@@ -4,3 +4,12 @@
 @import '@skeletonlabs/skeleton';
 @import '@skeletonlabs/skeleton-svelte';
 @import '@skeletonlabs/skeleton/themes/cerberus';
+@import '$lib/styles/theme-byoa.css';
+
+@theme {
+	--font-display: 'Literata', Georgia, 'Times New Roman', serif;
+	--font-body: 'Source Sans 3', 'Helvetica Neue', Arial, sans-serif;
+	--font-mono: 'JetBrains Mono', ui-monospace, monospace;
+	--reading-width: 65ch;
+	--shadow-message: 0 2px 8px -2px oklch(0.18 0.006 25 / 0.08);
+}

@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Hello Tauri",
+  "productName": "BYOA",
   "version": "0.1.0",
-  "identifier": "in.kazenor.sample.app.svalte-tauri",
+  "identifier": "in.kazenor.byoa.app",
   "build": {
     "frontendDist": "../build",
     "devUrl": "http://localhost:1420",
@@ -12,9 +12,9 @@
   "app": {
     "windows": [
       {
-        "title": "Hello Tauri + SvelteKit",
-        "width": 800,
-        "height": 600,
+        "title": "BYOA — Build Your Own Adventure",
+        "width": 1200,
+        "height": 800,
         "resizable": true,
         "fullscreen": false
       }
