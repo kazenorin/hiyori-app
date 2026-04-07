@@ -8,45 +8,10 @@
 	}
 </script>
 
-<main>
-	<h1>Hello Tauri + SvelteKit</h1>
-	<button onclick={greet}>Greet</button>
+<main class="grid place-items-center min-h-screen p-8">
+	<h1 class="h1 mb-4">Hello Tauri + SvelteKit</h1>
+	<button class="btn preset-filled-primary-500" onclick={greet}>Greet</button>
 	{#if greeting}
-		<p>{greeting}</p>
+		<p class="text-xl mt-4">{greeting}</p>
 	{/if}
 </main>
-
-<style>
-	main {
-		display: flex;
-		flex-direction: column;
-		align-items: center;
-		justify-content: center;
-		min-height: 100vh;
-		font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-	}
-
-	h1 {
-		margin-bottom: 1rem;
-	}
-
-	button {
-		padding: 0.5rem 1.5rem;
-		font-size: 1rem;
-		cursor: pointer;
-		border: none;
-		border-radius: 4px;
-		background: #ff3e00;
-		color: white;
-	}
-
-	button:hover {
-		background: #e03600;
-	}
-
-	p {
-		margin-top: 1rem;
-		font-size: 1.25rem;
-		color: #333;
-	}
-</style>

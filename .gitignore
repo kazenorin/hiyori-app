@@ -68,3 +68,8 @@ docker-compose.override.yml
 # =========================
 .DS_Store
 Thumbs.db
+
+# =========================
+# Local References
+# =========================
+local-references
