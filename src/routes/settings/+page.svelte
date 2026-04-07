@@ -70,17 +70,19 @@
 				</select>
 			</label>
 
-			{#if settings.provider === 'openai-compatible'}
+			{#if settings.provider === 'openai'}
 				<label class="block">
 					<span class="text-sm font-medium text-surface-700-300">API Type</span>
 					<select class="input mt-1" onchange={handleApiTypeChange}>
+						<option value="responses" selected={settings.apiType === 'responses'}
+							>Responses</option
+						>
 						<option value="chat-completions" selected={settings.apiType === 'chat-completions'}
 							>Chat Completions</option
 						>
-						<option value="responses" selected={settings.apiType === 'responses'}>Responses</option>
 					</select>
 					<span class="text-xs text-surface-500 mt-1 block"
-						>Chat Completions uses /chat/completions endpoint. Most local providers use this.</span
+						>Responses uses the OpenAI Responses API. Chat Completions uses /chat/completions.</span
 					>
 				</label>
 			{/if}

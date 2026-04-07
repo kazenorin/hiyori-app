@@ -15,6 +15,7 @@ export interface Message {
 	id: string;
 	role: 'user' | 'assistant';
 	content: string;
+	reasoning?: string;
 	metadata?: MessageMetadata;
 }
 
@@ -60,7 +61,8 @@ export async function sendMessage(text: string): Promise<void> {
 	const assistantMessage: Message = {
 		id: assistantId,
 		role: 'assistant',
-		content: ''
+		content: '',
+		reasoning: ''
 	};
 
 	messages = [...messages, userMessage, assistantMessage];
@@ -80,13 +82,30 @@ export async function sendMessage(text: string): Promise<void> {
 			model,
 			messages: history,
 			system: 'You are a helpful assistant.',
-			abortSignal: abortController.signal
+			abortSignal: abortController.signal,
+			providerOptions: {
+				openai: {
+					reasoningEffort: 'medium',
+					reasoningSummary: 'detailed'
+				}
+			}
 		});
 
-		for await (const chunk of result.textStream) {
-			messages = messages.map((m) =>
-				m.id === assistantId ? { ...m, content: m.content + chunk } : m
-			);
+		for await (const part of result.fullStream) {
+			switch (part.type) {
+				case 'reasoning-delta':
+					messages = messages.map((m) =>
+						m.id === assistantId
+							? { ...m, reasoning: (m.reasoning ?? '') + part.text }
+							: m
+					);
+					break;
+				case 'text-delta':
+					messages = messages.map((m) =>
+						m.id === assistantId ? { ...m, content: m.content + part.text } : m
+					);
+					break;
+			}
 		}
 
 		// Capture metadata after stream completes
@@ -94,10 +113,15 @@ export async function sendMessage(text: string): Promise<void> {
 		const finishReason = await result.finishReason;
 		const durationMs = Date.now() - startTime;
 
+		// Clear empty reasoning field if no reasoning was generated
+		const finalMessage = messages.find((m) => m.id === assistantId);
+		const reasoning = finalMessage?.reasoning || undefined;
+
 		messages = messages.map((m) =>
 			m.id === assistantId
 				? {
 						...m,
+						reasoning,
 						metadata: {
 							model: settings.model,
 							finishReason,

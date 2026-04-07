@@ -7,6 +7,7 @@
 		stopStreaming,
 		clearChat
 	} from '$lib/ai/chat.svelte';
+	import { Accordion } from '@skeletonlabs/skeleton-svelte';
 
 	let input = $state('');
 	let chatContainer: HTMLDivElement;
@@ -70,6 +71,35 @@
 						<div
 							class="rounded-[var(--radius-container)] bg-surface-50-950 p-5 shadow-message"
 						>
+							{#if message.reasoning}
+								<div class="mb-3">
+									<Accordion collapsible>
+										<Accordion.Item value="reasoning">
+											<Accordion.ItemTrigger
+												class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1"
+											>
+												<span>Thinking...</span>
+												<Accordion.ItemIndicator>
+													<span class="transition-transform duration-150 text-surface-500">▼</span>
+												</Accordion.ItemIndicator>
+											</Accordion.ItemTrigger>
+											<Accordion.ItemContent>
+												{#snippet element(attributes)}
+													{#if !attributes.hidden}
+														<div
+															{...attributes}
+															class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
+														>
+															{message.reasoning}
+														</div>
+													{/if}
+												{/snippet}
+											</Accordion.ItemContent>
+										</Accordion.Item>
+									</Accordion>
+								</div>
+							{/if}
+
 							{#if message.content}
 								<p class="leading-relaxed text-surface-950-50 whitespace-pre-wrap">{message.content}</p>
 							{/if}

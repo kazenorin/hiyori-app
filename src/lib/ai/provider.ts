@@ -1,8 +1,18 @@
 import { createOpenAI } from '@ai-sdk/openai';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import type { Settings } from '$lib/stores/settings.svelte';
 
 export function createModel(settings: Settings) {
 	const baseURL = settings.baseURL || 'https://api.openai.com/v1';
+
+	if (settings.provider === 'openai-compatible') {
+		const provider = createOpenAICompatible({
+			name: 'openai-compatible',
+			baseURL,
+			apiKey: settings.apiKey || 'missing-key'
+		});
+		return provider.chatModel(settings.model);
+	}
 
 	const provider = createOpenAI({
 		apiKey: settings.apiKey || 'missing-key',
