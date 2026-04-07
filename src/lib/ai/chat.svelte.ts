@@ -2,10 +2,20 @@ import { streamText } from 'ai';
 import { getSettings } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
 
+export interface MessageMetadata {
+	model: string;
+	finishReason: string;
+	promptTokens: number;
+	completionTokens: number;
+	totalTokens: number;
+	durationMs: number;
+}
+
 export interface Message {
 	id: string;
 	role: 'user' | 'assistant';
 	content: string;
+	metadata?: MessageMetadata;
 }
 
 let messages = $state<Message[]>([]);
@@ -56,6 +66,7 @@ export async function sendMessage(text: string): Promise<void> {
 	messages = [...messages, userMessage, assistantMessage];
 	isStreaming = true;
 	abortController = new AbortController();
+	const startTime = Date.now();
 
 	try {
 		const model = createModel(settings);
@@ -77,6 +88,27 @@ export async function sendMessage(text: string): Promise<void> {
 				m.id === assistantId ? { ...m, content: m.content + chunk } : m
 			);
 		}
+
+		// Capture metadata after stream completes
+		const usage = await result.usage;
+		const finishReason = await result.finishReason;
+		const durationMs = Date.now() - startTime;
+
+		messages = messages.map((m) =>
+			m.id === assistantId
+				? {
+						...m,
+						metadata: {
+							model: settings.model,
+							finishReason,
+							promptTokens: usage.inputTokens ?? 0,
+							completionTokens: usage.outputTokens ?? 0,
+							totalTokens: usage.totalTokens ?? 0,
+							durationMs
+						}
+					}
+				: m
+		);
 	} catch (err: unknown) {
 		if (err instanceof DOMException && err.name === 'AbortError') {
 			// User cancelled — keep partial content, just stop streaming

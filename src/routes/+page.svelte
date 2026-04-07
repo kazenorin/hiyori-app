@@ -76,6 +76,12 @@
 							{#if getIsStreaming() && message === getMessages().at(-1)}
 								<span class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
 							{/if}
+							{#if message.metadata}
+								<pre class="mt-4 pt-3 border-t border-surface-200-800 text-xs text-surface-500 font-mono leading-relaxed">model:       {message.metadata.model}
+finish:      {message.metadata.finishReason}
+tokens:      {message.metadata.promptTokens} prompt + {message.metadata.completionTokens} completion = {message.metadata.totalTokens} total
+duration:    {message.metadata.durationMs}ms</pre>
+							{/if}
 						</div>
 					{/if}
 				{/each}

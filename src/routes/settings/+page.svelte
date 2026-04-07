@@ -1,8 +1,13 @@
 <script lang="ts">
 	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
+	import { fetchModels, type ModelInfo } from '$lib/ai/models';
 	import type { Provider, ApiType } from '$lib/stores/settings.svelte';
 
 	const settings = getSettings();
+
+	let availableModels = $state<ModelInfo[]>([]);
+	let isLoadingModels = $state(false);
+	let modelsError = $state<string | null>(null);
 
 	function handleProviderChange(e: Event) {
 		const value = (e.currentTarget as HTMLSelectElement).value as Provider;
@@ -18,12 +23,30 @@
 		updateSettings({ baseURL: (e.currentTarget as HTMLInputElement).value });
 	}
 
-	function handleModelChange(e: Event) {
+	function handleModelSelect(e: Event) {
+		const value = (e.currentTarget as HTMLSelectElement).value;
+		updateSettings({ model: value });
+	}
+
+	function handleModelInput(e: Event) {
 		updateSettings({ model: (e.currentTarget as HTMLInputElement).value });
 	}
 
 	function handleApiKeyChange(e: Event) {
 		updateSettings({ apiKey: (e.currentTarget as HTMLInputElement).value });
+	}
+
+	async function handleFetchModels() {
+		isLoadingModels = true;
+		modelsError = null;
+		try {
+			availableModels = await fetchModels(getSettings());
+		} catch (err: unknown) {
+			modelsError = err instanceof Error ? err.message : 'Failed to fetch models';
+			availableModels = [];
+		} finally {
+			isLoadingModels = false;
+		}
 	}
 </script>
 
@@ -77,16 +100,53 @@
 				>
 			</label>
 
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Model</span>
-				<input
-					class="input mt-1"
-					type="text"
-					placeholder="gpt-4o"
-					value={settings.model}
-					oninput={handleModelChange}
-				/>
-			</label>
+			<div>
+				<div class="flex items-end gap-2">
+					<label class="flex-1">
+						<span class="text-sm font-medium text-surface-700-300">Model</span>
+						{#if availableModels.length > 0}
+							<select class="input mt-1" onchange={handleModelSelect}>
+								{#each availableModels as model (model.id)}
+									<option value={model.id} selected={settings.model === model.id}
+										>{model.id}</option
+									>
+								{/each}
+							</select>
+						{:else}
+							<input
+								class="input mt-1"
+								type="text"
+								placeholder="gpt-4o"
+								value={settings.model}
+								oninput={handleModelInput}
+							/>
+						{/if}
+					</label>
+					<button
+						class="btn preset-tonal shrink-0"
+						type="button"
+						onclick={handleFetchModels}
+						disabled={isLoadingModels}
+					>
+						{isLoadingModels ? 'Loading...' : 'Fetch Models'}
+					</button>
+				</div>
+				{#if availableModels.length > 0}
+					<label class="block mt-2">
+						<span class="text-xs text-surface-500">Or type manually</span>
+						<input
+							class="input mt-1"
+							type="text"
+							placeholder="gpt-4o"
+							value={settings.model}
+							oninput={handleModelInput}
+						/>
+					</label>
+				{/if}
+				{#if modelsError}
+					<p class="text-xs text-error-700-300 mt-1">{modelsError}</p>
+				{/if}
+			</div>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">API Key</span>
