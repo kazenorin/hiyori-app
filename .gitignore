@@ -1,0 +1,70 @@
+# =========================
+# AI Agents & LLM Tools
+# =========================
+.claude/settings.local.json
+.claude/history/
+CLAUDE.local.md
+
+.cline/.history/
+.cline/memory/
+
+# =========================
+# Node.js / Web
+# =========================
+node_modules/
+build/
+dist/
+.svelte-kit/
+
+# =========================
+# Tauri
+# =========================
+src-tauri/target/
+src-tauri/gen/
+.xwin-cache/
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+pip-log.txt
+
+# =========================
+# Environment & Local Config
+# =========================
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.local
+*.pem
+*.key
+
+# =========================
+# Infrastructure
+# =========================
+docker-compose.override.yml
+.kube/config
+
+# =========================
+# IDE / Editor
+# =========================
+.idea/
+
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
