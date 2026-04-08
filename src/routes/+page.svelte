@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	import {
 		getMessages,
 		getIsStreaming,
@@ -9,14 +8,9 @@
 		clearChat
 	} from '$lib/ai/chat.svelte';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
-	import { loadChatFile } from '$lib/fs';
 
 	let input = $state('');
 	let chatContainer: HTMLDivElement;
-
-	onMount(async () => {
-		input = await loadChatFile();
-	});
 
 	function handleSubmit() {
 		const text = input.trim();

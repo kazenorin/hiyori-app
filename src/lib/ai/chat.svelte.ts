@@ -1,6 +1,7 @@
 import { streamText } from 'ai';
 import { getSettings } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
+import { loadSystemPrompt } from '$lib/fs/system-prompt';
 
 export interface MessageMetadata {
 	model: string;
@@ -72,6 +73,7 @@ export async function sendMessage(text: string): Promise<void> {
 
 	try {
 		const model = createModel(settings);
+		const systemPrompt = await loadSystemPrompt();
 
 		// Build message history excluding the empty assistant placeholder
 		const history = messages
@@ -81,7 +83,7 @@ export async function sendMessage(text: string): Promise<void> {
 		const result = streamText({
 			model,
 			messages: history,
-			system: 'You are a helpful assistant.',
+			system: systemPrompt,
 			abortSignal: abortController.signal,
 			providerOptions: {
 				openai: {
