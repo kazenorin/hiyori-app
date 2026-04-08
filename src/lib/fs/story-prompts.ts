@@ -8,6 +8,7 @@ import {
 } from '@tauri-apps/plugin-fs';
 import { SYSTEM_PROMPT_FILE, getDefaultSystemPromptContent } from './system-prompt';
 import * as dbStoryFolders from '$lib/db/story-folders';
+import { generateWorld } from '$lib/ai/world-generator';
 
 /**
  * Compute the canonical folder name for a story.
@@ -141,5 +142,23 @@ export async function loadStorySystemPrompt(storyId: string, storyName: string):
 		return await readTextFile(promptPath, { baseDir: BaseDirectory.AppData });
 	} catch {
 		return await getDefaultSystemPromptContent();
+	}
+}
+
+/**
+ * Ensure the story folder has a world.md file.
+ * If it doesn't exist, generate it from the story's chat history.
+ */
+export async function ensureWorldFile(storyId: string, storyName: string): Promise<void> {
+	const folderName = await dbStoryFolders.getStoryFolder(storyId) ?? await resolveStoryFolder(storyId, storyName);
+
+	const worldPath = `${folderName}/world.md`;
+	const worldExists = await exists(worldPath, { baseDir: BaseDirectory.AppData });
+	if (worldExists) return;
+
+	try {
+		await generateWorld(storyId, folderName);
+	} catch (err) {
+		console.error('[world] Failed to generate world.md:', err);
 	}
 }

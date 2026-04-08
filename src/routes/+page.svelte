@@ -6,7 +6,7 @@
 		sendMessage,
 		stopStreaming
 	} from '$lib/ai/chat.svelte';
-	import { getActiveActLineId, getActiveSystemPrompt } from '$lib/stores/stories.svelte';
+	import { getActiveActLineId, getActiveSystemPrompt, getIsSelectingStory } from '$lib/stores/stories.svelte';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
 
 	let input = $state('');
@@ -41,7 +41,13 @@
 </script>
 
 <div class="flex-1 flex min-h-0">
-	{#if !getActiveActLineId()}
+	{#if getIsSelectingStory()}
+		<div class="flex-1 flex items-center justify-center">
+			<div class="text-center space-y-3">
+				<div class="text-surface-500 animate-pulse">Loading story...</div>
+			</div>
+		</div>
+	{:else if !getActiveActLineId()}
 		<!-- Empty state — no act line selected -->
 		<div class="flex-1 flex items-center justify-center">
 			<div class="text-center space-y-3">

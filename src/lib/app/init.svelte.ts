@@ -1,7 +1,7 @@
 import { initDatabase } from '$lib/db/database';
 import { runMigrations } from '$lib/db/migrations';
 import { loadStories, restoreState } from '$lib/stores/stories.svelte';
-import { loadWorldTemplate, loadGenerateWorldFromChatPrompt } from '$lib/fs/world-prompts';
+import { loadWorldTemplate, loadGenerateWorldFromChatPrompt, loadGenerateWorldFromChatSystemPrompt } from '$lib/fs/world-prompts';
 
 let initialized = false;
 let initializing = false;
@@ -23,6 +23,7 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 		console.log('[init] Loading world prompts...');
 		await loadWorldTemplate();
 		await loadGenerateWorldFromChatPrompt();
+		await loadGenerateWorldFromChatSystemPrompt();
 
 		onStatus?.('Loading stories...');
 		console.log('[init] Loading stories...');
