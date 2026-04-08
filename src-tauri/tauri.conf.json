@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "BYOA",
   "version": "0.1.0",
-  "identifier": "in.kazenor.byoa.app",
+  "identifier": "in.kazenor.byoa-app",
   "build": {
     "frontendDist": "../build",
     "devUrl": "http://localhost:1420",

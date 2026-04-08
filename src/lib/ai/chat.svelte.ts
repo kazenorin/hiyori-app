@@ -2,6 +2,8 @@ import { streamText } from 'ai';
 import { getSettings } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
 import { loadSystemPrompt } from '$lib/fs/system-prompt';
+import * as dbMessages from '$lib/db/messages';
+import * as dbActLines from '$lib/db/act-lines';
 
 export interface MessageMetadata {
 	model: string;
@@ -37,7 +39,25 @@ export function getError(): string | null {
 	return error;
 }
 
-export async function sendMessage(text: string): Promise<void> {
+export async function loadActLineMessages(actLineId: string): Promise<void> {
+	const dbMsgs = await dbActLines.getMessagesForLine(actLineId);
+	messages = dbMsgs.map((m) => ({
+		id: m.id,
+		role: m.role,
+		content: m.content,
+		reasoning: m.reasoning,
+		metadata: m.metadata ? JSON.parse(m.metadata) : undefined
+	}));
+	error = null;
+}
+
+export function clearMessages(): void {
+	messages = [];
+	error = null;
+	isStreaming = false;
+}
+
+export async function sendMessage(actLineId: string, text: string): Promise<void> {
 	const settings = getSettings();
 
 	if (!settings.apiKey) {
@@ -57,6 +77,11 @@ export async function sendMessage(text: string): Promise<void> {
 		role: 'user',
 		content: text
 	};
+
+	// Persist user message
+	await dbMessages.createMessage(userMessage.id, userMessage.role, userMessage.content);
+	const userSeq = await dbActLines.getNextSequence(actLineId);
+	await dbActLines.addMessageToLine(actLineId, userMessage.id, userSeq);
 
 	const assistantId = crypto.randomUUID();
 	const assistantMessage: Message = {
@@ -119,25 +144,45 @@ export async function sendMessage(text: string): Promise<void> {
 		const finalMessage = messages.find((m) => m.id === assistantId);
 		const reasoning = finalMessage?.reasoning || undefined;
 
+		const metadata: MessageMetadata = {
+			model: settings.model,
+			finishReason,
+			promptTokens: usage.inputTokens ?? 0,
+			completionTokens: usage.outputTokens ?? 0,
+			totalTokens: usage.totalTokens ?? 0,
+			durationMs
+		};
+
 		messages = messages.map((m) =>
 			m.id === assistantId
-				? {
-						...m,
-						reasoning,
-						metadata: {
-							model: settings.model,
-							finishReason,
-							promptTokens: usage.inputTokens ?? 0,
-							completionTokens: usage.outputTokens ?? 0,
-							totalTokens: usage.totalTokens ?? 0,
-							durationMs
-						}
-					}
+				? { ...m, reasoning, metadata }
 				: m
 		);
+
+		// Persist assistant message
+		await dbMessages.createMessage(
+			assistantId,
+			'assistant',
+			finalMessage?.content ?? '',
+			reasoning,
+			JSON.stringify(metadata)
+		);
+		const assistantSeq = await dbActLines.getNextSequence(actLineId);
+		await dbActLines.addMessageToLine(actLineId, assistantId, assistantSeq);
 	} catch (err: unknown) {
 		if (err instanceof DOMException && err.name === 'AbortError') {
-			// User cancelled — keep partial content, just stop streaming
+			// User cancelled — persist partial content
+			const partial = messages.find((m) => m.id === assistantId);
+			if (partial && partial.content) {
+				await dbMessages.createMessage(
+					assistantId,
+					'assistant',
+					partial.content,
+					partial.reasoning || undefined
+				);
+				const seq = await dbActLines.getNextSequence(actLineId);
+				await dbActLines.addMessageToLine(actLineId, assistantId, seq);
+			}
 		} else {
 			const msg = err instanceof Error ? err.message : 'An unexpected error occurred.';
 			error = msg;
@@ -152,10 +197,4 @@ export async function sendMessage(text: string): Promise<void> {
 
 export function stopStreaming(): void {
 	abortController?.abort();
-}
-
-export function clearChat(): void {
-	messages = [];
-	error = null;
-	isStreaming = false;
 }

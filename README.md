@@ -44,81 +44,51 @@ Output artifacts:
 
 ## Cross-Compiling for Windows (from Linux)
 
-Cross-compiling Tauri to Windows from Linux requires the MSVC toolchain via `xwin`, `clang`, `lld`, and `llvm`.
+Cross-compiling to Windows uses the GNU toolchain with MinGW-w64.
 
-### 1. Install cross-compilation tools
-
-```bash
-# Add the Windows MSVC target to Rust
-rustup target add x86_64-pc-windows-msvc
-
-# Install xwin (downloads MSVC CRT/SDK headers and libs)
-cargo install xwin
-
-# Install clang, lld, and llvm (provides lld-link linker and llvm-rc resource compiler)
-sudo apt install -y clang lld llvm
-```
-
-### 2. Download MSVC CRT and SDK
+### 1. Install dependencies
 
 ```bash
-xwin --accept-license splat --output ~/.xwin
+# Add the Windows GNU target to Rust
+rustup target add x86_64-pc-windows-gnu
+
+# Install MinGW-w64 cross-compiler and NSIS installer builder
+sudo apt install -y gcc-mingw-w64-x86-64 nsis
 ```
 
-This creates the following directories:
-
-```
-~/.xwin/
-  crt/          # C runtime headers and libs
-  sdk/          # Windows SDK headers and libs
-```
-
-### 3. Configure the Cargo linker
-
-The file `src-tauri/.cargo/config.toml` configures `lld-link` as the linker and points to the `xwin` library paths:
-
-```toml
-[target.x86_64-pc-windows-msvc]
-linker = "lld-link"
-rustflags = [
-  "-C", "target-feature=+crt-static",
-  "-L", "/home/<USER>/.xwin/crt/lib/x86_64",
-  "-L", "/home/<USER>/.xwin/sdk/lib/um/x86_64",
-  "-L", "/home/<USER>/.xwin/sdk/lib/ucrt/x86_64",
-]
-```
-
-Update the paths if your `xwin` output is in a different location.
-
-### 4. Build the Windows binary
+### 2. Build the Windows binary and installer
 
 ```bash
-npm run tauri build -- --target x86_64-pc-windows-msvc
+npm run tauri build -- --target x86_64-pc-windows-gnu
 ```
 
 Output:
 
 | Artifact | Path |
 |----------|------|
-| .exe | `src-tauri/target/x86_64-pc-windows-msvc/release/app.exe` |
+| .exe | `src-tauri/target/x86_64-pc-windows-gnu/release/app.exe` |
+| NSIS installer | `src-tauri/target/x86_64-pc-windows-gnu/release/bundle/nsis/BYOA_0.1.0_x64-setup.exe` |
 
 The `.exe` includes the embedded frontend assets and requires [WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (pre-installed on Windows 10/11).
-
-> **Note:** NSIS/MSI installer bundling is not supported when cross-compiling. For a full Windows installer, build natively on Windows or use CI.
 
 ## Project Structure
 
 ```
 src/                      # SvelteKit frontend
+  lib/
+    ai/                   # AI chat (streaming, provider, models)
+    db/                   # SQLite repositories (stories, acts, messages)
+    fs/                   # File system services (system prompt)
+    stores/               # Reactive state (settings, stories)
   routes/
     +layout.ts            # SSR disabled, prerender enabled
-    +page.svelte          # Main UI with greet button
+    +page.svelte          # Chat UI
+    settings/+page.svelte # Settings page
   app.html                # HTML shell
 src-tauri/                # Tauri (Rust) backend
   src/
-    lib.rs                # Greet command handler
+    lib.rs                # Tauri setup and command handlers
     main.rs               # App entry point
-  .cargo/config.toml      # Cross-compilation linker config
   tauri.conf.json         # Tauri app configuration
   Cargo.toml              # Rust dependencies
 svelte.config.js          # SvelteKit with adapter-static (SPA fallback)
