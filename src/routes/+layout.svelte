@@ -1,6 +1,7 @@
 <script lang="ts">
 	import './+layout.css';
 	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { initializeApp } from '$lib/app/init.svelte';
 	import {
 		getStories,
@@ -59,16 +60,19 @@
 	async function handleSelectStory(id: string) {
 		await selectStory(id);
 		clearMessages();
+		goto('/');
 	}
 
 	async function handleSelectAct(id: string) {
 		await selectAct(id);
 		clearMessages();
+		goto('/');
 	}
 
 	async function handleSelectActLine(id: string) {
 		await selectActLine(id);
 		await loadActLineMessages(id);
+		goto('/');
 	}
 
 	async function handleCreateStory() {
@@ -262,7 +266,13 @@
 			</nav>
 
 			<!-- Sidebar footer -->
-			<div class="p-3 border-t border-surface-200-800">
+			<div class="p-3 border-t border-surface-200-800 flex flex-col gap-1">
+				<a
+					href="/"
+					class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+				>
+					Chat
+				</a>
 				<a
 					href="/settings"
 					class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"

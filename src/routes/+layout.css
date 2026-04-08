@@ -13,3 +13,12 @@
 	--reading-width: 65ch;
 	--shadow-message: 0 2px 8px -2px oklch(0.18 0.006 25 / 0.08);
 }
+
+/* Fix form element backgrounds for dark mode (skeleton.dev Windows bugfix) */
+.select,
+.input,
+.textarea,
+.input-group {
+	background-color: var(--color-surface-50-950);
+	color: var(--color-surface-950-50);
+}

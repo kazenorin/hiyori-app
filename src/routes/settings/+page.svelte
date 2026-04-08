@@ -62,7 +62,7 @@
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">API Provider</span>
-				<select class="input mt-1" onchange={handleProviderChange}>
+				<select class="select mt-1" onchange={handleProviderChange}>
 					<option value="openai" selected={settings.provider === 'openai'}>OpenAI</option>
 					<option value="openai-compatible" selected={settings.provider === 'openai-compatible'}
 						>OpenAI-Compatible</option
@@ -73,7 +73,7 @@
 			{#if settings.provider === 'openai'}
 				<label class="block">
 					<span class="text-sm font-medium text-surface-700-300">API Type</span>
-					<select class="input mt-1" onchange={handleApiTypeChange}>
+					<select class="select mt-1" onchange={handleApiTypeChange}>
 						<option value="responses" selected={settings.apiType === 'responses'}
 							>Responses</option
 						>
@@ -107,7 +107,7 @@
 					<label class="flex-1">
 						<span class="text-sm font-medium text-surface-700-300">Model</span>
 						{#if availableModels.length > 0}
-							<select class="input mt-1" onchange={handleModelSelect}>
+							<select class="select mt-1" onchange={handleModelSelect}>
 								{#each availableModels as model (model.id)}
 									<option value={model.id} selected={settings.model === model.id}
 										>{model.id}</option
