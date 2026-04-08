@@ -6,7 +6,7 @@
 		sendMessage,
 		stopStreaming
 	} from '$lib/ai/chat.svelte';
-	import { getActiveActLineId } from '$lib/stores/stories.svelte';
+	import { getActiveActLineId, getActiveSystemPrompt } from '$lib/stores/stories.svelte';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
 
 	let input = $state('');
@@ -17,7 +17,7 @@
 		const actLineId = getActiveActLineId();
 		if (!text || getIsStreaming() || !actLineId) return;
 		input = '';
-		sendMessage(actLineId, text);
+		sendMessage(actLineId, text, getActiveSystemPrompt() ?? undefined);
 	}
 
 	function handleKeydown(e: KeyboardEvent) {

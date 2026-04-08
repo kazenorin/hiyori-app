@@ -20,3 +20,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - `local-references/openapi.with-code-samples.yml` — OpenAI API OpenAPI spec, used as a local reference for API integration.
 - `local-references/llms-svelte.txt` — Skeleton.dev design system documentation (Svelte), used as a local reference for UI components and patterns.
+
+## Story Folders
+
+Each story gets a dedicated folder in AppData containing its own `system-prompt.md`. The global `system-prompt.md` at the AppData root serves as the default template — when a story folder is created, the default prompt is copied into it.
+
+- **Folder naming**: Derived from the story name via `canonicalName()` (strips `/ \ < > : " | ? *` and control chars, supports Unicode). If two stories share the same name, the later one gets a short UUID suffix (e.g., `My Story - a1b2`).
+- **Resolution**: `resolveStoryFolder()` in `src/lib/fs/story-prompts.ts` handles folder lookup. It checks the `story_folders` DB table first, then falls back to filesystem scanning. Exact name matches are preferred; UUID suffix is used only on collision.
+- **Prompt switching**: When a story is selected, its system prompt is loaded via `loadStorySystemPrompt()` and cached in the stories store. Chat messages use this story-specific prompt.
+
+## IntelliJ MCP Usage
+
+When using IntelliJ MCP tools, first check whether the current shell is WSL2 by running `which wslpath`.
+
+If `wslpath` is available, convert the project path to a Windows path before passing it to IntelliJ MCP:
+
+```bash
+$(wslpath -w "$ProjectPath")
+```
+
+where `$ProjectPath` is the current project directory.

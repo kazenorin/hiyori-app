@@ -51,6 +51,14 @@ const migrationStatements: string[][] = [
 			active_act_line_id TEXT
 		)`,
 		`INSERT OR IGNORE INTO app_state (id) VALUES (1)`
+	],
+	[
+		`CREATE TABLE IF NOT EXISTS story_folders (
+			story_id TEXT PRIMARY KEY,
+			folder_name TEXT NOT NULL,
+			created_at INTEGER NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_story_folders_folder ON story_folders(folder_name)`
 	]
 ];
 

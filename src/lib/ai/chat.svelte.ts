@@ -57,7 +57,7 @@ export function clearMessages(): void {
 	isStreaming = false;
 }
 
-export async function sendMessage(actLineId: string, text: string): Promise<void> {
+export async function sendMessage(actLineId: string, text: string, systemPrompt?: string): Promise<void> {
 	const settings = getSettings();
 
 	if (!settings.apiKey) {
@@ -98,7 +98,7 @@ export async function sendMessage(actLineId: string, text: string): Promise<void
 
 	try {
 		const model = createModel(settings);
-		const systemPrompt = await loadSystemPrompt();
+		const prompt = systemPrompt ?? await loadSystemPrompt();
 
 		// Build message history excluding the empty assistant placeholder
 		const history = messages
@@ -108,7 +108,7 @@ export async function sendMessage(actLineId: string, text: string): Promise<void
 		const result = streamText({
 			model,
 			messages: history,
-			system: systemPrompt,
+			system: prompt,
 			abortSignal: abortController.signal,
 			providerOptions: {
 				openai: {

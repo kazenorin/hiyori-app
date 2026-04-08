@@ -78,7 +78,7 @@ src/                      # SvelteKit frontend
   lib/
     ai/                   # AI chat (streaming, provider, models)
     db/                   # SQLite repositories (stories, acts, messages)
-    fs/                   # File system services (system prompt)
+    fs/                   # File system services (system prompt, story prompts)
     stores/               # Reactive state (settings, stories)
   routes/
     +layout.ts            # SSR disabled, prerender enabled

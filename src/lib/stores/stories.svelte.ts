@@ -2,6 +2,7 @@ import * as dbStories from '$lib/db/stories';
 import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import * as dbAppState from '$lib/db/app-state';
+import { loadStorySystemPrompt } from '$lib/fs/story-prompts';
 
 export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
 
@@ -12,6 +13,7 @@ let activeStoryId = $state<string | null>(null);
 let activeActId = $state<string | null>(null);
 let activeActLineId = $state<string | null>(null);
 let isLoading = $state(true);
+let activeSystemPrompt = $state<string | null>(null);
 
 export function getStories(): dbStories.Story[] {
 	return stories;
@@ -33,6 +35,9 @@ export function getActiveActLineId(): string | null {
 }
 export function getIsLoading(): boolean {
 	return isLoading;
+}
+export function getActiveSystemPrompt(): string | null {
+	return activeSystemPrompt;
 }
 
 export function getActiveStory(): dbStories.Story | null {
@@ -69,6 +74,10 @@ export async function selectStory(storyId: string | null): Promise<void> {
 
 	if (storyId) {
 		await loadActs(storyId);
+		const story = stories.find((s) => s.id === storyId);
+		if (story) {
+			activeSystemPrompt = await loadStorySystemPrompt(storyId, story.name);
+		}
 	}
 }
 
@@ -155,6 +164,10 @@ export async function restoreState(): Promise<void> {
 	if (state.activeStoryId) {
 		activeStoryId = state.activeStoryId;
 		await loadActs(state.activeStoryId);
+		const story = stories.find((s) => s.id === state.activeStoryId);
+		if (story) {
+			activeSystemPrompt = await loadStorySystemPrompt(story.id, story.name);
+		}
 	}
 	if (state.activeActId) {
 		activeActId = state.activeActId;

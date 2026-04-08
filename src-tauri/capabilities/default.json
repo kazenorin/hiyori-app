@@ -10,19 +10,23 @@
     "fs:default",
     {
       "identifier": "fs:allow-exists",
-      "allow": [{ "path": "$APPDATA/*" }]
+      "allow": [{ "path": "$APPDATA/*" }, { "path": "$APPDATA/**" }]
     },
     {
       "identifier": "fs:allow-read-text-file",
-      "allow": [{ "path": "$APPDATA/*" }]
+      "allow": [{ "path": "$APPDATA/*" }, { "path": "$APPDATA/**" }]
     },
     {
       "identifier": "fs:allow-write-text-file",
-      "allow": [{ "path": "$APPDATA/*" }]
+      "allow": [{ "path": "$APPDATA/*" }, { "path": "$APPDATA/**" }]
     },
     {
       "identifier": "fs:allow-mkdir",
-      "allow": [{ "path": "$APPDATA" }, { "path": "$APPDATA/*" }]
+      "allow": [{ "path": "$APPDATA" }, { "path": "$APPDATA/*" }, { "path": "$APPDATA/**" }]
+    },
+    {
+      "identifier": "fs:allow-read-dir",
+      "allow": [{ "path": "$APPDATA" }, { "path": "$APPDATA/*" }, { "path": "$APPDATA/**" }]
     },
     "sql:default",
     "sql:allow-execute"
