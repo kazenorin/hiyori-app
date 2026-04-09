@@ -18,8 +18,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Reference Material
 
-- `local-references/openapi.with-code-samples.yml` — OpenAI API OpenAPI spec, used as a local reference for API integration.
-- `local-references/llms-svelte.txt` — Skeleton.dev design system documentation (Svelte), used as a local reference for UI components and patterns.
+Check `local-references/*` for local reference files (if any).
 
 ## Story Folders
 

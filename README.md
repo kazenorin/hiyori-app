@@ -28,6 +28,21 @@ npm run tauri dev
 
 This starts the Vite dev server on `http://localhost:1420` and launches the Tauri window with hot-reload.
 
+### Rust Installation (WSL2)
+
+Before working on the Tauri backend, ensure Rust is installed in WSL2:
+
+1. **Install build dependencies** — Rust crates often compile from source:
+   ```bash
+   sudo apt update && sudo apt install build-essential gcc make -y
+   ```
+
+2. **Run the official rustup installer**:
+   ```bash
+   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+   ```
+   When prompted, type `1` (default installation) and press Enter.
+
 ## Building a Linux Binary
 
 ```bash
