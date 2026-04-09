@@ -2,7 +2,8 @@ import * as dbStories from '$lib/db/stories';
 import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import * as dbAppState from '$lib/db/app-state';
-import { loadStorySystemPrompt, ensureWorldFile } from '$lib/fs/story-prompts';
+import { loadStorySystemPrompt, ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-prompts';
+import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 
 export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
 
@@ -184,4 +185,21 @@ export async function restoreState(): Promise<void> {
 		activeActLineId = state.activeActLineId;
 	}
 	isLoading = false;
+}
+
+export async function createStoryFromWorldBuilder(
+	name: string,
+	worldContent: string
+): Promise<void> {
+	const story = await createStory(name);
+	const act = await createAct(story.id, 'Act 1');
+	const actLine = await createActLine(act.id, 'main line');
+
+	// Write world.md to story folder before selectStory triggers ensureWorldFile
+	const folderName = await resolveStoryFolder(story.id, story.name);
+	const worldPath = `${folderName}/world.md`;
+	await writeTextFile(worldPath, worldContent, { baseDir: BaseDirectory.AppData });
+
+	await selectStory(story.id);
+	await selectActLine(actLine.id);
 }

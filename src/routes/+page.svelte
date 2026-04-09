@@ -6,7 +6,24 @@
 		sendMessage,
 		stopStreaming
 	} from '$lib/ai/chat.svelte';
-	import { getActiveActLineId, getActiveSystemPrompt, getIsSelectingStory } from '$lib/stores/stories.svelte';
+	import {
+		getIsActive as getIsWorldBuilderActive,
+		getMessages as getWorldBuilderMessages,
+		getIsStreaming as getIsWorldBuilderStreaming,
+		getError as getWorldBuilderError,
+		sendWorldBuilderMessage,
+		stopStreaming as stopWorldBuilderStreaming,
+		getIsComplete as getIsWorldBuilderComplete,
+		getStoryName as getWorldBuilderStoryName,
+		getWorldContent as getWorldBuilderContent,
+		exitWorldBuilderMode
+	} from '$lib/ai/world-builder.svelte';
+	import {
+		getActiveActLineId,
+		getActiveSystemPrompt,
+		getIsSelectingStory,
+		createStoryFromWorldBuilder
+	} from '$lib/stores/stories.svelte';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
 
 	let input = $state('');
@@ -14,10 +31,26 @@
 
 	function handleSubmit() {
 		const text = input.trim();
+		if (!text || getIsStreaming() || getIsWorldBuilderStreaming()) return;
+
+		if (getIsWorldBuilderActive()) {
+			input = '';
+			sendWorldBuilderMessage(text);
+			return;
+		}
+
 		const actLineId = getActiveActLineId();
-		if (!text || getIsStreaming() || !actLineId) return;
+		if (!actLineId) return;
 		input = '';
 		sendMessage(actLineId, text, getActiveSystemPrompt() ?? undefined);
+	}
+
+	async function handleCreateFromWorldBuilder() {
+		const name = getWorldBuilderStoryName();
+		const content = getWorldBuilderContent();
+		if (!name) return;
+		await createStoryFromWorldBuilder(name, content ?? '');
+		exitWorldBuilderMode();
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -38,6 +71,12 @@
 		getIsStreaming();
 		setTimeout(scrollToBottom, 0);
 	});
+
+	$effect(() => {
+		getWorldBuilderMessages();
+		getIsWorldBuilderStreaming();
+		setTimeout(scrollToBottom, 0);
+	});
 </script>
 
 <div class="flex-1 flex min-h-0">
@@ -47,6 +86,107 @@
 				<div class="text-surface-500 animate-pulse">Loading story...</div>
 			</div>
 		</div>
+	{:else if getIsWorldBuilderActive()}
+		<!-- World builder mode -->
+		<!-- svelte-ignore binding_property_non_reactive -->
+		<div
+			bind:this={chatContainer}
+			class="flex-1 overflow-y-auto p-6"
+		>
+			<div class="px-8 space-y-4">
+				<div class="text-center py-4">
+					<h2 class="h2 font-display text-surface-700-300 mb-2">World Builder</h2>
+					<p class="text-xs text-surface-500">Answer questions to build your story's world. Say "let's start" when ready.</p>
+				</div>
+
+				{#each getWorldBuilderMessages() as message (message.id)}
+					{#if message.role === 'user'}
+						<div class="flex justify-end">
+							<div
+								class="max-w-[80%] rounded-[var(--radius-container)] bg-primary-100-900 p-5"
+							>
+								<p class="leading-relaxed text-primary-900-100 whitespace-pre-wrap">{message.content}</p>
+							</div>
+						</div>
+					{:else}
+						<div
+							class="rounded-[var(--radius-container)] bg-surface-50-950 p-5 shadow-message"
+						>
+							{#if message.content}
+								<p class="leading-relaxed text-surface-950-50 whitespace-pre-wrap">{message.content}</p>
+							{/if}
+							{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
+								<span class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
+							{/if}
+						</div>
+					{/if}
+				{/each}
+
+				{#if getIsWorldBuilderComplete()}
+					<div class="rounded-[var(--radius-container)] bg-primary-100-900 p-6 text-center space-y-4">
+						<h3 class="h3 font-display text-primary-900-100">Create "{getWorldBuilderStoryName()}"?</h3>
+						<p class="text-sm text-primary-700-300">Your world document is ready. Create the story and start your adventure?</p>
+						<div class="flex gap-3 justify-center">
+							<button
+								class="btn preset-filled-primary-500"
+								type="button"
+								onclick={handleCreateFromWorldBuilder}
+							>
+								Create Story
+							</button>
+							<button
+								class="btn preset-tonal"
+								type="button"
+								onclick={exitWorldBuilderMode}
+							>
+								Cancel
+							</button>
+						</div>
+					</div>
+				{/if}
+
+				{#if getWorldBuilderError()}
+					<div class="rounded-[var(--radius-container)] bg-error-100-900 p-4">
+						<p class="text-sm text-error-700-300">{getWorldBuilderError()}</p>
+					</div>
+				{/if}
+			</div>
+		</div>
+
+		<!-- Right-side input panel -->
+		<aside class="w-80 border-l border-surface-200-800 flex flex-col p-4 bg-surface-50-950">
+			<div class="flex items-center justify-between mb-3">
+				<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">World Builder</span>
+				<button
+					class="text-xs text-surface-500 hover:text-error-500 transition-colors"
+					type="button"
+					onclick={exitWorldBuilderMode}
+				>
+					Exit
+				</button>
+			</div>
+
+			<textarea
+				class="input flex-1 resize-none text-sm leading-relaxed"
+				placeholder="Describe your world...&#10;&#10;Enter to send, Shift+Enter for new line."
+				aria-label="World builder input"
+				bind:value={input}
+				onkeydown={handleKeydown}
+				disabled={getIsWorldBuilderStreaming() || getIsWorldBuilderComplete()}
+			></textarea>
+
+			<div class="mt-3">
+				{#if getIsWorldBuilderStreaming()}
+					<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopWorldBuilderStreaming}>
+						Stop
+					</button>
+				{:else if !getIsWorldBuilderComplete()}
+					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}>
+						Send
+					</button>
+				{/if}
+			</div>
+		</aside>
 	{:else if !getActiveActLineId()}
 		<!-- Empty state — no act line selected -->
 		<div class="flex-1 flex items-center justify-center">

@@ -27,15 +27,18 @@
 		loadActLineMessages,
 		clearMessages
 	} from '$lib/ai/chat.svelte';
+	import {
+		enterWorldBuilderMode,
+		exitWorldBuilderMode,
+		getIsActive as getIsWorldBuilderActive
+	} from '$lib/ai/world-builder.svelte';
 
 	let { children } = $props();
 	let appError = $state<string | null>(null);
 	let initStatus = $state('Starting...');
 	let appReady = $state(false);
-	let newStoryName = $state('');
 	let newActName = $state('');
 	let newActLineName = $state('');
-	let showNewStory = $state(false);
 	let showNewAct = $state(false);
 	let showNewActLine = $state(false);
 
@@ -58,30 +61,33 @@
 	});
 
 	async function handleSelectStory(id: string) {
+		if (getIsWorldBuilderActive()) exitWorldBuilderMode();
 		await selectStory(id);
 		clearMessages();
 		goto('/');
 	}
 
 	async function handleSelectAct(id: string) {
+		if (getIsWorldBuilderActive()) exitWorldBuilderMode();
 		await selectAct(id);
 		clearMessages();
 		goto('/');
 	}
 
 	async function handleSelectActLine(id: string) {
+		if (getIsWorldBuilderActive()) exitWorldBuilderMode();
 		await selectActLine(id);
 		await loadActLineMessages(id);
 		goto('/');
 	}
 
-	async function handleCreateStory() {
-		const name = newStoryName.trim();
-		if (!name) return;
-		await createStory(name);
-		newStoryName = '';
-		showNewStory = false;
+	async function handleNewStory() {
+		exitWorldBuilderMode();
+		clearMessages();
+		await enterWorldBuilderMode();
+		goto('/');
 	}
+
 
 	async function handleCreateAct() {
 		const name = newActName.trim();
@@ -242,27 +248,13 @@
 				{/each}
 
 				<!-- Add story button -->
-				{#if showNewStory}
-					<div class="p-1">
-						<div class="flex gap-1">
-							<input
-								class="input text-sm flex-1"
-								placeholder="Story name"
-								bind:value={newStoryName}
-								onkeydown={(e) => e.key === 'Enter' && handleCreateStory()}
-							/>
-							<button class="text-sm text-primary-500" type="button" onclick={handleCreateStory}>+</button>
-						</div>
-					</div>
-				{:else}
-					<button
-						class="w-full p-3 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
-						type="button"
-						onclick={() => (showNewStory = true)}
-					>
-						+ New Story
-					</button>
-				{/if}
+				<button
+					class="w-full p-3 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+					type="button"
+					onclick={handleNewStory}
+				>
+					+ New Story
+				</button>
 			</nav>
 
 			<!-- Sidebar footer -->
