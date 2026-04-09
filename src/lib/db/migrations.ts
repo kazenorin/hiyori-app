@@ -59,6 +59,9 @@ const migrationStatements: string[][] = [
 			created_at INTEGER NOT NULL
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_story_folders_folder ON story_folders(folder_name)`
+	],
+	[
+		`ALTER TABLE act_line_meta ADD COLUMN is_main_line INTEGER NOT NULL DEFAULT 0`
 	]
 ];
 

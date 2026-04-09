@@ -26,14 +26,12 @@ async function traceStoryMessages(storyId: string): Promise<{ role: 'user' | 'as
 	// Find act with highest act_number
 	const latestAct = acts.reduce((a, b) => (a.actNumber > b.actNumber ? a : b));
 
-	// Get first act line by creation date
-	const actLines = await dbActLines.getActLinesForAct(latestAct.id);
-	if (actLines.length === 0) return [];
-
-	const firstActLine = actLines[0]; // already sorted by created_at ASC
+	// Get main act line (or first by creation date as fallback)
+	const mainLine = await dbActLines.getMainLineForAct(latestAct.id);
+	if (!mainLine) return [];
 
 	const results: { role: 'user' | 'assistant'; content: string }[] = [];
-	let currentActLineId: string | null = firstActLine.id;
+	let currentActLineId: string | null = mainLine.id;
 	let currentAct: dbActs.Act | null = latestAct;
 
 	while (currentActLineId && currentAct) {

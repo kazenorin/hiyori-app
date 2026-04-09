@@ -129,7 +129,8 @@ export async function createAct(
 }
 
 export async function createActLine(actId: string, name: string): Promise<dbActLines.ActLineMeta> {
-	const line = await dbActLines.createActLine(crypto.randomUUID(), actId, name);
+	const isFirst = actLines.length === 0;
+	const line = await dbActLines.createActLine(crypto.randomUUID(), actId, name, isFirst);
 	actLines = [...actLines, line];
 	return line;
 }

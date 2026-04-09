@@ -5,6 +5,7 @@ export interface ActLineMeta {
 	id: string;
 	actId: string;
 	name: string;
+	isMainLine: boolean;
 	createdAt: number;
 }
 
@@ -12,6 +13,7 @@ interface ActLineMetaRow {
 	id: string;
 	act_id: string;
 	name: string;
+	is_main_line: number;
 	created_at: number;
 }
 
@@ -42,20 +44,21 @@ function rowToActLineMeta(row: ActLineMetaRow): ActLineMeta {
 		id: row.id,
 		actId: row.act_id,
 		name: row.name,
+		isMainLine: row.is_main_line === 1,
 		createdAt: row.created_at
 	};
 }
 
 // === act_line_meta operations ===
 
-export async function createActLine(id: string, actId: string, name: string): Promise<ActLineMeta> {
+export async function createActLine(id: string, actId: string, name: string, isMainLine: boolean = false): Promise<ActLineMeta> {
 	const db = getDatabase();
 	const now = Date.now();
 	await db.execute(
-		'INSERT INTO act_line_meta (id, act_id, name, created_at) VALUES ($1, $2, $3, $4)',
-		[id, actId, name, now]
+		'INSERT INTO act_line_meta (id, act_id, name, is_main_line, created_at) VALUES ($1, $2, $3, $4, $5)',
+		[id, actId, name, isMainLine ? 1 : 0, now]
 	);
-	return { id, actId, name, createdAt: now };
+	return { id, actId, name, isMainLine, createdAt: now };
 }
 
 export async function getActLine(id: string): Promise<ActLineMeta | null> {
@@ -74,6 +77,21 @@ export async function getActLinesForAct(actId: string): Promise<ActLineMeta[]> {
 		[actId]
 	);
 	return rows.map(rowToActLineMeta);
+}
+
+export async function getMainLineForAct(actId: string): Promise<ActLineMeta | null> {
+	const db = getDatabase();
+	const rows = await db.select<ActLineMetaRow[]>(
+		'SELECT * FROM act_line_meta WHERE act_id = $1 AND is_main_line = 1 LIMIT 1',
+		[actId]
+	);
+	if (rows.length > 0) return rowToActLineMeta(rows[0]);
+	// Fallback: return first by creation date
+	const fallback = await db.select<ActLineMetaRow[]>(
+		'SELECT * FROM act_line_meta WHERE act_id = $1 ORDER BY created_at ASC LIMIT 1',
+		[actId]
+	);
+	return fallback.length > 0 ? rowToActLineMeta(fallback[0]) : null;
 }
 
 export async function deleteActLine(id: string): Promise<void> {
@@ -138,8 +156,8 @@ export async function branchFromLine(
 ): Promise<ActLineMeta> {
 	const db = getDatabase();
 
-	// Create new act line meta
-	const lineMeta = await createActLine(newLineId, actId, name);
+	// Create new act line meta (branches are never main lines)
+	const lineMeta = await createActLine(newLineId, actId, name, false);
 
 	// Copy entries up to fromSequence
 	const entries = await db.select<ActLineEntryRow[]>(
