@@ -5,6 +5,8 @@ import { executeStream, type StreamResult } from '$lib/ai/streaming';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
 import { logMainChat } from '$lib/logging/chat-logger';
+import { createGameDataStreamParser } from '$lib/ai/game-data-parser';
+import type { GameData } from '$lib/db/messages';
 
 export interface MessageMetadata {
 	model: string;
@@ -21,6 +23,7 @@ export interface Message {
 	content: string;
 	reasoning?: string;
 	metadata?: MessageMetadata;
+	gameData?: GameData;
 }
 
 let messages = $state<Message[]>([]);
@@ -47,7 +50,8 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 		role: m.role,
 		content: m.content,
 		reasoning: m.reasoning,
-		metadata: parseMetadata(m.metadata)
+		metadata: parseMetadata(m.metadata),
+		gameData: m.gameData
 	}));
 	error = null;
 }
@@ -91,14 +95,16 @@ async function persistMessage(
 	assistantId: string,
 	content: string,
 	reasoning: string | undefined,
-	metadata: MessageMetadata | undefined
+	metadata: MessageMetadata | undefined,
+	gameData?: GameData
 ): Promise<void> {
 	await dbMessages.createMessage(
 		assistantId,
 		'assistant',
 		content,
 		reasoning,
-		metadata ? JSON.stringify(metadata) : undefined
+		metadata ? JSON.stringify(metadata) : undefined,
+		gameData
 	);
 	const seq = await dbActLines.getNextSequence(actLineId);
 	await dbActLines.addMessageToLine(actLineId, assistantId, seq);
@@ -122,6 +128,8 @@ async function streamChatResponse(
 
 	await logMainChat({ systemPrompt, narrationContent, messages: history });
 
+	const parser = createGameDataStreamParser();
+
 	const result = await executeStream(
 		{
 			model,
@@ -137,10 +145,19 @@ async function streamChatResponse(
 		},
 		{
 			onTextDelta: (text) => {
-				messages[assistantIdx] = {
-					...messages[assistantIdx],
-					content: messages[assistantIdx].content + text
-				};
+				const output = parser.feed(text);
+				if (output.text) {
+					messages[assistantIdx] = {
+						...messages[assistantIdx],
+						content: messages[assistantIdx].content + output.text
+					};
+				}
+				if (output.gameData) {
+					messages[assistantIdx] = {
+						...messages[assistantIdx],
+						gameData: output.gameData
+					};
+				}
 			},
 			onReasoningDelta: (text) => {
 				messages[assistantIdx] = {
@@ -150,6 +167,21 @@ async function streamChatResponse(
 			}
 		}
 	);
+
+	// Flush any remaining buffered content
+	const flushed = parser.flush();
+	if (flushed.text) {
+		messages[assistantIdx] = {
+			...messages[assistantIdx],
+			content: messages[assistantIdx].content + flushed.text
+		};
+	}
+	if (flushed.gameData) {
+		messages[assistantIdx] = {
+			...messages[assistantIdx],
+			gameData: flushed.gameData
+		};
+	}
 
 	// Clear empty reasoning if none was generated
 	const reasoning = result.reasoning || undefined;
@@ -162,7 +194,9 @@ async function streamChatResponse(
 		metadata
 	};
 
-	await persistMessage(actLineId, assistantId, result.content, reasoning, metadata);
+	// Persist with stripped content (not result.content)
+	const msg = messages[assistantIdx];
+	await persistMessage(actLineId, assistantId, msg.content, reasoning, metadata, msg.gameData);
 }
 
 /**
@@ -173,7 +207,7 @@ function handleStreamError(err: unknown, assistantId: string, actLineId: string)
 		// User cancelled — persist partial content (fire and forget)
 		const partial = messages.find((m) => m.id === assistantId);
 		if (partial && partial.content) {
-			persistMessage(actLineId, assistantId, partial.content, partial.reasoning || undefined, undefined);
+			persistMessage(actLineId, assistantId, partial.content, partial.reasoning || undefined, undefined, partial.gameData);
 		}
 	} else {
 		error = err instanceof Error ? err.message : 'An unexpected error occurred.';
@@ -234,6 +268,15 @@ export async function sendMessage(actLineId: string, text: string, systemPrompt?
 
 export function stopStreaming(): void {
 	abortController?.abort();
+}
+
+export function getLatestDecisions(): string[] {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		if (messages[i].role === 'assistant' && messages[i].gameData?.decisions?.length) {
+			return messages[i].gameData!.decisions;
+		}
+	}
+	return [];
 }
 
 export async function regenerateLastResponse(actLineId: string, systemPrompt?: string, narrationContent?: string): Promise<void> {

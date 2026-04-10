@@ -9,7 +9,8 @@
 		regenerateLastResponse,
 		deleteLastExchange,
 		getForkSequence,
-		loadActLineMessages
+		loadActLineMessages,
+		getLatestDecisions
 	} from '$lib/ai/chat.svelte';
 	import {
 		getIsActive as getIsWorldBuilderActive,
@@ -38,6 +39,8 @@
 	let input = $state('');
 	let chatContainer: HTMLDivElement;
 	let copiedId = $state<string | null>(null);
+	let latestDecisions = $derived(getLatestDecisions());
+	let lastAssistantIdx = $derived(getMessages().reduce((acc: number, m, i) => m.role === 'assistant' ? i : acc, -1));
 
 	async function handleCopy(messageId: string, content: string) {
 		await navigator.clipboard.writeText(content);
@@ -72,6 +75,7 @@
 
 		if (getIsWorldBuilderActive()) {
 			input = '';
+			stuckToBottom = true;
 			sendWorldBuilderMessage(text);
 			return;
 		}
@@ -79,6 +83,7 @@
 		const actLineId = getActiveActLineId();
 		if (!actLineId) return;
 		input = '';
+		stuckToBottom = true;
 		sendMessage(actLineId, text, getActiveSystemPrompt() ?? undefined, getActiveNarrationContext() ?? undefined);
 	}
 
@@ -105,32 +110,52 @@
 		}
 	}
 
+	function handleDecisionClick(decision: string) {
+		if (getIsStreaming()) return;
+		const actLineId = getActiveActLineId();
+		if (!actLineId) return;
+		stuckToBottom = true;
+		sendMessage(actLineId, decision, getActiveSystemPrompt() ?? undefined, getActiveNarrationContext() ?? undefined);
+	}
+
+	let streamingCursor: HTMLSpanElement | null = $state(null);
+	let stuckToBottom = $state(true);
+
 	function scrollToBottom() {
-		if (chatContainer) {
-			chatContainer.scrollTop = chatContainer.scrollHeight;
-		}
-	}
-
-	function smartScrollToBottom() {
 		if (!chatContainer) return;
-		const { scrollTop, scrollHeight, clientHeight } = chatContainer;
-		const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-		// Only auto-scroll if within 150px of bottom
-		if (distanceFromBottom <= 150) {
-			chatContainer.scrollTop = scrollHeight;
-		}
+		chatContainer.scrollTop = chatContainer.scrollHeight;
 	}
 
+	// IntersectionObserver watches the streaming cursor — if it's visible,
+	// user is at the bottom (stuckToBottom = true). If not, user scrolled up (detached).
 	$effect(() => {
-		getMessages();
-		getIsStreaming();
-		setTimeout(smartScrollToBottom, 0);
+		const cursor = streamingCursor;
+		const container = chatContainer;
+		if (!cursor || !container) return;
+
+		const observer = new IntersectionObserver(
+			(entries) => {
+				stuckToBottom = entries[0].isIntersecting;
+			},
+			{ root: container, threshold: 0 }
+		);
+
+		observer.observe(cursor);
+		return () => observer.disconnect();
 	});
 
+	// MutationObserver watches DOM changes and scrolls to bottom only when stuck.
 	$effect(() => {
-		getWorldBuilderMessages();
-		getIsWorldBuilderStreaming();
-		setTimeout(smartScrollToBottom, 0);
+		if (!chatContainer) return;
+
+		const observer = new MutationObserver(() => {
+			if (stuckToBottom) {
+				chatContainer.scrollTop = chatContainer.scrollHeight;
+			}
+		});
+
+		observer.observe(chatContainer, { childList: true, subtree: true, characterData: true });
+		return () => observer.disconnect();
 	});
 </script>
 
@@ -289,7 +314,6 @@
 								</div>
 							</div>
 						{:else}
-							{@const lastAssistantIdx = getMessages().reduce((acc, m, idx) => m.role === 'assistant' ? idx : acc, -1)}
 							<div
 								class="rounded-[var(--radius-container)] bg-surface-50-950 p-5 shadow-message"
 							>
@@ -328,7 +352,7 @@
 									</div>
 								{/if}
 								{#if getIsStreaming() && message === getMessages().at(-1)}
-									<span class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
+									<span bind:this={streamingCursor} class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
 								{/if}
 								{#if message.metadata}
 									<pre class="mt-4 pt-3 border-t border-surface-200-800 text-xs text-surface-500 font-mono leading-relaxed">model:       {message.metadata.model}
@@ -365,6 +389,20 @@ duration:    {message.metadata.durationMs}ms</pre>
 							</div>
 						{/if}
 					{/each}
+				{/if}
+
+				{#if latestDecisions.length > 0 && !getIsStreaming()}
+					<div class="max-w-2xl mx-auto space-y-2 mt-4">
+						{#each latestDecisions as decision, i}
+							<button
+								class="btn preset-filled-primary-500 w-full text-left"
+								type="button"
+								onclick={() => handleDecisionClick(decision)}
+							>
+								{i + 1}. {decision}
+							</button>
+						{/each}
+					</div>
 				{/if}
 
 				{#if getError()}
