@@ -2,6 +2,7 @@ import { initDatabase } from '$lib/db/database';
 import { runMigrations } from '$lib/db/migrations';
 import { loadStories, restoreState } from '$lib/stores/stories.svelte';
 import { loadWorldTemplate, loadGenerateWorldFromChatPrompt, loadGenerateWorldFromChatSystemPrompt, loadWorldBuilderSystemPrompt } from '$lib/fs/world-prompts';
+import { initLogging, log } from '$lib/logging/logger';
 
 let initialized = false;
 let initializing = false;
@@ -11,33 +12,34 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 	initializing = true;
 
 	try {
+		await initLogging();
+		log.info('init', 'Initializing database...');
 		onStatus?.('Initializing database...');
-		console.log('[init] Initializing database...');
 		await initDatabase();
 
+		log.info('init', 'Running migrations...');
 		onStatus?.('Running migrations...');
-		console.log('[init] Running migrations...');
 		await runMigrations();
 
+		log.info('init', 'Loading world prompts...');
 		onStatus?.('Loading world prompts...');
-		console.log('[init] Loading world prompts...');
 		await loadWorldTemplate();
 		await loadGenerateWorldFromChatPrompt();
 		await loadGenerateWorldFromChatSystemPrompt();
 		await loadWorldBuilderSystemPrompt();
 
+		log.info('init', 'Loading stories...');
 		onStatus?.('Loading stories...');
-		console.log('[init] Loading stories...');
 		await loadStories();
 
+		log.info('init', 'Restoring state...');
 		onStatus?.('Restoring state...');
-		console.log('[init] Restoring state...');
 		await restoreState();
 
-		console.log('[init] Done');
+		log.info('init', 'Done');
 		initialized = true;
 	} catch (err) {
-		console.error('[init] Failed:', err);
+		log.error('init', 'Failed', err);
 		throw err;
 	} finally {
 		initializing = false;

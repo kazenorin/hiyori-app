@@ -7,6 +7,7 @@ import {
 	BaseDirectory
 } from '@tauri-apps/plugin-fs';
 import { SYSTEM_PROMPT_FILE, getDefaultSystemPromptContent } from './system-prompt';
+import { log } from '$lib/logging/logger';
 import { NARRATION_TEMPLATE_FILE, getDefaultNarrationTemplateContent } from './narration-template';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { generateWorld } from '$lib/ai/world-generator';
@@ -160,7 +161,7 @@ export async function ensureWorldFile(storyId: string, storyName: string): Promi
 	try {
 		await generateWorld(storyId, folderName);
 	} catch (err) {
-		console.error('[world] Failed to generate world.md:', err);
+		log.error('world', 'Failed to generate world.md', err);
 	}
 }
 

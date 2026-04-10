@@ -1,3 +1,4 @@
+import { log } from '$lib/logging/logger';
 import defaultSystemPrompt from './default-system-prompt.md?raw';
 import {
 	readTextFile,
@@ -24,7 +25,7 @@ export async function loadSystemPrompt(): Promise<string> {
 
 		return await readTextFile(SYSTEM_PROMPT_FILE, { baseDir: BaseDirectory.AppData });
 	} catch (err) {
-		console.error('Failed to load system prompt:', err);
+		log.error('system-prompt', 'Failed to load system prompt', err);
 		return defaultSystemPrompt;
 	}
 }

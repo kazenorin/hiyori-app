@@ -1,3 +1,4 @@
+import { log } from '$lib/logging/logger';
 import defaultNarrationTemplate from './default-narration-template.md?raw';
 import {
 	readTextFile,
@@ -22,7 +23,7 @@ export async function loadNarrationTemplate(): Promise<string> {
 
 		return await readTextFile(NARRATION_TEMPLATE_FILE, { baseDir: BaseDirectory.AppData });
 	} catch (err) {
-		console.error('Failed to load narration template:', err);
+		log.error('narration', 'Failed to load narration template', err);
 		return defaultNarrationTemplate;
 	}
 }

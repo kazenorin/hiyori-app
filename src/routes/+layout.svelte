@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { initializeApp } from '$lib/app/init.svelte';
+	import { log } from '$lib/logging/logger';
 	import {
 		getStories,
 		getActs,
@@ -44,9 +45,9 @@
 
 	onMount(async () => {
 		try {
-			console.log('[init] Starting app initialization...');
+			log.info('init', 'Starting app initialization...');
 			await initializeApp((status) => (initStatus = status));
-			console.log('[init] App initialized successfully');
+			log.info('init', 'App initialized successfully');
 			initStatus = 'Loading messages...';
 			// Load messages for the restored act line
 			const lineId = getActiveActLineId();
@@ -55,7 +56,7 @@
 			}
 			appReady = true;
 		} catch (err) {
-			console.error('[init] Failed:', err);
+			log.error('init', 'Failed', err);
 			appError = err instanceof Error ? err.message : String(err);
 		}
 	});

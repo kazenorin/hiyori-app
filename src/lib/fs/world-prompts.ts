@@ -1,3 +1,4 @@
+import { log } from '$lib/logging/logger';
 import defaultWorldTemplate from './default-world-template.md?raw';
 import defaultGenerateWorldFromChatPrompt from './default-generate-world-from-chat-prompt.md?raw';
 import defaultGenerateWorldFromChatSystemPrompt from './default-generate-world-from-chat-system-prompt.md?raw';
@@ -34,7 +35,7 @@ export async function loadWorldTemplate(): Promise<string> {
 	try {
 		return await ensureAndLoad(WORLD_TEMPLATE_FILE, defaultWorldTemplate);
 	} catch (err) {
-		console.error('Failed to load world template:', err);
+		log.error('prompts', 'Failed to load world template', err);
 		return defaultWorldTemplate;
 	}
 }
@@ -43,7 +44,7 @@ export async function loadGenerateWorldFromChatPrompt(): Promise<string> {
 	try {
 		return await ensureAndLoad(GENERATE_WORLD_FROM_CHAT_FILE, defaultGenerateWorldFromChatPrompt);
 	} catch (err) {
-		console.error('Failed to load generate world from chat prompt:', err);
+		log.error('prompts', 'Failed to load generate world from chat prompt', err);
 		return defaultGenerateWorldFromChatPrompt;
 	}
 }
@@ -52,7 +53,7 @@ export async function loadGenerateWorldFromChatSystemPrompt(): Promise<string> {
 	try {
 		return await ensureAndLoad(GENERATE_WORLD_FROM_CHAT_SYSTEM_FILE, defaultGenerateWorldFromChatSystemPrompt);
 	} catch (err) {
-		console.error('Failed to load generate world from chat system prompt:', err);
+		log.error('prompts', 'Failed to load generate world from chat system prompt', err);
 		return defaultGenerateWorldFromChatSystemPrompt;
 	}
 }
@@ -61,7 +62,7 @@ export async function loadWorldBuilderSystemPrompt(): Promise<string> {
 	try {
 		return await ensureAndLoad(WORLD_BUILDER_SYSTEM_FILE, defaultWorldBuilderSystemPrompt);
 	} catch (err) {
-		console.error('Failed to load world builder system prompt:', err);
+		log.error('prompts', 'Failed to load world builder system prompt', err);
 		return defaultWorldBuilderSystemPrompt;
 	}
 }
