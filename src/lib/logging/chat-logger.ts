@@ -44,16 +44,16 @@ export async function logMainChat(context: {
 }): Promise<void> {
 	const parts: string[] = [];
 
-	parts.push(`SYSTEM PROMPT:\n${context.systemPrompt}`);
+	parts.push(`=== SYSTEM PROMPT ===\n${context.systemPrompt}`);
 
 	if (context.narrationContent) {
-		parts.push(`NARRATION CONTEXT (hidden):\n${context.narrationContent}`);
+		parts.push(`=== NARRATION CONTEXT ===\n${context.narrationContent}`);
 	}
 
 	const messagesStr = context.messages
-		.map((m) => `[${m.role.toUpperCase()}]\n${m.content}`)
+		.map((m) => `--- [${m.role.toUpperCase()}] ---\n${m.content}`)
 		.join('\n\n');
-	parts.push(`MESSAGES:\n${messagesStr}`);
+	parts.push(`=== MESSAGES ===\n${messagesStr}`);
 
 	await appendToLog(MAIN_CHAT_LOG, formatEntry('DEBUG', 'Main Chat Context', parts.join('\n\n')));
 }
@@ -68,12 +68,12 @@ export async function logWorldBuilderChat(context: {
 }): Promise<void> {
 	const parts: string[] = [];
 
-	parts.push(`SYSTEM PROMPT:\n${context.systemPrompt}`);
+	parts.push(`=== SYSTEM PROMPT ===\n${context.systemPrompt}`);
 
 	const messagesStr = context.messages
 		.map((m) => `[${m.role.toUpperCase()}]\n${m.content}`)
 		.join('\n\n');
-	parts.push(`MESSAGES:\n${messagesStr}`);
+	parts.push(`=== MESSAGES ===\n${messagesStr}`);
 
 	await appendToLog(WORLD_BUILDER_LOG, formatEntry('DEBUG', 'World Builder Chat Context', parts.join('\n\n')));
 }

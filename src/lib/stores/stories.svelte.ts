@@ -62,7 +62,11 @@ export function getActiveNarrationContext(): string | null {
 	if (!template && !world) return null;
 	if (!template) return world;
 	if (!world) return template;
-	return template + '\n\n---\n\n' + world;
+    const act = acts.find((a) => a.id === activeActId);
+    const actNumber = act?.actNumber ?? 1;
+
+	const startPrompt = 'Gamemaster, it is Act ' + actNumber + ' now. Start the game.';
+	return template + '\n\n---\n\n' + world + '\n\n ---\n\n' + startPrompt;
 }
 
 export function getActiveStory(): dbStories.Story | null {
