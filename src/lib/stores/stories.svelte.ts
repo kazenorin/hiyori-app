@@ -2,7 +2,7 @@ import * as dbStories from '$lib/db/stories';
 import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import * as dbAppState from '$lib/db/app-state';
-import { loadStorySystemPrompt, ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-prompts';
+import { loadStorySystemPrompt, loadStoryNarrationTemplate, loadStoryWorldContent, ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-prompts';
 import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 
 export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
@@ -16,6 +16,8 @@ let activeActLineId = $state<string | null>(null);
 let isLoading = $state(true);
 let isSelectingStory = $state(false);
 let activeSystemPrompt = $state<string | null>(null);
+let activeNarrationTemplate = $state<string | null>(null);
+let activeWorldContent = $state<string | null>(null);
 
 export function getStories(): dbStories.Story[] {
 	return stories;
@@ -43,6 +45,24 @@ export function getIsSelectingStory(): boolean {
 }
 export function getActiveSystemPrompt(): string | null {
 	return activeSystemPrompt;
+}
+export function getActiveNarrationTemplate(): string | null {
+	return activeNarrationTemplate;
+}
+export function getActiveWorldContent(): string | null {
+	return activeWorldContent;
+}
+/**
+ * Combined narration context: narration template + world content.
+ * This is what gets prepended as a hidden message on every AI call.
+ */
+export function getActiveNarrationContext(): string | null {
+	const template = activeNarrationTemplate;
+	const world = activeWorldContent;
+	if (!template && !world) return null;
+	if (!template) return world;
+	if (!world) return template;
+	return template + '\n\n---\n\n' + world;
 }
 
 export function getActiveStory(): dbStories.Story | null {
@@ -83,7 +103,9 @@ export async function selectStory(storyId: string | null): Promise<void> {
 		const story = stories.find((s) => s.id === storyId);
 		if (story) {
 			activeSystemPrompt = await loadStorySystemPrompt(storyId, story.name);
+			activeNarrationTemplate = await loadStoryNarrationTemplate(storyId, story.name);
 			await ensureWorldFile(storyId, story.name);
+			activeWorldContent = await loadStoryWorldContent(storyId, story.name);
 		}
 	}
 	isSelectingStory = false;

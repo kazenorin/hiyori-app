@@ -4,7 +4,8 @@
 		getIsStreaming,
 		getError,
 		sendMessage,
-		stopStreaming
+		stopStreaming,
+		sendInitialNarration
 	} from '$lib/ai/chat.svelte';
 	import {
 		getIsActive as getIsWorldBuilderActive,
@@ -22,7 +23,8 @@
 		getActiveActLineId,
 		getActiveSystemPrompt,
 		getIsSelectingStory,
-		createStoryFromWorldBuilder
+		createStoryFromWorldBuilder,
+		getActiveNarrationContext
 	} from '$lib/stores/stories.svelte';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
 
@@ -42,15 +44,23 @@
 		const actLineId = getActiveActLineId();
 		if (!actLineId) return;
 		input = '';
-		sendMessage(actLineId, text, getActiveSystemPrompt() ?? undefined);
+		sendMessage(actLineId, text, getActiveSystemPrompt() ?? undefined, getActiveNarrationContext() ?? undefined);
 	}
 
 	async function handleCreateFromWorldBuilder() {
 		const name = getWorldBuilderStoryName();
-		const content = getWorldBuilderContent();
+		const worldContent = getWorldBuilderContent();
 		if (!name) return;
-		await createStoryFromWorldBuilder(name, content ?? '');
+
+		await createStoryFromWorldBuilder(name, worldContent ?? '');
 		exitWorldBuilderMode();
+
+		// Send narration template as hidden developer message to trigger opening narrative
+		const actLineId = getActiveActLineId();
+		const narrationContext = getActiveNarrationContext();
+		if (actLineId && narrationContext) {
+			sendInitialNarration(actLineId, narrationContext, getActiveSystemPrompt() ?? undefined);
+		}
 	}
 
 	function handleKeydown(e: KeyboardEvent) {

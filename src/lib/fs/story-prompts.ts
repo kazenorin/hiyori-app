@@ -7,6 +7,7 @@ import {
 	BaseDirectory
 } from '@tauri-apps/plugin-fs';
 import { SYSTEM_PROMPT_FILE, getDefaultSystemPromptContent } from './system-prompt';
+import { NARRATION_TEMPLATE_FILE, getDefaultNarrationTemplateContent } from './narration-template';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { generateWorld } from '$lib/ai/world-generator';
 
@@ -160,5 +161,52 @@ export async function ensureWorldFile(storyId: string, storyName: string): Promi
 		await generateWorld(storyId, folderName);
 	} catch (err) {
 		console.error('[world] Failed to generate world.md:', err);
+	}
+}
+
+/**
+ * Ensure a story folder contains narration-template.md.
+ */
+export async function ensureNarrationTemplateInFolder(storyId: string, storyName: string): Promise<void> {
+	const folderName = await resolveStoryFolder(storyId, storyName);
+
+	const templatePath = `${folderName}/${NARRATION_TEMPLATE_FILE}`;
+	const templateExists = await exists(templatePath, { baseDir: BaseDirectory.AppData });
+	if (!templateExists) {
+		const defaultContent = await getDefaultNarrationTemplateContent();
+		await writeTextFile(templatePath, defaultContent, { baseDir: BaseDirectory.AppData });
+	}
+}
+
+/**
+ * Load the narration template for a specific story.
+ * Ensures the file exists in the story folder, then returns the content.
+ */
+export async function loadStoryNarrationTemplate(storyId: string, storyName: string): Promise<string> {
+	await ensureNarrationTemplateInFolder(storyId, storyName);
+
+	const folderName = await dbStoryFolders.getStoryFolder(storyId) ?? canonicalName(storyName);
+	const templatePath = `${folderName}/${NARRATION_TEMPLATE_FILE}`;
+
+	try {
+		return await readTextFile(templatePath, { baseDir: BaseDirectory.AppData });
+	} catch {
+		return await getDefaultNarrationTemplateContent();
+	}
+}
+
+/**
+ * Load the world.md content for a specific story.
+ * Returns null if the file doesn't exist.
+ */
+export async function loadStoryWorldContent(storyId: string, storyName: string): Promise<string | null> {
+	const folderName = await dbStoryFolders.getStoryFolder(storyId) ?? await resolveStoryFolder(storyId, storyName);
+	const worldPath = `${folderName}/world.md`;
+	try {
+		const worldExists = await exists(worldPath, { baseDir: BaseDirectory.AppData });
+		if (!worldExists) return null;
+		return await readTextFile(worldPath, { baseDir: BaseDirectory.AppData });
+	} catch {
+		return null;
 	}
 }

@@ -57,7 +57,7 @@ export function clearMessages(): void {
 	isStreaming = false;
 }
 
-export async function sendMessage(actLineId: string, text: string, systemPrompt?: string): Promise<void> {
+export async function sendMessage(actLineId: string, text: string, systemPrompt?: string, narrationContent?: string): Promise<void> {
 	const settings = getSettings();
 
 	if (!settings.apiKey) {
@@ -101,9 +101,11 @@ export async function sendMessage(actLineId: string, text: string, systemPrompt?
 		const prompt = systemPrompt ?? await loadSystemPrompt();
 
 		// Build message history excluding the empty assistant placeholder
-		const history = messages
+		const narrationMsg = narrationContent ? [{ role: 'user' as const, content: narrationContent }] : [];
+		const existingMsgs = messages
 			.filter((m) => m.id !== assistantId)
 			.map((m) => ({ role: m.role, content: m.content }));
+		const history = [...narrationMsg, ...existingMsgs];
 
 		const result = streamText({
 			model,
@@ -197,4 +199,130 @@ export async function sendMessage(actLineId: string, text: string, systemPrompt?
 
 export function stopStreaming(): void {
 	abortController?.abort();
+}
+
+/**
+ * Send the narration template as a hidden developer message.
+ * The developer message is never persisted or shown in the UI.
+ * Only the assistant's response (the opening narrative) is persisted and displayed.
+ */
+export async function sendInitialNarration(
+	actLineId: string,
+	narrationContent: string,
+	systemPrompt?: string
+): Promise<void> {
+	const settings = getSettings();
+
+	if (!settings.apiKey || !settings.model) {
+		error = 'Please configure your API key and model in Settings.';
+		return;
+	}
+
+	error = null;
+
+	const assistantId = crypto.randomUUID();
+	const assistantMessage: Message = {
+		id: assistantId,
+		role: 'assistant',
+		content: '',
+		reasoning: ''
+	};
+
+	// Only the assistant message goes into the reactive array — never the developer message
+	messages = [assistantMessage];
+	isStreaming = true;
+	abortController = new AbortController();
+	const startTime = Date.now();
+
+	try {
+		const model = createModel(settings);
+		const prompt = systemPrompt ?? await loadSystemPrompt();
+
+		// Narration message is ephemeral — only in the history sent to the AI, never persisted or shown
+		const history = [{ role: 'user' as const, content: narrationContent }];
+
+		const result = streamText({
+			model,
+			messages: history,
+			system: prompt,
+			abortSignal: abortController.signal,
+			providerOptions: {
+				openai: {
+					reasoningEffort: 'medium',
+					reasoningSummary: 'detailed'
+				}
+			}
+		});
+
+		for await (const part of result.fullStream) {
+			switch (part.type) {
+				case 'reasoning-delta':
+					messages = messages.map((m) =>
+						m.id === assistantId
+							? { ...m, reasoning: (m.reasoning ?? '') + part.text }
+							: m
+					);
+					break;
+				case 'text-delta':
+					messages = messages.map((m) =>
+						m.id === assistantId ? { ...m, content: m.content + part.text } : m
+					);
+					break;
+			}
+		}
+
+		const usage = await result.usage;
+		const finishReason = await result.finishReason;
+		const durationMs = Date.now() - startTime;
+
+		const finalMessage = messages.find((m) => m.id === assistantId);
+		const reasoning = finalMessage?.reasoning || undefined;
+
+		const metadata: MessageMetadata = {
+			model: settings.model,
+			finishReason,
+			promptTokens: usage.inputTokens ?? 0,
+			completionTokens: usage.outputTokens ?? 0,
+			totalTokens: usage.totalTokens ?? 0,
+			durationMs
+		};
+
+		messages = messages.map((m) =>
+			m.id === assistantId
+				? { ...m, reasoning, metadata }
+				: m
+		);
+
+		// Persist ONLY the assistant message
+		await dbMessages.createMessage(
+			assistantId,
+			'assistant',
+			finalMessage?.content ?? '',
+			reasoning,
+			JSON.stringify(metadata)
+		);
+		const seq = await dbActLines.getNextSequence(actLineId);
+		await dbActLines.addMessageToLine(actLineId, assistantId, seq);
+	} catch (err: unknown) {
+		if (err instanceof DOMException && err.name === 'AbortError') {
+			const partial = messages.find((m) => m.id === assistantId);
+			if (partial && partial.content) {
+				await dbMessages.createMessage(
+					assistantId,
+					'assistant',
+					partial.content,
+					partial.reasoning || undefined
+				);
+				const seq = await dbActLines.getNextSequence(actLineId);
+				await dbActLines.addMessageToLine(actLineId, assistantId, seq);
+			}
+		} else {
+			const msg = err instanceof Error ? err.message : 'An unexpected error occurred.';
+			error = msg;
+			messages = messages.filter((m) => m.id !== assistantId);
+		}
+	} finally {
+		isStreaming = false;
+		abortController = null;
+	}
 }
