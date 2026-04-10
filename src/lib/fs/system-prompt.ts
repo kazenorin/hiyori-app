@@ -25,7 +25,7 @@ export async function loadSystemPrompt(): Promise<string> {
 
 		return await readTextFile(SYSTEM_PROMPT_FILE, { baseDir: BaseDirectory.AppData });
 	} catch (err) {
-		log.error('system-prompt', 'Failed to load system prompt', err);
+		await log.error('system-prompt', 'Failed to load system prompt', err);
 		return defaultSystemPrompt;
 	}
 }

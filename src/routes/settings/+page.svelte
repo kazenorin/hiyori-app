@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
-	import type { Provider, ApiType } from '$lib/stores/settings.svelte';
+	import type { Provider, ApiType, LogLevel } from '$lib/stores/settings.svelte';
 
 	const settings = getSettings();
 
@@ -159,6 +159,28 @@
 					value={settings.apiKey}
 					oninput={handleApiKeyChange}
 				/>
+			</label>
+		</section>
+
+		<!-- Developer -->
+		<section class="card p-6 space-y-4">
+			<h2 class="h4">Developer</h2>
+
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">Log Level</span>
+				<select
+					class="select mt-1"
+					onchange={(e) =>
+						updateSettings({ logLevel: (e.currentTarget as HTMLSelectElement).value as LogLevel })}
+				>
+					<option value="error" selected={settings.logLevel === 'error'}>Error</option>
+					<option value="warn" selected={settings.logLevel === 'warn'}>Warn</option>
+					<option value="info" selected={settings.logLevel === 'info'}>Info (default)</option>
+					<option value="debug" selected={settings.logLevel === 'debug'}>Debug</option>
+				</select>
+				<span class="text-xs text-surface-500 mt-1 block"
+					>Debug logs include full AI chat context. Logs are written to the app log directory.</span
+				>
 			</label>
 		</section>
 	</div>

@@ -23,7 +23,7 @@ export async function loadNarrationTemplate(): Promise<string> {
 
 		return await readTextFile(NARRATION_TEMPLATE_FILE, { baseDir: BaseDirectory.AppData });
 	} catch (err) {
-		log.error('narration', 'Failed to load narration template', err);
+		await log.error('narration', 'Failed to load narration template', err);
 		return defaultNarrationTemplate;
 	}
 }

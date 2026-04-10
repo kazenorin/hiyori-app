@@ -161,7 +161,7 @@ export async function ensureWorldFile(storyId: string, storyName: string): Promi
 	try {
 		await generateWorld(storyId, folderName);
 	} catch (err) {
-		log.error('world', 'Failed to generate world.md', err);
+		await log.error('world', 'Failed to generate world.md', err);
 	}
 }
 

@@ -45,9 +45,9 @@
 
 	onMount(async () => {
 		try {
-			log.info('init', 'Starting app initialization...');
+			await log.info('init', 'Starting app initialization...');
 			await initializeApp((status) => (initStatus = status));
-			log.info('init', 'App initialized successfully');
+			await log.info('init', 'App initialized successfully');
 			initStatus = 'Loading messages...';
 			// Load messages for the restored act line
 			const lineId = getActiveActLineId();
@@ -56,7 +56,7 @@
 			}
 			appReady = true;
 		} catch (err) {
-			log.error('init', 'Failed', err);
+			await log.error('init', 'Failed', err);
 			appError = err instanceof Error ? err.message : String(err);
 		}
 	});

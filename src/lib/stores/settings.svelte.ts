@@ -1,12 +1,15 @@
 export type Provider = 'openai' | 'openai-compatible';
 export type ApiType = 'chat-completions' | 'responses';
 
+export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
+
 export interface Settings {
 	provider: Provider;
 	apiType: ApiType;
 	baseURL: string;
 	model: string;
 	apiKey: string;
+	logLevel: LogLevel;
 }
 
 const STORAGE_KEY = 'byoa-settings';
@@ -16,7 +19,8 @@ const defaults: Settings = {
 	apiType: 'responses',
 	baseURL: 'https://api.openai.com/v1',
 	model: 'gpt-4o',
-	apiKey: ''
+	apiKey: '',
+	logLevel: 'info'
 };
 
 function loadSettings(): Settings {
@@ -43,7 +47,7 @@ export function getSettings(): Settings {
 	return settings;
 }
 
-export function updateSettings(partial: Partial<Settings>): void {
+export async function updateSettings(partial: Partial<Settings>): Promise<void> {
 	const prev = settings;
 	let updated = { ...prev, ...partial };
 
@@ -58,4 +62,14 @@ export function updateSettings(partial: Partial<Settings>): void {
 
 	settings = updated;
 	persist();
+
+	// Sync log level to Rust backend
+	if (partial.logLevel !== undefined && partial.logLevel !== prev.logLevel) {
+		try {
+			const { invoke } = await import('@tauri-apps/api/core');
+			await invoke('set_log_level', { level: partial.logLevel });
+		} catch {
+			// Rust backend unavailable (e.g. dev mode without Tauri)
+		}
+	}
 }
