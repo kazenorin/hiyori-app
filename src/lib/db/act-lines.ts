@@ -94,6 +94,11 @@ export async function getMainLineForAct(actId: string): Promise<ActLineMeta | nu
 	return fallback.length > 0 ? rowToActLineMeta(fallback[0]) : null;
 }
 
+export async function updateActLine(id: string, name: string): Promise<void> {
+	const db = getDatabase();
+	await db.execute('UPDATE act_line_meta SET name = $1 WHERE id = $2', [name, id]);
+}
+
 export async function deleteActLine(id: string): Promise<void> {
 	const db = getDatabase();
 	await db.execute('DELETE FROM act_line_meta WHERE id = $1', [id]);

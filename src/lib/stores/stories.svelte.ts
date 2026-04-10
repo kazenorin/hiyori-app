@@ -2,8 +2,10 @@ import * as dbStories from '$lib/db/stories';
 import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import * as dbAppState from '$lib/db/app-state';
-import { loadStorySystemPrompt, loadStoryNarrationTemplate, loadStoryWorldContent, ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-prompts';
-import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+	import { log } from '$lib/logging/logger';
+import { loadStorySystemPrompt, loadStoryNarrationTemplate, loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder } from '$lib/fs/story-prompts';
+import { writeTextFile, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
+import * as dbStoryFolders from '$lib/db/story-folders';
 
 export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
 
@@ -181,9 +183,40 @@ export async function createActLine(actId: string, name: string): Promise<dbActL
 	return line;
 }
 
-export async function deleteStory(id: string): Promise<void> {
+export async function renameStory(id: string, newName: string): Promise<void> {
+	await dbStories.updateStory(id, newName);
+	stories = stories.map((s) => s.id === id ? { ...s, name: newName, updatedAt: Date.now() } : s);
+	try {
+		await renameStoryFolder(id, newName);
+	} catch (err) {
+		await log.error('story', 'Failed to rename folder', err);
+	}
+}
+
+export async function renameAct(id: string, newName: string): Promise<void> {
+	await dbActs.updateAct(id, newName);
+	acts = acts.map((a) => a.id === id ? { ...a, name: newName, updatedAt: Date.now() } : a);
+}
+
+export async function renameActLine(id: string, newName: string): Promise<void> {
+	await dbActLines.updateActLine(id, newName);
+	actLines = actLines.map((l) => l.id === id ? { ...l, name: newName } : l);
+}
+
+export async function deleteStory(id: string, removeFolder: boolean = false): Promise<void> {
 	await dbStories.deleteStory(id);
 	stories = stories.filter((s) => s.id !== id);
+	if (removeFolder) {
+		const folderName = await dbStoryFolders.getStoryFolder(id);
+		if (folderName) {
+			try {
+				await remove(folderName, { baseDir: BaseDirectory.AppData, recursive: true });
+			} catch {
+				// Folder may already be gone
+			}
+			await dbStoryFolders.deleteStoryFolder(id);
+		}
+	}
 	if (activeStoryId === id) {
 		activeStoryId = null;
 		activeActId = null;
@@ -194,6 +227,7 @@ export async function deleteStory(id: string): Promise<void> {
 		await dbAppState.setActiveStory(null);
 	}
 }
+
 
 export async function deleteAct(id: string): Promise<void> {
 	await dbActs.deleteAct(id);

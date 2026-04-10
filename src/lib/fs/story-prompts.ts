@@ -4,6 +4,7 @@ import {
 	mkdir,
 	exists,
 	readDir,
+	rename,
 	BaseDirectory,
 	type DirEntry
 } from '@tauri-apps/plugin-fs';
@@ -207,4 +208,41 @@ export async function loadStoryWorldContent(storyId: string, storyName: string):
 	} catch {
 		return null;
 	}
+}
+
+/**
+ * Rename a story's folder on disk.
+ * Computes the new canonical name, handles collisions, renames via Tauri FS,
+ * and updates the DB mapping.
+ */
+export async function renameStoryFolder(storyId: string, newName: string): Promise<string> {
+	const oldFolder = await dbStoryFolders.getStoryFolder(storyId);
+	if (!oldFolder) return resolveStoryFolder(storyId, newName);
+
+	const canon = canonicalName(newName);
+
+	// Fallback if canonical name is empty
+	if (!canon) {
+		return oldFolder;
+	}
+
+	// Check if the new name collides with an existing folder owned by another story
+	const folders = await listAppDataFolders();
+	let newFolder = canon;
+
+	if (folders.includes(canon)) {
+		const owner = await dbStoryFolders.getFolderOwner(canon);
+		if (owner && owner !== storyId) {
+			// Collision — use UUID suffix
+			newFolder = `${canon} - ${shortId(storyId)}`;
+		}
+	}
+
+	// Rename on disk if the name actually changed
+	if (oldFolder !== newFolder) {
+		await rename(oldFolder, newFolder, { oldPathBaseDir: BaseDirectory.AppData, newPathBaseDir: BaseDirectory.AppData });
+		await dbStoryFolders.setStoryFolder(storyId, newFolder);
+	}
+
+	return newFolder;
 }

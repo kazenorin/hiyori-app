@@ -222,6 +222,52 @@ describe('act-lines operations', () => {
 		const branchMsgs = await actLines.getMessagesForLine('line-2');
 		expect(branchMsgs).toHaveLength(2);
 	});
+
+	it('updates an act line name', async () => {
+		await actLines.createActLine('line-1', 'act-1', 'original name', false);
+		expect((await actLines.getActLine('line-1'))!.name).toBe('original name');
+
+		await actLines.updateActLine('line-1', 'renamed');
+		expect((await actLines.getActLine('line-1'))!.name).toBe('renamed');
+	});
+
+	it('gets act lines for an act sorted by created_at', async () => {
+		await actLines.createActLine('line-1', 'act-1', 'first', false);
+		await actLines.createActLine('line-2', 'act-1', 'second', false);
+
+		const lines = await actLines.getActLinesForAct('act-1');
+		expect(lines).toHaveLength(2);
+		expect(lines[0].id).toBe('line-1');
+		expect(lines[1].id).toBe('line-2');
+	});
+
+	it('deletes an act line', async () => {
+		await actLines.createActLine('line-1', 'act-1', 'bye', false);
+		await actLines.deleteActLine('line-1');
+		expect(await actLines.getActLine('line-1')).toBeNull();
+	});
+
+	it('gets message sequence for a message in a line', async () => {
+		await messages.createMessage('msg-1', 'user', 'test');
+		await actLines.addMessageToLine('line-1', 'msg-1', 5);
+		expect(await actLines.getMessageSequence('line-1', 'msg-1')).toBe(5);
+	});
+
+	it('returns null for message not in line', async () => {
+		expect(await actLines.getMessageSequence('line-1', 'nope')).toBeNull();
+	});
+
+	it('falls back to first line by creation when no main line', async () => {
+		await actLines.createActLine('line-1', 'act-1', 'first', false);
+		await actLines.createActLine('line-2', 'act-1', 'second', false);
+
+		const main = await actLines.getMainLineForAct('act-1');
+		expect(main!.id).toBe('line-1');
+	});
+
+	it('returns null when no lines exist for act', async () => {
+		expect(await actLines.getMainLineForAct('act-1')).toBeNull();
+	});
 });
 
 describe('messages CRUD', () => {
