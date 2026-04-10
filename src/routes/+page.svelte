@@ -5,7 +5,11 @@
 		getError,
 		sendMessage,
 		stopStreaming,
-		sendInitialNarration
+	sendInitialNarration,
+		regenerateLastResponse,
+		deleteLastExchange,
+		getForkSequence,
+		loadActLineMessages
 	} from '$lib/ai/chat.svelte';
 	import {
 		getIsActive as getIsWorldBuilderActive,
@@ -23,13 +27,44 @@
 		getActiveActLineId,
 		getActiveSystemPrompt,
 		getIsSelectingStory,
+		getActiveAct,
 		createStoryFromWorldBuilder,
-		getActiveNarrationContext
+		getActiveNarrationContext,
+		forkActLine
 	} from '$lib/stores/stories.svelte';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
+	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 
 	let input = $state('');
 	let chatContainer: HTMLDivElement;
+	let copiedId = $state<string | null>(null);
+
+	async function handleCopy(messageId: string, content: string) {
+		await navigator.clipboard.writeText(content);
+		copiedId = messageId;
+		setTimeout(() => { copiedId = null; }, 1500);
+	}
+
+	async function handleRegenerate() {
+		const actLineId = getActiveActLineId();
+		if (!actLineId || getIsStreaming()) return;
+		await regenerateLastResponse(actLineId, getActiveSystemPrompt() ?? undefined, getActiveNarrationContext() ?? undefined);
+	}
+
+	async function handleDelete() {
+		const actLineId = getActiveActLineId();
+		if (!actLineId || getIsStreaming()) return;
+		await deleteLastExchange(actLineId);
+	}
+
+	async function handleFork(messageIndex: number) {
+		const actLineId = getActiveActLineId();
+		const act = getActiveAct();
+		if (!actLineId || !act || getIsStreaming()) return;
+		const { branchSeq, name } = await getForkSequence(actLineId, messageIndex);
+		const line = await forkActLine(actLineId, branchSeq, act.id, name);
+		await loadActLineMessages(line.id);
+	}
 
 	function handleSubmit() {
 		const text = input.trim();
@@ -223,16 +258,28 @@
 						</p>
 					</div>
 				{:else}
-					{#each getMessages() as message (message.id)}
+					{#each getMessages() as message, i (message.id)}
 						{#if message.role === 'user'}
 							<div class="flex justify-end">
 								<div
 									class="max-w-[80%] rounded-[var(--radius-container)] bg-primary-100-900 p-5"
 								>
-									<p class="leading-relaxed text-primary-900-100 whitespace-pre-wrap">{message.content}</p>
+									<div class="leading-relaxed text-primary-900-100">
+										<MarkdownContent content={message.content} />
+									</div>
+									{#if !getIsStreaming()}
+										<div class="flex gap-2 mt-3 pt-3 border-t border-primary-200-800">
+											<button
+												class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
+												title="Copy message"
+												onclick={() => handleCopy(message.id, message.content)}
+											>{copiedId === message.id ? 'Copied' : 'Copy'}</button>
+										</div>
+									{/if}
 								</div>
 							</div>
 						{:else}
+							{@const lastAssistantIdx = getMessages().reduce((acc, m, idx) => m.role === 'assistant' ? idx : acc, -1)}
 							<div
 								class="rounded-[var(--radius-container)] bg-surface-50-950 p-5 shadow-message"
 							>
@@ -266,7 +313,9 @@
 								{/if}
 
 								{#if message.content}
-									<p class="leading-relaxed text-surface-950-50 whitespace-pre-wrap">{message.content}</p>
+									<div class="leading-relaxed text-surface-950-50">
+										<MarkdownContent content={message.content} />
+									</div>
 								{/if}
 								{#if getIsStreaming() && message === getMessages().at(-1)}
 									<span class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
@@ -276,6 +325,32 @@
 finish:      {message.metadata.finishReason}
 tokens:      {message.metadata.promptTokens} prompt + {message.metadata.completionTokens} completion = {message.metadata.totalTokens} total
 duration:    {message.metadata.durationMs}ms</pre>
+								{/if}
+								{#if !getIsStreaming() && message.content}
+									<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
+										<button
+											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+											title="Copy message"
+											onclick={() => handleCopy(message.id, message.content)}
+										>{copiedId === message.id ? 'Copied' : 'Copy'}</button>
+										<button
+											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+											title="Fork from here"
+											onclick={() => handleFork(i)}
+										>Fork</button>
+										{#if i === lastAssistantIdx}
+											<button
+												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+												title="Regenerate response"
+												onclick={handleRegenerate}
+											>Regenerate</button>
+											<button
+												class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
+												title="Delete last exchange"
+												onclick={handleDelete}
+											>Delete</button>
+										{/if}
+									</div>
 								{/if}
 							</div>
 						{/if}
