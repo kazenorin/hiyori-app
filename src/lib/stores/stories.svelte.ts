@@ -211,6 +211,8 @@ export async function restoreState(): Promise<void> {
 		const story = stories.find((s) => s.id === state.activeStoryId);
 		if (story) {
 			activeSystemPrompt = await loadStorySystemPrompt(story.id, story.name);
+			activeNarrationTemplate = await loadStoryNarrationTemplate(story.id, story.name);
+			activeWorldContent = await loadStoryWorldContent(story.id, story.name);
 		}
 	}
 	if (state.activeActId) {
