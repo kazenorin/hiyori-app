@@ -16,7 +16,7 @@ pub fn run() {
                     Target::new(TargetKind::LogDir { file_name: None }),
                     Target::new(TargetKind::Webview),
                 ])
-                .level(log::LevelFilter::Info)
+                .level(log::LevelFilter::Debug)
                 .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(3))
                 .max_file_size(100_000)
                 .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)

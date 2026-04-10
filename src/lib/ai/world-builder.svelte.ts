@@ -2,6 +2,7 @@ import { streamText } from 'ai';
 import { getSettings } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
 import { loadWorldBuilderSystemPrompt, loadWorldTemplate } from '$lib/fs/world-prompts';
+import { logWorldBuilderChat } from '$lib/logging/chat-logger';
 
 export interface WorldBuilderMessage {
 	id: string;
@@ -85,9 +86,12 @@ export async function enterWorldBuilderMode(): Promise<void> {
 		const model = createModel(settings);
 
 		// Seed with a minimal user message to trigger the greeting
+		const seedMsg = { role: 'user' as const, content: 'I want to create a new story. Please help me build a world.' };
+		await logWorldBuilderChat({ systemPrompt: fullSystemPrompt, messages: [seedMsg] });
+
 		const result = streamText({
 			model,
-			messages: [{ role: 'user', content: 'I want to create a new story. Please help me build a world.' }],
+			messages: [seedMsg],
 			system: fullSystemPrompt,
 			abortSignal: abortController.signal
 		});
@@ -144,6 +148,8 @@ export async function sendWorldBuilderMessage(text: string): Promise<void> {
 		const history = messages
 			.filter((m) => m.id !== assistantId)
 			.map((m) => ({ role: m.role, content: m.content }));
+
+		await logWorldBuilderChat({ systemPrompt: fullSystemPrompt, messages: history });
 
 		const result = streamText({
 			model,

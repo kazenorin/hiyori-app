@@ -4,6 +4,7 @@ import { createModel } from '$lib/ai/provider';
 import { loadSystemPrompt } from '$lib/fs/system-prompt';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
+import { logMainChat } from '$lib/logging/chat-logger';
 
 export interface MessageMetadata {
 	model: string;
@@ -106,6 +107,8 @@ export async function sendMessage(actLineId: string, text: string, systemPrompt?
 			.filter((m) => m.id !== assistantId)
 			.map((m) => ({ role: m.role, content: m.content }));
 		const history = [...narrationMsg, ...existingMsgs];
+
+		await logMainChat({ systemPrompt: prompt, narrationContent, messages: history });
 
 		const result = streamText({
 			model,
@@ -296,6 +299,8 @@ export async function sendInitialNarration(
 		// Narration message is ephemeral — only in the history sent to the AI, never persisted or shown
 		const history = [{ role: 'user' as const, content: narrationContent }];
 
+		await logMainChat({ systemPrompt: prompt, narrationContent, messages: history });
+
 		const result = streamText({
 			model,
 			messages: history,
@@ -415,6 +420,8 @@ async function streamAssistantResponse(actLineId: string, systemPrompt?: string,
 			.filter((m) => m.id !== assistantId)
 			.map((m) => ({ role: m.role, content: m.content }));
 		const history = [...narrationMsg, ...existingMsgs];
+
+		await logMainChat({ systemPrompt: prompt, narrationContent, messages: history });
 
 		const result = streamText({
 			model,
