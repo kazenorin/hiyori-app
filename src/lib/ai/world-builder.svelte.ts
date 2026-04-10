@@ -68,7 +68,7 @@ export async function enterWorldBuilderMode(): Promise<void> {
 
 	const systemPrompt = await loadWorldBuilderSystemPrompt();
 	const worldTemplate = await loadWorldTemplate();
-	const fullSystemPrompt = systemPrompt + '\n\n## World Template\n\n' + worldTemplate;
+	const fullSystemPrompt = systemPrompt + '\n\n---\n\n' + worldTemplate + '\n\n---\n\n';
 
 	const assistantId = crypto.randomUUID();
 	const assistantMessage: WorldBuilderMessage = {
