@@ -190,6 +190,19 @@ export async function deleteActLine(id: string): Promise<void> {
 	}
 }
 
+export async function forkActLine(
+	fromLineId: string,
+	fromSequence: number,
+	actId: string,
+	name: string
+): Promise<dbActLines.ActLineMeta> {
+	const newLineId = crypto.randomUUID();
+	const line = await dbActLines.branchFromLine(newLineId, fromLineId, fromSequence, actId, name);
+	actLines = [...actLines, line];
+	await selectActLine(line.id);
+	return line;
+}
+
 export async function restoreState(): Promise<void> {
 	const state = await dbAppState.getAppState();
 	if (state.activeStoryId) {

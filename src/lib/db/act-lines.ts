@@ -138,6 +138,31 @@ export async function deleteLineEntries(actLineId: string): Promise<void> {
 	await db.execute('DELETE FROM act_lines WHERE act_line_id = $1', [actLineId]);
 }
 
+export async function removeLastMessageEntries(actLineId: string, count: number): Promise<void> {
+	const db = getDatabase();
+
+	// Get the last N message entries
+	const entries = await db.select<ActLineEntryRow[]>(
+		'SELECT * FROM act_lines WHERE act_line_id = $1 ORDER BY sequence DESC LIMIT $2',
+		[actLineId, count]
+	);
+
+	if (entries.length === 0) return;
+
+	const messageIds = entries.map((e) => e.message_id);
+
+	// Delete from act_lines junction
+	await db.execute(
+		`DELETE FROM act_lines WHERE act_line_id = $1 AND message_id IN (${messageIds.map((_, i) => `$${i + 2}`).join(', ')})`,
+		[actLineId, ...messageIds]
+	);
+
+	// Delete the messages themselves
+	for (const msgId of messageIds) {
+		await db.execute('DELETE FROM messages WHERE id = $1', [msgId]);
+	}
+}
+
 export async function getNextSequence(actLineId: string): Promise<number> {
 	const db = getDatabase();
 	const rows = await db.select<{ max: number | null }[]>(
@@ -145,6 +170,15 @@ export async function getNextSequence(actLineId: string): Promise<number> {
 		[actLineId]
 	);
 	return (rows[0]?.max ?? 0) + 1;
+}
+
+export async function getMessageSequence(actLineId: string, messageId: string): Promise<number | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ sequence: number }[]>(
+		'SELECT sequence FROM act_lines WHERE act_line_id = $1 AND message_id = $2',
+		[actLineId, messageId]
+	);
+	return rows.length > 0 ? rows[0].sequence : null;
 }
 
 export async function branchFromLine(
