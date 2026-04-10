@@ -2,7 +2,7 @@ import * as dbStories from '$lib/db/stories';
 import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import * as dbAppState from '$lib/db/app-state';
-	import { log } from '$lib/logging/logger';
+import { log } from '$lib/logging/logger';
 import { loadStorySystemPrompt, loadStoryNarrationTemplate, loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder } from '$lib/fs/story-prompts';
 import { writeTextFile, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
@@ -227,7 +227,6 @@ export async function deleteStory(id: string, removeFolder: boolean = false): Pr
 		await dbAppState.setActiveStory(null);
 	}
 }
-
 
 export async function deleteAct(id: string): Promise<void> {
 	await dbActs.deleteAct(id);

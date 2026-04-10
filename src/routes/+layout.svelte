@@ -50,10 +50,12 @@
 	let editingId = $state<string | null>(null);
 	let editingType = $state<'story' | 'act' | 'line' | null>(null);
 	let editingName = $state('');
+	let renameSubmitting = $state(false);
 
 	// Delete confirmation state
 	type DeleteTarget = { type: 'story' | 'act' | 'line'; id: string; name: string };
 	let confirmDelete = $state<DeleteTarget | null>(null);
+	let cancelButton: HTMLButtonElement | null = $state(null);
 
 	onMount(async () => {
 		try {
@@ -101,7 +103,6 @@
 		goto('/');
 	}
 
-
 	async function handleCreateAct() {
 		const name = newActName.trim();
 		const storyId = getActiveStoryId();
@@ -133,9 +134,12 @@
 		editingId = null;
 		editingType = null;
 		editingName = '';
+		renameSubmitting = false;
 	}
 
 	async function submitRename() {
+		if (renameSubmitting) return;
+		renameSubmitting = true;
 		const name = editingName.trim();
 		if (!name || !editingId || !editingType) {
 			cancelRename();
@@ -173,17 +177,27 @@
 		const { type, id } = confirmDelete;
 		confirmDelete = null;
 
-		if (type === 'story') {
-			await deleteStory(id, removeFolder);
-			clearMessages();
-		} else if (type === 'act') {
-			await deleteAct(id);
-			clearMessages();
-		} else if (type === 'line') {
-			await deleteActLine(id);
-			clearMessages();
+		try {
+			if (type === 'story') {
+				await deleteStory(id, removeFolder);
+				clearMessages();
+			} else if (type === 'act') {
+				await deleteAct(id);
+				clearMessages();
+			} else if (type === 'line') {
+				await deleteActLine(id);
+				clearMessages();
+			}
+		} catch (err) {
+			await log.error('delete', 'Failed to delete', err);
 		}
 	}
+
+	$effect(() => {
+		if (confirmDelete && cancelButton) {
+			cancelButton.focus();
+		}
+	});
 </script>
 
 {#if !appReady}
@@ -213,13 +227,15 @@
 						>
 							{#if editingId === story.id && editingType === 'story'}
 								<input
+									autofocus
+									maxlength="200"
 									class="input text-sm flex-1"
 									bind:value={editingName}
 									onkeydown={(e) => {
-										if (e.key === 'Enter') submitRename();
+										if (e.key === 'Enter') { e.preventDefault(); submitRename(); }
 										if (e.key === 'Escape') cancelRename();
 									}}
-									onblur={submitRename}
+									onblur={() => { if (!renameSubmitting) submitRename(); }}
 									onclick={(e) => e.stopPropagation()}
 									type="text"
 								/>
@@ -238,7 +254,6 @@
 								onclick={(e) => { e.stopPropagation(); requestDeleteStory(story.id, story.name); }}
 								title="Delete story"
 							>&times;</button>
-							>
 						</div>
 
 						<!-- Acts (only show for active story) -->
@@ -251,13 +266,15 @@
 									>
 										{#if editingId === act.id && editingType === 'act'}
 											<input
+												autofocus
+												maxlength="200"
 												class="input text-xs flex-1"
 												bind:value={editingName}
 												onkeydown={(e) => {
-													if (e.key === 'Enter') submitRename();
+													if (e.key === 'Enter') { e.preventDefault(); submitRename(); }
 													if (e.key === 'Escape') cancelRename();
 												}}
-												onblur={submitRename}
+												onblur={() => { if (!renameSubmitting) submitRename(); }}
 												onclick={(e) => e.stopPropagation()}
 												type="text"
 											/>
@@ -276,7 +293,6 @@
 											onclick={(e) => { e.stopPropagation(); requestDeleteAct(act.id, act.name); }}
 											title="Delete act"
 										>&times;</button>
-										>
 									</div>
 
 									<!-- Act Lines -->
@@ -288,13 +304,15 @@
 											>
 												{#if editingId === line.id && editingType === 'line'}
 													<input
+														autofocus
+														maxlength="200"
 														class="input text-xs flex-1"
 														bind:value={editingName}
 														onkeydown={(e) => {
-															if (e.key === 'Enter') submitRename();
+															if (e.key === 'Enter') { e.preventDefault(); submitRename(); }
 															if (e.key === 'Escape') cancelRename();
 														}}
-														onblur={submitRename}
+														onblur={() => { if (!renameSubmitting) submitRename(); }}
 														onclick={(e) => e.stopPropagation()}
 														type="text"
 													/>
@@ -313,7 +331,6 @@
 													onclick={(e) => { e.stopPropagation(); requestDeleteActLine(line.id, line.name); }}
 													title="Delete line"
 												>&times;</button>
-												>
 											</div>
 										{/each}
 
@@ -406,6 +423,9 @@
 	{#if confirmDelete}
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="delete-dialog-title"
 			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
 			onclick={cancelDelete}
 			onkeydown={(e) => e.key === 'Escape' && cancelDelete()}
@@ -416,7 +436,7 @@
 				onclick={(e) => e.stopPropagation()}
 				onkeydown={(e) => e.stopPropagation()}
 			>
-				<h3 class="text-lg font-semibold text-surface-900-100 mb-2">
+				<h3 id="delete-dialog-title" class="text-lg font-semibold text-surface-900-100 mb-2">
 					Delete {confirmDelete.type}?
 				</h3>
 				<p class="text-sm text-surface-600-400 mb-5">
@@ -447,6 +467,7 @@
 							Delete with folder
 						</button>
 						<button
+							bind:this={cancelButton}
 							class="w-full px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
 							type="button"
 							onclick={cancelDelete}
@@ -457,6 +478,7 @@
 				{:else}
 					<div class="flex gap-2">
 						<button
+							bind:this={cancelButton}
 							class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
 							type="button"
 							onclick={cancelDelete}
