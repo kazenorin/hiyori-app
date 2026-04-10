@@ -111,16 +111,26 @@
 		}
 	}
 
+	function smartScrollToBottom() {
+		if (!chatContainer) return;
+		const { scrollTop, scrollHeight, clientHeight } = chatContainer;
+		const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+		// Only auto-scroll if within 150px of bottom
+		if (distanceFromBottom <= 150) {
+			chatContainer.scrollTop = scrollHeight;
+		}
+	}
+
 	$effect(() => {
 		getMessages();
 		getIsStreaming();
-		setTimeout(scrollToBottom, 0);
+		setTimeout(smartScrollToBottom, 0);
 	});
 
 	$effect(() => {
 		getWorldBuilderMessages();
 		getIsWorldBuilderStreaming();
-		setTimeout(scrollToBottom, 0);
+		setTimeout(smartScrollToBottom, 0);
 	});
 </script>
 
