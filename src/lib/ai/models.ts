@@ -4,6 +4,8 @@ export interface ModelInfo {
 	created: number;
 }
 
+const FETCH_TIMEOUT_MS = 10000;
+
 export async function fetchModels(settings: {
 	baseURL: string;
 	apiKey: string;
@@ -16,12 +18,24 @@ export async function fetchModels(settings: {
 		headers['Authorization'] = `Bearer ${settings.apiKey}`;
 	}
 
-	const response = await fetch(url, { headers });
+	const controller = new AbortController();
+	const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-	if (!response.ok) {
-		throw new Error(`Failed to fetch models (${response.status})`);
+	try {
+		const response = await fetch(url, { headers, signal: controller.signal });
+
+		if (!response.ok) {
+			throw new Error(`Failed to fetch models (${response.status})`);
+		}
+
+		const data = await response.json();
+
+		if (!Array.isArray(data.data)) {
+			throw new Error('Invalid response format from models API');
+		}
+
+		return (data.data as ModelInfo[]).sort((a, b) => a.id.localeCompare(b.id));
+	} finally {
+		clearTimeout(timeoutId);
 	}
-
-	const data = await response.json();
-	return (data.data as ModelInfo[]).sort((a, b) => a.id.localeCompare(b.id));
 }

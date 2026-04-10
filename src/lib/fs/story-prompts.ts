@@ -4,7 +4,8 @@ import {
 	mkdir,
 	exists,
 	readDir,
-	BaseDirectory
+	BaseDirectory,
+	type DirEntry
 } from '@tauri-apps/plugin-fs';
 import { SYSTEM_PROMPT_FILE, getDefaultSystemPromptContent } from './system-prompt';
 import { log } from '$lib/logging/logger';
@@ -31,10 +32,6 @@ function shortId(id: string): string {
 	return id.split('-')[0];
 }
 
-interface DirEntry {
-	name: string;
-	isDirectory: boolean;
-}
 
 async function listAppDataFolders(): Promise<string[]> {
 	const entries = await readDir('', { baseDir: BaseDirectory.AppData });

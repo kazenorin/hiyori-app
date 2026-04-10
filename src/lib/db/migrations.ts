@@ -81,7 +81,15 @@ export async function runMigrations(): Promise<void> {
 
 	for (let i = currentVersion; i < migrationStatements.length; i++) {
 		for (const stmt of migrationStatements[i]) {
-			await db.execute(stmt);
+			try {
+				await db.execute(stmt);
+			} catch (err) {
+				// Allow idempotent re-run of ALTER TABLE statements
+				if (stmt.startsWith('ALTER TABLE') && err instanceof Error && err.message.includes('duplicate column')) {
+					continue;
+				}
+				throw err;
+			}
 		}
 
 		await db.execute('INSERT INTO schema_version (version) VALUES ($1)', [i + 1]);

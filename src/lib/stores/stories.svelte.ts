@@ -62,11 +62,11 @@ export function getActiveNarrationContext(): string | null {
 	if (!template && !world) return null;
 	if (!template) return world;
 	if (!world) return template;
-    const act = acts.find((a) => a.id === activeActId);
-    const actNumber = act?.actNumber ?? 1;
 
-	const startPrompt = 'Gamemaster, it is Act ' + actNumber + ' now. Start the game.';
-	return template + '\n\n---\n\n' + world + '\n\n ---\n\n' + startPrompt;
+	const act = acts.find((a) => a.id === activeActId);
+	const actNumber = act?.actNumber ?? 1;
+	const startPrompt = `Gamemaster, it is Act ${actNumber} now. Start the game.`;
+	return `${template}\n\n---\n\n${world}\n\n---\n\n${startPrompt}`;
 }
 
 export function getActiveStory(): dbStories.Story | null {
@@ -93,6 +93,23 @@ export async function loadActLines(actId: string): Promise<void> {
 	actLines = await dbActLines.getActLinesForAct(actId);
 }
 
+/**
+ * Load story-specific content (system prompt, narration template, world content).
+ * Shared between selectStory and restoreState to ensure consistent behavior.
+ */
+async function loadStoryContent(storyId: string, storyName: string): Promise<void> {
+	activeSystemPrompt = await loadStorySystemPrompt(storyId, storyName);
+	activeNarrationTemplate = await loadStoryNarrationTemplate(storyId, storyName);
+	await ensureWorldFile(storyId, storyName);
+	activeWorldContent = await loadStoryWorldContent(storyId, storyName);
+}
+
+function resetStoryContent(): void {
+	activeSystemPrompt = null;
+	activeNarrationTemplate = null;
+	activeWorldContent = null;
+}
+
 export async function selectStory(storyId: string | null): Promise<void> {
 	isSelectingStory = true;
 	activeStoryId = storyId;
@@ -100,19 +117,22 @@ export async function selectStory(storyId: string | null): Promise<void> {
 	activeActLineId = null;
 	acts = [];
 	actLines = [];
-	await dbAppState.setActiveStory(storyId);
 
-	if (storyId) {
-		await loadActs(storyId);
-		const story = stories.find((s) => s.id === storyId);
-		if (story) {
-			activeSystemPrompt = await loadStorySystemPrompt(storyId, story.name);
-			activeNarrationTemplate = await loadStoryNarrationTemplate(storyId, story.name);
-			await ensureWorldFile(storyId, story.name);
-			activeWorldContent = await loadStoryWorldContent(storyId, story.name);
+	try {
+		await dbAppState.setActiveStory(storyId);
+
+		if (storyId) {
+			await loadActs(storyId);
+			const story = stories.find((s) => s.id === storyId);
+			if (story) {
+				await loadStoryContent(storyId, story.name);
+			}
+		} else {
+			resetStoryContent();
 		}
+	} finally {
+		isSelectingStory = false;
 	}
-	isSelectingStory = false;
 }
 
 export async function selectAct(actId: string | null): Promise<void> {
@@ -170,6 +190,7 @@ export async function deleteStory(id: string): Promise<void> {
 		activeActLineId = null;
 		acts = [];
 		actLines = [];
+		resetStoryContent();
 		await dbAppState.setActiveStory(null);
 	}
 }
@@ -211,12 +232,14 @@ export async function restoreState(): Promise<void> {
 	const state = await dbAppState.getAppState();
 	if (state.activeStoryId) {
 		activeStoryId = state.activeStoryId;
+
+		// Must load stories list before looking up the active story
+		await loadStories();
 		await loadActs(state.activeStoryId);
+
 		const story = stories.find((s) => s.id === state.activeStoryId);
 		if (story) {
-			activeSystemPrompt = await loadStorySystemPrompt(story.id, story.name);
-			activeNarrationTemplate = await loadStoryNarrationTemplate(story.id, story.name);
-			activeWorldContent = await loadStoryWorldContent(story.id, story.name);
+			await loadStoryContent(story.id, story.name);
 		}
 	}
 	if (state.activeActId) {

@@ -151,15 +151,27 @@ export async function removeLastMessageEntries(actLineId: string, count: number)
 
 	const messageIds = entries.map((e) => e.message_id);
 
-	// Delete from act_lines junction
-	await db.execute(
-		`DELETE FROM act_lines WHERE act_line_id = $1 AND message_id IN (${messageIds.map((_, i) => `$${i + 2}`).join(', ')})`,
-		[actLineId, ...messageIds]
-	);
+	try {
+		await db.execute('BEGIN');
 
-	// Delete the messages themselves
-	for (const msgId of messageIds) {
-		await db.execute('DELETE FROM messages WHERE id = $1', [msgId]);
+		// Delete from act_lines junction using IN clause
+		const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
+		await db.execute(
+			`DELETE FROM act_lines WHERE act_line_id = $1 AND message_id IN (${placeholders})`,
+			[actLineId, ...messageIds]
+		);
+
+		// Batch delete messages
+		const msgPlaceholders = messageIds.map((_, i) => `$${i + 1}`).join(', ');
+		await db.execute(
+			`DELETE FROM messages WHERE id IN (${msgPlaceholders})`,
+			messageIds
+		);
+
+		await db.execute('COMMIT');
+	} catch (err) {
+		await db.execute('ROLLBACK');
+		throw err;
 	}
 }
 
@@ -199,8 +211,23 @@ export async function branchFromLine(
 		[fromLineId, fromSequence]
 	);
 
-	for (const entry of entries) {
-		await addMessageToLine(newLineId, entry.message_id, entry.sequence);
+	if (entries.length === 0) return lineMeta;
+
+	try {
+		await db.execute('BEGIN');
+
+		// Batch insert all entries
+		const values = entries.map((e, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(', ');
+		const params = entries.flatMap((e) => [newLineId, e.message_id, e.sequence]);
+		await db.execute(
+			`INSERT INTO act_lines (act_line_id, message_id, sequence) VALUES ${values}`,
+			params
+		);
+
+		await db.execute('COMMIT');
+	} catch (err) {
+		await db.execute('ROLLBACK');
+		throw err;
 	}
 
 	return lineMeta;

@@ -55,7 +55,7 @@ async function traceStoryMessages(storyId: string): Promise<{ role: 'user' | 'as
  * Generate world.md for a story by analyzing its chat history.
  * Uses generate-world-from-chat-prompt.md + world-template.md as system prompt.
  */
-export async function generateWorld(storyId: string, folderName: string): Promise<string> {
+export async function generateWorld(storyId: string, folderName: string, abortSignal?: AbortSignal): Promise<string> {
 	const settings = getSettings();
 
 	if (!settings.apiKey || !settings.model) {
@@ -87,15 +87,18 @@ export async function generateWorld(storyId: string, folderName: string): Promis
 	const result = streamText({
 		model,
 		messages: allMessages,
-		system: systemPrompt
+		system: systemPrompt,
+		abortSignal
 	});
 
-	let worldContent = '';
+	const contentParts: string[] = [];
 	for await (const part of result.fullStream) {
 		if (part.type === 'text-delta') {
-			worldContent += part.text;
+			contentParts.push(part.text);
 		}
 	}
+
+	const worldContent = contentParts.join('');
 
 	// Write to story folder
 	const worldPath = `${folderName}/world.md`;
