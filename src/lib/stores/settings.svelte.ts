@@ -10,6 +10,7 @@ export interface Settings {
 	model: string;
 	apiKey: string;
 	logLevel: LogLevel;
+	fontSize: number;
 }
 
 const STORAGE_KEY = 'byoa-settings';
@@ -20,8 +21,19 @@ const defaults: Settings = {
 	baseURL: 'https://api.openai.com/v1',
 	model: 'gpt-4o',
 	apiKey: '',
-	logLevel: 'info'
+	logLevel: 'info',
+	fontSize: 1.0
 };
+
+/**
+ * Apply font size preference by setting the --text-scaling CSS variable.
+ * This dynamically scales all typography throughout the application.
+ */
+export function applyFontSizePreference(fontSize: number): void {
+	if (typeof document !== 'undefined') {
+		document.documentElement.style.setProperty('--text-scaling', String(fontSize));
+	}
+}
 
 function loadSettings(): Settings {
 	try {
@@ -43,6 +55,9 @@ function persist(): void {
 
 let settings = $state<Settings>(loadSettings());
 
+/** Apply initial font size preference when store is initialized */
+applyFontSizePreference(settings.fontSize);
+
 export function getSettings(): Settings {
 	return settings;
 }
@@ -62,6 +77,11 @@ export async function updateSettings(partial: Partial<Settings>): Promise<void> 
 
 	settings = updated;
 	persist();
+
+	// Apply font size preference when fontSize changes
+	if (partial.fontSize !== undefined && partial.fontSize !== prev.fontSize) {
+		applyFontSizePreference(updated.fontSize);
+	}
 
 	// Sync log level to Rust backend
 	if (partial.logLevel !== undefined && partial.logLevel !== prev.logLevel) {
