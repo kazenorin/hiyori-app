@@ -39,7 +39,8 @@
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 
 	let input = $state('');
-	let chatContainer: HTMLDivElement;
+	let chatContainer = $state<HTMLDivElement | null>(null);
+	let wbChatContainer = $state<HTMLDivElement | null>(null);
 	let copiedId = $state<string | null>(null);
 	let latestDecisions = $derived(getLatestDecisions());
 	let lastAssistantIdx = $derived(getMessages().reduce((acc: number, m, i) => m.role === 'assistant' ? i : acc, -1));
@@ -128,11 +129,20 @@
 		sendMessage(actLineId, decision, getActiveSystemPrompt() ?? undefined, getActiveNarrationContext() ?? undefined);
 	}
 
-	function isCursorVisible() {
-		if (!chatContainer) return false;
-		const cursor = chatContainer.querySelector('[data-streaming-cursor]');
+	function isCursorVisible(container: HTMLDivElement | null) {
+		if (!container) return false;
+		const cursor = container.querySelector('[data-streaming-cursor]');
 		if (!cursor) return false;
-		const containerRect = chatContainer.getBoundingClientRect();
+		const containerRect = container.getBoundingClientRect();
+		const cursorRect = cursor.getBoundingClientRect();
+		return cursorRect.top <= containerRect.bottom && cursorRect.bottom >= containerRect.top;
+	}
+
+	function isWbCursorVisible(container: HTMLDivElement | null) {
+		if (!container) return false;
+		const cursor = container.querySelector('[data-streaming-cursor]');
+		if (!cursor) return false;
+		const containerRect = container.getBoundingClientRect();
 		const cursorRect = cursor.getBoundingClientRect();
 		return cursorRect.top <= containerRect.bottom && cursorRect.bottom >= containerRect.top;
 	}
@@ -140,17 +150,38 @@
 	$effect(() => {
 		if (!chatContainer) return;
 
-		const scrollIfCursorVisible = () => {
-			if (isCursorVisible()) {
-				chatContainer.scrollTop = chatContainer.scrollHeight;
+		const scrollIfCursorVisible = (container: HTMLDivElement) => {
+			if (isCursorVisible(container)) {
+				container.scrollTop = container.scrollHeight;
 			}
 		};
 
-		const mutationObserver = new MutationObserver(scrollIfCursorVisible);
+		const mutationObserver = new MutationObserver((_) => scrollIfCursorVisible(chatContainer!));
 		mutationObserver.observe(chatContainer, { childList: true, subtree: true, characterData: true });
 
-		const resizeObserver = new ResizeObserver(scrollIfCursorVisible);
+		const resizeObserver = new ResizeObserver((_) => scrollIfCursorVisible(chatContainer!));
 		resizeObserver.observe(chatContainer);
+
+		return () => {
+			mutationObserver.disconnect();
+			resizeObserver.disconnect();
+		};
+	});
+
+	$effect(() => {
+		if (!wbChatContainer) return;
+
+		const scrollWbIfCursorVisible = (container: HTMLDivElement) => {
+			if (isWbCursorVisible(container)) {
+				container.scrollTop = container.scrollHeight;
+			}
+		};
+
+		const mutationObserver = new MutationObserver((_) => scrollWbIfCursorVisible(wbChatContainer!));
+		mutationObserver.observe(wbChatContainer, { childList: true, subtree: true, characterData: true });
+
+		const resizeObserver = new ResizeObserver((_) => scrollWbIfCursorVisible(wbChatContainer!));
+		resizeObserver.observe(wbChatContainer);
 
 		return () => {
 			mutationObserver.disconnect();
@@ -170,7 +201,7 @@
 		<!-- World builder mode -->
 		<!-- svelte-ignore binding_property_non_reactive -->
 		<div
-			bind:this={chatContainer}
+			bind:this={wbChatContainer}
 			class="flex-1 overflow-y-auto p-6"
 		>
 			<div class="px-8 space-y-4">
@@ -202,7 +233,9 @@
 							class="rounded-[var(--radius-container)] bg-surface-50-950 p-5 shadow-message"
 						>
 							{#if message.content}
-								<p class="leading-relaxed text-surface-950-50 whitespace-pre-wrap">{message.content}</p>
+								<div class="leading-relaxed text-surface-950-50">
+									<MarkdownContent content={message.content} />
+								</div>
 							{/if}
 							{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
 								<span data-streaming-cursor class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
