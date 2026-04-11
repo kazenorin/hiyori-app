@@ -88,7 +88,6 @@
 
 		if (getIsWorldBuilderActive()) {
 			input = '';
-			stuckToBottom = true;
 			sendWorldBuilderMessage(text);
 			return;
 		}
@@ -96,7 +95,6 @@
 		const actLineId = getActiveActLineId();
 		if (!actLineId) return;
 		input = '';
-		stuckToBottom = true;
 		sendMessage(actLineId, text, getActiveSystemPrompt() ?? undefined, getActiveNarrationContext() ?? undefined);
 	}
 
@@ -127,51 +125,33 @@
 		if (getIsStreaming()) return;
 		const actLineId = getActiveActLineId();
 		if (!actLineId) return;
-		stuckToBottom = true;
 		sendMessage(actLineId, decision, getActiveSystemPrompt() ?? undefined, getActiveNarrationContext() ?? undefined);
 	}
-
-	let streamingCursor: HTMLSpanElement | null = $state(null);
-	let wbStreamingCursor: HTMLSpanElement | null = $state(null);
-	let stuckToBottom = $state(true);
 
 	function scrollToBottom() {
 		if (!chatContainer) return;
 		chatContainer.scrollTop = chatContainer.scrollHeight;
 	}
 
-	// IntersectionObserver watches the streaming cursor — if it's visible,
-	// user is at the bottom (stuckToBottom = true). If not, user scrolled up (detached).
+	function smartScrollToBottom() {
+		if (!chatContainer) return;
+		const { scrollTop, scrollHeight, clientHeight } = chatContainer;
+		const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+		if (distanceFromBottom <= 150) {
+			chatContainer.scrollTop = scrollHeight;
+		}
+	}
+
 	$effect(() => {
-		// Must select cursor by active mode — bind:this does not reset on unmount,
-		// so ?? would pick a stale world builder reference in main chat mode.
-		const cursor = getIsWorldBuilderActive() ? wbStreamingCursor : streamingCursor;
-		const container = chatContainer;
-		if (!cursor || !container) return;
-
-		const observer = new IntersectionObserver(
-			(entries) => {
-				stuckToBottom = entries[0].isIntersecting;
-			},
-			{ root: container, threshold: 0 }
-		);
-
-		observer.observe(cursor);
-		return () => observer.disconnect();
+		getMessages();
+		getIsStreaming();
+		setTimeout(smartScrollToBottom, 0);
 	});
 
-	// MutationObserver watches DOM changes and scrolls to bottom only when stuck.
 	$effect(() => {
-		if (!chatContainer) return;
-
-		const observer = new MutationObserver(() => {
-			if (stuckToBottom) {
-				chatContainer.scrollTop = chatContainer.scrollHeight;
-			}
-		});
-
-		observer.observe(chatContainer, { childList: true, subtree: true, characterData: true });
-		return () => observer.disconnect();
+		getWorldBuilderMessages();
+		getIsWorldBuilderStreaming();
+		setTimeout(smartScrollToBottom, 0);
 	});
 </script>
 
@@ -221,7 +201,7 @@
 								<p class="leading-relaxed text-surface-950-50 whitespace-pre-wrap">{message.content}</p>
 							{/if}
 							{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
-								<span bind:this={wbStreamingCursor} class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
+								<span class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
 							{/if}
 							{#if !getIsWorldBuilderStreaming() && message.content}
 								<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
@@ -398,7 +378,7 @@
 									</div>
 								{/if}
 								{#if getIsStreaming() && message === getMessages().at(-1)}
-									<span bind:this={streamingCursor} class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
+									<span class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
 								{/if}
 								{#if message.metadata}
 									<pre class="mt-4 pt-3 border-t border-surface-200-800 text-xs text-surface-500 font-mono leading-relaxed">model:       {message.metadata.model}
