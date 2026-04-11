@@ -1,5 +1,6 @@
 import { getDatabase } from './database';
 import type { Message } from './messages';
+import { parseGameData } from './messages';
 
 export interface ActLineMeta {
 	id: string;
@@ -35,6 +36,7 @@ interface MessageInLine {
 	content: string;
 	reasoning: string | null;
 	metadata: string | null;
+	game_data: string | null;
 	created_at: number;
 	sequence: number;
 }
@@ -94,6 +96,11 @@ export async function getMainLineForAct(actId: string): Promise<ActLineMeta | nu
 	return fallback.length > 0 ? rowToActLineMeta(fallback[0]) : null;
 }
 
+export async function updateActLine(id: string, name: string): Promise<void> {
+	const db = getDatabase();
+	await db.execute('UPDATE act_line_meta SET name = $1 WHERE id = $2', [name, id]);
+}
+
 export async function deleteActLine(id: string): Promise<void> {
 	const db = getDatabase();
 	await db.execute('DELETE FROM act_line_meta WHERE id = $1', [id]);
@@ -104,7 +111,7 @@ export async function deleteActLine(id: string): Promise<void> {
 export async function getMessagesForLine(actLineId: string): Promise<Message[]> {
 	const db = getDatabase();
 	const rows = await db.select<MessageInLine[]>(`
-		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.created_at, al.sequence
+		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.game_data, m.created_at, al.sequence
 		FROM act_lines al
 		JOIN messages m ON al.message_id = m.id
 		WHERE al.act_line_id = $1
@@ -117,6 +124,7 @@ export async function getMessagesForLine(actLineId: string): Promise<Message[]> 
 		content: row.content,
 		reasoning: row.reasoning ?? undefined,
 		metadata: row.metadata ?? undefined,
+		gameData: parseGameData(row.game_data),
 		createdAt: row.created_at
 	}));
 }

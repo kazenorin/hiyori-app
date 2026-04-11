@@ -1,11 +1,17 @@
 import { getDatabase } from './database';
 
+export interface GameData {
+	worldState: string;
+	decisions: string[];
+}
+
 export interface Message {
 	id: string;
 	role: 'user' | 'assistant';
 	content: string;
 	reasoning?: string;
 	metadata?: string;
+	gameData?: GameData;
 	createdAt: number;
 }
 
@@ -15,7 +21,27 @@ interface MessageRow {
 	content: string;
 	reasoning: string | null;
 	metadata: string | null;
+	game_data: string | null;
 	created_at: number;
+}
+
+export function parseGameData(raw: string | null): GameData | undefined {
+	if (!raw) return undefined;
+	try {
+		const parsed = JSON.parse(raw);
+		if (
+			typeof parsed === 'object' &&
+			parsed !== null &&
+			typeof parsed.worldState === 'string' &&
+			Array.isArray(parsed.decisions) &&
+			parsed.decisions.every((d: unknown) => typeof d === 'string')
+		) {
+			return { worldState: parsed.worldState, decisions: parsed.decisions };
+		}
+		return undefined;
+	} catch {
+		return undefined;
+	}
 }
 
 function rowToMessage(row: MessageRow): Message {
@@ -25,6 +51,7 @@ function rowToMessage(row: MessageRow): Message {
 		content: row.content,
 		reasoning: row.reasoning ?? undefined,
 		metadata: row.metadata ?? undefined,
+		gameData: parseGameData(row.game_data),
 		createdAt: row.created_at
 	};
 }
@@ -34,14 +61,15 @@ export async function createMessage(
 	role: 'user' | 'assistant',
 	content: string,
 	reasoning?: string,
-	metadata?: string
+	metadata?: string,
+	gameData?: GameData
 ): Promise<Message> {
 	const db = getDatabase();
 	const now = Date.now();
 	await db.execute(
-		`INSERT INTO messages (id, role, content, reasoning, metadata, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6)`,
-		[id, role, content, reasoning ?? null, metadata ?? null, now]
+		`INSERT INTO messages (id, role, content, reasoning, metadata, game_data, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		[id, role, content, reasoning ?? null, metadata ?? null, gameData ? JSON.stringify(gameData) : null, now]
 	);
 	return {
 		id,
@@ -49,6 +77,7 @@ export async function createMessage(
 		content,
 		reasoning,
 		metadata,
+		gameData,
 		createdAt: now
 	};
 }

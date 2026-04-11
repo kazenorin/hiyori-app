@@ -62,6 +62,9 @@ const migrationStatements: string[][] = [
 	],
 	[
 		`ALTER TABLE act_line_meta ADD COLUMN is_main_line INTEGER NOT NULL DEFAULT 0`
+	],
+	[
+		`ALTER TABLE messages ADD COLUMN game_data TEXT`
 	]
 ];
 

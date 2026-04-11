@@ -20,7 +20,10 @@
 		createActLine,
 		deleteStory,
 		deleteAct,
-		deleteActLine
+		deleteActLine,
+		renameStory,
+		renameAct,
+		renameActLine
 	} from '$lib/stores/stories.svelte';
 	import {
 		getMessages,
@@ -42,6 +45,17 @@
 	let newActLineName = $state('');
 	let showNewAct = $state(false);
 	let showNewActLine = $state(false);
+
+	// Inline rename state
+	let editingId = $state<string | null>(null);
+	let editingType = $state<'story' | 'act' | 'line' | null>(null);
+	let editingName = $state('');
+	let renameSubmitting = $state(false);
+
+	// Delete confirmation state
+	type DeleteTarget = { type: 'story' | 'act' | 'line'; id: string; name: string };
+	let confirmDelete = $state<DeleteTarget | null>(null);
+	let cancelButton: HTMLButtonElement | null = $state(null);
 
 	onMount(async () => {
 		try {
@@ -89,7 +103,6 @@
 		goto('/');
 	}
 
-
 	async function handleCreateAct() {
 		const name = newActName.trim();
 		const storyId = getActiveStoryId();
@@ -109,20 +122,82 @@
 		await handleSelectActLine(line.id);
 	}
 
-	async function handleDeleteStory(id: string) {
-		await deleteStory(id);
-		clearMessages();
+	// === Rename handlers ===
+
+	function startRename(type: 'story' | 'act' | 'line', id: string, currentName: string) {
+		editingId = id;
+		editingType = type;
+		editingName = currentName;
 	}
 
-	async function handleDeleteAct(id: string) {
-		await deleteAct(id);
-		clearMessages();
+	function cancelRename() {
+		editingId = null;
+		editingType = null;
+		editingName = '';
+		renameSubmitting = false;
 	}
 
-	async function handleDeleteActLine(id: string) {
-		await deleteActLine(id);
-		clearMessages();
+	async function submitRename() {
+		if (renameSubmitting) return;
+		renameSubmitting = true;
+		const name = editingName.trim();
+		if (!name || !editingId || !editingType) {
+			cancelRename();
+			return;
+		}
+		try {
+			if (editingType === 'story') await renameStory(editingId, name);
+			else if (editingType === 'act') await renameAct(editingId, name);
+			else if (editingType === 'line') await renameActLine(editingId, name);
+		} finally {
+			cancelRename();
+		}
 	}
+
+	// === Delete handlers ===
+
+	function requestDeleteStory(id: string, name: string) {
+		confirmDelete = { type: 'story', id, name };
+	}
+
+	function requestDeleteAct(id: string, name: string) {
+		confirmDelete = { type: 'act', id, name };
+	}
+
+	function requestDeleteActLine(id: string, name: string) {
+		confirmDelete = { type: 'line', id, name };
+	}
+
+	function cancelDelete() {
+		confirmDelete = null;
+	}
+
+	async function confirmDeleteAction(removeFolder: boolean = false) {
+		if (!confirmDelete) return;
+		const { type, id } = confirmDelete;
+		confirmDelete = null;
+
+		try {
+			if (type === 'story') {
+				await deleteStory(id, removeFolder);
+				clearMessages();
+			} else if (type === 'act') {
+				await deleteAct(id);
+				clearMessages();
+			} else if (type === 'line') {
+				await deleteActLine(id);
+				clearMessages();
+			}
+		} catch (err) {
+			await log.error('delete', 'Failed to delete', err);
+		}
+	}
+
+	$effect(() => {
+		if (confirmDelete && cancelButton) {
+			cancelButton.focus();
+		}
+	});
 </script>
 
 {#if !appReady}
@@ -147,17 +222,38 @@
 					<div class="space-y-0.5">
 						<!-- Story header -->
 						<div
-							class="flex items-center justify-between p-3 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer {getActiveStoryId() === story.id ? 'bg-surface-200-800' : 'hover:bg-surface-200-800'}"
+							class="group flex items-center justify-between p-3 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer {getActiveStoryId() === story.id ? 'bg-surface-200-800' : 'hover:bg-surface-200-800'}"
 							onclick={() => handleSelectStory(story.id)}
 						>
-							<span class="text-sm font-medium truncate flex-1">{story.name}</span>
+							{#if editingId === story.id && editingType === 'story'}
+								<input
+									autofocus
+									maxlength="200"
+									class="input text-sm flex-1"
+									bind:value={editingName}
+									onkeydown={(e) => {
+										if (e.key === 'Enter') { e.preventDefault(); submitRename(); }
+										if (e.key === 'Escape') cancelRename();
+									}}
+									onblur={() => { if (!renameSubmitting) submitRename(); }}
+									onclick={(e) => e.stopPropagation()}
+									type="text"
+								/>
+							{:else}
+								<span class="text-sm font-medium truncate flex-1">{story.name}</span>
+								<button
+									class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+									type="button"
+									onclick={(e) => { e.stopPropagation(); startRename('story', story.id, story.name); }}
+									title="Rename story"
+								>&#9998;</button>
+							{/if}
 							<button
-								class="text-surface-500 hover:text-error-500 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+								class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 								type="button"
-								onclick={(e) => { e.stopPropagation(); handleDeleteStory(story.id); }}
+								onclick={(e) => { e.stopPropagation(); requestDeleteStory(story.id, story.name); }}
 								title="Delete story"
-							>&times;</button
-							>
+							>&times;</button>
 						</div>
 
 						<!-- Acts (only show for active story) -->
@@ -165,34 +261,76 @@
 							{#each getActs() as act (act.id)}
 								<div class="ml-3 space-y-0.5">
 									<div
-										class="flex items-center justify-between p-2 pl-4 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-sm {getActiveActId() === act.id ? 'bg-surface-200-800' : 'hover:bg-surface-200-800'}"
+										class="group flex items-center justify-between p-2 pl-4 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-sm {getActiveActId() === act.id ? 'bg-surface-200-800' : 'hover:bg-surface-200-800'}"
 										onclick={() => handleSelectAct(act.id)}
 									>
-										<span class="truncate flex-1 text-surface-700-300">Act {act.actNumber}: {act.name}</span>
+										{#if editingId === act.id && editingType === 'act'}
+											<input
+												autofocus
+												maxlength="200"
+												class="input text-xs flex-1"
+												bind:value={editingName}
+												onkeydown={(e) => {
+													if (e.key === 'Enter') { e.preventDefault(); submitRename(); }
+													if (e.key === 'Escape') cancelRename();
+												}}
+												onblur={() => { if (!renameSubmitting) submitRename(); }}
+												onclick={(e) => e.stopPropagation()}
+												type="text"
+											/>
+										{:else}
+											<span class="truncate flex-1 text-surface-700-300">Act {act.actNumber}: {act.name}</span>
+											<button
+												class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+												type="button"
+												onclick={(e) => { e.stopPropagation(); startRename('act', act.id, act.name); }}
+												title="Rename act"
+											>&#9998;</button>
+										{/if}
 										<button
-											class="text-surface-500 hover:text-error-500 ml-2 text-xs shrink-0"
+											class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 											type="button"
-											onclick={(e) => { e.stopPropagation(); handleDeleteAct(act.id); }}
+											onclick={(e) => { e.stopPropagation(); requestDeleteAct(act.id, act.name); }}
 											title="Delete act"
-										>&times;</button
-										>
+										>&times;</button>
 									</div>
 
 									<!-- Act Lines -->
 									{#if getActiveActId() === act.id}
 										{#each getActLines() as line (line.id)}
 											<div
-												class="flex items-center justify-between p-2 pl-8 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-xs {getActiveActLineId() === line.id ? 'bg-primary-100-900 text-primary-700-300' : 'hover:bg-surface-200-800 text-surface-500'}"
+												class="group flex items-center justify-between p-2 pl-8 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-xs {getActiveActLineId() === line.id ? 'bg-primary-100-900 text-primary-700-300' : 'hover:bg-surface-200-800 text-surface-500'}"
 												onclick={() => handleSelectActLine(line.id)}
 											>
-												<span class="truncate flex-1">{line.name}</span>
+												{#if editingId === line.id && editingType === 'line'}
+													<input
+														autofocus
+														maxlength="200"
+														class="input text-xs flex-1"
+														bind:value={editingName}
+														onkeydown={(e) => {
+															if (e.key === 'Enter') { e.preventDefault(); submitRename(); }
+															if (e.key === 'Escape') cancelRename();
+														}}
+														onblur={() => { if (!renameSubmitting) submitRename(); }}
+														onclick={(e) => e.stopPropagation()}
+														type="text"
+													/>
+												{:else}
+													<span class="truncate flex-1">{line.name}</span>
+													<button
+														class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+														type="button"
+														onclick={(e) => { e.stopPropagation(); startRename('line', line.id, line.name); }}
+														title="Rename line"
+													>&#9998;</button>
+												{/if}
 												<button
-													class="text-surface-500 hover:text-error-500 ml-2 text-xs shrink-0"
+													class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 													type="button"
-													onclick={(e) => { e.stopPropagation(); handleDeleteActLine(line.id); }}
+													onclick={(e) => { e.stopPropagation(); requestDeleteActLine(line.id, line.name); }}
 													title="Delete line"
-												>&times;</button
-												>
+												>&times;</button>
 											</div>
 										{/each}
 
@@ -280,4 +418,83 @@
 			{@render children()}
 		</main>
 	</div>
+
+	<!-- Delete Confirmation Modal -->
+	{#if confirmDelete}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="delete-dialog-title"
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+			onclick={cancelDelete}
+			onkeydown={(e) => e.key === 'Escape' && cancelDelete()}
+		>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4"
+				onclick={(e) => e.stopPropagation()}
+				onkeydown={(e) => e.stopPropagation()}
+			>
+				<h3 id="delete-dialog-title" class="text-lg font-semibold text-surface-900-100 mb-2">
+					Delete {confirmDelete.type}?
+				</h3>
+				<p class="text-sm text-surface-600-400 mb-5">
+					{#if confirmDelete.type === 'story'}
+						Are you sure you want to delete <strong>{confirmDelete.name}</strong>?
+						All acts and lines within this story will also be removed.
+					{:else if confirmDelete.type === 'act'}
+						Are you sure you want to delete <strong>{confirmDelete.name}</strong>?
+						All lines within this act will also be removed.
+					{:else}
+						Are you sure you want to delete <strong>{confirmDelete.name}</strong>?
+					{/if}
+				</p>
+				{#if confirmDelete.type === 'story'}
+					<div class="flex flex-col gap-2">
+						<button
+							class="w-full px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
+							type="button"
+							onclick={() => confirmDeleteAction(false)}
+						>
+							Delete (keep folder)
+						</button>
+						<button
+							class="w-full px-4 py-2 rounded-lg bg-error-700 hover:bg-error-800 text-white text-sm font-medium transition-colors"
+							type="button"
+							onclick={() => confirmDeleteAction(true)}
+						>
+							Delete with folder
+						</button>
+						<button
+							bind:this={cancelButton}
+							class="w-full px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+							type="button"
+							onclick={cancelDelete}
+						>
+							Cancel
+						</button>
+					</div>
+				{:else}
+					<div class="flex gap-2">
+						<button
+							bind:this={cancelButton}
+							class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+							type="button"
+							onclick={cancelDelete}
+						>
+							Cancel
+						</button>
+						<button
+							class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
+							type="button"
+							onclick={() => confirmDeleteAction()}
+						>
+							Delete
+						</button>
+					</div>
+				{/if}
+			</div>
+		</div>
+	{/if}
 {/if}
