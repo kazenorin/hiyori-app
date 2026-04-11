@@ -28,14 +28,13 @@ My Story
 		expect(extractCompletionData(content)).toBeNull();
 	});
 
-	it('falls back to Untitled Story when name line is whitespace only', () => {
+	it('treats first non-blank line as story name when blank line follows marker', () => {
 		const content = `[WORLD_BUILDER_COMPLETE]
 
 # World Overview
 Some content here.`;
 
-		// After trim, lines[0] is '' which falls back to 'Untitled Story'
-		// But content (lines 2+) is '# World Overview\nSome content here.'
+		// After trim(), the blank line is removed, so '# World Overview' becomes lines[0]
 		const result = extractCompletionData(content);
 		expect(result).not.toBeNull();
 		expect(result!.storyName).toBe('# World Overview');

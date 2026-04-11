@@ -42,7 +42,6 @@ export function deriveStoryName(name: string, id: string): string {
 	return canon || `story-${shortId(id)}`;
 }
 
-
 async function listAppDataFolders(): Promise<string[]> {
 	const entries = await readDir('', { baseDir: BaseDirectory.AppData });
 	return entries

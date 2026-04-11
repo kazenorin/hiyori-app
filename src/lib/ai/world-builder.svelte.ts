@@ -89,11 +89,10 @@ function buildFullSystemPrompt(): string {
  * Returns { storyName, worldContent } or null if no marker found.
  */
 export function extractCompletionData(content: string): { storyName: string; worldContent: string } | null {
-	const COMPLETION = '[WORLD_BUILDER_COMPLETE]';
-	const markerIndex = content.indexOf(COMPLETION);
+	const markerIndex = content.indexOf(COMPLETION_MARKER);
 	if (markerIndex === -1) return null;
 
-	const afterMarker = content.slice(markerIndex + COMPLETION.length).trim();
+	const afterMarker = content.slice(markerIndex + COMPLETION_MARKER.length).trim();
 	const lines = afterMarker.split('\n');
 
 	const extractedName = (lines[0] ?? '').trim() || 'Untitled Story';
@@ -233,8 +232,7 @@ export async function deleteLastWorldBuilderExchange(): Promise<void> {
 }
 
 async function streamNextResponse(assistantId: string): Promise<void> {
-	const assistantIdx = messages.findIndex((m) => m.id === assistantId);
-	if (assistantIdx === -1) return;
+	if (!messages.some((m) => m.id === assistantId)) return;
 
 	isStreaming = true;
 	abortController = new AbortController();
@@ -259,9 +257,11 @@ async function streamNextResponse(assistantId: string): Promise<void> {
 			},
 			{
 				onTextDelta: (text) => {
-					messages[assistantIdx] = {
-						...messages[assistantIdx],
-						content: messages[assistantIdx].content + text
+					const idx = messages.findIndex((m) => m.id === assistantId);
+					if (idx === -1) return;
+					messages[idx] = {
+						...messages[idx],
+						content: messages[idx].content + text
 					};
 				}
 			}

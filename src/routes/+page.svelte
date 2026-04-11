@@ -128,30 +128,34 @@
 		sendMessage(actLineId, decision, getActiveSystemPrompt() ?? undefined, getActiveNarrationContext() ?? undefined);
 	}
 
-	function scrollToBottom() {
-		if (!chatContainer) return;
-		chatContainer.scrollTop = chatContainer.scrollHeight;
-	}
-
-	function smartScrollToBottom() {
-		if (!chatContainer) return;
-		const { scrollTop, scrollHeight, clientHeight } = chatContainer;
-		const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-		if (distanceFromBottom <= 150) {
-			chatContainer.scrollTop = scrollHeight;
-		}
+	function isCursorVisible() {
+		if (!chatContainer) return false;
+		const cursor = chatContainer.querySelector('[data-streaming-cursor]');
+		if (!cursor) return false;
+		const containerRect = chatContainer.getBoundingClientRect();
+		const cursorRect = cursor.getBoundingClientRect();
+		return cursorRect.top <= containerRect.bottom && cursorRect.bottom >= containerRect.top;
 	}
 
 	$effect(() => {
-		getMessages();
-		getIsStreaming();
-		setTimeout(smartScrollToBottom, 0);
-	});
+		if (!chatContainer) return;
 
-	$effect(() => {
-		getWorldBuilderMessages();
-		getIsWorldBuilderStreaming();
-		setTimeout(smartScrollToBottom, 0);
+		const scrollIfCursorVisible = () => {
+			if (isCursorVisible()) {
+				chatContainer.scrollTop = chatContainer.scrollHeight;
+			}
+		};
+
+		const mutationObserver = new MutationObserver(scrollIfCursorVisible);
+		mutationObserver.observe(chatContainer, { childList: true, subtree: true, characterData: true });
+
+		const resizeObserver = new ResizeObserver(scrollIfCursorVisible);
+		resizeObserver.observe(chatContainer);
+
+		return () => {
+			mutationObserver.disconnect();
+			resizeObserver.disconnect();
+		};
 	});
 </script>
 
@@ -201,7 +205,7 @@
 								<p class="leading-relaxed text-surface-950-50 whitespace-pre-wrap">{message.content}</p>
 							{/if}
 							{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
-								<span class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
+								<span data-streaming-cursor class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
 							{/if}
 							{#if !getIsWorldBuilderStreaming() && message.content}
 								<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
@@ -378,7 +382,7 @@
 									</div>
 								{/if}
 								{#if getIsStreaming() && message === getMessages().at(-1)}
-									<span class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
+									<span data-streaming-cursor class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
 								{/if}
 								{#if message.metadata}
 									<pre class="mt-4 pt-3 border-t border-surface-200-800 text-xs text-surface-500 font-mono leading-relaxed">model:       {message.metadata.model}
