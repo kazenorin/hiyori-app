@@ -42,7 +42,6 @@ async function appendToStoryLog(
  */
 export async function logMainChat(context: {
 	systemPrompt: string;
-	narrationContent?: string;
 	messages: Array<{ role: string; content: string }>;
 }): Promise<void> {
 	const parts: string[] = [];

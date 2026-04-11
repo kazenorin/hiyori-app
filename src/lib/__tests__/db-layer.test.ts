@@ -207,6 +207,69 @@ describe('act-lines operations', () => {
 		expect(msgs[0].content).toBe('Keep');
 	});
 
+	it('does not delete shared message when other line still references it', async () => {
+		// Create shared messages
+		await messages.createMessage('msg-1', 'user', 'Shared User');
+		await messages.createMessage('msg-2', 'assistant', 'Shared Assistant', undefined, undefined, { worldState: 'State', decisions: ['A', 'B'] });
+		await actLines.addMessageToLine('line-1', 'msg-1', 1);
+		await actLines.addMessageToLine('line-1', 'msg-2', 2);
+
+		// Fork from line-1 at sequence 2 (copies msg-1 and msg-2)
+		await actLines.branchFromLine('line-2', 'line-1', 2, 'act-1', 'fork');
+
+		// Add extra message to line-1 only
+		await messages.createMessage('msg-3', 'assistant', 'Only on line-1');
+		await actLines.addMessageToLine('line-1', 'msg-3', 3);
+
+		// Remove last entry from line-1 (should delete msg-3, but NOT msg-2 since line-2 still references it)
+		await actLines.removeLastMessageEntries('line-1', 1);
+
+		// Verify msg-3 was deleted (only line-1 referenced it)
+		expect(await messages.getMessage('msg-3')).toBeNull();
+
+		// Verify msg-2 still exists (line-2 still references it)
+		const msg2 = await messages.getMessage('msg-2');
+		expect(msg2).not.toBeNull();
+		expect(msg2!.gameData).toEqual({ worldState: 'State', decisions: ['A', 'B'] });
+
+		// Verify line-1 no longer has msg-3
+		const line1Msgs = await actLines.getMessagesForLine('line-1');
+		expect(line1Msgs).toHaveLength(2);
+		expect(line1Msgs.map(m => m.id)).toEqual(['msg-1', 'msg-2']);
+
+		// Verify line-2 still has msg-1 and msg-2 with game data
+		const line2Msgs = await actLines.getMessagesForLine('line-2');
+		expect(line2Msgs).toHaveLength(2);
+		expect(line2Msgs[1].gameData).toEqual({ worldState: 'State', decisions: ['A', 'B'] });
+	});
+
+	it('deletes message when no other line references it', async () => {
+		await messages.createMessage('msg-1', 'user', 'Solo');
+		await actLines.addMessageToLine('line-1', 'msg-1', 1);
+
+		await actLines.removeLastMessageEntries('line-1', 1);
+
+		expect(await messages.getMessage('msg-1')).toBeNull();
+	});
+
+	it('preserves game data for shared messages after delete on one line', async () => {
+		await messages.createMessage('msg-1', 'assistant', 'Content', undefined, undefined, { worldState: 'World', decisions: ['X'] });
+		await actLines.addMessageToLine('line-1', 'msg-1', 1);
+		await actLines.addMessageToLine('line-2', 'msg-1', 1);
+
+		// Delete from line-1 only
+		await actLines.removeLastMessageEntries('line-1', 1);
+
+		// Message should still exist and line-2 should still have it with game data
+		const msg = await messages.getMessage('msg-1');
+		expect(msg).not.toBeNull();
+		expect(msg!.gameData).toEqual({ worldState: 'World', decisions: ['X'] });
+
+		const line2Msgs = await actLines.getMessagesForLine('line-2');
+		expect(line2Msgs).toHaveLength(1);
+		expect(line2Msgs[0].gameData).toEqual({ worldState: 'World', decisions: ['X'] });
+	});
+
 	it('branches from a line copying messages up to sequence', async () => {
 		await messages.createMessage('msg-1', 'user', 'Q1');
 		await messages.createMessage('msg-2', 'assistant', 'A1');

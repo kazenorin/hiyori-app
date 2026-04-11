@@ -169,12 +169,16 @@ export async function removeLastMessageEntries(actLineId: string, count: number)
 			[actLineId, ...messageIds]
 		);
 
-		// Batch delete messages
-		const msgPlaceholders = messageIds.map((_, i) => `$${i + 1}`).join(', ');
-		await db.execute(
-			`DELETE FROM messages WHERE id IN (${msgPlaceholders})`,
-			messageIds
-		);
+		// Only delete messages that are no longer referenced by any act line
+		for (const msgId of messageIds) {
+			const refs = await db.select<{ cnt: number }[]>(
+				'SELECT COUNT(*) as cnt FROM act_lines WHERE message_id = $1',
+				[msgId]
+			);
+			if (refs[0].cnt === 0) {
+				await db.execute('DELETE FROM messages WHERE id = $1', [msgId]);
+			}
+		}
 
 		await db.execute('COMMIT');
 	} catch (err) {

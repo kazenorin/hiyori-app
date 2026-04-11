@@ -43,8 +43,8 @@
 	let wbChatContainer = $state<HTMLDivElement | null>(null);
 	let copiedId = $state<string | null>(null);
 	let latestDecisions = $derived(getLatestDecisions());
-	let lastAssistantIdx = $derived(getMessages().reduce((acc: number, m, i) => m.role === 'assistant' ? i : acc, -1));
-	let lastWbAssistantIdx = $derived(getWorldBuilderMessages().reduce((acc: number, m, i) => m.role === 'assistant' ? i : acc, -1));
+	let lastMessageIdx = $derived(getMessages().reduce((acc: number, m, i) => m.role === 'assistant' ? i : acc, -1));
+	let lastWbMessageIdx = $derived(getWorldBuilderMessages().reduce((acc: number, m, i) => m.role === 'assistant' ? i : acc, -1));
 
 	async function handleCopy(messageId: string, content: string) {
 		await navigator.clipboard.writeText(content);
@@ -96,7 +96,11 @@
 		const actLineId = getActiveActLineId();
 		if (!actLineId) return;
 		input = '';
-		sendMessage(actLineId, text, getActiveSystemPrompt() ?? undefined, getActiveNarrationContext() ?? undefined);
+		sendMessage(actLineId, {
+			bodyText: text,
+			systemPrompt: getActiveSystemPrompt() ?? undefined,
+			narrationContent: getActiveNarrationContext() ?? undefined
+		});
 	}
 
 	async function handleCreateFromWorldBuilder() {
@@ -126,7 +130,11 @@
 		if (getIsStreaming()) return;
 		const actLineId = getActiveActLineId();
 		if (!actLineId) return;
-		sendMessage(actLineId, decision, getActiveSystemPrompt() ?? undefined, getActiveNarrationContext() ?? undefined);
+		sendMessage(actLineId, {
+			bodyText: decision,
+			systemPrompt: getActiveSystemPrompt() ?? undefined,
+			narrationContent: getActiveNarrationContext() ?? undefined,
+		});
 	}
 
 	function isCursorVisible(container: HTMLDivElement | null) {
@@ -247,7 +255,7 @@
 										title="Copy message"
 										onclick={() => handleCopy(message.id, message.content)}
 									>{copiedId === message.id ? 'Copied' : 'Copy'}</button>
-									{#if i === lastWbAssistantIdx}
+									{#if i === lastWbMessageIdx}
 										<button
 											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 											title="Regenerate response"
@@ -435,7 +443,7 @@ duration:    {message.metadata.durationMs}ms</pre>
 											title="Fork from here"
 											onclick={() => handleFork(i)}
 										>Fork</button>
-										{#if i === lastAssistantIdx}
+										{#if i === lastMessageIdx}
 											<button
 												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 												title="Regenerate response"
