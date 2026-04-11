@@ -152,7 +152,7 @@ export async function sendMessage(actLineId: string, message: {
 
 		const narrationMsg = message.narrationContent ? [{ role: 'user' as const, content: message.narrationContent }] : [];
 		const existingMsgs = messages.slice(0, -1)
-			.map((m) => ({ role: m.role, content: m.content }));
+			.map((m) => toHistoryMessage(m));
 		const history = [...narrationMsg, ...existingMsgs];
 
 		const result = await Promise.all([
@@ -178,6 +178,13 @@ export async function sendMessage(actLineId: string, message: {
 		isStreaming = false;
 		abortController = null;
 	}
+}
+
+function toHistoryMessage(message: Message) {
+	const gameDataContent = (message.gameData != null) ? `\n\n\`\`\`json
+${JSON.stringify(message.gameData, null, 2)}
+\`\`\`\n` : null
+	return {role: message.role, content: gameDataContent ? message.content + gameDataContent : message.content};
 }
 
 export function stopStreaming(): void {
