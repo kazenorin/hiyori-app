@@ -143,7 +143,9 @@
 	// IntersectionObserver watches the streaming cursor — if it's visible,
 	// user is at the bottom (stuckToBottom = true). If not, user scrolled up (detached).
 	$effect(() => {
-		const cursor = wbStreamingCursor ?? streamingCursor;
+		// Must select cursor by active mode — bind:this does not reset on unmount,
+		// so ?? would pick a stale world builder reference in main chat mode.
+		const cursor = getIsWorldBuilderActive() ? wbStreamingCursor : streamingCursor;
 		const container = chatContainer;
 		if (!cursor || !container) return;
 
