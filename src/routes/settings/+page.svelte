@@ -4,15 +4,9 @@
 	import type { Provider, ApiType, LogLevel } from '$lib/stores/settings.svelte';
 
 	const settings = getSettings();
-
 	let availableModels = $state<ModelInfo[]>([]);
 	let isLoadingModels = $state(false);
 	let modelsError = $state<string | null>(null);
-	let fontSizeSlider = $state(settings.fontSize);
-
-	$effect(() => {
-		fontSizeSlider = settings.fontSize;
-	});
 
 	function handleProviderChange(e: Event) {
 		const value = (e.currentTarget as HTMLSelectElement).value as Provider;
@@ -39,12 +33,6 @@
 
 	function handleApiKeyChange(e: Event) {
 		updateSettings({ apiKey: (e.currentTarget as HTMLInputElement).value });
-	}
-
-	function handleFontSizeChange(e: Event) {
-		const value = parseFloat((e.currentTarget as HTMLInputElement).value);
-		fontSizeSlider = value;
-		updateSettings({ fontSize: value });
 	}
 
 	async function handleFetchModels() {
@@ -170,29 +158,6 @@
 					value={settings.apiKey}
 					oninput={handleApiKeyChange}
 				/>
-			</label>
-		</section>
-
-		<!-- Appearance -->
-		<section class="card p-6 space-y-4">
-			<h2 class="h4">Appearance</h2>
-
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Text Scaling</span>
-				<input
-					class="input mt-1"
-					type="range"
-					min="0.7"
-					max="1.5"
-					step="0.05"
-					value={fontSizeSlider}
-					oninput={handleFontSizeChange}
-				/>
-				<div class="flex justify-between text-xs text-surface-500 mt-1">
-					<span>70%</span>
-					<span>Text Scaling: {(fontSizeSlider * 100).toFixed(0)}%</span>
-					<span>150%</span>
-				</div>
 			</label>
 		</section>
 

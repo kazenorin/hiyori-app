@@ -36,6 +36,7 @@
 		exitWorldBuilderMode,
 		getIsActive as getIsWorldBuilderActive
 	} from '$lib/ai/world-builder.svelte';
+	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
 
 	let { children } = $props();
 	let appError = $state<string | null>(null);
@@ -56,6 +57,31 @@
 	type DeleteTarget = { type: 'story' | 'act' | 'line'; id: string; name: string };
 	let confirmDelete = $state<DeleteTarget | null>(null);
 	let cancelButton: HTMLButtonElement | null = $state(null);
+
+	// Font size slider state
+	let fontSizeSlider = $state(getSettings().fontSize);
+	$effect(() => { fontSizeSlider = getSettings().fontSize; });
+
+	function handleFontSizeChange(e: Event) {
+		const value = parseFloat((e.currentTarget as HTMLInputElement).value);
+		updateSettings({ fontSize: value });
+	}
+
+	// Ctrl+scroll to adjust text size
+	$effect(() => {
+		function handleWheel(e: WheelEvent) {
+			if (!e.ctrlKey) return;
+			e.preventDefault();
+			const current = getSettings().fontSize;
+			const delta = e.deltaY > 0 ? -0.05 : 0.05;
+			const next = Math.min(1.5, Math.max(0.7, Math.round((current + delta) * 100) / 100));
+			if (next !== current) {
+				updateSettings({ fontSize: next });
+			}
+		}
+		window.addEventListener('wheel', handleWheel, { passive: false });
+		return () => window.removeEventListener('wheel', handleWheel);
+	});
 
 	onMount(async () => {
 		try {
@@ -398,6 +424,19 @@
 
 			<!-- Sidebar footer -->
 			<div class="p-3 border-t border-surface-200-800 flex flex-col gap-1">
+				<label class="flex items-center gap-2 px-2 py-1 text-xs text-surface-500">
+					<span class="shrink-0 font-medium" style="font-size: 0.65rem;">Aa</span>
+					<input
+						class="flex-1 cursor-pointer"
+						type="range"
+						min="0.7"
+						max="1.5"
+						step="0.05"
+						value={fontSizeSlider}
+						oninput={handleFontSizeChange}
+					/>
+					<span class="shrink-0 w-8 text-right tabular-nums">{(fontSizeSlider * 100).toFixed(0)}%</span>
+				</label>
 				<a
 					href="/"
 					class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"

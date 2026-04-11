@@ -20,17 +20,24 @@
 <style>
 	@reference "../../routes/+layout.css";
 
+	.markdown-content {
+		font-size: var(--text-base);
+	}
 	.markdown-content :global(h1) {
-		@apply text-2xl font-bold mt-6 mb-3;
+		font-size: var(--text-2xl);
+		@apply font-bold mt-6 mb-3;
 	}
 	.markdown-content :global(h2) {
-		@apply text-xl font-semibold mt-5 mb-2;
+		font-size: var(--text-xl);
+		@apply font-semibold mt-5 mb-2;
 	}
 	.markdown-content :global(h3) {
-		@apply text-lg font-semibold mt-4 mb-2;
+		font-size: var(--text-lg);
+		@apply font-semibold mt-4 mb-2;
 	}
 	.markdown-content :global(h4) {
-		@apply text-base font-semibold mt-3 mb-1;
+		font-size: var(--text-base);
+		@apply font-semibold mt-3 mb-1;
 	}
 	.markdown-content :global(p) {
 		@apply mb-3 leading-relaxed;
@@ -57,10 +64,12 @@
 		@apply border-l-4 border-surface-300-700 pl-4 italic my-3;
 	}
 	.markdown-content :global(code) {
-		@apply font-mono text-sm bg-surface-200-800 rounded px-1.5 py-0.5;
+		font-size: var(--text-xs);
+		@apply font-mono bg-surface-200-800 rounded px-1.5 py-0.5;
 	}
 	.markdown-content :global(pre) {
-		@apply font-mono text-sm bg-surface-200-800 rounded-lg p-4 overflow-x-auto my-3;
+		font-size: var(--text-xs);
+		@apply font-mono bg-surface-200-800 rounded-lg p-4 overflow-x-auto my-3;
 	}
 	.markdown-content :global(pre code) {
 		@apply bg-transparent p-0 rounded-none;
