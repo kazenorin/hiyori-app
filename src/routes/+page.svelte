@@ -425,7 +425,7 @@ duration:    {message.metadata.durationMs}ms</pre>
 					<div class="max-w-2xl mx-auto space-y-2 mt-4">
 						{#each latestDecisions as decision, i}
 							<button
-								class="btn preset-filled-primary-500 w-full text-left"
+								class="btn preset-filled-primary-500 w-full text-left line-clamp-2 whitespace-normal"
 								type="button"
 								onclick={() => handleDecisionClick(decision)}
 							>
