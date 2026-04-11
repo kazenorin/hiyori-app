@@ -194,56 +194,56 @@
 				</div>
 
 				{#each getWorldBuilderMessages() as message, i (message.id)}
-						{#if message.role === 'user'}
-							<div class="flex justify-end">
-								<div
-									class="max-w-[80%] rounded-[var(--radius-container)] bg-primary-100-900 p-5"
-								>
-									<p class="leading-relaxed text-primary-900-100 whitespace-pre-wrap">{message.content}</p>
-									{#if !getIsWorldBuilderStreaming()}
-										<div class="flex gap-2 mt-3 pt-3 border-t border-primary-200-800">
-											<button
-												class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
-												title="Copy message"
-												onclick={() => handleCopy(message.id, message.content)}
-											>{copiedId === message.id ? 'Copied' : 'Copy'}</button>
-										</div>
-									{/if}
-								</div>
-							</div>
-						{:else}
+					{#if message.role === 'user'}
+						<div class="flex justify-end">
 							<div
-								class="rounded-[var(--radius-container)] bg-surface-50-950 p-5 shadow-message"
+								class="max-w-[80%] rounded-[var(--radius-container)] bg-primary-100-900 p-5"
 							>
-								{#if message.content}
-									<p class="leading-relaxed text-surface-950-50 whitespace-pre-wrap">{message.content}</p>
-								{/if}
-								{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
-									<span bind:this={wbStreamingCursor} class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
-								{/if}
-								{#if !getIsWorldBuilderStreaming() && message.content}
-									<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
+								<p class="leading-relaxed text-primary-900-100 whitespace-pre-wrap">{message.content}</p>
+								{#if !getIsWorldBuilderStreaming()}
+									<div class="flex gap-2 mt-3 pt-3 border-t border-primary-200-800">
 										<button
-											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+											class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
 											title="Copy message"
 											onclick={() => handleCopy(message.id, message.content)}
 										>{copiedId === message.id ? 'Copied' : 'Copy'}</button>
-										{#if i === lastWbAssistantIdx}
-											<button
-												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
-												title="Regenerate response"
-												onclick={handleWorldBuilderRegenerate}
-											>Regenerate</button>
-											<button
-												class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
-												title="Delete last exchange"
-												onclick={handleWorldBuilderDelete}
-											>Delete</button>
-										{/if}
 									</div>
 								{/if}
 							</div>
-						{/if}
+						</div>
+					{:else}
+						<div
+							class="rounded-[var(--radius-container)] bg-surface-50-950 p-5 shadow-message"
+						>
+							{#if message.content}
+								<p class="leading-relaxed text-surface-950-50 whitespace-pre-wrap">{message.content}</p>
+							{/if}
+							{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
+								<span bind:this={wbStreamingCursor} class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
+							{/if}
+							{#if !getIsWorldBuilderStreaming() && message.content}
+								<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
+									<button
+										class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+										title="Copy message"
+										onclick={() => handleCopy(message.id, message.content)}
+									>{copiedId === message.id ? 'Copied' : 'Copy'}</button>
+									{#if i === lastWbAssistantIdx}
+										<button
+											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+											title="Regenerate response"
+											onclick={handleWorldBuilderRegenerate}
+										>Regenerate</button>
+										<button
+											class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
+											title="Delete last exchange"
+											onclick={handleWorldBuilderDelete}
+										>Delete</button>
+									{/if}
+								</div>
+							{/if}
+						</div>
+					{/if}
 					{/each}
 
 				{#if getIsWorldBuilderComplete()}

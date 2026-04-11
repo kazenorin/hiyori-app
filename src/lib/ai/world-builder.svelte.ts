@@ -1,4 +1,3 @@
-import { streamText } from 'ai';
 import { getSettings } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
 import { loadWorldBuilderSystemPrompt, loadWorldTemplate } from '$lib/fs/world-prompts';
@@ -189,58 +188,9 @@ export async function sendWorldBuilderMessage(text: string): Promise<void> {
 	};
 
 	const assistantId = crypto.randomUUID();
-	const assistantMessage: WorldBuilderMessage = {
-		id: assistantId,
-		role: 'assistant',
-		content: ''
-	};
+	messages = [...messages, userMessage, { id: assistantId, role: 'assistant', content: '' }];
 
-	messages = [...messages, userMessage, assistantMessage];
-	const assistantIdx = messages.length - 1;
-
-	isStreaming = true;
-	abortController = new AbortController();
-
-	try {
-		const settings = getSettings();
-		const model = createModel(settings);
-
-		// Use cached prompts instead of reloading from filesystem
-		const fullSystemPrompt = buildFullSystemPrompt();
-
-		const history = messages
-			.filter((m) => m.id !== assistantId)
-			.map((m) => ({ role: m.role, content: m.content }));
-
-		await logWorldBuilderChat({ systemPrompt: fullSystemPrompt, messages: history, logFilename: logFilePath ?? undefined });
-
-		const result = await executeStream(
-			{
-				model,
-				messages: history,
-				systemPrompt: fullSystemPrompt,
-				abortSignal: abortController.signal
-			},
-			{
-				onTextDelta: (text) => {
-					messages[assistantIdx] = {
-						...messages[assistantIdx],
-						content: messages[assistantIdx].content + text
-					};
-				}
-			}
-		);
-
-		// Check for completion marker in the final content
-		parseCompletionMarker(result.content);
-	} catch (err: unknown) {
-		if (err instanceof DOMException && err.name === 'AbortError') return;
-		error = err instanceof Error ? err.message : 'An unexpected error occurred.';
-		messages = messages.filter((m) => m.id !== assistantId);
-	} finally {
-		isStreaming = false;
-		abortController = null;
-	}
+	await streamNextResponse(assistantId);
 }
 
 export function stopStreaming(): void {
@@ -256,7 +206,9 @@ export async function regenerateLastWorldBuilderResponse(): Promise<void> {
 	const lastAssistant = messages[lastAssistantIdx];
 	messages = messages.filter((m) => m.id !== lastAssistant.id);
 
-	await resendLastWorldBuilderMessage();
+	const assistantId = crypto.randomUUID();
+	messages = [...messages, { id: assistantId, role: 'assistant', content: '' }];
+	await streamNextResponse(assistantId);
 }
 
 export async function deleteLastWorldBuilderExchange(): Promise<void> {
@@ -280,27 +232,9 @@ export async function deleteLastWorldBuilderExchange(): Promise<void> {
 	messages = messages.filter((_, i) => i !== lastUserIdx && i !== lastAssistantIdx);
 }
 
-async function resendLastWorldBuilderMessage(): Promise<void> {
-	const validationError = validateSettings();
-	if (validationError) {
-		error = validationError;
-		return;
-	}
-
-	error = null;
-
-	const lastUserIdx = messages.map((m) => m.role).lastIndexOf('user');
-	if (lastUserIdx === -1) return;
-
-	const assistantId = crypto.randomUUID();
-	const assistantMessage: WorldBuilderMessage = {
-		id: assistantId,
-		role: 'assistant',
-		content: ''
-	};
-
-	messages = [...messages, assistantMessage];
-	const assistantIdx = messages.length - 1;
+async function streamNextResponse(assistantId: string): Promise<void> {
+	const assistantIdx = messages.findIndex((m) => m.id === assistantId);
+	if (assistantIdx === -1) return;
 
 	isStreaming = true;
 	abortController = new AbortController();
