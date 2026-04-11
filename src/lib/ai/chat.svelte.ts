@@ -1,22 +1,11 @@
-import { getSettings } from '$lib/stores/settings.svelte';
-import { createModel } from '$lib/ai/provider';
-import { loadSystemPrompt } from '$lib/fs/system-prompt';
-import { executeStream, type StreamResult } from '$lib/ai/streaming';
+import {getSettings} from '$lib/stores/settings.svelte';
+import {loadSystemPrompt} from '$lib/fs/system-prompt';
+import type {GameData} from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
-import { logMainChat } from '$lib/logging/chat-logger';
-import { createStreamAccumulator } from '$lib/ai/chat-callbacks';
-import { setMetadata } from '$lib/ai/message-updater';
-import type { GameData } from '$lib/db/messages';
-
-export interface MessageMetadata {
-	model: string;
-	finishReason: string;
-	promptTokens: number;
-	completionTokens: number;
-	totalTokens: number;
-	durationMs: number;
-}
+import {logMainChat} from '$lib/logging/chat-logger';
+import {type StreamState} from '$lib/ai/chat-callbacks';
+import {type MessageMetadata, streamChatResponse} from "./chat-stream";
 
 export interface Message {
 	id: string;
@@ -79,110 +68,31 @@ function validateSettings(): string | null {
 	return null;
 }
 
-function buildMetadata(result: StreamResult): MessageMetadata {
-	const settings = getSettings();
-	return {
-		model: settings.model,
-		finishReason: result.finishReason,
-		promptTokens: result.usage.inputTokens,
-		completionTokens: result.usage.outputTokens,
-		totalTokens: result.usage.totalTokens,
-		durationMs: result.durationMs
-	};
-}
-
 async function persistMessage(
 	actLineId: string,
-	messageId: string,
-	content: string,
-	reasoning: string | undefined,
-	metadata: MessageMetadata | undefined,
-	gameData?: GameData
+	message: Message
 ): Promise<void> {
 	await dbMessages.createMessage(
-		messageId,
+		message.id,
 		'assistant',
-		content,
-		reasoning,
-		metadata ? JSON.stringify(metadata) : undefined,
-		gameData
+		message.content,
+		message.reasoning,
+		message.metadata ? JSON.stringify(message.metadata) : undefined,
+		message.gameData
 	);
 	const seq = await dbActLines.getNextSequence(actLineId);
-	await dbActLines.addMessageToLine(actLineId, messageId, seq);
-}
-
-/**
- * Core streaming helper for chat responses.
- * Handles streaming, metadata capture, persistence, and error handling.
- * Callers provide the message history and state setup.
- */
-async function streamChatResponse(
-	actLineId: string,
-	history: { role: "user" | "assistant"; content: string }[],
-	systemPrompt: string,
-	messageId: string,
-	messageIdx: number
-): Promise<void> {
-	const settings = getSettings();
-	const model = createModel(settings);
-
-	await logMainChat({ systemPrompt, messages: history });
-
-	// Create stream accumulator with parser chain integrated
-	const accumulator = createStreamAccumulator((state) => {
-		messages[messageIdx] = {
-			...messages[messageIdx],
-			content: state.content,
-			reasoning: state.reasoning || undefined,
-			gameData: state.gameData || undefined
-		};
-	});
-
-	const result = await executeStream(
-		{
-			model,
-			messages: history,
-			systemPrompt,
-			abortSignal: abortController!.signal,
-			providerOptions: {
-				openai: {
-					reasoningEffort: 'medium',
-					reasoningSummary: 'detailed'
-				}
-			}
-		},
-		accumulator.callbacks
-	);
-
-	// Flush parser chain and apply any remaining output
-	accumulator.flush();
-	const finalState = accumulator.state;
-
-	// Update message with accumulated content and final metadata
-	const metadata = buildMetadata(result);
-	const reasoning = finalState.reasoning || undefined;
-	messages[messageIdx] = setMetadata(messages[messageIdx], reasoning, metadata);
-
-	// Persist with accumulated content (not result.content)
-	await persistMessage(
-		actLineId,
-		messageId,
-		finalState.content,
-		reasoning,
-		metadata,
-		finalState.gameData || undefined
-	);
+	await dbActLines.addMessageToLine(actLineId, message.id, seq);
 }
 
 /**
  * Handle errors from streaming: persist partial on abort, remove message on other errors.
  */
-function handleStreamError(err: unknown, messageId: string, actLineId: string): void {
+async function handleStreamError(err: unknown, messageId: string, actLineId: string): Promise<void> {
 	if (err instanceof DOMException && err.name === 'AbortError') {
 		// User cancelled — persist partial content (fire and forget)
 		const partial = messages.find((m) => m.id === messageId);
 		if (partial && partial.content) {
-			persistMessage(actLineId, messageId, partial.content, partial.reasoning || undefined, undefined, partial.gameData);
+			await persistMessage(actLineId, partial);
 		}
 	} else {
 		error = err instanceof Error ? err.message : 'An unexpected error occurred.';
@@ -245,9 +155,25 @@ export async function sendMessage(actLineId: string, message: {
 			.map((m) => ({ role: m.role, content: m.content }));
 		const history = [...narrationMsg, ...existingMsgs];
 
-		await streamChatResponse(actLineId, history, systemPrompt, responseMessageId, messageIdx);
+		const result = await Promise.all([
+			logMainChat({systemPrompt, messages: history}),
+			streamChatResponse(systemPrompt, history, abortController!.signal,
+				(state: StreamState) => {
+					messages[messageIdx] = {
+						...messages[messageIdx],
+						content: state.content,
+						reasoning: state.reasoning ?? messages[messageIdx].reasoning,
+						gameData: state.gameData ?? messages[messageIdx].gameData
+					};
+				}
+			)
+		])
+		messages[messageIdx].metadata = result[1];
+
+		// Persist with accumulated content (not result.content)
+		await persistMessage(actLineId, messages[messageIdx]);
 	} catch (err: unknown) {
-		handleStreamError(err, responseMessageId, actLineId);
+		await handleStreamError(err, responseMessageId, actLineId);
 	} finally {
 		isStreaming = false;
 		abortController = null;

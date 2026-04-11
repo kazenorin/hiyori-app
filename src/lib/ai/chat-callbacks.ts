@@ -1,19 +1,18 @@
-import type { StreamCallbacks } from './streaming';
-import type { ParserChainOutput } from './parser-chain';
+import type { StreamCallbacks, StreamResultMetadata } from './streaming';
 import { createParserChain } from './parser-chain';
 import { applyParserOutput, applyReasoningDelta } from './message-updater';
 import type { GameData } from '$lib/db/messages';
 
 export interface StreamState {
 	content: string;
-	reasoning: string;
+	reasoning: string | null;
 	gameData: GameData | null;
 }
 
 export interface StreamAccumulator {
 	callbacks: StreamCallbacks;
 	state: StreamState;
-	flush(): ParserChainOutput;
+	resultMetadata: Promise<StreamResultMetadata>;
 }
 
 export type OnStreamUpdate = (state: StreamState) => void;
@@ -26,10 +25,11 @@ export type OnStreamUpdate = (state: StreamState) => void;
  */
 export function createStreamAccumulator(onUpdate?: OnStreamUpdate): StreamAccumulator {
 	const chain = createParserChain();
+	const { promise: resultMetadataPromise, resolve: resolveResult, reject: rejectResult } = Promise.withResolvers<StreamResultMetadata>()
 	let state: StreamState = {
 		content: '',
-		reasoning: '',
-		gameData: null
+		reasoning: null,
+		gameData: null,
 	};
 
 	function notify(): void {
@@ -48,15 +48,20 @@ export function createStreamAccumulator(onUpdate?: OnStreamUpdate): StreamAccumu
 			onReasoningDelta: (text: string) => {
 				state = applyReasoningDelta(state, text);
 				notify();
+			},
+			onComplete: (resultMetadata: StreamResultMetadata) => {
+				const chainOutput = chain.flush();
+				state = applyParserOutput(state, chainOutput);
+				notify();
+				resolveResult(resultMetadata)
+			},
+			onError: (err: unknown) => {
+				rejectResult(err)
 			}
 		},
 		get state() {
 			return state;
 		},
-		flush(): ParserChainOutput {
-			const output = chain.flush();
-			state = applyParserOutput(state, output);
-			return output;
-		}
+		resultMetadata: resultMetadataPromise
 	};
 }

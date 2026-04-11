@@ -1,20 +1,27 @@
 import { describe, it, expect } from 'vitest';
-import { createStreamAccumulator } from '../ai/chat-callbacks';
+import {createStreamAccumulator, type StreamState} from '../ai/chat-callbacks';
 import type { GameData } from '../db/messages';
 
 const T = 'think';
+const emptyMetadata = {
+	finishReason: 'finished',
+	usage: {
+		inputTokens: 0,
+		outputTokens: 0,
+		totalTokens: 0
+	},
+	durationMs: 1
+}
 
-function feedAll(chunks: string[]): { text: string; reasoning: string; gameData: GameData | null } {
-	const updates: Array<{ content: string; reasoning: string; gameData: GameData | null }> = [];
-	const acc = createStreamAccumulator((state) => {
-		updates.push({ content: state.content, reasoning: state.reasoning, gameData: state.gameData });
-	});
+function feedAll(chunks: string[]): { text: string; reasoning: string | null; gameData: GameData | null } {
+	const acc = createStreamAccumulator();
 
 	for (const chunk of chunks) {
 		acc.callbacks.onTextDelta(chunk);
 	}
 
-	acc.flush();
+	acc.callbacks.onComplete(emptyMetadata)
+
 	return {
 		text: acc.state.content,
 		reasoning: acc.state.reasoning,
@@ -32,7 +39,7 @@ describe('createStreamAccumulator', () => {
 		it('accumulates plain text', () => {
 			const result = feedAll(['Hello', ' ', 'world']);
 			expect(result.text).toBe('Hello world');
-			expect(result.reasoning).toBe('');
+			expect(result.reasoning).toBeNull();
 			expect(result.gameData).toBeNull();
 		});
 
@@ -59,15 +66,21 @@ describe('createStreamAccumulator', () => {
 	describe('reasoning delta', () => {
 		it('accumulates explicit reasoning deltas', () => {
 			const acc = createStreamAccumulator();
-			acc.callbacks.onReasoningDelta('First');
-			acc.callbacks.onReasoningDelta(' Second');
+			if (acc.callbacks.onReasoningDelta) {
+				acc.callbacks.onReasoningDelta('First');
+			}
+			if (acc.callbacks.onReasoningDelta) {
+				acc.callbacks.onReasoningDelta(' Second');
+			}
 			expect(acc.state.reasoning).toBe('First Second');
 		});
 
 		it('accumulates reasoning from both thinking tags and deltas', () => {
 			const acc = createStreamAccumulator();
 			acc.callbacks.onTextDelta(`<${T}>Tag reasoning</${T}>`);
-			acc.callbacks.onReasoningDelta(' Delta reasoning');
+			if (acc.callbacks.onReasoningDelta) {
+				acc.callbacks.onReasoningDelta(' Delta reasoning');
+			}
 			expect(acc.state.reasoning).toBe('Tag reasoning Delta reasoning');
 		});
 	});
@@ -127,9 +140,13 @@ describe('createStreamAccumulator', () => {
 		it('calls onUpdate on reasoning delta', () => {
 			const updates: string[] = [];
 			const acc = createStreamAccumulator((state) => {
-				updates.push(state.reasoning);
+				if (state.reasoning) {
+					updates.push(state.reasoning);
+				}
 			});
-			acc.callbacks.onReasoningDelta('thought');
+			if (acc.callbacks.onReasoningDelta) {
+				acc.callbacks.onReasoningDelta('thought');
+			}
 			expect(updates).toEqual(['thought']);
 		});
 
@@ -148,7 +165,7 @@ describe('createStreamAccumulator', () => {
 			const acc = createStreamAccumulator();
 			acc.callbacks.onTextDelta(`<${T}>Incomplete`);
 			expect(acc.state.content).toBe('');
-			acc.flush();
+			acc.callbacks.onComplete(emptyMetadata)
 			expect(acc.state.content).toContain(`<${T}>`);
 			expect(acc.state.content).toContain('Incomplete');
 		});
@@ -167,12 +184,16 @@ describe('createStreamAccumulator', () => {
 		});
 
 		it('state is replaced not mutated on reasoning delta', () => {
-			const states: Array<{ reasoning: string }> = [];
+			const states: Array<StreamState> = [];
 			const acc = createStreamAccumulator((state) => {
 				states.push(state);
 			});
-			acc.callbacks.onReasoningDelta('x');
-			acc.callbacks.onReasoningDelta('y');
+			if (acc.callbacks.onReasoningDelta) {
+				acc.callbacks.onReasoningDelta('x');
+			}
+			if (acc.callbacks.onReasoningDelta) {
+				acc.callbacks.onReasoningDelta('y');
+			}
 			expect(states[0].reasoning).toBe('x');
 			expect(states[1].reasoning).toBe('xy');
 		});

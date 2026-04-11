@@ -38,7 +38,7 @@ export function createParserChain(): ParserChain {
 			const thinking = thinkingOutput.thinking;
 
 			// Pass remaining text through game-data parser
-			const textToProcess = thinkingOutput.text ?? '';
+			const textToProcess = thinkingOutput.text;
 			if (textToProcess) {
 				const gameOutput = gameDataParser.feed(textToProcess);
 				return {

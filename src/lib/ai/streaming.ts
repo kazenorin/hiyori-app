@@ -13,11 +13,11 @@ export interface StreamConfig {
 export interface StreamCallbacks {
 	onTextDelta: (text: string) => void;
 	onReasoningDelta?: (text: string) => void;
+	onComplete: (result: StreamResultMetadata) => void;
+	onError: (err: unknown) => void;
 }
 
-export interface StreamResult {
-	content: string;
-	reasoning: string | undefined;
+export interface StreamResultMetadata {
 	finishReason: string;
 	usage: {
 		inputTokens: number;
@@ -36,48 +36,44 @@ export interface StreamResult {
 export async function executeStream(
 	config: StreamConfig,
 	callbacks: StreamCallbacks
-): Promise<StreamResult> {
+): Promise<void> {
 	const startTime = Date.now();
-	const contentParts: string[] = [];
-	const reasoningParts: string[] = [];
 
-	const result = streamText({
-		model: config.model,
-		messages: config.messages,
-		system: config.systemPrompt,
-		abortSignal: config.abortSignal,
-		providerOptions: config.providerOptions
-	});
+	try {
+		const result = streamText({
+			model: config.model,
+			messages: config.messages,
+			system: config.systemPrompt,
+			abortSignal: config.abortSignal,
+			providerOptions: config.providerOptions
+		});
 
-	for await (const part of result.fullStream) {
-		switch (part.type) {
-			case 'text-delta':
-				contentParts.push(part.text);
-				callbacks.onTextDelta(part.text);
-				break;
-			case 'reasoning-delta':
-				if (callbacks.onReasoningDelta) {
-					reasoningParts.push(part.text);
-					callbacks.onReasoningDelta(part.text);
-				}
-				break;
+		for await (const part of result.fullStream) {
+			switch (part.type) {
+				case 'text-delta':
+					callbacks.onTextDelta(part.text);
+					break;
+				case 'reasoning-delta':
+					if (callbacks.onReasoningDelta) {
+						callbacks.onReasoningDelta(part.text);
+					}
+					break;
+			}
 		}
+
+		const usage = await result.usage;
+		const finishReason = (await result.finishReason) ?? 'unknown';
+
+		callbacks.onComplete({
+			finishReason,
+			usage: {
+				inputTokens: usage.inputTokens ?? 0,
+				outputTokens: usage.outputTokens ?? 0,
+				totalTokens: usage.totalTokens ?? 0
+			},
+			durationMs: Date.now() - startTime
+		})
+	} catch (err: unknown) {
+		callbacks.onError(err)
 	}
-
-	const usage = await result.usage;
-	const finishReason = (await result.finishReason) ?? 'unknown';
-	const content = contentParts.join('');
-	const reasoning = reasoningParts.length > 0 ? reasoningParts.join('') : undefined;
-
-	return {
-		content,
-		reasoning,
-		finishReason,
-		usage: {
-			inputTokens: usage.inputTokens ?? 0,
-			outputTokens: usage.outputTokens ?? 0,
-			totalTokens: usage.totalTokens ?? 0
-		},
-		durationMs: Date.now() - startTime
-	};
 }
