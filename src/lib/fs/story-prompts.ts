@@ -33,6 +33,15 @@ function shortId(id: string): string {
 	return id.split('-')[0];
 }
 
+/**
+ * Derive a safe story name, falling back to a short UUID-based name
+ * when the canonical name would be empty.
+ */
+export function deriveStoryName(name: string, id: string): string {
+	const canon = canonicalName(name);
+	return canon || `story-${shortId(id)}`;
+}
+
 
 async function listAppDataFolders(): Promise<string[]> {
 	const entries = await readDir('', { baseDir: BaseDirectory.AppData });

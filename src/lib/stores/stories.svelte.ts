@@ -3,7 +3,9 @@ import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import * as dbAppState from '$lib/db/app-state';
 import { log } from '$lib/logging/logger';
-import { loadStorySystemPrompt, loadStoryNarrationTemplate, loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder } from '$lib/fs/story-prompts';
+import { moveWorldBuilderLog } from '$lib/logging/chat-logger';
+import { getLogFilePath } from '$lib/ai/world-builder.svelte';
+import { loadStorySystemPrompt, loadStoryNarrationTemplate, loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-prompts';
 import { writeTextFile, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 
@@ -294,9 +296,16 @@ export async function createStoryFromWorldBuilder(
 	const actLine = await createActLine(act.id, 'main line');
 
 	// Write world.md to story folder before selectStory triggers ensureWorldFile
-	const folderName = await resolveStoryFolder(story.id, story.name);
+	const effectiveName = deriveStoryName(story.name, story.id);
+	const folderName = await resolveStoryFolder(story.id, effectiveName);
 	const worldPath = `${folderName}/world.md`;
 	await writeTextFile(worldPath, worldContent, { baseDir: BaseDirectory.AppData });
+
+	// Move world builder log from AppData/logs/ to story folder
+	const logFile = getLogFilePath();
+	if (logFile) {
+		await moveWorldBuilderLog(logFile, folderName);
+	}
 
 	await selectStory(story.id);
 	await selectActLine(actLine.id);

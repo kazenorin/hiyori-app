@@ -1,4 +1,4 @@
-import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { writeTextFile, readTextFile, mkdir, exists, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { resolveStoryFolder } from '$lib/fs/story-prompts';
 import { getActiveStory } from '$lib/stores/stories.svelte';
 import { getSettings } from '$lib/stores/settings.svelte';
@@ -64,13 +64,16 @@ export async function logMainChat(context: {
 }
 
 /**
- * Log world builder chat context: system prompt and all messages.
- * Called before each AI call in the world builder.
+ * Log world builder chat context to a temporary file in AppData/logs/.
+ * After story creation, the log is moved to the story folder.
  */
 export async function logWorldBuilderChat(context: {
 	systemPrompt: string;
 	messages: Array<{ role: string; content: string }>;
+	logFilename?: string;
 }): Promise<void> {
+	if (!isDebugEnabled()) return;
+
 	const parts: string[] = [];
 
 	parts.push(`=== SYSTEM PROMPT ===\n${context.systemPrompt}`);
@@ -82,9 +85,53 @@ export async function logWorldBuilderChat(context: {
 
 	const content = parts.join('\n\n');
 
-	// Write to story-level log file
-	await appendToStoryLog('world-builder.log', 'World Builder Chat Context', content);
-
-	// Also send to unified Tauri log (filtered by Rust-side level)
+	// Also send to unified Tauri log
 	await log.debug('world-builder', content);
+
+	// Write to temp log file if filename provided
+	if (context.logFilename) {
+		try {
+			await mkdir('logs', { baseDir: BaseDirectory.AppData, recursive: true });
+			await writeTextFile(`logs/${context.logFilename}`, formatEntry('World Builder Chat Context', content), {
+				baseDir: BaseDirectory.AppData,
+				append: true
+			});
+		} catch (err) {
+			await log.error('chat-logger', `Failed to write world builder log`, err);
+		}
+	}
+}
+
+/**
+ * Move a world builder log file from AppData/logs/ to the story folder.
+ */
+export async function moveWorldBuilderLog(
+	logFilename: string,
+	storyFolder: string
+): Promise<void> {
+	if (!logFilename) return;
+	try {
+		const srcPath = `logs/${logFilename}`;
+		const srcExists = await exists(srcPath, { baseDir: BaseDirectory.AppData });
+		if (!srcExists) return;
+
+		const content = await readTextFile(srcPath, { baseDir: BaseDirectory.AppData });
+		await writeTextFile(`${storyFolder}/${logFilename}`, content, {
+			baseDir: BaseDirectory.AppData,
+			append: false
+		});
+		await remove(srcPath, { baseDir: BaseDirectory.AppData });
+	} catch (err) {
+		await log.error('chat-logger', `Failed to move world builder log`, err);
+	}
+}
+
+/**
+ * Generate a world builder log filename with timestamp.
+ */
+export function generateWorldBuilderLogFilename(): string {
+	const now = new Date();
+	const pad = (n: number) => String(n).padStart(2, '0');
+	const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+	return `worldbuilding-${ts}.log`;
 }

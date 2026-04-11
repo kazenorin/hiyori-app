@@ -22,7 +22,9 @@
 		getIsComplete as getIsWorldBuilderComplete,
 		getStoryName as getWorldBuilderStoryName,
 		getWorldContent as getWorldBuilderContent,
-		exitWorldBuilderMode
+		exitWorldBuilderMode,
+		regenerateLastWorldBuilderResponse,
+		deleteLastWorldBuilderExchange
 	} from '$lib/ai/world-builder.svelte';
 	import {
 		getActiveActLineId,
@@ -41,6 +43,7 @@
 	let copiedId = $state<string | null>(null);
 	let latestDecisions = $derived(getLatestDecisions());
 	let lastAssistantIdx = $derived(getMessages().reduce((acc: number, m, i) => m.role === 'assistant' ? i : acc, -1));
+	let lastWbAssistantIdx = $derived(getWorldBuilderMessages().reduce((acc: number, m, i) => m.role === 'assistant' ? i : acc, -1));
 
 	async function handleCopy(messageId: string, content: string) {
 		await navigator.clipboard.writeText(content);
@@ -58,6 +61,16 @@
 		const actLineId = getActiveActLineId();
 		if (!actLineId || getIsStreaming()) return;
 		await deleteLastExchange(actLineId);
+	}
+
+	async function handleWorldBuilderRegenerate() {
+		if (getIsWorldBuilderStreaming()) return;
+		await regenerateLastWorldBuilderResponse();
+	}
+
+	async function handleWorldBuilderDelete() {
+		if (getIsWorldBuilderStreaming()) return;
+		await deleteLastWorldBuilderExchange();
 	}
 
 	async function handleFork(messageIndex: number) {
@@ -119,6 +132,7 @@
 	}
 
 	let streamingCursor: HTMLSpanElement | null = $state(null);
+	let wbStreamingCursor: HTMLSpanElement | null = $state(null);
 	let stuckToBottom = $state(true);
 
 	function scrollToBottom() {
@@ -129,7 +143,7 @@
 	// IntersectionObserver watches the streaming cursor — if it's visible,
 	// user is at the bottom (stuckToBottom = true). If not, user scrolled up (detached).
 	$effect(() => {
-		const cursor = streamingCursor;
+		const cursor = wbStreamingCursor ?? streamingCursor;
 		const container = chatContainer;
 		if (!cursor || !container) return;
 
@@ -179,28 +193,58 @@
 					<p class="text-xs text-surface-500">Answer questions to build your story's world. Say "let's start" when ready.</p>
 				</div>
 
-				{#each getWorldBuilderMessages() as message (message.id)}
-					{#if message.role === 'user'}
-						<div class="flex justify-end">
-							<div
-								class="max-w-[80%] rounded-[var(--radius-container)] bg-primary-100-900 p-5"
-							>
-								<p class="leading-relaxed text-primary-900-100 whitespace-pre-wrap">{message.content}</p>
+				{#each getWorldBuilderMessages() as message, i (message.id)}
+						{#if message.role === 'user'}
+							<div class="flex justify-end">
+								<div
+									class="max-w-[80%] rounded-[var(--radius-container)] bg-primary-100-900 p-5"
+								>
+									<p class="leading-relaxed text-primary-900-100 whitespace-pre-wrap">{message.content}</p>
+									{#if !getIsWorldBuilderStreaming()}
+										<div class="flex gap-2 mt-3 pt-3 border-t border-primary-200-800">
+											<button
+												class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
+												title="Copy message"
+												onclick={() => handleCopy(message.id, message.content)}
+											>{copiedId === message.id ? 'Copied' : 'Copy'}</button>
+										</div>
+									{/if}
+								</div>
 							</div>
-						</div>
-					{:else}
-						<div
-							class="rounded-[var(--radius-container)] bg-surface-50-950 p-5 shadow-message"
-						>
-							{#if message.content}
-								<p class="leading-relaxed text-surface-950-50 whitespace-pre-wrap">{message.content}</p>
-							{/if}
-							{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
-								<span class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
-							{/if}
-						</div>
-					{/if}
-				{/each}
+						{:else}
+							<div
+								class="rounded-[var(--radius-container)] bg-surface-50-950 p-5 shadow-message"
+							>
+								{#if message.content}
+									<p class="leading-relaxed text-surface-950-50 whitespace-pre-wrap">{message.content}</p>
+								{/if}
+								{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
+									<span bind:this={wbStreamingCursor} class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
+								{/if}
+								{#if !getIsWorldBuilderStreaming() && message.content}
+									<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
+										<button
+											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+											title="Copy message"
+											onclick={() => handleCopy(message.id, message.content)}
+										>{copiedId === message.id ? 'Copied' : 'Copy'}</button>
+										{#if i === lastWbAssistantIdx}
+											<button
+												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+												title="Regenerate response"
+												onclick={handleWorldBuilderRegenerate}
+											>Regenerate</button>
+											<button
+												class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
+												title="Delete last exchange"
+												onclick={handleWorldBuilderDelete}
+											>Delete</button>
+										{/if}
+									</div>
+								{/if}
+							</div>
+						{/if}
+					{/each}
 
 				{#if getIsWorldBuilderComplete()}
 					<div class="rounded-[var(--radius-container)] bg-primary-100-900 p-6 text-center space-y-4">

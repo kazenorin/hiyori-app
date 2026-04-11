@@ -3,6 +3,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Mock dependencies before importing
 vi.mock('@tauri-apps/plugin-fs', () => ({
 	writeTextFile: vi.fn(async () => {}),
+	readTextFile: vi.fn(async () => ''),
+	mkdir: vi.fn(async () => {}),
+	exists: vi.fn(async () => false),
+	remove: vi.fn(async () => {}),
 	BaseDirectory: { AppData: 0 }
 }));
 
@@ -136,23 +140,25 @@ describe('chat-logger', () => {
 	});
 
 	describe('logWorldBuilderChat', () => {
-		it('writes to world-builder.log when logLevel is debug', async () => {
+		it('writes to temp log when logFilename provided and logLevel is debug', async () => {
 			await logWorldBuilderChat({
 				systemPrompt: 'You are a world builder',
-				messages: [{ role: 'user', content: 'Create a fantasy world' }]
+				messages: [{ role: 'user', content: 'Create a fantasy world' }],
+				logFilename: 'worldbuilding-20260411093000.log'
 			});
 
 			expect(mockWriteTextFile).toHaveBeenCalledWith(
-				expect.stringContaining('world-builder.log'),
+				expect.stringContaining('logs/worldbuilding-20260411093000.log'),
 				expect.any(String),
 				expect.objectContaining({ append: true })
 			);
 		});
 
-		it('includes system prompt and messages', async () => {
+		it('includes system prompt and messages in temp log', async () => {
 			await logWorldBuilderChat({
 				systemPrompt: 'world-builder prompt',
-				messages: [{ role: 'user', content: 'I want dragons' }]
+				messages: [{ role: 'user', content: 'I want dragons' }],
+				logFilename: 'worldbuilding-test.log'
 			});
 
 			const loggedContent = mockWriteTextFile.mock.calls[0][1] as string;
