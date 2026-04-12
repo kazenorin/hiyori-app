@@ -88,7 +88,7 @@ function persist(): void {
 	}
 }
 
-let settings = $state<Settings>(loadSettings());
+export let settings = $state<Settings>(loadSettings());
 
 /** Apply initial font size preference when store is initialized */
 applyFontSizePreference(settings.fontSize);
@@ -117,50 +117,49 @@ export function getProviderConfigForRole(role: string): ProviderConfig | undefin
 
 export function addProviderConfig(partial: Omit<ProviderConfig, 'id'>): ProviderConfig {
 	const config: ProviderConfig = { ...partial, id: uuidv4() };
-	settings = { ...settings, providers: [...settings.providers, config] };
+	settings.providers = [...settings.providers, config];
 	persist();
 	return config;
 }
 
 export function updateProviderConfig(id: string, partial: Partial<Omit<ProviderConfig, 'id'>>): void {
-	const updated = settings.providers.map((p) => (p.id === id ? { ...p, ...partial } : p));
-	settings = { ...settings, providers: updated };
+	settings.providers = settings.providers.map((p) => (p.id === id ? { ...p, ...partial } : p));
 	persist();
 }
 
 export function deleteProviderConfig(id: string): void {
-	const providers = settings.providers.filter((p) => p.id !== id);
+	settings.providers = settings.providers.filter((p) => p.id !== id);
 	// Clean up any role assignments pointing to the deleted config
-	const roleAssignments = { ...settings.roleAssignments };
-	for (const [role, configId] of Object.entries(roleAssignments)) {
+	for (const [role, configId] of Object.entries(settings.roleAssignments)) {
 		if (configId === id) {
-			delete roleAssignments[role];
+			delete settings.roleAssignments[role];
 		}
 	}
-	settings = { ...settings, providers, roleAssignments };
 	persist();
 }
 
 export function assignRole(role: string, providerConfigId: string): void {
-	const roleAssignments = { ...settings.roleAssignments, [role]: providerConfigId };
-	settings = { ...settings, roleAssignments };
+	settings.roleAssignments[role] = providerConfigId;
 	persist();
 }
 
 // --- Global Settings ---
 
 export async function updateSettings(partial: Partial<Pick<Settings, 'logLevel' | 'fontSize'>>): Promise<void> {
-	const prev = settings;
-	settings = { ...prev, ...partial };
+	const prevFontSize = settings.fontSize;
+	const prevLogLevel = settings.logLevel;
+
+	if (partial.logLevel !== undefined) settings.logLevel = partial.logLevel;
+	if (partial.fontSize !== undefined) settings.fontSize = partial.fontSize;
 	persist();
 
 	// Apply font size preference when fontSize changes
-	if (partial.fontSize !== undefined && partial.fontSize !== prev.fontSize) {
+	if (partial.fontSize !== undefined && partial.fontSize !== prevFontSize) {
 		applyFontSizePreference(settings.fontSize);
 	}
 
 	// Sync log level to Rust backend
-	if (partial.logLevel !== undefined && partial.logLevel !== prev.logLevel) {
+	if (partial.logLevel !== undefined && partial.logLevel !== prevLogLevel) {
 		try {
 			const { invoke } = await import('@tauri-apps/api/core');
 			await invoke('set_log_level', { level: partial.logLevel });

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import {
-		getSettings,
+		settings,
 		addProviderConfig,
 		updateProviderConfig,
 		deleteProviderConfig,
@@ -12,8 +12,6 @@
 		type LogLevel
 	} from '$lib/stores/settings.svelte';
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
-
-	const settings = getSettings();
 
 	// Editing state
 	let editingId = $state<string | null>(null);
@@ -77,7 +75,7 @@
 	}
 
 	function handleSaveNew() {
-		addProviderConfig({
+		const config = addProviderConfig({
 			name: formName || 'Untitled Provider',
 			provider: formProvider,
 			apiType: formApiType,
@@ -87,9 +85,7 @@
 		});
 		// If no main provider assigned, make this the main one
 		if (!settings.roleAssignments['main']) {
-			const providers = getSettings().providers;
-			const last = providers[providers.length - 1];
-			if (last) assignRole('main', last.id);
+			assignRole('main', config.id);
 		}
 		cancelEdit();
 	}
@@ -112,8 +108,17 @@
 		if (editingId === id) cancelEdit();
 	}
 
-	function handleSetMain(id: string) {
-		assignRole('main', id);
+	function handleDuplicate(config: ProviderConfig) {
+		const copy = addProviderConfig({
+			name: config.name + ' (copy)',
+			provider: config.provider,
+			apiType: config.apiType,
+			baseURL: config.baseURL,
+			model: config.model,
+			apiKey: config.apiKey
+		});
+		// Start editing the copy immediately
+		startEdit(copy);
 	}
 
 	async function handleFetchModels() {
@@ -150,9 +155,6 @@
 					+ Add Provider
 				</button>
 			</div>
-			<span class="text-xs text-surface-500"
-				>The main provider is used for chat and world building.</span
-			>
 
 			{#if settings.providers.length === 0 && !isAddingNew}
 				<p class="text-sm text-surface-500 py-2">No providers configured. Add one to get started.</p>
@@ -261,37 +263,28 @@
 				{:else}
 					<!-- Provider Card -->
 					<div class="flex items-center justify-between p-3 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150">
-						<div class="flex items-center gap-3 min-w-0">
-							{#if mainProviderId === config.id}
-								<span class="text-xs font-medium text-primary-500 shrink-0">MAIN</span>
-							{/if}
-							<div class="min-w-0">
-								<p class="text-sm font-medium truncate">{config.name}</p>
-								<p class="text-xs text-surface-500 truncate"
-									>{config.provider === 'openai' ? 'OpenAI' : 'OpenAI-Compatible'} · {config.model}</p
-								>
-							</div>
+						<div class="min-w-0">
+							<p class="text-sm font-medium truncate">{config.name}</p>
+							<p class="text-xs text-surface-500 truncate"
+								>{config.provider === 'openai' ? 'OpenAI' : 'OpenAI-Compatible'} · {config.model}</p
+							>
 						</div>
 						<div class="flex items-center gap-1 shrink-0">
-							{#if mainProviderId !== config.id}
-								<button
-									class="btn preset-tonal text-xs px-2 py-1"
-									type="button"
-									onclick={() => handleSetMain(config.id)}
-								>
-									Set as Main
-								</button>
-							{/if}
+							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => handleDuplicate(config)}>
+								Copy
+							</button>
 							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => startEdit(config)}>
 								Edit
 							</button>
-							<button
-								class="btn preset-tonal text-xs px-2 py-1 text-error-700-300"
-								type="button"
-								onclick={() => handleDelete(config.id)}
-							>
-								Delete
-							</button>
+							{#if mainProviderId !== config.id}
+								<button
+									class="btn preset-tonal text-xs px-2 py-1 text-error-700-300"
+									type="button"
+									onclick={() => handleDelete(config.id)}
+								>
+									Delete
+								</button>
+							{/if}
 						</div>
 					</div>
 				{/if}
@@ -389,6 +382,33 @@
 					</div>
 				</div>
 			{/if}
+		</section>
+
+		<!-- Provider Roles -->
+		<section class="card p-6 space-y-4">
+			<h2 class="h4">Provider Roles</h2>
+			<span class="text-xs text-surface-500"
+				>Assign providers to functions. The main provider is used for chat and world building.</span
+			>
+
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">Main Provider</span>
+				<select
+					class="select mt-1"
+					onchange={(e) => {
+						const value = (e.currentTarget as HTMLSelectElement).value;
+						if (value) assignRole('main', value);
+					}}
+				>
+					{#if settings.providers.length === 0}
+						<option value="" disabled selected>No providers configured</option>
+					{:else}
+						{#each settings.providers as config (config.id)}
+							<option value={config.id} selected={mainProviderId === config.id}>{config.name}</option>
+						{/each}
+					{/if}
+				</select>
+			</label>
 		</section>
 
 		<!-- Developer -->

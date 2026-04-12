@@ -225,4 +225,33 @@ describe('settings', () => {
 		await updateSettings({ logLevel: 'debug' });
 		expect(mockInvoke).toHaveBeenCalledWith('set_log_level', { level: 'debug' });
 	});
+
+	it('duplicate copies provider with new id and (copy) suffix', async () => {
+		vi.resetModules();
+		const { addProviderConfig, getSettings } = await import('$lib/stores/settings.svelte');
+		const original = addProviderConfig({
+			name: 'My Provider',
+			provider: 'openai',
+			apiType: 'responses',
+			baseURL: 'https://api.openai.com/v1',
+			model: 'gpt-4o',
+			apiKey: 'sk-test'
+		});
+
+		// Simulate duplicate like the UI does
+		const copy = addProviderConfig({
+			name: original.name + ' (copy)',
+			provider: original.provider,
+			apiType: original.apiType,
+			baseURL: original.baseURL,
+			model: original.model,
+			apiKey: original.apiKey
+		});
+
+		expect(copy.id).not.toBe(original.id);
+		expect(copy.name).toBe('My Provider (copy)');
+		expect(copy.provider).toBe('openai');
+		expect(copy.apiKey).toBe('sk-test');
+		expect(getSettings().providers).toHaveLength(2);
+	});
 });
