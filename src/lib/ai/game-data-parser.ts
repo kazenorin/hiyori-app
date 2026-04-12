@@ -1,21 +1,17 @@
 import type { GameData } from '$lib/db/messages';
+import type { ParserResult, StreamParser } from './stream-parser';
 
-export interface ParserOutput {
-	text: string | null;
-	gameData: GameData | null;
-}
+export type GameDataParserResult = ParserResult<{ gameData: GameData | null }>;
 
 type ParserState = 'TEXT' | 'POTENTIAL_OPENER' | 'JSON_BODY' | 'POTENTIAL_CLOSER';
 
 const JSON_OPENER = '```json';
 const JSON_CLOSER = '```';
 
-export interface GameDataStreamParser {
-	feed(chunk: string): ParserOutput;
-	flush(): ParserOutput;
+export interface GameDataParser extends StreamParser<{ gameData: GameData | null }> {
 }
 
-export function createGameDataStreamParser(): GameDataStreamParser {
+export function createGameDataParser(): GameDataParser {
 	let state: ParserState = 'TEXT';
 	let openerBuffer = '';
 	let jsonBuffer = '';
@@ -41,7 +37,7 @@ export function createGameDataStreamParser(): GameDataStreamParser {
 		return null;
 	}
 
-	function collectResult(): ParserOutput {
+	function collectResult(): GameDataParserResult {
 		const text = textBuffer.length > 0 ? textBuffer : null;
 		const gameData = pendingGameData;
 		textBuffer = '';
@@ -49,7 +45,7 @@ export function createGameDataStreamParser(): GameDataStreamParser {
 		return { text, gameData };
 	}
 
-	function feed(chunk: string): ParserOutput {
+	function feed(chunk: string): GameDataParserResult {
 		for (let i = 0; i < chunk.length; i++) {
 			const char = chunk[i];
 
@@ -136,7 +132,7 @@ export function createGameDataStreamParser(): GameDataStreamParser {
 		return { text: null, gameData: null };
 	}
 
-	function flush(): ParserOutput {
+	function flush(): GameDataParserResult {
 		let flushedText = textBuffer;
 
 		switch (state) {
@@ -160,7 +156,7 @@ export function createGameDataStreamParser(): GameDataStreamParser {
 		state = 'TEXT';
 		textBuffer = '';
 
-		const result: ParserOutput = {
+		const result: GameDataParserResult = {
 			text: flushedText.length > 0 ? flushedText : null,
 			gameData: pendingGameData
 		};

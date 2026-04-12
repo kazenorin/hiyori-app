@@ -56,7 +56,10 @@ export function createStreamAccumulator(onUpdate?: OnStreamUpdate): StreamAccumu
 				resolveResult(resultMetadata)
 			},
 			onError: (err: unknown) => {
-				rejectResult(err)
+				const chainOutput = chain.flush();
+				state = applyParserOutput(state, chainOutput);
+				notify();
+				rejectResult(err);
 			}
 		},
 		get state() {

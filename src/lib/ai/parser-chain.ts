@@ -1,5 +1,5 @@
 import { createThinkingTagParser } from './thinking-tag-parser';
-import { createGameDataStreamParser } from './game-data-parser';
+import { createGameDataParser } from './game-data-parser';
 import type { GameData } from '$lib/db/messages';
 
 export interface ParserChainOutput {
@@ -15,20 +15,11 @@ export interface ParserChain {
 
 /**
  * Combined parser chain: text → thinking parser → game-data parser.
- * Extracts <think...>...</think > tags first, then intercepts ```json game-data blocks.
+ * Extracts think tags first, then intercepts ```json game-data blocks.
  */
 export function createParserChain(): ParserChain {
 	const thinkingParser = createThinkingTagParser();
-	const gameDataParser = createGameDataStreamParser();
-
-	function processText(text: string): ParserChainOutput {
-		const output = gameDataParser.feed(text);
-		return {
-			text: output.text,
-			thinking: null,
-			gameData: output.gameData
-		};
-	}
+	const gameDataParser = createGameDataParser();
 
 	return {
 		feed(chunk: string): ParserChainOutput {

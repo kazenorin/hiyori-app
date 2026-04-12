@@ -1,7 +1,6 @@
-export interface ThinkingParserOutput {
-	text: string | null;
-	thinking: string | null;
-}
+import type { ParserResult, StreamParser } from './stream-parser';
+
+export type ThinkingParserResult = ParserResult<{ thinking: string | null }>;
 
 type ParserState = 'TEXT' | 'POTENTIAL_OPENER' | 'THINKING_BODY' | 'POTENTIAL_CLOSER';
 
@@ -9,9 +8,7 @@ const THINK_TAG_NAME = 'think';
 const THINK_OPENER = '<' + THINK_TAG_NAME;
 const THINK_CLOSER = `</${THINK_TAG_NAME}>`;
 
-export interface ThinkingTagParser {
-	feed(chunk: string): ThinkingParserOutput;
-	flush(): ThinkingParserOutput;
+export interface ThinkingTagParser extends StreamParser<{ thinking: string | null }> {
 }
 
 export function createThinkingTagParser(): ThinkingTagParser {
@@ -23,7 +20,7 @@ export function createThinkingTagParser(): ThinkingTagParser {
 	let textBuffer = '';
 	let thinkingAccumulator = '';
 
-	function collectResult(): ThinkingParserOutput {
+	function collectResult(): ThinkingParserResult {
 		const text = textBuffer.length > 0 ? textBuffer : null;
 		const thinking = thinkingAccumulator.length > 0 ? thinkingAccumulator : null;
 		textBuffer = '';
@@ -31,7 +28,7 @@ export function createThinkingTagParser(): ThinkingTagParser {
 		return { text, thinking };
 	}
 
-	function feed(chunk: string): ThinkingParserOutput {
+	function feed(chunk: string): ThinkingParserResult {
 		for (let i = 0; i < chunk.length; i++) {
 			const char = chunk[i];
 
@@ -125,7 +122,7 @@ export function createThinkingTagParser(): ThinkingTagParser {
 		return { text: null, thinking: null };
 	}
 
-	function flush(): ThinkingParserOutput {
+	function flush(): ThinkingParserResult {
 		let flushedText = textBuffer;
 
 		switch (state) {
@@ -153,7 +150,7 @@ export function createThinkingTagParser(): ThinkingTagParser {
 		state = 'TEXT';
 		textBuffer = '';
 
-		const result: ThinkingParserOutput = {
+		const result: ThinkingParserResult = {
 			text: flushedText.length > 0 ? flushedText : null,
 			thinking: thinkingAccumulator.length > 0 ? thinkingAccumulator : null
 		};

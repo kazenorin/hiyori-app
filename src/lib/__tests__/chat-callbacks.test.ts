@@ -198,4 +198,24 @@ describe('createStreamAccumulator', () => {
 			expect(states[1].reasoning).toBe('xy');
 		});
 	});
+
+	describe('onError flush', () => {
+		it('flushes buffered content on error before rejecting', async () => {
+			const acc = createStreamAccumulator();
+			acc.callbacks.onTextDelta(`<${T}>Incomplete`);
+			expect(acc.state.content).toBe('');
+			expect(acc.state.reasoning).toBeNull();
+
+			const error = new Error('stream failed');
+			acc.callbacks.onError(error);
+
+			// Buffered thinking tag should be flushed as text content
+			expect(acc.state.content).toContain(`<${T}>`);
+			expect(acc.state.content).toContain('Incomplete');
+
+			// resultMetadata promise should reject
+			await expect(acc.resultMetadata).rejects.toThrow('stream failed');
+		});
+	});
+
 });

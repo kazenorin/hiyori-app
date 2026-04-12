@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { createGameDataStreamParser } from '../ai/game-data-parser';
+import { createGameDataParser } from '../ai/game-data-parser';
 import type { GameData } from '../db/messages';
 
 function feedAll(chunks: string[]): { text: string; gameData: GameData | null } {
-	const parser = createGameDataStreamParser();
+	const parser = createGameDataParser();
 	let text = '';
 	let gameData: GameData | null = null;
 
@@ -25,7 +25,7 @@ const VALID_GAME_DATA = JSON.stringify({
 	decisions: ['Go left', 'Go right', 'Go straight']
 });
 
-describe('GameDataStreamParser', () => {
+describe('GameDataParser', () => {
 	describe('plain text passthrough', () => {
 		it('passes plain text through unchanged', () => {
 			const { text, gameData } = feedAll(['Hello, world!']);
