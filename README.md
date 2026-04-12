@@ -1,6 +1,15 @@
-# Hello Tauri + SvelteKit
+# BYOA — Build Your Own Adventure
 
-A minimal hello world desktop app built with [Tauri v2](https://v2.tauri.app/) and [SvelteKit](https://kit.svelte.dev/).
+An AI-powered interactive fiction desktop app built with [Tauri v2](https://v2.tauri.app/) and [SvelteKit 5](https://kit.svelte.dev/). Create stories through an AI-guided world builder, then play through branching narratives with real-time game state tracking.
+
+## Features
+
+- **World Builder** — AI-guided interview that generates a story's world document
+- **Branching Narratives** — Fork storylines at any point; each branch is an independent act line sharing messages up to the fork point
+- **Game Data Blocks** — AI emits structured `worldState` and `decisions` during streaming, rendered as clickable decision buttons
+- **Thinking Tag Parsing** — Extracts `<think...>` reasoning from AI responses, displayed in a collapsible section
+- **Dynamic Typography** — Sidebar slider and Ctrl+scroll to adjust text size (70%–150%)
+- **Structured Logging** — Chat logs written to AppData with configurable log levels
 
 ## Prerequisites
 
@@ -54,8 +63,8 @@ Output artifacts:
 | Artifact | Path |
 |----------|------|
 | Binary | `src-tauri/target/release/app` |
-| .deb | `src-tauri/target/release/bundle/deb/Hello Tauri_0.1.0_amd64.deb` |
-| .rpm | `src-tauri/target/release/bundle/rpm/Hello Tauri-0.1.0-1.x86_64.rpm` |
+| .deb | `src-tauri/target/release/bundle/deb/BYOA_0.1.0_amd64.deb` |
+| .rpm | `src-tauri/target/release/bundle/rpm/BYOA-0.1.0-1.x86_64.rpm` |
 
 ## Cross-Compiling for Windows (from Linux)
 
@@ -91,15 +100,31 @@ The `.exe` includes the embedded frontend assets and requires [WebView2](https:/
 ```
 src/                      # SvelteKit frontend
   lib/
-    ai/                   # AI chat (streaming, provider, models)
-    db/                   # SQLite repositories (stories, acts, messages)
-    fs/                   # File system services (system prompt, story prompts)
-    stores/               # Reactive state (settings, stories)
+    ai/
+      chat-stream.ts      # Shared streaming function (used by chat + world builder)
+      chat-callbacks.ts    # Stream accumulator with parser chain
+      chat.svelte.ts       # Main chat state and message management (Svelte 5 runes)
+      world-builder.svelte.ts  # World builder mode state (Svelte 5 runes)
+      parser-chain.ts      # Chains thinking-tag → game-data parsers
+      thinking-tag-parser.ts   # Extracts <think...> reasoning from stream
+      game-data-parser.ts  # Extracts ```json game data blocks from stream
+      message-updater.ts   # Immutable StreamState update helpers
+      streaming.ts         # Low-level executeStream wrapper (Vercel AI SDK)
+      provider.ts          # AI model factory
+      models.ts            # Model registry
+    db/                    # SQLite repositories
+      stories.ts, acts.ts, act-lines.ts, messages.ts, app-state.ts, story-folders.ts
+    fs/                    # File system services (system prompt, story prompts)
+    stores/                # Reactive state (settings, stories)
+    components/            # Shared Svelte components (MarkdownContent, etc.)
+    logging/               # Structured logging via tauri-plugin-log
   routes/
-    +layout.ts            # SSR disabled, prerender enabled
-    +page.svelte          # Chat UI
-    settings/+page.svelte # Settings page
-  app.html                # HTML shell
+    +layout.svelte         # Sidebar navigation, text size controls
+    +layout.css            # Global styles
+    +layout.ts             # SSR disabled, prerender enabled
+    +page.svelte           # Chat UI + world builder
+    settings/+page.svelte  # Settings page
+  app.html                 # HTML shell
 src-tauri/                # Tauri (Rust) backend
   src/
     lib.rs                # Tauri setup and command handlers
