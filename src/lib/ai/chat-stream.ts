@@ -1,5 +1,5 @@
 import {executeStream, type StreamResultMetadata} from "./streaming";
-import {getSettings} from "../stores/settings.svelte";
+import {getMainProviderConfig} from "../stores/settings.svelte";
 import {createStreamAccumulator, type StreamState} from "./chat-callbacks";
 import {createModel} from "./provider";
 
@@ -23,8 +23,11 @@ export async function streamChatResponse(
     abortSignal: AbortSignal,
     onStateUpdate: (state: StreamState) => void,
 ): Promise<MessageMetadata> {
-    const settings = getSettings();
-    const model = createModel(settings);
+    const config = getMainProviderConfig();
+    if (!config) {
+        throw new Error('No main provider configured. Please set one in Settings.');
+    }
+    const model = createModel(config);
 
     // Create stream accumulator with parser chain integrated
     const accumulator = createStreamAccumulator(onStateUpdate);
@@ -51,9 +54,9 @@ export async function streamChatResponse(
 }
 
 function buildMetadata(result: StreamResultMetadata): MessageMetadata {
-    const settings = getSettings();
+    const config = getMainProviderConfig();
     return {
-        model: settings.model,
+        model: config?.model ?? 'unknown',
         finishReason: result.finishReason,
         promptTokens: result.usage.inputTokens,
         completionTokens: result.usage.outputTokens,

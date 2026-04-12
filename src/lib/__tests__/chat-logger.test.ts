@@ -20,12 +20,10 @@ vi.mock('$lib/stores/stories.svelte', () => ({
 
 vi.mock('$lib/stores/settings.svelte', () => ({
 	getSettings: vi.fn(() => ({
+		providers: [],
+		roleAssignments: {},
 		logLevel: 'debug',
-		provider: 'openai',
-		apiType: 'responses',
-		baseURL: '',
-		model: '',
-		apiKey: ''
+		fontSize: 1.0
 	}))
 }));
 

@@ -1,45 +1,126 @@
 <script lang="ts">
-	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
+	import {
+		getSettings,
+		addProviderConfig,
+		updateProviderConfig,
+		deleteProviderConfig,
+		assignRole,
+		updateSettings,
+		type ProviderConfig,
+		type Provider,
+		type ApiType,
+		type LogLevel
+	} from '$lib/stores/settings.svelte';
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
-	import type { Provider, ApiType, LogLevel } from '$lib/stores/settings.svelte';
 
 	const settings = getSettings();
+
+	// Editing state
+	let editingId = $state<string | null>(null);
+	let isAddingNew = $state(false);
+
+	// Form state for the provider being edited/added
+	let formName = $state('');
+	let formProvider = $state<Provider>('openai');
+	let formApiType = $state<ApiType>('responses');
+	let formBaseURL = $state('https://api.openai.com/v1');
+	let formModel = $state('');
+	let formApiKey = $state('');
+
+	// Model fetching
 	let availableModels = $state<ModelInfo[]>([]);
 	let isLoadingModels = $state(false);
 	let modelsError = $state<string | null>(null);
 
-	function handleProviderChange(e: Event) {
-		const value = (e.currentTarget as HTMLSelectElement).value as Provider;
-		updateSettings({ provider: value });
+	function resetForm() {
+		formName = '';
+		formProvider = 'openai';
+		formApiType = 'responses';
+		formBaseURL = 'https://api.openai.com/v1';
+		formModel = '';
+		formApiKey = '';
+		availableModels = [];
+		modelsError = null;
 	}
 
-	function handleApiTypeChange(e: Event) {
-		const value = (e.currentTarget as HTMLSelectElement).value as ApiType;
-		updateSettings({ apiType: value });
+	function startEdit(config: ProviderConfig) {
+		editingId = config.id;
+		isAddingNew = false;
+		formName = config.name;
+		formProvider = config.provider;
+		formApiType = config.apiType;
+		formBaseURL = config.baseURL;
+		formModel = config.model;
+		formApiKey = config.apiKey;
+		availableModels = [];
+		modelsError = null;
 	}
 
-	function handleBaseURLChange(e: Event) {
-		updateSettings({ baseURL: (e.currentTarget as HTMLInputElement).value });
+	function startAdd() {
+		resetForm();
+		isAddingNew = true;
+		editingId = null;
 	}
 
-	function handleModelSelect(e: Event) {
-		const value = (e.currentTarget as HTMLSelectElement).value;
-		updateSettings({ model: value });
+	function cancelEdit() {
+		editingId = null;
+		isAddingNew = false;
+		resetForm();
 	}
 
-	function handleModelInput(e: Event) {
-		updateSettings({ model: (e.currentTarget as HTMLInputElement).value });
+	function handleProviderChange() {
+		if (formProvider === 'openai') {
+			formBaseURL = 'https://api.openai.com/v1';
+		} else {
+			formBaseURL = '';
+		}
 	}
 
-	function handleApiKeyChange(e: Event) {
-		updateSettings({ apiKey: (e.currentTarget as HTMLInputElement).value });
+	function handleSaveNew() {
+		addProviderConfig({
+			name: formName || 'Untitled Provider',
+			provider: formProvider,
+			apiType: formApiType,
+			baseURL: formBaseURL,
+			model: formModel,
+			apiKey: formApiKey
+		});
+		// If no main provider assigned, make this the main one
+		if (!settings.roleAssignments['main']) {
+			const providers = getSettings().providers;
+			const last = providers[providers.length - 1];
+			if (last) assignRole('main', last.id);
+		}
+		cancelEdit();
+	}
+
+	function handleSaveEdit() {
+		if (!editingId) return;
+		updateProviderConfig(editingId, {
+			name: formName,
+			provider: formProvider,
+			apiType: formApiType,
+			baseURL: formBaseURL,
+			model: formModel,
+			apiKey: formApiKey
+		});
+		cancelEdit();
+	}
+
+	function handleDelete(id: string) {
+		deleteProviderConfig(id);
+		if (editingId === id) cancelEdit();
+	}
+
+	function handleSetMain(id: string) {
+		assignRole('main', id);
 	}
 
 	async function handleFetchModels() {
 		isLoadingModels = true;
 		modelsError = null;
 		try {
-			availableModels = await fetchModels(getSettings());
+			availableModels = await fetchModels({ baseURL: formBaseURL, apiKey: formApiKey });
 		} catch (err: unknown) {
 			modelsError = err instanceof Error ? err.message : 'Failed to fetch models';
 			availableModels = [];
@@ -47,6 +128,12 @@
 			isLoadingModels = false;
 		}
 	}
+
+	function isEditing(config: ProviderConfig): boolean {
+		return editingId === config.id;
+	}
+
+	const mainProviderId = $derived(settings.roleAssignments['main']);
 </script>
 
 <div class="flex-1 overflow-y-auto p-6">
@@ -55,110 +142,253 @@
 
 		<p class="text-sm text-surface-500">Settings are saved automatically.</p>
 
-		<!-- Model Configuration -->
+		<!-- AI Providers -->
 		<section class="card p-6 space-y-4">
-			<h2 class="h4">Model</h2>
+			<div class="flex items-center justify-between">
+				<h2 class="h4">AI Providers</h2>
+				<button class="btn preset-tonal" type="button" onclick={startAdd}>
+					+ Add Provider
+				</button>
+			</div>
+			<span class="text-xs text-surface-500"
+				>The main provider is used for chat and world building.</span
+			>
 
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">API Provider</span>
-				<select class="select mt-1" onchange={handleProviderChange}>
-					<option value="openai" selected={settings.provider === 'openai'}>OpenAI</option>
-					<option value="openai-compatible" selected={settings.provider === 'openai-compatible'}
-						>OpenAI-Compatible</option
-					>
-				</select>
-			</label>
-
-			{#if settings.provider === 'openai'}
-				<label class="block">
-					<span class="text-sm font-medium text-surface-700-300">API Type</span>
-					<select class="select mt-1" onchange={handleApiTypeChange}>
-						<option value="responses" selected={settings.apiType === 'responses'}
-							>Responses</option
-						>
-						<option value="chat-completions" selected={settings.apiType === 'chat-completions'}
-							>Chat Completions</option
-						>
-					</select>
-					<span class="text-xs text-surface-500 mt-1 block"
-						>Responses uses the OpenAI Responses API. Chat Completions uses /chat/completions.</span
-					>
-				</label>
+			{#if settings.providers.length === 0 && !isAddingNew}
+				<p class="text-sm text-surface-500 py-2">No providers configured. Add one to get started.</p>
 			{/if}
 
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Base URL</span>
-				<input
-					class="input mt-1"
-					type="url"
-					placeholder="https://api.openai.com/v1"
-					value={settings.baseURL}
-					oninput={handleBaseURLChange}
-				/>
-				<span class="text-xs text-surface-500 mt-1 block"
-					>For local providers: http://localhost:11434/v1 (Ollama), http://localhost:1234/v1 (LM
-					Studio)</span
-				>
-			</label>
+			<!-- Provider List -->
+			{#each settings.providers as config (config.id)}
+				{#if isEditing(config)}
+					<!-- Edit Form -->
+					<div class="card p-4 space-y-3 border border-primary-500-300">
+						{#each settings.providers as c}
+							{#if c.id === config.id}
+								{@const isMain = mainProviderId === config.id}
+								<p class="text-xs text-surface-500">
+									Editing{#if isMain} (main provider){/if}
+								</p>
+							{/if}
+						{/each}
+						<details open>
+							<summary class="text-sm font-medium cursor-pointer">{formName || 'Untitled'}</summary>
+							<div class="mt-3 space-y-3">
+								<label class="block">
+									<span class="text-sm font-medium text-surface-700-300">Name</span>
+									<input class="input mt-1" type="text" placeholder="e.g. OpenAI GPT-4o" bind:value={formName} />
+								</label>
 
-			<div>
-				<div class="flex items-end gap-2">
-					<label class="flex-1">
-						<span class="text-sm font-medium text-surface-700-300">Model</span>
-						{#if availableModels.length > 0}
-							<select class="select mt-1" onchange={handleModelSelect}>
-								{#each availableModels as model (model.id)}
-									<option value={model.id} selected={settings.model === model.id}
-										>{model.id}</option
+								<label class="block">
+									<span class="text-sm font-medium text-surface-700-300">API Provider</span>
+									<select class="select mt-1" onchange={() => handleProviderChange()} bind:value={formProvider}>
+										<option value="openai">OpenAI</option>
+										<option value="openai-compatible">OpenAI-Compatible</option>
+									</select>
+								</label>
+
+								{#if formProvider === 'openai'}
+									<label class="block">
+										<span class="text-sm font-medium text-surface-700-300">API Type</span>
+										<select class="select mt-1" bind:value={formApiType}>
+											<option value="responses">Responses</option>
+											<option value="chat-completions">Chat Completions</option>
+										</select>
+										<span class="text-xs text-surface-500 mt-1 block"
+											>Responses uses the OpenAI Responses API. Chat Completions uses
+											/chat/completions.</span
+										>
+									</label>
+								{/if}
+
+								<label class="block">
+									<span class="text-sm font-medium text-surface-700-300">Base URL</span>
+									<input class="input mt-1" type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} />
+									<span class="text-xs text-surface-500 mt-1 block"
+										>Local: http://localhost:11434/v1 (Ollama), http://localhost:1234/v1 (LM Studio)</span
 									>
-								{/each}
-							</select>
-						{:else}
-							<input
-								class="input mt-1"
-								type="text"
-								placeholder="gpt-4o"
-								value={settings.model}
-								oninput={handleModelInput}
-							/>
-						{/if}
-					</label>
-					<button
-						class="btn preset-tonal shrink-0"
-						type="button"
-						onclick={handleFetchModels}
-						disabled={isLoadingModels}
-					>
-						{isLoadingModels ? 'Loading...' : 'Fetch Models'}
-					</button>
-				</div>
-				{#if availableModels.length > 0}
-					<label class="block mt-2">
-						<span class="text-xs text-surface-500">Or type manually</span>
-						<input
-							class="input mt-1"
-							type="text"
-							placeholder="gpt-4o"
-							value={settings.model}
-							oninput={handleModelInput}
-						/>
-					</label>
-				{/if}
-				{#if modelsError}
-					<p class="text-xs text-error-700-300 mt-1">{modelsError}</p>
-				{/if}
-			</div>
+								</label>
 
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">API Key</span>
-				<input
-					class="input mt-1"
-					type="password"
-					placeholder="sk-..."
-					value={settings.apiKey}
-					oninput={handleApiKeyChange}
-				/>
-			</label>
+								<div>
+									<div class="flex items-end gap-2">
+										<label class="flex-1">
+											<span class="text-sm font-medium text-surface-700-300">Model</span>
+											{#if availableModels.length > 0}
+												<select class="select mt-1" bind:value={formModel}>
+													{#each availableModels as model (model.id)}
+														<option value={model.id}>{model.id}</option>
+													{/each}
+												</select>
+											{:else}
+												<input class="input mt-1" type="text" placeholder="gpt-4o" bind:value={formModel} />
+											{/if}
+										</label>
+										<button
+											class="btn preset-tonal shrink-0"
+											type="button"
+											onclick={handleFetchModels}
+											disabled={isLoadingModels}
+										>
+											{isLoadingModels ? 'Loading...' : 'Fetch Models'}
+										</button>
+									</div>
+									{#if availableModels.length > 0}
+										<label class="block mt-2">
+											<span class="text-xs text-surface-500">Or type manually</span>
+											<input class="input mt-1" type="text" placeholder="gpt-4o" bind:value={formModel} />
+										</label>
+									{/if}
+									{#if modelsError}
+										<p class="text-xs text-error-700-300 mt-1">{modelsError}</p>
+									{/if}
+								</div>
+
+								<label class="block">
+									<span class="text-sm font-medium text-surface-700-300">API Key</span>
+									<input class="input mt-1" type="password" placeholder="sk-..." bind:value={formApiKey} />
+								</label>
+							</div>
+						</details>
+						<div class="flex gap-2">
+							<button class="btn preset-filled" type="button" onclick={handleSaveEdit}>
+								Save
+							</button>
+							<button class="btn preset-tonal" type="button" onclick={cancelEdit}>
+								Cancel
+							</button>
+						</div>
+					</div>
+				{:else}
+					<!-- Provider Card -->
+					<div class="flex items-center justify-between p-3 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150">
+						<div class="flex items-center gap-3 min-w-0">
+							{#if mainProviderId === config.id}
+								<span class="text-xs font-medium text-primary-500 shrink-0">MAIN</span>
+							{/if}
+							<div class="min-w-0">
+								<p class="text-sm font-medium truncate">{config.name}</p>
+								<p class="text-xs text-surface-500 truncate"
+									>{config.provider === 'openai' ? 'OpenAI' : 'OpenAI-Compatible'} · {config.model}</p
+								>
+							</div>
+						</div>
+						<div class="flex items-center gap-1 shrink-0">
+							{#if mainProviderId !== config.id}
+								<button
+									class="btn preset-tonal text-xs px-2 py-1"
+									type="button"
+									onclick={() => handleSetMain(config.id)}
+								>
+									Set as Main
+								</button>
+							{/if}
+							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => startEdit(config)}>
+								Edit
+							</button>
+							<button
+								class="btn preset-tonal text-xs px-2 py-1 text-error-700-300"
+								type="button"
+								onclick={() => handleDelete(config.id)}
+							>
+								Delete
+							</button>
+						</div>
+					</div>
+				{/if}
+			{/each}
+
+			<!-- Add New Provider Form -->
+			{#if isAddingNew}
+				<div class="card p-4 space-y-3 border border-primary-500-300">
+					<p class="text-xs text-surface-500">New provider</p>
+					<details open>
+						<summary class="text-sm font-medium cursor-pointer">{formName || 'New Provider'}</summary>
+						<div class="mt-3 space-y-3">
+							<label class="block">
+								<span class="text-sm font-medium text-surface-700-300">Name</span>
+								<input class="input mt-1" type="text" placeholder="e.g. OpenAI GPT-4o" bind:value={formName} />
+							</label>
+
+							<label class="block">
+								<span class="text-sm font-medium text-surface-700-300">API Provider</span>
+								<select class="select mt-1" onchange={() => handleProviderChange()} bind:value={formProvider}>
+									<option value="openai">OpenAI</option>
+									<option value="openai-compatible">OpenAI-Compatible</option>
+								</select>
+							</label>
+
+							{#if formProvider === 'openai'}
+								<label class="block">
+									<span class="text-sm font-medium text-surface-700-300">API Type</span>
+									<select class="select mt-1" bind:value={formApiType}>
+										<option value="responses">Responses</option>
+										<option value="chat-completions">Chat Completions</option>
+									</select>
+									<span class="text-xs text-surface-500 mt-1 block"
+										>Responses uses the OpenAI Responses API. Chat Completions uses
+										/chat/completions.</span
+									>
+								</label>
+							{/if}
+
+							<label class="block">
+								<span class="text-sm font-medium text-surface-700-300">Base URL</span>
+								<input class="input mt-1" type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} />
+								<span class="text-xs text-surface-500 mt-1 block"
+									>Local: http://localhost:11434/v1 (Ollama), http://localhost:1234/v1 (LM Studio)</span
+								>
+							</label>
+
+							<div>
+								<div class="flex items-end gap-2">
+									<label class="flex-1">
+										<span class="text-sm font-medium text-surface-700-300">Model</span>
+										{#if availableModels.length > 0}
+											<select class="select mt-1" bind:value={formModel}>
+												{#each availableModels as model (model.id)}
+													<option value={model.id}>{model.id}</option>
+												{/each}
+											</select>
+										{:else}
+											<input class="input mt-1" type="text" placeholder="gpt-4o" bind:value={formModel} />
+										{/if}
+									</label>
+									<button
+										class="btn preset-tonal shrink-0"
+										type="button"
+										onclick={handleFetchModels}
+										disabled={isLoadingModels}
+									>
+										{isLoadingModels ? 'Loading...' : 'Fetch Models'}
+									</button>
+								</div>
+								{#if availableModels.length > 0}
+									<label class="block mt-2">
+										<span class="text-xs text-surface-500">Or type manually</span>
+										<input class="input mt-1" type="text" placeholder="gpt-4o" bind:value={formModel} />
+									</label>
+								{/if}
+								{#if modelsError}
+									<p class="text-xs text-error-700-300 mt-1">{modelsError}</p>
+								{/if}
+							</div>
+
+							<label class="block">
+								<span class="text-sm font-medium text-surface-700-300">API Key</span>
+								<input class="input mt-1" type="password" placeholder="sk-..." bind:value={formApiKey} />
+							</label>
+						</div>
+					</details>
+					<div class="flex gap-2">
+						<button class="btn preset-filled" type="button" onclick={handleSaveNew}>
+							Add Provider
+						</button>
+						<button class="btn preset-tonal" type="button" onclick={cancelEdit}>
+							Cancel
+						</button>
+					</div>
+				</div>
+			{/if}
 		</section>
 
 		<!-- Developer -->

@@ -1,31 +1,31 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
-import type { Settings } from '$lib/stores/settings.svelte';
+import type { ProviderConfig } from '$lib/stores/settings.svelte';
 
-export function createModel(settings: Settings) {
-	if (!settings.apiKey) {
+export function createModel(config: ProviderConfig) {
+	if (!config.apiKey) {
 		throw new Error('API key not configured. Please set it in Settings.');
 	}
 
-	const baseURL = settings.baseURL || 'https://api.openai.com/v1';
+	const baseURL = config.baseURL || 'https://api.openai.com/v1';
 
-	if (settings.provider === 'openai-compatible') {
+	if (config.provider === 'openai-compatible') {
 		const provider = createOpenAICompatible({
-			name: 'openai-compatible',
+			name: config.name || 'openai-compatible',
 			baseURL,
-			apiKey: settings.apiKey
+			apiKey: config.apiKey
 		});
-		return provider.chatModel(settings.model);
+		return provider.chatModel(config.model);
 	}
 
 	const provider = createOpenAI({
-		apiKey: settings.apiKey,
+		apiKey: config.apiKey,
 		baseURL
 	});
 
-	if (settings.apiType === 'chat-completions') {
-		return provider.chat(settings.model);
+	if (config.apiType === 'chat-completions') {
+		return provider.chat(config.model);
 	}
 
-	return provider.responses(settings.model);
+	return provider.responses(config.model);
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock Tauri invoke
 vi.mock('@tauri-apps/api/core', () => ({
@@ -15,61 +15,213 @@ vi.mock('$lib/logging/logger', () => ({
 	}
 }));
 
-import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
-import { invoke } from '@tauri-apps/api/core';
+// Mock uuid to return predictable values
+let uuidCounter = 0;
+vi.mock('uuid', () => ({
+	v4: () => `test-uuid-${++uuidCounter}`
+}));
 
 const STORAGE_KEY = 'byoa-settings';
 
+// Re-import for each test to reset module state
 describe('settings', () => {
-	it('returns defaults when localStorage is empty', () => {
+	beforeEach(() => {
 		localStorage.removeItem(STORAGE_KEY);
-		// Note: settings is a singleton module, so defaults are already loaded
-		// We verify the shape matches expected defaults
-		const settings = getSettings();
-		expect(settings).toHaveProperty('provider');
-		expect(settings).toHaveProperty('apiType');
-		expect(settings).toHaveProperty('baseURL');
-		expect(settings).toHaveProperty('model');
-		expect(settings).toHaveProperty('apiKey');
-		expect(settings).toHaveProperty('logLevel');
+		uuidCounter = 0;
 	});
 
-	it('updates a single field', async () => {
-		await updateSettings({ apiKey: 'sk-test-key-' + Date.now() });
+	it('migrates flat settings to multi-provider shape', async () => {
+		localStorage.setItem(
+			STORAGE_KEY,
+			JSON.stringify({
+				provider: 'openai',
+				apiType: 'responses',
+				baseURL: 'https://api.openai.com/v1',
+				model: 'gpt-4o',
+				apiKey: 'sk-test-key',
+				logLevel: 'debug',
+				fontSize: 1.2
+			})
+		);
+
+		// Force module re-import
+		vi.resetModules();
+		const { getSettings } = await import('$lib/stores/settings.svelte');
 		const settings = getSettings();
-		expect(settings.apiKey).toMatch(/^sk-test-key-/);
+
+		// Old fields should be gone, new shape present
+		expect(settings.providers).toHaveLength(1);
+		expect(settings.providers[0]).toEqual({
+			id: expect.any(String),
+			name: 'Default Provider',
+			provider: 'openai',
+			apiType: 'responses',
+			baseURL: 'https://api.openai.com/v1',
+			model: 'gpt-4o',
+			apiKey: 'sk-test-key'
+		});
+		expect(settings.roleAssignments['main']).toBe(settings.providers[0].id);
+		expect(settings.logLevel).toBe('debug');
+		expect(settings.fontSize).toBe(1.2);
+	});
+
+	it('returns defaults when localStorage is empty', async () => {
+		vi.resetModules();
+		const { getSettings } = await import('$lib/stores/settings.svelte');
+		const settings = getSettings();
+
+		expect(settings.providers).toEqual([]);
+		expect(settings.roleAssignments).toEqual({});
+		expect(settings.logLevel).toBe('info');
+		expect(settings.fontSize).toBe(1.0);
+	});
+
+	it('addProviderConfig creates a config with UUID', async () => {
+		vi.resetModules();
+		const { addProviderConfig, getSettings } = await import('$lib/stores/settings.svelte');
+		const config = addProviderConfig({
+			name: 'Test Provider',
+			provider: 'openai',
+			apiType: 'responses',
+			baseURL: 'https://api.openai.com/v1',
+			model: 'gpt-4o',
+			apiKey: 'sk-test'
+		});
+
+		expect(config.id).toBe('test-uuid-1');
+		expect(config.name).toBe('Test Provider');
+		expect(getSettings().providers).toHaveLength(1);
+	});
+
+	it('updateProviderConfig updates the correct config', async () => {
+		vi.resetModules();
+		const { addProviderConfig, updateProviderConfig, getProviderConfig } = await import(
+			'$lib/stores/settings.svelte'
+		);
+		const c1 = addProviderConfig({
+			name: 'First',
+			provider: 'openai',
+			apiType: 'responses',
+			baseURL: '',
+			model: 'gpt-4o',
+			apiKey: 'sk-1'
+		});
+		const c2 = addProviderConfig({
+			name: 'Second',
+			provider: 'openai-compatible',
+			apiType: 'chat-completions',
+			baseURL: 'http://localhost:11434/v1',
+			model: 'llama3',
+			apiKey: ''
+		});
+
+		updateProviderConfig(c1.id, { apiKey: 'sk-updated' });
+
+		expect(getProviderConfig(c1.id)?.apiKey).toBe('sk-updated');
+		expect(getProviderConfig(c2.id)?.apiKey).toBe(''); // unchanged
+	});
+
+	it('deleteProviderConfig removes config and cleans up role assignments', async () => {
+		vi.resetModules();
+		const { addProviderConfig, assignRole, deleteProviderConfig, getSettings } = await import(
+			'$lib/stores/settings.svelte'
+		);
+		const c1 = addProviderConfig({
+			name: 'Main',
+			provider: 'openai',
+			apiType: 'responses',
+			baseURL: '',
+			model: 'gpt-4o',
+			apiKey: 'sk-1'
+		});
+		const c2 = addProviderConfig({
+			name: 'Other',
+			provider: 'openai-compatible',
+			apiType: 'chat-completions',
+			baseURL: '',
+			model: 'llama3',
+			apiKey: ''
+		});
+
+		assignRole('main', c1.id);
+		expect(getSettings().roleAssignments['main']).toBe(c1.id);
+
+		deleteProviderConfig(c1.id);
+
+		expect(getSettings().providers).toHaveLength(1);
+		expect(getSettings().providers[0].id).toBe(c2.id);
+		expect(getSettings().roleAssignments['main']).toBeUndefined();
+	});
+
+	it('getMainProviderConfig returns the config assigned to main role', async () => {
+		vi.resetModules();
+		const { addProviderConfig, assignRole, getMainProviderConfig } = await import(
+			'$lib/stores/settings.svelte'
+		);
+		const config = addProviderConfig({
+			name: 'Main',
+			provider: 'openai',
+			apiType: 'responses',
+			baseURL: '',
+			model: 'gpt-4o',
+			apiKey: 'sk-test'
+		});
+		assignRole('main', config.id);
+
+		const main = getMainProviderConfig();
+		expect(main?.id).toBe(config.id);
+		expect(main?.name).toBe('Main');
+	});
+
+	it('getMainProviderConfig returns undefined when no main is assigned', async () => {
+		vi.resetModules();
+		const { getMainProviderConfig } = await import('$lib/stores/settings.svelte');
+		expect(getMainProviderConfig()).toBeUndefined();
+	});
+
+	it('assignRole correctly updates the map', async () => {
+		vi.resetModules();
+		const { addProviderConfig, assignRole, getSettings } = await import(
+			'$lib/stores/settings.svelte'
+		);
+		const config = addProviderConfig({
+			name: 'Test',
+			provider: 'openai',
+			apiType: 'responses',
+			baseURL: '',
+			model: 'gpt-4o',
+			apiKey: 'sk-test'
+		});
+
+		assignRole('embedding', config.id);
+		expect(getSettings().roleAssignments['embedding']).toBe(config.id);
 	});
 
 	it('persists to localStorage', async () => {
-		const model = 'test-model-' + Date.now();
-		await updateSettings({ model });
+		vi.resetModules();
+		const { addProviderConfig, assignRole } = await import('$lib/stores/settings.svelte');
+		const config = addProviderConfig({
+			name: 'Test',
+			provider: 'openai',
+			apiType: 'responses',
+			baseURL: '',
+			model: 'gpt-4o',
+			apiKey: 'sk-test'
+		});
+		assignRole('main', config.id);
+
 		const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
-		expect(stored.model).toBe(model);
-	});
-
-	it('resets baseURL when switching to openai provider', async () => {
-		await updateSettings({ provider: 'openai-compatible' });
-		await updateSettings({ baseURL: 'http://localhost:11434/v1' });
-		expect(getSettings().baseURL).toBe('http://localhost:11434/v1');
-
-		await updateSettings({ provider: 'openai' });
-		expect(getSettings().baseURL).toBe('https://api.openai.com/v1');
-	});
-
-	it('resets baseURL to empty when switching to openai-compatible', async () => {
-		await updateSettings({ provider: 'openai-compatible' });
-		expect(getSettings().baseURL).toBe('');
-	});
-
-	it('does not reset baseURL when updating other fields', async () => {
-		await updateSettings({ baseURL: 'http://custom.api/v1' });
-		await updateSettings({ model: 'gpt-4' });
-		expect(getSettings().baseURL).toBe('http://custom.api/v1');
+		expect(stored.providers).toHaveLength(1);
+		expect(stored.roleAssignments.main).toBe(config.id);
 	});
 
 	it('syncs logLevel to Rust backend on change', async () => {
+		vi.resetModules();
+		const { updateSettings } = await import('$lib/stores/settings.svelte');
+		const { invoke } = await import('@tauri-apps/api/core');
 		const mockInvoke = vi.mocked(invoke);
 		mockInvoke.mockClear();
+
 		await updateSettings({ logLevel: 'debug' });
 		expect(mockInvoke).toHaveBeenCalledWith('set_log_level', { level: 'debug' });
 	});

@@ -1,14 +1,22 @@
+import { v4 as uuidv4 } from 'uuid';
+
 export type Provider = 'openai' | 'openai-compatible';
 export type ApiType = 'chat-completions' | 'responses';
-
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
-export interface Settings {
+export interface ProviderConfig {
+	id: string;
+	name: string;
 	provider: Provider;
 	apiType: ApiType;
 	baseURL: string;
 	model: string;
 	apiKey: string;
+}
+
+export interface Settings {
+	providers: ProviderConfig[];
+	roleAssignments: Record<string, string>;
 	logLevel: LogLevel;
 	fontSize: number;
 }
@@ -16,18 +24,41 @@ export interface Settings {
 const STORAGE_KEY = 'byoa-settings';
 
 const defaults: Settings = {
-	provider: 'openai',
-	apiType: 'responses',
-	baseURL: 'https://api.openai.com/v1',
-	model: 'gpt-4o',
-	apiKey: '',
+	providers: [],
+	roleAssignments: {},
 	logLevel: 'info',
 	fontSize: 1.0
 };
 
 /**
+ * Migrate from the old flat settings shape to the new multi-provider shape.
+ * Detects old shape by presence of `provider` as a string without `providers` array.
+ */
+function migrateFromFlatSettings(raw: Record<string, unknown>): Settings {
+	const config: ProviderConfig = {
+		id: uuidv4(),
+		name: 'Default Provider',
+		provider: (raw.provider as Provider) || 'openai',
+		apiType: (raw.apiType as ApiType) || 'responses',
+		baseURL: (raw.baseURL as string) || 'https://api.openai.com/v1',
+		model: (raw.model as string) || 'gpt-4o',
+		apiKey: (raw.apiKey as string) || ''
+	};
+
+	return {
+		providers: [config],
+		roleAssignments: { main: config.id },
+		logLevel: (raw.logLevel as LogLevel) || 'info',
+		fontSize: (raw.fontSize as number) ?? 1.0
+	};
+}
+
+function isFlatSettings(raw: Record<string, unknown>): boolean {
+	return typeof raw.provider === 'string' && !Array.isArray(raw.providers);
+}
+
+/**
  * Apply font size preference by setting the --text-scaling CSS variable.
- * This dynamically scales all typography throughout the application.
  */
 export function applyFontSizePreference(fontSize: number): void {
 	if (typeof document !== 'undefined') {
@@ -39,7 +70,11 @@ function loadSettings(): Settings {
 	try {
 		const stored = localStorage.getItem(STORAGE_KEY);
 		if (stored) {
-			return { ...defaults, ...JSON.parse(stored) };
+			const raw = JSON.parse(stored);
+			if (isFlatSettings(raw)) {
+				return migrateFromFlatSettings(raw);
+			}
+			return { ...defaults, ...raw };
 		}
 	} catch {
 		// Invalid JSON or localStorage unavailable — use defaults
@@ -62,25 +97,66 @@ export function getSettings(): Settings {
 	return settings;
 }
 
-export async function updateSettings(partial: Partial<Settings>): Promise<void> {
-	const prev = settings;
-	let updated = { ...prev, ...partial };
+// --- Provider Config CRUD ---
 
-	// Reset baseURL to provider default when provider changes
-	if (partial.provider && partial.provider !== prev.provider) {
-		if (updated.provider === 'openai') {
-			updated = { ...updated, baseURL: 'https://api.openai.com/v1' };
-		} else if (updated.provider === 'openai-compatible') {
-			updated = { ...updated, baseURL: '' };
+export function getProviderConfig(id: string): ProviderConfig | undefined {
+	return settings.providers.find((p) => p.id === id);
+}
+
+export function getMainProviderConfig(): ProviderConfig | undefined {
+	const id = settings.roleAssignments['main'];
+	if (!id) return undefined;
+	return getProviderConfig(id);
+}
+
+export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
+	const id = settings.roleAssignments[role];
+	if (!id) return undefined;
+	return getProviderConfig(id);
+}
+
+export function addProviderConfig(partial: Omit<ProviderConfig, 'id'>): ProviderConfig {
+	const config: ProviderConfig = { ...partial, id: uuidv4() };
+	settings = { ...settings, providers: [...settings.providers, config] };
+	persist();
+	return config;
+}
+
+export function updateProviderConfig(id: string, partial: Partial<Omit<ProviderConfig, 'id'>>): void {
+	const updated = settings.providers.map((p) => (p.id === id ? { ...p, ...partial } : p));
+	settings = { ...settings, providers: updated };
+	persist();
+}
+
+export function deleteProviderConfig(id: string): void {
+	const providers = settings.providers.filter((p) => p.id !== id);
+	// Clean up any role assignments pointing to the deleted config
+	const roleAssignments = { ...settings.roleAssignments };
+	for (const [role, configId] of Object.entries(roleAssignments)) {
+		if (configId === id) {
+			delete roleAssignments[role];
 		}
 	}
+	settings = { ...settings, providers, roleAssignments };
+	persist();
+}
 
-	settings = updated;
+export function assignRole(role: string, providerConfigId: string): void {
+	const roleAssignments = { ...settings.roleAssignments, [role]: providerConfigId };
+	settings = { ...settings, roleAssignments };
+	persist();
+}
+
+// --- Global Settings ---
+
+export async function updateSettings(partial: Partial<Pick<Settings, 'logLevel' | 'fontSize'>>): Promise<void> {
+	const prev = settings;
+	settings = { ...prev, ...partial };
 	persist();
 
 	// Apply font size preference when fontSize changes
 	if (partial.fontSize !== undefined && partial.fontSize !== prev.fontSize) {
-		applyFontSizePreference(updated.fontSize);
+		applyFontSizePreference(settings.fontSize);
 	}
 
 	// Sync log level to Rust backend
@@ -89,7 +165,7 @@ export async function updateSettings(partial: Partial<Settings>): Promise<void> 
 			const { invoke } = await import('@tauri-apps/api/core');
 			await invoke('set_log_level', { level: partial.logLevel });
 		} catch (err) {
-			console.debug("Rust backend unavailable for log level sync:", err);
+			console.debug('Rust backend unavailable for log level sync:', err);
 		}
 	}
 }

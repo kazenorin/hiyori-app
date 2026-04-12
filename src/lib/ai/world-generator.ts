@@ -1,5 +1,5 @@
 import { streamText } from 'ai';
-import { getSettings } from '$lib/stores/settings.svelte';
+import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
 import { loadWorldTemplate, loadGenerateWorldFromChatPrompt, loadGenerateWorldFromChatSystemPrompt } from '$lib/fs/world-prompts';
 import * as dbActs from '$lib/db/acts';
@@ -56,9 +56,9 @@ async function traceStoryMessages(storyId: string): Promise<{ role: 'user' | 'as
  * Uses generate-world-from-chat-prompt.md + world-template.md as system prompt.
  */
 export async function generateWorld(storyId: string, folderName: string, abortSignal?: AbortSignal): Promise<string> {
-	const settings = getSettings();
+	const config = getMainProviderConfig();
 
-	if (!settings.apiKey || !settings.model) {
+	if (!config?.apiKey || !config?.model) {
 		throw new Error('API key and model must be configured in Settings.');
 	}
 
@@ -82,7 +82,7 @@ export async function generateWorld(storyId: string, folderName: string, abortSi
 		{ role: 'user' as const, content: userInstruction }
 	];
 
-	const model = createModel(settings);
+	const model = createModel(config!);
 
 	const result = streamText({
 		model,

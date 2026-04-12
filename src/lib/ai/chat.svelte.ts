@@ -1,4 +1,4 @@
-import {getSettings} from '$lib/stores/settings.svelte';
+import {getMainProviderConfig} from '$lib/stores/settings.svelte';
 import {loadSystemPrompt} from '$lib/fs/system-prompt';
 import type {GameData} from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
@@ -62,9 +62,9 @@ function parseMetadata(raw: string | undefined | null): MessageMetadata | undefi
 }
 
 function validateSettings(): string | null {
-	const settings = getSettings();
-	if (!settings.apiKey) return 'Please configure your API key in Settings.';
-	if (!settings.model) return 'Please configure a model name in Settings.';
+	const config = getMainProviderConfig();
+	if (!config?.apiKey) return 'Please configure your API key in Settings.';
+	if (!config?.model) return 'Please configure a model name in Settings.';
 	return null;
 }
 

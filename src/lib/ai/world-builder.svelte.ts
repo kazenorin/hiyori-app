@@ -1,4 +1,4 @@
-import {getSettings} from '$lib/stores/settings.svelte';
+import {getMainProviderConfig} from '$lib/stores/settings.svelte';
 import {loadWorldBuilderSystemPrompt, loadWorldTemplate} from '$lib/fs/world-prompts';
 import {generateWorldBuilderLogFilename, logWorldBuilderChat} from '$lib/logging/chat-logger';
 import {type StreamState} from "$lib/ai/chat-callbacks";
@@ -74,8 +74,8 @@ export function exitWorldBuilderMode(): void {
 }
 
 function validateSettings(): string | null {
-	const settings = getSettings();
-	if (!settings.apiKey || !settings.model) {
+	const config = getMainProviderConfig();
+	if (!config?.apiKey || !config?.model) {
 		return 'Please configure your API key and model in Settings.';
 	}
 	return null;
