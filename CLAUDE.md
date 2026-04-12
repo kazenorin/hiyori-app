@@ -93,6 +93,44 @@ The UI supports dynamic typography scaling via a sidebar slider and keyboard sho
 - **Ctrl+Scroll**: Holding Ctrl and scrolling adjusts font size by ±0.05 increments, clamped to 0.7–1.5.
 - **Rendering**: `MarkdownContent.svelte` applies the scale factor to its content container.
 
+## Vector Data Types (sqlite-vec)
+
+The app has the `sqlite-vec` extension available in all SQLite connections. This enables vector storage and similarity search directly in the database, accessible from the frontend via `tauri-plugin-sql` JavaScript API.
+
+### How It Works
+
+- **Registration**: `main.rs` calls `sqlite3_auto_extension()` with `sqlite3_vec_init` before `app_lib::run()`. This registers the extension process-globally on the bundled SQLite library.
+- **Propagation**: `tauri-plugin-sql` (via sqlx) links against the same bundled `libsqlite3-sys`. Since the bundled build produces a single static library, the auto-extension affects all connections — no Rust Tauri commands needed.
+- **Usage**: All sqlite-vec SQL functions (`vec_version`, `vec_distance_cosine`, `vec_to_json`, etc.) and the `vec0` virtual table module are available from JavaScript SQL queries.
+
+### Constraints
+
+- **vec0 schema requires explicit dimension**: `float[N]` (e.g., `float[768]`), not bare `float`.
+- **Vectors as JSON strings**: `tauri-plugin-sql` IPC cannot bind binary BLOBs from JavaScript. Pass vectors as JSON strings (e.g., `'[1.0, 0.5, 0.33]'`) — sqlite-vec parses them natively.
+- **Integer primary keys only**: JS `number` values bind as REAL through IPC. Use `last_insert_rowid()` in SQL instead of passing rowids from JavaScript to keep them as native SQLite integers.
+- **KNN queries require LIMIT on vec0 scan**: When JOINing with other tables, use a subquery pattern so the `LIMIT` is directly on the vec0 virtual table scan.
+
+### Example Usage (JavaScript)
+
+```sql
+-- Create a vector table
+CREATE VIRTUAL TABLE vec_items USING vec0(embedding float[768]);
+
+-- Insert (vector as JSON string)
+INSERT INTO vec_items(rowid, embedding) VALUES (1, '[0.1, 0.2, ...]');
+
+-- Search (top 5 closest by cosine distance)
+SELECT rowid, distance
+FROM vec_items
+WHERE embedding MATCH '[0.3, 0.1, ...]'
+ORDER BY distance
+LIMIT 5;
+```
+
+### Online References for sqlite-vec
+　— API Reference:　https://alexgarcia.xyz/sqlite-vec/api-reference.html
+　— vec0 virtual tables:　https://alexgarcia.xyz/sqlite-vec/features/vec0.html
+
 ## IntelliJ MCP Usage
 
 When using IntelliJ MCP tools, first check whether the current shell is WSL2 by running `which wslpath`.
