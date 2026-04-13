@@ -126,6 +126,8 @@ function parseCharacterJson(text: string): CharacterSummary[] {
 	}
 }
 
+export { parseCharacterJson as _parseCharacterJsonForTest };
+
 // === Lineage ===
 
 export async function buildActLineage(): Promise<ActLineageEntry[]> {
@@ -178,6 +180,8 @@ function computeCardFilename(canonicalName: string, isMainLine: boolean, actLine
 	if (isMainLine) return `${canonicalName}.md`;
 	return `${canonicalName}-${actLineId.slice(-8)}.md`;
 }
+
+export { computeCardFilename as _computeCardFilenameForTest };
 
 async function loadExistingCharacterCard(
 	storyFolder: string,
