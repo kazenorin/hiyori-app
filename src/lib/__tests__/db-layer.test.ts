@@ -53,8 +53,8 @@ describe('migrations', () => {
 
 	it('adds is_main_line column (migration 3)', async () => {
 		await runMigrations();
-		const cols = testDb._db.pragma('table_info(act_line_meta)');
-		const colNames = cols.map((c: any) => c.name);
+		const cols = testDb._db.pragma('table_info(act_line_meta)') as Array<{ name: string }>;
+		const colNames = cols.map((c) => c.name);
 		expect(colNames).toContain('is_main_line');
 	});
 

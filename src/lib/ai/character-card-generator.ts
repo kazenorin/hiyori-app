@@ -21,6 +21,7 @@ import {
 import { mkdir, writeTextFile, readTextFile, exists, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { toKebabCase } from '$lib/utils/string';
 import { log } from '$lib/logging/logger';
+import { logCharacterCardActivity } from '$lib/logging/chat-logger';
 
 // === Act Card Filename (mirrors act-card-generator) ===
 
@@ -113,11 +114,21 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 	const model = createModel(config);
 	const transcript = contents.join('\n\n---\n\n');
 
+	await logCharacterCardActivity('extraction-start', `Extracting characters from act line: ${actLineId}\n
+	System Prompt:\n${combinedSystem}\n
+	Transcript:\n${transcript}`);
+
 	const result = await generateText({
 		model,
 		system: combinedSystem,
 		messages: [{ role: 'user', content: transcript }]
 	});
+
+	await logCharacterCardActivity('extraction-end', `
+	Result: ${result.text}
+	Usage: ${JSON.stringify(result.usage, null, 2)}
+	Total Usage: ${JSON.stringify(result.totalUsage, null, 2)}
+	Finish Reason: ${result.finishReason}`);
 
 	const parsed = parseCharacterJson(result.text);
 	return parsed;
@@ -311,11 +322,15 @@ export async function generateCharacterCard(
 
 	// Generate
 	const model = createModel(config);
+	await logCharacterCardActivity('generation-start', `Character: ${entry.character}\n\nUser prompt:\n${userPrompt}`);
+
 	const result = await generateText({
 		model,
 		system: combinedSystem,
 		messages: [{ role: 'user', content: userPrompt }]
 	});
+
+	await logCharacterCardActivity('generation-end', `Character: ${entry.character}\n\nResult:\n${result.text}`);
 
 	// Get current act info for saving (reusing currentAct fetched earlier)
 	if (!currentAct) throw new Error('Active act not found.');

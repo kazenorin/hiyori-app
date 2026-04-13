@@ -56,482 +56,183 @@
 	<title>Generate Character Cards</title>
 </svelte:head>
 
-<div class="container">
-	<!-- Header -->
-	<div class="header">
-		<button class="back-btn" onclick={handleBack}>← Back</button>
-		<h1>Generate Character Cards</h1>
-	</div>
-
-	<!-- Context Info -->
-	<div class="context-info">
-		<span class="label">Story:</span>
-		<span class="value">{getActiveStory()?.name ?? '—'}</span>
-		<span class="label">Act:</span>
-		<span class="value">{getActiveAct()?.actNumber ?? '—'}</span>
-		<span class="label">Act Line:</span>
-		<span class="value">{getActiveActLine()?.name ?? '—'}</span>
-		<span class="label">Act Line ID:</span>
-		<span class="value id">{getActiveActLine()?.id ?? '—'}</span>
-	</div>
-
-	<!-- Extraction Loading -->
-	{#if getIsExtracting()}
-		<div class="loading-overlay" role="alert" aria-live="polite" aria-busy="true">
-			<div class="spinner" aria-hidden="true"></div>
-			<p>Extracting characters from act...</p>
+<div class="flex-1 overflow-y-auto p-6">
+	<div class="max-w-4xl mx-auto space-y-6">
+		<!-- Header -->
+		<div class="flex items-center gap-4">
+			<button class="btn btn-sm preset-tonal" onclick={handleBack}>
+				&larr; Back
+			</button>
+			<h2 class="h2">Generate Character Cards</h2>
 		</div>
-	{/if}
 
-	<!-- Extraction Error -->
-	{#if getExtractionError() && !getIsExtracting()}
-		<div class="error-box">
-			<p>{getExtractionError()}</p>
-		</div>
-	{/if}
-
-	<!-- Raw Output (if parse failed) -->
-	{#if getRawExtractionOutput() && !getIsExtracting()}
-		<div class="raw-output">
-			<h3>Raw LLM Output</h3>
-			<pre>{getRawExtractionOutput()}</pre>
-		</div>
-	{/if}
-
-	<!-- Character Table -->
-	{#if !getIsExtracting() && (getCharacters().length > 0 || getExtractionError())}
-		<div class="character-table">
-			<div class="table-header">
-				<span class="col-name">Character Name</span>
-				<span class="col-summary">Summary</span>
-				<span class="col-canonical">Canonical Name</span>
-				<span class="col-include">Include</span>
-				<span class="col-actions"></span>
+		<!-- Context Info -->
+		<section class="card p-4">
+			<div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+				<span class="font-semibold text-surface-700-300">Story:</span>
+				<span class="text-surface-950-50">{getActiveStory()?.name ?? '—'}</span>
+				<span class="font-semibold text-surface-700-300">Act:</span>
+				<span class="text-surface-950-50">{getActiveAct()?.actNumber ?? '—'}</span>
+				<span class="font-semibold text-surface-700-300">Act Line:</span>
+				<span class="text-surface-950-50">{getActiveActLine()?.name ?? '—'}</span>
+				<span class="font-semibold text-surface-700-300">Act Line ID:</span>
+				<span class="text-surface-500 text-xs font-mono">{getActiveActLine()?.id ?? '—'}</span>
 			</div>
+		</section>
 
-			{#each getCharacters() as char, i (i)}
-				<div class="table-row">
-					<span class="col-name">
-						{#if char.isManual}
-							<input
-								type="text"
-								value={char.character}
-								oninput={(e) => updateCharacter(i, { character: e.currentTarget.value })}
-								placeholder="Enter name"
-							/>
-						{:else}
-							{char.character}
-						{/if}
-					</span>
-					<span class="col-summary">
-						{#if char.isManual}
-							<input
-								type="text"
-								value={char.importance}
-								oninput={(e) => updateCharacter(i, { importance: e.currentTarget.value })}
-								placeholder="Summary"
-							/>
-						{:else}
-							{char.importance}
-						{/if}
-					</span>
-					<span class="col-canonical">
-						<input
-							type="text"
-							value={char.canonicalName}
-							oninput={(e) => updateCanonicalName(i, e.currentTarget.value)}
-						/>
-					</span>
-					<span class="col-include">
-						{#if char.isManual}
-							<span class="manual-note">(manual)</span>
-						{:else}
-							<input type="checkbox" checked={char.include} onchange={(e) => updateInclude(i, e.currentTarget.checked)} />
-						{/if}
-					</span>
-					<span class="col-actions">
-						{#if char.isManual}
-							<button class="remove-btn" onclick={() => handleRemoveRow(i)}>×</button>
-						{/if}
-					</span>
-				</div>
-			{/each}
-
-			<button class="add-row-btn" onclick={handleAddRow}>+ Add Row</button>
-		</div>
-	{/if}
-
-	<!-- Remarks Box -->
-	{#if !getIsExtracting()}
-		<div class="remarks-box">
-			<h4>Remarks</h4>
-			<ul>
-				<li>Canonical names must remain consistent throughout the entire story.</li>
-				<li>Character cards are maintained per act line (not globally).</li>
-				<li>Cards are generated from the current act's content. If cards exist for the current act line <strong>and</strong> previous acts in the lineage, their content contributes to generation context.</li>
-				<li>If a card for the current act line already exists, <strong>it will be overwritten</strong>.</li>
-			</ul>
-		</div>
-	{/if}
-
-	<!-- Generation Controls -->
-	{#if !getIsExtracting() && !getIsGenerating() && getCharacters().length > 0}
-		<div class="controls">
-			<label class="concurrent-label">
-				<input type="checkbox" bind:checked={concurrent} />
-				Concurrent Generation
-			</label>
-			<button class="generate-btn" onclick={handleGenerate}>Generate Cards</button>
-		</div>
-	{/if}
-
-	<!-- Generation Progress Overlay -->
-	{#if getIsGenerating()}
-		{@const total = getProgress()?.total ?? getCharacters().length}
-		{@const completed = getProgress()?.completed ?? 0}
-		<div class="loading-overlay" role="alert" aria-live="polite" aria-busy="true">
-			<div class="progress-box">
-				<p>Generating {completed + 1} of {total} characters...</p>
-				<p class="current-char">{getProgress()?.currentCharacter ?? ''}</p>
-				<div class="progress-bar" role="progressbar" aria-valuenow={completed} aria-valuemin={0} aria-valuemax={total}>
-					<div
-						class="progress-fill"
-						style="width: {total > 0 ? (completed / total) * 100 : 0}%"
-					></div>
+		<!-- Extraction Loading -->
+		{#if getIsExtracting()}
+			<div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" role="alert" aria-live="polite" aria-busy="true">
+				<div class="card p-8 text-center">
+					<div class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+					<p class="mt-4 text-surface-950-50">Extracting characters from act...</p>
 				</div>
 			</div>
-		</div>
-	{/if}
+		{/if}
 
-	<!-- Generation Error -->
-	{#if getGenerationError() && !getIsGenerating()}
-		<div class="error-box">
-			<p>{getGenerationError()}</p>
-		</div>
-	{/if}
+		<!-- Extraction Error -->
+		{#if getExtractionError() && !getIsExtracting()}
+			<div class="card p-4 border border-error-500-500">
+				<p class="text-error-700-300">{getExtractionError()}</p>
+			</div>
+		{/if}
 
-	<!-- Results -->
-	{#if getResults().length > 0 && !getIsGenerating()}
-		<div class="success-box">
-			<h3>Generated {getResults().length} character cards:</h3>
-			<ul>
-				{#each getResults() as r}
-					<li>
-						<strong>{r.characterName}</strong>: {r.filePath}
-					</li>
+		<!-- Raw Output (if parse failed) -->
+		{#if getRawExtractionOutput() && !getIsExtracting()}
+			<section class="card p-4 space-y-2">
+				<h3 class="font-semibold text-surface-950-50">Raw LLM Output</h3>
+				<pre class="text-xs text-surface-700-300 whitespace-pre-wrap break-words">{getRawExtractionOutput()}</pre>
+			</section>
+		{/if}
+
+		<!-- Character Table -->
+		{#if !getIsExtracting() && (getCharacters().length > 0 || getExtractionError())}
+			<section class="card p-4 space-y-3">
+				<div class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(100px,1fr)_60px_36px] gap-3 text-xs font-semibold text-surface-700-300 uppercase tracking-wide border-b border-surface-200-800 pb-2">
+					<span>Character</span>
+					<span>Summary</span>
+					<span>Canonical Name</span>
+					<span class="text-center">Include</span>
+					<span></span>
+				</div>
+
+				{#each getCharacters() as char, i (i)}
+					<div class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(100px,1fr)_60px_36px] gap-3 items-center py-2 border-b border-surface-100-900">
+						<span class="text-surface-950-50">
+							{#if char.isManual}
+								<input
+									type="text"
+									class="input text-sm"
+									value={char.character}
+									oninput={(e) => updateCharacter(i, { character: e.currentTarget.value })}
+									placeholder="Enter name"
+								/>
+							{:else}
+								{char.character}
+							{/if}
+						</span>
+						<span class="text-surface-700-300 text-sm">
+							{#if char.isManual}
+								<input
+									type="text"
+									class="input text-sm"
+									value={char.importance}
+									oninput={(e) => updateCharacter(i, { importance: e.currentTarget.value })}
+									placeholder="Summary"
+								/>
+							{:else}
+								{char.importance}
+							{/if}
+						</span>
+						<span>
+							<input
+								type="text"
+								class="input text-sm"
+								value={char.canonicalName}
+								oninput={(e) => updateCanonicalName(i, e.currentTarget.value)}
+							/>
+						</span>
+						<span class="text-center">
+							{#if char.isManual}
+								<span class="text-xs text-surface-500">(manual)</span>
+							{:else}
+								<input type="checkbox" class="checkbox" checked={char.include} onchange={(e) => updateInclude(i, e.currentTarget.checked)} />
+							{/if}
+						</span>
+						<span>
+							{#if char.isManual}
+								<button class="btn btn-sm preset-filled-error-500" onclick={() => handleRemoveRow(i)}>&times;</button>
+							{/if}
+						</span>
+					</div>
 				{/each}
-			</ul>
-		</div>
-	{/if}
+
+				<button class="btn btn-sm preset-tonal" onclick={handleAddRow}>+ Add Row</button>
+			</section>
+		{/if}
+
+		<!-- Remarks -->
+		{#if !getIsExtracting()}
+			<section class="card p-4 space-y-2 border border-secondary-500-300">
+				<h4 class="font-semibold text-secondary-700-300">Remarks</h4>
+				<ul class="list-disc list-inside text-sm text-surface-700-300 space-y-1">
+					<li>Canonical names must remain consistent throughout the entire story.</li>
+					<li>Character cards are maintained per act line (not globally).</li>
+					<li>Cards are generated from the current act's content. If cards exist for the current act line <strong>and</strong> previous acts in the lineage, their content contributes to generation context.</li>
+					<li>If a card for the current act line already exists, <strong>it will be overwritten</strong>.</li>
+				</ul>
+			</section>
+		{/if}
+
+		<!-- Generation Controls -->
+		{#if !getIsExtracting() && !getIsGenerating() && getCharacters().length > 0}
+			<div class="flex items-center gap-4">
+				<label class="flex items-center gap-2 text-sm text-surface-700-300">
+					<input type="checkbox" class="checkbox" bind:checked={concurrent} />
+					Concurrent Generation
+				</label>
+				<button class="btn preset-filled-primary-500" onclick={handleGenerate}>Generate Cards</button>
+			</div>
+		{/if}
+
+		<!-- Generation Progress Overlay -->
+		{#if getIsGenerating()}
+			{@const total = getProgress()?.total ?? getCharacters().length}
+			{@const completed = getProgress()?.completed ?? 0}
+			<div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" role="alert" aria-live="polite" aria-busy="true">
+				<div class="card p-8 text-center min-w-[320px]">
+					<p class="text-surface-950-50">Generating {completed + 1} of {total} characters...</p>
+					<p class="text-lg font-semibold text-surface-950-50 mt-2">{getProgress()?.currentCharacter ?? ''}</p>
+					<div class="mt-4 h-3 bg-surface-200-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={completed} aria-valuemin={0} aria-valuemax={total}>
+						<div
+							class="h-full bg-primary-500 transition-[width] duration-200"
+							style="width: {total > 0 ? (completed / total) * 100 : 0}%"
+						></div>
+					</div>
+				</div>
+			</div>
+		{/if}
+
+		<!-- Generation Error -->
+		{#if getGenerationError() && !getIsGenerating()}
+			<div class="card p-4 border border-error-500-500">
+				<p class="text-error-700-300">{getGenerationError()}</p>
+			</div>
+		{/if}
+
+		<!-- Results -->
+		{#if getResults().length > 0 && !getIsGenerating()}
+			<section class="card p-4 space-y-2 border border-success-500-300">
+				<h3 class="font-semibold text-success-700-300">Generated {getResults().length} character cards:</h3>
+				<ul class="list-disc list-inside text-sm text-surface-700-300">
+					{#each getResults() as r}
+						<li>
+							<strong class="text-surface-950-50">{r.characterName}</strong>: <span class="font-mono text-xs">{r.filePath}</span>
+						</li>
+					{/each}
+				</ul>
+			</section>
+		{/if}
+	</div>
 </div>
 
-<style>
-	.container {
-		max-width: 900px;
-		margin: 0 auto;
-		padding: 20px;
-	}
-
-	.header {
-		display: flex;
-		align-items: center;
-		gap: 16px;
-		margin-bottom: 20px;
-	}
-
-	.back-btn {
-		padding: 8px 16px;
-		background: #555;
-		color: white;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-	}
-
-	.back-btn:hover {
-		background: #666;
-	}
-
-	h1 {
-		margin: 0;
-	}
-
-	.context-info {
-		background: var(--color-surface-200);
-		padding: 16px;
-		border-radius: 8px;
-		margin-bottom: 20px;
-		display: grid;
-		grid-template-columns: auto 1fr;
-		gap: 8px 16px;
-	}
-
-	.label {
-		font-weight: 600;
-		color: var(--color-surface-700);
-		white-space: nowrap;
-	}
-
-	.value {
-		color: var(--color-surface-900);
-	}
-
-	.value.id {
-		font-size: 0.85em;
-		color: var(--color-surface-600);
-	}
-
-	.loading-overlay {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		bottom: 0;
-		background: rgba(0, 0, 0, 0.5);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		z-index: 1000;
-	}
-
-	.spinner {
-		width: 40px;
-		height: 40px;
-		border: 4px solid #fff;
-		border-top-color: transparent;
-		border-radius: 50%;
-		animation: spin 1s linear infinite;
-	}
-
-	@keyframes spin {
-		to {
-			transform: rotate(360deg);
-		}
-	}
-
-	.progress-box {
-		background: var(--color-surface-100);
-		color: var(--color-surface-900);
-		padding: 24px;
-		border-radius: 8px;
-		text-align: center;
-		min-width: 300px;
-	}
-
-	.current-char {
-		font-size: 1.1em;
-		font-weight: 600;
-		margin: 8px 0 16px;
-	}
-
-	.progress-bar {
-		height: 12px;
-		background: var(--color-surface-300);
-		border-radius: 6px;
-		overflow: hidden;
-	}
-
-	.progress-fill {
-		height: 100%;
-		background: #4a90d9;
-		transition: width 0.2s;
-	}
-
-	.error-box {
-		background: rgba(204, 0, 0, 0.1);
-		border: 1px solid #c00;
-		padding: 16px;
-		border-radius: 8px;
-		margin-bottom: 20px;
-	}
-
-	.error-box p {
-		margin: 0;
-		color: #900;
-	}
-
-	.raw-output {
-		background: var(--color-surface-200);
-		padding: 16px;
-		border-radius: 8px;
-		margin-bottom: 20px;
-	}
-
-	.raw-output h3 {
-		margin: 0 0 12px;
-		color: var(--color-surface-900);
-	}
-
-	.raw-output pre {
-		white-space: pre-wrap;
-		word-break: break-word;
-		font-size: 0.85em;
-		color: var(--color-surface-700);
-	}
-
-	.character-table {
-		margin-bottom: 20px;
-	}
-
-	.table-header {
-		display: flex;
-		gap: 16px;
-		padding: 12px 0;
-		font-weight: 600;
-		border-bottom: 2px solid var(--color-surface-300);
-		color: var(--color-surface-900);
-	}
-
-	.table-row {
-		display: flex;
-		gap: 16px;
-		padding: 12px 0;
-		border-bottom: 1px solid var(--color-surface-200);
-		align-items: center;
-		color: var(--color-surface-800);
-	}
-
-	.col-name {
-		min-width: 150px;
-	}
-
-	.col-summary {
-		min-width: 200px;
-	}
-
-	.col-canonical {
-		min-width: 120px;
-	}
-
-	.col-include {
-		min-width: 80px;
-		text-align: center;
-	}
-
-	.col-actions {
-		min-width: 40px;
-	}
-
-	.table-row input[type="text"] {
-		width: 100%;
-		padding: 6px 8px;
-		border: 1px solid var(--color-surface-400);
-		border-radius: 4px;
-		background: var(--color-surface-100);
-		color: var(--color-surface-900);
-	}
-
-	.table-row input[type="checkbox"] {
-		width: 18px;
-		height: 18px;
-	}
-
-	.manual-note {
-		font-size: 0.85em;
-		color: var(--color-surface-600);
-	}
-
-	.remove-btn {
-		background: #c00;
-		color: white;
-		border: none;
-		border-radius: 4px;
-		padding: 4px 10px;
-		cursor: pointer;
-	}
-
-	.remove-btn:hover {
-		background: #a00;
-	}
-
-	.add-row-btn {
-		margin-top: 12px;
-		padding: 8px 16px;
-		background: #555;
-		color: white;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-	}
-
-	.add-row-btn:hover {
-		background: #666;
-	}
-
-	.remarks-box {
-		background: rgba(74, 144, 217, 0.1);
-		border: 1px solid #4a90d9;
-		padding: 16px;
-		border-radius: 8px;
-		margin-bottom: 20px;
-		color: var(--color-surface-800);
-	}
-
-	.remarks-box h4 {
-		margin: 0 0 12px;
-		color: var(--color-surface-900);
-	}
-
-	.remarks-box ul {
-		margin: 0;
-		padding-left: 20px;
-	}
-
-	.remarks-box li {
-		margin-bottom: 8px;
-	}
-
-	.remarks-box li:last-child {
-		margin-bottom: 0;
-	}
-
-	.controls {
-		display: flex;
-		gap: 16px;
-		align-items: center;
-		margin-bottom: 20px;
-	}
-
-	.concurrent-label {
-		display: flex;
-		gap: 8px;
-		align-items: center;
-		color: var(--color-surface-800);
-	}
-
-	.generate-btn {
-		padding: 12px 24px;
-		background: #4a90d9;
-		color: white;
-		border: none;
-		border-radius: 4px;
-		cursor: pointer;
-		font-weight: 600;
-	}
-
-	.generate-btn:hover {
-		background: #3a80c9;
-	}
-
-	.success-box {
-		background: rgba(0, 204, 0, 0.1);
-		border: 1px solid #0c0;
-		padding: 16px;
-		border-radius: 8px;
-		color: var(--color-surface-800);
-	}
-
-	.success-box h3 {
-		margin: 0 0 12px;
-		color: var(--color-surface-900);
-	}
-
-	.success-box ul {
-		margin: 0;
-		padding-left: 20px;
-	}
-
-	.success-box li {
-		margin-bottom: 4px;
-	}
-</style>
