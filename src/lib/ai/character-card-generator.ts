@@ -22,6 +22,32 @@ import { mkdir, writeTextFile, readTextFile, exists, BaseDirectory } from '@taur
 import { toKebabCase } from '$lib/utils/string';
 import { log } from '$lib/logging/logger';
 
+// === Act Card Filename (mirrors act-card-generator) ===
+
+function computeActCardFilename(isMainLine: boolean, actLineId: string): string {
+	if (isMainLine) return 'main-line.md';
+	return `line-${actLineId.slice(-8)}.md`;
+}
+
+async function loadActCard(
+	storyFolder: string,
+	actNumber: number,
+	isMainLine: boolean,
+	actLineId: string
+): Promise<string | null> {
+	const dir = `${storyFolder}/act-${actNumber}`;
+	const filename = computeActCardFilename(isMainLine, actLineId);
+	const path = `${dir}/${filename}`;
+
+	try {
+		const fileExists = await exists(path, { baseDir: BaseDirectory.AppData });
+		if (!fileExists) return null;
+		return await readTextFile(path, { baseDir: BaseDirectory.AppData });
+	} catch {
+		return null;
+	}
+}
+
 // === Types ===
 
 export interface CharacterSummary {
@@ -233,10 +259,37 @@ export async function generateCharacterCard(
 	const namedExtractionPrompt = extractionPrompt.replaceAll('{{character name}}', entry.character);
 	const namedTemplate = template.replaceAll('{{character name}}', entry.character);
 
-	// Build user prompt with existing cards context
-	const storyFolder = await resolveStoryFolder(storyId, story.name);
-	let existingCardsSection = '';
+	// Load current act transcript
+	const actLineId = getActiveActLineId()!;
+	const allMessages = await getMessagesForLine(actLineId);
+	const transcript = exportActLine(allMessages);
+	const transcriptSection = transcript.length > 0
+		? `\n\n## Source Transcript\n\n${transcript.join('\n\n---\n\n')}`
+		: '';
 
+	// Build user prompt with act cards from previous acts
+	const storyFolder = await resolveStoryFolder(storyId, story.name);
+	const currentAct = await getAct(actId);
+	const currentActNumber = currentAct?.actNumber ?? 0;
+	let previousActCardsSection = '';
+
+	for (const lineageEntry of lineage) {
+		// Skip current act — its transcript is already included above
+		if (lineageEntry.actNumber === currentActNumber) continue;
+
+		const actCard = await loadActCard(
+			storyFolder,
+			lineageEntry.actNumber,
+			lineageEntry.isMainLine,
+			lineageEntry.actLineId
+		);
+		if (actCard) {
+			previousActCardsSection += `\n\n## Act Card from Act ${lineageEntry.actNumber}\n\n${actCard}`;
+		}
+	}
+
+	// Load existing character cards from lineage
+	let existingCardsSection = '';
 	for (const lineageEntry of lineage) {
 		const card = await loadExistingCharacterCard(
 			storyFolder,
@@ -246,11 +299,11 @@ export async function generateCharacterCard(
 			lineageEntry.actLineId
 		);
 		if (card) {
-			existingCardsSection += `\n\n## Details from Act ${lineageEntry.actNumber}\n\n${card}`;
+			existingCardsSection += `\n\n## Character Details from Act ${lineageEntry.actNumber}\n\n${card}`;
 		}
 	}
 
-	const userPrompt = `${namedExtractionPrompt}\n\n${namedTemplate}${existingCardsSection}`;
+	const userPrompt = `${namedExtractionPrompt}\n\n${namedTemplate}${transcriptSection}${previousActCardsSection}${existingCardsSection}`;
 
 	if (onProgress && progress) {
 		onProgress(progress);
@@ -264,15 +317,14 @@ export async function generateCharacterCard(
 		messages: [{ role: 'user', content: userPrompt }]
 	});
 
-	// Get current act info for saving
-	const act = await getAct(actId);
-	if (!act) throw new Error('Active act not found.');
+	// Get current act info for saving (reusing currentAct fetched earlier)
+	if (!currentAct) throw new Error('Active act not found.');
 
 	const actLine = await getActLine(getActiveActLineId()!);
 	const isMainLine = actLine?.isMainLine ?? false;
 
 	// Save file
-	const charactersDir = `${storyFolder}/act-${act.actNumber}/characters`;
+	const charactersDir = `${storyFolder}/act-${currentAct.actNumber}/characters`;
 	const filename = computeCardFilename(entry.canonicalName, isMainLine, getActiveActLineId()!);
 	const filePath = `${charactersDir}/${filename}`;
 
