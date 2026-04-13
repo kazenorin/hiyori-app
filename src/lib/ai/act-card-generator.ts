@@ -3,6 +3,7 @@ import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
 import { loadActCardTemplate, loadActExtractionPrompt } from '$lib/fs/act-card-prompts';
 import { loadSystemPrompt } from '$lib/fs/system-prompt';
+import { exportActLine } from './act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
 import { resolveStoryFolder } from '$lib/fs/story-prompts';
@@ -19,19 +20,8 @@ function computeFilename(isMainLine: boolean, actLineId: string): string {
 	return `line-${actLineId.slice(-8)}.md`;
 }
 
-function filterAssistantNarrationMessages(messages: Array<{ role: string; content: string }>): Array<{ role: string; content: string }> {
-	const keywords = ['act', 'scene', 'session'];
-	return messages.filter((m) => {
-		if (m.role !== 'assistant') return false;
-		const lowerContent = m.content.toLowerCase();
-		return keywords.some((kw) => lowerContent.includes(kw));
-	});
-}
-
-function buildUserMessage(messages: Array<{ role: string; content: string }>, template: string): string {
-	const transcript = messages
-		.map((m) => `[${m.role.toUpperCase()}]:\n${m.content}`)
-		.join('\n\n---\n\n');
+function buildUserMessage(contents: string[], template: string): string {
+	const transcript = contents.join('\n\n---\n\n');
 
 	return `Here is the narrative content for this act line:
 
@@ -61,8 +51,8 @@ export async function generateActCard(): Promise<GenerateActCardResult> {
 
 	// Gather and filter messages
 	const allMessages = await getMessagesForLine(actLineId);
-	const messages = filterAssistantNarrationMessages(allMessages);
-	if (messages.length === 0) {
+	const contents = exportActLine(allMessages);
+	if (contents.length === 0) {
 		throw new Error('No narrative content found in this act line.');
 	}
 
@@ -86,7 +76,7 @@ export async function generateActCard(): Promise<GenerateActCardResult> {
 
 	// Build AI call
 	const model = createModel(config);
-	const userContent = buildUserMessage(messages, template);
+	const userContent = buildUserMessage(contents, template);
 
 	const result = await generateText({
 		model,

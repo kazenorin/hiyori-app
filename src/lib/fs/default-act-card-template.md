@@ -44,8 +44,8 @@
 - **Opposition Present:** [Who or what actively resists progress]
 - **Characters Absent but Influential:** [Off-page forces still affecting events]
 
-## Chapter / Event Breakdown
-### Chapter or Event 1
+## Event Breakdown
+### Event 1
 - **Title / Label:**
 - **Purpose:**
 - **Main Event:**
@@ -53,7 +53,7 @@
 - **Outcome:**
 - **Hook into next chapter:**
 
-### Chapter or Event 2
+### Event 2
 - **Title / Label:**
 - **Purpose:**
 - **Main Event:**
@@ -61,7 +61,7 @@
 - **Outcome:**
 - **Hook into next chapter:**
 
-### Chapter or Event 3
+### Event 3
 - **Title / Label:**
 - **Purpose:**
 - **Main Event:**
@@ -83,7 +83,3 @@
 - **Atmosphere:** [Localized mood for this act]
 - **Best Opening Pressure:** [What kind of scene should start this act]
 - **Best Closing Beat:** [What kind of note should end the act]
-
-## Writing Cue
-Write this act as:
-[2-4 sentences telling the LLM how to maintain momentum, conflict, and emotional progression within this act]
