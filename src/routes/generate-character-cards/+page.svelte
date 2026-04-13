@@ -97,8 +97,8 @@
 
 	<!-- Extraction Loading -->
 	{#if isExtracting}
-		<div class="loading-overlay">
-			<div class="spinner"></div>
+		<div class="loading-overlay" role="alert" aria-live="polite" aria-busy="true">
+			<div class="spinner" aria-hidden="true"></div>
 			<p>Extracting characters from act...</p>
 		</div>
 	{/if}
@@ -207,11 +207,11 @@
 
 	<!-- Generation Progress Overlay -->
 	{#if isGenerating}
-		<div class="loading-overlay">
+		<div class="loading-overlay" role="alert" aria-live="polite" aria-busy="true">
 			<div class="progress-box">
 				<p>Generating {progress?.completed ?? 0 + 1} of {progress?.total ?? characters.length} characters...</p>
 				<p class="current-char">{progress?.currentCharacter ?? ''}</p>
-				<div class="progress-bar">
+				<div class="progress-bar" role="progressbar" aria-valuenow={progress?.completed ?? 0} aria-valuemin={0} aria-valuemax={progress?.total ?? characters.length}>
 					<div
 						class="progress-fill"
 						style="width: {((progress?.completed ?? 0) / (progress?.total ?? characters.length)) * 100}%"

@@ -67,4 +67,10 @@ describe('toKebabCase', () => {
 	it('collapses multiple hyphens', () => {
 		expect(toKebabCase('Hello   World!!!')).toBe('hello-world');
 	});
+
+		it("strips path traversal sequences", () => {
+			expect(toKebabCase("../secret")).toBe("secret");
+			expect(toKebabCase("....")).toBe("");
+			expect(toKebabCase("foo../bar")).toBe("foo-bar");
+		});
 });
