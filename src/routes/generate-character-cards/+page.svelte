@@ -21,20 +21,8 @@
 
 	let concurrent = $state(false);
 
-	const story = getActiveStory();
-	const act = getActiveAct();
-	const actLine = getActiveActLine();
-
-	const characters = getCharacters();
-	const isExtracting = getIsExtracting();
-	const isGenerating = getIsGenerating();
-	const extractionError = getExtractionError();
-	const generationError = getGenerationError();
-	const rawOutput = getRawExtractionOutput();
-	const progress = getProgress();
-	const results = getResults();
-
 	onMount(() => {
+		resetState();
 		extractCharacters();
 	});
 
@@ -77,26 +65,18 @@
 
 	<!-- Context Info -->
 	<div class="context-info">
-		<div class="info-row">
-			<span class="label">Story:</span>
-			<span class="value">{story?.name ?? '—'}</span>
-		</div>
-		<div class="info-row">
-			<span class="label">Act:</span>
-			<span class="value">{act?.actNumber ?? '—'}</span>
-		</div>
-		<div class="info-row">
-			<span class="label">Act Line:</span>
-			<span class="value">{actLine?.name ?? '—'}</span>
-		</div>
-		<div class="info-row">
-			<span class="label">Act Line ID:</span>
-			<span class="value id">{actLine?.id ?? '—'}</span>
-		</div>
+		<span class="label">Story:</span>
+		<span class="value">{getActiveStory()?.name ?? '—'}</span>
+		<span class="label">Act:</span>
+		<span class="value">{getActiveAct()?.actNumber ?? '—'}</span>
+		<span class="label">Act Line:</span>
+		<span class="value">{getActiveActLine()?.name ?? '—'}</span>
+		<span class="label">Act Line ID:</span>
+		<span class="value id">{getActiveActLine()?.id ?? '—'}</span>
 	</div>
 
 	<!-- Extraction Loading -->
-	{#if isExtracting}
+	{#if getIsExtracting()}
 		<div class="loading-overlay" role="alert" aria-live="polite" aria-busy="true">
 			<div class="spinner" aria-hidden="true"></div>
 			<p>Extracting characters from act...</p>
@@ -104,22 +84,22 @@
 	{/if}
 
 	<!-- Extraction Error -->
-	{#if extractionError && !isExtracting}
+	{#if getExtractionError() && !getIsExtracting()}
 		<div class="error-box">
-			<p>{extractionError}</p>
+			<p>{getExtractionError()}</p>
 		</div>
 	{/if}
 
 	<!-- Raw Output (if parse failed) -->
-	{#if rawOutput && !isExtracting}
+	{#if getRawExtractionOutput() && !getIsExtracting()}
 		<div class="raw-output">
 			<h3>Raw LLM Output</h3>
-			<pre>{rawOutput}</pre>
+			<pre>{getRawExtractionOutput()}</pre>
 		</div>
 	{/if}
 
 	<!-- Character Table -->
-	{#if !isExtracting && (characters.length > 0 || extractionError)}
+	{#if !getIsExtracting() && (getCharacters().length > 0 || getExtractionError())}
 		<div class="character-table">
 			<div class="table-header">
 				<span class="col-name">Character Name</span>
@@ -129,7 +109,7 @@
 				<span class="col-actions"></span>
 			</div>
 
-			{#each characters as char, i (i)}
+			{#each getCharacters() as char, i (i)}
 				<div class="table-row">
 					<span class="col-name">
 						{#if char.isManual}
@@ -182,7 +162,7 @@
 	{/if}
 
 	<!-- Remarks Box -->
-	{#if !isExtracting}
+	{#if !getIsExtracting()}
 		<div class="remarks-box">
 			<h4>Remarks</h4>
 			<ul>
@@ -195,7 +175,7 @@
 	{/if}
 
 	<!-- Generation Controls -->
-	{#if !isExtracting && !isGenerating && characters.length > 0}
+	{#if !getIsExtracting() && !getIsGenerating() && getCharacters().length > 0}
 		<div class="controls">
 			<label class="concurrent-label">
 				<input type="checkbox" bind:checked={concurrent} />
@@ -206,15 +186,17 @@
 	{/if}
 
 	<!-- Generation Progress Overlay -->
-	{#if isGenerating}
+	{#if getIsGenerating()}
+		{@const total = getProgress()?.total ?? getCharacters().length}
+		{@const completed = getProgress()?.completed ?? 0}
 		<div class="loading-overlay" role="alert" aria-live="polite" aria-busy="true">
 			<div class="progress-box">
-				<p>Generating {progress?.completed ?? 0 + 1} of {progress?.total ?? characters.length} characters...</p>
-				<p class="current-char">{progress?.currentCharacter ?? ''}</p>
-				<div class="progress-bar" role="progressbar" aria-valuenow={progress?.completed ?? 0} aria-valuemin={0} aria-valuemax={progress?.total ?? characters.length}>
+				<p>Generating {completed + 1} of {total} characters...</p>
+				<p class="current-char">{getProgress()?.currentCharacter ?? ''}</p>
+				<div class="progress-bar" role="progressbar" aria-valuenow={completed} aria-valuemin={0} aria-valuemax={total}>
 					<div
 						class="progress-fill"
-						style="width: {((progress?.completed ?? 0) / (progress?.total ?? characters.length)) * 100}%"
+						style="width: {total > 0 ? (completed / total) * 100 : 0}%"
 					></div>
 				</div>
 			</div>
@@ -222,18 +204,18 @@
 	{/if}
 
 	<!-- Generation Error -->
-	{#if generationError && !isGenerating}
+	{#if getGenerationError() && !getIsGenerating()}
 		<div class="error-box">
-			<p>{generationError}</p>
+			<p>{getGenerationError()}</p>
 		</div>
 	{/if}
 
 	<!-- Results -->
-	{#if results.length > 0 && !isGenerating}
+	{#if getResults().length > 0 && !getIsGenerating()}
 		<div class="success-box">
-			<h3>Generated {results.length} character cards:</h3>
+			<h3>Generated {getResults().length} character cards:</h3>
 			<ul>
-				{#each results as r}
+				{#each getResults() as r}
 					<li>
 						<strong>{r.characterName}</strong>: {r.filePath}
 					</li>
@@ -275,34 +257,28 @@
 	}
 
 	.context-info {
-		background: #f5f5f5;
+		background: var(--color-surface-200);
 		padding: 16px;
 		border-radius: 8px;
 		margin-bottom: 20px;
-	}
-
-	.info-row {
-		display: flex;
-		gap: 8px;
-		margin-bottom: 8px;
-	}
-
-	.info-row:last-child {
-		margin-bottom: 0;
+		display: grid;
+		grid-template-columns: auto 1fr;
+		gap: 8px 16px;
 	}
 
 	.label {
 		font-weight: 600;
-		min-width: 100px;
+		color: var(--color-surface-700);
+		white-space: nowrap;
 	}
 
 	.value {
-		color: #333;
+		color: var(--color-surface-900);
 	}
 
 	.value.id {
 		font-size: 0.85em;
-		color: #666;
+		color: var(--color-surface-600);
 	}
 
 	.loading-overlay {
@@ -334,7 +310,8 @@
 	}
 
 	.progress-box {
-		background: white;
+		background: var(--color-surface-100);
+		color: var(--color-surface-900);
 		padding: 24px;
 		border-radius: 8px;
 		text-align: center;
@@ -349,7 +326,7 @@
 
 	.progress-bar {
 		height: 12px;
-		background: #ddd;
+		background: var(--color-surface-300);
 		border-radius: 6px;
 		overflow: hidden;
 	}
@@ -361,7 +338,7 @@
 	}
 
 	.error-box {
-		background: #fee;
+		background: rgba(204, 0, 0, 0.1);
 		border: 1px solid #c00;
 		padding: 16px;
 		border-radius: 8px;
@@ -374,7 +351,7 @@
 	}
 
 	.raw-output {
-		background: #f0f0f0;
+		background: var(--color-surface-200);
 		padding: 16px;
 		border-radius: 8px;
 		margin-bottom: 20px;
@@ -382,12 +359,14 @@
 
 	.raw-output h3 {
 		margin: 0 0 12px;
+		color: var(--color-surface-900);
 	}
 
 	.raw-output pre {
 		white-space: pre-wrap;
 		word-break: break-word;
 		font-size: 0.85em;
+		color: var(--color-surface-700);
 	}
 
 	.character-table {
@@ -399,15 +378,17 @@
 		gap: 16px;
 		padding: 12px 0;
 		font-weight: 600;
-		border-bottom: 2px solid #ddd;
+		border-bottom: 2px solid var(--color-surface-300);
+		color: var(--color-surface-900);
 	}
 
 	.table-row {
 		display: flex;
 		gap: 16px;
 		padding: 12px 0;
-		border-bottom: 1px solid #eee;
+		border-bottom: 1px solid var(--color-surface-200);
 		align-items: center;
+		color: var(--color-surface-800);
 	}
 
 	.col-name {
@@ -434,8 +415,10 @@
 	.table-row input[type="text"] {
 		width: 100%;
 		padding: 6px 8px;
-		border: 1px solid #ccc;
+		border: 1px solid var(--color-surface-400);
 		border-radius: 4px;
+		background: var(--color-surface-100);
+		color: var(--color-surface-900);
 	}
 
 	.table-row input[type="checkbox"] {
@@ -445,7 +428,7 @@
 
 	.manual-note {
 		font-size: 0.85em;
-		color: #666;
+		color: var(--color-surface-600);
 	}
 
 	.remove-btn {
@@ -476,16 +459,17 @@
 	}
 
 	.remarks-box {
-		background: #e8f4fc;
+		background: rgba(74, 144, 217, 0.1);
 		border: 1px solid #4a90d9;
 		padding: 16px;
 		border-radius: 8px;
 		margin-bottom: 20px;
+		color: var(--color-surface-800);
 	}
 
 	.remarks-box h4 {
 		margin: 0 0 12px;
-		color: #2a70b9;
+		color: var(--color-surface-900);
 	}
 
 	.remarks-box ul {
@@ -512,6 +496,7 @@
 		display: flex;
 		gap: 8px;
 		align-items: center;
+		color: var(--color-surface-800);
 	}
 
 	.generate-btn {
@@ -529,15 +514,16 @@
 	}
 
 	.success-box {
-		background: #efe;
+		background: rgba(0, 204, 0, 0.1);
 		border: 1px solid #0c0;
 		padding: 16px;
 		border-radius: 8px;
+		color: var(--color-surface-800);
 	}
 
 	.success-box h3 {
 		margin: 0 0 12px;
-		color: #060;
+		color: var(--color-surface-900);
 	}
 
 	.success-box ul {
