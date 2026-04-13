@@ -37,6 +37,13 @@
 		getIsActive as getIsWorldBuilderActive
 	} from '$lib/ai/world-builder.svelte';
 	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
+	import {
+		getIsGenerating,
+		getError,
+		getLastGeneratedPath,
+		generateActCardForCurrentLine,
+		resetState
+	} from '$lib/stores/act-card.svelte';
 
 	let { children } = $props();
 	let appError = $state<string | null>(null);
@@ -424,6 +431,26 @@
 
 			<!-- Sidebar footer -->
 			<div class="p-3 border-t border-surface-200-800 flex flex-col gap-1">
+				<button
+					class="w-full p-2 rounded-[var(--radius-base)] text-sm text-surface-500 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-surface-200-800"
+					type="button"
+					disabled={!getActiveActLineId() || getIsGenerating()}
+					onclick={generateActCardForCurrentLine}
+				>
+					{#if getIsGenerating()}
+						Generating...
+					{:else}
+						Generate Act Card
+					{/if}
+				</button>
+				{#if getError()}
+					<p class="px-2 text-xs text-red-400">{getError()}</p>
+				{/if}
+				{#if getLastGeneratedPath()}
+					<p class="px-2 text-xs text-green-400 truncate" title={getLastGeneratedPath() ?? ''}>
+						Saved: {getLastGeneratedPath()!.split('/').pop()}
+					</p>
+				{/if}
 				<label class="flex items-center gap-2 px-2 py-1 text-xs text-surface-500">
 					<span class="shrink-0 font-medium" style="font-size: 0.65rem;">Aa</span>
 					<input
