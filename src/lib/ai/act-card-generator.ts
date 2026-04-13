@@ -2,6 +2,7 @@ import { generateText } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
 import { loadActCardTemplate, loadActExtractionPrompt } from '$lib/fs/act-card-prompts';
+import { loadSystemPrompt } from '$lib/fs/system-prompt';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
 import { resolveStoryFolder } from '$lib/fs/story-prompts';
@@ -18,12 +19,21 @@ function computeFilename(isMainLine: boolean, actLineId: string): string {
 	return `line-${actLineId.slice(-8)}.md`;
 }
 
+function filterAssistantNarrationMessages(messages: Array<{ role: string; content: string }>): Array<{ role: string; content: string }> {
+	const keywords = ['act', 'scene', 'session'];
+	return messages.filter((m) => {
+		if (m.role !== 'assistant') return false;
+		const lowerContent = m.content.toLowerCase();
+		return keywords.some((kw) => lowerContent.includes(kw));
+	});
+}
+
 function buildUserMessage(messages: Array<{ role: string; content: string }>, template: string): string {
 	const transcript = messages
 		.map((m) => `[${m.role.toUpperCase()}]:\n${m.content}`)
 		.join('\n\n---\n\n');
 
-	return `Here is the chat history for this act line:
+	return `Here is the narrative content for this act line:
 
 ${transcript}
 
@@ -49,10 +59,11 @@ export async function generateActCard(): Promise<GenerateActCardResult> {
 		throw new Error('No main provider configured. Please set one in Settings.');
 	}
 
-	// Gather messages
-	const messages = await getMessagesForLine(actLineId);
+	// Gather and filter messages
+	const allMessages = await getMessagesForLine(actLineId);
+	const messages = filterAssistantNarrationMessages(allMessages);
 	if (messages.length === 0) {
-		throw new Error('No messages found in this act line.');
+		throw new Error('No narrative content found in this act line.');
 	}
 
 	// Get act info for act number
@@ -68,6 +79,10 @@ export async function generateActCard(): Promise<GenerateActCardResult> {
 	// Load prompts
 	const template = await loadActCardTemplate();
 	const extractionPrompt = await loadActExtractionPrompt();
+	const systemPrompt = await loadSystemPrompt();
+
+	// Build system prompt: main chat system prompt + extraction instructions
+	const combinedSystemPrompt = `${systemPrompt}\n\n---\n\n${extractionPrompt}`;
 
 	// Build AI call
 	const model = createModel(config);
@@ -75,7 +90,7 @@ export async function generateActCard(): Promise<GenerateActCardResult> {
 
 	const result = await generateText({
 		model,
-		system: extractionPrompt,
+		system: combinedSystemPrompt,
 		messages: [
 			{ role: 'user', content: userContent }
 		]
@@ -87,7 +102,7 @@ export async function generateActCard(): Promise<GenerateActCardResult> {
 	const filename = computeFilename(isMainLine, actLineId);
 	const filePath = `${actDir}/${filename}`;
 
-	// Write file
+	// Write file (overwrites if exists)
 	await mkdir(actDir, { baseDir: BaseDirectory.AppData, recursive: true });
 	await writeTextFile(filePath, result.text, { baseDir: BaseDirectory.AppData });
 
