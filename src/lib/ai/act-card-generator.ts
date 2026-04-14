@@ -1,4 +1,4 @@
-import { generateText } from 'ai';
+import {generateText, type ModelMessage} from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
 import { loadActCardTemplate, loadActExtractionPrompt } from '$lib/fs/act-card-prompts';
@@ -10,24 +10,21 @@ import { resolveStoryFolder } from '$lib/fs/story-prompts';
 import { getActiveStoryId, getActiveActId, getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
 import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { buildLineDir } from './card-output-path';
+import { logActCardActivity } from '$lib/logging/chat-logger';
 
 export interface GenerateActCardResult {
 	filePath: string;
 	content: string;
 }
 
-function buildUserMessage(contents: string[], template: string): string {
-	const transcript = contents.join('\n\n---\n\n');
-
-	return `Here is the narrative content for this act line:
-
-${transcript}
-
----
-
-Using the provided source, fill this template:
-
-${template}`;
+function buildUserMessages(contents: string[], template: string, extractionPrompt: string): string[] {
+	return [
+		'The following messages will contain the transcript of the current act:',
+		...contents,
+		'The previous message was the end of the transcript of the current act. The following message will contain the Act Card template:',
+		template,
+		extractionPrompt
+	];
 }
 
 export async function generateActCard(): Promise<GenerateActCardResult> {
@@ -63,24 +60,30 @@ export async function generateActCard(): Promise<GenerateActCardResult> {
 	const isMainLine = actLine?.isMainLine ?? false;
 
 	// Load prompts
-	const template = await loadActCardTemplate();
-	const extractionPrompt = await loadActExtractionPrompt();
-	const systemPrompt = await loadSystemPrompt();
-
-	// Build system prompt: main chat system prompt + extraction instructions
-	const combinedSystemPrompt = `${systemPrompt}\n\n---\n\n${extractionPrompt}`;
+	const [template, extractionPrompt, systemPrompt] = await Promise.all([
+		loadActCardTemplate(),
+		loadActExtractionPrompt(),
+		loadSystemPrompt()
+	]);
 
 	// Build AI call
 	const model = createModel(config);
-	const userContent = buildUserMessage(contents, template);
+	const userMessages: ModelMessage[] = buildUserMessages(contents, template, extractionPrompt).map((content) => ({
+		role: 'user', content
+	}));
+
+	await logActCardActivity('generation-start', `Act line: ${actLineId}\n\nMessages:\n${JSON.stringify(userMessages, null, 2)}`);
 
 	const result = await generateText({
 		model,
-		system: combinedSystemPrompt,
-		messages: [
-			{ role: 'user', content: userContent }
-		]
+		system: systemPrompt,
+		messages: userMessages
 	});
+
+	await logActCardActivity('generation-end', `
+  Result: ${result.text}
+  Usage: ${JSON.stringify(result.usage, null, 4)}
+  Finish Reason: ${result.finishReason}`);
 
 	// Resolve file path
 	const storyFolder = await resolveStoryFolder(storyId, story.name);

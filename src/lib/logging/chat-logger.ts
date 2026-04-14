@@ -145,3 +145,14 @@ export async function logCharacterCardActivity(
 	if (!isDebugEnabled()) return;
 	await appendToStoryLog('character-cards.log', `Character Card ${phase}`, details);
 }
+
+/**
+ * Log act card generation activity (before/after generateText calls).
+ */
+export async function logActCardActivity(
+	phase: 'generation-start' | 'generation-end',
+	details: string
+): Promise<void> {
+	if (!isDebugEnabled()) return;
+	await appendToStoryLog('act-cards.log', `Act Card ${phase}`, details);
+}
