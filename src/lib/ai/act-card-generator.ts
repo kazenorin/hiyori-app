@@ -9,15 +9,11 @@ import { getAct } from '$lib/db/acts';
 import { resolveStoryFolder } from '$lib/fs/story-prompts';
 import { getActiveStoryId, getActiveActId, getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
 import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { buildLineDir } from './card-output-path';
 
 export interface GenerateActCardResult {
 	filePath: string;
 	content: string;
-}
-
-function computeFilename(isMainLine: boolean, actLineId: string): string {
-	if (isMainLine) return 'main-line.md';
-	return `line-${actLineId.slice(-8)}.md`;
 }
 
 function buildUserMessage(contents: string[], template: string): string {
@@ -88,12 +84,11 @@ export async function generateActCard(): Promise<GenerateActCardResult> {
 
 	// Resolve file path
 	const storyFolder = await resolveStoryFolder(storyId, story.name);
-	const actDir = `${storyFolder}/act-${act.actNumber}`;
-	const filename = computeFilename(isMainLine, actLineId);
-	const filePath = `${actDir}/${filename}`;
+	const lineDir = buildLineDir(storyFolder, act.actNumber, isMainLine, actLineId);
+	const filePath = `${lineDir}/act-card.md`;
 
 	// Write file (overwrites if exists)
-	await mkdir(actDir, { baseDir: BaseDirectory.AppData, recursive: true });
+	await mkdir(lineDir, { baseDir: BaseDirectory.AppData, recursive: true });
 	await writeTextFile(filePath, result.text, { baseDir: BaseDirectory.AppData });
 
 	return { filePath, content: result.text };

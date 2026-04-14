@@ -105,30 +105,19 @@ describe('parseCharacterJson', () => {
 });
 
 describe('computeCardFilename', () => {
-	it('returns canonical name for main line', () => {
-		const result = computeCardFilename('john-doe', true, 'abc-123-xyz');
+	it('returns canonical name with .md extension', () => {
+		const result = computeCardFilename('john-doe');
 		expect(result).toBe('john-doe.md');
 	});
 
-	it('returns name with suffix for non-main line', () => {
-		const result = computeCardFilename('jane-smith', false, 'abc-123-xyz');
-		// slice(-8) of 'abc-123-xyz' is '-123-xyz'
-		expect(result).toBe('jane-smith--123-xyz.md');
-	});
-
-	it('uses last 8 chars of act line ID', () => {
-		const result = computeCardFilename('test', false, '1234567890abcdef');
-		expect(result).toBe('test-90abcdef.md');
-	});
-
-	it('handles short IDs', () => {
-		const result = computeCardFilename('test', false, 'abc');
-		expect(result).toBe('test-abc.md');
-	});
-
-	it('preserves complex canonical names', () => {
-		const result = computeCardFilename('dr-john-the-doc-smith', true, 'any-id');
+	it('handles complex canonical names', () => {
+		const result = computeCardFilename('dr-john-the-doc-smith');
 		expect(result).toBe('dr-john-the-doc-smith.md');
+	});
+
+	it('handles simple names', () => {
+		const result = computeCardFilename('test');
+		expect(result).toBe('test.md');
 	});
 });
 

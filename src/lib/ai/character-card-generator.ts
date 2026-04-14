@@ -22,13 +22,9 @@ import { mkdir, writeTextFile, readTextFile, exists, BaseDirectory } from '@taur
 import { toKebabCase } from '$lib/utils/string';
 import { log } from '$lib/logging/logger';
 import { logCharacterCardActivity } from '$lib/logging/chat-logger';
+import { buildLineDir } from './card-output-path';
 
-// === Act Card Filename (mirrors act-card-generator) ===
-
-function computeActCardFilename(isMainLine: boolean, actLineId: string): string {
-	if (isMainLine) return 'main-line.md';
-	return `line-${actLineId.slice(-8)}.md`;
-}
+// === Act Card Loading ===
 
 async function loadActCard(
 	storyFolder: string,
@@ -36,9 +32,8 @@ async function loadActCard(
 	isMainLine: boolean,
 	actLineId: string
 ): Promise<string | null> {
-	const dir = `${storyFolder}/act-${actNumber}`;
-	const filename = computeActCardFilename(isMainLine, actLineId);
-	const path = `${dir}/${filename}`;
+	const lineDir = buildLineDir(storyFolder, actNumber, isMainLine, actLineId);
+	const path = `${lineDir}/act-card.md`;
 
 	try {
 		const fileExists = await exists(path, { baseDir: BaseDirectory.AppData });
@@ -210,11 +205,10 @@ export async function buildActLineage(): Promise<ActLineageEntry[]> {
 	return lineage;
 }
 
-// === Existing Cards ===
+// === Existing Character Card Loading ===
 
-function computeCardFilename(canonicalName: string, isMainLine: boolean, actLineId: string): string {
-	if (isMainLine) return `${canonicalName}.md`;
-	return `${canonicalName}-${actLineId.slice(-8)}.md`;
+function computeCardFilename(canonicalName: string): string {
+	return `${canonicalName}.md`;
 }
 
 export { computeCardFilename as _computeCardFilenameForTest };
@@ -226,9 +220,10 @@ async function loadExistingCharacterCard(
 	isMainLine: boolean,
 	actLineId: string
 ): Promise<string | null> {
-	const dir = `${storyFolder}/act-${actNumber}/characters`;
-	const filename = computeCardFilename(canonicalName, isMainLine, actLineId);
-	const path = `${dir}/${filename}`;
+	const lineDir = buildLineDir(storyFolder, actNumber, isMainLine, actLineId);
+	const charactersDir = `${lineDir}/characters`;
+	const filename = computeCardFilename(canonicalName);
+	const path = `${charactersDir}/${filename}`;
 
 	try {
 		const fileExists = await exists(path, { baseDir: BaseDirectory.AppData });
@@ -348,8 +343,9 @@ ${namedExtractionPrompt}\n---\n${namedTemplate}`;
 	const isMainLine = actLine?.isMainLine ?? false;
 
 	// Save file
-	const charactersDir = `${storyFolder}/act-${currentAct.actNumber}/characters`;
-	const filename = computeCardFilename(entry.canonicalName, isMainLine, getActiveActLineId()!);
+	const lineDir = buildLineDir(storyFolder, currentAct.actNumber, isMainLine, getActiveActLineId()!);
+	const charactersDir = `${lineDir}/characters`;
+	const filename = computeCardFilename(entry.canonicalName);
 	const filePath = `${charactersDir}/${filename}`;
 
 	await mkdir(charactersDir, { baseDir: BaseDirectory.AppData, recursive: true });
