@@ -1,4 +1,4 @@
-import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { mkdir, BaseDirectory } from '@tauri-apps/plugin-fs';
 
 /**
  * Compute the subdirectory name for an act line.

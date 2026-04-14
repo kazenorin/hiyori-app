@@ -1,4 +1,4 @@
-import {generateText, type ModelMessage} from 'ai';
+import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
 import {
@@ -23,26 +23,6 @@ import { toKebabCase } from '$lib/utils/string';
 import { log } from '$lib/logging/logger';
 import { logCharacterCardActivity } from '$lib/logging/chat-logger';
 import { buildLineDir } from './card-output-path';
-
-// === Act Card Loading ===
-
-async function loadActCard(
-	storyFolder: string,
-	actNumber: number,
-	isMainLine: boolean,
-	actLineId: string
-): Promise<string | null> {
-	const lineDir = buildLineDir(storyFolder, actNumber, isMainLine, actLineId);
-	const path = `${lineDir}/act-card.md`;
-
-	try {
-		const fileExists = await exists(path, { baseDir: BaseDirectory.AppData });
-		if (!fileExists) return null;
-		return await readTextFile(path, { baseDir: BaseDirectory.AppData });
-	} catch {
-		return null;
-	}
-}
 
 // === Types ===
 
@@ -117,7 +97,7 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 		{ role: 'user', content: 'The previous message was the end of the transcript of the current act.' },
 		{ role: 'user', content: `Extract all the characters from the current act according to the following rules: ${summarizePrompt}` }
 	];
-	const result = await generateText({model, system: systemPrompt, messages});
+	const result = await generateText({ model, system: systemPrompt, messages });
 
 	await logCharacterCardActivity('extraction-end', `
   Result: ${result.text}
@@ -129,7 +109,6 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 }
 
 function parseCharacterJson(text: string): CharacterSummary[] {
-	// Try to extract JSON from the response
 	let jsonStr = text.trim();
 
 	// Strip markdown code fences if present
@@ -152,8 +131,9 @@ function parseCharacterJson(text: string): CharacterSummary[] {
 				character: item.character as string,
 				importance: item.importance as string
 			}));
-	} catch {
-		throw new Error(`PARSE_FAILED:${text}`);
+	} catch (err) {
+		const msg = err instanceof Error ? err.message : String(err);
+		throw new Error(`PARSE_FAILED:${msg}\n${text}`);
 	}
 }
 
@@ -161,6 +141,11 @@ export { parseCharacterJson as _parseCharacterJsonForTest };
 
 // === Lineage ===
 
+/**
+ * Walk the act chain backwards from the current act line via `continuesFromActLineId`.
+ * Returns entries sorted newest-first. A `visited` set prevents infinite loops
+ * if the chain is somehow circular.
+ */
 export async function buildActLineage(): Promise<ActLineageEntry[]> {
 	const actId = getActiveActId();
 	const actLineId = getActiveActLineId();
@@ -169,7 +154,6 @@ export async function buildActLineage(): Promise<ActLineageEntry[]> {
 	const lineage: ActLineageEntry[] = [];
 	const visited = new Set<string>();
 
-	// Start with the current act
 	let currentActId: string | null = actId;
 	let currentActLineId: string | null = actLineId;
 
@@ -187,11 +171,8 @@ export async function buildActLineage(): Promise<ActLineageEntry[]> {
 			isMainLine: actLine?.isMainLine ?? false
 		});
 
-		// Follow the chain to the previous act
 		if (!act.continuesFromActLineId) break;
 
-		// The continuesFromActLineId points to a line in the previous act.
-		// We need to find which act contains that line.
 		const prevActLineId = act.continuesFromActLineId;
 		const prevActLine = await getActLine(prevActLineId);
 		if (!prevActLine) break;
@@ -200,18 +181,36 @@ export async function buildActLineage(): Promise<ActLineageEntry[]> {
 		currentActLineId = prevActLineId;
 	}
 
-	// Sort descending by act number (newest first)
 	lineage.sort((a, b) => b.actNumber - a.actNumber);
 	return lineage;
 }
 
-// === Existing Character Card Loading ===
+// === File I/O Helpers ===
 
 function computeCardFilename(canonicalName: string): string {
 	return `${canonicalName}.md`;
 }
 
 export { computeCardFilename as _computeCardFilenameForTest };
+
+async function loadActCard(
+	storyFolder: string,
+	actNumber: number,
+	isMainLine: boolean,
+	actLineId: string
+): Promise<string | null> {
+	const lineDir = buildLineDir(storyFolder, actNumber, isMainLine, actLineId);
+	const path = `${lineDir}/act-card.md`;
+
+	try {
+		const fileExists = await exists(path, { baseDir: BaseDirectory.AppData });
+		if (!fileExists) return null;
+		return await readTextFile(path, { baseDir: BaseDirectory.AppData });
+	} catch (err) {
+		await log.warn('character-card', `Failed to read act card at ${path}: ${err}`);
+		return null;
+	}
+}
 
 async function loadExistingCharacterCard(
 	storyFolder: string,
@@ -229,9 +228,65 @@ async function loadExistingCharacterCard(
 		const fileExists = await exists(path, { baseDir: BaseDirectory.AppData });
 		if (!fileExists) return null;
 		return await readTextFile(path, { baseDir: BaseDirectory.AppData });
-	} catch {
+	} catch (err) {
+		await log.warn('character-card', `Failed to read character card at ${path}: ${err}`);
 		return null;
 	}
+}
+
+// === Context Building ===
+
+async function loadPreviousActCards(
+	storyFolder: string,
+	lineage: ActLineageEntry[],
+	skipActNumber: number
+): Promise<string[]> {
+	const sections: string[] = [];
+	for (const entry of lineage) {
+		if (entry.actNumber === skipActNumber) continue;
+
+		const actCard = await loadActCard(storyFolder, entry.actNumber, entry.isMainLine, entry.actLineId);
+		if (actCard) {
+			sections.push(`The following message contains the Act Card from Act ${entry.actNumber}`);
+			sections.push(actCard);
+		}
+	}
+	return sections;
+}
+
+async function loadPreviousCharacterCards(
+	storyFolder: string,
+	lineage: ActLineageEntry[],
+	canonicalName: string,
+	characterName: string
+): Promise<string[]> {
+	const sections: string[] = [];
+	for (const entry of lineage) {
+		const card = await loadExistingCharacterCard(
+			storyFolder, entry.actNumber, canonicalName, entry.isMainLine, entry.actLineId
+		);
+		if (card) {
+			sections.push(`The following message contains the previous Character Card of ${characterName} from Act ${entry.actNumber}`);
+			sections.push(card);
+		}
+	}
+	return sections;
+}
+
+function buildGenerationMessages(
+	transcript: string[],
+	previousActCards: string[],
+	existingCards: string[],
+	userPrompt: string
+): ModelMessage[] {
+	return [
+		{ role: 'user', content: 'The following messages will contain the transcript of the current act:' },
+		...(transcript.map(toUserModelMessage)),
+		{ role: 'user', content: 'The previous message was the end of the transcript of the current act.' },
+		...(previousActCards.map(toUserModelMessage)),
+		...(existingCards.map(toUserModelMessage)),
+		{ role: 'user', content: userPrompt }
+	];
 }
 
 // === Card Generation ===
@@ -245,90 +300,58 @@ export async function generateCharacterCard(
 	const storyId = getActiveStoryId();
 	const story = getActiveStory();
 	const actId = getActiveActId();
+	const actLineId = getActiveActLineId();
 
-	if (!storyId || !story || !actId) throw new Error('No active story context.');
+	if (!storyId || !story || !actId || !actLineId) {
+		throw new Error('No active story context.');
+	}
 
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) throw new Error('No main provider configured.');
 
-	// Load prompts
-	const template = await loadCharacterCardTemplate();
-	const extractionPrompt = await loadCharacterCardExtractionPrompt();
-	const extractionSystemPrompt = await loadCharacterCardExtractionSystemPrompt();
-	const systemPrompt = await loadSystemPrompt();
-
-	// Build system prompt: main chat system prompt + extraction system prompt
-	const combinedSystem = `${systemPrompt}\n\n---\n\n${extractionSystemPrompt}`;
-
-	// Inject character name into prompts
-	const namedExtractionPrompt = extractionPrompt.replaceAll('{{character name}}', entry.character);
-	const namedTemplate = template.replaceAll('{{character name}}', entry.character);
-
-	// Load current act transcript
-	const actLineId = getActiveActLineId()!;
-	const allMessages = await getMessagesForLine(actLineId);
-	const transcript = exportActLine(allMessages);
-
-	// Build user prompt with act cards from previous acts
-	const storyFolder = await resolveStoryFolder(storyId, story.name);
-	const currentAct = await getAct(actId);
-	const currentActNumber = currentAct?.actNumber ?? 0;
-	const previousActCardsSection: string[] = [];
-
-	for (const lineageEntry of lineage) {
-		// Skip current act — its transcript is already included above
-		if (lineageEntry.actNumber === currentActNumber) continue;
-
-		const actCard = await loadActCard(
-			storyFolder,
-			lineageEntry.actNumber,
-			lineageEntry.isMainLine,
-			lineageEntry.actLineId
-		);
-		if (actCard) {
-			previousActCardsSection.push(`The following message contains the Act Card from Act ${lineageEntry.actNumber}`);
-			previousActCardsSection.push(actCard);
-		}
+	if (!entry.canonicalName.trim()) {
+		throw new Error(`Character name cannot be empty for entry: "${entry.character}"`);
 	}
-
-	// Load existing character cards from lineage
-	const existingCardsSection: string[] = [];
-	for (const lineageEntry of lineage) {
-		const card = await loadExistingCharacterCard(
-			storyFolder,
-			lineageEntry.actNumber,
-			entry.canonicalName,
-			lineageEntry.isMainLine,
-			lineageEntry.actLineId
-		);
-		if (card) {
-			existingCardsSection.push(`The following message contains the previous Character Card of ${entry.character} from Act ${lineageEntry.actNumber}`);
-			existingCardsSection.push(card);
-		}
-	}
-
-	const userPrompt = `Based on the information from the chat history, generate a new Character Card according to the following rules:
-${namedExtractionPrompt}\n---\n${namedTemplate}`;
 
 	if (onProgress && progress) {
 		onProgress(progress);
 	}
 
-	// Generate
-	const model = createModel(config);
+	// Load prompts
+	const [template, extractionPrompt, extractionSystemPrompt, systemPrompt] = await Promise.all([
+		loadCharacterCardTemplate(),
+		loadCharacterCardExtractionPrompt(),
+		loadCharacterCardExtractionSystemPrompt(),
+		loadSystemPrompt()
+	]);
 
-	const messages: ModelMessage[] = [
-		{ role: 'user', content: 'The following messages will contain the transcript of the current act:' },
-		...(transcript.map(toUserModelMessage)),
-		{ role: 'user', content: 'The previous message was the end of the transcript of the current act.' },
-		...(previousActCardsSection.map(toUserModelMessage)),
-		...(existingCardsSection.map(toUserModelMessage)),
-		{ role: 'user', content: userPrompt }
-	];
+	const combinedSystem = `${systemPrompt}\n\n---\n\n${extractionSystemPrompt}`;
+	const namedExtractionPrompt = extractionPrompt.replaceAll('{{character name}}', entry.character);
+	const namedTemplate = template.replaceAll('{{character name}}', entry.character);
+
+	// Load transcript and context
+	const allMessages = await getMessagesForLine(actLineId);
+	const transcript = exportActLine(allMessages);
+
+	const storyFolder = await resolveStoryFolder(storyId, story.name);
+	const currentAct = await getAct(actId);
+	if (!currentAct) throw new Error('Active act not found.');
+
+	const currentActNumber = currentAct.actNumber;
+
+	const [previousActCards, existingCards] = await Promise.all([
+		loadPreviousActCards(storyFolder, lineage, currentActNumber),
+		loadPreviousCharacterCards(storyFolder, lineage, entry.canonicalName, entry.character)
+	]);
+
+	const userPrompt = `Based on the information from the chat history, generate a new Character Card according to the following rules:\n${namedExtractionPrompt}\n---\n${namedTemplate}`;
+	const messages = buildGenerationMessages(transcript, previousActCards, existingCards, userPrompt);
+
+	const model = createModel(config);
 
 	await logCharacterCardActivity('generation-start', `Character: ${entry.character}\n\nMessages:\n${JSON.stringify(messages, null, 2)}`);
 
-	const result = await generateText({model, system: combinedSystem, messages});
+	const result = await generateText({ model, system: combinedSystem, messages });
 
 	await logCharacterCardActivity('generation-end', `
   Character: ${entry.character}
@@ -336,14 +359,10 @@ ${namedExtractionPrompt}\n---\n${namedTemplate}`;
   Usage: ${JSON.stringify(result.usage, null, 4)}
   Finish Reason: ${result.finishReason}`);
 
-	// Get current act info for saving (reusing currentAct fetched earlier)
-	if (!currentAct) throw new Error('Active act not found.');
-
-	const actLine = await getActLine(getActiveActLineId()!);
-	const isMainLine = actLine?.isMainLine ?? false;
-
 	// Save file
-	const lineDir = buildLineDir(storyFolder, currentAct.actNumber, isMainLine, getActiveActLineId()!);
+	const actLine = await getActLine(actLineId);
+	const isMainLine = actLine?.isMainLine ?? false;
+	const lineDir = buildLineDir(storyFolder, currentAct.actNumber, isMainLine, actLineId);
 	const charactersDir = `${lineDir}/characters`;
 	const filename = computeCardFilename(entry.canonicalName);
 	const filePath = `${charactersDir}/${filename}`;
@@ -421,5 +440,5 @@ export async function generateCharacterCards(
 }
 
 function toUserModelMessage(content: string): ModelMessage {
-	return {role: 'user', content};
+	return { role: 'user', content };
 }

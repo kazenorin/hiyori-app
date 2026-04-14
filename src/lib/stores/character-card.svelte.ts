@@ -84,7 +84,7 @@ export async function generateCards(concurrent: boolean): Promise<void> {
 
 	try {
 		results = await generateCharacterCards(characters, concurrent, (p) => {
-			progress = { ...p };
+			progress = p;
 		});
 	} catch (err) {
 		const message = err instanceof Error ? err.message : 'Failed to generate character cards.';
