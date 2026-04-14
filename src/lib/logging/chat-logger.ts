@@ -1,5 +1,5 @@
 import { writeTextFile, readTextFile, mkdir, exists, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
-import { resolveStoryFolder } from '$lib/fs/story-prompts';
+import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { getActiveStory } from '$lib/stores/stories.svelte';
 import { getSettings } from '$lib/stores/settings.svelte';
 import { log } from './logger';

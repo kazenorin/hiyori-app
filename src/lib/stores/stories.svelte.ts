@@ -6,7 +6,7 @@ import { log } from '$lib/logging/logger';
 import { moveWorldBuilderLog } from '$lib/logging/chat-logger';
 import { getLogFilePath } from '$lib/ai/world-builder.svelte';
 import { loadStorySystemPrompt, loadStoryNarrationTemplate } from '$lib/fs/prompts';
-import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-prompts';
+import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-folders';
 import { writeTextFile, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 

@@ -1,6 +1,6 @@
 import { readTextFile, writeTextFile, mkdir, exists, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { log } from '$lib/logging/logger';
-import { resolveStoryFolder } from './story-prompts';
+import { resolveStoryFolder } from './story-folders';
 
 /**
  * Base directory for prompt templates in AppData.

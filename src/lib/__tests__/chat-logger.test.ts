@@ -10,7 +10,7 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 	BaseDirectory: { AppData: 0 }
 }));
 
-vi.mock('$lib/fs/story-prompts', () => ({
+vi.mock('$lib/fs/story-folders', () => ({
 	resolveStoryFolder: vi.fn(async () => 'test-story-folder')
 }));
 

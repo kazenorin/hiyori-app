@@ -130,7 +130,7 @@ src/                      # SvelteKit frontend
         world/             # World builder prompt templates
         act/               # Act card prompt templates
         character/         # Character card prompt templates
-      story-prompts.ts     # Story folder resolution and world content loading
+      story-folders.ts     # Story folder resolution and world content loading
     stores/                # Reactive state (settings, stories)
     components/            # Shared Svelte components (MarkdownContent, etc.)
     logging/               # Structured logging via tauri-plugin-log

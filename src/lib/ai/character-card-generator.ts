@@ -11,7 +11,7 @@ import {
 import { exportActLine } from './act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
-import { resolveStoryFolder } from '$lib/fs/story-prompts';
+import { resolveStoryFolder } from '$lib/fs/story-folders';
 import {
 	getActiveStoryId,
 	getActiveActId,
