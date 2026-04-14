@@ -47,12 +47,10 @@ const mockGetActiveStory = vi.mocked(getActiveStory);
 
 function defaultSettings() {
 	return {
+		providers: [],
+		roleAssignments: {},
 		logLevel: 'debug' as const,
-		provider: 'openai' as const,
-		apiType: 'responses' as const,
-		baseURL: '',
-		model: '',
-		apiKey: ''
+		fontSize: 1.0
 	};
 }
 

@@ -134,3 +134,25 @@ export function generateWorldBuilderLogFilename(): string {
 	const ts = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
 	return `worldbuilding-${ts}.log`;
 }
+
+/**
+ * Log character card generation activity (before/after generateText calls).
+ */
+export async function logCharacterCardActivity(
+	phase: 'extraction-start' | 'extraction-end' | 'generation-start' | 'generation-end',
+	details: string
+): Promise<void> {
+	if (!isDebugEnabled()) return;
+	await appendToStoryLog('character-cards.log', `Character Card ${phase}`, details);
+}
+
+/**
+ * Log act card generation activity (before/after generateText calls).
+ */
+export async function logActCardActivity(
+	phase: 'generation-start' | 'generation-end',
+	details: string
+): Promise<void> {
+	if (!isDebugEnabled()) return;
+	await appendToStoryLog('act-cards.log', `Act Card ${phase}`, details);
+}

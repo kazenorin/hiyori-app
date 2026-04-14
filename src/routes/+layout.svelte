@@ -451,6 +451,15 @@
 						Saved: {getLastGeneratedPath()!.split('/').pop()}
 					</p>
 				{/if}
+				<a
+					href="/generate-character-cards"
+					class="block w-full p-2 rounded-[var(--radius-base)] text-sm text-surface-500 transition-colors duration-150 hover:bg-surface-200-800 text-center"
+					class:opacity-50={!getActiveActLineId()}
+					class:pointer-events-none={!getActiveActLineId()}
+					aria-disabled={!getActiveActLineId()}
+				>
+					Generate Character Cards
+				</a>
 				<label class="flex items-center gap-2 px-2 py-1 text-xs text-surface-500">
 					<span class="shrink-0 font-medium" style="font-size: 0.65rem;">Aa</span>
 					<input

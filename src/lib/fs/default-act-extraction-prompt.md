@@ -1,6 +1,6 @@
 # Extraction Instructions
 
-Fill this template using the provided source.
+Fill the provided Act Card template using the source from the chat history.
 
 Rules:
 - Prefer explicit facts over interpretation.
