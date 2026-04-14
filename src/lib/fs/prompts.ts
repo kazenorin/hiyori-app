@@ -25,6 +25,10 @@ import defaultCharacterCardExtractionPrompt from './prompts/character/character-
 import defaultCharacterCardExtractionSystemPrompt from './prompts/character/character-card-extraction-system-prompt.md?raw';
 import defaultSummarizeCharactersInAct from './prompts/character/summarize-characters-in-act.md?raw';
 
+// Import
+import defaultActGenerationPrompt from './prompts/import/act-generation-prompt.md?raw';
+import defaultChoicesExtractionPrompt from './prompts/import/choices-extraction-prompt.md?raw';
+
 // Re-export for consumers that need raw content
 export {
 	defaultSystemPrompt,
@@ -38,7 +42,9 @@ export {
 	defaultCharacterCardTemplate,
 	defaultCharacterCardExtractionPrompt,
 	defaultCharacterCardExtractionSystemPrompt,
-	defaultSummarizeCharactersInAct
+	defaultSummarizeCharactersInAct,
+	defaultActGenerationPrompt,
+	defaultChoicesExtractionPrompt
 };
 
 // === Prompt Config Instances ===
@@ -63,6 +69,10 @@ const characterCardExtractionPrompt = new Prompt({ relativePath: 'character/char
 const characterCardExtractionSystemPrompt = new Prompt({ relativePath: 'character/character-card-extraction-system-prompt.md', defaultContent: defaultCharacterCardExtractionSystemPrompt });
 const summarizeCharactersInAct = new Prompt({ relativePath: 'character/summarize-characters-in-act.md', defaultContent: defaultSummarizeCharactersInAct });
 
+// Import
+const actGenerationPrompt = new Prompt({ relativePath: 'import/act-generation-prompt.md', defaultContent: defaultActGenerationPrompt });
+const choicesExtractionPrompt = new Prompt({ relativePath: 'import/choices-extraction-prompt.md', defaultContent: defaultChoicesExtractionPrompt });
+
 // === Load Functions ===
 
 export const loadSystemPrompt = (): Promise<string> => systemPrompt.load();
@@ -77,6 +87,8 @@ export const loadCharacterCardTemplate = (): Promise<string> => characterCardTem
 export const loadCharacterCardExtractionPrompt = (): Promise<string> => characterCardExtractionPrompt.load();
 export const loadCharacterCardExtractionSystemPrompt = (): Promise<string> => characterCardExtractionSystemPrompt.load();
 export const loadSummarizeCharactersInAct = (): Promise<string> => summarizeCharactersInAct.load();
+export const loadActGenerationPrompt = (): Promise<string> => actGenerationPrompt.load();
+export const loadChoicesExtractionPrompt = (): Promise<string> => choicesExtractionPrompt.load();
 
 export const getDefaultSystemPromptContent = () => defaultSystemPrompt;
 export const getDefaultNarrationTemplateContent = () => defaultNarrationTemplate;
@@ -107,5 +119,7 @@ registerDefaults([
 	characterCardTemplate,
 	characterCardExtractionPrompt,
 	characterCardExtractionSystemPrompt,
-	summarizeCharactersInAct
+	summarizeCharactersInAct,
+	actGenerationPrompt,
+	choicesExtractionPrompt
 ]);
