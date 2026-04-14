@@ -7,6 +7,8 @@ An AI-powered interactive fiction desktop app built with [Tauri v2](https://v2.t
 - **World Builder** — AI-guided interview that generates a story's world document
 - **Branching Narratives** — Fork storylines at any point; each branch is an independent act line sharing messages up to the fork point
 - **Game Data Blocks** — AI emits structured `worldState` and `decisions` during streaming, rendered as clickable decision buttons
+- **Character Cards** — Extract characters from acts and generate detailed character cards with personality, appearance, and story arcs
+- **Act Cards** — Generate summary documents for entire acts from chat transcripts
 - **Thinking Tag Parsing** — Extracts `<think...>` reasoning from AI responses, displayed in a collapsible section
 - **Dynamic Typography** — Sidebar slider and Ctrl+scroll to adjust text size (70%–150%)
 - **Structured Logging** — Chat logs written to AppData with configurable log levels
@@ -105,6 +107,11 @@ src/                      # SvelteKit frontend
       chat-callbacks.ts    # Stream accumulator with parser chain
       chat.svelte.ts       # Main chat state and message management (Svelte 5 runes)
       world-builder.svelte.ts  # World builder mode state (Svelte 5 runes)
+      world-generator.ts   # World generation from chat
+      act-card-generator.ts    # Act summary card generation
+      character-card-generator.ts  # Character card extraction and generation
+      act-line-export.ts   # Export act line messages for AI processing
+      card-output-path.ts  # Card file path construction
       parser-chain.ts      # Chains thinking-tag → game-data parsers
       thinking-tag-parser.ts   # Extracts <think...> reasoning from stream
       game-data-parser.ts  # Extracts ```json game data blocks from stream
@@ -114,7 +121,16 @@ src/                      # SvelteKit frontend
       models.ts            # Model registry
     db/                    # SQLite repositories
       stories.ts, acts.ts, act-lines.ts, messages.ts, app-state.ts, story-folders.ts
-    fs/                    # File system services (system prompt, story prompts)
+    fs/                    # File system services
+      prompts.ts           # Unified prompt loading module (Prompt class instances)
+      prompt-loader.ts     # Core Prompt class and loading logic
+      prompts/             # Bundled default markdown templates
+        system-prompt.md
+        narration-template.md
+        world/             # World builder prompt templates
+        act/               # Act card prompt templates
+        character/         # Character card prompt templates
+      story-prompts.ts     # Story folder resolution and world content loading
     stores/                # Reactive state (settings, stories)
     components/            # Shared Svelte components (MarkdownContent, etc.)
     logging/               # Structured logging via tauri-plugin-log
@@ -124,6 +140,7 @@ src/                      # SvelteKit frontend
     +layout.ts             # SSR disabled, prerender enabled
     +page.svelte           # Chat UI + world builder
     settings/+page.svelte  # Settings page
+    generate-character-cards/+page.svelte  # Character card generation
   app.html                 # HTML shell
 src-tauri/                # Tauri (Rust) backend
   src/

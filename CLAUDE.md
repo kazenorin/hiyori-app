@@ -20,6 +20,49 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Check `local-references/*` for local reference files (if any).
 
+## Prompt Loading System
+
+The app uses a unified prompt loading system with a `Prompt` class pattern:
+
+### Core Files
+
+- **`src/lib/fs/prompt-loader.ts`**: Contains the `Prompt` class and core loading logic
+  - `Prompt` class: Holds `relativePath` and `defaultContent`, with `load()` method
+  - `loadPrompt()`: Ensures base file exists in AppData, returns content
+  - `loadPromptForStory()`: Loads with story-specific override fallback
+  - `ensureAllBaseConfigs()`: Creates all registered prompt files on app startup
+
+- **`src/lib/fs/prompts.ts`**: Unified module exporting all prompt loading functions
+  - Declares all prompts as `const Prompt` instances
+  - Exports wrapper functions: `loadSystemPrompt()`, `loadWorldTemplate()`, etc.
+  - Registers all defaults on module load for `ensureAllBaseConfigs()`
+
+- **`src/lib/fs/prompts/`**: Bundled default markdown files organized by category
+  - `system-prompt.md`, `narration-template.md` at root
+  - `world/`: world-template.md, generate-world-from-chat-prompt.md, etc.
+  - `act/`: act-card-template.md, act-extraction-prompt.md
+  - `character/`: character-card-template.md, summarize-characters-in-act.md, etc.
+
+### AppData Structure
+
+Base prompt templates are stored in `AppData/config/prompt-templates/`:
+```
+AppData/
+  config/
+    prompt-templates/
+      system-prompt.md
+      narration-template.md
+      world/
+        world-template.md
+        ...
+      act/
+        act-card-template.md
+        ...
+      character/
+        character-card-template.md
+        ...
+```
+
 ## Story Folders
 
 Each story gets a dedicated folder in AppData containing its own `system-prompt.md`. The global `system-prompt.md` at the AppData root serves as the default template — when a story folder is created, the default prompt is copied into it.
@@ -27,6 +70,13 @@ Each story gets a dedicated folder in AppData containing its own `system-prompt.
 - **Folder naming**: Derived from the story name via `canonicalName()` (strips `/ \ < > : " | ? *` and control chars, supports Unicode). If two stories share the same name, the later one gets a short UUID suffix (e.g., `My Story - a1b2`). If the canonical name is empty (all chars sanitized), `deriveStoryName()` falls back to `story-{shortId}`.
 - **Resolution**: `resolveStoryFolder()` in `src/lib/fs/story-prompts.ts` handles folder lookup. It checks the `story_folders` DB table first, then falls back to filesystem scanning. Exact name matches are preferred; UUID suffix is used only on collision.
 - **Prompt switching**: When a story is selected, its system prompt is loaded via `loadStorySystemPrompt()` and cached in the stories store. Chat messages use this story-specific prompt.
+
+### Story-Specific Overrides
+
+Each story folder can contain its own `prompt-templates/` subdirectory with story-specific overrides. Resolution order:
+1. Story-specific: `<story-folder>/prompt-templates/<relativePath>`
+2. Base file: `config/prompt-templates/<relativePath>`
+3. Bundled default (in-memory fallback)
 
 ## World Builder
 
@@ -55,13 +105,13 @@ executeStream (streaming.ts)
 - **`streaming.ts`**: Low-level `executeStream()` wraps the Vercel AI SDK `streamText()`. Emits `onTextDelta`, `onReasoningDelta`, then `onComplete` with `StreamResultMetadata` (or `onError`). Returns void — lifecycle is callback-driven.
 - **`chat-callbacks.ts`**: `createStreamAccumulator()` wires the parser chain into `StreamCallbacks`. Accumulates immutable `StreamState` (`content`, `reasoning`, `gameData`). Exposes `resultMetadata` as a `Promise` resolved on `onComplete`.
 - **`parser-chain.ts`**: Chains thinking-tag parser then game-data parser. `feed()` returns `ParserChainOutput` (`text`, `thinking`, `gameData`). `flush()` drains buffered state.
-- **`thinking-tag-parser.ts`**: Character-by-character state machine that extracts `<think...>...</think >` blocks. Separates reasoning content from visible text.
+- **`thinking-tag-parser.ts`**: Character-by-character state machine that extracts `think`-tag blocks. Separates reasoning content from visible text.
 - **`message-updater.ts`**: Pure immutable helpers for `StreamState` updates: `applyParserOutput`, `applyReasoningDelta`. Private `isValidGameData()` validates game data before applying.
 - **`chat-stream.ts`**: Shared library function `streamChatResponse()` — creates model, accumulator, calls `executeStream`, returns `MessageMetadata`. Used by both `chat.svelte.ts` and `world-builder.svelte.ts`.
 
 ## Thinking Tags
 
-AI models emit reasoning in `<think...>...</think >` tags. The `ThinkingTagParser` (character-by-character state machine) extracts these during streaming and separates them from visible content.
+Some AI models emit reasoning enclosed in `think` tags. The `ThinkingTagParser` (character-by-character state machine) extracts these during streaming and separates them from visible content.
 
 - **Parser**: `src/lib/ai/thinking-tag-parser.ts` — states: TEXT → POTENTIAL_OPENER → THINKING_BODY → POTENTIAL_CLOSER. Uses `THINK_TAG_NAME` constant.
 - **Integration**: Wired via `parser-chain.ts` before the game-data parser.
@@ -76,6 +126,18 @@ During main chat streaming, ```json blocks containing `worldState` (string) and 
 - **History injection**: `toHistoryMessage()` in `chat.svelte.ts` appends game data JSON to message content when building LLM history, so the model sees prior game state.
 - **Persistence**: `game_data` column in `messages` table (migration 4). Canonical types: `GameData` interface and `parseGameData()` in `src/lib/db/messages.ts`.
 - **Shared message safety**: `removeLastMessageEntries()` in `act-lines.ts` only deletes `messages` rows when no other act line references them (prevents data loss on forked lines).
+
+## Character and Act Card Generation
+
+The app can generate character cards and act summaries from chat transcripts:
+
+- **Character Cards** (`src/lib/ai/character-card-generator.ts`): Extracts characters from an act line, generates individual character cards with personality, appearance, and arc information. Uses lineage tracking to include previous act card context.
+- **Act Cards** (`src/lib/ai/act-card-generator.ts`): Generates summary documents for entire acts from the chat transcript.
+
+Both generators:
+- Use `Prompt` class instances from `$lib/fs/prompts` for template loading
+- Support parallel generation for multiple characters
+- Write output to story folder under `act-N/characters/` subdirectories
 
 ## Scroll Behavior
 
