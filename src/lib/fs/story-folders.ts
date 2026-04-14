@@ -138,8 +138,11 @@ export async function ensureWorldFile(storyId: string, storyName: string): Promi
  * Load the world.md content for a specific story.
  * Returns null if the file doesn't exist.
  */
-export async function loadStoryWorldContent(storyId: string, storyName: string): Promise<string | null> {
-	const folderName = await dbStoryFolders.getStoryFolder(storyId) ?? await resolveStoryFolder(storyId, storyName);
+export async function loadStoryWorldContent(storyId: string, storyName?: string): Promise<string | null> {
+	const folder = await dbStoryFolders.getStoryFolder(storyId);
+	if (!folder && !storyName) return null;
+
+	const folderName = folder ?? await resolveStoryFolder(storyId, storyName!);
 	const worldPath = `${folderName}/world.md`;
 	try {
 		const worldExists = await exists(worldPath, { baseDir: BaseDirectory.AppData });

@@ -4,7 +4,6 @@
 - **Story Title:** [Parent story]
 - **Act Number / Name:** [Act I / Act II / Act III, etc.]
 - **Story Scope Covered:** [Which portion of the full story this act contains]
-- **Linked Story Card:** [Reference title or ID]
 
 ## Act Purpose
 - **Act Function:** [Setup / escalation / collapse / pursuit / revelation / resolution]

@@ -5,7 +5,7 @@ import { loadActCardTemplate, loadActExtractionPrompt, loadSystemPrompt } from '
 import { exportActLine } from './act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
-import { resolveStoryFolder } from '$lib/fs/story-folders';
+import { loadStoryWorldContent, resolveStoryFolder } from '$lib/fs/story-folders';
 import { getActiveStoryId, getActiveActId, getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
 import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { buildLineDir } from './card-output-path';
@@ -16,8 +16,13 @@ export interface GenerateActCardResult {
 	content: string;
 }
 
-function buildUserMessages(contents: string[], template: string, extractionPrompt: string): string[] {
+function buildUserMessages(contents: string[], template: string, extractionPrompt: string, world: string | null): string[] {
+	const worldPrompt = !!world ? [
+		'The world setting is based on the following:',
+		world
+	] : [];
 	return [
+		...worldPrompt,
 		'The following messages will contain the transcript of the current act:',
 		...contents,
 		'The previous message was the end of the transcript of the current act. The following message will contain the Act Card template:',
@@ -59,15 +64,16 @@ export async function generateActCard(): Promise<GenerateActCardResult> {
 	const isMainLine = actLine?.isMainLine ?? false;
 
 	// Load prompts
-	const [template, extractionPrompt, systemPrompt] = await Promise.all([
+	const [template, extractionPrompt, systemPrompt, world] = await Promise.all([
 		loadActCardTemplate(),
 		loadActExtractionPrompt(),
-		loadSystemPrompt()
+		loadSystemPrompt(),
+		loadStoryWorldContent(act.storyId)
 	]);
 
 	// Build AI call
 	const model = createModel(config);
-	const userMessages: ModelMessage[] = buildUserMessages(contents, template, extractionPrompt).map((content) => ({
+	const userMessages: ModelMessage[] = buildUserMessages(contents, template, extractionPrompt, world).map((content) => ({
 		role: 'user', content
 	}));
 
