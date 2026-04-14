@@ -26,6 +26,8 @@ import { buildLineDir } from './card-output-path';
 
 // === Types ===
 
+const ERR_NO_CONTEXT = 'No active story context.';
+
 export interface CharacterSummary {
 	character: string;
 	importance: string;
@@ -73,7 +75,7 @@ export function toCharacterEntries(summaries: CharacterSummary[]): CharacterEntr
 
 export async function extractCharactersFromActLine(): Promise<CharacterSummary[]> {
 	const actLineId = getActiveActLineId();
-	if (!actLineId) throw new Error('No active act line selected.');
+	if (!actLineId) throw new Error(ERR_NO_CONTEXT);
 
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) throw new Error('No main provider configured.');
@@ -149,7 +151,7 @@ export { parseCharacterJson as _parseCharacterJsonForTest };
 export async function buildActLineage(): Promise<ActLineageEntry[]> {
 	const actId = getActiveActId();
 	const actLineId = getActiveActLineId();
-	if (!actId || !actLineId) throw new Error('No active act line selected.');
+	if (!actId || !actLineId) throw new Error(ERR_NO_CONTEXT);
 
 	const lineage: ActLineageEntry[] = [];
 	const visited = new Set<string>();
@@ -303,14 +305,14 @@ export async function generateCharacterCard(
 	const actLineId = getActiveActLineId();
 
 	if (!storyId || !story || !actId || !actLineId) {
-		throw new Error('No active story context.');
+		throw new Error(ERR_NO_CONTEXT);
 	}
 
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) throw new Error('No main provider configured.');
 
 	if (!entry.canonicalName.trim()) {
-		throw new Error(`Character name cannot be empty for entry: "${entry.character}"`);
+		throw new Error(`Character name resolves to empty identifier: "${entry.character}"`);
 	}
 
 	if (onProgress && progress) {
@@ -335,9 +337,13 @@ export async function generateCharacterCard(
 
 	const storyFolder = await resolveStoryFolder(storyId, story.name);
 	const currentAct = await getAct(actId);
-	if (!currentAct) throw new Error('Active act not found.');
+	if (!currentAct) throw new Error(ERR_NO_CONTEXT);
 
 	const currentActNumber = currentAct.actNumber;
+
+	// Use lineage entry for isMainLine to avoid redundant DB query
+	const currentLineageEntry = lineage.find((l) => l.actLineId === actLineId);
+	const isMainLine = currentLineageEntry?.isMainLine ?? false;
 
 	const [previousActCards, existingCards] = await Promise.all([
 		loadPreviousActCards(storyFolder, lineage, currentActNumber),
@@ -360,8 +366,6 @@ export async function generateCharacterCard(
   Finish Reason: ${result.finishReason}`);
 
 	// Save file
-	const actLine = await getActLine(actLineId);
-	const isMainLine = actLine?.isMainLine ?? false;
 	const lineDir = buildLineDir(storyFolder, currentAct.actNumber, isMainLine, actLineId);
 	const charactersDir = `${lineDir}/characters`;
 	const filename = computeCardFilename(entry.canonicalName);
@@ -379,26 +383,28 @@ export async function generateCharacterCard(
 
 export async function generateCharacterCards(
 	entries: CharacterEntry[],
-	concurrent: boolean,
+	parallel: boolean,
 	onProgress?: (progress: GenerateProgress) => void
 ): Promise<CharacterCardResult[]> {
-	const lineage = await buildActLineage();
-	const selected = entries.filter((e) => {
-		if (e.isManual) return e.character.trim().length > 0;
-		return e.include;
-	});
+	// Separate valid entries from skipped ones
+	const { selected, skipped } = validateEntries(entries);
+
+	if (skipped.length > 0) {
+		await log.warn(
+			'character-card',
+			`Skipped ${skipped.length} entries with empty names: ${skipped.map((e) => `"${e.character}"`).join(', ')}`
+		);
+	}
 
 	if (selected.length === 0) throw new Error('No characters selected for generation.');
 
+	const lineage = await buildActLineage();
+
 	const results: CharacterCardResult[] = [];
 
-	if (concurrent) {
-		const promises = selected.map((entry, i) =>
-			generateCharacterCard(entry, lineage, onProgress, {
-				completed: i,
-				total: selected.length,
-				currentCharacter: entry.character
-			})
+	if (parallel) {
+		const promises = selected.map((entry) =>
+			generateCharacterCard(entry, lineage)
 		);
 		const settled = await Promise.allSettled(promises);
 
@@ -412,6 +418,10 @@ export async function generateCharacterCards(
 					`Failed to generate card for ${selected[i].character}`,
 					result.reason
 				);
+			}
+			// Report progress after each card settles (success or failure)
+			if (onProgress) {
+				onProgress({ completed: i + 1, total: selected.length, currentCharacter: selected[i].character });
 			}
 		}
 	} else {
@@ -437,6 +447,22 @@ export async function generateCharacterCards(
 	}
 
 	return results;
+}
+
+function validateEntries(entries: CharacterEntry[]): { selected: CharacterEntry[]; skipped: CharacterEntry[] } {
+	const selected: CharacterEntry[] = [];
+	const skipped: CharacterEntry[] = [];
+
+	for (const entry of entries) {
+		const isSelected = entry.isManual ? entry.character.trim().length > 0 : entry.include;
+		if (isSelected) {
+			selected.push(entry);
+		} else {
+			skipped.push(entry);
+		}
+	}
+
+	return { selected, skipped };
 }
 
 function toUserModelMessage(content: string): ModelMessage {

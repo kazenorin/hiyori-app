@@ -24,11 +24,4 @@ export function buildLineDir(
 	return `${storyFolder}/act-${actNumber}/${subdir}`;
 }
 
-/**
- * Ensure a directory exists (create recursively if needed).
- */
-export async function ensureDir(dirPath: string): Promise<void> {
-	await mkdir(dirPath, { baseDir: BaseDirectory.AppData, recursive: true });
-}
-
 export { computeLineSubdir as _computeLineSubdirForTest };

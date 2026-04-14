@@ -74,7 +74,7 @@ export async function extractCharacters(): Promise<void> {
 	}
 }
 
-export async function generateCards(concurrent: boolean): Promise<void> {
+export async function generateCards(parallel: boolean): Promise<void> {
 	if (isGenerating) return;
 
 	isGenerating = true;
@@ -83,7 +83,7 @@ export async function generateCards(concurrent: boolean): Promise<void> {
 	results = [];
 
 	try {
-		results = await generateCharacterCards(characters, concurrent, (p) => {
+		results = await generateCharacterCards(characters, parallel, (p) => {
 			progress = p;
 		});
 	} catch (err) {
