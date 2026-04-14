@@ -16,6 +16,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `svelte.config.js` — adapter-static with `fallback: 'index.html'`
 - `vite.config.ts` — port 1420 (must match `tauri.conf.json` `devUrl`)
 
+## Styling Guidelines
+
+**Always use Skeleton.dev and Tailwind CSS utilities — never hardcode color values.**
+
+- **Skeleton.dev components**: Use built-in components (buttons, cards, inputs, etc.) and their `variant` props for consistent styling
+- **Color tokens**: Reference theme variables via Tailwind (e.g., `bg-surface-50`, `text-primary-500`, `border-surface-200-700`)
+- **Typography**: Use `preset-typography` classes for text sizing
+- **Spacing**: Use Tailwind spacing scale (`p-4`, `gap-2`, etc.)
+- **Dark mode**: Skeleton handles automatic dark mode via `data-theme`; don't write custom dark mode selectors
+- **Custom CSS**: Only use `+layout.css` for global resets or Skeleton theme customizations; component styles should use Tailwind classes
+
 ## Reference Material
 
 Check `local-references/*` for local reference files (if any).
