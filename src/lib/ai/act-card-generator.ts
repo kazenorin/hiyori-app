@@ -1,8 +1,7 @@
 import {generateText, type ModelMessage} from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
-import { loadActCardTemplate, loadActExtractionPrompt } from '$lib/fs/act-card-prompts';
-import { loadSystemPrompt } from '$lib/fs/system-prompt';
+import { loadActCardTemplate, loadActExtractionPrompt, loadSystemPrompt } from '$lib/fs/prompts';
 import { exportActLine } from './act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';

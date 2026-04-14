@@ -1,5 +1,5 @@
 import {getMainProviderConfig} from '$lib/stores/settings.svelte';
-import {loadSystemPrompt} from '$lib/fs/system-prompt';
+import {loadSystemPrompt} from '$lib/fs/prompts';
 import type {GameData} from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';

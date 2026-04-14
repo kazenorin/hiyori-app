@@ -1,7 +1,7 @@
 import { initDatabase } from '$lib/db/database';
 import { runMigrations } from '$lib/db/migrations';
 import { loadStories, restoreState } from '$lib/stores/stories.svelte';
-import { loadWorldTemplate, loadGenerateWorldFromChatPrompt, loadGenerateWorldFromChatSystemPrompt, loadWorldBuilderSystemPrompt } from '$lib/fs/world-prompts';
+import { loadWorldTemplate, loadGenerateWorldFromChatPrompt, loadGenerateWorldFromChatSystemPrompt, loadWorldBuilderSystemPrompt, ensureAllBaseConfigs } from '$lib/fs/prompts';
 import { initLogging, log } from '$lib/logging/logger';
 import { getSettings } from '$lib/stores/settings.svelte';
 
@@ -28,6 +28,10 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 		await log.info('init', 'Running migrations...');
 		onStatus?.('Running migrations...');
 		await runMigrations();
+
+		await log.info('init', 'Ensuring base configs...');
+		onStatus?.('Ensuring base configs...');
+		await ensureAllBaseConfigs();
 
 		await log.info('init', 'Loading world prompts...');
 		onStatus?.('Loading world prompts...');

@@ -5,9 +5,9 @@ import {
 	loadCharacterCardTemplate,
 	loadCharacterCardExtractionPrompt,
 	loadCharacterCardExtractionSystemPrompt,
-	loadSummarizeCharactersInAct
-} from '$lib/fs/character-card-prompts';
-import { loadSystemPrompt } from '$lib/fs/system-prompt';
+	loadSummarizeCharactersInAct,
+	loadSystemPrompt
+} from '$lib/fs/prompts';
 import { exportActLine } from './act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';

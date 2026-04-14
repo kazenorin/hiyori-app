@@ -1,5 +1,5 @@
 import {getMainProviderConfig} from '$lib/stores/settings.svelte';
-import {loadWorldBuilderSystemPrompt, loadWorldTemplate} from '$lib/fs/world-prompts';
+import {loadWorldBuilderSystemPrompt, loadWorldTemplate} from '$lib/fs/prompts';
 import {generateWorldBuilderLogFilename, logWorldBuilderChat} from '$lib/logging/chat-logger';
 import {type StreamState} from "$lib/ai/chat-callbacks";
 import {type MessageMetadata, streamChatResponse} from "./chat-stream";

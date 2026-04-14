@@ -1,6 +1,5 @@
 import {
 	readTextFile,
-	writeTextFile,
 	mkdir,
 	exists,
 	readDir,
@@ -8,11 +7,9 @@ import {
 	BaseDirectory,
 	type DirEntry
 } from '@tauri-apps/plugin-fs';
-import { SYSTEM_PROMPT_FILE, getDefaultSystemPromptContent } from './system-prompt';
-import { log } from '$lib/logging/logger';
-import { NARRATION_TEMPLATE_FILE, getDefaultNarrationTemplateContent } from './narration-template';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { generateWorld } from '$lib/ai/world-generator';
+import { log } from '$lib/logging/logger';
 
 /**
  * Compute the canonical folder name for a story.
@@ -120,40 +117,6 @@ export async function resolveStoryFolder(storyId: string, storyName: string): Pr
 }
 
 /**
- * Ensure a story folder exists and contains system-prompt.md.
- * Returns the folder name.
- */
-export async function ensureStoryPromptFolder(storyId: string, storyName: string): Promise<string> {
-	const folderName = await resolveStoryFolder(storyId, storyName);
-
-	const promptPath = `${folderName}/${SYSTEM_PROMPT_FILE}`;
-	const promptExists = await exists(promptPath, { baseDir: BaseDirectory.AppData });
-	if (!promptExists) {
-		const defaultContent = await getDefaultSystemPromptContent();
-		await writeTextFile(promptPath, defaultContent, { baseDir: BaseDirectory.AppData });
-	}
-
-	return folderName;
-}
-
-/**
- * Load the system prompt for a specific story.
- * Ensures the folder and prompt file exist, then returns the content.
- */
-export async function loadStorySystemPrompt(storyId: string, storyName: string): Promise<string> {
-	await ensureStoryPromptFolder(storyId, storyName);
-
-	const folderName = await dbStoryFolders.getStoryFolder(storyId) ?? canonicalName(storyName);
-	const promptPath = `${folderName}/${SYSTEM_PROMPT_FILE}`;
-
-	try {
-		return await readTextFile(promptPath, { baseDir: BaseDirectory.AppData });
-	} catch {
-		return await getDefaultSystemPromptContent();
-	}
-}
-
-/**
  * Ensure the story folder has a world.md file.
  * If it doesn't exist, generate it from the story's chat history.
  */
@@ -168,37 +131,6 @@ export async function ensureWorldFile(storyId: string, storyName: string): Promi
 		await generateWorld(storyId, folderName);
 	} catch (err) {
 		await log.error('world', 'Failed to generate world.md', err);
-	}
-}
-
-/**
- * Ensure a story folder contains narration-template.md.
- */
-export async function ensureNarrationTemplateInFolder(storyId: string, storyName: string): Promise<void> {
-	const folderName = await resolveStoryFolder(storyId, storyName);
-
-	const templatePath = `${folderName}/${NARRATION_TEMPLATE_FILE}`;
-	const templateExists = await exists(templatePath, { baseDir: BaseDirectory.AppData });
-	if (!templateExists) {
-		const defaultContent = await getDefaultNarrationTemplateContent();
-		await writeTextFile(templatePath, defaultContent, { baseDir: BaseDirectory.AppData });
-	}
-}
-
-/**
- * Load the narration template for a specific story.
- * Ensures the file exists in the story folder, then returns the content.
- */
-export async function loadStoryNarrationTemplate(storyId: string, storyName: string): Promise<string> {
-	await ensureNarrationTemplateInFolder(storyId, storyName);
-
-	const folderName = await dbStoryFolders.getStoryFolder(storyId) ?? canonicalName(storyName);
-	const templatePath = `${folderName}/${NARRATION_TEMPLATE_FILE}`;
-
-	try {
-		return await readTextFile(templatePath, { baseDir: BaseDirectory.AppData });
-	} catch {
-		return await getDefaultNarrationTemplateContent();
 	}
 }
 
