@@ -6,8 +6,7 @@ import type {
 	ParsedTranscript,
 	ParsedMessage,
 	OpenWebUIExport,
-	OpenWebUIMessage,
-	OpenWebUIOutput
+	OpenWebUIMessage
 } from './types';
 
 // === Format Detection ===
@@ -265,14 +264,18 @@ function buildSequence(
 	idToMessage: Map<string, OpenWebUIMessage>
 ): OpenWebUIMessage[] {
 	const sequence: OpenWebUIMessage[] = [head];
+	const visited = new Set<string>([head.id]);
 	let current = head;
 
 	while (current.childrenIds && current.childrenIds.length > 0) {
 		// For depth-first, take first child
 		const childId = current.childrenIds[0];
+		// Cycle detection: stop if we've already visited this ID
+		if (visited.has(childId)) break;
 		const child = idToMessage.get(childId);
 		if (!child) break;
 
+		visited.add(childId);
 		sequence.push(child);
 		current = child;
 	}

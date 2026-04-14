@@ -87,7 +87,7 @@ function buildGenerationMessages(
 	// Generation request
 	messages.push({
 		role: 'user',
-		content: 'Generate a story based the above settings.'
+		content: 'Generate a story based on the above settings.'
 	});
 
 	return messages;

@@ -1,8 +1,8 @@
 // Main import orchestrator coordinating all import steps
 
 import { createStory } from '$lib/db/stories';
-import { createAct, updateAct } from '$lib/db/acts';
-import { createActLine, addMessageToLine, getActLine } from '$lib/db/act-lines';
+import { createAct } from '$lib/db/acts';
+import { createActLine, addMessageToLine } from '$lib/db/act-lines';
 import { createMessage } from '$lib/db/messages';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { writeTextFile, mkdir, BaseDirectory } from '@tauri-apps/plugin-fs';
@@ -14,7 +14,6 @@ import type {
 	RetryConfig
 } from './types';
 import { parseTranscriptFile } from './transcript-parsers';
-import { runGameDataDetection } from './game-data-detector';
 import { generateActFromCards } from './act-generator';
 
 // === Progress Callback Type ===
@@ -65,6 +64,7 @@ export async function executeImport(
 		// Process each act
 		let previousActLineId: string | null = null;
 		const actIds: string[] = [];
+		const actLineIds: string[] = [];
 
 		for (let actIndex = 0; actIndex < formData.acts.length; actIndex++) {
 			const actInput = formData.acts[actIndex];
@@ -85,6 +85,7 @@ export async function executeImport(
 			// Create main act line
 			const actLineId = crypto.randomUUID();
 			await createActLine(actLineId, actId, 'Main Line', true);
+			actLineIds.push(actLineId);
 
 			// Process act content
 			if (actInput.transcript) {
@@ -112,6 +113,12 @@ export async function executeImport(
 					actLineId,
 					onProgress
 				);
+
+				// Save provided act card if exists (for transcript imports)
+				if (actInput.actFile) {
+					const actCardContent = await actInput.actFile.text();
+					await saveActCard(storyFolder, actNumber, actCardContent);
+				}
 			} else if (actInput.actFile) {
 				// Load act card content
 				const actCardContent = await actInput.actFile.text();
@@ -128,14 +135,12 @@ export async function executeImport(
 					backoffIntervalSeconds: formData.backoffIntervalSeconds
 				};
 
-				let generatedContent = '';
 				const generation = await generateActFromCards(
 					worldContent,
 					actCardContent,
 					characterCards,
 					retryConfig,
 					(text) => {
-						generatedContent = text;
 						onProgress({
 							phase: 'generating-act',
 							message: `Generating Act ${actNumber}...`,
@@ -192,42 +197,22 @@ export async function executeImport(
 				await saveActCard(storyFolder, actNumber, generation);
 			}
 
-			// Run game data detection if needed
-			const actLine = await getActLine(actLineId);
-			if (actLine) {
-				onProgress({
-					phase: 'detecting-game-data',
-					message: `Detecting game data for Act ${actNumber}...`
-				});
-
-				// This would run game data detection on the act's messages
-				// For now, we'll skip this as it requires fetching messages first
-			}
-
-			// Save act card if provided
-			if (actInput.actFile) {
-				const actCardContent = await actInput.actFile.text();
-				await saveActCard(storyFolder, actNumber, actCardContent);
-			}
-
 			previousActLineId = actLineId;
 		}
 
-		// Generate act names for acts without them
+		// Finalize
 		onProgress({ phase: 'finalizing', message: 'Finalizing story...' });
-
-		// Return success
 		onProgress({ phase: 'complete', message: 'Import complete!' });
 
-		// Navigate to the first act's main line
-		const firstActId = actIds[0];
-		const firstActLine = await getActLine(`${firstActId}-main`); // This is a guess, need to fix
+		// Return first act info for navigation (guard against empty acts)
+		const firstActId = actIds.length > 0 ? actIds[0] : undefined;
+		const firstActLineId = actLineIds.length > 0 ? actLineIds[0] : undefined;
 
 		return {
 			success: true,
 			storyId,
 			actId: firstActId,
-			actLineId: previousActLineId ?? undefined,
+			actLineId: firstActLineId,
 			warnings
 		};
 	} catch (error) {
@@ -290,8 +275,19 @@ async function saveCharacterCards(
 	const charactersDir = `${storyFolder}/characters`;
 	await mkdir(charactersDir, { baseDir: BaseDirectory.AppData, recursive: true });
 
+	const usedNames = new Set<string>();
 	for (const card of characterCards) {
-		const fileName = card.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+		let fileName = card.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+		// Handle collisions by appending counter
+		if (usedNames.has(fileName)) {
+			let counter = 1;
+			while (usedNames.has(`${fileName}_${counter}`)) {
+				counter++;
+			}
+			fileName = `${fileName}_${counter}`;
+		}
+		usedNames.add(fileName);
+
 		const filePath = `${charactersDir}/${fileName}.md`;
 		await writeTextFile(filePath, card.content, { baseDir: BaseDirectory.AppData });
 	}
@@ -324,6 +320,3 @@ function extractCharacterName(content: string): string | null {
 
 	return null;
 }
-
-// === Type Helper ===
-// Using crypto.randomUUID() directly as per project convention

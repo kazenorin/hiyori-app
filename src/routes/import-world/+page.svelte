@@ -36,7 +36,7 @@
 				class="btn preset-tonal"
 				type="button"
 				onclick={handleBack}
-				disabled={store.isImporting}
+				disabled={store.isImporting || !store.canSubmit}
 			>
 				Back to Chat
 			</button>
