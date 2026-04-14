@@ -65,6 +65,9 @@
 	let confirmDelete = $state<DeleteTarget | null>(null);
 	let cancelButton: HTMLButtonElement | null = $state(null);
 
+	// New story mode selection
+	let showNewStoryModal = $state(false);
+
 	// Font size slider state
 	let fontSizeSlider = $state(getSettings().fontSize);
 	$effect(() => { fontSizeSlider = getSettings().fontSize; });
@@ -130,10 +133,24 @@
 	}
 
 	async function handleNewStory() {
+		showNewStoryModal = true;
+	}
+
+	function handleStartWorldBuilder() {
+		showNewStoryModal = false;
 		exitWorldBuilderMode();
 		clearMessages();
-		await enterWorldBuilderMode();
+		enterWorldBuilderMode();
 		goto('/');
+	}
+
+	function handleStartImportWorld() {
+		showNewStoryModal = false;
+		goto('/import-world');
+	}
+
+	function cancelNewStory() {
+		showNewStoryModal = false;
 	}
 
 	async function handleCreateAct() {
@@ -569,6 +586,55 @@
 						</button>
 					</div>
 				{/if}
+			</div>
+		</div>
+	{/if}
+
+	<!-- New Story Modal -->
+	{#if showNewStoryModal}
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			role="dialog"
+			aria-modal="true"
+			aria-labelledby="new-story-dialog-title"
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+			onclick={cancelNewStory}
+			onkeydown={(e) => e.key === 'Escape' && cancelNewStory()}
+		>
+			<!-- svelte-ignore a11y_no_static_element_interactions -->
+			<div
+				class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4"
+				onclick={(e) => e.stopPropagation()}
+				onkeydown={(e) => e.stopPropagation()}
+			>
+				<h3 id="new-story-dialog-title" class="text-lg font-semibold text-surface-900-100 mb-4">
+					Create New Story
+				</h3>
+				<div class="flex flex-col gap-3">
+					<button
+						class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
+						type="button"
+						onclick={handleStartWorldBuilder}
+					>
+						<div class="font-medium text-surface-900-100 mb-1">World Builder</div>
+						<div class="text-sm text-surface-600-400">Guided interview to create a world from scratch with AI assistance.</div>
+					</button>
+					<button
+						class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
+						type="button"
+						onclick={handleStartImportWorld}
+					>
+						<div class="font-medium text-surface-900-100 mb-1">Import World</div>
+						<div class="text-sm text-surface-600-400">Bring an existing world document and start playing immediately.</div>
+					</button>
+				</div>
+				<button
+					class="w-full mt-4 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+					type="button"
+					onclick={cancelNewStory}
+				>
+					Cancel
+				</button>
 			</div>
 		</div>
 	{/if}
