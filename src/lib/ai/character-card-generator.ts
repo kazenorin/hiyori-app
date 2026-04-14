@@ -1,4 +1,4 @@
-import { generateText } from 'ai';
+import {generateText, type ModelMessage} from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
 import {
@@ -104,31 +104,30 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 	if (!config?.apiKey) throw new Error('No main provider configured.');
 
 	const allMessages = await getMessagesForLine(actLineId);
-	const contents = exportActLine(allMessages);
-	if (contents.length === 0) throw new Error('No narrative content found in this act line.');
+	const transcript: string[] = exportActLine(allMessages);
+	if (transcript.length === 0) throw new Error('No narrative content found in this act line.');
 
 	const summarizePrompt = await loadSummarizeCharactersInAct();
 	const systemPrompt = await loadSystemPrompt();
-	const combinedSystem = `${systemPrompt}\n\n---\n\n${summarizePrompt}`;
 
 	const model = createModel(config);
-	const transcript = contents.join('\n\n---\n\n');
 
 	await logCharacterCardActivity('extraction-start', `Extracting characters from act line: ${actLineId}\n
-	System Prompt:\n${combinedSystem}\n
-	Transcript:\n${transcript}`);
+  System Prompt:\n${systemPrompt}\n
+  Transcript:\n    ${transcript.join('\n    ')}`);
 
-	const result = await generateText({
-		model,
-		system: combinedSystem,
-		messages: [{ role: 'user', content: transcript }]
-	});
+	const messages: ModelMessage[] = [
+		{ role: 'user', content: 'I need your help to extract all the characters from the current act.\nThe following messages will contain the transcript of the current act:' },
+		...(transcript.map(toUserModelMessage)),
+		{ role: 'user', content: 'The previous message was the end of the transcript of the current act.' },
+		{ role: 'user', content: `Extract all the characters from the current act according to the following rules: ${summarizePrompt}` }
+	];
+	const result = await generateText({model, system: systemPrompt, messages});
 
 	await logCharacterCardActivity('extraction-end', `
-	Result: ${result.text}
-	Usage: ${JSON.stringify(result.usage, null, 2)}
-	Total Usage: ${JSON.stringify(result.totalUsage, null, 2)}
-	Finish Reason: ${result.finishReason}`);
+  Result: ${result.text}
+  Usage: ${JSON.stringify(result.usage, null, 4)}
+  Finish Reason: ${result.finishReason}`);
 
 	const parsed = parseCharacterJson(result.text);
 	return parsed;
@@ -274,15 +273,12 @@ export async function generateCharacterCard(
 	const actLineId = getActiveActLineId()!;
 	const allMessages = await getMessagesForLine(actLineId);
 	const transcript = exportActLine(allMessages);
-	const transcriptSection = transcript.length > 0
-		? `\n\n## Source Transcript\n\n${transcript.join('\n\n---\n\n')}`
-		: '';
 
 	// Build user prompt with act cards from previous acts
 	const storyFolder = await resolveStoryFolder(storyId, story.name);
 	const currentAct = await getAct(actId);
 	const currentActNumber = currentAct?.actNumber ?? 0;
-	let previousActCardsSection = '';
+	const previousActCardsSection: string[] = [];
 
 	for (const lineageEntry of lineage) {
 		// Skip current act — its transcript is already included above
@@ -295,12 +291,13 @@ export async function generateCharacterCard(
 			lineageEntry.actLineId
 		);
 		if (actCard) {
-			previousActCardsSection += `\n\n## Act Card from Act ${lineageEntry.actNumber}\n\n${actCard}`;
+			previousActCardsSection.push(`The following message contains the Act Card from Act ${lineageEntry.actNumber}`);
+			previousActCardsSection.push(actCard);
 		}
 	}
 
 	// Load existing character cards from lineage
-	let existingCardsSection = '';
+	const existingCardsSection: string[] = [];
 	for (const lineageEntry of lineage) {
 		const card = await loadExistingCharacterCard(
 			storyFolder,
@@ -310,11 +307,13 @@ export async function generateCharacterCard(
 			lineageEntry.actLineId
 		);
 		if (card) {
-			existingCardsSection += `\n\n## Character Details from Act ${lineageEntry.actNumber}\n\n${card}`;
+			existingCardsSection.push(`The following message contains the previous Character Card of ${entry.character} from Act ${lineageEntry.actNumber}`);
+			existingCardsSection.push(card);
 		}
 	}
 
-	const userPrompt = `${namedExtractionPrompt}\n\n${namedTemplate}${transcriptSection}${previousActCardsSection}${existingCardsSection}`;
+	const userPrompt = `Based on the information from the chat history, generate a new Character Card according to the following rules:
+${namedExtractionPrompt}\n---\n${namedTemplate}`;
 
 	if (onProgress && progress) {
 		onProgress(progress);
@@ -322,15 +321,25 @@ export async function generateCharacterCard(
 
 	// Generate
 	const model = createModel(config);
-	await logCharacterCardActivity('generation-start', `Character: ${entry.character}\n\nUser prompt:\n${userPrompt}`);
 
-	const result = await generateText({
-		model,
-		system: combinedSystem,
-		messages: [{ role: 'user', content: userPrompt }]
-	});
+	const messages: ModelMessage[] = [
+		{ role: 'user', content: 'The following messages will contain the transcript of the current act:' },
+		...(transcript.map(toUserModelMessage)),
+		{ role: 'user', content: 'The previous message was the end of the transcript of the current act.' },
+		...(previousActCardsSection.map(toUserModelMessage)),
+		...(existingCardsSection.map(toUserModelMessage)),
+		{ role: 'user', content: userPrompt }
+	];
 
-	await logCharacterCardActivity('generation-end', `Character: ${entry.character}\n\nResult:\n${result.text}`);
+	await logCharacterCardActivity('generation-start', `Character: ${entry.character}\n\nMessages:\n${JSON.stringify(messages, null, 2)}`);
+
+	const result = await generateText({model, system: combinedSystem, messages});
+
+	await logCharacterCardActivity('generation-end', `
+  Character: ${entry.character}
+  Result: ${result.text}
+  Usage: ${JSON.stringify(result.usage, null, 4)}
+  Finish Reason: ${result.finishReason}`);
 
 	// Get current act info for saving (reusing currentAct fetched earlier)
 	if (!currentAct) throw new Error('Active act not found.');
@@ -413,4 +422,8 @@ export async function generateCharacterCards(
 	}
 
 	return results;
+}
+
+function toUserModelMessage(content: string): ModelMessage {
+	return {role: 'user', content};
 }
