@@ -1,12 +1,11 @@
-import {getMainProviderConfig} from '$lib/stores/settings.svelte';
+import {getMainProviderConfig, type ProviderConfig} from '$lib/stores/settings.svelte';
 import {loadSystemPrompt} from '$lib/fs/prompts';
 import type {GameData} from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
 import {logMainChat} from '$lib/logging/chat-logger';
 import {type StreamState} from '$lib/ai/chat-callbacks';
-import {type MessageMetadata, streamChatResponse} from "./chat-stream";
-import type {StreamResultMetadata} from "$lib/ai/streaming";
+import {buildMetadata, type MessageMetadata, streamChatResponse} from "./chat-stream";
 
 export interface Message {
 	id: string;
@@ -62,13 +61,6 @@ function parseMetadata(raw: string | undefined | null): MessageMetadata | undefi
 	}
 }
 
-function validateSettings(): string | null {
-	const config = getMainProviderConfig();
-	if (!config?.apiKey) return 'Please configure your API key in Settings.';
-	if (!config?.model) return 'Please configure a model name in Settings.';
-	return null;
-}
-
 async function persistMessage(
 	actLineId: string,
 	message: Message
@@ -101,21 +93,27 @@ async function handleStreamError(err: unknown, messageId: string, actLineId: str
 	}
 }
 
-export async function sendMessage(actLineId: string, message: {
-	bodyText: string | undefined,
-	systemPrompt: string | undefined,
-	narrationContent: string | undefined
-}): Promise<void> {
-	if (!message.bodyText && !message.systemPrompt && !message.narrationContent) {
-		return
+export async function sendMessage(
+	actLineId: string,
+	message: {
+		bodyText: string | undefined,
+		systemPrompt: string | undefined,
+		narrationContent: string | undefined
 	}
-
-	const validationError = validateSettings();
-	if (validationError) {
-		error = validationError;
+): Promise<void> {
+	if (!message.bodyText && !message.systemPrompt && !message.narrationContent) {
 		return;
 	}
 
+	const providerConfig = getMainProviderConfig();
+	if (!providerConfig?.apiKey) {
+		error = 'Please configure your API key in Settings.';
+		return;
+	}
+	if (!providerConfig?.model) {
+		error = 'Please configure a model name in Settings.';
+		return;
+	}
 	error = null;
 
 	const responseMessageId = crypto.randomUUID();
@@ -165,13 +163,14 @@ export async function sendMessage(actLineId: string, message: {
 						reasoning: state.reasoning ?? messages[messageIdx].reasoning,
 						gameData: state.gameData ?? messages[messageIdx].gameData
 					};
-				}
+				},
+				providerConfig
 			).then((acc) => acc.resultMetadata),
 			logMainChat({systemPrompt, messages: history})
 		])
 
 		// Update message with accumulated content and final metadata
-		messages[messageIdx].metadata = buildMetadata(resultMetadata);
+		messages[messageIdx].metadata = buildMetadata(resultMetadata, providerConfig.model);
 
 		// Persist with accumulated content (not result.content)
 		await persistMessage(actLineId, messages[messageIdx]);
@@ -252,18 +251,6 @@ function randomPositionalDecisions(i: number): string {
 		`For this decision, choose option ${i}.`,
 		`Option ${i} will be selected.`
 	] as const)
-}
-
-function buildMetadata(result: StreamResultMetadata): MessageMetadata {
-	const config = getMainProviderConfig();
-	return {
-		model: config?.model ?? 'unknown',
-		finishReason: result.finishReason,
-		promptTokens: result.usage.inputTokens,
-		completionTokens: result.usage.outputTokens,
-		totalTokens: result.usage.totalTokens,
-		durationMs: result.durationMs
-	};
 }
 
 export function stopStreaming(): void {

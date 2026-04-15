@@ -133,6 +133,7 @@ export interface GameDataExtractionResult {
 	messageIndex: number;
 	gameData: GameData | null;
 	source: 'traditional' | 'llm' | 'none';
+	metadata?: string;
 }
 
 export interface GameDataDetectionResult {

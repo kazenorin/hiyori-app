@@ -1,4 +1,4 @@
-import {getMainProviderConfig} from '$lib/stores/settings.svelte';
+import {getMainProviderConfig, type ProviderConfig} from '$lib/stores/settings.svelte';
 import {loadWorldBuilderSystemPrompt, loadWorldTemplate} from '$lib/fs/prompts';
 import {generateWorldBuilderLogFilename, logWorldBuilderChat} from '$lib/logging/chat-logger';
 import {type StreamAccumulator, type StreamState} from "$lib/ai/chat-callbacks";
@@ -174,9 +174,9 @@ export async function deleteLastWorldBuilderExchange(): Promise<void> {
 }
 
 async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<void> {
-	const validationError = validateSettings();
-	if (validationError) {
-		error = validationError;
+	const providerConfig = getMainProviderConfig();
+	if (!providerConfig?.apiKey || !providerConfig?.model) {
+		error = 'Please configure your API key and model in Settings.';
 		return;
 	}
 
@@ -194,7 +194,7 @@ async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<vo
 	try {
 		const existingMsgs = messages.slice(0, -1).map((m) => ({role: m.role, content: m.content}));
 		const history = [seedMsg, ...existingMsgs];
-		await streamWorldBuilderChat(history, messageIdx, abortController.signal);
+		await streamWorldBuilderChat(history, messageIdx, abortController.signal, providerConfig);
 		parseCompletionMarker(messages[messageIdx].content);
 	} catch (err: unknown) {
 		if (err instanceof DOMException && err.name === 'AbortError') return;
@@ -209,7 +209,8 @@ async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<vo
 async function streamWorldBuilderChat(
 	history: { role: "user" | "assistant"; content: string }[],
 	messageIdx: number,
-	abortSignal: AbortSignal
+	abortSignal: AbortSignal,
+	providerConfig: ProviderConfig
 ): Promise<StreamAccumulator> {
 	const fullSystemPrompt = buildFullSystemPrompt();
 	const result = await Promise.all([
@@ -218,7 +219,7 @@ async function streamWorldBuilderChat(
 		}),
 		streamChatResponse(fullSystemPrompt, history, abortSignal, (state: StreamState) => {
 			messages[messageIdx] = {...messages[messageIdx], content: state.content};
-		})
+		}, providerConfig)
 	])
 	return result[1]
 }

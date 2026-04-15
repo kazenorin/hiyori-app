@@ -12,17 +12,18 @@ import { validateFileSize } from '$lib/utils/async';
 
 // === Format Detection ===
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null;
+}
+
 export function detectTranscriptFormat(json: unknown): TranscriptFormat {
-	if (!json || typeof json !== 'object') {
+	if (!isRecord(json)) {
 		return 'unknown';
 	}
 
 	// Check for App Export format: { messages: [...] }
-	if (
-		'messages' in json &&
-		Array.isArray((json as Record<string, unknown>).messages)
-	) {
-		const msgs = (json as Record<string, unknown>).messages as unknown[];
+	if ('messages' in json && Array.isArray(json.messages)) {
+		const msgs = json.messages;
 		if (msgs.length > 0 && isAppExportMessage(msgs[0])) {
 			return 'app-export';
 		}
@@ -33,14 +34,12 @@ export function detectTranscriptFormat(json: unknown): TranscriptFormat {
 
 	// Check for Open WebUI format: array with chat.history.messages
 	if (Array.isArray(json) && json.length > 0) {
-		const first = json[0] as Record<string, unknown>;
+		const first = json[0];
 		if (
+			isRecord(first) &&
 			typeof first.title === 'string' &&
-			first.chat &&
-			typeof first.chat === 'object' &&
-			first.chat !== null &&
-			(first.chat as Record<string, unknown>).history &&
-			typeof (first.chat as Record<string, unknown>).history === 'object'
+			isRecord(first.chat) &&
+			isRecord(first.chat.history)
 		) {
 			return 'openwebui';
 		}
@@ -50,19 +49,17 @@ export function detectTranscriptFormat(json: unknown): TranscriptFormat {
 }
 
 function isAppExportMessage(msg: unknown): boolean {
-	if (!msg || typeof msg !== 'object') return false;
-	const m = msg as Record<string, unknown>;
+	if (!isRecord(msg)) return false;
 	return (
-		typeof m.role === 'string' &&
-		typeof m.content === 'string' &&
-		('metadata' in m || 'game_data' in m || 'reasoning' in m)
+		typeof msg.role === 'string' &&
+		typeof msg.content === 'string' &&
+		('metadata' in msg || 'game_data' in msg || 'reasoning' in msg)
 	);
 }
 
 function isOpenAIMessage(msg: unknown): boolean {
-	if (!msg || typeof msg !== 'object') return false;
-	const m = msg as Record<string, unknown>;
-	return typeof m.role === 'string' && typeof m.content === 'string' && !('game_data' in m);
+	if (!isRecord(msg)) return false;
+	return typeof msg.role === 'string' && typeof msg.content === 'string' && !('game_data' in msg);
 }
 
 // === Format A: App Export Format ===
@@ -379,7 +376,8 @@ export async function parseTranscriptFile(
 	try {
 		json = JSON.parse(text);
 	} catch (e) {
-		throw new Error('File is not valid JSON');
+		const errorMsg = e instanceof Error ? e.message : 'unknown error';
+		throw new Error(`File is not valid JSON: ${errorMsg}`);
 	}
 
 	const format = detectTranscriptFormat(json);

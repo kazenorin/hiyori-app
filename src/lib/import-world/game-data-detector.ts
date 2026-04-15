@@ -4,10 +4,11 @@
 
 import type {GameData} from '$lib/db/messages';
 import type {GameDataDetectionResult, GameDataExtractionResult, ParsedMessage} from './types';
-import {type RetryConfig, streamWithRetry} from '$lib/ai/chat-stream';
+import {buildMetadata, type RetryConfig, streamWithRetry} from '$lib/ai/chat-stream';
 import {loadChoicesExtractionPrompt, loadSystemPrompt} from '$lib/fs/prompts';
 import {sleep} from '$lib/utils/async';
-import type {StreamState} from "$lib/ai/chat-callbacks";
+import type {StreamState} from '$lib/ai/chat-callbacks';
+import {getMainProviderConfig, type ProviderConfig} from "$lib/stores/settings.svelte";
 
 // === Pass 1: Traditional Extraction (Synchronous) ===
 
@@ -166,6 +167,7 @@ export async function extractGameDataWithLLM(
 	onProgress: (msgIndex: number, state: StreamState) => void,
 	onError: (msgIndex: number, err: Error, attempt: number) => void
 ): Promise<GameDataExtractionResult[]> {
+	const providerConfig = getMainProviderConfig();
 	const systemPrompt = await loadSystemPrompt();
 	const choicesExtractionPrompt = await loadChoicesExtractionPrompt();
 	const results: GameDataExtractionResult[] = [];
@@ -187,15 +189,18 @@ export async function extractGameDataWithLLM(
 			},
 			(err, attempt) => {
 				onError(msgIndex, err, attempt);
-			}
+			},
+			providerConfig
 		)
 
 		const gameData = acc.state.gameData;
+		const metadata = await acc.resultMetadata
 
 		results.push({
 			messageIndex: msgIndex,
 			gameData,
-			source: gameData ? 'llm' : 'none'
+			source: gameData ? 'llm' : 'none',
+			metadata: JSON.stringify(buildMetadata(metadata, providerConfig?.model), null, 2),
 		});
 
 		// Rate limit: small delay between LLM calls to avoid hitting API rate limits
@@ -213,7 +218,6 @@ export async function extractGameDataWithLLM(
  * Run the complete game data detection pipeline on parsed messages.
  * Pass 1 runs synchronously (markdown header parsing).
  * Pass 2 uses LLM for remaining messages (only if API key is configured).
- * Updates messages in-place with detected game data.
  * Returns detection results and the number of LLM calls made.
  */
 export async function runGameDataDetection(
@@ -228,29 +232,28 @@ export async function runGameDataDetection(
 
 	// Pass 1: Traditional extraction
 	for (let i = 0; i < messages.length; i++) {
-		const msg = messages[i];
+		const message = messages[i];
 
 		// Skip non-assistant messages and messages that already have game_data
-		if (msg.role !== 'assistant' || msg.gameData) {
-			if (msg.gameData) {
+		if (message.role !== 'assistant' || message.gameData) {
+			if (message.gameData) {
 				results.push({
 					messageIndex: i,
-					gameData: msg.gameData,
+					gameData: message.gameData,
 					source: 'traditional'
 				});
 			}
 			continue;
 		}
 
-		const gameData = extractGameDataTraditional(msg.content);
+		const gameData = extractGameDataTraditional(message.content);
 		if (gameData) {
-			msg.gameData = gameData;
 			results.push({
 				messageIndex: i,
 				gameData,
 				source: 'traditional'
 			});
-			log(`Generated GameData[${i}] using traditional method.`)
+			log(`Generated GameData[${i}] using traditional method.`);
 		} else {
 			indicesNeedingLLM.push(i);
 		}
@@ -266,13 +269,6 @@ export async function runGameDataDetection(
 			onProgress,
 			onError
 		);
-
-		// Apply detected game data back to the parsed messages
-		for (const result of llmResults) {
-			if (result.gameData) {
-				messages[result.messageIndex].gameData = result.gameData;
-			}
-		}
 
 		results.push(...llmResults);
 		llmCallsMade = llmResults.filter((r) => r.source === 'llm').length;

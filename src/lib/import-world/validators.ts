@@ -101,6 +101,20 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		});
 	}
 
+	// Validate retry settings
+	if (formData.retryCount < 0 || formData.retryCount > 20) {
+		errors.push({
+			field: 'retryCount',
+			message: 'LLM Retry Count must be between 0 and 20.'
+		});
+	}
+	if (formData.backoffIntervalSeconds < 1 || formData.backoffIntervalSeconds > 60) {
+		errors.push({
+			field: 'backoffIntervalSeconds',
+			message: 'Backoff Interval must be between 1 and 60 seconds.'
+		});
+	}
+
 	// Validate file types for acts
 	for (const act of formData.acts) {
 		if (act.actFile && !isValidTextFile(act.actFile)) {

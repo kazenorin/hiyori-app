@@ -1,24 +1,19 @@
 // Main import orchestrator coordinating all import steps
 
-import { createStory, deleteStory } from '$lib/db/stories';
-import { createAct, deleteAct } from '$lib/db/acts';
-import { createActLine, addMessageToLine, deleteActLine, deleteLineEntries } from '$lib/db/act-lines';
-import { createMessage, deleteMessage } from '$lib/db/messages';
-import { resolveStoryFolder } from '$lib/fs/story-folders';
-import { deleteStoryFolder } from '$lib/db/story-folders';
-import { writeTextFile, mkdir, BaseDirectory } from '@tauri-apps/plugin-fs';
-import { loadStories } from '$lib/stores/stories.svelte';
-import { toKebabCase } from '$lib/utils/string';
-import type {
-	ImportFormData,
-	ImportResult,
-	ImportProgressUpdate,
-	ParsedMessage,
-} from './types';
-import type { RetryConfig } from '$lib/ai/chat-stream';
-import { parseTranscriptFile } from './transcript-parsers';
-import { generateActFromCards, formatIntoScenes } from './act-generator';
-import { runGameDataDetection } from './game-data-detector';
+import {createStory, deleteStory} from '$lib/db/stories';
+import {createAct, deleteAct} from '$lib/db/acts';
+import {addMessageToLine, createActLine, deleteActLine, deleteLineEntries} from '$lib/db/act-lines';
+import {createMessage, deleteMessage} from '$lib/db/messages';
+import {resolveStoryFolder} from '$lib/fs/story-folders';
+import {deleteStoryFolder} from '$lib/db/story-folders';
+import {BaseDirectory, mkdir, writeTextFile} from '@tauri-apps/plugin-fs';
+import {loadStories} from '$lib/stores/stories.svelte';
+import {toKebabCase} from '$lib/utils/string';
+import type {ImportFormData, ImportProgressUpdate, ImportResult, ParsedMessage,} from './types';
+import type {RetryConfig} from '$lib/ai/chat-stream';
+import {parseTranscriptFile} from './transcript-parsers';
+import {formatIntoScenes, generateActFromCards} from './act-generator';
+import {runGameDataDetection} from './game-data-detector';
 import type {StreamState} from "$lib/ai/chat-callbacks";
 
 // === Progress Callback Type ===
@@ -274,7 +269,9 @@ async function processTranscriptAct(
 		skipOptionalMalformed
 	);
 
-	log(`Parsed ${parsedTranscript.messages.length} messages (${parsedTranscript.format} format)`);
+	const parsedMessages = [...parsedTranscript.messages];
+
+	log(`Parsed ${parsedMessages.length} messages (${parsedTranscript.format} format)`);
 
 	// Run game data detection on assistant messages lacking game data
 	const missingGameData = parsedTranscript.messages.filter(
@@ -290,11 +287,11 @@ async function processTranscriptAct(
 		log(`Detecting game data for ${missingGameData} messages...`);
 
 		const detectionResult = await runGameDataDetection(
-			parsedTranscript.messages,
+			parsedMessages,
 			retryConfig,
 			log,
 			(msgIndex, state) => {
-				const consoleOutput = !!state.content ? state.content : state.reasoning
+				const consoleOutput = !!state.content ? state.content : state.reasoning;
 				onProgress({
 					phase: 'generating-game-data',
 					message: `Generating GameData[${msgIndex}]...`,
@@ -311,6 +308,18 @@ async function processTranscriptAct(
 			}
 		);
 
+		// Use the updated messages with detected game data
+		for (const result of detectionResult.results) {
+			if (result.gameData) {
+				const originalParsedMessage = parsedMessages[result.messageIndex];
+				parsedMessages[result.messageIndex] = {
+					...originalParsedMessage,
+					gameData: result.gameData,
+					metadata: result.metadata ?? originalParsedMessage.metadata,
+				}
+			}
+		}
+
 		const detected = detectionResult.results.filter(r => r.gameData).length;
 		const llmCalls = detectionResult.llmCallsMade;
 		log(`Game data detection: ${detected}/${missingGameData} messages processed (${llmCalls} LLM calls)`);
@@ -318,7 +327,7 @@ async function processTranscriptAct(
 
 	// Create messages and add to act line
 	const messageIds = await createMessagesFromParsed(
-		parsedTranscript.messages,
+		parsedMessages,
 		actLineId,
 		log,
 		(msg) => {
@@ -422,11 +431,6 @@ async function generateActFromLLM(
 		}
 	);
 	createdResources.messageIds.push(...genMessageIds);
-
-	// Save combined content as act card
-	const combinedContent = processedScenes.map((s) => s.content).join('\n\n---\n\n');
-	await saveActCard(storyFolder, actNumber, combinedContent);
-	log(`Act card saved: act-${actNumber}/act-card.md`);
 }
 
 // === Helper Functions ===
@@ -562,27 +566,6 @@ function extractCharacterName(content: string): string | null {
 	return null;
 }
 
-async function extractActNameFromCard(actCard: string, retryCount: number): Promise<string | null> {
-	// Try to extract act name from act card content
-	// Look for patterns like "## Act 1 - Name" or "Title: ..."
-	const titleMatch = actCard.match(/^#+\s*(?:Act\s*\d+\s*[-:]\s*)?(.+)$/m);
-	if (titleMatch) {
-		const name = titleMatch[1].trim();
-		if (name && name.length < 100) {
-			return name;
-		}
-	}
-
-	const actHeaderMatch = actCard.match(/##\s*Act\s*\d+\s*[-–—]\s*(.+)$/m);
-	if (actHeaderMatch) {
-		return actHeaderMatch[1].trim();
-	}
-
-	// Fallback: Use LLM to extract name
-	// For now, return null - could implement LLM extraction if needed
-	return null;
-}
-
 interface CreatedResources {
 	storyId: string | null;
 	storyFolder: string | null;
@@ -622,8 +605,9 @@ async function cleanupImport(
 	}
 
 	// Delete story folder (files)
-	if (resources.storyFolder) {
-		await safeDelete(() => deleteStoryFolder(resources.storyId!), `story folder`);
+	if (resources.storyFolder && resources.storyId) {
+		const storyId = resources.storyId;
+		await safeDelete(() => deleteStoryFolder(storyId), `story folder`);
 	}
 
 	// Delete story (must be last - it's the root)

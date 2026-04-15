@@ -1,5 +1,5 @@
 import {executeStream, type StreamResultMetadata} from "./streaming";
-import {getMainProviderConfig} from "../stores/settings.svelte";
+import {getMainProviderConfig, type ProviderConfig} from "../stores/settings.svelte";
 import {createStreamAccumulator, type StreamAccumulator, type StreamState} from "./chat-callbacks";
 import {createModel} from "./provider";
 import {isAuthError, sleep} from "$lib/utils/async";
@@ -18,6 +18,17 @@ export interface MessageMetadata {
     durationMs: number;
 }
 
+export function buildMetadata(result: StreamResultMetadata, model?: string): MessageMetadata {
+    return {
+        model: model ?? 'unknown',
+        finishReason: result.finishReason,
+        promptTokens: result.usage.inputTokens,
+        completionTokens: result.usage.outputTokens,
+        totalTokens: result.usage.totalTokens,
+        durationMs: result.durationMs
+    };
+}
+
 /**
  * Core streaming helper for chat responses.
  * Handles streaming, metadata capture, persistence, and error handling.
@@ -28,12 +39,12 @@ export async function streamChatResponse(
     history: { role: "user" | "assistant"; content: string }[],
     abortSignal: AbortSignal,
     onStateUpdate: (state: StreamState) => void,
+    providerConfig: ProviderConfig | undefined
 ): Promise<StreamAccumulator> {
-    const config = getMainProviderConfig();
-    if (!config) {
+    if (!providerConfig) {
         throw new Error('No main provider configured. Please set one in Settings.');
     }
-    const model = createModel(config);
+    const model = createModel(providerConfig);
 
     // Create stream accumulator with parser chain integrated
     const accumulator = createStreamAccumulator(onStateUpdate);
@@ -66,7 +77,8 @@ export async function streamWithRetry(
     messages: { role: 'user' | 'assistant'; content: string }[],
     retryConfig: RetryConfig,
     onProgress: (state: StreamState) => void,
-    onError: (err: Error, attempt: number) => void
+    onError: (err: Error, attempt: number) => void,
+    providerConfig: ProviderConfig | undefined = getMainProviderConfig(),
 ): Promise<StreamAccumulator> {
     const abortController = new AbortController();
     let lastError: Error | null = null;
@@ -77,7 +89,8 @@ export async function streamWithRetry(
                 systemPrompt,
                 messages,
                 abortController.signal,
-                onProgress
+                onProgress,
+                providerConfig
             );
         } catch (e) {
             lastError = e instanceof Error ? e : new Error(String(e));
