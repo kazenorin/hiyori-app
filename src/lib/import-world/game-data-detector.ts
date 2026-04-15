@@ -2,13 +2,18 @@
 // Pass 1: Traditional extraction from markdown headers/keywords
 // Pass 2: LLM-based extraction for remaining messages
 
-import type { Message, GameData } from '$lib/db/messages';
-import type { GameDataDetectionResult, GameDataExtractionResult, RetryConfig } from './types';
+import type { GameData } from '$lib/db/messages';
+import type {
+	ParsedMessage,
+	GameDataDetectionResult,
+	GameDataExtractionResult,
+	RetryConfig
+} from './types';
 import { generateText } from 'ai';
 import { createModel } from '$lib/ai/provider';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { loadSystemPrompt } from '$lib/fs/prompts';
-import { sleep } from '$lib/utils/async';
+import { sleep, isAuthError } from '$lib/utils/async';
 
 // === Pass 1: Traditional Extraction (Synchronous) ===
 
@@ -142,7 +147,7 @@ function cleanMarkdownFormatting(text: string): string {
  * Returns extraction results only for messages where game_data was extracted.
  */
 export async function extractGameDataWithLLM(
-	messages: Message[],
+	messages: ParsedMessage[],
 	indicesNeedingExtraction: number[],
 	retryConfig: RetryConfig,
 	choicesExtractionPrompt: string
@@ -156,7 +161,8 @@ export async function extractGameDataWithLLM(
 	const model = createModel(config);
 	const results: GameDataExtractionResult[] = [];
 
-	for (const msgIndex of indicesNeedingExtraction) {
+	for (let i = 0; i < indicesNeedingExtraction.length; i++) {
+		const msgIndex = indicesNeedingExtraction[i];
 		const msg = messages[msgIndex];
 		if (!msg || msg.role !== 'assistant') continue;
 
@@ -175,7 +181,7 @@ export async function extractGameDataWithLLM(
 		});
 
 		// Rate limit: small delay between LLM calls to avoid hitting API rate limits
-		if (indicesNeedingExtraction.indexOf(msgIndex) < indicesNeedingExtraction.length - 1) {
+		if (i < indicesNeedingExtraction.length - 1) {
 			await sleep(100);
 		}
 	}
@@ -206,6 +212,9 @@ async function retryLLMCall(
 			return parseLLMGameData(result.text);
 		} catch (e) {
 			lastError = e instanceof Error ? e : new Error(String(e));
+			if (isAuthError(lastError)) {
+				throw new Error('Authentication failed. Please check your API key in Settings.');
+			}
 
 			if (attempt < retryConfig.retryCount) {
 				await sleep(retryConfig.backoffIntervalSeconds * 1000 * (attempt + 1));
@@ -260,12 +269,14 @@ function parseGameDataObject(json: string): GameData | null {
 // === Full Pipeline ===
 
 /**
- * Run the complete game data detection pipeline on an array of messages.
- * Pass 1 runs synchronously, Pass 2 uses LLM for remaining messages.
- * Returns a combined result with all extractions.
+ * Run the complete game data detection pipeline on parsed messages.
+ * Pass 1 runs synchronously (markdown header parsing).
+ * Pass 2 uses LLM for remaining messages (only if API key is configured).
+ * Updates messages in-place with detected game data.
+ * Returns detection results and the number of LLM calls made.
  */
 export async function runGameDataDetection(
-	messages: Message[],
+	messages: ParsedMessage[],
 	retryConfig: RetryConfig,
 	choicesExtractionPrompt: string
 ): Promise<GameDataDetectionResult> {
@@ -290,6 +301,7 @@ export async function runGameDataDetection(
 
 		const gameData = extractGameDataTraditional(msg.content);
 		if (gameData) {
+			msg.gameData = gameData;
 			results.push({
 				messageIndex: i,
 				gameData,
@@ -309,6 +321,14 @@ export async function runGameDataDetection(
 			retryConfig,
 			choicesExtractionPrompt
 		);
+
+		// Apply detected game data back to the parsed messages
+		for (const result of llmResults) {
+			if (result.gameData) {
+				messages[result.messageIndex].gameData = result.gameData;
+			}
+		}
+
 		results.push(...llmResults);
 		llmCallsMade = llmResults.filter((r) => r.source === 'llm').length;
 	}

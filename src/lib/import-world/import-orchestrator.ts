@@ -19,6 +19,8 @@ import type {
 } from './types';
 import { parseTranscriptFile } from './transcript-parsers';
 import { generateActFromCards, formatIntoScenes } from './act-generator';
+import { runGameDataDetection } from './game-data-detector';
+import { loadChoicesExtractionPrompt } from '$lib/fs/prompts';
 
 // === Progress Callback Type ===
 
@@ -195,6 +197,7 @@ async function processActs(
 				storyFolder,
 				actNumber,
 				formData.skipOptionalMalformed,
+				retryConfig,
 				log,
 				onProgress,
 				createdResources
@@ -259,6 +262,7 @@ async function processTranscriptAct(
 	storyFolder: string,
 	actNumber: number,
 	skipOptionalMalformed: boolean,
+	retryConfig: RetryConfig,
 	log: (msg: string) => void,
 	onProgress: ProgressCallback,
 	createdResources: CreatedResources
@@ -273,6 +277,31 @@ async function processTranscriptAct(
 	);
 
 	log(`Parsed ${parsedTranscript.messages.length} messages (${parsedTranscript.format} format)`);
+
+	// Run game data detection on assistant messages lacking game data
+	const assistantCount = parsedTranscript.messages.filter(m => m.role === 'assistant').length;
+	const missingGameData = parsedTranscript.messages.filter(
+		m => m.role === 'assistant' && !m.gameData
+	).length;
+
+	if (missingGameData > 0) {
+		onProgress({
+			phase: 'saving-messages',
+			message: `Detecting game data for ${missingGameData} messages...`,
+			consoleOutput: ''
+		});
+
+		const choicesExtractionPrompt = await loadChoicesExtractionPrompt();
+		const detectionResult = await runGameDataDetection(
+			parsedTranscript.messages,
+			retryConfig,
+			choicesExtractionPrompt
+		);
+
+		const detected = detectionResult.results.filter(r => r.gameData).length;
+		const llmCalls = detectionResult.llmCallsMade;
+		log(`Game data detection: ${detected}/${missingGameData} messages processed (${llmCalls} LLM calls)`);
+	}
 
 	// Create messages and add to act line
 	const messageIds = await createMessagesFromParsed(
