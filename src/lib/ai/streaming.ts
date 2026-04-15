@@ -67,6 +67,7 @@ export async function executeStream(
 		callbacks.onComplete({
 			finishReason,
 			usage: {
+				...usage,
 				inputTokens: usage.inputTokens ?? 0,
 				outputTokens: usage.outputTokens ?? 0,
 				totalTokens: usage.totalTokens ?? 0

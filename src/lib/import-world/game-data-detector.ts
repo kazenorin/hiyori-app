@@ -2,38 +2,36 @@
 // Pass 1: Traditional extraction from markdown headers/keywords
 // Pass 2: LLM-based extraction for remaining messages
 
-import type { GameData } from '$lib/db/messages';
-import type {
-	ParsedMessage,
-	GameDataDetectionResult,
-	GameDataExtractionResult,
-	RetryConfig
-} from './types';
-import { generateText } from 'ai';
-import { createModel } from '$lib/ai/provider';
-import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { loadSystemPrompt } from '$lib/fs/prompts';
-import { sleep, isAuthError } from '$lib/utils/async';
+import type {GameData} from '$lib/db/messages';
+import type {GameDataDetectionResult, GameDataExtractionResult, ParsedMessage} from './types';
+import {type RetryConfig, streamWithRetry} from '$lib/ai/chat-stream';
+import {loadChoicesExtractionPrompt, loadSystemPrompt} from '$lib/fs/prompts';
+import {sleep} from '$lib/utils/async';
+import type {StreamState} from "$lib/ai/chat-callbacks";
 
 // === Pass 1: Traditional Extraction (Synchronous) ===
 
 /**
- * Extract game data from message content by detecting markdown headers
- * containing decision-related keywords and parsing list items below them.
+ * Extract game data from message content by detecting decision markers.
+ * Supports two marker patterns:
+ *   1. Markdown headers with decision keywords (## Decision, ### Choices, etc.)
+ *   2. Bold bracket markers (**[DECISION POINT]**, **[CHOICES]**, etc.)
+ * Supports list items in plain and blockquote form (> 1., > *, etc.)
  */
 export function extractGameDataTraditional(content: string): GameData | null {
-	// Split on one or more leading # characters (markdown headers)
-	const sections = content.split(/^(?=#{1,6}\s)/m);
+	// Split on markdown headers OR bold bracket markers containing decision keywords
+	// Pattern 1: #{1,6} headers
+	// Pattern 2: **[...]** where brackets contain decision keywords
+	const sections = content.split(/^(?=(?:#{1,6}\s|\*\*\[.*?(?:decision|choice|option).*?\]\*\*))/im);
 
 	for (const section of sections) {
 		const lines = section.split('\n');
 		if (lines.length === 0) continue;
 
-		// Check if header matches decision keywords
-		const header = lines[0].toLowerCase();
+		const header = lines[0];
 		if (!isDecisionHeader(header)) continue;
 
-		// Extract text between header and first list item
+		// Extract text between header and first list item → worldState
 		let worldState = '';
 		const decisions: string[] = [];
 		let foundFirstListItem = false;
@@ -51,7 +49,6 @@ export function extractGameDataTraditional(content: string): GameData | null {
 					decisions.push(cleaned);
 				}
 			} else if (!foundFirstListItem) {
-				// Text between header and first list item → worldState
 				worldState += (worldState ? ' ' : '') + trimmed;
 			}
 		}
@@ -70,39 +67,55 @@ export function extractGameDataTraditional(content: string): GameData | null {
 
 /**
  * Check if a header line contains decision-related keywords.
+ * Handles:
+ *   - Markdown headers: ## Decision, ### Choices, etc.
+ *   - Bold bracket markers: **[DECISION POINT]**, **[CHOICES]**, etc.
  */
 function isDecisionHeader(header: string): boolean {
-	// Match keywords: decision, decisions, choice, choices, option, options
-	// Also match pattern: what ... do?
+	// Strip common prefix markers for detection
+	// Keep the content inside **bold** or just the raw text
 	const keywords = ['decision', 'decisions', 'choice', 'choices', 'option', 'options'];
-	const strippedHeader = header.replace(/^#+\s*/, '');
 
+	// For "**[DECISION POINT]**" style headers, extract content between **[ and ]**
+	const bracketMatch = header.match(/^\**\[(.+?)\]\*\*|^(.+)$/i);
+	const content = bracketMatch ? (bracketMatch[1] ?? bracketMatch[2] ?? '') : header;
+
+	// Check stripped content for keywords
+	const lowerContent = content.toLowerCase();
 	for (const keyword of keywords) {
-		if (strippedHeader.includes(keyword)) return true;
+		if (lowerContent.includes(keyword)) return true;
 	}
 
 	// Match "what ... do?" pattern
-	if (/what.+do\?/.test(strippedHeader)) return true;
-
-	return false;
+	return /what.+do\?/i.test(lowerContent);
 }
 
 /**
- * Check if a trimmed line is a list item (bullet, dash, or numbered).
+ * Check if a trimmed line is a list item.
+ * Supports:
+ *   - Bullet lists: *, -
+ *   - Numbered lists: 1., 2)
+ *   - Blockquote prefixed: > 1., > *, > -
  */
 function isListItem(trimmed: string): boolean {
+	// Remove leading blockquote marker if present
+	const withoutQuote = trimmed.replace(/^>\s*/, '');
+
 	// Bullet list: starts with * or -
-	if (/^[*-]\s/.test(trimmed)) return true;
+	if (/^[*-]\s/.test(withoutQuote)) return true;
 	// Numbered list: starts with digit followed by . or )
-	if (/^\d+[.)]\s/.test(trimmed)) return true;
-	return false;
+	return /^\d+[.)]\s/.test(withoutQuote);
 }
 
 /**
  * Clean a list item line by removing markdown formatting and preserving content.
+ * Handles blockquote prefixed items (> 1., > *, etc.)
  */
 function cleanListItem(line: string): string {
 	let cleaned = line;
+
+	// Remove leading blockquote marker
+	cleaned = cleaned.replace(/^>\s*/, '');
 
 	// Remove list marker and leading whitespace
 	cleaned = cleaned.replace(/^[*-]\s+/, '');
@@ -150,15 +163,11 @@ export async function extractGameDataWithLLM(
 	messages: ParsedMessage[],
 	indicesNeedingExtraction: number[],
 	retryConfig: RetryConfig,
-	choicesExtractionPrompt: string
+	onProgress: (msgIndex: number, state: StreamState) => void,
+	onError: (msgIndex: number, err: Error, attempt: number) => void
 ): Promise<GameDataExtractionResult[]> {
-	const config = getMainProviderConfig();
-	if (!config?.apiKey) {
-		return [];
-	}
-
 	const systemPrompt = await loadSystemPrompt();
-	const model = createModel(config);
+	const choicesExtractionPrompt = await loadChoicesExtractionPrompt();
 	const results: GameDataExtractionResult[] = [];
 
 	for (let i = 0; i < indicesNeedingExtraction.length; i++) {
@@ -166,13 +175,22 @@ export async function extractGameDataWithLLM(
 		const msg = messages[msgIndex];
 		if (!msg || msg.role !== 'assistant') continue;
 
-		const gameData = await retryLLMCall(
-			model,
+		const acc = await streamWithRetry(
 			systemPrompt,
-			msg.content,
-			choicesExtractionPrompt,
-			retryConfig
-		);
+			[
+				{role: 'user', content: choicesExtractionPrompt},
+				{role: 'user', content: msg.content}
+			],
+			retryConfig,
+			(state) => {
+				onProgress(msgIndex, state);
+			},
+			(err, attempt) => {
+				onError(msgIndex, err, attempt);
+			}
+		)
+
+		const gameData = acc.state.gameData;
 
 		results.push({
 			messageIndex: msgIndex,
@@ -189,83 +207,6 @@ export async function extractGameDataWithLLM(
 	return results;
 }
 
-async function retryLLMCall(
-	model: ReturnType<typeof createModel>,
-	systemPrompt: string,
-	messageContent: string,
-	choicesExtractionPrompt: string,
-	retryConfig: RetryConfig
-): Promise<GameData | null> {
-	let lastError: Error | null = null;
-
-	for (let attempt = 0; attempt <= retryConfig.retryCount; attempt++) {
-		try {
-			const result = await generateText({
-				model,
-				system: systemPrompt,
-				messages: [
-					{ role: 'assistant', content: messageContent },
-					{ role: 'user', content: choicesExtractionPrompt }
-				]
-			});
-
-			return parseLLMGameData(result.text);
-		} catch (e) {
-			lastError = e instanceof Error ? e : new Error(String(e));
-			if (isAuthError(lastError)) {
-				throw new Error('Authentication failed. Please check your API key in Settings.');
-			}
-
-			if (attempt < retryConfig.retryCount) {
-				await sleep(retryConfig.backoffIntervalSeconds * 1000 * (attempt + 1));
-			}
-		}
-	}
-
-	return null;
-}
-
-/**
- * Parse LLM response text to extract GameData JSON.
- */
-function parseLLMGameData(text: string): GameData | null {
-	// Try to extract JSON from the response
-	// Look for ```json blocks first
-	const jsonBlockMatch = text.match(/```json\s*([\s\S]*?)```/);
-	if (jsonBlockMatch) {
-		return parseGameDataObject(jsonBlockMatch[1]);
-	}
-
-	// Try to find raw JSON object in the text
-	const jsonObjectMatch = text.match(/\{[\s\S]*"worldState"[\s\S]*"decisions"[\s\S]*\}/);
-	if (jsonObjectMatch) {
-		return parseGameDataObject(jsonObjectMatch[0]);
-	}
-
-	return null;
-}
-
-function parseGameDataObject(json: string): GameData | null {
-	try {
-		const parsed = JSON.parse(json);
-		if (
-			parsed &&
-			typeof parsed === 'object' &&
-			typeof parsed.worldState === 'string' &&
-			Array.isArray(parsed.decisions) &&
-			parsed.decisions.every((d: unknown) => typeof d === 'string')
-		) {
-			return {
-				worldState: parsed.worldState,
-				decisions: parsed.decisions
-			};
-		}
-		return null;
-	} catch {
-		return null;
-	}
-}
-
 // === Full Pipeline ===
 
 /**
@@ -278,7 +219,9 @@ function parseGameDataObject(json: string): GameData | null {
 export async function runGameDataDetection(
 	messages: ParsedMessage[],
 	retryConfig: RetryConfig,
-	choicesExtractionPrompt: string
+	log: (msg: string) => void,
+	onProgress: (msgIndex: number, state: StreamState) => void,
+	onError: (msgIndex: number, err: Error, attempt: number) => void
 ): Promise<GameDataDetectionResult> {
 	const results: GameDataExtractionResult[] = [];
 	const indicesNeedingLLM: number[] = [];
@@ -307,6 +250,7 @@ export async function runGameDataDetection(
 				gameData,
 				source: 'traditional'
 			});
+			log(`Generated GameData[${i}] using traditional method.`)
 		} else {
 			indicesNeedingLLM.push(i);
 		}
@@ -319,7 +263,8 @@ export async function runGameDataDetection(
 			messages,
 			indicesNeedingLLM,
 			retryConfig,
-			choicesExtractionPrompt
+			onProgress,
+			onError
 		);
 
 		// Apply detected game data back to the parsed messages

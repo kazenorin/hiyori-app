@@ -6,6 +6,7 @@ import * as dbActLines from '$lib/db/act-lines';
 import {logMainChat} from '$lib/logging/chat-logger';
 import {type StreamState} from '$lib/ai/chat-callbacks';
 import {type MessageMetadata, streamChatResponse} from "./chat-stream";
+import type {StreamResultMetadata} from "$lib/ai/streaming";
 
 export interface Message {
 	id: string;
@@ -155,8 +156,7 @@ export async function sendMessage(actLineId: string, message: {
 			.map((m) => toHistoryMessage(m));
 		const history = [...narrationMsg, ...existingMsgs];
 
-		const result = await Promise.all([
-			logMainChat({systemPrompt, messages: history}),
+		const [resultMetadata] = await Promise.all([
 			streamChatResponse(systemPrompt, history, abortController!.signal,
 				(state: StreamState) => {
 					messages[messageIdx] = {
@@ -166,9 +166,12 @@ export async function sendMessage(actLineId: string, message: {
 						gameData: state.gameData ?? messages[messageIdx].gameData
 					};
 				}
-			)
+			).then((acc) => acc.resultMetadata),
+			logMainChat({systemPrompt, messages: history})
 		])
-		messages[messageIdx].metadata = result[1];
+
+		// Update message with accumulated content and final metadata
+		messages[messageIdx].metadata = buildMetadata(resultMetadata);
 
 		// Persist with accumulated content (not result.content)
 		await persistMessage(actLineId, messages[messageIdx]);
@@ -181,10 +184,86 @@ export async function sendMessage(actLineId: string, message: {
 }
 
 function toHistoryMessage(message: Message) {
-	const gameDataContent = (message.gameData != null) ? `\n\n\`\`\`json
-${JSON.stringify(message.gameData, null, 2)}
-\`\`\`\n` : null
-	return {role: message.role, content: gameDataContent ? message.content + gameDataContent : message.content};
+	const gameDataContent = `\n\n\`\`\`json
+${JSON.stringify(message.gameData ? message.gameData : placeholderContent(), null, 2)}
+\`\`\`\n`
+	return {role: message.role, content: message.content + gameDataContent};
+}
+
+function randomItem<T>(items: readonly T[]): T {
+	return items[Math.floor(Math.random() * items.length)]
+}
+
+// Randomized history for placeholder content so that to encourage the LLM to actually offer options
+function placeholderContent(): GameData {
+	return {
+		worldState: randomWorldStateMessage(),
+		decisions: [1, 2, 3, 4].map((i) => randomPositionalDecisions(i))
+	}
+}
+
+function randomWorldStateMessage(): string {
+	const intros = [
+		"Refer to",
+		"Check",
+		"Look at",
+		"Review",
+		"Consult",
+		"See",
+		"Use",
+		"Read"
+	] as const
+
+	const subjects = [
+		"the chat history",
+		"the conversation above",
+		"the messages above",
+		"the earlier conversation",
+		"the discussion above",
+		"the story so far",
+		"the story above",
+		"what was said earlier",
+		"the earlier messages",
+		"the previous context"
+	] as const
+
+	const endings = [
+		".",
+		" for context.",
+		" for details.",
+		" for reference.",
+		" to understand the situation.",
+		" to see what happened before."
+	] as const
+
+	return `${randomItem(intros)} ${randomItem(subjects)}${randomItem(endings)}`
+}
+
+function randomPositionalDecisions(i: number): string {
+	return randomItem([
+		`Option ${i}.`,
+		`Select option ${i}.`,
+		`Pick option ${i}.`,
+		`Go with option ${i}.`,
+		`Option ${i} sounds right.`,
+		`I will choose option ${i}.`,
+		`I want to select option ${i}.`,
+		`My choice is option ${i}.`,
+		`For this decision, choose option ${i}.`,
+		`Option ${i} will be selected.`
+	] as const)
+}
+
+function buildMetadata(result: StreamResultMetadata): MessageMetadata {
+	const config = getMainProviderConfig();
+	return {
+		model: config?.model ?? 'unknown',
+		finishReason: result.finishReason,
+		promptTokens: result.usage.inputTokens,
+		completionTokens: result.usage.outputTokens,
+		totalTokens: result.usage.totalTokens,
+		durationMs: result.durationMs
+	};
 }
 
 export function stopStreaming(): void {

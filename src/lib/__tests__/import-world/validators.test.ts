@@ -134,13 +134,13 @@ describe('validateImportForm', () => {
 	});
 
 	describe('character validation', () => {
-		it('requires character card file when character section is added', () => {
+		it('warns but does not error when character card is missing', () => {
 			const result = validateImportForm(makeFormData({
 				worldFile: createFile('world.md'),
 				characters: [makeCharacter()]
 			}));
-			expect(result.isValid).toBe(false);
-			expect(result.errors.some((e) => e.message.includes('Character card file is required'))).toBe(true);
+			expect(result.isValid).toBe(true);
+			expect(result.warnings.some((w) => w.message.includes('Character card file is missing'))).toBe(true);
 		});
 
 		it('passes when character card is provided', () => {

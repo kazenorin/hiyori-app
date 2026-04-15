@@ -66,7 +66,3 @@ At the very end of your response, you must include a Markdown JSON code block co
 ```
 
 ***
-
-**WORLD SETTING:**
-
-***

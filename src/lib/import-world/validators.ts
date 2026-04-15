@@ -43,12 +43,12 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		}
 	}
 
-	// Validate character cards
+	// Warn about missing character cards (don't error - let user proceed with warning)
 	for (const character of formData.characters) {
 		if (!character.cardFile) {
-			errors.push({
+			warnings.push({
 				field: `character-${character.id}`,
-				message: 'Character card file is required when a character section is added.'
+				message: 'Character card file is missing — character will be skipped during import.'
 			});
 		}
 	}

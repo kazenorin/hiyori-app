@@ -1,8 +1,8 @@
 import {getMainProviderConfig} from '$lib/stores/settings.svelte';
 import {loadWorldBuilderSystemPrompt, loadWorldTemplate} from '$lib/fs/prompts';
 import {generateWorldBuilderLogFilename, logWorldBuilderChat} from '$lib/logging/chat-logger';
-import {type StreamState} from "$lib/ai/chat-callbacks";
-import {type MessageMetadata, streamChatResponse} from "./chat-stream";
+import {type StreamAccumulator, type StreamState} from "$lib/ai/chat-callbacks";
+import {streamChatResponse} from "./chat-stream";
 
 export interface WorldBuilderMessage {
 	id: string;
@@ -210,7 +210,7 @@ async function streamWorldBuilderChat(
 	history: { role: "user" | "assistant"; content: string }[],
 	messageIdx: number,
 	abortSignal: AbortSignal
-): Promise<MessageMetadata> {
+): Promise<StreamAccumulator> {
 	const fullSystemPrompt = buildFullSystemPrompt();
 	const result = await Promise.all([
 		logWorldBuilderChat({

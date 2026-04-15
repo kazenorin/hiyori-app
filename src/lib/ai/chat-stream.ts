@@ -1,7 +1,13 @@
 import {executeStream, type StreamResultMetadata} from "./streaming";
 import {getMainProviderConfig} from "../stores/settings.svelte";
-import {createStreamAccumulator, type StreamState} from "./chat-callbacks";
+import {createStreamAccumulator, type StreamAccumulator, type StreamState} from "./chat-callbacks";
 import {createModel} from "./provider";
+import {isAuthError, sleep} from "$lib/utils/async";
+
+export interface RetryConfig {
+    retryCount: number;
+    backoffIntervalSeconds: number;
+}
 
 export interface MessageMetadata {
     model: string;
@@ -22,7 +28,7 @@ export async function streamChatResponse(
     history: { role: "user" | "assistant"; content: string }[],
     abortSignal: AbortSignal,
     onStateUpdate: (state: StreamState) => void,
-): Promise<MessageMetadata> {
+): Promise<StreamAccumulator> {
     const config = getMainProviderConfig();
     if (!config) {
         throw new Error('No main provider configured. Please set one in Settings.');
@@ -48,19 +54,43 @@ export async function streamChatResponse(
         accumulator.callbacks
     );
 
-    // Update message with accumulated content and final metadata
-    const resultMetadata = await accumulator.resultMetadata;
-    return buildMetadata(resultMetadata)
+    return accumulator
 }
 
-function buildMetadata(result: StreamResultMetadata): MessageMetadata {
-    const config = getMainProviderConfig();
-    return {
-        model: config?.model ?? 'unknown',
-        finishReason: result.finishReason,
-        promptTokens: result.usage.inputTokens,
-        completionTokens: result.usage.outputTokens,
-        totalTokens: result.usage.totalTokens,
-        durationMs: result.durationMs
-    };
+/**
+ * Execute a streaming LLM call with retry logic.
+ * Extracts the duplicated retry pattern from generateActFromCards and formatIntoScenes.
+ */
+export async function streamWithRetry(
+    systemPrompt: string,
+    messages: { role: 'user' | 'assistant'; content: string }[],
+    retryConfig: RetryConfig,
+    onProgress: (state: StreamState) => void,
+    onError: (err: Error, attempt: number) => void
+): Promise<StreamAccumulator> {
+    const abortController = new AbortController();
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= retryConfig.retryCount; attempt++) {
+        try {
+            return await streamChatResponse(
+                systemPrompt,
+                messages,
+                abortController.signal,
+                onProgress
+            );
+        } catch (e) {
+            lastError = e instanceof Error ? e : new Error(String(e));
+            if (isAuthError(lastError)) {
+                throw new Error('Authentication failed. Please check your API key in Settings.');
+            }
+            onError(lastError, attempt + 1);
+
+            if (attempt < retryConfig.retryCount) {
+                await sleep(retryConfig.backoffIntervalSeconds * 1000 * (attempt + 1));
+            }
+        }
+    }
+
+    throw lastError;
 }

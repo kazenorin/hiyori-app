@@ -98,6 +98,9 @@
 						{#each store.progressUpdates as update}
 							<p class="text-xs text-surface-500">
 								<span class="font-mono">[{update.phase}]</span> {update.message}
+								{#if !!update.repeatedMessageCounter}
+									<span class="font-mono">x{update.repeatedMessageCounter}</span>
+								{/if}
 							</p>
 						{/each}
 					</div>
@@ -105,7 +108,8 @@
 			</section>
 		{/if}
 
-		<!-- Validation Errors -->
+		<!-- Form Sections - Hidden During Import -->
+		{#if !store.isImporting}
 		{#if store.validationResult && store.validationResult.errors.length > 0}
 			<div class="card p-4 border border-error-500 bg-error-50 dark:bg-error-950 space-y-2">
 				<h3 class="text-sm font-semibold text-error-700 dark:text-error-400">Validation Errors</h3>
@@ -342,6 +346,7 @@
 				</label>
 			</div>
 		</section>
+		{/if}
 
 		<!-- Submit -->
 		<div class="flex justify-end gap-3 pb-8">
@@ -366,7 +371,7 @@
 					class="btn variant-filled"
 					type="button"
 					onclick={handleImport}
-					disabled={!store.canSubmit}
+					disabled={store.isImporting}
 				>
 					{store.isImporting ? 'Importing...' : 'Import Story'}
 				</button>

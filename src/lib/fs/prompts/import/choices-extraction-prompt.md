@@ -1,4 +1,4 @@
-Generate the world state and decisions that the player can make based on the context from your previous message.
+Generate the world state and decisions that the player can make based on the context of my next message.
 
 If the message already contains decisions, choices, or options, use them and do not generate new ones.
 

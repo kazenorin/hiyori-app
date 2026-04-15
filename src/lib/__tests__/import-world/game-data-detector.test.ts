@@ -231,4 +231,163 @@ Choose wisely:
 		expect(result).not.toBeNull();
 		expect(result!.decisions).toEqual(['Fight', 'Flee']);
 	});
+
+	// === Bold bracket marker patterns ===
+
+	it('extracts from **[DECISION POINT]** bold bracket marker', () => {
+		const content = `Some story narrative here.
+
+**[DECISION POINT]**
+
+It's getting late, what should you do?
+
+> 1. Go to bed.
+> 2. Just one more turn.
+> 3. Call a friend.
+> 4. Procrastinate.
+> 5. *(Free choice - describe what you will do)*`;
+
+		const result = extractGameDataTraditional(content);
+		expect(result).not.toBeNull();
+		expect(result!.decisions).toHaveLength(5);
+		expect(result!.decisions[0]).toBe('Go to bed.');
+		expect(result!.decisions[4]).toBe('Free choice - describe what you will do');
+		expect(result!.worldState).toBe("It's getting late, what should you do?");
+	});
+
+	it('extracts from **[CHOICES]** bold bracket marker', () => {
+		const content = `The guard blocks the path.
+
+**[CHOICES]**
+
+What do you do?
+
+> * Bribe the guard
+> * Find another way
+> * Fight through`;
+
+		const result = extractGameDataTraditional(content);
+		expect(result).not.toBeNull();
+		expect(result!.decisions).toHaveLength(3);
+		expect(result!.decisions[0]).toBe('Bribe the guard');
+		expect(result!.worldState).toBe('What do you do?');
+	});
+
+	it('extracts from **[OPTIONS]** bold bracket marker with plain numbered list', () => {
+		const content = `**[OPTIONS]**
+
+Pick your path:
+
+1. Left corridor
+2. Right corridor
+3. Stairway`;
+
+		const result = extractGameDataTraditional(content);
+		expect(result).not.toBeNull();
+		expect(result!.decisions).toHaveLength(3);
+		expect(result!.decisions).toEqual(['Left corridor', 'Right corridor', 'Stairway']);
+	});
+
+	it('extracts from **[DECISION]** marker with blockquote bullet list', () => {
+		const content = `The room is silent.
+
+**[DECISION]**
+
+> - Open the door quietly
+> - Knock and announce yourself
+> - Wait and listen`;
+
+		const result = extractGameDataTraditional(content);
+		expect(result).not.toBeNull();
+		expect(result!.decisions).toHaveLength(3);
+		expect(result!.worldState).toBe('');
+	});
+
+	// === Blockquote list item patterns ===
+
+	it('handles blockquote numbered list with markdown headers', () => {
+		const content = `## Decisions
+
+The bridge is collapsing!
+
+> 1. Sprint across
+> 2. Jump to the ledge
+> 3. Hang and climb down`;
+
+		const result = extractGameDataTraditional(content);
+		expect(result).not.toBeNull();
+		expect(result!.decisions).toHaveLength(3);
+		expect(result!.worldState).toBe('The bridge is collapsing!');
+	});
+
+	it('handles blockquote bullet list with markdown headers', () => {
+		const content = `### Choices
+
+> * Cast fireball
+> * Heal ally
+> * Retreat`;
+
+		const result = extractGameDataTraditional(content);
+		expect(result).not.toBeNull();
+		expect(result!.decisions).toHaveLength(3);
+	});
+
+	it('handles mixed blockquote and plain list items', () => {
+		const content = `## Options
+
+Choose wisely:
+
+> 1. Accept the quest
+2. Decline politely
+> 3. Ask for more details`;
+
+		const result = extractGameDataTraditional(content);
+		expect(result).not.toBeNull();
+		expect(result!.decisions).toHaveLength(3);
+	});
+
+	it('handles parenthesized numbered list in blockquote', () => {
+		const content = `**[DECISION POINT]**
+
+What now?
+
+> 1) Run
+> 2) Hide
+> 3) Fight`;
+
+		const result = extractGameDataTraditional(content);
+		expect(result).not.toBeNull();
+		expect(result!.decisions).toEqual(['Run', 'Hide', 'Fight']);
+	});
+
+	it('strips italic from blockquote list items', () => {
+		const content = `**[CHOICES]**
+
+> * *Sneak past the guards*
+> * *Create a diversion*
+> * *Climb the wall*`;
+
+		const result = extractGameDataTraditional(content);
+		expect(result).not.toBeNull();
+		expect(result!.decisions[0]).toBe('Sneak past the guards');
+	});
+
+	it('returns null when bold bracket marker has fewer than 2 decisions', () => {
+		const content = `**[DECISION POINT]**
+
+> * Only one choice`;
+
+		const result = extractGameDataTraditional(content);
+		expect(result).toBeNull();
+	});
+
+	it('returns null when bold bracket has no decision keyword', () => {
+		const content = `**[SCENE BREAK]**
+
+> * Continue forward
+> * Turn back`;
+
+		const result = extractGameDataTraditional(content);
+		expect(result).toBeNull();
+	});
 });

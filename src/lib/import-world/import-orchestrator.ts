@@ -1,26 +1,25 @@
 // Main import orchestrator coordinating all import steps
 
-import { createStory, updateStory, deleteStory } from '$lib/db/stories';
-import { createAct, updateAct, deleteAct } from '$lib/db/acts';
-import { createActLine, addMessageToLine, getMessagesForLine, deleteActLine, deleteLineEntries } from '$lib/db/act-lines';
+import { createStory, deleteStory } from '$lib/db/stories';
+import { createAct, deleteAct } from '$lib/db/acts';
+import { createActLine, addMessageToLine, deleteActLine, deleteLineEntries } from '$lib/db/act-lines';
 import { createMessage, deleteMessage } from '$lib/db/messages';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { deleteStoryFolder } from '$lib/db/story-folders';
 import { writeTextFile, mkdir, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { loadStories } from '$lib/stores/stories.svelte';
 import { toKebabCase } from '$lib/utils/string';
-import { sleep } from '$lib/utils/async';
 import type {
 	ImportFormData,
 	ImportResult,
 	ImportProgressUpdate,
 	ParsedMessage,
-	RetryConfig
 } from './types';
+import type { RetryConfig } from '$lib/ai/chat-stream';
 import { parseTranscriptFile } from './transcript-parsers';
 import { generateActFromCards, formatIntoScenes } from './act-generator';
 import { runGameDataDetection } from './game-data-detector';
-import { loadChoicesExtractionPrompt } from '$lib/fs/prompts';
+import type {StreamState} from "$lib/ai/chat-callbacks";
 
 // === Progress Callback Type ===
 
@@ -134,7 +133,7 @@ export async function executeImport(
 		onProgress({
 			phase: 'error',
 			message: 'Import failed',
-			details: errorMsg,
+			errorMessage: errorMsg,
 			consoleOutput: logs.join('\n')
 		});
 
@@ -237,7 +236,6 @@ async function createActAndLine(
 	onProgress({
 		phase: 'processing-act',
 		message: `Processing Act ${actNumber}...`,
-		details: `Act ${actNumber}`,
 		consoleOutput: ''
 	});
 
@@ -279,7 +277,6 @@ async function processTranscriptAct(
 	log(`Parsed ${parsedTranscript.messages.length} messages (${parsedTranscript.format} format)`);
 
 	// Run game data detection on assistant messages lacking game data
-	const assistantCount = parsedTranscript.messages.filter(m => m.role === 'assistant').length;
 	const missingGameData = parsedTranscript.messages.filter(
 		m => m.role === 'assistant' && !m.gameData
 	).length;
@@ -290,12 +287,28 @@ async function processTranscriptAct(
 			message: `Detecting game data for ${missingGameData} messages...`,
 			consoleOutput: ''
 		});
+		log(`Detecting game data for ${missingGameData} messages...`);
 
-		const choicesExtractionPrompt = await loadChoicesExtractionPrompt();
 		const detectionResult = await runGameDataDetection(
 			parsedTranscript.messages,
 			retryConfig,
-			choicesExtractionPrompt
+			log,
+			(msgIndex, state) => {
+				const consoleOutput = !!state.content ? state.content : state.reasoning
+				onProgress({
+					phase: 'generating-game-data',
+					message: `Generating GameData[${msgIndex}]...`,
+					consoleOutput: consoleOutput ?? ''
+				});
+			},
+			(msgIndex, err, attempt) => {
+				const errorContent = `[generating-game-data] attempt ${attempt + 1} failed: ${err.message}. Retrying...`;
+				onProgress({
+					phase: 'generating-game-data',
+					message: `Generating GameData[${msgIndex}]...`,
+					consoleOutput: '[ERROR]' + errorContent
+				});
+			}
 		);
 
 		const detected = detectionResult.results.filter(r => r.gameData).length;
@@ -343,56 +356,61 @@ async function generateActFromLLM(
 	onProgress({
 		phase: 'generating-act',
 		message: `Generating Act ${actNumber} via LLM...`,
-		isStreaming: true,
 		consoleOutput: ''
 	});
 
 	// Generate act content with streaming
-	const generation = await generateActFromCards(
+	const acc = await generateActFromCards(
 		worldContent,
 		actCardContent,
 		characterCards,
 		retryConfig,
-		(text) => {
+		(state: StreamState) => {
+			const consoleOutput = !!state.content ? state.content : state.reasoning
 			onProgress({
 				phase: 'generating-act',
 				message: `Generating Act ${actNumber}...`,
-				consoleOutput: '\n\n--- Streaming ---\n' + text,
-				isStreaming: true
+				consoleOutput: consoleOutput ?? ''
+			});
+		},
+		(err, attempt) => {
+			const errorContent = `[generateActFromCards] attempt ${attempt + 1} failed: ${err.message}. Retrying...`;
+			onProgress({
+				phase: 'generating-act',
+				message: `Generating Act ${actNumber}...`,
+				consoleOutput: '[ERROR]' + errorContent
 			});
 		}
 	);
 
+	const generation = acc.state.content
+
 	log(`Act ${actNumber} generation complete (${generation.length} chars)`);
 
-	// Format into scenes (narration-template format)
+	// Format into scenes (returns array of processed scenes)
 	onProgress({
 		phase: 'formatting-act',
 		message: `Formatting Act ${actNumber} into scenes...`,
 		consoleOutput: ''
 	});
 
-	const formattedContent = await formatIntoScenes(
+	const { scenes: processedScenes } = await formatIntoScenes(
 		generation,
 		actNumber,
 		retryConfig,
+		log,
 		(text) => {
 			onProgress({
 				phase: 'formatting-act',
 				message: `Formatting Act ${actNumber}...`,
-				consoleOutput: '\n' + text,
-				isStreaming: true
+				consoleOutput: '\n' + text
 			});
 		}
 	);
 
-	// Create messages from formatted content
-	const generatedMessages: ParsedMessage[] = [
-		{ role: 'assistant', content: formattedContent }
-	];
-
+	// Create messages from processed scenes (each scene is a separate message)
 	const genMessageIds = await createMessagesFromParsed(
-		generatedMessages,
+		processedScenes,
 		actLineId,
 		log,
 		(msg) => {
@@ -405,8 +423,9 @@ async function generateActFromLLM(
 	);
 	createdResources.messageIds.push(...genMessageIds);
 
-	// Save formatted content as act card
-	await saveActCard(storyFolder, actNumber, formattedContent);
+	// Save combined content as act card
+	const combinedContent = processedScenes.map((s) => s.content).join('\n\n---\n\n');
+	await saveActCard(storyFolder, actNumber, combinedContent);
 	log(`Act card saved: act-${actNumber}/act-card.md`);
 }
 

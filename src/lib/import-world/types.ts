@@ -6,13 +6,6 @@ import type { GameData } from '$lib/db/messages';
 
 export type TranscriptFormat = 'app-export' | 'openai-api' | 'openwebui' | 'unknown';
 
-// === Retry Configuration ===
-
-export interface RetryConfig {
-	retryCount: number;
-	backoffIntervalSeconds: number;
-}
-
 // === Import Form Data ===
 
 export interface ImportFormData {
@@ -99,9 +92,9 @@ export interface ImportResult {
 export interface ImportProgressUpdate {
 	phase: ImportPhase;
 	message: string;
-	details?: string;
+	repeatedMessageCounter?: number;
+	errorMessage?: string;
 	consoleOutput?: string;
-	isStreaming?: boolean;
 }
 
 export type ImportPhase =
@@ -110,6 +103,7 @@ export type ImportPhase =
 	| 'processing-act'
 	| 'generating-act'
 	| 'formatting-act'
+	| 'generating-game-data'
 	| 'saving-messages'
 	| 'finalizing'
 	| 'complete'

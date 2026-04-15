@@ -28,12 +28,13 @@ let validationResult = $state<ValidationResult | null>(null);
 let progressUpdates = $state<ImportProgressUpdate[]>([]);
 let currentPhase = $state<ImportPhase>('validating');
 let consoleOutput = $state('');
+const MAX_CONSOLE_LINES = 50;
 let importError = $state<string | null>(null);
 let showValidationWarnings = $state(false);
 
 // === Derived ===
 
-let canSubmit = $derived(!isImporting && !importComplete && validationResult?.isValid === true);
+let canSubmit = $derived(!isImporting && !importComplete);
 
 // === Form Actions ===
 
@@ -109,13 +110,29 @@ function getFormData(): ImportFormData {
 }
 
 function addProgressUpdate(update: ImportProgressUpdate): void {
-	progressUpdates = [...progressUpdates, update];
 	currentPhase = update.phase;
-	if (update.consoleOutput) {
-		consoleOutput = update.consoleOutput;
+	if (progressUpdates.length > 0) {
+		const previousUpdate = progressUpdates[progressUpdates.length - 1]
+		if (previousUpdate.phase == currentPhase && previousUpdate.message == update.message) {
+			const repeatedProgress = progressUpdates.slice(0, -1)
+			repeatedProgress.push({...update, repeatedMessageCounter: (previousUpdate.repeatedMessageCounter ?? 0) + 1})
+			progressUpdates = repeatedProgress;
+		} else {
+			progressUpdates = [...progressUpdates, update];
+		}
+	} else {
+		progressUpdates = [update];
 	}
-	if (update.phase === 'error' && update.details) {
-		importError = update.details;
+
+	if (update.consoleOutput) {
+		const buffer = consoleOutput + update.consoleOutput
+		const lines = buffer.split('\n');
+		consoleOutput = lines.length > MAX_CONSOLE_LINES
+			? lines.slice(-MAX_CONSOLE_LINES).join('\n')
+			: buffer;
+	}
+	if (update.phase === 'error' && update.errorMessage) {
+		importError = update.errorMessage;
 	}
 }
 
