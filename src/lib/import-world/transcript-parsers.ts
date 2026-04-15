@@ -8,6 +8,7 @@ import type {
 	OpenWebUIExport,
 	OpenWebUIMessage
 } from './types';
+import { validateFileSize } from '$lib/utils/async';
 
 // === Format Detection ===
 
@@ -371,6 +372,7 @@ export async function parseTranscriptFile(
 	file: File,
 	skipOptionalMalformed: boolean
 ): Promise<ParsedTranscript> {
+	validateFileSize(file);
 	const text = await file.text();
 	let json: unknown;
 

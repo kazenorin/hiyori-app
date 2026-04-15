@@ -23,6 +23,7 @@ let backoffIntervalSeconds = $state(5);
 // === UI State ===
 
 let isImporting = $state(false);
+let importComplete = $state(false);
 let validationResult = $state<ValidationResult | null>(null);
 let progressUpdates = $state<ImportProgressUpdate[]>([]);
 let currentPhase = $state<ImportPhase>('validating');
@@ -32,7 +33,7 @@ let showValidationWarnings = $state(false);
 
 // === Derived ===
 
-let canSubmit = $derived(!isImporting && validationResult?.isValid === true);
+let canSubmit = $derived(!isImporting && !importComplete && validationResult?.isValid === true);
 
 // === Form Actions ===
 
@@ -127,6 +128,7 @@ function resetForm(): void {
 	retryCount = 5;
 	backoffIntervalSeconds = 5;
 	isImporting = false;
+		importComplete = false;
 	validationResult = null;
 	progressUpdates = [];
 	currentPhase = 'validating';
@@ -140,7 +142,13 @@ function setImporting(value: boolean): void {
 	if (value) {
 		progressUpdates = [];
 		importError = null;
+		importComplete = false;
 	}
+}
+
+function setImportComplete(): void {
+	importComplete = true;
+	isImporting = false;
 }
 
 // === Exports ===
@@ -156,6 +164,7 @@ export function getImportWorldStore() {
 		get retryCount() { return retryCount; },
 		get backoffIntervalSeconds() { return backoffIntervalSeconds; },
 		get isImporting() { return isImporting; },
+		get importComplete() { return importComplete; },
 		get validationResult() { return validationResult; },
 		get progressUpdates() { return progressUpdates; },
 		get currentPhase() { return currentPhase; },
@@ -165,6 +174,7 @@ export function getImportWorldStore() {
 		get canSubmit() { return canSubmit; },
 
 		// Setters
+		set importComplete(v: boolean) { importComplete = v; },
 		set storyName(v: string) { storyName = v; },
 		set worldFile(v: File | null) { worldFile = v; },
 		set skipOptionalMalformed(v: boolean) { skipOptionalMalformed = v; },
@@ -185,6 +195,7 @@ export function getImportWorldStore() {
 		getFormData,
 		addProgressUpdate,
 		resetForm,
-		setImporting
+		setImporting,
+		setImportComplete
 	};
 }

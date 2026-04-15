@@ -8,6 +8,7 @@ import { generateText } from 'ai';
 import { createModel } from '$lib/ai/provider';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { loadSystemPrompt } from '$lib/fs/prompts';
+import { sleep } from '$lib/utils/async';
 
 // === Pass 1: Traditional Extraction (Synchronous) ===
 
@@ -172,6 +173,11 @@ export async function extractGameDataWithLLM(
 			gameData,
 			source: gameData ? 'llm' : 'none'
 		});
+
+		// Rate limit: small delay between LLM calls to avoid hitting API rate limits
+		if (indicesNeedingExtraction.indexOf(msgIndex) < indicesNeedingExtraction.length - 1) {
+			await sleep(100);
+		}
 	}
 
 	return results;
@@ -311,8 +317,4 @@ export async function runGameDataDetection(
 		results: results.sort((a, b) => a.messageIndex - b.messageIndex),
 		llmCallsMade
 	};
-}
-
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
 }

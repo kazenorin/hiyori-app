@@ -93,6 +93,7 @@ export interface ImportResult {
 	actLineId?: string;
 	error?: string;
 	warnings: string[];
+	importComplete?: boolean;
 }
 
 export interface ImportProgressUpdate {
@@ -108,9 +109,8 @@ export type ImportPhase =
 	| 'creating-story'
 	| 'processing-act'
 	| 'generating-act'
-	| 'detecting-game-data'
+	| 'formatting-act'
 	| 'saving-messages'
-	| 'saving-characters'
 	| 'finalizing'
 	| 'complete'
 	| 'error';

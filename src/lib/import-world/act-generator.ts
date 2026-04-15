@@ -1,47 +1,55 @@
 // LLM-based act generation from world + act + character cards
+// Uses streaming via chat-stream.ts for real-time feedback
 
-import { generateText } from 'ai';
-import { createModel } from '$lib/ai/provider';
+import { streamChatResponse } from '$lib/ai/chat-stream';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { loadSystemPrompt } from '$lib/fs/prompts';
+import { loadSystemPrompt, loadNarrationTemplate } from '$lib/fs/prompts';
+import { sleep, isAuthError } from '$lib/utils/async';
 import type { RetryConfig } from './types';
+import {
+	WORLD_CARD_LABEL,
+	ACT_CARD_LABEL,
+	CHARACTER_CARD_LABEL,
+	ACT_GENERATION_INSTRUCTION,
+	SCENE_FORMAT_PROMPT
+} from './prompts';
+
+// === Shared Retry Logic ===
 
 /**
- * Generate act content using LLM when no transcript is provided.
- * Uses world card, act card, and character cards as context.
+ * Execute a streaming LLM call with retry logic.
+ * Extracts the duplicated retry pattern from generateActFromCards and formatIntoScenes.
  */
-export async function generateActFromCards(
-	worldContent: string | null,
-	actCardContent: string | null,
-	characterCards: { name: string; content: string }[],
+async function streamWithRetry(
+	systemPrompt: string,
+	messages: { role: 'user' | 'assistant'; content: string }[],
 	retryConfig: RetryConfig,
-	onProgress?: (text: string) => void
+	onProgress: (text: string) => void,
+	errorPrefix: string
 ): Promise<string> {
-	const config = getMainProviderConfig();
-	if (!config?.apiKey) {
-		throw new Error('No main provider configured. Please set one in Settings.');
-	}
-
-	const model = createModel(config);
-	const systemPrompt = await loadSystemPrompt();
-	const userMessages = buildGenerationMessages(worldContent, actCardContent, characterCards);
-
+	const abortController = new AbortController();
+	let accumulatedContent = '';
 	let lastError: Error | null = null;
 
 	for (let attempt = 0; attempt <= retryConfig.retryCount; attempt++) {
 		try {
-			const result = await generateText({
-				model,
-				system: systemPrompt,
-				messages: userMessages
-			});
+			await streamChatResponse(
+				systemPrompt,
+				messages,
+				abortController.signal,
+				(state) => {
+					accumulatedContent = state.content;
+					onProgress(state.content);
+				}
+			);
 
-			return result.text;
+			return accumulatedContent;
 		} catch (e) {
 			lastError = e instanceof Error ? e : new Error(String(e));
-			if (onProgress) {
-				onProgress(`Attempt ${attempt + 1} failed: ${lastError.message}. Retrying...`);
+			if (isAuthError(lastError)) {
+				throw new Error('Authentication failed. Please check your API key in Settings.');
 			}
+			onProgress(`${errorPrefix} attempt ${attempt + 1} failed: ${lastError.message}. Retrying...`);
 
 			if (attempt < retryConfig.retryCount) {
 				await sleep(retryConfig.backoffIntervalSeconds * 1000 * (attempt + 1));
@@ -49,7 +57,38 @@ export async function generateActFromCards(
 		}
 	}
 
-	throw new Error(`Act generation failed after ${retryConfig.retryCount + 1} attempts: ${lastError?.message}`);
+	throw new Error(`${errorPrefix} failed after ${retryConfig.retryCount + 1} attempts: ${lastError?.message}`);
+}
+
+// === Act Generation ===
+
+/**
+ * Generate act content using LLM when no transcript is provided.
+ * Uses world card, act card, and character cards as context.
+ * Streams content for real-time display.
+ */
+export async function generateActFromCards(
+	worldContent: string | null,
+	actCardContent: string | null,
+	characterCards: { name: string; content: string }[],
+	retryConfig: RetryConfig,
+	onProgress: (text: string) => void
+): Promise<string> {
+	const config = getMainProviderConfig();
+	if (!config?.apiKey) {
+		throw new Error('No main provider configured. Please set one in Settings.');
+	}
+
+	const systemPrompt = await loadSystemPrompt();
+	const userMessages = buildGenerationMessages(worldContent, actCardContent, characterCards);
+
+	return streamWithRetry(
+		systemPrompt,
+		userMessages as { role: 'user' | 'assistant'; content: string }[],
+		retryConfig,
+		onProgress,
+		'Act generation'
+	);
 }
 
 function buildGenerationMessages(
@@ -62,7 +101,7 @@ function buildGenerationMessages(
 	// World card
 	if (worldContent) {
 		messages.push(
-			{ role: 'user', content: 'The following message is a world building settings card.' },
+			{ role: 'user', content: WORLD_CARD_LABEL },
 			{ role: 'user', content: worldContent }
 		);
 	}
@@ -70,16 +109,16 @@ function buildGenerationMessages(
 	// Act card
 	if (actCardContent) {
 		messages.push(
-			{ role: 'user', content: 'The following message is an act card describing the events of the act.' },
+			{ role: 'user', content: ACT_CARD_LABEL },
 			{ role: 'user', content: actCardContent }
 		);
 	}
 
 	// Character cards
 	for (const card of characterCards) {
-		const name = card.name || 'Unknown Character';
+		const name = card.name || 'a character in the story';
 		messages.push(
-			{ role: 'user', content: `The following message is a character card for ${name}.` },
+			{ role: 'user', content: CHARACTER_CARD_LABEL.replace('{name}', name) },
 			{ role: 'user', content: card.content }
 		);
 	}
@@ -87,12 +126,53 @@ function buildGenerationMessages(
 	// Generation request
 	messages.push({
 		role: 'user',
-		content: 'Generate a story based on the above settings.'
+		content: ACT_GENERATION_INSTRUCTION
 	});
 
 	return messages;
 }
 
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
+// === Scene Formatting ===
+
+/**
+ * Format raw generated content into the narration-template format.
+ * Feeds content back to LLM to split into scenes with proper structure.
+ */
+export async function formatIntoScenes(
+	rawContent: string,
+	actNumber: number,
+	retryConfig: RetryConfig,
+	onProgress: (text: string) => void
+): Promise<string> {
+	const config = getMainProviderConfig();
+	if (!config?.apiKey) {
+		// If no config, return raw content
+		return rawContent;
+	}
+
+	const systemPrompt = await loadSystemPrompt();
+	const narrationTemplate = await loadNarrationTemplate();
+
+	const formatPrompt = SCENE_FORMAT_PROMPT
+		.replace('{actNumber}', String(actNumber))
+		.replace('{rawContent}', rawContent)
+		.replace('{narrationTemplate}', narrationTemplate);
+
+	const messages: { role: 'user'; content: string }[] = [
+		{ role: 'user', content: formatPrompt }
+	];
+
+	try {
+		return await streamWithRetry(
+			systemPrompt,
+			messages,
+			retryConfig,
+			onProgress,
+			'Formatting'
+		);
+	} catch {
+		// Fallback: return raw content if formatting fails
+		onProgress('Formatting failed, using raw content.');
+		return rawContent;
+	}
 }

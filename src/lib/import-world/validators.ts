@@ -1,6 +1,7 @@
 // Validation logic for Import World feature
 
 import type { ImportFormData, ImportActInput, ValidationResult, ValidationError, ValidationWarning } from './types';
+import { MAX_FILE_SIZE } from '$lib/utils/async';
 
 export function validateImportForm(formData: ImportFormData): ValidationResult {
 	const errors: ValidationError[] = [];
@@ -58,6 +59,36 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 			warnings.push({
 				field: `character-${character.id}-name`,
 				message: 'Character name is empty — a name will be derived from the card content.'
+			});
+		}
+	}
+
+	// Validate file sizes (50MB max)
+	if (formData.worldFile && formData.worldFile.size > MAX_FILE_SIZE) {
+		errors.push({
+			field: 'worldFile',
+			message: `World file too large (${(formData.worldFile.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`
+		});
+	}
+	for (const act of formData.acts) {
+		if (act.actFile && act.actFile.size > MAX_FILE_SIZE) {
+			errors.push({
+				field: `act-${act.id}-file`,
+				message: `Act file too large (${(act.actFile.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`
+			});
+		}
+		if (act.transcript && act.transcript.size > MAX_FILE_SIZE) {
+			errors.push({
+				field: `act-${act.id}-transcript`,
+				message: `Transcript file too large (${(act.transcript.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`
+			});
+		}
+	}
+	for (const character of formData.characters) {
+		if (character.cardFile && character.cardFile.size > MAX_FILE_SIZE) {
+			errors.push({
+				field: `character-${character.id}-file`,
+				message: `Character card too large (${(character.cardFile.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`
 			});
 		}
 	}

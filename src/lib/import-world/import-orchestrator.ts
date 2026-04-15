@@ -1,11 +1,15 @@
 // Main import orchestrator coordinating all import steps
 
-import { createStory } from '$lib/db/stories';
-import { createAct } from '$lib/db/acts';
-import { createActLine, addMessageToLine } from '$lib/db/act-lines';
-import { createMessage } from '$lib/db/messages';
+import { createStory, updateStory, deleteStory } from '$lib/db/stories';
+import { createAct, updateAct, deleteAct } from '$lib/db/acts';
+import { createActLine, addMessageToLine, getMessagesForLine, deleteActLine, deleteLineEntries } from '$lib/db/act-lines';
+import { createMessage, deleteMessage } from '$lib/db/messages';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
+import { deleteStoryFolder } from '$lib/db/story-folders';
 import { writeTextFile, mkdir, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { loadStories } from '$lib/stores/stories.svelte';
+import { toKebabCase } from '$lib/utils/string';
+import { sleep } from '$lib/utils/async';
 import type {
 	ImportFormData,
 	ImportResult,
@@ -14,7 +18,7 @@ import type {
 	RetryConfig
 } from './types';
 import { parseTranscriptFile } from './transcript-parsers';
-import { generateActFromCards } from './act-generator';
+import { generateActFromCards, formatIntoScenes } from './act-generator';
 
 // === Progress Callback Type ===
 
@@ -27,248 +31,425 @@ export async function executeImport(
 	onProgress: ProgressCallback
 ): Promise<ImportResult> {
 	const warnings: string[] = [];
+	const logs: string[] = [];
+
+	function log(message: string): void {
+		logs.push(message);
+		onProgress({
+			phase: 'creating-story',
+			message,
+			consoleOutput: logs.join('\n')
+		});
+	}
+
+	// Track created resources for cleanup on failure
+	const createdResources = {
+		storyId: null as string | null,
+		storyFolder: null as string | null,
+		actIds: [] as string[],
+		actLineIds: [] as string[],
+		messageIds: [] as string[]
+	};
+
+	let worldContent: string | null = null;
+	let storyFolder = '';
+	let storyId = '';
+	let storyName = '';
 
 	try {
 		// Phase: Creating Story
-		onProgress({ phase: 'creating-story', message: 'Creating story...' });
-		const storyId = crypto.randomUUID();
-		const storyName = formData.storyName.trim() || `Story-${storyId.slice(-8)}`;
+		log('Creating story...');
+		storyId = crypto.randomUUID();
+		storyName = formData.storyName.trim() || `Story-${storyId.slice(-8)}`;
 
-		// Create story in database
 		await createStory(storyId, storyName);
+		createdResources.storyId = storyId;
+		log(`Story created: "${storyName}" (${storyId.slice(-8)})`);
+
+		// Refresh sidebar to show new story
+		await loadStories();
 
 		// Resolve story folder
-		const storyFolder = await resolveStoryFolder(storyId, storyName);
+		storyFolder = await resolveStoryFolder(storyId, storyName);
+		createdResources.storyFolder = storyFolder;
 
 		// Save world file if provided
-		let worldContent: string | null = null;
 		if (formData.worldFile) {
 			worldContent = await formData.worldFile.text();
 			const worldPath = `${storyFolder}/world.md`;
 			await writeTextFile(worldPath, worldContent, { baseDir: BaseDirectory.AppData });
+			log(`World file saved: ${formData.worldFile.name}`);
 		}
 
 		// Load character cards
-		const characterCards: { name: string; content: string }[] = [];
-		for (const char of formData.characters) {
-			if (char.cardFile) {
-				const content = await char.cardFile.text();
-				const name = char.name.trim() || extractCharacterName(content) || 'Unknown Character';
-				characterCards.push({ name, content });
-			}
-		}
+		const characterCards = await loadCharacterCards(formData.characters, log);
 
 		// Save character cards to disk
-		await saveCharacterCards(storyFolder, characterCards);
+		await saveCharacterCards(storyFolder, characterCards, log);
 
-		// Process each act
-		let previousActLineId: string | null = null;
-		const actIds: string[] = [];
-		const actLineIds: string[] = [];
+		// Process acts
+		const processResult = await processActs(
+			formData,
+			storyId,
+			storyFolder,
+			worldContent,
+			characterCards,
+			log,
+			onProgress,
+			createdResources
+		);
 
-		for (let actIndex = 0; actIndex < formData.acts.length; actIndex++) {
-			const actInput = formData.acts[actIndex];
-			const actNumber = actIndex + 1;
-
-			onProgress({
-				phase: 'processing-act',
-				message: `Processing Act ${actNumber}...`,
-				details: `Act ${actNumber} of ${formData.acts.length}`
-			});
-
-			// Create act
-			const actId = crypto.randomUUID();
-			const actName = actInput.name.trim() || `Act ${actNumber}`;
-			await createAct(actId, storyId, actName, actNumber, previousActLineId);
-			actIds.push(actId);
-
-			// Create main act line
-			const actLineId = crypto.randomUUID();
-			await createActLine(actLineId, actId, 'Main Line', true);
-			actLineIds.push(actLineId);
-
-			// Process act content
-			if (actInput.transcript) {
-				// Parse transcript
-				onProgress({
-					phase: 'processing-act',
-					message: `Parsing transcript for Act ${actNumber}...`,
-					consoleOutput: `Reading transcript file: ${actInput.transcript.name}`
-				});
-
-				const parsedTranscript = await parseTranscriptFile(
-					actInput.transcript,
-					formData.skipOptionalMalformed
-				);
-
-				onProgress({
-					phase: 'processing-act',
-					message: `Parsed ${parsedTranscript.messages.length} messages from transcript`,
-					consoleOutput: `Detected format: ${parsedTranscript.format}`
-				});
-
-				// Create messages and add to act line
-				await createMessagesFromParsed(
-					parsedTranscript.messages,
-					actLineId,
-					onProgress
-				);
-
-				// Save provided act card if exists (for transcript imports)
-				if (actInput.actFile) {
-					const actCardContent = await actInput.actFile.text();
-					await saveActCard(storyFolder, actNumber, actCardContent);
-				}
-			} else if (actInput.actFile) {
-				// Load act card content
-				const actCardContent = await actInput.actFile.text();
-
-				// Generate act via LLM
-				onProgress({
-					phase: 'generating-act',
-					message: `Generating Act ${actNumber} via LLM...`,
-					isStreaming: true
-				});
-
-				const retryConfig: RetryConfig = {
-					retryCount: formData.retryCount,
-					backoffIntervalSeconds: formData.backoffIntervalSeconds
-				};
-
-				const generation = await generateActFromCards(
-					worldContent,
-					actCardContent,
-					characterCards,
-					retryConfig,
-					(text) => {
-						onProgress({
-							phase: 'generating-act',
-							message: `Generating Act ${actNumber}...`,
-							consoleOutput: text.slice(-500), // Last 500 chars
-							isStreaming: true
-						});
-					}
-				);
-
-				// Parse generated content into messages
-				const generatedMessages: ParsedMessage[] = [
-					{ role: 'assistant', content: generation }
-				];
-
-				await createMessagesFromParsed(generatedMessages, actLineId, onProgress);
-
-				// Save generated content as act card
-				await saveActCard(storyFolder, actNumber, generation);
-			} else if (worldContent || characterCards.length > 0) {
-				// Generate from world + characters only
-				onProgress({
-					phase: 'generating-act',
-					message: `Generating Act ${actNumber} from world settings...`,
-					isStreaming: true
-				});
-
-				const retryConfig: RetryConfig = {
-					retryCount: formData.retryCount,
-					backoffIntervalSeconds: formData.backoffIntervalSeconds
-				};
-
-				const generation = await generateActFromCards(
-					worldContent,
-					null,
-					characterCards,
-					retryConfig,
-					(text) => {
-						onProgress({
-							phase: 'generating-act',
-							message: `Generating Act ${actNumber}...`,
-							consoleOutput: text.slice(-500),
-							isStreaming: true
-						});
-					}
-				);
-
-				const generatedMessages: ParsedMessage[] = [
-					{ role: 'assistant', content: generation }
-				];
-
-				await createMessagesFromParsed(generatedMessages, actLineId, onProgress);
-
-				// Save generated content as act card
-				await saveActCard(storyFolder, actNumber, generation);
-			}
-
-			previousActLineId = actLineId;
-		}
+		// Refresh sidebar again to show updated names
+		await loadStories();
 
 		// Finalize
-		onProgress({ phase: 'finalizing', message: 'Finalizing story...' });
-		onProgress({ phase: 'complete', message: 'Import complete!' });
+		onProgress({
+			phase: 'complete',
+			message: 'Import complete!',
+			consoleOutput: logs.join('\n') + '\n\n✓ Import completed successfully.'
+		});
 
-		// Return first act info for navigation (guard against empty acts)
-		const firstActId = actIds.length > 0 ? actIds[0] : undefined;
-		const firstActLineId = actLineIds.length > 0 ? actLineIds[0] : undefined;
+		// Return info (no navigation - stay on page)
+		const firstActId = processResult.actIds.length > 0 ? processResult.actIds[0] : undefined;
+		const firstActLineId = processResult.actLineIds.length > 0 ? processResult.actLineIds[0] : undefined;
 
 		return {
 			success: true,
 			storyId,
 			actId: firstActId,
 			actLineId: firstActLineId,
-			warnings
+			warnings,
+			importComplete: true
 		};
 	} catch (error) {
+		const errorMsg = error instanceof Error ? error.message : String(error);
+		logs.push(`\n✗ Import failed: ${errorMsg}`);
+
+		// Cleanup created resources on failure
+		logs.push('Cleaning up partially imported data...');
+		await cleanupImport(createdResources, logs);
+
 		onProgress({
 			phase: 'error',
 			message: 'Import failed',
-			details: error instanceof Error ? error.message : String(error)
+			details: errorMsg,
+			consoleOutput: logs.join('\n')
 		});
 
 		return {
 			success: false,
-			error: error instanceof Error ? error.message : String(error),
-			warnings
+			error: errorMsg,
+			warnings,
+			importComplete: false
 		};
 	}
 }
 
+// === Act Processing ===
+
+interface ActProcessingResult {
+	actIds: string[];
+	actLineIds: string[];
+}
+
+async function processActs(
+	formData: ImportFormData,
+	storyId: string,
+	storyFolder: string,
+	worldContent: string | null,
+	characterCards: { name: string; content: string }[],
+	log: (msg: string) => void,
+	onProgress: ProgressCallback,
+	createdResources: CreatedResources
+): Promise<ActProcessingResult> {
+	let previousActLineId: string | null = null;
+	const actIds: string[] = [];
+	const actLineIds: string[] = [];
+
+	const retryConfig: RetryConfig = {
+		retryCount: formData.retryCount,
+		backoffIntervalSeconds: formData.backoffIntervalSeconds
+	};
+
+	for (let actIndex = 0; actIndex < formData.acts.length; actIndex++) {
+		const actInput = formData.acts[actIndex];
+		const actNumber = actIndex + 1;
+
+		const { actId, actLineId } = await createActAndLine(
+			actInput,
+			actNumber,
+			storyId,
+			previousActLineId,
+			log,
+			onProgress,
+			createdResources
+		);
+		actIds.push(actId);
+		actLineIds.push(actLineId);
+
+		// Process act content
+		if (actInput.transcript) {
+			await processTranscriptAct(
+				actInput,
+				actLineId,
+				storyFolder,
+				actNumber,
+				formData.skipOptionalMalformed,
+				log,
+				onProgress,
+				createdResources
+			);
+		} else if (actInput.actFile || worldContent || characterCards.length > 0) {
+			await generateActFromLLM(
+				actInput,
+				actLineId,
+				storyFolder,
+				actNumber,
+				worldContent,
+				characterCards,
+				retryConfig,
+				log,
+				onProgress,
+				createdResources
+			);
+		}
+
+		previousActLineId = actLineId;
+	}
+
+	return { actIds, actLineIds };
+}
+
+async function createActAndLine(
+	actInput: { id: string; name: string; actFile: File | null; transcript: File | null },
+	actNumber: number,
+	storyId: string,
+	previousActLineId: string | null,
+	log: (msg: string) => void,
+	onProgress: ProgressCallback,
+	createdResources: CreatedResources
+): Promise<{ actId: string; actLineId: string }> {
+	const isPlaceholderName = !actInput.name.trim();
+
+	onProgress({
+		phase: 'processing-act',
+		message: `Processing Act ${actNumber}...`,
+		details: `Act ${actNumber}`,
+		consoleOutput: ''
+	});
+
+	// Create act with placeholder name if needed
+	const actId = crypto.randomUUID();
+	const placeholderName = isPlaceholderName ? `Act-${actId.slice(-8)}` : actInput.name.trim();
+	await createAct(actId, storyId, placeholderName, actNumber, previousActLineId);
+	createdResources.actIds.push(actId);
+	log(`Act ${actNumber} created: "${placeholderName}"`);
+
+	// Create main act line
+	const actLineId = crypto.randomUUID();
+	await createActLine(actLineId, actId, 'Main Line', true);
+	createdResources.actLineIds.push(actLineId);
+
+	return { actId, actLineId };
+}
+
+async function processTranscriptAct(
+	actInput: { id: string; name: string; actFile: File | null; transcript: File | null },
+	actLineId: string,
+	storyFolder: string,
+	actNumber: number,
+	skipOptionalMalformed: boolean,
+	log: (msg: string) => void,
+	onProgress: ProgressCallback,
+	createdResources: CreatedResources
+): Promise<void> {
+	// Parse transcript
+	const transcriptName = actInput.transcript!.name;
+	log(`Parsing transcript: ${transcriptName}`);
+
+	const parsedTranscript = await parseTranscriptFile(
+		actInput.transcript!,
+		skipOptionalMalformed
+	);
+
+	log(`Parsed ${parsedTranscript.messages.length} messages (${parsedTranscript.format} format)`);
+
+	// Create messages and add to act line
+	const messageIds = await createMessagesFromParsed(
+		parsedTranscript.messages,
+		actLineId,
+		log,
+		(msg) => {
+			onProgress({
+				phase: 'saving-messages',
+				message: msg,
+				consoleOutput: ''
+			});
+		}
+	);
+	createdResources.messageIds.push(...messageIds);
+
+	// Save provided act card if exists (for transcript imports)
+	if (actInput.actFile) {
+		const actCardContent = await actInput.actFile.text();
+		await saveActCard(storyFolder, actNumber, actCardContent);
+		log(`Act card saved: ${actInput.actFile.name}`);
+	}
+}
+
+async function generateActFromLLM(
+	actInput: { id: string; name: string; actFile: File | null; transcript: File | null },
+	actLineId: string,
+	storyFolder: string,
+	actNumber: number,
+	worldContent: string | null,
+	characterCards: { name: string; content: string }[],
+	retryConfig: RetryConfig,
+	log: (msg: string) => void,
+	onProgress: ProgressCallback,
+	createdResources: CreatedResources
+): Promise<void> {
+	const actCardContent = actInput.actFile ? await actInput.actFile.text() : null;
+
+	onProgress({
+		phase: 'generating-act',
+		message: `Generating Act ${actNumber} via LLM...`,
+		isStreaming: true,
+		consoleOutput: ''
+	});
+
+	// Generate act content with streaming
+	const generation = await generateActFromCards(
+		worldContent,
+		actCardContent,
+		characterCards,
+		retryConfig,
+		(text) => {
+			onProgress({
+				phase: 'generating-act',
+				message: `Generating Act ${actNumber}...`,
+				consoleOutput: '\n\n--- Streaming ---\n' + text,
+				isStreaming: true
+			});
+		}
+	);
+
+	log(`Act ${actNumber} generation complete (${generation.length} chars)`);
+
+	// Format into scenes (narration-template format)
+	onProgress({
+		phase: 'formatting-act',
+		message: `Formatting Act ${actNumber} into scenes...`,
+		consoleOutput: ''
+	});
+
+	const formattedContent = await formatIntoScenes(
+		generation,
+		actNumber,
+		retryConfig,
+		(text) => {
+			onProgress({
+				phase: 'formatting-act',
+				message: `Formatting Act ${actNumber}...`,
+				consoleOutput: '\n' + text,
+				isStreaming: true
+			});
+		}
+	);
+
+	// Create messages from formatted content
+	const generatedMessages: ParsedMessage[] = [
+		{ role: 'assistant', content: formattedContent }
+	];
+
+	const genMessageIds = await createMessagesFromParsed(
+		generatedMessages,
+		actLineId,
+		log,
+		(msg) => {
+			onProgress({
+				phase: 'saving-messages',
+				message: msg,
+				consoleOutput: ''
+			});
+		}
+	);
+	createdResources.messageIds.push(...genMessageIds);
+
+	// Save formatted content as act card
+	await saveActCard(storyFolder, actNumber, formattedContent);
+	log(`Act card saved: act-${actNumber}/act-card.md`);
+}
+
 // === Helper Functions ===
+
+async function loadCharacterCards(
+	characters: { id: string; name: string; cardFile: File | null }[],
+	log: (msg: string) => void
+): Promise<{ name: string; content: string }[]> {
+	const characterCards: { name: string; content: string }[] = [];
+	for (const char of characters) {
+		if (char.cardFile) {
+			const content = await char.cardFile.text();
+			const name = char.name.trim() || extractCharacterName(content) || 'a character in the story';
+			characterCards.push({ name, content });
+			log(`Character loaded: ${name}`);
+		}
+	}
+	return characterCards;
+}
 
 async function createMessagesFromParsed(
 	parsedMessages: ParsedMessage[],
 	actLineId: string,
-	onProgress: ProgressCallback
-): Promise<void> {
+	log: (msg: string) => void,
+	onProgress?: (message: string) => void
+): Promise<string[]> {
 	let sequence = 1;
+	const messageIds: string[] = [];
+	const total = parsedMessages.length;
+	const reportInterval = Math.max(1, Math.floor(total / 5)); // Report every 20%
 
 	for (const msg of parsedMessages) {
 		// Skip non-supported roles
 		if (msg.role === 'system') {
-			// System messages are not saved as user-visible messages
 			continue;
 		}
 
 		const messageId = crypto.randomUUID();
-		await createMessage(
-			messageId,
-			msg.role,
-			msg.content,
-			msg.reasoning,
-			msg.metadata,
-			msg.gameData
-		);
 
-		await addMessageToLine(actLineId, messageId, sequence++);
+		try {
+			await createMessage(
+				messageId,
+				msg.role,
+				msg.content,
+				msg.reasoning,
+				msg.metadata,
+				msg.gameData
+			);
+
+			await addMessageToLine(actLineId, messageId, sequence++);
+			messageIds.push(messageId);
+		} catch (e) {
+			const errorMsg = e instanceof Error ? e.message : String(e);
+			log(`Failed to save message ${sequence}: ${errorMsg}`);
+			throw e; // Re-throw to trigger cleanup
+		}
+
+		// Report progress periodically for large batches
+		if (onProgress && sequence % reportInterval === 0) {
+			onProgress(`Saving messages: ${sequence}/${total}`);
+		}
 	}
 
-	onProgress({
-		phase: 'saving-messages',
-		message: `Saved ${sequence - 1} messages`,
-		consoleOutput: `Created ${sequence - 1} messages in act line`
-	});
+	log(`Saved ${sequence - 1} messages to act line`);
+	return messageIds;
 }
 
 async function saveCharacterCards(
 	storyFolder: string,
-	characterCards: { name: string; content: string }[]
+	characterCards: { name: string; content: string }[],
+	log: (msg: string) => void
 ): Promise<void> {
 	if (characterCards.length === 0) return;
 
@@ -277,19 +458,25 @@ async function saveCharacterCards(
 
 	const usedNames = new Set<string>();
 	for (const card of characterCards) {
-		let fileName = card.name.replace(/[^a-zA-Z0-9_-]/g, '_');
+		// Use canonical kebab-case naming like character-card-generator
+		let canonicalName = toKebabCase(card.name);
+		if (!canonicalName) {
+			canonicalName = 'unnamed-character';
+		}
+
 		// Handle collisions by appending counter
-		if (usedNames.has(fileName)) {
+		if (usedNames.has(canonicalName)) {
 			let counter = 1;
-			while (usedNames.has(`${fileName}_${counter}`)) {
+			while (usedNames.has(`${canonicalName}-${counter}`)) {
 				counter++;
 			}
-			fileName = `${fileName}_${counter}`;
+			canonicalName = `${canonicalName}-${counter}`;
 		}
-		usedNames.add(fileName);
+		usedNames.add(canonicalName);
 
-		const filePath = `${charactersDir}/${fileName}.md`;
+		const filePath = `${charactersDir}/${canonicalName}.md`;
 		await writeTextFile(filePath, card.content, { baseDir: BaseDirectory.AppData });
+		log(`Character card saved: ${canonicalName}.md`);
 	}
 }
 
@@ -306,11 +493,17 @@ async function saveActCard(
 }
 
 function extractCharacterName(content: string): string | null {
+	// Common non-name headers to skip
+	const nonNameHeaders = ['character card', 'character profile', 'character sheet', 'character details', 'character info'];
+
 	// Try to extract character name from card content
 	// Look for patterns like "# Character Name" or "Name: ..."
 	const headerMatch = content.match(/^#\s*(.+)$/m);
 	if (headerMatch) {
-		return headerMatch[1].trim();
+		const candidate = headerMatch[1].trim();
+		if (!nonNameHeaders.includes(candidate.toLowerCase())) {
+			return candidate;
+		}
 	}
 
 	const nameFieldMatch = content.match(/^Name:\s*(.+)$/m);
@@ -319,4 +512,77 @@ function extractCharacterName(content: string): string | null {
 	}
 
 	return null;
+}
+
+async function extractActNameFromCard(actCard: string, retryCount: number): Promise<string | null> {
+	// Try to extract act name from act card content
+	// Look for patterns like "## Act 1 - Name" or "Title: ..."
+	const titleMatch = actCard.match(/^#+\s*(?:Act\s*\d+\s*[-:]\s*)?(.+)$/m);
+	if (titleMatch) {
+		const name = titleMatch[1].trim();
+		if (name && name.length < 100) {
+			return name;
+		}
+	}
+
+	const actHeaderMatch = actCard.match(/##\s*Act\s*\d+\s*[-–—]\s*(.+)$/m);
+	if (actHeaderMatch) {
+		return actHeaderMatch[1].trim();
+	}
+
+	// Fallback: Use LLM to extract name
+	// For now, return null - could implement LLM extraction if needed
+	return null;
+}
+
+interface CreatedResources {
+	storyId: string | null;
+	storyFolder: string | null;
+	actIds: string[];
+	actLineIds: string[];
+	messageIds: string[];
+}
+
+async function cleanupImport(
+	resources: CreatedResources,
+	logs: string[]
+): Promise<void> {
+	// Helper to safely delete and log failures
+	const safeDelete = async (fn: () => Promise<void>, label: string) => {
+		try {
+			await fn();
+		} catch (e) {
+			const msg = e instanceof Error ? e.message : String(e);
+			logs.push(`  Warning: Failed to delete ${label}: ${msg}`);
+		}
+	};
+
+	// Delete messages (reverse order - no dependencies)
+	for (const msgId of resources.messageIds) {
+		await safeDelete(() => deleteMessage(msgId), `message ${msgId.slice(-8)}`);
+	}
+
+	// Delete act lines and their entries
+	for (const lineId of resources.actLineIds) {
+		await safeDelete(() => deleteLineEntries(lineId), `line entries for ${lineId.slice(-8)}`);
+		await safeDelete(() => deleteActLine(lineId), `act line ${lineId.slice(-8)}`);
+	}
+
+	// Delete acts
+	for (const actId of resources.actIds) {
+		await safeDelete(() => deleteAct(actId), `act ${actId.slice(-8)}`);
+	}
+
+	// Delete story folder (files)
+	if (resources.storyFolder) {
+		await safeDelete(() => deleteStoryFolder(resources.storyId!), `story folder`);
+	}
+
+	// Delete story (must be last - it's the root)
+	if (resources.storyId) {
+		const storyId = resources.storyId;
+		await safeDelete(() => deleteStory(storyId), `story ${storyId.slice(-8)}`);
+	}
+
+	logs.push('Cleanup complete.');
 }

@@ -1,23 +1,11 @@
-Generate the next act of the story based on the provided world settings, act card, and character cards.
+Generate a story based on the provided context cards.
 
 ## Instructions
 
-1. Write compelling narrative that continues from the previous act
+1. Write compelling narrative based on the world settings, act card, and character cards
 2. Include character interactions that reflect their personalities from the character cards
 3. Include decision points where the player can make meaningful choices
 4. Use the world settings to maintain consistency with established lore
-
-## World Settings Card
-
-{{worldCard}}
-
-## Act Card
-
-{{actCard}}
-
-## Character Cards
-
-{{characterCards}}
 
 ## Output Format
 

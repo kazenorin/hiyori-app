@@ -6,6 +6,9 @@
 	const store = getImportWorldStore();
 
 	async function handleImport() {
+		// Scroll to top when import starts
+		window.scrollTo(0, 0);
+
 		const result = store.validate();
 		if (!result.isValid) return;
 
@@ -15,9 +18,9 @@
 			store.addProgressUpdate(update);
 		});
 
-		if (importResult.success && importResult.storyId) {
-			// Navigate to the story
-			goto('/');
+		// Stay on page after import - show complete log
+		if (importResult.success && importResult.importComplete) {
+			store.setImportComplete();
 		} else {
 			store.setImporting(false);
 		}
@@ -36,11 +39,71 @@
 				class="btn preset-tonal"
 				type="button"
 				onclick={handleBack}
-				disabled={store.isImporting || !store.canSubmit}
+				disabled={store.isImporting}
 			>
 				Back to Chat
 			</button>
 		</div>
+
+		<!-- Import Progress (shown at top for visibility) -->
+		{#if store.isImporting || store.importComplete || store.progressUpdates.length > 0}
+			<section class="card p-6 space-y-4">
+				<h2 class="h4">
+					{#if store.importComplete}
+						Import Complete
+					{:else}
+						Import Progress
+					{/if}
+				</h2>
+
+				<!-- Current status -->
+				{#if store.isImporting}
+					<div class="flex items-center gap-2">
+						<div class="animate-spin h-4 w-4 border-2 border-primary-500 border-t-transparent rounded-full"></div>
+						<span class="text-sm text-surface-700-300">
+							{store.progressUpdates[store.progressUpdates.length - 1]?.message ?? 'Processing...'}
+						</span>
+					</div>
+				{/if}
+
+				<!-- Completion indicator -->
+				{#if store.importComplete}
+					<div class="flex items-center gap-2 text-success-600">
+						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+						</svg>
+						<span class="text-sm font-medium">Story imported successfully. You can find it in the sidebar.</span>
+					</div>
+				{/if}
+
+				<!-- Console output -->
+				{#if store.consoleOutput}
+					<div class="bg-surface-900-100 text-surface-100-900 rounded-lg p-4 font-mono text-xs max-h-96 overflow-y-auto">
+						<pre class="whitespace-pre-wrap break-words">{store.consoleOutput}</pre>
+					</div>
+				{/if}
+
+				<!-- Error display -->
+				{#if store.importError}
+					<div class="card p-4 border border-error-500">
+						<h3 class="text-sm font-semibold text-error-600">Import Failed</h3>
+						<p class="text-sm text-error-500 mt-1">{store.importError}</p>
+					</div>
+				{/if}
+
+				<!-- Progress log -->
+				<details>
+					<summary class="text-sm font-medium cursor-pointer text-surface-500">Full Log</summary>
+					<div class="mt-2 space-y-1 max-h-64 overflow-y-auto">
+						{#each store.progressUpdates as update}
+							<p class="text-xs text-surface-500">
+								<span class="font-mono">[{update.phase}]</span> {update.message}
+							</p>
+						{/each}
+					</div>
+				</details>
+			</section>
+		{/if}
 
 		<!-- Validation Errors -->
 		{#if store.validationResult && store.validationResult.errors.length > 0}
@@ -78,7 +141,7 @@
 					type="text"
 					placeholder="Auto-generated if empty"
 					bind:value={store.storyName}
-					disabled={store.isImporting}
+					disabled={store.isImporting || store.importComplete}
 				/>
 			</label>
 
@@ -89,7 +152,7 @@
 					class="input mt-1"
 					type="file"
 					accept=".md,.txt"
-					disabled={store.isImporting}
+					disabled={store.isImporting || store.importComplete}
 					onchange={(e) => {
 						const target = e.target as HTMLInputElement;
 						store.worldFile = target.files?.[0] ?? null;
@@ -106,7 +169,7 @@
 					class="btn preset-tonal text-sm"
 					type="button"
 					onclick={store.addAct}
-					disabled={store.isImporting}
+					disabled={store.isImporting || store.importComplete}
 				>
 					+ Add Act
 				</button>
@@ -124,7 +187,7 @@
 							class="btn variant-ghost text-sm text-error-600"
 							type="button"
 							onclick={() => store.removeAct(act.id)}
-							disabled={store.isImporting}
+							disabled={store.isImporting || store.importComplete}
 						>
 							Remove
 						</button>
@@ -139,7 +202,7 @@
 							placeholder="Auto-generated if empty"
 							value={act.name}
 							oninput={(e) => store.updateActName(act.id, (e.target as HTMLInputElement).value)}
-							disabled={store.isImporting}
+							disabled={store.isImporting || store.importComplete}
 						/>
 					</label>
 
@@ -150,7 +213,7 @@
 							class="input mt-1"
 							type="file"
 							accept=".md,.txt"
-							disabled={store.isImporting}
+							disabled={store.isImporting || store.importComplete}
 							onchange={(e) => {
 								const target = e.target as HTMLInputElement;
 								store.updateActFile(act.id, target.files?.[0] ?? null);
@@ -165,7 +228,7 @@
 							class="input mt-1"
 							type="file"
 							accept=".json"
-							disabled={store.isImporting}
+							disabled={store.isImporting || store.importComplete}
 							onchange={(e) => {
 								const target = e.target as HTMLInputElement;
 								store.updateActTranscript(act.id, target.files?.[0] ?? null);
@@ -184,7 +247,7 @@
 					class="btn preset-tonal text-sm"
 					type="button"
 					onclick={store.addCharacter}
-					disabled={store.isImporting}
+					disabled={store.isImporting || store.importComplete}
 				>
 					+ Add Character
 				</button>
@@ -202,7 +265,7 @@
 							class="btn variant-ghost text-sm text-error-600"
 							type="button"
 							onclick={() => store.removeCharacter(character.id)}
-							disabled={store.isImporting}
+							disabled={store.isImporting || store.importComplete}
 						>
 							Remove
 						</button>
@@ -217,7 +280,7 @@
 							placeholder="Derived from card if empty"
 							value={character.name}
 							oninput={(e) => store.updateCharacterName(character.id, (e.target as HTMLInputElement).value)}
-							disabled={store.isImporting}
+							disabled={store.isImporting || store.importComplete}
 						/>
 					</label>
 
@@ -228,7 +291,7 @@
 							class="input mt-1"
 							type="file"
 							accept=".md,.txt"
-							disabled={store.isImporting}
+							disabled={store.isImporting || store.importComplete}
 							onchange={(e) => {
 								const target = e.target as HTMLInputElement;
 								store.updateCharacterFile(character.id, target.files?.[0] ?? null);
@@ -248,7 +311,7 @@
 					type="checkbox"
 					class="checkbox"
 					bind:checked={store.skipOptionalMalformed}
-					disabled={store.isImporting}
+					disabled={store.isImporting || store.importComplete}
 				/>
 				<span class="text-sm text-surface-700-300">Skip malformed optional data</span>
 			</label>
@@ -262,7 +325,7 @@
 						min="0"
 						max="20"
 						bind:value={store.retryCount}
-						disabled={store.isImporting}
+						disabled={store.isImporting || store.importComplete}
 					/>
 				</label>
 
@@ -274,74 +337,40 @@
 						min="1"
 						max="60"
 						bind:value={store.backoffIntervalSeconds}
-						disabled={store.isImporting}
+						disabled={store.isImporting || store.importComplete}
 					/>
 				</label>
 			</div>
 		</section>
 
-		<!-- Import Progress -->
-		{#if store.isImporting || store.progressUpdates.length > 0}
-			<section class="card p-6 space-y-4">
-				<h2 class="h4">Import Progress</h2>
-
-				<!-- Current status -->
-				{#if store.isImporting}
-					<div class="flex items-center gap-2">
-						<div class="animate-spin h-4 w-4 border-2 border-primary-500 border-t-transparent rounded-full"></div>
-						<span class="text-sm text-surface-700-300">
-							{store.progressUpdates[store.progressUpdates.length - 1]?.message ?? 'Processing...'}
-						</span>
-					</div>
-				{/if}
-
-				<!-- Console output -->
-				{#if store.consoleOutput}
-					<div class="bg-surface-900-100 text-surface-100-900 rounded-lg p-4 font-mono text-xs max-h-48 overflow-hidden">
-						<pre class="whitespace-pre-wrap break-words">{store.consoleOutput}</pre>
-					</div>
-				{/if}
-
-				<!-- Error display -->
-				{#if store.importError}
-					<div class="card p-4 border border-error-500">
-						<h3 class="text-sm font-semibold text-error-600">Import Failed</h3>
-						<p class="text-sm text-error-500 mt-1">{store.importError}</p>
-					</div>
-				{/if}
-
-				<!-- Progress log -->
-				<details>
-					<summary class="text-sm font-medium cursor-pointer text-surface-500">Full Log</summary>
-					<div class="mt-2 space-y-1 max-h-64 overflow-y-auto">
-						{#each store.progressUpdates as update}
-							<p class="text-xs text-surface-500">
-								<span class="font-mono">[{update.phase}]</span> {update.message}
-							</p>
-						{/each}
-					</div>
-				</details>
-			</section>
-		{/if}
-
 		<!-- Submit -->
 		<div class="flex justify-end gap-3 pb-8">
-			<button
-				class="btn variant-ghost"
-				type="button"
-				onclick={handleBack}
-				disabled={store.isImporting}
-			>
-				Cancel
-			</button>
-			<button
-				class="btn variant-filled"
-				type="button"
-				onclick={handleImport}
-				disabled={store.isImporting}
-			>
-				{store.isImporting ? 'Importing...' : 'Import Story'}
-			</button>
+			{#if store.importComplete}
+				<button
+					class="btn variant-filled"
+					type="button"
+					onclick={handleBack}
+				>
+					Back to Chat
+				</button>
+			{:else}
+				<button
+					class="btn variant-ghost"
+					type="button"
+					onclick={handleBack}
+					disabled={store.isImporting}
+				>
+					Cancel
+				</button>
+				<button
+					class="btn variant-filled"
+					type="button"
+					onclick={handleImport}
+					disabled={!store.canSubmit}
+				>
+					{store.isImporting ? 'Importing...' : 'Import Story'}
+				</button>
+			{/if}
 		</div>
 	</div>
 </div>
