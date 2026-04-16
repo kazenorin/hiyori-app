@@ -54,7 +54,7 @@ const mockIsAuthError = vi.fn((err: Error) => {
 	const msg = err.message.toLowerCase();
 	return msg.includes('401') || msg.includes('403') || msg.includes('unauthorized');
 });
-const mockSleep = vi.fn(async () => {});
+const mockSleep = vi.fn(async (_ms?: number) => {});
 
 // Custom mock withRetry that mimics real behavior but with zero-delay
 async function mockWithRetry<T>(

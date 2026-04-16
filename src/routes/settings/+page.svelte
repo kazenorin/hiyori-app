@@ -411,6 +411,48 @@
 			</label>
 		</section>
 
+		<!-- Memory -->
+		<section class="card p-6 space-y-4">
+			<h2 class="h4">Memory</h2>
+			<span class="text-xs text-surface-500"
+				>Automatically save and recall context from past conversations.</span
+			>
+
+			<label class="flex items-center gap-2">
+				<input
+					type="checkbox"
+					class="checkbox"
+					checked={settings.memoryEnabled}
+					onchange={(e) => updateSettings({ memoryEnabled: (e.currentTarget as HTMLInputElement).checked })}
+				/>
+				<span class="text-sm font-medium text-surface-700-300">Enable memory</span>
+			</label>
+
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">Embedding Provider</span>
+				<select
+					class="select mt-1"
+					disabled={!settings.memoryEnabled}
+					onchange={(e) => {
+						const value = (e.currentTarget as HTMLSelectElement).value;
+						updateSettings({ memoryProviderRole: value });
+					}}
+				>
+					{#if settings.providers.length === 0}
+						<option value="" disabled selected>No providers configured</option>
+					{:else}
+						<option value="main" selected={settings.memoryProviderRole === 'main'}>Main Provider</option>
+						{#each settings.providers as config (config.id)}
+							<option value={config.id} selected={settings.memoryProviderRole === config.id}>{config.name}</option>
+						{/each}
+					{/if}
+				</select>
+				<span class="text-xs text-surface-500 mt-1 block"
+					>The provider used to generate embeddings for memory search.</span
+				>
+			</label>
+		</section>
+
 		<!-- Developer -->
 		<section class="card p-6 space-y-4">
 			<h2 class="h4">Developer</h2>
