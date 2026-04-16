@@ -183,6 +183,28 @@ export async function sendMessage(
 
 		// Persist with accumulated content (not result.content)
 		await persistMessage(actLineId, messages[messageIdx]);
+
+		// Run memory extraction pipeline in background (non-blocking)
+		if (settings.memoryEnabled) {
+			const storyId = getActiveStoryId();
+			const activeActLineId = getActiveActLineId();
+			if (storyId && activeActLineId) {
+				memoryPipelinePromise = runMemoryExtractionPipeline(
+					messages[messageIdx].content,
+					storyId,
+					activeActLineId
+				)
+					.then((result) => {
+						log.debug('memory-pipeline', `Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`);
+					})
+					.catch((err) => {
+						log.error('memory-pipeline', 'Pipeline failed', err);
+					})
+					.finally(() => {
+						memoryPipelinePromise = null;
+					});
+			}
+		}
 	} catch (err: unknown) {
 		await handleStreamError(err, responseMessageId, actLineId);
 	} finally {

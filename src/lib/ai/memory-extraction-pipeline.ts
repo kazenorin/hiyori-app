@@ -79,27 +79,31 @@ async function persistMemoriesWithRetry(
 	};
 
 	for (const [character, locations] of Object.entries(extracted)) {
-		// Per-character retry scope
-		for (let attempt = 0; attempt <= RETRY_COUNT; attempt++) {
-			try {
-				for (const [location, memories] of Object.entries(locations)) {
+		let characterSuccess = true;
+		for (const [location, memories] of Object.entries(locations)) {
+			// Per-location retry scope — avoids duplicating previously succeeded locations
+			for (let attempt = 0; attempt <= RETRY_COUNT; attempt++) {
+				try {
 					await memory.add(storyId, actLineId, character, location, memories);
 					await memory.addLocation(storyId, actLineId, location);
 					result.memoriesAdded += memories.length;
 					result.locationsAdded += 1;
-				}
-				result.charactersProcessed += 1;
-				break; // Success, exit retry loop
-			} catch (err) {
-				const msg = err instanceof Error ? err.message : String(err);
-				if (attempt < RETRY_COUNT) {
-					await log.warn('memory-pipeline', `Persisting memories for ${character} attempt ${attempt + 1} failed, retrying...`);
-					await sleep(BACKOFF_SECONDS * 1000 * (attempt + 1));
-				} else {
-					result.errors.push(`Character ${character}: ${msg}`);
-					await log.error('memory-pipeline', `Failed to persist memories for ${character}`, err);
+					break; // Success for this location
+				} catch (err) {
+					const msg = err instanceof Error ? err.message : String(err);
+					if (attempt < RETRY_COUNT) {
+						await log.warn('memory-pipeline', `Location "${location}" for ${character} attempt ${attempt + 1} failed, retrying...`);
+						await sleep(BACKOFF_SECONDS * 1000 * (attempt + 1));
+					} else {
+						result.errors.push(`Character ${character}, Location "${location}": ${msg}`);
+						await log.error('memory-pipeline', `Failed to persist memories for ${character} at "${location}"`, err);
+						characterSuccess = false;
+					}
 				}
 			}
+		}
+		if (characterSuccess) {
+			result.charactersProcessed += 1;
 		}
 	}
 

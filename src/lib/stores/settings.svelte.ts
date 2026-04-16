@@ -119,9 +119,9 @@ export function getMemoryProviderConfig(): ProviderConfig | undefined {
 	const role = settings.memoryProviderRole || 'main';
 	// If it's a named role (like "main"), resolve through roleAssignments
 	const id = settings.roleAssignments[role];
-	if (id) return getProviderConfig(id);
-	// Otherwise it might be a direct provider config ID
-	return getProviderConfig(role);
+	const config = id ? getProviderConfig(id) : getProviderConfig(role);
+	if (!config?.apiKey) return undefined;
+	return config;
 }
 
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
