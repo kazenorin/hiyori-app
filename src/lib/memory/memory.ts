@@ -44,6 +44,15 @@ interface VecRow {
 	rowid: number;
 }
 
+export interface LocationItem {
+	id: string;
+	location: string;
+	score?: number;
+	storyId: string;
+	actLineId: string;
+	createdAt?: string;
+}
+
 export class Memory {
 	private readonly providerConfig: ProviderConfig;
 	private embeddingModel: ReturnType<typeof createEmbeddingModel> | null = null;
@@ -340,6 +349,79 @@ export class Memory {
 			actLineId: row.act_line_id,
 			characterCanonicalName: row.character_canonical_name,
 			location: row.location,
+			createdAt: row.created_at
+		}));
+	}
+
+	async getAll(options: MemorySearchOptions): Promise<MemoryItem[]> {
+		const db = getMemoryDatabase();
+
+		const rows = await db.select<MemoryMetaRow[]>(
+			'SELECT id, content, story_id, act_line_id, character_canonical_name, location, created_at FROM memory_meta WHERE story_id = $1 ORDER BY created_at DESC',
+			[options.storyId]
+		);
+
+		return rows.map((row) => ({
+			id: row.id,
+			memory: row.content,
+			storyId: row.story_id,
+			actLineId: row.act_line_id,
+			characterCanonicalName: row.character_canonical_name,
+			location: row.location,
+			createdAt: row.created_at
+		}));
+	}
+
+	async getAllLocations(options: MemorySearchOptions): Promise<LocationItem[]> {
+		const db = getMemoryDatabase();
+
+		const rows = await db.select<LocationMetaRow[]>(
+			'SELECT id, location_text, story_id, act_line_id, created_at FROM location_meta WHERE story_id = $1 ORDER BY created_at DESC',
+			[options.storyId]
+		);
+
+		return rows.map((row) => ({
+			id: row.id,
+			location: row.location_text,
+			storyId: row.story_id,
+			actLineId: row.act_line_id,
+			createdAt: row.created_at
+		}));
+	}
+
+	async searchLocations(query: string, options: MemorySearchOptions): Promise<LocationItem[]> {
+		const db = getMemoryDatabase();
+		const embedding = await this.generateEmbedding(query);
+		const dimension = embedding.length;
+		await this.ensureLocationVecTable(dimension);
+		const limit = options.limit ?? 5;
+
+		const sql = `
+			SELECT l.id, l.location_text, l.story_id, l.act_line_id, l.created_at, sub.distance
+			FROM (
+				SELECT rowid, distance
+				FROM vec_locations
+				WHERE embedding MATCH $1
+				  AND k = $2
+				  AND story_id = $3
+				ORDER BY distance
+			) sub
+			JOIN location_meta l ON l.vec_rowid = sub.rowid
+			ORDER BY sub.distance
+		`;
+
+		const rows = await db.select<LocationMetaRow[]>(sql, [
+			JSON.stringify(embedding),
+			limit,
+			options.storyId
+		]);
+
+		return rows.map((row) => ({
+			id: row.id,
+			location: row.location_text,
+			score: row.distance,
+			storyId: row.story_id,
+			actLineId: row.act_line_id,
 			createdAt: row.created_at
 		}));
 	}
