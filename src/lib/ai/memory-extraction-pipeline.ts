@@ -1,10 +1,10 @@
 import { generateText } from 'ai';
 import { createModel } from './provider';
-import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
+import { getMemoryProviderConfig, settings, type MemoryProviderConfig } from '$lib/stores/settings.svelte';
 import { loadMemoryExtractionSystemPrompt, loadMemoryExtractionPrompt } from '$lib/fs/prompts';
 import { parseMemoryExtract, type ExtractedMemories } from '$lib/memory/memory-extract-parser';
 import { Memory } from '$lib/memory/memory';
-import { isAuthError, sleep } from '$lib/utils/async';
+import { isAuthError, withRetry, toError } from '$lib/utils/async';
 import { log } from '$lib/logging/logger';
 
 export interface PipelineResult {
@@ -37,38 +37,28 @@ export async function runMemoryExtractionPipeline(
 	return await persistMemoriesWithRetry(extracted, storyId, actLineId, config);
 }
 
-async function generateMemoriesWithRetry(response: string, config: NonNullable<ReturnType<typeof getMemoryProviderConfig>>): Promise<string> {
+async function generateMemoriesWithRetry(response: string, config: MemoryProviderConfig): Promise<string> {
 	const model = createModel(config);
 	const systemPrompt = await loadMemoryExtractionSystemPrompt();
 	const extractionPromptTemplate = await loadMemoryExtractionPrompt();
 	const userPrompt = extractionPromptTemplate + '\n' + response;
 
-	for (let attempt = 0; attempt <= RETRY_COUNT; attempt++) {
-		try {
-			const result = await generateText({
-				model,
-				system: systemPrompt,
-				prompt: userPrompt
-			});
-			return result.text;
-		} catch (err) {
-			if (isAuthError(err instanceof Error ? err : new Error(String(err)))) {
-				throw new Error('Authentication failed. Please check your API key in Settings.');
-			}
-			if (attempt < RETRY_COUNT) {
-				await log.warn('memory-pipeline', `Memory generation attempt ${attempt + 1} failed, retrying...`);
-				await sleep(BACKOFF_SECONDS * 1000 * (attempt + 1));
-			}
+	return await withRetry(
+		() => generateText({ model, system: systemPrompt, prompt: userPrompt }).then(r => r.text),
+		{
+			maxAttempts: RETRY_COUNT + 1,
+			backoffMs: BACKOFF_SECONDS * 1000,
+			shouldRetry: (err) => !isAuthError(err),
+			onRetry: (attempt) => log.warn('memory-pipeline', `Memory generation attempt ${attempt} failed, retrying...`)
 		}
-	}
-	throw new Error('Memory generation failed after retries');
+	);
 }
 
 async function persistMemoriesWithRetry(
 	extracted: ExtractedMemories,
 	storyId: string,
 	actLineId: string,
-	config: NonNullable<ReturnType<typeof getMemoryProviderConfig>>
+	config: MemoryProviderConfig
 ): Promise<PipelineResult> {
 	const memory = new Memory(config);
 	const result: PipelineResult = {
@@ -82,24 +72,15 @@ async function persistMemoriesWithRetry(
 		let characterSuccess = true;
 		for (const [location, memories] of Object.entries(locations)) {
 			// Per-location retry scope — avoids duplicating previously succeeded locations
-			for (let attempt = 0; attempt <= RETRY_COUNT; attempt++) {
-				try {
-					await memory.add(storyId, actLineId, character, location, memories);
-					await memory.addLocation(storyId, actLineId, location);
-					result.memoriesAdded += memories.length;
-					result.locationsAdded += 1;
-					break; // Success for this location
-				} catch (err) {
-					const msg = err instanceof Error ? err.message : String(err);
-					if (attempt < RETRY_COUNT) {
-						await log.warn('memory-pipeline', `Location "${location}" for ${character} attempt ${attempt + 1} failed, retrying...`);
-						await sleep(BACKOFF_SECONDS * 1000 * (attempt + 1));
-					} else {
-						result.errors.push(`Character ${character}, Location "${location}": ${msg}`);
-						await log.error('memory-pipeline', `Failed to persist memories for ${character} at "${location}"`, err);
-						characterSuccess = false;
-					}
-				}
+			try {
+				await persistLocationWithRetry(memory, storyId, actLineId, character, location, memories);
+				result.memoriesAdded += memories.length;
+				result.locationsAdded += 1;
+			} catch (err) {
+				const msg = toError(err).message;
+				result.errors.push(`Character ${character}, Location "${location}": ${msg}`);
+				await log.error('memory-pipeline', `Failed to persist memories for ${character} at "${location}"`, err);
+				characterSuccess = false;
 			}
 		}
 		if (characterSuccess) {
@@ -108,4 +89,25 @@ async function persistMemoriesWithRetry(
 	}
 
 	return result;
+}
+
+async function persistLocationWithRetry(
+	memory: Memory,
+	storyId: string,
+	actLineId: string,
+	character: string,
+	location: string,
+	memories: string[]
+): Promise<void> {
+	await withRetry(
+		async () => {
+			await memory.add(storyId, actLineId, character, location, memories);
+			await memory.addLocation(storyId, actLineId, location);
+		},
+		{
+			maxAttempts: RETRY_COUNT + 1,
+			backoffMs: BACKOFF_SECONDS * 1000,
+			onRetry: (attempt) => log.warn('memory-pipeline', `Location "${location}" for ${character} attempt ${attempt} failed, retrying...`)
+		}
+	);
 }

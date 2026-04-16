@@ -124,6 +124,9 @@ export function getMemoryProviderConfig(): ProviderConfig | undefined {
 	return config;
 }
 
+/** Resolved memory provider config type (non-nullable after successful resolution) */
+export type MemoryProviderConfig = NonNullable<ReturnType<typeof getMemoryProviderConfig>>;
+
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
 	const id = settings.roleAssignments[role];
 	if (!id) return undefined;

@@ -49,15 +49,52 @@ vi.mock('$lib/memory/memory-extract-parser', () => ({
 	parseMemoryExtract: mockParseMemoryExtract
 }));
 
-// Mock async utilities
+// Mock async utilities - mock withRetry with same logic but no actual delays
 const mockIsAuthError = vi.fn((err: Error) => {
 	const msg = err.message.toLowerCase();
 	return msg.includes('401') || msg.includes('403') || msg.includes('unauthorized');
 });
 const mockSleep = vi.fn(async () => {});
+
+// Custom mock withRetry that mimics real behavior but with zero-delay
+async function mockWithRetry<T>(
+	fn: () => Promise<T>,
+	options: { maxAttempts: number; backoffMs: number; shouldRetry?: (error: Error) => boolean; onRetry?: (attempt: number, error: Error) => void | Promise<void> }
+): Promise<T> {
+	let lastError: Error | undefined;
+
+	for (let attempt = 0; attempt < options.maxAttempts; attempt++) {
+		try {
+			return await fn();
+		} catch (err) {
+			lastError = err instanceof Error ? err : new Error(String(err));
+
+			if (options.shouldRetry && !options.shouldRetry(lastError)) {
+				throw lastError;
+			}
+
+			const isLastAttempt = attempt === options.maxAttempts - 1;
+			if (isLastAttempt) {
+				break;
+			}
+
+			if (options.onRetry) {
+				await options.onRetry(attempt + 1, lastError);
+			}
+
+			// Zero delay for tests (no actual sleep)
+			await mockSleep(options.backoffMs * (attempt + 1));
+		}
+	}
+
+	throw lastError ?? new Error('Retry failed');
+}
+
 vi.mock('$lib/utils/async', () => ({
 	isAuthError: mockIsAuthError,
-	sleep: mockSleep
+	sleep: mockSleep,
+	toError: (err: unknown) => err instanceof Error ? err : new Error(String(err)),
+	withRetry: mockWithRetry
 }));
 
 // Mock logger
@@ -86,6 +123,8 @@ describe('memory-extraction-pipeline', () => {
 			const msg = err.message.toLowerCase();
 			return msg.includes('401') || msg.includes('403') || msg.includes('unauthorized');
 		});
+		mockMemoryInstance.add.mockResolvedValue(undefined);
+		mockMemoryInstance.addLocation.mockResolvedValue(undefined);
 	});
 
 	describe('runMemoryExtractionPipeline', () => {
@@ -133,7 +172,8 @@ describe('memory-extraction-pipeline', () => {
 			const { runMemoryExtractionPipeline } = await import('$lib/ai/memory-extraction-pipeline');
 			await expect(
 				runMemoryExtractionPipeline('response', 'story-1', 'line-1')
-			).rejects.toThrow('Authentication failed');
+			).rejects.toThrow('401 Unauthorized');
+			expect(mockGenerateText).toHaveBeenCalledTimes(1); // No retries for auth errors
 		});
 
 		it('retries on transient errors', async () => {
@@ -156,7 +196,7 @@ describe('memory-extraction-pipeline', () => {
 			const { runMemoryExtractionPipeline } = await import('$lib/ai/memory-extraction-pipeline');
 			await expect(
 				runMemoryExtractionPipeline('response', 'story-1', 'line-1')
-			).rejects.toThrow('Memory generation failed after retries');
+			).rejects.toThrow('Network error');
 
 			expect(mockGenerateText).toHaveBeenCalledTimes(4); // Initial + 3 retries
 		});

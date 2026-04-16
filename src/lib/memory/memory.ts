@@ -1,4 +1,5 @@
 import { embed, embedMany } from 'ai';
+import Database from '@tauri-apps/plugin-sql';
 import { getMemoryDatabase } from '$lib/db/memory-database';
 import { createEmbeddingModel } from '$lib/ai/provider';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
@@ -41,11 +42,6 @@ interface LocationMetaRow {
 
 interface VecRow {
 	rowid: number;
-}
-
-function getErrorMessage(error: unknown): string {
-	if (error instanceof Error) return error.message;
-	return 'Unexpected error';
 }
 
 export class Memory {
@@ -234,11 +230,22 @@ export class Memory {
 		const dimension = embeddings[0].length;
 		await this.ensureMemoryVecTable(dimension);
 
-		for (let i = 0; i < memories.length; i++) {
-			const id = crypto.randomUUID();
-			const text = memories[i];
-			const embedding = embeddings[i];
+		// Batch insert all memories at once
+		await this.insertMemoryBatch(db, storyId, actLineId, characterCanonicalName, location, memories, embeddings);
+	}
 
+	private async insertMemoryBatch(
+		db: Database,
+		storyId: string,
+		actLineId: string,
+		characterCanonicalName: string,
+		location: string,
+		memories: string[],
+		embeddings: number[][]
+	): Promise<void> {
+		// Insert all vectors first
+		const vecRowids: number[] = [];
+		for (const embedding of embeddings) {
 			await db.execute(
 				'INSERT INTO vec_memories(story_id, act_line_id, embedding) VALUES ($1, $2, $3)',
 				[storyId, actLineId, JSON.stringify(embedding)]
@@ -250,12 +257,19 @@ export class Memory {
 			if (!vecRowid) {
 				throw new Error('Failed to retrieve vector rowid after insert');
 			}
+			vecRowids.push(vecRowid);
+		}
+
+		// Insert all metadata
+		for (let i = 0; i < memories.length; i++) {
+			const id = crypto.randomUUID();
+			const text = memories[i];
 
 			await db.execute(
 				`INSERT INTO memory_meta (
 					id, vec_rowid, content, story_id, act_line_id, character_canonical_name, location
 				) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-				[id, vecRowid, text, storyId, actLineId, characterCanonicalName, location]
+				[id, vecRowids[i], text, storyId, actLineId, characterCanonicalName, location]
 			);
 		}
 	}
