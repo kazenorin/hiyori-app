@@ -1,4 +1,4 @@
-import {getMainProviderConfig, type ProviderConfig} from '$lib/stores/settings.svelte';
+import {getMainProviderConfig, getMemoryProviderConfig, settings} from '$lib/stores/settings.svelte';
 import {loadSystemPrompt} from '$lib/fs/prompts';
 import type {GameData} from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
@@ -6,6 +6,9 @@ import * as dbActLines from '$lib/db/act-lines';
 import {logMainChat} from '$lib/logging/chat-logger';
 import {type StreamState} from '$lib/ai/chat-callbacks';
 import {buildMetadata, type MessageMetadata, streamChatResponse} from "./chat-stream";
+import {runMemoryExtractionPipeline} from './memory-extraction-pipeline';
+import {log} from '$lib/logging/logger';
+import {getActiveStoryId, getActiveActLineId} from '$lib/stores/stories.svelte';
 
 export interface Message {
 	id: string;
@@ -20,6 +23,7 @@ let messages = $state<Message[]>([]);
 let isStreaming = $state(false);
 let error = $state<string | null>(null);
 let abortController: AbortController | null = null;
+let memoryPipelinePromise: Promise<void> | null = null;
 
 export function getMessages(): Message[] {
 	return messages;
@@ -115,6 +119,11 @@ export async function sendMessage(
 		return;
 	}
 	error = null;
+
+	// Await any in-flight memory pipeline before starting a new response
+	if (memoryPipelinePromise) {
+		await memoryPipelinePromise;
+	}
 
 	const responseMessageId = crypto.randomUUID();
 	const responseMessage: Message = {

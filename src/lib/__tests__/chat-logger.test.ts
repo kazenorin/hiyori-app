@@ -23,7 +23,9 @@ vi.mock('$lib/stores/settings.svelte', () => ({
 		providers: [],
 		roleAssignments: {},
 		logLevel: 'debug',
-		fontSize: 1.0
+		fontSize: 1.0,
+		memoryEnabled: true,
+		memoryProviderRole: 'main'
 	}))
 }));
 
@@ -50,7 +52,9 @@ function defaultSettings() {
 		providers: [],
 		roleAssignments: {},
 		logLevel: 'debug' as const,
-		fontSize: 1.0
+		fontSize: 1.0,
+		memoryEnabled: true,
+		memoryProviderRole: 'main'
 	};
 }
 

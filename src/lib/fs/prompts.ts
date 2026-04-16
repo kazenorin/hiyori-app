@@ -29,6 +29,10 @@ import defaultSummarizeCharactersInAct from './prompts/character/summarize-chara
 import defaultActGenerationPrompt from './prompts/import/act-generation-prompt.md?raw';
 import defaultChoicesExtractionPrompt from './prompts/import/choices-extraction-prompt.md?raw';
 
+// Memories
+import defaultMemoryExtractionSystemPrompt from './prompts/memories/memory-extraction-system-prompt.md?raw';
+import defaultMemoryExtractionPrompt from './prompts/memories/memory-extraction-prompt.md?raw';
+
 // Re-export for consumers that need raw content
 export {
 	defaultSystemPrompt,
@@ -44,7 +48,9 @@ export {
 	defaultCharacterCardExtractionSystemPrompt,
 	defaultSummarizeCharactersInAct,
 	defaultActGenerationPrompt,
-	defaultChoicesExtractionPrompt
+	defaultChoicesExtractionPrompt,
+	defaultMemoryExtractionSystemPrompt,
+	defaultMemoryExtractionPrompt
 };
 
 // === Prompt Config Instances ===
@@ -73,6 +79,10 @@ const summarizeCharactersInAct = new Prompt({ relativePath: 'character/summarize
 const actGenerationPrompt = new Prompt({ relativePath: 'import/act-generation-prompt.md', defaultContent: defaultActGenerationPrompt });
 const choicesExtractionPrompt = new Prompt({ relativePath: 'import/choices-extraction-prompt.md', defaultContent: defaultChoicesExtractionPrompt });
 
+// Memories
+const memoryExtractionSystemPrompt = new Prompt({ relativePath: 'memories/memory-extraction-system-prompt.md', defaultContent: defaultMemoryExtractionSystemPrompt });
+const memoryExtractionPrompt = new Prompt({ relativePath: 'memories/memory-extraction-prompt.md', defaultContent: defaultMemoryExtractionPrompt });
+
 // === Load Functions ===
 
 export const loadSystemPrompt = (): Promise<string> => systemPrompt.load();
@@ -89,6 +99,8 @@ export const loadCharacterCardExtractionSystemPrompt = (): Promise<string> => ch
 export const loadSummarizeCharactersInAct = (): Promise<string> => summarizeCharactersInAct.load();
 export const loadActGenerationPrompt = (): Promise<string> => actGenerationPrompt.load();
 export const loadChoicesExtractionPrompt = (): Promise<string> => choicesExtractionPrompt.load();
+export const loadMemoryExtractionSystemPrompt = (): Promise<string> => memoryExtractionSystemPrompt.load();
+export const loadMemoryExtractionPrompt = (): Promise<string> => memoryExtractionPrompt.load();
 
 export const getDefaultSystemPromptContent = () => defaultSystemPrompt;
 export const getDefaultNarrationTemplateContent = () => defaultNarrationTemplate;
@@ -121,5 +133,7 @@ registerDefaults([
 	characterCardExtractionSystemPrompt,
 	summarizeCharactersInAct,
 	actGenerationPrompt,
-	choicesExtractionPrompt
+	choicesExtractionPrompt,
+	memoryExtractionSystemPrompt,
+	memoryExtractionPrompt
 ]);

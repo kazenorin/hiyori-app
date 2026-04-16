@@ -19,6 +19,8 @@ export interface Settings {
 	roleAssignments: Record<string, string>;
 	logLevel: LogLevel;
 	fontSize: number;
+	memoryEnabled: boolean;
+	memoryProviderRole: string;
 }
 
 const STORAGE_KEY = 'byoa-settings';
@@ -27,7 +29,9 @@ const defaults: Settings = {
 	providers: [],
 	roleAssignments: {},
 	logLevel: 'info',
-	fontSize: 1.0
+	fontSize: 1.0,
+	memoryEnabled: true,
+	memoryProviderRole: 'main'
 };
 
 /**
@@ -49,7 +53,9 @@ function migrateFromFlatSettings(raw: Record<string, unknown>): Settings {
 		providers: [config],
 		roleAssignments: { main: config.id },
 		logLevel: (raw.logLevel as LogLevel) || 'info',
-		fontSize: (raw.fontSize as number) ?? 1.0
+		fontSize: (raw.fontSize as number) ?? 1.0,
+		memoryEnabled: (raw.memoryEnabled as boolean) ?? true,
+		memoryProviderRole: (raw.memoryProviderRole as string) || 'main'
 	};
 }
 
@@ -109,6 +115,15 @@ export function getMainProviderConfig(): ProviderConfig | undefined {
 	return getProviderConfig(id);
 }
 
+export function getMemoryProviderConfig(): ProviderConfig | undefined {
+	const role = settings.memoryProviderRole || 'main';
+	// If it's a named role (like "main"), resolve through roleAssignments
+	const id = settings.roleAssignments[role];
+	if (id) return getProviderConfig(id);
+	// Otherwise it might be a direct provider config ID
+	return getProviderConfig(role);
+}
+
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
 	const id = settings.roleAssignments[role];
 	if (!id) return undefined;
@@ -145,12 +160,16 @@ export function assignRole(role: string, providerConfigId: string): void {
 
 // --- Global Settings ---
 
-export async function updateSettings(partial: Partial<Pick<Settings, 'logLevel' | 'fontSize'>>): Promise<void> {
+export async function updateSettings(
+	partial: Partial<Pick<Settings, 'logLevel' | 'fontSize' | 'memoryEnabled' | 'memoryProviderRole'>>
+): Promise<void> {
 	const prevFontSize = settings.fontSize;
 	const prevLogLevel = settings.logLevel;
 
 	if (partial.logLevel !== undefined) settings.logLevel = partial.logLevel;
 	if (partial.fontSize !== undefined) settings.fontSize = partial.fontSize;
+	if (partial.memoryEnabled !== undefined) settings.memoryEnabled = partial.memoryEnabled;
+	if (partial.memoryProviderRole !== undefined) settings.memoryProviderRole = partial.memoryProviderRole;
 	persist();
 
 	// Apply font size preference when fontSize changes

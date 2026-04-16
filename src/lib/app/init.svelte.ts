@@ -1,7 +1,9 @@
 import { initDatabase } from '$lib/db/database';
 import { runMigrations } from '$lib/db/migrations';
+import { initMemoryDatabase } from '$lib/db/memory-database';
+import { runMemoryMigrations } from '$lib/db/memory-migrations';
 import { loadStories, restoreState } from '$lib/stores/stories.svelte';
-import { loadWorldTemplate, loadGenerateWorldFromChatPrompt, loadGenerateWorldFromChatSystemPrompt, loadWorldBuilderSystemPrompt, ensureAllBaseConfigs } from '$lib/fs/prompts';
+import { loadWorldTemplate, loadGenerateWorldFromChatPrompt, loadGenerateWorldFromChatSystemPrompt, loadWorldBuilderSystemPrompt, ensureAllBaseConfigs, loadMemoryExtractionSystemPrompt, loadMemoryExtractionPrompt } from '$lib/fs/prompts';
 import { initLogging, log } from '$lib/logging/logger';
 import { getSettings } from '$lib/stores/settings.svelte';
 
@@ -29,6 +31,11 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 		onStatus?.('Running migrations...');
 		await runMigrations();
 
+		await log.info('init', 'Initializing memory database...');
+		onStatus?.('Initializing memory database...');
+		await initMemoryDatabase();
+		await runMemoryMigrations();
+
 		await log.info('init', 'Ensuring base configs...');
 		onStatus?.('Ensuring base configs...');
 		await ensureAllBaseConfigs();
@@ -39,6 +46,10 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 		await loadGenerateWorldFromChatPrompt();
 		await loadGenerateWorldFromChatSystemPrompt();
 		await loadWorldBuilderSystemPrompt();
+
+		await log.info('init', 'Loading memory prompts...');
+		await loadMemoryExtractionSystemPrompt();
+		await loadMemoryExtractionPrompt();
 
 		await log.info('init', 'Loading stories...');
 		onStatus?.('Loading stories...');
