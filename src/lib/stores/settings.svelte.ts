@@ -186,6 +186,7 @@ export async function updateSettings(
 	if (partial.fontSize !== undefined) settings.fontSize = partial.fontSize;
 	if (partial.memoryEnabled !== undefined) settings.memoryEnabled = partial.memoryEnabled;
 	if (partial.memoryProviderRole !== undefined) settings.memoryProviderRole = partial.memoryProviderRole;
+	if (partial.embeddingProviderRole !== undefined) settings.embeddingProviderRole = partial.embeddingProviderRole;
 	persist();
 
 	// Apply font size preference when fontSize changes
