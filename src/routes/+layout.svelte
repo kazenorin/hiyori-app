@@ -36,7 +36,7 @@
 		exitWorldBuilderMode,
 		getIsActive as getIsWorldBuilderActive
 	} from '$lib/ai/world-builder.svelte';
-	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
+	import { getSettings, updateSettings, settings } from '$lib/stores/settings.svelte';
 	import {
 		getIsGenerating,
 		getError,
@@ -44,6 +44,12 @@
 		generateActCardForCurrentLine,
 		resetState
 	} from '$lib/stores/act-card.svelte';
+	import {
+		getIsRegenerating,
+		getRegenError,
+		getLastRegenResult,
+		regenerateMemoriesForCurrentLine
+	} from '$lib/stores/memory-regeneration.svelte';
 
 	let { children } = $props();
 	let appError = $state<string | null>(null);
@@ -477,6 +483,26 @@
 				>
 					Generate Character Cards
 				</a>
+				{#if settings.memoryEnabled}
+					<button
+						class="w-full p-2 rounded-[var(--radius-base)] text-sm text-surface-500 transition-colors duration-150 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-surface-200-800"
+						type="button"
+						disabled={!getActiveActLineId() || getIsRegenerating()}
+						onclick={regenerateMemoriesForCurrentLine}
+					>
+						{#if getIsRegenerating()}
+							Regenerating...
+						{:else}
+							Regenerate Memories
+						{/if}
+					</button>
+					{#if getRegenError()}
+						<p class="px-2 text-xs text-red-400">{getRegenError()}</p>
+					{/if}
+					{#if getLastRegenResult()}
+						<p class="px-2 text-xs text-green-400 truncate">{getLastRegenResult()}</p>
+					{/if}
+				{/if}
 				<label class="flex items-center gap-2 px-2 py-1 text-xs text-surface-500">
 					<span class="shrink-0 font-medium" style="font-size: 0.65rem;">Aa</span>
 					<input

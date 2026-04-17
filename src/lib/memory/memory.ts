@@ -416,10 +416,10 @@ export class Memory {
 				WHERE embedding MATCH $1
 				  AND k = $2
 				  AND story_id = $3
+				  AND act_line_id = $4
 				ORDER BY distance
 			) sub
 			JOIN memory_meta m ON m.vec_rowid = sub.rowid
-			WHERE m.act_line_id = $4
 			ORDER BY sub.distance
 		`
 			: `
@@ -553,6 +553,54 @@ export class Memory {
 		}
 
 		await db.execute('DELETE FROM memory_meta WHERE id = $1', [id]);
+	}
+
+	async deleteByActLine(storyId: string, actLineId: string): Promise<number> {
+		const db = getMemoryDatabase();
+
+		// Count before deleting
+		const countRows = await db.select<Array<{ cnt: number }>>(
+			'SELECT COUNT(*) as cnt FROM memory_meta WHERE story_id = $1 AND act_line_id = $2',
+			[storyId, actLineId]
+		);
+		const count = countRows[0]?.cnt ?? 0;
+
+		// Single statement — act_line_id is a partition key on vec_memories
+		await db.execute(
+			'DELETE FROM vec_memories WHERE story_id = $1 AND act_line_id = $2',
+			[storyId, actLineId]
+		);
+		await db.execute(
+			'DELETE FROM memory_meta WHERE story_id = $1 AND act_line_id = $2',
+			[storyId, actLineId]
+		);
+
+		return count;
+	}
+
+	async deleteLocationsByActLine(storyId: string, actLineId: string): Promise<number> {
+		const db = getMemoryDatabase();
+
+		// Get all vec_rowids to delete from vec_locations
+		const rows = await db.select<VecRow[]>(
+			'SELECT vec_rowid as rowid FROM location_meta WHERE story_id = $1 AND act_line_id = $2',
+			[storyId, actLineId]
+		);
+
+		// Delete from vec_locations
+		for (const row of rows) {
+			if (row.rowid) {
+				await db.execute('DELETE FROM vec_locations WHERE rowid = $1', [row.rowid]);
+			}
+		}
+
+		// Delete from location_meta
+		await db.execute(
+			'DELETE FROM location_meta WHERE story_id = $1 AND act_line_id = $2',
+			[storyId, actLineId]
+		);
+
+		return rows.length;
 	}
 
 	async reset(): Promise<void> {
