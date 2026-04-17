@@ -339,11 +339,16 @@ export class Memory {
 		messageId: string,
 		location: string
 	): Promise<boolean> {
+		// Check for exact text match before generating embedding
+		if (await this.isLocationExactMatch(location, storyId, actLineId)) {
+			return false;
+		}
+
 		const embedding = await this.generateEmbedding(location);
 		const dimension = embedding.length;
 		await this.ensureLocationVecTable(dimension);
 
-		// Check for duplicate location in same act line
+		// Check for similar location in same act line
 		if (await this.isLocationDuplicate(embedding, storyId, actLineId)) {
 			return false;
 		}
@@ -369,6 +374,19 @@ export class Memory {
 			[id, vecRowid, location, messageId, storyId, actLineId]
 		);
 		return true;
+	}
+
+	private async isLocationExactMatch(location: string, storyId: string, actLineId: string): Promise<boolean> {
+		const db = getMemoryDatabase();
+		try {
+			const rows = await db.select<Array<{ count: number }>>(
+				'SELECT COUNT(*) as count FROM location_meta WHERE location_text = $1 AND story_id = $2 AND act_line_id = $3',
+				[location, storyId, actLineId]
+			);
+			return rows.length > 0 && rows[0].count > 0;
+		} catch {
+			return false;
+		}
 	}
 
 	private async isLocationDuplicate(

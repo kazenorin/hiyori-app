@@ -163,8 +163,12 @@ describe('Memory', () => {
 
 	describe('addLocation', () => {
 		it('creates vec_locations table and inserts location', async () => {
-			setupMocksForNewTable();
-			setupMocksForVecInsertRowid(42);
+			// Set up mock select results in call order:
+			// 1. isLocationExactMatch → no match
+			// 2. sqlite_master check → table doesn't exist
+			// 3. isLocationDuplicate → no similar locations
+			// 4. last_insert_rowid after vec insert
+			mockDbSelectResults = [[{ count: 0 }], [], [{ rowid: 1 }], [{ rowid: 42 }]];
 
 			const memory = new Memory(testConfig);
 			await memory.addLocation('story-1', 'line-1', 'msg-1', 'The Ancient Ruins');
@@ -182,7 +186,40 @@ describe('Memory', () => {
 			// Find location_meta insert
 			const metaInsert = mockDbExecuteCalls.find(([q]) => q.includes('INSERT INTO location_meta'));
 			expect(metaInsert).toBeDefined();
-		});
+			});
+
+			it('skips similar location with cosine distance < 0.1', async () => {
+				// First call: insert succeeds. Second call: rejected by similarity.
+				mockDbSelectResults = [
+					// First addLocation
+					[{ count: 0 }],      // isLocationExactMatch
+					[],                   // sqlite_master (no table)
+					[],                   // isLocationDuplicate (empty)
+					[{ rowid: 42 }],     // last_insert_rowid
+					// Second addLocation (different text, same embedding)
+					[{ count: 0 }],      // isLocationExactMatch (different text)
+					[{ name: 'vec_locations' }], // sqlite_master (exists)
+					[
+						{ key: 'loc_vec_dimension', value: '4' },
+						{ key: 'loc_model_key', value: MODEL_KEY }
+					],                   // memory_config
+					[{ distance: 0.05 }] // isLocationDuplicate (similar found)
+				];
+
+				const memory = new Memory(testConfig);
+				const first = await memory.addLocation('story-1', 'line-1', 'msg-1', 'The Ancient Ruins');
+				expect(first).toBe(true);
+
+				// Clear execute calls to count inserts on second call
+				mockDbExecuteCalls = [];
+
+				const second = await memory.addLocation('story-1', 'line-1', 'msg-2', 'The Old Ruins');
+				expect(second).toBe(false);
+
+				// No new inserts should have happened
+				expect(mockDbExecuteCalls.some(([q]) => q.includes('INSERT INTO vec_locations'))).toBe(false);
+				expect(mockDbExecuteCalls.some(([q]) => q.includes('INSERT INTO location_meta'))).toBe(false);
+			});
 	});
 
 	describe('search', () => {
