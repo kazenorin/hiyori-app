@@ -6,6 +6,7 @@ import type { ProviderConfig } from '$lib/stores/settings.svelte';
 
 export interface MemorySearchOptions {
 	storyId: string;
+	actLineId?: string;
 	limit?: number;
 }
 
@@ -321,7 +322,22 @@ export class Memory {
 		await this.ensureMemoryVecTable(dimension);
 		const limit = options.limit ?? 5;
 
-		const sql = `
+		const sql = options.actLineId
+			? `
+			SELECT m.id, m.content, m.story_id, m.act_line_id, m.character_canonical_name, m.location, m.created_at, sub.distance
+			FROM (
+				SELECT rowid, distance
+				FROM vec_memories
+				WHERE embedding MATCH $1
+				  AND k = $2
+				  AND story_id = $3
+				ORDER BY distance
+			) sub
+			JOIN memory_meta m ON m.vec_rowid = sub.rowid
+			WHERE m.act_line_id = $4
+			ORDER BY sub.distance
+		`
+			: `
 			SELECT m.id, m.content, m.story_id, m.act_line_id, m.character_canonical_name, m.location, m.created_at, sub.distance
 			FROM (
 				SELECT rowid, distance
@@ -335,11 +351,11 @@ export class Memory {
 			ORDER BY sub.distance
 		`;
 
-		const rows = await db.select<MemoryMetaRow[]>(sql, [
-			JSON.stringify(embedding),
-			limit,
-			options.storyId
-		]);
+		const params = options.actLineId
+			? [JSON.stringify(embedding), limit, options.storyId, options.actLineId]
+			: [JSON.stringify(embedding), limit, options.storyId];
+
+		const rows = await db.select<MemoryMetaRow[]>(sql, params);
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -356,10 +372,14 @@ export class Memory {
 	async getAll(options: MemorySearchOptions): Promise<MemoryItem[]> {
 		const db = getMemoryDatabase();
 
-		const rows = await db.select<MemoryMetaRow[]>(
-			'SELECT id, content, story_id, act_line_id, character_canonical_name, location, created_at FROM memory_meta WHERE story_id = $1 ORDER BY created_at DESC',
-			[options.storyId]
-		);
+		const sql = options.actLineId
+			? 'SELECT id, content, story_id, act_line_id, character_canonical_name, location, created_at FROM memory_meta WHERE story_id = $1 AND act_line_id = $2 ORDER BY created_at DESC'
+			: 'SELECT id, content, story_id, act_line_id, character_canonical_name, location, created_at FROM memory_meta WHERE story_id = $1 ORDER BY created_at DESC';
+		const params = options.actLineId
+			? [options.storyId, options.actLineId]
+			: [options.storyId];
+
+		const rows = await db.select<MemoryMetaRow[]>(sql, params);
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -375,10 +395,14 @@ export class Memory {
 	async getAllLocations(options: MemorySearchOptions): Promise<LocationItem[]> {
 		const db = getMemoryDatabase();
 
-		const rows = await db.select<LocationMetaRow[]>(
-			'SELECT id, location_text, story_id, act_line_id, created_at FROM location_meta WHERE story_id = $1 ORDER BY created_at DESC',
-			[options.storyId]
-		);
+		const sql = options.actLineId
+			? 'SELECT id, location_text, story_id, act_line_id, created_at FROM location_meta WHERE story_id = $1 AND act_line_id = $2 ORDER BY created_at DESC'
+			: 'SELECT id, location_text, story_id, act_line_id, created_at FROM location_meta WHERE story_id = $1 ORDER BY created_at DESC';
+		const params = options.actLineId
+			? [options.storyId, options.actLineId]
+			: [options.storyId];
+
+		const rows = await db.select<LocationMetaRow[]>(sql, params);
 
 		return rows.map((row) => ({
 			id: row.id,

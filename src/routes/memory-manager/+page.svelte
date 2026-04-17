@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Memory, type MemoryItem, type LocationItem } from '$lib/memory/memory';
 	import { getEmbeddingProviderConfig, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
-	import { getActiveStoryId } from '$lib/stores/stories.svelte';
+	import { getActiveStory, getActiveAct, getActiveActLine, getActiveStoryId, getActiveActLineId } from '$lib/stores/stories.svelte';
 
 	let memories = $state<MemoryItem[]>([]);
 	let locations = $state<LocationItem[]>([]);
@@ -17,7 +17,11 @@
 
 	const embeddingConfig = $derived(getEmbeddingProviderConfig());
 	const memoryConfig = $derived(getMemoryProviderConfig());
+	const activeStory = $derived(getActiveStory());
+	const activeAct = $derived(getActiveAct());
+	const activeActLine = $derived(getActiveActLine());
 	const activeStoryId = $derived(getActiveStoryId());
+	const activeActLineId = $derived(getActiveActLineId());
 
 	function providerLabel(config: { name: string; model: string } | undefined, role: string): string {
 		if (!config) return `No ${role} provider configured`;
@@ -30,8 +34,8 @@
 			return;
 		}
 		const memory = new Memory(embeddingConfig);
-		memories = await memory.getAll({ storyId: activeStoryId });
-		locations = await memory.getAllLocations({ storyId: activeStoryId });
+		memories = await memory.getAll({ storyId: activeStoryId, actLineId: activeActLineId ?? undefined });
+		locations = await memory.getAllLocations({ storyId: activeStoryId, actLineId: activeActLineId ?? undefined });
 	}
 
 	async function handleAddMemory() {
@@ -42,7 +46,7 @@
 			const memory = new Memory(embeddingConfig);
 			await memory.add(
 				activeStoryId,
-				'test-line',
+				activeActLineId ?? 'test-line',
 				addCharacter.trim() || 'unknown',
 				addLocationText.trim() || 'unknown',
 				[addText.trim()]
@@ -65,7 +69,7 @@
 		status = 'Searching memories...';
 		try {
 			const memory = new Memory(embeddingConfig);
-			searchResults = await memory.search(searchQuery.trim(), { storyId: activeStoryId, limit: 5 });
+			searchResults = await memory.search(searchQuery.trim(), { storyId: activeStoryId, actLineId: activeActLineId ?? undefined, limit: 5 });
 			status = `Found ${searchResults.length} result(s).`;
 		} catch (err) {
 			status = err instanceof Error ? err.message : 'Search failed';
@@ -81,7 +85,7 @@
 		status = 'Searching locations...';
 		try {
 			const memory = new Memory(embeddingConfig);
-			locationSearchResults = await memory.searchLocations(locationSearchQuery.trim(), { storyId: activeStoryId, limit: 5 });
+			locationSearchResults = await memory.searchLocations(locationSearchQuery.trim(), { storyId: activeStoryId, actLineId: activeActLineId ?? undefined, limit: 5 });
 			status = `Found ${locationSearchResults.length} location(s).`;
 		} catch (err) {
 			status = err instanceof Error ? err.message : 'Location search failed';
@@ -93,7 +97,7 @@
 
 	async function handleReset() {
 		if (!embeddingConfig) return;
-		const confirmed = confirm('Delete all memories and locations for this story?');
+		const confirmed = confirm('Delete all memories and locations?');
 		if (!confirmed) return;
 		isLoading = true;
 		try {
@@ -135,10 +139,23 @@
 
 <div class="flex-1 overflow-y-auto p-6">
 	<div class="max-w-2xl mx-auto space-y-8">
-		<h1 class="h2 font-display">Memory Test</h1>
+		<h1 class="h2 font-display">Memory Manager</h1>
 
 		{#if settings.memoryEnabled}
 			<section class="card p-4 space-y-2">
+				<div class="flex items-center gap-2">
+					<span class="text-xs text-surface-500 w-32 shrink-0">Story</span>
+					<span class="text-sm font-medium">{activeStory?.name ?? 'None selected'}</span>
+				</div>
+				<div class="flex items-center gap-2">
+					<span class="text-xs text-surface-500 w-32 shrink-0">Act</span>
+					<span class="text-sm font-medium">{activeAct?.name ?? 'None selected'}</span>
+				</div>
+				<div class="flex items-center gap-2">
+					<span class="text-xs text-surface-500 w-32 shrink-0">Act Line</span>
+					<span class="text-sm font-medium">{activeActLine?.name ?? 'None selected'}</span>
+				</div>
+				<div class="border-t border-surface-200-700 my-2"></div>
 				<div class="flex items-center gap-2">
 					<span class="text-xs text-surface-500 w-32 shrink-0">Memory Provider</span>
 					<span class="text-sm font-medium">{providerLabel(memoryConfig, 'memory')}</span>
@@ -153,9 +170,9 @@
 		{#if !settings.memoryEnabled}
 			<p class="text-warning-700-300">Memory is currently disabled in Settings.</p>
 		{:else if !activeStoryId}
-			<p class="text-error-700-300">No story selected. Select a story to test memory.</p>
+			<p class="text-error-700-300">No story selected. Select a story in the sidebar.</p>
 		{:else if !embeddingConfig}
-			<p class="text-error-700-300">Please configure a memory provider in Settings first.</p>
+			<p class="text-error-700-300">Please configure an embedding provider in Settings first.</p>
 		{/if}
 
 		<!-- Add Memory -->

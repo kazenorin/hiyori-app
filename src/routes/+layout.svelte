@@ -503,10 +503,10 @@
 					Settings
 				</a>
 				<a
-					href="/memory-test"
+					href="/memory-manager"
 					class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 				>
-					Memory
+					Memory Manager
 				</a>
 			</div>
 		</aside>
