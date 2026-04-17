@@ -1,7 +1,11 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { Memory, type MemoryItem, type LocationItem } from '$lib/memory/memory';
 	import { getEmbeddingProviderConfig, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
-	import { getActiveStory, getActiveAct, getActiveActLine, getActiveStoryId, getActiveActLineId } from '$lib/stores/stories.svelte';
+	import { getActiveStory, getActiveAct, getActiveActLine, getActiveStoryId, getActiveActLineId, getActiveActId } from '$lib/stores/stories.svelte';
+	import { regenerateMemoriesForCurrentLine, getIsRegenerating, getRegenError, getLastRegenResult } from '$lib/stores/memory-regeneration.svelte';
+	import { streamActCard } from '$lib/ai/act-card-generator';
+	import { log } from '$lib/logging/logger';
 
 	let memories = $state<MemoryItem[]>([]);
 	let locations = $state<LocationItem[]>([]);
@@ -12,6 +16,13 @@
 	let status = $state('');
 	let isLoading = $state(false);
 
+	// Generation state
+	let isGeneratingAct = $state(false);
+	let consoleOutput = $state('');
+	let consoleRef = $state<HTMLPreElement | null>(null);
+	let progressUpdates = $state<Array<{ time: Date; message: string }>>([]);
+	let confirmDialog = $state<{ title: string; message: string; onConfirm: () => void } | null>(null);
+
 	const embeddingConfig = $derived(getEmbeddingProviderConfig());
 	const memoryConfig = $derived(getMemoryProviderConfig());
 	const activeStory = $derived(getActiveStory());
@@ -19,6 +30,7 @@
 	const activeActLine = $derived(getActiveActLine());
 	const activeStoryId = $derived(getActiveStoryId());
 	const activeActLineId = $derived(getActiveActLineId());
+	const activeActId = $derived(getActiveActId());
 
 	function providerLabel(config: { name: string; model: string } | undefined, role: string): string {
 		if (!config) return `No ${role} provider configured`;
@@ -35,6 +47,94 @@
 		locations = await memory.getAllLocations({ storyId: activeStoryId, actLineId: activeActLineId ?? undefined });
 	}
 
+
+	function appendConsole(text: string) {
+		consoleOutput += text + '\n';
+		// Auto-scroll to bottom
+		requestAnimationFrame(() => {
+			if (consoleRef) consoleRef.scrollTop = consoleRef.scrollHeight;
+		});
+	}
+
+	function addProgress(message: string) {
+		progressUpdates = [...progressUpdates, { time: new Date(), message }];
+		appendConsole(message);
+	}
+
+	async function handleGenerateActCard() {
+		if (!activeActLineId) {
+			status = 'No active act line selected.';
+			return;
+		}
+		confirmDialog = {
+			title: 'Generate Act Card',
+			message: 'The existing act card will be overridden. Continue?',
+			onConfirm: doGenerateActCard
+		};
+	}
+
+	async function doGenerateActCard() {
+
+		isGeneratingAct = true;
+		consoleOutput = '';
+		progressUpdates = [];
+		status = '';
+
+		try {
+			addProgress('Generating act card...');
+			const result = await streamActCard((state) => {
+				const text = state.content || state.reasoning || '';
+				if (text) {
+					consoleOutput = text;
+					requestAnimationFrame(() => {
+						if (consoleRef) consoleRef.scrollTop = consoleRef.scrollHeight;
+					});
+				}
+			});
+			addProgress(`\nAct card saved: ${result.filePath.split('/').pop()}`);
+			status = `Act card generated successfully.`;
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : 'Generation failed.';
+			addProgress(`Error: ${msg}`);
+			status = msg;
+			await log.error('memory-manager', 'Act card generation failed', err);
+		} finally {
+			isGeneratingAct = false;
+		}
+	}
+
+	async function handleRegenerateMemories() {
+		if (!activeActLineId) {
+			status = 'No active act line selected.';
+			return;
+		}
+		confirmDialog = {
+			title: 'Regenerate Memories',
+			message: 'All existing memories for this act line will be deleted and re-extracted. This may take a while depending on the number of exchanges. Continue?',
+			onConfirm: doRegenerateMemories
+		};
+	}
+
+	async function doRegenerateMemories() {
+
+		consoleOutput = '';
+		progressUpdates = [];
+		status = '';
+
+		addProgress('Starting memory regeneration...');
+		await regenerateMemoriesForCurrentLine((msg) => addProgress(msg));
+
+		const error = getRegenError();
+		const result = getLastRegenResult();
+		if (error) {
+			addProgress(`Error: ${error}`);
+			status = error;
+		} else if (result) {
+			addProgress(`Complete: ${result}`);
+			status = `Regeneration complete: ${result}`;
+			await loadMemories();
+		}
+	}
 
 	async function handleSearch() {
 		if (!searchQuery.trim() || !embeddingConfig || !activeStoryId) return;
@@ -70,8 +170,14 @@
 
 	async function handleReset() {
 		if (!embeddingConfig) return;
-		const confirmed = confirm('Delete all memories and locations?');
-		if (!confirmed) return;
+		confirmDialog = {
+			title: 'Reset All Memories',
+			message: 'Delete all memories and locations? This cannot be undone.',
+			onConfirm: doReset
+		};
+	}
+
+	async function doReset() {
 		isLoading = true;
 		try {
 			const memory = new Memory(embeddingConfig);
@@ -147,6 +253,65 @@
 		{:else if !embeddingConfig}
 			<p class="text-error-700-300">Please configure an embedding provider in Settings first.</p>
 		{/if}
+
+			<!-- Generation Tools -->
+			{#if settings.memoryEnabled && activeStoryId}
+				<section class="card p-6 space-y-4">
+					<h2 class="h4">Generation Tools</h2>
+
+					<div class="flex flex-wrap gap-2">
+						<button
+							class="btn preset-filled"
+							type="button"
+							onclick={handleGenerateActCard}
+							disabled={!activeActLineId || isGeneratingAct || getIsRegenerating()}
+						>
+							{#if isGeneratingAct}
+								Generating...
+							{:else}
+								Generate Act Card
+							{/if}
+						</button>
+						<button
+							class="btn preset-outlined"
+							type="button"
+							onclick={() => goto('/generate-character-cards')}
+							disabled={!activeActLineId || isGeneratingAct || getIsRegenerating()}
+						>
+							Generate Character Cards
+						</button>
+						<button
+							class="btn preset-tonal"
+							type="button"
+							onclick={handleRegenerateMemories}
+							disabled={!activeActLineId || isGeneratingAct || getIsRegenerating()}
+						>
+							{#if getIsRegenerating()}
+								Regenerating...
+							{:else}
+								Regenerate Memories
+							{/if}
+						</button>
+					</div>
+
+					{#if consoleOutput}
+						<div class="bg-surface-900-100 text-surface-100-900 rounded-lg p-4 font-mono text-xs h-64 overflow-y-auto">
+							<pre bind:this={consoleRef} class="whitespace-pre-wrap break-words">{consoleOutput}</pre>
+						</div>
+
+						<details>
+							<summary class="text-sm font-medium cursor-pointer text-surface-500">Full Log</summary>
+							<div class="mt-2 space-y-1 max-h-64 overflow-y-auto">
+								{#each progressUpdates as update}
+									<p class="text-xs text-surface-500">
+										<span class="font-mono">[{update.time.toLocaleTimeString()}]</span> {update.message}
+									</p>
+								{/each}
+							</div>
+						</details>
+					{/if}
+				</section>
+			{/if}
 
 		<!-- Search Memories -->
 		<section class="card p-6 space-y-4">
@@ -283,3 +448,49 @@
 		{/if}
 	</div>
 </div>
+
+<!-- Confirmation Dialog -->
+{#if confirmDialog}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		role="dialog"
+		aria-modal="true"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+		onclick={() => confirmDialog = null}
+		onkeydown={(e) => e.key === 'Escape' && (confirmDialog = null)}
+	>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+		>
+			<h3 class="text-lg font-semibold text-surface-900-100 mb-2">
+				{confirmDialog.title}
+			</h3>
+			<p class="text-sm text-surface-600-400 mb-5">
+				{confirmDialog.message}
+			</p>
+			<div class="flex justify-end gap-3">
+				<button
+					class="btn preset-tonal"
+					type="button"
+					onclick={() => confirmDialog = null}
+				>
+					Cancel
+				</button>
+				<button
+					class="btn variant-filled"
+					type="button"
+					onclick={() => {
+						const handler = confirmDialog!.onConfirm;
+						confirmDialog = null;
+						handler();
+					}}
+				>
+					Confirm
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
