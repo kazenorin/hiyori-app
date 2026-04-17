@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Memory, type MemoryItem, type LocationItem } from '$lib/memory/memory';
-	import { getEmbeddingProviderConfig, settings } from '$lib/stores/settings.svelte';
+	import { getEmbeddingProviderConfig, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 	import { getActiveStoryId } from '$lib/stores/stories.svelte';
 
 	let memories = $state<MemoryItem[]>([]);
@@ -16,7 +16,13 @@
 	let isLoading = $state(false);
 
 	const embeddingConfig = $derived(getEmbeddingProviderConfig());
+	const memoryConfig = $derived(getMemoryProviderConfig());
 	const activeStoryId = $derived(getActiveStoryId());
+
+	function providerLabel(config: { name: string; model: string } | undefined, role: string): string {
+		if (!config) return `No ${role} provider configured`;
+		return `${config.name} (${config.model})`;
+	}
 
 	async function loadMemories() {
 		if (!embeddingConfig || !activeStoryId) {
@@ -130,6 +136,19 @@
 <div class="flex-1 overflow-y-auto p-6">
 	<div class="max-w-2xl mx-auto space-y-8">
 		<h1 class="h2 font-display">Memory Test</h1>
+
+		{#if settings.memoryEnabled}
+			<section class="card p-4 space-y-2">
+				<div class="flex items-center gap-2">
+					<span class="text-xs text-surface-500 w-32 shrink-0">Memory Provider</span>
+					<span class="text-sm font-medium">{providerLabel(memoryConfig, 'memory')}</span>
+				</div>
+				<div class="flex items-center gap-2">
+					<span class="text-xs text-surface-500 w-32 shrink-0">Embedding Provider</span>
+					<span class="text-sm font-medium">{providerLabel(embeddingConfig, 'embedding')}</span>
+				</div>
+			</section>
+		{/if}
 
 		{#if !settings.memoryEnabled}
 			<p class="text-warning-700-300">Memory is currently disabled in Settings.</p>
