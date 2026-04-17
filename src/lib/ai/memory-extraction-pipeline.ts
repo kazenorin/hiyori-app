@@ -20,7 +20,8 @@ const BACKOFF_SECONDS = 2;
 export async function runMemoryExtractionPipeline(
 	assistantResponse: string,
 	storyId: string,
-	actLineId: string
+	actLineId: string,
+	messageId: string
 ): Promise<PipelineResult> {
 	const llmConfig = getMemoryProviderConfig();
 	if (!llmConfig) {
@@ -39,7 +40,7 @@ export async function runMemoryExtractionPipeline(
 	const extracted = parseMemoryExtract(generatedText);
 
 	// Step 3: Persist each character/location (uses embedding provider)
-	return await persistMemoriesWithRetry(extracted, storyId, actLineId, embeddingConfig);
+	return await persistMemoriesWithRetry(extracted, storyId, actLineId, messageId, embeddingConfig);
 }
 
 async function generateMemoriesWithRetry(response: string, config: MemoryProviderConfig): Promise<string> {
@@ -63,6 +64,7 @@ async function persistMemoriesWithRetry(
 	extracted: ExtractedMemories,
 	storyId: string,
 	actLineId: string,
+	messageId: string,
 	config: EmbeddingProviderConfig
 ): Promise<PipelineResult> {
 	const memory = new Memory(config);
@@ -78,9 +80,9 @@ async function persistMemoriesWithRetry(
 		for (const [location, memories] of Object.entries(locations)) {
 			// Per-location retry scope — avoids duplicating previously succeeded locations
 			try {
-				await persistLocationWithRetry(memory, storyId, actLineId, character, location, memories);
-				result.memoriesAdded += memories.length;
-				result.locationsAdded += 1;
+				const { memoriesAdded, locationAdded } = await persistLocationWithRetry(memory, storyId, actLineId, messageId, character, location, memories);
+				result.memoriesAdded += memoriesAdded;
+				if (locationAdded) result.locationsAdded += 1;
 			} catch (err) {
 				const msg = toError(err).message;
 				result.errors.push(`Character ${character}, Location "${location}": ${msg}`);
@@ -100,14 +102,18 @@ async function persistLocationWithRetry(
 	memory: Memory,
 	storyId: string,
 	actLineId: string,
+	messageId: string,
 	character: string,
 	location: string,
 	memories: string[]
-): Promise<void> {
+): Promise<{ memoriesAdded: number; locationAdded: boolean }> {
+	let memoriesAdded = 0;
+	let locationAdded = false;
+
 	await withRetry(
 		async () => {
-			await memory.add(storyId, actLineId, character, location, memories);
-			await memory.addLocation(storyId, actLineId, location);
+			memoriesAdded = await memory.add(storyId, actLineId, messageId, character, location, memories);
+			locationAdded = await memory.addLocation(storyId, actLineId, messageId, location);
 		},
 		{
 			maxAttempts: RETRY_COUNT + 1,
@@ -115,4 +121,6 @@ async function persistLocationWithRetry(
 			onRetry: (attempt) => log.warn('memory-pipeline', `Location "${location}" for ${character} attempt ${attempt} failed, retrying...`)
 		}
 	);
+
+	return { memoriesAdded, locationAdded };
 }

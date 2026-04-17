@@ -96,7 +96,7 @@ describe('Memory', () => {
 		}));
 		vi.doMock('ai', () => ({
 			embed: vi.fn(async () => ({ embedding: mockEmbedding })),
-			embedMany: vi.fn(async () => ({ embeddings: [mockEmbedding, mockEmbedding] }))
+			embedMany: vi.fn(async () => ({ embeddings: [[1, 0, 0, 0], [0, 1, 0, 0]] }))
 		}));
 		vi.doMock('$lib/ai/provider', () => ({
 			createEmbeddingModel: vi.fn(() => ({}))
@@ -112,7 +112,7 @@ describe('Memory', () => {
 	describe('add', () => {
 		it('does nothing when memories array is empty', async () => {
 			const memory = new Memory(testConfig);
-			await memory.add('story-1', 'line-1', 'elena', 'tavern', []);
+			await memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', []);
 
 			expect(mockDbExecuteCalls.length).toBe(0);
 		});
@@ -122,7 +122,7 @@ describe('Memory', () => {
 			setupMocksForVecInsertRowid(1);
 
 			const memory = new Memory(testConfig);
-			await memory.add('story-1', 'line-1', 'elena', 'tavern', ['Elena drew her sword.']);
+			await memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['Elena drew her sword.']);
 
 			// Find the vec table creation call
 			const createCall = mockDbExecuteCalls.find(([q]) => q.includes('CREATE VIRTUAL TABLE vec_memories'));
@@ -152,11 +152,12 @@ describe('Memory', () => {
 			setupMocksForVecInsertRowid(2);
 
 			const memory = new Memory(testConfig);
-			await memory.add('story-1', 'line-1', 'elena', 'tavern', ['Memory 1', 'Memory 2']);
+			const added = await memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['Memory 1', 'Memory 2']);
 
 			// Should use embedMany for batch
 			expect(vi.mocked(embedMany)).toHaveBeenCalled();
 			expect(mockDbExecuteCalls.filter(([q]) => q.includes('INSERT INTO memory_meta')).length).toBe(2);
+			expect(added).toBe(2);
 		});
 	});
 
@@ -166,7 +167,7 @@ describe('Memory', () => {
 			setupMocksForVecInsertRowid(42);
 
 			const memory = new Memory(testConfig);
-			await memory.addLocation('story-1', 'line-1', 'The Ancient Ruins');
+			await memory.addLocation('story-1', 'line-1', 'msg-1', 'The Ancient Ruins');
 
 			// Find vec_locations creation
 			const createCall = mockDbExecuteCalls.find(([q]) => q.includes('CREATE VIRTUAL TABLE vec_locations'));
@@ -272,7 +273,7 @@ describe('Memory', () => {
 
 			const memory = new Memory(testConfig);
 			await expect(
-				memory.add('story-1', 'line-1', 'elena', 'tavern', ['A memory.'])
+				memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['A memory.'])
 			).rejects.toThrow('Embedding dimension mismatch');
 		});
 
@@ -281,7 +282,7 @@ describe('Memory', () => {
 
 			const memory = new Memory(testConfig);
 			await expect(
-				memory.add('story-1', 'line-1', 'elena', 'tavern', ['A memory.'])
+				memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['A memory.'])
 			).rejects.toThrow('Embedding model changed');
 		});
 	});
@@ -294,12 +295,12 @@ describe('Memory', () => {
 			const memory = new Memory(testConfig);
 
 			// First add
-			await memory.add('story-1', 'line-1', 'elena', 'tavern', ['Memory 1']);
+			await memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['Memory 1']);
 			const sqliteMasterCallsFirst = mockDbSelectCalls.filter(([q]) => q.includes('sqlite_master')).length;
 
 			// Second add — should skip sqlite_master check due to cache
 			setupMocksForVecInsertRowid(2);
-			await memory.add('story-1', 'line-1', 'elena', 'forest', ['Memory 2']);
+			await memory.add('story-1', 'line-1', 'msg-1', 'elena', 'forest', ['Memory 2']);
 
 			const sqliteMasterCallsTotal = mockDbSelectCalls.filter(([q]) => q.includes('sqlite_master')).length;
 			expect(sqliteMasterCallsTotal).toBe(sqliteMasterCallsFirst); // No additional calls

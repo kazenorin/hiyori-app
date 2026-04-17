@@ -3,6 +3,17 @@ import Database from '@tauri-apps/plugin-sql';
 import { getMemoryDatabase } from '$lib/db/memory-database';
 import { createEmbeddingModel } from '$lib/ai/provider';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
+import { log } from '$lib/logging/logger';
+
+function cosineDistance(a: number[], b: number[]): number {
+	let dot = 0, normA = 0, normB = 0;
+	for (let i = 0; i < a.length; i++) {
+		dot += a[i] * b[i];
+		normA += a[i] * a[i];
+		normB += b[i] * b[i];
+	}
+	return 1 - dot / (Math.sqrt(normA) * Math.sqrt(normB));
+}
 
 export interface MemorySearchOptions {
 	storyId: string;
@@ -14,6 +25,7 @@ export interface MemoryItem {
 	id: string;
 	memory: string;
 	score?: number;
+	messageId: string;
 	storyId: string;
 	actLineId: string;
 	characterCanonicalName: string;
@@ -24,6 +36,7 @@ export interface MemoryItem {
 interface MemoryMetaRow {
 	id: string;
 	content: string;
+	message_id: string;
 	story_id: string;
 	act_line_id: string;
 	character_canonical_name: string;
@@ -35,6 +48,7 @@ interface MemoryMetaRow {
 interface LocationMetaRow {
 	id: string;
 	location_text: string;
+	message_id: string;
 	story_id: string;
 	act_line_id: string;
 	created_at: string;
@@ -49,6 +63,7 @@ export interface LocationItem {
 	id: string;
 	location: string;
 	score?: number;
+	messageId: string;
 	storyId: string;
 	actLineId: string;
 	createdAt?: string;
@@ -86,6 +101,30 @@ export class Memory {
 		const model = this.getEmbeddingModel();
 		const result = await embedMany({ model, values: texts });
 		return result.embeddings;
+	}
+
+	private deduplicateMemories(memories: string[], embeddings: number[][]): {
+		memories: string[];
+		embeddings: number[][];
+	} {
+		if (memories.length <= 1) return { memories: [...memories], embeddings: [...embeddings] };
+
+		const keep = new Set<number>();
+		for (let i = 0; i < embeddings.length; i++) {
+			let isDuplicate = false;
+			for (let j = 0; j < i; j++) {
+				if (keep.has(j) && cosineDistance(embeddings[i], embeddings[j]) < 0.1) {
+					isDuplicate = true;
+					break;
+				}
+			}
+			if (!isDuplicate) keep.add(i);
+		}
+
+		return {
+			memories: memories.filter((_, i) => keep.has(i)),
+			embeddings: embeddings.filter((_, i) => keep.has(i))
+		};
 	}
 
 	private async ensureMemoryVecTable(dimension: number): Promise<void> {
@@ -226,28 +265,37 @@ export class Memory {
 	async add(
 		storyId: string,
 		actLineId: string,
+		messageId: string,
 		characterCanonicalName: string,
 		location: string,
 		memories: string[]
-	): Promise<void> {
-		if (memories.length === 0) return;
+	): Promise<number> {
+		if (memories.length === 0) return 0;
 
-		const db = getMemoryDatabase();
 		const embeddings = memories.length === 1
 			? [await this.generateEmbedding(memories[0])]
 			: await this.generateEmbeddings(memories);
 
-		const dimension = embeddings[0].length;
+		// Deduplicate: keep earlier memory when cosine distance < 0.1
+		const { memories: dedupedMemories, embeddings: dedupedEmbeddings } =
+			this.deduplicateMemories(memories, embeddings);
+
+		if (dedupedMemories.length === 0) return 0;
+
+		const db = getMemoryDatabase();
+		const dimension = dedupedEmbeddings[0].length;
 		await this.ensureMemoryVecTable(dimension);
 
-		// Batch insert all memories at once
-		await this.insertMemoryBatch(db, storyId, actLineId, characterCanonicalName, location, memories, embeddings);
+		// Batch insert deduplicated memories
+		await this.insertMemoryBatch(db, storyId, actLineId, messageId, characterCanonicalName, location, dedupedMemories, dedupedEmbeddings);
+		return dedupedMemories.length;
 	}
 
 	private async insertMemoryBatch(
 		db: Database,
 		storyId: string,
 		actLineId: string,
+		messageId: string,
 		characterCanonicalName: string,
 		location: string,
 		memories: string[],
@@ -277,9 +325,9 @@ export class Memory {
 
 			await db.execute(
 				`INSERT INTO memory_meta (
-					id, vec_rowid, content, story_id, act_line_id, character_canonical_name, location
-				) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-				[id, vecRowids[i], text, storyId, actLineId, characterCanonicalName, location]
+					id, vec_rowid, content, message_id, story_id, act_line_id, character_canonical_name, location
+				) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+				[id, vecRowids[i], text, messageId, storyId, actLineId, characterCanonicalName, location]
 			);
 		}
 	}
@@ -287,13 +335,19 @@ export class Memory {
 	async addLocation(
 		storyId: string,
 		actLineId: string,
+		messageId: string,
 		location: string
-	): Promise<void> {
-		const db = getMemoryDatabase();
+	): Promise<boolean> {
 		const embedding = await this.generateEmbedding(location);
 		const dimension = embedding.length;
 		await this.ensureLocationVecTable(dimension);
 
+		// Check for duplicate location in same act line
+		if (await this.isLocationDuplicate(embedding, storyId, actLineId)) {
+			return false;
+		}
+
+		const db = getMemoryDatabase();
 		const id = crypto.randomUUID();
 
 		await db.execute(
@@ -309,10 +363,41 @@ export class Memory {
 		}
 
 		await db.execute(
-			`INSERT INTO location_meta (id, vec_rowid, location_text, story_id, act_line_id)
-			VALUES ($1, $2, $3, $4, $5)`,
-			[id, vecRowid, location, storyId, actLineId]
+			`INSERT INTO location_meta (id, vec_rowid, location_text, message_id, story_id, act_line_id)
+			VALUES ($1, $2, $3, $4, $5, $6)`,
+			[id, vecRowid, location, messageId, storyId, actLineId]
 		);
+		return true;
+	}
+
+	private async isLocationDuplicate(
+		embedding: number[],
+		storyId: string,
+		actLineId: string
+	): Promise<boolean> {
+		const db = getMemoryDatabase();
+
+		try {
+			const rows = await db.select<Array<{ distance: number }>>(`
+				SELECT sub.distance
+				FROM (
+					SELECT rowid, distance
+					FROM vec_locations
+					WHERE embedding MATCH $1
+					  AND k = 1
+					  AND story_id = $2
+					ORDER BY distance
+					LIMIT 1
+				) sub
+				JOIN location_meta l ON l.vec_rowid = sub.rowid
+				WHERE l.act_line_id = $3
+			`, [JSON.stringify(embedding), storyId, actLineId]);
+
+			return rows.length > 0 && rows[0].distance < 0.1;
+		} catch {
+			// Table may not exist yet on first call
+			return false;
+		}
 	}
 
 	async search(query: string, options: MemorySearchOptions): Promise<MemoryItem[]> {
@@ -324,7 +409,7 @@ export class Memory {
 
 		const sql = options.actLineId
 			? `
-			SELECT m.id, m.content, m.story_id, m.act_line_id, m.character_canonical_name, m.location, m.created_at, sub.distance
+			SELECT m.id, m.content, m.message_id, m.story_id, m.act_line_id, m.character_canonical_name, m.location, m.created_at, sub.distance
 			FROM (
 				SELECT rowid, distance
 				FROM vec_memories
@@ -338,7 +423,7 @@ export class Memory {
 			ORDER BY sub.distance
 		`
 			: `
-			SELECT m.id, m.content, m.story_id, m.act_line_id, m.character_canonical_name, m.location, m.created_at, sub.distance
+			SELECT m.id, m.content, m.message_id, m.story_id, m.act_line_id, m.character_canonical_name, m.location, m.created_at, sub.distance
 			FROM (
 				SELECT rowid, distance
 				FROM vec_memories
@@ -361,6 +446,7 @@ export class Memory {
 			id: row.id,
 			memory: row.content,
 			score: row.distance,
+			messageId: row.message_id,
 			storyId: row.story_id,
 			actLineId: row.act_line_id,
 			characterCanonicalName: row.character_canonical_name,
@@ -373,8 +459,8 @@ export class Memory {
 		const db = getMemoryDatabase();
 
 		const sql = options.actLineId
-			? 'SELECT id, content, story_id, act_line_id, character_canonical_name, location, created_at FROM memory_meta WHERE story_id = $1 AND act_line_id = $2 ORDER BY created_at DESC'
-			: 'SELECT id, content, story_id, act_line_id, character_canonical_name, location, created_at FROM memory_meta WHERE story_id = $1 ORDER BY created_at DESC';
+			? 'SELECT id, content, message_id, story_id, act_line_id, character_canonical_name, location, created_at FROM memory_meta WHERE story_id = $1 AND act_line_id = $2 ORDER BY created_at DESC'
+			: 'SELECT id, content, message_id, story_id, act_line_id, character_canonical_name, location, created_at FROM memory_meta WHERE story_id = $1 ORDER BY created_at DESC';
 		const params = options.actLineId
 			? [options.storyId, options.actLineId]
 			: [options.storyId];
@@ -384,6 +470,7 @@ export class Memory {
 		return rows.map((row) => ({
 			id: row.id,
 			memory: row.content,
+			messageId: row.message_id,
 			storyId: row.story_id,
 			actLineId: row.act_line_id,
 			characterCanonicalName: row.character_canonical_name,
@@ -396,8 +483,8 @@ export class Memory {
 		const db = getMemoryDatabase();
 
 		const sql = options.actLineId
-			? 'SELECT id, location_text, story_id, act_line_id, created_at FROM location_meta WHERE story_id = $1 AND act_line_id = $2 ORDER BY created_at DESC'
-			: 'SELECT id, location_text, story_id, act_line_id, created_at FROM location_meta WHERE story_id = $1 ORDER BY created_at DESC';
+			? 'SELECT id, location_text, message_id, story_id, act_line_id, created_at FROM location_meta WHERE story_id = $1 AND act_line_id = $2 ORDER BY created_at DESC'
+			: 'SELECT id, location_text, message_id, story_id, act_line_id, created_at FROM location_meta WHERE story_id = $1 ORDER BY created_at DESC';
 		const params = options.actLineId
 			? [options.storyId, options.actLineId]
 			: [options.storyId];
@@ -407,6 +494,7 @@ export class Memory {
 		return rows.map((row) => ({
 			id: row.id,
 			location: row.location_text,
+			messageId: row.message_id,
 			storyId: row.story_id,
 			actLineId: row.act_line_id,
 			createdAt: row.created_at
@@ -421,7 +509,7 @@ export class Memory {
 		const limit = options.limit ?? 5;
 
 		const sql = `
-			SELECT l.id, l.location_text, l.story_id, l.act_line_id, l.created_at, sub.distance
+			SELECT l.id, l.location_text, l.message_id, l.story_id, l.act_line_id, l.created_at, sub.distance
 			FROM (
 				SELECT rowid, distance
 				FROM vec_locations
@@ -444,6 +532,7 @@ export class Memory {
 			id: row.id,
 			location: row.location_text,
 			score: row.distance,
+			messageId: row.message_id,
 			storyId: row.story_id,
 			actLineId: row.act_line_id,
 			createdAt: row.created_at

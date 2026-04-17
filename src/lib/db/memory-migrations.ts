@@ -14,6 +14,7 @@ const memoryMigrationStatements: string[][] = [
 			id TEXT PRIMARY KEY,
 			vec_rowid INTEGER UNIQUE,
 			content TEXT NOT NULL,
+			message_id TEXT NOT NULL,
 			story_id TEXT NOT NULL,
 			act_line_id TEXT NOT NULL,
 			character_canonical_name TEXT NOT NULL,
@@ -22,19 +23,22 @@ const memoryMigrationStatements: string[][] = [
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_memory_meta_story ON memory_meta(story_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_memory_meta_act_line ON memory_meta(act_line_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_memory_meta_character ON memory_meta(character_canonical_name)`
+		`CREATE INDEX IF NOT EXISTS idx_memory_meta_character ON memory_meta(character_canonical_name)`,
+		`CREATE INDEX IF NOT EXISTS idx_memory_meta_message ON memory_meta(message_id)`
 	],
 	[
 		`CREATE TABLE IF NOT EXISTS location_meta (
 			id TEXT PRIMARY KEY,
 			vec_rowid INTEGER UNIQUE,
 			location_text TEXT NOT NULL,
+			message_id TEXT NOT NULL,
 			story_id TEXT NOT NULL,
 			act_line_id TEXT NOT NULL,
 			created_at TEXT DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_location_meta_story ON location_meta(story_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_location_meta_act_line ON location_meta(act_line_id)`
+		`CREATE INDEX IF NOT EXISTS idx_location_meta_act_line ON location_meta(act_line_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_location_meta_message ON location_meta(message_id)`
 	]
 ];
 

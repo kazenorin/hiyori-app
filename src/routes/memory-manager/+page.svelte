@@ -5,9 +5,6 @@
 
 	let memories = $state<MemoryItem[]>([]);
 	let locations = $state<LocationItem[]>([]);
-	let addText = $state('');
-	let addCharacter = $state('');
-	let addLocationText = $state('');
 	let searchQuery = $state('');
 	let searchResults = $state<MemoryItem[]>([]);
 	let locationSearchQuery = $state('');
@@ -38,30 +35,6 @@
 		locations = await memory.getAllLocations({ storyId: activeStoryId, actLineId: activeActLineId ?? undefined });
 	}
 
-	async function handleAddMemory() {
-		if (!addText.trim() || !embeddingConfig || !activeStoryId) return;
-		isLoading = true;
-		status = 'Embedding and saving...';
-		try {
-			const memory = new Memory(embeddingConfig);
-			await memory.add(
-				activeStoryId,
-				activeActLineId ?? 'test-line',
-				addCharacter.trim() || 'unknown',
-				addLocationText.trim() || 'unknown',
-				[addText.trim()]
-			);
-			addText = '';
-			addCharacter = '';
-			addLocationText = '';
-			await loadMemories();
-			status = 'Saved.';
-		} catch (err) {
-			status = err instanceof Error ? err.message : 'Failed to save';
-		} finally {
-			isLoading = false;
-		}
-	}
 
 	async function handleSearch() {
 		if (!searchQuery.trim() || !embeddingConfig || !activeStoryId) return;
@@ -174,41 +147,6 @@
 		{:else if !embeddingConfig}
 			<p class="text-error-700-300">Please configure an embedding provider in Settings first.</p>
 		{/if}
-
-		<!-- Add Memory -->
-		<section class="card p-6 space-y-4">
-			<h2 class="h4">Add Memory</h2>
-			<textarea
-				class="input w-full h-24"
-				placeholder="Enter text to remember..."
-				bind:value={addText}
-				disabled={isLoading || !activeStoryId}
-			></textarea>
-			<input
-				class="input w-full"
-				type="text"
-				placeholder="Character name (optional)"
-				bind:value={addCharacter}
-				disabled={isLoading || !activeStoryId}
-			/>
-			<input
-				class="input w-full"
-				type="text"
-				placeholder="Location (optional)"
-				bind:value={addLocationText}
-				disabled={isLoading || !activeStoryId}
-			/>
-			<div class="flex gap-2">
-				<button
-					class="btn preset-filled"
-					type="button"
-					onclick={handleAddMemory}
-					disabled={isLoading || !addText.trim() || !activeStoryId}
-				>
-					Save Memory
-				</button>
-			</div>
-		</section>
 
 		<!-- Search Memories -->
 		<section class="card p-6 space-y-4">

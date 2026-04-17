@@ -192,7 +192,8 @@ export async function sendMessage(
 				memoryPipelinePromise = runMemoryExtractionPipeline(
 					messages[messageIdx].content,
 					storyId,
-					activeActLineId
+					activeActLineId,
+					messages[messageIdx].id
 				)
 					.then((result) => {
 						log.debug('memory-pipeline', `Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`);
