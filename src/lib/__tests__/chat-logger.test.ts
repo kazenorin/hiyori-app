@@ -54,7 +54,8 @@ function defaultSettings() {
 		logLevel: 'debug' as const,
 		fontSize: 1.0,
 		memoryEnabled: true,
-		memoryProviderRole: 'main'
+		memoryProviderRole: 'main',
+		embeddingProviderRole: 'main'
 	};
 }
 

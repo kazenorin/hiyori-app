@@ -429,7 +429,7 @@
 			</label>
 
 			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Embedding Provider</span>
+				<span class="text-sm font-medium text-surface-700-300">Memory Provider</span>
 				<select
 					class="select mt-1"
 					disabled={!settings.memoryEnabled}
@@ -444,6 +444,30 @@
 						<option value="main" selected={settings.memoryProviderRole === 'main'}>Main Provider</option>
 						{#each settings.providers as config (config.id)}
 							<option value={config.id} selected={settings.memoryProviderRole === config.id}>{config.name}</option>
+						{/each}
+					{/if}
+				</select>
+				<span class="text-xs text-surface-500 mt-1 block"
+					>The LLM provider used to extract memories from chat responses.</span
+				>
+			</label>
+
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">Embedding Provider</span>
+				<select
+					class="select mt-1"
+					disabled={!settings.memoryEnabled}
+					onchange={(e) => {
+						const value = (e.currentTarget as HTMLSelectElement).value;
+						updateSettings({ embeddingProviderRole: value });
+					}}
+				>
+					{#if settings.providers.length === 0}
+						<option value="" disabled selected>No providers configured</option>
+					{:else}
+						<option value="main" selected={settings.embeddingProviderRole === 'main'}>Main Provider</option>
+						{#each settings.providers as config (config.id)}
+							<option value={config.id} selected={settings.embeddingProviderRole === config.id}>{config.name}</option>
 						{/each}
 					{/if}
 				</select>

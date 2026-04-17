@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Memory, type MemoryItem, type LocationItem } from '$lib/memory/memory';
-	import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
+	import { getEmbeddingProviderConfig, settings } from '$lib/stores/settings.svelte';
 	import { getActiveStoryId } from '$lib/stores/stories.svelte';
 
 	let memories = $state<MemoryItem[]>([]);
@@ -15,25 +15,25 @@
 	let status = $state('');
 	let isLoading = $state(false);
 
-	const providerConfig = $derived(getMemoryProviderConfig());
+	const embeddingConfig = $derived(getEmbeddingProviderConfig());
 	const activeStoryId = $derived(getActiveStoryId());
 
 	async function loadMemories() {
-		if (!providerConfig || !activeStoryId) {
+		if (!embeddingConfig || !activeStoryId) {
 			status = !activeStoryId ? 'No story selected.' : 'No provider configured.';
 			return;
 		}
-		const memory = new Memory(providerConfig);
+		const memory = new Memory(embeddingConfig);
 		memories = await memory.getAll({ storyId: activeStoryId });
 		locations = await memory.getAllLocations({ storyId: activeStoryId });
 	}
 
 	async function handleAddMemory() {
-		if (!addText.trim() || !providerConfig || !activeStoryId) return;
+		if (!addText.trim() || !embeddingConfig || !activeStoryId) return;
 		isLoading = true;
 		status = 'Embedding and saving...';
 		try {
-			const memory = new Memory(providerConfig);
+			const memory = new Memory(embeddingConfig);
 			await memory.add(
 				activeStoryId,
 				'test-line',
@@ -54,11 +54,11 @@
 	}
 
 	async function handleSearch() {
-		if (!searchQuery.trim() || !providerConfig || !activeStoryId) return;
+		if (!searchQuery.trim() || !embeddingConfig || !activeStoryId) return;
 		isLoading = true;
 		status = 'Searching memories...';
 		try {
-			const memory = new Memory(providerConfig);
+			const memory = new Memory(embeddingConfig);
 			searchResults = await memory.search(searchQuery.trim(), { storyId: activeStoryId, limit: 5 });
 			status = `Found ${searchResults.length} result(s).`;
 		} catch (err) {
@@ -70,11 +70,11 @@
 	}
 
 	async function handleLocationSearch() {
-		if (!locationSearchQuery.trim() || !providerConfig || !activeStoryId) return;
+		if (!locationSearchQuery.trim() || !embeddingConfig || !activeStoryId) return;
 		isLoading = true;
 		status = 'Searching locations...';
 		try {
-			const memory = new Memory(providerConfig);
+			const memory = new Memory(embeddingConfig);
 			locationSearchResults = await memory.searchLocations(locationSearchQuery.trim(), { storyId: activeStoryId, limit: 5 });
 			status = `Found ${locationSearchResults.length} location(s).`;
 		} catch (err) {
@@ -86,12 +86,12 @@
 	}
 
 	async function handleReset() {
-		if (!providerConfig) return;
+		if (!embeddingConfig) return;
 		const confirmed = confirm('Delete all memories and locations for this story?');
 		if (!confirmed) return;
 		isLoading = true;
 		try {
-			const memory = new Memory(providerConfig);
+			const memory = new Memory(embeddingConfig);
 			await memory.reset();
 			memories = [];
 			locations = [];
@@ -106,10 +106,10 @@
 	}
 
 	async function handleDeleteMemory(id: string) {
-		if (!providerConfig) return;
+		if (!embeddingConfig) return;
 		isLoading = true;
 		try {
-			const memory = new Memory(providerConfig);
+			const memory = new Memory(embeddingConfig);
 			await memory.delete(id);
 			await loadMemories();
 			status = 'Memory deleted.';
@@ -121,7 +121,7 @@
 	}
 
 	$effect(() => {
-		if (providerConfig && activeStoryId && settings.memoryEnabled) {
+		if (embeddingConfig && activeStoryId && settings.memoryEnabled) {
 			loadMemories();
 		}
 	});
@@ -135,7 +135,7 @@
 			<p class="text-warning-700-300">Memory is currently disabled in Settings.</p>
 		{:else if !activeStoryId}
 			<p class="text-error-700-300">No story selected. Select a story to test memory.</p>
-		{:else if !providerConfig}
+		{:else if !embeddingConfig}
 			<p class="text-error-700-300">Please configure a memory provider in Settings first.</p>
 		{/if}
 

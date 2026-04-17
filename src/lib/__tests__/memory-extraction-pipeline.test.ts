@@ -33,8 +33,10 @@ const defaultProviderConfig = {
 	apiKey: 'sk-test'
 };
 const mockGetMemoryProviderConfig = vi.fn(() => defaultProviderConfig);
+const mockGetEmbeddingProviderConfig = vi.fn(() => defaultProviderConfig);
 vi.mock('$lib/stores/settings.svelte', () => ({
-	getMemoryProviderConfig: mockGetMemoryProviderConfig
+	getMemoryProviderConfig: mockGetMemoryProviderConfig,
+	getEmbeddingProviderConfig: mockGetEmbeddingProviderConfig
 }));
 
 // Mock prompts
@@ -117,6 +119,7 @@ describe('memory-extraction-pipeline', () => {
 
 		// Restore default mock implementations
 		mockGetMemoryProviderConfig.mockReturnValue(defaultProviderConfig);
+		mockGetEmbeddingProviderConfig.mockReturnValue(defaultProviderConfig);
 		mockGenerateText.mockResolvedValue({ text: '## elena\n\n### tavern\n- Elena sat.' });
 		mockParseMemoryExtract.mockReturnValue(defaultParsed);
 		mockIsAuthError.mockImplementation((err: Error) => {
@@ -164,6 +167,16 @@ describe('memory-extraction-pipeline', () => {
 			await expect(
 				runMemoryExtractionPipeline('response', 'story-1', 'line-1')
 			).rejects.toThrow('Memory provider not configured');
+		});
+
+		it('throws when no embedding provider configured', async () => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			mockGetEmbeddingProviderConfig.mockReturnValue(undefined as any);
+
+			const { runMemoryExtractionPipeline } = await import('$lib/ai/memory-extraction-pipeline');
+			await expect(
+				runMemoryExtractionPipeline('response', 'story-1', 'line-1')
+			).rejects.toThrow('Embedding provider not configured');
 		});
 
 		it('throws immediately on auth error without retry', async () => {

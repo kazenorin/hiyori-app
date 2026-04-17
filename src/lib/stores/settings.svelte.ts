@@ -21,6 +21,7 @@ export interface Settings {
 	fontSize: number;
 	memoryEnabled: boolean;
 	memoryProviderRole: string;
+	embeddingProviderRole: string;
 }
 
 const STORAGE_KEY = 'byoa-settings';
@@ -31,7 +32,8 @@ const defaults: Settings = {
 	logLevel: 'info',
 	fontSize: 1.0,
 	memoryEnabled: true,
-	memoryProviderRole: 'main'
+	memoryProviderRole: 'main',
+	embeddingProviderRole: 'main'
 };
 
 /**
@@ -55,7 +57,8 @@ function migrateFromFlatSettings(raw: Record<string, unknown>): Settings {
 		logLevel: (raw.logLevel as LogLevel) || 'info',
 		fontSize: (raw.fontSize as number) ?? 1.0,
 		memoryEnabled: (raw.memoryEnabled as boolean) ?? true,
-		memoryProviderRole: (raw.memoryProviderRole as string) || 'main'
+		memoryProviderRole: (raw.memoryProviderRole as string) || 'main',
+		embeddingProviderRole: (raw.embeddingProviderRole as string) || 'main'
 	};
 }
 
@@ -127,6 +130,16 @@ export function getMemoryProviderConfig(): ProviderConfig | undefined {
 /** Resolved memory provider config type (non-nullable after successful resolution) */
 export type MemoryProviderConfig = NonNullable<ReturnType<typeof getMemoryProviderConfig>>;
 
+
+export function getEmbeddingProviderConfig(): ProviderConfig | undefined {
+	const role = settings.embeddingProviderRole || 'main';
+	const id = settings.roleAssignments[role];
+	const config = id ? getProviderConfig(id) : getProviderConfig(role);
+	if (!config?.apiKey) return undefined;
+	return config;
+}
+
+export type EmbeddingProviderConfig = NonNullable<ReturnType<typeof getEmbeddingProviderConfig>>;
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
 	const id = settings.roleAssignments[role];
 	if (!id) return undefined;
@@ -164,7 +177,7 @@ export function assignRole(role: string, providerConfigId: string): void {
 // --- Global Settings ---
 
 export async function updateSettings(
-	partial: Partial<Pick<Settings, 'logLevel' | 'fontSize' | 'memoryEnabled' | 'memoryProviderRole'>>
+	partial: Partial<Pick<Settings, 'logLevel' | 'fontSize' | 'memoryEnabled' | 'memoryProviderRole' | 'embeddingProviderRole'>>
 ): Promise<void> {
 	const prevFontSize = settings.fontSize;
 	const prevLogLevel = settings.logLevel;

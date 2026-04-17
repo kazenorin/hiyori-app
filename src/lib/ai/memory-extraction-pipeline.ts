@@ -1,6 +1,6 @@
 import { generateText } from 'ai';
 import { createModel } from './provider';
-import { getMemoryProviderConfig, settings, type MemoryProviderConfig } from '$lib/stores/settings.svelte';
+import { getMemoryProviderConfig, getEmbeddingProviderConfig, settings, type MemoryProviderConfig, type EmbeddingProviderConfig } from '$lib/stores/settings.svelte';
 import { loadMemoryExtractionSystemPrompt, loadMemoryExtractionPrompt } from '$lib/fs/prompts';
 import { parseMemoryExtract, type ExtractedMemories } from '$lib/memory/memory-extract-parser';
 import { Memory } from '$lib/memory/memory';
@@ -22,19 +22,24 @@ export async function runMemoryExtractionPipeline(
 	storyId: string,
 	actLineId: string
 ): Promise<PipelineResult> {
-	const config = getMemoryProviderConfig();
-	if (!config) {
+	const llmConfig = getMemoryProviderConfig();
+	if (!llmConfig) {
 		throw new Error('Memory provider not configured');
 	}
 
+	const embeddingConfig = getEmbeddingProviderConfig();
+	if (!embeddingConfig) {
+		throw new Error('Embedding provider not configured');
+	}
+
 	// Step 1: Generate memories via LLM
-	const generatedText = await generateMemoriesWithRetry(assistantResponse, config);
+	const generatedText = await generateMemoriesWithRetry(assistantResponse, llmConfig);
 
 	// Step 2: Parse into structured object
 	const extracted = parseMemoryExtract(generatedText);
 
-	// Step 3: Persist each character/location
-	return await persistMemoriesWithRetry(extracted, storyId, actLineId, config);
+	// Step 3: Persist each character/location (uses embedding provider)
+	return await persistMemoriesWithRetry(extracted, storyId, actLineId, embeddingConfig);
 }
 
 async function generateMemoriesWithRetry(response: string, config: MemoryProviderConfig): Promise<string> {
@@ -58,7 +63,7 @@ async function persistMemoriesWithRetry(
 	extracted: ExtractedMemories,
 	storyId: string,
 	actLineId: string,
-	config: MemoryProviderConfig
+	config: EmbeddingProviderConfig
 ): Promise<PipelineResult> {
 	const memory = new Memory(config);
 	const result: PipelineResult = {
