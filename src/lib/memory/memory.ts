@@ -19,6 +19,7 @@ export interface MemorySearchOptions {
 	storyId: string;
 	actLineId?: string;
 	limit?: number;
+	locations?: LocationItem[];
 }
 
 export interface MemoryItem {
@@ -407,40 +408,49 @@ export class Memory {
 		await this.ensureMemoryVecTable(dimension);
 		const limit = options.limit ?? 5;
 
-		const sql = options.actLineId
-			? `
+		const hasLocations = options.locations && options.locations.length > 0;
+		const locationPlaceholders = hasLocations
+			? options.locations!.map(() => '?').join(', ')
+			: null;
+
+		const whereClauses: string[] = [
+			'embedding MATCH ?',
+			'k = ?',
+			'story_id = ?'
+		];
+		const params: unknown[] = [JSON.stringify(embedding), limit, options.storyId];
+
+		if (options.actLineId) {
+			whereClauses.push('act_line_id = ?');
+			params.push(options.actLineId);
+		}
+
+		const vecSql = `
+			SELECT rowid, distance
+			FROM vec_memories
+			WHERE ${whereClauses.join(' AND ')}
+			ORDER BY distance
+		`;
+
+		let metaWhere = '1=1';
+		const metaParams: unknown[] = [];
+
+		if (hasLocations) {
+			metaWhere = `m.location IN (${locationPlaceholders})`;
+			metaParams.push(...options.locations!.map(l => l.location));
+		}
+
+		const sql = `
 			SELECT m.id, m.content, m.message_id, m.story_id, m.act_line_id, m.character_canonical_name, m.location, m.created_at, sub.distance
 			FROM (
-				SELECT rowid, distance
-				FROM vec_memories
-				WHERE embedding MATCH $1
-				  AND k = $2
-				  AND story_id = $3
-				  AND act_line_id = $4
-				ORDER BY distance
+				${vecSql}
 			) sub
 			JOIN memory_meta m ON m.vec_rowid = sub.rowid
-			ORDER BY sub.distance
-		`
-			: `
-			SELECT m.id, m.content, m.message_id, m.story_id, m.act_line_id, m.character_canonical_name, m.location, m.created_at, sub.distance
-			FROM (
-				SELECT rowid, distance
-				FROM vec_memories
-				WHERE embedding MATCH $1
-				  AND k = $2
-				  AND story_id = $3
-				ORDER BY distance
-			) sub
-			JOIN memory_meta m ON m.vec_rowid = sub.rowid
+			WHERE ${metaWhere}
 			ORDER BY sub.distance
 		`;
 
-		const params = options.actLineId
-			? [JSON.stringify(embedding), limit, options.storyId, options.actLineId]
-			: [JSON.stringify(embedding), limit, options.storyId];
-
-		const rows = await db.select<MemoryMetaRow[]>(sql, params);
+		const rows = await db.select<MemoryMetaRow[]>(sql, [...params, ...metaParams]);
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -453,6 +463,11 @@ export class Memory {
 			location: row.location,
 			createdAt: row.created_at
 		}));
+	}
+
+	async searchByLocation(query: string, location: string, options: MemorySearchOptions): Promise<MemoryItem[]> {
+		const locationResults = await this.searchLocations(location, { ...options, limit: 5 });
+		return this.search(query, { ...options, locations: locationResults });
 	}
 
 	async getAll(options: MemorySearchOptions): Promise<MemoryItem[]> {

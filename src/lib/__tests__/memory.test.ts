@@ -206,7 +206,7 @@ describe('Memory', () => {
 			// Find the KNN search call (not the sqlite_master or memory_config calls)
 			const searchCall = mockDbSelectCalls.find(([q]) => q.includes('WHERE embedding MATCH'));
 			expect(searchCall).toBeDefined();
-			expect(searchCall![0]).toContain('story_id = $3');
+			expect(searchCall![0]).toContain('story_id = ?');
 			expect(searchCall![1]).toContain('story-1');
 
 			expect(results.length).toBe(1);
@@ -221,7 +221,7 @@ describe('Memory', () => {
 			const memory = new Memory(testConfig);
 			await memory.search('test', { storyId: 'story-1' });
 
-			const knnCall = mockDbSelectCalls.find(([q]) => q.includes('k = $2'));
+			const knnCall = mockDbSelectCalls.find(([q]) => q.includes('k = ?'));
 			expect(knnCall).toBeDefined();
 			expect(knnCall![1][1]).toBe(5);
 		});

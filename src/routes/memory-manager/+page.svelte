@@ -13,6 +13,9 @@
 	let searchResults = $state<MemoryItem[]>([]);
 	let locationSearchQuery = $state('');
 	let locationSearchResults = $state<LocationItem[]>([]);
+	let locationQuery = $state('');
+	let locationQueryLocation = $state('');
+	let locationQueryResults = $state<MemoryItem[]>([]);
 	let status = $state('');
 	let isLoading = $state(false);
 
@@ -168,6 +171,26 @@
 		}
 	}
 
+	async function handleLocationQuery() {
+		if (!locationQuery.trim() || !locationQueryLocation.trim() || !embeddingConfig || !activeStoryId) return;
+		isLoading = true;
+		status = 'Searching memories by location...';
+		try {
+			const memory = new Memory(embeddingConfig);
+			locationQueryResults = await memory.searchByLocation(
+				locationQuery.trim(),
+				locationQueryLocation.trim(),
+				{ storyId: activeStoryId, actLineId: activeActLineId ?? undefined, limit: 5 }
+			);
+			status = `Found ${locationQueryResults.length} result(s) by location.`;
+		} catch (err) {
+			status = err instanceof Error ? err.message : 'Search by location failed';
+			locationQueryResults = [];
+		} finally {
+			isLoading = false;
+		}
+	}
+
 	async function handleReset() {
 		if (!embeddingConfig) return;
 		confirmDialog = {
@@ -186,6 +209,7 @@
 			locations = [];
 			searchResults = [];
 			locationSearchResults = [];
+			locationQueryResults = [];
 			status = 'All memories deleted.';
 		} catch (err) {
 			status = err instanceof Error ? err.message : 'Reset failed';
@@ -313,7 +337,50 @@
 				</section>
 			{/if}
 
-		<!-- Search Memories -->
+		<!-- Search by Location -->
+	<section class="card p-6 space-y-4">
+		<h2 class="h4">Search by Location</h2>
+		<input
+			class="input w-full"
+			type="text"
+			placeholder="Query..."
+			bind:value={locationQuery}
+			disabled={isLoading || !activeStoryId}
+		/>
+		<input
+			class="input w-full"
+			type="text"
+			placeholder="Location..."
+			bind:value={locationQueryLocation}
+			disabled={isLoading || !activeStoryId}
+		/>
+		<div class="flex gap-2">
+			<button
+				class="btn preset-filled"
+				type="button"
+				onclick={handleLocationQuery}
+				disabled={isLoading || !locationQuery.trim() || !locationQueryLocation.trim() || !activeStoryId}
+			>
+				Search
+			</button>
+		</div>
+
+		{#if locationQueryResults.length > 0}
+			<div class="space-y-2 mt-4">
+				<p class="text-sm font-medium text-surface-700-300">Results</p>
+				{#each locationQueryResults as result (result.id)}
+					<div class="p-3 rounded-[var(--radius-base)] bg-surface-100-900">
+						<p class="text-sm">{result.memory}</p>
+						<p class="text-xs text-surface-500">
+							Character: {result.characterCanonicalName} · Location: {result.location} · Distance: {result.score?.toFixed(4) ?? 'N/A'}
+						</p>
+					</div>
+				{/each}
+			</div>
+		{/if}
+	</section>
+
+	<!-- Search Memories -->
 		<section class="card p-6 space-y-4">
 			<h2 class="h4">Search Memories</h2>
 			<input
