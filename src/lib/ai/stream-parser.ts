@@ -2,7 +2,7 @@
  * Base result type for all streaming parsers.
  * Every parser produces text passthrough plus its own extracted fields.
  */
-export type ParserResult<TExtract> = { text: string | null } & TExtract;
+export type ParserAccumulator<TExtract> = { } & TExtract;
 
 /**
  * Standard contract for streaming character parsers.
@@ -11,10 +11,8 @@ export type ParserResult<TExtract> = { text: string | null } & TExtract;
  * have extracted so far. Call `flush()` at end-of-stream to recover
  * any buffered content.
  *
- * @typeParam TExtract - Parser-specific extracted fields
- *   (e.g. `{ thinking: string | null }` for the thinking-tag parser).
  */
 export interface StreamParser<TExtract> {
-	feed(chunk: string): ParserResult<TExtract>;
-	flush(): ParserResult<TExtract>;
+	feed(chunk: string, accumulator: ParserAccumulator<TExtract>): string;
+	flush(accumulator: ParserAccumulator<TExtract>): string;
 }

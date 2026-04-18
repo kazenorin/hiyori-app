@@ -30,78 +30,61 @@ export function createParserChain(): ParserChain {
 	const revisedNarrativeParser = createXmlTagParser('revised_narrative');
 	const gameDataParser = createGameDataParser();
 
+	const parserChain = [
+		thinkingParser,
+		reviewScratchpadParser,
+		revisedNarrativeParser,
+		gameDataParser
+	];
+
+	function runChain(initialText: string, mode: 'feed' | 'flush'): ParserChainOutput {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const acc: any = {
+			thinking: null,
+			gameData: null,
+			review_scratchpad: null,
+			revised_narrative: null,
+		};
+
+		let text = mode === 'feed'
+			? parserChain.reduce((t, parser) => parser.feed(t, acc), initialText)
+			: runFlush(parserChain, acc, initialText);
+
+		return {
+			text: text || null,
+			thinking: acc.thinking as string | null,
+			gameData: acc.gameData as GameData | null,
+			reviewScratchpad: acc.review_scratchpad as string | null,
+			revisedNarrative: acc.revised_narrative as string | null,
+		};
+	}
+
 	return {
 		feed(chunk: string): ParserChainOutput {
-			const { thinking, text } = thinkingParser.feed(chunk);
-
-			const { extracted: reviewScratchpad, text: text2 } = reviewScratchpadParser.feed(text ?? '');
-			const { extracted: revisedNarrative, text: text3 } = revisedNarrativeParser.feed(text2 ?? '');
-			const { text: finalText, gameData } = gameDataParser.feed(text3 ?? '');
-
-			return { text: finalText, thinking, gameData, reviewScratchpad, revisedNarrative };
-			},
+			return runChain(chunk, 'feed');
+		},
 
 		flush(): ParserChainOutput {
-			const thinkingFlushed = thinkingParser.flush();
-
-			let text: string | null = null;
-			let gameData: GameData | null = null;
-			let reviewScratchpad: string | null = null;
-			let revisedNarrative: string | null = null;
-
-			// Process thinking flush through review_scratchpad parser
-			if (thinkingFlushed.text) {
-				const reviewOutput = reviewScratchpadParser.feed(thinkingFlushed.text);
-				if (reviewOutput.extracted) reviewScratchpad = reviewOutput.extracted;
-
-				// Process through revised_narrative parser
-				if (reviewOutput.text) {
-					const revisedOutput = revisedNarrativeParser.feed(reviewOutput.text);
-					if (revisedOutput.extracted) revisedNarrative = revisedOutput.extracted;
-
-					// Process through game-data parser
-					if (revisedOutput.text) {
-						const gameOutput = gameDataParser.feed(revisedOutput.text);
-						if (gameOutput.text) text = gameOutput.text;
-						if (gameOutput.gameData) gameData = gameOutput.gameData;
-					}
-				}
-			}
-
-			// Flush review_scratchpad parser
-			const reviewFlushed = reviewScratchpadParser.flush();
-			if (reviewFlushed.text) {
-				text = (text ?? '') + reviewFlushed.text;
-			}
-			if (reviewFlushed.extracted) {
-				reviewScratchpad = (reviewScratchpad ?? '') + reviewFlushed.extracted;
-			}
-
-			// Flush revised_narrative parser
-			const revisedFlushed = revisedNarrativeParser.flush();
-			if (revisedFlushed.text) {
-				text = (text ?? '') + revisedFlushed.text;
-			}
-			if (revisedFlushed.extracted) {
-				revisedNarrative = (revisedNarrative ?? '') + revisedFlushed.extracted;
-			}
-
-			// Flush game-data parser
-			const flushed = gameDataParser.flush();
-			if (flushed.text) {
-				text = (text ?? '') + flushed.text;
-			}
-			if (flushed.gameData) {
-				gameData = flushed.gameData;
-			}
-
-			return {
-				text,
-				thinking: thinkingFlushed.thinking,
-				gameData,
-				reviewScratchpad,
-				revisedNarrative
-			};
+			return runChain('', 'flush');
 		}
 	};
+}
+
+function runFlush(parserChain: StreamParserFeed[], acc: any, _initial: string): string {
+	const [first, ...rest] = parserChain;
+	let text = first.flush(acc);
+
+	text = rest.reduce((t, parser) => parser.feed(t, acc), text);
+
+	for (const parser of rest) {
+		const flushed = parser.flush(acc);
+		if (flushed) text += flushed;
+	}
+
+	return text;
+}
+
+interface StreamParserFeed {
+	feed(chunk: string, accumulator: any): string;
+	flush(accumulator: any): string;
 }

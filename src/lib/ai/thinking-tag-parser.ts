@@ -1,6 +1,4 @@
-import type { ParserResult, StreamParser } from './stream-parser';
-
-export type ThinkingParserResult = ParserResult<{ thinking: string | null }>;
+import type {StreamParser} from './stream-parser';
 
 type ParserState = 'TEXT' | 'POTENTIAL_OPENER' | 'THINKING_BODY' | 'POTENTIAL_CLOSER';
 
@@ -8,10 +6,7 @@ const THINK_TAG_NAME = 'think';
 const THINK_OPENER = '<' + THINK_TAG_NAME;
 const THINK_CLOSER = `</${THINK_TAG_NAME}>`;
 
-export interface ThinkingTagParser extends StreamParser<{ thinking: string | null }> {
-}
-
-export function createThinkingTagParser(): ThinkingTagParser {
+export function createThinkingTagParser(): StreamParser<{ thinking: string | null }> {
 	let state: ParserState = 'TEXT';
 	let openerBuffer = '';
 	let savedOpener = '';
@@ -20,15 +15,16 @@ export function createThinkingTagParser(): ThinkingTagParser {
 	let textBuffer = '';
 	let thinkingAccumulator = '';
 
-	function collectResult(): ThinkingParserResult {
-		const text = textBuffer.length > 0 ? textBuffer : null;
+	function collectResult(accumulator: { thinking: string | null }): string {
+		const text = textBuffer;
 		const thinking = thinkingAccumulator.length > 0 ? thinkingAccumulator : null;
 		textBuffer = '';
 		thinkingAccumulator = '';
-		return { text, thinking };
+		accumulator.thinking = thinking ?? accumulator.thinking;
+		return text;
 	}
 
-	function feed(chunk: string): ThinkingParserResult {
+	function feed(chunk: string, accumulator: { thinking: string | null }): string {
 		for (let i = 0; i < chunk.length; i++) {
 			const char = chunk[i];
 
@@ -116,13 +112,13 @@ export function createThinkingTagParser(): ThinkingTagParser {
 		}
 
 		if (state === 'TEXT') {
-			return collectResult();
+			return collectResult(accumulator);
 		}
 
-		return { text: null, thinking: null };
+		return '';
 	}
 
-	function flush(): ThinkingParserResult {
+	function flush(accumulator: { thinking: string | null }): string {
 		let flushedText = textBuffer;
 
 		switch (state) {
@@ -150,12 +146,9 @@ export function createThinkingTagParser(): ThinkingTagParser {
 		state = 'TEXT';
 		textBuffer = '';
 
-		const result: ThinkingParserResult = {
-			text: flushedText.length > 0 ? flushedText : null,
-			thinking: thinkingAccumulator.length > 0 ? thinkingAccumulator : null
-		};
+		accumulator.thinking = thinkingAccumulator.length > 0 ? accumulator.thinking + thinkingAccumulator : accumulator.thinking;
 		thinkingAccumulator = '';
-		return result;
+		return flushedText;
 	}
 
 	return { feed, flush };

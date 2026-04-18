@@ -1,4 +1,4 @@
-import type { ParserResult, StreamParser } from './stream-parser';
+import type {StreamParser} from './stream-parser';
 
 type ParserState = 'TEXT' | 'POTENTIAL_OPENER' | 'TAG_BODY' | 'POTENTIAL_CLOSER';
 
@@ -6,10 +6,8 @@ type ParserState = 'TEXT' | 'POTENTIAL_OPENER' | 'TAG_BODY' | 'POTENTIAL_CLOSER'
  * Streaming character parser that extracts content between XML-style open/close tags.
  * The extracted content is hidden from text passthrough.
  */
-export interface XmlTagParser extends StreamParser<{ extracted: string | null }> {
-}
 
-export function createXmlTagParser(tagName: string): XmlTagParser {
+export function createXmlTagParser(tagName: string): StreamParser<{ [tagName]: string | null }> {
 	const OPENER = `<${tagName}`;
 	const CLOSER = `</${tagName}>`;
 
@@ -21,15 +19,16 @@ export function createXmlTagParser(tagName: string): XmlTagParser {
 	let textBuffer = '';
 	let extractedAccumulator = '';
 
-	function collectResult(): ParserResult<{ extracted: string | null }> {
-		const text = textBuffer.length > 0 ? textBuffer : null;
+	function collectResult(accumulator: { [tagName]: string | null }): string {
+		const text = textBuffer;
 		const extracted = extractedAccumulator.length > 0 ? extractedAccumulator : null;
 		textBuffer = '';
 		extractedAccumulator = '';
-		return { text, extracted };
+		accumulator[tagName] = extracted ?? accumulator[tagName];
+		return text;
 	}
 
-	function feed(chunk: string): ParserResult<{ extracted: string | null }> {
+	function feed(chunk: string, accumulator: { [tagName]: string | null }): string {
 		for (let i = 0; i < chunk.length; i++) {
 			const char = chunk[i];
 
@@ -108,20 +107,20 @@ export function createXmlTagParser(tagName: string): XmlTagParser {
 		}
 
 		if (state === 'TEXT') {
-			return collectResult();
+			return collectResult(accumulator);
 		}
 
 		// Emit extracted content while buffering
 		if (extractedAccumulator) {
 			const extracted = extractedAccumulator;
 			extractedAccumulator = '';
-			return { text: null, extracted };
+			accumulator[tagName] = extracted;
 		}
 
-		return { text: null, extracted: null };
+		return '';
 	}
 
-	function flush(): ParserResult<{ extracted: string | null }> {
+	function flush(accumulator: { [tagName]: string | null }): string {
 		let flushedText = textBuffer;
 
 		switch (state) {
@@ -147,12 +146,9 @@ export function createXmlTagParser(tagName: string): XmlTagParser {
 		state = 'TEXT';
 		textBuffer = '';
 
-		const result: ParserResult<{ extracted: string | null }> = {
-			text: flushedText.length > 0 ? flushedText : null,
-			extracted: extractedAccumulator.length > 0 ? extractedAccumulator : null
-		};
+		accumulator[tagName] = extractedAccumulator.length > 0 ? accumulator[tagName] + extractedAccumulator : accumulator[tagName];
 		extractedAccumulator = '';
-		return result;
+		return flushedText;
 	}
 
 	return { feed, flush };

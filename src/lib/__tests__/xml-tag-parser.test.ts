@@ -7,14 +7,16 @@ function feedAll(chunks: string[], tagName: string): { text: string; extracted: 
 	let extracted: string | null = null;
 
 	for (const chunk of chunks) {
-		const output = parser.feed(chunk);
-		if (output.text) text += output.text;
-		if (output.extracted) extracted = (extracted ?? '') + output.extracted;
+		const acc: Record<string, string | null> = { [tagName]: null };
+		const result = parser.feed(chunk, acc);
+		if (result) text += result;
+		if (acc[tagName]) extracted = (extracted ?? '') + acc[tagName];
 	}
 
-	const flushed = parser.flush();
-	if (flushed.text) text += flushed.text;
-	if (flushed.extracted) extracted = (extracted ?? '') + flushed.extracted;
+	const acc: Record<string, string | null> = { [tagName]: null };
+	const flushed = parser.flush(acc);
+	if (flushed) text += flushed;
+	if (acc[tagName]) extracted = (extracted ?? '') + acc[tagName];
 
 	return { text, extracted };
 }

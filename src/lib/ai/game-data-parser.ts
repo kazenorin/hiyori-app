@@ -1,17 +1,12 @@
 import type { GameData } from '$lib/db/messages';
-import type { ParserResult, StreamParser } from './stream-parser';
-
-export type GameDataParserResult = ParserResult<{ gameData: GameData | null }>;
+import type { StreamParser } from './stream-parser';
 
 type ParserState = 'TEXT' | 'POTENTIAL_OPENER' | 'JSON_BODY' | 'POTENTIAL_CLOSER';
 
 const JSON_OPENER = '```json';
 const JSON_CLOSER = '```';
 
-export interface GameDataParser extends StreamParser<{ gameData: GameData | null }> {
-}
-
-export function createGameDataParser(): GameDataParser {
+export function createGameDataParser(): StreamParser<{ gameData: GameData | null }> {
 	let state: ParserState = 'TEXT';
 	let openerBuffer = '';
 	let jsonBuffer = '';
@@ -37,15 +32,16 @@ export function createGameDataParser(): GameDataParser {
 		return null;
 	}
 
-	function collectResult(): GameDataParserResult {
-		const text = textBuffer.length > 0 ? textBuffer : null;
+	function collectResult(accumulator: { gameData: GameData | null }): string {
+		const text = textBuffer;
 		const gameData = pendingGameData;
 		textBuffer = '';
 		pendingGameData = null;
-		return { text, gameData };
+		accumulator.gameData = gameData ?? accumulator.gameData;
+		return text;
 	}
 
-	function feed(chunk: string): GameDataParserResult {
+	function feed(chunk: string, accumulator: { gameData: GameData | null }): string {
 		for (let i = 0; i < chunk.length; i++) {
 			const char = chunk[i];
 
@@ -119,20 +115,20 @@ export function createGameDataParser(): GameDataParser {
 
 		// Only return text if we're in TEXT state (not mid-buffer)
 		if (state === 'TEXT') {
-			return collectResult();
+			return collectResult(accumulator);
 		}
 
 		// While buffering, return game data if found (no text yet)
 		if (pendingGameData) {
 			const gameData = pendingGameData;
 			pendingGameData = null;
-			return { text: null, gameData };
+			accumulator.gameData = gameData;
 		}
 
-		return { text: null, gameData: null };
+		return '';
 	}
 
-	function flush(): GameDataParserResult {
+	function flush(accumulator: { gameData: GameData | null }): string {
 		let flushedText = textBuffer;
 
 		switch (state) {
@@ -156,12 +152,9 @@ export function createGameDataParser(): GameDataParser {
 		state = 'TEXT';
 		textBuffer = '';
 
-		const result: GameDataParserResult = {
-			text: flushedText.length > 0 ? flushedText : null,
-			gameData: pendingGameData
-		};
+		accumulator.gameData = pendingGameData ?? accumulator.gameData
 		pendingGameData = null;
-		return result;
+		return flushedText;
 	}
 
 	return { feed, flush };

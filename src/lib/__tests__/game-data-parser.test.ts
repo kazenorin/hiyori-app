@@ -8,14 +8,16 @@ function feedAll(chunks: string[]): { text: string; gameData: GameData | null } 
 	let gameData: GameData | null = null;
 
 	for (const chunk of chunks) {
-		const output = parser.feed(chunk);
-		if (output.text) text += output.text;
-		if (output.gameData) gameData = output.gameData;
+		const acc: { gameData: GameData | null } = { gameData: null };
+		const result = parser.feed(chunk, acc);
+		if (result) text += result;
+		if (acc.gameData) gameData = acc.gameData;
 	}
 
-	const flushed = parser.flush();
-	if (flushed.text) text += flushed.text;
-	if (flushed.gameData) gameData = flushed.gameData;
+	const acc: { gameData: GameData | null } = { gameData: null };
+	const flushed = parser.flush(acc);
+	if (flushed) text += flushed;
+	if (acc.gameData) gameData = acc.gameData;
 
 	return { text, gameData };
 }

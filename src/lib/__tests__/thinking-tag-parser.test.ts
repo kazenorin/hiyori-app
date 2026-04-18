@@ -9,14 +9,16 @@ function feedAll(chunks: string[]): { text: string; thinking: string | null } {
 	let thinking: string | null = null;
 
 	for (const chunk of chunks) {
-		const output = parser.feed(chunk);
-		if (output.text) text += output.text;
-		if (output.thinking) thinking = (thinking ?? '') + output.thinking;
+		const acc: { thinking: string | null } = { thinking: null };
+		const result = parser.feed(chunk, acc);
+		if (result) text += result;
+		if (acc.thinking) thinking = (thinking ?? '') + acc.thinking;
 	}
 
-	const flushed = parser.flush();
-	if (flushed.text) text += flushed.text;
-	if (flushed.thinking) thinking = (thinking ?? '') + flushed.thinking;
+	const acc: { thinking: string | null } = { thinking: null };
+	const flushed = parser.flush(acc);
+	if (flushed) text += flushed;
+	if (acc.thinking) thinking = (thinking ?? '') + acc.thinking;
 
 	return { text, thinking };
 }
