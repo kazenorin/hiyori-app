@@ -5,7 +5,13 @@ import * as dbAppState from '$lib/db/app-state';
 import { log } from '$lib/logging/logger';
 import { moveWorldBuilderLog } from '$lib/logging/chat-logger';
 import { getLogFilePath } from '$lib/ai/world-builder.svelte';
-import { loadStorySystemPrompt, loadStoryNarrationTemplate } from '$lib/fs/prompts';
+import {
+	loadStorySystemPrompt,
+	loadSystemPrompt,
+	loadNarrationTemplate,
+	loadStoryNarrationExtractionPrompt,
+	loadStoryNarrationTemplate
+} from '$lib/fs/prompts';
 import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-folders';
 import { writeTextFile, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
@@ -16,11 +22,13 @@ let stories = $state<dbStories.Story[]>([]);
 let acts = $state<dbActs.Act[]>([]);
 let actLines = $state<dbActLines.ActLineMeta[]>([]);
 let activeStoryId = $state<string | null>(null);
+let activeStoryName = $state<string | null>(null);
 let activeActId = $state<string | null>(null);
 let activeActLineId = $state<string | null>(null);
 let isLoading = $state(true);
 let isSelectingStory = $state(false);
 let activeSystemPrompt = $state<string | null>(null);
+let activeNarrationExtractionPrompt = $state<string | null>(null);
 let activeNarrationTemplate = $state<string | null>(null);
 let activeWorldContent = $state<string | null>(null);
 
@@ -35,6 +43,9 @@ export function getActLines(): dbActLines.ActLineMeta[] {
 }
 export function getActiveStoryId(): string | null {
 	return activeStoryId;
+}
+export function getActiveStoryName(): string | null {
+	return activeStoryName;
 }
 export function getActiveActId(): string | null {
 	return activeActId;
@@ -51,8 +62,17 @@ export function getIsSelectingStory(): boolean {
 export function getActiveSystemPrompt(): string | null {
 	return activeSystemPrompt;
 }
+export async function getActiveSystemPromptOrDefault(): Promise<string> {
+	return activeSystemPrompt ?? await loadSystemPrompt();
+}
+export function getActiveNarrationExtractionPrompt(): string | null {
+	return activeNarrationExtractionPrompt;
+}
 export function getActiveNarrationTemplate(): string | null {
 	return activeNarrationTemplate;
+}
+export async function getActiveNarrationTemplateOrDefault(): Promise<string> {
+	return activeNarrationTemplate ?? await loadNarrationTemplate();
 }
 export function getActiveWorldContent(): string | null {
 	return activeWorldContent;
@@ -62,16 +82,17 @@ export function getActiveWorldContent(): string | null {
  * This is what gets prepended as a hidden message on every AI call.
  */
 export function getActiveNarrationContext(): string | null {
-	const template = activeNarrationTemplate;
+	const narration = (activeNarrationExtractionPrompt && activeNarrationTemplate)
+		? activeNarrationExtractionPrompt.replace('{narrationTemplate}', activeNarrationTemplate) : null;
 	const world = activeWorldContent;
-	if (!template && !world) return null;
-	if (!template) return world;
-	if (!world) return template;
+	if (!narration && !world) return null;
+	if (!narration) return world;
+	if (!world) return narration;
 
 	const act = acts.find((a) => a.id === activeActId);
 	const actNumber = act?.actNumber ?? 1;
 	const startPrompt = `Gamemaster, it is Act ${actNumber} now. Start the game.`;
-	return `${template}\n\n---\n\n${world}\n\n---\n\n${startPrompt}`;
+	return `${narration}\n\n---\n\n${world}\n\n---\n\n${startPrompt}`;
 }
 
 export function getActiveStory(): dbStories.Story | null {
@@ -104,6 +125,7 @@ export async function loadActLines(actId: string): Promise<void> {
  */
 async function loadStoryContent(storyId: string, storyName: string): Promise<void> {
 	activeSystemPrompt = await loadStorySystemPrompt(storyId, storyName);
+	activeNarrationExtractionPrompt = await loadStoryNarrationExtractionPrompt(storyId, storyName);
 	activeNarrationTemplate = await loadStoryNarrationTemplate(storyId, storyName);
 	await ensureWorldFile(storyId, storyName);
 	activeWorldContent = await loadStoryWorldContent(storyId, storyName);
@@ -111,6 +133,7 @@ async function loadStoryContent(storyId: string, storyName: string): Promise<voi
 
 function resetStoryContent(): void {
 	activeSystemPrompt = null;
+	activeNarrationExtractionPrompt = null;
 	activeNarrationTemplate = null;
 	activeWorldContent = null;
 }
@@ -131,6 +154,7 @@ export async function selectStory(storyId: string | null): Promise<void> {
 			const story = stories.find((s) => s.id === storyId);
 			if (story) {
 				await loadStoryContent(storyId, story.name);
+				activeStoryName = story.name;
 			}
 		} else {
 			resetStoryContent();
@@ -222,6 +246,7 @@ export async function deleteStory(id: string, removeFolder: boolean = false): Pr
 	}
 	if (activeStoryId === id) {
 		activeStoryId = null;
+		activeStoryName = null;
 		activeActId = null;
 		activeActLineId = null;
 		acts = [];
@@ -276,6 +301,7 @@ export async function restoreState(): Promise<void> {
 		const story = stories.find((s) => s.id === state.activeStoryId);
 		if (story) {
 			await loadStoryContent(story.id, story.name);
+			activeStoryName = story.name;
 		}
 	}
 	if (state.activeActId) {

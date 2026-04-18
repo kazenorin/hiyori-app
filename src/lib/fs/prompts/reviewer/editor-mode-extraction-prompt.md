@@ -15,6 +15,7 @@ Rewrite the corrected scene inside a `<revised_narrative>` block, strictly obeyi
 - **Fix Everything:** Resolve ALL flagged violations with minimal, targeted changes.
 - **Preserve Story:** Do not alter unflagged plot events, truncate the text, or add new story beats.
 - **Seamless:** Do not acknowledge the review process. The text must read seamlessly.
+- **Output Format:** You MUST conform to the provided format.
 - **Mandatory Tags:** You MUST explicitly write the closing tags `</review_scratchpad>` and `</revised_narrative>`.
 
 ### Output Format
@@ -29,5 +30,5 @@ Strictly follow this exact structure:
 </review_scratchpad>
 
 <revised_narrative>
-[Insert the complete, corrected narrative here. No preamble, no meta-text.]
+{narrationTemplate}
 </revised_narrative>

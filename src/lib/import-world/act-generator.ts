@@ -4,7 +4,7 @@
 import type {StreamAccumulator, StreamState} from "$lib/ai/chat-callbacks";
 import { type RetryConfig, streamWithRetry} from '$lib/ai/chat-stream';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { loadSystemPrompt, loadNarrationTemplate } from '$lib/fs/prompts';
+import { loadSystemPrompt, loadNarrationContent } from '$lib/fs/prompts';
 import {sleep} from '$lib/utils/async';
 import type {ParsedMessage} from './types';
 import {
@@ -190,7 +190,7 @@ export async function formatIntoScenes(
 		};
 	}
 
-	const narrationTemplate = await loadNarrationTemplate();
+	const narration = await loadNarrationContent();
 
 	// Step 1: Break raw content into scenes (using markdown headers)
 	const rawScenes = breakIntoScenes(rawContent);
@@ -206,7 +206,7 @@ export async function formatIntoScenes(
 		try {
 			const acc = await processScene(
 				rawScenes[i],
-				narrationTemplate,
+				narration,
 				processedScenes,
 				retryConfig,
 				(state: StreamState) => {

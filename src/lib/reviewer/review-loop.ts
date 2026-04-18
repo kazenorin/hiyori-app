@@ -1,29 +1,21 @@
 import { streamWithRetry, type RetryConfig } from '$lib/ai/chat-stream';
 import type { StreamState } from '$lib/ai/chat-callbacks';
 import { getReviewerProviderConfig, getMainProviderConfig } from '$lib/stores/settings.svelte';
-import {
-	loadSystemPrompt,
-	loadEditorModeExtractionPrompt,
-} from '$lib/fs/prompts';
+import {loadEditorModeExtractionPrompt, loadSystemPrompt} from '$lib/fs/prompts';
 import { knownCharacterNameList } from '$lib/memory/memory';
 import { log } from '$lib/logging/logger';
+import {
+	getActiveNarrationTemplateOrDefault,
+	getActiveSystemPromptOrDefault
+} from "$lib/stores/stories.svelte";
 
 export interface ReviewLoopResult {
+	content: string;
 	scratchpad: string;
 	revisedContent: string;
 }
 
 const RETRY_CONFIG: RetryConfig = { retryCount: 2, backoffIntervalSeconds: 2 };
-
-function extractTagContent(text: string, tag: string): string | null {
-	const openTag = `<${tag}>`;
-	const closeTag = `</${tag}>`;
-	const start = text.indexOf(openTag);
-	if (start === -1) return null;
-	const end = text.indexOf(closeTag, start);
-	if (end === -1) return null;
-	return text.slice(start + openTag.length, end).trim();
-}
 
 function getProviderConfig() {
 	return getReviewerProviderConfig() ?? getMainProviderConfig();
@@ -33,8 +25,9 @@ export async function streamReview(
 	history: { role: 'user' | 'assistant'; content: string }[],
 	onProgress?: (state: StreamState) => void,
 ): Promise<ReviewLoopResult | null> {
-	const [systemPrompt, editorTemplate, characterNames] = await Promise.all([
-		loadSystemPrompt(),
+	const [systemPrompt, narrationTemplate, editorTemplate, characterNames] = await Promise.all([
+		getActiveSystemPromptOrDefault() ,
+		getActiveNarrationTemplateOrDefault(),
 		loadEditorModeExtractionPrompt(),
 		knownCharacterNameList(),
 	]);
@@ -42,7 +35,7 @@ export async function streamReview(
 	const editorModePrompt = editorTemplate.replace(
 		'{knownCharacterNameList}',
 		JSON.stringify(characterNames)
-	);
+	).replace('{narrationTemplate}', narrationTemplate);
 
 	const historyWithEditorPrompt = [
 		...history,
@@ -63,17 +56,18 @@ export async function streamReview(
 	);
 
 	const content = accumulator.state.content;
-	const revisedNarrative = extractTagContent(content, 'revised_narrative');
 
+	const revisedNarrative = accumulator.state.revisedNarrative;
 	if (!revisedNarrative) {
 		await log.debug('review-loop', 'No revised_narrative found in response, passing through');
 		return null;
 	}
 
-	const scratchpad = extractTagContent(content, 'review_scratchpad') ?? '';
+	const scratchpad = accumulator.state.reviewScratchpad ?? '';
 	await log.info('review-loop', 'Editor mode produced revised narrative');
 
 	return {
+		content,
 		scratchpad,
 		revisedContent: revisedNarrative,
 	};

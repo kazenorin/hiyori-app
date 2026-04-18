@@ -8,6 +8,7 @@ import { settings } from '$lib/stores/settings.svelte';
 
 // System & Narration
 import defaultSystemPrompt from './prompts/system-prompt.md?raw';
+import defaultNarrationExtractionPrompt from './prompts/narration-extraction-prompt.md?raw';
 import defaultNarrationTemplate from './prompts/narration-template.md?raw';
 
 // World
@@ -41,6 +42,7 @@ import defaultTriggerEditorModeFragment from './prompts/reviewer/trigger-editor-
 // Re-export for consumers that need raw content
 export {
 	defaultSystemPrompt,
+	defaultNarrationExtractionPrompt,
 	defaultNarrationTemplate,
 	defaultWorldTemplate,
 	defaultGenerateWorldFromChatPrompt,
@@ -64,6 +66,7 @@ export {
 
 // System & Narration
 const systemPrompt = new Prompt({ relativePath: 'system-prompt.md', defaultContent: defaultSystemPrompt });
+const narrationExtractionPrompt = new Prompt({ relativePath: 'narration-extraction-prompt.md', defaultContent: defaultNarrationExtractionPrompt });
 const narrationTemplate = new Prompt({ relativePath: 'narration-template.md', defaultContent: defaultNarrationTemplate });
 
 // World
@@ -107,7 +110,15 @@ export const loadSystemPrompt = async (): Promise<string> => {
 		return systemPrompt.load()
 	}
 };
+export const loadNarrationExtractionPrompt = (): Promise<string> => narrationExtractionPrompt.load();
 export const loadNarrationTemplate = (): Promise<string> => narrationTemplate.load();
+export async function loadNarrationContent(): Promise<string> {
+	const [extraction, template] = await Promise.all([
+		narrationExtractionPrompt.load(),
+		narrationTemplate.load()
+	]);
+	return extraction.replace('{narrationTemplate}', template);
+}
 export const loadWorldTemplate = (): Promise<string> => worldTemplate.load();
 export const loadGenerateWorldFromChatPrompt = (): Promise<string> => generateWorldFromChatPrompt.load();
 export const loadGenerateWorldFromChatSystemPrompt = (): Promise<string> => generateWorldFromChatSystemPrompt.load();
@@ -126,6 +137,7 @@ export const loadEditorModeExtractionPrompt = (): Promise<string> => editorModeE
 export const loadTriggerEditorModeFragment = (): Promise<string> => triggerEditorModeFragment.load();
 
 export const getDefaultSystemPromptContent = () => defaultSystemPrompt;
+export const getDefaultNarrationExtractionPromptContent = () => defaultNarrationExtractionPrompt;
 export const getDefaultNarrationTemplateContent = () => defaultNarrationTemplate;
 
 // Story-specific loaders
@@ -133,8 +145,12 @@ export async function loadStorySystemPrompt(storyId: string, storyName: string):
 	return loadPromptForStory(storyId, storyName, systemPrompt.relativePath, systemPrompt.defaultContent);
 }
 
-export async function loadStoryNarrationTemplate(storyId: string, storyName: string): Promise<string> {
+export async function loadStoryNarrationExtractionPrompt(storyId: string, storyName: string): Promise<string> {
 	return loadPromptForStory(storyId, storyName, narrationTemplate.relativePath, narrationTemplate.defaultContent);
+}
+
+export async function loadStoryNarrationTemplate(storyId: string, storyName: string): Promise<string> {
+	return loadPromptForStory(storyId, storyName, narrationExtractionPrompt.relativePath, narrationExtractionPrompt.defaultContent);
 }
 
 // === Ensure All Base Configs ===

@@ -157,6 +157,14 @@ export async function sendMessage(
 
 	const messageIdx = messages.length - 1;
 
+	function getCurrentMessage(): Message {
+		return messages[messageIdx];
+	}
+
+	function setCurrentMessage(message: Message) {
+		messages[messageIdx] = message;
+	}
+
 	isStreaming = true;
 	abortController = new AbortController();
 
@@ -176,12 +184,13 @@ export async function sendMessage(
 		const [resultMetadata] = await Promise.all([
 			streamChatResponse(systemPrompt, history, abortController!.signal,
 				(state: StreamState) => {
-					messages[messageIdx] = {
-						...messages[messageIdx],
-						content: state.content,
-						reasoning: state.reasoning ?? messages[messageIdx].reasoning,
-						gameData: state.gameData ?? messages[messageIdx].gameData
-					};
+					const currentMessage = getCurrentMessage();
+					setCurrentMessage({
+						...currentMessage,
+						[settings.reviewerEnabled ? 'draftContent' : 'content']: state.content,
+						reasoning: state.reasoning ?? currentMessage.reasoning,
+						gameData: state.gameData ?? currentMessage.gameData
+					});
 				},
 				(err: unknown) => {
 					error = err instanceof Error ? err.message : String(err);
@@ -191,11 +200,12 @@ export async function sendMessage(
 		])
 
 		// Update message with accumulated content and final metadata
-		messages[messageIdx].metadata = buildMetadata(resultMetadata, providerConfig.model);
+		getCurrentMessage().metadata = buildMetadata(resultMetadata, providerConfig.model);
 
 		// Review loop: run editor mode, revise if needed
 		if (settings.reviewerEnabled) {
-			const draftContent = messages[messageIdx].content;
+			const draftMessage = getCurrentMessage();
+			const draftContent = draftMessage.draftContent ?? draftMessage.content;
 			const historyWithDraft: { role: 'user' | 'assistant'; content: string }[] = [
 				...history,
 				{ role: 'assistant', content: draftContent }
@@ -204,20 +214,24 @@ export async function sendMessage(
 			const reviewResult = await streamReview(
 				historyWithDraft,
 				(state: StreamState) => {
-					messages[messageIdx] = {
-						...messages[messageIdx],
-						content: state.content
-					};
+					const currentMessage = getCurrentMessage();
+					setCurrentMessage({
+						...currentMessage,
+						content: state.revisedNarrative ?? currentMessage.content,
+						reviewScratchpad: state.reviewScratchpad ?? currentMessage.reviewScratchpad,
+						reasoning: state.reasoning ?? currentMessage.reasoning,
+						gameData: state.gameData ?? currentMessage.gameData
+					});
 				}
 			);
 
-			if (reviewResult?.revisedContent) {
-				messages[messageIdx] = {
-					...messages[messageIdx],
-					draftContent: draftContent,
-					reviewScratchpad: reviewResult.scratchpad,
-					content: reviewResult.revisedContent
-				};
+			if (!reviewResult) {
+				setCurrentMessage({
+					...draftMessage,
+					draftContent: undefined,
+					reviewScratchpad: undefined,
+					content: draftContent
+				});
 			}
 		}
 

@@ -396,7 +396,7 @@
 												<Accordion.ItemTrigger
 													class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1"
 												>
-													<span>Thinking...</span>
+													<span>Reasoning</span>
 													<Accordion.ItemIndicator>
 														<span class="transition-transform duration-150 text-surface-500">▼</span>
 													</Accordion.ItemIndicator>

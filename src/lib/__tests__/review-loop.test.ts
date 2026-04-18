@@ -4,6 +4,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('$lib/fs/prompts', () => ({
 	loadSystemPrompt: vi.fn(async () => 'Main system prompt with trigger-editor-mode-fragment'),
 	loadEditorModeExtractionPrompt: vi.fn(async () => '# Editor Mode\n\nReview the output.\n\n{knownCharacterNameList}\n\n<review_scratchpad>...'),
+	loadNarrationContent: vi.fn(async () => 'Narration extraction prompt\n\nNarration template'),
+}));
+
+vi.mock('$lib/stores/stories.svelte', () => ({
+	getActiveSystemPromptOrDefault: vi.fn(async () => 'Main system prompt with trigger-editor-mode-fragment'),
+	getActiveNarrationTemplateOrDefault: vi.fn(async () => 'Narration extraction prompt\n\nNarration template'),
 }));
 
 // Mock settings - import settings for loadSystemPrompt behavior
@@ -29,15 +35,29 @@ vi.mock('$lib/logging/logger', () => ({
 }));
 
 // Mock chat-stream
-const mockStreamAccumulator = (content: string) => ({
-	callbacks: {} as any,
-	state: { content, reasoning: null, gameData: null, reviewScratchpad: null, revisedNarrative: null },
-	resultMetadata: Promise.resolve({
-		finishReason: 'stop',
-		usage: { inputTokens: 100, outputTokens: 200, totalTokens: 300 },
-		durationMs: 1000,
-	}),
-});
+const mockStreamAccumulator = (content: string) => {
+	const scratchpad = extractTagContent(content, 'review_scratchpad');
+	const revisedNarrative = extractTagContent(content, 'revised_narrative');
+	return {
+		callbacks: {} as any,
+		state: { content, reasoning: null, gameData: null, reviewScratchpad: scratchpad, revisedNarrative },
+		resultMetadata: Promise.resolve({
+			finishReason: 'stop',
+			usage: { inputTokens: 100, outputTokens: 200, totalTokens: 300 },
+			durationMs: 1000,
+		}),
+	};
+};
+
+function extractTagContent(text: string, tag: string): string | null {
+	const openTag = `<${tag}>`;
+	const closeTag = `</${tag}>`;
+	const start = text.indexOf(openTag);
+	if (start === -1) return null;
+	const end = text.indexOf(closeTag, start);
+	if (end === -1) return null;
+	return text.slice(start + openTag.length, end).trim();
+}
 
 const mockReviewerConfig = {
 	id: 'reviewer-id',

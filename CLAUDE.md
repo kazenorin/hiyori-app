@@ -49,7 +49,7 @@ The app uses a unified prompt loading system with a `Prompt` class pattern:
   - Registers all defaults on module load for `ensureAllBaseConfigs()`
 
 - **`src/lib/fs/prompts/`**: Bundled default markdown files organized by category
-  - `system-prompt.md`, `narration-template.md` at root
+  - `system-prompt.md`, `narration-extraction-prompt.md`, `narration-template.md` at root
   - `world/`: world-template.md, generate-world-from-chat-prompt.md, etc.
   - `act/`: act-card-template.md, act-extraction-prompt.md
   - `character/`: character-card-template.md, summarize-characters-in-act.md, etc.
@@ -62,6 +62,7 @@ AppData/
   config/
     prompt-templates/
       system-prompt.md
+      narration-extraction-prompt.md
       narration-template.md
       world/
         world-template.md
