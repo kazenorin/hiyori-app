@@ -189,7 +189,7 @@ export async function sendMessage(
 						...currentMessage,
 						[settings.reviewerEnabled ? 'draftContent' : 'content']: state.content,
 						reasoning: state.reasoning ?? currentMessage.reasoning,
-						gameData: state.gameData ?? currentMessage.gameData
+						gameData: state.revisedGameData ?? state.gameData ?? currentMessage.gameData
 					});
 				},
 				(err: unknown) => {

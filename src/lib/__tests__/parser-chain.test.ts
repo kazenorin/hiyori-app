@@ -10,6 +10,7 @@ function feedAll(chunks: string[]): {
 	gameData: GameData | null;
 	reviewScratchpad: string | null;
 	revisedNarrative: string | null;
+	revisedGameData: GameData | null;
 } {
 	const chain = createParserChain();
 	let text = '';
@@ -17,6 +18,7 @@ function feedAll(chunks: string[]): {
 	let gameData: GameData | null = null;
 	let reviewScratchpad: string | null = null;
 	let revisedNarrative: string | null = null;
+	let revisedGameData: GameData | null = null;
 
 	for (const chunk of chunks) {
 		const output = chain.feed(chunk);
@@ -25,6 +27,7 @@ function feedAll(chunks: string[]): {
 		if (output.gameData) gameData = output.gameData;
 		if (output.reviewScratchpad) reviewScratchpad = (reviewScratchpad ?? '') + output.reviewScratchpad;
 		if (output.revisedNarrative) revisedNarrative = (revisedNarrative ?? '') + output.revisedNarrative;
+		if (output.revisedGameData) revisedGameData = output.revisedGameData;
 	}
 
 	const flushed = chain.flush();
@@ -33,8 +36,9 @@ function feedAll(chunks: string[]): {
 	if (flushed.gameData) gameData = flushed.gameData;
 	if (flushed.reviewScratchpad) reviewScratchpad = (reviewScratchpad ?? '') + flushed.reviewScratchpad;
 	if (flushed.revisedNarrative) revisedNarrative = (revisedNarrative ?? '') + flushed.revisedNarrative;
+	if (flushed.revisedGameData) revisedGameData = flushed.revisedGameData;
 
-	return { text, thinking, gameData, reviewScratchpad, revisedNarrative };
+	return { text, thinking, gameData, reviewScratchpad, revisedNarrative, revisedGameData };
 }
 
 const GAME_DATA_JSON = JSON.stringify({
@@ -196,12 +200,13 @@ describe('ParserChain', () => {
 					GAME_DATA_JSON,
 					'\n```\nEnd'
 				].join('');
-				const { text, thinking, gameData, reviewScratchpad, revisedNarrative } = feedAll([input]);
+				const { text, thinking, gameData, reviewScratchpad, revisedNarrative, revisedGameData } = feedAll([input]);
 				expect(thinking).toBe('Analyzing narrative');
 				expect(reviewScratchpad).toBe('Tone is inconsistent');
 				expect(revisedNarrative).toBe('The sun set over the hills');
 				expect(gameData).not.toBeNull();
 				expect(gameData?.decisions).toEqual(['Go left', 'Go right']);
+				expect(revisedGameData).toBeNull();
 				expect(text).toBe('Story continues\n\nEnd');
 			});
 
@@ -218,11 +223,12 @@ describe('ParserChain', () => {
 					GAME_DATA_JSON,
 					'\n```'
 				];
-				const { text, thinking, gameData, reviewScratchpad, revisedNarrative } = feedAll(chunks);
+				const { text, thinking, gameData, reviewScratchpad, revisedNarrative, revisedGameData } = feedAll(chunks);
 				expect(thinking).toBe('Deep thought');
 				expect(reviewScratchpad).toBe('Review');
 				expect(revisedNarrative).toBe('Revised');
 				expect(gameData).not.toBeNull();
+				expect(revisedGameData).toBeNull();
 				expect(text).toBe('Text');
 			});
 

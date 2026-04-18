@@ -6,7 +6,7 @@ type ParserState = 'TEXT' | 'POTENTIAL_OPENER' | 'JSON_BODY' | 'POTENTIAL_CLOSER
 const JSON_OPENER = '```json';
 const JSON_CLOSER = '```';
 
-export function createGameDataParser(): StreamParser<{ gameData: GameData | null }> {
+export function createGameDataParser(tagName: string = 'gameData'): StreamParser<{ [key: string]: GameData | null }> {
 	let state: ParserState = 'TEXT';
 	let openerBuffer = '';
 	let jsonBuffer = '';
@@ -32,16 +32,16 @@ export function createGameDataParser(): StreamParser<{ gameData: GameData | null
 		return null;
 	}
 
-	function collectResult(accumulator: { gameData: GameData | null }): string {
+	function collectResult(accumulator: Record<string, GameData | null>): string {
 		const text = textBuffer;
 		const gameData = pendingGameData;
 		textBuffer = '';
 		pendingGameData = null;
-		accumulator.gameData = gameData ?? accumulator.gameData;
+		accumulator[tagName] = gameData ?? accumulator[tagName];
 		return text;
 	}
 
-	function feed(chunk: string, accumulator: { gameData: GameData | null }): string {
+	function feed(chunk: string, accumulator: Record<string, GameData | null>): string {
 		for (let i = 0; i < chunk.length; i++) {
 			const char = chunk[i];
 
@@ -122,13 +122,13 @@ export function createGameDataParser(): StreamParser<{ gameData: GameData | null
 		if (pendingGameData) {
 			const gameData = pendingGameData;
 			pendingGameData = null;
-			accumulator.gameData = gameData;
+			accumulator[tagName] = gameData;
 		}
 
 		return '';
 	}
 
-	function flush(accumulator: { gameData: GameData | null }): string {
+	function flush(accumulator: Record<string, GameData | null>): string {
 		let flushedText = textBuffer;
 
 		switch (state) {
@@ -152,7 +152,7 @@ export function createGameDataParser(): StreamParser<{ gameData: GameData | null
 		state = 'TEXT';
 		textBuffer = '';
 
-		accumulator.gameData = pendingGameData ?? accumulator.gameData
+		accumulator[tagName] = pendingGameData ?? accumulator[tagName]
 		pendingGameData = null;
 		return flushedText;
 	}

@@ -40,7 +40,7 @@ const mockStreamAccumulator = (content: string) => {
 	const revisedNarrative = extractTagContent(content, 'revised_narrative');
 	return {
 		callbacks: {} as any,
-		state: { content, reasoning: null, gameData: null, reviewScratchpad: scratchpad, revisedNarrative },
+		state: { content, reasoning: null, gameData: null, reviewScratchpad: scratchpad, revisedNarrative, revisedGameData: null },
 		resultMetadata: Promise.resolve({
 			finishReason: 'stop',
 			usage: { inputTokens: 100, outputTokens: 200, totalTokens: 300 },

@@ -9,6 +9,7 @@ export interface StreamState {
 	gameData: GameData | null;
 	reviewScratchpad: string | null;
 	revisedNarrative: string | null;
+	revisedGameData: GameData | null;
 }
 
 export interface StreamAccumulator {
@@ -37,6 +38,7 @@ export function createStreamAccumulator(onUpdate?: OnStreamUpdate, onError?: OnS
 		gameData: null,
 		reviewScratchpad: null,
 		revisedNarrative: null,
+		revisedGameData: null,
 	};
 
 	function notify(): void {

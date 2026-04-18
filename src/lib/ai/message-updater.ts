@@ -11,6 +11,7 @@ export function applyParserOutput(state: StreamState, output: ParserChainOutput)
 		gameData: output.gameData && isValidGameData(output.gameData) ? output.gameData : state.gameData,
 		reviewScratchpad: output.reviewScratchpad ?? state.reviewScratchpad,
 		revisedNarrative: output.revisedNarrative ?? state.revisedNarrative,
+		revisedGameData: output.revisedGameData ?? state.revisedGameData,
 	};
 }
 
