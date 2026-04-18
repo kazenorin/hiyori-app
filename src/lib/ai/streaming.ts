@@ -72,7 +72,7 @@ export async function executeStream(
 			result.text
 		]);
 
-		if (text.trim().length == 0) {
+		if (text.trim().length === 0) {
 			callbacks.onError(new Error('empty response from stream'))
 			await fileLog('warn', 'streaming', `empty body\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`);
 		} else {

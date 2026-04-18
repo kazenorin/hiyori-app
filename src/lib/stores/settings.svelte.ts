@@ -224,8 +224,8 @@ export async function updateSettings(
 		try {
 			const { invoke } = await import('@tauri-apps/api/core');
 			await invoke('set_log_level', { level: partial.logLevel });
-		} catch (err) {
-			console.debug('Rust backend unavailable for log level sync:', err);
+		} catch {
+			// Rust backend may not be available in all environments
 		}
 	}
 }

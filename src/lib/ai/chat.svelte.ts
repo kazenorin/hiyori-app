@@ -115,6 +115,7 @@ export async function sendMessage(
 	}
 ): Promise<void> {
 	if (!message.bodyText && !message.systemPrompt && !message.narrationContent) {
+		log.warn('send-message', 'Called with no body, system prompt, or narration content');
 		return;
 	}
 
@@ -258,14 +259,14 @@ export async function sendMessage(
 	}
 }
 
-function toHistoryMessage(message: Message) {
+function toHistoryMessage(message: Message): { role: 'user' | 'assistant'; content: string } {
 	if (message.role !== 'assistant') {
-		return message;
+		return { role: message.role, content: message.content };
 	}
 	const gameDataContent = `\n\`\`\`json
 ${JSON.stringify(message.gameData ? message.gameData : placeholderContent(), null, 2)}
 \`\`\`\n`
-	return {role: 'assistant', content: message.content + gameDataContent} as Message;
+	return { role: 'assistant', content: message.content + gameDataContent };
 }
 
 function randomItem<T>(items: readonly T[]): T {
