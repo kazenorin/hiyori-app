@@ -1,5 +1,5 @@
 import type { StreamCallbacks, StreamResultMetadata } from './streaming';
-import { createParserChain } from './parser-chain';
+import {createParserChain, hasContent} from './parser-chain';
 import { applyParserOutput, applyReasoningDelta } from './message-updater';
 import type { GameData } from '$lib/db/messages';
 
@@ -7,6 +7,8 @@ export interface StreamState {
 	content: string;
 	reasoning: string | null;
 	gameData: GameData | null;
+	reviewScratchpad: string | null;
+	revisedNarrative: string | null;
 }
 
 export interface StreamAccumulator {
@@ -17,6 +19,7 @@ export interface StreamAccumulator {
 
 export type OnStreamUpdate = (state: StreamState) => void;
 export type OnStreamError = (err: unknown) => void;
+
 
 /**
  * Creates streaming callbacks that process text through the parser chain
@@ -32,6 +35,8 @@ export function createStreamAccumulator(onUpdate?: OnStreamUpdate, onError?: OnS
 		content: '',
 		reasoning: null,
 		gameData: null,
+		reviewScratchpad: null,
+		revisedNarrative: null,
 	};
 
 	function notify(): void {
@@ -42,7 +47,7 @@ export function createStreamAccumulator(onUpdate?: OnStreamUpdate, onError?: OnS
 		callbacks: {
 			onTextDelta: (text: string) => {
 				const output = chain.feed(text);
-				if (output.text || output.thinking || output.gameData) {
+				if (hasContent(output)) {
 					state = applyParserOutput(state, output);
 					notify();
 				}

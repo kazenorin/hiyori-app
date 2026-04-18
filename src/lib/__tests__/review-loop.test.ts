@@ -31,7 +31,7 @@ vi.mock('$lib/logging/logger', () => ({
 // Mock chat-stream
 const mockStreamAccumulator = (content: string) => ({
 	callbacks: {} as any,
-	state: { content, reasoning: null, gameData: null },
+	state: { content, reasoning: null, gameData: null, reviewScratchpad: null, revisedNarrative: null },
 	resultMetadata: Promise.resolve({
 		finishReason: 'stop',
 		usage: { inputTokens: 100, outputTokens: 200, totalTokens: 300 },

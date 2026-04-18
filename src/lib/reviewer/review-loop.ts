@@ -51,7 +51,7 @@ export async function streamReview(
 
 	const providerConfig = getProviderConfig();
 
-	log.debug('review-loop', 'Starting editor mode pass');
+	await log.debug('review-loop', 'Starting editor mode pass');
 
 	const accumulator = await streamWithRetry(
 		systemPrompt,
@@ -66,12 +66,12 @@ export async function streamReview(
 	const revisedNarrative = extractTagContent(content, 'revised_narrative');
 
 	if (!revisedNarrative) {
-		log.debug('review-loop', 'No revised_narrative found in response, passing through');
+		await log.debug('review-loop', 'No revised_narrative found in response, passing through');
 		return null;
 	}
 
 	const scratchpad = extractTagContent(content, 'review_scratchpad') ?? '';
-	log.info('review-loop', 'Editor mode produced revised narrative');
+	await log.info('review-loop', 'Editor mode produced revised narrative');
 
 	return {
 		scratchpad,

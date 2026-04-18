@@ -12,56 +12,62 @@ function createMessage(overrides?: Partial<Message>): Message {
 	};
 }
 
-const emptyState = { content: '', reasoning: '', gameData: null as GameData | null };
+const emptyState = {
+	content: '',
+	reasoning: '',
+	gameData: null as GameData | null,
+	reviewScratchpad: null as string | null,
+	revisedNarrative: null as string | null
+};
 
 describe('message-updater', () => {
 	describe('applyParserOutput', () => {
 		it('appends text', () => {
-			const result = applyParserOutput(emptyState, { text: 'Hello', thinking: null, gameData: null });
+			const result = applyParserOutput(emptyState, { text: 'Hello', thinking: null, gameData: null, reviewScratchpad: null, revisedNarrative: null });
 			expect(result.content).toBe('Hello');
 			expect(result.reasoning).toBe('');
 			expect(result.gameData).toBeNull();
 		});
 
 		it('appends thinking', () => {
-			const result = applyParserOutput(emptyState, { text: null, thinking: 'reasoning', gameData: null });
+			const result = applyParserOutput(emptyState, { text: null, thinking: 'reasoning', gameData: null, reviewScratchpad: null, revisedNarrative: null });
 			expect(result.reasoning).toBe('reasoning');
 			expect(result.content).toBe('');
 		});
 
 		it('sets valid gameData', () => {
 			const gd: GameData = { worldState: 'State', decisions: ['A'] };
-			const result = applyParserOutput(emptyState, { text: null, thinking: null, gameData: gd });
+			const result = applyParserOutput(emptyState, { text: null, thinking: null, gameData: gd, reviewScratchpad: null, revisedNarrative: null });
 			expect(result.gameData).toEqual(gd);
 		});
 
 		it('skips invalid gameData (empty worldState)', () => {
 			const gd: GameData = { worldState: '', decisions: ['A'] };
-			const result = applyParserOutput(emptyState, { text: null, thinking: null, gameData: gd });
+			const result = applyParserOutput(emptyState, { text: null, thinking: null, gameData: gd, reviewScratchpad: null, revisedNarrative: null });
 			expect(result.gameData).toBeNull();
 		});
 
 		it('skips invalid gameData (empty decisions)', () => {
 			const gd: GameData = { worldState: 'State', decisions: [] };
-			const result = applyParserOutput(emptyState, { text: null, thinking: null, gameData: gd });
+			const result = applyParserOutput(emptyState, { text: null, thinking: null, gameData: gd, reviewScratchpad: null, revisedNarrative: null });
 			expect(result.gameData).toBeNull();
 		});
 
 		it('appends text and thinking together', () => {
-			const result = applyParserOutput(emptyState, { text: 'content', thinking: 'thought', gameData: null });
+			const result = applyParserOutput(emptyState, { text: 'content', thinking: 'thought', gameData: null, reviewScratchpad: null, revisedNarrative: null });
 			expect(result.content).toBe('content');
 			expect(result.reasoning).toBe('thought');
 		});
 
 		it('accumulates across multiple calls', () => {
-			let state = applyParserOutput(emptyState, { text: 'Hello', thinking: null, gameData: null });
-			state = applyParserOutput(state, { text: ' world', thinking: ' think', gameData: null });
+			let state = applyParserOutput(emptyState, { text: 'Hello', thinking: null, gameData: null, reviewScratchpad: null, revisedNarrative: null });
+			state = applyParserOutput(state, { text: ' world', thinking: ' think', gameData: null, reviewScratchpad: null, revisedNarrative: null });
 			expect(state.content).toBe('Hello world');
 			expect(state.reasoning).toBe(' think');
 		});
 
 		it('returns new object (immutable)', () => {
-			const result = applyParserOutput(emptyState, { text: 'x', thinking: null, gameData: null });
+			const result = applyParserOutput(emptyState, { text: 'x', thinking: null, gameData: null, reviewScratchpad: null, revisedNarrative: null });
 			expect(result).not.toBe(emptyState);
 		});
 	});

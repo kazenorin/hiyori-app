@@ -167,7 +167,13 @@ export async function streamActCard(
 		retryConfig,
 		onProgress,
 		(err, attempt) => {
-			onProgress({ content: '', reasoning: `Attempt ${attempt} failed: ${err.message}. Retrying...`, gameData: null });
+			onProgress({
+				content: '',
+				reasoning: `Attempt ${attempt} failed: ${err.message}. Retrying...`,
+				gameData: null,
+				reviewScratchpad: null,
+				revisedNarrative: null
+			});
 		},
 		config
 	);

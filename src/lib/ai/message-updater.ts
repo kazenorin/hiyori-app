@@ -9,6 +9,8 @@ export function applyParserOutput(state: StreamState, output: ParserChainOutput)
 			? (state.reasoning != null ? state.reasoning + output.thinking : output.thinking)
 			: state.reasoning,
 		gameData: output.gameData && isValidGameData(output.gameData) ? output.gameData : state.gameData,
+		reviewScratchpad: output.reviewScratchpad ?? state.reviewScratchpad,
+		revisedNarrative: output.revisedNarrative ?? state.revisedNarrative,
 	};
 }
 

@@ -1,11 +1,18 @@
 import { createThinkingTagParser } from './thinking-tag-parser';
 import { createGameDataParser } from './game-data-parser';
+import { createXmlTagParser } from './xml-tag-parser';
 import type { GameData } from '$lib/db/messages';
 
 export interface ParserChainOutput {
 	text: string | null;
 	thinking: string | null;
 	gameData: GameData | null;
+	reviewScratchpad: string | null;
+	revisedNarrative: string | null;
+}
+
+export function hasContent(output: ParserChainOutput) {
+	return output.text || output.thinking || output.gameData || output.reviewScratchpad || output.revisedNarrative;
 }
 
 export interface ParserChain {
@@ -14,45 +21,87 @@ export interface ParserChain {
 }
 
 /**
- * Combined parser chain: text → thinking parser → game-data parser.
- * Extracts think tags first, then intercepts ```json game-data blocks.
+ * Combined parser chain: text → thinking parser → review_scratchpad → revised_narrative → game-data parser.
+ * Extracts think tags first, then XML review tags, then intercepts ```json game-data blocks.
  */
 export function createParserChain(): ParserChain {
 	const thinkingParser = createThinkingTagParser();
+	const reviewScratchpadParser = createXmlTagParser('review_scratchpad');
+	const revisedNarrativeParser = createXmlTagParser('revised_narrative');
 	const gameDataParser = createGameDataParser();
 
 	return {
 		feed(chunk: string): ParserChainOutput {
 			const thinkingOutput = thinkingParser.feed(chunk);
-
-			// Collect thinking if extracted
 			const thinking = thinkingOutput.thinking;
 
-			// Pass remaining text through game-data parser
-			const textToProcess = thinkingOutput.text;
+			// Pass remaining text through review_scratchpad parser
+			const reviewScratchpadOutput = reviewScratchpadParser.feed(thinkingOutput.text ?? '');
+			const reviewScratchpad = reviewScratchpadOutput.extracted;
+
+			// Pass through revised_narrative parser
+			const revisedNarrativeOutput = revisedNarrativeParser.feed(reviewScratchpadOutput.text ?? '');
+			const revisedNarrative = revisedNarrativeOutput.extracted;
+
+			// Pass through game-data parser
+			const textToProcess = revisedNarrativeOutput.text;
 			if (textToProcess) {
 				const gameOutput = gameDataParser.feed(textToProcess);
 				return {
 					text: gameOutput.text,
 					thinking,
-					gameData: gameOutput.gameData
+					gameData: gameOutput.gameData,
+					reviewScratchpad,
+					revisedNarrative
 				};
 			}
 
-			return { text: null, thinking, gameData: null };
+			return { text: null, thinking, gameData: null, reviewScratchpad, revisedNarrative };
 		},
 
 		flush(): ParserChainOutput {
-			// Flush thinking parser first
 			const thinkingFlushed = thinkingParser.flush();
 
 			let text: string | null = null;
 			let gameData: GameData | null = null;
+			let reviewScratchpad: string | null = null;
+			let revisedNarrative: string | null = null;
 
+			// Process thinking flush through review_scratchpad parser
 			if (thinkingFlushed.text) {
-				const output = gameDataParser.feed(thinkingFlushed.text);
-				if (output.text) text = output.text;
-				if (output.gameData) gameData = output.gameData;
+				const reviewOutput = reviewScratchpadParser.feed(thinkingFlushed.text);
+				if (reviewOutput.extracted) reviewScratchpad = reviewOutput.extracted;
+
+				// Process through revised_narrative parser
+				if (reviewOutput.text) {
+					const revisedOutput = revisedNarrativeParser.feed(reviewOutput.text);
+					if (revisedOutput.extracted) revisedNarrative = revisedOutput.extracted;
+
+					// Process through game-data parser
+					if (revisedOutput.text) {
+						const gameOutput = gameDataParser.feed(revisedOutput.text);
+						if (gameOutput.text) text = gameOutput.text;
+						if (gameOutput.gameData) gameData = gameOutput.gameData;
+					}
+				}
+			}
+
+			// Flush review_scratchpad parser
+			const reviewFlushed = reviewScratchpadParser.flush();
+			if (reviewFlushed.text) {
+				text = (text ?? '') + reviewFlushed.text;
+			}
+			if (reviewFlushed.extracted) {
+				reviewScratchpad = (reviewScratchpad ?? '') + reviewFlushed.extracted;
+			}
+
+			// Flush revised_narrative parser
+			const revisedFlushed = revisedNarrativeParser.flush();
+			if (revisedFlushed.text) {
+				text = (text ?? '') + revisedFlushed.text;
+			}
+			if (revisedFlushed.extracted) {
+				revisedNarrative = (revisedNarrative ?? '') + revisedFlushed.extracted;
 			}
 
 			// Flush game-data parser
@@ -67,7 +116,9 @@ export function createParserChain(): ParserChain {
 			return {
 				text,
 				thinking: thinkingFlushed.thinking,
-				gameData
+				gameData,
+				reviewScratchpad,
+				revisedNarrative
 			};
 		}
 	};
