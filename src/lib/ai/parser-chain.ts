@@ -32,32 +32,14 @@ export function createParserChain(): ParserChain {
 
 	return {
 		feed(chunk: string): ParserChainOutput {
-			const thinkingOutput = thinkingParser.feed(chunk);
-			const thinking = thinkingOutput.thinking;
+			const { thinking, text } = thinkingParser.feed(chunk);
 
-			// Pass remaining text through review_scratchpad parser
-			const reviewScratchpadOutput = reviewScratchpadParser.feed(thinkingOutput.text ?? '');
-			const reviewScratchpad = reviewScratchpadOutput.extracted;
+			const { extracted: reviewScratchpad, text: text2 } = reviewScratchpadParser.feed(text ?? '');
+			const { extracted: revisedNarrative, text: text3 } = revisedNarrativeParser.feed(text2 ?? '');
+			const { text: finalText, gameData } = gameDataParser.feed(text3 ?? '');
 
-			// Pass through revised_narrative parser
-			const revisedNarrativeOutput = revisedNarrativeParser.feed(reviewScratchpadOutput.text ?? '');
-			const revisedNarrative = revisedNarrativeOutput.extracted;
-
-			// Pass through game-data parser
-			const textToProcess = revisedNarrativeOutput.text;
-			if (textToProcess) {
-				const gameOutput = gameDataParser.feed(textToProcess);
-				return {
-					text: gameOutput.text,
-					thinking,
-					gameData: gameOutput.gameData,
-					reviewScratchpad,
-					revisedNarrative
-				};
-			}
-
-			return { text: null, thinking, gameData: null, reviewScratchpad, revisedNarrative };
-		},
+			return { text: finalText, thinking, gameData, reviewScratchpad, revisedNarrative };
+			},
 
 		flush(): ParserChainOutput {
 			const thinkingFlushed = thinkingParser.flush();
