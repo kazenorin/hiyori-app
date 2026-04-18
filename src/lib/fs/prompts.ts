@@ -146,11 +146,11 @@ export async function loadStorySystemPrompt(storyId: string, storyName: string):
 }
 
 export async function loadStoryNarrationExtractionPrompt(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, narrationTemplate.relativePath, narrationTemplate.defaultContent);
+	return loadPromptForStory(storyId, storyName, narrationExtractionPrompt.relativePath, narrationExtractionPrompt.defaultContent);
 }
 
 export async function loadStoryNarrationTemplate(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, narrationExtractionPrompt.relativePath, narrationExtractionPrompt.defaultContent);
+	return loadPromptForStory(storyId, storyName, narrationTemplate.relativePath, narrationTemplate.defaultContent);
 }
 
 // === Ensure All Base Configs ===
