@@ -187,6 +187,7 @@ export async function extractGameDataWithLLM(
 			(state) => {
 				onProgress(msgIndex, state);
 			},
+			() => {},
 			(err, attempt) => {
 				onError(msgIndex, err, attempt);
 			},

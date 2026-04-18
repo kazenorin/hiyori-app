@@ -44,6 +44,7 @@ export async function generateActFromCards(
 		userMessages as { role: 'user' | 'assistant'; content: string }[],
 		retryConfig,
 		onProgress,
+		() => {},
 		onError
 	);
 }
@@ -156,6 +157,7 @@ async function processScene(
 		messages,
 		retryConfig,
 		onProgress,
+		() => {},
 		onError
 	);
 }

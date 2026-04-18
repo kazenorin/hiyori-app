@@ -4,6 +4,13 @@ export type Provider = 'openai' | 'openai-compatible';
 export type ApiType = 'chat-completions' | 'responses';
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 
+export const LOG_LEVEL_VALUES: Record<LogLevel, number> = {
+	error: 1,
+	warn: 2,
+	info: 3,
+	debug: 4,
+};
+
 export interface ProviderConfig {
 	id: string;
 	name: string;

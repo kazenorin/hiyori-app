@@ -146,30 +146,19 @@ export async function deleteLineEntries(actLineId: string): Promise<void> {
 	await db.execute('DELETE FROM act_lines WHERE act_line_id = $1', [actLineId]);
 }
 
-export async function removeLastMessageEntries(actLineId: string, count: number): Promise<void> {
+export async function removeMessagesFromActLine(actLineId: string, messageIds: string[]): Promise<void> {
+	if (messageIds.length === 0) return;
 	const db = getDatabase();
-
-	// Get the last N message entries
-	const entries = await db.select<ActLineEntryRow[]>(
-		'SELECT * FROM act_lines WHERE act_line_id = $1 ORDER BY sequence DESC LIMIT $2',
-		[actLineId, count]
-	);
-
-	if (entries.length === 0) return;
-
-	const messageIds = entries.map((e) => e.message_id);
 
 	try {
 		await db.execute('BEGIN');
 
-		// Delete from act_lines junction using IN clause
 		const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
 		await db.execute(
 			`DELETE FROM act_lines WHERE act_line_id = $1 AND message_id IN (${placeholders})`,
 			[actLineId, ...messageIds]
 		);
 
-		// Only delete messages that are no longer referenced by any act line
 		for (const msgId of messageIds) {
 			const refs = await db.select<{ cnt: number }[]>(
 				'SELECT COUNT(*) as cnt FROM act_lines WHERE message_id = $1',

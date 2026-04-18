@@ -34,12 +34,17 @@ export async function runMemoryExtractionPipeline(
 	}
 
 	// Step 1: Generate memories via LLM
-	const generatedText = await generateMemoriesWithRetry(assistantResponse, llmConfig);
+	const [generatedText] = await Promise.all([
+		generateMemoriesWithRetry(assistantResponse, llmConfig),
+		log.debug('memory-pipeline', `Generating memories for message=${messageId}...`)
+	]);
 
 	// Step 2: Parse into structured object
+	await log.debug('memory-pipeline', `parsing memories for message=${messageId}...`)
 	const extracted = parseMemoryExtract(generatedText);
 
 	// Step 3: Persist each character/location (uses embedding provider)
+	await log.debug('memory-pipeline', `persisting memories for message=${messageId}...`)
 	return await persistMemoriesWithRetry(extracted, storyId, actLineId, messageId, embeddingConfig);
 }
 

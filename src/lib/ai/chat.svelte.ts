@@ -7,7 +7,8 @@ import {logMainChat} from '$lib/logging/chat-logger';
 import {type StreamState} from '$lib/ai/chat-callbacks';
 import {buildMetadata, type MessageMetadata, streamChatResponse} from "./chat-stream";
 import {runMemoryExtractionPipeline} from './memory-extraction-pipeline';
-import {streamReview, type ReviewResult} from '$lib/reviewer/review-loop';
+import {Memory} from '$lib/memory/memory';
+import {streamReview} from '$lib/reviewer/review-loop';
 import {log} from '$lib/logging/logger';
 import {getActiveStoryId, getActiveActLineId} from '$lib/stores/stories.svelte';
 
@@ -19,17 +20,22 @@ export interface Message {
 	metadata?: MessageMetadata;
 	gameData?: GameData;
 	draftContent?: string;
-	reviewResult?: ReviewResult;
+	reviewScratchpad?: string;
 }
 
 let messages = $state<Message[]>([]);
 let isStreaming = $state(false);
 let error = $state<string | null>(null);
 let abortController: AbortController | null = null;
+let memoryPipelineRunning = $state(false);
 let memoryPipelinePromise: Promise<void> | null = null;
 
 export function getMessages(): Message[] {
 	return messages;
+}
+
+export function isMemoryPipelineRunning(): boolean {
+	return memoryPipelineRunning;
 }
 
 export function getIsStreaming(): boolean {
@@ -123,11 +129,6 @@ export async function sendMessage(
 	}
 	error = null;
 
-	// Await any in-flight memory pipeline before starting a new response
-	if (memoryPipelinePromise) {
-		await memoryPipelinePromise;
-	}
-
 	const responseMessageId = crypto.randomUUID();
 	const responseMessage: Message = {
 		id: responseMessageId,
@@ -166,6 +167,11 @@ export async function sendMessage(
 			.map((m) => toHistoryMessage(m));
 		const history = [...narrationMsg, ...existingMsgs];
 
+		// Await any in-flight memory pipeline before starting a new response
+		if (memoryPipelinePromise) {
+			await memoryPipelinePromise;
+		}
+
 		const [resultMetadata] = await Promise.all([
 			streamChatResponse(systemPrompt, history, abortController!.signal,
 				(state: StreamState) => {
@@ -176,22 +182,26 @@ export async function sendMessage(
 						gameData: state.gameData ?? messages[messageIdx].gameData
 					};
 				},
+				(err) => {
+					error = err instanceof Error ? err.message : String(err);
+				},
 				providerConfig
 			).then((acc) => acc.resultMetadata),
-			logMainChat({systemPrompt, messages: history})
 		])
 
 		// Update message with accumulated content and final metadata
 		messages[messageIdx].metadata = buildMetadata(resultMetadata, providerConfig.model);
 
-		// Review loop: run reviewer, revise if needed
+		// Review loop: run editor mode, revise if needed
 		if (settings.reviewerEnabled) {
-			const transcript = messages.slice(0, -1).map(toHistoryMessage);
-			transcript.push({ role: 'assistant', content: messages[messageIdx].content });
+			const draftContent = messages[messageIdx].content;
+			const historyWithDraft: { role: 'user' | 'assistant'; content: string }[] = [
+				...history,
+				{ role: 'assistant', content: draftContent }
+			];
 
 			const reviewResult = await streamReview(
-				transcript,
-				undefined,
+				historyWithDraft,
 				(state: StreamState) => {
 					messages[messageIdx] = {
 						...messages[messageIdx],
@@ -203,21 +213,25 @@ export async function sendMessage(
 			if (reviewResult?.revisedContent) {
 				messages[messageIdx] = {
 					...messages[messageIdx],
-					draftContent: messages[messageIdx].content,
-					reviewResult: reviewResult.review,
+					draftContent: draftContent,
+					reviewScratchpad: reviewResult.scratchpad,
 					content: reviewResult.revisedContent
 				};
 			}
 		}
 
 		// Persist with accumulated content (not result.content)
-		await persistMessage(actLineId, messages[messageIdx]);
+		await Promise.all([
+			persistMessage(actLineId, messages[messageIdx]),
+			logMainChat({systemPrompt, messages})
+		]);
 
 		// Run memory extraction pipeline in background (non-blocking)
 		if (settings.memoryEnabled) {
 			const storyId = getActiveStoryId();
 			const activeActLineId = getActiveActLineId();
 			if (storyId && activeActLineId) {
+				memoryPipelineRunning = true;
 				memoryPipelinePromise = runMemoryExtractionPipeline(
 					messages[messageIdx].content,
 					storyId,
@@ -232,6 +246,7 @@ export async function sendMessage(
 					})
 					.finally(() => {
 						memoryPipelinePromise = null;
+						memoryPipelineRunning = false;
 					});
 			}
 		}
@@ -244,10 +259,13 @@ export async function sendMessage(
 }
 
 function toHistoryMessage(message: Message) {
-	const gameDataContent = `\n\n\`\`\`json
+	if (message.role !== 'assistant') {
+		return message;
+	}
+	const gameDataContent = `\n\`\`\`json
 ${JSON.stringify(message.gameData ? message.gameData : placeholderContent(), null, 2)}
 \`\`\`\n`
-	return {role: message.role, content: message.content + gameDataContent};
+	return {role: 'assistant', content: message.content + gameDataContent} as Message;
 }
 
 function randomItem<T>(items: readonly T[]): T {
@@ -342,28 +360,55 @@ export async function sendInitialNarration(
 }
 
 export async function regenerateLastResponse(actLineId: string, systemPrompt?: string, narrationContent?: string): Promise<void> {
-	const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
-	if (!lastAssistant) return;
+	const currentMessages = [...messages];
+	const lastAssistantMsgIdx = currentMessages.findLastIndex((m) => m.role === 'assistant');
+	if (lastAssistantMsgIdx === -1) return;
 
-	await dbActLines.removeLastMessageEntries(actLineId, 1);
-	messages = messages.filter((m) => m.id !== lastAssistant.id);
+	const messageIdsToRemove = messages.slice(lastAssistantMsgIdx).map((m)=>m.id);
+	messages = messages.slice(0, lastAssistantMsgIdx);
+
+	try {
+		await dbActLines.removeMessagesFromActLine(actLineId, messageIdsToRemove);
+	} catch (err) {
+		await log.error('delete-last-exchange', 'Message removal failed', err);
+		return;
+	}
+
+	try {
+		await removeMemoriesFromActLine(actLineId, messageIdsToRemove);
+	} catch (err) {
+		await log.error('regenerate-last-response', 'Memory cleanup failed', err);
+	}
 
 	await sendMessage(actLineId, {bodyText: undefined, systemPrompt: systemPrompt, narrationContent: narrationContent});
 }
 
 export async function deleteLastExchange(actLineId: string): Promise<void> {
-	await dbActLines.removeLastMessageEntries(actLineId, 2);
+	let lastUserMsgIdx = messages.length - 1;
+	while (lastUserMsgIdx >= 0 && messages[lastUserMsgIdx].role !== 'user') {
+		lastUserMsgIdx--;
+	}
 
-	const lastMessageIdx = messages.map((m) => m.role).lastIndexOf('assistant');
-	if (lastMessageIdx === -1) return;
+	if (lastUserMsgIdx === -1) return;
+	while (lastUserMsgIdx > 0 && messages[lastUserMsgIdx - 1].role === 'user') {
+		lastUserMsgIdx--;
+	}
 
-	const lastUserIdx = messages.slice(0, lastMessageIdx).map((m) => m.role).lastIndexOf('user');
-	if (lastUserIdx === -1) {
-		messages = messages.filter((m) => m.id !== messages[lastMessageIdx].id);
+	const messageIdsToRemove = messages.slice(lastUserMsgIdx).map((m) => m.id);
+	messages = messages.slice(0, lastUserMsgIdx);
+
+	try {
+		await dbActLines.removeMessagesFromActLine(actLineId, messageIdsToRemove);
+	} catch (err) {
+		await log.error('delete-last-exchange', 'Message removal failed', err);
 		return;
 	}
 
-	messages = messages.filter((_, i) => i !== lastUserIdx && i !== lastMessageIdx);
+	try {
+		await removeMemoriesFromActLine(actLineId, messageIdsToRemove);
+	} catch (err) {
+		await log.error('delete-last-exchange', 'Memory cleanup failed', err);
+	}
 }
 
 export async function getForkSequence(actLineId: string, assistantMessageIndex: number): Promise<{ branchSeq: number; name: string }> {
@@ -385,4 +430,16 @@ export async function getForkSequence(actLineId: string, assistantMessageIndex: 
 			? `Fork from "${userMsg.content.slice(0, 30)}${userMsg.content.length > 30 ? '...' : ''}"`
 			: 'New Branch'
 	};
+}
+
+async function removeMemoriesFromActLine(actLineId: string, messageIdsToRemove: string[]) {
+	const storyId = getActiveStoryId();
+	if (storyId && settings.memoryEnabled) {
+		const config = getMemoryProviderConfig();
+		if (config) {
+			const memory = new Memory(config);
+			await memory.deleteByMessages(storyId, actLineId, messageIdsToRemove);
+			await memory.deleteLocationsByMessages(storyId, actLineId, messageIdsToRemove);
+		}
+	}
 }

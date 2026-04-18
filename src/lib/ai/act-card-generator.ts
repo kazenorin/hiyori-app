@@ -166,6 +166,7 @@ export async function streamActCard(
 		userMessages,
 		retryConfig,
 		onProgress,
+		() => {},
 		(err, attempt) => {
 			onProgress({ content: '', reasoning: `Attempt ${attempt} failed: ${err.message}. Retrying...`, gameData: null });
 		},

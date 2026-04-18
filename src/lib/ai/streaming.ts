@@ -1,6 +1,7 @@
 import { streamText } from 'ai';
 import type { LanguageModel } from 'ai';
 import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
+import {log, fileLog} from "$lib/logging/logger";
 
 export interface StreamConfig {
 	model: LanguageModel;
@@ -58,23 +59,50 @@ export async function executeStream(
 						callbacks.onReasoningDelta(part.text);
 					}
 					break;
+				case 'error':
+					callbacks.onError(part.error)
+					await fileLog('error', 'streaming', formatPartError(part.error));
+					return
 			}
 		}
 
-		const usage = await result.usage;
-		const finishReason = (await result.finishReason) ?? 'unknown';
+		const [usage, finishReason, text] = await Promise.all([
+			result.usage,
+			result.finishReason.then((s) => s ?? 'unknown'),
+			result.text
+		]);
 
-		callbacks.onComplete({
-			finishReason,
-			usage: {
-				...usage,
-				inputTokens: usage.inputTokens ?? 0,
-				outputTokens: usage.outputTokens ?? 0,
-				totalTokens: usage.totalTokens ?? 0
-			},
-			durationMs: Date.now() - startTime
-		})
+		if (text.trim().length == 0) {
+			callbacks.onError(new Error('empty response from stream'))
+			await fileLog('warn', 'streaming', `empty body\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`);
+		} else {
+			callbacks.onComplete({
+				finishReason,
+				usage: {
+					...usage,
+					inputTokens: usage.inputTokens ?? 0,
+					outputTokens: usage.outputTokens ?? 0,
+					totalTokens: usage.totalTokens ?? 0
+				},
+				durationMs: Date.now() - startTime
+			});
+
+			await fileLog('debug', 'streaming', `${text}\n\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`);
+		}
 	} catch (err: unknown) {
 		callbacks.onError(err)
+		await fileLog('error', 'streaming', formatPartError(err));
+	}
+}
+
+function formatPartError(error: unknown): string {
+	if (error instanceof Error) {
+		return error.message;
+	} else {
+		try {
+			return String(error)
+		} catch {
+			return 'unknown error';
+		}
 	}
 }

@@ -636,6 +636,62 @@ export class Memory {
 		return rows.length;
 	}
 
+	async deleteByMessages(storyId: string, actLineId: string, messageIds: string[]): Promise<number> {
+		if (messageIds.length === 0) return 0;
+		const db = getMemoryDatabase();
+
+		const placeholders = messageIds.map((_, i) => `$${i + 3}`).join(', ');
+
+		// Get vec rowids from meta table (vec_memories has no message_id column)
+		const rows = await db.select<VecRow[]>(
+			`SELECT vec_rowid as rowid FROM memory_meta WHERE story_id = $1 AND act_line_id = $2 AND message_id IN (${placeholders})`,
+			[storyId, actLineId, ...messageIds]
+		);
+
+		// Delete from vec_memories by rowid
+		for (const row of rows) {
+			if (row.rowid) {
+				await db.execute('DELETE FROM vec_memories WHERE rowid = $1', [row.rowid]);
+			}
+		}
+
+		// Delete from memory_meta
+		await db.execute(
+			`DELETE FROM memory_meta WHERE story_id = $1 AND act_line_id = $2 AND message_id IN (${placeholders})`,
+			[storyId, actLineId, ...messageIds]
+		);
+
+		return rows.length;
+	}
+
+	async deleteLocationsByMessages(storyId: string, actLineId: string, messageIds: string[]): Promise<number> {
+		if (messageIds.length === 0) return 0;
+		const db = getMemoryDatabase();
+
+		const placeholders = messageIds.map((_, i) => `$${i + 3}`).join(', ');
+
+		// Get vec rowids from meta table (vec_locations has no message_id column)
+		const rows = await db.select<VecRow[]>(
+			`SELECT vec_rowid as rowid FROM location_meta WHERE story_id = $1 AND act_line_id = $2 AND message_id IN (${placeholders})`,
+			[storyId, actLineId, ...messageIds]
+		);
+
+		// Delete from vec_locations by rowid
+		for (const row of rows) {
+			if (row.rowid) {
+				await db.execute('DELETE FROM vec_locations WHERE rowid = $1', [row.rowid]);
+			}
+		}
+
+		// Delete from location_meta
+		await db.execute(
+			`DELETE FROM location_meta WHERE story_id = $1 AND act_line_id = $2 AND message_id IN (${placeholders})`,
+			[storyId, actLineId, ...messageIds]
+		);
+
+		return rows.length;
+	}
+
 	async reset(): Promise<void> {
 		const db = getMemoryDatabase();
 		await db.execute('DELETE FROM vec_memories');

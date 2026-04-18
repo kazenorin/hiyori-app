@@ -1,10 +1,13 @@
 import {
-	info as tauriInfo,
-	error as tauriError,
-	warn as tauriWarn,
+	attachConsole,
 	debug as tauriDebug,
-	attachConsole
+	error as tauriError,
+	info as tauriInfo,
+	warn as tauriWarn
 } from '@tauri-apps/plugin-log';
+import {BaseDirectory, mkdir, writeTextFile} from '@tauri-apps/plugin-fs';
+import {toKebabCase} from '$lib/utils/string';
+import {getSettings, LOG_LEVEL_VALUES, type LogLevel} from '$lib/stores/settings.svelte';
 
 let attached = false;
 
@@ -25,7 +28,7 @@ export const log = {
 	},
 
 	error(context: string, message: string, err?: unknown): Promise<void> {
-		const detail = err instanceof Error ? `${message}: ${err.message}` : message;
+		const detail = `${message}: ${(parseErrorMessage(err))}`;
 		return tauriError(`[${context}] ${detail}`);
 	},
 
@@ -37,3 +40,39 @@ export const log = {
 		return tauriDebug(`[${context}] ${message}`);
 	}
 };
+
+export async function fileLog(level: LogLevel, loggerTag: string, message: string): Promise<void> {
+	const settingsLevel = LOG_LEVEL_VALUES[getSettings().logLevel];
+	const incomingLevel = LOG_LEVEL_VALUES[level];
+	if (incomingLevel > settingsLevel) return;
+
+	const line = `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${message}\n`;
+	const filename = `${toKebabCase(loggerTag)}.log`;
+	try {
+		await mkdir('logs', {baseDir: BaseDirectory.AppData, recursive: true});
+		await writeTextFile(`logs/${filename}`, line, {
+			baseDir: BaseDirectory.AppData,
+			append: true
+		});
+	} catch {
+		// Silent fail — file logging is best-effort
+	}
+}
+
+function parseErrorMessage(err?: unknown): string {
+	if (err instanceof Error) {
+		return err.message;
+	} else if (typeof err === 'string') {
+		return err;
+	} else {
+		try {
+			return String(err)
+		} catch {
+			return 'unknown error';
+		}
+	}
+}
+
+function fileLogTimestamp(): string {
+	return new Date().toISOString().replace('T', ' ').replace('Z', '');
+}

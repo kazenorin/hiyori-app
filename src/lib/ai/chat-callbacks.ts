@@ -16,14 +16,16 @@ export interface StreamAccumulator {
 }
 
 export type OnStreamUpdate = (state: StreamState) => void;
+export type OnStreamError = (err: unknown) => void;
 
 /**
  * Creates streaming callbacks that process text through the parser chain
  * (thinking tags → game-data blocks) and accumulate state.
  *
  * @param onUpdate - called with the accumulated state after each delta
+ * @param onError - called when a stream error occurs
  */
-export function createStreamAccumulator(onUpdate?: OnStreamUpdate): StreamAccumulator {
+export function createStreamAccumulator(onUpdate?: OnStreamUpdate, onError?: OnStreamError): StreamAccumulator {
 	const chain = createParserChain();
 	const { promise: resultMetadataPromise, resolve: resolveResult, reject: rejectResult } = Promise.withResolvers<StreamResultMetadata>()
 	let state: StreamState = {
@@ -59,6 +61,7 @@ export function createStreamAccumulator(onUpdate?: OnStreamUpdate): StreamAccumu
 				const chainOutput = chain.flush();
 				state = applyParserOutput(state, chainOutput);
 				notify();
+				if (onError) onError(err);
 				rejectResult(err);
 			}
 		},

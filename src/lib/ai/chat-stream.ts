@@ -1,6 +1,6 @@
 import {executeStream, type StreamResultMetadata} from "./streaming";
 import {getMainProviderConfig, type ProviderConfig} from "../stores/settings.svelte";
-import {createStreamAccumulator, type StreamAccumulator, type StreamState} from "./chat-callbacks";
+import {createStreamAccumulator, type StreamAccumulator, type StreamState, type OnStreamError} from "./chat-callbacks";
 import {createModel} from "./provider";
 import {isAuthError, sleep} from "$lib/utils/async";
 
@@ -39,6 +39,7 @@ export async function streamChatResponse(
     history: { role: "user" | "assistant"; content: string }[],
     abortSignal: AbortSignal,
     onStateUpdate: (state: StreamState) => void,
+    onError: OnStreamError,
     providerConfig: ProviderConfig | undefined
 ): Promise<StreamAccumulator> {
     if (!providerConfig) {
@@ -47,7 +48,7 @@ export async function streamChatResponse(
     const model = createModel(providerConfig);
 
     // Create stream accumulator with parser chain integrated
-    const accumulator = createStreamAccumulator(onStateUpdate);
+    const accumulator = createStreamAccumulator(onStateUpdate, onError);
 
     await executeStream(
         {
@@ -77,6 +78,7 @@ export async function streamWithRetry(
     messages: { role: 'user' | 'assistant'; content: string }[],
     retryConfig: RetryConfig,
     onProgress: (state: StreamState) => void,
+    onStreamError: OnStreamError,
     onError: (err: Error, attempt: number) => void,
     providerConfig: ProviderConfig | undefined = getMainProviderConfig(),
 ): Promise<StreamAccumulator> {
@@ -90,6 +92,7 @@ export async function streamWithRetry(
                 messages,
                 abortController.signal,
                 onProgress,
+                onStreamError,
                 providerConfig
             );
         } catch (e) {

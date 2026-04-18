@@ -2,6 +2,7 @@
 // Replaces: system-prompt.ts, narration-template.ts, world-prompts.ts, act-card-prompts.ts, character-card-prompts.ts
 
 import { Prompt, loadPromptForStory, registerDefaults } from './prompt-loader';
+import { settings } from '$lib/stores/settings.svelte';
 
 // === Bundled Default Imports ===
 
@@ -34,9 +35,8 @@ import defaultMemoryExtractionSystemPrompt from './prompts/memories/memory-extra
 import defaultMemoryExtractionPrompt from './prompts/memories/memory-extraction-prompt.md?raw';
 
 // Reviewer
-import defaultReviewerSystemPrompt from './prompts/reviewer/reviewer-system-prompt.md?raw';
-import defaultRevisionModeFragment from './prompts/reviewer/revision-mode-fragment.md?raw';
-import defaultRevisionRequestExtractionPrompt from './prompts/reviewer/revision-request-extraction-prompt.md?raw';
+import defaultEditorModeExtractionPrompt from './prompts/reviewer/editor-mode-extraction-prompt.md?raw';
+import defaultTriggerEditorModeFragment from './prompts/reviewer/trigger-editor-mode-fragment.md?raw';
 
 // Re-export for consumers that need raw content
 export {
@@ -56,9 +56,8 @@ export {
 	defaultChoicesExtractionPrompt,
 	defaultMemoryExtractionSystemPrompt,
 	defaultMemoryExtractionPrompt,
-	defaultReviewerSystemPrompt,
-	defaultRevisionModeFragment,
-	defaultRevisionRequestExtractionPrompt
+	defaultEditorModeExtractionPrompt,
+	defaultTriggerEditorModeFragment
 };
 
 // === Prompt Config Instances ===
@@ -92,13 +91,22 @@ const memoryExtractionSystemPrompt = new Prompt({ relativePath: 'memories/memory
 const memoryExtractionPrompt = new Prompt({ relativePath: 'memories/memory-extraction-prompt.md', defaultContent: defaultMemoryExtractionPrompt });
 
 // Reviewer
-const reviewerSystemPrompt = new Prompt({ relativePath: 'reviewer/reviewer-system-prompt.md', defaultContent: defaultReviewerSystemPrompt });
-const revisionModeFragment = new Prompt({ relativePath: 'reviewer/revision-mode-fragment.md', defaultContent: defaultRevisionModeFragment });
-const revisionRequestExtractionPrompt = new Prompt({ relativePath: 'reviewer/revision-request-extraction-prompt.md', defaultContent: defaultRevisionRequestExtractionPrompt });
+const editorModeExtractionPrompt = new Prompt({ relativePath: 'reviewer/editor-mode-extraction-prompt.md', defaultContent: defaultEditorModeExtractionPrompt });
+const triggerEditorModeFragment = new Prompt({ relativePath: 'reviewer/trigger-editor-mode-fragment.md', defaultContent: defaultTriggerEditorModeFragment });
 
 // === Load Functions ===
 
-export const loadSystemPrompt = (): Promise<string> => systemPrompt.load();
+export const loadSystemPrompt = async (): Promise<string> => {
+	if (settings.reviewerEnabled) {
+		const [a, b] = await Promise.all([
+			systemPrompt.load(),
+			triggerEditorModeFragment.load()
+		]);
+		return a + b;
+	} else {
+		return systemPrompt.load()
+	}
+};
 export const loadNarrationTemplate = (): Promise<string> => narrationTemplate.load();
 export const loadWorldTemplate = (): Promise<string> => worldTemplate.load();
 export const loadGenerateWorldFromChatPrompt = (): Promise<string> => generateWorldFromChatPrompt.load();
@@ -114,9 +122,8 @@ export const loadActGenerationPrompt = (): Promise<string> => actGenerationPromp
 export const loadChoicesExtractionPrompt = (): Promise<string> => choicesExtractionPrompt.load();
 export const loadMemoryExtractionSystemPrompt = (): Promise<string> => memoryExtractionSystemPrompt.load();
 export const loadMemoryExtractionPrompt = (): Promise<string> => memoryExtractionPrompt.load();
-export const loadReviewerSystemPrompt = (): Promise<string> => reviewerSystemPrompt.load();
-export const loadRevisionModeFragment = (): Promise<string> => revisionModeFragment.load();
-export const loadRevisionRequestExtractionPrompt = (): Promise<string> => revisionRequestExtractionPrompt.load();
+export const loadEditorModeExtractionPrompt = (): Promise<string> => editorModeExtractionPrompt.load();
+export const loadTriggerEditorModeFragment = (): Promise<string> => triggerEditorModeFragment.load();
 
 export const getDefaultSystemPromptContent = () => defaultSystemPrompt;
 export const getDefaultNarrationTemplateContent = () => defaultNarrationTemplate;
@@ -152,7 +159,6 @@ registerDefaults([
 	choicesExtractionPrompt,
 	memoryExtractionSystemPrompt,
 	memoryExtractionPrompt,
-	reviewerSystemPrompt,
-	revisionModeFragment,
-	revisionRequestExtractionPrompt
+	editorModeExtractionPrompt,
+	triggerEditorModeFragment
 ]);

@@ -10,7 +10,8 @@
 		deleteLastExchange,
 		getForkSequence,
 		loadActLineMessages,
-		getLatestDecisions
+		getLatestDecisions,
+		isMemoryPipelineRunning
 	} from '$lib/ai/chat.svelte';
 	import {
 		getIsActive as getIsWorldBuilderActive,
@@ -436,7 +437,7 @@
 																{...attributes}
 																class="text-xs text-surface-500 leading-relaxed border-l-2 border-surface-200-800 pl-3 mt-2"
 															>
-																<MarkdownContent content={message.draftContent} />
+																<MarkdownContent content={message.draftContent ?? ''} />
 															</div>
 														{/if}
 													{/snippet}
@@ -446,7 +447,7 @@
 									</div>
 								{/if}
 
-								{#if message.reviewResult}
+								{#if message.reviewScratchpad}
 									<div class="mb-3">
 										<Accordion collapsible>
 											<Accordion.Item value="review">
@@ -463,11 +464,9 @@
 														{#if !attributes.hidden}
 															<div
 																{...attributes}
-																class="text-xs text-surface-500 leading-relaxed border-l-2 border-surface-200-800 pl-3 mt-2"
+																class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
 															>
-																{#each message.reviewResult.violations as v}
-																	<p class="mb-1"><strong>{v.rule}</strong> ({v.severity}): {v.description}</p>
-																{/each}
+																		{message.reviewScratchpad}
 															</div>
 														{/if}
 													{/snippet}
@@ -491,8 +490,9 @@ finish:      {message.metadata.finishReason}
 tokens:      {message.metadata.promptTokens} prompt + {message.metadata.completionTokens} completion = {message.metadata.totalTokens} total
 duration:    {message.metadata.durationMs}ms</pre>
 								{/if}
-								{#if !getIsStreaming() && message.content}
+								{#if !getIsStreaming()}
 									<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
+										{#if message.content}
 										<button
 											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 											title="Copy message"
@@ -503,6 +503,7 @@ duration:    {message.metadata.durationMs}ms</pre>
 											title="Fork from here"
 											onclick={() => handleFork(i)}
 										>Fork</button>
+										{/if}
 										{#if i === lastMessageIdx}
 											<button
 												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
@@ -522,7 +523,12 @@ duration:    {message.metadata.durationMs}ms</pre>
 					{/each}
 				{/if}
 
-				{#if latestDecisions.length > 0 && !getIsStreaming()}
+				{#if isMemoryPipelineRunning()}
+					<div class="max-w-2xl mx-auto mt-4 text-sm text-surface-500 flex items-center gap-2">
+						<span class="inline-block w-4 h-4 border-2 border-surface-400 border-t-transparent rounded-full animate-spin"></span>
+						Processing memories...
+					</div>
+				{:else if latestDecisions.length > 0 && !getIsStreaming()}
 					<div class="max-w-2xl mx-auto space-y-2 mt-4">
 						{#each latestDecisions as decision, i}
 							<button
@@ -556,19 +562,23 @@ duration:    {message.metadata.durationMs}ms</pre>
 				aria-label="Message input"
 				bind:value={input}
 				onkeydown={handleKeydown}
-				disabled={getIsStreaming()}
+				disabled={getIsStreaming() || isMemoryPipelineRunning()}
 			></textarea>
 
 			<div class="mt-3">
-				{#if getIsStreaming()}
-					<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopStreaming}>
-						Stop
-					</button>
-				{:else}
-					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}>
-						Send
-					</button>
-				{/if}
+					{#if isMemoryPipelineRunning()}
+						<button class="btn preset-filled-primary-500 w-full opacity-50 cursor-not-allowed" type="button" disabled>
+							Processing memories...
+						</button>
+					{:else if getIsStreaming()}
+						<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopStreaming}>
+							Stop
+						</button>
+					{:else}
+						<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}>
+							Send
+						</button>
+					{/if}
 			</div>
 		</aside>
 	{/if}

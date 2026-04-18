@@ -136,7 +136,7 @@ During main chat streaming, ```json blocks containing `worldState` (string) and 
 - **Rendering**: Decisions are rendered as clickable buttons below messages. Game data shows in a collapsed accordion on the assistant message card. Buttons are limited to 2 lines via `line-clamp`.
 - **History injection**: `toHistoryMessage()` in `chat.svelte.ts` appends game data JSON to message content when building LLM history, so the model sees prior game state.
 - **Persistence**: `game_data` column in `messages` table (migration 4). Canonical types: `GameData` interface and `parseGameData()` in `src/lib/db/messages.ts`.
-- **Shared message safety**: `removeLastMessageEntries()` in `act-lines.ts` only deletes `messages` rows when no other act line references them (prevents data loss on forked lines).
+- **Shared message safety**: `removeMessagesFromActLine()` in `act-lines.ts` only deletes `messages` rows when no other act line references them (prevents data loss on forked lines).
 
 ## Character and Act Card Generation
 

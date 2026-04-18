@@ -2,33 +2,20 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock prompts
 vi.mock('$lib/fs/prompts', () => ({
-	loadReviewerSystemPrompt: vi.fn(async () => 'Review system prompt with {knownCharacterNameList}'),
-	loadRevisionModeFragment: vi.fn(async () => '### Revision Mode\nFix all violations.'),
-	loadRevisionRequestExtractionPrompt: vi.fn(async () => '### Revision Request\n{reviewer_json_report}\n### Instructions'),
-	loadSystemPrompt: vi.fn(async () => 'Main system prompt'),
+	loadSystemPrompt: vi.fn(async () => 'Main system prompt with trigger-editor-mode-fragment'),
+	loadEditorModeExtractionPrompt: vi.fn(async () => '# Editor Mode\n\nReview the output.\n\n{knownCharacterNameList}\n\n<review_scratchpad>...'),
+}));
+
+// Mock settings - import settings for loadSystemPrompt behavior
+vi.mock('$lib/stores/settings.svelte', () => ({
+	settings: { reviewerEnabled: true },
+	getReviewerProviderConfig: vi.fn(() => mockReviewerProviderConfig),
+	getMainProviderConfig: vi.fn(() => mockReviewerConfig),
 }));
 
 // Mock memory
 vi.mock('$lib/memory/memory', () => ({
 	knownCharacterNameList: vi.fn(async () => ['Elena Thornwood', 'Marcus Vale']),
-}));
-
-// Mock settings
-const mockReviewerConfig = {
-	id: 'reviewer-id',
-	name: 'Reviewer',
-	provider: 'openai' as const,
-	apiType: 'responses' as const,
-	baseURL: 'https://api.openai.com/v1',
-	model: 'gpt-4o',
-	apiKey: 'sk-reviewer',
-};
-
-let mockReviewerProviderConfig: typeof mockReviewerConfig | undefined = mockReviewerConfig;
-
-vi.mock('$lib/stores/settings.svelte', () => ({
-	getReviewerProviderConfig: vi.fn(() => mockReviewerProviderConfig),
-	getMainProviderConfig: vi.fn(() => mockReviewerConfig),
 }));
 
 // Mock logger
@@ -52,6 +39,17 @@ const mockStreamAccumulator = (content: string) => ({
 	}),
 });
 
+const mockReviewerConfig = {
+	id: 'reviewer-id',
+	name: 'Reviewer',
+	provider: 'openai' as const,
+	apiType: 'responses' as const,
+	baseURL: 'https://api.openai.com/v1',
+	model: 'gpt-4o',
+	apiKey: 'sk-reviewer',
+};
+
+let mockReviewerProviderConfig: typeof mockReviewerConfig | undefined = mockReviewerConfig;
 let mockStreamWithRetryResult: any;
 
 vi.mock('$lib/ai/chat-stream', () => ({
@@ -59,7 +57,7 @@ vi.mock('$lib/ai/chat-stream', () => ({
 }));
 
 import { streamReview, type ReviewLoopResult } from '$lib/reviewer/review-loop';
-import { loadReviewerSystemPrompt, loadRevisionModeFragment, loadRevisionRequestExtractionPrompt, loadSystemPrompt } from '$lib/fs/prompts';
+import { loadSystemPrompt, loadEditorModeExtractionPrompt } from '$lib/fs/prompts';
 import { knownCharacterNameList } from '$lib/memory/memory';
 import { streamWithRetry } from '$lib/ai/chat-stream';
 
@@ -77,137 +75,97 @@ describe('review-loop', () => {
 	});
 
 	describe('streamReview', () => {
-		it('returns null when review approves', async () => {
-			mockStreamWithRetryResult = mockStreamAccumulator(
-				JSON.stringify({ approved: true, violations: [] })
-			);
+		it('returns null when no revised_narrative tag found', async () => {
+			mockStreamWithRetryResult = mockStreamAccumulator('Just some text without the right tags');
 
 			const result = await streamReview(baseTranscript);
 			expect(result).toBeNull();
 		});
 
-		it('returns null when JSON parse fails', async () => {
-			mockStreamWithRetryResult = mockStreamAccumulator('Not valid JSON at all');
+		it('extracts revised_narrative and review_scratchpad', async () => {
+			const response = `<review_scratchpad>
+- Rule 1 Analysis: No issues found.
+- Rule 2 Analysis: Character "Bob" contradicts established traits.
+- Planned Fixes: Change Bob's dialogue to match.
+</review_scratchpad>
 
-			const result = await streamReview(baseTranscript);
-			expect(result).toBeNull();
-		});
+<revised_narrative>
+The corrected narrative output goes here.
+</revised_narrative>`;
 
-		it('returns null when JSON is inside markdown fences', async () => {
-			const json = JSON.stringify({ approved: true, violations: [] });
-			mockStreamWithRetryResult = mockStreamAccumulator('```json\n' + json + '\n```');
-
-			const result = await streamReview(baseTranscript);
-			expect(result).toBeNull();
-		});
-
-		it('runs revision when violations found', async () => {
-			const violations = [
-				{
-					rule: 'Rule 1 — Name Uniqueness',
-					severity: 'critical',
-					description: 'Duplicate character introduction.',
-					offending_excerpt: 'Elena walked in.',
-					suggested_fix: null,
-				},
-			];
-
-			let callIndex = 0;
-			vi.mocked(streamWithRetry).mockImplementation(async () => {
-				callIndex++;
-				if (callIndex === 1) {
-					// Review pass
-					return mockStreamAccumulator(
-						JSON.stringify({ approved: false, violations })
-					);
-				}
-				// Revision pass
-				return mockStreamAccumulator('Revised GM output with fixes applied.');
-			});
+			mockStreamWithRetryResult = mockStreamAccumulator(response);
 
 			const result = await streamReview(baseTranscript) as ReviewLoopResult;
 
 			expect(result).not.toBeNull();
-			expect(result.review.approved).toBe(false);
-			expect(result.review.violations).toHaveLength(1);
-			expect(result.revisedContent).toBe('Revised GM output with fixes applied.');
-
-			// Two calls: review + revision
-			expect(streamWithRetry).toHaveBeenCalledTimes(2);
+			expect(result.scratchpad).toContain('Rule 1 Analysis');
+			expect(result.scratchpad).toContain('Planned Fixes');
+			expect(result.revisedContent).toBe('The corrected narrative output goes here.');
 		});
 
-		it('builds review history with forced user roles', async () => {
+		it('returns empty scratchpad when review_scratchpad tag is missing', async () => {
 			mockStreamWithRetryResult = mockStreamAccumulator(
-				JSON.stringify({ approved: true, violations: [] })
+				'<revised_narrative>\nFixed output.\n</revised_narrative>'
+			);
+
+			const result = await streamReview(baseTranscript) as ReviewLoopResult;
+
+			expect(result.scratchpad).toBe('');
+			expect(result.revisedContent).toBe('Fixed output.');
+		});
+
+		it('sends transcript as-is with editor prompt appended as user message', async () => {
+			mockStreamWithRetryResult = mockStreamAccumulator(
+				'<revised_narrative>\nFixed.\n</revised_narrative>'
 			);
 
 			await streamReview(baseTranscript);
 
+			expect(streamWithRetry).toHaveBeenCalledTimes(1);
+
 			const [systemPromptArg, historyArg] = vi.mocked(streamWithRetry).mock.calls[0];
 
-			// System prompt should have knownCharacterNameList replaced
-			expect(systemPromptArg).toContain('["Elena Thornwood","Marcus Vale"]');
-			expect(systemPromptArg).not.toContain('{knownCharacterNameList}');
+			// System prompt from loadSystemPrompt
+			expect(systemPromptArg).toBe('Main system prompt with trigger-editor-mode-fragment');
 
-			// History: first message is "Below is the transcript:"
-			expect(historyArg[0]).toEqual({ role: 'user', content: 'Below is the transcript:' });
+			// History = transcript + editor prompt as last user message
+			expect(historyArg.length).toBe(baseTranscript.length + 1);
 
-			// User messages get "Player responded: " prefix
-			expect(historyArg[1]).toEqual({ role: 'user', content: 'Player responded: Player message' });
+			// First messages match the transcript exactly
+			for (let i = 0; i < baseTranscript.length; i++) {
+				expect(historyArg[i]).toEqual(baseTranscript[i]);
+			}
 
-			// Assistant messages keep their content
-			expect(historyArg[2]).toEqual({ role: 'user', content: 'GM response' });
-
-			// Last message wraps GM output
+			// Last message is the editor prompt
 			const lastMsg = historyArg[historyArg.length - 1];
 			expect(lastMsg.role).toBe('user');
-			expect(lastMsg.content).toContain("GM's Output to review");
-			expect(lastMsg.content).toContain('GM output to review');
+			expect(lastMsg.content).toContain('# Editor Mode');
+			expect(lastMsg.content).toContain('["Elena Thornwood","Marcus Vale"]');
+			expect(lastMsg.content).not.toContain('{knownCharacterNameList}');
+		});
+
+		it('replaces {knownCharacterNameList} with character names in editor prompt', async () => {
+			mockStreamWithRetryResult = mockStreamAccumulator(
+				'<revised_narrative>\nDone.\n</revised_narrative>'
+			);
+
+			await streamReview(baseTranscript);
+
+			const lastMsg = vi.mocked(streamWithRetry).mock.calls[0][1].at(-1)!;
+			expect(lastMsg.content).toContain('Elena Thornwood');
+			expect(lastMsg.content).toContain('Marcus Vale');
+			expect(lastMsg.content).not.toContain('{knownCharacterNameList}');
 		});
 
 		it('falls back to main provider when reviewer config is unset', async () => {
 			mockReviewerProviderConfig = undefined;
 			mockStreamWithRetryResult = mockStreamAccumulator(
-				JSON.stringify({ approved: true, violations: [] })
+				'<revised_narrative>\nFixed.\n</revised_narrative>'
 			);
 
-			await streamReview(baseTranscript);
-
-			// Should still succeed using main provider fallback
+			const result = await streamReview(baseTranscript) as ReviewLoopResult;
+			expect(result).not.toBeNull();
 			expect(streamWithRetry).toHaveBeenCalledTimes(1);
-		});
-
-		it('replaces {reviewer_json_report} in revision request', async () => {
-			const violations = [
-				{
-					rule: 'Rule 3 — Style',
-					severity: 'warning' as const,
-					description: 'Telling instead of showing.',
-					offending_excerpt: 'She felt sad.',
-					suggested_fix: 'Tears welled in her eyes.',
-				},
-			];
-
-			let callIndex = 0;
-			vi.mocked(streamWithRetry).mockImplementation(async () => {
-				callIndex++;
-				if (callIndex === 1) {
-					return mockStreamAccumulator(
-						JSON.stringify({ approved: false, violations })
-					);
-				}
-				return mockStreamAccumulator('Corrected output.');
-			});
-
-			await streamReview(baseTranscript);
-
-			// Second call is the revision — check the last history message
-			const revisionCall = vi.mocked(streamWithRetry).mock.calls[1];
-			const revisionHistory = revisionCall[1];
-			const revisionUserMsg = revisionHistory[revisionHistory.length - 1];
-
-			expect(revisionUserMsg.content).toContain('Rule 3');
-			expect(revisionUserMsg.content).not.toContain('{reviewer_json_report}');
 		});
 	});
 });

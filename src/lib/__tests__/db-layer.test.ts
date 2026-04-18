@@ -195,16 +195,27 @@ describe('act-lines operations', () => {
 		expect(await actLines.getNextSequence('line-1')).toBe(2);
 	});
 
-	it('removes last N message entries', async () => {
+	it('removes specified messages from act line', async () => {
 		await messages.createMessage('msg-1', 'user', 'Keep');
 		await messages.createMessage('msg-2', 'assistant', 'Remove');
+		await messages.createMessage('msg-3', 'user', 'Also remove');
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
 		await actLines.addMessageToLine('line-1', 'msg-2', 2);
+		await actLines.addMessageToLine('line-1', 'msg-3', 3);
 
-		await actLines.removeLastMessageEntries('line-1', 1);
+		await actLines.removeMessagesFromActLine('line-1', ['msg-2', 'msg-3']);
 		const msgs = await actLines.getMessagesForLine('line-1');
 		expect(msgs).toHaveLength(1);
 		expect(msgs[0].content).toBe('Keep');
+	});
+
+	it('does nothing when messageIds is empty', async () => {
+		await messages.createMessage('msg-1', 'user', 'Keep');
+		await actLines.addMessageToLine('line-1', 'msg-1', 1);
+
+		await actLines.removeMessagesFromActLine('line-1', []);
+		const msgs = await actLines.getMessagesForLine('line-1');
+		expect(msgs).toHaveLength(1);
 	});
 
 	it('does not delete shared message when other line still references it', async () => {
@@ -221,8 +232,8 @@ describe('act-lines operations', () => {
 		await messages.createMessage('msg-3', 'assistant', 'Only on line-1');
 		await actLines.addMessageToLine('line-1', 'msg-3', 3);
 
-		// Remove last entry from line-1 (should delete msg-3, but NOT msg-2 since line-2 still references it)
-		await actLines.removeLastMessageEntries('line-1', 1);
+		// Remove msg-3 from line-1 (should delete msg-3, but NOT msg-2 since line-2 still references it)
+		await actLines.removeMessagesFromActLine('line-1', ['msg-3']);
 
 		// Verify msg-3 was deleted (only line-1 referenced it)
 		expect(await messages.getMessage('msg-3')).toBeNull();
@@ -247,7 +258,7 @@ describe('act-lines operations', () => {
 		await messages.createMessage('msg-1', 'user', 'Solo');
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
 
-		await actLines.removeLastMessageEntries('line-1', 1);
+		await actLines.removeMessagesFromActLine('line-1', ['msg-1']);
 
 		expect(await messages.getMessage('msg-1')).toBeNull();
 	});
@@ -258,7 +269,7 @@ describe('act-lines operations', () => {
 		await actLines.addMessageToLine('line-2', 'msg-1', 1);
 
 		// Delete from line-1 only
-		await actLines.removeLastMessageEntries('line-1', 1);
+		await actLines.removeMessagesFromActLine('line-1', ['msg-1']);
 
 		// Message should still exist and line-2 should still have it with game data
 		const msg = await messages.getMessage('msg-1');

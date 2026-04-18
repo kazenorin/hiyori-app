@@ -219,7 +219,7 @@ async function streamWorldBuilderChat(
 		}),
 		streamChatResponse(fullSystemPrompt, history, abortSignal, (state: StreamState) => {
 			messages[messageIdx] = {...messages[messageIdx], content: state.content};
-		}, providerConfig)
+		}, () => {}, providerConfig)
 	])
 	return result[1]
 }
