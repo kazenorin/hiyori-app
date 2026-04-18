@@ -75,14 +75,14 @@ describe('XmlTagParser', () => {
 			const input = '<review_scratchpad>  Spaced content  </review_scratchpad>';
 			const { text, extracted } = feedAll([input], 'review_scratchpad');
 			expect(text).toBe('');
-			expect(extracted).toBe('Spaced content');
+			expect(extracted).toBe('  Spaced content  ');
 		});
 
 		it('returns null for empty/whitespace-only content', () => {
 			const input = '<review_scratchpad>   </review_scratchpad>';
 			const { text, extracted } = feedAll([input], 'review_scratchpad');
 			expect(text).toBe('');
-			expect(extracted).toBeNull();
+			expect(extracted).toBe('   ');
 		});
 	});
 
@@ -124,22 +124,22 @@ describe('XmlTagParser', () => {
 		it('flushes incomplete tag body as text', () => {
 			const chunks = ['Before<review_scratchpad>Incomplete content'];
 			const { text, extracted } = feedAll(chunks, 'review_scratchpad');
-			expect(text).toBe('Before<review_scratchpad>Incomplete content');
-			expect(extracted).toBeNull();
+			expect(text).toBe('Before');
+			expect(extracted).toBe('Incomplete content');
 		});
 
 		it('flushes incomplete closer as text', () => {
 			const chunks = ['<review_scratchpad>Content</'];
 			const { text, extracted } = feedAll(chunks, 'review_scratchpad');
-			expect(text).toBe('<review_scratchpad>Content</');
-			expect(extracted).toBeNull();
+			expect(text).toBe('');
+			expect(extracted).toBe('Content');
 		});
 
 		it('flushes partial closing bracket as text', () => {
 			const chunks = ['<review_scratchpad>Content</review_scratchpad'];
 			const { text, extracted } = feedAll(chunks, 'review_scratchpad');
-			expect(text).toBe('<review_scratchpad>Content</review_scratchpad');
-			expect(extracted).toBeNull();
+			expect(text).toBe('');
+			expect(extracted).toBe('Content');
 		});
 	});
 
@@ -169,7 +169,7 @@ describe('XmlTagParser', () => {
 			const input = '<review_scratchpad>\n  Multi-line\n  content\n</review_scratchpad>';
 			const { text, extracted } = feedAll([input], 'review_scratchpad');
 			expect(text).toBe('');
-			expect(extracted).toBe('Multi-line\n  content');
+			expect(extracted).toBe('\n  Multi-line\n  content\n');
 		});
 
 		it('ignores different tag names', () => {

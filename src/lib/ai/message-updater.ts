@@ -5,12 +5,10 @@ import type { ParserChainOutput } from './parser-chain';
 export function applyParserOutput(state: StreamState, output: ParserChainOutput): StreamState {
 	return {
 		content: state.content + (output.text ?? ''),
-		reasoning: output.thinking != null
-			? (state.reasoning != null ? state.reasoning + output.thinking : output.thinking)
-			: state.reasoning,
+		reasoning: appendDelta(state.reasoning, output.thinking),
 		gameData: output.gameData && isValidGameData(output.gameData) ? output.gameData : state.gameData,
-		reviewScratchpad: output.reviewScratchpad ?? state.reviewScratchpad,
-		revisedNarrative: output.revisedNarrative ?? state.revisedNarrative,
+		reviewScratchpad: appendDelta(state.reviewScratchpad, output.reviewScratchpad),
+		revisedNarrative: appendDelta(state.revisedNarrative, output.revisedNarrative),
 		revisedGameData: output.revisedGameData ?? state.revisedGameData,
 	};
 }
@@ -20,6 +18,12 @@ export function applyReasoningDelta(state: StreamState, text: string): StreamSta
 		...state,
 		reasoning: (state.reasoning ?? '') + text
 	};
+}
+
+function appendDelta(existing: string | null, delta: string | null): string | null {
+	return delta != null
+		? (existing != null ? existing + delta : delta)
+		: existing;
 }
 
 function isValidGameData(gameData: GameData): boolean {

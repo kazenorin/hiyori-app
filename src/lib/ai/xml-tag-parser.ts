@@ -5,6 +5,9 @@ type ParserState = 'TEXT' | 'POTENTIAL_OPENER' | 'TAG_BODY' | 'POTENTIAL_CLOSER'
 /**
  * Streaming character parser that extracts content between XML-style open/close tags.
  * The extracted content is hidden from text passthrough.
+ *
+ * Body content is emitted incrementally (as deltas) while inside the tag,
+ * enabling real-time streaming of tag content to the UI.
  */
 
 export function createXmlTagParser(tagName: string): StreamParser<{ [tagName]: string | null }> {
@@ -17,15 +20,20 @@ export function createXmlTagParser(tagName: string): StreamParser<{ [tagName]: s
 	let bodyBuffer = '';
 	let closerBuffer = '';
 	let textBuffer = '';
-	let extractedAccumulator = '';
+	let emittedBodyLength = 0;
 
-	function collectResult(accumulator: { [tagName]: string | null }): string {
+	function collectResult(): string {
 		const text = textBuffer;
-		const extracted = extractedAccumulator.length > 0 ? extractedAccumulator : null;
 		textBuffer = '';
-		extractedAccumulator = '';
-		accumulator[tagName] = extracted ?? accumulator[tagName];
 		return text;
+	}
+
+	function emitBodyDelta(accumulator: { [tagName]: string | null }): void {
+		const delta = bodyBuffer.slice(emittedBodyLength);
+		if (delta) {
+			emittedBodyLength = bodyBuffer.length;
+			accumulator[tagName] = (accumulator[tagName] ?? '') + delta;
+		}
 	}
 
 	function feed(chunk: string, accumulator: { [tagName]: string | null }): string {
@@ -51,6 +59,7 @@ export function createXmlTagParser(tagName: string): StreamParser<{ [tagName]: s
 							savedOpener = openerBuffer;
 							state = 'TAG_BODY';
 							bodyBuffer = '';
+							emittedBodyLength = 0;
 							openerBuffer = '';
 						} else {
 							textBuffer += openerBuffer;
@@ -83,12 +92,11 @@ export function createXmlTagParser(tagName: string): StreamParser<{ [tagName]: s
 
 					if (char === '>') {
 						if (closerBuffer === CLOSER) {
-							const trimmed = bodyBuffer.trim();
-							if (trimmed) {
-								extractedAccumulator += trimmed;
-							}
+							// Tag closed — emit remaining body delta
+							emitBodyDelta(accumulator);
 							bodyBuffer = '';
 							closerBuffer = '';
+							emittedBodyLength = 0;
 							savedOpener = '';
 							state = 'TEXT';
 						} else {
@@ -107,47 +115,55 @@ export function createXmlTagParser(tagName: string): StreamParser<{ [tagName]: s
 		}
 
 		if (state === 'TEXT') {
-			return collectResult(accumulator);
+			return collectResult();
 		}
 
-		// Emit extracted content while buffering
-		if (extractedAccumulator) {
-			const extracted = extractedAccumulator;
-			extractedAccumulator = '';
-			accumulator[tagName] = extracted;
-		}
+		// Emit body content delta while still buffering
+		emitBodyDelta(accumulator);
 
 		return '';
 	}
 
-	function flush(accumulator: { [tagName]: string | null }): string {
-		let flushedText = textBuffer;
-
+	function flushBuffers(): string {
+		let flushed = '';
 		switch (state) {
 			case 'TEXT':
 				break;
 			case 'POTENTIAL_OPENER':
-				flushedText += openerBuffer;
+				flushed += openerBuffer;
 				openerBuffer = '';
 				break;
 			case 'TAG_BODY':
-				flushedText += savedOpener + bodyBuffer;
+				flushed += savedOpener + bodyBuffer;
 				bodyBuffer = '';
 				savedOpener = '';
 				break;
 			case 'POTENTIAL_CLOSER':
-				flushedText += savedOpener + bodyBuffer + closerBuffer;
+				flushed += savedOpener + bodyBuffer + closerBuffer;
 				bodyBuffer = '';
 				closerBuffer = '';
 				savedOpener = '';
 				break;
 		}
+		return flushed;
+	}
+
+	function flush(accumulator: { [tagName]: string | null }): string {
+		let flushedText = textBuffer;
+
+		if (emittedBodyLength > 0) {
+			// Content was already streamed — emit remaining delta, don't flush as text
+			emitBodyDelta(accumulator);
+			flushBuffers(); // discard buffered state
+		} else {
+			// Nothing was streamed — original flush behavior (passthrough text)
+			flushedText += flushBuffers();
+		}
 
 		state = 'TEXT';
 		textBuffer = '';
+		emittedBodyLength = 0;
 
-		accumulator[tagName] = extractedAccumulator.length > 0 ? accumulator[tagName] + extractedAccumulator : accumulator[tagName];
-		extractedAccumulator = '';
 		return flushedText;
 	}
 

@@ -168,8 +168,8 @@ describe('ParserChain', () => {
 			it('flushes incomplete review_scratchpad as text', () => {
 				const chunks = ['Text<review_scratchpad>Unfinished review'];
 				const { text, reviewScratchpad } = feedAll(chunks);
-				expect(text).toBe('Text<review_scratchpad>Unfinished review');
-				expect(reviewScratchpad).toBeNull();
+				expect(text).toBe('Text');
+				expect(reviewScratchpad).toBe('Unfinished review');
 			});
 		});
 
