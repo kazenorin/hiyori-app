@@ -22,6 +22,8 @@ export interface Settings {
 	memoryEnabled: boolean;
 	memoryProviderRole: string;
 	embeddingProviderRole: string;
+	reviewerEnabled: boolean;
+	reviewerProviderRole: string;
 }
 
 const STORAGE_KEY = 'byoa-settings';
@@ -33,7 +35,9 @@ const defaults: Settings = {
 	fontSize: 1.0,
 	memoryEnabled: true,
 	memoryProviderRole: 'main',
-	embeddingProviderRole: 'main'
+	embeddingProviderRole: 'main',
+	reviewerEnabled: false,
+	reviewerProviderRole: 'main'
 };
 
 /**
@@ -58,7 +62,9 @@ function migrateFromFlatSettings(raw: Record<string, unknown>): Settings {
 		fontSize: (raw.fontSize as number) ?? 1.0,
 		memoryEnabled: (raw.memoryEnabled as boolean) ?? true,
 		memoryProviderRole: (raw.memoryProviderRole as string) || 'main',
-		embeddingProviderRole: (raw.embeddingProviderRole as string) || 'main'
+		embeddingProviderRole: (raw.embeddingProviderRole as string) || 'main',
+		reviewerEnabled: (raw.reviewerEnabled as boolean) ?? false,
+		reviewerProviderRole: (raw.reviewerProviderRole as string) || 'main'
 	};
 }
 
@@ -140,6 +146,16 @@ export function getEmbeddingProviderConfig(): ProviderConfig | undefined {
 }
 
 export type EmbeddingProviderConfig = NonNullable<ReturnType<typeof getEmbeddingProviderConfig>>;
+
+export function getReviewerProviderConfig(): ProviderConfig | undefined {
+	const role = settings.reviewerProviderRole || 'main';
+	const id = settings.roleAssignments[role];
+	const config = id ? getProviderConfig(id) : getProviderConfig(role);
+	if (!config?.apiKey) return undefined;
+	return config;
+}
+
+export type ReviewerProviderConfig = NonNullable<ReturnType<typeof getReviewerProviderConfig>>;
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
 	const id = settings.roleAssignments[role];
 	if (!id) return undefined;
@@ -177,7 +193,7 @@ export function assignRole(role: string, providerConfigId: string): void {
 // --- Global Settings ---
 
 export async function updateSettings(
-	partial: Partial<Pick<Settings, 'logLevel' | 'fontSize' | 'memoryEnabled' | 'memoryProviderRole' | 'embeddingProviderRole'>>
+	partial: Partial<Pick<Settings, 'logLevel' | 'fontSize' | 'memoryEnabled' | 'memoryProviderRole' | 'embeddingProviderRole' | 'reviewerEnabled' | 'reviewerProviderRole'>>
 ): Promise<void> {
 	const prevFontSize = settings.fontSize;
 	const prevLogLevel = settings.logLevel;
@@ -187,6 +203,8 @@ export async function updateSettings(
 	if (partial.memoryEnabled !== undefined) settings.memoryEnabled = partial.memoryEnabled;
 	if (partial.memoryProviderRole !== undefined) settings.memoryProviderRole = partial.memoryProviderRole;
 	if (partial.embeddingProviderRole !== undefined) settings.embeddingProviderRole = partial.embeddingProviderRole;
+	if (partial.reviewerEnabled !== undefined) settings.reviewerEnabled = partial.reviewerEnabled;
+	if (partial.reviewerProviderRole !== undefined) settings.reviewerProviderRole = partial.reviewerProviderRole;
 	persist();
 
 	// Apply font size preference when fontSize changes

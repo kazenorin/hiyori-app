@@ -343,4 +343,31 @@ describe('Memory', () => {
 			expect(sqliteMasterCallsTotal).toBe(sqliteMasterCallsFirst); // No additional calls
 		});
 	});
+
+	describe('knownCharacterNameList', () => {
+		it('returns distinct character names with hyphens replaced', async () => {
+			mockDbSelectResults.push([
+				{ character_canonical_name: 'elena-thornwood' },
+				{ character_canonical_name: 'marcus-vale' },
+				{ character_canonical_name: 'elena-thornwood' }, // duplicate
+			]);
+
+			const mod = await import('$lib/memory/memory');
+			const names = await mod.knownCharacterNameList();
+
+			// SELECT DISTINCT should be in the query
+			const selectCall = mockDbSelectCalls.find(([q]) => q.includes('DISTINCT character_canonical_name'));
+			expect(selectCall).toBeDefined();
+			expect(names).toEqual(['elena thornwood', 'marcus vale', 'elena thornwood']);
+		});
+
+		it('returns empty array on error', async () => {
+			mockDb.select.mockRejectedValueOnce(new Error('table not found'));
+
+			const mod = await import('$lib/memory/memory');
+			const names = await mod.knownCharacterNameList();
+
+			expect(names).toEqual([]);
+		});
+	});
 });

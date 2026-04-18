@@ -7,6 +7,7 @@ import {logMainChat} from '$lib/logging/chat-logger';
 import {type StreamState} from '$lib/ai/chat-callbacks';
 import {buildMetadata, type MessageMetadata, streamChatResponse} from "./chat-stream";
 import {runMemoryExtractionPipeline} from './memory-extraction-pipeline';
+import {streamReview, type ReviewResult} from '$lib/reviewer/review-loop';
 import {log} from '$lib/logging/logger';
 import {getActiveStoryId, getActiveActLineId} from '$lib/stores/stories.svelte';
 
@@ -17,6 +18,8 @@ export interface Message {
 	reasoning?: string;
 	metadata?: MessageMetadata;
 	gameData?: GameData;
+	draftContent?: string;
+	reviewResult?: ReviewResult;
 }
 
 let messages = $state<Message[]>([]);
@@ -180,6 +183,32 @@ export async function sendMessage(
 
 		// Update message with accumulated content and final metadata
 		messages[messageIdx].metadata = buildMetadata(resultMetadata, providerConfig.model);
+
+		// Review loop: run reviewer, revise if needed
+		if (settings.reviewerEnabled) {
+			const transcript = messages.slice(0, -1).map(toHistoryMessage);
+			transcript.push({ role: 'assistant', content: messages[messageIdx].content });
+
+			const reviewResult = await streamReview(
+				transcript,
+				undefined,
+				(state: StreamState) => {
+					messages[messageIdx] = {
+						...messages[messageIdx],
+						content: state.content
+					};
+				}
+			);
+
+			if (reviewResult?.revisedContent) {
+				messages[messageIdx] = {
+					...messages[messageIdx],
+					draftContent: messages[messageIdx].content,
+					reviewResult: reviewResult.review,
+					content: reviewResult.revisedContent
+				};
+			}
+		}
 
 		// Persist with accumulated content (not result.content)
 		await persistMessage(actLineId, messages[messageIdx]);

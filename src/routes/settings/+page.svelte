@@ -477,6 +477,48 @@
 			</label>
 		</section>
 
+		<!-- Review & Quality -->
+		<section class="card p-6 space-y-4">
+			<h2 class="h4">Review & Quality</h2>
+			<span class="text-xs text-surface-500"
+				>Run a QA reviewer on GM outputs before delivering to the player.</span
+			>
+
+			<label class="flex items-center gap-2">
+				<input
+					type="checkbox"
+					class="checkbox"
+					checked={settings.reviewerEnabled}
+					onchange={(e) => updateSettings({ reviewerEnabled: (e.currentTarget as HTMLInputElement).checked })}
+				/>
+				<span class="text-sm font-medium text-surface-700-300">Enable review loop</span>
+			</label>
+
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">Reviewer Provider</span>
+				<select
+					class="select mt-1"
+					disabled={!settings.reviewerEnabled}
+					onchange={(e) => {
+						const value = (e.currentTarget as HTMLSelectElement).value;
+						updateSettings({ reviewerProviderRole: value });
+					}}
+				>
+					{#if settings.providers.length === 0}
+						<option value="" disabled selected>No providers configured</option>
+					{:else}
+						<option value="main" selected={settings.reviewerProviderRole === 'main'}>Main Provider</option>
+						{#each settings.providers as config (config.id)}
+							<option value={config.id} selected={settings.reviewerProviderRole === config.id}>{config.name}</option>
+						{/each}
+					{/if}
+				</select>
+				<span class="text-xs text-surface-500 mt-1 block"
+					>The LLM provider used to review and revise GM outputs.</span
+				>
+			</label>
+		</section>
+
 		<!-- Developer -->
 		<section class="card p-6 space-y-4">
 			<h2 class="h4">Developer</h2>

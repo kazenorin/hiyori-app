@@ -33,6 +33,11 @@ import defaultChoicesExtractionPrompt from './prompts/import/choices-extraction-
 import defaultMemoryExtractionSystemPrompt from './prompts/memories/memory-extraction-system-prompt.md?raw';
 import defaultMemoryExtractionPrompt from './prompts/memories/memory-extraction-prompt.md?raw';
 
+// Reviewer
+import defaultReviewerSystemPrompt from './prompts/reviewer/reviewer-system-prompt.md?raw';
+import defaultRevisionModeFragment from './prompts/reviewer/revision-mode-fragment.md?raw';
+import defaultRevisionRequestExtractionPrompt from './prompts/reviewer/revision-request-extraction-prompt.md?raw';
+
 // Re-export for consumers that need raw content
 export {
 	defaultSystemPrompt,
@@ -50,7 +55,10 @@ export {
 	defaultActGenerationPrompt,
 	defaultChoicesExtractionPrompt,
 	defaultMemoryExtractionSystemPrompt,
-	defaultMemoryExtractionPrompt
+	defaultMemoryExtractionPrompt,
+	defaultReviewerSystemPrompt,
+	defaultRevisionModeFragment,
+	defaultRevisionRequestExtractionPrompt
 };
 
 // === Prompt Config Instances ===
@@ -83,6 +91,11 @@ const choicesExtractionPrompt = new Prompt({ relativePath: 'import/choices-extra
 const memoryExtractionSystemPrompt = new Prompt({ relativePath: 'memories/memory-extraction-system-prompt.md', defaultContent: defaultMemoryExtractionSystemPrompt });
 const memoryExtractionPrompt = new Prompt({ relativePath: 'memories/memory-extraction-prompt.md', defaultContent: defaultMemoryExtractionPrompt });
 
+// Reviewer
+const reviewerSystemPrompt = new Prompt({ relativePath: 'reviewer/reviewer-system-prompt.md', defaultContent: defaultReviewerSystemPrompt });
+const revisionModeFragment = new Prompt({ relativePath: 'reviewer/revision-mode-fragment.md', defaultContent: defaultRevisionModeFragment });
+const revisionRequestExtractionPrompt = new Prompt({ relativePath: 'reviewer/revision-request-extraction-prompt.md', defaultContent: defaultRevisionRequestExtractionPrompt });
+
 // === Load Functions ===
 
 export const loadSystemPrompt = (): Promise<string> => systemPrompt.load();
@@ -101,6 +114,9 @@ export const loadActGenerationPrompt = (): Promise<string> => actGenerationPromp
 export const loadChoicesExtractionPrompt = (): Promise<string> => choicesExtractionPrompt.load();
 export const loadMemoryExtractionSystemPrompt = (): Promise<string> => memoryExtractionSystemPrompt.load();
 export const loadMemoryExtractionPrompt = (): Promise<string> => memoryExtractionPrompt.load();
+export const loadReviewerSystemPrompt = (): Promise<string> => reviewerSystemPrompt.load();
+export const loadRevisionModeFragment = (): Promise<string> => revisionModeFragment.load();
+export const loadRevisionRequestExtractionPrompt = (): Promise<string> => revisionRequestExtractionPrompt.load();
 
 export const getDefaultSystemPromptContent = () => defaultSystemPrompt;
 export const getDefaultNarrationTemplateContent = () => defaultNarrationTemplate;
@@ -135,5 +151,8 @@ registerDefaults([
 	actGenerationPrompt,
 	choicesExtractionPrompt,
 	memoryExtractionSystemPrompt,
-	memoryExtractionPrompt
+	memoryExtractionPrompt,
+	reviewerSystemPrompt,
+	revisionModeFragment,
+	revisionRequestExtractionPrompt
 ]);

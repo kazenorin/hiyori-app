@@ -652,3 +652,15 @@ export class Memory {
 		this.cachedModelKey = null;
 	}
 }
+
+export async function knownCharacterNameList(): Promise<string[]> {
+	const db = getMemoryDatabase();
+	try {
+		const rows = await db.select<Array<{ character_canonical_name: string }>>(
+			'SELECT DISTINCT character_canonical_name FROM memory_meta'
+		);
+		return rows.map(r => r.character_canonical_name.replace(/-/g, ' '));
+	} catch {
+		return [];
+	}
+}

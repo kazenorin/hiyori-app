@@ -417,6 +417,66 @@
 									</div>
 								{/if}
 
+								{#if message.draftContent}
+									<div class="mb-3">
+										<Accordion collapsible>
+											<Accordion.Item value="draft">
+												<Accordion.ItemTrigger
+													class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1"
+												>
+													<span>Draft</span>
+													<Accordion.ItemIndicator>
+														<span class="transition-transform duration-150 text-surface-500">▼</span>
+													</Accordion.ItemIndicator>
+												</Accordion.ItemTrigger>
+												<Accordion.ItemContent>
+													{#snippet element(attributes)}
+														{#if !attributes.hidden}
+															<div
+																{...attributes}
+																class="text-xs text-surface-500 leading-relaxed border-l-2 border-surface-200-800 pl-3 mt-2"
+															>
+																<MarkdownContent content={message.draftContent} />
+															</div>
+														{/if}
+													{/snippet}
+												</Accordion.ItemContent>
+											</Accordion.Item>
+										</Accordion>
+									</div>
+								{/if}
+
+								{#if message.reviewResult}
+									<div class="mb-3">
+										<Accordion collapsible>
+											<Accordion.Item value="review">
+												<Accordion.ItemTrigger
+													class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1"
+												>
+													<span>Review</span>
+													<Accordion.ItemIndicator>
+														<span class="transition-transform duration-150 text-surface-500">▼</span>
+													</Accordion.ItemIndicator>
+												</Accordion.ItemTrigger>
+												<Accordion.ItemContent>
+													{#snippet element(attributes)}
+														{#if !attributes.hidden}
+															<div
+																{...attributes}
+																class="text-xs text-surface-500 leading-relaxed border-l-2 border-surface-200-800 pl-3 mt-2"
+															>
+																{#each message.reviewResult.violations as v}
+																	<p class="mb-1"><strong>{v.rule}</strong> ({v.severity}): {v.description}</p>
+																{/each}
+															</div>
+														{/if}
+													{/snippet}
+												</Accordion.ItemContent>
+											</Accordion.Item>
+										</Accordion>
+									</div>
+								{/if}
+
 								{#if message.content}
 									<div class="leading-relaxed text-surface-950-50">
 										<MarkdownContent content={message.content} />

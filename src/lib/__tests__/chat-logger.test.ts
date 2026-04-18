@@ -55,7 +55,9 @@ function defaultSettings() {
 		fontSize: 1.0,
 		memoryEnabled: true,
 		memoryProviderRole: 'main',
-		embeddingProviderRole: 'main'
+		embeddingProviderRole: 'main',
+		reviewerEnabled: false,
+		reviewerProviderRole: 'main'
 	};
 }
 
