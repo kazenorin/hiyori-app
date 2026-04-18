@@ -58,7 +58,6 @@ export async function streamReview(
 		historyWithEditorPrompt,
 		RETRY_CONFIG,
 		onProgress ?? (() => {}),
-		() => {},
 		(err, attempt) => log.warn('review-loop', `Editor mode attempt ${attempt} failed: ${err instanceof Error ? err.message : String(err)}`),
 		providerConfig,
 	);

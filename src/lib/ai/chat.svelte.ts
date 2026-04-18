@@ -183,7 +183,7 @@ export async function sendMessage(
 						gameData: state.gameData ?? messages[messageIdx].gameData
 					};
 				},
-				(err) => {
+				(err: unknown) => {
 					error = err instanceof Error ? err.message : String(err);
 				},
 				providerConfig
