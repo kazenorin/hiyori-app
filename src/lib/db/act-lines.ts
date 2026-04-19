@@ -18,12 +18,6 @@ interface ActLineMetaRow {
 	created_at: number;
 }
 
-interface ActLineEntry {
-	actLineId: string;
-	messageId: string;
-	sequence: number;
-}
-
 interface ActLineEntryRow {
 	act_line_id: string;
 	message_id: string;
@@ -181,6 +175,97 @@ export async function getMessageIdsUpToSequence(actLineId: string, fromSequence:
 		[actLineId, fromSequence]
 	);
 	return rows.map((r) => r.message_id);
+}
+
+export async function getActNumberForActLine(actLineId: string): Promise<number | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ act_number: number }[]>(
+		'SELECT a.act_number FROM act_line_meta alm JOIN acts a ON a.id = alm.act_id WHERE alm.id = $1',
+		[actLineId]
+	);
+	return rows.length > 0 ? rows[0].act_number : null;
+}
+
+export async function getStoryIdForActLine(actLineId: string): Promise<string | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ story_id: string }[]>(
+		'SELECT a.story_id FROM act_line_meta alm JOIN acts a ON a.id = alm.act_id WHERE alm.id = $1',
+		[actLineId]
+	);
+	return rows.length > 0 ? rows[0].story_id : null;
+}
+
+/**
+ * Batch-resolve act number, max sequence, and message sequence for multiple items.
+ * Returns a map keyed by `${actLineId}:${messageId}`.
+ * Fetches per unique actLineId (act number + max sequence) and per item (message sequence).
+ */
+export async function batchResolveActLineInfo(
+	items: Array<{ actLineId: string; messageId: string }>
+): Promise<Map<string, { actNumber: number | null; maxSeq: number; msgSeq: number | null }>> {
+	if (items.length === 0) return new Map();
+
+	const db = getDatabase();
+
+	// Collect unique actLineIds
+	const uniqueActLineIds = [...new Set(items.map((i) => i.actLineId))];
+
+	// Batch: act number + max sequence per unique actLineId
+	interface ActLineInfoRow {
+		id: string;
+		act_number: number;
+		max_seq: number;
+	}
+	const placeholders = uniqueActLineIds.map((_, i) => `$${i + 1}`).join(', ');
+	const actLineInfoRows = await db.select<ActLineInfoRow[]>(
+		`SELECT alm.id, a.act_number,
+		  (SELECT COALESCE(MAX(sequence), 0) + 1 FROM act_lines WHERE act_line_id = alm.id) as max_seq
+		 FROM act_line_meta alm
+		 JOIN acts a ON a.id = alm.act_id
+		 WHERE alm.id IN (${placeholders})`,
+		uniqueActLineIds
+	);
+	const actLineInfoMap = new Map<string, { actNumber: number; maxSeq: number }>();
+	for (const row of actLineInfoRows) {
+		actLineInfoMap.set(row.id, { actNumber: row.act_number, maxSeq: row.max_seq });
+	}
+
+	// Batch: message sequence per (actLineId, messageId) pair
+	// Build parameterized query for all pairs
+	interface MsgSeqRow {
+		act_line_id: string;
+		message_id: string;
+		sequence: number;
+	}
+	const msgSeqMap = new Map<string, number>();
+	if (items.length > 0) {
+		const conditions: string[] = [];
+		const params: unknown[] = [];
+		for (const item of items) {
+			params.push(item.actLineId, item.messageId);
+			conditions.push(`(act_line_id = $${params.length - 1} AND message_id = $${params.length})`);
+		}
+		const msgSeqRows = await db.select<MsgSeqRow[]>(
+			`SELECT act_line_id, message_id, sequence FROM act_lines WHERE ${conditions.join(' OR ')}`,
+			params
+		);
+		for (const row of msgSeqRows) {
+			msgSeqMap.set(`${row.act_line_id}:${row.message_id}`, row.sequence);
+		}
+	}
+
+	// Build result map
+	const result = new Map<string, { actNumber: number | null; maxSeq: number; msgSeq: number | null }>();
+	for (const item of items) {
+		const info = actLineInfoMap.get(item.actLineId);
+		const key = `${item.actLineId}:${item.messageId}`;
+		result.set(key, {
+			actNumber: info?.actNumber ?? null,
+			maxSeq: info?.maxSeq ?? 0,
+			msgSeq: msgSeqMap.get(key) ?? null,
+		});
+	}
+	return result;
 }
 
 export async function branchFromLine(
