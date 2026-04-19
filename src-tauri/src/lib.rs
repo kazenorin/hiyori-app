@@ -30,12 +30,19 @@ pub fn run() {
                     Target::new(TargetKind::LogDir { file_name: None }),
                     Target::new(TargetKind::Webview),
                 ])
-                .level(log::LevelFilter::Info)
+                // Use Trace level so fern passes all messages; actual filtering
+                // is controlled by log::set_max_level() via the set_log_level command
+                .level(log::LevelFilter::Trace)
                 .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(3))
                 .max_file_size(100_000)
                 .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
                 .build(),
         )
+        // Set initial log level after plugin init; frontend will sync user preference
+        .setup(|_app| {
+            log::set_max_level(log::LevelFilter::Info);
+            Ok(())
+        })
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_sql::Builder::default().build())
         .run(tauri::generate_context!())
