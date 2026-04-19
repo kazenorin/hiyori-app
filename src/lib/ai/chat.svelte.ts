@@ -1,5 +1,5 @@
 import { getMainProviderConfig, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
-import { loadSystemPrompt } from '$lib/fs/prompts';
+import { getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
 import type { GameData } from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
@@ -11,7 +11,7 @@ import { Memory } from '$lib/memory/memory';
 import { streamReview } from '$lib/reviewer/review-loop';
 import { log } from '$lib/logging/logger';
 import { getActiveStoryId } from '$lib/stores/stories.svelte';
-import { buildTools } from "$lib/ai/tools/tools";
+import { buildTools } from '$lib/ai/tools/tools';
 
 export interface Message {
 	id: string;
@@ -183,7 +183,7 @@ export async function sendMessage(
 	const tools = buildTools(storyId, actLineId);
 
 	try {
-		const systemPrompt = message.systemPrompt ?? (await loadSystemPrompt());
+		const systemPrompt = message.systemPrompt ?? (await getActiveSystemPromptOrDefault());
 
 		const narrationMsg = message.narrationContent ? [{ role: 'user' as const, content: message.narrationContent }] : [];
 		const existingMsgs = messages.slice(0, -1).map((m) => toHistoryMessage(m));
@@ -228,16 +228,20 @@ export async function sendMessage(
 				{ role: 'assistant', content: draftContent },
 			];
 
-			const reviewResult = await streamReview(historyWithDraft, (state: StreamState) => {
-				const currentMessage = getCurrentMessage();
-				setCurrentMessage({
-					...currentMessage,
-					content: state.revisedNarrative ?? currentMessage.content,
-					reviewScratchpad: state.reviewScratchpad ?? currentMessage.reviewScratchpad,
-					reasoning: state.reasoning ?? currentMessage.reasoning,
-					gameData: state.gameData ?? currentMessage.gameData,
-				});
-			}, tools);
+			const reviewResult = await streamReview(
+				historyWithDraft,
+				(state: StreamState) => {
+					const currentMessage = getCurrentMessage();
+					setCurrentMessage({
+						...currentMessage,
+						content: state.revisedNarrative ?? currentMessage.content,
+						reviewScratchpad: state.reviewScratchpad ?? currentMessage.reviewScratchpad,
+						reasoning: state.reasoning ?? currentMessage.reasoning,
+						gameData: state.gameData ?? currentMessage.gameData,
+					});
+				},
+				tools
+			);
 
 			if (!reviewResult) {
 				setCurrentMessage({

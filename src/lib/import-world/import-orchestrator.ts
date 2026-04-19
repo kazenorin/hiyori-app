@@ -15,6 +15,7 @@ import { parseTranscriptFile } from './transcript-parsers';
 import { formatIntoScenes, generateActFromCards } from './act-generator';
 import { runGameDataDetection } from './game-data-detector';
 import type { StreamState } from '$lib/ai/chat-callbacks';
+import {loadSystemPrompt} from "$lib/fs/prompts";
 
 // === Progress Callback Type ===
 
@@ -186,18 +187,9 @@ async function processActs(
 				createdResources
 			);
 		} else if (actInput.actFile || worldContent || characterCards.length > 0) {
-			await generateActFromLLM(
-				actInput,
-				actLineId,
-				storyFolder,
-				actNumber,
-				worldContent,
-				characterCards,
-				retryConfig,
-				log,
-				onProgress,
-				createdResources
-			);
+			// Load global default systemPrompt, as for importing, the story systemPrompt is not supposed to be available yet
+			const systemPrompt = await loadSystemPrompt();
+			await generateActFromLLM(systemPrompt, actInput, actLineId, actNumber, worldContent, characterCards, retryConfig, log, onProgress, createdResources);
 		}
 
 		previousActLineId = actLineId;
@@ -275,7 +267,7 @@ async function processTranscriptAct(
 			retryConfig,
 			log,
 			(msgIndex, state) => {
-				const consoleOutput = !!state.content ? state.content : state.reasoning;
+				const consoleOutput = state.content ? state.content : state.reasoning;
 				onProgress({
 					phase: 'generating-game-data',
 					message: `Generating GameData[${msgIndex}]...`,
@@ -328,9 +320,9 @@ async function processTranscriptAct(
 }
 
 async function generateActFromLLM(
+	systemPrompt: string,
 	actInput: { id: string; name: string; actFile: File | null; transcript: File | null },
 	actLineId: string,
-	storyFolder: string,
 	actNumber: number,
 	worldContent: string | null,
 	characterCards: { name: string; content: string }[],
@@ -349,12 +341,13 @@ async function generateActFromLLM(
 
 	// Generate act content with streaming
 	const acc = await generateActFromCards(
+		systemPrompt,
 		worldContent,
 		actCardContent,
 		characterCards,
 		retryConfig,
 		(state: StreamState) => {
-			const consoleOutput = !!state.content ? state.content : state.reasoning;
+			const consoleOutput = state.content ? state.content : state.reasoning;
 			onProgress({
 				phase: 'generating-act',
 				message: `Generating Act ${actNumber}...`,

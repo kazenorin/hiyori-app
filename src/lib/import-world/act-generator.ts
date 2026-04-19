@@ -24,6 +24,7 @@ import {
  * Streams content for real-time display.
  */
 export async function generateActFromCards(
+	systemPrompt: string,
 	worldContent: string | null,
 	actCardContent: string | null,
 	characterCards: { name: string; content: string }[],
@@ -36,7 +37,6 @@ export async function generateActFromCards(
 		throw new Error('No main provider configured. Please set one in Settings.');
 	}
 
-	const systemPrompt = await loadSystemPrompt();
 	const userMessages = buildGenerationMessages(worldContent, actCardContent, characterCards);
 
 	return streamWithRetry(systemPrompt, userMessages as { role: 'user' | 'assistant'; content: string }[], retryConfig, onProgress, onError);
@@ -187,7 +187,7 @@ export async function formatIntoScenes(
 				processedScenes,
 				retryConfig,
 				(state: StreamState) => {
-					const consoleOutput = (!!state.content ? state.content : state.reasoning) ?? '';
+					const consoleOutput = (state.content ? state.content : state.reasoning) ?? '';
 					onProgress(`Scene ${i + 1}: ${consoleOutput}`);
 				},
 				(err, attempt) => {

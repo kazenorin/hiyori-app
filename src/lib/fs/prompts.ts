@@ -187,6 +187,13 @@ export const getDefaultNarrationTemplateContent = () => defaultNarrationTemplate
 
 // Story-specific loaders
 export async function loadStorySystemPrompt(storyId: string, storyName: string): Promise<string> {
+	if (settings.reviewerEnabled) {
+		const [a, b] = await Promise.all([
+			loadPromptForStory(storyId, storyName, systemPrompt.relativePath, systemPrompt.defaultContent),
+			triggerEditorModeFragment.load(),
+		]);
+		return a + b;
+	}
 	return loadPromptForStory(storyId, storyName, systemPrompt.relativePath, systemPrompt.defaultContent);
 }
 
@@ -196,6 +203,14 @@ export async function loadStoryNarrationExtractionPrompt(storyId: string, storyN
 
 export async function loadStoryNarrationTemplate(storyId: string, storyName: string): Promise<string> {
 	return loadPromptForStory(storyId, storyName, narrationTemplate.relativePath, narrationTemplate.defaultContent);
+}
+
+export async function loadStoryNarrationContent(storyId: string, storyName: string): Promise<string> {
+	const [extraction, template] = await Promise.all([
+		loadStoryNarrationExtractionPrompt(storyId, storyName),
+		loadStoryNarrationTemplate(storyId, storyName),
+	]);
+	return extraction.replace('{narrationTemplate}', template);
 }
 
 // === Ensure All Base Configs ===

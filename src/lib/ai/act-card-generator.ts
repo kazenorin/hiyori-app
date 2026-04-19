@@ -1,7 +1,7 @@
 import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
-import { loadActCardTemplate, loadActExtractionPrompt, loadSystemPrompt } from '$lib/fs/prompts';
+import {loadActCardTemplate, loadActExtractionPrompt, loadStorySystemPrompt, loadSystemPrompt} from '$lib/fs/prompts';
 import { exportActLine } from './act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
@@ -19,7 +19,7 @@ export interface GenerateActCardResult {
 }
 
 function buildUserMessages(contents: string[], template: string, extractionPrompt: string, world: string | null): string[] {
-	const worldPrompt = !!world ? ['The world setting is based on the following:', world] : [];
+	const worldPrompt = world ? ['The world setting is based on the following:', world] : [];
 	return [
 		...worldPrompt,
 		'The following messages will contain the transcript of the current act:',
@@ -66,8 +66,8 @@ export async function generateActCard(): Promise<GenerateActCardResult> {
 	const [template, extractionPrompt, systemPrompt, world] = await Promise.all([
 		loadActCardTemplate(),
 		loadActExtractionPrompt(),
-		loadSystemPrompt(),
-		loadStoryWorldContent(act.storyId),
+		loadStorySystemPrompt(story.id, story.name),
+		loadStoryWorldContent(story.id)
 	]);
 
 	// Build AI call
@@ -149,8 +149,8 @@ export async function streamActCard(
 	const [template, extractionPrompt, systemPrompt, world] = await Promise.all([
 		loadActCardTemplate(),
 		loadActExtractionPrompt(),
-		loadSystemPrompt(),
-		loadStoryWorldContent(story.id),
+		loadStorySystemPrompt(story.id, story.name),
+		loadStoryWorldContent(story.id)
 	]);
 
 	// Build messages for streaming

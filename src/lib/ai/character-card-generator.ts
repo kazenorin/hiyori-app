@@ -6,12 +6,12 @@ import {
 	loadCharacterCardExtractionPrompt,
 	loadCharacterCardExtractionSystemPrompt,
 	loadSummarizeCharactersInAct,
-	loadSystemPrompt,
+	loadSystemPrompt, loadStorySystemPrompt,
 } from '$lib/fs/prompts';
 import { exportActLine } from './act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
-import { resolveStoryFolder } from '$lib/fs/story-folders';
+import {loadStoryWorldContent, resolveStoryFolder} from '$lib/fs/story-folders';
 import { getActiveStoryId, getActiveActId, getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
 import { mkdir, writeTextFile, readTextFile, exists, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { toKebabCase } from '$lib/utils/string';
@@ -72,6 +72,9 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 	const actLineId = getActiveActLineId();
 	if (!actLineId) throw new Error(ERR_NO_CONTEXT);
 
+	const story = getActiveStory()
+	if (!story) throw new Error(ERR_NO_CONTEXT);
+
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) throw new Error('No main provider configured.');
 
@@ -80,7 +83,7 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 	if (transcript.length === 0) throw new Error('No narrative content found in this act line.');
 
 	const summarizePrompt = await loadSummarizeCharactersInAct();
-	const systemPrompt = await loadSystemPrompt();
+	const systemPrompt = await loadStorySystemPrompt(story.id, story.name);
 
 	const model = createModel(config);
 
@@ -321,7 +324,7 @@ export async function generateCharacterCard(
 		loadCharacterCardTemplate(),
 		loadCharacterCardExtractionPrompt(),
 		loadCharacterCardExtractionSystemPrompt(),
-		loadSystemPrompt(),
+		loadStorySystemPrompt(story.id, story.name),
 	]);
 
 	const combinedSystem = `${systemPrompt}\n\n---\n\n${extractionSystemPrompt}`;
