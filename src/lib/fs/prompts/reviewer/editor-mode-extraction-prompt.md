@@ -33,7 +33,8 @@ Strictly follow this exact structure:
 - Rule 3 Analysis & Flags: ...
 - Rule 4 Analysis & Flags: ...
 - Planned Fixes: ...
-  </review_scratchpad>
+
+</review_scratchpad>
 
 <revised_narrative>
 {narrationTemplate}
