@@ -10,7 +10,9 @@ import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
 import { Memory } from '$lib/memory/memory';
 import { streamReview } from '$lib/reviewer/review-loop';
 import { log } from '$lib/logging/logger';
-import { getActiveStoryId, getActiveActLineId } from '$lib/stores/stories.svelte';
+import { getActiveStoryId } from '$lib/stores/stories.svelte';
+import { createQueryMemoriesTool } from './tools/query-memories';
+import { type ToolSet } from 'ai';
 
 export interface Message {
 	id: string;
@@ -103,6 +105,43 @@ async function handleStreamError(err: unknown, messageId: string, actLineId: str
 	}
 }
 
+function buildTools(storyId: string | null, actLineId: string): ToolSet | undefined {
+	const tools: ToolSet = {
+		...buildMemoryTools(storyId, actLineId),
+	};
+
+	return Object.keys(tools).length > 0 ? tools : undefined;
+}
+
+function buildMemoryTools(storyId: string | null, actLineId: string): ToolSet {
+	if (!settings.memoryEnabled) return {};
+	if (!storyId || !actLineId) return {};
+
+	const memConfig = getMemoryProviderConfig();
+	if (!memConfig) return {};
+
+	return {
+		'query-memories': createQueryMemoriesTool({
+			memory: new Memory(memConfig),
+			storyId,
+			actLineId,
+		}),
+	};
+}
+
+function runMemoryPipeline(storyId: string | null, actLineId: string, message: Message): void {
+	if (!settings.memoryEnabled) return;
+	if (!storyId || !actLineId) return;
+	memoryPipelineRunning = true;
+	memoryPipelinePromise = runMemoryExtractionPipeline(message.content, storyId, actLineId, message.id)
+		.then((result) => log.debug('memory-pipeline', `Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`))
+		.catch((err) => log.error('memory-pipeline', 'Pipeline failed', err))
+		.finally(() => {
+			memoryPipelinePromise = null;
+			memoryPipelineRunning = false;
+		});
+}
+
 export async function sendMessage(
 	actLineId: string,
 	message: {
@@ -111,6 +150,7 @@ export async function sendMessage(
 		narrationContent: string | undefined;
 	}
 ): Promise<void> {
+	const storyIdPromise = dbActLines.getStoryIdForActLine(actLineId);
 	if (!message.bodyText && !message.systemPrompt && !message.narrationContent) {
 		log.warn('send-message', 'Called with no body, system prompt, or narration content');
 		return;
@@ -164,6 +204,7 @@ export async function sendMessage(
 
 	isStreaming = true;
 	abortController = new AbortController();
+	const storyId = await storyIdPromise;
 
 	try {
 		const systemPrompt = message.systemPrompt ?? (await loadSystemPrompt());
@@ -194,7 +235,8 @@ export async function sendMessage(
 				(err: unknown) => {
 					error = err instanceof Error ? err.message : String(err);
 				},
-				providerConfig
+				providerConfig,
+				buildTools(storyId, actLineId)
 			).then((acc) => acc.resultMetadata),
 		]);
 
@@ -232,27 +274,10 @@ export async function sendMessage(
 		}
 
 		// Persist with accumulated content (not result.content)
-		await Promise.all([persistMessage(actLineId, messages[messageIdx]), logMainChat({ systemPrompt, messages })]);
+		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({ systemPrompt, messages })]);
 
 		// Run memory extraction pipeline in background (non-blocking)
-		if (settings.memoryEnabled) {
-			const storyId = getActiveStoryId();
-			const activeActLineId = getActiveActLineId();
-			if (storyId && activeActLineId) {
-				memoryPipelineRunning = true;
-				memoryPipelinePromise = runMemoryExtractionPipeline(messages[messageIdx].content, storyId, activeActLineId, messages[messageIdx].id)
-					.then((result) => {
-						log.debug('memory-pipeline', `Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`);
-					})
-					.catch((err) => {
-						log.error('memory-pipeline', 'Pipeline failed', err);
-					})
-					.finally(() => {
-						memoryPipelinePromise = null;
-						memoryPipelineRunning = false;
-					});
-			}
-		}
+		runMemoryPipeline(storyId, actLineId, getCurrentMessage());
 	} catch (err: unknown) {
 		await handleStreamError(err, responseMessageId, actLineId);
 	} finally {

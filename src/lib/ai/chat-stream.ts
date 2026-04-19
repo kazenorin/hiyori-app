@@ -1,3 +1,4 @@
+import { type ToolSet } from 'ai';
 import { executeStream, type StreamResultMetadata } from './streaming';
 import { getMainProviderConfig, type ProviderConfig } from '../stores/settings.svelte';
 import { createStreamAccumulator, type StreamAccumulator, type StreamState } from './chat-callbacks';
@@ -40,7 +41,8 @@ export async function streamChatResponse(
 	abortSignal: AbortSignal,
 	onStateUpdate: (state: StreamState) => void,
 	onError: (err: unknown) => void,
-	providerConfig: ProviderConfig | undefined
+	providerConfig: ProviderConfig | undefined,
+	tools?: ToolSet
 ): Promise<StreamAccumulator> {
 	if (!providerConfig) {
 		throw new Error('No main provider configured. Please set one in Settings.');
@@ -62,6 +64,8 @@ export async function streamChatResponse(
 					reasoningSummary: 'detailed',
 				},
 			},
+			tools,
+			maxSteps: tools ? 3 : undefined,
 		},
 		accumulator.callbacks
 	);

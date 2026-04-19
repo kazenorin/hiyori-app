@@ -1,7 +1,7 @@
-import { streamText } from 'ai';
+import { streamText, type ToolSet } from 'ai';
 import type { LanguageModel } from 'ai';
 import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
-import { log, fileLog } from '$lib/logging/logger';
+import { fileLog } from '$lib/logging/logger';
 
 export interface StreamConfig {
 	model: LanguageModel;
@@ -9,6 +9,8 @@ export interface StreamConfig {
 	systemPrompt: string;
 	abortSignal: AbortSignal;
 	providerOptions?: SharedV3ProviderOptions;
+	tools?: ToolSet;
+	maxSteps?: number;
 }
 
 export interface StreamCallbacks {
@@ -38,12 +40,19 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 	const startTime = Date.now();
 
 	try {
-		const result = streamText({
+		const baseConfig = {
 			model: config.model,
 			messages: config.messages,
 			system: config.systemPrompt,
 			abortSignal: config.abortSignal,
 			providerOptions: config.providerOptions,
+		};
+
+		const hasTools = config.tools && Object.keys(config.tools).length > 0;
+
+		const result = streamText({
+			...baseConfig,
+			...(hasTools ? { tools: config.tools, maxSteps: config.maxSteps ?? 3 } : {}),
 		});
 
 		for await (const part of result.fullStream) {
@@ -55,6 +64,11 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 					if (callbacks.onReasoningDelta) {
 						callbacks.onReasoningDelta(part.text);
 					}
+					break;
+				case 'tool-call':
+				case 'tool-result':
+					// Tool invocations flow through automatically in multi-step mode.
+					// The LLM consumes the result and generates text in subsequent steps.
 					break;
 				case 'error':
 					callbacks.onError(part.error);
