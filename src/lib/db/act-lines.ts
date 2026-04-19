@@ -53,18 +53,16 @@ function rowToActLineMeta(row: ActLineMetaRow): ActLineMeta {
 
 // === act_line_meta operations ===
 
-export async function createActLine(
-	id: string,
-	actId: string,
-	name: string,
-	isMainLine: boolean = false
-): Promise<ActLineMeta> {
+export async function createActLine(id: string, actId: string, name: string, isMainLine: boolean = false): Promise<ActLineMeta> {
 	const db = getDatabase();
 	const now = Date.now();
-	await db.execute(
-		'INSERT INTO act_line_meta (id, act_id, name, is_main_line, created_at) VALUES ($1, $2, $3, $4, $5)',
-		[id, actId, name, isMainLine ? 1 : 0, now]
-	);
+	await db.execute('INSERT INTO act_line_meta (id, act_id, name, is_main_line, created_at) VALUES ($1, $2, $3, $4, $5)', [
+		id,
+		actId,
+		name,
+		isMainLine ? 1 : 0,
+		now,
+	]);
 	return { id, actId, name, isMainLine, createdAt: now };
 }
 
@@ -76,25 +74,18 @@ export async function getActLine(id: string): Promise<ActLineMeta | null> {
 
 export async function getActLinesForAct(actId: string): Promise<ActLineMeta[]> {
 	const db = getDatabase();
-	const rows = await db.select<ActLineMetaRow[]>(
-		'SELECT * FROM act_line_meta WHERE act_id = $1 ORDER BY created_at ASC',
-		[actId]
-	);
+	const rows = await db.select<ActLineMetaRow[]>('SELECT * FROM act_line_meta WHERE act_id = $1 ORDER BY created_at ASC', [actId]);
 	return rows.map(rowToActLineMeta);
 }
 
 export async function getMainLineForAct(actId: string): Promise<ActLineMeta | null> {
 	const db = getDatabase();
-	const rows = await db.select<ActLineMetaRow[]>(
-		'SELECT * FROM act_line_meta WHERE act_id = $1 AND is_main_line = 1 LIMIT 1',
-		[actId]
-	);
+	const rows = await db.select<ActLineMetaRow[]>('SELECT * FROM act_line_meta WHERE act_id = $1 AND is_main_line = 1 LIMIT 1', [actId]);
 	if (rows.length > 0) return rowToActLineMeta(rows[0]);
 	// Fallback: return first by creation date
-	const fallback = await db.select<ActLineMetaRow[]>(
-		'SELECT * FROM act_line_meta WHERE act_id = $1 ORDER BY created_at ASC LIMIT 1',
-		[actId]
-	);
+	const fallback = await db.select<ActLineMetaRow[]>('SELECT * FROM act_line_meta WHERE act_id = $1 ORDER BY created_at ASC LIMIT 1', [
+		actId,
+	]);
 	return fallback.length > 0 ? rowToActLineMeta(fallback[0]) : null;
 }
 
@@ -136,11 +127,7 @@ export async function getMessagesForLine(actLineId: string): Promise<Message[]> 
 
 export async function addMessageToLine(actLineId: string, messageId: string, sequence: number): Promise<void> {
 	const db = getDatabase();
-	await db.execute('INSERT INTO act_lines (act_line_id, message_id, sequence) VALUES ($1, $2, $3)', [
-		actLineId,
-		messageId,
-		sequence,
-	]);
+	await db.execute('INSERT INTO act_lines (act_line_id, message_id, sequence) VALUES ($1, $2, $3)', [actLineId, messageId, sequence]);
 }
 
 export async function deleteLineEntries(actLineId: string): Promise<void> {
@@ -156,15 +143,10 @@ export async function removeMessagesFromActLine(actLineId: string, messageIds: s
 		await db.execute('BEGIN');
 
 		const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
-		await db.execute(`DELETE FROM act_lines WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [
-			actLineId,
-			...messageIds,
-		]);
+		await db.execute(`DELETE FROM act_lines WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [actLineId, ...messageIds]);
 
 		for (const msgId of messageIds) {
-			const refs = await db.select<{ cnt: number }[]>('SELECT COUNT(*) as cnt FROM act_lines WHERE message_id = $1', [
-				msgId,
-			]);
+			const refs = await db.select<{ cnt: number }[]>('SELECT COUNT(*) as cnt FROM act_lines WHERE message_id = $1', [msgId]);
 			if (refs[0].cnt === 0) {
 				await db.execute('DELETE FROM messages WHERE id = $1', [msgId]);
 			}
@@ -179,20 +161,26 @@ export async function removeMessagesFromActLine(actLineId: string, messageIds: s
 
 export async function getNextSequence(actLineId: string): Promise<number> {
 	const db = getDatabase();
-	const rows = await db.select<{ max: number | null }[]>(
-		'SELECT MAX(sequence) as max FROM act_lines WHERE act_line_id = $1',
-		[actLineId]
-	);
+	const rows = await db.select<{ max: number | null }[]>('SELECT MAX(sequence) as max FROM act_lines WHERE act_line_id = $1', [actLineId]);
 	return (rows[0]?.max ?? 0) + 1;
 }
 
 export async function getMessageSequence(actLineId: string, messageId: string): Promise<number | null> {
 	const db = getDatabase();
-	const rows = await db.select<{ sequence: number }[]>(
-		'SELECT sequence FROM act_lines WHERE act_line_id = $1 AND message_id = $2',
-		[actLineId, messageId]
-	);
+	const rows = await db.select<{ sequence: number }[]>('SELECT sequence FROM act_lines WHERE act_line_id = $1 AND message_id = $2', [
+		actLineId,
+		messageId,
+	]);
 	return rows.length > 0 ? rows[0].sequence : null;
+}
+
+export async function getMessageIdsUpToSequence(actLineId: string, fromSequence: number): Promise<string[]> {
+	const db = getDatabase();
+	const rows = await db.select<{ message_id: string }[]>(
+		'SELECT message_id FROM act_lines WHERE act_line_id = $1 AND sequence <= $2 ORDER BY sequence ASC',
+		[actLineId, fromSequence]
+	);
+	return rows.map((r) => r.message_id);
 }
 
 export async function branchFromLine(

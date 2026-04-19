@@ -5,6 +5,8 @@ import * as dbAppState from '$lib/db/app-state';
 import { log } from '$lib/logging/logger';
 import { moveWorldBuilderLog } from '$lib/logging/chat-logger';
 import { getLogFilePath } from '$lib/ai/world-builder.svelte';
+import { Memory } from '$lib/memory/memory';
+import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 import {
 	loadStorySystemPrompt,
 	loadSystemPrompt,
@@ -12,13 +14,7 @@ import {
 	loadStoryNarrationExtractionPrompt,
 	loadStoryNarrationTemplate,
 } from '$lib/fs/prompts';
-import {
-	loadStoryWorldContent,
-	ensureWorldFile,
-	resolveStoryFolder,
-	renameStoryFolder,
-	deriveStoryName,
-} from '$lib/fs/story-folders';
+import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-folders';
 import { writeTextFile, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 
@@ -274,17 +270,34 @@ export async function deleteActLine(id: string): Promise<void> {
 	}
 }
 
-export async function forkActLine(
-	fromLineId: string,
-	fromSequence: number,
-	actId: string,
-	name: string
-): Promise<dbActLines.ActLineMeta> {
+export async function forkActLine(fromLineId: string, fromSequence: number, actId: string, name: string): Promise<dbActLines.ActLineMeta> {
 	const newLineId = crypto.randomUUID();
 	const line = await dbActLines.branchFromLine(newLineId, fromLineId, fromSequence, actId, name);
 	actLines = [...actLines, line];
 	await selectActLine(line.id);
+
+	await copyMemoriesForFork(fromLineId, line.id, fromSequence);
+
 	return line;
+}
+
+async function copyMemoriesForFork(fromLineId: string, toLineId: string, fromSequence: number): Promise<void> {
+	const storyId = activeStoryId;
+	if (!storyId || !settings.memoryEnabled) return;
+
+	const config = getMemoryProviderConfig();
+	if (!config) return;
+
+	try {
+		const messageIds = await dbActLines.getMessageIdsUpToSequence(fromLineId, fromSequence);
+		if (messageIds.length === 0) return;
+
+		const memory = new Memory(config);
+		const result = await memory.copyMemoriesForFork(storyId, fromLineId, toLineId, messageIds);
+		log.info('fork', `Copied ${result.memoriesCopied} memories and ${result.locationsCopied} locations to line ${toLineId}`);
+	} catch (err) {
+		log.error('fork', 'Failed to copy memories for fork', err);
+	}
 }
 
 export async function restoreState(): Promise<void> {

@@ -240,17 +240,9 @@ export async function sendMessage(
 			const activeActLineId = getActiveActLineId();
 			if (storyId && activeActLineId) {
 				memoryPipelineRunning = true;
-				memoryPipelinePromise = runMemoryExtractionPipeline(
-					messages[messageIdx].content,
-					storyId,
-					activeActLineId,
-					messages[messageIdx].id
-				)
+				memoryPipelinePromise = runMemoryExtractionPipeline(messages[messageIdx].content, storyId, activeActLineId, messages[messageIdx].id)
 					.then((result) => {
-						log.debug(
-							'memory-pipeline',
-							`Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`
-						);
+						log.debug('memory-pipeline', `Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`);
 					})
 					.catch((err) => {
 						log.error('memory-pipeline', 'Pipeline failed', err);
@@ -352,11 +344,7 @@ export function getLatestDecisions(): string[] {
  * The narration message is never persisted or shown in the UI.
  * Only the assistant's response (the opening narrative) is persisted and displayed.
  */
-export async function sendInitialNarration(
-	actLineId: string,
-	narrationContent: string,
-	systemPrompt?: string
-): Promise<void> {
+export async function sendInitialNarration(actLineId: string, narrationContent: string, systemPrompt?: string): Promise<void> {
 	messages = [];
 	return await sendMessage(actLineId, {
 		bodyText: undefined,
@@ -365,11 +353,7 @@ export async function sendInitialNarration(
 	});
 }
 
-export async function regenerateLastResponse(
-	actLineId: string,
-	systemPrompt?: string,
-	narrationContent?: string
-): Promise<void> {
+export async function regenerateLastResponse(actLineId: string, systemPrompt?: string, narrationContent?: string): Promise<void> {
 	const currentMessages = [...messages];
 	const lastAssistantMsgIdx = currentMessages.findLastIndex((m) => m.role === 'assistant');
 	if (lastAssistantMsgIdx === -1) return;
@@ -421,10 +405,7 @@ export async function deleteLastExchange(actLineId: string): Promise<void> {
 	}
 }
 
-export async function getForkSequence(
-	actLineId: string,
-	assistantMessageIndex: number
-): Promise<{ branchSeq: number; name: string }> {
+export async function getForkSequence(actLineId: string, assistantMessageIndex: number): Promise<{ branchSeq: number; name: string }> {
 	const assistantMsg = messages[assistantMessageIndex];
 	if (!assistantMsg || assistantMsg.role !== 'assistant') {
 		throw new Error('Invalid message: expected assistant message');
@@ -439,9 +420,7 @@ export async function getForkSequence(
 
 	return {
 		branchSeq: assistantSeq,
-		name: userMsg
-			? `Fork from "${userMsg.content.slice(0, 30)}${userMsg.content.length > 30 ? '...' : ''}"`
-			: 'New Branch',
+		name: userMsg ? `Fork from "${userMsg.content.slice(0, 30)}${userMsg.content.length > 30 ? '...' : ''}"` : 'New Branch',
 	};
 }
 

@@ -161,9 +161,7 @@ export class Memory {
 			}
 			if (storedModelKey && storedModelKey !== currentKey) {
 				// Model changed but dimension might be the same — still block to prevent mixed embeddings
-				throw new Error(
-					`Embedding model changed from "${storedModelKey}" to "${currentKey}". Reset memory to switch embedding models.`
-				);
+				throw new Error(`Embedding model changed from "${storedModelKey}" to "${currentKey}". Reset memory to switch embedding models.`);
 			}
 
 			this.vecDimension = dimension;
@@ -191,14 +189,12 @@ export class Memory {
 			}
 		}
 
-		await db.execute(
-			"INSERT INTO memory_config (key, value) VALUES ('vec_dimension', $1) ON CONFLICT(key) DO UPDATE SET value = $1",
-			[String(dimension)]
-		);
-		await db.execute(
-			"INSERT INTO memory_config (key, value) VALUES ('model_key', $1) ON CONFLICT(key) DO UPDATE SET value = $1",
-			[currentKey]
-		);
+		await db.execute("INSERT INTO memory_config (key, value) VALUES ('vec_dimension', $1) ON CONFLICT(key) DO UPDATE SET value = $1", [
+			String(dimension),
+		]);
+		await db.execute("INSERT INTO memory_config (key, value) VALUES ('model_key', $1) ON CONFLICT(key) DO UPDATE SET value = $1", [
+			currentKey,
+		]);
 		this.vecDimension = dimension;
 		this.cachedModelKey = currentKey;
 	}
@@ -240,9 +236,7 @@ export class Memory {
 		}
 
 		try {
-			await db.execute(
-				`CREATE VIRTUAL TABLE vec_locations USING vec0(story_id TEXT PARTITION KEY, embedding float[${dimension}])`
-			);
+			await db.execute(`CREATE VIRTUAL TABLE vec_locations USING vec0(story_id TEXT PARTITION KEY, embedding float[${dimension}])`);
 		} catch (err) {
 			if (err instanceof Error && err.message.includes('no such module: vec0')) {
 				await db.execute(`
@@ -257,14 +251,12 @@ export class Memory {
 			}
 		}
 
-		await db.execute(
-			"INSERT INTO memory_config (key, value) VALUES ('loc_vec_dimension', $1) ON CONFLICT(key) DO UPDATE SET value = $1",
-			[String(dimension)]
-		);
-		await db.execute(
-			"INSERT INTO memory_config (key, value) VALUES ('loc_model_key', $1) ON CONFLICT(key) DO UPDATE SET value = $1",
-			[currentKey]
-		);
+		await db.execute("INSERT INTO memory_config (key, value) VALUES ('loc_vec_dimension', $1) ON CONFLICT(key) DO UPDATE SET value = $1", [
+			String(dimension),
+		]);
+		await db.execute("INSERT INTO memory_config (key, value) VALUES ('loc_model_key', $1) ON CONFLICT(key) DO UPDATE SET value = $1", [
+			currentKey,
+		]);
 		this.locVecDimension = dimension;
 	}
 
@@ -278,8 +270,7 @@ export class Memory {
 	): Promise<number> {
 		if (memories.length === 0) return 0;
 
-		const embeddings =
-			memories.length === 1 ? [await this.generateEmbedding(memories[0])] : await this.generateEmbeddings(memories);
+		const embeddings = memories.length === 1 ? [await this.generateEmbedding(memories[0])] : await this.generateEmbeddings(memories);
 
 		// Deduplicate: keep earlier memory when cosine distance < 0.1
 		const { memories: dedupedMemories, embeddings: dedupedEmbeddings } = this.deduplicateMemories(memories, embeddings);
@@ -291,16 +282,7 @@ export class Memory {
 		await this.ensureMemoryVecTable(dimension);
 
 		// Batch insert deduplicated memories
-		await this.insertMemoryBatch(
-			db,
-			storyId,
-			actLineId,
-			messageId,
-			characterCanonicalName,
-			location,
-			dedupedMemories,
-			dedupedEmbeddings
-		);
+		await this.insertMemoryBatch(db, storyId, actLineId, messageId, characterCanonicalName, location, dedupedMemories, dedupedEmbeddings);
 		return dedupedMemories.length;
 	}
 
@@ -364,10 +346,7 @@ export class Memory {
 		const db = getMemoryDatabase();
 		const id = crypto.randomUUID();
 
-		await db.execute('INSERT INTO vec_locations(story_id, embedding) VALUES ($1, $2)', [
-			storyId,
-			JSON.stringify(embedding),
-		]);
+		await db.execute('INSERT INTO vec_locations(story_id, embedding) VALUES ($1, $2)', [storyId, JSON.stringify(embedding)]);
 
 		const rowResult = await db.select<VecRow[]>('SELECT last_insert_rowid() as rowid');
 		const vecRowid = rowResult[0]?.rowid;
@@ -599,10 +578,10 @@ export class Memory {
 		const db = getMemoryDatabase();
 
 		// Get all vec_rowids to delete from vec_locations
-		const rows = await db.select<VecRow[]>(
-			'SELECT vec_rowid as rowid FROM location_meta WHERE story_id = $1 AND act_line_id = $2',
-			[storyId, actLineId]
-		);
+		const rows = await db.select<VecRow[]>('SELECT vec_rowid as rowid FROM location_meta WHERE story_id = $1 AND act_line_id = $2', [
+			storyId,
+			actLineId,
+		]);
 
 		// Delete from vec_locations
 		for (const row of rows) {
@@ -637,10 +616,11 @@ export class Memory {
 		}
 
 		// Delete from memory_meta
-		await db.execute(
-			`DELETE FROM memory_meta WHERE story_id = $1 AND act_line_id = $2 AND message_id IN (${placeholders})`,
-			[storyId, actLineId, ...messageIds]
-		);
+		await db.execute(`DELETE FROM memory_meta WHERE story_id = $1 AND act_line_id = $2 AND message_id IN (${placeholders})`, [
+			storyId,
+			actLineId,
+			...messageIds,
+		]);
 
 		return rows.length;
 	}
@@ -665,12 +645,88 @@ export class Memory {
 		}
 
 		// Delete from location_meta
-		await db.execute(
-			`DELETE FROM location_meta WHERE story_id = $1 AND act_line_id = $2 AND message_id IN (${placeholders})`,
-			[storyId, actLineId, ...messageIds]
-		);
+		await db.execute(`DELETE FROM location_meta WHERE story_id = $1 AND act_line_id = $2 AND message_id IN (${placeholders})`, [
+			storyId,
+			actLineId,
+			...messageIds,
+		]);
 
 		return rows.length;
+	}
+
+	async copyMemoriesForFork(
+		storyId: string,
+		fromLineId: string,
+		toLineId: string,
+		messageIds: string[]
+	): Promise<{ memoriesCopied: number; locationsCopied: number }> {
+		if (messageIds.length === 0) return { memoriesCopied: 0, locationsCopied: 0 };
+		const db = getMemoryDatabase();
+		const msgPlaceholders = messageIds.map((_, i) => `$${i + 3}`).join(', ');
+
+		// --- Copy memories (memory_meta + vec_memories) ---
+		interface MemorySourceRow {
+			vec_rowid: number;
+			content: string;
+			message_id: string;
+			character_canonical_name: string;
+			location: string;
+			embedding: string;
+		}
+		const memRows = await db.select<MemorySourceRow[]>(
+			`SELECT mm.vec_rowid, mm.content, mm.message_id, mm.character_canonical_name, mm.location, vm.embedding
+			 FROM memory_meta mm
+			 JOIN vec_memories vm ON vm.rowid = mm.vec_rowid
+			 WHERE mm.story_id = $1 AND mm.act_line_id = $2 AND mm.message_id IN (${msgPlaceholders})`,
+			[storyId, fromLineId, ...messageIds]
+		);
+
+		for (const row of memRows) {
+			await db.execute('INSERT INTO vec_memories(story_id, act_line_id, embedding) VALUES ($1, $2, $3)', [
+				storyId,
+				toLineId,
+				row.embedding,
+			]);
+			const vecResult = await db.select<VecRow[]>('SELECT last_insert_rowid() as rowid');
+			const newVecRowid = vecResult[0]?.rowid;
+			if (!newVecRowid) throw new Error('Failed to retrieve vector rowid after insert');
+
+			await db.execute(
+				`INSERT INTO memory_meta (id, vec_rowid, content, message_id, story_id, act_line_id, character_canonical_name, location)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+				[crypto.randomUUID(), newVecRowid, row.content, row.message_id, storyId, toLineId, row.character_canonical_name, row.location]
+			);
+		}
+
+		// --- Copy locations (location_meta + vec_locations) ---
+		interface LocationSourceRow {
+			vec_rowid: number;
+			location_text: string;
+			message_id: string;
+			embedding: string;
+		}
+		const locRows = await db.select<LocationSourceRow[]>(
+			`SELECT lm.vec_rowid, lm.location_text, lm.message_id, vl.embedding
+			 FROM location_meta lm
+			 JOIN vec_locations vl ON vl.rowid = lm.vec_rowid
+			 WHERE lm.story_id = $1 AND lm.act_line_id = $2 AND lm.message_id IN (${msgPlaceholders})`,
+			[storyId, fromLineId, ...messageIds]
+		);
+
+		for (const row of locRows) {
+			await db.execute('INSERT INTO vec_locations(story_id, embedding) VALUES ($1, $2)', [storyId, row.embedding]);
+			const vecResult = await db.select<VecRow[]>('SELECT last_insert_rowid() as rowid');
+			const newVecRowid = vecResult[0]?.rowid;
+			if (!newVecRowid) throw new Error('Failed to retrieve location vector rowid after insert');
+
+			await db.execute(
+				`INSERT INTO location_meta (id, vec_rowid, location_text, message_id, story_id, act_line_id)
+				 VALUES ($1, $2, $3, $4, $5, $6)`,
+				[crypto.randomUUID(), newVecRowid, row.location_text, row.message_id, storyId, toLineId]
+			);
+		}
+
+		return { memoriesCopied: memRows.length, locationsCopied: locRows.length };
 	}
 
 	async reset(): Promise<void> {
@@ -679,9 +735,7 @@ export class Memory {
 		await db.execute('DELETE FROM memory_meta');
 		await db.execute('DELETE FROM vec_locations');
 		await db.execute('DELETE FROM location_meta');
-		await db.execute(
-			"DELETE FROM memory_config WHERE key IN ('vec_dimension', 'model_key', 'loc_vec_dimension', 'loc_model_key')"
-		);
+		await db.execute("DELETE FROM memory_config WHERE key IN ('vec_dimension', 'model_key', 'loc_vec_dimension', 'loc_model_key')");
 
 		// Reset in-memory cache
 		this.vecDimension = null;
@@ -693,9 +747,7 @@ export class Memory {
 export async function knownCharacterNameList(): Promise<string[]> {
 	const db = getMemoryDatabase();
 	try {
-		const rows = await db.select<Array<{ character_canonical_name: string }>>(
-			'SELECT DISTINCT character_canonical_name FROM memory_meta'
-		);
+		const rows = await db.select<Array<{ character_canonical_name: string }>>('SELECT DISTINCT character_canonical_name FROM memory_meta');
 		return rows.map((r) => r.character_canonical_name.replace(/-/g, ' '));
 	} catch {
 		return [];
