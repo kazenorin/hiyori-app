@@ -3,11 +3,11 @@ import {
 	debug as tauriDebug,
 	error as tauriError,
 	info as tauriInfo,
-	warn as tauriWarn
+	warn as tauriWarn,
 } from '@tauri-apps/plugin-log';
-import {BaseDirectory, mkdir, writeTextFile} from '@tauri-apps/plugin-fs';
-import {toKebabCase} from '$lib/utils/string';
-import {getSettings, LOG_LEVEL_VALUES, type LogLevel} from '$lib/stores/settings.svelte';
+import { BaseDirectory, mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
+import { toKebabCase } from '$lib/utils/string';
+import { getSettings, LOG_LEVEL_VALUES, type LogLevel } from '$lib/stores/settings.svelte';
 
 let attached = false;
 
@@ -28,7 +28,7 @@ export const log = {
 	},
 
 	error(context: string, message: string, err?: unknown): Promise<void> {
-		const detail = `${message}: ${(parseErrorMessage(err))}`;
+		const detail = `${message}: ${parseErrorMessage(err)}`;
 		return tauriError(`[${context}] ${detail}`);
 	},
 
@@ -38,7 +38,7 @@ export const log = {
 
 	debug(context: string, message: string): Promise<void> {
 		return tauriDebug(`[${context}] ${message}`);
-	}
+	},
 };
 
 export async function fileLog(level: LogLevel, loggerTag: string, message: string): Promise<void> {
@@ -49,10 +49,10 @@ export async function fileLog(level: LogLevel, loggerTag: string, message: strin
 	const line = `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${message}\n`;
 	const filename = `${toKebabCase(loggerTag)}.log`;
 	try {
-		await mkdir('logs', {baseDir: BaseDirectory.AppData, recursive: true});
+		await mkdir('logs', { baseDir: BaseDirectory.AppData, recursive: true });
 		await writeTextFile(`logs/${filename}`, line, {
 			baseDir: BaseDirectory.AppData,
-			append: true
+			append: true,
 		});
 	} catch {
 		// Silent fail — file logging is best-effort
@@ -66,7 +66,7 @@ function parseErrorMessage(err?: unknown): string {
 		return err;
 	} else {
 		try {
-			return String(err)
+			return String(err);
 		} catch {
 			return 'unknown error';
 		}

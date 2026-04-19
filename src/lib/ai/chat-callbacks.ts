@@ -1,5 +1,5 @@
 import type { StreamCallbacks, StreamResultMetadata } from './streaming';
-import {createParserChain, hasContent} from './parser-chain';
+import { createParserChain, hasContent } from './parser-chain';
 import { applyParserOutput, applyReasoningDelta } from './message-updater';
 import type { GameData } from '$lib/db/messages';
 
@@ -21,7 +21,6 @@ export interface StreamAccumulator {
 export type OnStreamUpdate = (state: StreamState) => void;
 export type OnStreamError = (err: unknown) => void;
 
-
 /**
  * Creates streaming callbacks that process text through the parser chain
  * (thinking tags → game-data blocks) and accumulate state.
@@ -31,7 +30,11 @@ export type OnStreamError = (err: unknown) => void;
  */
 export function createStreamAccumulator(onUpdate?: OnStreamUpdate, onError?: OnStreamError): StreamAccumulator {
 	const chain = createParserChain();
-	const { promise: resultMetadataPromise, resolve: resolveResult, reject: rejectResult } = Promise.withResolvers<StreamResultMetadata>()
+	const {
+		promise: resultMetadataPromise,
+		resolve: resolveResult,
+		reject: rejectResult,
+	} = Promise.withResolvers<StreamResultMetadata>();
 	let state: StreamState = {
 		content: '',
 		reasoning: null,
@@ -62,7 +65,7 @@ export function createStreamAccumulator(onUpdate?: OnStreamUpdate, onError?: OnS
 				const chainOutput = chain.flush();
 				state = applyParserOutput(state, chainOutput);
 				notify();
-				resolveResult(resultMetadata)
+				resolveResult(resultMetadata);
 			},
 			onError: (err: unknown) => {
 				const chainOutput = chain.flush();
@@ -70,11 +73,11 @@ export function createStreamAccumulator(onUpdate?: OnStreamUpdate, onError?: OnS
 				notify();
 				if (onError) onError(err);
 				rejectResult(err);
-			}
+			},
 		},
 		get state() {
 			return state;
 		},
-		resultMetadata: resultMetadataPromise
+		resultMetadata: resultMetadataPromise,
 	};
 }

@@ -6,18 +6,13 @@ import {
 	loadCharacterCardExtractionPrompt,
 	loadCharacterCardExtractionSystemPrompt,
 	loadSummarizeCharactersInAct,
-	loadSystemPrompt
+	loadSystemPrompt,
 } from '$lib/fs/prompts';
 import { exportActLine } from './act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
-import {
-	getActiveStoryId,
-	getActiveActId,
-	getActiveActLineId,
-	getActiveStory
-} from '$lib/stores/stories.svelte';
+import { getActiveStoryId, getActiveActId, getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
 import { mkdir, writeTextFile, readTextFile, exists, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { toKebabCase } from '$lib/utils/string';
 import { log } from '$lib/logging/logger';
@@ -67,7 +62,7 @@ export function toCharacterEntries(summaries: CharacterSummary[]): CharacterEntr
 		importance: s.importance,
 		canonicalName: toKebabCase(s.character),
 		include: true,
-		isManual: false
+		isManual: false,
 	}));
 }
 
@@ -89,22 +84,35 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 
 	const model = createModel(config);
 
-	await logCharacterCardActivity('extraction-start', `Extracting characters from act line: ${actLineId}\n
+	await logCharacterCardActivity(
+		'extraction-start',
+		`Extracting characters from act line: ${actLineId}\n
   System Prompt:\n${systemPrompt}\n
-  Transcript:\n    ${transcript.join('\n    ')}`);
+  Transcript:\n    ${transcript.join('\n    ')}`
+	);
 
 	const messages: ModelMessage[] = [
-		{ role: 'user', content: 'I need your help to extract all the characters from the current act.\nThe following messages will contain the transcript of the current act:' },
-		...(transcript.map(toUserModelMessage)),
+		{
+			role: 'user',
+			content:
+				'I need your help to extract all the characters from the current act.\nThe following messages will contain the transcript of the current act:',
+		},
+		...transcript.map(toUserModelMessage),
 		{ role: 'user', content: 'The previous message was the end of the transcript of the current act.' },
-		{ role: 'user', content: `Extract all the characters from the current act according to the following rules: ${summarizePrompt}` }
+		{
+			role: 'user',
+			content: `Extract all the characters from the current act according to the following rules: ${summarizePrompt}`,
+		},
 	];
 	const result = await generateText({ model, system: systemPrompt, messages });
 
-	await logCharacterCardActivity('extraction-end', `
+	await logCharacterCardActivity(
+		'extraction-end',
+		`
   Result: ${result.text}
   Usage: ${JSON.stringify(result.usage, null, 4)}
-  Finish Reason: ${result.finishReason}`);
+  Finish Reason: ${result.finishReason}`
+	);
 
 	const parsed = parseCharacterJson(result.text);
 	return parsed;
@@ -131,7 +139,7 @@ function parseCharacterJson(text: string): CharacterSummary[] {
 			})
 			.map((item: Record<string, unknown>) => ({
 				character: item.character as string,
-				importance: item.importance as string
+				importance: item.importance as string,
 			}));
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);
@@ -170,7 +178,7 @@ export async function buildActLineage(): Promise<ActLineageEntry[]> {
 		lineage.push({
 			actNumber: act.actNumber,
 			actLineId: currentActLineId,
-			isMainLine: actLine?.isMainLine ?? false
+			isMainLine: actLine?.isMainLine ?? false,
 		});
 
 		if (!act.continuesFromActLineId) break;
@@ -265,10 +273,16 @@ async function loadPreviousCharacterCards(
 	const sections: string[] = [];
 	for (const entry of lineage) {
 		const card = await loadExistingCharacterCard(
-			storyFolder, entry.actNumber, canonicalName, entry.isMainLine, entry.actLineId
+			storyFolder,
+			entry.actNumber,
+			canonicalName,
+			entry.isMainLine,
+			entry.actLineId
 		);
 		if (card) {
-			sections.push(`The following message contains the previous Character Card of ${characterName} from Act ${entry.actNumber}`);
+			sections.push(
+				`The following message contains the previous Character Card of ${characterName} from Act ${entry.actNumber}`
+			);
 			sections.push(card);
 		}
 	}
@@ -283,11 +297,11 @@ function buildGenerationMessages(
 ): ModelMessage[] {
 	return [
 		{ role: 'user', content: 'The following messages will contain the transcript of the current act:' },
-		...(transcript.map(toUserModelMessage)),
+		...transcript.map(toUserModelMessage),
 		{ role: 'user', content: 'The previous message was the end of the transcript of the current act.' },
-		...(previousActCards.map(toUserModelMessage)),
-		...(existingCards.map(toUserModelMessage)),
-		{ role: 'user', content: userPrompt }
+		...previousActCards.map(toUserModelMessage),
+		...existingCards.map(toUserModelMessage),
+		{ role: 'user', content: userPrompt },
 	];
 }
 
@@ -324,7 +338,7 @@ export async function generateCharacterCard(
 		loadCharacterCardTemplate(),
 		loadCharacterCardExtractionPrompt(),
 		loadCharacterCardExtractionSystemPrompt(),
-		loadSystemPrompt()
+		loadSystemPrompt(),
 	]);
 
 	const combinedSystem = `${systemPrompt}\n\n---\n\n${extractionSystemPrompt}`;
@@ -347,7 +361,7 @@ export async function generateCharacterCard(
 
 	const [previousActCards, existingCards] = await Promise.all([
 		loadPreviousActCards(storyFolder, lineage, currentActNumber),
-		loadPreviousCharacterCards(storyFolder, lineage, entry.canonicalName, entry.character)
+		loadPreviousCharacterCards(storyFolder, lineage, entry.canonicalName, entry.character),
 	]);
 
 	const userPrompt = `Based on the information from the chat history, generate a new Character Card according to the following rules:\n${namedExtractionPrompt}\n---\n${namedTemplate}`;
@@ -355,15 +369,21 @@ export async function generateCharacterCard(
 
 	const model = createModel(config);
 
-	await logCharacterCardActivity('generation-start', `Character: ${entry.character}\n\nMessages:\n${JSON.stringify(messages, null, 2)}`);
+	await logCharacterCardActivity(
+		'generation-start',
+		`Character: ${entry.character}\n\nMessages:\n${JSON.stringify(messages, null, 2)}`
+	);
 
 	const result = await generateText({ model, system: combinedSystem, messages });
 
-	await logCharacterCardActivity('generation-end', `
+	await logCharacterCardActivity(
+		'generation-end',
+		`
   Character: ${entry.character}
   Result: ${result.text}
   Usage: ${JSON.stringify(result.usage, null, 4)}
-  Finish Reason: ${result.finishReason}`);
+  Finish Reason: ${result.finishReason}`
+	);
 
 	// Save file
 	const lineDir = buildLineDir(storyFolder, currentAct.actNumber, isMainLine, actLineId);
@@ -377,7 +397,7 @@ export async function generateCharacterCard(
 	return {
 		characterName: entry.character,
 		filePath,
-		content: result.text
+		content: result.text,
 	};
 }
 
@@ -403,9 +423,7 @@ export async function generateCharacterCards(
 	const results: CharacterCardResult[] = [];
 
 	if (parallel) {
-		const promises = selected.map((entry) =>
-			generateCharacterCard(entry, lineage)
-		);
+		const promises = selected.map((entry) => generateCharacterCard(entry, lineage));
 		const settled = await Promise.allSettled(promises);
 
 		for (let i = 0; i < settled.length; i++) {
@@ -413,11 +431,7 @@ export async function generateCharacterCards(
 			if (result.status === 'fulfilled') {
 				results.push(result.value);
 			} else {
-				await log.error(
-					'character-card',
-					`Failed to generate card for ${selected[i].character}`,
-					result.reason
-				);
+				await log.error('character-card', `Failed to generate card for ${selected[i].character}`, result.reason);
 			}
 			// Report progress after each card settles (success or failure)
 			if (onProgress) {
@@ -430,18 +444,14 @@ export async function generateCharacterCards(
 			const progress: GenerateProgress = {
 				completed: i,
 				total: selected.length,
-				currentCharacter: entry.character
+				currentCharacter: entry.character,
 			};
 
 			try {
 				const result = await generateCharacterCard(entry, lineage, onProgress, progress);
 				results.push(result);
 			} catch (err) {
-				await log.error(
-					'character-card',
-					`Failed to generate card for ${entry.character}`,
-					err
-				);
+				await log.error('character-card', `Failed to generate card for ${entry.character}`, err);
 			}
 		}
 	}

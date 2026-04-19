@@ -1,16 +1,16 @@
-import {getMainProviderConfig, getMemoryProviderConfig, settings} from '$lib/stores/settings.svelte';
-import {loadSystemPrompt} from '$lib/fs/prompts';
-import type {GameData} from '$lib/db/messages';
+import { getMainProviderConfig, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
+import { loadSystemPrompt } from '$lib/fs/prompts';
+import type { GameData } from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
-import {logMainChat} from '$lib/logging/chat-logger';
-import {type StreamState} from '$lib/ai/chat-callbacks';
-import {buildMetadata, type MessageMetadata, streamChatResponse} from "./chat-stream";
-import {runMemoryExtractionPipeline} from './memory-extraction-pipeline';
-import {Memory} from '$lib/memory/memory';
-import {streamReview} from '$lib/reviewer/review-loop';
-import {log} from '$lib/logging/logger';
-import {getActiveStoryId, getActiveActLineId} from '$lib/stores/stories.svelte';
+import { logMainChat } from '$lib/logging/chat-logger';
+import { type StreamState } from '$lib/ai/chat-callbacks';
+import { buildMetadata, type MessageMetadata, streamChatResponse } from './chat-stream';
+import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
+import { Memory } from '$lib/memory/memory';
+import { streamReview } from '$lib/reviewer/review-loop';
+import { log } from '$lib/logging/logger';
+import { getActiveStoryId, getActiveActLineId } from '$lib/stores/stories.svelte';
 
 export interface Message {
 	id: string;
@@ -54,7 +54,7 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 		content: m.content,
 		reasoning: m.reasoning,
 		metadata: parseMetadata(m.metadata),
-		gameData: m.gameData
+		gameData: m.gameData,
 	}));
 	error = null;
 }
@@ -74,10 +74,7 @@ function parseMetadata(raw: string | undefined | null): MessageMetadata | undefi
 	}
 }
 
-async function persistMessage(
-	actLineId: string,
-	message: Message
-): Promise<void> {
+async function persistMessage(actLineId: string, message: Message): Promise<void> {
 	await dbMessages.createMessage(
 		message.id,
 		'assistant',
@@ -109,9 +106,9 @@ async function handleStreamError(err: unknown, messageId: string, actLineId: str
 export async function sendMessage(
 	actLineId: string,
 	message: {
-		bodyText: string | undefined,
-		systemPrompt: string | undefined,
-		narrationContent: string | undefined
+		bodyText: string | undefined;
+		systemPrompt: string | undefined;
+		narrationContent: string | undefined;
 	}
 ): Promise<void> {
 	if (!message.bodyText && !message.systemPrompt && !message.narrationContent) {
@@ -135,14 +132,14 @@ export async function sendMessage(
 		id: responseMessageId,
 		role: 'assistant',
 		content: '',
-		reasoning: ''
+		reasoning: '',
 	};
 
 	if (!!message.bodyText && message.bodyText.trim().length > 0) {
 		const userMessage: Message = {
 			id: crypto.randomUUID(),
 			role: 'user',
-			content: message.bodyText
+			content: message.bodyText,
 		};
 
 		// Persist user message
@@ -169,11 +166,10 @@ export async function sendMessage(
 	abortController = new AbortController();
 
 	try {
-		const systemPrompt = message.systemPrompt ?? await loadSystemPrompt();
+		const systemPrompt = message.systemPrompt ?? (await loadSystemPrompt());
 
 		const narrationMsg = message.narrationContent ? [{ role: 'user' as const, content: message.narrationContent }] : [];
-		const existingMsgs = messages.slice(0, -1)
-			.map((m) => toHistoryMessage(m));
+		const existingMsgs = messages.slice(0, -1).map((m) => toHistoryMessage(m));
 		const history = [...narrationMsg, ...existingMsgs];
 
 		// Await any in-flight memory pipeline before starting a new response
@@ -182,14 +178,17 @@ export async function sendMessage(
 		}
 
 		const [resultMetadata] = await Promise.all([
-			streamChatResponse(systemPrompt, history, abortController!.signal,
+			streamChatResponse(
+				systemPrompt,
+				history,
+				abortController!.signal,
 				(state: StreamState) => {
 					const currentMessage = getCurrentMessage();
 					setCurrentMessage({
 						...currentMessage,
 						[settings.reviewerEnabled ? 'draftContent' : 'content']: state.content,
 						reasoning: state.reasoning ?? currentMessage.reasoning,
-						gameData: state.revisedGameData ?? state.gameData ?? currentMessage.gameData
+						gameData: state.revisedGameData ?? state.gameData ?? currentMessage.gameData,
 					});
 				},
 				(err: unknown) => {
@@ -197,7 +196,7 @@ export async function sendMessage(
 				},
 				providerConfig
 			).then((acc) => acc.resultMetadata),
-		])
+		]);
 
 		// Update message with accumulated content and final metadata
 		getCurrentMessage().metadata = buildMetadata(resultMetadata, providerConfig.model);
@@ -208,38 +207,32 @@ export async function sendMessage(
 			const draftContent = draftMessage.draftContent ?? draftMessage.content;
 			const historyWithDraft: { role: 'user' | 'assistant'; content: string }[] = [
 				...history,
-				{ role: 'assistant', content: draftContent }
+				{ role: 'assistant', content: draftContent },
 			];
 
-			const reviewResult = await streamReview(
-				historyWithDraft,
-				(state: StreamState) => {
-					const currentMessage = getCurrentMessage();
-					setCurrentMessage({
-						...currentMessage,
-						content: state.revisedNarrative ?? currentMessage.content,
-						reviewScratchpad: state.reviewScratchpad ?? currentMessage.reviewScratchpad,
-						reasoning: state.reasoning ?? currentMessage.reasoning,
-						gameData: state.gameData ?? currentMessage.gameData
-					});
-				}
-			);
+			const reviewResult = await streamReview(historyWithDraft, (state: StreamState) => {
+				const currentMessage = getCurrentMessage();
+				setCurrentMessage({
+					...currentMessage,
+					content: state.revisedNarrative ?? currentMessage.content,
+					reviewScratchpad: state.reviewScratchpad ?? currentMessage.reviewScratchpad,
+					reasoning: state.reasoning ?? currentMessage.reasoning,
+					gameData: state.gameData ?? currentMessage.gameData,
+				});
+			});
 
 			if (!reviewResult) {
 				setCurrentMessage({
 					...draftMessage,
 					draftContent: undefined,
 					reviewScratchpad: undefined,
-					content: draftContent
+					content: draftContent,
 				});
 			}
 		}
 
 		// Persist with accumulated content (not result.content)
-		await Promise.all([
-			persistMessage(actLineId, messages[messageIdx]),
-			logMainChat({systemPrompt, messages})
-		]);
+		await Promise.all([persistMessage(actLineId, messages[messageIdx]), logMainChat({ systemPrompt, messages })]);
 
 		// Run memory extraction pipeline in background (non-blocking)
 		if (settings.memoryEnabled) {
@@ -254,7 +247,10 @@ export async function sendMessage(
 					messages[messageIdx].id
 				)
 					.then((result) => {
-						log.debug('memory-pipeline', `Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`);
+						log.debug(
+							'memory-pipeline',
+							`Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`
+						);
 					})
 					.catch((err) => {
 						log.error('memory-pipeline', 'Pipeline failed', err);
@@ -279,57 +275,48 @@ function toHistoryMessage(message: Message): { role: 'user' | 'assistant'; conte
 	}
 	const gameDataContent = `\n\`\`\`json
 ${JSON.stringify(message.gameData ? message.gameData : placeholderContent(), null, 2)}
-\`\`\`\n`
+\`\`\`\n`;
 	return { role: 'assistant', content: message.content + gameDataContent };
 }
 
 function randomItem<T>(items: readonly T[]): T {
-	return items[Math.floor(Math.random() * items.length)]
+	return items[Math.floor(Math.random() * items.length)];
 }
 
 // Randomized history for placeholder content so that to encourage the LLM to actually offer options
 function placeholderContent(): GameData {
 	return {
 		worldState: randomWorldStateMessage(),
-		decisions: [1, 2, 3, 4].map((i) => randomPositionalDecisions(i))
-	}
+		decisions: [1, 2, 3, 4].map((i) => randomPositionalDecisions(i)),
+	};
 }
 
 function randomWorldStateMessage(): string {
-	const intros = [
-		"Refer to",
-		"Check",
-		"Look at",
-		"Review",
-		"Consult",
-		"See",
-		"Use",
-		"Read"
-	] as const
+	const intros = ['Refer to', 'Check', 'Look at', 'Review', 'Consult', 'See', 'Use', 'Read'] as const;
 
 	const subjects = [
-		"the chat history",
-		"the conversation above",
-		"the messages above",
-		"the earlier conversation",
-		"the discussion above",
-		"the story so far",
-		"the story above",
-		"what was said earlier",
-		"the earlier messages",
-		"the previous context"
-	] as const
+		'the chat history',
+		'the conversation above',
+		'the messages above',
+		'the earlier conversation',
+		'the discussion above',
+		'the story so far',
+		'the story above',
+		'what was said earlier',
+		'the earlier messages',
+		'the previous context',
+	] as const;
 
 	const endings = [
-		".",
-		" for context.",
-		" for details.",
-		" for reference.",
-		" to understand the situation.",
-		" to see what happened before."
-	] as const
+		'.',
+		' for context.',
+		' for details.',
+		' for reference.',
+		' to understand the situation.',
+		' to see what happened before.',
+	] as const;
 
-	return `${randomItem(intros)} ${randomItem(subjects)}${randomItem(endings)}`
+	return `${randomItem(intros)} ${randomItem(subjects)}${randomItem(endings)}`;
 }
 
 function randomPositionalDecisions(i: number): string {
@@ -343,8 +330,8 @@ function randomPositionalDecisions(i: number): string {
 		`I want to select option ${i}.`,
 		`My choice is option ${i}.`,
 		`For this decision, choose option ${i}.`,
-		`Option ${i} will be selected.`
-	] as const)
+		`Option ${i} will be selected.`,
+	] as const);
 }
 
 export function stopStreaming(): void {
@@ -370,16 +357,24 @@ export async function sendInitialNarration(
 	narrationContent: string,
 	systemPrompt?: string
 ): Promise<void> {
-	messages = []
-	return await sendMessage(actLineId, {bodyText: undefined, systemPrompt: systemPrompt, narrationContent: narrationContent});
+	messages = [];
+	return await sendMessage(actLineId, {
+		bodyText: undefined,
+		systemPrompt: systemPrompt,
+		narrationContent: narrationContent,
+	});
 }
 
-export async function regenerateLastResponse(actLineId: string, systemPrompt?: string, narrationContent?: string): Promise<void> {
+export async function regenerateLastResponse(
+	actLineId: string,
+	systemPrompt?: string,
+	narrationContent?: string
+): Promise<void> {
 	const currentMessages = [...messages];
 	const lastAssistantMsgIdx = currentMessages.findLastIndex((m) => m.role === 'assistant');
 	if (lastAssistantMsgIdx === -1) return;
 
-	const messageIdsToRemove = messages.slice(lastAssistantMsgIdx).map((m)=>m.id);
+	const messageIdsToRemove = messages.slice(lastAssistantMsgIdx).map((m) => m.id);
 	messages = messages.slice(0, lastAssistantMsgIdx);
 
 	try {
@@ -395,7 +390,7 @@ export async function regenerateLastResponse(actLineId: string, systemPrompt?: s
 		await log.error('regenerate-last-response', 'Memory cleanup failed', err);
 	}
 
-	await sendMessage(actLineId, {bodyText: undefined, systemPrompt: systemPrompt, narrationContent: narrationContent});
+	await sendMessage(actLineId, { bodyText: undefined, systemPrompt: systemPrompt, narrationContent: narrationContent });
 }
 
 export async function deleteLastExchange(actLineId: string): Promise<void> {
@@ -426,7 +421,10 @@ export async function deleteLastExchange(actLineId: string): Promise<void> {
 	}
 }
 
-export async function getForkSequence(actLineId: string, assistantMessageIndex: number): Promise<{ branchSeq: number; name: string }> {
+export async function getForkSequence(
+	actLineId: string,
+	assistantMessageIndex: number
+): Promise<{ branchSeq: number; name: string }> {
 	const assistantMsg = messages[assistantMessageIndex];
 	if (!assistantMsg || assistantMsg.role !== 'assistant') {
 		throw new Error('Invalid message: expected assistant message');
@@ -443,7 +441,7 @@ export async function getForkSequence(actLineId: string, assistantMessageIndex: 
 		branchSeq: assistantSeq,
 		name: userMsg
 			? `Fork from "${userMsg.content.slice(0, 30)}${userMsg.content.length > 30 ? '...' : ''}"`
-			: 'New Branch'
+			: 'New Branch',
 	};
 }
 

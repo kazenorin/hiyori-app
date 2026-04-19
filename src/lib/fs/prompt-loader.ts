@@ -65,10 +65,7 @@ async function ensureDirForPath(fullPath: string): Promise<void> {
  * Creates the file from bundled defaults if it doesn't exist.
  * Does not return the content - use ensureAndLoadBase for that.
  */
-async function ensureBaseFileExists(
-	relativePath: string,
-	defaultContent: string
-): Promise<void> {
+async function ensureBaseFileExists(relativePath: string, defaultContent: string): Promise<void> {
 	const fullPath = `${PROMPT_TEMPLATES_DIR}/${relativePath}`;
 	await ensureDirForPath(fullPath);
 
@@ -82,10 +79,7 @@ async function ensureBaseFileExists(
  * Ensure a base prompt file exists in AppData and return its content.
  * Creates the file from bundled defaults if it doesn't exist.
  */
-async function ensureAndLoadBase(
-	relativePath: string,
-	defaultContent: string
-): Promise<string> {
+async function ensureAndLoadBase(relativePath: string, defaultContent: string): Promise<string> {
 	await ensureBaseFileExists(relativePath, defaultContent);
 	const fullPath = `${PROMPT_TEMPLATES_DIR}/${relativePath}`;
 	return await readTextFile(fullPath, { baseDir: BaseDirectory.AppData });
@@ -99,11 +93,7 @@ async function ensureAndLoadBase(
  * 2. Base file: `config/prompt-templates/<relativePath>`
  * 3. Bundled default (in-memory)
  */
-async function loadWithOverride(
-	storyFolder: string,
-	relativePath: string,
-	defaultContent: string
-): Promise<string> {
+async function loadWithOverride(storyFolder: string, relativePath: string, defaultContent: string): Promise<string> {
 	const storyPath = `${storyFolder}/prompt-templates/${relativePath}`;
 
 	try {
@@ -122,10 +112,7 @@ async function loadWithOverride(
  * Load a global prompt template (no story override).
  * Ensures the base file exists in AppData, then returns its content.
  */
-export async function loadPrompt(
-	relativePath: string,
-	defaultContent: string
-): Promise<string> {
+export async function loadPrompt(relativePath: string, defaultContent: string): Promise<string> {
 	try {
 		return await ensureAndLoadBase(relativePath, defaultContent);
 	} catch (err) {

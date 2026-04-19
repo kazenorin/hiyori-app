@@ -56,7 +56,7 @@ export function createMockDatabase() {
 		/** Clear all tables. */
 		clear() {
 			tables.clear();
-		}
+		},
 	};
 
 	function select(query: string, params?: (string | number | boolean | null | undefined)[]) {

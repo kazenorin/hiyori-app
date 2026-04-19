@@ -21,7 +21,7 @@ export async function getAppState(): Promise<AppState> {
 		? {
 				activeStoryId: rows[0].active_story_id,
 				activeActId: rows[0].active_act_id,
-				activeActLineId: rows[0].active_act_line_id
+				activeActLineId: rows[0].active_act_line_id,
 			}
 		: { activeStoryId: null, activeActId: null, activeActLineId: null };
 }
@@ -36,18 +36,12 @@ export async function setActiveStory(storyId: string | null): Promise<void> {
 
 export async function setActiveAct(actId: string | null): Promise<void> {
 	const db = getDatabase();
-	await db.execute(
-		'UPDATE app_state SET active_act_id = $1, active_act_line_id = NULL WHERE id = 1',
-		[actId]
-	);
+	await db.execute('UPDATE app_state SET active_act_id = $1, active_act_line_id = NULL WHERE id = 1', [actId]);
 }
 
 export async function setActiveActLine(actLineId: string | null): Promise<void> {
 	const db = getDatabase();
-	await db.execute(
-		'UPDATE app_state SET active_act_line_id = $1 WHERE id = 1',
-		[actLineId]
-	);
+	await db.execute('UPDATE app_state SET active_act_line_id = $1 WHERE id = 1', [actLineId]);
 }
 
 export async function setActiveAll(

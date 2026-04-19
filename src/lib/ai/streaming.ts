@@ -1,7 +1,7 @@
 import { streamText } from 'ai';
 import type { LanguageModel } from 'ai';
 import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
-import {log, fileLog} from "$lib/logging/logger";
+import { log, fileLog } from '$lib/logging/logger';
 
 export interface StreamConfig {
 	model: LanguageModel;
@@ -34,10 +34,7 @@ export interface StreamResultMetadata {
  * Handles the streaming loop, metadata capture, and timing.
  * Does NOT handle error recovery — callers should wrap in try/catch.
  */
-export async function executeStream(
-	config: StreamConfig,
-	callbacks: StreamCallbacks
-): Promise<void> {
+export async function executeStream(config: StreamConfig, callbacks: StreamCallbacks): Promise<void> {
 	const startTime = Date.now();
 
 	try {
@@ -46,7 +43,7 @@ export async function executeStream(
 			messages: config.messages,
 			system: config.systemPrompt,
 			abortSignal: config.abortSignal,
-			providerOptions: config.providerOptions
+			providerOptions: config.providerOptions,
 		});
 
 		for await (const part of result.fullStream) {
@@ -60,21 +57,25 @@ export async function executeStream(
 					}
 					break;
 				case 'error':
-					callbacks.onError(part.error)
+					callbacks.onError(part.error);
 					await fileLog('error', 'streaming', formatPartError(part.error));
-					return
+					return;
 			}
 		}
 
 		const [usage, finishReason, text] = await Promise.all([
 			result.usage,
 			result.finishReason.then((s) => s ?? 'unknown'),
-			result.text
+			result.text,
 		]);
 
 		if (text.trim().length === 0) {
-			callbacks.onError(new Error('empty response from stream'))
-			await fileLog('warn', 'streaming', `empty body\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`);
+			callbacks.onError(new Error('empty response from stream'));
+			await fileLog(
+				'warn',
+				'streaming',
+				`empty body\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`
+			);
 		} else {
 			callbacks.onComplete({
 				finishReason,
@@ -82,15 +83,19 @@ export async function executeStream(
 					...usage,
 					inputTokens: usage.inputTokens ?? 0,
 					outputTokens: usage.outputTokens ?? 0,
-					totalTokens: usage.totalTokens ?? 0
+					totalTokens: usage.totalTokens ?? 0,
 				},
-				durationMs: Date.now() - startTime
+				durationMs: Date.now() - startTime,
 			});
 
-			await fileLog('debug', 'streaming', `${text}\n\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`);
+			await fileLog(
+				'debug',
+				'streaming',
+				`${text}\n\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`
+			);
 		}
 	} catch (err: unknown) {
-		callbacks.onError(err)
+		callbacks.onError(err);
 		await fileLog('error', 'streaming', formatPartError(err));
 	}
 }
@@ -100,7 +105,7 @@ function formatPartError(error: unknown): string {
 		return error.message;
 	} else {
 		try {
-			return String(error)
+			return String(error);
 		} catch {
 			return 'unknown error';
 		}

@@ -1,13 +1,7 @@
 // Transcript parsers for multiple JSON formats
 
 import type { GameData } from '$lib/db/messages';
-import type {
-	TranscriptFormat,
-	ParsedTranscript,
-	ParsedMessage,
-	OpenWebUIExport,
-	OpenWebUIMessage
-} from './types';
+import type { TranscriptFormat, ParsedTranscript, ParsedMessage, OpenWebUIExport, OpenWebUIMessage } from './types';
 import { validateFileSize } from '$lib/utils/async';
 
 // === Format Detection ===
@@ -35,12 +29,7 @@ export function detectTranscriptFormat(json: unknown): TranscriptFormat {
 	// Check for Open WebUI format: array with chat.history.messages
 	if (Array.isArray(json) && json.length > 0) {
 		const first = json[0];
-		if (
-			isRecord(first) &&
-			typeof first.title === 'string' &&
-			isRecord(first.chat) &&
-			isRecord(first.chat.history)
-		) {
+		if (isRecord(first) && typeof first.title === 'string' && isRecord(first.chat) && isRecord(first.chat.history)) {
 			return 'openwebui';
 		}
 	}
@@ -76,10 +65,7 @@ export interface AppExportMessage {
 	game_data?: string;
 }
 
-export function parseAppExportFormat(
-	json: unknown,
-	skipOptionalMalformed: boolean
-): ParsedTranscript {
+export function parseAppExportFormat(json: unknown, skipOptionalMalformed: boolean): ParsedTranscript {
 	if (!isAppExportFormat(json)) {
 		throw new Error('Invalid App Export format');
 	}
@@ -92,7 +78,7 @@ export function parseAppExportFormat(
 
 		const parsedMsg: ParsedMessage = {
 			role: msg.role,
-			content: msg.content
+			content: msg.content,
 		};
 
 		if (msg.reasoning) {
@@ -160,7 +146,7 @@ export function parseSimpleOpenAIFormat(json: unknown): ParsedTranscript {
 
 		const parsedMsg: ParsedMessage = {
 			role: msg.role,
-			content: msg.content
+			content: msg.content,
 		};
 
 		// Support both reasoning and reasoning_content
@@ -196,10 +182,7 @@ function isSimpleOpenAIFormat(json: unknown): boolean {
 
 // === Format C: Open WebUI Format ===
 
-export function parseOpenWebUIFormat(
-	json: unknown,
-	skipOptionalMalformed: boolean
-): ParsedTranscript {
+export function parseOpenWebUIFormat(json: unknown, skipOptionalMalformed: boolean): ParsedTranscript {
 	if (!isOpenWebUIFormat(json)) {
 		throw new Error('Invalid Open WebUI format');
 	}
@@ -237,9 +220,7 @@ export function parseOpenWebUIFormat(
 	}
 
 	// Convert to ParsedMessage format
-	const parsed: ParsedMessage[] = longestSequence.map((msg) =>
-		convertOpenWebUIMessage(msg, skipOptionalMalformed)
-	);
+	const parsed: ParsedMessage[] = longestSequence.map((msg) => convertOpenWebUIMessage(msg, skipOptionalMalformed));
 
 	return { format: 'openwebui', messages: parsed };
 }
@@ -250,17 +231,16 @@ function isOpenWebUIFormat(json: unknown): boolean {
 	const chat = first.chat as Record<string, unknown> | undefined;
 	return (
 		typeof first.title === 'string' &&
-		chat !== null && chat !== undefined &&
+		chat !== null &&
+		chat !== undefined &&
 		typeof chat === 'object' &&
-		chat.history !== null && chat.history !== undefined &&
+		chat.history !== null &&
+		chat.history !== undefined &&
 		typeof chat.history === 'object'
 	);
 }
 
-function buildSequence(
-	head: OpenWebUIMessage,
-	idToMessage: Map<string, OpenWebUIMessage>
-): OpenWebUIMessage[] {
+function buildSequence(head: OpenWebUIMessage, idToMessage: Map<string, OpenWebUIMessage>): OpenWebUIMessage[] {
 	const sequence: OpenWebUIMessage[] = [head];
 	const visited = new Set<string>([head.id]);
 	let current = head;
@@ -281,13 +261,10 @@ function buildSequence(
 	return sequence;
 }
 
-function convertOpenWebUIMessage(
-	msg: OpenWebUIMessage,
-	skipOptionalMalformed: boolean
-): ParsedMessage {
+function convertOpenWebUIMessage(msg: OpenWebUIMessage, skipOptionalMalformed: boolean): ParsedMessage {
 	const parsed: ParsedMessage = {
 		role: msg.role,
-		content: msg.content
+		content: msg.content,
 	};
 
 	if (msg.output && msg.output.length > 0) {
@@ -365,10 +342,7 @@ function parseGameData(raw: string, skipOptionalMalformed: boolean): GameData | 
 
 // === Main Parse Entry Point ===
 
-export async function parseTranscriptFile(
-	file: File,
-	skipOptionalMalformed: boolean
-): Promise<ParsedTranscript> {
+export async function parseTranscriptFile(file: File, skipOptionalMalformed: boolean): Promise<ParsedTranscript> {
 	validateFileSize(file);
 	const text = await file.text();
 	let json: unknown;

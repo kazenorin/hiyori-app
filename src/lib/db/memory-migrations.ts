@@ -24,7 +24,7 @@ const memoryMigrationStatements: string[][] = [
 		`CREATE INDEX IF NOT EXISTS idx_memory_meta_story ON memory_meta(story_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_memory_meta_act_line ON memory_meta(act_line_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_memory_meta_character ON memory_meta(character_canonical_name)`,
-		`CREATE INDEX IF NOT EXISTS idx_memory_meta_message ON memory_meta(message_id)`
+		`CREATE INDEX IF NOT EXISTS idx_memory_meta_message ON memory_meta(message_id)`,
 	],
 	[
 		`CREATE TABLE IF NOT EXISTS location_meta (
@@ -38,8 +38,8 @@ const memoryMigrationStatements: string[][] = [
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_location_meta_story ON location_meta(story_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_location_meta_act_line ON location_meta(act_line_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_location_meta_message ON location_meta(message_id)`
-	]
+		`CREATE INDEX IF NOT EXISTS idx_location_meta_message ON location_meta(message_id)`,
+	],
 ];
 
 export async function runMemoryMigrations(): Promise<void> {
@@ -51,9 +51,7 @@ export async function runMemoryMigrations(): Promise<void> {
 		)
 	`);
 
-	const result = await db.select<SchemaVersion[]>(
-		'SELECT version FROM schema_version ORDER BY version DESC LIMIT 1'
-	);
+	const result = await db.select<SchemaVersion[]>('SELECT version FROM schema_version ORDER BY version DESC LIMIT 1');
 	const currentVersion = result.length > 0 ? result[0].version : 0;
 
 	for (let i = currentVersion; i < memoryMigrationStatements.length; i++) {

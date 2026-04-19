@@ -11,7 +11,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	if (!formData.storyName.trim()) {
 		warnings.push({
 			field: 'storyName',
-			message: 'Story name is empty — a placeholder name will be auto-generated.'
+			message: 'Story name is empty — a placeholder name will be auto-generated.',
 		});
 	}
 
@@ -27,7 +27,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 					field: `act-${act.id}`,
 					message: hasMultipleActs
 						? 'Each act must have either an act/chapter file or a transcript when there are multiple acts.'
-						: 'Each act must have either an act/chapter file or a transcript when no world building file is provided.'
+						: 'Each act must have either an act/chapter file or a transcript when no world building file is provided.',
 				});
 			}
 		}
@@ -38,7 +38,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (!act.name.trim()) {
 			warnings.push({
 				field: `act-${act.id}-name`,
-				message: `Act ${formData.acts.indexOf(act) + 1} name is empty — a placeholder name will be auto-generated.`
+				message: `Act ${formData.acts.indexOf(act) + 1} name is empty — a placeholder name will be auto-generated.`,
 			});
 		}
 	}
@@ -48,7 +48,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (!character.cardFile) {
 			warnings.push({
 				field: `character-${character.id}`,
-				message: 'Character card file is missing — character will be skipped during import.'
+				message: 'Character card file is missing — character will be skipped during import.',
 			});
 		}
 	}
@@ -58,7 +58,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (character.cardFile && !character.name.trim()) {
 			warnings.push({
 				field: `character-${character.id}-name`,
-				message: 'Character name is empty — a name will be derived from the card content.'
+				message: 'Character name is empty — a name will be derived from the card content.',
 			});
 		}
 	}
@@ -67,20 +67,20 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	if (formData.worldFile && formData.worldFile.size > MAX_FILE_SIZE) {
 		errors.push({
 			field: 'worldFile',
-			message: `World file too large (${(formData.worldFile.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`
+			message: `World file too large (${(formData.worldFile.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
 		});
 	}
 	for (const act of formData.acts) {
 		if (act.actFile && act.actFile.size > MAX_FILE_SIZE) {
 			errors.push({
 				field: `act-${act.id}-file`,
-				message: `Act file too large (${(act.actFile.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`
+				message: `Act file too large (${(act.actFile.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
 			});
 		}
 		if (act.transcript && act.transcript.size > MAX_FILE_SIZE) {
 			errors.push({
 				field: `act-${act.id}-transcript`,
-				message: `Transcript file too large (${(act.transcript.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`
+				message: `Transcript file too large (${(act.transcript.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
 			});
 		}
 	}
@@ -88,7 +88,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (character.cardFile && character.cardFile.size > MAX_FILE_SIZE) {
 			errors.push({
 				field: `character-${character.id}-file`,
-				message: `Character card too large (${(character.cardFile.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`
+				message: `Character card too large (${(character.cardFile.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
 			});
 		}
 	}
@@ -97,7 +97,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	if (!hasWorldFile && formData.acts.length === 0 && formData.characters.length === 0) {
 		errors.push({
 			field: 'form',
-			message: 'At least a world building file, an act, or a character must be provided.'
+			message: 'At least a world building file, an act, or a character must be provided.',
 		});
 	}
 
@@ -105,13 +105,13 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	if (formData.retryCount < 0 || formData.retryCount > 20) {
 		errors.push({
 			field: 'retryCount',
-			message: 'LLM Retry Count must be between 0 and 20.'
+			message: 'LLM Retry Count must be between 0 and 20.',
 		});
 	}
 	if (formData.backoffIntervalSeconds < 1 || formData.backoffIntervalSeconds > 60) {
 		errors.push({
 			field: 'backoffIntervalSeconds',
-			message: 'Backoff Interval must be between 1 and 60 seconds.'
+			message: 'Backoff Interval must be between 1 and 60 seconds.',
 		});
 	}
 
@@ -120,13 +120,13 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (act.actFile && !isValidTextFile(act.actFile)) {
 			errors.push({
 				field: `act-${act.id}-file`,
-				message: 'Act/chapter file must be a .md or .txt file.'
+				message: 'Act/chapter file must be a .md or .txt file.',
 			});
 		}
 		if (act.transcript && !isValidJsonFile(act.transcript)) {
 			errors.push({
 				field: `act-${act.id}-transcript`,
-				message: 'Transcript file must be a .json file.'
+				message: 'Transcript file must be a .json file.',
 			});
 		}
 	}
@@ -136,7 +136,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (character.cardFile && !isValidTextFile(character.cardFile)) {
 			errors.push({
 				field: `character-${character.id}-file`,
-				message: 'Character card file must be a .md or .txt file.'
+				message: 'Character card file must be a .md or .txt file.',
 			});
 		}
 	}
@@ -144,7 +144,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	return {
 		isValid: errors.length === 0,
 		errors,
-		warnings
+		warnings,
 	};
 }
 

@@ -52,7 +52,7 @@ function rowToMessage(row: MessageRow): Message {
 		reasoning: row.reasoning ?? undefined,
 		metadata: row.metadata ?? undefined,
 		gameData: parseGameData(row.game_data),
-		createdAt: row.created_at
+		createdAt: row.created_at,
 	};
 }
 
@@ -78,7 +78,7 @@ export async function createMessage(
 		reasoning,
 		metadata,
 		gameData,
-		createdAt: now
+		createdAt: now,
 	};
 }
 

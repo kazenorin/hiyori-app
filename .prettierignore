@@ -1,0 +1,9 @@
+.svelte-kit/
+build/
+dist/
+node_modules/
+src-tauri/
+*.min.js
+*.local
+package-lock.json
+skills-lock.json

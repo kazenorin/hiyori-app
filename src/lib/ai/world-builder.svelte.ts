@@ -1,8 +1,8 @@
-import {getMainProviderConfig, type ProviderConfig} from '$lib/stores/settings.svelte';
-import {loadWorldBuilderSystemPrompt, loadWorldTemplate} from '$lib/fs/prompts';
-import {generateWorldBuilderLogFilename, logWorldBuilderChat} from '$lib/logging/chat-logger';
-import {type StreamAccumulator, type StreamState} from "$lib/ai/chat-callbacks";
-import {streamChatResponse} from "./chat-stream";
+import { getMainProviderConfig, type ProviderConfig } from '$lib/stores/settings.svelte';
+import { loadWorldBuilderSystemPrompt, loadWorldTemplate } from '$lib/fs/prompts';
+import { generateWorldBuilderLogFilename, logWorldBuilderChat } from '$lib/logging/chat-logger';
+import { type StreamAccumulator, type StreamState } from '$lib/ai/chat-callbacks';
+import { streamChatResponse } from './chat-stream';
 
 export interface WorldBuilderMessage {
 	id: string;
@@ -11,7 +11,7 @@ export interface WorldBuilderMessage {
 }
 
 const COMPLETION_MARKER = '[WORLD_BUILDER_COMPLETE]';
-const seedMsg = {role: 'user' as const, content: 'I want to create a new story. Please help me build a world.'};
+const seedMsg = { role: 'user' as const, content: 'I want to create a new story. Please help me build a world.' };
 
 let isActive = $state(false);
 let messages = $state<WorldBuilderMessage[]>([]);
@@ -121,7 +121,7 @@ export async function enterWorldBuilderMode(): Promise<void> {
 	cachedSystemPrompt = await loadWorldBuilderSystemPrompt();
 	cachedWorldTemplate = await loadWorldTemplate();
 
-	await streamNextResponse()
+	await streamNextResponse();
 }
 
 export async function sendWorldBuilderMessage(text: string): Promise<void> {
@@ -130,7 +130,7 @@ export async function sendWorldBuilderMessage(text: string): Promise<void> {
 	const userMessage: WorldBuilderMessage = {
 		id: crypto.randomUUID(),
 		role: 'user',
-		content: text
+		content: text,
 	};
 
 	await streamNextResponse(userMessage);
@@ -164,7 +164,10 @@ export async function deleteLastWorldBuilderExchange(): Promise<void> {
 		return;
 	}
 
-	const lastUserIdx = messages.slice(0, lastMessageIdx).map((m) => m.role).lastIndexOf('user');
+	const lastUserIdx = messages
+		.slice(0, lastMessageIdx)
+		.map((m) => m.role)
+		.lastIndexOf('user');
 	if (lastUserIdx === -1) {
 		messages = messages.filter((_, i) => i !== lastMessageIdx);
 		return;
@@ -180,19 +183,19 @@ async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<vo
 		return;
 	}
 
-	const responseMessage: WorldBuilderMessage = {id: crypto.randomUUID(), role: 'assistant', content: ''};
+	const responseMessage: WorldBuilderMessage = { id: crypto.randomUUID(), role: 'assistant', content: '' };
 	if (userMessage) {
 		messages = [...messages, userMessage, responseMessage];
 	} else {
 		messages = [...messages, responseMessage];
 	}
-	const messageIdx = messages.length - 1
+	const messageIdx = messages.length - 1;
 
 	isStreaming = true;
 	abortController = new AbortController();
 
 	try {
-		const existingMsgs = messages.slice(0, -1).map((m) => ({role: m.role, content: m.content}));
+		const existingMsgs = messages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
 		const history = [seedMsg, ...existingMsgs];
 		await streamWorldBuilderChat(history, messageIdx, abortController.signal, providerConfig);
 		parseCompletionMarker(messages[messageIdx].content);
@@ -207,7 +210,7 @@ async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<vo
 }
 
 async function streamWorldBuilderChat(
-	history: { role: "user" | "assistant"; content: string }[],
+	history: { role: 'user' | 'assistant'; content: string }[],
 	messageIdx: number,
 	abortSignal: AbortSignal,
 	providerConfig: ProviderConfig
@@ -215,11 +218,20 @@ async function streamWorldBuilderChat(
 	const fullSystemPrompt = buildFullSystemPrompt();
 	const result = await Promise.all([
 		logWorldBuilderChat({
-			systemPrompt: fullSystemPrompt, messages: history, logFilename: logFilePath ?? undefined
+			systemPrompt: fullSystemPrompt,
+			messages: history,
+			logFilename: logFilePath ?? undefined,
 		}),
-		streamChatResponse(fullSystemPrompt, history, abortSignal, (state: StreamState) => {
-			messages[messageIdx] = {...messages[messageIdx], content: state.content};
-		}, () => {}, providerConfig)
-	])
-	return result[1]
+		streamChatResponse(
+			fullSystemPrompt,
+			history,
+			abortSignal,
+			(state: StreamState) => {
+				messages[messageIdx] = { ...messages[messageIdx], content: state.content };
+			},
+			() => {},
+			providerConfig
+		),
+	]);
+	return result[1];
 }

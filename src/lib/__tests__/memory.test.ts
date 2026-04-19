@@ -18,11 +18,11 @@ const mockDb = {
 			return mockDbSelectResults.shift();
 		}
 		return [];
-	})
+	}),
 };
 
 vi.mock('$lib/db/memory-database', () => ({
-	getMemoryDatabase: () => mockDb
+	getMemoryDatabase: () => mockDb,
 }));
 
 // Mock the AI SDK embed/embedMany
@@ -30,18 +30,18 @@ const mockEmbedding = [0.1, 0.2, 0.3, 0.4]; // dimension 4
 
 vi.mock('ai', () => ({
 	embed: vi.fn(async () => ({ embedding: mockEmbedding })),
-	embedMany: vi.fn(async () => ({ embeddings: [mockEmbedding, mockEmbedding] }))
+	embedMany: vi.fn(async () => ({ embeddings: [mockEmbedding, mockEmbedding] })),
 }));
 
 // Mock provider
 vi.mock('$lib/ai/provider', () => ({
-	createEmbeddingModel: vi.fn(() => ({}))
+	createEmbeddingModel: vi.fn(() => ({})),
 }));
 
 // Mock crypto.randomUUID
 let uuidCounter = 0;
 vi.stubGlobal('crypto', {
-	randomUUID: () => `test-uuid-${++uuidCounter}`
+	randomUUID: () => `test-uuid-${++uuidCounter}`,
 });
 
 const testConfig: ProviderConfig = {
@@ -51,7 +51,7 @@ const testConfig: ProviderConfig = {
 	apiType: 'responses',
 	baseURL: 'https://api.openai.com/v1',
 	model: 'text-embedding-3-small',
-	apiKey: 'sk-test-key'
+	apiKey: 'sk-test-key',
 };
 
 const MODEL_KEY = 'openai-text-embedding-3-small-https://api.openai.com/v1';
@@ -69,7 +69,7 @@ function setupMocksForExistingTable(dimension: number, modelKey: string) {
 	// memory_config query
 	mockDbSelectResults.push([
 		{ key: 'vec_dimension', value: String(dimension) },
-		{ key: 'model_key', value: modelKey }
+		{ key: 'model_key', value: modelKey },
 	]);
 }
 
@@ -92,17 +92,22 @@ describe('Memory', () => {
 
 		// Re-mock after resetModules
 		vi.doMock('$lib/db/memory-database', () => ({
-			getMemoryDatabase: () => mockDb
+			getMemoryDatabase: () => mockDb,
 		}));
 		vi.doMock('ai', () => ({
 			embed: vi.fn(async () => ({ embedding: mockEmbedding })),
-			embedMany: vi.fn(async () => ({ embeddings: [[1, 0, 0, 0], [0, 1, 0, 0]] }))
+			embedMany: vi.fn(async () => ({
+				embeddings: [
+					[1, 0, 0, 0],
+					[0, 1, 0, 0],
+				],
+			})),
 		}));
 		vi.doMock('$lib/ai/provider', () => ({
-			createEmbeddingModel: vi.fn(() => ({}))
+			createEmbeddingModel: vi.fn(() => ({})),
 		}));
 		vi.stubGlobal('crypto', {
-			randomUUID: () => `test-uuid-${++uuidCounter}`
+			randomUUID: () => `test-uuid-${++uuidCounter}`,
 		});
 
 		const mod = await import('$lib/memory/memory');
@@ -186,56 +191,58 @@ describe('Memory', () => {
 			// Find location_meta insert
 			const metaInsert = mockDbExecuteCalls.find(([q]) => q.includes('INSERT INTO location_meta'));
 			expect(metaInsert).toBeDefined();
-			});
+		});
 
-			it('skips similar location with cosine distance < 0.1', async () => {
-				// First call: insert succeeds. Second call: rejected by similarity.
-				mockDbSelectResults = [
-					// First addLocation
-					[{ count: 0 }],      // isLocationExactMatch
-					[],                   // sqlite_master (no table)
-					[],                   // isLocationDuplicate (empty)
-					[{ rowid: 42 }],     // last_insert_rowid
-					// Second addLocation (different text, same embedding)
-					[{ count: 0 }],      // isLocationExactMatch (different text)
-					[{ name: 'vec_locations' }], // sqlite_master (exists)
-					[
-						{ key: 'loc_vec_dimension', value: '4' },
-						{ key: 'loc_model_key', value: MODEL_KEY }
-					],                   // memory_config
-					[{ distance: 0.05 }] // isLocationDuplicate (similar found)
-				];
+		it('skips similar location with cosine distance < 0.1', async () => {
+			// First call: insert succeeds. Second call: rejected by similarity.
+			mockDbSelectResults = [
+				// First addLocation
+				[{ count: 0 }], // isLocationExactMatch
+				[], // sqlite_master (no table)
+				[], // isLocationDuplicate (empty)
+				[{ rowid: 42 }], // last_insert_rowid
+				// Second addLocation (different text, same embedding)
+				[{ count: 0 }], // isLocationExactMatch (different text)
+				[{ name: 'vec_locations' }], // sqlite_master (exists)
+				[
+					{ key: 'loc_vec_dimension', value: '4' },
+					{ key: 'loc_model_key', value: MODEL_KEY },
+				], // memory_config
+				[{ distance: 0.05 }], // isLocationDuplicate (similar found)
+			];
 
-				const memory = new Memory(testConfig);
-				const first = await memory.addLocation('story-1', 'line-1', 'msg-1', 'The Ancient Ruins');
-				expect(first).toBe(true);
+			const memory = new Memory(testConfig);
+			const first = await memory.addLocation('story-1', 'line-1', 'msg-1', 'The Ancient Ruins');
+			expect(first).toBe(true);
 
-				// Clear execute calls to count inserts on second call
-				mockDbExecuteCalls = [];
+			// Clear execute calls to count inserts on second call
+			mockDbExecuteCalls = [];
 
-				const second = await memory.addLocation('story-1', 'line-1', 'msg-2', 'The Old Ruins');
-				expect(second).toBe(false);
+			const second = await memory.addLocation('story-1', 'line-1', 'msg-2', 'The Old Ruins');
+			expect(second).toBe(false);
 
-				// No new inserts should have happened
-				expect(mockDbExecuteCalls.some(([q]) => q.includes('INSERT INTO vec_locations'))).toBe(false);
-				expect(mockDbExecuteCalls.some(([q]) => q.includes('INSERT INTO location_meta'))).toBe(false);
-			});
+			// No new inserts should have happened
+			expect(mockDbExecuteCalls.some(([q]) => q.includes('INSERT INTO vec_locations'))).toBe(false);
+			expect(mockDbExecuteCalls.some(([q]) => q.includes('INSERT INTO location_meta'))).toBe(false);
+		});
 	});
 
 	describe('search', () => {
 		it('queries with partition key constraint', async () => {
 			setupMocksForExistingTable(4, MODEL_KEY);
 			// KNN result
-			mockDbSelectResults.push([{
-				id: 'mem-1',
-				content: 'Elena fought the dragon.',
-				story_id: 'story-1',
-				act_line_id: 'line-1',
-				character_canonical_name: 'elena',
-				location: 'cave',
-				created_at: '2026-01-01',
-				distance: 0.15
-			}]);
+			mockDbSelectResults.push([
+				{
+					id: 'mem-1',
+					content: 'Elena fought the dragon.',
+					story_id: 'story-1',
+					act_line_id: 'line-1',
+					character_canonical_name: 'elena',
+					location: 'cave',
+					created_at: '2026-01-01',
+					distance: 0.15,
+				},
+			]);
 
 			const memory = new Memory(testConfig);
 			const results = await memory.search('dragon fight', { storyId: 'story-1' });
@@ -309,18 +316,18 @@ describe('Memory', () => {
 			setupMocksForExistingTable(1536, MODEL_KEY); // Wrong dimension (1536 vs 4)
 
 			const memory = new Memory(testConfig);
-			await expect(
-				memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['A memory.'])
-			).rejects.toThrow('Embedding dimension mismatch');
+			await expect(memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['A memory.'])).rejects.toThrow(
+				'Embedding dimension mismatch'
+			);
 		});
 
 		it('throws on model key mismatch with existing table', async () => {
 			setupMocksForExistingTable(4, 'different-model-key');
 
 			const memory = new Memory(testConfig);
-			await expect(
-				memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['A memory.'])
-			).rejects.toThrow('Embedding model changed');
+			await expect(memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['A memory.'])).rejects.toThrow(
+				'Embedding model changed'
+			);
 		});
 	});
 

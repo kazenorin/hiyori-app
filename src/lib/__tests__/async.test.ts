@@ -69,7 +69,8 @@ describe('async utilities', () => {
 		});
 
 		it('retries on failure and returns result', async () => {
-			const fn = vi.fn()
+			const fn = vi
+				.fn()
 				.mockRejectedValueOnce(new Error('Attempt 1'))
 				.mockRejectedValueOnce(new Error('Attempt 2'))
 				.mockResolvedValue('success');
@@ -83,17 +84,13 @@ describe('async utilities', () => {
 		it('throws last error after max attempts', async () => {
 			const fn = vi.fn().mockRejectedValue(new Error('Persistent failure'));
 
-			await expect(
-				withRetry(fn, { maxAttempts: 3, backoffMs: 10 })
-			).rejects.toThrow('Persistent failure');
+			await expect(withRetry(fn, { maxAttempts: 3, backoffMs: 10 })).rejects.toThrow('Persistent failure');
 
 			expect(fn).toHaveBeenCalledTimes(3);
 		});
 
 		it('calls onRetry callback between attempts', async () => {
-			const fn = vi.fn()
-				.mockRejectedValueOnce(new Error('First'))
-				.mockResolvedValue('success');
+			const fn = vi.fn().mockRejectedValueOnce(new Error('First')).mockResolvedValue('success');
 			const onRetry = vi.fn();
 
 			await withRetry(fn, { maxAttempts: 3, backoffMs: 10, onRetry });
@@ -107,18 +104,14 @@ describe('async utilities', () => {
 			const fn = vi.fn().mockRejectedValue(new Error('Non-retryable'));
 			const shouldRetry = vi.fn().mockReturnValue(false);
 
-			await expect(
-				withRetry(fn, { maxAttempts: 3, backoffMs: 10, shouldRetry })
-			).rejects.toThrow('Non-retryable');
+			await expect(withRetry(fn, { maxAttempts: 3, backoffMs: 10, shouldRetry })).rejects.toThrow('Non-retryable');
 
 			expect(fn).toHaveBeenCalledTimes(1); // No retries
 			expect(shouldRetry).toHaveBeenCalledTimes(1);
 		});
 
 		it('retries when shouldRetry returns true', async () => {
-			const fn = vi.fn()
-				.mockRejectedValueOnce(new Error('Retryable'))
-				.mockResolvedValue('success');
+			const fn = vi.fn().mockRejectedValueOnce(new Error('Retryable')).mockResolvedValue('success');
 			const shouldRetry = vi.fn().mockReturnValue(true);
 
 			await withRetry(fn, { maxAttempts: 3, backoffMs: 10, shouldRetry });
@@ -128,7 +121,8 @@ describe('async utilities', () => {
 		});
 
 		it('increases delay with each retry', async () => {
-			const fn = vi.fn()
+			const fn = vi
+				.fn()
 				.mockRejectedValueOnce(new Error('1'))
 				.mockRejectedValueOnce(new Error('2'))
 				.mockResolvedValue('success');
@@ -143,9 +137,7 @@ describe('async utilities', () => {
 		});
 
 		it('handles non-Error rejections', async () => {
-			const fn = vi.fn()
-				.mockRejectedValueOnce('string error')
-				.mockResolvedValue('success');
+			const fn = vi.fn().mockRejectedValueOnce('string error').mockResolvedValue('success');
 
 			const onRetry = vi.fn();
 			await withRetry(fn, { maxAttempts: 2, backoffMs: 10, onRetry });
@@ -157,9 +149,7 @@ describe('async utilities', () => {
 		it('works with 1 max attempt', async () => {
 			const fn = vi.fn().mockRejectedValue(new Error('Fail'));
 
-			await expect(
-				withRetry(fn, { maxAttempts: 1, backoffMs: 10 })
-			).rejects.toThrow('Fail');
+			await expect(withRetry(fn, { maxAttempts: 1, backoffMs: 10 })).rejects.toThrow('Fail');
 
 			expect(fn).toHaveBeenCalledTimes(1);
 		});
@@ -167,9 +157,7 @@ describe('async utilities', () => {
 		it('handles undefined rejection gracefully', async () => {
 			const fn = vi.fn().mockRejectedValue(undefined);
 
-			await expect(
-				withRetry(fn, { maxAttempts: 1, backoffMs: 10 })
-			).rejects.toThrow('undefined');
+			await expect(withRetry(fn, { maxAttempts: 1, backoffMs: 10 })).rejects.toThrow('undefined');
 		});
 	});
 

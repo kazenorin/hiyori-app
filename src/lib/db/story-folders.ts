@@ -8,19 +8,15 @@ interface StoryFolder {
 
 export async function getStoryFolder(storyId: string): Promise<string | null> {
 	const db = getDatabase();
-	const result = await db.select<StoryFolder[]>(
-		'SELECT folder_name FROM story_folders WHERE story_id = $1',
-		[storyId]
-	);
+	const result = await db.select<StoryFolder[]>('SELECT folder_name FROM story_folders WHERE story_id = $1', [storyId]);
 	return result.length > 0 ? result[0].folder_name : null;
 }
 
 export async function getFolderOwner(folderName: string): Promise<string | null> {
 	const db = getDatabase();
-	const result = await db.select<StoryFolder[]>(
-		'SELECT story_id FROM story_folders WHERE folder_name = $1',
-		[folderName]
-	);
+	const result = await db.select<StoryFolder[]>('SELECT story_id FROM story_folders WHERE folder_name = $1', [
+		folderName,
+	]);
 	return result.length > 0 ? result[0].story_id : null;
 }
 

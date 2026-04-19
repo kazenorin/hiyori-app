@@ -14,12 +14,7 @@ export function computeLineSubdir(isMainLine: boolean, actLineId: string): strin
  * Build the full directory path for an act line's generated content.
  * Pattern: {storyFolder}/act-{actNumber}/{lineSubdir}
  */
-export function buildLineDir(
-	storyFolder: string,
-	actNumber: number,
-	isMainLine: boolean,
-	actLineId: string
-): string {
+export function buildLineDir(storyFolder: string, actNumber: number, isMainLine: boolean, actLineId: string): string {
 	const subdir = computeLineSubdir(isMainLine, actLineId);
 	return `${storyFolder}/act-${actNumber}/${subdir}`;
 }

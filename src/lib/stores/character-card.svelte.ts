@@ -4,7 +4,7 @@ import {
 	toCharacterEntries,
 	type CharacterEntry,
 	type CharacterCardResult,
-	type GenerateProgress
+	type GenerateProgress,
 } from '$lib/ai/character-card-generator';
 import { log } from '$lib/logging/logger';
 
@@ -109,8 +109,8 @@ export function addManualCharacter(): void {
 			importance: '',
 			canonicalName: '',
 			include: true,
-			isManual: true
-		}
+			isManual: true,
+		},
 	];
 }
 

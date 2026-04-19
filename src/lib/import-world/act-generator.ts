@@ -1,19 +1,19 @@
 // LLM-based act generation from world + act + character cards
 // Uses streaming via chat-stream.ts for real-time feedback
 
-import type {StreamAccumulator, StreamState} from "$lib/ai/chat-callbacks";
-import { type RetryConfig, streamWithRetry} from '$lib/ai/chat-stream';
+import type { StreamAccumulator, StreamState } from '$lib/ai/chat-callbacks';
+import { type RetryConfig, streamWithRetry } from '$lib/ai/chat-stream';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { loadSystemPrompt, loadNarrationContent } from '$lib/fs/prompts';
-import {sleep} from '$lib/utils/async';
-import type {ParsedMessage} from './types';
+import { sleep } from '$lib/utils/async';
+import type { ParsedMessage } from './types';
 import {
 	WORLD_CARD_LABEL,
 	ACT_CARD_LABEL,
 	CHARACTER_CARD_LABEL,
 	ACT_GENERATION_INSTRUCTION,
 	SCENE_EXTRACTION_FIRST_PROMPT,
-	SCENE_EXTRACTION_CONTINUATION_PROMPT
+	SCENE_EXTRACTION_CONTINUATION_PROMPT,
 } from './prompts';
 
 // === Act Generation ===
@@ -57,18 +57,12 @@ function buildGenerationMessages(
 
 	// World card
 	if (worldContent) {
-		messages.push(
-			{ role: 'user', content: WORLD_CARD_LABEL },
-			{ role: 'user', content: worldContent }
-		);
+		messages.push({ role: 'user', content: WORLD_CARD_LABEL }, { role: 'user', content: worldContent });
 	}
 
 	// Act card
 	if (actCardContent) {
-		messages.push(
-			{ role: 'user', content: ACT_CARD_LABEL },
-			{ role: 'user', content: actCardContent }
-		);
+		messages.push({ role: 'user', content: ACT_CARD_LABEL }, { role: 'user', content: actCardContent });
 	}
 
 	// Character cards
@@ -83,7 +77,7 @@ function buildGenerationMessages(
 	// Generation request
 	messages.push({
 		role: 'user',
-		content: ACT_GENERATION_INSTRUCTION
+		content: ACT_GENERATION_INSTRUCTION,
 	});
 
 	return messages;
@@ -135,29 +129,21 @@ async function processScene(
 	let extractionPrompt: string;
 	if (previousScenes.length === 0) {
 		// First scene: no prior context
-		extractionPrompt = SCENE_EXTRACTION_FIRST_PROMPT
-			.replace('{narrationTemplate}', narrationTemplate)
-			.replace('{sceneContent}', sceneContent);
+		extractionPrompt = SCENE_EXTRACTION_FIRST_PROMPT.replace('{narrationTemplate}', narrationTemplate).replace(
+			'{sceneContent}',
+			sceneContent
+		);
 	} else {
 		// Subsequent scenes: include previous scenes for continuity
 		const previousContent = previousScenes.map((s, i) => `Scene ${i + 1}:\n${s}`).join('\n\n---\n\n');
-		extractionPrompt = SCENE_EXTRACTION_CONTINUATION_PROMPT
-			.replace('{previousScenes}', previousContent)
+		extractionPrompt = SCENE_EXTRACTION_CONTINUATION_PROMPT.replace('{previousScenes}', previousContent)
 			.replace('{narrationTemplate}', narrationTemplate)
 			.replace('{sceneContent}', sceneContent);
 	}
 
-	const messages: { role: 'user'; content: string }[] = [
-		{role: 'user', content: extractionPrompt}
-	];
+	const messages: { role: 'user'; content: string }[] = [{ role: 'user', content: extractionPrompt }];
 
-	return await streamWithRetry(
-		systemPrompt,
-		messages,
-		retryConfig,
-		onProgress,
-		onError
-	);
+	return await streamWithRetry(systemPrompt, messages, retryConfig, onProgress, onError);
 }
 
 // === Scene Formatting (Main Entry Point) ===
@@ -185,8 +171,8 @@ export async function formatIntoScenes(
 	if (!config?.apiKey) {
 		// If no config, return raw content as single scene
 		return {
-			scenes: [{role: 'assistant', content: rawContent}],
-			rawSceneCount: 1
+			scenes: [{ role: 'assistant', content: rawContent }],
+			rawSceneCount: 1,
 		};
 	}
 
@@ -210,7 +196,7 @@ export async function formatIntoScenes(
 				processedScenes,
 				retryConfig,
 				(state: StreamState) => {
-					const consoleOutput = (!!state.content ? state.content : state.reasoning) ?? ''
+					const consoleOutput = (!!state.content ? state.content : state.reasoning) ?? '';
 					onProgress(`Scene ${i + 1}: ${consoleOutput}`);
 				},
 				(err, attempt) => {
@@ -224,10 +210,10 @@ export async function formatIntoScenes(
 				role: 'assistant',
 				content: processedSceneContent,
 				reasoning: acc.state.reasoning ?? undefined,
-				gameData: acc.state.gameData ?? undefined
+				gameData: acc.state.gameData ?? undefined,
 			});
 
-			log(JSON.stringify(await acc.resultMetadata, null, 2))
+			log(JSON.stringify(await acc.resultMetadata, null, 2));
 
 			// Small delay between scene processing to avoid rate limits
 			if (i < rawScenes.length - 1) {
@@ -240,7 +226,7 @@ export async function formatIntoScenes(
 			processedScenes.push(rawScenes[i]);
 			sceneMessages.push({
 				role: 'assistant',
-				content: rawScenes[i]
+				content: rawScenes[i],
 			});
 		}
 	}
@@ -249,6 +235,6 @@ export async function formatIntoScenes(
 
 	return {
 		scenes: sceneMessages,
-		rawSceneCount: rawScenes.length
+		rawSceneCount: rawScenes.length,
 	};
 }

@@ -9,7 +9,7 @@
 		type ProviderConfig,
 		type Provider,
 		type ApiType,
-		type LogLevel
+		type LogLevel,
 	} from '$lib/stores/settings.svelte';
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
 
@@ -81,7 +81,7 @@
 			apiType: formApiType,
 			baseURL: formBaseURL,
 			model: formModel,
-			apiKey: formApiKey
+			apiKey: formApiKey,
 		});
 		// If no main provider assigned, make this the main one
 		if (!settings.roleAssignments['main']) {
@@ -98,7 +98,7 @@
 			apiType: formApiType,
 			baseURL: formBaseURL,
 			model: formModel,
-			apiKey: formApiKey
+			apiKey: formApiKey,
 		});
 		cancelEdit();
 	}
@@ -115,7 +115,7 @@
 			apiType: config.apiType,
 			baseURL: config.baseURL,
 			model: config.model,
-			apiKey: config.apiKey
+			apiKey: config.apiKey,
 		});
 		// Start editing the copy immediately
 		startEdit(copy);
@@ -151,9 +151,7 @@
 		<section class="card p-6 space-y-4">
 			<div class="flex items-center justify-between">
 				<h2 class="h4">AI Providers</h2>
-				<button class="btn preset-tonal" type="button" onclick={startAdd}>
-					+ Add Provider
-				</button>
+				<button class="btn preset-tonal" type="button" onclick={startAdd}> + Add Provider </button>
 			</div>
 
 			{#if settings.providers.length === 0 && !isAddingNew}
@@ -169,7 +167,8 @@
 							{#if c.id === config.id}
 								{@const isMain = mainProviderId === config.id}
 								<p class="text-xs text-surface-500">
-									Editing{#if isMain} (main provider){/if}
+									Editing{#if isMain}
+										(main provider){/if}
 								</p>
 							{/if}
 						{/each}
@@ -197,15 +196,19 @@
 											<option value="chat-completions">Chat Completions</option>
 										</select>
 										<span class="text-xs text-surface-500 mt-1 block"
-											>Responses uses the OpenAI Responses API. Chat Completions uses
-											/chat/completions.</span
+											>Responses uses the OpenAI Responses API. Chat Completions uses /chat/completions.</span
 										>
 									</label>
 								{/if}
 
 								<label class="block">
 									<span class="text-sm font-medium text-surface-700-300">Base URL</span>
-									<input class="input mt-1" type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} />
+									<input
+										class="input mt-1"
+										type="url"
+										placeholder="https://api.openai.com/v1"
+										bind:value={formBaseURL}
+									/>
 									<span class="text-xs text-surface-500 mt-1 block"
 										>Local: http://localhost:11434/v1 (Ollama), http://localhost:1234/v1 (LM Studio)</span
 									>
@@ -252,22 +255,20 @@
 							</div>
 						</details>
 						<div class="flex gap-2">
-							<button class="btn preset-filled" type="button" onclick={handleSaveEdit}>
-								Save
-							</button>
-							<button class="btn preset-tonal" type="button" onclick={cancelEdit}>
-								Cancel
-							</button>
+							<button class="btn preset-filled" type="button" onclick={handleSaveEdit}> Save </button>
+							<button class="btn preset-tonal" type="button" onclick={cancelEdit}> Cancel </button>
 						</div>
 					</div>
 				{:else}
 					<!-- Provider Card -->
-					<div class="flex items-center justify-between p-3 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150">
+					<div
+						class="flex items-center justify-between p-3 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150"
+					>
 						<div class="min-w-0">
 							<p class="text-sm font-medium truncate">{config.name}</p>
-							<p class="text-xs text-surface-500 truncate"
-								>{config.provider === 'openai' ? 'OpenAI' : 'OpenAI-Compatible'} · {config.model}</p
-							>
+							<p class="text-xs text-surface-500 truncate">
+								{config.provider === 'openai' ? 'OpenAI' : 'OpenAI-Compatible'} · {config.model}
+							</p>
 						</div>
 						<div class="flex items-center gap-1 shrink-0">
 							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => handleDuplicate(config)}>
@@ -318,8 +319,7 @@
 										<option value="chat-completions">Chat Completions</option>
 									</select>
 									<span class="text-xs text-surface-500 mt-1 block"
-										>Responses uses the OpenAI Responses API. Chat Completions uses
-										/chat/completions.</span
+										>Responses uses the OpenAI Responses API. Chat Completions uses /chat/completions.</span
 									>
 								</label>
 							{/if}
@@ -373,12 +373,8 @@
 						</div>
 					</details>
 					<div class="flex gap-2">
-						<button class="btn preset-filled" type="button" onclick={handleSaveNew}>
-							Add Provider
-						</button>
-						<button class="btn preset-tonal" type="button" onclick={cancelEdit}>
-							Cancel
-						</button>
+						<button class="btn preset-filled" type="button" onclick={handleSaveNew}> Add Provider </button>
+						<button class="btn preset-tonal" type="button" onclick={cancelEdit}> Cancel </button>
 					</div>
 				</div>
 			{/if}
@@ -414,9 +410,7 @@
 		<!-- Memory -->
 		<section class="card p-6 space-y-4">
 			<h2 class="h4">Memory</h2>
-			<span class="text-xs text-surface-500"
-				>Automatically save and recall context from past conversations.</span
-			>
+			<span class="text-xs text-surface-500">Automatically save and recall context from past conversations.</span>
 
 			<label class="flex items-center gap-2">
 				<input
@@ -480,9 +474,7 @@
 		<!-- Review & Quality -->
 		<section class="card p-6 space-y-4">
 			<h2 class="h4">Review & Quality</h2>
-			<span class="text-xs text-surface-500"
-				>Run a QA reviewer on GM outputs before delivering to the player.</span
-			>
+			<span class="text-xs text-surface-500">Run a QA reviewer on GM outputs before delivering to the player.</span>
 
 			<label class="flex items-center gap-2">
 				<input
@@ -513,9 +505,7 @@
 						{/each}
 					{/if}
 				</select>
-				<span class="text-xs text-surface-500 mt-1 block"
-					>The LLM provider used to review and revise GM outputs.</span
-				>
+				<span class="text-xs text-surface-500 mt-1 block">The LLM provider used to review and revise GM outputs.</span>
 			</label>
 		</section>
 
@@ -527,8 +517,7 @@
 				<span class="text-sm font-medium text-surface-700-300">Log Level</span>
 				<select
 					class="select mt-1"
-					onchange={(e) =>
-						updateSettings({ logLevel: (e.currentTarget as HTMLSelectElement).value as LogLevel })}
+					onchange={(e) => updateSettings({ logLevel: (e.currentTarget as HTMLSelectElement).value as LogLevel })}
 				>
 					<option value="error" selected={settings.logLevel === 'error'}>Error</option>
 					<option value="warn" selected={settings.logLevel === 'warn'}>Warn</option>

@@ -5,13 +5,13 @@
 		getError,
 		sendMessage,
 		stopStreaming,
-	sendInitialNarration,
+		sendInitialNarration,
 		regenerateLastResponse,
 		deleteLastExchange,
 		getForkSequence,
 		loadActLineMessages,
 		getLatestDecisions,
-		isMemoryPipelineRunning
+		isMemoryPipelineRunning,
 	} from '$lib/ai/chat.svelte';
 	import {
 		getIsActive as getIsWorldBuilderActive,
@@ -25,7 +25,7 @@
 		getWorldContent as getWorldBuilderContent,
 		exitWorldBuilderMode,
 		regenerateLastWorldBuilderResponse,
-		deleteLastWorldBuilderExchange
+		deleteLastWorldBuilderExchange,
 	} from '$lib/ai/world-builder.svelte';
 	import {
 		getActiveActLineId,
@@ -34,7 +34,7 @@
 		getActiveAct,
 		createStoryFromWorldBuilder,
 		getActiveNarrationContext,
-		forkActLine
+		forkActLine,
 	} from '$lib/stores/stories.svelte';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
@@ -44,19 +44,27 @@
 	let wbChatContainer = $state<HTMLDivElement | null>(null);
 	let copiedId = $state<string | null>(null);
 	let latestDecisions = $derived(getLatestDecisions());
-	let lastMessageIdx = $derived(getMessages().reduce((acc: number, m, i) => m.role === 'assistant' ? i : acc, -1));
-	let lastWbMessageIdx = $derived(getWorldBuilderMessages().reduce((acc: number, m, i) => m.role === 'assistant' ? i : acc, -1));
+	let lastMessageIdx = $derived(getMessages().reduce((acc: number, m, i) => (m.role === 'assistant' ? i : acc), -1));
+	let lastWbMessageIdx = $derived(
+		getWorldBuilderMessages().reduce((acc: number, m, i) => (m.role === 'assistant' ? i : acc), -1)
+	);
 
 	async function handleCopy(messageId: string, content: string) {
 		await navigator.clipboard.writeText(content);
 		copiedId = messageId;
-		setTimeout(() => { copiedId = null; }, 1500);
+		setTimeout(() => {
+			copiedId = null;
+		}, 1500);
 	}
 
 	async function handleRegenerate() {
 		const actLineId = getActiveActLineId();
 		if (!actLineId || getIsStreaming()) return;
-		await regenerateLastResponse(actLineId, getActiveSystemPrompt() ?? undefined, getActiveNarrationContext() ?? undefined);
+		await regenerateLastResponse(
+			actLineId,
+			getActiveSystemPrompt() ?? undefined,
+			getActiveNarrationContext() ?? undefined
+		);
 	}
 
 	async function handleDelete() {
@@ -100,7 +108,7 @@
 		sendMessage(actLineId, {
 			bodyText: text,
 			systemPrompt: getActiveSystemPrompt() ?? undefined,
-			narrationContent: getActiveNarrationContext() ?? undefined
+			narrationContent: getActiveNarrationContext() ?? undefined,
 		});
 	}
 
@@ -209,22 +217,19 @@
 	{:else if getIsWorldBuilderActive()}
 		<!-- World builder mode -->
 		<!-- svelte-ignore binding_property_non_reactive -->
-		<div
-			bind:this={wbChatContainer}
-			class="flex-1 overflow-y-auto p-6"
-		>
+		<div bind:this={wbChatContainer} class="flex-1 overflow-y-auto p-6">
 			<div class="px-8 space-y-4">
 				<div class="text-center py-4">
 					<h2 class="h2 font-display text-surface-700-300 mb-2">World Builder</h2>
-					<p class="text-xs text-surface-500">Answer questions to build your story's world. Say "let's start" when ready.</p>
+					<p class="text-xs text-surface-500">
+						Answer questions to build your story's world. Say "let's start" when ready.
+					</p>
 				</div>
 
 				{#each getWorldBuilderMessages() as message, i (message.id)}
 					{#if message.role === 'user'}
 						<div class="flex justify-end">
-							<div
-								class="max-w-[80%] rounded-[var(--radius-container)] bg-primary-100-900 p-5"
-							>
+							<div class="max-w-[80%] rounded-[var(--radius-container)] bg-primary-100-900 p-5">
 								<p class="leading-relaxed text-primary-900-100 whitespace-pre-wrap">{message.content}</p>
 								{#if !getIsWorldBuilderStreaming()}
 									<div class="flex gap-2 mt-3 pt-3 border-t border-primary-200-800">
@@ -232,22 +237,24 @@
 											class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
 											title="Copy message"
 											onclick={() => handleCopy(message.id, message.content)}
-										>{copiedId === message.id ? 'Copied' : 'Copy'}</button>
+											>{copiedId === message.id ? 'Copied' : 'Copy'}</button
+										>
 									</div>
 								{/if}
 							</div>
 						</div>
 					{:else}
-						<div
-							class="rounded-[var(--radius-container)] bg-surface-50-950 p-5 shadow-message"
-						>
+						<div class="rounded-[var(--radius-container)] bg-surface-50-950 p-5 shadow-message">
 							{#if message.content}
 								<div class="leading-relaxed text-surface-950-50">
 									<MarkdownContent content={message.content} />
 								</div>
 							{/if}
 							{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
-								<span data-streaming-cursor class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
+								<span
+									data-streaming-cursor
+									class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"
+								></span>
 							{/if}
 							{#if !getIsWorldBuilderStreaming() && message.content}
 								<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
@@ -255,44 +262,37 @@
 										class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 										title="Copy message"
 										onclick={() => handleCopy(message.id, message.content)}
-									>{copiedId === message.id ? 'Copied' : 'Copy'}</button>
+										>{copiedId === message.id ? 'Copied' : 'Copy'}</button
+									>
 									{#if i === lastWbMessageIdx}
 										<button
 											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 											title="Regenerate response"
-											onclick={handleWorldBuilderRegenerate}
-										>Regenerate</button>
+											onclick={handleWorldBuilderRegenerate}>Regenerate</button
+										>
 										<button
 											class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
 											title="Delete last exchange"
-											onclick={handleWorldBuilderDelete}
-										>Delete</button>
+											onclick={handleWorldBuilderDelete}>Delete</button
+										>
 									{/if}
 								</div>
 							{/if}
 						</div>
 					{/if}
-					{/each}
+				{/each}
 
 				{#if getIsWorldBuilderComplete()}
 					<div class="rounded-[var(--radius-container)] bg-primary-100-900 p-6 text-center space-y-4">
 						<h3 class="h3 font-display text-primary-900-100">Create "{getWorldBuilderStoryName()}"?</h3>
-						<p class="text-sm text-primary-700-300">Your world document is ready. Create the story and start your adventure?</p>
+						<p class="text-sm text-primary-700-300">
+							Your world document is ready. Create the story and start your adventure?
+						</p>
 						<div class="flex gap-3 justify-center">
-							<button
-								class="btn preset-filled-primary-500"
-								type="button"
-								onclick={handleCreateFromWorldBuilder}
-							>
+							<button class="btn preset-filled-primary-500" type="button" onclick={handleCreateFromWorldBuilder}>
 								Create Story
 							</button>
-							<button
-								class="btn preset-tonal"
-								type="button"
-								onclick={exitWorldBuilderMode}
-							>
-								Cancel
-							</button>
+							<button class="btn preset-tonal" type="button" onclick={exitWorldBuilderMode}> Cancel </button>
 						</div>
 					</div>
 				{/if}
@@ -333,9 +333,7 @@
 						Stop
 					</button>
 				{:else if !getIsWorldBuilderComplete()}
-					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}>
-						Send
-					</button>
+					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> Send </button>
 				{/if}
 			</div>
 		</aside>
@@ -352,25 +350,18 @@
 	{:else}
 		<!-- Chat messages area -->
 		<!-- svelte-ignore binding_property_non_reactive -->
-		<div
-			bind:this={chatContainer}
-			class="flex-1 overflow-y-auto p-6"
-		>
+		<div bind:this={chatContainer} class="flex-1 overflow-y-auto p-6">
 			<div class="px-8 space-y-4">
 				{#if getMessages().length === 0}
 					<div class="flex flex-col items-center justify-center py-24 text-center">
 						<h2 class="h2 font-display text-surface-700-300 mb-3">Begin Your Adventure</h2>
-						<p class="text-surface-400-500 max-w-lg">
-							Type a message to start chatting with the AI.
-						</p>
+						<p class="text-surface-400-500 max-w-lg">Type a message to start chatting with the AI.</p>
 					</div>
 				{:else}
 					{#each getMessages() as message, i (message.id)}
 						{#if message.role === 'user'}
 							<div class="flex justify-end">
-								<div
-									class="max-w-[80%] rounded-[var(--radius-container)] bg-primary-100-900 p-5"
-								>
+								<div class="max-w-[80%] rounded-[var(--radius-container)] bg-primary-100-900 p-5">
 									<div class="leading-relaxed text-primary-900-100">
 										<MarkdownContent content={message.content} />
 									</div>
@@ -380,15 +371,14 @@
 												class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
 												title="Copy message"
 												onclick={() => handleCopy(message.id, message.content)}
-											>{copiedId === message.id ? 'Copied' : 'Copy'}</button>
+												>{copiedId === message.id ? 'Copied' : 'Copy'}</button
+											>
 										</div>
 									{/if}
 								</div>
 							</div>
 						{:else}
-							<div
-								class="rounded-[var(--radius-container)] bg-surface-50-950 p-5 shadow-message"
-							>
+							<div class="rounded-[var(--radius-container)] bg-surface-50-950 p-5 shadow-message">
 								{#if message.reasoning}
 									<div class="mb-3">
 										<Accordion collapsible>
@@ -466,7 +456,7 @@
 																{...attributes}
 																class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
 															>
-																		{message.reviewScratchpad}
+																{message.reviewScratchpad}
 															</div>
 														{/if}
 													{/snippet}
@@ -482,39 +472,46 @@
 									</div>
 								{/if}
 								{#if getIsStreaming() && message === getMessages().at(-1)}
-									<span data-streaming-cursor class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"></span>
+									<span
+										data-streaming-cursor
+										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"
+									></span>
 								{/if}
 								{#if message.metadata}
-									<pre class="mt-4 pt-3 border-t border-surface-200-800 text-xs text-surface-500 font-mono leading-relaxed">model:       {message.metadata.model}
+									<pre
+										class="mt-4 pt-3 border-t border-surface-200-800 text-xs text-surface-500 font-mono leading-relaxed">model:       {message
+											.metadata.model}
 finish:      {message.metadata.finishReason}
-tokens:      {message.metadata.promptTokens} prompt + {message.metadata.completionTokens} completion = {message.metadata.totalTokens} total
+tokens:      {message.metadata.promptTokens} prompt + {message.metadata.completionTokens} completion = {message.metadata
+											.totalTokens} total
 duration:    {message.metadata.durationMs}ms</pre>
 								{/if}
 								{#if !getIsStreaming()}
 									<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
 										{#if message.content}
-										<button
-											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
-											title="Copy message"
-											onclick={() => handleCopy(message.id, message.content)}
-										>{copiedId === message.id ? 'Copied' : 'Copy'}</button>
-										<button
-											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
-											title="Fork from here"
-											onclick={() => handleFork(i)}
-										>Fork</button>
+											<button
+												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+												title="Copy message"
+												onclick={() => handleCopy(message.id, message.content)}
+												>{copiedId === message.id ? 'Copied' : 'Copy'}</button
+											>
+											<button
+												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+												title="Fork from here"
+												onclick={() => handleFork(i)}>Fork</button
+											>
 										{/if}
 										{#if i === lastMessageIdx}
 											<button
 												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 												title="Regenerate response"
-												onclick={handleRegenerate}
-											>Regenerate</button>
+												onclick={handleRegenerate}>Regenerate</button
+											>
 											<button
 												class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
 												title="Delete last exchange"
-												onclick={handleDelete}
-											>Delete</button>
+												onclick={handleDelete}>Delete</button
+											>
 										{/if}
 									</div>
 								{/if}
@@ -525,7 +522,9 @@ duration:    {message.metadata.durationMs}ms</pre>
 
 				{#if isMemoryPipelineRunning()}
 					<div class="max-w-2xl mx-auto mt-4 text-sm text-surface-500 flex items-center gap-2">
-						<span class="inline-block w-4 h-4 border-2 border-surface-400 border-t-transparent rounded-full animate-spin"></span>
+						<span
+							class="inline-block w-4 h-4 border-2 border-surface-400 border-t-transparent rounded-full animate-spin"
+						></span>
 						Processing memories...
 					</div>
 				{:else if latestDecisions.length > 0 && !getIsStreaming()}
@@ -566,19 +565,15 @@ duration:    {message.metadata.durationMs}ms</pre>
 			></textarea>
 
 			<div class="mt-3">
-					{#if isMemoryPipelineRunning()}
-						<button class="btn preset-filled-primary-500 w-full opacity-50 cursor-not-allowed" type="button" disabled>
-							Processing memories...
-						</button>
-					{:else if getIsStreaming()}
-						<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopStreaming}>
-							Stop
-						</button>
-					{:else}
-						<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}>
-							Send
-						</button>
-					{/if}
+				{#if isMemoryPipelineRunning()}
+					<button class="btn preset-filled-primary-500 w-full opacity-50 cursor-not-allowed" type="button" disabled>
+						Processing memories...
+					</button>
+				{:else if getIsStreaming()}
+					<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopStreaming}> Stop </button>
+				{:else}
+					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> Send </button>
+				{/if}
 			</div>
 		</aside>
 	{/if}

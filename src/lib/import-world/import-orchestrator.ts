@@ -1,20 +1,20 @@
 // Main import orchestrator coordinating all import steps
 
-import {createStory, deleteStory} from '$lib/db/stories';
-import {createAct, deleteAct} from '$lib/db/acts';
-import {addMessageToLine, createActLine, deleteActLine, deleteLineEntries} from '$lib/db/act-lines';
-import {createMessage, deleteMessage} from '$lib/db/messages';
-import {resolveStoryFolder} from '$lib/fs/story-folders';
-import {deleteStoryFolder} from '$lib/db/story-folders';
-import {BaseDirectory, mkdir, writeTextFile} from '@tauri-apps/plugin-fs';
-import {loadStories} from '$lib/stores/stories.svelte';
-import {toKebabCase} from '$lib/utils/string';
-import type {ImportFormData, ImportProgressUpdate, ImportResult, ParsedMessage,} from './types';
-import type {RetryConfig} from '$lib/ai/chat-stream';
-import {parseTranscriptFile} from './transcript-parsers';
-import {formatIntoScenes, generateActFromCards} from './act-generator';
-import {runGameDataDetection} from './game-data-detector';
-import type {StreamState} from "$lib/ai/chat-callbacks";
+import { createStory, deleteStory } from '$lib/db/stories';
+import { createAct, deleteAct } from '$lib/db/acts';
+import { addMessageToLine, createActLine, deleteActLine, deleteLineEntries } from '$lib/db/act-lines';
+import { createMessage, deleteMessage } from '$lib/db/messages';
+import { resolveStoryFolder } from '$lib/fs/story-folders';
+import { deleteStoryFolder } from '$lib/db/story-folders';
+import { BaseDirectory, mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
+import { loadStories } from '$lib/stores/stories.svelte';
+import { toKebabCase } from '$lib/utils/string';
+import type { ImportFormData, ImportProgressUpdate, ImportResult, ParsedMessage } from './types';
+import type { RetryConfig } from '$lib/ai/chat-stream';
+import { parseTranscriptFile } from './transcript-parsers';
+import { formatIntoScenes, generateActFromCards } from './act-generator';
+import { runGameDataDetection } from './game-data-detector';
+import type { StreamState } from '$lib/ai/chat-callbacks';
 
 // === Progress Callback Type ===
 
@@ -22,10 +22,7 @@ export type ProgressCallback = (update: ImportProgressUpdate) => void;
 
 // === Main Import Function ===
 
-export async function executeImport(
-	formData: ImportFormData,
-	onProgress: ProgressCallback
-): Promise<ImportResult> {
+export async function executeImport(formData: ImportFormData, onProgress: ProgressCallback): Promise<ImportResult> {
 	const warnings: string[] = [];
 	const logs: string[] = [];
 
@@ -34,7 +31,7 @@ export async function executeImport(
 		onProgress({
 			phase: 'creating-story',
 			message,
-			consoleOutput: logs.join('\n')
+			consoleOutput: logs.join('\n'),
 		});
 	}
 
@@ -44,7 +41,7 @@ export async function executeImport(
 		storyFolder: null as string | null,
 		actIds: [] as string[],
 		actLineIds: [] as string[],
-		messageIds: [] as string[]
+		messageIds: [] as string[],
 	};
 
 	let worldContent: string | null = null;
@@ -102,7 +99,7 @@ export async function executeImport(
 		onProgress({
 			phase: 'complete',
 			message: 'Import complete!',
-			consoleOutput: logs.join('\n') + '\n\n✓ Import completed successfully.'
+			consoleOutput: logs.join('\n') + '\n\n✓ Import completed successfully.',
 		});
 
 		// Return info (no navigation - stay on page)
@@ -115,7 +112,7 @@ export async function executeImport(
 			actId: firstActId,
 			actLineId: firstActLineId,
 			warnings,
-			importComplete: true
+			importComplete: true,
 		};
 	} catch (error) {
 		const errorMsg = error instanceof Error ? error.message : String(error);
@@ -129,14 +126,14 @@ export async function executeImport(
 			phase: 'error',
 			message: 'Import failed',
 			errorMessage: errorMsg,
-			consoleOutput: logs.join('\n')
+			consoleOutput: logs.join('\n'),
 		});
 
 		return {
 			success: false,
 			error: errorMsg,
 			warnings,
-			importComplete: false
+			importComplete: false,
 		};
 	}
 }
@@ -164,7 +161,7 @@ async function processActs(
 
 	const retryConfig: RetryConfig = {
 		retryCount: formData.retryCount,
-		backoffIntervalSeconds: formData.backoffIntervalSeconds
+		backoffIntervalSeconds: formData.backoffIntervalSeconds,
 	};
 
 	for (let actIndex = 0; actIndex < formData.acts.length; actIndex++) {
@@ -231,7 +228,7 @@ async function createActAndLine(
 	onProgress({
 		phase: 'processing-act',
 		message: `Processing Act ${actNumber}...`,
-		consoleOutput: ''
+		consoleOutput: '',
 	});
 
 	// Create act with placeholder name if needed
@@ -264,25 +261,20 @@ async function processTranscriptAct(
 	const transcriptName = actInput.transcript!.name;
 	log(`Parsing transcript: ${transcriptName}`);
 
-	const parsedTranscript = await parseTranscriptFile(
-		actInput.transcript!,
-		skipOptionalMalformed
-	);
+	const parsedTranscript = await parseTranscriptFile(actInput.transcript!, skipOptionalMalformed);
 
 	const parsedMessages = [...parsedTranscript.messages];
 
 	log(`Parsed ${parsedMessages.length} messages (${parsedTranscript.format} format)`);
 
 	// Run game data detection on assistant messages lacking game data
-	const missingGameData = parsedTranscript.messages.filter(
-		m => m.role === 'assistant' && !m.gameData
-	).length;
+	const missingGameData = parsedTranscript.messages.filter((m) => m.role === 'assistant' && !m.gameData).length;
 
 	if (missingGameData > 0) {
 		onProgress({
 			phase: 'saving-messages',
 			message: `Detecting game data for ${missingGameData} messages...`,
-			consoleOutput: ''
+			consoleOutput: '',
 		});
 		log(`Detecting game data for ${missingGameData} messages...`);
 
@@ -295,7 +287,7 @@ async function processTranscriptAct(
 				onProgress({
 					phase: 'generating-game-data',
 					message: `Generating GameData[${msgIndex}]...`,
-					consoleOutput: consoleOutput ?? ''
+					consoleOutput: consoleOutput ?? '',
 				});
 			},
 			(msgIndex, err, attempt) => {
@@ -303,7 +295,7 @@ async function processTranscriptAct(
 				onProgress({
 					phase: 'generating-game-data',
 					message: `Generating GameData[${msgIndex}]...`,
-					consoleOutput: '[ERROR]' + errorContent
+					consoleOutput: '[ERROR]' + errorContent,
 				});
 			}
 		);
@@ -316,28 +308,23 @@ async function processTranscriptAct(
 					...originalParsedMessage,
 					gameData: result.gameData,
 					metadata: result.metadata ?? originalParsedMessage.metadata,
-				}
+				};
 			}
 		}
 
-		const detected = detectionResult.results.filter(r => r.gameData).length;
+		const detected = detectionResult.results.filter((r) => r.gameData).length;
 		const llmCalls = detectionResult.llmCallsMade;
 		log(`Game data detection: ${detected}/${missingGameData} messages processed (${llmCalls} LLM calls)`);
 	}
 
 	// Create messages and add to act line
-	const messageIds = await createMessagesFromParsed(
-		parsedMessages,
-		actLineId,
-		log,
-		(msg) => {
-			onProgress({
-				phase: 'saving-messages',
-				message: msg,
-				consoleOutput: ''
-			});
-		}
-	);
+	const messageIds = await createMessagesFromParsed(parsedMessages, actLineId, log, (msg) => {
+		onProgress({
+			phase: 'saving-messages',
+			message: msg,
+			consoleOutput: '',
+		});
+	});
 	createdResources.messageIds.push(...messageIds);
 
 	// Save provided act card if exists (for transcript imports)
@@ -365,7 +352,7 @@ async function generateActFromLLM(
 	onProgress({
 		phase: 'generating-act',
 		message: `Generating Act ${actNumber} via LLM...`,
-		consoleOutput: ''
+		consoleOutput: '',
 	});
 
 	// Generate act content with streaming
@@ -375,11 +362,11 @@ async function generateActFromLLM(
 		characterCards,
 		retryConfig,
 		(state: StreamState) => {
-			const consoleOutput = !!state.content ? state.content : state.reasoning
+			const consoleOutput = !!state.content ? state.content : state.reasoning;
 			onProgress({
 				phase: 'generating-act',
 				message: `Generating Act ${actNumber}...`,
-				consoleOutput: consoleOutput ?? ''
+				consoleOutput: consoleOutput ?? '',
 			});
 		},
 		(err, attempt) => {
@@ -387,12 +374,12 @@ async function generateActFromLLM(
 			onProgress({
 				phase: 'generating-act',
 				message: `Generating Act ${actNumber}...`,
-				consoleOutput: '[ERROR]' + errorContent
+				consoleOutput: '[ERROR]' + errorContent,
 			});
 		}
 	);
 
-	const generation = acc.state.content
+	const generation = acc.state.content;
 
 	log(`Act ${actNumber} generation complete (${generation.length} chars)`);
 
@@ -400,36 +387,25 @@ async function generateActFromLLM(
 	onProgress({
 		phase: 'formatting-act',
 		message: `Formatting Act ${actNumber} into scenes...`,
-		consoleOutput: ''
+		consoleOutput: '',
 	});
 
-	const { scenes: processedScenes } = await formatIntoScenes(
-		generation,
-		actNumber,
-		retryConfig,
-		log,
-		(text) => {
-			onProgress({
-				phase: 'formatting-act',
-				message: `Formatting Act ${actNumber}...`,
-				consoleOutput: '\n' + text
-			});
-		}
-	);
+	const { scenes: processedScenes } = await formatIntoScenes(generation, actNumber, retryConfig, log, (text) => {
+		onProgress({
+			phase: 'formatting-act',
+			message: `Formatting Act ${actNumber}...`,
+			consoleOutput: '\n' + text,
+		});
+	});
 
 	// Create messages from processed scenes (each scene is a separate message)
-	const genMessageIds = await createMessagesFromParsed(
-		processedScenes,
-		actLineId,
-		log,
-		(msg) => {
-			onProgress({
-				phase: 'saving-messages',
-				message: msg,
-				consoleOutput: ''
-			});
-		}
-	);
+	const genMessageIds = await createMessagesFromParsed(processedScenes, actLineId, log, (msg) => {
+		onProgress({
+			phase: 'saving-messages',
+			message: msg,
+			consoleOutput: '',
+		});
+	});
 	createdResources.messageIds.push(...genMessageIds);
 }
 
@@ -471,14 +447,7 @@ async function createMessagesFromParsed(
 		const messageId = crypto.randomUUID();
 
 		try {
-			await createMessage(
-				messageId,
-				msg.role,
-				msg.content,
-				msg.reasoning,
-				msg.metadata,
-				msg.gameData
-			);
+			await createMessage(messageId, msg.role, msg.content, msg.reasoning, msg.metadata, msg.gameData);
 
 			await addMessageToLine(actLineId, messageId, sequence++);
 			messageIds.push(messageId);
@@ -532,11 +501,7 @@ async function saveCharacterCards(
 	}
 }
 
-async function saveActCard(
-	storyFolder: string,
-	actNumber: number,
-	content: string
-): Promise<void> {
+async function saveActCard(storyFolder: string, actNumber: number, content: string): Promise<void> {
 	const actDir = `${storyFolder}/act-${actNumber}`;
 	await mkdir(actDir, { baseDir: BaseDirectory.AppData, recursive: true });
 
@@ -546,7 +511,13 @@ async function saveActCard(
 
 function extractCharacterName(content: string): string | null {
 	// Common non-name headers to skip
-	const nonNameHeaders = ['character card', 'character profile', 'character sheet', 'character details', 'character info'];
+	const nonNameHeaders = [
+		'character card',
+		'character profile',
+		'character sheet',
+		'character details',
+		'character info',
+	];
 
 	// Try to extract character name from card content
 	// Look for patterns like "# Character Name" or "Name: ..."
@@ -574,10 +545,7 @@ interface CreatedResources {
 	messageIds: string[];
 }
 
-async function cleanupImport(
-	resources: CreatedResources,
-	logs: string[]
-): Promise<void> {
+async function cleanupImport(resources: CreatedResources, logs: string[]): Promise<void> {
 	// Helper to safely delete and log failures
 	const safeDelete = async (fn: () => Promise<void>, label: string) => {
 		try {

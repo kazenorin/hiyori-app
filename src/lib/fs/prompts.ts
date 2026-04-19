@@ -59,64 +59,109 @@ export {
 	defaultMemoryExtractionSystemPrompt,
 	defaultMemoryExtractionPrompt,
 	defaultEditorModeExtractionPrompt,
-	defaultTriggerEditorModeFragment
+	defaultTriggerEditorModeFragment,
 };
 
 // === Prompt Config Instances ===
 
 // System & Narration
 const systemPrompt = new Prompt({ relativePath: 'system-prompt.md', defaultContent: defaultSystemPrompt });
-const narrationExtractionPrompt = new Prompt({ relativePath: 'narration-extraction-prompt.md', defaultContent: defaultNarrationExtractionPrompt });
-const narrationTemplate = new Prompt({ relativePath: 'narration-template.md', defaultContent: defaultNarrationTemplate });
+const narrationExtractionPrompt = new Prompt({
+	relativePath: 'narration-extraction-prompt.md',
+	defaultContent: defaultNarrationExtractionPrompt,
+});
+const narrationTemplate = new Prompt({
+	relativePath: 'narration-template.md',
+	defaultContent: defaultNarrationTemplate,
+});
 
 // World
 const worldTemplate = new Prompt({ relativePath: 'world/world-template.md', defaultContent: defaultWorldTemplate });
-const generateWorldFromChatPrompt = new Prompt({ relativePath: 'world/generate-world-from-chat-prompt.md', defaultContent: defaultGenerateWorldFromChatPrompt });
-const generateWorldFromChatSystemPrompt = new Prompt({ relativePath: 'world/generate-world-from-chat-system-prompt.md', defaultContent: defaultGenerateWorldFromChatSystemPrompt });
-const worldBuilderSystemPrompt = new Prompt({ relativePath: 'world/world-builder-system-prompt.md', defaultContent: defaultWorldBuilderSystemPrompt });
+const generateWorldFromChatPrompt = new Prompt({
+	relativePath: 'world/generate-world-from-chat-prompt.md',
+	defaultContent: defaultGenerateWorldFromChatPrompt,
+});
+const generateWorldFromChatSystemPrompt = new Prompt({
+	relativePath: 'world/generate-world-from-chat-system-prompt.md',
+	defaultContent: defaultGenerateWorldFromChatSystemPrompt,
+});
+const worldBuilderSystemPrompt = new Prompt({
+	relativePath: 'world/world-builder-system-prompt.md',
+	defaultContent: defaultWorldBuilderSystemPrompt,
+});
 
 // Act
-const actCardTemplate = new Prompt({ relativePath: 'act/act-card-template.md', defaultContent: defaultActCardTemplate });
-const actExtractionPrompt = new Prompt({ relativePath: 'act/act-extraction-prompt.md', defaultContent: defaultActExtractionPrompt });
+const actCardTemplate = new Prompt({
+	relativePath: 'act/act-card-template.md',
+	defaultContent: defaultActCardTemplate,
+});
+const actExtractionPrompt = new Prompt({
+	relativePath: 'act/act-extraction-prompt.md',
+	defaultContent: defaultActExtractionPrompt,
+});
 
 // Character
-const characterCardTemplate = new Prompt({ relativePath: 'character/character-card-template.md', defaultContent: defaultCharacterCardTemplate });
-const characterCardExtractionPrompt = new Prompt({ relativePath: 'character/character-card-extraction-prompt.md', defaultContent: defaultCharacterCardExtractionPrompt });
-const characterCardExtractionSystemPrompt = new Prompt({ relativePath: 'character/character-card-extraction-system-prompt.md', defaultContent: defaultCharacterCardExtractionSystemPrompt });
-const summarizeCharactersInAct = new Prompt({ relativePath: 'character/summarize-characters-in-act.md', defaultContent: defaultSummarizeCharactersInAct });
+const characterCardTemplate = new Prompt({
+	relativePath: 'character/character-card-template.md',
+	defaultContent: defaultCharacterCardTemplate,
+});
+const characterCardExtractionPrompt = new Prompt({
+	relativePath: 'character/character-card-extraction-prompt.md',
+	defaultContent: defaultCharacterCardExtractionPrompt,
+});
+const characterCardExtractionSystemPrompt = new Prompt({
+	relativePath: 'character/character-card-extraction-system-prompt.md',
+	defaultContent: defaultCharacterCardExtractionSystemPrompt,
+});
+const summarizeCharactersInAct = new Prompt({
+	relativePath: 'character/summarize-characters-in-act.md',
+	defaultContent: defaultSummarizeCharactersInAct,
+});
 
 // Import
-const actGenerationPrompt = new Prompt({ relativePath: 'import/act-generation-prompt.md', defaultContent: defaultActGenerationPrompt });
-const choicesExtractionPrompt = new Prompt({ relativePath: 'import/choices-extraction-prompt.md', defaultContent: defaultChoicesExtractionPrompt });
+const actGenerationPrompt = new Prompt({
+	relativePath: 'import/act-generation-prompt.md',
+	defaultContent: defaultActGenerationPrompt,
+});
+const choicesExtractionPrompt = new Prompt({
+	relativePath: 'import/choices-extraction-prompt.md',
+	defaultContent: defaultChoicesExtractionPrompt,
+});
 
 // Memories
-const memoryExtractionSystemPrompt = new Prompt({ relativePath: 'memories/memory-extraction-system-prompt.md', defaultContent: defaultMemoryExtractionSystemPrompt });
-const memoryExtractionPrompt = new Prompt({ relativePath: 'memories/memory-extraction-prompt.md', defaultContent: defaultMemoryExtractionPrompt });
+const memoryExtractionSystemPrompt = new Prompt({
+	relativePath: 'memories/memory-extraction-system-prompt.md',
+	defaultContent: defaultMemoryExtractionSystemPrompt,
+});
+const memoryExtractionPrompt = new Prompt({
+	relativePath: 'memories/memory-extraction-prompt.md',
+	defaultContent: defaultMemoryExtractionPrompt,
+});
 
 // Reviewer
-const editorModeExtractionPrompt = new Prompt({ relativePath: 'reviewer/editor-mode-extraction-prompt.md', defaultContent: defaultEditorModeExtractionPrompt });
-const triggerEditorModeFragment = new Prompt({ relativePath: 'reviewer/trigger-editor-mode-fragment.md', defaultContent: defaultTriggerEditorModeFragment });
+const editorModeExtractionPrompt = new Prompt({
+	relativePath: 'reviewer/editor-mode-extraction-prompt.md',
+	defaultContent: defaultEditorModeExtractionPrompt,
+});
+const triggerEditorModeFragment = new Prompt({
+	relativePath: 'reviewer/trigger-editor-mode-fragment.md',
+	defaultContent: defaultTriggerEditorModeFragment,
+});
 
 // === Load Functions ===
 
 export const loadSystemPrompt = async (): Promise<string> => {
 	if (settings.reviewerEnabled) {
-		const [a, b] = await Promise.all([
-			systemPrompt.load(),
-			triggerEditorModeFragment.load()
-		]);
+		const [a, b] = await Promise.all([systemPrompt.load(), triggerEditorModeFragment.load()]);
 		return a + b;
 	} else {
-		return systemPrompt.load()
+		return systemPrompt.load();
 	}
 };
 export const loadNarrationExtractionPrompt = (): Promise<string> => narrationExtractionPrompt.load();
 export const loadNarrationTemplate = (): Promise<string> => narrationTemplate.load();
 export async function loadNarrationContent(): Promise<string> {
-	const [extraction, template] = await Promise.all([
-		narrationExtractionPrompt.load(),
-		narrationTemplate.load()
-	]);
+	const [extraction, template] = await Promise.all([narrationExtractionPrompt.load(), narrationTemplate.load()]);
 	return extraction.replace('{narrationTemplate}', template);
 }
 export const loadWorldTemplate = (): Promise<string> => worldTemplate.load();
@@ -127,7 +172,8 @@ export const loadActCardTemplate = (): Promise<string> => actCardTemplate.load()
 export const loadActExtractionPrompt = (): Promise<string> => actExtractionPrompt.load();
 export const loadCharacterCardTemplate = (): Promise<string> => characterCardTemplate.load();
 export const loadCharacterCardExtractionPrompt = (): Promise<string> => characterCardExtractionPrompt.load();
-export const loadCharacterCardExtractionSystemPrompt = (): Promise<string> => characterCardExtractionSystemPrompt.load();
+export const loadCharacterCardExtractionSystemPrompt = (): Promise<string> =>
+	characterCardExtractionSystemPrompt.load();
 export const loadSummarizeCharactersInAct = (): Promise<string> => summarizeCharactersInAct.load();
 export const loadActGenerationPrompt = (): Promise<string> => actGenerationPrompt.load();
 export const loadChoicesExtractionPrompt = (): Promise<string> => choicesExtractionPrompt.load();
@@ -146,7 +192,12 @@ export async function loadStorySystemPrompt(storyId: string, storyName: string):
 }
 
 export async function loadStoryNarrationExtractionPrompt(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, narrationExtractionPrompt.relativePath, narrationExtractionPrompt.defaultContent);
+	return loadPromptForStory(
+		storyId,
+		storyName,
+		narrationExtractionPrompt.relativePath,
+		narrationExtractionPrompt.defaultContent
+	);
 }
 
 export async function loadStoryNarrationTemplate(storyId: string, storyName: string): Promise<string> {
@@ -176,5 +227,5 @@ registerDefaults([
 	memoryExtractionSystemPrompt,
 	memoryExtractionPrompt,
 	editorModeExtractionPrompt,
-	triggerEditorModeFragment
+	triggerEditorModeFragment,
 ]);

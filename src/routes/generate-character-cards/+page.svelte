@@ -15,7 +15,7 @@
 		updateCharacter,
 		addManualCharacter,
 		removeCharacter,
-		resetState
+		resetState,
 	} from '$lib/stores/character-card.svelte';
 	import { onMount } from 'svelte';
 
@@ -60,9 +60,7 @@
 	<div class="max-w-4xl mx-auto space-y-6">
 		<!-- Header -->
 		<div class="flex items-center gap-4">
-			<button class="btn btn-sm preset-tonal" onclick={handleBack}>
-				&larr; Back
-			</button>
+			<button class="btn btn-sm preset-tonal" onclick={handleBack}> &larr; Back </button>
 			<h2 class="h2">Generate Character Cards</h2>
 		</div>
 
@@ -82,9 +80,16 @@
 
 		<!-- Extraction Loading -->
 		{#if getIsExtracting()}
-			<div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" role="alert" aria-live="polite" aria-busy="true">
+			<div
+				class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+				role="alert"
+				aria-live="polite"
+				aria-busy="true"
+			>
 				<div class="card p-8 text-center">
-					<div class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+					<div
+						class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"
+					></div>
 					<p class="mt-4 text-surface-950-50">Extracting characters from act...</p>
 				</div>
 			</div>
@@ -108,7 +113,9 @@
 		<!-- Character Table -->
 		{#if !getIsExtracting() && (getCharacters().length > 0 || getExtractionError())}
 			<section class="card p-4 space-y-3">
-				<div class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(100px,1fr)_60px_36px] gap-3 text-xs font-semibold text-surface-700-300 uppercase tracking-wide border-b border-surface-200-800 pb-2">
+				<div
+					class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(100px,1fr)_60px_36px] gap-3 text-xs font-semibold text-surface-700-300 uppercase tracking-wide border-b border-surface-200-800 pb-2"
+				>
 					<span>Character</span>
 					<span>Summary</span>
 					<span>Canonical Name</span>
@@ -117,7 +124,9 @@
 				</div>
 
 				{#each getCharacters() as char, i (i)}
-					<div class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(100px,1fr)_60px_36px] gap-3 items-center py-2 border-b border-surface-100-900">
+					<div
+						class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(100px,1fr)_60px_36px] gap-3 items-center py-2 border-b border-surface-100-900"
+					>
 						<span class="text-surface-950-50">
 							{#if char.isManual}
 								<input
@@ -156,7 +165,12 @@
 							{#if char.isManual}
 								<span class="text-xs text-surface-500">(manual)</span>
 							{:else}
-								<input type="checkbox" class="checkbox" checked={char.include} onchange={(e) => updateInclude(i, e.currentTarget.checked)} />
+								<input
+									type="checkbox"
+									class="checkbox"
+									checked={char.include}
+									onchange={(e) => updateInclude(i, e.currentTarget.checked)}
+								/>
 							{/if}
 						</span>
 						<span>
@@ -178,7 +192,11 @@
 				<ul class="list-disc list-inside text-sm text-surface-700-300 space-y-1">
 					<li>Canonical names must remain consistent throughout the entire story.</li>
 					<li>Character cards are maintained per act line (not globally).</li>
-					<li>Cards are generated from the current act's content. If cards exist for the current act line <strong>and</strong> previous acts in the lineage, their content contributes to generation context.</li>
+					<li>
+						Cards are generated from the current act's content. If cards exist for the current act line <strong
+							>and</strong
+						> previous acts in the lineage, their content contributes to generation context.
+					</li>
 					<li>If a card for the current act line already exists, <strong>it will be overwritten</strong>.</li>
 				</ul>
 			</section>
@@ -199,11 +217,22 @@
 		{#if getIsGenerating()}
 			{@const total = getProgress()?.total ?? getCharacters().length}
 			{@const completed = getProgress()?.completed ?? 0}
-			<div class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50" role="alert" aria-live="polite" aria-busy="true">
+			<div
+				class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50"
+				role="alert"
+				aria-live="polite"
+				aria-busy="true"
+			>
 				<div class="card p-8 text-center min-w-[320px]">
 					<p class="text-surface-950-50">Generating {completed + 1} of {total} characters...</p>
 					<p class="text-lg font-semibold text-surface-950-50 mt-2">{getProgress()?.currentCharacter ?? ''}</p>
-					<div class="mt-4 h-3 bg-surface-200-800 rounded-full overflow-hidden" role="progressbar" aria-valuenow={completed} aria-valuemin={0} aria-valuemax={total}>
+					<div
+						class="mt-4 h-3 bg-surface-200-800 rounded-full overflow-hidden"
+						role="progressbar"
+						aria-valuenow={completed}
+						aria-valuemin={0}
+						aria-valuemax={total}
+					>
 						<div
 							class="h-full bg-primary-500 transition-[width] duration-200"
 							style="width: {total > 0 ? (completed / total) * 100 : 0}%"
@@ -227,7 +256,8 @@
 				<ul class="list-disc list-inside text-sm text-surface-700-300">
 					{#each getResults() as r}
 						<li>
-							<strong class="text-surface-950-50">{r.characterName}</strong>: <span class="font-mono text-xs">{r.filePath}</span>
+							<strong class="text-surface-950-50">{r.characterName}</strong>:
+							<span class="font-mono text-xs">{r.filePath}</span>
 						</li>
 					{/each}
 				</ul>
@@ -235,4 +265,3 @@
 		{/if}
 	</div>
 </div>
-

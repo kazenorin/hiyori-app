@@ -1,4 +1,4 @@
-import {generateText, type ModelMessage} from 'ai';
+import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
 import { loadActCardTemplate, loadActExtractionPrompt, loadSystemPrompt } from '$lib/fs/prompts';
@@ -18,18 +18,20 @@ export interface GenerateActCardResult {
 	content: string;
 }
 
-function buildUserMessages(contents: string[], template: string, extractionPrompt: string, world: string | null): string[] {
-	const worldPrompt = !!world ? [
-		'The world setting is based on the following:',
-		world
-	] : [];
+function buildUserMessages(
+	contents: string[],
+	template: string,
+	extractionPrompt: string,
+	world: string | null
+): string[] {
+	const worldPrompt = !!world ? ['The world setting is based on the following:', world] : [];
 	return [
 		...worldPrompt,
 		'The following messages will contain the transcript of the current act:',
 		...contents,
 		'The previous message was the end of the transcript of the current act. The following message will contain the Act Card template:',
 		template,
-		extractionPrompt
+		extractionPrompt,
 	];
 }
 
@@ -70,27 +72,36 @@ export async function generateActCard(): Promise<GenerateActCardResult> {
 		loadActCardTemplate(),
 		loadActExtractionPrompt(),
 		loadSystemPrompt(),
-		loadStoryWorldContent(act.storyId)
+		loadStoryWorldContent(act.storyId),
 	]);
 
 	// Build AI call
 	const model = createModel(config);
-	const userMessages: ModelMessage[] = buildUserMessages(contents, template, extractionPrompt, world).map((content) => ({
-		role: 'user', content
-	}));
+	const userMessages: ModelMessage[] = buildUserMessages(contents, template, extractionPrompt, world).map(
+		(content) => ({
+			role: 'user',
+			content,
+		})
+	);
 
-	await logActCardActivity('generation-start', `Act line: ${actLineId}\n\nMessages:\n${JSON.stringify(userMessages, null, 2)}`);
+	await logActCardActivity(
+		'generation-start',
+		`Act line: ${actLineId}\n\nMessages:\n${JSON.stringify(userMessages, null, 2)}`
+	);
 
 	const result = await generateText({
 		model,
 		system: systemPrompt,
-		messages: userMessages
+		messages: userMessages,
 	});
 
-	await logActCardActivity('generation-end', `
+	await logActCardActivity(
+		'generation-end',
+		`
   Result: ${result.text}
   Usage: ${JSON.stringify(result.usage, null, 4)}
-  Finish Reason: ${result.finishReason}`);
+  Finish Reason: ${result.finishReason}`
+	);
 
 	// Resolve file path
 	const storyFolder = await resolveStoryFolder(storyId, story.name);
@@ -149,13 +160,18 @@ export async function streamActCard(
 		loadActCardTemplate(),
 		loadActExtractionPrompt(),
 		loadSystemPrompt(),
-		loadStoryWorldContent(story.id)
+		loadStoryWorldContent(story.id),
 	]);
 
 	// Build messages for streaming
-	const userMessages: { role: 'user' | 'assistant'; content: string }[] = buildUserMessages(contents, template, extractionPrompt, world).map((content) => ({
+	const userMessages: { role: 'user' | 'assistant'; content: string }[] = buildUserMessages(
+		contents,
+		template,
+		extractionPrompt,
+		world
+	).map((content) => ({
 		role: 'user',
-		content
+		content,
 	}));
 
 	await logActCardActivity('generation-start', `Act line: ${actLineId}`);
@@ -173,7 +189,7 @@ export async function streamActCard(
 				gameData: null,
 				reviewScratchpad: null,
 				revisedNarrative: null,
-				revisedGameData: null
+				revisedGameData: null,
 			});
 		},
 		config
@@ -181,9 +197,12 @@ export async function streamActCard(
 
 	const content = accumulator.state.content;
 
-	await logActCardActivity('generation-end', `
+	await logActCardActivity(
+		'generation-end',
+		`
 	  Result: ${content}
-	  Usage: ${JSON.stringify(accumulator.resultMetadata, null, 4)}`);
+	  Usage: ${JSON.stringify(accumulator.resultMetadata, null, 4)}`
+	);
 
 	// Resolve file path
 	const storyFolder = await resolveStoryFolder(storyId, story.name);

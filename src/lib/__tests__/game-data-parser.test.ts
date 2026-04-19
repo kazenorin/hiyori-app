@@ -24,7 +24,7 @@ function feedAll(chunks: string[]): { text: string; gameData: GameData | null } 
 
 const VALID_GAME_DATA = JSON.stringify({
 	worldState: 'The hero stands at a crossroads.',
-	decisions: ['Go left', 'Go right', 'Go straight']
+	decisions: ['Go left', 'Go right', 'Go straight'],
 });
 
 describe('GameDataParser', () => {
@@ -62,7 +62,7 @@ describe('GameDataParser', () => {
 			expect(text).toBe('The story continues.\n');
 			expect(gameData).toEqual({
 				worldState: 'The hero stands at a crossroads.',
-				decisions: ['Go left', 'Go right', 'Go straight']
+				decisions: ['Go left', 'Go right', 'Go straight'],
 			});
 		});
 
@@ -126,29 +126,15 @@ describe('GameDataParser', () => {
 			expect(text).toBe('The story.\n');
 			expect(gameData).toEqual({
 				worldState: 'The hero stands at a crossroads.',
-				decisions: ['Go left', 'Go right', 'Go straight']
+				decisions: ['Go left', 'Go right', 'Go straight'],
 			});
 		});
 
 		it('handles backtick split across chunk boundary', () => {
-			const chunks = [
-				'Text',
-				'`\n',
-				'``',
-				'json\n',
-				VALID_GAME_DATA,
-				'\n```',
-				' end'
-			];
+			const chunks = ['Text', '`\n', '``', 'json\n', VALID_GAME_DATA, '\n```', ' end'];
 			// This tests: ` followed by `` which forms ```
 			// Actually let's test properly - the full ```json arrives across chunks
-			const chunks2 = [
-				'Hello\n`',
-				'``json\n',
-				VALID_GAME_DATA + '\n',
-				'```',
-				'\nDone'
-			];
+			const chunks2 = ['Hello\n`', '``json\n', VALID_GAME_DATA + '\n', '```', '\nDone'];
 			const { text, gameData } = feedAll(chunks2);
 			expect(text).toBe('Hello\n\nDone');
 			expect(gameData).not.toBeNull();
@@ -190,7 +176,7 @@ describe('GameDataParser', () => {
 		it('handles backticks inside JSON content', () => {
 			const json = JSON.stringify({
 				worldState: 'He said `hello`',
-				decisions: ['A']
+				decisions: ['A'],
 			});
 			const input = `\`\`\`json\n${json}\n\`\`\``;
 			const { text, gameData } = feedAll([input]);

@@ -1,4 +1,4 @@
-import type {StreamParser} from './stream-parser';
+import type { StreamParser } from './stream-parser';
 
 type ParserState = 'TEXT' | 'POTENTIAL_OPENER' | 'TAG_BODY' | 'POTENTIAL_CLOSER';
 
@@ -66,10 +66,7 @@ export function createXmlTagParser(tagName: string): StreamParser<{ [tagName]: s
 							openerBuffer = '';
 							state = 'TEXT';
 						}
-					} else if (
-						!openerBuffer.startsWith(OPENER) &&
-						!OPENER.startsWith(openerBuffer)
-					) {
+					} else if (!openerBuffer.startsWith(OPENER) && !OPENER.startsWith(openerBuffer)) {
 						textBuffer += openerBuffer;
 						openerBuffer = '';
 						state = 'TEXT';

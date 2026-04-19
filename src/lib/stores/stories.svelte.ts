@@ -10,9 +10,15 @@ import {
 	loadSystemPrompt,
 	loadNarrationTemplate,
 	loadStoryNarrationExtractionPrompt,
-	loadStoryNarrationTemplate
+	loadStoryNarrationTemplate,
 } from '$lib/fs/prompts';
-import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-folders';
+import {
+	loadStoryWorldContent,
+	ensureWorldFile,
+	resolveStoryFolder,
+	renameStoryFolder,
+	deriveStoryName,
+} from '$lib/fs/story-folders';
 import { writeTextFile, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 
@@ -63,7 +69,7 @@ export function getActiveSystemPrompt(): string | null {
 	return activeSystemPrompt;
 }
 export async function getActiveSystemPromptOrDefault(): Promise<string> {
-	return activeSystemPrompt ?? await loadSystemPrompt();
+	return activeSystemPrompt ?? (await loadSystemPrompt());
 }
 export function getActiveNarrationExtractionPrompt(): string | null {
 	return activeNarrationExtractionPrompt;
@@ -72,7 +78,7 @@ export function getActiveNarrationTemplate(): string | null {
 	return activeNarrationTemplate;
 }
 export async function getActiveNarrationTemplateOrDefault(): Promise<string> {
-	return activeNarrationTemplate ?? await loadNarrationTemplate();
+	return activeNarrationTemplate ?? (await loadNarrationTemplate());
 }
 export function getActiveWorldContent(): string | null {
 	return activeWorldContent;
@@ -82,8 +88,10 @@ export function getActiveWorldContent(): string | null {
  * This is what gets prepended as a hidden message on every AI call.
  */
 export function getActiveNarrationContext(): string | null {
-	const narration = (activeNarrationExtractionPrompt && activeNarrationTemplate)
-		? activeNarrationExtractionPrompt.replace('{narrationTemplate}', activeNarrationTemplate) : null;
+	const narration =
+		activeNarrationExtractionPrompt && activeNarrationTemplate
+			? activeNarrationExtractionPrompt.replace('{narrationTemplate}', activeNarrationTemplate)
+			: null;
 	const world = activeWorldContent;
 	if (!narration && !world) return null;
 	if (!narration) return world;
@@ -186,19 +194,9 @@ export async function createStory(name: string): Promise<dbStories.Story> {
 	return story;
 }
 
-export async function createAct(
-	storyId: string,
-	name: string,
-	continuesFromActLineId?: string
-): Promise<dbActs.Act> {
+export async function createAct(storyId: string, name: string, continuesFromActLineId?: string): Promise<dbActs.Act> {
 	const actNumber = await dbActs.getNextActNumber(storyId);
-	const act = await dbActs.createAct(
-		crypto.randomUUID(),
-		storyId,
-		name,
-		actNumber,
-		continuesFromActLineId ?? null
-	);
+	const act = await dbActs.createAct(crypto.randomUUID(), storyId, name, actNumber, continuesFromActLineId ?? null);
 	acts = [...acts, act].sort((a, b) => a.actNumber - b.actNumber);
 	return act;
 }
@@ -212,7 +210,7 @@ export async function createActLine(actId: string, name: string): Promise<dbActL
 
 export async function renameStory(id: string, newName: string): Promise<void> {
 	await dbStories.updateStory(id, newName);
-	stories = stories.map((s) => s.id === id ? { ...s, name: newName, updatedAt: Date.now() } : s);
+	stories = stories.map((s) => (s.id === id ? { ...s, name: newName, updatedAt: Date.now() } : s));
 	try {
 		await renameStoryFolder(id, newName);
 	} catch (err) {
@@ -222,12 +220,12 @@ export async function renameStory(id: string, newName: string): Promise<void> {
 
 export async function renameAct(id: string, newName: string): Promise<void> {
 	await dbActs.updateAct(id, newName);
-	acts = acts.map((a) => a.id === id ? { ...a, name: newName, updatedAt: Date.now() } : a);
+	acts = acts.map((a) => (a.id === id ? { ...a, name: newName, updatedAt: Date.now() } : a));
 }
 
 export async function renameActLine(id: string, newName: string): Promise<void> {
 	await dbActLines.updateActLine(id, newName);
-	actLines = actLines.map((l) => l.id === id ? { ...l, name: newName } : l);
+	actLines = actLines.map((l) => (l.id === id ? { ...l, name: newName } : l));
 }
 
 export async function deleteStory(id: string, removeFolder: boolean = false): Promise<void> {
@@ -314,10 +312,7 @@ export async function restoreState(): Promise<void> {
 	isLoading = false;
 }
 
-export async function createStoryFromWorldBuilder(
-	name: string,
-	worldContent: string
-): Promise<void> {
+export async function createStoryFromWorldBuilder(name: string, worldContent: string): Promise<void> {
 	const story = await createStory(name);
 	const act = await createAct(story.id, 'Act 1');
 	const actLine = await createActLine(act.id, 'main line');

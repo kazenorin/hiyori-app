@@ -1,12 +1,4 @@
-import {
-	readTextFile,
-	mkdir,
-	exists,
-	readDir,
-	rename,
-	BaseDirectory,
-	type DirEntry
-} from '@tauri-apps/plugin-fs';
+import { readTextFile, mkdir, exists, readDir, rename, BaseDirectory, type DirEntry } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { generateWorld } from '$lib/ai/world-generator';
 import { log } from '$lib/logging/logger';
@@ -41,9 +33,7 @@ export function deriveStoryName(name: string, id: string): string {
 
 async function listAppDataFolders(): Promise<string[]> {
 	const entries = await readDir('', { baseDir: BaseDirectory.AppData });
-	return entries
-		.filter((e: DirEntry) => e.isDirectory)
-		.map((e: DirEntry) => e.name);
+	return entries.filter((e: DirEntry) => e.isDirectory).map((e: DirEntry) => e.name);
 }
 
 /**
@@ -121,7 +111,7 @@ export async function resolveStoryFolder(storyId: string, storyName: string): Pr
  * If it doesn't exist, generate it from the story's chat history.
  */
 export async function ensureWorldFile(storyId: string, storyName: string): Promise<void> {
-	const folderName = await dbStoryFolders.getStoryFolder(storyId) ?? await resolveStoryFolder(storyId, storyName);
+	const folderName = (await dbStoryFolders.getStoryFolder(storyId)) ?? (await resolveStoryFolder(storyId, storyName));
 
 	const worldPath = `${folderName}/world.md`;
 	const worldExists = await exists(worldPath, { baseDir: BaseDirectory.AppData });
@@ -142,7 +132,7 @@ export async function loadStoryWorldContent(storyId: string, storyName?: string)
 	const folder = await dbStoryFolders.getStoryFolder(storyId);
 	if (!folder && !storyName) return null;
 
-	const folderName = folder ?? await resolveStoryFolder(storyId, storyName!);
+	const folderName = folder ?? (await resolveStoryFolder(storyId, storyName!));
 	const worldPath = `${folderName}/world.md`;
 	try {
 		const worldExists = await exists(worldPath, { baseDir: BaseDirectory.AppData });
@@ -183,7 +173,10 @@ export async function renameStoryFolder(storyId: string, newName: string): Promi
 
 	// Rename on disk if the name actually changed
 	if (oldFolder !== newFolder) {
-		await rename(oldFolder, newFolder, { oldPathBaseDir: BaseDirectory.AppData, newPathBaseDir: BaseDirectory.AppData });
+		await rename(oldFolder, newFolder, {
+			oldPathBaseDir: BaseDirectory.AppData,
+			newPathBaseDir: BaseDirectory.AppData,
+		});
 		await dbStoryFolders.setStoryFolder(storyId, newFolder);
 	}
 

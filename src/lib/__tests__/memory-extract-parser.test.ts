@@ -50,9 +50,7 @@ Some intro text that should be ignored.
 		const result = parseMemoryExtract(markdown);
 
 		expect(result['sir-lancelot-du-lac']).toBeDefined();
-		expect(result['sir-lancelot-du-lac']['Camelot Castle']).toEqual([
-			'Sir Lancelot du Lac drew his sword.'
-		]);
+		expect(result['sir-lancelot-du-lac']['Camelot Castle']).toEqual(['Sir Lancelot du Lac drew his sword.']);
 	});
 
 	it('handles empty markdown', () => {
@@ -84,9 +82,7 @@ Some intro text that should be ignored.
 
 		const result = parseMemoryExtract(markdown);
 
-		expect(result['elena-shadowcrest']['The Tavern']).toEqual([
-			'This item should be captured.'
-		]);
+		expect(result['elena-shadowcrest']['The Tavern']).toEqual(['This item should be captured.']);
 		// No key for items outside H3
 		expect(Object.keys(result['elena-shadowcrest'])).toHaveLength(1);
 	});
@@ -107,9 +103,7 @@ Some intro text that should be ignored.
 		const result = parseMemoryExtract(markdown);
 
 		expect(Object.keys(result)).toHaveLength(1);
-		expect(result['elena-shadowcrest']['The Tavern']).toEqual([
-			'Elena Shadowcrest sat by the fire.'
-		]);
+		expect(result['elena-shadowcrest']['The Tavern']).toEqual(['Elena Shadowcrest sat by the fire.']);
 	});
 
 	it('handles multiple characters with same location name', () => {
@@ -129,12 +123,8 @@ Some intro text that should be ignored.
 
 		const result = parseMemoryExtract(markdown);
 
-		expect(result['elena-shadowcrest']['The Market']).toEqual([
-			'Elena bought herbs.'
-		]);
-		expect(result['marcus-thorne']['The Market']).toEqual([
-			'Marcus sold his horse.'
-		]);
+		expect(result['elena-shadowcrest']['The Market']).toEqual(['Elena bought herbs.']);
+		expect(result['marcus-thorne']['The Market']).toEqual(['Marcus sold his horse.']);
 	});
 
 	it('handles character with multiple memories in one location', () => {
@@ -171,9 +161,7 @@ Character: Elena - important, named.
 
 		const result = parseMemoryExtract(markdown);
 
-		expect(result['elena']['The Tower']).toEqual([
-			'Elena climbed the tower stairs.'
-		]);
+		expect(result['elena']['The Tower']).toEqual(['Elena climbed the tower stairs.']);
 	});
 
 	it('handles H2 with special characters in name', () => {

@@ -6,10 +6,7 @@ export interface ModelInfo {
 
 const FETCH_TIMEOUT_MS = 10000;
 
-export async function fetchModels(settings: {
-	baseURL: string;
-	apiKey: string;
-}): Promise<ModelInfo[]> {
+export async function fetchModels(settings: { baseURL: string; apiKey: string }): Promise<ModelInfo[]> {
 	const baseURL = settings.baseURL || 'https://api.openai.com/v1';
 	const url = `${baseURL}/models`;
 

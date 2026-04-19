@@ -2,7 +2,7 @@
  * Base result type for all streaming parsers.
  * Every parser produces text passthrough plus its own extracted fields.
  */
-export type ParserAccumulator<TExtract> = { } & TExtract;
+export type ParserAccumulator<TExtract> = {} & TExtract;
 
 /**
  * Standard contract for streaming character parsers.

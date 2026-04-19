@@ -2,8 +2,20 @@
 	import { goto } from '$app/navigation';
 	import { Memory, type MemoryItem, type LocationItem } from '$lib/memory/memory';
 	import { getEmbeddingProviderConfig, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
-	import { getActiveStory, getActiveAct, getActiveActLine, getActiveStoryId, getActiveActLineId, getActiveActId } from '$lib/stores/stories.svelte';
-	import { regenerateMemoriesForCurrentLine, getIsRegenerating, getRegenError, getLastRegenResult } from '$lib/stores/memory-regeneration.svelte';
+	import {
+		getActiveStory,
+		getActiveAct,
+		getActiveActLine,
+		getActiveStoryId,
+		getActiveActLineId,
+		getActiveActId,
+	} from '$lib/stores/stories.svelte';
+	import {
+		regenerateMemoriesForCurrentLine,
+		getIsRegenerating,
+		getRegenError,
+		getLastRegenResult,
+	} from '$lib/stores/memory-regeneration.svelte';
 	import { streamActCard } from '$lib/ai/act-card-generator';
 	import { log } from '$lib/logging/logger';
 
@@ -50,7 +62,6 @@
 		locations = await memory.getAllLocations({ storyId: activeStoryId, actLineId: activeActLineId ?? undefined });
 	}
 
-
 	function appendConsole(text: string) {
 		consoleOutput += text + '\n';
 		// Auto-scroll to bottom
@@ -72,12 +83,11 @@
 		confirmDialog = {
 			title: 'Generate Act Card',
 			message: 'The existing act card will be overridden. Continue?',
-			onConfirm: doGenerateActCard
+			onConfirm: doGenerateActCard,
 		};
 	}
 
 	async function doGenerateActCard() {
-
 		isGeneratingAct = true;
 		consoleOutput = '';
 		progressUpdates = [];
@@ -113,13 +123,13 @@
 		}
 		confirmDialog = {
 			title: 'Regenerate Memories',
-			message: 'All existing memories for this act line will be deleted and re-extracted. This may take a while depending on the number of exchanges. Continue?',
-			onConfirm: doRegenerateMemories
+			message:
+				'All existing memories for this act line will be deleted and re-extracted. This may take a while depending on the number of exchanges. Continue?',
+			onConfirm: doRegenerateMemories,
 		};
 	}
 
 	async function doRegenerateMemories() {
-
 		consoleOutput = '';
 		progressUpdates = [];
 		status = '';
@@ -145,7 +155,11 @@
 		status = 'Searching memories...';
 		try {
 			const memory = new Memory(embeddingConfig);
-			searchResults = await memory.search(searchQuery.trim(), { storyId: activeStoryId, actLineId: activeActLineId ?? undefined, limit: 5 });
+			searchResults = await memory.search(searchQuery.trim(), {
+				storyId: activeStoryId,
+				actLineId: activeActLineId ?? undefined,
+				limit: 5,
+			});
 			status = `Found ${searchResults.length} result(s).`;
 		} catch (err) {
 			status = err instanceof Error ? err.message : 'Search failed';
@@ -161,7 +175,11 @@
 		status = 'Searching locations...';
 		try {
 			const memory = new Memory(embeddingConfig);
-			locationSearchResults = await memory.searchLocations(locationSearchQuery.trim(), { storyId: activeStoryId, actLineId: activeActLineId ?? undefined, limit: 5 });
+			locationSearchResults = await memory.searchLocations(locationSearchQuery.trim(), {
+				storyId: activeStoryId,
+				actLineId: activeActLineId ?? undefined,
+				limit: 5,
+			});
 			status = `Found ${locationSearchResults.length} location(s).`;
 		} catch (err) {
 			status = err instanceof Error ? err.message : 'Location search failed';
@@ -177,11 +195,11 @@
 		status = 'Searching memories by location...';
 		try {
 			const memory = new Memory(embeddingConfig);
-			locationQueryResults = await memory.searchByLocation(
-				locationQuery.trim(),
-				locationQueryLocation.trim(),
-				{ storyId: activeStoryId, actLineId: activeActLineId ?? undefined, limit: 5 }
-			);
+			locationQueryResults = await memory.searchByLocation(locationQuery.trim(), locationQueryLocation.trim(), {
+				storyId: activeStoryId,
+				actLineId: activeActLineId ?? undefined,
+				limit: 5,
+			});
 			status = `Found ${locationQueryResults.length} result(s) by location.`;
 		} catch (err) {
 			status = err instanceof Error ? err.message : 'Search by location failed';
@@ -196,7 +214,7 @@
 		confirmDialog = {
 			title: 'Reset All Memories',
 			message: 'Delete all memories and locations? This cannot be undone.',
-			onConfirm: doReset
+			onConfirm: doReset,
 		};
 	}
 
@@ -278,109 +296,112 @@
 			<p class="text-error-700-300">Please configure an embedding provider in Settings first.</p>
 		{/if}
 
-			<!-- Generation Tools -->
-			{#if settings.memoryEnabled && activeStoryId}
-				<section class="card p-6 space-y-4">
-					<h2 class="h4">Generation Tools</h2>
+		<!-- Generation Tools -->
+		{#if settings.memoryEnabled && activeStoryId}
+			<section class="card p-6 space-y-4">
+				<h2 class="h4">Generation Tools</h2>
 
-					<div class="flex flex-wrap gap-2">
-						<button
-							class="btn preset-filled"
-							type="button"
-							onclick={handleGenerateActCard}
-							disabled={!activeActLineId || isGeneratingAct || getIsRegenerating()}
-						>
-							{#if isGeneratingAct}
-								Generating...
-							{:else}
-								Generate Act Card
-							{/if}
-						</button>
-						<button
-							class="btn preset-outlined"
-							type="button"
-							onclick={() => goto('/generate-character-cards')}
-							disabled={!activeActLineId || isGeneratingAct || getIsRegenerating()}
-						>
-							Generate Character Cards
-						</button>
-						<button
-							class="btn preset-tonal"
-							type="button"
-							onclick={handleRegenerateMemories}
-							disabled={!activeActLineId || isGeneratingAct || getIsRegenerating()}
-						>
-							{#if getIsRegenerating()}
-								Regenerating...
-							{:else}
-								Regenerate Memories
-							{/if}
-						</button>
+				<div class="flex flex-wrap gap-2">
+					<button
+						class="btn preset-filled"
+						type="button"
+						onclick={handleGenerateActCard}
+						disabled={!activeActLineId || isGeneratingAct || getIsRegenerating()}
+					>
+						{#if isGeneratingAct}
+							Generating...
+						{:else}
+							Generate Act Card
+						{/if}
+					</button>
+					<button
+						class="btn preset-outlined"
+						type="button"
+						onclick={() => goto('/generate-character-cards')}
+						disabled={!activeActLineId || isGeneratingAct || getIsRegenerating()}
+					>
+						Generate Character Cards
+					</button>
+					<button
+						class="btn preset-tonal"
+						type="button"
+						onclick={handleRegenerateMemories}
+						disabled={!activeActLineId || isGeneratingAct || getIsRegenerating()}
+					>
+						{#if getIsRegenerating()}
+							Regenerating...
+						{:else}
+							Regenerate Memories
+						{/if}
+					</button>
+				</div>
+
+				{#if consoleOutput}
+					<div class="bg-surface-900-100 text-surface-100-900 rounded-lg p-4 font-mono text-xs h-64 overflow-y-auto">
+						<pre bind:this={consoleRef} class="whitespace-pre-wrap break-words">{consoleOutput}</pre>
 					</div>
 
-					{#if consoleOutput}
-						<div class="bg-surface-900-100 text-surface-100-900 rounded-lg p-4 font-mono text-xs h-64 overflow-y-auto">
-							<pre bind:this={consoleRef} class="whitespace-pre-wrap break-words">{consoleOutput}</pre>
+					<details>
+						<summary class="text-sm font-medium cursor-pointer text-surface-500">Full Log</summary>
+						<div class="mt-2 space-y-1 max-h-64 overflow-y-auto">
+							{#each progressUpdates as update}
+								<p class="text-xs text-surface-500">
+									<span class="font-mono">[{update.time.toLocaleTimeString()}]</span>
+									{update.message}
+								</p>
+							{/each}
 						</div>
-
-						<details>
-							<summary class="text-sm font-medium cursor-pointer text-surface-500">Full Log</summary>
-							<div class="mt-2 space-y-1 max-h-64 overflow-y-auto">
-								{#each progressUpdates as update}
-									<p class="text-xs text-surface-500">
-										<span class="font-mono">[{update.time.toLocaleTimeString()}]</span> {update.message}
-									</p>
-								{/each}
-							</div>
-						</details>
-					{/if}
-				</section>
-			{/if}
+					</details>
+				{/if}
+			</section>
+		{/if}
 
 		<!-- Search by Location -->
-	<section class="card p-6 space-y-4">
-		<h2 class="h4">Search by Location</h2>
-		<input
-			class="input w-full"
-			type="text"
-			placeholder="Query..."
-			bind:value={locationQuery}
-			disabled={isLoading || !activeStoryId}
-		/>
-		<input
-			class="input w-full"
-			type="text"
-			placeholder="Location..."
-			bind:value={locationQueryLocation}
-			disabled={isLoading || !activeStoryId}
-		/>
-		<div class="flex gap-2">
-			<button
-				class="btn preset-filled"
-				type="button"
-				onclick={handleLocationQuery}
-				disabled={isLoading || !locationQuery.trim() || !locationQueryLocation.trim() || !activeStoryId}
-			>
-				Search
-			</button>
-		</div>
-
-		{#if locationQueryResults.length > 0}
-			<div class="space-y-2 mt-4">
-				<p class="text-sm font-medium text-surface-700-300">Results</p>
-				{#each locationQueryResults as result (result.id)}
-					<div class="p-3 rounded-[var(--radius-base)] bg-surface-100-900">
-						<p class="text-sm">{result.memory}</p>
-						<p class="text-xs text-surface-500">
-							Character: {result.characterCanonicalName} · Location: {result.location} · Distance: {result.score?.toFixed(4) ?? 'N/A'}
-						</p>
-					</div>
-				{/each}
+		<section class="card p-6 space-y-4">
+			<h2 class="h4">Search by Location</h2>
+			<input
+				class="input w-full"
+				type="text"
+				placeholder="Query..."
+				bind:value={locationQuery}
+				disabled={isLoading || !activeStoryId}
+			/>
+			<input
+				class="input w-full"
+				type="text"
+				placeholder="Location..."
+				bind:value={locationQueryLocation}
+				disabled={isLoading || !activeStoryId}
+			/>
+			<div class="flex gap-2">
+				<button
+					class="btn preset-filled"
+					type="button"
+					onclick={handleLocationQuery}
+					disabled={isLoading || !locationQuery.trim() || !locationQueryLocation.trim() || !activeStoryId}
+				>
+					Search
+				</button>
 			</div>
-		{/if}
-	</section>
 
-	<!-- Search Memories -->
+			{#if locationQueryResults.length > 0}
+				<div class="space-y-2 mt-4">
+					<p class="text-sm font-medium text-surface-700-300">Results</p>
+					{#each locationQueryResults as result (result.id)}
+						<div class="p-3 rounded-[var(--radius-base)] bg-surface-100-900">
+							<p class="text-sm">{result.memory}</p>
+							<p class="text-xs text-surface-500">
+								Character: {result.characterCanonicalName} · Location: {result.location} · Distance: {result.score?.toFixed(
+									4
+								) ?? 'N/A'}
+							</p>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</section>
+
+		<!-- Search Memories -->
 		<section class="card p-6 space-y-4">
 			<h2 class="h4">Search Memories</h2>
 			<input
@@ -408,7 +429,9 @@
 						<div class="p-3 rounded-[var(--radius-base)] bg-surface-100-900">
 							<p class="text-sm">{result.memory}</p>
 							<p class="text-xs text-surface-500">
-								Character: {result.characterCanonicalName} · Location: {result.location} · Distance: {result.score?.toFixed(4) ?? 'N/A'}
+								Character: {result.characterCanonicalName} · Location: {result.location} · Distance: {result.score?.toFixed(
+									4
+								) ?? 'N/A'}
 							</p>
 						</div>
 					{/each}
@@ -523,7 +546,7 @@
 		role="dialog"
 		aria-modal="true"
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-		onclick={() => confirmDialog = null}
+		onclick={() => (confirmDialog = null)}
 		onkeydown={(e) => e.key === 'Escape' && (confirmDialog = null)}
 	>
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -539,13 +562,7 @@
 				{confirmDialog.message}
 			</p>
 			<div class="flex justify-end gap-3">
-				<button
-					class="btn preset-tonal"
-					type="button"
-					onclick={() => confirmDialog = null}
-				>
-					Cancel
-				</button>
+				<button class="btn preset-tonal" type="button" onclick={() => (confirmDialog = null)}> Cancel </button>
 				<button
 					class="btn variant-filled"
 					type="button"

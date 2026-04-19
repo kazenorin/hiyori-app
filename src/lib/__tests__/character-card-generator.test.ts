@@ -3,14 +3,14 @@ import {
 	_parseCharacterJsonForTest as parseCharacterJson,
 	_computeCardFilenameForTest as computeCardFilename,
 	toCharacterEntries,
-	type CharacterSummary
+	type CharacterSummary,
 } from '$lib/ai/character-card-generator';
 
 describe('parseCharacterJson', () => {
 	it('parses simple JSON array', () => {
 		const input = JSON.stringify([
 			{ character: 'John Doe', importance: 'Protagonist' },
-			{ character: 'Jane Smith', importance: 'Supporting role' }
+			{ character: 'Jane Smith', importance: 'Supporting role' },
 		]);
 		const result = parseCharacterJson(input);
 		expect(result).toHaveLength(2);
@@ -56,7 +56,7 @@ describe('parseCharacterJson', () => {
 			'invalid string',
 			123,
 			null,
-			{ character: 'Also Valid', importance: 'Another role' }
+			{ character: 'Also Valid', importance: 'Another role' },
 		]);
 		const result = parseCharacterJson(input);
 		expect(result).toHaveLength(2);
@@ -69,7 +69,7 @@ describe('parseCharacterJson', () => {
 			{ character: 'Has Name', importance: 'Role' },
 			{ character: 'Missing Importance' },
 			{ importance: 'Missing Name' },
-			{ other: 'fields' }
+			{ other: 'fields' },
 		]);
 		const result = parseCharacterJson(input);
 		expect(result).toHaveLength(1);
@@ -77,10 +77,7 @@ describe('parseCharacterJson', () => {
 	});
 
 	it('returns empty array for valid JSON with no matching objects', () => {
-		const input = JSON.stringify([
-			{ other: 'field' },
-			{ name: 'Wrong field name' }
-		]);
+		const input = JSON.stringify([{ other: 'field' }, { name: 'Wrong field name' }]);
 		const result = parseCharacterJson(input);
 		expect(result).toHaveLength(0);
 	});
@@ -95,8 +92,8 @@ describe('parseCharacterJson', () => {
 		const input = JSON.stringify([
 			{
 				character: 'Complex Character',
-				importance: 'A very long description with many words and special chars: colon, "quotes", and more!'
-			}
+				importance: 'A very long description with many words and special chars: colon, "quotes", and more!',
+			},
 		]);
 		const result = parseCharacterJson(input);
 		expect(result).toHaveLength(1);
@@ -125,7 +122,7 @@ describe('toCharacterEntries', () => {
 	it('converts summaries to entries with auto-generated canonical names', () => {
 		const summaries: CharacterSummary[] = [
 			{ character: 'John Doe', importance: 'Protagonist' },
-			{ character: 'Jane Smith', importance: 'Supporting' }
+			{ character: 'Jane Smith', importance: 'Supporting' },
 		];
 		const result = toCharacterEntries(summaries);
 
@@ -135,14 +132,14 @@ describe('toCharacterEntries', () => {
 			importance: 'Protagonist',
 			canonicalName: 'john-doe',
 			include: true,
-			isManual: false
+			isManual: false,
 		});
 		expect(result[1]).toEqual({
 			character: 'Jane Smith',
 			importance: 'Supporting',
 			canonicalName: 'jane-smith',
 			include: true,
-			isManual: false
+			isManual: false,
 		});
 	});
 
@@ -152,9 +149,7 @@ describe('toCharacterEntries', () => {
 	});
 
 	it('correctly kebab-cases complex names', () => {
-		const summaries: CharacterSummary[] = [
-			{ character: 'Dr. John "The Doc" Smith', importance: 'Doctor' }
-		];
+		const summaries: CharacterSummary[] = [{ character: 'Dr. John "The Doc" Smith', importance: 'Doctor' }];
 		const result = toCharacterEntries(summaries);
 		expect(result[0].canonicalName).toBe('dr-john-the-doc-smith');
 	});
@@ -162,10 +157,10 @@ describe('toCharacterEntries', () => {
 	it('sets include to true and isManual to false for all entries', () => {
 		const summaries: CharacterSummary[] = [
 			{ character: 'A', importance: 'Role 1' },
-			{ character: 'B', importance: 'Role 2' }
+			{ character: 'B', importance: 'Role 2' },
 		];
 		const result = toCharacterEntries(summaries);
-		result.forEach(entry => {
+		result.forEach((entry) => {
 			expect(entry.include).toBe(true);
 			expect(entry.isManual).toBe(false);
 		});

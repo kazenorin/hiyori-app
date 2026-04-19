@@ -26,10 +26,7 @@ export function createTestDatabase(): DatabaseInstance & { _db: BetterSqlite3.Da
 	return {
 		_db: db,
 
-		execute<T = Record<string, unknown>>(
-			query: string,
-			bindValues?: BindValue[]
-		): Promise<{ rows: T[] }> {
+		execute<T = Record<string, unknown>>(query: string, bindValues?: BindValue[]): Promise<{ rows: T[] }> {
 			try {
 				const params = bindValues ?? [];
 				const [sql, expanded] = convertParams(query, params);
@@ -45,10 +42,7 @@ export function createTestDatabase(): DatabaseInstance & { _db: BetterSqlite3.Da
 			}
 		},
 
-		select<T = Record<string, unknown>>(
-			query: string,
-			bindValues?: BindValue[]
-		): Promise<T[]> {
+		select<T = Record<string, unknown>>(query: string, bindValues?: BindValue[]): Promise<T[]> {
 			try {
 				const params = bindValues ?? [];
 				const [sql, expanded] = convertParams(query, params);
@@ -62,6 +56,6 @@ export function createTestDatabase(): DatabaseInstance & { _db: BetterSqlite3.Da
 
 		close() {
 			db.close();
-		}
+		},
 	} as unknown as DatabaseInstance & { _db: BetterSqlite3.Database };
 }

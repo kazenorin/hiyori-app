@@ -3,7 +3,15 @@ import { runMigrations } from '$lib/db/migrations';
 import { initMemoryDatabase } from '$lib/db/memory-database';
 import { runMemoryMigrations } from '$lib/db/memory-migrations';
 import { loadStories, restoreState } from '$lib/stores/stories.svelte';
-import { loadWorldTemplate, loadGenerateWorldFromChatPrompt, loadGenerateWorldFromChatSystemPrompt, loadWorldBuilderSystemPrompt, ensureAllBaseConfigs, loadMemoryExtractionSystemPrompt, loadMemoryExtractionPrompt } from '$lib/fs/prompts';
+import {
+	loadWorldTemplate,
+	loadGenerateWorldFromChatPrompt,
+	loadGenerateWorldFromChatSystemPrompt,
+	loadWorldBuilderSystemPrompt,
+	ensureAllBaseConfigs,
+	loadMemoryExtractionSystemPrompt,
+	loadMemoryExtractionPrompt,
+} from '$lib/fs/prompts';
 import { initLogging, log } from '$lib/logging/logger';
 import { getSettings } from '$lib/stores/settings.svelte';
 

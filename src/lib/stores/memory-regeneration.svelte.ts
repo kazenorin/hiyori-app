@@ -21,9 +21,7 @@ export function getLastRegenResult(): string | null {
 	return lastResult;
 }
 
-export async function regenerateMemoriesForCurrentLine(
-	onProgress?: (message: string) => void
-): Promise<void> {
+export async function regenerateMemoriesForCurrentLine(onProgress?: (message: string) => void): Promise<void> {
 	const storyId = getActiveStoryId();
 	const actLineId = getActiveActLineId();
 

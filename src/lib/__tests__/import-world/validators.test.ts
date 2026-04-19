@@ -16,7 +16,7 @@ function makeAct(overrides: Partial<ImportActInput> = {}): ImportActInput {
 		name: '',
 		actFile: null,
 		transcript: null,
-		...overrides
+		...overrides,
 	};
 }
 
@@ -25,7 +25,7 @@ function makeCharacter(overrides: Partial<ImportCharacterInput> = {}): ImportCha
 		id: crypto.randomUUID(),
 		name: '',
 		cardFile: null,
-		...overrides
+		...overrides,
 	};
 }
 
@@ -38,7 +38,7 @@ function makeFormData(overrides: Partial<ImportFormData> = {}): ImportFormData {
 		skipOptionalMalformed: false,
 		retryCount: 5,
 		backoffIntervalSeconds: 5,
-		...overrides
+		...overrides,
 	};
 }
 
@@ -52,110 +52,136 @@ describe('validateImportForm', () => {
 		});
 
 		it('passes with only a world file', () => {
-			const result = validateImportForm(makeFormData({
-				worldFile: createFile('world.md')
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					worldFile: createFile('world.md'),
+				})
+			);
 			expect(result.isValid).toBe(true);
 		});
 
 		it('passes with only acts', () => {
-			const result = validateImportForm(makeFormData({
-				worldFile: createFile('world.md'),
-				acts: [makeAct({ actFile: createFile('act.md') })]
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					worldFile: createFile('world.md'),
+					acts: [makeAct({ actFile: createFile('act.md') })],
+				})
+			);
 			expect(result.isValid).toBe(true);
 		});
 
 		it('passes with only characters', () => {
-			const result = validateImportForm(makeFormData({
-				worldFile: createFile('world.md'),
-				characters: [makeCharacter({ cardFile: createFile('char.md') })]
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					worldFile: createFile('world.md'),
+					characters: [makeCharacter({ cardFile: createFile('char.md') })],
+				})
+			);
 			expect(result.isValid).toBe(true);
 		});
 	});
 
 	describe('act validation', () => {
 		it('requires acts to have content when no world file', () => {
-			const result = validateImportForm(makeFormData({
-				acts: [makeAct()]
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					acts: [makeAct()],
+				})
+			);
 			expect(result.isValid).toBe(false);
 			expect(result.errors.some((e) => e.field.startsWith('act-'))).toBe(true);
 		});
 
 		it('requires acts to have content when multiple acts', () => {
-			const result = validateImportForm(makeFormData({
-				worldFile: createFile('world.md'),
-				acts: [makeAct(), makeAct({ actFile: createFile('act2.md') })]
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					worldFile: createFile('world.md'),
+					acts: [makeAct(), makeAct({ actFile: createFile('act2.md') })],
+				})
+			);
 			expect(result.isValid).toBe(false);
 		});
 
 		it('acts are optional when world file is present and single act', () => {
-			const result = validateImportForm(makeFormData({
-				worldFile: createFile('world.md'),
-				acts: [makeAct()]
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					worldFile: createFile('world.md'),
+					acts: [makeAct()],
+				})
+			);
 			expect(result.isValid).toBe(true);
 		});
 
 		it('validates act file type', () => {
-			const result = validateImportForm(makeFormData({
-				worldFile: createFile('world.md'),
-				acts: [makeAct({ actFile: createFile('act.pdf') })]
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					worldFile: createFile('world.md'),
+					acts: [makeAct({ actFile: createFile('act.pdf') })],
+				})
+			);
 			expect(result.isValid).toBe(false);
 			expect(result.errors.some((e) => e.message.includes('.md or .txt'))).toBe(true);
 		});
 
 		it('validates transcript file type', () => {
-			const result = validateImportForm(makeFormData({
-				worldFile: createFile('world.md'),
-				acts: [makeAct({ transcript: createFile('transcript.txt') })]
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					worldFile: createFile('world.md'),
+					acts: [makeAct({ transcript: createFile('transcript.txt') })],
+				})
+			);
 			expect(result.isValid).toBe(false);
 			expect(result.errors.some((e) => e.message.includes('.json'))).toBe(true);
 		});
 
 		it('accepts valid act file types', () => {
-			const result = validateImportForm(makeFormData({
-				acts: [makeAct({ actFile: createFile('act.md') })]
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					acts: [makeAct({ actFile: createFile('act.md') })],
+				})
+			);
 			expect(result.errors.some((e) => e.field.includes('file'))).toBe(false);
 		});
 
 		it('accepts valid transcript file types', () => {
-			const result = validateImportForm(makeFormData({
-				acts: [makeAct({ transcript: createJsonFile('transcript.json') })]
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					acts: [makeAct({ transcript: createJsonFile('transcript.json') })],
+				})
+			);
 			expect(result.errors.some((e) => e.field.includes('transcript'))).toBe(false);
 		});
 	});
 
 	describe('character validation', () => {
 		it('warns but does not error when character card is missing', () => {
-			const result = validateImportForm(makeFormData({
-				worldFile: createFile('world.md'),
-				characters: [makeCharacter()]
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					worldFile: createFile('world.md'),
+					characters: [makeCharacter()],
+				})
+			);
 			expect(result.isValid).toBe(true);
 			expect(result.warnings.some((w) => w.message.includes('Character card file is missing'))).toBe(true);
 		});
 
 		it('passes when character card is provided', () => {
-			const result = validateImportForm(makeFormData({
-				worldFile: createFile('world.md'),
-				characters: [makeCharacter({ cardFile: createFile('char.md') })]
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					worldFile: createFile('world.md'),
+					characters: [makeCharacter({ cardFile: createFile('char.md') })],
+				})
+			);
 			expect(result.errors.some((e) => e.field.startsWith('character-'))).toBe(false);
 		});
 
 		it('validates character card file type', () => {
-			const result = validateImportForm(makeFormData({
-				worldFile: createFile('world.md'),
-				characters: [makeCharacter({ cardFile: createFile('char.pdf') })]
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					worldFile: createFile('world.md'),
+					characters: [makeCharacter({ cardFile: createFile('char.pdf') })],
+				})
+			);
 			expect(result.isValid).toBe(false);
 			expect(result.errors.some((e) => e.message.includes('.md or .txt'))).toBe(true);
 		});
@@ -163,33 +189,41 @@ describe('validateImportForm', () => {
 
 	describe('warnings', () => {
 		it('warns about missing story name', () => {
-			const result = validateImportForm(makeFormData({
-				worldFile: createFile('world.md')
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					worldFile: createFile('world.md'),
+				})
+			);
 			expect(result.warnings.some((w) => w.field === 'storyName')).toBe(true);
 		});
 
 		it('does not warn when story name is provided', () => {
-			const result = validateImportForm(makeFormData({
-				storyName: 'My Story',
-				worldFile: createFile('world.md')
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					storyName: 'My Story',
+					worldFile: createFile('world.md'),
+				})
+			);
 			expect(result.warnings.some((w) => w.field === 'storyName')).toBe(false);
 		});
 
 		it('warns about missing act names', () => {
-			const result = validateImportForm(makeFormData({
-				worldFile: createFile('world.md'),
-				acts: [makeAct({ actFile: createFile('act.md') })]
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					worldFile: createFile('world.md'),
+					acts: [makeAct({ actFile: createFile('act.md') })],
+				})
+			);
 			expect(result.warnings.some((w) => w.field.includes('act-'))).toBe(true);
 		});
 
 		it('warns about missing character names', () => {
-			const result = validateImportForm(makeFormData({
-				worldFile: createFile('world.md'),
-				characters: [makeCharacter({ cardFile: createFile('char.md') })]
-			}));
+			const result = validateImportForm(
+				makeFormData({
+					worldFile: createFile('world.md'),
+					characters: [makeCharacter({ cardFile: createFile('char.md') })],
+				})
+			);
 			expect(result.warnings.some((w) => w.field.includes('character-'))).toBe(true);
 		});
 	});

@@ -13,14 +13,14 @@ export function createModel(config: ProviderConfig) {
 		const provider = createOpenAICompatible({
 			name: config.name || 'openai-compatible',
 			baseURL,
-			apiKey: config.apiKey
+			apiKey: config.apiKey,
 		});
 		return provider.chatModel(config.model);
 	}
 
 	const provider = createOpenAI({
 		apiKey: config.apiKey,
-		baseURL
+		baseURL,
 	});
 
 	if (config.apiType === 'chat-completions') {
@@ -41,14 +41,14 @@ export function createEmbeddingModel(config: ProviderConfig) {
 		const provider = createOpenAICompatible({
 			name: config.name || 'openai-compatible',
 			baseURL,
-			apiKey: config.apiKey
+			apiKey: config.apiKey,
 		});
 		return provider.embeddingModel(config.model);
 	}
 
 	const provider = createOpenAI({
 		apiKey: config.apiKey,
-		baseURL
+		baseURL,
 	});
 
 	return provider.embeddingModel(config.model);

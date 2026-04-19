@@ -9,6 +9,6 @@ export function createMockLogger() {
 		info: vi.fn(async (_context: string, _message: string) => {}),
 		error: vi.fn(async (_context: string, _message: string, _err?: unknown) => {}),
 		warn: vi.fn(async (_context: string, _message: string) => {}),
-		debug: vi.fn(async (_context: string, _message: string) => {})
+		debug: vi.fn(async (_context: string, _message: string) => {}),
 	};
 }

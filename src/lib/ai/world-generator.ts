@@ -1,13 +1,14 @@
 import { streamText } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
-import { loadWorldTemplate, loadGenerateWorldFromChatPrompt, loadGenerateWorldFromChatSystemPrompt } from '$lib/fs/prompts';
+import {
+	loadWorldTemplate,
+	loadGenerateWorldFromChatPrompt,
+	loadGenerateWorldFromChatSystemPrompt,
+} from '$lib/fs/prompts';
 import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
-import {
-	writeTextFile,
-	BaseDirectory
-} from '@tauri-apps/plugin-fs';
+import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 
 /**
  * Trace back through the act line chain to collect the full message history.
@@ -64,10 +65,7 @@ export async function generateWorld(storyId: string, folderName: string, abortSi
 
 	const systemPrompt = await loadGenerateWorldFromChatSystemPrompt();
 
-	const [generatePrompt, worldTemplate] = await Promise.all([
-		loadGenerateWorldFromChatPrompt(),
-		loadWorldTemplate()
-	]);
+	const [generatePrompt, worldTemplate] = await Promise.all([loadGenerateWorldFromChatPrompt(), loadWorldTemplate()]);
 
 	const userInstruction = generatePrompt + '\n\n' + worldTemplate;
 	const messages = await traceStoryMessages(storyId);
@@ -77,10 +75,7 @@ export async function generateWorld(storyId: string, folderName: string, abortSi
 	}
 
 	// Append the instruction + template as the final user message
-	const allMessages = [
-		...messages,
-		{ role: 'user' as const, content: userInstruction }
-	];
+	const allMessages = [...messages, { role: 'user' as const, content: userInstruction }];
 
 	const model = createModel(config!);
 
@@ -88,7 +83,7 @@ export async function generateWorld(storyId: string, folderName: string, abortSi
 		model,
 		messages: allMessages,
 		system: systemPrompt,
-		abortSignal
+		abortSignal,
 	});
 
 	const contentParts: string[] = [];

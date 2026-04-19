@@ -2,13 +2,13 @@
 // Pass 1: Traditional extraction from markdown headers/keywords
 // Pass 2: LLM-based extraction for remaining messages
 
-import type {GameData} from '$lib/db/messages';
-import type {GameDataDetectionResult, GameDataExtractionResult, ParsedMessage} from './types';
-import {buildMetadata, type RetryConfig, streamWithRetry} from '$lib/ai/chat-stream';
-import {loadChoicesExtractionPrompt, loadSystemPrompt} from '$lib/fs/prompts';
-import {sleep} from '$lib/utils/async';
-import type {StreamState} from '$lib/ai/chat-callbacks';
-import {getMainProviderConfig, type ProviderConfig} from "$lib/stores/settings.svelte";
+import type { GameData } from '$lib/db/messages';
+import type { GameDataDetectionResult, GameDataExtractionResult, ParsedMessage } from './types';
+import { buildMetadata, type RetryConfig, streamWithRetry } from '$lib/ai/chat-stream';
+import { loadChoicesExtractionPrompt, loadSystemPrompt } from '$lib/fs/prompts';
+import { sleep } from '$lib/utils/async';
+import type { StreamState } from '$lib/ai/chat-callbacks';
+import { getMainProviderConfig, type ProviderConfig } from '$lib/stores/settings.svelte';
 
 // === Pass 1: Traditional Extraction (Synchronous) ===
 
@@ -58,7 +58,7 @@ export function extractGameDataTraditional(content: string): GameData | null {
 		if (decisions.length >= 2) {
 			return {
 				worldState: worldState.trim(),
-				decisions
+				decisions,
 			};
 		}
 	}
@@ -180,8 +180,8 @@ export async function extractGameDataWithLLM(
 		const acc = await streamWithRetry(
 			systemPrompt,
 			[
-				{role: 'user', content: choicesExtractionPrompt},
-				{role: 'user', content: msg.content}
+				{ role: 'user', content: choicesExtractionPrompt },
+				{ role: 'user', content: msg.content },
 			],
 			retryConfig,
 			(state) => {
@@ -191,10 +191,10 @@ export async function extractGameDataWithLLM(
 				onError(msgIndex, err, attempt);
 			},
 			providerConfig
-		)
+		);
 
 		const gameData = acc.state.gameData;
-		const metadata = await acc.resultMetadata
+		const metadata = await acc.resultMetadata;
 
 		results.push({
 			messageIndex: msgIndex,
@@ -240,7 +240,7 @@ export async function runGameDataDetection(
 				results.push({
 					messageIndex: i,
 					gameData: message.gameData,
-					source: 'traditional'
+					source: 'traditional',
 				});
 			}
 			continue;
@@ -251,7 +251,7 @@ export async function runGameDataDetection(
 			results.push({
 				messageIndex: i,
 				gameData,
-				source: 'traditional'
+				source: 'traditional',
 			});
 			log(`Generated GameData[${i}] using traditional method.`);
 		} else {
@@ -262,13 +262,7 @@ export async function runGameDataDetection(
 	// Pass 2: LLM extraction for messages still missing game_data
 	let llmCallsMade = 0;
 	if (indicesNeedingLLM.length > 0) {
-		const llmResults = await extractGameDataWithLLM(
-			messages,
-			indicesNeedingLLM,
-			retryConfig,
-			onProgress,
-			onError
-		);
+		const llmResults = await extractGameDataWithLLM(messages, indicesNeedingLLM, retryConfig, onProgress, onError);
 
 		results.push(...llmResults);
 		llmCallsMade = llmResults.filter((r) => r.source === 'llm').length;
@@ -276,6 +270,6 @@ export async function runGameDataDetection(
 
 	return {
 		results: results.sort((a, b) => a.messageIndex - b.messageIndex),
-		llmCallsMade
+		llmCallsMade,
 	};
 }

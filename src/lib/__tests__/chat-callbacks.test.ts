@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {createStreamAccumulator, type StreamState} from '../ai/chat-callbacks';
+import { createStreamAccumulator, type StreamState } from '../ai/chat-callbacks';
 import type { GameData } from '../db/messages';
 
 const T = 'think';
@@ -8,10 +8,10 @@ const emptyMetadata = {
 	usage: {
 		inputTokens: 0,
 		outputTokens: 0,
-		totalTokens: 0
+		totalTokens: 0,
 	},
-	durationMs: 1
-}
+	durationMs: 1,
+};
 
 function feedAll(chunks: string[]): { text: string; reasoning: string | null; gameData: GameData | null } {
 	const acc = createStreamAccumulator();
@@ -20,18 +20,18 @@ function feedAll(chunks: string[]): { text: string; reasoning: string | null; ga
 		acc.callbacks.onTextDelta(chunk);
 	}
 
-	acc.callbacks.onComplete(emptyMetadata)
+	acc.callbacks.onComplete(emptyMetadata);
 
 	return {
 		text: acc.state.content,
 		reasoning: acc.state.reasoning,
-		gameData: acc.state.gameData
+		gameData: acc.state.gameData,
 	};
 }
 
 const GAME_DATA_JSON = JSON.stringify({
 	worldState: 'The hero stands at a crossroads.',
-	decisions: ['Go left', 'Go right']
+	decisions: ['Go left', 'Go right'],
 });
 
 describe('createStreamAccumulator', () => {
@@ -113,12 +113,7 @@ describe('createStreamAccumulator', () => {
 		});
 
 		it('extracts game data alongside thinking tags', () => {
-			const chunks = [
-				`<${T}>reasoning</${T}>`,
-				`Story\n\`\`\`json\n`,
-				GAME_DATA_JSON,
-				'\n\`\`\`\nEnd'
-			];
+			const chunks = [`<${T}>reasoning</${T}>`, `Story\n\`\`\`json\n`, GAME_DATA_JSON, '\n\`\`\`\nEnd'];
 			const result = feedAll(chunks);
 			expect(result.reasoning).toBe('reasoning');
 			expect(result.gameData).not.toBeNull();
@@ -165,7 +160,7 @@ describe('createStreamAccumulator', () => {
 			const acc = createStreamAccumulator();
 			acc.callbacks.onTextDelta(`<${T}>Incomplete`);
 			expect(acc.state.content).toBe('');
-			acc.callbacks.onComplete(emptyMetadata)
+			acc.callbacks.onComplete(emptyMetadata);
 			expect(acc.state.content).toContain(`<${T}>`);
 			expect(acc.state.content).toContain('Incomplete');
 		});
@@ -217,5 +212,4 @@ describe('createStreamAccumulator', () => {
 			await expect(acc.resultMetadata).rejects.toThrow('stream failed');
 		});
 	});
-
 });

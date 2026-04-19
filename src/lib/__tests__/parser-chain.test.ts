@@ -43,7 +43,7 @@ function feedAll(chunks: string[]): {
 
 const GAME_DATA_JSON = JSON.stringify({
 	worldState: 'The hero stands at a crossroads.',
-	decisions: ['Go left', 'Go right']
+	decisions: ['Go left', 'Go right'],
 });
 
 describe('ParserChain', () => {
@@ -66,13 +66,7 @@ describe('ParserChain', () => {
 	});
 
 	it('extracts game data when thinking tag is followed by game data in chunks', () => {
-		const chunks = [
-			`<${T}>Let me think`,
-			` about this</${T}>`,
-			'Story\n```json\n',
-			GAME_DATA_JSON,
-			'\n```\nEnd'
-		];
+		const chunks = [`<${T}>Let me think`, ` about this</${T}>`, 'Story\n```json\n', GAME_DATA_JSON, '\n```\nEnd'];
 		const { text, thinking, gameData } = feedAll(chunks);
 		expect(thinking).toBe('Let me think about this');
 		expect(gameData).not.toBeNull();
@@ -153,12 +147,7 @@ describe('ParserChain', () => {
 			});
 
 			it('handles review_scratchpad split across chunks after thinking', () => {
-				const chunks = [
-					`<${T}>Thought</${T}>`,
-					'<review_scratchpad>Review',
-					' notes</review_scratchpad>',
-					' Story'
-				];
+				const chunks = [`<${T}>Thought</${T}>`, '<review_scratchpad>Review', ' notes</review_scratchpad>', ' Story'];
 				const { text, thinking, reviewScratchpad } = feedAll(chunks);
 				expect(thinking).toBe('Thought');
 				expect(reviewScratchpad).toBe('Review notes');
@@ -182,7 +171,8 @@ describe('ParserChain', () => {
 			});
 
 			it('extracts revised_narrative after review_scratchpad', () => {
-				const input = '<review_scratchpad>Fix pacing</review_scratchpad><revised_narrative>Better pacing here</revised_narrative>End';
+				const input =
+					'<review_scratchpad>Fix pacing</review_scratchpad><revised_narrative>Better pacing here</revised_narrative>End';
 				const { text, reviewScratchpad, revisedNarrative } = feedAll([input]);
 				expect(reviewScratchpad).toBe('Fix pacing');
 				expect(revisedNarrative).toBe('Better pacing here');
@@ -198,7 +188,7 @@ describe('ParserChain', () => {
 					'<revised_narrative>The sun set over the hills</revised_narrative>',
 					'Story continues\n```json\n',
 					GAME_DATA_JSON,
-					'\n```\nEnd'
+					'\n```\nEnd',
 				].join('');
 				const { text, thinking, gameData, reviewScratchpad, revisedNarrative, revisedGameData } = feedAll([input]);
 				expect(thinking).toBe('Analyzing narrative');
@@ -221,7 +211,7 @@ describe('ParserChain', () => {
 					'ised</revised_narrative>',
 					'Text```json\n',
 					GAME_DATA_JSON,
-					'\n```'
+					'\n```',
 				];
 				const { text, thinking, gameData, reviewScratchpad, revisedNarrative, revisedGameData } = feedAll(chunks);
 				expect(thinking).toBe('Deep thought');

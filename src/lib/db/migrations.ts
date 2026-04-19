@@ -50,7 +50,7 @@ const migrationStatements: string[][] = [
 			active_act_id TEXT,
 			active_act_line_id TEXT
 		)`,
-		`INSERT OR IGNORE INTO app_state (id) VALUES (1)`
+		`INSERT OR IGNORE INTO app_state (id) VALUES (1)`,
 	],
 	[
 		`CREATE TABLE IF NOT EXISTS story_folders (
@@ -58,14 +58,10 @@ const migrationStatements: string[][] = [
 			folder_name TEXT NOT NULL,
 			created_at INTEGER NOT NULL
 		)`,
-		`CREATE INDEX IF NOT EXISTS idx_story_folders_folder ON story_folders(folder_name)`
+		`CREATE INDEX IF NOT EXISTS idx_story_folders_folder ON story_folders(folder_name)`,
 	],
-	[
-		`ALTER TABLE act_line_meta ADD COLUMN is_main_line INTEGER NOT NULL DEFAULT 0`
-	],
-	[
-		`ALTER TABLE messages ADD COLUMN game_data TEXT`
-	]
+	[`ALTER TABLE act_line_meta ADD COLUMN is_main_line INTEGER NOT NULL DEFAULT 0`],
+	[`ALTER TABLE messages ADD COLUMN game_data TEXT`],
 ];
 
 export async function runMigrations(): Promise<void> {
@@ -77,9 +73,7 @@ export async function runMigrations(): Promise<void> {
 		)
 	`);
 
-	const result = await db.select<SchemaVersion[]>(
-		'SELECT version FROM schema_version ORDER BY version DESC LIMIT 1'
-	);
+	const result = await db.select<SchemaVersion[]>('SELECT version FROM schema_version ORDER BY version DESC LIMIT 1');
 	const currentVersion = result.length > 0 ? result[0].version : 0;
 
 	for (let i = currentVersion; i < migrationStatements.length; i++) {

@@ -1,6 +1,12 @@
 import { generateText } from 'ai';
 import { createModel } from './provider';
-import { getMemoryProviderConfig, getEmbeddingProviderConfig, settings, type MemoryProviderConfig, type EmbeddingProviderConfig } from '$lib/stores/settings.svelte';
+import {
+	getMemoryProviderConfig,
+	getEmbeddingProviderConfig,
+	settings,
+	type MemoryProviderConfig,
+	type EmbeddingProviderConfig,
+} from '$lib/stores/settings.svelte';
 import { loadMemoryExtractionSystemPrompt, loadMemoryExtractionPrompt } from '$lib/fs/prompts';
 import { parseMemoryExtract, type ExtractedMemories } from '$lib/memory/memory-extract-parser';
 import { Memory } from '$lib/memory/memory';
@@ -36,15 +42,15 @@ export async function runMemoryExtractionPipeline(
 	// Step 1: Generate memories via LLM
 	const [generatedText] = await Promise.all([
 		generateMemoriesWithRetry(assistantResponse, llmConfig),
-		log.debug('memory-pipeline', `Generating memories for message=${messageId}...`)
+		log.debug('memory-pipeline', `Generating memories for message=${messageId}...`),
 	]);
 
 	// Step 2: Parse into structured object
-	await log.debug('memory-pipeline', `parsing memories for message=${messageId}...`)
+	await log.debug('memory-pipeline', `parsing memories for message=${messageId}...`);
 	const extracted = parseMemoryExtract(generatedText);
 
 	// Step 3: Persist each character/location (uses embedding provider)
-	await log.debug('memory-pipeline', `persisting memories for message=${messageId}...`)
+	await log.debug('memory-pipeline', `persisting memories for message=${messageId}...`);
 	return await persistMemoriesWithRetry(extracted, storyId, actLineId, messageId, embeddingConfig);
 }
 
@@ -54,15 +60,12 @@ async function generateMemoriesWithRetry(response: string, config: MemoryProvide
 	const extractionPromptTemplate = await loadMemoryExtractionPrompt();
 	const userPrompt = extractionPromptTemplate + '\n' + response;
 
-	return await withRetry(
-		() => generateText({ model, system: systemPrompt, prompt: userPrompt }).then(r => r.text),
-		{
-			maxAttempts: RETRY_COUNT + 1,
-			backoffMs: BACKOFF_SECONDS * 1000,
-			shouldRetry: (err) => !isAuthError(err),
-			onRetry: (attempt) => log.warn('memory-pipeline', `Memory generation attempt ${attempt} failed, retrying...`)
-		}
-	);
+	return await withRetry(() => generateText({ model, system: systemPrompt, prompt: userPrompt }).then((r) => r.text), {
+		maxAttempts: RETRY_COUNT + 1,
+		backoffMs: BACKOFF_SECONDS * 1000,
+		shouldRetry: (err) => !isAuthError(err),
+		onRetry: (attempt) => log.warn('memory-pipeline', `Memory generation attempt ${attempt} failed, retrying...`),
+	});
 }
 
 async function persistMemoriesWithRetry(
@@ -77,7 +80,7 @@ async function persistMemoriesWithRetry(
 		charactersProcessed: 0,
 		memoriesAdded: 0,
 		locationsAdded: 0,
-		errors: []
+		errors: [],
 	};
 
 	for (const [character, locations] of Object.entries(extracted)) {
@@ -85,7 +88,15 @@ async function persistMemoriesWithRetry(
 		for (const [location, memories] of Object.entries(locations)) {
 			// Per-location retry scope — avoids duplicating previously succeeded locations
 			try {
-				const { memoriesAdded, locationAdded } = await persistLocationWithRetry(memory, storyId, actLineId, messageId, character, location, memories);
+				const { memoriesAdded, locationAdded } = await persistLocationWithRetry(
+					memory,
+					storyId,
+					actLineId,
+					messageId,
+					character,
+					location,
+					memories
+				);
 				result.memoriesAdded += memoriesAdded;
 				if (locationAdded) result.locationsAdded += 1;
 			} catch (err) {
@@ -123,7 +134,8 @@ async function persistLocationWithRetry(
 		{
 			maxAttempts: RETRY_COUNT + 1,
 			backoffMs: BACKOFF_SECONDS * 1000,
-			onRetry: (attempt) => log.warn('memory-pipeline', `Location "${location}" for ${character} attempt ${attempt} failed, retrying...`)
+			onRetry: (attempt) =>
+				log.warn('memory-pipeline', `Location "${location}" for ${character} attempt ${attempt} failed, retrying...`),
 		}
 	);
 

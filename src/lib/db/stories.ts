@@ -19,17 +19,19 @@ function rowToStory(row: StoryRow): Story {
 		id: row.id,
 		name: row.name,
 		createdAt: row.created_at,
-		updatedAt: row.updated_at
+		updatedAt: row.updated_at,
 	};
 }
 
 export async function createStory(id: string, name: string): Promise<Story> {
 	const db = getDatabase();
 	const now = Date.now();
-	await db.execute(
-		'INSERT INTO stories (id, name, created_at, updated_at) VALUES ($1, $2, $3, $4)',
-		[id, name, now, now]
-	);
+	await db.execute('INSERT INTO stories (id, name, created_at, updated_at) VALUES ($1, $2, $3, $4)', [
+		id,
+		name,
+		now,
+		now,
+	]);
 	return { id, name, createdAt: now, updatedAt: now };
 }
 
@@ -48,10 +50,7 @@ export async function getAllStories(): Promise<Story[]> {
 export async function updateStory(id: string, name: string): Promise<void> {
 	const db = getDatabase();
 	const now = Date.now();
-	await db.execute(
-		'UPDATE stories SET name = $1, updated_at = $2 WHERE id = $3',
-		[name, now, id]
-	);
+	await db.execute('UPDATE stories SET name = $1, updated_at = $2 WHERE id = $3', [name, now, id]);
 }
 
 export async function deleteStory(id: string): Promise<void> {

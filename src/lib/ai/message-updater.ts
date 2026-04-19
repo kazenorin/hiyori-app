@@ -16,14 +16,12 @@ export function applyParserOutput(state: StreamState, output: ParserChainOutput)
 export function applyReasoningDelta(state: StreamState, text: string): StreamState {
 	return {
 		...state,
-		reasoning: (state.reasoning ?? '') + text
+		reasoning: (state.reasoning ?? '') + text,
 	};
 }
 
 function appendDelta(existing: string | null, delta: string | null): string | null {
-	return delta != null
-		? (existing != null ? existing + delta : delta)
-		: existing;
+	return delta != null ? (existing != null ? existing + delta : delta) : existing;
 }
 
 function isValidGameData(gameData: GameData): boolean {

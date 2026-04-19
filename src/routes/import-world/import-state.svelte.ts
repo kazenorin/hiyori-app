@@ -6,7 +6,7 @@ import type {
 	ImportCharacterInput,
 	ImportProgressUpdate,
 	ValidationResult,
-	ImportPhase
+	ImportPhase,
 } from '$lib/import-world/types';
 import { validateImportForm } from '$lib/import-world/validators';
 
@@ -45,8 +45,8 @@ function addAct(): void {
 			id: crypto.randomUUID(),
 			name: '',
 			actFile: null,
-			transcript: null
-		}
+			transcript: null,
+		},
 	];
 }
 
@@ -60,8 +60,8 @@ function addCharacter(): void {
 		{
 			id: crypto.randomUUID(),
 			name: '',
-			cardFile: null
-		}
+			cardFile: null,
+		},
 	];
 }
 
@@ -105,17 +105,17 @@ function getFormData(): ImportFormData {
 		characters: [...characters],
 		skipOptionalMalformed,
 		retryCount,
-		backoffIntervalSeconds
+		backoffIntervalSeconds,
 	};
 }
 
 function addProgressUpdate(update: ImportProgressUpdate): void {
 	currentPhase = update.phase;
 	if (progressUpdates.length > 0) {
-		const previousUpdate = progressUpdates[progressUpdates.length - 1]
+		const previousUpdate = progressUpdates[progressUpdates.length - 1];
 		if (previousUpdate.phase == currentPhase && previousUpdate.message == update.message) {
-			const repeatedProgress = progressUpdates.slice(0, -1)
-			repeatedProgress.push({...update, repeatedMessageCounter: (previousUpdate.repeatedMessageCounter ?? 0) + 1})
+			const repeatedProgress = progressUpdates.slice(0, -1);
+			repeatedProgress.push({ ...update, repeatedMessageCounter: (previousUpdate.repeatedMessageCounter ?? 0) + 1 });
 			progressUpdates = repeatedProgress;
 		} else {
 			progressUpdates = [...progressUpdates, update];
@@ -125,11 +125,9 @@ function addProgressUpdate(update: ImportProgressUpdate): void {
 	}
 
 	if (update.consoleOutput) {
-		const buffer = consoleOutput + update.consoleOutput
+		const buffer = consoleOutput + update.consoleOutput;
 		const lines = buffer.split('\n');
-		consoleOutput = lines.length > MAX_CONSOLE_LINES
-			? lines.slice(-MAX_CONSOLE_LINES).join('\n')
-			: buffer;
+		consoleOutput = lines.length > MAX_CONSOLE_LINES ? lines.slice(-MAX_CONSOLE_LINES).join('\n') : buffer;
 	}
 	if (update.phase === 'error' && update.errorMessage) {
 		importError = update.errorMessage;
@@ -145,7 +143,7 @@ function resetForm(): void {
 	retryCount = 5;
 	backoffIntervalSeconds = 5;
 	isImporting = false;
-		importComplete = false;
+	importComplete = false;
 	validationResult = null;
 	progressUpdates = [];
 	currentPhase = 'validating';
@@ -173,30 +171,74 @@ function setImportComplete(): void {
 export function getImportWorldStore() {
 	return {
 		// State getters
-		get storyName() { return storyName; },
-		get worldFile() { return worldFile; },
-		get acts() { return acts; },
-		get characters() { return characters; },
-		get skipOptionalMalformed() { return skipOptionalMalformed; },
-		get retryCount() { return retryCount; },
-		get backoffIntervalSeconds() { return backoffIntervalSeconds; },
-		get isImporting() { return isImporting; },
-		get importComplete() { return importComplete; },
-		get validationResult() { return validationResult; },
-		get progressUpdates() { return progressUpdates; },
-		get currentPhase() { return currentPhase; },
-		get consoleOutput() { return consoleOutput; },
-		get importError() { return importError; },
-		get showValidationWarnings() { return showValidationWarnings; },
-		get canSubmit() { return canSubmit; },
+		get storyName() {
+			return storyName;
+		},
+		get worldFile() {
+			return worldFile;
+		},
+		get acts() {
+			return acts;
+		},
+		get characters() {
+			return characters;
+		},
+		get skipOptionalMalformed() {
+			return skipOptionalMalformed;
+		},
+		get retryCount() {
+			return retryCount;
+		},
+		get backoffIntervalSeconds() {
+			return backoffIntervalSeconds;
+		},
+		get isImporting() {
+			return isImporting;
+		},
+		get importComplete() {
+			return importComplete;
+		},
+		get validationResult() {
+			return validationResult;
+		},
+		get progressUpdates() {
+			return progressUpdates;
+		},
+		get currentPhase() {
+			return currentPhase;
+		},
+		get consoleOutput() {
+			return consoleOutput;
+		},
+		get importError() {
+			return importError;
+		},
+		get showValidationWarnings() {
+			return showValidationWarnings;
+		},
+		get canSubmit() {
+			return canSubmit;
+		},
 
 		// Setters
-		set importComplete(v: boolean) { importComplete = v; },
-		set storyName(v: string) { storyName = v; },
-		set worldFile(v: File | null) { worldFile = v; },
-		set skipOptionalMalformed(v: boolean) { skipOptionalMalformed = v; },
-		set retryCount(v: number) { retryCount = v; },
-		set backoffIntervalSeconds(v: number) { backoffIntervalSeconds = v; },
+		set importComplete(v: boolean) {
+			importComplete = v;
+		},
+		set storyName(v: string) {
+			storyName = v;
+		},
+		set worldFile(v: File | null) {
+			worldFile = v;
+		},
+		set skipOptionalMalformed(v: boolean) {
+			skipOptionalMalformed = v;
+		},
+		set retryCount(v: number) {
+			retryCount = v;
+		},
+		set backoffIntervalSeconds(v: number) {
+			backoffIntervalSeconds = v;
+		},
 
 		// Actions
 		addAct,
@@ -213,6 +255,6 @@ export function getImportWorldStore() {
 		addProgressUpdate,
 		resetForm,
 		setImporting,
-		setImportComplete
+		setImportComplete,
 	};
 }

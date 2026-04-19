@@ -28,7 +28,7 @@ function rowToAct(row: ActRow): Act {
 		actNumber: row.act_number,
 		continuesFromActLineId: row.continues_from_act_line_id,
 		createdAt: row.created_at,
-		updatedAt: row.updated_at
+		updatedAt: row.updated_at,
 	};
 }
 
@@ -53,7 +53,7 @@ export async function createAct(
 		actNumber,
 		continuesFromActLineId,
 		createdAt: now,
-		updatedAt: now
+		updatedAt: now,
 	};
 }
 
@@ -65,10 +65,7 @@ export async function getAct(id: string): Promise<Act | null> {
 
 export async function getActsForStory(storyId: string): Promise<Act[]> {
 	const db = getDatabase();
-	const rows = await db.select<ActRow[]>(
-		'SELECT * FROM acts WHERE story_id = $1 ORDER BY act_number ASC',
-		[storyId]
-	);
+	const rows = await db.select<ActRow[]>('SELECT * FROM acts WHERE story_id = $1 ORDER BY act_number ASC', [storyId]);
 	return rows.map(rowToAct);
 }
 
@@ -84,10 +81,7 @@ export async function getNextActNumber(storyId: string): Promise<number> {
 export async function updateAct(id: string, name: string): Promise<void> {
 	const db = getDatabase();
 	const now = Date.now();
-	await db.execute(
-		'UPDATE acts SET name = $1, updated_at = $2 WHERE id = $3',
-		[name, now, id]
-	);
+	await db.execute('UPDATE acts SET name = $1, updated_at = $2 WHERE id = $3', [name, now, id]);
 }
 
 export async function deleteAct(id: string): Promise<void> {
@@ -97,9 +91,6 @@ export async function deleteAct(id: string): Promise<void> {
 
 export async function getActsContinuingFrom(actLineId: string): Promise<Act[]> {
 	const db = getDatabase();
-	const rows = await db.select<ActRow[]>(
-		'SELECT * FROM acts WHERE continues_from_act_line_id = $1',
-		[actLineId]
-	);
+	const rows = await db.select<ActRow[]>('SELECT * FROM acts WHERE continues_from_act_line_id = $1', [actLineId]);
 	return rows.map(rowToAct);
 }

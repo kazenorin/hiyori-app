@@ -4,22 +4,24 @@ import type { ExtractedMemories } from '$lib/memory/memory-extract-parser';
 // Mock Memory class — must use regular function for constructor
 const mockMemoryInstance = {
 	add: vi.fn(async () => 1),
-	addLocation: vi.fn(async () => true)
+	addLocation: vi.fn(async () => true),
 };
 
 vi.mock('$lib/memory/memory', () => ({
-	Memory: vi.fn(function () { return mockMemoryInstance; })
+	Memory: vi.fn(function () {
+		return mockMemoryInstance;
+	}),
 }));
 
 // Mock AI SDK
 const mockGenerateText = vi.fn(async () => ({ text: '## elena\n\n### tavern\n- Elena sat.' }));
 vi.mock('ai', () => ({
-	generateText: mockGenerateText
+	generateText: mockGenerateText,
 }));
 
 // Mock provider
 vi.mock('$lib/ai/provider', () => ({
-	createModel: vi.fn(() => ({}))
+	createModel: vi.fn(() => ({})),
 }));
 
 // Mock settings
@@ -30,25 +32,25 @@ const defaultProviderConfig = {
 	apiType: 'responses' as const,
 	baseURL: 'https://api.openai.com/v1',
 	model: 'gpt-4o',
-	apiKey: 'sk-test'
+	apiKey: 'sk-test',
 };
 const mockGetMemoryProviderConfig = vi.fn(() => defaultProviderConfig);
 const mockGetEmbeddingProviderConfig = vi.fn(() => defaultProviderConfig);
 vi.mock('$lib/stores/settings.svelte', () => ({
 	getMemoryProviderConfig: mockGetMemoryProviderConfig,
-	getEmbeddingProviderConfig: mockGetEmbeddingProviderConfig
+	getEmbeddingProviderConfig: mockGetEmbeddingProviderConfig,
 }));
 
 // Mock prompts
 vi.mock('$lib/fs/prompts', () => ({
 	loadMemoryExtractionSystemPrompt: vi.fn(async () => 'System prompt'),
-	loadMemoryExtractionPrompt: vi.fn(async () => 'User prompt')
+	loadMemoryExtractionPrompt: vi.fn(async () => 'User prompt'),
 }));
 
 // Mock parser — typed as returning ExtractedMemories
 const mockParseMemoryExtract = vi.fn<(text: string) => ExtractedMemories>();
 vi.mock('$lib/memory/memory-extract-parser', () => ({
-	parseMemoryExtract: mockParseMemoryExtract
+	parseMemoryExtract: mockParseMemoryExtract,
 }));
 
 // Mock async utilities - mock withRetry with same logic but no actual delays
@@ -61,7 +63,12 @@ const mockSleep = vi.fn(async (_ms?: number) => {});
 // Custom mock withRetry that mimics real behavior but with zero-delay
 async function mockWithRetry<T>(
 	fn: () => Promise<T>,
-	options: { maxAttempts: number; backoffMs: number; shouldRetry?: (error: Error) => boolean; onRetry?: (attempt: number, error: Error) => void | Promise<void> }
+	options: {
+		maxAttempts: number;
+		backoffMs: number;
+		shouldRetry?: (error: Error) => boolean;
+		onRetry?: (attempt: number, error: Error) => void | Promise<void>;
+	}
 ): Promise<T> {
 	let lastError: Error | undefined;
 
@@ -95,8 +102,8 @@ async function mockWithRetry<T>(
 vi.mock('$lib/utils/async', () => ({
 	isAuthError: mockIsAuthError,
 	sleep: mockSleep,
-	toError: (err: unknown) => err instanceof Error ? err : new Error(String(err)),
-	withRetry: mockWithRetry
+	toError: (err: unknown) => (err instanceof Error ? err : new Error(String(err))),
+	withRetry: mockWithRetry,
 }));
 
 // Mock logger
@@ -105,12 +112,12 @@ vi.mock('$lib/logging/logger', () => ({
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
 		warn: vi.fn(async () => {}),
-		debug: vi.fn(async () => {})
-	}
+		debug: vi.fn(async () => {}),
+	},
 }));
 
 const defaultParsed: ExtractedMemories = {
-	elena: { tavern: ['Elena sat by the fire.'] }
+	elena: { tavern: ['Elena sat by the fire.'] },
 };
 
 describe('memory-extraction-pipeline', () => {
@@ -133,28 +140,18 @@ describe('memory-extraction-pipeline', () => {
 	describe('runMemoryExtractionPipeline', () => {
 		it('runs full pipeline successfully', async () => {
 			const { runMemoryExtractionPipeline } = await import('$lib/ai/memory-extraction-pipeline');
-			const result = await runMemoryExtractionPipeline(
-				'Elena walked into the tavern.',
-				'story-1',
-				'line-1',
-				'msg-1'
-			);
+			const result = await runMemoryExtractionPipeline('Elena walked into the tavern.', 'story-1', 'line-1', 'msg-1');
 
 			expect(mockGenerateText).toHaveBeenCalledWith(
 				expect.objectContaining({
 					system: 'System prompt',
-					prompt: expect.stringContaining('User prompt')
+					prompt: expect.stringContaining('User prompt'),
 				})
 			);
 
-			expect(mockMemoryInstance.add).toHaveBeenCalledWith(
-				'story-1',
-				'line-1',
-				'msg-1',
-				'elena',
-				'tavern',
-				['Elena sat by the fire.']
-			);
+			expect(mockMemoryInstance.add).toHaveBeenCalledWith('story-1', 'line-1', 'msg-1', 'elena', 'tavern', [
+				'Elena sat by the fire.',
+			]);
 			expect(mockMemoryInstance.addLocation).toHaveBeenCalledWith('story-1', 'line-1', 'msg-1', 'tavern');
 			expect(result.charactersProcessed).toBe(1);
 			expect(result.memoriesAdded).toBe(1);
@@ -166,9 +163,9 @@ describe('memory-extraction-pipeline', () => {
 			mockGetMemoryProviderConfig.mockReturnValue(undefined as any);
 
 			const { runMemoryExtractionPipeline } = await import('$lib/ai/memory-extraction-pipeline');
-			await expect(
-				runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1')
-			).rejects.toThrow('Memory provider not configured');
+			await expect(runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1')).rejects.toThrow(
+				'Memory provider not configured'
+			);
 		});
 
 		it('throws when no embedding provider configured', async () => {
@@ -176,18 +173,18 @@ describe('memory-extraction-pipeline', () => {
 			mockGetEmbeddingProviderConfig.mockReturnValue(undefined as any);
 
 			const { runMemoryExtractionPipeline } = await import('$lib/ai/memory-extraction-pipeline');
-			await expect(
-				runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1')
-			).rejects.toThrow('Embedding provider not configured');
+			await expect(runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1')).rejects.toThrow(
+				'Embedding provider not configured'
+			);
 		});
 
 		it('throws immediately on auth error without retry', async () => {
 			mockGenerateText.mockRejectedValueOnce(new Error('401 Unauthorized'));
 
 			const { runMemoryExtractionPipeline } = await import('$lib/ai/memory-extraction-pipeline');
-			await expect(
-				runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1')
-			).rejects.toThrow('401 Unauthorized');
+			await expect(runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1')).rejects.toThrow(
+				'401 Unauthorized'
+			);
 			expect(mockGenerateText).toHaveBeenCalledTimes(1); // No retries for auth errors
 		});
 
@@ -209,9 +206,9 @@ describe('memory-extraction-pipeline', () => {
 			mockGenerateText.mockRejectedValue(new Error('Network error'));
 
 			const { runMemoryExtractionPipeline } = await import('$lib/ai/memory-extraction-pipeline');
-			await expect(
-				runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1')
-			).rejects.toThrow('Network error');
+			await expect(runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1')).rejects.toThrow(
+				'Network error'
+			);
 
 			expect(mockGenerateText).toHaveBeenCalledTimes(4); // Initial + 3 retries
 		});
@@ -222,19 +219,19 @@ describe('memory-extraction-pipeline', () => {
 			mockParseMemoryExtract.mockReturnValue({
 				elena: {
 					tavern: ['Memory 1', 'Memory 2'],
-					forest: ['Memory 3']
+					forest: ['Memory 3'],
 				},
 				marcus: {
-					castle: ['Memory 4']
-				}
+					castle: ['Memory 4'],
+				},
 			});
 
-				// Mock add to return the number of memories passed (simulating dedup where all are unique)
-				mockMemoryInstance.add.mockImplementation(async (...args: unknown[]) => {
-					const memories = args[5] as string[];
-					return memories.length;
-				});
-				mockMemoryInstance.addLocation.mockResolvedValue(true);
+			// Mock add to return the number of memories passed (simulating dedup where all are unique)
+			mockMemoryInstance.add.mockImplementation(async (...args: unknown[]) => {
+				const memories = args[5] as string[];
+				return memories.length;
+			});
+			mockMemoryInstance.addLocation.mockResolvedValue(true);
 
 			const { runMemoryExtractionPipeline } = await import('$lib/ai/memory-extraction-pipeline');
 			const result = await runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1');
@@ -250,8 +247,8 @@ describe('memory-extraction-pipeline', () => {
 			mockParseMemoryExtract.mockReturnValue({
 				elena: {
 					tavern: ['Memory 1'],
-					forest: ['Memory 2']
-				}
+					forest: ['Memory 2'],
+				},
 			});
 
 			// tavern fails once then succeeds, forest succeeds immediately
@@ -273,8 +270,8 @@ describe('memory-extraction-pipeline', () => {
 			mockParseMemoryExtract.mockReturnValue({
 				elena: {
 					tavern: ['Memory 1'],
-					forest: ['Memory 2']
-				}
+					forest: ['Memory 2'],
+				},
 			});
 
 			// tavern succeeds, forest fails all retries

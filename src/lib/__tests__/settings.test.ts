@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock Tauri invoke
 vi.mock('@tauri-apps/api/core', () => ({
-	invoke: vi.fn(async () => {})
+	invoke: vi.fn(async () => {}),
 }));
 
 // Mock logger
@@ -11,14 +11,14 @@ vi.mock('$lib/logging/logger', () => ({
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
 		warn: vi.fn(async () => {}),
-		debug: vi.fn(async () => {})
-	}
+		debug: vi.fn(async () => {}),
+	},
 }));
 
 // Mock uuid to return predictable values
 let uuidCounter = 0;
 vi.mock('uuid', () => ({
-	v4: () => `test-uuid-${++uuidCounter}`
+	v4: () => `test-uuid-${++uuidCounter}`,
 }));
 
 const STORAGE_KEY = 'byoa-settings';
@@ -40,7 +40,7 @@ describe('settings', () => {
 				model: 'gpt-4o',
 				apiKey: 'sk-test-key',
 				logLevel: 'debug',
-				fontSize: 1.2
+				fontSize: 1.2,
 			})
 		);
 
@@ -58,7 +58,7 @@ describe('settings', () => {
 			apiType: 'responses',
 			baseURL: 'https://api.openai.com/v1',
 			model: 'gpt-4o',
-			apiKey: 'sk-test-key'
+			apiKey: 'sk-test-key',
 		});
 		expect(settings.roleAssignments['main']).toBe(settings.providers[0].id);
 		expect(settings.logLevel).toBe('debug');
@@ -85,7 +85,7 @@ describe('settings', () => {
 			apiType: 'responses',
 			baseURL: 'https://api.openai.com/v1',
 			model: 'gpt-4o',
-			apiKey: 'sk-test'
+			apiKey: 'sk-test',
 		});
 
 		expect(config.id).toBe('test-uuid-1');
@@ -95,16 +95,14 @@ describe('settings', () => {
 
 	it('updateProviderConfig updates the correct config', async () => {
 		vi.resetModules();
-		const { addProviderConfig, updateProviderConfig, getProviderConfig } = await import(
-			'$lib/stores/settings.svelte'
-		);
+		const { addProviderConfig, updateProviderConfig, getProviderConfig } = await import('$lib/stores/settings.svelte');
 		const c1 = addProviderConfig({
 			name: 'First',
 			provider: 'openai',
 			apiType: 'responses',
 			baseURL: '',
 			model: 'gpt-4o',
-			apiKey: 'sk-1'
+			apiKey: 'sk-1',
 		});
 		const c2 = addProviderConfig({
 			name: 'Second',
@@ -112,7 +110,7 @@ describe('settings', () => {
 			apiType: 'chat-completions',
 			baseURL: 'http://localhost:11434/v1',
 			model: 'llama3',
-			apiKey: ''
+			apiKey: '',
 		});
 
 		updateProviderConfig(c1.id, { apiKey: 'sk-updated' });
@@ -123,16 +121,15 @@ describe('settings', () => {
 
 	it('deleteProviderConfig removes config and cleans up role assignments', async () => {
 		vi.resetModules();
-		const { addProviderConfig, assignRole, deleteProviderConfig, getSettings } = await import(
-			'$lib/stores/settings.svelte'
-		);
+		const { addProviderConfig, assignRole, deleteProviderConfig, getSettings } =
+			await import('$lib/stores/settings.svelte');
 		const c1 = addProviderConfig({
 			name: 'Main',
 			provider: 'openai',
 			apiType: 'responses',
 			baseURL: '',
 			model: 'gpt-4o',
-			apiKey: 'sk-1'
+			apiKey: 'sk-1',
 		});
 		const c2 = addProviderConfig({
 			name: 'Other',
@@ -140,7 +137,7 @@ describe('settings', () => {
 			apiType: 'chat-completions',
 			baseURL: '',
 			model: 'llama3',
-			apiKey: ''
+			apiKey: '',
 		});
 
 		assignRole('main', c1.id);
@@ -155,16 +152,14 @@ describe('settings', () => {
 
 	it('getMainProviderConfig returns the config assigned to main role', async () => {
 		vi.resetModules();
-		const { addProviderConfig, assignRole, getMainProviderConfig } = await import(
-			'$lib/stores/settings.svelte'
-		);
+		const { addProviderConfig, assignRole, getMainProviderConfig } = await import('$lib/stores/settings.svelte');
 		const config = addProviderConfig({
 			name: 'Main',
 			provider: 'openai',
 			apiType: 'responses',
 			baseURL: '',
 			model: 'gpt-4o',
-			apiKey: 'sk-test'
+			apiKey: 'sk-test',
 		});
 		assignRole('main', config.id);
 
@@ -181,16 +176,14 @@ describe('settings', () => {
 
 	it('assignRole correctly updates the map', async () => {
 		vi.resetModules();
-		const { addProviderConfig, assignRole, getSettings } = await import(
-			'$lib/stores/settings.svelte'
-		);
+		const { addProviderConfig, assignRole, getSettings } = await import('$lib/stores/settings.svelte');
 		const config = addProviderConfig({
 			name: 'Test',
 			provider: 'openai',
 			apiType: 'responses',
 			baseURL: '',
 			model: 'gpt-4o',
-			apiKey: 'sk-test'
+			apiKey: 'sk-test',
 		});
 
 		assignRole('embedding', config.id);
@@ -206,7 +199,7 @@ describe('settings', () => {
 			apiType: 'responses',
 			baseURL: '',
 			model: 'gpt-4o',
-			apiKey: 'sk-test'
+			apiKey: 'sk-test',
 		});
 		assignRole('main', config.id);
 
@@ -235,7 +228,7 @@ describe('settings', () => {
 			apiType: 'responses',
 			baseURL: 'https://api.openai.com/v1',
 			model: 'gpt-4o',
-			apiKey: 'sk-test'
+			apiKey: 'sk-test',
 		});
 
 		// Simulate duplicate like the UI does
@@ -245,7 +238,7 @@ describe('settings', () => {
 			apiType: original.apiType,
 			baseURL: original.baseURL,
 			model: original.model,
-			apiKey: original.apiKey
+			apiKey: original.apiKey,
 		});
 
 		expect(copy.id).not.toBe(original.id);

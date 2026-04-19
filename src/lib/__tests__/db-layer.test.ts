@@ -7,7 +7,7 @@ let testDb: ReturnType<typeof createTestDatabase>;
 
 vi.mock('$lib/db/database', () => ({
 	initDatabase: vi.fn(async () => testDb),
-	getDatabase: vi.fn(() => testDb)
+	getDatabase: vi.fn(() => testDb),
 }));
 
 vi.mock('$lib/logging/logger', () => ({
@@ -15,8 +15,8 @@ vi.mock('$lib/logging/logger', () => ({
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
 		warn: vi.fn(async () => {}),
-		debug: vi.fn(async () => {})
-	}
+		debug: vi.fn(async () => {}),
+	},
 }));
 
 import * as stories from '$lib/db/stories';
@@ -37,9 +37,7 @@ describe('migrations', () => {
 
 	it('runs all migrations and creates tables', async () => {
 		await runMigrations();
-		const tables = testDb._db
-			.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
-			.all();
+		const tables = testDb._db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
 		const tableNames = tables.map((t: any) => t.name);
 		expect(tableNames).toContain('stories');
 		expect(tableNames).toContain('acts');
@@ -221,7 +219,10 @@ describe('act-lines operations', () => {
 	it('does not delete shared message when other line still references it', async () => {
 		// Create shared messages
 		await messages.createMessage('msg-1', 'user', 'Shared User');
-		await messages.createMessage('msg-2', 'assistant', 'Shared Assistant', undefined, undefined, { worldState: 'State', decisions: ['A', 'B'] });
+		await messages.createMessage('msg-2', 'assistant', 'Shared Assistant', undefined, undefined, {
+			worldState: 'State',
+			decisions: ['A', 'B'],
+		});
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
 		await actLines.addMessageToLine('line-1', 'msg-2', 2);
 
@@ -246,7 +247,7 @@ describe('act-lines operations', () => {
 		// Verify line-1 no longer has msg-3
 		const line1Msgs = await actLines.getMessagesForLine('line-1');
 		expect(line1Msgs).toHaveLength(2);
-		expect(line1Msgs.map(m => m.id)).toEqual(['msg-1', 'msg-2']);
+		expect(line1Msgs.map((m) => m.id)).toEqual(['msg-1', 'msg-2']);
 
 		// Verify line-2 still has msg-1 and msg-2 with game data
 		const line2Msgs = await actLines.getMessagesForLine('line-2');
@@ -264,7 +265,10 @@ describe('act-lines operations', () => {
 	});
 
 	it('preserves game data for shared messages after delete on one line', async () => {
-		await messages.createMessage('msg-1', 'assistant', 'Content', undefined, undefined, { worldState: 'World', decisions: ['X'] });
+		await messages.createMessage('msg-1', 'assistant', 'Content', undefined, undefined, {
+			worldState: 'World',
+			decisions: ['X'],
+		});
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
 		await actLines.addMessageToLine('line-2', 'msg-1', 1);
 

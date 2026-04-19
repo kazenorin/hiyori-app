@@ -23,21 +23,15 @@
 		deleteActLine,
 		renameStory,
 		renameAct,
-		renameActLine
+		renameActLine,
 	} from '$lib/stores/stories.svelte';
-	import {
-		getMessages,
-		getIsStreaming,
-		loadActLineMessages,
-		clearMessages
-	} from '$lib/ai/chat.svelte';
+	import { getMessages, getIsStreaming, loadActLineMessages, clearMessages } from '$lib/ai/chat.svelte';
 	import {
 		enterWorldBuilderMode,
 		exitWorldBuilderMode,
-		getIsActive as getIsWorldBuilderActive
+		getIsActive as getIsWorldBuilderActive,
 	} from '$lib/ai/world-builder.svelte';
 	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
-
 
 	let { children } = $props();
 	let appError = $state<string | null>(null);
@@ -64,7 +58,9 @@
 
 	// Font size slider state
 	let fontSizeSlider = $state(getSettings().fontSize);
-	$effect(() => { fontSizeSlider = getSettings().fontSize; });
+	$effect(() => {
+		fontSizeSlider = getSettings().fontSize;
+	});
 
 	function handleFontSizeChange(e: Event) {
 		const value = parseFloat((e.currentTarget as HTMLInputElement).value);
@@ -266,7 +262,10 @@
 					<div class="space-y-0.5">
 						<!-- Story header -->
 						<div
-							class="group flex items-center justify-between p-3 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer {getActiveStoryId() === story.id ? 'bg-surface-200-800' : 'hover:bg-surface-200-800'}"
+							class="group flex items-center justify-between p-3 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer {getActiveStoryId() ===
+							story.id
+								? 'bg-surface-200-800'
+								: 'hover:bg-surface-200-800'}"
 							onclick={() => handleSelectStory(story.id)}
 						>
 							{#if editingId === story.id && editingType === 'story'}
@@ -276,10 +275,15 @@
 									class="input text-sm flex-1"
 									bind:value={editingName}
 									onkeydown={(e) => {
-										if (e.key === 'Enter') { e.preventDefault(); submitRename(); }
+										if (e.key === 'Enter') {
+											e.preventDefault();
+											submitRename();
+										}
 										if (e.key === 'Escape') cancelRename();
 									}}
-									onblur={() => { if (!renameSubmitting) submitRename(); }}
+									onblur={() => {
+										if (!renameSubmitting) submitRename();
+									}}
 									onclick={(e) => e.stopPropagation()}
 									type="text"
 								/>
@@ -288,16 +292,22 @@
 								<button
 									class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 									type="button"
-									onclick={(e) => { e.stopPropagation(); startRename('story', story.id, story.name); }}
-									title="Rename story"
-								>&#9998;</button>
+									onclick={(e) => {
+										e.stopPropagation();
+										startRename('story', story.id, story.name);
+									}}
+									title="Rename story">&#9998;</button
+								>
 							{/if}
 							<button
 								class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 								type="button"
-								onclick={(e) => { e.stopPropagation(); requestDeleteStory(story.id, story.name); }}
-								title="Delete story"
-							>&times;</button>
+								onclick={(e) => {
+									e.stopPropagation();
+									requestDeleteStory(story.id, story.name);
+								}}
+								title="Delete story">&times;</button
+							>
 						</div>
 
 						<!-- Acts (only show for active story) -->
@@ -305,7 +315,10 @@
 							{#each getActs() as act (act.id)}
 								<div class="ml-3 space-y-0.5">
 									<div
-										class="group flex items-center justify-between p-2 pl-4 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-sm {getActiveActId() === act.id ? 'bg-surface-200-800' : 'hover:bg-surface-200-800'}"
+										class="group flex items-center justify-between p-2 pl-4 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-sm {getActiveActId() ===
+										act.id
+											? 'bg-surface-200-800'
+											: 'hover:bg-surface-200-800'}"
 										onclick={() => handleSelectAct(act.id)}
 									>
 										{#if editingId === act.id && editingType === 'act'}
@@ -315,10 +328,15 @@
 												class="input text-xs flex-1"
 												bind:value={editingName}
 												onkeydown={(e) => {
-													if (e.key === 'Enter') { e.preventDefault(); submitRename(); }
+													if (e.key === 'Enter') {
+														e.preventDefault();
+														submitRename();
+													}
 													if (e.key === 'Escape') cancelRename();
 												}}
-												onblur={() => { if (!renameSubmitting) submitRename(); }}
+												onblur={() => {
+													if (!renameSubmitting) submitRename();
+												}}
 												onclick={(e) => e.stopPropagation()}
 												type="text"
 											/>
@@ -327,23 +345,32 @@
 											<button
 												class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 												type="button"
-												onclick={(e) => { e.stopPropagation(); startRename('act', act.id, act.name); }}
-												title="Rename act"
-											>&#9998;</button>
+												onclick={(e) => {
+													e.stopPropagation();
+													startRename('act', act.id, act.name);
+												}}
+												title="Rename act">&#9998;</button
+											>
 										{/if}
 										<button
 											class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 											type="button"
-											onclick={(e) => { e.stopPropagation(); requestDeleteAct(act.id, act.name); }}
-											title="Delete act"
-										>&times;</button>
+											onclick={(e) => {
+												e.stopPropagation();
+												requestDeleteAct(act.id, act.name);
+											}}
+											title="Delete act">&times;</button
+										>
 									</div>
 
 									<!-- Act Lines -->
 									{#if getActiveActId() === act.id}
 										{#each getActLines() as line (line.id)}
 											<div
-												class="group flex items-center justify-between p-2 pl-8 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-xs {getActiveActLineId() === line.id ? 'bg-primary-100-900 text-primary-700-300' : 'hover:bg-surface-200-800 text-surface-500'}"
+												class="group flex items-center justify-between p-2 pl-8 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-xs {getActiveActLineId() ===
+												line.id
+													? 'bg-primary-100-900 text-primary-700-300'
+													: 'hover:bg-surface-200-800 text-surface-500'}"
 												onclick={() => handleSelectActLine(line.id)}
 											>
 												{#if editingId === line.id && editingType === 'line'}
@@ -353,10 +380,15 @@
 														class="input text-xs flex-1"
 														bind:value={editingName}
 														onkeydown={(e) => {
-															if (e.key === 'Enter') { e.preventDefault(); submitRename(); }
+															if (e.key === 'Enter') {
+																e.preventDefault();
+																submitRename();
+															}
 															if (e.key === 'Escape') cancelRename();
 														}}
-														onblur={() => { if (!renameSubmitting) submitRename(); }}
+														onblur={() => {
+															if (!renameSubmitting) submitRename();
+														}}
 														onclick={(e) => e.stopPropagation()}
 														type="text"
 													/>
@@ -365,16 +397,22 @@
 													<button
 														class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 														type="button"
-														onclick={(e) => { e.stopPropagation(); startRename('line', line.id, line.name); }}
-														title="Rename line"
-													>&#9998;</button>
+														onclick={(e) => {
+															e.stopPropagation();
+															startRename('line', line.id, line.name);
+														}}
+														title="Rename line">&#9998;</button
+													>
 												{/if}
 												<button
 													class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 													type="button"
-													onclick={(e) => { e.stopPropagation(); requestDeleteActLine(line.id, line.name); }}
-													title="Delete line"
-												>&times;</button>
+													onclick={(e) => {
+														e.stopPropagation();
+														requestDeleteActLine(line.id, line.name);
+													}}
+													title="Delete line">&times;</button
+												>
 											</div>
 										{/each}
 
@@ -388,7 +426,8 @@
 														bind:value={newActLineName}
 														onkeydown={(e) => e.key === 'Enter' && handleCreateActLine()}
 													/>
-													<button class="text-xs text-primary-500" type="button" onclick={handleCreateActLine}>+</button>
+													<button class="text-xs text-primary-500" type="button" onclick={handleCreateActLine}>+</button
+													>
 												</div>
 											</div>
 										{:else}
@@ -504,11 +543,11 @@
 				</h3>
 				<p class="text-sm text-surface-600-400 mb-5">
 					{#if confirmDelete.type === 'story'}
-						Are you sure you want to delete <strong>{confirmDelete.name}</strong>?
-						All acts and lines within this story will also be removed.
+						Are you sure you want to delete <strong>{confirmDelete.name}</strong>? All acts and lines within this story
+						will also be removed.
 					{:else if confirmDelete.type === 'act'}
-						Are you sure you want to delete <strong>{confirmDelete.name}</strong>?
-						All lines within this act will also be removed.
+						Are you sure you want to delete <strong>{confirmDelete.name}</strong>? All lines within this act will also
+						be removed.
 					{:else}
 						Are you sure you want to delete <strong>{confirmDelete.name}</strong>?
 					{/if}
@@ -578,9 +617,7 @@
 				onclick={(e) => e.stopPropagation()}
 				onkeydown={(e) => e.stopPropagation()}
 			>
-				<h3 id="new-story-dialog-title" class="text-lg font-semibold text-surface-900-100 mb-4">
-					Create New Story
-				</h3>
+				<h3 id="new-story-dialog-title" class="text-lg font-semibold text-surface-900-100 mb-4">Create New Story</h3>
 				<div class="flex flex-col gap-3">
 					<button
 						class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
@@ -588,7 +625,9 @@
 						onclick={handleStartWorldBuilder}
 					>
 						<div class="font-medium text-surface-900-100 mb-1">World Builder</div>
-						<div class="text-sm text-surface-600-400">Guided interview to create a world from scratch with AI assistance.</div>
+						<div class="text-sm text-surface-600-400">
+							Guided interview to create a world from scratch with AI assistance.
+						</div>
 					</button>
 					<button
 						class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
@@ -596,7 +635,9 @@
 						onclick={handleStartImportWorld}
 					>
 						<div class="font-medium text-surface-900-100 mb-1">Import World</div>
-						<div class="text-sm text-surface-600-400">Bring an existing world document and start playing immediately.</div>
+						<div class="text-sm text-surface-600-400">
+							Bring an existing world document and start playing immediately.
+						</div>
 					</button>
 				</div>
 				<button

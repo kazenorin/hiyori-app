@@ -44,7 +44,7 @@ const defaults: Settings = {
 	memoryProviderRole: 'main',
 	embeddingProviderRole: 'main',
 	reviewerEnabled: false,
-	reviewerProviderRole: 'main'
+	reviewerProviderRole: 'main',
 };
 
 /**
@@ -59,7 +59,7 @@ function migrateFromFlatSettings(raw: Record<string, unknown>): Settings {
 		apiType: (raw.apiType as ApiType) || 'responses',
 		baseURL: (raw.baseURL as string) || 'https://api.openai.com/v1',
 		model: (raw.model as string) || 'gpt-4o',
-		apiKey: (raw.apiKey as string) || ''
+		apiKey: (raw.apiKey as string) || '',
 	};
 
 	return {
@@ -71,7 +71,7 @@ function migrateFromFlatSettings(raw: Record<string, unknown>): Settings {
 		memoryProviderRole: (raw.memoryProviderRole as string) || 'main',
 		embeddingProviderRole: (raw.embeddingProviderRole as string) || 'main',
 		reviewerEnabled: (raw.reviewerEnabled as boolean) ?? false,
-		reviewerProviderRole: (raw.reviewerProviderRole as string) || 'main'
+		reviewerProviderRole: (raw.reviewerProviderRole as string) || 'main',
 	};
 }
 
@@ -143,7 +143,6 @@ export function getMemoryProviderConfig(): ProviderConfig | undefined {
 /** Resolved memory provider config type (non-nullable after successful resolution) */
 export type MemoryProviderConfig = NonNullable<ReturnType<typeof getMemoryProviderConfig>>;
 
-
 export function getEmbeddingProviderConfig(): ProviderConfig | undefined {
 	const role = settings.embeddingProviderRole || 'main';
 	const id = settings.roleAssignments[role];
@@ -200,7 +199,18 @@ export function assignRole(role: string, providerConfigId: string): void {
 // --- Global Settings ---
 
 export async function updateSettings(
-	partial: Partial<Pick<Settings, 'logLevel' | 'fontSize' | 'memoryEnabled' | 'memoryProviderRole' | 'embeddingProviderRole' | 'reviewerEnabled' | 'reviewerProviderRole'>>
+	partial: Partial<
+		Pick<
+			Settings,
+			| 'logLevel'
+			| 'fontSize'
+			| 'memoryEnabled'
+			| 'memoryProviderRole'
+			| 'embeddingProviderRole'
+			| 'reviewerEnabled'
+			| 'reviewerProviderRole'
+		>
+	>
 ): Promise<void> {
 	const prevFontSize = settings.fontSize;
 	const prevLogLevel = settings.logLevel;

@@ -17,11 +17,7 @@ function formatEntry(label: string, content: string): string {
 	return `[${timestamp()}] ${label}\n${separator}\n${content}\n${separator}\n\n`;
 }
 
-async function appendToStoryLog(
-	filename: string,
-	label: string,
-	content: string
-): Promise<void> {
+async function appendToStoryLog(filename: string, label: string, content: string): Promise<void> {
 	if (!isDebugEnabled()) return;
 	const story = getActiveStory();
 	if (!story) return;
@@ -29,7 +25,7 @@ async function appendToStoryLog(
 		const folder = await resolveStoryFolder(story.id, story.name);
 		await writeTextFile(`${folder}/${filename}`, formatEntry(label, content), {
 			baseDir: BaseDirectory.AppData,
-			append: true
+			append: true,
 		});
 	} catch (err) {
 		await log.error('chat-logger', `Failed to write to ${filename}`, err);
@@ -48,9 +44,7 @@ export async function logMainChat(context: {
 
 	parts.push(`=== SYSTEM PROMPT ===\n${context.systemPrompt}`);
 
-	const messagesStr = context.messages
-		.map((m) => `--- [${m.role.toUpperCase()}] ---\n${m.content}`)
-		.join('\n\n');
+	const messagesStr = context.messages.map((m) => `--- [${m.role.toUpperCase()}] ---\n${m.content}`).join('\n\n');
 	parts.push(`=== MESSAGES ===\n${messagesStr}`);
 
 	const content = parts.join('\n\n');
@@ -77,9 +71,7 @@ export async function logWorldBuilderChat(context: {
 
 	parts.push(`=== SYSTEM PROMPT ===\n${context.systemPrompt}`);
 
-	const messagesStr = context.messages
-		.map((m) => `[${m.role.toUpperCase()}]\n${m.content}`)
-		.join('\n\n');
+	const messagesStr = context.messages.map((m) => `[${m.role.toUpperCase()}]\n${m.content}`).join('\n\n');
 	parts.push(`=== MESSAGES ===\n${messagesStr}`);
 
 	const content = parts.join('\n\n');
@@ -93,7 +85,7 @@ export async function logWorldBuilderChat(context: {
 			await mkdir('logs', { baseDir: BaseDirectory.AppData, recursive: true });
 			await writeTextFile(`logs/${context.logFilename}`, formatEntry('World Builder Chat Context', content), {
 				baseDir: BaseDirectory.AppData,
-				append: true
+				append: true,
 			});
 		} catch (err) {
 			await log.error('chat-logger', `Failed to write world builder log`, err);
@@ -104,10 +96,7 @@ export async function logWorldBuilderChat(context: {
 /**
  * Move a world builder log file from AppData/logs/ to the story folder.
  */
-export async function moveWorldBuilderLog(
-	logFilename: string,
-	storyFolder: string
-): Promise<void> {
+export async function moveWorldBuilderLog(logFilename: string, storyFolder: string): Promise<void> {
 	if (!logFilename) return;
 	try {
 		const srcPath = `logs/${logFilename}`;
@@ -117,7 +106,7 @@ export async function moveWorldBuilderLog(
 		const content = await readTextFile(srcPath, { baseDir: BaseDirectory.AppData });
 		await writeTextFile(`${storyFolder}/${logFilename}`, content, {
 			baseDir: BaseDirectory.AppData,
-			append: false
+			append: false,
 		});
 		await remove(srcPath, { baseDir: BaseDirectory.AppData });
 	} catch (err) {
@@ -149,10 +138,7 @@ export async function logCharacterCardActivity(
 /**
  * Log act card generation activity (before/after generateText calls).
  */
-export async function logActCardActivity(
-	phase: 'generation-start' | 'generation-end',
-	details: string
-): Promise<void> {
+export async function logActCardActivity(phase: 'generation-start' | 'generation-end', details: string): Promise<void> {
 	if (!isDebugEnabled()) return;
 	await appendToStoryLog('act-cards.log', `Act Card ${phase}`, details);
 }

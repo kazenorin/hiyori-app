@@ -14,7 +14,14 @@ export interface ParserChainOutput {
 }
 
 export function hasContent(output: ParserChainOutput) {
-	return output.text || output.thinking || output.gameData || output.reviewScratchpad || output.revisedNarrative || output.revisedGameData;
+	return (
+		output.text ||
+		output.thinking ||
+		output.gameData ||
+		output.reviewScratchpad ||
+		output.revisedNarrative ||
+		output.revisedGameData
+	);
 }
 
 export interface ParserChain {
@@ -36,12 +43,7 @@ export function createParserChain(): ParserChain {
 	]);
 	const gameDataParser = createGameDataParser('gameData');
 
-	const parserChain = [
-		thinkingParser,
-		reviewScratchpadParser,
-		gameDataParser,
-		revisedNarrativeParser,
-	];
+	const parserChain = [thinkingParser, reviewScratchpadParser, gameDataParser, revisedNarrativeParser];
 
 	function runChain(initialText: string, mode: 'feed' | 'flush'): ParserChainOutput {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -53,9 +55,10 @@ export function createParserChain(): ParserChain {
 			revised_narrative: null,
 		};
 
-		let text = mode === 'feed'
-			? parserChain.reduce((t, parser) => parser.feed(t, acc), initialText)
-			: runFlush(parserChain, acc);
+		let text =
+			mode === 'feed'
+				? parserChain.reduce((t, parser) => parser.feed(t, acc), initialText)
+				: runFlush(parserChain, acc);
 
 		return {
 			text: text || null,
@@ -74,7 +77,7 @@ export function createParserChain(): ParserChain {
 
 		flush(): ParserChainOutput {
 			return runChain('', 'flush');
-		}
+		},
 	};
 }
 

@@ -1,4 +1,4 @@
-import type {StreamParser} from './stream-parser';
+import type { StreamParser } from './stream-parser';
 
 type ParserState = 'TEXT' | 'POTENTIAL_OPENER' | 'THINKING_BODY' | 'POTENTIAL_CLOSER';
 
@@ -56,10 +56,7 @@ export function createThinkingTagParser(): StreamParser<{ thinking: string | nul
 							openerBuffer = '';
 							state = 'TEXT';
 						}
-					} else if (
-						!openerBuffer.startsWith(THINK_OPENER) &&
-						!THINK_OPENER.startsWith(openerBuffer)
-					) {
+					} else if (!openerBuffer.startsWith(THINK_OPENER) && !THINK_OPENER.startsWith(openerBuffer)) {
 						// Can no longer form `<think` — flush as text
 						textBuffer += openerBuffer;
 						openerBuffer = '';
@@ -146,7 +143,8 @@ export function createThinkingTagParser(): StreamParser<{ thinking: string | nul
 		state = 'TEXT';
 		textBuffer = '';
 
-		accumulator.thinking = thinkingAccumulator.length > 0 ? accumulator.thinking + thinkingAccumulator : accumulator.thinking;
+		accumulator.thinking =
+			thinkingAccumulator.length > 0 ? accumulator.thinking + thinkingAccumulator : accumulator.thinking;
 		thinkingAccumulator = '';
 		return flushedText;
 	}

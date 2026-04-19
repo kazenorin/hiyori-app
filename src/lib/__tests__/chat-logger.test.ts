@@ -7,15 +7,15 @@ vi.mock('@tauri-apps/plugin-fs', () => ({
 	mkdir: vi.fn(async () => {}),
 	exists: vi.fn(async () => false),
 	remove: vi.fn(async () => {}),
-	BaseDirectory: { AppData: 0 }
+	BaseDirectory: { AppData: 0 },
 }));
 
 vi.mock('$lib/fs/story-folders', () => ({
-	resolveStoryFolder: vi.fn(async () => 'test-story-folder')
+	resolveStoryFolder: vi.fn(async () => 'test-story-folder'),
 }));
 
 vi.mock('$lib/stores/stories.svelte', () => ({
-	getActiveStory: vi.fn(() => ({ id: 'story-1', name: 'Test Story' }))
+	getActiveStory: vi.fn(() => ({ id: 'story-1', name: 'Test Story' })),
 }));
 
 vi.mock('$lib/stores/settings.svelte', () => ({
@@ -25,8 +25,8 @@ vi.mock('$lib/stores/settings.svelte', () => ({
 		logLevel: 'debug',
 		fontSize: 1.0,
 		memoryEnabled: true,
-		memoryProviderRole: 'main'
-	}))
+		memoryProviderRole: 'main',
+	})),
 }));
 
 vi.mock('$lib/logging/logger', () => ({
@@ -34,8 +34,8 @@ vi.mock('$lib/logging/logger', () => ({
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
 		warn: vi.fn(async () => {}),
-		debug: vi.fn(async () => {})
-	}
+		debug: vi.fn(async () => {}),
+	},
 }));
 
 import { logMainChat, logWorldBuilderChat } from '$lib/logging/chat-logger';
@@ -57,7 +57,7 @@ function defaultSettings() {
 		memoryProviderRole: 'main',
 		embeddingProviderRole: 'main',
 		reviewerEnabled: false,
-		reviewerProviderRole: 'main'
+		reviewerProviderRole: 'main',
 	};
 }
 
@@ -72,7 +72,7 @@ describe('chat-logger', () => {
 		it('writes to main-chat.log when logLevel is debug', async () => {
 			await logMainChat({
 				systemPrompt: 'You are a GM',
-				messages: [{ role: 'user', content: 'Hello' }]
+				messages: [{ role: 'user', content: 'Hello' }],
 			});
 
 			expect(mockWriteTextFile).toHaveBeenCalledWith(
@@ -85,7 +85,7 @@ describe('chat-logger', () => {
 		it('includes system prompt in log content', async () => {
 			await logMainChat({
 				systemPrompt: 'You are a GM',
-				messages: []
+				messages: [],
 			});
 
 			const loggedContent = mockWriteTextFile.mock.calls[0][1] as string;
@@ -98,8 +98,8 @@ describe('chat-logger', () => {
 				systemPrompt: 'prompt',
 				messages: [
 					{ role: 'user', content: 'Hello' },
-					{ role: 'assistant', content: 'Hi there' }
-				]
+					{ role: 'assistant', content: 'Hi there' },
+				],
 			});
 
 			const loggedContent = mockWriteTextFile.mock.calls[0][1] as string;
@@ -112,7 +112,7 @@ describe('chat-logger', () => {
 		it('formats timestamp in entry', async () => {
 			await logMainChat({
 				systemPrompt: 'prompt',
-				messages: []
+				messages: [],
 			});
 
 			const loggedContent = mockWriteTextFile.mock.calls[0][1] as string;
@@ -124,7 +124,7 @@ describe('chat-logger', () => {
 
 			await logMainChat({
 				systemPrompt: 'prompt',
-				messages: []
+				messages: [],
 			});
 
 			expect(mockWriteTextFile).not.toHaveBeenCalled();
@@ -135,7 +135,7 @@ describe('chat-logger', () => {
 
 			await logMainChat({
 				systemPrompt: 'prompt',
-				messages: []
+				messages: [],
 			});
 
 			expect(mockWriteTextFile).not.toHaveBeenCalled();
@@ -147,7 +147,7 @@ describe('chat-logger', () => {
 			await logWorldBuilderChat({
 				systemPrompt: 'You are a world builder',
 				messages: [{ role: 'user', content: 'Create a fantasy world' }],
-				logFilename: 'worldbuilding-20260411093000.log'
+				logFilename: 'worldbuilding-20260411093000.log',
 			});
 
 			expect(mockWriteTextFile).toHaveBeenCalledWith(
@@ -161,7 +161,7 @@ describe('chat-logger', () => {
 			await logWorldBuilderChat({
 				systemPrompt: 'world-builder prompt',
 				messages: [{ role: 'user', content: 'I want dragons' }],
-				logFilename: 'worldbuilding-test.log'
+				logFilename: 'worldbuilding-test.log',
 			});
 
 			const loggedContent = mockWriteTextFile.mock.calls[0][1] as string;
@@ -174,7 +174,7 @@ describe('chat-logger', () => {
 
 			await logWorldBuilderChat({
 				systemPrompt: 'prompt',
-				messages: []
+				messages: [],
 			});
 
 			expect(mockWriteTextFile).not.toHaveBeenCalled();

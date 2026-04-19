@@ -152,7 +152,7 @@ export function createGameDataParser(tagName: string = 'gameData'): StreamParser
 		state = 'TEXT';
 		textBuffer = '';
 
-		accumulator[tagName] = pendingGameData ?? accumulator[tagName]
+		accumulator[tagName] = pendingGameData ?? accumulator[tagName];
 		pendingGameData = null;
 		return flushedText;
 	}

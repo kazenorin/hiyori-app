@@ -47,13 +47,18 @@ function rowToActLineMeta(row: ActLineMetaRow): ActLineMeta {
 		actId: row.act_id,
 		name: row.name,
 		isMainLine: row.is_main_line === 1,
-		createdAt: row.created_at
+		createdAt: row.created_at,
 	};
 }
 
 // === act_line_meta operations ===
 
-export async function createActLine(id: string, actId: string, name: string, isMainLine: boolean = false): Promise<ActLineMeta> {
+export async function createActLine(
+	id: string,
+	actId: string,
+	name: string,
+	isMainLine: boolean = false
+): Promise<ActLineMeta> {
 	const db = getDatabase();
 	const now = Date.now();
 	await db.execute(
@@ -65,10 +70,7 @@ export async function createActLine(id: string, actId: string, name: string, isM
 
 export async function getActLine(id: string): Promise<ActLineMeta | null> {
 	const db = getDatabase();
-	const rows = await db.select<ActLineMetaRow[]>(
-		'SELECT * FROM act_line_meta WHERE id = $1',
-		[id]
-	);
+	const rows = await db.select<ActLineMetaRow[]>('SELECT * FROM act_line_meta WHERE id = $1', [id]);
 	return rows.length > 0 ? rowToActLineMeta(rows[0]) : null;
 }
 
@@ -110,13 +112,16 @@ export async function deleteActLine(id: string): Promise<void> {
 
 export async function getMessagesForLine(actLineId: string): Promise<Message[]> {
 	const db = getDatabase();
-	const rows = await db.select<MessageInLine[]>(`
+	const rows = await db.select<MessageInLine[]>(
+		`
 		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.game_data, m.created_at, al.sequence
 		FROM act_lines al
 		JOIN messages m ON al.message_id = m.id
 		WHERE al.act_line_id = $1
 		ORDER BY al.sequence ASC
-	`, [actLineId]);
+	`,
+		[actLineId]
+	);
 
 	return rows.map((row) => ({
 		id: row.id,
@@ -125,20 +130,17 @@ export async function getMessagesForLine(actLineId: string): Promise<Message[]> 
 		reasoning: row.reasoning ?? undefined,
 		metadata: row.metadata ?? undefined,
 		gameData: parseGameData(row.game_data),
-		createdAt: row.created_at
+		createdAt: row.created_at,
 	}));
 }
 
-export async function addMessageToLine(
-	actLineId: string,
-	messageId: string,
-	sequence: number
-): Promise<void> {
+export async function addMessageToLine(actLineId: string, messageId: string, sequence: number): Promise<void> {
 	const db = getDatabase();
-	await db.execute(
-		'INSERT INTO act_lines (act_line_id, message_id, sequence) VALUES ($1, $2, $3)',
-		[actLineId, messageId, sequence]
-	);
+	await db.execute('INSERT INTO act_lines (act_line_id, message_id, sequence) VALUES ($1, $2, $3)', [
+		actLineId,
+		messageId,
+		sequence,
+	]);
 }
 
 export async function deleteLineEntries(actLineId: string): Promise<void> {
@@ -154,16 +156,15 @@ export async function removeMessagesFromActLine(actLineId: string, messageIds: s
 		await db.execute('BEGIN');
 
 		const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
-		await db.execute(
-			`DELETE FROM act_lines WHERE act_line_id = $1 AND message_id IN (${placeholders})`,
-			[actLineId, ...messageIds]
-		);
+		await db.execute(`DELETE FROM act_lines WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [
+			actLineId,
+			...messageIds,
+		]);
 
 		for (const msgId of messageIds) {
-			const refs = await db.select<{ cnt: number }[]>(
-				'SELECT COUNT(*) as cnt FROM act_lines WHERE message_id = $1',
-				[msgId]
-			);
+			const refs = await db.select<{ cnt: number }[]>('SELECT COUNT(*) as cnt FROM act_lines WHERE message_id = $1', [
+				msgId,
+			]);
 			if (refs[0].cnt === 0) {
 				await db.execute('DELETE FROM messages WHERE id = $1', [msgId]);
 			}
@@ -220,10 +221,7 @@ export async function branchFromLine(
 		// Batch insert all entries
 		const values = entries.map((e, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(', ');
 		const params = entries.flatMap((e) => [newLineId, e.message_id, e.sequence]);
-		await db.execute(
-			`INSERT INTO act_lines (act_line_id, message_id, sequence) VALUES ${values}`,
-			params
-		);
+		await db.execute(`INSERT INTO act_lines (act_line_id, message_id, sequence) VALUES ${values}`, params);
 
 		await db.execute('COMMIT');
 	} catch (err) {

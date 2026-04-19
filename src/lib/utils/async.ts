@@ -25,10 +25,7 @@ export interface RetryOptions {
 /**
  * Execute an async function with automatic retry and exponential backoff.
  */
-export async function withRetry<T>(
-	fn: () => Promise<T>,
-	options: RetryOptions
-): Promise<T> {
+export async function withRetry<T>(fn: () => Promise<T>, options: RetryOptions): Promise<T> {
 	let lastError: Error | undefined;
 
 	for (let attempt = 0; attempt < options.maxAttempts; attempt++) {

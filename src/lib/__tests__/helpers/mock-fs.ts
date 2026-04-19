@@ -43,7 +43,10 @@ export function createMockFs() {
 					const firstPart = rest.split('/')[0];
 					if (firstPart && !seen.has(firstPart)) {
 						seen.add(firstPart);
-						entries.push({ name: firstPart, isDirectory: !rest.includes('/') || rest.indexOf('/') === rest.length - 1 });
+						entries.push({
+							name: firstPart,
+							isDirectory: !rest.includes('/') || rest.indexOf('/') === rest.length - 1,
+						});
 					}
 				}
 			}
@@ -76,6 +79,6 @@ export function createMockFs() {
 			files.clear();
 			dirs.clear();
 			dirs.add('/');
-		}
+		},
 	};
 }
