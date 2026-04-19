@@ -14,14 +14,7 @@ export interface ParserChainOutput {
 }
 
 export function hasContent(output: ParserChainOutput) {
-	return (
-		output.text ||
-		output.thinking ||
-		output.gameData ||
-		output.reviewScratchpad ||
-		output.revisedNarrative ||
-		output.revisedGameData
-	);
+	return output.text || output.thinking || output.gameData || output.reviewScratchpad || output.revisedNarrative || output.revisedGameData;
 }
 
 export interface ParserChain {
@@ -37,10 +30,7 @@ export interface ParserChain {
 export function createParserChain(): ParserChain {
 	const thinkingParser = createThinkingTagParser();
 	const reviewScratchpadParser = createXmlTagParser('review_scratchpad');
-	const revisedNarrativeParser = createCompositeParser([
-		createXmlTagParser('revised_narrative'),
-		createGameDataParser('revisedGameData'),
-	]);
+	const revisedNarrativeParser = createCompositeParser([createXmlTagParser('revised_narrative'), createGameDataParser('revisedGameData')]);
 	const gameDataParser = createGameDataParser('gameData');
 
 	const parserChain = [thinkingParser, reviewScratchpadParser, gameDataParser, revisedNarrativeParser];
@@ -55,10 +45,7 @@ export function createParserChain(): ParserChain {
 			revised_narrative: null,
 		};
 
-		let text =
-			mode === 'feed'
-				? parserChain.reduce((t, parser) => parser.feed(t, acc), initialText)
-				: runFlush(parserChain, acc);
+		let text = mode === 'feed' ? parserChain.reduce((t, parser) => parser.feed(t, acc), initialText) : runFlush(parserChain, acc);
 
 		return {
 			text: text || null,

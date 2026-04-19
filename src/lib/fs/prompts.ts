@@ -172,8 +172,7 @@ export const loadActCardTemplate = (): Promise<string> => actCardTemplate.load()
 export const loadActExtractionPrompt = (): Promise<string> => actExtractionPrompt.load();
 export const loadCharacterCardTemplate = (): Promise<string> => characterCardTemplate.load();
 export const loadCharacterCardExtractionPrompt = (): Promise<string> => characterCardExtractionPrompt.load();
-export const loadCharacterCardExtractionSystemPrompt = (): Promise<string> =>
-	characterCardExtractionSystemPrompt.load();
+export const loadCharacterCardExtractionSystemPrompt = (): Promise<string> => characterCardExtractionSystemPrompt.load();
 export const loadSummarizeCharactersInAct = (): Promise<string> => summarizeCharactersInAct.load();
 export const loadActGenerationPrompt = (): Promise<string> => actGenerationPrompt.load();
 export const loadChoicesExtractionPrompt = (): Promise<string> => choicesExtractionPrompt.load();
@@ -192,12 +191,7 @@ export async function loadStorySystemPrompt(storyId: string, storyName: string):
 }
 
 export async function loadStoryNarrationExtractionPrompt(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(
-		storyId,
-		storyName,
-		narrationExtractionPrompt.relativePath,
-		narrationExtractionPrompt.defaultContent
-	);
+	return loadPromptForStory(storyId, storyName, narrationExtractionPrompt.relativePath, narrationExtractionPrompt.defaultContent);
 }
 
 export async function loadStoryNarrationTemplate(storyId: string, storyName: string): Promise<string> {

@@ -171,8 +171,7 @@ describe('ParserChain', () => {
 			});
 
 			it('extracts revised_narrative after review_scratchpad', () => {
-				const input =
-					'<review_scratchpad>Fix pacing</review_scratchpad><revised_narrative>Better pacing here</revised_narrative>End';
+				const input = '<review_scratchpad>Fix pacing</review_scratchpad><revised_narrative>Better pacing here</revised_narrative>End';
 				const { text, reviewScratchpad, revisedNarrative } = feedAll([input]);
 				expect(reviewScratchpad).toBe('Fix pacing');
 				expect(revisedNarrative).toBe('Better pacing here');

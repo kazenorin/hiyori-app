@@ -1,6 +1,6 @@
 {
-  "enabledPlugins": {
-    "svelte-skills@svelte-skills-kit": true,
-    "rust-analyzer-lsp@claude-plugins-official": true
-  }
+	"enabledPlugins": {
+		"svelte-skills@svelte-skills-kit": true,
+		"rust-analyzer-lsp@claude-plugins-official": true
+	}
 }

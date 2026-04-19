@@ -10,6 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Backend** (`src-tauri/`): Rust/Tauri v2. Tauri commands are registered in `src/lib.rs` via `tauri::generate_handler![]`. Entry point is `main.rs` which calls `app_lib::run()`.
 
 ### Key config files
+
 - `src-tauri/tauri.conf.json` — app metadata, window config, CSP, build commands
 - `src-tauri/Cargo.toml` — Rust dependencies
 - `src-tauri/capabilities/default.json` — Tauri permissions
@@ -57,6 +58,7 @@ The app uses a unified prompt loading system with a `Prompt` class pattern:
 ### AppData Structure
 
 Base prompt templates are stored in `AppData/config/prompt-templates/`:
+
 ```
 AppData/
   config/
@@ -86,6 +88,7 @@ Each story gets a dedicated folder in AppData containing its own `system-prompt.
 ### Story-Specific Overrides
 
 Each story folder can contain its own `prompt-templates/` subdirectory with story-specific overrides. Resolution order:
+
 1. Story-specific: `<story-folder>/prompt-templates/<relativePath>`
 2. Base file: `config/prompt-templates/<relativePath>`
 3. Bundled default (in-memory fallback)
@@ -130,7 +133,7 @@ Some AI models emit reasoning enclosed in `think` tags. The `ThinkingTagParser` 
 
 ## Game Data Blocks
 
-During main chat streaming, ```json blocks containing `worldState` (string) and `decisions` (string[]) are intercepted and hidden from chat content.
+During main chat streaming, ```json blocks containing `worldState`(string) and`decisions` (string[]) are intercepted and hidden from chat content.
 
 - **Parser**: `src/lib/ai/game-data-parser.ts` — character-by-character state machine (TEXT → POTENTIAL_OPENER → JSON_BODY → POTENTIAL_CLOSER) that buffers during streaming.
 - **Validation**: Private `isValidGameData()` in `message-updater.ts` — skips game data with blank `worldState` or empty `decisions` array.
@@ -147,6 +150,7 @@ The app can generate character cards and act summaries from chat transcripts:
 - **Act Cards** (`src/lib/ai/act-card-generator.ts`): Generates summary documents for entire acts from the chat transcript.
 
 Both generators:
+
 - Use `Prompt` class instances from `$lib/fs/prompts` for template loading
 - Support parallel generation for multiple characters
 - Write output to story folder under `act-N/characters/` subdirectories
@@ -202,6 +206,7 @@ LIMIT 5;
 ```
 
 ### Online References for sqlite-vec
+
 　— API Reference:　https://alexgarcia.xyz/sqlite-vec/api-reference.html
 　— vec0 virtual tables:　https://alexgarcia.xyz/sqlite-vec/features/vec0.html
 

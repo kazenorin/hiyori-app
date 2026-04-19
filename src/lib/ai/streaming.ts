@@ -63,19 +63,11 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 			}
 		}
 
-		const [usage, finishReason, text] = await Promise.all([
-			result.usage,
-			result.finishReason.then((s) => s ?? 'unknown'),
-			result.text,
-		]);
+		const [usage, finishReason, text] = await Promise.all([result.usage, result.finishReason.then((s) => s ?? 'unknown'), result.text]);
 
 		if (text.trim().length === 0) {
 			callbacks.onError(new Error('empty response from stream'));
-			await fileLog(
-				'warn',
-				'streaming',
-				`empty body\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`
-			);
+			await fileLog('warn', 'streaming', `empty body\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`);
 		} else {
 			callbacks.onComplete({
 				finishReason,
@@ -88,11 +80,7 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 				durationMs: Date.now() - startTime,
 			});
 
-			await fileLog(
-				'debug',
-				'streaming',
-				`${text}\n\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`
-			);
+			await fileLog('debug', 'streaming', `${text}\n\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`);
 		}
 	} catch (err: unknown) {
 		callbacks.onError(err);

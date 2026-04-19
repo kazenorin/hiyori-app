@@ -87,9 +87,7 @@
 				aria-busy="true"
 			>
 				<div class="card p-8 text-center">
-					<div
-						class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"
-					></div>
+					<div class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
 					<p class="mt-4 text-surface-950-50">Extracting characters from act...</p>
 				</div>
 			</div>
@@ -193,9 +191,8 @@
 					<li>Canonical names must remain consistent throughout the entire story.</li>
 					<li>Character cards are maintained per act line (not globally).</li>
 					<li>
-						Cards are generated from the current act's content. If cards exist for the current act line <strong
-							>and</strong
-						> previous acts in the lineage, their content contributes to generation context.
+						Cards are generated from the current act's content. If cards exist for the current act line <strong>and</strong> previous acts in
+						the lineage, their content contributes to generation context.
 					</li>
 					<li>If a card for the current act line already exists, <strong>it will be overwritten</strong>.</li>
 				</ul>

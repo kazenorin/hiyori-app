@@ -1,11 +1,7 @@
 import { streamText } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
-import {
-	loadWorldTemplate,
-	loadGenerateWorldFromChatPrompt,
-	loadGenerateWorldFromChatSystemPrompt,
-} from '$lib/fs/prompts';
+import { loadWorldTemplate, loadGenerateWorldFromChatPrompt, loadGenerateWorldFromChatSystemPrompt } from '$lib/fs/prompts';
 import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';

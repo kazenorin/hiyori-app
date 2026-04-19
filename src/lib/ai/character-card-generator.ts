@@ -203,12 +203,7 @@ function computeCardFilename(canonicalName: string): string {
 
 export { computeCardFilename as _computeCardFilenameForTest };
 
-async function loadActCard(
-	storyFolder: string,
-	actNumber: number,
-	isMainLine: boolean,
-	actLineId: string
-): Promise<string | null> {
+async function loadActCard(storyFolder: string, actNumber: number, isMainLine: boolean, actLineId: string): Promise<string | null> {
 	const lineDir = buildLineDir(storyFolder, actNumber, isMainLine, actLineId);
 	const path = `${lineDir}/act-card.md`;
 
@@ -246,11 +241,7 @@ async function loadExistingCharacterCard(
 
 // === Context Building ===
 
-async function loadPreviousActCards(
-	storyFolder: string,
-	lineage: ActLineageEntry[],
-	skipActNumber: number
-): Promise<string[]> {
+async function loadPreviousActCards(storyFolder: string, lineage: ActLineageEntry[], skipActNumber: number): Promise<string[]> {
 	const sections: string[] = [];
 	for (const entry of lineage) {
 		if (entry.actNumber === skipActNumber) continue;
@@ -272,17 +263,9 @@ async function loadPreviousCharacterCards(
 ): Promise<string[]> {
 	const sections: string[] = [];
 	for (const entry of lineage) {
-		const card = await loadExistingCharacterCard(
-			storyFolder,
-			entry.actNumber,
-			canonicalName,
-			entry.isMainLine,
-			entry.actLineId
-		);
+		const card = await loadExistingCharacterCard(storyFolder, entry.actNumber, canonicalName, entry.isMainLine, entry.actLineId);
 		if (card) {
-			sections.push(
-				`The following message contains the previous Character Card of ${characterName} from Act ${entry.actNumber}`
-			);
+			sections.push(`The following message contains the previous Character Card of ${characterName} from Act ${entry.actNumber}`);
 			sections.push(card);
 		}
 	}
@@ -369,10 +352,7 @@ export async function generateCharacterCard(
 
 	const model = createModel(config);
 
-	await logCharacterCardActivity(
-		'generation-start',
-		`Character: ${entry.character}\n\nMessages:\n${JSON.stringify(messages, null, 2)}`
-	);
+	await logCharacterCardActivity('generation-start', `Character: ${entry.character}\n\nMessages:\n${JSON.stringify(messages, null, 2)}`);
 
 	const result = await generateText({ model, system: combinedSystem, messages });
 

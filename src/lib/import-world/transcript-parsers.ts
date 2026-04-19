@@ -39,11 +39,7 @@ export function detectTranscriptFormat(json: unknown): TranscriptFormat {
 
 function isAppExportMessage(msg: unknown): boolean {
 	if (!isRecord(msg)) return false;
-	return (
-		typeof msg.role === 'string' &&
-		typeof msg.content === 'string' &&
-		('metadata' in msg || 'game_data' in msg || 'reasoning' in msg)
-	);
+	return typeof msg.role === 'string' && typeof msg.content === 'string' && ('metadata' in msg || 'game_data' in msg || 'reasoning' in msg);
 }
 
 function isOpenAIMessage(msg: unknown): boolean {

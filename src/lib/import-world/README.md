@@ -54,13 +54,14 @@ Form validation logic:
 
 Parses three transcript formats into unified `ParsedMessage[]`:
 
-| Format | Detection | Notes |
-|--------|-----------|-------|
-| **App Export** | `{ messages: [...] }` with metadata/game_data fields | Native format with full game data |
-| **OpenAI API** | `{ messages: [...] }` simple role/content | No metadata, needs game data detection |
-| **Open WebUI** | Array with `chat.history.messages` | Tree structure, uses longest path |
+| Format         | Detection                                            | Notes                                  |
+| -------------- | ---------------------------------------------------- | -------------------------------------- |
+| **App Export** | `{ messages: [...] }` with metadata/game_data fields | Native format with full game data      |
+| **OpenAI API** | `{ messages: [...] }` simple role/content            | No metadata, needs game data detection |
+| **Open WebUI** | Array with `chat.history.messages`                   | Tree structure, uses longest path      |
 
 **Key functions:**
+
 - `detectTranscriptFormat(json)` — Returns detected format
 - `parseAppExportFormat()` — Parses native app format
 - `parseSimpleOpenAIFormat()` — Parses basic OpenAI format
@@ -72,6 +73,7 @@ Parses three transcript formats into unified `ParsedMessage[]`:
 Two-pass pipeline to extract `GameData` (decision points) from assistant messages:
 
 **Pass 1: Traditional Extraction** (synchronous)
+
 - Splits content on markdown headers (`#`, `##`, etc.)
 - Detects decision keywords: `decision`, `choice`, `option`, `what...do?`
 - Extracts:
@@ -80,6 +82,7 @@ Two-pass pipeline to extract `GameData` (decision points) from assistant message
 - Requires at least 2 decisions to be valid
 
 **Pass 2: LLM Extraction** (asynchronous)
+
 - For messages where Pass 1 returned null
 - Sends to LLM with `choices-extraction-prompt.md`
 - LLM returns JSON: `{ worldState: "...", decisions: ["...", "..."] }`
@@ -94,17 +97,20 @@ Two-pass pipeline to extract `GameData` (decision points) from assistant message
 Generates story content via LLM when no transcript is provided:
 
 **`generateActFromCards()`**
+
 - Builds prompt from world card + act card + character cards
 - Uses streaming via `streamChatResponse()` for real-time feedback
 - Retries with exponential backoff
 - Fast-fails on auth errors (401/403)
 
 **`formatIntoScenes()`**
+
 - Takes raw generated content
 - Feeds back to LLM to split into scenes using narration template
 - Returns formatted content in proper structure
 
 Prompts are centralized in `prompts.ts`:
+
 - `WORLD_CARD_LABEL` — "The following message is a world building settings card."
 - `ACT_CARD_LABEL` — "The following message is an act card..."
 - `CHARACTER_CARD_LABEL` — "The following message is a character card for {name}."
@@ -127,11 +133,13 @@ Main coordinator. Orchestrates the entire import process:
 6. **Finalize** — Refresh sidebar, return success
 
 **Error handling:**
+
 - Tracks all created resources (story, acts, act lines, messages)
 - On failure: `cleanupImport()` deletes everything in reverse order
 - Logs cleanup warnings for any failures
 
 **Helper functions:**
+
 - `processActs()` — Iterate acts and route to transcript or generation
 - `createActAndLine()` — Create act and main act line in DB
 - `processTranscriptAct()` — Parse transcript and detect game data
@@ -145,11 +153,11 @@ Main coordinator. Orchestrates the entire import process:
 Centralized LLM prompts as constants:
 
 ```typescript
-WORLD_CARD_LABEL           // Context label for world building card
-ACT_CARD_LABEL             // Context label for act card
-CHARACTER_CARD_LABEL       // Template with {name} placeholder
-ACT_GENERATION_INSTRUCTION // Final LLM instruction
-SCENE_FORMAT_PROMPT        // Multi-line template with placeholders
+WORLD_CARD_LABEL; // Context label for world building card
+ACT_CARD_LABEL; // Context label for act card
+CHARACTER_CARD_LABEL; // Template with {name} placeholder
+ACT_GENERATION_INSTRUCTION; // Final LLM instruction
+SCENE_FORMAT_PROMPT; // Multi-line template with placeholders
 ```
 
 Benefit: All user-facing LLM text in one place for easy review/modification.
@@ -159,6 +167,7 @@ Benefit: All user-facing LLM text in one place for easy review/modification.
 ### +page.svelte
 
 Import World page UI:
+
 - Form sections: Story Details, Acts/Chapters, Characters, Import Settings
 - File inputs for world file, act files, transcripts (.json), character cards
 - Progress panel at top showing current phase and console output
@@ -169,6 +178,7 @@ Import World page UI:
 ### import-state.svelte.ts
 
 Svelte 5 runes-based state management:
+
 - Form state: `storyName`, `worldFile`, `acts[]`, `characters[]`, settings
 - UI state: `isImporting`, `importComplete`, `progressUpdates[]`, `consoleOutput`
 - Actions: `addAct()`, `removeAct()`, `updateActFile()`, `validate()`, etc.
@@ -213,19 +223,20 @@ User selects:
 
 ## Error Handling
 
-| Error Type | Handling |
-|------------|----------|
-| Validation errors | Show in UI before import starts |
-| File too large | Reject with size limit message |
-| Invalid JSON | Throw with "File is not valid JSON" |
-| Unknown format | Throw with "Unable to detect transcript format" |
-| LLM auth failure | Fast-fail with settings message |
-| LLM retry exhaustion | Log warning, continue or fail based on context |
+| Error Type               | Handling                                           |
+| ------------------------ | -------------------------------------------------- |
+| Validation errors        | Show in UI before import starts                    |
+| File too large           | Reject with size limit message                     |
+| Invalid JSON             | Throw with "File is not valid JSON"                |
+| Unknown format           | Throw with "Unable to detect transcript format"    |
+| LLM auth failure         | Fast-fail with settings message                    |
+| LLM retry exhaustion     | Log warning, continue or fail based on context     |
 | DB failure during import | `cleanupImport()` rolls back all created resources |
 
 ## File Size Limits
 
 All uploaded files are validated against `MAX_FILE_SIZE = 50 * 1024 * 1024` (50MB):
+
 - World files (.md, .txt)
 - Act files (.md, .txt)
 - Transcripts (.json)

@@ -36,10 +36,7 @@ async function appendToStoryLog(filename: string, label: string, content: string
  * Log main chat context: system prompt, narration context, and all messages.
  * Called before each AI call in the main chat.
  */
-export async function logMainChat(context: {
-	systemPrompt: string;
-	messages: Array<{ role: string; content: string }>;
-}): Promise<void> {
+export async function logMainChat(context: { systemPrompt: string; messages: Array<{ role: string; content: string }> }): Promise<void> {
 	const parts: string[] = [];
 
 	parts.push(`=== SYSTEM PROMPT ===\n${context.systemPrompt}`);

@@ -71,10 +71,7 @@ export async function getActsForStory(storyId: string): Promise<Act[]> {
 
 export async function getNextActNumber(storyId: string): Promise<number> {
 	const db = getDatabase();
-	const rows = await db.select<{ max: number | null }[]>(
-		'SELECT MAX(act_number) as max FROM acts WHERE story_id = $1',
-		[storyId]
-	);
+	const rows = await db.select<{ max: number | null }[]>('SELECT MAX(act_number) as max FROM acts WHERE story_id = $1', [storyId]);
 	return (rows[0]?.max ?? 0) + 1;
 }
 

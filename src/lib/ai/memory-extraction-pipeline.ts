@@ -134,8 +134,7 @@ async function persistLocationWithRetry(
 		{
 			maxAttempts: RETRY_COUNT + 1,
 			backoffMs: BACKOFF_SECONDS * 1000,
-			onRetry: (attempt) =>
-				log.warn('memory-pipeline', `Location "${location}" for ${character} attempt ${attempt} failed, retrying...`),
+			onRetry: (attempt) => log.warn('memory-pipeline', `Location "${location}" for ${character} attempt ${attempt} failed, retrying...`),
 		}
 	);
 

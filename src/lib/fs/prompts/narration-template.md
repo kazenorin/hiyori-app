@@ -1,9 +1,10 @@
 # [STORY TITLE]
+
 ## Act [X]
 
 > Session [Y]
 
-***
+---
 
 ### SCENE [Z]: [SCENE TITLE]
 
@@ -11,19 +12,20 @@
 
 [Narrative Body - Focus on sensory details, physical reactions, internal psychology, and content rules. Ensure smooth transitions.]
 
-**[CHARACTER NAME]:** "*Dialogue or direct thoughts.*"
+**[CHARACTER NAME]:** "_Dialogue or direct thoughts._"
 
 [Narration continues...]
 
 **[CG:** Visual Novel style artwork description. Describe camera angle, lighting, expressions, body positioning, and environmental details.**]**
 
-***
+---
 
 **STATUS UPDATE**
+
 - **Current Context:** [Summary of the immediate situation and state of events]
 - **Active Plot Threads:** [List of unresolved situations or immediate goals]
 
-***
+---
 
 **DECISION POINT**
 [Brief contextual description of the moment of choice]
@@ -36,12 +38,7 @@
 
 ```json
 {
-  "worldState": "[Briefly detail secret background information, hidden character motives, or hidden plot tracking here. Do not show player-facing narrative yet.]",
-  "decisions": [
-    "[choice 1 text]",
-    "[choice 2 text]",
-    "[choice 3 text]",
-    "[choice 4 text]"
-  ]
+	"worldState": "[Briefly detail secret background information, hidden character motives, or hidden plot tracking here. Do not show player-facing narrative yet.]",
+	"decisions": ["[choice 1 text]", "[choice 2 text]", "[choice 3 text]", "[choice 4 text]"]
 }
 ```

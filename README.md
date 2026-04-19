@@ -15,11 +15,11 @@ An AI-powered interactive fiction desktop app built with [Tauri v2](https://v2.t
 
 ## Prerequisites
 
-| Tool | Version |
-|------|---------|
-| [Node.js](https://nodejs.org/) | v24+ |
-| [Rust](https://www.rust-lang.org/tools/install) | 1.77+ |
-| [Cargo](https://doc.rust-lang.org/cargo/) | 1.94+ |
+| Tool                                            | Version |
+| ----------------------------------------------- | ------- |
+| [Node.js](https://nodejs.org/)                  | v24+    |
+| [Rust](https://www.rust-lang.org/tools/install) | 1.77+   |
+| [Cargo](https://doc.rust-lang.org/cargo/)       | 1.94+   |
 
 ### Linux system dependencies
 
@@ -44,6 +44,7 @@ This starts the Vite dev server on `http://localhost:1420` and launches the Taur
 Before working on the Tauri backend, ensure Rust is installed in WSL2:
 
 1. **Install build dependencies** — Rust crates often compile from source:
+
    ```bash
    sudo apt update && sudo apt install build-essential gcc make -y
    ```
@@ -62,11 +63,11 @@ npm run tauri build
 
 Output artifacts:
 
-| Artifact | Path |
-|----------|------|
-| Binary | `src-tauri/target/release/app` |
-| .deb | `src-tauri/target/release/bundle/deb/BYOA_0.1.0_amd64.deb` |
-| .rpm | `src-tauri/target/release/bundle/rpm/BYOA-0.1.0-1.x86_64.rpm` |
+| Artifact | Path                                                          |
+| -------- | ------------------------------------------------------------- |
+| Binary   | `src-tauri/target/release/app`                                |
+| .deb     | `src-tauri/target/release/bundle/deb/BYOA_0.1.0_amd64.deb`    |
+| .rpm     | `src-tauri/target/release/bundle/rpm/BYOA-0.1.0-1.x86_64.rpm` |
 
 ## Cross-Compiling for Windows (from Linux)
 
@@ -90,16 +91,16 @@ npm run tauri build -- --target x86_64-pc-windows-gnu
 
 Output:
 
-| Artifact | Path |
-|----------|------|
-| .exe | `src-tauri/target/x86_64-pc-windows-gnu/release/app.exe` |
+| Artifact       | Path                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------- |
+| .exe           | `src-tauri/target/x86_64-pc-windows-gnu/release/app.exe`                              |
 | NSIS installer | `src-tauri/target/x86_64-pc-windows-gnu/release/bundle/nsis/BYOA_0.1.0_x64-setup.exe` |
 
 The `.exe` includes the embedded frontend assets and requires [WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (pre-installed on Windows 10/11).
 
 ## Project Structure
 
-```
+````
 src/                      # SvelteKit frontend
   lib/
     ai/
@@ -150,7 +151,7 @@ src-tauri/                # Tauri (Rust) backend
   Cargo.toml              # Rust dependencies
 svelte.config.js          # SvelteKit with adapter-static (SPA fallback)
 vite.config.ts            # Vite dev server on port 1420
-```
+````
 
 ## License
 

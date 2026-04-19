@@ -35,9 +35,7 @@
 	<div class="max-w-3xl mx-auto space-y-6">
 		<div class="flex items-center justify-between">
 			<h1 class="h2 font-display">Import World</h1>
-			<button class="btn preset-tonal" type="button" onclick={handleBack} disabled={store.isImporting}>
-				Back to Chat
-			</button>
+			<button class="btn preset-tonal" type="button" onclick={handleBack} disabled={store.isImporting}> Back to Chat </button>
 		</div>
 
 		<!-- Import Progress (shown at top for visibility) -->
@@ -73,9 +71,7 @@
 
 				<!-- Console output -->
 				{#if store.consoleOutput}
-					<div
-						class="bg-surface-900-100 text-surface-100-900 rounded-lg p-4 font-mono text-xs max-h-96 overflow-y-auto"
-					>
+					<div class="bg-surface-900-100 text-surface-100-900 rounded-lg p-4 font-mono text-xs max-h-96 overflow-y-auto">
 						<pre class="whitespace-pre-wrap break-words">{store.consoleOutput}</pre>
 					</div>
 				{/if}
@@ -351,9 +347,7 @@
 			{#if store.importComplete}
 				<button class="btn variant-filled" type="button" onclick={handleBack}> Back to Chat </button>
 			{:else}
-				<button class="btn variant-ghost" type="button" onclick={handleBack} disabled={store.isImporting}>
-					Cancel
-				</button>
+				<button class="btn variant-ghost" type="button" onclick={handleBack} disabled={store.isImporting}> Cancel </button>
 				<button class="btn variant-filled" type="button" onclick={handleImport} disabled={store.isImporting}>
 					{store.isImporting ? 'Importing...' : 'Import Story'}
 				</button>

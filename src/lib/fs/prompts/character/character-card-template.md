@@ -1,11 +1,13 @@
 # Character Card
 
 ## Source
+
 - Based on: {{story title / interview / notes}}
 - Extraction mode: {{strict extraction | light inference | creative completion}}
 - Confidence note: {{high / medium / low}}
 
 ## Core Identity
+
 - Name:
 - Aliases / nicknames:
 - Age:
@@ -17,14 +19,17 @@
 - Era / time period:
 
 ## One-Line Summary
+
 A concise sentence describing who this character is and why they matter.
 
 ## Role in Story
+
 - Narrative role: {{protagonist / antagonist / deuteragonist / supporting / side character}}
 - Function in plot:
 - What changes if this character is removed from the story?
 
 ## Appearance
+
 - Build / silhouette:
 - Face / notable features:
 - Hair:
@@ -35,6 +40,7 @@ A concise sentence describing who this character is and why they matter.
 - Sensory impression: {{how they seem at first glance}}
 
 ## Personality
+
 - Core traits:
 - Social style:
 - Emotional tendencies:
@@ -46,6 +52,7 @@ A concise sentence describing who this character is and why they matter.
 - What they admire:
 
 ## Motivations
+
 - Primary goal:
 - Secondary goal:
 - Immediate need:
@@ -56,12 +63,15 @@ A concise sentence describing who this character is and why they matter.
 - Stakes if they fail:
 
 ## Backstory
+
 ### Important past events
+
 1.
 2.
 3.
 
 ### Formative influences
+
 - Family:
 - Culture:
 - Training / education:
@@ -69,6 +79,7 @@ A concise sentence describing who this character is and why they matter.
 - Key success or failure:
 
 ## Values and Beliefs
+
 - Moral code:
 - Political / social beliefs:
 - Spiritual / philosophical beliefs:
@@ -76,6 +87,7 @@ A concise sentence describing who this character is and why they matter.
 - What might make them break their code:
 
 ## Competence
+
 - Skills:
 - Knowledge:
 - Resources:
@@ -84,12 +96,15 @@ A concise sentence describing who this character is and why they matter.
 - Special powers / tools / talents:
 
 ## Relationships
+
 ### Important people
+
 - {{name}} — {{relationship}}, {{dynamic}}, {{tension}}
 - {{name}} — {{relationship}}, {{dynamic}}, {{tension}}
 - {{name}} — {{relationship}}, {{dynamic}}, {{tension}}
 
 ### Group dynamics
+
 - Allies:
 - Rivals:
 - Dependents:
@@ -98,6 +113,7 @@ A concise sentence describing who this character is and why they matter.
 - Who misunderstands them:
 
 ## Voice
+
 - Speaking style:
 - Vocabulary level:
 - Tone:
@@ -109,6 +125,7 @@ A concise sentence describing who this character is and why they matter.
 - How they sound when vulnerable:
 
 ## Dialogue Examples
+
 > "{{short example line 1}}"
 
 > "{{short example line 2}}"
@@ -116,6 +133,7 @@ A concise sentence describing who this character is and why they matter.
 > "{{short example line 3}}"
 
 ## Behavior in Scenes
+
 - Under pressure, they tend to:
 - In conflict, they tend to:
 - In romance / intimacy, they tend to:
@@ -124,17 +142,20 @@ A concise sentence describing who this character is and why they matter.
 - Typical decision-making pattern:
 
 ## Story Constraints
+
 - Must remain true to:
 - Must not contradict:
 - Can be expanded creatively in:
 - Open questions / unknowns:
 
 ## Scene Hooks
+
 - Best type of scene for this character:
 - A secret that can surface later:
 - A likely turning point:
 - A likely breaking point:
 
 ## Short Writing Cue
+
 Write this character as:
 {{2-4 sentences telling the LLM how to portray them consistently}}

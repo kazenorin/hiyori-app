@@ -325,9 +325,7 @@ describe('Memory', () => {
 			setupMocksForExistingTable(4, 'different-model-key');
 
 			const memory = new Memory(testConfig);
-			await expect(memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['A memory.'])).rejects.toThrow(
-				'Embedding model changed'
-			);
+			await expect(memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['A memory.'])).rejects.toThrow('Embedding model changed');
 		});
 	});
 

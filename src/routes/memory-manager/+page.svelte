@@ -359,13 +359,7 @@
 		<!-- Search by Location -->
 		<section class="card p-6 space-y-4">
 			<h2 class="h4">Search by Location</h2>
-			<input
-				class="input w-full"
-				type="text"
-				placeholder="Query..."
-				bind:value={locationQuery}
-				disabled={isLoading || !activeStoryId}
-			/>
+			<input class="input w-full" type="text" placeholder="Query..." bind:value={locationQuery} disabled={isLoading || !activeStoryId} />
 			<input
 				class="input w-full"
 				type="text"
@@ -391,9 +385,7 @@
 						<div class="p-3 rounded-[var(--radius-base)] bg-surface-100-900">
 							<p class="text-sm">{result.memory}</p>
 							<p class="text-xs text-surface-500">
-								Character: {result.characterCanonicalName} · Location: {result.location} · Distance: {result.score?.toFixed(
-									4
-								) ?? 'N/A'}
+								Character: {result.characterCanonicalName} · Location: {result.location} · Distance: {result.score?.toFixed(4) ?? 'N/A'}
 							</p>
 						</div>
 					{/each}
@@ -404,13 +396,7 @@
 		<!-- Search Memories -->
 		<section class="card p-6 space-y-4">
 			<h2 class="h4">Search Memories</h2>
-			<input
-				class="input w-full"
-				type="text"
-				placeholder="Query..."
-				bind:value={searchQuery}
-				disabled={isLoading || !activeStoryId}
-			/>
+			<input class="input w-full" type="text" placeholder="Query..." bind:value={searchQuery} disabled={isLoading || !activeStoryId} />
 			<div class="flex gap-2">
 				<button
 					class="btn preset-filled"
@@ -429,9 +415,7 @@
 						<div class="p-3 rounded-[var(--radius-base)] bg-surface-100-900">
 							<p class="text-sm">{result.memory}</p>
 							<p class="text-xs text-surface-500">
-								Character: {result.characterCanonicalName} · Location: {result.location} · Distance: {result.score?.toFixed(
-									4
-								) ?? 'N/A'}
+								Character: {result.characterCanonicalName} · Location: {result.location} · Distance: {result.score?.toFixed(4) ?? 'N/A'}
 							</p>
 						</div>
 					{/each}

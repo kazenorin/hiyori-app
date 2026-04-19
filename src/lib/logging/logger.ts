@@ -1,10 +1,4 @@
-import {
-	attachConsole,
-	debug as tauriDebug,
-	error as tauriError,
-	info as tauriInfo,
-	warn as tauriWarn,
-} from '@tauri-apps/plugin-log';
+import { attachConsole, debug as tauriDebug, error as tauriError, info as tauriInfo, warn as tauriWarn } from '@tauri-apps/plugin-log';
 import { BaseDirectory, mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { toKebabCase } from '$lib/utils/string';
 import { getSettings, LOG_LEVEL_VALUES, type LogLevel } from '$lib/stores/settings.svelte';

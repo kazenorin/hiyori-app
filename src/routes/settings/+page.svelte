@@ -203,12 +203,7 @@
 
 								<label class="block">
 									<span class="text-sm font-medium text-surface-700-300">Base URL</span>
-									<input
-										class="input mt-1"
-										type="url"
-										placeholder="https://api.openai.com/v1"
-										bind:value={formBaseURL}
-									/>
+									<input class="input mt-1" type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} />
 									<span class="text-xs text-surface-500 mt-1 block"
 										>Local: http://localhost:11434/v1 (Ollama), http://localhost:1234/v1 (LM Studio)</span
 									>
@@ -228,12 +223,7 @@
 												<input class="input mt-1" type="text" placeholder="gpt-4o" bind:value={formModel} />
 											{/if}
 										</label>
-										<button
-											class="btn preset-tonal shrink-0"
-											type="button"
-											onclick={handleFetchModels}
-											disabled={isLoadingModels}
-										>
+										<button class="btn preset-tonal shrink-0" type="button" onclick={handleFetchModels} disabled={isLoadingModels}>
 											{isLoadingModels ? 'Loading...' : 'Fetch Models'}
 										</button>
 									</div>
@@ -271,18 +261,10 @@
 							</p>
 						</div>
 						<div class="flex items-center gap-1 shrink-0">
-							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => handleDuplicate(config)}>
-								Copy
-							</button>
-							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => startEdit(config)}>
-								Edit
-							</button>
+							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => handleDuplicate(config)}> Copy </button>
+							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => startEdit(config)}> Edit </button>
 							{#if mainProviderId !== config.id}
-								<button
-									class="btn preset-tonal text-xs px-2 py-1 text-error-700-300"
-									type="button"
-									onclick={() => handleDelete(config.id)}
-								>
+								<button class="btn preset-tonal text-xs px-2 py-1 text-error-700-300" type="button" onclick={() => handleDelete(config.id)}>
 									Delete
 								</button>
 							{/if}
@@ -346,12 +328,7 @@
 											<input class="input mt-1" type="text" placeholder="gpt-4o" bind:value={formModel} />
 										{/if}
 									</label>
-									<button
-										class="btn preset-tonal shrink-0"
-										type="button"
-										onclick={handleFetchModels}
-										disabled={isLoadingModels}
-									>
+									<button class="btn preset-tonal shrink-0" type="button" onclick={handleFetchModels} disabled={isLoadingModels}>
 										{isLoadingModels ? 'Loading...' : 'Fetch Models'}
 									</button>
 								</div>
@@ -383,9 +360,7 @@
 		<!-- Provider Roles -->
 		<section class="card p-6 space-y-4">
 			<h2 class="h4">Provider Roles</h2>
-			<span class="text-xs text-surface-500"
-				>Assign providers to functions. The main provider is used for chat and world building.</span
-			>
+			<span class="text-xs text-surface-500">Assign providers to functions. The main provider is used for chat and world building.</span>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">Main Provider</span>
@@ -441,9 +416,7 @@
 						{/each}
 					{/if}
 				</select>
-				<span class="text-xs text-surface-500 mt-1 block"
-					>The LLM provider used to extract memories from chat responses.</span
-				>
+				<span class="text-xs text-surface-500 mt-1 block">The LLM provider used to extract memories from chat responses.</span>
 			</label>
 
 			<label class="block">
@@ -465,9 +438,7 @@
 						{/each}
 					{/if}
 				</select>
-				<span class="text-xs text-surface-500 mt-1 block"
-					>The provider used to generate embeddings for memory search.</span
-				>
+				<span class="text-xs text-surface-500 mt-1 block">The provider used to generate embeddings for memory search.</span>
 			</label>
 		</section>
 

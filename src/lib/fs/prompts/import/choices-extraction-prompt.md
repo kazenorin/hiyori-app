@@ -6,12 +6,7 @@ Respond using the following JSON format only:
 
 ```json
 {
-  "worldState": "[Briefly detail secret background information, hidden character motives, or hidden plot tracking here. Do not show player-facing narrative yet.]",
-  "decisions": [
-    "[choice 1 text]",
-    "[choice 2 text]",
-    "[choice 3 text]",
-    "[choice 4 text]"
-  ]
+	"worldState": "[Briefly detail secret background information, hidden character motives, or hidden plot tracking here. Do not show player-facing narrative yet.]",
+	"decisions": ["[choice 1 text]", "[choice 2 text]", "[choice 3 text]", "[choice 4 text]"]
 }
 ```

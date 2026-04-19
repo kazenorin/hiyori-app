@@ -359,12 +359,8 @@ describe('parseOpenWebUIFormat', () => {
 	});
 
 	it('uses only first item in export array', () => {
-		const first = buildOpenWebUIExport([
-			{ id: 'a', parentId: null, childrenIds: [], role: 'user', content: 'First chat' },
-		]);
-		const second = buildOpenWebUIExport([
-			{ id: 'x', parentId: null, childrenIds: [], role: 'user', content: 'Second chat' },
-		]);
+		const first = buildOpenWebUIExport([{ id: 'a', parentId: null, childrenIds: [], role: 'user', content: 'First chat' }]);
+		const second = buildOpenWebUIExport([{ id: 'x', parentId: null, childrenIds: [], role: 'user', content: 'Second chat' }]);
 
 		const result = parseOpenWebUIFormat([...first, ...second], false);
 		expect(result.messages).toHaveLength(1);
@@ -421,8 +417,7 @@ describe('parseOpenWebUIFormat', () => {
 			},
 		]);
 		// Add usage to the message manually
-		const msgs = (json[0] as { chat: { history: { messages: Record<string, Record<string, unknown>> } } }).chat.history
-			.messages;
+		const msgs = (json[0] as { chat: { history: { messages: Record<string, Record<string, unknown>> } } }).chat.history.messages;
 		const existing = msgs['a'] as Record<string, unknown>;
 		msgs['a'] = {
 			...existing,

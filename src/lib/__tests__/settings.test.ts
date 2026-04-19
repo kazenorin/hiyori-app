@@ -121,8 +121,7 @@ describe('settings', () => {
 
 	it('deleteProviderConfig removes config and cleans up role assignments', async () => {
 		vi.resetModules();
-		const { addProviderConfig, assignRole, deleteProviderConfig, getSettings } =
-			await import('$lib/stores/settings.svelte');
+		const { addProviderConfig, assignRole, deleteProviderConfig, getSettings } = await import('$lib/stores/settings.svelte');
 		const c1 = addProviderConfig({
 			name: 'Main',
 			provider: 'openai',

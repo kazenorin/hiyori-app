@@ -3,6 +3,7 @@
 Fill the provided Act Card template using the source from the chat history.
 
 Rules:
+
 - Prefer explicit facts over interpretation.
 - Mark uncertain conclusions as **Inferred:**.
 - Use **Unknown** when evidence is missing.

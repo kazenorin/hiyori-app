@@ -37,6 +37,7 @@ Orchestrates the end-to-end flow from raw assistant response to persisted memori
 3. **Persistence** -- For each character and location, calls `Memory.add()` and `Memory.addLocation()` with retry logic
 
 Two provider configs are involved:
+
 - **Memory provider** -- The LLM used for extraction (configured separately from the main chat model)
 - **Embedding provider** -- The model used to generate vector embeddings
 
@@ -46,10 +47,14 @@ Parses Markdown structured as:
 
 ```markdown
 ## Character Name
+
 ### Time, Location
+
 - Character Name did something.
 - Character Name said to Recipient: "dialog".
+
 ### Later Time, Different Location
+
 - Character Name recalled that past event.
 ```
 
@@ -75,17 +80,17 @@ CREATE VIRTUAL TABLE vec_memories USING vec0(
 
 ### memory_meta
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | TEXT (UUID) | Primary key |
-| vec_rowid | INTEGER | Foreign key to vec_memories.rowid |
-| content | TEXT | The memory sentence |
-| message_id | TEXT | ID of the source message |
-| story_id | TEXT | Story partition key |
-| act_line_id | TEXT | Act line partition key |
-| character_canonical_name | TEXT | Kebab-case character name |
-| location | TEXT | Location string from H3 heading |
-| created_at | TEXT | ISO timestamp |
+| Column                   | Type        | Description                       |
+| ------------------------ | ----------- | --------------------------------- |
+| id                       | TEXT (UUID) | Primary key                       |
+| vec_rowid                | INTEGER     | Foreign key to vec_memories.rowid |
+| content                  | TEXT        | The memory sentence               |
+| message_id               | TEXT        | ID of the source message          |
+| story_id                 | TEXT        | Story partition key               |
+| act_line_id              | TEXT        | Act line partition key            |
+| character_canonical_name | TEXT        | Kebab-case character name         |
+| location                 | TEXT        | Location string from H3 heading   |
+| created_at               | TEXT        | ISO timestamp                     |
 
 ### vec_locations (sqlite-vec virtual table)
 
@@ -98,15 +103,15 @@ CREATE VIRTUAL TABLE vec_locations USING vec0(
 
 ### location_meta
 
-| Column | Type | Description |
-|--------|------|-------------|
-| id | TEXT (UUID) | Primary key |
-| vec_rowid | INTEGER | Foreign key to vec_locations.rowid |
-| location_text | TEXT | The location string |
-| message_id | TEXT | ID of the source message |
-| story_id | TEXT | Story partition key |
-| act_line_id | TEXT | Act line partition key |
-| created_at | TEXT | ISO timestamp |
+| Column        | Type        | Description                        |
+| ------------- | ----------- | ---------------------------------- |
+| id            | TEXT (UUID) | Primary key                        |
+| vec_rowid     | INTEGER     | Foreign key to vec_locations.rowid |
+| location_text | TEXT        | The location string                |
+| message_id    | TEXT        | ID of the source message           |
+| story_id      | TEXT        | Story partition key                |
+| act_line_id   | TEXT        | Act line partition key             |
+| created_at    | TEXT        | ISO timestamp                      |
 
 ### memory_config
 

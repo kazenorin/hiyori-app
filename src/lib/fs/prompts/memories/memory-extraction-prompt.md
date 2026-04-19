@@ -2,6 +2,7 @@ Please analyze the provided role-play transcript and extract the memorable event
 
 **Step 1: Analysis**
 Before generating your final output, create a `<scratchpad>` block. Inside it:
+
 - List all named characters in the text.
 - Filter out generic or one-off characters, keeping only those who are important and likely to appear again.
 - Briefly map out the timeline of events, explicitly identifying scene changes (when characters move to new locations or time skips ahead).
@@ -12,12 +13,14 @@ Before generating your final output, create a `<scratchpad>` block. Inside it:
 Generate the final memory extraction using exactly the following Markdown format.
 
 **Header Rules (Time and Location):**
+
 - Format headers consistently: Use the format `### [Time], [Specific Location]`. E.g.: `### Late Afternoon, The Royal Library` or `### Next Morning, John's Kitchen`.
 - Keep headers concise: Do not exceed 8 words for the time and location header.
 - Create new sections for scene changes: Create a new `### [Time], [Specific Location]` block whenever the character moves to a new place or a noticeable amount of time passes.
 - Resolve all pronouns to explicit names. Never use pronouns (he, she, him, her, they) to refer to characters without first referring who that person/thing is. The header must make sense when out of context. E.g., use "Early morning, Lucy's bedroom", not "Early morning, her bedroom".
 
 **Formatting Rules for Bullet Points:**
+
 - Each extracted thought, action, dialog, or recalled memory must be **exactly one written sentence**.
 - Every sentence must begin with the character's name.
 - Resolve all pronouns to explicit names. Never use pronouns to refer to characters without first referring who that person/thing is. The sentence must make sense when out of context. E.g., use "John thought that Mary liked him", not "John thought that she liked him".

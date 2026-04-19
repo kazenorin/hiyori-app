@@ -26,11 +26,7 @@
 		renameActLine,
 	} from '$lib/stores/stories.svelte';
 	import { getMessages, getIsStreaming, loadActLineMessages, clearMessages } from '$lib/ai/chat.svelte';
-	import {
-		enterWorldBuilderMode,
-		exitWorldBuilderMode,
-		getIsActive as getIsWorldBuilderActive,
-	} from '$lib/ai/world-builder.svelte';
+	import { enterWorldBuilderMode, exitWorldBuilderMode, getIsActive as getIsWorldBuilderActive } from '$lib/ai/world-builder.svelte';
 	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
 
 	let { children } = $props();
@@ -426,8 +422,7 @@
 														bind:value={newActLineName}
 														onkeydown={(e) => e.key === 'Enter' && handleCreateActLine()}
 													/>
-													<button class="text-xs text-primary-500" type="button" onclick={handleCreateActLine}>+</button
-													>
+													<button class="text-xs text-primary-500" type="button" onclick={handleCreateActLine}>+</button>
 												</div>
 											</div>
 										{:else}
@@ -543,11 +538,10 @@
 				</h3>
 				<p class="text-sm text-surface-600-400 mb-5">
 					{#if confirmDelete.type === 'story'}
-						Are you sure you want to delete <strong>{confirmDelete.name}</strong>? All acts and lines within this story
-						will also be removed.
+						Are you sure you want to delete <strong>{confirmDelete.name}</strong>? All acts and lines within this story will also be
+						removed.
 					{:else if confirmDelete.type === 'act'}
-						Are you sure you want to delete <strong>{confirmDelete.name}</strong>? All lines within this act will also
-						be removed.
+						Are you sure you want to delete <strong>{confirmDelete.name}</strong>? All lines within this act will also be removed.
 					{:else}
 						Are you sure you want to delete <strong>{confirmDelete.name}</strong>?
 					{/if}
@@ -625,9 +619,7 @@
 						onclick={handleStartWorldBuilder}
 					>
 						<div class="font-medium text-surface-900-100 mb-1">World Builder</div>
-						<div class="text-sm text-surface-600-400">
-							Guided interview to create a world from scratch with AI assistance.
-						</div>
+						<div class="text-sm text-surface-600-400">Guided interview to create a world from scratch with AI assistance.</div>
 					</button>
 					<button
 						class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
@@ -635,9 +627,7 @@
 						onclick={handleStartImportWorld}
 					>
 						<div class="font-medium text-surface-900-100 mb-1">Import World</div>
-						<div class="text-sm text-surface-600-400">
-							Bring an existing world document and start playing immediately.
-						</div>
+						<div class="text-sm text-surface-600-400">Bring an existing world document and start playing immediately.</div>
 					</button>
 				</div>
 				<button

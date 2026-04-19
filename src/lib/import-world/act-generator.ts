@@ -39,13 +39,7 @@ export async function generateActFromCards(
 	const systemPrompt = await loadSystemPrompt();
 	const userMessages = buildGenerationMessages(worldContent, actCardContent, characterCards);
 
-	return streamWithRetry(
-		systemPrompt,
-		userMessages as { role: 'user' | 'assistant'; content: string }[],
-		retryConfig,
-		onProgress,
-		onError
-	);
+	return streamWithRetry(systemPrompt, userMessages as { role: 'user' | 'assistant'; content: string }[], retryConfig, onProgress, onError);
 }
 
 function buildGenerationMessages(
@@ -68,10 +62,7 @@ function buildGenerationMessages(
 	// Character cards
 	for (const card of characterCards) {
 		const name = card.name || 'a character in the story';
-		messages.push(
-			{ role: 'user', content: CHARACTER_CARD_LABEL.replace('{name}', name) },
-			{ role: 'user', content: card.content }
-		);
+		messages.push({ role: 'user', content: CHARACTER_CARD_LABEL.replace('{name}', name) }, { role: 'user', content: card.content });
 	}
 
 	// Generation request

@@ -74,12 +74,7 @@ export async function regenerateMemoriesForCurrentLine(onProgress?: (message: st
 			await log.info('memory-regen', msgInfo);
 
 			try {
-				const result = await runMemoryExtractionPipeline(
-					assistantMessages[i].content,
-					storyId,
-					actLineId,
-					assistantMessages[i].id
-				);
+				const result = await runMemoryExtractionPipeline(assistantMessages[i].content, storyId, actLineId, assistantMessages[i].id);
 				totalCharacters += result.charactersProcessed;
 				totalMemories += result.memoriesAdded;
 				totalLocations += result.locationsAdded;

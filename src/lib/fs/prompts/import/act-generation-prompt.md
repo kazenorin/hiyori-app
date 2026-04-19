@@ -10,6 +10,7 @@ Generate a story based on the provided context cards.
 ## Output Format
 
 Write the act as a complete narrative with:
+
 - Scene descriptions with [Background: description] tags
 - Character dialogue with "Character Name:" format
 - **STATUS UPDATE** sections summarizing current events

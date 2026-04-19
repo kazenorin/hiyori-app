@@ -30,11 +30,7 @@ export type OnStreamError = (err: unknown) => void;
  */
 export function createStreamAccumulator(onUpdate?: OnStreamUpdate, onError?: OnStreamError): StreamAccumulator {
 	const chain = createParserChain();
-	const {
-		promise: resultMetadataPromise,
-		resolve: resolveResult,
-		reject: rejectResult,
-	} = Promise.withResolvers<StreamResultMetadata>();
+	const { promise: resultMetadataPromise, resolve: resolveResult, reject: rejectResult } = Promise.withResolvers<StreamResultMetadata>();
 	let state: StreamState = {
 		content: '',
 		reasoning: null,

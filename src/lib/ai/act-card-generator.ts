@@ -18,12 +18,7 @@ export interface GenerateActCardResult {
 	content: string;
 }
 
-function buildUserMessages(
-	contents: string[],
-	template: string,
-	extractionPrompt: string,
-	world: string | null
-): string[] {
+function buildUserMessages(contents: string[], template: string, extractionPrompt: string, world: string | null): string[] {
 	const worldPrompt = !!world ? ['The world setting is based on the following:', world] : [];
 	return [
 		...worldPrompt,
@@ -77,17 +72,12 @@ export async function generateActCard(): Promise<GenerateActCardResult> {
 
 	// Build AI call
 	const model = createModel(config);
-	const userMessages: ModelMessage[] = buildUserMessages(contents, template, extractionPrompt, world).map(
-		(content) => ({
-			role: 'user',
-			content,
-		})
-	);
+	const userMessages: ModelMessage[] = buildUserMessages(contents, template, extractionPrompt, world).map((content) => ({
+		role: 'user',
+		content,
+	}));
 
-	await logActCardActivity(
-		'generation-start',
-		`Act line: ${actLineId}\n\nMessages:\n${JSON.stringify(userMessages, null, 2)}`
-	);
+	await logActCardActivity('generation-start', `Act line: ${actLineId}\n\nMessages:\n${JSON.stringify(userMessages, null, 2)}`);
 
 	const result = await generateText({
 		model,

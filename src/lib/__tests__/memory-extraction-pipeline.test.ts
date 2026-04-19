@@ -149,9 +149,7 @@ describe('memory-extraction-pipeline', () => {
 				})
 			);
 
-			expect(mockMemoryInstance.add).toHaveBeenCalledWith('story-1', 'line-1', 'msg-1', 'elena', 'tavern', [
-				'Elena sat by the fire.',
-			]);
+			expect(mockMemoryInstance.add).toHaveBeenCalledWith('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['Elena sat by the fire.']);
 			expect(mockMemoryInstance.addLocation).toHaveBeenCalledWith('story-1', 'line-1', 'msg-1', 'tavern');
 			expect(result.charactersProcessed).toBe(1);
 			expect(result.memoriesAdded).toBe(1);
@@ -163,9 +161,7 @@ describe('memory-extraction-pipeline', () => {
 			mockGetMemoryProviderConfig.mockReturnValue(undefined as any);
 
 			const { runMemoryExtractionPipeline } = await import('$lib/ai/memory-extraction-pipeline');
-			await expect(runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1')).rejects.toThrow(
-				'Memory provider not configured'
-			);
+			await expect(runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1')).rejects.toThrow('Memory provider not configured');
 		});
 
 		it('throws when no embedding provider configured', async () => {
@@ -182,9 +178,7 @@ describe('memory-extraction-pipeline', () => {
 			mockGenerateText.mockRejectedValueOnce(new Error('401 Unauthorized'));
 
 			const { runMemoryExtractionPipeline } = await import('$lib/ai/memory-extraction-pipeline');
-			await expect(runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1')).rejects.toThrow(
-				'401 Unauthorized'
-			);
+			await expect(runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1')).rejects.toThrow('401 Unauthorized');
 			expect(mockGenerateText).toHaveBeenCalledTimes(1); // No retries for auth errors
 		});
 
@@ -206,9 +200,7 @@ describe('memory-extraction-pipeline', () => {
 			mockGenerateText.mockRejectedValue(new Error('Network error'));
 
 			const { runMemoryExtractionPipeline } = await import('$lib/ai/memory-extraction-pipeline');
-			await expect(runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1')).rejects.toThrow(
-				'Network error'
-			);
+			await expect(runMemoryExtractionPipeline('response', 'story-1', 'line-1', 'msg-1')).rejects.toThrow('Network error');
 
 			expect(mockGenerateText).toHaveBeenCalledTimes(4); // Initial + 3 retries
 		});

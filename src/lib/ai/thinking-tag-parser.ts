@@ -143,8 +143,7 @@ export function createThinkingTagParser(): StreamParser<{ thinking: string | nul
 		state = 'TEXT';
 		textBuffer = '';
 
-		accumulator.thinking =
-			thinkingAccumulator.length > 0 ? accumulator.thinking + thinkingAccumulator : accumulator.thinking;
+		accumulator.thinking = thinkingAccumulator.length > 0 ? accumulator.thinking + thinkingAccumulator : accumulator.thinking;
 		thinkingAccumulator = '';
 		return flushedText;
 	}

@@ -168,15 +168,7 @@ async function processActs(
 		const actInput = formData.acts[actIndex];
 		const actNumber = actIndex + 1;
 
-		const { actId, actLineId } = await createActAndLine(
-			actInput,
-			actNumber,
-			storyId,
-			previousActLineId,
-			log,
-			onProgress,
-			createdResources
-		);
+		const { actId, actLineId } = await createActAndLine(actInput, actNumber, storyId, previousActLineId, log, onProgress, createdResources);
 		actIds.push(actId);
 		actLineIds.push(actLineId);
 
@@ -511,13 +503,7 @@ async function saveActCard(storyFolder: string, actNumber: number, content: stri
 
 function extractCharacterName(content: string): string | null {
 	// Common non-name headers to skip
-	const nonNameHeaders = [
-		'character card',
-		'character profile',
-		'character sheet',
-		'character details',
-		'character info',
-	];
+	const nonNameHeaders = ['character card', 'character profile', 'character sheet', 'character details', 'character info'];
 
 	// Try to extract character name from card content
 	// Look for patterns like "# Character Name" or "Name: ..."

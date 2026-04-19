@@ -121,11 +121,7 @@ describe('async utilities', () => {
 		});
 
 		it('increases delay with each retry', async () => {
-			const fn = vi
-				.fn()
-				.mockRejectedValueOnce(new Error('1'))
-				.mockRejectedValueOnce(new Error('2'))
-				.mockResolvedValue('success');
+			const fn = vi.fn().mockRejectedValueOnce(new Error('1')).mockRejectedValueOnce(new Error('2')).mockResolvedValue('success');
 
 			const start = Date.now();
 			await withRetry(fn, { maxAttempts: 3, backoffMs: 50 });

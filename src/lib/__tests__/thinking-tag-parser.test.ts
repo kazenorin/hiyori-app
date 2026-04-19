@@ -126,16 +126,7 @@ describe('ThinkingTagParser', () => {
 		});
 
 		it('handles tag opener split across chunk boundary', () => {
-			const chunks = [
-				'Text<',
-				THINK_TAG_NAME.slice(0, 4),
-				THINK_TAG_NAME.slice(-1),
-				'>',
-				'Thought',
-				'</',
-				THINK_TAG_NAME,
-				'>End',
-			];
+			const chunks = ['Text<', THINK_TAG_NAME.slice(0, 4), THINK_TAG_NAME.slice(-1), '>', 'Thought', '</', THINK_TAG_NAME, '>End'];
 			const { text, thinking } = feedAll(chunks);
 			expect(text).toBe('TextEnd');
 			expect(thinking).toBe('Thought');

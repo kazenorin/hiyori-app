@@ -14,9 +14,7 @@ export async function getStoryFolder(storyId: string): Promise<string | null> {
 
 export async function getFolderOwner(folderName: string): Promise<string | null> {
 	const db = getDatabase();
-	const result = await db.select<StoryFolder[]>('SELECT story_id FROM story_folders WHERE folder_name = $1', [
-		folderName,
-	]);
+	const result = await db.select<StoryFolder[]>('SELECT story_id FROM story_folders WHERE folder_name = $1', [folderName]);
 	return result.length > 0 ? result[0].story_id : null;
 }
 
