@@ -64,8 +64,7 @@ export async function streamChatResponse(
 					reasoningSummary: 'detailed',
 				},
 			},
-			tools,
-			maxSteps: tools ? 3 : undefined,
+			tools
 		},
 		accumulator.callbacks
 	);
@@ -83,7 +82,8 @@ export async function streamWithRetry(
 	retryConfig: RetryConfig,
 	onProgress: (state: StreamState) => void,
 	onError: (err: Error, attempt: number) => void,
-	providerConfig: ProviderConfig | undefined = getMainProviderConfig()
+	providerConfig: ProviderConfig | undefined = getMainProviderConfig(),
+	tools?: ToolSet
 ): Promise<StreamAccumulator> {
 	const abortController = new AbortController();
 	let lastError: Error | null = null;
@@ -98,7 +98,8 @@ export async function streamWithRetry(
 				(err: unknown) => {
 					onError(err instanceof Error ? err : new Error(String(err)), attempt + 1);
 				},
-				providerConfig
+				providerConfig,
+				tools
 			);
 		} catch (e) {
 			lastError = e instanceof Error ? e : new Error(String(e));

@@ -3,7 +3,6 @@ import Database from '@tauri-apps/plugin-sql';
 import { getMemoryDatabase } from '$lib/db/memory-database';
 import { createEmbeddingModel } from '$lib/ai/provider';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
-import { log } from '$lib/logging/logger';
 
 function cosineDistance(a: number[], b: number[]): number {
 	let dot = 0,
@@ -73,18 +72,18 @@ export interface LocationItem {
 }
 
 export class Memory {
-	private readonly providerConfig: ProviderConfig;
+	private readonly embeddingProviderConfig: ProviderConfig;
 	private embeddingModel: ReturnType<typeof createEmbeddingModel> | null = null;
 	private vecDimension: number | null = null;
 	private locVecDimension: number | null = null;
 	private cachedModelKey: string | null = null;
 
-	constructor(providerConfig: ProviderConfig) {
-		this.providerConfig = providerConfig;
+	constructor(embeddingProviderConfig: ProviderConfig) {
+		this.embeddingProviderConfig = embeddingProviderConfig;
 	}
 
 	private getModelCacheKey(): string {
-		return `${this.providerConfig.provider}-${this.providerConfig.model}-${this.providerConfig.baseURL}`;
+		return `${this.embeddingProviderConfig.provider}-${this.embeddingProviderConfig.model}-${this.embeddingProviderConfig.baseURL}`;
 	}
 
 	/**
@@ -143,7 +142,7 @@ export class Memory {
 
 	private getEmbeddingModel() {
 		if (!this.embeddingModel) {
-			this.embeddingModel = createEmbeddingModel(this.providerConfig);
+			this.embeddingModel = createEmbeddingModel(this.embeddingProviderConfig);
 		}
 		return this.embeddingModel;
 	}

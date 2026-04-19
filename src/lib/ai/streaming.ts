@@ -1,7 +1,9 @@
-import { streamText, type ToolSet } from 'ai';
+import {stepCountIs, streamText, type ToolSet} from 'ai';
 import type { LanguageModel } from 'ai';
 import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
 import { fileLog } from '$lib/logging/logger';
+
+const DEFAULT_MAX_STEPS = 5;
 
 export interface StreamConfig {
 	model: LanguageModel;
@@ -52,7 +54,10 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 
 		const result = streamText({
 			...baseConfig,
-			...(hasTools ? { tools: config.tools, maxSteps: config.maxSteps ?? 3 } : {}),
+			...(hasTools ? {
+				tools: config.tools,
+				stopWhen: stepCountIs(!!config.maxSteps && config.maxSteps > 0 ? config.maxSteps : DEFAULT_MAX_STEPS)
+			} : {}),
 		});
 
 		for await (const part of result.fullStream) {

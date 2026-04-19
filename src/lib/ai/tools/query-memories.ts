@@ -2,6 +2,9 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { Memory, type MemoryItem } from '$lib/memory/memory';
 import { batchResolveActLineInfo } from '$lib/db/act-lines';
+import {fileLog} from '$lib/logging/logger';
+import {getEmbeddingProviderConfig, settings} from '$lib/stores/settings.svelte';
+import {type ToolSet} from 'ai';
 
 export interface QueryMemoriesContext {
 	memory: Memory;
@@ -17,14 +20,22 @@ interface MemoryResult {
 }
 
 async function toResults(items: MemoryItem[]): Promise<MemoryResult[]> {
-	const infoMap = await batchResolveActLineInfo(items.map((item) => ({ actLineId: item.actLineId, messageId: item.messageId })));
+	// Group messageIds by actLineId
+	const grouped: Record<string, string[]> = {};
+	for (const item of items) {
+		if (!grouped[item.actLineId]) grouped[item.actLineId] = [];
+		grouped[item.actLineId].push(item.messageId);
+	}
+
+	const infoMap = await batchResolveActLineInfo(grouped);
 
 	return items.map((item) => {
-		const key = `${item.actLineId}:${item.messageId}`;
-		const info = infoMap.get(key);
-		const messagesAgo = info?.msgSeq !== null && info ? info.maxSeq - 1 - (info.msgSeq ?? 0) : -1;
+		const actLineInfo = infoMap.get(item.actLineId);
+		const msgSeq = actLineInfo?.messages.get(item.messageId) ?? null;
+		const maxSeq = actLineInfo?.maxSeq ?? 0;
+		const messagesAgo = msgSeq !== null ? maxSeq - msgSeq : -1;
 		return {
-			actNumber: info?.actNumber ?? null,
+			actNumber: actLineInfo?.actNumber ?? null,
 			messagesAgo,
 			location: item.location,
 			memory: item.memory,
@@ -59,6 +70,14 @@ export function createQueryMemoriesTool(context: QueryMemoriesContext) {
 		inputSchema,
 		execute: async (input: z.infer<typeof inputSchema>): Promise<MemoryResult[]> => {
 			const { characterQuery, timeAndLocation, currentActOnly } = input;
+			await fileLog(
+				'debug',
+				'tool',
+				`triggering query memories:
+			  characterQuery=${characterQuery}
+			  timeAndLocation=${timeAndLocation}
+			  currentActOnly=${currentActOnly}`
+			);
 			const opts = {
 				storyId,
 				actLineId: currentActOnly ? actLineId : undefined,
@@ -72,12 +91,28 @@ export function createQueryMemoriesTool(context: QueryMemoriesContext) {
 			} else if (characterQuery) {
 				items = await memory.search(characterQuery, opts);
 			} else if (timeAndLocation) {
-				items = await memory.searchByLocation(timeAndLocation, timeAndLocation, opts);
+				items = await memory.search(timeAndLocation, opts); // TODO: this is wrong
 			} else {
 				return [];
 			}
 
-			return toResults(items.slice(0, 10));
+			return await toResults(items.slice(0, 10));
 		},
 	});
+}
+
+export function buildMemoryTools(storyId: string | null, actLineId: string): ToolSet {
+	if (!settings.memoryEnabled) return {};
+	if (!storyId || !actLineId) return {};
+
+	const memConfig = getEmbeddingProviderConfig();
+	if (!memConfig) return {};
+
+	return {
+		'query-memories': createQueryMemoriesTool({
+			memory: new Memory(memConfig),
+			storyId,
+			actLineId,
+		}),
+	};
 }

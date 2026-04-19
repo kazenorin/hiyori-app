@@ -129,9 +129,9 @@ describe('createQueryMemoriesTool', () => {
 		});
 	});
 
-	it('calls searchByLocation when only timeAndLocation provided', async () => {
-		const searchByLocSpy = vi.fn(async () => mockSearchResults);
-		const mem = { search: vi.fn(async () => []), searchByLocation: searchByLocSpy } as any;
+	it('calls search when only timeAndLocation provided', async () => {
+		const searchSpy = vi.fn(async () => mockSearchResults);
+		const mem = { search: searchSpy, searchByLocation: vi.fn(async () => []) } as any;
 
 		const toolDef = createQueryMemoriesTool({
 			memory: mem,
@@ -148,7 +148,7 @@ describe('createQueryMemoriesTool', () => {
 			{ toolCallId: 'test', messages: [] }
 		);
 
-		expect(searchByLocSpy).toHaveBeenCalledWith('Night at the Tavern', 'Night at the Tavern', {
+		expect(searchSpy).toHaveBeenCalledWith('Night at the Tavern', {
 			storyId: 'story-1',
 			actLineId: 'line-1',
 			limit: 10,

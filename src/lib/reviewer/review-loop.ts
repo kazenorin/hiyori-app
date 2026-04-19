@@ -1,10 +1,11 @@
 import { streamWithRetry, type RetryConfig } from '$lib/ai/chat-stream';
 import type { StreamState } from '$lib/ai/chat-callbacks';
 import { getReviewerProviderConfig, getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { loadEditorModeExtractionPrompt, loadSystemPrompt } from '$lib/fs/prompts';
+import { loadEditorModeExtractionPrompt } from '$lib/fs/prompts';
 import { knownCharacterNameList } from '$lib/memory/memory';
 import { log } from '$lib/logging/logger';
 import { getActiveNarrationTemplateOrDefault, getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
+import { type ToolSet } from 'ai';
 
 export interface ReviewLoopResult {
 	content: string;
@@ -20,7 +21,8 @@ function getProviderConfig() {
 
 export async function streamReview(
 	history: { role: 'user' | 'assistant'; content: string }[],
-	onProgress?: (state: StreamState) => void
+	onProgress?: (state: StreamState) => void,
+	tools?: ToolSet
 ): Promise<ReviewLoopResult | null> {
 	const [systemPrompt, narrationTemplate, editorTemplate, characterNames] = await Promise.all([
 		getActiveSystemPromptOrDefault(),
@@ -45,7 +47,8 @@ export async function streamReview(
 		RETRY_CONFIG,
 		onProgress ?? (() => {}),
 		(err, attempt) => log.warn('review-loop', `Editor mode attempt ${attempt} failed: ${err instanceof Error ? err.message : String(err)}`),
-		providerConfig
+		providerConfig,
+		tools
 	);
 
 	const content = accumulator.state.content;

@@ -11,8 +11,7 @@ import { Memory } from '$lib/memory/memory';
 import { streamReview } from '$lib/reviewer/review-loop';
 import { log } from '$lib/logging/logger';
 import { getActiveStoryId } from '$lib/stores/stories.svelte';
-import { createQueryMemoriesTool } from './tools/query-memories';
-import { type ToolSet } from 'ai';
+import { buildTools } from "$lib/ai/tools/tools";
 
 export interface Message {
 	id: string;
@@ -105,30 +104,6 @@ async function handleStreamError(err: unknown, messageId: string, actLineId: str
 	}
 }
 
-function buildTools(storyId: string | null, actLineId: string): ToolSet | undefined {
-	const tools: ToolSet = {
-		...buildMemoryTools(storyId, actLineId),
-	};
-
-	return Object.keys(tools).length > 0 ? tools : undefined;
-}
-
-function buildMemoryTools(storyId: string | null, actLineId: string): ToolSet {
-	if (!settings.memoryEnabled) return {};
-	if (!storyId || !actLineId) return {};
-
-	const memConfig = getMemoryProviderConfig();
-	if (!memConfig) return {};
-
-	return {
-		'query-memories': createQueryMemoriesTool({
-			memory: new Memory(memConfig),
-			storyId,
-			actLineId,
-		}),
-	};
-}
-
 function runMemoryPipeline(storyId: string | null, actLineId: string, message: Message): void {
 	if (!settings.memoryEnabled) return;
 	if (!storyId || !actLineId) return;
@@ -205,6 +180,7 @@ export async function sendMessage(
 	isStreaming = true;
 	abortController = new AbortController();
 	const storyId = await storyIdPromise;
+	const tools = buildTools(storyId, actLineId);
 
 	try {
 		const systemPrompt = message.systemPrompt ?? (await loadSystemPrompt());
@@ -236,7 +212,7 @@ export async function sendMessage(
 					error = err instanceof Error ? err.message : String(err);
 				},
 				providerConfig,
-				buildTools(storyId, actLineId)
+				tools
 			).then((acc) => acc.resultMetadata),
 		]);
 
@@ -261,7 +237,7 @@ export async function sendMessage(
 					reasoning: state.reasoning ?? currentMessage.reasoning,
 					gameData: state.gameData ?? currentMessage.gameData,
 				});
-			});
+			}, tools);
 
 			if (!reviewResult) {
 				setCurrentMessage({
