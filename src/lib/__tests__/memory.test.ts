@@ -321,11 +321,43 @@ describe('Memory', () => {
 			);
 		});
 
-		it('throws on model key mismatch with existing table', async () => {
+		it('rejects when no samples available for challenge', async () => {
 			setupMocksForExistingTable(4, 'different-model-key');
+			// verifyModelCompatibility: compat check → no recorded compat
+			mockDbSelectResults.push([]);
+			// verifyModelCompatibility: sample challenge → 0 rows (empty table)
+			mockDbSelectResults.push([]);
 
 			const memory = new Memory(testConfig);
-			await expect(memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['A memory.'])).rejects.toThrow('Embedding model changed');
+			await expect(memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['A memory.'])).rejects.toThrow('is incompatible');
+		});
+
+		it('allows compatible model after challenge', async () => {
+			setupMocksForExistingTable(4, 'different-model-key');
+			// verifyModelCompatibility: compat check
+			mockDbSelectResults.push([]);
+			// verifyModelCompatibility: sample
+			mockDbSelectResults.push([{ vec_rowid: 42, content: 'test memory' }]);
+			// verifyModelCompatibility: vec_distance_cosine < 0.05
+			mockDbSelectResults.push([{ distance: 0.001 }]);
+			// vec insert rowid
+			setupMocksForVecInsertRowid(1);
+
+			const memory = new Memory(testConfig);
+			await memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['A memory.']);
+		});
+
+		it('throws on incompatible model after challenge', async () => {
+			setupMocksForExistingTable(4, 'different-model-key');
+			// verifyModelCompatibility: compat check
+			mockDbSelectResults.push([]);
+			// verifyModelCompatibility: sample
+			mockDbSelectResults.push([{ vec_rowid: 42, content: 'test memory' }]);
+			// verifyModelCompatibility: vec_distance_cosine >= 0.05
+			mockDbSelectResults.push([{ distance: 0.8 }]);
+
+			const memory = new Memory(testConfig);
+			await expect(memory.add('story-1', 'line-1', 'msg-1', 'elena', 'tavern', ['A memory.'])).rejects.toThrow('is incompatible');
 		});
 	});
 

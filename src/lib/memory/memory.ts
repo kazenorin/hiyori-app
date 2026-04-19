@@ -87,6 +87,60 @@ export class Memory {
 		return `${this.providerConfig.provider}-${this.providerConfig.model}-${this.providerConfig.baseURL}`;
 	}
 
+	/**
+	 * Verify that the current embedding model produces compatible vectors with a previously-stored model.
+	 * 1. Check exact key match
+	 * 2. Check recorded compatibility in memory_config
+	 * 3. Challenge: sample existing content→vector pairs, regenerate with current model, compare
+	 */
+	private async verifyModelCompatibility(storedModelKey: string, currentKey: string): Promise<boolean> {
+		if (storedModelKey === currentKey) return true;
+
+		const db = getMemoryDatabase();
+
+		// Check if already verified compatible
+		const compatKey = `compat:${currentKey}`;
+		const rows = await db.select<Array<{ value: string }>>('SELECT value FROM memory_config WHERE key = $1', [compatKey]);
+		if (rows.length > 0 && rows[0].value === storedModelKey) {
+			return true;
+		}
+
+		// Sample content rows for challenge
+		const samples = await db.select<Array<{ vec_rowid: number; content: string }>>(
+			`SELECT mm.vec_rowid, mm.content
+			 FROM memory_meta mm
+			 ORDER BY RANDOM()
+			 LIMIT 5`
+		);
+
+		if (samples.length === 0) {
+			// No data to challenge against — cannot verify compatibility
+			return false;
+		}
+
+		// Generate embeddings with current model
+		const contents = samples.map((s) => s.content);
+		const newEmbeddings = await this.generateEmbeddings(contents);
+
+		// Use database-level cosine distance to compare each new embedding against stored vector
+		for (let i = 0; i < samples.length; i++) {
+			const distRows = await db.select<Array<{ distance: number }>>(
+				`SELECT vec_distance_cosine($1, embedding) as distance FROM vec_memories WHERE rowid = $2`,
+				[JSON.stringify(newEmbeddings[i]), samples[i].vec_rowid]
+			);
+			if (distRows.length === 0 || distRows[0].distance >= 0.05) {
+				return false;
+			}
+		}
+
+		// All matched — record compatibility
+		await db.execute('INSERT INTO memory_config (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = $2', [
+			compatKey,
+			storedModelKey,
+		]);
+		return true;
+	}
+
 	private getEmbeddingModel() {
 		if (!this.embeddingModel) {
 			this.embeddingModel = createEmbeddingModel(this.providerConfig);
@@ -160,8 +214,11 @@ export class Memory {
 				);
 			}
 			if (storedModelKey && storedModelKey !== currentKey) {
-				// Model changed but dimension might be the same — still block to prevent mixed embeddings
-				throw new Error(`Embedding model changed from "${storedModelKey}" to "${currentKey}". Reset memory to switch embedding models.`);
+				if (!(await this.verifyModelCompatibility(storedModelKey, currentKey))) {
+					throw new Error(
+						`Embedding model "${currentKey}" is incompatible with stored model "${storedModelKey}". Reset memory to switch embedding models.`
+					);
+				}
 			}
 
 			this.vecDimension = dimension;
@@ -225,9 +282,11 @@ export class Memory {
 				);
 			}
 			if (storedModelKey && storedModelKey !== currentKey) {
-				throw new Error(
-					`Location embedding model changed from "${storedModelKey}" to "${currentKey}". Reset memory to switch embedding models.`
-				);
+				if (!(await this.verifyModelCompatibility(storedModelKey, currentKey))) {
+					throw new Error(
+						`Location embedding model "${currentKey}" is incompatible with stored model "${storedModelKey}". Reset memory to switch embedding models.`
+					);
+				}
 			}
 
 			this.locVecDimension = dimension;
@@ -671,10 +730,10 @@ export class Memory {
 			message_id: string;
 			character_canonical_name: string;
 			location: string;
-			embedding: string;
+			embeddingJson: string;
 		}
 		const memRows = await db.select<MemorySourceRow[]>(
-			`SELECT mm.vec_rowid, mm.content, mm.message_id, mm.character_canonical_name, mm.location, vm.embedding
+			`SELECT mm.vec_rowid, mm.content, mm.message_id, mm.character_canonical_name, mm.location, vec_to_json(vm.embedding) as embeddingJson
 			 FROM memory_meta mm
 			 JOIN vec_memories vm ON vm.rowid = mm.vec_rowid
 			 WHERE mm.story_id = $1 AND mm.act_line_id = $2 AND mm.message_id IN (${msgPlaceholders})`,
@@ -685,7 +744,7 @@ export class Memory {
 			await db.execute('INSERT INTO vec_memories(story_id, act_line_id, embedding) VALUES ($1, $2, $3)', [
 				storyId,
 				toLineId,
-				row.embedding,
+				row.embeddingJson,
 			]);
 			const vecResult = await db.select<VecRow[]>('SELECT last_insert_rowid() as rowid');
 			const newVecRowid = vecResult[0]?.rowid;
@@ -703,10 +762,10 @@ export class Memory {
 			vec_rowid: number;
 			location_text: string;
 			message_id: string;
-			embedding: string;
+			embeddingJson: string;
 		}
 		const locRows = await db.select<LocationSourceRow[]>(
-			`SELECT lm.vec_rowid, lm.location_text, lm.message_id, vl.embedding
+			`SELECT lm.vec_rowid, lm.location_text, lm.message_id, vec_to_json(vl.embedding) as embeddingJson
 			 FROM location_meta lm
 			 JOIN vec_locations vl ON vl.rowid = lm.vec_rowid
 			 WHERE lm.story_id = $1 AND lm.act_line_id = $2 AND lm.message_id IN (${msgPlaceholders})`,
@@ -714,7 +773,7 @@ export class Memory {
 		);
 
 		for (const row of locRows) {
-			await db.execute('INSERT INTO vec_locations(story_id, embedding) VALUES ($1, $2)', [storyId, row.embedding]);
+			await db.execute('INSERT INTO vec_locations(story_id, embedding) VALUES ($1, $2)', [storyId, row.embeddingJson]);
 			const vecResult = await db.select<VecRow[]>('SELECT last_insert_rowid() as rowid');
 			const newVecRowid = vecResult[0]?.rowid;
 			if (!newVecRowid) throw new Error('Failed to retrieve location vector rowid after insert');
