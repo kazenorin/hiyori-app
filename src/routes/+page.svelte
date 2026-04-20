@@ -223,7 +223,9 @@
 					{#if message.role === 'user'}
 						<div class="flex justify-end">
 							<div class="max-w-[80%] rounded-[var(--radius-container)] bg-primary-100-900 p-5">
-								<p class="leading-relaxed text-primary-900-100 whitespace-pre-wrap">{message.content}</p>
+								<div class="leading-relaxed text-primary-900-100">
+									<MarkdownContent content={message.content} />
+								</div>
 								{#if !getIsWorldBuilderStreaming()}
 									<div class="flex gap-2 mt-3 pt-3 border-t border-primary-200-800">
 										<button
