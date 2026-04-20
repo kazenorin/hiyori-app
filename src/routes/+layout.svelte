@@ -1,6 +1,7 @@
 <script lang="ts">
 	import './+layout.css';
 	import { onMount } from 'svelte';
+	import { clamp } from 'lodash';
 	import { goto } from '$app/navigation';
 	import { initializeApp } from '$lib/app/init.svelte';
 	import { log } from '$lib/logging/logger';
@@ -70,7 +71,7 @@
 			e.preventDefault();
 			const current = getSettings().fontSize;
 			const delta = e.deltaY > 0 ? -0.05 : 0.05;
-			const next = Math.min(1.5, Math.max(0.7, Math.round((current + delta) * 100) / 100));
+			const next = clamp(Math.round((current + delta) * 100) / 100, 0.7, 1.5);
 			if (next !== current) {
 				updateSettings({ fontSize: next });
 			}

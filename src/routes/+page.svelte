@@ -37,6 +37,7 @@
 		forkActLine,
 	} from '$lib/stores/stories.svelte';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
+	import { findLastIndex } from 'lodash';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 
 	let input = $state('');
@@ -44,8 +45,8 @@
 	let wbChatContainer = $state<HTMLDivElement | null>(null);
 	let copiedId = $state<string | null>(null);
 	let latestDecisions = $derived(getLatestDecisions());
-	let lastMessageIdx = $derived(getMessages().reduce((acc: number, m, i) => (m.role === 'assistant' ? i : acc), -1));
-	let lastWbMessageIdx = $derived(getWorldBuilderMessages().reduce((acc: number, m, i) => (m.role === 'assistant' ? i : acc), -1));
+	let lastMessageIdx = $derived(findLastIndex(getMessages(), (m) => m.role === 'assistant'));
+	let lastWbMessageIdx = $derived(findLastIndex(getWorldBuilderMessages(), (m) => m.role === 'assistant'));
 
 	async function handleCopy(messageId: string, content: string) {
 		await navigator.clipboard.writeText(content);

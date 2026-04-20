@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import { omitBy } from 'lodash';
 
 export type Provider = 'openai' | 'openai-compatible';
 export type ApiType = 'chat-completions' | 'responses';
@@ -183,11 +184,7 @@ export function updateProviderConfig(id: string, partial: Partial<Omit<ProviderC
 export function deleteProviderConfig(id: string): void {
 	settings.providers = settings.providers.filter((p) => p.id !== id);
 	// Clean up any role assignments pointing to the deleted config
-	for (const [role, configId] of Object.entries(settings.roleAssignments)) {
-		if (configId === id) {
-			delete settings.roleAssignments[role];
-		}
-	}
+	settings.roleAssignments = omitBy(settings.roleAssignments, (configId) => configId === id);
 	persist();
 }
 

@@ -1,4 +1,5 @@
 import { streamText } from 'ai';
+import { maxBy } from 'lodash';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
 import { loadWorldTemplate, loadGenerateWorldFromChatPrompt, loadGenerateWorldFromChatSystemPrompt } from '$lib/fs/prompts';
@@ -21,7 +22,7 @@ async function traceStoryMessages(storyId: string): Promise<{ role: 'user' | 'as
 	if (acts.length === 0) return [];
 
 	// Find act with highest act_number
-	const latestAct = acts.reduce((a, b) => (a.actNumber > b.actNumber ? a : b));
+	const latestAct = maxBy(acts, 'actNumber')!;
 
 	// Get main act line (or first by creation date as fallback)
 	const mainLine = await dbActLines.getMainLineForAct(latestAct.id);
