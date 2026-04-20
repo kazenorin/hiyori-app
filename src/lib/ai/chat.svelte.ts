@@ -180,7 +180,7 @@ export async function sendMessage(
 	isStreaming = true;
 	abortController = new AbortController();
 	const storyId = await storyIdPromise;
-	const tools = buildTools(storyId, actLineId);
+	const tools = await buildTools(storyId, actLineId);
 
 	try {
 		const systemPrompt = message.systemPrompt ?? (await getActiveSystemPromptOrDefault());
