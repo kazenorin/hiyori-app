@@ -135,7 +135,6 @@
 		const worldContent = getWorldBuilderContent();
 		if (!name || !worldContent) return;
 
-		showCreateStoryOptions = false;
 		isCreatingStory = true;
 		createStoryError = null;
 
