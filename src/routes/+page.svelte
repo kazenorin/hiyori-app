@@ -32,6 +32,7 @@
 		getActiveSystemPrompt,
 		getIsSelectingStory,
 		getActiveAct,
+		getActiveStory,
 		createStoryFromWorldBuilder,
 		getActiveNarrationContext,
 		forkActLine,
@@ -39,6 +40,8 @@
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
 	import { findLastIndex } from 'lodash';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
+	import { generateActPlot } from '$lib/ai/act-plot-generator';
+	import { getActLine } from '$lib/db/act-lines';
 
 	let input = $state('');
 	let chatContainer = $state<HTMLDivElement | null>(null);
@@ -47,6 +50,11 @@
 	let latestDecisions = $derived(getLatestDecisions());
 	let lastMessageIdx = $derived(findLastIndex(getMessages(), (m) => m.role === 'assistant'));
 	let lastWbMessageIdx = $derived(findLastIndex(getWorldBuilderMessages(), (m) => m.role === 'assistant'));
+
+	// World builder story creation state
+	let showCreateStoryOptions = $state(false);
+	let isCreatingStory = $state(false);
+	let createStoryError = $state<string | null>(null);
 
 	async function handleCopy(messageId: string, content: string) {
 		await navigator.clipboard.writeText(content);
@@ -107,19 +115,48 @@
 		});
 	}
 
-	async function handleCreateFromWorldBuilder() {
+	function handleCreateFromWorldBuilder() {
+		const name = getWorldBuilderStoryName();
+		if (!name) return;
+		showCreateStoryOptions = true;
+	}
+
+	function cancelCreateStoryOptions() {
+		showCreateStoryOptions = false;
+		createStoryError = null;
+	}
+
+	async function handleCreateStoryImmediate() {
 		const name = getWorldBuilderStoryName();
 		const worldContent = getWorldBuilderContent();
-		if (!name) return;
+		if (!name || !worldContent) return;
 
-		await createStoryFromWorldBuilder(name, worldContent ?? '');
-		exitWorldBuilderMode();
+		showCreateStoryOptions = false;
+		isCreatingStory = true;
+		createStoryError = null;
 
-		// Send narration template as hidden developer message to trigger opening narrative
-		const actLineId = getActiveActLineId();
-		const narrationContext = getActiveNarrationContext();
-		if (actLineId && narrationContext) {
-			sendInitialNarration(actLineId, narrationContext, getActiveSystemPrompt() ?? undefined);
+		try {
+			await createStoryFromWorldBuilder(name, worldContent);
+
+			const actLineId = getActiveActLineId();
+			const story = getActiveStory();
+
+			if (actLineId && story) {
+				const actLine = await getActLine(actLineId);
+				const isMainLine = actLine?.isMainLine ?? true;
+				await generateActPlot(story.id, story.name, worldContent, actLineId, isMainLine);
+			}
+
+			exitWorldBuilderMode();
+
+			const narrationContext = getActiveNarrationContext();
+			if (actLineId && narrationContext) {
+				sendInitialNarration(actLineId, narrationContext, getActiveSystemPrompt() ?? undefined);
+			}
+		} catch (err) {
+			createStoryError = err instanceof Error ? err.message : 'Failed to create story';
+		} finally {
+			isCreatingStory = false;
 		}
 	}
 
@@ -276,14 +313,57 @@
 				{/each}
 
 				{#if getIsWorldBuilderComplete()}
-					<div class="rounded-[var(--radius-container)] bg-primary-100-900 p-6 text-center space-y-4">
-						<h3 class="h3 font-display text-primary-900-100">Create "{getWorldBuilderStoryName()}"?</h3>
-						<p class="text-sm text-primary-700-300">Your world document is ready. Create the story and start your adventure?</p>
-						<div class="flex gap-3 justify-center">
-							<button class="btn preset-filled-primary-500" type="button" onclick={handleCreateFromWorldBuilder}> Create Story </button>
-							<button class="btn preset-tonal" type="button" onclick={exitWorldBuilderMode}> Cancel </button>
+					{#if showCreateStoryOptions}
+						<div class="rounded-[var(--radius-container)] bg-primary-100-900 p-6 space-y-4">
+							<h3 class="h3 font-display text-primary-900-100 text-center">Create "{getWorldBuilderStoryName()}"?</h3>
+
+							{#if isCreatingStory}
+								<div class="flex items-center justify-center gap-3 py-4">
+									<span class="inline-block w-4 h-4 border-2 border-surface-400 border-t-transparent rounded-full animate-spin"></span>
+									<span class="text-sm text-primary-700-300">Creating story and generating plot...</span>
+								</div>
+							{:else if createStoryError}
+								<div class="rounded-lg bg-error-100-900 p-4 mb-2">
+									<p class="text-sm text-error-700-300">{createStoryError}</p>
+								</div>
+								<div class="flex gap-3 justify-center">
+									<button class="btn preset-filled-primary-500" type="button" onclick={handleCreateStoryImmediate}> Try Again </button>
+									<button class="btn preset-tonal" type="button" onclick={cancelCreateStoryOptions}> Cancel </button>
+								</div>
+							{:else}
+								<div class="flex flex-col gap-3">
+									<button
+										class="w-full text-left p-4 rounded-lg border border-primary-200-800 hover:bg-primary-200-800 transition-colors duration-150"
+										type="button"
+										onclick={handleCreateStoryImmediate}
+									>
+										<div class="font-medium text-primary-900-100 mb-1">Start immediately</div>
+										<div class="text-sm text-primary-700-300">Create the story and begin your adventure right away.</div>
+									</button>
+									<button
+										class="w-full text-left p-4 rounded-lg border border-surface-200-800 opacity-50 cursor-not-allowed"
+										type="button"
+										disabled
+									>
+										<div class="font-medium text-surface-700-300 mb-1">Tell us about the story</div>
+										<div class="text-sm text-surface-500">Customize the plot and protagonist before starting. (Coming soon)</div>
+									</button>
+								</div>
+								<div class="flex justify-center mt-2">
+									<button class="btn preset-tonal" type="button" onclick={cancelCreateStoryOptions}> Cancel </button>
+								</div>
+							{/if}
 						</div>
-					</div>
+					{:else}
+						<div class="rounded-[var(--radius-container)] bg-primary-100-900 p-6 text-center space-y-4">
+							<h3 class="h3 font-display text-primary-900-100">Create "{getWorldBuilderStoryName()}"?</h3>
+							<p class="text-sm text-primary-700-300">Your world document is ready. Create the story and start your adventure?</p>
+							<div class="flex gap-3 justify-center">
+								<button class="btn preset-filled-primary-500" type="button" onclick={handleCreateFromWorldBuilder}> Create Story </button>
+								<button class="btn preset-tonal" type="button" onclick={exitWorldBuilderMode}> Cancel </button>
+							</div>
+						</div>
+					{/if}
 				{/if}
 
 				{#if getWorldBuilderError()}
