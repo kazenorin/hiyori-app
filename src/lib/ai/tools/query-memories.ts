@@ -1,10 +1,11 @@
 import { tool } from 'ai';
 import { z } from 'zod';
+import { sampleSize } from 'lodash';
 import { Memory, type MemoryItem } from '$lib/memory/memory';
 import { batchResolveActLineInfo } from '$lib/db/act-lines';
-import {fileLog} from '$lib/logging/logger';
-import {getEmbeddingProviderConfig, settings} from '$lib/stores/settings.svelte';
-import {type ToolSet} from 'ai';
+import { fileLog } from '$lib/logging/logger';
+import { getEmbeddingProviderConfig, settings } from '$lib/stores/settings.svelte';
+import { type ToolSet } from 'ai';
 
 export interface QueryMemoriesContext {
 	memory: Memory;
@@ -50,21 +51,26 @@ export function createQueryMemoriesTool(context: QueryMemoriesContext) {
 		characterQuery: z
 			.string()
 			.optional()
-			.describe('A short description of the character or topic to search memories for (e.g. "Elena", "the blacksmith"). If omitted, the tool will return memories based on the time-location query context parameter.'),
+			.describe(
+				'A short description of the character or topic to search memories for (e.g. "Elena", "the blacksmith"). If omitted, the tool will return memories based on the time-location query context parameter.'
+			),
 		timeAndLocation: z
 			.string()
 			.optional()
-			.describe('A short description of the location or time period (e.g., "The Tavern", "Dawn in the Forest"). If omitted, will return memories of the given character.'),
+			.describe(
+				'A short description of the location or time period (e.g., "The Tavern", "Dawn in the Forest"). If omitted, will return memories of the given character.'
+			),
 		currentActOnly: z
 			.boolean()
 			.optional()
 			.default(true)
-			.describe('If true, searches only recent memories from the current act. Set to false to retrieve long-term lore or events from past acts.'),
+			.describe(
+				'If true, searches only recent memories from the current act. Set to false to retrieve long-term lore or events from past acts.'
+			),
 	});
 
 	return tool({
-		description:
-			`Search the game's memory database to recall past events, locations visited, or character interactions. You must provide a character query, a time-location query for context, or both. Returns a list of recalled memories with their act number, recency, and location.`,
+		description: `Search the game's memory database to recall past events, locations visited, or character interactions. You must provide a character query, a time-location query for context, or both. Returns a list of recalled memories with their act number, recency, and location.`,
 		inputSchema,
 		execute: async (input: z.infer<typeof inputSchema>): Promise<MemoryResult[]> => {
 			const { characterQuery, timeAndLocation, currentActOnly } = input;
@@ -86,15 +92,17 @@ export function createQueryMemoriesTool(context: QueryMemoriesContext) {
 
 			if (characterQuery && timeAndLocation) {
 				items = await memory.searchByLocation(characterQuery, timeAndLocation, opts);
+				return await toResults(items.slice(0, opts.limit));
 			} else if (characterQuery) {
 				items = await memory.search(characterQuery, opts);
+				return await toResults(items.slice(0, opts.limit));
 			} else if (timeAndLocation) {
-				items = await memory.search(timeAndLocation, opts); // TODO: this is wrong
+				const locations = await memory.searchLocations(timeAndLocation, opts);
+				items = await Promise.all(locations.map((location) => memory.sampleByLocation(location, opts.limit))).then((p) => p.flat());
+				return await toResults(sampleSize(items, opts.limit));
 			} else {
 				return [];
 			}
-
-			return await toResults(items.slice(0, 10));
 		},
 	});
 }

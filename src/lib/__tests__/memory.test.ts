@@ -407,4 +407,220 @@ describe('Memory', () => {
 			expect(names).toEqual([]);
 		});
 	});
+
+	describe('sampleByLocation', () => {
+		it('queries memory_meta by location with random sampling', async () => {
+			mockDbSelectResults.push([
+				{
+					id: 'mem-1',
+					content: 'Elena found a sword.',
+					message_id: 'msg-1',
+					story_id: 'story-1',
+					act_line_id: 'line-1',
+					character_canonical_name: 'elena',
+					location: 'cave',
+					created_at: '2026-01-01',
+				},
+				{
+					id: 'mem-2',
+					content: 'Elena fought a goblin.',
+					message_id: 'msg-2',
+					story_id: 'story-1',
+					act_line_id: 'line-1',
+					character_canonical_name: 'elena',
+					location: 'cave',
+					created_at: '2026-01-02',
+				},
+			]);
+
+			const memory = new Memory(testConfig);
+			const results = await memory.sampleByLocation(
+				{
+					id: 'loc-1',
+					location: 'cave',
+					messageId: 'msg-loc',
+					storyId: 'story-1',
+					actLineId: 'line-1',
+				},
+				5
+			);
+
+			// Find the sample query
+			const sampleCall = mockDbSelectCalls.find(([q]) => q.includes('ORDER BY RANDOM()'));
+			expect(sampleCall).toBeDefined();
+			expect(sampleCall![0]).toContain('WHERE story_id = $1 AND act_line_id = $2 AND location = $3');
+			expect(sampleCall![1]).toContain('story-1');
+			expect(sampleCall![1]).toContain('line-1');
+			expect(sampleCall![1]).toContain('cave');
+			expect(sampleCall![1]).toContain(5);
+
+			expect(results.length).toBe(2);
+			expect(results[0].memory).toBe('Elena found a sword.');
+			expect(results[0].location).toBe('cave');
+		});
+
+		it('returns empty array when no memories at location', async () => {
+			mockDbSelectResults.push([]);
+
+			const memory = new Memory(testConfig);
+			const results = await memory.sampleByLocation(
+				{
+					id: 'loc-1',
+					location: 'empty-place',
+					messageId: 'msg-loc',
+					storyId: 'story-1',
+					actLineId: 'line-1',
+				},
+				3
+			);
+
+			expect(results).toEqual([]);
+		});
+	});
+
+	describe('searchLocations', () => {
+		it('queries vec_locations with embedding and story constraint', async () => {
+			// sqlite_master check -> table exists
+			mockDbSelectResults.push([{ name: 'vec_locations' }]);
+			// memory_config for loc_vec_dimension and loc_model_key
+			mockDbSelectResults.push([
+				{ key: 'loc_vec_dimension', value: '4' },
+				{ key: 'loc_model_key', value: MODEL_KEY },
+			]);
+			// KNN result
+			mockDbSelectResults.push([
+				{
+					id: 'loc-1',
+					location_text: 'The Tavern',
+					message_id: 'msg-1',
+					story_id: 'story-1',
+					act_line_id: 'line-1',
+					created_at: '2026-01-01',
+					distance: 0.2,
+				},
+			]);
+
+			const memory = new Memory(testConfig);
+			const results = await memory.searchLocations('tavern', { storyId: 'story-1', limit: 5 });
+
+			// Find the KNN search call
+			const searchCall = mockDbSelectCalls.find(([q]) => q.includes('embedding MATCH'));
+			expect(searchCall).toBeDefined();
+			expect(searchCall![0]).toContain('WHERE embedding MATCH $1');
+			expect(searchCall![0]).toContain('AND story_id = $3');
+			expect(searchCall![1]).toContain('story-1');
+
+			expect(results.length).toBe(1);
+			expect(results[0].location).toBe('The Tavern');
+			expect(results[0].score).toBe(0.2);
+		});
+	});
+
+	describe('sampleByLocation', () => {
+		it('queries memory_meta by location with random sampling', async () => {
+			mockDbSelectResults.push([
+				{
+					id: 'mem-1',
+					content: 'Elena found a sword.',
+					message_id: 'msg-1',
+					story_id: 'story-1',
+					act_line_id: 'line-1',
+					character_canonical_name: 'elena',
+					location: 'cave',
+					created_at: '2026-01-01',
+				},
+				{
+					id: 'mem-2',
+					content: 'Elena fought a goblin.',
+					message_id: 'msg-2',
+					story_id: 'story-1',
+					act_line_id: 'line-1',
+					character_canonical_name: 'elena',
+					location: 'cave',
+					created_at: '2026-01-02',
+				},
+			]);
+
+			const memory = new Memory(testConfig);
+			const results = await memory.sampleByLocation(
+				{
+					id: 'loc-1',
+					location: 'cave',
+					messageId: 'msg-loc',
+					storyId: 'story-1',
+					actLineId: 'line-1',
+				},
+				5
+			);
+
+			// Find the sample query
+			const sampleCall = mockDbSelectCalls.find(([q]) => q.includes('ORDER BY RANDOM()'));
+			expect(sampleCall).toBeDefined();
+			expect(sampleCall![0]).toContain('WHERE story_id = $1 AND act_line_id = $2 AND location = $3');
+			expect(sampleCall![1]).toContain('story-1');
+			expect(sampleCall![1]).toContain('line-1');
+			expect(sampleCall![1]).toContain('cave');
+			expect(sampleCall![1]).toContain(5);
+
+			expect(results.length).toBe(2);
+			expect(results[0].memory).toBe('Elena found a sword.');
+			expect(results[0].location).toBe('cave');
+		});
+
+		it('returns empty array when no memories at location', async () => {
+			mockDbSelectResults.push([]);
+
+			const memory = new Memory(testConfig);
+			const results = await memory.sampleByLocation(
+				{
+					id: 'loc-1',
+					location: 'empty-place',
+					messageId: 'msg-loc',
+					storyId: 'story-1',
+					actLineId: 'line-1',
+				},
+				3
+			);
+
+			expect(results).toEqual([]);
+		});
+	});
+
+	describe('searchLocations', () => {
+		it('queries vec_locations with embedding and story constraint', async () => {
+			// sqlite_master check -> table exists
+			mockDbSelectResults.push([{ name: 'vec_locations' }]);
+			// memory_config for loc_vec_dimension and loc_model_key
+			mockDbSelectResults.push([
+				{ key: 'loc_vec_dimension', value: '4' },
+				{ key: 'loc_model_key', value: MODEL_KEY },
+			]);
+			// KNN result
+			mockDbSelectResults.push([
+				{
+					id: 'loc-1',
+					location_text: 'The Tavern',
+					message_id: 'msg-1',
+					story_id: 'story-1',
+					act_line_id: 'line-1',
+					created_at: '2026-01-01',
+					distance: 0.2,
+				},
+			]);
+
+			const memory = new Memory(testConfig);
+			const results = await memory.searchLocations('tavern', { storyId: 'story-1', limit: 5 });
+
+			// Find the KNN search call
+			const searchCall = mockDbSelectCalls.find(([q]) => q.includes('embedding MATCH'));
+			expect(searchCall).toBeDefined();
+			expect(searchCall![0]).toContain('WHERE embedding MATCH $1');
+			expect(searchCall![0]).toContain('AND story_id = $3');
+			expect(searchCall![1]).toContain('story-1');
+
+			expect(results.length).toBe(1);
+			expect(results[0].location).toBe('The Tavern');
+			expect(results[0].score).toBe(0.2);
+		});
+	});
 });

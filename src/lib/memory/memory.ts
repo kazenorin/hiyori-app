@@ -548,6 +548,30 @@ export class Memory {
 		}));
 	}
 
+	async sampleByLocation(location: LocationItem, sampleSize: number): Promise<MemoryItem[]> {
+		const db = getMemoryDatabase();
+
+		const rows = await db.select<MemoryMetaRow[]>(
+			`SELECT id, content, message_id, story_id, act_line_id, character_canonical_name, location, created_at
+			 FROM memory_meta
+			 WHERE story_id = $1 AND act_line_id = $2 AND location = $3
+			 ORDER BY RANDOM()
+			 LIMIT $4`,
+			[location.storyId, location.actLineId, location.location, sampleSize]
+		);
+
+		return rows.map((row) => ({
+			id: row.id,
+			memory: row.content,
+			messageId: row.message_id,
+			storyId: row.story_id,
+			actLineId: row.act_line_id,
+			characterCanonicalName: row.character_canonical_name,
+			location: row.location,
+			createdAt: row.created_at,
+		}));
+	}
+
 	async getAllLocations(options: MemorySearchOptions): Promise<LocationItem[]> {
 		const db = getMemoryDatabase();
 
