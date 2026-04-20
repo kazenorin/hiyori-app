@@ -32,6 +32,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Check `local-references/*` for local reference files (if any).
 
+## Lodash Usage
+
+The project uses lodash for common utility operations. Import from `lodash` (not `lodash-es`):
+
+- `clamp` — clamping values to a range
+- `kebabCase` — string to kebab-case for file naming
+- `omitBy` — removing object entries by predicate
+- `maxBy` — finding max element by property
+- `findLastIndex` — finding last matching index
+- `sampleSize` — random sampling from arrays
+
 ## Prompt Loading System
 
 The app uses a unified prompt loading system with a `Prompt` class pattern:
@@ -54,6 +65,9 @@ The app uses a unified prompt loading system with a `Prompt` class pattern:
   - `world/`: world-template.md, generate-world-from-chat-prompt.md, etc.
   - `act/`: act-card-template.md, act-extraction-prompt.md
   - `character/`: character-card-template.md, summarize-characters-in-act.md, etc.
+  - `memories/`: memory-extraction-prompt.md, memory-extraction-template.md
+  - `reviewer/`: editor-mode-extraction-prompt.md, trigger-editor-mode-fragment.md
+  - `import/`: import-related prompt templates
 
 ### AppData Structure
 
@@ -75,13 +89,19 @@ AppData/
       character/
         character-card-template.md
         ...
+      memories/
+        memory-extraction-prompt.md
+        ...
+      reviewer/
+        editor-mode-extraction-prompt.md
+        ...
 ```
 
 ## Story Folders
 
 Each story gets a dedicated folder in AppData containing its own `system-prompt.md`. The global `system-prompt.md` at the AppData root serves as the default template — when a story folder is created, the default prompt is copied into it.
 
-- **Folder naming**: Derived from the story name via `canonicalName()` (strips `/ \ < > : " | ? *` and control chars, supports Unicode). If two stories share the same name, the later one gets a short UUID suffix (e.g., `My Story - a1b2`). If the canonical name is empty (all chars sanitized), `deriveStoryName()` falls back to `story-{shortId}`.
+- **Folder naming**: Derived from the story name via `canonicalName()` (strips `/ \ < > : " | ? *` and control chars, supports Unicode). If two stories share the same name, the later one gets a short UUID suffix (e.g., `My Story - a1b2`). If the canonical name is empty (all chars sanitized), `deriveStoryName()` fall backs to `story-{shortId}`.
 - **Resolution**: `resolveStoryFolder()` in `src/lib/fs/story-folders.ts` handles folder lookup. It checks the `story_folders` DB table first, then falls back to filesystem scanning. Exact name matches are preferred; UUID suffix is used only on collision.
 - **Prompt switching**: When a story is selected, its system prompt is loaded via `loadStorySystemPrompt()` and cached in the stories store. Chat messages use this story-specific prompt.
 
@@ -93,6 +113,70 @@ Each story folder can contain its own `prompt-templates/` subdirectory with stor
 2. Base file: `config/prompt-templates/<relativePath>`
 3. Bundled default (in-memory fallback)
 
+## Memory System
+
+The app maintains a vector-based memory database for each story, enabling the AI to recall past events, locations, and character interactions during chat.
+
+### Architecture
+
+- **`src/lib/memory/memory.ts`**: `Memory` class managing vector storage and search
+  - Stores memories as embeddings in `vec_memories` virtual table (sqlite-vec)
+  - Stores locations in `vec_locations` virtual table
+  - Methods: `add()`, `search()`, `searchByLocation()`, `searchLocations()`, `sampleByLocation()`
+  - Deduplication via cosine distance threshold (0.1)
+  - Model compatibility verification with challenge mechanism
+
+- **`src/lib/db/memory-database.ts`**: Separate SQLite connection for memory data
+- **`src/lib/db/memory-migrations.ts`**: Memory schema migrations
+
+### Memory Extraction Pipeline
+
+Memories are extracted from assistant messages during chat streaming:
+
+- **`src/lib/ai/memory-extraction-pipeline.ts`**: Orchestrates extraction
+  - Triggers on streaming completion when memory is enabled
+  - Uses `memory-extraction-prompt.md` and `memory-extraction-template.md`
+  - Parses extracted memories and locations via `memory-extract-parser.ts`
+  - Writes to memory database with embeddings
+
+- **`src/lib/memory/memory-extract-parser.ts`**: Parses markdown extraction output
+  - Extracts character canonical names and their memories
+  - Extracts location descriptions
+  - Groups memories by character for batch insertion
+
+### Query-Memories Tool
+
+The AI can query memories during chat via a tool:
+
+- **`src/lib/ai/tools/query-memories.ts`**: `createQueryMemoriesTool()` factory
+  - Parameters: `characterQuery` (string), `timeAndLocation` (string), `currentActOnly` (boolean)
+  - Three search modes:
+    1. `characterQuery + timeAndLocation` → `searchByLocation()` (filtered by location)
+    2. `characterQuery` only → `search()` (sorted by relevance, sliced to limit)
+    3. `timeAndLocation` only → `searchLocations()` + `sampleByLocation()` + `sampleSize()` (random sampling)
+  - Returns memories with `actNumber`, `messagesAgo`, `location`, and content
+
+- **`src/lib/ai/tools/tools.ts`**: `buildTools()` combines memory + other tool sets
+
+### Memory Regeneration
+
+Users can regenerate memories for an act line:
+
+- **`src/lib/stores/memory-regeneration.svelte.ts`**: State management
+- **`src/routes/memory-manager/+page.svelte`**: UI for memory management
+
+## Editor Mode Reviewer
+
+The app includes an optional AI reviewer that validates assistant responses:
+
+- **`src/lib/reviewer/review-loop.ts`**: Orchestrates review cycles
+  - Streams review using `editor-mode-extraction-prompt.md`
+  - Parses review scratchpad for flags and fixes
+  - Applies fixes to content if issues found
+  - Maximum 3 review cycles per message
+
+- **Trigger**: Enabled via `settings.editorModeEnabled` — adds `trigger-editor-mode-fragment.md` to system prompt
+
 ## World Builder
 
 The world builder is an AI-guided interview that creates a story's world document. It runs in a separate mode within the main page (`+page.svelte`), toggled by `getIsWorldBuilderActive()`.
@@ -103,6 +187,21 @@ The world builder is an AI-guided interview that creates a story's world documen
 - **Story creation**: `createStoryFromWorldBuilder()` in `stories.svelte.ts` creates the story, act, act line, writes `world.md`, moves the temp log, then selects the new story.
 - **Logging**: World builder logs are written to `AppData/logs/worldbuilding-{yyyyMMddHHmmss}.log` during the session. After story creation, `moveWorldBuilderLog()` moves the log into the story folder.
 - **Chat actions**: Copy, regenerate, and delete work the same as the main chat. `regenerateLastWorldBuilderResponse()` removes the last assistant message and calls `streamNextResponse()`. `deleteLastWorldBuilderExchange()` removes the last user+assistant pair.
+
+## Import World
+
+The app can import existing chat transcripts as new stories:
+
+- **`src/routes/import-world/+page.svelte`**: Import UI
+- **`src/lib/import-world/import-orchestrator.ts`**: Main orchestration
+  - Parses transcript files (JSON, Markdown, generic text)
+  - Detects game data (world state, decisions)
+  - Generates acts from extracted content
+  - Creates story structure with acts and act lines
+
+- **`src/lib/import-world/transcript-parsers.ts`**: Multi-format parsing
+- **`src/lib/import-world/game-data-detector.ts`**: Detects structured game data
+- **`src/lib/import-world/act-generator.ts`**: Generates acts from parsed content
 
 ## Streaming Pipeline
 
@@ -117,7 +216,7 @@ executeStream (streaming.ts)
       → message-updater helpers (applyParserOutput, applyReasoningDelta)
 ```
 
-- **`streaming.ts`**: Low-level `executeStream()` wraps the Vercel AI SDK `streamText()`. Emits `onTextDelta`, `onReasoningDelta`, then `onComplete` with `StreamResultMetadata` (or `onError`). Returns void — lifecycle is callback-driven.
+- **`streaming.ts`**: Low-level `executeStream()` wraps the Vercel AI SDK `streamText()`. Uses `ToolSet` type and `stopWhen: stepCountIs(DEFAULT_MAX_STEPS)` for tool loops. Emits callbacks, returns void — lifecycle is callback-driven.
 - **`chat-callbacks.ts`**: `createStreamAccumulator()` wires the parser chain into `StreamCallbacks`. Accumulates immutable `StreamState` (`content`, `reasoning`, `gameData`). Exposes `resultMetadata` as a `Promise` resolved on `onComplete`.
 - **`parser-chain.ts`**: Chains thinking-tag parser then game-data parser. `feed()` returns `ParserChainOutput` (`text`, `thinking`, `gameData`). `flush()` drains buffered state.
 - **`thinking-tag-parser.ts`**: Character-by-character state machine that extracts `think`-tag blocks. Separates reasoning content from visible text.
@@ -168,7 +267,7 @@ Auto-scroll uses two observers on `chatContainer` (shared by main chat and world
 The UI supports dynamic typography scaling via a sidebar slider and keyboard shortcuts:
 
 - **Slider**: Range input in `+layout.svelte` sidebar footer, range 0.7–1.5, step 0.05. Persisted in `settings.fontSize`.
-- **Ctrl+Scroll**: Holding Ctrl and scrolling adjusts font size by ±0.05 increments, clamped to 0.7–1.5.
+- **Ctrl+Scroll**: Holding Ctrl and scrolling adjusts font size by ±0.05 increments, clamped to 0.7–1.5 via lodash `clamp`.
 - **Rendering**: `MarkdownContent.svelte` applies the scale factor to its content container.
 
 ## Vector Data Types (sqlite-vec)

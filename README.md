@@ -7,11 +7,14 @@ An AI-powered interactive fiction desktop app built with [Tauri v2](https://v2.t
 - **World Builder** — AI-guided interview that generates a story's world document
 - **Branching Narratives** — Fork storylines at any point; each branch is an independent act line sharing messages up to the fork point
 - **Game Data Blocks** — AI emits structured `worldState` and `decisions` during streaming, rendered as clickable decision buttons
+- **Memory System** — Vector-based memory database with semantic search. AI recalls past events, locations, and character interactions via `query-memories` tool
+- **Editor Mode** — Optional AI reviewer that validates continuity, character consistency, and narrative quality before displaying responses
+- **Import World** — Import existing chat transcripts (JSON, Markdown, text) as new stories with automatic act and character extraction
 - **Character Cards** — Extract characters from acts and generate detailed character cards with personality, appearance, and story arcs
 - **Act Cards** — Generate summary documents for entire acts from chat transcripts
 - **Thinking Tag Parsing** — Extracts `<think...>` reasoning from AI responses, displayed in a collapsible section
 - **Dynamic Typography** — Sidebar slider and Ctrl+scroll to adjust text size (70%–150%)
-- **Structured Logging** — Chat logs written to AppData with configurable log levels
+- **Structured Logging** — Chat logs written to AppData with configurable log levels (error/warn/info/debug)
 
 ## Prerequisites
 
@@ -100,7 +103,7 @@ The `.exe` includes the embedded frontend assets and requires [WebView2](https:/
 
 ## Project Structure
 
-````
+```
 src/                      # SvelteKit frontend
   lib/
     ai/
@@ -109,6 +112,7 @@ src/                      # SvelteKit frontend
       chat.svelte.ts       # Main chat state and message management (Svelte 5 runes)
       world-builder.svelte.ts  # World builder mode state (Svelte 5 runes)
       world-generator.ts   # World generation from chat
+      memory-extraction-pipeline.ts  # Memory extraction from assistant messages
       act-card-generator.ts    # Act summary card generation
       character-card-generator.ts  # Character card extraction and generation
       act-line-export.ts   # Export act line messages for AI processing
@@ -120,28 +124,66 @@ src/                      # SvelteKit frontend
       streaming.ts         # Low-level executeStream wrapper (Vercel AI SDK)
       provider.ts          # AI model factory
       models.ts            # Model registry
+      tools/               # LLM tools for chat
+        tools.ts           # Tool builder combining memory + other tools
+        query-memories.ts  # Memory recall tool for AI
     db/                    # SQLite repositories
-      stories.ts, acts.ts, act-lines.ts, messages.ts, app-state.ts, story-folders.ts
+      database.ts          # Main database connection and migrations
+      memory-database.ts   # Separate connection for memory vectors
+      stories.ts           # Story CRUD operations
+      acts.ts              # Act CRUD operations
+      act-lines.ts         # Act line management with batch info resolution
+      messages.ts          # Message CRUD operations
+      app-state.ts         # Application state persistence
+      story-folders.ts     # Story folder path resolution
+    memory/
+      memory.ts            # Memory class with vector search (sqlite-vec)
+      memory-extract-parser.ts  # Parses markdown extraction output
     fs/                    # File system services
       prompts.ts           # Unified prompt loading module (Prompt class instances)
       prompt-loader.ts     # Core Prompt class and loading logic
       prompts/             # Bundled default markdown templates
         system-prompt.md
         narration-template.md
-        world/             # World builder prompt templates
-        act/               # Act card prompt templates
-        character/         # Character card prompt templates
+        memories/          # Memory extraction prompts
+        reviewer/          # Editor mode prompts
+        world/             # World builder prompts
+        act/               # Act card prompts
+        character/         # Character card prompts
+        import/            # Import prompts
       story-folders.ts     # Story folder resolution and world content loading
-    stores/                # Reactive state (settings, stories)
-    components/            # Shared Svelte components (MarkdownContent, etc.)
-    logging/               # Structured logging via tauri-plugin-log
+    stores/                # Reactive state (Svelte 5 runes)
+      settings.svelte.ts   # Provider configs, log level, editor mode toggle
+      stories.svelte.ts    # Active story/act/actline selection
+      act-card.svelte.ts   # Act card generation state
+      character-card.svelte.ts  # Character card generation state
+      memory-regeneration.svelte.ts  # Memory regeneration workflow
+    import-world/          # Import transcript feature
+      import-orchestrator.ts  # Main import coordination
+      transcript-parsers.ts    # Multi-format parsing (JSON, Markdown, text)
+      game-data-detector.ts    # Detects structured game data in transcripts
+      act-generator.ts     # Generates acts from parsed content
+      validators.ts        # Import form validation
+    reviewer/
+      review-loop.ts       # Editor mode review cycle orchestration
+    logging/               # Structured logging
+      logger.ts            # Tauri log integration with file output
+      chat-logger.ts       # Chat-specific logging helpers
+    components/            # Shared Svelte components
+      MarkdownContent.svelte  # Markdown rendering with typography scaling
+    app/
+      init.svelte.ts       # App initialization sequence
+    utils/
+      async.ts             # Async utility functions
   routes/
     +layout.svelte         # Sidebar navigation, text size controls
     +layout.css            # Global styles
     +layout.ts             # SSR disabled, prerender enabled
     +page.svelte           # Chat UI + world builder
-    settings/+page.svelte  # Settings page
-    generate-character-cards/+page.svelte  # Character card generation
+    settings/+page.svelte  # Settings page (providers, log level, memory toggle)
+    generate-character-cards/+page.svelte  # Character card generation workflow
+    import-world/+page.svelte  # Import transcript as new story
+    memory-manager/+page.svelte  # Memory regeneration UI
   app.html                 # HTML shell
 src-tauri/                # Tauri (Rust) backend
   src/
@@ -151,7 +193,7 @@ src-tauri/                # Tauri (Rust) backend
   Cargo.toml              # Rust dependencies
 svelte.config.js          # SvelteKit with adapter-static (SPA fallback)
 vite.config.ts            # Vite dev server on port 1420
-````
+```
 
 ## License
 
