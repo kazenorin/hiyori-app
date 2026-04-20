@@ -50,23 +50,21 @@ export function createQueryMemoriesTool(context: QueryMemoriesContext) {
 		characterQuery: z
 			.string()
 			.optional()
-			.describe('A short description of the character or topic to search memories for (e.g. "Elena", "the blacksmith")'),
+			.describe('A short description of the character or topic to search memories for (e.g. "Elena", "the blacksmith"). If omitted, the tool will return memories based on the time-location query context parameter.'),
 		timeAndLocation: z
 			.string()
 			.optional()
-			.describe('A short description of time and location context (e.g. "Night at the Tavern", "Dawn in the Forest")'),
+			.describe('A short description of the location or time period (e.g., "The Tavern", "Dawn in the Forest"). If omitted, will return memories of the given character.'),
 		currentActOnly: z
 			.boolean()
 			.optional()
 			.default(true)
-			.describe('If true, only search memories from the current act. If false, search all acts.'),
+			.describe('If true, searches only recent memories from the current act. Set to false to retrieve long-term lore or events from past acts.'),
 	});
 
 	return tool({
 		description:
-			"Search the character's memories. Use this to recall past events, locations visited, or interactions. " +
-			'Provide a character query and/or a time-and-location description to find relevant memories. ' +
-			'Returns a list of recalled memories with their act number, recency, and location.',
+			`Search the game's memory database to recall past events, locations visited, or character interactions. You must provide a character query, a time-location query for context, or both. Returns a list of recalled memories with their act number, recency, and location.`,
 		inputSchema,
 		execute: async (input: z.infer<typeof inputSchema>): Promise<MemoryResult[]> => {
 			const { characterQuery, timeAndLocation, currentActOnly } = input;
