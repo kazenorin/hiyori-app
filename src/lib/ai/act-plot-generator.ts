@@ -1,4 +1,4 @@
-import { generateText } from 'ai';
+import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
 import { loadActPlotTemplate, loadActPlotGenerationPrompt, loadStorySystemPrompt } from '$lib/fs/prompts';
@@ -15,6 +15,9 @@ export interface GenerateActPlotResult {
 /**
  * Generate an act-plot.md file for a newly created story's first act.
  * Uses world.md content to generate story structure and planning.
+ *
+ * Note: actNumber is hardcoded to 1 because this is only called from the
+ * world builder flow, which always creates Act 1.
  *
  * @param storyId - The story's unique identifier
  * @param storyName - The story's display name
@@ -41,46 +44,44 @@ export async function generateActPlot(
 		loadStorySystemPrompt(storyId, storyName),
 	]);
 
-	// Build user message with world content, generation prompt, and template
-	const userMessage = `The following is the world setting for the story. Use it to generate an act plot.
-
----
-
-${worldContent}
-
----
-
-${generationPrompt}
-
----
-
-## Template
-
-${template}`;
+	const userMessages: ModelMessage[] = [
+		{ role: 'user', content: 'The following is the world setting for the story. Use it to generate an act plot.' },
+		{ role: 'user', content: worldContent },
+		{ role: 'user', content: generationPrompt },
+		{ role: 'user', content: `## Template\n\n${template}` },
+	];
 
 	const model = createModel(config);
 
 	await log.info('act-plot-generator', `Starting act-plot generation for story: ${storyName}`);
 
-	const result = await generateText({
-		model,
-		system: systemPrompt,
-		messages: [{ role: 'user', content: userMessage }],
-	});
+	try {
+		const result = await generateText({
+			model,
+			system: systemPrompt,
+			messages: userMessages,
+		});
 
-	await log.info(
-		'act-plot-generator',
-		`Act-plot generation complete. Tokens: ${result.usage.totalTokens}`
-	);
+		// Validate response before writing
+		const text = result.text.trim();
+		if (!text) {
+			throw new Error('LLM returned an empty response for act-plot generation.');
+		}
 
-	// Resolve output path: {storyFolder}/act-1/{lineSubdir}/act-plot.md
-	const storyFolder = await resolveStoryFolder(storyId, storyName);
-	const lineDir = buildLineDir(storyFolder, 1, isMainLine, actLineId);
-	const filePath = `${lineDir}/act-plot.md`;
+		await log.info('act-plot-generator', `Act-plot generation complete. Tokens: ${result.usage.totalTokens}, Length: ${text.length} chars`);
 
-	// Write file
-	await mkdir(lineDir, { baseDir: BaseDirectory.AppData, recursive: true });
-	await writeTextFile(filePath, result.text, { baseDir: BaseDirectory.AppData });
+		// Resolve output path: {storyFolder}/act-1/{lineSubdir}/act-plot.md
+		const storyFolder = await resolveStoryFolder(storyId, storyName);
+		const lineDir = buildLineDir(storyFolder, 1, isMainLine, actLineId);
+		const filePath = `${lineDir}/act-plot.md`;
 
-	return { filePath, content: result.text };
+		// Write file
+		await mkdir(lineDir, { baseDir: BaseDirectory.AppData, recursive: true });
+		await writeTextFile(filePath, text, { baseDir: BaseDirectory.AppData });
+
+		return { filePath, content: text };
+	} catch (err) {
+		await log.error('act-plot-generator', `Act-plot generation failed for story: ${storyName}`, err);
+		throw err;
+	}
 }

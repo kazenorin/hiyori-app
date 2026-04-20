@@ -124,7 +124,11 @@
 	function cancelCreateStoryOptions() {
 		showCreateStoryOptions = false;
 		createStoryError = null;
+		storyCreated = false;
 	}
+
+	// Track whether story was already created to prevent duplicates on retry
+	let storyCreated = $state(false);
 
 	async function handleCreateStoryImmediate() {
 		const name = getWorldBuilderStoryName();
@@ -136,7 +140,11 @@
 		createStoryError = null;
 
 		try {
-			await createStoryFromWorldBuilder(name, worldContent);
+			// Only create story if not already created (e.g., from a failed retry)
+			if (!storyCreated) {
+				await createStoryFromWorldBuilder(name, worldContent);
+				storyCreated = true;
+			}
 
 			const actLineId = getActiveActLineId();
 			const story = getActiveStory();
