@@ -6,15 +6,15 @@ import {
 	loadCharacterCardExtractionPrompt,
 	loadCharacterCardExtractionSystemPrompt,
 	loadSummarizeCharactersInAct,
-	loadSystemPrompt, loadStorySystemPrompt,
+	loadStorySystemPrompt,
 } from '$lib/fs/prompts';
 import { exportActLine } from './act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
-import {loadStoryWorldContent, resolveStoryFolder} from '$lib/fs/story-folders';
+import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { getActiveStoryId, getActiveActId, getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
 import { mkdir, writeTextFile, readTextFile, exists, BaseDirectory } from '@tauri-apps/plugin-fs';
-import { toKebabCase } from '$lib/utils/string';
+import { kebabCase } from 'lodash';
 import { log } from '$lib/logging/logger';
 import { logCharacterCardActivity } from '$lib/logging/chat-logger';
 import { buildLineDir } from './card-output-path';
@@ -60,7 +60,7 @@ export function toCharacterEntries(summaries: CharacterSummary[]): CharacterEntr
 	return summaries.map((s) => ({
 		character: s.character,
 		importance: s.importance,
-		canonicalName: toKebabCase(s.character),
+		canonicalName: kebabCase(s.character),
 		include: true,
 		isManual: false,
 	}));
@@ -72,7 +72,7 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 	const actLineId = getActiveActLineId();
 	if (!actLineId) throw new Error(ERR_NO_CONTEXT);
 
-	const story = getActiveStory()
+	const story = getActiveStory();
 	if (!story) throw new Error(ERR_NO_CONTEXT);
 
 	const config = getMainProviderConfig();

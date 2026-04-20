@@ -8,14 +8,14 @@ import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { deleteStoryFolder } from '$lib/db/story-folders';
 import { BaseDirectory, mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { loadStories } from '$lib/stores/stories.svelte';
-import { toKebabCase } from '$lib/utils/string';
+import { kebabCase } from 'lodash';
 import type { ImportFormData, ImportProgressUpdate, ImportResult, ParsedMessage } from './types';
 import type { RetryConfig } from '$lib/ai/chat-stream';
 import { parseTranscriptFile } from './transcript-parsers';
 import { formatIntoScenes, generateActFromCards } from './act-generator';
 import { runGameDataDetection } from './game-data-detector';
 import type { StreamState } from '$lib/ai/chat-callbacks';
-import {loadSystemPrompt} from "$lib/fs/prompts";
+import { loadSystemPrompt } from '$lib/fs/prompts';
 
 // === Progress Callback Type ===
 
@@ -189,7 +189,18 @@ async function processActs(
 		} else if (actInput.actFile || worldContent || characterCards.length > 0) {
 			// Load global default systemPrompt, as for importing, the story systemPrompt is not supposed to be available yet
 			const systemPrompt = await loadSystemPrompt();
-			await generateActFromLLM(systemPrompt, actInput, actLineId, actNumber, worldContent, characterCards, retryConfig, log, onProgress, createdResources);
+			await generateActFromLLM(
+				systemPrompt,
+				actInput,
+				actLineId,
+				actNumber,
+				worldContent,
+				characterCards,
+				retryConfig,
+				log,
+				onProgress,
+				createdResources
+			);
 		}
 
 		previousActLineId = actLineId;
@@ -465,7 +476,7 @@ async function saveCharacterCards(
 	const usedNames = new Set<string>();
 	for (const card of characterCards) {
 		// Use canonical kebab-case naming like character-card-generator
-		let canonicalName = toKebabCase(card.name);
+		let canonicalName = kebabCase(card.name);
 		if (!canonicalName) {
 			canonicalName = 'unnamed-character';
 		}

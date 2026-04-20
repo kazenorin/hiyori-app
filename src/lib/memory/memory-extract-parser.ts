@@ -1,5 +1,5 @@
 import { marked, type Tokens } from 'marked';
-import { toKebabCase } from '$lib/utils/string';
+import { kebabCase } from 'lodash';
 
 export type ExtractedMemories = {
 	[characterCanonicalName: string]: {
@@ -25,7 +25,7 @@ export function parseMemoryExtract(markdown: string): ExtractedMemories {
 		if (token.type === 'heading') {
 			const heading = token as Tokens.Heading;
 			if (heading.depth === 2) {
-				currentH2 = toKebabCase(heading.text);
+				currentH2 = kebabCase(heading.text);
 				currentH3 = null;
 				if (!result[currentH2]) {
 					result[currentH2] = {};

@@ -1,6 +1,6 @@
 import { attachConsole, debug as tauriDebug, error as tauriError, info as tauriInfo, warn as tauriWarn } from '@tauri-apps/plugin-log';
 import { BaseDirectory, mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
-import { toKebabCase } from '$lib/utils/string';
+import { kebabCase } from 'lodash';
 import { getSettings, LOG_LEVEL_VALUES, type LogLevel } from '$lib/stores/settings.svelte';
 
 let attached = false;
@@ -41,7 +41,7 @@ export async function fileLog(level: LogLevel, loggerTag: string, message: strin
 	if (incomingLevel > settingsLevel) return;
 
 	const line = `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${message}\n`;
-	const filename = `${toKebabCase(loggerTag)}.log`;
+	const filename = `${kebabCase(loggerTag)}.log`;
 	try {
 		await mkdir('logs', { baseDir: BaseDirectory.AppData, recursive: true });
 		await writeTextFile(`logs/${filename}`, line, {

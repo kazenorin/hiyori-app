@@ -175,7 +175,7 @@ Character: Elena - important, named.
 
 		const result = parseMemoryExtract(markdown);
 
-		// toKebabCase lowercases and replaces special chars (apostrophe becomes hyphen)
+		// kebabCase lowercases and replaces special chars (apostrophe becomes hyphen)
 		expect(result['o-brien-the-elder']).toBeDefined();
 	});
 
