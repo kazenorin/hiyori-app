@@ -62,6 +62,15 @@ const migrationStatements: string[][] = [
 	],
 	[`ALTER TABLE act_line_meta ADD COLUMN is_main_line INTEGER NOT NULL DEFAULT 0`],
 	[`ALTER TABLE messages ADD COLUMN game_data TEXT`],
+	[
+		`CREATE TABLE IF NOT EXISTS act_line_premises (
+			act_line_id TEXT NOT NULL,
+			message_id TEXT NOT NULL,
+			sequence INTEGER NOT NULL,
+			PRIMARY KEY (act_line_id, message_id, sequence)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_act_line_premises_line ON act_line_premises(act_line_id)`,
+	],
 ];
 
 export async function runMigrations(): Promise<void> {

@@ -7,6 +7,7 @@ import { moveWorldBuilderLog } from '$lib/logging/chat-logger';
 import { getLogFilePath } from '$lib/ai/world-builder.svelte';
 import { Memory } from '$lib/memory/memory';
 import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
+import type { ModelMessage } from 'ai';
 import {
 	loadStorySystemPrompt,
 	loadSystemPrompt,
@@ -33,6 +34,7 @@ let activeSystemPrompt = $state<string | null>(null);
 let activeNarrationExtractionPrompt = $state<string | null>(null);
 let activeNarrationTemplate = $state<string | null>(null);
 let activeWorldContent = $state<string | null>(null);
+let activeInterviewTranscript = $state<ModelMessage[]>([]);
 
 export function getStories(): dbStories.Story[] {
 	return stories;
@@ -80,23 +82,44 @@ export function getActiveWorldContent(): string | null {
 	return activeWorldContent;
 }
 /**
- * Combined narration context: narration template + world content.
- * This is what gets prepended as a hidden message on every AI call.
+ * Combined narration context as message array.
+ * This is what gets prepended as hidden messages on every AI call.
  */
-export function getActiveNarrationContext(): string | null {
+export function getActiveNarrationContext(): ModelMessage[] {
+	const result: ModelMessage[] = [];
+	const world = activeWorldContent;
+
+	if (world) {
+		result.push({ role: 'user', content: `The following is the world setting of the game story:\n\n---\n\n${world}` });
+	}
+
+	const interview = activeInterviewTranscript;
+	if (interview.length > 0 && interview.some((m) => m.role === 'user')) {
+		const act = acts.find((a) => a.id === activeActId);
+		const actNumber = act?.actNumber ?? 1;
+		result.push({
+			role: 'user',
+			content: `The following is an interview transcript on the premises about the current game act (Act ${actNumber}):`,
+		});
+		result.push(...interview);
+		result.push({ role: 'user', content: 'That was the end of the interview transcript.' });
+	}
+
 	const narration =
 		activeNarrationExtractionPrompt && activeNarrationTemplate
 			? activeNarrationExtractionPrompt.replace('{narrationTemplate}', activeNarrationTemplate)
 			: null;
-	const world = activeWorldContent;
-	if (!narration && !world) return null;
-	if (!narration) return world;
-	if (!world) return narration;
+	if (narration) {
+		result.push({ role: 'user', content: narration });
+	}
 
-	const act = acts.find((a) => a.id === activeActId);
-	const actNumber = act?.actNumber ?? 1;
-	const startPrompt = `Gamemaster, it is Act ${actNumber} now. Start the game.`;
-	return `${narration}\n\n---\n\n${world}\n\n---\n\n${startPrompt}`;
+	if (result.length > 0) {
+		const act = acts.find((a) => a.id === activeActId);
+		const actNumber = act?.actNumber ?? 1;
+		result.push({ role: 'user', content: `Gamemaster, it is Act ${actNumber} now. Start the game.` });
+	}
+
+	return result;
 }
 
 export function getActiveStory(): dbStories.Story | null {
@@ -140,6 +163,7 @@ function resetStoryContent(): void {
 	activeNarrationExtractionPrompt = null;
 	activeNarrationTemplate = null;
 	activeWorldContent = null;
+	activeInterviewTranscript = [];
 }
 
 export async function selectStory(storyId: string | null): Promise<void> {
@@ -182,6 +206,19 @@ export async function selectAct(actId: string | null): Promise<void> {
 export async function selectActLine(actLineId: string | null): Promise<void> {
 	activeActLineId = actLineId;
 	await dbAppState.setActiveActLine(actLineId);
+
+	if (actLineId) {
+		try {
+			const premises = await dbActLines.getPremisesMessages(actLineId);
+			activeInterviewTranscript = premises
+				.filter((m) => m.role === 'user' || m.role === 'assistant')
+				.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+		} catch {
+			activeInterviewTranscript = [];
+		}
+	} else {
+		activeInterviewTranscript = [];
+	}
 }
 
 export async function createStory(name: string): Promise<dbStories.Story> {

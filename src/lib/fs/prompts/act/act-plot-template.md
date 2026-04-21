@@ -80,10 +80,9 @@
 ## Presentation Notes
 
 - **Language Complexity:** [Simple English / Standard / Literary]
-- **Onomatopoeia:** [No / Yes, sparingly / Yes, as flavor]
-- **Visual Tags:** [None / CG-style bracketed tags / Detailed sensory descriptions]
-- **Emoji Usage:** [No / Minimal / Moderate for emotional emphasis]
 - **Dialogue Style:** [Naturalistic / Stylized / Formal]
+
+[Other notes that does not fit the above but important to the plot]
 
 ---
 

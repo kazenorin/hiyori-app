@@ -1,6 +1,7 @@
 import { getMainProviderConfig, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 import { getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
 import type { GameData } from '$lib/db/messages';
+import type { ModelMessage } from 'ai';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
 import { logMainChat } from '$lib/logging/chat-logger';
@@ -75,6 +76,20 @@ function parseMetadata(raw: string | undefined | null): MessageMetadata | undefi
 	}
 }
 
+function narrowNarrationMessage(msg: ModelMessage): { role: 'user' | 'assistant'; content: string } | null {
+	if (msg.role !== 'user' && msg.role !== 'assistant') return null;
+	if (typeof msg.content === 'string') {
+		return { role: msg.role, content: msg.content };
+	}
+	// Handle array content - extract text parts
+	if (Array.isArray(msg.content)) {
+		const textParts = msg.content.filter((part) => part.type === 'text');
+		const text = textParts.map((part) => (part as { type: 'text'; text: string }).text).join('\n');
+		return { role: msg.role, content: text };
+	}
+	return null;
+}
+
 async function persistMessage(actLineId: string, message: Message): Promise<void> {
 	await dbMessages.createMessage(
 		message.id,
@@ -122,7 +137,7 @@ export async function sendMessage(
 	message: {
 		bodyText: string | undefined;
 		systemPrompt: string | undefined;
-		narrationContent: string | undefined;
+		narrationContent: ModelMessage[] | undefined;
 	}
 ): Promise<void> {
 	const storyIdPromise = dbActLines.getStoryIdForActLine(actLineId);
@@ -185,9 +200,12 @@ export async function sendMessage(
 	try {
 		const systemPrompt = message.systemPrompt ?? (await getActiveSystemPromptOrDefault());
 
-		const narrationMsg = message.narrationContent ? [{ role: 'user' as const, content: message.narrationContent }] : [];
+		const narrationMsgs = message.narrationContent?.length
+			? message.narrationContent.map(narrowNarrationMessage).filter((m) => m !== null)
+			: [];
+		// exclude the first message (current message) to get the existing messages
 		const existingMsgs = messages.slice(0, -1).map((m) => toHistoryMessage(m));
-		const history = [...narrationMsg, ...existingMsgs];
+		const history = [...narrationMsgs, ...existingMsgs];
 
 		// Await any in-flight memory pipeline before starting a new response
 		if (memoryPipelinePromise) {
@@ -349,7 +367,7 @@ export function getLatestDecisions(): string[] {
  * The narration message is never persisted or shown in the UI.
  * Only the assistant's response (the opening narrative) is persisted and displayed.
  */
-export async function sendInitialNarration(actLineId: string, narrationContent: string, systemPrompt?: string): Promise<void> {
+export async function sendInitialNarration(actLineId: string, narrationContent: ModelMessage[], systemPrompt?: string): Promise<void> {
 	messages = [];
 	return await sendMessage(actLineId, {
 		bodyText: undefined,
@@ -358,7 +376,7 @@ export async function sendInitialNarration(actLineId: string, narrationContent: 
 	});
 }
 
-export async function regenerateLastResponse(actLineId: string, systemPrompt?: string, narrationContent?: string): Promise<void> {
+export async function regenerateLastResponse(actLineId: string, narrationContent: ModelMessage[], systemPrompt?: string): Promise<void> {
 	const currentMessages = [...messages];
 	const lastAssistantMsgIdx = currentMessages.findLastIndex((m) => m.role === 'assistant');
 	if (lastAssistantMsgIdx === -1) return;

@@ -38,7 +38,7 @@ describe('migrations', () => {
 	it('runs all migrations and creates tables', async () => {
 		await runMigrations();
 		const tables = testDb._db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
-		const tableNames = tables.map((t: any) => t.name);
+		const tableNames = tables.map((t: { name: string }) => t.name);
 		expect(tableNames).toContain('stories');
 		expect(tableNames).toContain('acts');
 		expect(tableNames).toContain('messages');
@@ -60,7 +60,7 @@ describe('migrations', () => {
 		await runMigrations();
 		await runMigrations();
 		const versions = testDb._db.prepare('SELECT version FROM schema_version ORDER BY version').all();
-		expect(versions).toHaveLength(4);
+		expect(versions).toHaveLength(5);
 	});
 });
 
@@ -345,6 +345,90 @@ describe('act-lines operations', () => {
 
 	it('returns null when no lines exist for act', async () => {
 		expect(await actLines.getMainLineForAct('act-1')).toBeNull();
+	});
+});
+
+describe('act_line_premises operations', () => {
+	beforeEach(async () => {
+		testDb = createTestDatabase();
+		await runMigrations();
+		await stories.createStory('story-1', 'Test');
+		await acts.createAct('act-1', 'story-1', 'Act 1', 1);
+	});
+
+	afterEach(() => {
+		testDb.close();
+	});
+
+	it('adds and retrieves messages for premises', async () => {
+		await actLines.createActLine('line-1', 'act-1', 'main', true);
+		await messages.createMessage('msg-1', 'assistant', 'What kind of story?');
+		await messages.createMessage('msg-2', 'user', 'A mystery thriller');
+		await actLines.addMessageToPremises('line-1', 'msg-1', 1);
+		await actLines.addMessageToPremises('line-1', 'msg-2', 2);
+
+		const msgs = await actLines.getPremisesMessages('line-1');
+		expect(msgs).toHaveLength(2);
+		expect(msgs[0].content).toBe('What kind of story?');
+		expect(msgs[1].content).toBe('A mystery thriller');
+	});
+
+	it('returns empty array when no premises exist', async () => {
+		await actLines.createActLine('line-1', 'act-1', 'main', true);
+		const msgs = await actLines.getPremisesMessages('line-1');
+		expect(msgs).toHaveLength(0);
+	});
+
+	it('gets next premises sequence', async () => {
+		await messages.createMessage('msg-1', 'user', 'test');
+		await actLines.addMessageToPremises('line-1', 'msg-1', 1);
+		expect(await actLines.getNextPremisesSequence('line-1')).toBe(2);
+	});
+
+	it('returns 1 for next sequence when no premises exist', async () => {
+		expect(await actLines.getNextPremisesSequence('line-1')).toBe(1);
+	});
+
+	it('removes messages from premises', async () => {
+		await messages.createMessage('msg-1', 'user', 'Keep');
+		await messages.createMessage('msg-2', 'assistant', 'Remove');
+		await actLines.addMessageToPremises('line-1', 'msg-1', 1);
+		await actLines.addMessageToPremises('line-1', 'msg-2', 2);
+
+		await actLines.removeMessagesFromPremises('line-1', ['msg-2']);
+		const msgs = await actLines.getPremisesMessages('line-1');
+		expect(msgs).toHaveLength(1);
+		expect(msgs[0].content).toBe('Keep');
+	});
+
+	it('does not delete message when act_lines still references it', async () => {
+		await actLines.createActLine('line-1', 'act-1', 'main', true);
+		await messages.createMessage('msg-1', 'user', 'Shared');
+		await actLines.addMessageToPremises('line-1', 'msg-1', 1);
+		await actLines.addMessageToLine('line-1', 'msg-1', 1);
+
+		await actLines.removeMessagesFromPremises('line-1', ['msg-1']);
+
+		// Message should still exist because act_lines still references it
+		expect(await messages.getMessage('msg-1')).not.toBeNull();
+	});
+
+	it('deletes message when only premises referenced it', async () => {
+		await messages.createMessage('msg-1', 'user', 'Only premises');
+		await actLines.addMessageToPremises('line-1', 'msg-1', 1);
+
+		await actLines.removeMessagesFromPremises('line-1', ['msg-1']);
+
+		expect(await messages.getMessage('msg-1')).toBeNull();
+	});
+
+	it('does nothing when messageIds is empty', async () => {
+		await messages.createMessage('msg-1', 'user', 'Keep');
+		await actLines.addMessageToPremises('line-1', 'msg-1', 1);
+
+		await actLines.removeMessagesFromPremises('line-1', []);
+		const msgs = await actLines.getPremisesMessages('line-1');
+		expect(msgs).toHaveLength(1);
 	});
 });
 

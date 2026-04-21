@@ -22,6 +22,7 @@ import defaultActCardTemplate from './prompts/act/act-card-template.md?raw';
 import defaultActExtractionPrompt from './prompts/act/act-extraction-prompt.md?raw';
 import defaultActPlotTemplate from './prompts/act/act-plot-template.md?raw';
 import defaultActPlotGenerationPrompt from './prompts/act/act-plot-generation-prompt.md?raw';
+import defaultInterviewExtractionPrompt from './prompts/interview-extraction-prompt.md?raw';
 
 // Character
 import defaultCharacterCardTemplate from './prompts/character/character-card-template.md?raw';
@@ -54,6 +55,7 @@ export {
 	defaultActExtractionPrompt,
 	defaultActPlotTemplate,
 	defaultActPlotGenerationPrompt,
+	defaultInterviewExtractionPrompt,
 	defaultCharacterCardTemplate,
 	defaultCharacterCardExtractionPrompt,
 	defaultCharacterCardExtractionSystemPrompt,
@@ -110,6 +112,10 @@ const actPlotTemplate = new Prompt({
 const actPlotGenerationPrompt = new Prompt({
 	relativePath: 'act/act-plot-generation-prompt.md',
 	defaultContent: defaultActPlotGenerationPrompt,
+});
+const interviewExtractionPrompt = new Prompt({
+	relativePath: 'interview-extraction-prompt.md',
+	defaultContent: defaultInterviewExtractionPrompt,
 });
 
 // Character
@@ -184,6 +190,7 @@ export const loadActCardTemplate = (): Promise<string> => actCardTemplate.load()
 export const loadActExtractionPrompt = (): Promise<string> => actExtractionPrompt.load();
 export const loadActPlotTemplate = (): Promise<string> => actPlotTemplate.load();
 export const loadActPlotGenerationPrompt = (): Promise<string> => actPlotGenerationPrompt.load();
+export const loadInterviewExtractionPrompt = (): Promise<string> => interviewExtractionPrompt.load();
 export const loadCharacterCardTemplate = (): Promise<string> => characterCardTemplate.load();
 export const loadCharacterCardExtractionPrompt = (): Promise<string> => characterCardExtractionPrompt.load();
 export const loadCharacterCardExtractionSystemPrompt = (): Promise<string> => characterCardExtractionSystemPrompt.load();
@@ -243,6 +250,7 @@ registerDefaults([
 	actExtractionPrompt,
 	actPlotTemplate,
 	actPlotGenerationPrompt,
+	interviewExtractionPrompt,
 	characterCardTemplate,
 	characterCardExtractionPrompt,
 	characterCardExtractionSystemPrompt,

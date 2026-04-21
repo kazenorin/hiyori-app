@@ -1,8 +1,12 @@
 import { getMainProviderConfig, type ProviderConfig } from '$lib/stores/settings.svelte';
-import { loadWorldBuilderSystemPrompt, loadWorldTemplate } from '$lib/fs/prompts';
+import { loadWorldBuilderSystemPrompt, loadWorldTemplate, loadInterviewExtractionPrompt } from '$lib/fs/prompts';
 import { generateWorldBuilderLogFilename, logWorldBuilderChat } from '$lib/logging/chat-logger';
+import { log } from '$lib/logging/logger';
 import { type StreamAccumulator, type StreamState } from '$lib/ai/chat-callbacks';
 import { streamChatResponse } from './chat-stream';
+import * as dbMessages from '$lib/db/messages';
+import * as dbActLines from '$lib/db/act-lines';
+import type {Message} from "$lib/ai/chat.svelte";
 
 export interface WorldBuilderMessage {
 	id: string;
@@ -22,6 +26,11 @@ let worldContent = $state<string | null>(null);
 let isComplete = $state(false);
 let abortController: AbortController | null = null;
 let logFilePath: string | null = null;
+
+// Act-plot interview state
+let actPlotInterview = $state(false);
+let interviewActLineId: string | null = null;
+let interviewSystemPrompt: string | null = null;
 
 // Cached prompts loaded once on enter
 let cachedSystemPrompt: string | null = null;
@@ -51,6 +60,12 @@ export function getIsComplete(): boolean {
 export function getLogFilePath(): string | null {
 	return logFilePath;
 }
+export function getActPlotInterview(): boolean {
+	return actPlotInterview;
+}
+export function getInterviewActLineId(): string | null {
+	return interviewActLineId;
+}
 
 function resetState(): void {
 	isActive = false;
@@ -64,6 +79,9 @@ function resetState(): void {
 	logFilePath = null;
 	cachedSystemPrompt = null;
 	cachedWorldTemplate = null;
+	actPlotInterview = false;
+	interviewActLineId = null;
+	interviewSystemPrompt = null;
 }
 
 export function exitWorldBuilderMode(): void {
@@ -71,14 +89,6 @@ export function exitWorldBuilderMode(): void {
 		abortController.abort();
 	}
 	resetState();
-}
-
-function validateSettings(): string | null {
-	const config = getMainProviderConfig();
-	if (!config?.apiKey || !config?.model) {
-		return 'Please configure your API key and model in Settings.';
-	}
-	return null;
 }
 
 function buildFullSystemPrompt(): string {
@@ -122,6 +132,27 @@ export async function enterWorldBuilderMode(): Promise<void> {
 	cachedWorldTemplate = await loadWorldTemplate();
 
 	await streamNextResponse();
+}
+
+export async function enterActPlotInterviewMode(actLineId: string, systemPrompt: string): Promise<void> {
+	// Reset world builder state but keep isActive true
+	resetState();
+	isActive = true;
+	actPlotInterview = true;
+	interviewActLineId = actLineId;
+	interviewSystemPrompt = systemPrompt;
+
+	// Load interview extraction prompt
+	const interviewPrompt = await loadInterviewExtractionPrompt();
+
+	// Send the interview prompt as the first message (hidden user message to guide narrator)
+	const seedMessage: WorldBuilderMessage = {
+		id: crypto.randomUUID(),
+		role: 'user',
+		content: interviewPrompt,
+	};
+
+	await streamNextResponse(seedMessage);
 }
 
 export async function sendWorldBuilderMessage(text: string): Promise<void> {
@@ -189,23 +220,64 @@ async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<vo
 	} else {
 		messages = [...messages, responseMessage];
 	}
+
 	const messageIdx = messages.length - 1;
+	function getCurrentMessage(): Message {
+		return messages[messageIdx];
+	}
 
 	isStreaming = true;
 	abortController = new AbortController();
 
 	try {
 		const existingMsgs = messages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
-		const history = [seedMsg, ...existingMsgs];
+		const history = actPlotInterview ? existingMsgs : [seedMsg, ...existingMsgs];
 		await streamWorldBuilderChat(history, messageIdx, abortController.signal, providerConfig);
-		parseCompletionMarker(messages[messageIdx].content);
+		parseCompletionMarker(getCurrentMessage().content);
+
+		// Persist messages to DB when in interview mode
+		if (actPlotInterview && interviewActLineId) {
+			await persistInterviewMessages(userMessage, getCurrentMessage());
+		}
 	} catch (err: unknown) {
-		if (err instanceof DOMException && err.name === 'AbortError') return;
+		if (err instanceof DOMException && err.name === 'AbortError') {
+			// Persist partial content on abort in interview mode
+			if (actPlotInterview && interviewActLineId) {
+				const partial = getCurrentMessage();
+				if (partial?.content) {
+					await persistInterviewMessages(userMessage, partial);
+				}
+			}
+			return;
+		}
 		error = err instanceof Error ? err.message : 'An unexpected error occurred.';
 		messages = messages.filter((m) => m.id !== responseMessage.id);
 	} finally {
 		isStreaming = false;
 		abortController = null;
+	}
+}
+
+async function persistInterviewMessages(
+	userMessage: WorldBuilderMessage | undefined,
+	assistantMessage: WorldBuilderMessage
+): Promise<void> {
+	if (!interviewActLineId) return;
+
+	try {
+		if (userMessage) {
+			await dbMessages.createMessage(userMessage.id, userMessage.role, userMessage.content);
+			const userSeq = await dbActLines.getNextPremisesSequence(interviewActLineId);
+			await dbActLines.addMessageToPremises(interviewActLineId, userMessage.id, userSeq);
+		}
+
+		if (assistantMessage.content) {
+			await dbMessages.createMessage(assistantMessage.id, 'assistant', assistantMessage.content);
+			const assistantSeq = await dbActLines.getNextPremisesSequence(interviewActLineId);
+			await dbActLines.addMessageToPremises(interviewActLineId, assistantMessage.id, assistantSeq);
+		}
+	} catch (err) {
+		await log.error('interview', 'Failed to persist interview messages', err);
 	}
 }
 
@@ -215,7 +287,7 @@ async function streamWorldBuilderChat(
 	abortSignal: AbortSignal,
 	providerConfig: ProviderConfig
 ): Promise<StreamAccumulator> {
-	const fullSystemPrompt = buildFullSystemPrompt();
+	const fullSystemPrompt = actPlotInterview && interviewSystemPrompt ? interviewSystemPrompt : buildFullSystemPrompt();
 	const result = await Promise.all([
 		logWorldBuilderChat({
 			systemPrompt: fullSystemPrompt,

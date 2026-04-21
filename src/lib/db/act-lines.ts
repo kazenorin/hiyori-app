@@ -1,3 +1,4 @@
+import Database from '@tauri-apps/plugin-sql';
 import { getDatabase } from './database';
 import type { Message } from './messages';
 import { parseGameData } from './messages';
@@ -68,7 +69,7 @@ export async function getActLine(id: string): Promise<ActLineMeta | null> {
 
 export async function getActLinesForAct(actId: string): Promise<ActLineMeta[]> {
 	const db = getDatabase();
-	const rows = await db.select<ActLineMetaRow[]>('SELECT * FROM act_line_meta WHERE act_id = $1 ORDER BY created_at ASC', [actId]);
+	const rows = await db.select<ActLineMetaRow[]>('SELECT * FROM act_line_meta WHERE act_id = $1 ORDER BY created_at', [actId]);
 	return rows.map(rowToActLineMeta);
 }
 
@@ -77,7 +78,7 @@ export async function getMainLineForAct(actId: string): Promise<ActLineMeta | nu
 	const rows = await db.select<ActLineMetaRow[]>('SELECT * FROM act_line_meta WHERE act_id = $1 AND is_main_line = 1 LIMIT 1', [actId]);
 	if (rows.length > 0) return rowToActLineMeta(rows[0]);
 	// Fallback: return first by creation date
-	const fallback = await db.select<ActLineMetaRow[]>('SELECT * FROM act_line_meta WHERE act_id = $1 ORDER BY created_at ASC LIMIT 1', [
+	const fallback = await db.select<ActLineMetaRow[]>('SELECT * FROM act_line_meta WHERE act_id = $1 ORDER BY created_at LIMIT 1', [
 		actId,
 	]);
 	return fallback.length > 0 ? rowToActLineMeta(fallback[0]) : null;
@@ -103,7 +104,7 @@ export async function getMessagesForLine(actLineId: string): Promise<Message[]> 
 		FROM act_lines al
 		JOIN messages m ON al.message_id = m.id
 		WHERE al.act_line_id = $1
-		ORDER BY al.sequence ASC
+		ORDER BY al.sequence
 	`,
 		[actLineId]
 	);
@@ -139,12 +140,7 @@ export async function removeMessagesFromActLine(actLineId: string, messageIds: s
 		const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
 		await db.execute(`DELETE FROM act_lines WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [actLineId, ...messageIds]);
 
-		for (const msgId of messageIds) {
-			const refs = await db.select<{ cnt: number }[]>('SELECT COUNT(*) as cnt FROM act_lines WHERE message_id = $1', [msgId]);
-			if (refs[0].cnt === 0) {
-				await db.execute('DELETE FROM messages WHERE id = $1', [msgId]);
-			}
-		}
+		await removeOrphanedMessages(db, messageIds);
 
 		await db.execute('COMMIT');
 	} catch (err) {
@@ -171,7 +167,7 @@ export async function getMessageSequence(actLineId: string, messageId: string): 
 export async function getMessageIdsUpToSequence(actLineId: string, fromSequence: number): Promise<string[]> {
 	const db = getDatabase();
 	const rows = await db.select<{ message_id: string }[]>(
-		'SELECT message_id FROM act_lines WHERE act_line_id = $1 AND sequence <= $2 ORDER BY sequence ASC',
+		'SELECT message_id FROM act_lines WHERE act_line_id = $1 AND sequence <= $2 ORDER BY sequence',
 		[actLineId, fromSequence]
 	);
 	return rows.map((r) => r.message_id);
@@ -289,7 +285,7 @@ export async function branchFromLine(
 
 	// Copy entries up to fromSequence
 	const entries = await db.select<ActLineEntryRow[]>(
-		'SELECT * FROM act_lines WHERE act_line_id = $1 AND sequence <= $2 ORDER BY sequence ASC',
+		'SELECT * FROM act_lines WHERE act_line_id = $1 AND sequence <= $2 ORDER BY sequence',
 		[fromLineId, fromSequence]
 	);
 
@@ -310,4 +306,81 @@ export async function branchFromLine(
 	}
 
 	return lineMeta;
+}
+
+// === act_line_premises operations ===
+
+export async function addMessageToPremises(actLineId: string, messageId: string, sequence: number): Promise<void> {
+	const db = getDatabase();
+	await db.execute('INSERT INTO act_line_premises (act_line_id, message_id, sequence) VALUES ($1, $2, $3)', [
+		actLineId,
+		messageId,
+		sequence,
+	]);
+}
+
+export async function getPremisesMessages(actLineId: string): Promise<Message[]> {
+	const db = getDatabase();
+	const rows = await db.select<MessageInLine[]>(
+		`
+		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.game_data, m.created_at, p.sequence
+		FROM act_line_premises p
+		JOIN messages m ON p.message_id = m.id
+		WHERE p.act_line_id = $1
+		ORDER BY p.sequence
+	`,
+		[actLineId]
+	);
+
+	return rows.map((row) => ({
+		id: row.id,
+		role: row.role as 'user' | 'assistant',
+		content: row.content,
+		reasoning: row.reasoning ?? undefined,
+		metadata: row.metadata ?? undefined,
+		gameData: parseGameData(row.game_data),
+		createdAt: row.created_at,
+	}));
+}
+
+export async function getNextPremisesSequence(actLineId: string): Promise<number> {
+	const db = getDatabase();
+	const rows = await db.select<{ max: number | null }[]>('SELECT MAX(sequence) as max FROM act_line_premises WHERE act_line_id = $1', [
+		actLineId,
+	]);
+	return (rows[0]?.max ?? 0) + 1;
+}
+
+export async function removeMessagesFromPremises(actLineId: string, messageIds: string[]): Promise<void> {
+	if (messageIds.length === 0) return;
+	const db = getDatabase();
+
+	try {
+		await db.execute('BEGIN');
+
+		const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
+		await db.execute(`DELETE FROM act_line_premises WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [
+			actLineId,
+			...messageIds,
+		]);
+
+		await removeOrphanedMessages(db, messageIds);
+
+		await db.execute('COMMIT');
+	} catch (err) {
+		await db.execute('ROLLBACK');
+		throw err;
+	}
+}
+
+async function removeOrphanedMessages(db: Database, messageIds: string[]) {
+	for (const msgId of messageIds) {
+		const refsInLines = await db.select<{ cnt: number }[]>('SELECT COUNT(*) as cnt FROM act_lines WHERE message_id = $1', [msgId]);
+		const refsInPremises = await db.select<{ cnt: number }[]>('SELECT COUNT(*) as cnt FROM act_line_premises WHERE message_id = $1', [
+			msgId,
+		]);
+		if (refsInLines[0].cnt === 0 && refsInPremises[0].cnt === 0) {
+			await db.execute('DELETE FROM messages WHERE id = $1', [msgId]);
+		}
+	}
 }
