@@ -37,8 +37,8 @@ describe('migrations', () => {
 
 	it('runs all migrations and creates tables', async () => {
 		await runMigrations();
-		const tables = testDb._db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
-		const tableNames = tables.map((t: { name: string }) => t.name);
+		const tables = testDb._db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all() as Array<{ name: string }>;
+		const tableNames = tables.map((t) => t.name);
 		expect(tableNames).toContain('stories');
 		expect(tableNames).toContain('acts');
 		expect(tableNames).toContain('messages');

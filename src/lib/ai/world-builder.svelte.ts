@@ -6,7 +6,7 @@ import { type StreamAccumulator, type StreamState } from '$lib/ai/chat-callbacks
 import { streamChatResponse } from './chat-stream';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
-import type {Message} from "$lib/ai/chat.svelte";
+import type { Message } from '$lib/ai/chat.svelte';
 
 export interface WorldBuilderMessage {
 	id: string;
@@ -31,6 +31,8 @@ let logFilePath: string | null = null;
 let actPlotInterview = $state(false);
 let interviewActLineId: string | null = null;
 let interviewSystemPrompt: string | null = null;
+let interviewHiddenContext: { role: 'user' | 'assistant'; content: string }[] = [];
+let interviewWorldContent: string | null = null;
 
 // Cached prompts loaded once on enter
 let cachedSystemPrompt: string | null = null;
@@ -52,7 +54,7 @@ export function getStoryName(): string | null {
 	return storyName;
 }
 export function getWorldContent(): string | null {
-	return worldContent;
+	return actPlotInterview ? interviewWorldContent : worldContent;
 }
 export function getIsComplete(): boolean {
 	return isComplete;
@@ -82,6 +84,8 @@ function resetState(): void {
 	actPlotInterview = false;
 	interviewActLineId = null;
 	interviewSystemPrompt = null;
+	interviewHiddenContext = [];
+	interviewWorldContent = null;
 }
 
 export function exitWorldBuilderMode(): void {
@@ -134,25 +138,29 @@ export async function enterWorldBuilderMode(): Promise<void> {
 	await streamNextResponse();
 }
 
-export async function enterActPlotInterviewMode(actLineId: string, systemPrompt: string): Promise<void> {
+export async function enterActPlotInterviewMode(actLineId: string, systemPrompt: string, worldContent: string): Promise<void> {
+	// Preserve world content before reset clears it
+	interviewWorldContent = worldContent;
+
 	// Reset world builder state but keep isActive true
 	resetState();
 	isActive = true;
 	actPlotInterview = true;
 	interviewActLineId = actLineId;
 	interviewSystemPrompt = systemPrompt;
+	interviewWorldContent = worldContent;
 
 	// Load interview extraction prompt
 	const interviewPrompt = await loadInterviewExtractionPrompt();
 
-	// Send the interview prompt as the first message (hidden user message to guide narrator)
-	const seedMessage: WorldBuilderMessage = {
-		id: crypto.randomUUID(),
-		role: 'user',
-		content: interviewPrompt,
-	};
+	// Build hidden context (invisible to user, sent to LLM every turn)
+	interviewHiddenContext = [
+		{ role: 'user', content: `The following is the world setting for the story:\n\n---\n\n${worldContent}` },
+		{ role: 'user', content: interviewPrompt },
+	];
 
-	await streamNextResponse(seedMessage);
+	// Start streaming without a visible seed message
+	await streamNextResponse();
 }
 
 export async function sendWorldBuilderMessage(text: string): Promise<void> {
@@ -281,6 +289,20 @@ async function persistInterviewMessages(
 	}
 }
 
+/**
+ * Remove the last persisted assistant message from act_line_premises.
+ * Called before starting the game so the GM's final "ready to start" message
+ * doesn't pollute the interview transcript used for act-plot generation.
+ */
+export async function removeLastInterviewAssistantMessage(): Promise<void> {
+	if (!interviewActLineId) return;
+
+	const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
+	if (!lastAssistant) return;
+
+	await dbActLines.removeMessagesFromPremises(interviewActLineId, [lastAssistant.id]);
+}
+
 async function streamWorldBuilderChat(
 	history: { role: 'user' | 'assistant'; content: string }[],
 	messageIdx: number,
@@ -288,15 +310,17 @@ async function streamWorldBuilderChat(
 	providerConfig: ProviderConfig
 ): Promise<StreamAccumulator> {
 	const fullSystemPrompt = actPlotInterview && interviewSystemPrompt ? interviewSystemPrompt : buildFullSystemPrompt();
+	// Prepend hidden context for interview mode (invisible to user, but sent to LLM)
+	const llmHistory = actPlotInterview ? [...interviewHiddenContext, ...history] : history;
 	const result = await Promise.all([
 		logWorldBuilderChat({
 			systemPrompt: fullSystemPrompt,
-			messages: history,
+			messages: llmHistory,
 			logFilename: logFilePath ?? undefined,
 		}),
 		streamChatResponse(
 			fullSystemPrompt,
-			history,
+			llmHistory,
 			abortSignal,
 			(state: StreamState) => {
 				messages[messageIdx] = { ...messages[messageIdx], content: state.content };

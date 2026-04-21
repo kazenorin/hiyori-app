@@ -26,6 +26,7 @@
 		getStoryName as getWorldBuilderStoryName,
 		getWorldContent as getWorldBuilderContent,
 		regenerateLastWorldBuilderResponse,
+		removeLastInterviewAssistantMessage,
 		sendWorldBuilderMessage,
 		stopStreaming as stopWorldBuilderStreaming,
 	} from '$lib/ai/world-builder.svelte';
@@ -218,7 +219,13 @@
 			}
 
 			const systemPrompt = await getActiveSystemPromptOrDefault();
-			await enterActPlotInterviewMode(refs.actLineId, systemPrompt);
+			const worldContent = getWorldBuilderContent();
+			if (!worldContent) {
+				createStoryError = 'World content not available';
+				isCreatingStory = false;
+				return;
+			}
+			await enterActPlotInterviewMode(refs.actLineId, systemPrompt, worldContent);
 		} catch (err) {
 			createStoryError = err instanceof Error ? err.message : 'Failed to start interview';
 		} finally {
@@ -234,6 +241,8 @@
 		createStoryError = null;
 
 		try {
+			await removeLastInterviewAssistantMessage();
+
 			const worldContent = getWorldBuilderContent();
 			if (worldContent) {
 				await startGame(refs.story.id, refs.story.name, refs.actLineId, worldContent);
@@ -450,6 +459,29 @@
 					{/if}
 				{/if}
 
+				{#if getActPlotInterview() && !getIsWorldBuilderStreaming()}
+					{#if isCreatingStory}
+						<div class="rounded-(--radius-container) bg-success-100-900 p-6 text-center space-y-3">
+							<div class="flex items-center justify-center gap-3">
+								<span class="inline-block w-4 h-4 border-2 border-surface-400 border-t-transparent rounded-full animate-spin"></span>
+								<span class="text-sm text-success-700-300">Generating act plot and starting the game...</span>
+							</div>
+						</div>
+					{:else if createStoryError}
+						<div class="rounded-(--radius-container) bg-error-100-900 p-4">
+							<p class="text-sm text-error-700-300">{createStoryError}</p>
+						</div>
+					{:else}
+						<div class="flex justify-center">
+							<button
+								class="btn preset-filled-success-500"
+								type="button"
+								onclick={handleStartGameAfterInterview}
+							> Start Game </button>
+						</div>
+					{/if}
+				{/if}
+
 				{#if getWorldBuilderError()}
 					<div class="rounded-(--radius-container) bg-error-100-900 p-4">
 						<p class="text-sm text-error-700-300">{getWorldBuilderError()}</p>
@@ -477,11 +509,9 @@
 			></textarea>
 
 			<div class="mt-3">
-				{#if getActPlotInterview() && !isCreatingStory}
-					<button class="btn preset-filled-success-500 w-full" type="button" onclick={handleStartGameAfterInterview}> Start Game</button>
-				{:else if getIsWorldBuilderStreaming()}
+				{#if getIsWorldBuilderStreaming()}
 					<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopWorldBuilderStreaming}> Stop </button>
-				{:else if !getIsWorldBuilderComplete() && !getActPlotInterview()}
+				{:else if !getIsWorldBuilderComplete() || getActPlotInterview()}
 					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> Send </button>
 				{/if}
 			</div>
