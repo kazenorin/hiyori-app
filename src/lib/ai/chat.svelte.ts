@@ -1,18 +1,20 @@
-import { getMainProviderConfig, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
-import { getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
-import type { GameData } from '$lib/db/messages';
-import type { ModelMessage } from 'ai';
+import {getMainProviderConfig, getMemoryProviderConfig, settings} from '$lib/stores/settings.svelte';
+import {getActiveStoryId, getActiveSystemPromptOrDefault} from '$lib/stores/stories.svelte';
+import type {GameData} from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
+import type {ModelMessage} from 'ai';
 import * as dbActLines from '$lib/db/act-lines';
-import { logMainChat } from '$lib/logging/chat-logger';
-import { type StreamState } from '$lib/ai/chat-callbacks';
-import { buildMetadata, type MessageMetadata, streamChatResponse } from './chat-stream';
-import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
-import { Memory } from '$lib/memory/memory';
-import { streamReview } from '$lib/reviewer/review-loop';
-import { log } from '$lib/logging/logger';
-import { getActiveStoryId } from '$lib/stores/stories.svelte';
-import { buildTools } from '$lib/ai/tools/tools';
+import {logMainChat} from '$lib/logging/chat-logger';
+import {type StreamState} from '$lib/ai/chat-callbacks';
+import {buildMetadata, type MessageMetadata, streamChatResponse} from './chat-stream';
+import {runMemoryExtractionPipeline} from './memory-extraction-pipeline';
+import {Memory} from '$lib/memory/memory';
+import {streamReview} from '$lib/reviewer/review-loop';
+import {log} from '$lib/logging/logger';
+import {buildTools} from '$lib/ai/tools/tools';
+
+const SCENE_NUMBER_REGEX = /scene\s+(\d+)/i;
+const SESSION_NUMBER_REGEX = /session\s+(\d+)/i;
 
 export interface Message {
 	id: string;
@@ -78,6 +80,20 @@ function parseMetadata(raw: string | undefined | null): MessageMetadata | undefi
 	} catch {
 		return undefined;
 	}
+}
+
+function findLastNonNullSceneNumber(): number | undefined {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		if (messages[i].sceneNumber != null) return messages[i].sceneNumber;
+	}
+	return undefined;
+}
+
+function findLastNonNullSessionNumber(): number | undefined {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		if (messages[i].sessionNumber != null) return messages[i].sessionNumber;
+	}
+	return undefined;
 }
 
 function narrowNarrationMessage(msg: ModelMessage): { role: 'user' | 'assistant'; content: string } | null {
@@ -173,14 +189,27 @@ export async function sendMessage(
 	};
 
 	if (!!message.bodyText && message.bodyText.trim().length > 0) {
+		const userSessionNumber = message.sessionNumber ?? findLastNonNullSessionNumber();
+		const userSceneNumber = findLastNonNullSceneNumber();
 		const userMessage: Message = {
 			id: crypto.randomUUID(),
 			role: 'user',
 			content: message.bodyText,
+			sessionNumber: userSessionNumber,
+			sceneNumber: userSceneNumber,
 		};
 
 		// Persist user message
-		await dbMessages.createMessage(userMessage.id, userMessage.role, userMessage.content);
+		await dbMessages.createMessage(
+			userMessage.id,
+			userMessage.role,
+			userMessage.content,
+			undefined,
+			undefined,
+			undefined,
+			userSceneNumber,
+			userSessionNumber
+		);
 		const userSeq = await dbActLines.getNextSequence(actLineId);
 		await dbActLines.addMessageToLine(actLineId, userMessage.id, userSeq);
 
@@ -278,6 +307,9 @@ export async function sendMessage(
 			}
 		}
 
+		// Determine sceneNumber and sessionNumber for the assistant response
+		determineSceneNumberAndNextSessionNumber(messageIdx, message.sessionNumber);
+
 		// Persist with accumulated content (not result.content)
 		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({ systemPrompt, messages })]);
 
@@ -289,6 +321,34 @@ export async function sendMessage(
 		isStreaming = false;
 		abortController = null;
 	}
+}
+
+function determineSceneNumberAndNextSessionNumber(messageIdx: number, explicitSessionNumber?: number): void {
+	const content = messages[messageIdx].content;
+
+	const lastSessionNumber = findLastNonNullSessionNumber();
+	const sessionNumber =
+		lastSessionNumber != null
+			? lastSessionNumber + 1
+			: (explicitSessionNumber ?? parseSessionNumber(content) ?? 1);
+
+	const sceneNumber = parseSceneNumber(content);
+
+	messages[messageIdx] = {
+		...messages[messageIdx],
+		sceneNumber,
+		sessionNumber,
+	};
+}
+
+function parseSessionNumber(content: string): number | undefined {
+	const match = SESSION_NUMBER_REGEX.exec(content);
+	return match ? parseInt(match[1], 10) : undefined;
+}
+
+function parseSceneNumber(content: string): number | undefined {
+	const match = SCENE_NUMBER_REGEX.exec(content);
+	return match ? parseInt(match[1], 10) : undefined;
 }
 
 function toHistoryMessage(message: Message): { role: 'user' | 'assistant'; content: string } {
