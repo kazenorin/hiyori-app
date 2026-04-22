@@ -176,8 +176,8 @@ describe('act-lines operations', () => {
 	});
 
 	it('adds and retrieves messages for a line', async () => {
-		await messages.createMessage('msg-1', 'user', 'Hello');
-		await messages.createMessage('msg-2', 'assistant', 'Hi');
+		await messages.createMessage({id: 'msg-1', role: 'user', content: 'Hello'});
+		await messages.createMessage({id: 'msg-2', role: 'assistant', content: 'Hi'});
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
 		await actLines.addMessageToLine('line-1', 'msg-2', 2);
 
@@ -188,15 +188,15 @@ describe('act-lines operations', () => {
 	});
 
 	it('gets next sequence number', async () => {
-		await messages.createMessage('msg-1', 'user', 'test');
+		await messages.createMessage({id: 'msg-1', role: 'user', content: 'test'});
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
 		expect(await actLines.getNextSequence('line-1')).toBe(2);
 	});
 
 	it('removes specified messages from act line', async () => {
-		await messages.createMessage('msg-1', 'user', 'Keep');
-		await messages.createMessage('msg-2', 'assistant', 'Remove');
-		await messages.createMessage('msg-3', 'user', 'Also remove');
+		await messages.createMessage({id: 'msg-1', role: 'user', content: 'Keep'});
+		await messages.createMessage({id: 'msg-2', role: 'assistant', content: 'Remove'});
+		await messages.createMessage({id: 'msg-3', role: 'user', content: 'Also remove'});
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
 		await actLines.addMessageToLine('line-1', 'msg-2', 2);
 		await actLines.addMessageToLine('line-1', 'msg-3', 3);
@@ -208,7 +208,7 @@ describe('act-lines operations', () => {
 	});
 
 	it('does nothing when messageIds is empty', async () => {
-		await messages.createMessage('msg-1', 'user', 'Keep');
+		await messages.createMessage({id: 'msg-1', role: 'user', content: 'Keep'});
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
 
 		await actLines.removeMessagesFromActLine('line-1', []);
@@ -218,11 +218,11 @@ describe('act-lines operations', () => {
 
 	it('does not delete shared message when other line still references it', async () => {
 		// Create shared messages
-		await messages.createMessage('msg-1', 'user', 'Shared User');
-		await messages.createMessage('msg-2', 'assistant', 'Shared Assistant', undefined, undefined, {
+		await messages.createMessage({id: 'msg-1', role: 'user', content: 'Shared User'});
+		await messages.createMessage({id: 'msg-2', role: 'assistant', content: 'Shared Assistant', gameData: {
 			worldState: 'State',
 			decisions: ['A', 'B'],
-		});
+		}});
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
 		await actLines.addMessageToLine('line-1', 'msg-2', 2);
 
@@ -230,7 +230,7 @@ describe('act-lines operations', () => {
 		await actLines.branchFromLine('line-2', 'line-1', 2, 'act-1', 'fork');
 
 		// Add extra message to line-1 only
-		await messages.createMessage('msg-3', 'assistant', 'Only on line-1');
+		await messages.createMessage({id: 'msg-3', role: 'assistant', content: 'Only on line-1'});
 		await actLines.addMessageToLine('line-1', 'msg-3', 3);
 
 		// Remove msg-3 from line-1 (should delete msg-3, but NOT msg-2 since line-2 still references it)
@@ -256,7 +256,7 @@ describe('act-lines operations', () => {
 	});
 
 	it('deletes message when no other line references it', async () => {
-		await messages.createMessage('msg-1', 'user', 'Solo');
+		await messages.createMessage({id: 'msg-1', role: 'user', content: 'Solo'});
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
 
 		await actLines.removeMessagesFromActLine('line-1', ['msg-1']);
@@ -265,10 +265,10 @@ describe('act-lines operations', () => {
 	});
 
 	it('preserves game data for shared messages after delete on one line', async () => {
-		await messages.createMessage('msg-1', 'assistant', 'Content', undefined, undefined, {
+		await messages.createMessage({id: 'msg-1', role: 'assistant', content: 'Content', gameData: {
 			worldState: 'World',
 			decisions: ['X'],
-		});
+		}});
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
 		await actLines.addMessageToLine('line-2', 'msg-1', 1);
 
@@ -286,9 +286,9 @@ describe('act-lines operations', () => {
 	});
 
 	it('branches from a line copying messages up to sequence', async () => {
-		await messages.createMessage('msg-1', 'user', 'Q1');
-		await messages.createMessage('msg-2', 'assistant', 'A1');
-		await messages.createMessage('msg-3', 'user', 'Q2');
+		await messages.createMessage({id: 'msg-1', role: 'user', content: 'Q1'});
+		await messages.createMessage({id: 'msg-2', role: 'assistant', content: 'A1'});
+		await messages.createMessage({id: 'msg-3', role: 'user', content: 'Q2'});
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
 		await actLines.addMessageToLine('line-1', 'msg-2', 2);
 		await actLines.addMessageToLine('line-1', 'msg-3', 3);
@@ -326,7 +326,7 @@ describe('act-lines operations', () => {
 	});
 
 	it('gets message sequence for a message in a line', async () => {
-		await messages.createMessage('msg-1', 'user', 'test');
+		await messages.createMessage({id: 'msg-1', role: 'user', content: 'test'});
 		await actLines.addMessageToLine('line-1', 'msg-1', 5);
 		expect(await actLines.getMessageSequence('line-1', 'msg-1')).toBe(5);
 	});
@@ -362,8 +362,8 @@ describe('act_line_premises operations', () => {
 
 	it('adds and retrieves messages for premises', async () => {
 		await actLines.createActLine('line-1', 'act-1', 'main', true);
-		await messages.createMessage('msg-1', 'assistant', 'What kind of story?');
-		await messages.createMessage('msg-2', 'user', 'A mystery thriller');
+		await messages.createMessage({id: 'msg-1', role: 'assistant', content: 'What kind of story?'});
+		await messages.createMessage({id: 'msg-2', role: 'user', content: 'A mystery thriller'});
 		await actLines.addMessageToPremises('line-1', 'msg-1', 1);
 		await actLines.addMessageToPremises('line-1', 'msg-2', 2);
 
@@ -380,7 +380,7 @@ describe('act_line_premises operations', () => {
 	});
 
 	it('gets next premises sequence', async () => {
-		await messages.createMessage('msg-1', 'user', 'test');
+		await messages.createMessage({id: 'msg-1', role: 'user', content: 'test'});
 		await actLines.addMessageToPremises('line-1', 'msg-1', 1);
 		expect(await actLines.getNextPremisesSequence('line-1')).toBe(2);
 	});
@@ -390,8 +390,8 @@ describe('act_line_premises operations', () => {
 	});
 
 	it('removes messages from premises', async () => {
-		await messages.createMessage('msg-1', 'user', 'Keep');
-		await messages.createMessage('msg-2', 'assistant', 'Remove');
+		await messages.createMessage({id: 'msg-1', role: 'user', content: 'Keep'});
+		await messages.createMessage({id: 'msg-2', role: 'assistant', content: 'Remove'});
 		await actLines.addMessageToPremises('line-1', 'msg-1', 1);
 		await actLines.addMessageToPremises('line-1', 'msg-2', 2);
 
@@ -403,7 +403,7 @@ describe('act_line_premises operations', () => {
 
 	it('does not delete message when act_lines still references it', async () => {
 		await actLines.createActLine('line-1', 'act-1', 'main', true);
-		await messages.createMessage('msg-1', 'user', 'Shared');
+		await messages.createMessage({id: 'msg-1', role: 'user', content: 'Shared'});
 		await actLines.addMessageToPremises('line-1', 'msg-1', 1);
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
 
@@ -414,7 +414,7 @@ describe('act_line_premises operations', () => {
 	});
 
 	it('deletes message when only premises referenced it', async () => {
-		await messages.createMessage('msg-1', 'user', 'Only premises');
+		await messages.createMessage({id: 'msg-1', role: 'user', content: 'Only premises'});
 		await actLines.addMessageToPremises('line-1', 'msg-1', 1);
 
 		await actLines.removeMessagesFromPremises('line-1', ['msg-1']);
@@ -423,7 +423,7 @@ describe('act_line_premises operations', () => {
 	});
 
 	it('does nothing when messageIds is empty', async () => {
-		await messages.createMessage('msg-1', 'user', 'Keep');
+		await messages.createMessage({id: 'msg-1', role: 'user', content: 'Keep'});
 		await actLines.addMessageToPremises('line-1', 'msg-1', 1);
 
 		await actLines.removeMessagesFromPremises('line-1', []);
@@ -443,13 +443,13 @@ describe('messages CRUD', () => {
 	});
 
 	it('creates and retrieves a message', async () => {
-		const msg = await messages.createMessage('msg-1', 'assistant', 'Reply', 'thinking...', '{"model":"gpt-4"}');
+		const msg = await messages.createMessage({id: 'msg-1', role: 'assistant', content: 'Reply', reasoning: 'thinking...', metadata: '{"model":"gpt-4"}'});
 		expect(msg.content).toBe('Reply');
 		expect(msg.reasoning).toBe('thinking...');
 	});
 
 	it('deletes a message', async () => {
-		await messages.createMessage('msg-1', 'user', 'Hello');
+		await messages.createMessage({id: 'msg-1', role: 'user', content: 'Hello'});
 		await messages.deleteMessage('msg-1');
 		expect(await messages.getMessage('msg-1')).toBeNull();
 	});

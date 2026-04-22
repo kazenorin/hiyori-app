@@ -111,16 +111,16 @@ function narrowNarrationMessage(msg: ModelMessage): { role: 'user' | 'assistant'
 }
 
 async function persistMessage(actLineId: string, message: Message): Promise<void> {
-	await dbMessages.createMessage(
-		message.id,
-		'assistant',
-		message.content,
-		message.reasoning,
-		message.metadata ? JSON.stringify(message.metadata) : undefined,
-		message.gameData,
-		message.sceneNumber,
-		message.sessionNumber
-	);
+	await dbMessages.createMessage({
+		id: message.id,
+		role: 'assistant',
+		content: message.content,
+		reasoning: message.reasoning,
+		metadata: message.metadata ? JSON.stringify(message.metadata) : undefined,
+		gameData: message.gameData,
+		sceneNumber: message.sceneNumber,
+		sessionNumber: message.sessionNumber,
+	});
 	const seq = await dbActLines.getNextSequence(actLineId);
 	await dbActLines.addMessageToLine(actLineId, message.id, seq);
 }
@@ -200,16 +200,13 @@ export async function sendMessage(
 		};
 
 		// Persist user message
-		await dbMessages.createMessage(
-			userMessage.id,
-			userMessage.role,
-			userMessage.content,
-			undefined,
-			undefined,
-			undefined,
-			userSceneNumber,
-			userSessionNumber
-		);
+		await dbMessages.createMessage({
+			id: userMessage.id,
+			role: userMessage.role,
+			content: userMessage.content,
+			sceneNumber: userSceneNumber,
+			sessionNumber: userSessionNumber,
+		});
 		const userSeq = await dbActLines.getNextSequence(actLineId);
 		await dbActLines.addMessageToLine(actLineId, userMessage.id, userSeq);
 

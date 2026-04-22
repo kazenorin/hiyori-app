@@ -274,13 +274,13 @@ async function persistInterviewMessages(
 
 	try {
 		if (userMessage) {
-			await dbMessages.createMessage(userMessage.id, userMessage.role, userMessage.content);
+			await dbMessages.createMessage({id: userMessage.id, role: userMessage.role, content: userMessage.content});
 			const userSeq = await dbActLines.getNextPremisesSequence(interviewActLineId);
 			await dbActLines.addMessageToPremises(interviewActLineId, userMessage.id, userSeq);
 		}
 
 		if (assistantMessage.content) {
-			await dbMessages.createMessage(assistantMessage.id, 'assistant', assistantMessage.content);
+			await dbMessages.createMessage({id: assistantMessage.id, role: 'assistant', content: assistantMessage.content});
 			const assistantSeq = await dbActLines.getNextPremisesSequence(interviewActLineId);
 			await dbActLines.addMessageToPremises(interviewActLineId, assistantMessage.id, assistantSeq);
 		}

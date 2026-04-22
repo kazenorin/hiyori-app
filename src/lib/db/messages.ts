@@ -62,44 +62,25 @@ function rowToMessage(row: MessageRow): Message {
 	};
 }
 
-export async function createMessage(
-	id: string,
-	role: 'user' | 'assistant',
-	content: string,
-	reasoning?: string,
-	metadata?: string,
-	gameData?: GameData,
-	sceneNumber?: number,
-	sessionNumber?: number
-): Promise<Message> {
+export async function createMessage(message: Omit<Message, 'createdAt'>): Promise<Message> {
 	const db = getDatabase();
 	const now = Date.now();
 	await db.execute(
 		`INSERT INTO messages (id, role, content, reasoning, metadata, game_data, scene_number, session_number, created_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		[
-			id,
-			role,
-			content,
-			reasoning ?? null,
-			metadata ?? null,
-			gameData ? JSON.stringify(gameData) : null,
-			sceneNumber ?? null,
-			sessionNumber ?? null,
+			message.id,
+			message.role,
+			message.content,
+			message.reasoning ?? null,
+			message.metadata ?? null,
+			message.gameData ? JSON.stringify(message.gameData) : null,
+			message.sceneNumber ?? null,
+			message.sessionNumber ?? null,
 			now,
 		]
 	);
-	return {
-		id,
-		role,
-		content,
-		reasoning,
-		metadata,
-		gameData,
-		sceneNumber,
-		sessionNumber,
-		createdAt: now,
-	};
+	return { ...message, createdAt: now };
 }
 
 export async function getMessage(id: string): Promise<Message | null> {

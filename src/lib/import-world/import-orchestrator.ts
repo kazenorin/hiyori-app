@@ -443,7 +443,14 @@ async function createMessagesFromParsed(
 		const messageId = crypto.randomUUID();
 
 		try {
-			await createMessage(messageId, msg.role, msg.content, msg.reasoning, msg.metadata, msg.gameData);
+			await createMessage({
+				id: messageId,
+				role: msg.role,
+				content: msg.content,
+				reasoning: msg.reasoning,
+				metadata: msg.metadata,
+				gameData: msg.gameData,
+			});
 
 			await addMessageToLine(actLineId, messageId, sequence++);
 			messageIds.push(messageId);
