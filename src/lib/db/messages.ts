@@ -3,6 +3,8 @@ import { getDatabase } from './database';
 export interface GameData {
 	worldState: string;
 	decisions: string[];
+	playerAliases?: string[];
+	aliases?: string[][];
 }
 
 export interface MessageBase {
@@ -43,7 +45,17 @@ export function parseGameData(raw: string | null): GameData | undefined {
 			Array.isArray(parsed.decisions) &&
 			parsed.decisions.every((d: unknown) => typeof d === 'string')
 		) {
-			return { worldState: parsed.worldState, decisions: parsed.decisions };
+			const result: GameData = { worldState: parsed.worldState, decisions: parsed.decisions };
+			if (Array.isArray(parsed.playerAliases) && parsed.playerAliases.every((d: unknown) => typeof d === 'string')) {
+				result.playerAliases = parsed.playerAliases;
+			}
+			if (
+				Array.isArray(parsed.aliases) &&
+				parsed.aliases.every((a: unknown) => Array.isArray(a) && (a as unknown[]).every((d: unknown) => typeof d === 'string'))
+			) {
+				result.aliases = parsed.aliases;
+			}
+			return result;
 		}
 		return undefined;
 	} catch {
