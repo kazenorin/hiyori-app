@@ -1,21 +1,19 @@
-import {getMainProviderConfig, getMemoryProviderConfig, type ProviderConfig, settings} from '$lib/stores/settings.svelte';
+import {getMainProviderConfig, getMemoryProviderConfig, type ProviderConfig, SCENE_NUMBER_REGEX, SESSION_NUMBER_REGEX, settings} from '$lib/stores/settings.svelte';
 import {getActiveStoryId, getActiveSystemPromptOrDefault} from '$lib/stores/stories.svelte';
 import type {GameData} from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
-import type {ModelMessage, ToolSet} from 'ai';
+import type {ModelMessage} from 'ai';
 import * as dbActLines from '$lib/db/act-lines';
 import {logMainChat} from '$lib/logging/chat-logger';
 import {type StreamState} from '$lib/ai/chat-callbacks';
 import {buildMetadata, type MessageMetadata, streamChatResponse} from './chat-stream';
 import {runMemoryExtractionPipeline} from './memory-extraction-pipeline';
 import {Memory} from '$lib/memory/memory';
-import {streamReview} from '$lib/reviewer/review-loop';
+import {runReviewLoop} from '$lib/reviewer/review-loop';
 import {log} from '$lib/logging/logger';
 import {buildTools} from '$lib/ai/tools/tools';
 import type {StreamResultMetadata} from "$lib/ai/streaming";
 
-const SCENE_NUMBER_REGEX = /scene\s+(\d+)/i;
-const SESSION_NUMBER_REGEX = /session\s+(\d+)/i;
 
 export interface Message {
 	id: string;
@@ -299,7 +297,7 @@ export async function sendMessage(
 		// Review loop: run editor mode, revise if needed
 		if (settings.reviewerEnabled) {
 			const sessionNumber = message.sessionNumber ?? findLastNonNullSessionNumber()
-			const reviewedMetadata = await runReviewLoop(getCurrentMessage, setCurrentMessage, history, {sessionNumber, tools});
+			const reviewedMetadata = await runReviewLoop(getCurrentMessage, (msg) => setCurrentMessage(msg as Message), history, {sessionNumber, tools});
 			updateMetaData(getCurrentMessage, reviewedMetadata, providerConfig);
 		}
 
@@ -319,67 +317,7 @@ export async function sendMessage(
 	}
 }
 
-function getPreprocessedContent(draftMessage: Message, options: ReviewLoopOptions): string {
-	let baseContent = draftMessage.draftContent ?? draftMessage.content;
 
-	// replace session number:
-	if (options.sessionNumber) {
-		const expectedNextSessionNumber = options.sessionNumber + 1;
-
-		baseContent = baseContent.replace(SESSION_NUMBER_REGEX, (match, p1) => {
-			return match.replace(p1, expectedNextSessionNumber.toString());
-		});
-	}
-
-	return baseContent;
-}
-
-interface ReviewLoopOptions {
-	sessionNumber?: number;
-	tools?: ToolSet;
-}
-
-async function runReviewLoop(
-	getCurrentMessage: () => Message,
-	setCurrentMessage: (message: Message) => void,
-	history: { role: 'user' | 'assistant'; content: string }[],
-	options: ReviewLoopOptions,
-): Promise<StreamResultMetadata | null> {
-	const draftMessage = getCurrentMessage();
-	const draftContent = getPreprocessedContent(draftMessage, options);
-
-	const historyWithDraft: { role: 'user' | 'assistant'; content: string }[] = [
-		...history,
-		{role: 'assistant', content: draftContent},
-	];
-
-	const reviewResult = await streamReview(
-		historyWithDraft,
-		(state: StreamState) => {
-			const currentMessage = getCurrentMessage();
-			setCurrentMessage({
-				...currentMessage,
-				content: state.revisedNarrative ?? currentMessage.content,
-				reviewScratchpad: state.reviewScratchpad ?? currentMessage.reviewScratchpad,
-				reasoning: state.reasoning ?? currentMessage.reasoning,
-				gameData: state.gameData ?? currentMessage.gameData,
-			});
-		},
-		options.tools
-	);
-
-	if (reviewResult) {
-		return reviewResult.resultMetadata;
-	} else {
-		setCurrentMessage({
-			...draftMessage,
-			draftContent: undefined,
-			reviewScratchpad: undefined,
-			content: draftContent,
-		});
-		return null;
-	}
-}
 
 function determineSceneNumberAndNextSessionNumber(messageIdx: number, explicitSessionNumber?: number): void {
 	const content = messages[messageIdx].content;

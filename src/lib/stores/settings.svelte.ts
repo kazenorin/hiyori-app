@@ -1,6 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
 import { omitBy } from 'lodash';
 
+export const SCENE_NUMBER_REGEX = /scene\s+(\d+)/i;
+export const SESSION_NUMBER_REGEX = /session\s+(\d+)/i;
+
 export type Provider = 'openai' | 'openai-compatible';
 export type ApiType = 'chat-completions' | 'responses';
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
@@ -111,6 +114,7 @@ function persist(): void {
 	}
 }
 
+// eslint-disable-next-line prefer-const -- $state requires let
 export let settings = $state<Settings>(loadSettings());
 
 /** Apply initial font size preference when store is initialized */
