@@ -130,8 +130,8 @@ export async function deleteLineEntries(actLineId: string): Promise<void> {
 	await db.execute('DELETE FROM act_lines WHERE act_line_id = $1', [actLineId]);
 }
 
-export async function removeMessagesFromActLine(actLineId: string, messageIds: string[]): Promise<void> {
-	if (messageIds.length === 0) return;
+export async function removeMessagesFromActLine(actLineId: string, messageIds: string[]): Promise<string[]> {
+	if (messageIds.length === 0) return [];
 	const db = getDatabase();
 
 	try {
@@ -143,6 +143,7 @@ export async function removeMessagesFromActLine(actLineId: string, messageIds: s
 		await removeOrphanedMessages(db, messageIds);
 
 		await db.execute('COMMIT');
+		return messageIds;
 	} catch (err) {
 		await db.execute('ROLLBACK');
 		throw err;
@@ -351,8 +352,8 @@ export async function getNextPremisesSequence(actLineId: string): Promise<number
 	return (rows[0]?.max ?? 0) + 1;
 }
 
-export async function removeMessagesFromPremises(actLineId: string, messageIds: string[]): Promise<void> {
-	if (messageIds.length === 0) return;
+export async function removeMessagesFromPremises(actLineId: string, messageIds: string[]): Promise<string[]> {
+	if (messageIds.length === 0) return [];
 	const db = getDatabase();
 
 	try {
@@ -367,13 +368,15 @@ export async function removeMessagesFromPremises(actLineId: string, messageIds: 
 		await removeOrphanedMessages(db, messageIds);
 
 		await db.execute('COMMIT');
+		return messageIds;
 	} catch (err) {
 		await db.execute('ROLLBACK');
 		throw err;
 	}
 }
 
-async function removeOrphanedMessages(db: Database, messageIds: string[]) {
+async function removeOrphanedMessages(db: Database, messageIds: string[]): Promise<string[]> {
+	const deleted: string[] = [];
 	for (const msgId of messageIds) {
 		const refsInLines = await db.select<{ cnt: number }[]>('SELECT COUNT(*) as cnt FROM act_lines WHERE message_id = $1', [msgId]);
 		const refsInPremises = await db.select<{ cnt: number }[]>('SELECT COUNT(*) as cnt FROM act_line_premises WHERE message_id = $1', [
@@ -381,6 +384,8 @@ async function removeOrphanedMessages(db: Database, messageIds: string[]) {
 		]);
 		if (refsInLines[0].cnt === 0 && refsInPremises[0].cnt === 0) {
 			await db.execute('DELETE FROM messages WHERE id = $1', [msgId]);
+			deleted.push(msgId);
 		}
 	}
+	return deleted;
 }

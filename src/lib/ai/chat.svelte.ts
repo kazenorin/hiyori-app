@@ -376,28 +376,54 @@ export async function sendInitialNarration(actLineId: string, narrationContent: 
 	});
 }
 
-export async function regenerateLastResponse(actLineId: string, narrationContent: ModelMessage[], systemPrompt?: string): Promise<void> {
+export async function regenerateLastResponse(actLineId: string, messageId: string, narrationContent: ModelMessage[], systemPrompt?: string): Promise<void> {
 	const currentMessages = [...messages];
 	const lastAssistantMsgIdx = currentMessages.findLastIndex((m) => m.role === 'assistant');
 	if (lastAssistantMsgIdx === -1) return;
 
 	const messageIdsToRemove = messages.slice(lastAssistantMsgIdx).map((m) => m.id);
-	messages = messages.slice(0, lastAssistantMsgIdx);
 
-	try {
-		await dbActLines.removeMessagesFromActLine(actLineId, messageIdsToRemove);
-	} catch (err) {
-		await log.error('delete-last-exchange', 'Message removal failed', err);
+	const targetMessageIdx = currentMessages.findIndex((m) => m.id === messageId);
+	if (messageIdsToRemove.length !== 1 || targetMessageIdx !== lastAssistantMsgIdx) {
+		error = 'Message state is stale, reloading messages from database.';
+		await loadActLineMessages(actLineId);
 		return;
 	}
 
+	messages = messages.slice(0, lastAssistantMsgIdx);
+
+	// Send new response first (persists to DB), then remove old messages
 	try {
-		await removeMemoriesFromActLine(actLineId, messageIdsToRemove);
+		await sendMessage(actLineId, { bodyText: undefined, systemPrompt: systemPrompt, narrationContent: narrationContent });
 	} catch (err) {
-		await log.error('regenerate-last-response', 'Memory cleanup failed', err);
+		await log.error('regenerate-last-response', 'Failed to regenerate response', err);
+		await loadActLineMessages(actLineId);
+		return;
 	}
 
-	await sendMessage(actLineId, { bodyText: undefined, systemPrompt: systemPrompt, narrationContent: narrationContent });
+	// Check the NEW message content (last message in array after sendMessage)
+	const newMessage = messages.at(-1);
+	if (!newMessage?.content) {
+		error = 'Regenerated message is empty, reloading messages from database.';
+		await loadActLineMessages(actLineId);
+		return;
+	}
+
+	let removedIds: string[] = [];
+	try {
+		removedIds = await dbActLines.removeMessagesFromActLine(actLineId, messageIdsToRemove);
+	} catch (err) {
+		await log.error('regenerate-last-response', 'Old message removal failed', err);
+		await loadActLineMessages(actLineId);
+	}
+
+	if (removedIds.length > 0) {
+		try {
+			await removeMemoriesFromActLine(actLineId, removedIds);
+		} catch (err) {
+			await log.error('regenerate-last-response', 'Memory cleanup failed', err);
+		}
+	}
 }
 
 export async function deleteLastExchange(actLineId: string): Promise<void> {
@@ -414,17 +440,20 @@ export async function deleteLastExchange(actLineId: string): Promise<void> {
 	const messageIdsToRemove = messages.slice(lastUserMsgIdx).map((m) => m.id);
 	messages = messages.slice(0, lastUserMsgIdx);
 
+	let removedIds: string[] = [];
 	try {
-		await dbActLines.removeMessagesFromActLine(actLineId, messageIdsToRemove);
+		removedIds = await dbActLines.removeMessagesFromActLine(actLineId, messageIdsToRemove);
 	} catch (err) {
 		await log.error('delete-last-exchange', 'Message removal failed', err);
 		return;
 	}
 
-	try {
-		await removeMemoriesFromActLine(actLineId, messageIdsToRemove);
-	} catch (err) {
-		await log.error('delete-last-exchange', 'Memory cleanup failed', err);
+	if (removedIds.length > 0) {
+		try {
+			await removeMemoriesFromActLine(actLineId, removedIds);
+		} catch (err) {
+			await log.error('delete-last-exchange', 'Memory cleanup failed', err);
+		}
 	}
 }
 

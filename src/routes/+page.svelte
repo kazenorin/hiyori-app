@@ -70,10 +70,10 @@
 		}, 1500);
 	}
 
-	async function handleRegenerate() {
+	async function handleRegenerate(messageId: string) {
 		const actLineId = getActiveActLineId();
 		if (!actLineId || getIsStreaming()) return;
-		await regenerateLastResponse(actLineId, getActiveNarrationContext(), getActiveSystemPrompt() ?? undefined);
+		await regenerateLastResponse(actLineId, messageId, getActiveNarrationContext(), getActiveSystemPrompt() ?? undefined);
 	}
 
 	async function handleDelete() {
@@ -672,7 +672,7 @@ duration:    {message.metadata.durationMs}ms</pre>
 											<button
 												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 												title="Regenerate response"
-												onclick={handleRegenerate}>Regenerate</button
+												onclick={() => handleRegenerate(message.id)}>Regenerate</button
 											>
 											<button
 												class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
