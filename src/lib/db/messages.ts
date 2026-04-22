@@ -5,10 +5,13 @@ export interface GameData {
 	decisions: string[];
 }
 
-export interface Message {
-	id: string;
+export interface MessageBase {
 	role: 'user' | 'assistant';
 	content: string;
+}
+
+export interface Message extends MessageBase {
+	id: string;
 	reasoning?: string;
 	metadata?: string;
 	gameData?: GameData;

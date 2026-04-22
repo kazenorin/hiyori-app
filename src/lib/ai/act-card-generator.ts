@@ -1,7 +1,8 @@
+import type {MessageBase} from '$lib/db/messages';
 import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
-import {loadActCardTemplate, loadActExtractionPrompt, loadStorySystemPrompt, loadSystemPrompt} from '$lib/fs/prompts';
+import {loadActCardTemplate, loadActExtractionPrompt, loadStorySystemPrompt} from '$lib/fs/prompts';
 import { exportActLine } from './act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
@@ -154,7 +155,7 @@ export async function streamActCard(
 	]);
 
 	// Build messages for streaming
-	const userMessages: { role: 'user' | 'assistant'; content: string }[] = buildUserMessages(
+	const userMessages: MessageBase[] = buildUserMessages(
 		contents,
 		template,
 		extractionPrompt,

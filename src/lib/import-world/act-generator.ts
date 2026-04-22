@@ -1,3 +1,4 @@
+import type {MessageBase} from '$lib/db/messages';
 // LLM-based act generation from world + act + character cards
 // Uses streaming via chat-stream.ts for real-time feedback
 
@@ -39,7 +40,7 @@ export async function generateActFromCards(
 
 	const userMessages = buildGenerationMessages(worldContent, actCardContent, characterCards);
 
-	return streamWithRetry(systemPrompt, userMessages as { role: 'user' | 'assistant'; content: string }[], retryConfig, onProgress, onError);
+	return streamWithRetry(systemPrompt, userMessages as MessageBase[], retryConfig, onProgress, onError);
 }
 
 function buildGenerationMessages(

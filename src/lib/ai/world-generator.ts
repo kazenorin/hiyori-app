@@ -1,3 +1,4 @@
+import type {MessageBase} from '$lib/db/messages';
 import { streamText } from 'ai';
 import { maxBy } from 'lodash';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
@@ -17,7 +18,7 @@ import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
  * 4. If act has continues_from_act_line_id, prepend those messages
  * 5. Move to the parent act and repeat from step 4
  */
-async function traceStoryMessages(storyId: string): Promise<{ role: 'user' | 'assistant'; content: string }[]> {
+async function traceStoryMessages(storyId: string): Promise<MessageBase[]> {
 	const acts = await dbActs.getActsForStory(storyId);
 	if (acts.length === 0) return [];
 
@@ -28,7 +29,7 @@ async function traceStoryMessages(storyId: string): Promise<{ role: 'user' | 'as
 	const mainLine = await dbActLines.getMainLineForAct(latestAct.id);
 	if (!mainLine) return [];
 
-	const results: { role: 'user' | 'assistant'; content: string }[] = [];
+	const results: MessageBase[] = [];
 	let currentActLineId: string | null = mainLine.id;
 	let currentAct: dbActs.Act | null = latestAct;
 

@@ -6,7 +6,8 @@ import { type StreamAccumulator, type StreamState } from '$lib/ai/chat-callbacks
 import { streamChatResponse } from './chat-stream';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
-import type { Message } from '$lib/ai/chat.svelte';
+import type {Message} from '$lib/ai/chat.svelte';
+import type {MessageBase} from '$lib/db/messages';
 
 export interface WorldBuilderMessage {
 	id: string;
@@ -31,7 +32,7 @@ let logFilePath: string | null = null;
 let actPlotInterview = $state(false);
 let interviewActLineId: string | null = null;
 let interviewSystemPrompt: string | null = null;
-let interviewHiddenContext: { role: 'user' | 'assistant'; content: string }[] = [];
+let interviewHiddenContext: MessageBase[] = [];
 let interviewWorldContent: string | null = null;
 
 // Cached prompts loaded once on enter
@@ -304,7 +305,7 @@ export async function removeLastInterviewAssistantMessage(): Promise<void> {
 }
 
 async function streamWorldBuilderChat(
-	history: { role: 'user' | 'assistant'; content: string }[],
+	history: MessageBase[],
 	messageIdx: number,
 	abortSignal: AbortSignal,
 	providerConfig: ProviderConfig

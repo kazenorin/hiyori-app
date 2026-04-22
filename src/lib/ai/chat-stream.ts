@@ -1,3 +1,4 @@
+import type {MessageBase} from '$lib/db/messages';
 import { type ToolSet } from 'ai';
 import { executeStream, type StreamResultMetadata } from './streaming';
 import { getMainProviderConfig, type ProviderConfig } from '../stores/settings.svelte';
@@ -37,7 +38,7 @@ export function buildMetadata(result: StreamResultMetadata, model?: string): Mes
  */
 export async function streamChatResponse(
 	systemPrompt: string,
-	history: { role: 'user' | 'assistant'; content: string }[],
+	history: MessageBase[],
 	abortSignal: AbortSignal,
 	onStateUpdate: (state: StreamState) => void,
 	onError: (err: unknown) => void,
@@ -78,7 +79,7 @@ export async function streamChatResponse(
  */
 export async function streamWithRetry(
 	systemPrompt: string,
-	messages: { role: 'user' | 'assistant'; content: string }[],
+	messages: MessageBase[],
 	retryConfig: RetryConfig,
 	onProgress: (state: StreamState) => void,
 	onError: (err: Error, attempt: number) => void,

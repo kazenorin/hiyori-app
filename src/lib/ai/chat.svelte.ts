@@ -1,6 +1,6 @@
 import {getMainProviderConfig, getMemoryProviderConfig, type ProviderConfig, SCENE_NUMBER_REGEX, SESSION_NUMBER_REGEX, settings} from '$lib/stores/settings.svelte';
 import {getActiveStoryId, getActiveSystemPromptOrDefault} from '$lib/stores/stories.svelte';
-import type {GameData} from '$lib/db/messages';
+import type {GameData, MessageBase} from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
 import type {ModelMessage} from 'ai';
 import * as dbActLines from '$lib/db/act-lines';
@@ -100,7 +100,7 @@ function getHistory(message: {
 	systemPrompt: string | undefined;
 	narrationContent: ModelMessage[] | undefined;
 	sessionNumber?: number
-}): { role: 'user' | 'assistant'; content: string }[] {
+}): MessageBase[] {
 	const narrations = message.narrationContent?.length
 		? message.narrationContent.map(narrowNarrationMessage).filter((m) => m !== null)
 		: [];
@@ -109,7 +109,7 @@ function getHistory(message: {
 	return [...narrations, ...existing];
 }
 
-function narrowNarrationMessage(msg: ModelMessage): { role: 'user' | 'assistant'; content: string } | null {
+function narrowNarrationMessage(msg: ModelMessage): MessageBase | null {
 	if (msg.role !== 'user' && msg.role !== 'assistant') return null;
 	if (typeof msg.content === 'string') {
 		return { role: msg.role, content: msg.content };
@@ -347,7 +347,7 @@ function parseSceneNumber(content: string): number | undefined {
 	return match ? parseInt(match[1], 10) : undefined;
 }
 
-function toHistoryMessage(message: Message): { role: 'user' | 'assistant'; content: string } {
+function toHistoryMessage(message: Message): MessageBase {
 	if (message.role !== 'assistant') {
 		return { role: message.role, content: message.content };
 	}

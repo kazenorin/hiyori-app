@@ -1,3 +1,4 @@
+import type {MessageBase} from '$lib/db/messages';
 import { streamWithRetry, type RetryConfig } from '$lib/ai/chat-stream';
 import type { StreamState } from '$lib/ai/chat-callbacks';
 import { getReviewerProviderConfig, getMainProviderConfig, SESSION_NUMBER_REGEX } from '$lib/stores/settings.svelte';
@@ -7,6 +8,7 @@ import { log } from '$lib/logging/logger';
 import { getActiveNarrationTemplateOrDefault, getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
 import { type ToolSet } from 'ai';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
+import type { GameData } from "$lib/db/messages";
 
 export interface ReviewLoopResult {
 	content: string;
@@ -24,7 +26,7 @@ export interface ReviewableMessage {
 	draftContent?: string;
 	reasoning?: string;
 	reviewScratchpad?: string;
-	gameData?: { worldState: string; decisions: string[] };
+	gameData?: GameData;
 }
 
 export interface ReviewLoopOptions {
@@ -52,7 +54,7 @@ function getPreprocessedContent(draftMessage: ReviewableMessage, options: Review
 }
 
 export async function streamReview(
-	history: { role: 'user' | 'assistant'; content: string }[],
+	history: MessageBase[],
 	onProgress?: (state: StreamState) => void,
 	tools?: ToolSet
 ): Promise<ReviewLoopResult | null> {
@@ -108,13 +110,13 @@ export async function streamReview(
 export async function runReviewLoop(
 	getCurrentMessage: () => ReviewableMessage,
 	setCurrentMessage: (message: ReviewableMessage) => void,
-	history: { role: 'user' | 'assistant'; content: string }[],
+	history: MessageBase[],
 	options: ReviewLoopOptions
 ): Promise<StreamResultMetadata | null> {
 	const draftMessage = getCurrentMessage();
 	const draftContent = getPreprocessedContent(draftMessage, options);
 
-	const historyWithDraft: { role: 'user' | 'assistant'; content: string }[] = [...history, { role: 'assistant', content: draftContent }];
+	const historyWithDraft: MessageBase[] = [...history, { role: 'assistant', content: draftContent }];
 
 	const reviewResult = await streamReview(
 		historyWithDraft,

@@ -1,3 +1,4 @@
+import type {MessageBase} from '$lib/db/messages';
 import {stepCountIs, streamText, type ToolSet} from 'ai';
 import type { LanguageModel } from 'ai';
 import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
@@ -7,7 +8,7 @@ const DEFAULT_MAX_STEPS = 5;
 
 export interface StreamConfig {
 	model: LanguageModel;
-	messages: { role: 'user' | 'assistant'; content: string }[];
+	messages: MessageBase[];
 	systemPrompt: string;
 	abortSignal: AbortSignal;
 	providerOptions?: SharedV3ProviderOptions;
