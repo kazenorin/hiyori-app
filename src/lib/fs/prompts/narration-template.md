@@ -38,6 +38,11 @@
 
 ```json
 {
+	"playerAliases": ["You", "Your", "[Actual Name]"],
+	"aliases": [
+		["[placeholder shown to player]", "[Alias 1]", "[Alias 2]"],
+		["[another placeholder shown to player]", "[Alias 1]", "[Alias 2]"]
+	],
 	"worldState": "[Briefly detail secret background information, hidden character motives, or hidden plot tracking here. Do not show player-facing narrative yet.]",
 	"decisions": ["[choice 1 text]", "[choice 2 text]", "[choice 3 text]", "[choice 4 text]"]
 }

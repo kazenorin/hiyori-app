@@ -22,19 +22,19 @@
 
 ## Major Events
 
-### Climactic Event 1 (Sessions ~12)
+### Climactic Event 1 (Target to happen at around 12 sessions after start)
 
 **Setup:** [What should be established before this event]
 **Event:** [What happens - the dramatic moment]
 **Impact:** [Emotional/narrative aftermath, how it changes the story direction]
 
-### Climactic Event 2 (Sessions ~24)
+### Climactic Event 2 (Target to happen at around 12 sessions after Climactic Event 1)
 
 **Setup:** [What should be established before this event]
 **Event:** [What happens - the dramatic moment]
 **Impact:** [Emotional/narrative aftermath, how it changes the story direction]
 
-### Climactic Event 3 (Sessions ~36)
+### Climactic Event 3 (Target to happen at around 12 sessions after Climactic Event 2)
 
 **Setup:** [What should be established before this event]
 **Event:** [What happens - the dramatic moment]
