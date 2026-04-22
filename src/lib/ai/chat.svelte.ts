@@ -21,6 +21,8 @@ export interface Message {
 	reasoning?: string;
 	metadata?: MessageMetadata;
 	gameData?: GameData;
+	sceneNumber?: number;
+	sessionNumber?: number;
 	draftContent?: string;
 	reviewScratchpad?: string;
 }
@@ -57,6 +59,8 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 		reasoning: m.reasoning,
 		metadata: parseMetadata(m.metadata),
 		gameData: m.gameData,
+		sceneNumber: m.sceneNumber,
+		sessionNumber: m.sessionNumber,
 	}));
 	error = null;
 }
@@ -97,7 +101,9 @@ async function persistMessage(actLineId: string, message: Message): Promise<void
 		message.content,
 		message.reasoning,
 		message.metadata ? JSON.stringify(message.metadata) : undefined,
-		message.gameData
+		message.gameData,
+		message.sceneNumber,
+		message.sessionNumber
 	);
 	const seq = await dbActLines.getNextSequence(actLineId);
 	await dbActLines.addMessageToLine(actLineId, message.id, seq);
@@ -138,6 +144,7 @@ export async function sendMessage(
 		bodyText: string | undefined;
 		systemPrompt: string | undefined;
 		narrationContent: ModelMessage[] | undefined;
+		sessionNumber?: number;
 	}
 ): Promise<void> {
 	const storyIdPromise = dbActLines.getStoryIdForActLine(actLineId);
@@ -373,10 +380,16 @@ export async function sendInitialNarration(actLineId: string, narrationContent: 
 		bodyText: undefined,
 		systemPrompt: systemPrompt,
 		narrationContent: narrationContent,
+		sessionNumber: 0,
 	});
 }
 
-export async function regenerateLastResponse(actLineId: string, messageId: string, narrationContent: ModelMessage[], systemPrompt?: string): Promise<void> {
+export async function regenerateLastResponse(
+	actLineId: string,
+	messageId: string,
+	narrationContent: ModelMessage[],
+	systemPrompt?: string
+): Promise<void> {
 	const currentMessages = [...messages];
 	const lastAssistantMsgIdx = currentMessages.findLastIndex((m) => m.role === 'assistant');
 	if (lastAssistantMsgIdx === -1) return;

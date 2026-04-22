@@ -32,6 +32,8 @@ interface MessageInLine {
 	reasoning: string | null;
 	metadata: string | null;
 	game_data: string | null;
+	scene_number: number | null;
+	session_number: number | null;
 	created_at: number;
 	sequence: number;
 }
@@ -78,9 +80,7 @@ export async function getMainLineForAct(actId: string): Promise<ActLineMeta | nu
 	const rows = await db.select<ActLineMetaRow[]>('SELECT * FROM act_line_meta WHERE act_id = $1 AND is_main_line = 1 LIMIT 1', [actId]);
 	if (rows.length > 0) return rowToActLineMeta(rows[0]);
 	// Fallback: return first by creation date
-	const fallback = await db.select<ActLineMetaRow[]>('SELECT * FROM act_line_meta WHERE act_id = $1 ORDER BY created_at LIMIT 1', [
-		actId,
-	]);
+	const fallback = await db.select<ActLineMetaRow[]>('SELECT * FROM act_line_meta WHERE act_id = $1 ORDER BY created_at LIMIT 1', [actId]);
 	return fallback.length > 0 ? rowToActLineMeta(fallback[0]) : null;
 }
 

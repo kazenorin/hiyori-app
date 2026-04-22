@@ -71,6 +71,8 @@ const migrationStatements: string[][] = [
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_act_line_premises_line ON act_line_premises(act_line_id)`,
 	],
+	[`ALTER TABLE messages ADD COLUMN scene_number INTEGER`],
+	[`ALTER TABLE messages ADD COLUMN session_number INTEGER`],
 ];
 
 export async function runMigrations(): Promise<void> {

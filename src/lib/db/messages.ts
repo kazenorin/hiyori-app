@@ -12,6 +12,8 @@ export interface Message {
 	reasoning?: string;
 	metadata?: string;
 	gameData?: GameData;
+	sceneNumber?: number;
+	sessionNumber?: number;
 	createdAt: number;
 }
 
@@ -22,6 +24,8 @@ interface MessageRow {
 	reasoning: string | null;
 	metadata: string | null;
 	game_data: string | null;
+	scene_number: number | null;
+	session_number: number | null;
 	created_at: number;
 }
 
@@ -52,6 +56,8 @@ function rowToMessage(row: MessageRow): Message {
 		reasoning: row.reasoning ?? undefined,
 		metadata: row.metadata ?? undefined,
 		gameData: parseGameData(row.game_data),
+		sceneNumber: row.scene_number ?? undefined,
+		sessionNumber: row.session_number ?? undefined,
 		createdAt: row.created_at,
 	};
 }
@@ -62,14 +68,26 @@ export async function createMessage(
 	content: string,
 	reasoning?: string,
 	metadata?: string,
-	gameData?: GameData
+	gameData?: GameData,
+	sceneNumber?: number,
+	sessionNumber?: number
 ): Promise<Message> {
 	const db = getDatabase();
 	const now = Date.now();
 	await db.execute(
-		`INSERT INTO messages (id, role, content, reasoning, metadata, game_data, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-		[id, role, content, reasoning ?? null, metadata ?? null, gameData ? JSON.stringify(gameData) : null, now]
+		`INSERT INTO messages (id, role, content, reasoning, metadata, game_data, scene_number, session_number, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		[
+			id,
+			role,
+			content,
+			reasoning ?? null,
+			metadata ?? null,
+			gameData ? JSON.stringify(gameData) : null,
+			sceneNumber ?? null,
+			sessionNumber ?? null,
+			now,
+		]
 	);
 	return {
 		id,
@@ -78,6 +96,8 @@ export async function createMessage(
 		reasoning,
 		metadata,
 		gameData,
+		sceneNumber,
+		sessionNumber,
 		createdAt: now,
 	};
 }
