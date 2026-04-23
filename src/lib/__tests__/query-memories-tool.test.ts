@@ -51,6 +51,8 @@ const mockSearchResults: MemoryItem[] = [
 	},
 ];
 
+const noOpResolveAliases = vi.fn(async (_s: any, _a: any, name: string) => [name]);
+
 describe('createQueryMemoriesTool', () => {
 	let createQueryMemoriesTool: typeof import('$lib/ai/tools/query-memories').createQueryMemoriesTool;
 
@@ -81,7 +83,7 @@ describe('createQueryMemoriesTool', () => {
 	it('returns empty array when no parameters provided', async () => {
 		const searchSpy = vi.fn(async () => mockSearchResults);
 		const searchByLocSpy = vi.fn(async () => mockSearchResults);
-		const mem = { search: searchSpy, searchByLocation: searchByLocSpy } as any;
+		const mem = { resolveAliases: noOpResolveAliases, search: searchSpy, searchByLocation: searchByLocSpy } as any;
 
 		const toolDef = createQueryMemoriesTool({
 			memory: mem,
@@ -105,7 +107,7 @@ describe('createQueryMemoriesTool', () => {
 
 	it('calls search when only characterQuery provided', async () => {
 		const searchSpy = vi.fn(async () => mockSearchResults);
-		const mem = { search: searchSpy, searchByLocation: vi.fn(async () => []) } as any;
+		const mem = { resolveAliases: noOpResolveAliases, search: searchSpy, searchByLocation: vi.fn(async () => []) } as any;
 
 		const toolDef = createQueryMemoriesTool({
 			memory: mem,
@@ -137,6 +139,7 @@ describe('createQueryMemoriesTool', () => {
 		const searchLocationsSpy = vi.fn(async () => locationItems);
 		const sampleByLocationSpy = vi.fn(async () => mockSearchResults);
 		const mem = {
+			resolveAliases: noOpResolveAliases,
 			search: vi.fn(async () => []),
 			searchByLocation: vi.fn(async () => []),
 			searchLocations: searchLocationsSpy,
@@ -170,7 +173,7 @@ describe('createQueryMemoriesTool', () => {
 
 	it('calls searchByLocation with both params when both provided', async () => {
 		const searchByLocSpy = vi.fn(async () => mockSearchResults);
-		const mem = { search: vi.fn(async () => []), searchByLocation: searchByLocSpy } as any;
+		const mem = { resolveAliases: noOpResolveAliases, search: vi.fn(async () => []), searchByLocation: searchByLocSpy } as any;
 
 		const toolDef = createQueryMemoriesTool({
 			memory: mem,
@@ -196,17 +199,17 @@ describe('createQueryMemoriesTool', () => {
 
 	it('slices results to limit for sorted search results', async () => {
 		// search returns sorted by relevance - should slice top 10
-		const manyResults = Array.from({ length: 20 }, (_v, _i) => ({
-			id: `mem-\${i}`,
-			memory: `Memory \${i}`,
-			messageId: `msg-\${i}`,
+		const manyResults = Array.from({ length: 20 }, (_v, i) => ({
+			id: `mem-${i}`,
+			memory: `Memory ${i}`,
+			messageId: `msg-${i}`,
 			storyId: 'story-1',
 			actLineId: 'line-1',
 			characterCanonicalName: 'elena',
 			location: 'cave',
 		}));
 		const searchSpy = vi.fn(async () => manyResults);
-		const mem = { search: searchSpy, searchByLocation: vi.fn(async () => []) } as any;
+		const mem = { resolveAliases: noOpResolveAliases, search: searchSpy, searchByLocation: vi.fn(async () => []) } as any;
 
 		const toolDef = createQueryMemoriesTool({
 			memory: mem,
@@ -215,7 +218,6 @@ describe('createQueryMemoriesTool', () => {
 		});
 
 		const result = await toolDef.execute!(
-
 			{
 				characterQuery: 'Elena',
 				timeAndLocation: undefined,
@@ -227,15 +229,13 @@ describe('createQueryMemoriesTool', () => {
 		// Should return exactly 10 (slice, not random sample)
 		expect((result as any).length).toBe(10);
 		// Should be first 10 items (sorted order preserved)
-		expect((result as any).map((r: any) => r.memory)).toEqual(
-			manyResults.slice(0, 10).map(m => m.memory)
-		);
+		expect((result as any).map((r: any) => r.memory)).toEqual(manyResults.slice(0, 10).map((m) => m.memory));
 	});
 
 	it('returns all results when fewer than limit', async () => {
 		const fewResults = mockSearchResults; // 2 items
 		const searchSpy = vi.fn(async () => fewResults);
-		const mem = { search: searchSpy, searchByLocation: vi.fn(async () => []) } as any;
+		const mem = { resolveAliases: noOpResolveAliases, search: searchSpy, searchByLocation: vi.fn(async () => []) } as any;
 
 		const toolDef = createQueryMemoriesTool({
 			memory: mem,
@@ -244,7 +244,6 @@ describe('createQueryMemoriesTool', () => {
 		});
 
 		const result = await toolDef.execute!(
-
 			{
 				characterQuery: 'Elena',
 				timeAndLocation: undefined,
@@ -262,28 +261,27 @@ describe('createQueryMemoriesTool', () => {
 		];
 		// Each location returns 8 items, total 16
 		const tavernMemories = Array.from({ length: 8 }, (_v, i) => ({
-			id: `mem-tavern-\${i}`,
-			memory: `Tavern memory \${i}`,
-			messageId: `msg-t-\${i}`,
+			id: `mem-tavern-${i}`,
+			memory: `Tavern memory ${i}`,
+			messageId: `msg-t-${i}`,
 			storyId: 'story-1',
 			actLineId: 'line-1',
 			characterCanonicalName: 'npc',
 			location: 'Tavern',
 		}));
 		const caveMemories = Array.from({ length: 8 }, (_v, i) => ({
-			id: `mem-cave-\${i}`,
-			memory: `Cave memory \${i}`,
-			messageId: `msg-c-\${i}`,
+			id: `mem-cave-${i}`,
+			memory: `Cave memory ${i}`,
+			messageId: `msg-c-${i}`,
 			storyId: 'story-1',
 			actLineId: 'line-1',
 			characterCanonicalName: 'elena',
 			location: 'Cave',
 		}));
 		const searchLocationsSpy = vi.fn(async () => locationItems);
-		const sampleByLocationSpy = vi.fn(async (loc: any) =>
-			loc.location === 'Tavern' ? tavernMemories : caveMemories
-		);
+		const sampleByLocationSpy = vi.fn(async (loc: any) => (loc.location === 'Tavern' ? tavernMemories : caveMemories));
 		const mem = {
+			resolveAliases: noOpResolveAliases,
 			search: vi.fn(async () => []),
 			searchByLocation: vi.fn(async () => []),
 			searchLocations: searchLocationsSpy,
@@ -297,7 +295,6 @@ describe('createQueryMemoriesTool', () => {
 		});
 
 		const result = await toolDef.execute!(
-
 			{
 				characterQuery: undefined,
 				timeAndLocation: 'Night at the Tavern',
@@ -311,7 +308,7 @@ describe('createQueryMemoriesTool', () => {
 		// All results should come from the original pool
 		const allMemories = [...tavernMemories, ...caveMemories];
 		for (const r of result as any) {
-			expect(allMemories.some(m => m.memory === r.memory)).toBe(true);
+			expect(allMemories.some((m) => m.memory === r.memory)).toBe(true);
 		}
 	});
 });

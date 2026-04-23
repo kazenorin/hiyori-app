@@ -6,7 +6,7 @@ import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { buildLineDir } from './card-output-path';
 import { log } from '$lib/logging/logger';
-import { getPremisesMessages } from '$lib/db/act-lines';
+import {getActNumberForActLine, getPremisesMessages} from '$lib/db/act-lines';
 
 export interface GenerateActPlotResult {
 	filePath: string;
@@ -60,7 +60,8 @@ export async function generateActPlot(
 	// Load prompts and interview transcript in parallel
 	const [template, generationPrompt, systemPrompt, interviewTranscript] = await Promise.all([
 		loadActPlotTemplate(),
-		loadActPlotGenerationPrompt(),
+		Promise.all([getActNumberForActLine(actLineId), loadActPlotGenerationPrompt()])
+			.then(([actNumber, prompt]) => prompt.replace('{actNumber}', (actNumber ?? 1).toString())),
 		loadStorySystemPrompt(storyId, storyName),
 		loadInterviewTranscript(actLineId),
 	]);

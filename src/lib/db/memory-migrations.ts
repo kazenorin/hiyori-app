@@ -40,6 +40,17 @@ const memoryMigrationStatements: string[][] = [
 		`CREATE INDEX IF NOT EXISTS idx_location_meta_act_line ON location_meta(act_line_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_location_meta_message ON location_meta(message_id)`,
 	],
+	[
+		`CREATE TABLE IF NOT EXISTS aliases (
+			story_id TEXT NOT NULL,
+			act_line_id TEXT NOT NULL,
+			alias TEXT NOT NULL,
+			alias_group TEXT NOT NULL,
+			message_id TEXT NOT NULL,
+			PRIMARY KEY (story_id, act_line_id, alias)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_aliases_message ON aliases(message_id)`,
+	],
 ];
 
 export async function runMemoryMigrations(): Promise<void> {

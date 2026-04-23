@@ -741,8 +741,8 @@ export class Memory {
 		fromLineId: string,
 		toLineId: string,
 		messageIds: string[]
-	): Promise<{ memoriesCopied: number; locationsCopied: number }> {
-		if (messageIds.length === 0) return { memoriesCopied: 0, locationsCopied: 0 };
+	): Promise<{ memoriesCopied: number; locationsCopied: number; aliasesCopied: number }> {
+		if (messageIds.length === 0) return { memoriesCopied: 0, locationsCopied: 0, aliasesCopied: 0 };
 		const db = getMemoryDatabase();
 		const msgPlaceholders = messageIds.map((_, i) => `$${i + 3}`).join(', ');
 
@@ -808,7 +808,80 @@ export class Memory {
 			);
 		}
 
-		return { memoriesCopied: memRows.length, locationsCopied: locRows.length };
+		const aliasesCopied = await this.copyAliasesForFork(storyId, fromLineId, toLineId);
+		return { memoriesCopied: memRows.length, locationsCopied: locRows.length, aliasesCopied };
+	}
+
+
+	async addAliases(storyId: string, actLineId: string, messageId: string, aliases: string[][]): Promise<void> {
+		if (aliases.length === 0) return;
+		const db = getMemoryDatabase();
+		for (const group of aliases) {
+			if (group.length === 0) continue;
+			const aliasGroup = group[0];
+			for (const alias of group) {
+				await db.execute(
+					'INSERT OR IGNORE INTO aliases (story_id, act_line_id, alias, alias_group, message_id) VALUES ($1, $2, $3, $4, $5)',
+					[storyId, actLineId, alias, aliasGroup, messageId]
+				);
+			}
+		}
+	}
+
+	async resolveAliases(storyId: string, actLineId: string, name: string): Promise<string[]> {
+		const db = getMemoryDatabase();
+		const rows = await db.select<Array<{ alias_group: string }>>(
+			'SELECT alias_group FROM aliases WHERE story_id = $1 AND act_line_id = $2 AND alias = $3',
+			[storyId, actLineId, name]
+		);
+		if (rows.length === 0) return [name];
+		const aliasGroup = rows[0].alias_group;
+		const aliasRows = await db.select<Array<{ alias: string }>>(
+			'SELECT alias FROM aliases WHERE story_id = $1 AND act_line_id = $2 AND alias_group = $3',
+			[storyId, actLineId, aliasGroup]
+		);
+		return aliasRows.map((r) => r.alias);
+	}
+
+	async deleteAliasesByMessages(storyId: string, actLineId: string, messageIds: string[]): Promise<number> {
+		if (messageIds.length === 0) return 0;
+		const db = getMemoryDatabase();
+		const placeholders = messageIds.map((_, i) => `$${i + 3}`).join(', ');
+		const countRows = await db.select<Array<{ cnt: number }>>(
+			`SELECT COUNT(*) as cnt FROM aliases WHERE story_id = $1 AND act_line_id = $2 AND message_id IN (${placeholders})`,
+			[storyId, actLineId, ...messageIds]
+		);
+		const count = countRows[0]?.cnt ?? 0;
+		await db.execute(`DELETE FROM aliases WHERE story_id = $1 AND act_line_id = $2 AND message_id IN (${placeholders})`, [
+			storyId, actLineId, ...messageIds,
+		]);
+		return count;
+	}
+
+	async deleteAliasesByActLine(storyId: string, actLineId: string): Promise<number> {
+		const db = getMemoryDatabase();
+		const countRows = await db.select<Array<{ cnt: number }>>(
+			'SELECT COUNT(*) as cnt FROM aliases WHERE story_id = $1 AND act_line_id = $2',
+			[storyId, actLineId]
+		);
+		const count = countRows[0]?.cnt ?? 0;
+		await db.execute('DELETE FROM aliases WHERE story_id = $1 AND act_line_id = $2', [storyId, actLineId]);
+		return count;
+	}
+
+	async copyAliasesForFork(storyId: string, fromLineId: string, toLineId: string): Promise<number> {
+		const db = getMemoryDatabase();
+		const rows = await db.select<Array<{ alias: string; alias_group: string; message_id: string }>>(
+			'SELECT alias, alias_group, message_id FROM aliases WHERE story_id = $1 AND act_line_id = $2',
+			[storyId, fromLineId]
+		);
+		for (const row of rows) {
+			await db.execute(
+				'INSERT OR IGNORE INTO aliases (story_id, act_line_id, alias, alias_group, message_id) VALUES ($1, $2, $3, $4, $5)',
+				[storyId, toLineId, row.alias, row.alias_group, row.message_id]
+			);
+		}
+		return rows.length;
 	}
 
 	async reset(): Promise<void> {
@@ -817,6 +890,7 @@ export class Memory {
 		await db.execute('DELETE FROM memory_meta');
 		await db.execute('DELETE FROM vec_locations');
 		await db.execute('DELETE FROM location_meta');
+		await db.execute('DELETE FROM aliases');
 		await db.execute("DELETE FROM memory_config WHERE key IN ('vec_dimension', 'model_key', 'loc_vec_dimension', 'loc_model_key')");
 
 		// Reset in-memory cache

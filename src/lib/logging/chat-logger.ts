@@ -48,9 +48,6 @@ export async function logMainChat(context: { systemPrompt: string; messages: Arr
 
 	// Write to story-level log file
 	await appendToStoryLog('main-chat.log', 'Main Chat Context', content);
-
-	// Also send to unified Tauri log (filtered by Rust-side level)
-	await log.debug('main-chat', content);
 }
 
 /**
@@ -72,9 +69,6 @@ export async function logWorldBuilderChat(context: {
 	parts.push(`=== MESSAGES ===\n${messagesStr}`);
 
 	const content = parts.join('\n\n');
-
-	// Also send to unified Tauri log
-	await log.debug('world-builder', content);
 
 	// Write to temp log file if filename provided
 	if (context.logFilename) {

@@ -4,7 +4,7 @@ You are generating an Act Plot document for an interactive story. This document 
 
 ## Your Task
 
-Read the provided world setting document and generate a structured Act Plot that guides the narrative. The Act Plot should be created **specifically for Act 1** of the story.
+Read the provided world setting document and generate a structured Act Plot that guides the narrative. The Act Plot should be created **specifically for Act {actNumber}** of the story.
 
 ## Requirements
 
@@ -12,7 +12,7 @@ Read the provided world setting document and generate a structured Act Plot that
 
 1. **Story Structure** — Define session count (target 30-40 sessions at ~400 words each), establishing the story's scope
 2. **Premise** — Create a protagonist archetype that fits the world, define the core conflict, and craft an engaging hook
-3. **Major Events** — Plan approximately 3-4 climactic events, roughly one per 12 sessions
+3. **Major Events** — Plan approximately 3-4 climactic events, roughly one per 12 sessions. The final event should lead to the Act's ending
 4. **Possible Endings** — Design at least 4 endings, including at least one "good" and one "bad" outcome from the story's perspective
 5. **Storytelling Style** — Determine narrative voice, tone, and pacing
 6. **Presentation Notes** — Set language complexity, onomatopoeia usage, emoji preferences, etc.

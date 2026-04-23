@@ -1,22 +1,23 @@
-import { generateText } from 'ai';
-import { createModel } from './provider';
+import {generateText} from 'ai';
+import {createModel} from './provider';
 import {
-	getMemoryProviderConfig,
-	getEmbeddingProviderConfig,
-	settings,
-	type MemoryProviderConfig,
 	type EmbeddingProviderConfig,
+	getEmbeddingProviderConfig,
+	getMemoryProviderConfig,
+	type MemoryProviderConfig,
 } from '$lib/stores/settings.svelte';
-import { loadMemoryExtractionSystemPrompt, loadMemoryExtractionPrompt } from '$lib/fs/prompts';
-import { parseMemoryExtract, type ExtractedMemories } from '$lib/memory/memory-extract-parser';
-import { Memory } from '$lib/memory/memory';
-import { isAuthError, withRetry, toError } from '$lib/utils/async';
-import { log } from '$lib/logging/logger';
+import {loadMemoryExtractionPrompt, loadMemoryExtractionSystemPrompt} from '$lib/fs/prompts';
+import {type ExtractedMemories, parseMemoryExtract} from '$lib/memory/memory-extract-parser';
+import {Memory} from '$lib/memory/memory';
+import type {GameData} from '$lib/db/messages';
+import {isAuthError, toError, withRetry} from '$lib/utils/async';
+import {log} from '$lib/logging/logger';
 
 export interface PipelineResult {
 	charactersProcessed: number;
 	memoriesAdded: number;
 	locationsAdded: number;
+	aliasesAdded: number;
 	errors: string[];
 }
 
@@ -27,7 +28,8 @@ export async function runMemoryExtractionPipeline(
 	assistantResponse: string,
 	storyId: string,
 	actLineId: string,
-	messageId: string
+	messageId: string,
+	gameData?: GameData
 ): Promise<PipelineResult> {
 	const llmConfig = getMemoryProviderConfig();
 	if (!llmConfig) {
@@ -51,7 +53,15 @@ export async function runMemoryExtractionPipeline(
 
 	// Step 3: Persist each character/location (uses embedding provider)
 	await log.debug('memory-pipeline', `persisting memories for message=${messageId}...`);
-	return await persistMemoriesWithRetry(extracted, storyId, actLineId, messageId, embeddingConfig);
+	const result = await persistMemoriesWithRetry(extracted, storyId, actLineId, messageId, embeddingConfig);
+
+	// Step 4: Persist aliases from GameData
+	const aliasGroups = [...(gameData?.aliases ?? []), ...(gameData?.playerAliases?.length ? [gameData.playerAliases] : [])];
+	if (aliasGroups.length > 0) {
+		result.aliasesAdded = await persistAliases(embeddingConfig, storyId, actLineId, messageId, aliasGroups);
+	}
+
+	return result;
 }
 
 async function generateMemoriesWithRetry(response: string, config: MemoryProviderConfig): Promise<string> {
@@ -80,6 +90,7 @@ async function persistMemoriesWithRetry(
 		charactersProcessed: 0,
 		memoriesAdded: 0,
 		locationsAdded: 0,
+		aliasesAdded: 0,
 		errors: [],
 	};
 
@@ -112,6 +123,12 @@ async function persistMemoriesWithRetry(
 	}
 
 	return result;
+}
+
+async function persistAliases(config: EmbeddingProviderConfig, storyId: string, actLineId: string, messageId: string, aliases: string[][]) {
+	const memory = new Memory(config);
+	await memory.addAliases(storyId, actLineId, messageId, aliases);
+	return aliases.reduce((sum, group) => sum + group.length, 0);
 }
 
 async function persistLocationWithRetry(

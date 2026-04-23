@@ -179,9 +179,11 @@ async function handleStreamError(err: unknown, messageId: string, actLineId: str
 		if (partial && partial.content) {
 			await persistMessage(actLineId, partial);
 		}
+		await log.warn('send-message', 'User aborted.')
 	} else {
 		error = err instanceof Error ? err.message : 'An unexpected error occurred.';
 		messages = messages.filter((m) => m.id !== messageId);
+		await log.error('send-message', error, err)
 	}
 }
 
@@ -189,7 +191,7 @@ function runMemoryPipeline(storyId: string | null, actLineId: string, message: M
 	if (!settings.memoryEnabled) return;
 	if (!storyId || !actLineId) return;
 	memoryPipelineRunning = true;
-	memoryPipelinePromise = runMemoryExtractionPipeline(message.content, storyId, actLineId, message.id)
+	memoryPipelinePromise = runMemoryExtractionPipeline(message.content, storyId, actLineId, message.id, message.gameData)
 		.then((result) => log.debug('memory-pipeline', `Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`))
 		.catch((err) => log.error('memory-pipeline', 'Pipeline failed', err))
 		.finally(() => {
@@ -299,10 +301,11 @@ export async function sendMessage(
 			const sessionNumber = message.sessionNumber ?? findLastNonNullSessionNumber()
 			const reviewedMetadata = await runReviewLoop(getCurrentMessage, (msg) => setCurrentMessage(msg as Message), history, {sessionNumber, tools});
 			updateMetaData(getCurrentMessage, reviewedMetadata, providerConfig);
+			await log.debug('send-message', `Session ${sessionNumber} review completed`)
 		}
 
 		// Determine sceneNumber and sessionNumber for the assistant response
-		determineSceneNumberAndNextSessionNumber(messageIdx, message.sessionNumber);
+		await determineSceneNumberAndNextSessionNumber(messageIdx, message.sessionNumber);
 
 		// Persist with accumulated content (not result.content)
 		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({systemPrompt, messages})]);
@@ -317,9 +320,7 @@ export async function sendMessage(
 	}
 }
 
-
-
-function determineSceneNumberAndNextSessionNumber(messageIdx: number, explicitSessionNumber?: number): void {
+async function determineSceneNumberAndNextSessionNumber(messageIdx: number, explicitSessionNumber?: number): Promise<void> {
 	const content = messages[messageIdx].content;
 
 	const lastSessionNumber = findLastNonNullSessionNumber();
@@ -335,6 +336,8 @@ function determineSceneNumberAndNextSessionNumber(messageIdx: number, explicitSe
 		sceneNumber,
 		sessionNumber,
 	};
+
+	await log.info('send-message', `Prepared session ${sessionNumber}, last scene was ${sceneNumber}`)
 }
 
 function parseSessionNumber(content: string): number | undefined {
@@ -553,6 +556,7 @@ async function removeMemoriesFromActLine(actLineId: string, messageIdsToRemove: 
 			const memory = new Memory(config);
 			await memory.deleteByMessages(storyId, actLineId, messageIdsToRemove);
 			await memory.deleteLocationsByMessages(storyId, actLineId, messageIdsToRemove);
+			await memory.deleteAliasesByMessages(storyId, actLineId, messageIdsToRemove);
 		}
 	}
 }

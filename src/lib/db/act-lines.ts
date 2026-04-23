@@ -134,20 +134,11 @@ export async function removeMessagesFromActLine(actLineId: string, messageIds: s
 	if (messageIds.length === 0) return [];
 	const db = getDatabase();
 
-	try {
-		await db.execute('BEGIN');
+	const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
+	await db.execute(`DELETE FROM act_lines WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [actLineId, ...messageIds]);
 
-		const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
-		await db.execute(`DELETE FROM act_lines WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [actLineId, ...messageIds]);
-
-		await removeOrphanedMessages(db, messageIds);
-
-		await db.execute('COMMIT');
-		return messageIds;
-	} catch (err) {
-		await db.execute('ROLLBACK');
-		throw err;
-	}
+	await removeOrphanedMessages(db, messageIds);
+	return messageIds;
 }
 
 export async function getNextSequence(actLineId: string): Promise<number> {
@@ -356,23 +347,14 @@ export async function removeMessagesFromPremises(actLineId: string, messageIds: 
 	if (messageIds.length === 0) return [];
 	const db = getDatabase();
 
-	try {
-		await db.execute('BEGIN');
+	const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
+	await db.execute(`DELETE FROM act_line_premises WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [
+		actLineId,
+		...messageIds,
+	]);
 
-		const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
-		await db.execute(`DELETE FROM act_line_premises WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [
-			actLineId,
-			...messageIds,
-		]);
-
-		await removeOrphanedMessages(db, messageIds);
-
-		await db.execute('COMMIT');
-		return messageIds;
-	} catch (err) {
-		await db.execute('ROLLBACK');
-		throw err;
-	}
+	await removeOrphanedMessages(db, messageIds);
+	return messageIds;
 }
 
 async function removeOrphanedMessages(db: Database, messageIds: string[]): Promise<string[]> {
