@@ -127,7 +127,7 @@ export async function runReviewLoop(
 				content: state.revisedNarrative ?? currentMessage.content,
 				reviewScratchpad: state.reviewScratchpad ?? currentMessage.reviewScratchpad,
 				reasoning: state.reasoning ?? currentMessage.reasoning,
-				gameData: state.gameData ?? currentMessage.gameData,
+				gameData: state.revisedGameData ?? state.gameData ?? currentMessage.gameData,
 			});
 		},
 		options.tools

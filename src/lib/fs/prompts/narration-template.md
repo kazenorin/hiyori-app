@@ -1,3 +1,6 @@
+<scratchpad>
+</scratchpad>
+
 # [STORY TITLE]
 
 ## Act [X]
