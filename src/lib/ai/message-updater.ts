@@ -9,7 +9,7 @@ export function applyParserOutput(state: StreamState, output: ParserChainOutput)
 		gameData: output.gameData && isValidGameData(output.gameData) ? output.gameData : state.gameData,
 		reviewScratchpad: appendDelta(state.reviewScratchpad, output.reviewScratchpad),
 		revisedNarrative: appendDelta(state.revisedNarrative, output.revisedNarrative),
-		revisedGameData: output.revisedGameData ?? state.revisedGameData,
+		revisedGameData: output.revisedGameData && isValidGameData(output.revisedGameData) ? output.revisedGameData : state.revisedGameData,
 	};
 }
 

@@ -179,6 +179,50 @@ describe('ParserChain', () => {
 			});
 		});
 
+		describe('revised_narrative with embedded game data', () => {
+			it('extracts game data from revised_narrative into revisedGameData', () => {
+				const input = [
+					'<revised_narrative>The story continues\n```json\n',
+					GAME_DATA_JSON,
+					'\n```\nMore narrative</revised_narrative>',
+				].join('');
+				const { text, gameData, revisedNarrative, revisedGameData } = feedAll([input]);
+				expect(text).toBe('');
+				expect(revisedNarrative).toBe('The story continues\n\nMore narrative');
+				expect(gameData).toBeNull(); // No game data outside the tag
+				expect(revisedGameData).not.toBeNull(); // Game data inside the tag
+				expect(revisedGameData?.decisions).toEqual(['Go left', 'Go right']);
+			});
+
+			it('handles revised_narrative game data split across chunks', () => {
+				const chunks = ['<revised_narrative>Text```json\n', GAME_DATA_JSON, '\n```</revised_narrative>'];
+				const { revisedNarrative, revisedGameData, gameData } = feedAll(chunks);
+				expect(revisedNarrative).toBe('Text');
+				expect(revisedGameData).not.toBeNull();
+				expect(revisedGameData?.decisions).toEqual(['Go left', 'Go right']);
+				expect(gameData).toBeNull();
+			});
+
+			it('prioritizes revisedGameData over gameData in review callback pattern', () => {
+				// Simulates reviewer output: draft gameData outside, revised gameData inside tag
+				const input = [
+					'Draft text```json\n',
+					JSON.stringify({ worldState: 'draft state', decisions: ['draft choice'] }),
+					'\n```\n',
+					'<revised_narrative>Revised text```json\n',
+					GAME_DATA_JSON,
+					'\n```\n</revised_narrative>',
+				].join('');
+				const { text, gameData, revisedGameData, revisedNarrative } = feedAll([input]);
+				expect(text).toBe('Draft text\n'); // Draft game data removed from text
+				expect(revisedNarrative).toBe('Revised text\n');
+				expect(gameData).not.toBeNull();
+				expect(gameData?.decisions).toEqual(['draft choice']);
+				expect(revisedGameData).not.toBeNull();
+				expect(revisedGameData?.decisions).toEqual(['Go left', 'Go right']);
+			});
+		});
+
 		describe('full chain: thinking + review + revised + game data', () => {
 			it('extracts all layers in sequence', () => {
 				const input = [

@@ -1,7 +1,7 @@
 import { createThinkingTagParser } from './thinking-tag-parser';
 import { createGameDataParser } from './game-data-parser';
 import { createXmlTagParser } from './xml-tag-parser';
-import { createCompositeParser } from './composite-parser';
+import { createNestedParser } from './nested-parser';
 import type { GameData } from '$lib/db/messages';
 
 export interface ParserChainOutput {
@@ -23,17 +23,22 @@ export interface ParserChain {
 }
 
 /**
- * Combined parser chain: text → thinking → review_scratchpad → revised_narrative + game-data → game-data.
+ * Combined parser chain: text → thinking → review_scratchpad → revised_narrative (with game-data) → game-data.
  * Extracts think tags first, then XML review tags, then intercepts ```json game-data blocks.
- * The revised_narrative parser is a composite that also extracts game data from within the tag.
+ * The revised_narrative parser extracts game data from within the tag body into revisedGameData.
+ * The top-level gameDataParser only captures ```json blocks outside the revised_narrative tag.
  */
 export function createParserChain(): ParserChain {
 	const thinkingParser = createThinkingTagParser();
 	const reviewScratchpadParser = createXmlTagParser('review_scratchpad');
-	const revisedNarrativeParser = createCompositeParser([createXmlTagParser('revised_narrative'), createGameDataParser('revisedGameData')]);
+	const revisedNarrativeParser = createNestedParser(
+		'revised_narrative',
+		createXmlTagParser('revised_narrative'),
+		createGameDataParser('revisedGameData')
+	);
 	const gameDataParser = createGameDataParser('gameData');
 
-	const parserChain = [thinkingParser, reviewScratchpadParser, gameDataParser, revisedNarrativeParser];
+	const parserChain = [thinkingParser, reviewScratchpadParser, revisedNarrativeParser, gameDataParser];
 
 	function runChain(initialText: string, mode: 'feed' | 'flush'): ParserChainOutput {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -45,7 +50,7 @@ export function createParserChain(): ParserChain {
 			revised_narrative: null,
 		};
 
-		let text = mode === 'feed' ? parserChain.reduce((t, parser) => parser.feed(t, acc), initialText) : runFlush(parserChain, acc);
+		const text = mode === 'feed' ? parserChain.reduce((t, parser) => parser.feed(t, acc), initialText) : runFlush(parserChain, acc);
 
 		return {
 			text: text || null,
@@ -68,11 +73,11 @@ export function createParserChain(): ParserChain {
 	};
 }
 
-function runFlush(parserChain: any[], acc: any): string {
+function runFlush(parserChain: StreamParser<Record<string, unknown>>[], acc: Record<string, unknown>): string {
 	const [first, ...rest] = parserChain;
 	let text = first.flush(acc);
 
-	text = rest.reduce((t: string, parser: any) => parser.feed(t, acc), text);
+	text = rest.reduce((t: string, parser: StreamParser<Record<string, unknown>>) => parser.feed(t, acc), text);
 
 	for (const parser of rest) {
 		const flushed = parser.flush(acc);
