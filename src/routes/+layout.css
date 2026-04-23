@@ -22,3 +22,7 @@
 	background-color: var(--color-surface-50-950);
 	color: var(--color-surface-950-50);
 }
+
+scratchpad {
+	display: none;
+}
