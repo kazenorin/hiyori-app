@@ -1,19 +1,26 @@
-import {getMainProviderConfig, getMemoryProviderConfig, type ProviderConfig, SCENE_NUMBER_REGEX, SESSION_NUMBER_REGEX, settings} from '$lib/stores/settings.svelte';
-import {getActiveStoryId, getActiveSystemPromptOrDefault} from '$lib/stores/stories.svelte';
-import type {GameData, MessageBase} from '$lib/db/messages';
+import {
+	getMainProviderConfig,
+	getMemoryProviderConfig,
+	type ProviderConfig,
+	SCENE_NUMBER_REGEX,
+	SESSION_NUMBER_REGEX,
+	settings,
+} from '$lib/stores/settings.svelte';
+import { getActiveStoryId, getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
+import type { GameData, MessageBase } from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
-import type {ModelMessage} from 'ai';
+import type { ModelMessage } from 'ai';
 import * as dbActLines from '$lib/db/act-lines';
-import {logMainChat} from '$lib/logging/chat-logger';
-import {type StreamState} from '$lib/ai/chat-callbacks';
-import {buildMetadata, type MessageMetadata, streamChatResponse} from './chat-stream';
-import {runMemoryExtractionPipeline} from './memory-extraction-pipeline';
-import {Memory} from '$lib/memory/memory';
-import {runReviewLoop} from '$lib/reviewer/review-loop';
-import {log} from '$lib/logging/logger';
-import {buildTools} from '$lib/ai/tools/tools';
-import type {StreamResultMetadata} from "$lib/ai/streaming";
-
+import { logMainChat } from '$lib/logging/chat-logger';
+import { type StreamState } from '$lib/ai/chat-callbacks';
+import { buildMetadata, type MessageMetadata, streamChatResponse } from './chat-stream';
+import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
+import { Memory } from '$lib/memory/memory';
+import { runReviewLoop } from '$lib/reviewer/review-loop';
+import { log } from '$lib/logging/logger';
+import { buildTools } from '$lib/ai/tools/tools';
+import type { StreamResultMetadata } from '$lib/ai/streaming';
+import { getErrorMessage } from '$lib/utils/error-handling';
 
 export interface Message {
 	id: string;
@@ -99,11 +106,9 @@ function getHistory(message: {
 	bodyText: string | undefined;
 	systemPrompt: string | undefined;
 	narrationContent: ModelMessage[] | undefined;
-	sessionNumber?: number
+	sessionNumber?: number;
 }): MessageBase[] {
-	const narrations = message.narrationContent?.length
-		? message.narrationContent.map(narrowNarrationMessage).filter((m) => m !== null)
-		: [];
+	const narrations = message.narrationContent?.length ? message.narrationContent.map(narrowNarrationMessage).filter((m) => m !== null) : [];
 	// exclude the first message (current message) to get the existing messages
 	const existing = messages.slice(0, -1).map((m) => toHistoryMessage(m));
 	return [...narrations, ...existing];
@@ -138,12 +143,15 @@ async function persistMessage(actLineId: string, message: Message): Promise<void
 	await dbActLines.addMessageToLine(actLineId, message.id, seq);
 }
 
-async function persistUserMessage(message: {
-	bodyText: string;
-	systemPrompt: string | undefined;
-	narrationContent: ModelMessage[] | undefined;
-	sessionNumber?: number
-}, actLineId: string) {
+async function persistUserMessage(
+	message: {
+		bodyText: string;
+		systemPrompt: string | undefined;
+		narrationContent: ModelMessage[] | undefined;
+		sessionNumber?: number;
+	},
+	actLineId: string
+) {
 	const userSessionNumber = message.sessionNumber ?? findLastNonNullSessionNumber();
 	const userSceneNumber = findLastNonNullSceneNumber();
 
@@ -179,11 +187,11 @@ async function handleStreamError(err: unknown, messageId: string, actLineId: str
 		if (partial && partial.content) {
 			await persistMessage(actLineId, partial);
 		}
-		await log.warn('send-message', 'User aborted.')
+		await log.warn('send-message', 'User aborted.');
 	} else {
-		error = err instanceof Error ? err.message : 'An unexpected error occurred.';
+		error = getErrorMessage(err);
 		messages = messages.filter((m) => m.id !== messageId);
-		await log.error('send-message', error, err)
+		await log.error('send-message', error, err);
 	}
 }
 
@@ -243,7 +251,7 @@ export async function sendMessage(
 
 	const responseMessage = newMessage('assistant');
 	if (!!message.bodyText && message.bodyText.trim().length > 0) {
-		const userMessage = await persistUserMessage({...message, bodyText: message.bodyText}, actLineId);
+		const userMessage = await persistUserMessage({ ...message, bodyText: message.bodyText }, actLineId);
 		messages = [...messages, userMessage, responseMessage];
 	} else {
 		messages = [...messages, responseMessage];
@@ -287,28 +295,33 @@ export async function sendMessage(
 				});
 			},
 			(err: unknown) => {
-				error = err instanceof Error ? err.message : String(err);
+				const errorMessage = getErrorMessage(err);
+				log.error('send-message', errorMessage, err);
+				error = errorMessage;
 			},
 			providerConfig,
 			tools
-		).then((acc) => acc.resultMetadata)
+		).then((acc) => acc.resultMetadata);
 
 		// Update message with accumulated content and final metadata
 		updateMetaData(getCurrentMessage, resultMetadata, providerConfig);
 
 		// Review loop: run editor mode, revise if needed
 		if (settings.reviewerEnabled) {
-			const sessionNumber = message.sessionNumber ?? findLastNonNullSessionNumber()
-			const reviewedMetadata = await runReviewLoop(getCurrentMessage, (msg) => setCurrentMessage(msg as Message), history, {sessionNumber, tools});
+			const sessionNumber = message.sessionNumber ?? findLastNonNullSessionNumber();
+			const reviewedMetadata = await runReviewLoop(getCurrentMessage, (msg) => setCurrentMessage(msg as Message), history, {
+				sessionNumber,
+				tools,
+			});
 			updateMetaData(getCurrentMessage, reviewedMetadata, providerConfig);
-			await log.debug('send-message', `Session ${sessionNumber} review completed`)
+			await log.debug('send-message', `Session ${sessionNumber} review completed`);
 		}
 
 		// Determine sceneNumber and sessionNumber for the assistant response
 		await determineSceneNumberAndNextSessionNumber(messageIdx, message.sessionNumber);
 
 		// Persist with accumulated content (not result.content)
-		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({systemPrompt, messages})]);
+		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({ systemPrompt, messages })]);
 
 		// Run memory extraction pipeline in background (non-blocking)
 		runMemoryPipeline(storyId, actLineId, getCurrentMessage());
@@ -324,10 +337,7 @@ async function determineSceneNumberAndNextSessionNumber(messageIdx: number, expl
 	const content = messages[messageIdx].content;
 
 	const lastSessionNumber = findLastNonNullSessionNumber();
-	const sessionNumber =
-		lastSessionNumber != null
-			? lastSessionNumber + 1
-			: (explicitSessionNumber ?? parseSessionNumber(content) ?? 1);
+	const sessionNumber = lastSessionNumber != null ? lastSessionNumber + 1 : (explicitSessionNumber ?? parseSessionNumber(content) ?? 1);
 
 	const sceneNumber = parseSceneNumber(content);
 
@@ -337,7 +347,7 @@ async function determineSceneNumberAndNextSessionNumber(messageIdx: number, expl
 		sessionNumber,
 	};
 
-	await log.info('send-message', `Prepared session ${sessionNumber}, last scene was ${sceneNumber}`)
+	await log.info('send-message', `Prepared session ${sessionNumber}, last scene was ${sceneNumber}`);
 }
 
 function parseSessionNumber(content: string): number | undefined {
@@ -527,6 +537,44 @@ export async function deleteLastExchange(actLineId: string): Promise<void> {
 			await log.error('delete-last-exchange', 'Memory cleanup failed', err);
 		}
 	}
+}
+
+/**
+ * Error-state fallback: deletes trailing user messages when the last message
+ * is a user message (i.e., no assistant response was ever generated).
+ * Also removes any consecutive user messages immediately before it.
+ */
+export async function deleteOrphanedUserMessages(actLineId: string): Promise<void> {
+	if (messages.length === 0) return;
+	if (messages.at(-1)?.role !== 'user') return;
+
+	let lastUserMsgIdx = messages.length - 1;
+	while (lastUserMsgIdx > 0 && messages[lastUserMsgIdx - 1].role === 'user') {
+		lastUserMsgIdx--;
+	}
+
+	const messageIdsToRemove = messages.slice(lastUserMsgIdx).map((m) => m.id);
+	messages = messages.slice(0, lastUserMsgIdx);
+
+	let removedIds: string[] = [];
+	try {
+		removedIds = await dbActLines.removeMessagesFromActLine(actLineId, messageIdsToRemove);
+	} catch (err) {
+		await log.error('delete-orphaned-user-messages', 'Message removal failed', err);
+		return;
+	}
+
+	if (removedIds.length > 0) {
+		try {
+			await removeMemoriesFromActLine(actLineId, removedIds);
+		} catch (err) {
+			await log.error('delete-orphaned-user-messages', 'Memory cleanup failed', err);
+		}
+	}
+}
+
+export function isUserMessage(message: Message): boolean {
+	return message.role === 'user';
 }
 
 export async function getForkSequence(actLineId: string, assistantMessageIndex: number): Promise<{ branchSeq: number; name: string }> {

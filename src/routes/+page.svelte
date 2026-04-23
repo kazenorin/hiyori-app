@@ -1,11 +1,13 @@
 <script lang="ts">
 	import {
 		deleteLastExchange,
+		deleteOrphanedUserMessages,
 		getError,
 		getForkSequence,
 		getIsStreaming,
 		getLatestDecisions,
 		getMessages,
+		isUserMessage,
 		isMemoryPipelineRunning,
 		loadActLineMessages,
 		regenerateLastResponse,
@@ -80,6 +82,12 @@
 		const actLineId = getActiveActLineId();
 		if (!actLineId || getIsStreaming()) return;
 		await deleteLastExchange(actLineId);
+	}
+
+	async function handleDeleteOrphanedUserMessages() {
+		const actLineId = getActiveActLineId();
+		if (!actLineId || getIsStreaming()) return;
+		await deleteOrphanedUserMessages(actLineId);
 	}
 
 	async function handleWorldBuilderRegenerate() {
@@ -548,6 +556,13 @@
 												title="Copy message"
 												onclick={() => handleCopy(message.id, message.content)}>{copiedId === message.id ? 'Copied' : 'Copy'}</button
 											>
+											{#if i === getMessages().length - 1 && isUserMessage(message)}
+												<button
+													class="text-xs text-error-500 hover:text-error-700 transition-colors"
+													title="Delete message"
+													onclick={() => handleDeleteOrphanedUserMessages()}>Delete</button
+												>
+											{/if}
 										</div>
 									{/if}
 								</div>

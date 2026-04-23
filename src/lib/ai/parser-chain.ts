@@ -3,6 +3,7 @@ import { createGameDataParser } from './game-data-parser';
 import { createXmlTagParser } from './xml-tag-parser';
 import { createNestedParser } from './nested-parser';
 import type { GameData } from '$lib/db/messages';
+import type { StreamParser } from './stream-parser';
 
 export interface ParserChainOutput {
 	text: string | null;

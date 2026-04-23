@@ -41,7 +41,7 @@
 
 ```json
 {
-	"playerAliases": ["You", "Your", "[Actual Name]"],
+	"playerAliases": ["[You/Your if second person, I if first person]", "[Actual Name]"],
 	"aliases": [
 		["[placeholder shown to player]", "[Alias 1]", "[Alias 2]"],
 		["[another placeholder shown to player]", "[Alias 1]", "[Alias 2]"]
