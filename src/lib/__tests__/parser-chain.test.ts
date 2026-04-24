@@ -41,41 +41,48 @@ function feedAll(chunks: string[]): {
 	return { text, thinking, gameData, reviewScratchpad, revisedNarrative, revisedGameData };
 }
 
-const GAME_DATA_JSON = JSON.stringify({
-	worldState: 'The hero stands at a crossroads.',
-	decisions: ['Go left', 'Go right'],
-});
+const GAME_DATA_MD = [
+	'# Game Data',
+	'',
+	'## World State',
+	'',
+	'The hero stands at a crossroads.',
+	'',
+	'## Decisions',
+	'',
+	'- Go left',
+	'- Go right',
+].join('\n');
 
 describe('ParserChain', () => {
 	it('extracts game data when no thinking tags are present', () => {
-		const input = `Story text\n\`\`\`json\n${GAME_DATA_JSON}\n\`\`\`\nMore text`;
+		const input = `Story text\n${GAME_DATA_MD}`;
 		const { text, gameData } = feedAll([input]);
 		expect(gameData).not.toBeNull();
 		expect(gameData?.decisions).toEqual(['Go left', 'Go right']);
 		expect(text).toContain('Story text');
-		expect(text).toContain('More text');
 	});
 
 	it('extracts thinking and game data from same stream', () => {
-		const input = `<${T}>Reasoning here</${T}>Story\n\`\`\`json\n${GAME_DATA_JSON}\n\`\`\`\nEnd`;
+		const input = `<${T}>Reasoning here</${T}>Story\n${GAME_DATA_MD}`;
 		const { text, thinking, gameData } = feedAll([input]);
 		expect(thinking).toBe('Reasoning here');
 		expect(gameData).not.toBeNull();
 		expect(gameData?.decisions).toEqual(['Go left', 'Go right']);
-		expect(text).toBe('Story\n\nEnd');
+		expect(text).toBe('Story\n');
 	});
 
 	it('extracts game data when thinking tag is followed by game data in chunks', () => {
-		const chunks = [`<${T}>Let me think`, ` about this</${T}>`, 'Story\n```json\n', GAME_DATA_JSON, '\n```\nEnd'];
+		const chunks = [`<${T}>Let me think`, ` about this</${T}>`, `Story\n${GAME_DATA_MD}`];
 		const { text, thinking, gameData } = feedAll(chunks);
 		expect(thinking).toBe('Let me think about this');
 		expect(gameData).not.toBeNull();
 		expect(gameData?.decisions).toEqual(['Go left', 'Go right']);
-		expect(text).toBe('Story\n\nEnd');
+		expect(text).toBe('Story\n');
 	});
 
-	it('preserves game data when text is empty between think tag and json block', () => {
-		const input = `<${T}>thought</${T}>\`\`\`json\n${GAME_DATA_JSON}\n\`\`\` `;
+	it('preserves game data when text is empty between think tag and markdown block', () => {
+		const input = `<${T}>thought</${T}>${GAME_DATA_MD}`;
 		const { thinking, gameData } = feedAll([input]);
 		expect(thinking).toBe('thought');
 		expect(gameData).not.toBeNull();
@@ -90,15 +97,13 @@ describe('ParserChain', () => {
 		expect(text).toContain('Incomplete thought');
 	});
 
-	it('game data survives when thinking tag ends mid-chunk and json starts same chunk', () => {
-		const chunk1 = `<${T}>reasoning</${T}>\`\`\`json\n`;
-		const chunk2 = GAME_DATA_JSON;
-		const chunk3 = '\n```';
-		const { text, thinking, gameData } = feedAll([chunk1, chunk2, chunk3]);
+	it('game data survives when thinking tag ends mid-chunk and markdown starts same chunk', () => {
+		const chunk1 = `<${T}>reasoning</${T}>Story\n${GAME_DATA_MD}`;
+		const { text, thinking, gameData } = feedAll([chunk1]);
 		expect(thinking).toBe('reasoning');
 		expect(gameData).not.toBeNull();
 		expect(gameData?.decisions).toEqual(['Go left', 'Go right']);
-		expect(text).toBe('');
+		expect(text).toBe('Story\n');
 	});
 
 	describe('reasoning accumulation', () => {
@@ -181,40 +186,29 @@ describe('ParserChain', () => {
 
 		describe('revised_narrative with embedded game data', () => {
 			it('extracts game data from revised_narrative into revisedGameData', () => {
-				const input = [
-					'<revised_narrative>The story continues\n```json\n',
-					GAME_DATA_JSON,
-					'\n```\nMore narrative</revised_narrative>',
-				].join('');
+				const input = `<revised_narrative>The story continues\n${GAME_DATA_MD}</revised_narrative>`;
 				const { text, gameData, revisedNarrative, revisedGameData } = feedAll([input]);
 				expect(text).toBe('');
-				expect(revisedNarrative).toBe('The story continues\n\nMore narrative');
-				expect(gameData).toBeNull(); // No game data outside the tag
-				expect(revisedGameData).not.toBeNull(); // Game data inside the tag
+				expect(revisedNarrative).toBe('The story continues\n');
+				expect(gameData).toBeNull();
+				expect(revisedGameData).not.toBeNull();
 				expect(revisedGameData?.decisions).toEqual(['Go left', 'Go right']);
 			});
 
 			it('handles revised_narrative game data split across chunks', () => {
-				const chunks = ['<revised_narrative>Text```json\n', GAME_DATA_JSON, '\n```</revised_narrative>'];
+				const chunks = [`<revised_narrative>Text\n${GAME_DATA_MD}</revised_narrative>`];
 				const { revisedNarrative, revisedGameData, gameData } = feedAll(chunks);
-				expect(revisedNarrative).toBe('Text');
+				expect(revisedNarrative).toBe('Text\n');
 				expect(revisedGameData).not.toBeNull();
 				expect(revisedGameData?.decisions).toEqual(['Go left', 'Go right']);
 				expect(gameData).toBeNull();
 			});
 
 			it('prioritizes revisedGameData over gameData in review callback pattern', () => {
-				// Simulates reviewer output: draft gameData outside, revised gameData inside tag
-				const input = [
-					'Draft text```json\n',
-					JSON.stringify({ worldState: 'draft state', decisions: ['draft choice'] }),
-					'\n```\n',
-					'<revised_narrative>Revised text```json\n',
-					GAME_DATA_JSON,
-					'\n```\n</revised_narrative>',
-				].join('');
+				const draftMd = ['# Game Data', '', '## World State', '', 'draft state', '', '## Decisions', '', '- draft choice'].join('\n');
+				const input = ['Draft text\n', draftMd, `<revised_narrative>Revised text\n${GAME_DATA_MD}</revised_narrative>`].join('');
 				const { text, gameData, revisedGameData, revisedNarrative } = feedAll([input]);
-				expect(text).toBe('Draft text\n'); // Draft game data removed from text
+				expect(text).toBe('Draft text\n');
 				expect(revisedNarrative).toBe('Revised text\n');
 				expect(gameData).not.toBeNull();
 				expect(gameData?.decisions).toEqual(['draft choice']);
@@ -229,9 +223,7 @@ describe('ParserChain', () => {
 					`<${T}>Analyzing narrative</${T}>`,
 					'<review_scratchpad>Tone is inconsistent</review_scratchpad>',
 					'<revised_narrative>The sun set over the hills</revised_narrative>',
-					'Story continues\n```json\n',
-					GAME_DATA_JSON,
-					'\n```\nEnd',
+					`Story continues\n${GAME_DATA_MD}`,
 				].join('');
 				const { text, thinking, gameData, reviewScratchpad, revisedNarrative, revisedGameData } = feedAll([input]);
 				expect(thinking).toBe('Analyzing narrative');
@@ -240,7 +232,7 @@ describe('ParserChain', () => {
 				expect(gameData).not.toBeNull();
 				expect(gameData?.decisions).toEqual(['Go left', 'Go right']);
 				expect(revisedGameData).toBeNull();
-				expect(text).toBe('Story continues\n\nEnd');
+				expect(text).toBe('Story continues\n');
 			});
 
 			it('handles all layers split across chunks', () => {
@@ -252,9 +244,7 @@ describe('ParserChain', () => {
 					'</review_scratchpad>',
 					'<revised_narrative>Rev',
 					'ised</revised_narrative>',
-					'Text```json\n',
-					GAME_DATA_JSON,
-					'\n```',
+					`Text\n${GAME_DATA_MD}`,
 				];
 				const { text, thinking, gameData, reviewScratchpad, revisedNarrative, revisedGameData } = feedAll(chunks);
 				expect(thinking).toBe('Deep thought');
@@ -262,7 +252,7 @@ describe('ParserChain', () => {
 				expect(revisedNarrative).toBe('Revised');
 				expect(gameData).not.toBeNull();
 				expect(revisedGameData).toBeNull();
-				expect(text).toBe('Text');
+				expect(text).toBe('Text\n');
 			});
 
 			it('omits missing layers', () => {

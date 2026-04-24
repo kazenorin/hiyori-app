@@ -33,20 +33,33 @@
 **DECISION POINT**
 [Brief contextual description of the moment of choice]
 
-1. [Specific, actionable choice]
-2. [Alternative approach or dialogue option]
-3. [Escalating or aggressive choice]
-4. [Observational, teasing, or defensive choice]
-5. Custom Action - [Prompt the player to elaborate their own approach]
+# Game Data
 
-```json
-{
-	"playerAliases": ["[You/Your if second person, I if first person]", "[Actual Name]"],
-	"aliases": [
-		["[placeholder shown to player]", "[Alias 1]", "[Alias 2]"],
-		["[another placeholder shown to player]", "[Alias 1]", "[Alias 2]"]
-	],
-	"worldState": "[Briefly detail secret background information, hidden character motives, or hidden plot tracking here. Do not show player-facing narrative yet.]",
-	"decisions": ["[choice 1 text]", "[choice 2 text]", "[choice 3 text]", "[choice 4 text]"]
-}
-```
+## Player Aliases
+
+Put the player's aliases here, one alias per list item:
+- [placeholder shown to player]
+- [Actual Name]
+
+## Other Character Aliases
+
+Use H3 `### Character Name` heading per character
+
+### [Character Name]
+
+Put the character aliases here, one alias per list item:
+- [placeholder shown to player]
+- [Alias 1]
+- [Alias 2]
+
+## World State
+
+[Briefly detail secret background information, hidden character motives, or hidden plot tracking here. Do not show player-facing narrative yet.]
+
+## Decisions
+
+Put the decisions available to the player here, one decision per list item
+- [Specific, actionable choice]
+- [Alternative approach or dialogue option]
+- [Escalating or aggressive choice]
+- [Observational, teasing, or defensive choice]

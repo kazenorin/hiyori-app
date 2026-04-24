@@ -29,10 +29,18 @@ function feedAll(chunks: string[]): { text: string; reasoning: string | null; ga
 	};
 }
 
-const GAME_DATA_JSON = JSON.stringify({
-	worldState: 'The hero stands at a crossroads.',
-	decisions: ['Go left', 'Go right'],
-});
+const GAME_DATA_MD = [
+	'# Game Data',
+	'',
+	'## World State',
+	'',
+	'The hero stands at a crossroads.',
+	'',
+	'## Decisions',
+	'',
+	'- Go left',
+	'- Go right',
+].join('\n');
 
 describe('createStreamAccumulator', () => {
 	describe('text accumulation', () => {
@@ -87,7 +95,7 @@ describe('createStreamAccumulator', () => {
 
 	describe('game data', () => {
 		it('extracts valid game data', () => {
-			const input = `Story\n\`\`\`json\n${GAME_DATA_JSON}\n\`\`\`\nEnd`;
+			const input = `Story\n${GAME_DATA_MD}`;
 			const result = feedAll([input]);
 			expect(result.gameData).not.toBeNull();
 			expect(result.gameData?.decisions).toEqual(['Go left', 'Go right']);
@@ -95,29 +103,23 @@ describe('createStreamAccumulator', () => {
 		});
 
 		it('skips game data with empty worldState', () => {
-			const gd = JSON.stringify({ worldState: '', decisions: ['A'] });
-			const result = feedAll([`\`\`\`json\n${gd}\n\`\`\``]);
-			expect(result.gameData).toBeNull();
-		});
-
-		it('skips game data with blank worldState', () => {
-			const gd = JSON.stringify({ worldState: '   ', decisions: ['A'] });
-			const result = feedAll([`\`\`\`json\n${gd}\n\`\`\``]);
+			const gd = ['# Game Data', '', '## World State', '', '   ', '', '## Decisions', '', '- A'].join('\n');
+			const result = feedAll([gd]);
 			expect(result.gameData).toBeNull();
 		});
 
 		it('skips game data with empty decisions', () => {
-			const gd = JSON.stringify({ worldState: 'State', decisions: [] });
-			const result = feedAll([`\`\`\`json\n${gd}\n\`\`\``]);
+			const gd = ['# Game Data', '', '## World State', '', 'State', '', '## Decisions', ''].join('\n');
+			const result = feedAll([gd]);
 			expect(result.gameData).toBeNull();
 		});
 
 		it('extracts game data alongside thinking tags', () => {
-			const chunks = [`<${T}>reasoning</${T}>`, `Story\n\`\`\`json\n`, GAME_DATA_JSON, '\n\`\`\`\nEnd'];
+			const chunks = [`<${T}>reasoning</${T}>`, `Story\n${GAME_DATA_MD}`];
 			const result = feedAll(chunks);
 			expect(result.reasoning).toBe('reasoning');
 			expect(result.gameData).not.toBeNull();
-			expect(result.text).toBe('Story\n\nEnd');
+			expect(result.text).toBe('Story\n');
 		});
 	});
 

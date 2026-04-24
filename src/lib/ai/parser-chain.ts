@@ -1,5 +1,5 @@
 import { createThinkingTagParser } from './thinking-tag-parser';
-import { createGameDataParser } from './game-data-parser';
+import { createMarkdownGameDataParser } from './markdown-game-data-parser';
 import { createXmlTagParser } from './xml-tag-parser';
 import { createNestedParser } from './nested-parser';
 import type { GameData } from '$lib/db/messages';
@@ -35,9 +35,9 @@ export function createParserChain(): ParserChain {
 	const revisedNarrativeParser = createNestedParser(
 		'revised_narrative',
 		createXmlTagParser('revised_narrative'),
-		createGameDataParser('revisedGameData')
+		createMarkdownGameDataParser('revisedGameData')
 	);
-	const gameDataParser = createGameDataParser('gameData');
+	const gameDataParser = createMarkdownGameDataParser('gameData');
 
 	const parserChain = [thinkingParser, reviewScratchpadParser, revisedNarrativeParser, gameDataParser];
 
