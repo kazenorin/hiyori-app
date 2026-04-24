@@ -1,8 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import { omitBy } from 'lodash';
 
-export const SCENE_NUMBER_REGEX = /scene\s+(\d+)/i;
-export const SESSION_NUMBER_REGEX = /session\s+(\d+)/i;
+export const SCENE_NUMBER_REGEX = /### Scene number\n+(\d+)/i;
+export const SESSION_NUMBER_REGEX = /## Session number\n+(\d+)/i;
 
 export type Provider = 'openai' | 'openai-compatible';
 export type ApiType = 'chat-completions' | 'responses';

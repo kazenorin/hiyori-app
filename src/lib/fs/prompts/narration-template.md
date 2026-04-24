@@ -1,36 +1,43 @@
-<scratchpad>
-</scratchpad>
+# Scratchpad
+[Scratchpad for plot planning, write you plans and evaluation here]
 
-# [STORY TITLE]
+# Story Information
 
-## Act [X]
+## Story Title
+[story title]
 
-> Session [Y]
+## Act Number
+[act number, an integer]
 
----
+## Session number
+[session number, an integer]
 
-### SCENE [Z]: [SCENE TITLE]
+## Scene
 
-**Background:** [Brief, vivid visual description of the setting, including lighting, atmosphere, and location.]
+### Scene number
+[scene number, an integer]
 
-[Narrative Body - Focus on sensory details, physical reactions, internal psychology, and content rules. Ensure smooth transitions.]
+### Scene title
+[scene title]
 
-**[CHARACTER NAME]:** "_Dialogue or direct thoughts._"
+# Background
+[Brief, vivid visual description of the setting, including lighting, atmosphere, and location.]
 
-[Narration continues...]
+# Narrative Body
+[Narrative Body - Dialogue or direct thoughts. Focus on sensory details, physical reactions, internal psychology, and content rules. Ensure smooth transitions.]
 
-**[CG:** Visual Novel style artwork description. Describe camera angle, lighting, expressions, body positioning, and environmental details.**]**
+# CG
+[CG: Visual Novel style artwork description. Describe camera angle, lighting, expressions, body positioning, and environmental details.]
 
----
+# Status Update
 
-**STATUS UPDATE**
+## Current Context
+[Summary of the immediate situation and state of events visible to the player]
 
-- **Current Context:** [Summary of the immediate situation and state of events]
-- **Active Plot Threads:** [List of unresolved situations or immediate goals]
+## Active Plot Threads
+[List of unresolved situations or immediate goals visible to the player]
 
----
-
-**DECISION POINT**
+# Decision context
 [Brief contextual description of the moment of choice]
 
 # Game Data

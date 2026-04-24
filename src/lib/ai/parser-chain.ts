@@ -2,6 +2,7 @@ import { createThinkingTagParser } from './thinking-tag-parser';
 import { createMarkdownGameDataParser } from './markdown-game-data-parser';
 import { createXmlTagParser } from './xml-tag-parser';
 import { createNestedParser } from './nested-parser';
+import { createHeadingSectionParser } from './heading-section-parser';
 import type { GameData } from '$lib/db/messages';
 import type { StreamParser } from './stream-parser';
 
@@ -24,13 +25,13 @@ export interface ParserChain {
 }
 
 /**
- * Combined parser chain: text → thinking → review_scratchpad → revised_narrative (with game-data) → game-data.
- * Extracts think tags first, then XML review tags, then intercepts ```json game-data blocks.
- * The revised_narrative parser extracts game data from within the tag body into revisedGameData.
- * The top-level gameDataParser only captures ```json blocks outside the revised_narrative tag.
+ * Combined parser chain: text → thinking → scratchpad → review_scratchpad → revised_narrative (with game-data) → game-data.
+ * Extracts think tags first, then hides scratchpad section, then XML review tags,
+ * then revised narrative with embedded game data, then top-level game data.
  */
 export function createParserChain(): ParserChain {
 	const thinkingParser = createThinkingTagParser();
+	const scratchpadParser = createHeadingSectionParser('Scratchpad');
 	const reviewScratchpadParser = createXmlTagParser('review_scratchpad');
 	const revisedNarrativeParser = createNestedParser(
 		'revised_narrative',
@@ -39,7 +40,7 @@ export function createParserChain(): ParserChain {
 	);
 	const gameDataParser = createMarkdownGameDataParser('gameData');
 
-	const parserChain = [thinkingParser, reviewScratchpadParser, revisedNarrativeParser, gameDataParser];
+	const parserChain = [thinkingParser, scratchpadParser, reviewScratchpadParser, revisedNarrativeParser, gameDataParser];
 
 	function runChain(initialText: string, mode: 'feed' | 'flush'): ParserChainOutput {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
