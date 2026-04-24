@@ -5,8 +5,10 @@ type ParserState = 'TEXT' | 'POTENTIAL_OPENER' | 'SECTION_BODY';
 export interface HeadingSectionOptions {
 	/** When provided, store body content in accumulator[accumulatorKey] instead of discarding. */
 	accumulatorKey?: string;
-	/** When true, capture body until EOF (no H1 boundary detection). Useful for last sections that contain fenced content with H1 headings. */
+	/** When true, capture body until EOF (no heading boundary detection). Useful for last sections. */
 	captureToEnd?: boolean;
+	/** Heading level: 1 for H1 (#), 2 for H2 (##), etc. Default is 1. */
+	level?: number;
 }
 
 /**
@@ -30,7 +32,8 @@ export function createHeadingSectionParser(
 	const resolvedOptions = typeof options === 'string' ? { accumulatorKey: options } : (options ?? {});
 	const accumulatorKey = resolvedOptions.accumulatorKey;
 	const captureToEnd = resolvedOptions.captureToEnd ?? false;
-	const OPENER = `# ${sectionHeading}`;
+	const level = resolvedOptions.level ?? 1;
+	const OPENER = `${'#'.repeat(level)} ${sectionHeading}`;
 
 	let state: ParserState = 'TEXT';
 	let openerBuffer = '';

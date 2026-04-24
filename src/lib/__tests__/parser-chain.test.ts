@@ -3,8 +3,6 @@ import { createParserChain } from '../ai/parser-chain';
 import type { GameData } from '../db/messages';
 
 const T = 'think';
-const FENCE_OPEN = '```markdown';
-const FENCE_CLOSE = '```';
 
 function feedAll(chunks: string[]): {
 	text: string;
@@ -44,13 +42,13 @@ function feedAll(chunks: string[]): {
 }
 
 const GAME_DATA_MD = [
-	'# Game Data',
+	'## Game Data',
 	'',
-	'## World State',
+	'### World State',
 	'',
 	'The hero stands at a crossroads.',
 	'',
-	'## Decisions',
+	'### Decisions',
 	'',
 	'- Go left',
 	'- Go right',
@@ -140,33 +138,21 @@ describe('ParserChain', () => {
 
 	describe('Review Scratchpad extraction', () => {
 		it('extracts # Review Scratchpad and hides it from text', () => {
-			const input = 'Before\n# Review Scratchpad\nCheck pacing and tone\n# Revised Narrative\n' + FENCE_OPEN + '\nAfter\n' + FENCE_CLOSE;
+			const input = 'Before\n# Review Scratchpad\nCheck pacing and tone\n# Revised Narrative\nAfter';
 			const { text, reviewScratchpad } = feedAll([input]);
 			expect(reviewScratchpad).toBe('\nCheck pacing and tone\n');
 			expect(text).not.toContain('Check pacing');
 		});
 
 		it('extracts # Review Scratchpad after thinking tags', () => {
-			const input =
-				'<' +
-				T +
-				'>Let me review</' +
-				T +
-				'>\n# Review Scratchpad\nPacing is off\n# Revised Narrative\n' +
-				FENCE_OPEN +
-				'\nStory text\n' +
-				FENCE_CLOSE;
+			const input = '<' + T + '>Let me review</' + T + '>\n# Review Scratchpad\nPacing is off\n# Revised Narrative\nStory text';
 			const { thinking, reviewScratchpad } = feedAll([input]);
 			expect(thinking).toBe('Let me review');
 			expect(reviewScratchpad).toBe('\nPacing is off\n');
 		});
 
 		it('handles # Review Scratchpad split across chunks after thinking', () => {
-			const chunks = [
-				'<' + T + '>Thought</' + T + '>',
-				'\n# Review Scratchpad\nReview',
-				' notes\n# Revised Narrative\n' + FENCE_OPEN + '\n Story\n' + FENCE_CLOSE,
-			];
+			const chunks = ['<' + T + '>Thought</' + T + '>', '\n# Review Scratchpad\nReview', ' notes\n# Revised Narrative\n Story'];
 			const { thinking, reviewScratchpad } = feedAll(chunks);
 			expect(thinking).toBe('Thought');
 			expect(reviewScratchpad).toBe('\nReview notes\n');
@@ -180,36 +166,36 @@ describe('ParserChain', () => {
 	});
 
 	describe('Revised Narrative extraction', () => {
-		it('extracts # Revised Narrative content from code fence', () => {
-			const input = 'Original\n# Revised Narrative\n' + FENCE_OPEN + '\nImproved version\n' + FENCE_CLOSE;
+		it('extracts # Revised Narrative content', () => {
+			const input = 'Original\n# Revised Narrative\nImproved version';
 			const { revisedNarrative } = feedAll([input]);
-			expect(revisedNarrative).toBe('Improved version\n');
+			expect(revisedNarrative).toBe('\nImproved version');
 		});
 
 		it('extracts # Revised Narrative after # Review Scratchpad', () => {
-			const input = '# Review Scratchpad\nFix pacing\n# Revised Narrative\n' + FENCE_OPEN + '\nBetter pacing here\n' + FENCE_CLOSE;
+			const input = '# Review Scratchpad\nFix pacing\n# Revised Narrative\nBetter pacing here';
 			const { reviewScratchpad, revisedNarrative } = feedAll([input]);
 			expect(reviewScratchpad).toBe('\nFix pacing\n');
-			expect(revisedNarrative).toBe('Better pacing here\n');
+			expect(revisedNarrative).toBe('\nBetter pacing here');
 		});
 	});
 
 	describe('Revised Narrative with embedded game data', () => {
-		it('extracts game data from # Revised Narrative code fence into revisedGameData', () => {
+		it('extracts game data from # Revised Narrative into revisedGameData', () => {
 			const narrativeMd = 'The story continues\n' + GAME_DATA_MD;
-			const input = '# Revised Narrative\n' + FENCE_OPEN + '\n' + narrativeMd + '\n' + FENCE_CLOSE;
+			const input = '# Revised Narrative\n' + narrativeMd;
 			const { revisedNarrative, revisedGameData } = feedAll([input]);
-			expect(revisedNarrative).toBe('The story continues\n');
+			expect(revisedNarrative).toBe('\nThe story continues\n');
 			expect(revisedGameData).not.toBeNull();
 			expect(revisedGameData?.decisions).toEqual(['Go left', 'Go right']);
 		});
 
 		it('prioritizes revisedGameData over gameData in review callback pattern', () => {
-			const draftMd = ['# Game Data', '', '## World State', '', 'draft state', '', '## Decisions', '', '- draft choice'].join('\n');
+			const draftMd = ['## Game Data', '', '### World State', '', 'draft state', '', '### Decisions', '', '- draft choice'].join('\n');
 			const revisedMd = 'Revised text\n' + GAME_DATA_MD;
-			const input = 'Draft text\n' + draftMd + '\n# Revised Narrative\n' + FENCE_OPEN + '\n' + revisedMd + '\n' + FENCE_CLOSE;
+			const input = 'Draft text\n' + draftMd + '\n# Revised Narrative\n' + revisedMd;
 			const { gameData, revisedGameData, revisedNarrative } = feedAll([input]);
-			expect(revisedNarrative).toBe('Revised text\n');
+			expect(revisedNarrative).toBe('\nRevised text\n');
 			expect(gameData).not.toBeNull();
 			expect(gameData?.decisions).toEqual(['draft choice']);
 			expect(revisedGameData).not.toBeNull();
@@ -228,33 +214,21 @@ describe('ParserChain', () => {
 				'\n# Review Scratchpad' +
 				'\nTone is inconsistent' +
 				'\n# Revised Narrative' +
-				'\n' +
-				FENCE_OPEN +
-				'\nThe sun set over the hills' +
-				'\n' +
-				FENCE_CLOSE;
+				'\nThe sun set over the hills';
 			const { thinking, gameData, reviewScratchpad, revisedNarrative, revisedGameData } = feedAll([input]);
 			expect(thinking).toBe('Analyzing narrative');
 			expect(reviewScratchpad).toBe('\nTone is inconsistent\n');
-			expect(revisedNarrative).toBe('The sun set over the hills\n');
+			expect(revisedNarrative).toBe('\nThe sun set over the hills');
 			expect(gameData).toBeNull();
 			expect(revisedGameData).toBeNull();
 		});
 
 		it('handles all layers split across chunks', () => {
-			const chunks = [
-				'<' + T + '>Deep ',
-				'thought</think',
-				'>',
-				'\n# Review Scratchpad\nReview',
-				'\n# Revised Narrative\n' + FENCE_OPEN,
-				'\nRev',
-				'ised\n' + FENCE_CLOSE,
-			];
+			const chunks = ['<' + T + '>Deep ', 'thought</think', '>', '\n# Review Scratchpad\nReview', '\n# Revised Narrative\nRev', 'ised'];
 			const { thinking, gameData, reviewScratchpad, revisedNarrative, revisedGameData } = feedAll(chunks);
 			expect(thinking).toBe('Deep thought');
 			expect(reviewScratchpad).toBe('\nReview\n');
-			expect(revisedNarrative).toBe('Revised\n');
+			expect(revisedNarrative).toBe('\nRevised');
 			expect(gameData).toBeNull();
 			expect(revisedGameData).toBeNull();
 		});

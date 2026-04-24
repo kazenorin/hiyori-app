@@ -4,7 +4,7 @@ import type { GameData } from '$lib/db/messages';
 
 type ParserState = 'TEXT' | 'POTENTIAL_OPENER' | 'MARKDOWN_BODY';
 
-const SECTION_OPENER = '# Game Data';
+const SECTION_OPENER = '## Game Data';
 
 /**
  * Streaming parser that extracts Game Data from Markdown format.
@@ -35,44 +35,44 @@ export function createMarkdownGameDataParser(tagName: string = 'gameData'): Stre
 		const aliases: Map<string, string[]> = new Map();
 		let worldState = '';
 		const decisions: string[] = [];
-		let currentH2: string | null = null;
-		let currentH3: string | null = null;
+		let currentSection: string | null = null;
+		let currentCharacter: string | null = null;
 
 		for (const token of tokens) {
 			if (token.type === 'heading') {
 				const heading = token as Tokens.Heading;
-				if (heading.depth === 1) {
+				if (heading.depth === 2) {
 					continue;
-				} else if (heading.depth === 2) {
-					currentH2 = heading.text.toLowerCase();
-					currentH3 = null;
-				} else if (heading.depth === 3 && currentH2 === 'other character aliases') {
-					currentH3 = heading.text;
-					if (currentH3 && !aliases.has(currentH3)) {
-						aliases.set(currentH3, []);
+				} else if (heading.depth === 3) {
+					currentSection = heading.text.toLowerCase();
+					currentCharacter = null;
+				} else if (heading.depth === 4 && currentSection === 'other character aliases') {
+					currentCharacter = heading.text;
+					if (currentCharacter && !aliases.has(currentCharacter)) {
+						aliases.set(currentCharacter, []);
 					}
 				}
 			} else if (token.type === 'list') {
 				const list = token as Tokens.List;
-				if (currentH2 === 'player aliases') {
+				if (currentSection === 'player aliases') {
 					for (const item of list.items) {
 						playerAliases.push(item.text);
 					}
-				} else if (currentH2 === 'other character aliases' && currentH3) {
-					const charAliases = aliases.get(currentH3);
+				} else if (currentSection === 'other character aliases' && currentCharacter) {
+					const charAliases = aliases.get(currentCharacter);
 					if (charAliases) {
 						for (const item of list.items) {
 							charAliases.push(item.text);
 						}
 					}
-				} else if (currentH2 === 'decisions') {
+				} else if (currentSection === 'decisions') {
 					for (const item of list.items) {
 						decisions.push(item.text);
 					}
 				}
 			} else if (token.type === 'paragraph') {
 				const para = token as Tokens.Paragraph;
-				if (currentH2 === 'world state') {
+				if (currentSection === 'world state') {
 					worldState = para.text;
 				}
 			}

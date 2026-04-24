@@ -49,8 +49,6 @@ Strictly follow the exact structure under the `### Output Template` section:
 
 # Revised Narrative
 
-```markdown
 {narrationTemplate}
-```
 
 ---

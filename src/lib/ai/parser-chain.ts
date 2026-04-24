@@ -22,21 +22,13 @@ export interface ParserChain {
 	flush(): ParserChainOutput;
 }
 
-const MARKDOWN_CODE_FENCE_REGEX = /[\s]*```(?:markdown|md)?\n([\s\S]*?)```/;
-
-function stripMarkdownCodeFence(text: string): string {
-	const match = text.match(MARKDOWN_CODE_FENCE_REGEX);
-	return match ? match[1] : text.trim();
-}
-
 /**
- * Creates a nested parser that captures `# {heading}` section content to EOF,
- * strips the outer ```markdown code fence, then extracts game data.
+ * Creates a parser that captures `# {heading}` section content to EOF,
+ * then extracts game data from the body.
  *
  * During feed, body deltas are accumulated locally (not emitted) because
- * code fence stripping requires the complete body. On flush, the full body
- * is stripped, fed through the game data parser, and the cleaned narrative
- * is emitted.
+ * game data extraction requires the complete body. On flush, the full body
+ * is fed through the game data parser, and the cleaned narrative is emitted.
  */
 function createRevisedNarrativeParser(heading: string, accumulatorKey: string, gameDataKey: string): StreamParser<Record<string, unknown>> {
 	const headingParser = createHeadingSectionParser(heading, { accumulatorKey, captureToEnd: true });
@@ -63,8 +55,7 @@ function createRevisedNarrativeParser(heading: string, accumulatorKey: string, g
 			captureBodyDelta(accumulator);
 
 			if (rawBody) {
-				const stripped = stripMarkdownCodeFence(rawBody);
-				const feedResult = gameDataParser.feed(stripped, accumulator as Record<string, GameData | null>);
+				const feedResult = gameDataParser.feed(rawBody, accumulator as Record<string, GameData | null>);
 				const flushResult = gameDataParser.flush(accumulator as Record<string, GameData | null>);
 				accumulator[accumulatorKey] = feedResult + flushResult;
 			}
@@ -81,7 +72,7 @@ function createRevisedNarrativeParser(heading: string, accumulatorKey: string, g
  */
 export function createParserChain(): ParserChain {
 	const thinkingParser = createThinkingTagParser();
-	const scratchpadParser = createHeadingSectionParser('Scratchpad');
+	const scratchpadParser = createHeadingSectionParser('Scratchpad', { level: 2 });
 	const reviewScratchpadParser = createHeadingSectionParser('Review Scratchpad', 'review_scratchpad');
 	const revisedNarrativeParser = createRevisedNarrativeParser('Revised Narrative', 'revised_narrative', 'revisedGameData');
 	const gameDataParser = createMarkdownGameDataParser('gameData');

@@ -30,13 +30,13 @@ function feedAll(chunks: string[]): { text: string; reasoning: string | null; ga
 }
 
 const GAME_DATA_MD = [
-	'# Game Data',
+	'## Game Data',
 	'',
-	'## World State',
+	'### World State',
 	'',
 	'The hero stands at a crossroads.',
 	'',
-	'## Decisions',
+	'### Decisions',
 	'',
 	'- Go left',
 	'- Go right',
@@ -103,13 +103,13 @@ describe('createStreamAccumulator', () => {
 		});
 
 		it('skips game data with empty worldState', () => {
-			const gd = ['# Game Data', '', '## World State', '', '   ', '', '## Decisions', '', '- A'].join('\n');
+			const gd = ['## Game Data', '', '### World State', '', '   ', '', '### Decisions', '', '- A'].join('\n');
 			const result = feedAll([gd]);
 			expect(result.gameData).toBeNull();
 		});
 
 		it('skips game data with empty decisions', () => {
-			const gd = ['# Game Data', '', '## World State', '', 'State', '', '## Decisions', ''].join('\n');
+			const gd = ['## Game Data', '', '### World State', '', 'State', '', '### Decisions', ''].join('\n');
 			const result = feedAll([gd]);
 			expect(result.gameData).toBeNull();
 		});
