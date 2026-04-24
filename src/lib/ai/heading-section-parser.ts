@@ -2,22 +2,53 @@ import type { StreamParser } from './stream-parser';
 
 type ParserState = 'TEXT' | 'POTENTIAL_OPENER' | 'SECTION_BODY';
 
+export interface HeadingSectionOptions {
+	/** When provided, store body content in accumulator[accumulatorKey] instead of discarding. */
+	accumulatorKey?: string;
+	/** When true, capture body until EOF (no H1 boundary detection). Useful for last sections that contain fenced content with H1 headings. */
+	captureToEnd?: boolean;
+}
+
 /**
  * Creates a parser that hides an H1 heading section from text output.
  *
  * Detects `# {sectionHeading}`, buffers content until the next H1 heading
- * (a line starting with `# `), and hides the entire section.
- * The content is discarded — not stored in the accumulator.
+ * (a line starting with `# `), and hides the entire section from passthrough.
+ *
+ * When `options.accumulatorKey` is provided, the section body content is emitted
+ * incrementally (as deltas) to `accumulator[accumulatorKey]`, enabling
+ * real-time streaming. When omitted, the content is silently discarded.
+ *
+ * When `options.captureToEnd` is true, the section body captures until EOF/flush
+ * instead of stopping at the next H1 heading. This is needed for sections that
+ * contain fenced content (e.g., ```markdown blocks) with embedded H1 headings.
  */
-export function createHeadingSectionParser(sectionHeading: string): StreamParser<Record<string, unknown>> {
+export function createHeadingSectionParser(
+	sectionHeading: string,
+	options?: string | HeadingSectionOptions
+): StreamParser<Record<string, unknown>> {
+	const resolvedOptions = typeof options === 'string' ? { accumulatorKey: options } : (options ?? {});
+	const accumulatorKey = resolvedOptions.accumulatorKey;
+	const captureToEnd = resolvedOptions.captureToEnd ?? false;
 	const OPENER = `# ${sectionHeading}`;
 
 	let state: ParserState = 'TEXT';
 	let openerBuffer = '';
 	let textBuffer = '';
 	let lineStart = true; // Track whether we're at the start of a line
+	let bodyBuffer = '';
+	let emittedBodyLength = 0;
 
-	function feed(chunk: string, _accumulator: Record<string, unknown>): string {
+	function emitBodyDelta(accumulator: Record<string, unknown>): void {
+		if (!accumulatorKey) return;
+		const delta = bodyBuffer.slice(emittedBodyLength);
+		if (delta) {
+			emittedBodyLength = bodyBuffer.length;
+			accumulator[accumulatorKey] = (accumulator[accumulatorKey] ?? '') + delta;
+		}
+	}
+
+	function feed(chunk: string, accumulator: Record<string, unknown>): string {
 		for (let i = 0; i < chunk.length; i++) {
 			const char = chunk[i];
 
@@ -37,9 +68,11 @@ export function createHeadingSectionParser(sectionHeading: string): StreamParser
 					openerBuffer += char;
 
 					if (openerBuffer === OPENER) {
-						// Check next char is newline or EOF (not part of a longer heading like `# Scratchpad Notes`)
+						// Matched heading — enter section body
 						state = 'SECTION_BODY';
 						openerBuffer = '';
+						bodyBuffer = '';
+						emittedBodyLength = 0;
 						lineStart = false;
 					} else if (char === '\n' || (char !== ' ' && !OPENER.startsWith(openerBuffer))) {
 						// Can't form opener — flush as text
@@ -57,35 +90,48 @@ export function createHeadingSectionParser(sectionHeading: string): StreamParser
 				}
 
 				case 'SECTION_BODY': {
-					// Detect next H1 heading: newline followed by `# `
-					if (char === '\n') {
-						lineStart = true;
-					} else if (char === '#' && lineStart) {
-						// Found start of next H1 heading — close section
-						// Don't consume the `#`, let it be processed as TEXT
-						state = 'TEXT';
-						lineStart = true;
-						// Re-process this '#' as potential opener or text
-						openerBuffer = '#';
-						state = 'POTENTIAL_OPENER';
+					if (captureToEnd) {
+						// Capture everything until EOF/flush — ignore H1 boundaries
+						bodyBuffer += char;
 					} else {
-						lineStart = false;
+						// Detect next H1 heading: newline followed by `# `
+						if (char === '\n') {
+							lineStart = true;
+							bodyBuffer += char;
+						} else if (char === '#' && lineStart) {
+							// Found start of next H1 heading — close section
+							// Emit remaining body delta before closing
+							emitBodyDelta(accumulator);
+							emittedBodyLength = 0;
+							bodyBuffer = '';
+							state = 'TEXT';
+							lineStart = true;
+							// Re-process this '#' as potential opener or text
+							openerBuffer = '#';
+							state = 'POTENTIAL_OPENER';
+						} else {
+							bodyBuffer += char;
+							lineStart = false;
+						}
 					}
 					break;
 				}
 			}
 		}
 
-		if (state === 'TEXT') {
-			const text = textBuffer;
-			textBuffer = '';
-			return text;
+		// Emit text accumulated before the section (always, regardless of state)
+		const text = textBuffer;
+		textBuffer = '';
+
+		// Emit body content delta while still buffering
+		if (state !== 'TEXT') {
+			emitBodyDelta(accumulator);
 		}
 
-		return '';
+		return text;
 	}
 
-	function flush(_accumulator: Record<string, unknown>): string {
+	function flush(accumulator: Record<string, unknown>): string {
 		let flushedText = textBuffer;
 
 		switch (state) {
@@ -96,7 +142,17 @@ export function createHeadingSectionParser(sectionHeading: string): StreamParser
 				openerBuffer = '';
 				break;
 			case 'SECTION_BODY':
-				// Discard section body — it's hidden from output
+				if (emittedBodyLength > 0) {
+					// Content was already streamed — emit remaining delta, don't flush as text
+					emitBodyDelta(accumulator);
+				} else if (!accumulatorKey) {
+					// No accumulator key — discard content
+				} else {
+					// Content was buffered but not emitted — passthrough as text
+					flushedText += OPENER + bodyBuffer;
+				}
+				bodyBuffer = '';
+				emittedBodyLength = 0;
 				break;
 		}
 
