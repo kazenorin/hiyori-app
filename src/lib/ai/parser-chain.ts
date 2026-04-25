@@ -1,6 +1,5 @@
 import { createThinkingTagParser } from './thinking-tag-parser';
-import { createMarkdownGameDataParser } from './markdown-game-data-parser';
-import { createHeadingSectionParser } from './heading-section-parser';
+import { createSaxSectionParser } from './sax-section-parser';
 import type { GameData } from '$lib/db/messages';
 import type { StreamParser } from './stream-parser';
 
@@ -23,61 +22,16 @@ export interface ParserChain {
 }
 
 /**
- * Creates a parser that captures `# {heading}` section content to EOF,
- * then extracts game data from the body.
- *
- * During feed, body deltas are accumulated locally (not emitted) because
- * game data extraction requires the complete body. On flush, the full body
- * is fed through the game data parser, and the cleaned narrative is emitted.
- */
-function createRevisedNarrativeParser(heading: string, accumulatorKey: string, gameDataKey: string): StreamParser<Record<string, unknown>> {
-	const headingParser = createHeadingSectionParser(heading, { accumulatorKey, captureToEnd: true });
-	const gameDataParser = createMarkdownGameDataParser(gameDataKey);
-	let rawBody = '';
-
-	function captureBodyDelta(accumulator: Record<string, unknown>): void {
-		const delta = accumulator[accumulatorKey] as string | undefined;
-		if (delta) {
-			rawBody += delta;
-			accumulator[accumulatorKey] = null;
-		}
-	}
-
-	return {
-		feed(chunk: string, accumulator: Record<string, unknown>): string {
-			const text = headingParser.feed(chunk, accumulator);
-			captureBodyDelta(accumulator);
-			return text;
-		},
-
-		flush(accumulator: Record<string, unknown>): string {
-			const text = headingParser.flush(accumulator);
-			captureBodyDelta(accumulator);
-
-			if (rawBody) {
-				const feedResult = gameDataParser.feed(rawBody, accumulator as Record<string, GameData | null>);
-				const flushResult = gameDataParser.flush(accumulator as Record<string, GameData | null>);
-				accumulator[accumulatorKey] = feedResult + flushResult;
-			}
-
-			return text;
-		},
-	};
-}
-
-/**
- * Combined parser chain: text → thinking → scratchpad → review_scratchpad → revised_narrative (with game-data) → game-data.
- * Extracts think tags first, hides scratchpad section, then heading-based review sections,
- * then revised narrative with embedded game data, then top-level game data.
+ * Combined parser chain: thinking → sax-section.
+ * ThinkingTagParser strips <think/> blocks first, then the SAX-based
+ * section parser handles all structural Markdown detection, section
+ * routing, and game data extraction.
  */
 export function createParserChain(): ParserChain {
 	const thinkingParser = createThinkingTagParser();
-	const scratchpadParser = createHeadingSectionParser('Scratchpad', { level: 2 });
-	const reviewScratchpadParser = createHeadingSectionParser('Review Scratchpad', 'review_scratchpad');
-	const revisedNarrativeParser = createRevisedNarrativeParser('Revised Narrative', 'revised_narrative', 'revisedGameData');
-	const gameDataParser = createMarkdownGameDataParser('gameData');
+	const saxSectionParser = createSaxSectionParser();
 
-	const parserChain = [thinkingParser, scratchpadParser, reviewScratchpadParser, revisedNarrativeParser, gameDataParser];
+	const parserChain = [thinkingParser, saxSectionParser];
 
 	function runChain(initialText: string, mode: 'feed' | 'flush'): ParserChainOutput {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
