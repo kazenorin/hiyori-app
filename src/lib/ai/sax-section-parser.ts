@@ -83,11 +83,13 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 
 	// Cross-call state (persists across feed calls)
 	let sectionMode: SectionMode = 'normal';
+	let previousModeBeforeSuppress: SectionMode | null = null;
 	let _suppressDepth = 0;
 	let skipNextText = false;
 
 	// Revised narrative capture
 	let revisedBodyBuffer = '';
+	let revisedSentLength = 0;
 
 	// Game data tracking (top-level)
 	let topLevelGameData: GameDataTracker | null = null;
@@ -118,6 +120,7 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 
 				// Check for special sections
 				if (name === SCRATCHPAD && level === 2) {
+					previousModeBeforeSuppress = sectionMode;
 					sectionMode = 'suppress';
 					_suppressDepth = element.depth;
 					skipNextText = true;
@@ -210,7 +213,8 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 
 			// Leaving Scratchpad
 			if (name === SCRATCHPAD && level === 2) {
-				sectionMode = 'normal';
+				sectionMode = previousModeBeforeSuppress ?? 'normal';
+				previousModeBeforeSuppress = null;
 				return;
 			}
 
@@ -234,6 +238,8 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 					// Invalid game data — emit buffered text as passthrough
 					if (tracker === revisedGameData) {
 						revisedBodyBuffer += tracker.fallbackBuffer;
+						currentAcc[ACC_NARRATIVE] = (currentAcc[ACC_NARRATIVE] ?? '') + tracker.fallbackBuffer;
+						revisedSentLength = revisedBodyBuffer.length;
 					} else {
 						pendingText += tracker.fallbackBuffer;
 					}
@@ -302,8 +308,9 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 
 				case 'captureRevised':
 					revisedBodyBuffer += text;
+					currentAcc[ACC_NARRATIVE] = (currentAcc[ACC_NARRATIVE] ?? '') + text;
+					revisedSentLength = revisedBodyBuffer.length;
 					return;
-
 				case 'gameData':
 					// Handled by activeGameData above
 					return;
@@ -363,11 +370,13 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 			pendingRevisedGameData = null;
 		}
 
-		// Write revised narrative
-		if (revisedBodyBuffer) {
-			accumulator[ACC_NARRATIVE] = revisedBodyBuffer;
-			revisedBodyBuffer = '';
+		// Write remaining revised narrative not yet sent via feed
+		const unsent = revisedBodyBuffer.slice(revisedSentLength);
+		if (unsent) {
+			accumulator[ACC_NARRATIVE] = (accumulator[ACC_NARRATIVE] ?? '') + unsent;
 		}
+		revisedBodyBuffer = '';
+		revisedSentLength = 0;
 
 		// Reset section state
 		sectionMode = 'normal';

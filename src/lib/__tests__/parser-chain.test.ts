@@ -244,3 +244,72 @@ describe('ParserChain', () => {
 		});
 	});
 });
+
+describe('Revised Narrative with ## Scratchpad (suppress-nesting)', () => {
+	it('captures revised narrative content after ## Scratchpad', () => {
+		// This tests the bug where ## Scratchpad inside # Revised Narrative
+		// would cause section mode to reset to 'normal' instead of 'captureRevised'
+		const input = [
+			'# Review Scratchpad',
+			'- Rule 1: OK',
+			'',
+			'# Revised Narrative',
+			'## Scratchpad',
+			'[Planning notes]',
+			'',
+			'## Story Information',
+			'',
+			'### Story Title',
+			'My Story',
+			'',
+			'## Background',
+			'The setting.',
+		].join('\n');
+		const { revisedNarrative, reviewScratchpad } = feedAll([input]);
+
+		// Review scratchpad should have the review content
+		// Note: SAX parser strips list markers, so "- Rule 1: OK" becomes "Rule 1: OK"
+		expect(reviewScratchpad).toBe('Rule 1: OK\n');
+
+		// Revised narrative should include content after ## Scratchpad
+		// (The scratchpad section itself is suppressed)
+		// Note: SAX parser strips header markers, so "## Story Information" becomes "Story Information"
+		expect(revisedNarrative).not.toBeNull();
+		expect(revisedNarrative).toContain('Story Information');
+		expect(revisedNarrative).toContain('My Story');
+		expect(revisedNarrative).toContain('The setting.');
+		expect(revisedNarrative).not.toContain('[Planning notes]');
+	});
+
+	it('streams revised narrative content progressively during feed', () => {
+		// Test that revised narrative accumulates across feed calls
+		const chunks = [
+			'# Review Scratchpad\n',
+			'- Analysis\n',
+			'\n# Revised Narrative\n',
+			'## Scratchpad\n',
+			'[Hidden]\n',
+			'\n## Story\n',
+			'Content here.\n',
+		];
+
+		const chain = createParserChain();
+		let revisedNarrative = '';
+
+		for (const chunk of chunks) {
+			const output = chain.feed(chunk);
+			if (output.revisedNarrative) {
+				revisedNarrative += output.revisedNarrative;
+			}
+		}
+
+		const flushed = chain.flush();
+		if (flushed.revisedNarrative) {
+			revisedNarrative += flushed.revisedNarrative;
+		}
+
+		expect(revisedNarrative).toContain('Story');
+		expect(revisedNarrative).toContain('Content here.');
+		expect(revisedNarrative).not.toContain('[Hidden]');
+	});
+});
