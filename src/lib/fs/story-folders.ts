@@ -10,7 +10,8 @@ import { log } from '$lib/logging/logger';
  */
 export function canonicalName(name: string): string {
 	// Remove: / \ < > : " | ? * and control characters (0x00-0x1F)
-	let sanitized = name.replace(/[/\\<>:"|?*\x00-\x1F]/g, '');
+	// eslint-disable-next-line no-control-regex
+	let sanitized = name.replace(/[/\\<>:"|?*\u0000-\u001F]/gu, '');
 	// Trim trailing spaces and dots (Windows issue)
 	sanitized = sanitized.replace(/[\s.]+$/u, '');
 	// Trim leading spaces

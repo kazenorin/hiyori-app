@@ -1,16 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { applyParserOutput, applyReasoningDelta } from '../ai/message-updater';
 import type { GameData } from '../db/messages';
-import type { Message } from '../ai/chat.svelte';
-
-function createMessage(overrides?: Partial<Message>): Message {
-	return {
-		id: 'test-id',
-		role: 'assistant',
-		content: '',
-		...overrides,
-	};
-}
 
 const emptyState = {
 	content: '',

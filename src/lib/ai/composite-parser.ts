@@ -5,7 +5,7 @@ import type { StreamParser } from './stream-parser';
  * Each parser's text output feeds into the next parser.
  * All parsers share the same accumulator.
  */
-export interface CompositeParser extends StreamParser<Record<string, unknown>> {}
+export type CompositeParser = StreamParser<Record<string, unknown>>;
 
 export function createCompositeParser(parsers: StreamParser<Record<string, unknown>>[]): CompositeParser {
 	return {

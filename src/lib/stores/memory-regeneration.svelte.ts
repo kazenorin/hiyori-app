@@ -1,5 +1,5 @@
 import { Memory } from '$lib/memory/memory';
-import { getEmbeddingProviderConfig, getMemoryProviderConfig } from '$lib/stores/settings.svelte';
+import { getEmbeddingProviderConfig } from '$lib/stores/settings.svelte';
 import { getActiveStoryId, getActiveActLineId } from './stories.svelte';
 import { getMessagesForLine } from '$lib/db/act-lines';
 import { runMemoryExtractionPipeline } from '$lib/ai/memory-extraction-pipeline';
@@ -63,7 +63,7 @@ export async function regenerateMemoriesForCurrentLine(onProgress?: (message: st
 		await log.info('memory-regen', msg);
 
 		// Run pipeline for each assistant message sequentially
-		let totalCharacters = 0;
+		let _totalCharacters = 0;
 		let totalMemories = 0;
 		let totalLocations = 0;
 		let errorCount = 0;
@@ -75,7 +75,7 @@ export async function regenerateMemoriesForCurrentLine(onProgress?: (message: st
 
 			try {
 				const result = await runMemoryExtractionPipeline(assistantMessages[i].content, storyId, actLineId, assistantMessages[i].id);
-				totalCharacters += result.charactersProcessed;
+				_totalCharacters += result.charactersProcessed;
 				totalMemories += result.memoriesAdded;
 				totalLocations += result.locationsAdded;
 				errorCount += result.errors.length;

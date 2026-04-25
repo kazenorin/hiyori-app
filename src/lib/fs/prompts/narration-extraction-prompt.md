@@ -18,7 +18,7 @@
 
 Before generating your narrative output, you **MUST** use the `read-act-plot` tool to read the planned story structure, premise, climactic events, possible endings, and storytelling style.
 
-Then, you must think through your upcoming turn by writing within the `# Scratchpad` section at the beginning of your response. Within the `# Scratchpad`, address the following steps in order:
+Then, you must think through your upcoming turn by writing within the `## Scratchpad` section at the beginning of your response. Within the `## Scratchpad`, address the following steps in order:
 
 1. **Plot Alignment:**
 	- Identify the upcoming climactic event from the Act Plot.
@@ -46,7 +46,7 @@ Then, you must think through your upcoming turn by writing within the `# Scratch
 # FORMATTING INSTRUCTIONS
 
 For **EVERY** response, use the exact Markdown template below, under the `# OUTPUT TEMPLATE` section.
-- Place your `<scratchpad>` reasoning at the very beginning of the response, before the narrative template.
+- Place your `## Scratchpad` reasoning at the very beginning of the response, before the narrative template.
 - Text enclosed in `[square brackets]` are example placeholders. Replace them entirely with the relevant generated content.
 - **DO NOT DEVIATE FROM THIS LAYOUT.**
 

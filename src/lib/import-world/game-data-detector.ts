@@ -5,11 +5,11 @@
 import type { GameData } from '$lib/db/messages';
 import type { GameDataDetectionResult, GameDataExtractionResult, ParsedMessage } from './types';
 import { buildMetadata, type RetryConfig, streamWithRetry } from '$lib/ai/chat-stream';
-import {loadChoicesExtractionPrompt, loadStorySystemPrompt, loadSystemPrompt} from '$lib/fs/prompts';
+import { loadChoicesExtractionPrompt } from '$lib/fs/prompts';
 import { sleep } from '$lib/utils/async';
 import type { StreamState } from '$lib/ai/chat-callbacks';
-import { getMainProviderConfig, type ProviderConfig } from '$lib/stores/settings.svelte';
-import {getActiveStory, getActiveSystemPromptOrDefault} from "$lib/stores/stories.svelte";
+import { getMainProviderConfig } from '$lib/stores/settings.svelte';
+import { getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
 
 // === Pass 1: Traditional Extraction (Synchronous) ===
 

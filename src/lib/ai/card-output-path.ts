@@ -1,5 +1,3 @@
-import { mkdir, BaseDirectory } from '@tauri-apps/plugin-fs';
-
 /**
  * Compute the subdirectory name for an act line.
  * - "main-line" if the act line is the main line

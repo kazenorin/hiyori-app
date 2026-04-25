@@ -12,6 +12,7 @@
 </script>
 
 <div class="markdown-content">
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized via DOMPurify -->
 	{@html html}
 </div>
 

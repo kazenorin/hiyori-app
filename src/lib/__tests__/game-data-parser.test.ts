@@ -131,9 +131,7 @@ describe('GameDataParser', () => {
 		});
 
 		it('handles backtick split across chunk boundary', () => {
-			const chunks = ['Text', '`\n', '``', 'json\n', VALID_GAME_DATA, '\n```', ' end'];
-			// This tests: ` followed by `` which forms ```
-			// Actually let's test properly - the full ```json arrives across chunks
+			// Test: ` followed by `` which forms ```
 			const chunks2 = ['Hello\n`', '``json\n', VALID_GAME_DATA + '\n', '```', '\nDone'];
 			const { text, gameData } = feedAll(chunks2);
 			expect(text).toBe('Hello\n\nDone');

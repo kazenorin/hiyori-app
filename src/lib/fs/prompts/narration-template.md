@@ -50,7 +50,7 @@ Put the player's aliases here, one alias per list item:
 
 ### Other Character Aliases
 
-Use H3 `### Character Name` heading per character
+Use H4 `#### Character Name` heading per character
 
 #### [Character Name]
 

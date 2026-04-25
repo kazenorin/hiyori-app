@@ -370,21 +370,21 @@ function toHistoryMessage(message: Message): MessageBase {
 }
 
 function gameDataToMarkdown(gd: GameData): string {
-	const lines = ['# Game Data', '', '## World State', '', gd.worldState, '', '## Decisions', ''];
+	const lines = ['## Game Data', '', '### World State', '', gd.worldState, '', '### Decisions', ''];
 	for (const decision of gd.decisions) {
 		lines.push(`- ${decision}`);
 	}
 	if (gd.playerAliases && gd.playerAliases.length > 0) {
-		lines.push('', '## Player Aliases', '');
+		lines.push('', '### Player Aliases', '');
 		for (const alias of gd.playerAliases) {
 			lines.push(`- ${alias}`);
 		}
 	}
 	if (gd.aliases && gd.aliases.length > 0) {
-		lines.push('', '## Other Character Aliases', '');
+		lines.push('', '### Other Character Aliases', '');
 		for (const aliasGroup of gd.aliases) {
 			if (aliasGroup.length > 0) {
-				lines.push('', `### ${aliasGroup[0]}`, '');
+				lines.push('', `#### ${aliasGroup[0]}`, '');
 				for (let i = 1; i < aliasGroup.length; i++) {
 					lines.push(`- ${aliasGroup[i]}`);
 				}

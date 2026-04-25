@@ -4,7 +4,6 @@ import {
 	parseAppExportFormat,
 	parseSimpleOpenAIFormat,
 	parseOpenWebUIFormat,
-	parseTranscriptFile,
 } from '$lib/import-world/transcript-parsers';
 
 // === Format Detection ===

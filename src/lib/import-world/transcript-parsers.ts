@@ -257,7 +257,7 @@ function buildSequence(head: OpenWebUIMessage, idToMessage: Map<string, OpenWebU
 	return sequence;
 }
 
-function convertOpenWebUIMessage(msg: OpenWebUIMessage, skipOptionalMalformed: boolean): ParsedMessage {
+function convertOpenWebUIMessage(msg: OpenWebUIMessage, _skipOptionalMalformed: boolean): ParsedMessage {
 	const parsed: ParsedMessage = {
 		role: msg.role,
 		content: msg.content,

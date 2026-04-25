@@ -86,8 +86,6 @@ vi.mock('$lib/ai/chat-stream', () => ({
 }));
 
 import { streamReview, type ReviewLoopResult } from '$lib/reviewer/review-loop';
-import { loadSystemPrompt, loadEditorModeExtractionPrompt } from '$lib/fs/prompts';
-import { knownCharacterNameList } from '$lib/memory/memory';
 import { streamWithRetry } from '$lib/ai/chat-stream';
 
 const baseTranscript = [
