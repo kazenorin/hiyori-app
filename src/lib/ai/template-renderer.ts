@@ -1,19 +1,5 @@
-import type { NarrativeSections } from './parser-chain';
+import { type NarrativeSections, NARRATIVE_SECTION_FIELDS } from './parser-chain';
 import type { GameData } from '$lib/db/messages';
-
-const SECTION_KEYS: (keyof NarrativeSections)[] = [
-	'storyTitle',
-	'actNumber',
-	'sessionNumber',
-	'sceneNumber',
-	'sceneTitle',
-	'background',
-	'narrativeBody',
-	'cg',
-	'currentContext',
-	'activePlotThreads',
-	'decisionContext',
-];
 
 /**
  * Check if a message has structural fields that indicate template-based rendering.
@@ -29,7 +15,7 @@ export function hasStructuralFields(sections?: NarrativeSections | null): boolea
 export function renderTemplate(template: string, sections: NarrativeSections, gameData?: GameData | null): string {
 	let result = template;
 
-	for (const key of SECTION_KEYS) {
+	for (const key of NARRATIVE_SECTION_FIELDS) {
 		const value = sections[key];
 		result = result.replaceAll(`{${key}}`, value ?? '');
 	}

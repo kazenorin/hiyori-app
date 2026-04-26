@@ -1,6 +1,7 @@
 import { createMarkdownSaxParser, type ElementInfo, type ContextNode } from '$lib/markdown/markdown-sax-parser';
 import type { StreamParser } from './stream-parser';
 import type { GameData } from '$lib/db/messages';
+import { type NarrativeSections, SECTION_ACC_PREFIX } from './parser-chain';
 import { kebabCase } from 'lodash';
 
 // Header names for section detection
@@ -15,6 +16,22 @@ const CG = 'CG';
 const STATUS_UPDATE = 'Status Update';
 const DECISION_CONTEXT = 'Decision Context';
 const SCENE = 'Scene';
+
+// Precomputed kebab-case values for header names (avoid recomputing per chunk)
+const KC_BACKGROUND = kebabCase(BACKGROUND);
+const KC_NARRATIVE_BODY = kebabCase(NARRATIVE_BODY);
+const KC_CG = kebabCase(CG);
+const KC_DECISION_CONTEXT = kebabCase(DECISION_CONTEXT);
+const KC_STORY_INFORMATION = kebabCase(STORY_INFORMATION);
+const KC_SCENE = kebabCase(SCENE);
+const KC_STATUS_UPDATE = kebabCase(STATUS_UPDATE);
+const KC_STORY_TITLE = kebabCase('Story Title');
+const KC_ACT_NUMBER = kebabCase('Act Number');
+const KC_SESSION_NUMBER = kebabCase('Session number');
+const KC_SCENE_NUMBER = kebabCase('Scene number');
+const KC_SCENE_TITLE = kebabCase('Scene title');
+const KC_CURRENT_CONTEXT = kebabCase('Current Context');
+const KC_ACTIVE_PLOT_THREADS = kebabCase('Active Plot Threads');
 
 // Game data subsection names (kebab-case normalized header names)
 const SUB_WORLD_STATE = 'world-state';
@@ -37,18 +54,7 @@ interface GameDataTracker {
 	fallbackBuffer: string;
 }
 
-type SectionField =
-	| 'storyTitle'
-	| 'actNumber'
-	| 'sessionNumber'
-	| 'sceneNumber'
-	| 'sceneTitle'
-	| 'background'
-	| 'narrativeBody'
-	| 'cg'
-	| 'currentContext'
-	| 'activePlotThreads'
-	| 'decisionContext';
+type SectionField = keyof NarrativeSections;
 
 function createGameDataTracker(): GameDataTracker {
 	return {
@@ -117,33 +123,32 @@ function resolveSectionField(name: string, level: number, context: readonly Cont
 
 	// H2 direct-mapped sections
 	if (level === 2) {
-		if (normalized === kebabCase(BACKGROUND)) return 'background';
-		if (normalized === kebabCase(NARRATIVE_BODY)) return 'narrativeBody';
-		if (normalized === kebabCase(CG)) return 'cg';
-		if (normalized === kebabCase(DECISION_CONTEXT)) return 'decisionContext';
+		if (normalized === KC_BACKGROUND) return 'background';
+		if (normalized === KC_NARRATIVE_BODY) return 'narrativeBody';
+		if (normalized === KC_CG) return 'cg';
+		if (normalized === KC_DECISION_CONTEXT) return 'decisionContext';
 		return null;
 	}
 
 	// H3 under Story Information
-	if (level === 3 && hasHeaderName(context, kebabCase(STORY_INFORMATION))) {
-		if (normalized === kebabCase('Story Title')) return 'storyTitle';
-		if (normalized === kebabCase('Act Number')) return 'actNumber';
-		if (normalized === kebabCase('Session number')) return 'sessionNumber';
-		// "Scene" is a grouping header, not a direct field
+	if (level === 3 && hasHeaderName(context, KC_STORY_INFORMATION)) {
+		if (normalized === KC_STORY_TITLE) return 'storyTitle';
+		if (normalized === KC_ACT_NUMBER) return 'actNumber';
+		if (normalized === KC_SESSION_NUMBER) return 'sessionNumber';
 		return null;
 	}
 
 	// H4 under Scene (under Story Information)
-	if (level === 4 && hasHeaderName(context, kebabCase(SCENE)) && hasHeaderName(context, kebabCase(STORY_INFORMATION))) {
-		if (normalized === kebabCase('Scene number')) return 'sceneNumber';
-		if (normalized === kebabCase('Scene title')) return 'sceneTitle';
+	if (level === 4 && hasHeaderName(context, KC_SCENE) && hasHeaderName(context, KC_STORY_INFORMATION)) {
+		if (normalized === KC_SCENE_NUMBER) return 'sceneNumber';
+		if (normalized === KC_SCENE_TITLE) return 'sceneTitle';
 		return null;
 	}
 
 	// H3 under Status Update
-	if (level === 3 && hasHeaderName(context, kebabCase(STATUS_UPDATE))) {
-		if (normalized === kebabCase('Current Context')) return 'currentContext';
-		if (normalized === kebabCase('Active Plot Threads')) return 'activePlotThreads';
+	if (level === 3 && hasHeaderName(context, KC_STATUS_UPDATE)) {
+		if (normalized === KC_CURRENT_CONTEXT) return 'currentContext';
+		if (normalized === KC_ACTIVE_PLOT_THREADS) return 'activePlotThreads';
 		return null;
 	}
 
@@ -200,19 +205,6 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 	const ACC_NARRATIVE = 'revised_narrative';
 	const ACC_GAME_DATA = 'gameData';
 	const ACC_REVISED_GAME_DATA = 'revisedGameData';
-
-	/**
-	 * Check if we're currently inside a capturing context
-	 * (Review Scratchpad, Revised Narrative, or a narrative section).
-	 */
-	function isInsideSpecialSection(context: readonly ContextNode[]): boolean {
-		return (
-			!!findHeaderInContext(context, REVIEW_SCRATCHPAD, 1) ||
-			!!findHeaderInContext(context, REVISED_NARRATIVE, 1) ||
-			currentSectionField !== null ||
-			activeGameData !== null
-		);
-	}
 
 	const saxParser = createMarkdownSaxParser({
 		onEnterElement(element: ElementInfo, context: readonly ContextNode[]): void {
@@ -284,7 +276,6 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 				const inRevisedNarrative = !!findHeaderInContext(context, REVISED_NARRATIVE, 1);
 				const inReviewScratchpad = !!findHeaderInContext(context, REVIEW_SCRATCHPAD, 1);
 				if (inRevisedNarrative || inReviewScratchpad) {
-					// Header names flow as text content in these sections
 					return;
 				}
 
@@ -297,7 +288,7 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 				}
 
 				// Grouping headers (Story Information, Scene, Status Update) — skip name text
-				if (isInsideSpecialSection(context)) {
+				if (currentSectionField !== null || activeGameData !== null) {
 					skipNextText = true;
 				}
 				return;
@@ -433,8 +424,7 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 
 			// Narrative section field
 			if (currentSectionField) {
-				const accKey = 'section_' + currentSectionField;
-				currentAcc[accKey] = (currentAcc[accKey] ?? '') + text;
+				currentAcc[SECTION_ACC_PREFIX + currentSectionField] = (currentAcc[SECTION_ACC_PREFIX + currentSectionField] ?? '') + text;
 				return;
 			}
 

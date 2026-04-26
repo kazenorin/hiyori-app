@@ -1,5 +1,5 @@
 import { getDatabase } from './database';
-import type { NarrativeSections } from '$lib/ai/parser-chain';
+import { type NarrativeSections, emptySections, NARRATIVE_SECTION_FIELDS } from '$lib/ai/parser-chain';
 
 export interface GameData {
 	worldState: string;
@@ -81,11 +81,6 @@ function rowToMessage(row: MessageRow): Message {
 	};
 }
 
-const SECTION_FIELDS: (keyof NarrativeSections)[] = [
-	'storyTitle', 'actNumber', 'sessionNumber', 'sceneNumber', 'sceneTitle',
-	'background', 'narrativeBody', 'cg', 'currentContext', 'activePlotThreads', 'decisionContext',
-];
-
 function parseSections(raw: string | null): NarrativeSections | undefined {
 	if (!raw) return undefined;
 	try {
@@ -93,13 +88,8 @@ function parseSections(raw: string | null): NarrativeSections | undefined {
 		if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
 			return undefined;
 		}
-		// Validate that recognized fields are string-or-null
-		const result: NarrativeSections = {
-			storyTitle: null, actNumber: null, sessionNumber: null, sceneNumber: null, sceneTitle: null,
-			background: null, narrativeBody: null, cg: null, currentContext: null, activePlotThreads: null,
-			decisionContext: null,
-		};
-		for (const field of SECTION_FIELDS) {
+		const result = emptySections();
+		for (const field of NARRATIVE_SECTION_FIELDS) {
 			const value = parsed[field];
 			if (typeof value === 'string') {
 				result[field] = value;

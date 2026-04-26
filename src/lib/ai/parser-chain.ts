@@ -17,6 +17,26 @@ export interface NarrativeSections {
 	decisionContext: string | null;
 }
 
+/** Canonical list of all NarrativeSections field names — single source of truth. */
+export const NARRATIVE_SECTION_FIELDS: (keyof NarrativeSections)[] = [
+	'storyTitle',
+	'actNumber',
+	'sessionNumber',
+	'sceneNumber',
+	'sceneTitle',
+	'background',
+	'narrativeBody',
+	'cg',
+	'currentContext',
+	'activePlotThreads',
+	'decisionContext',
+];
+
+/** Create a NarrativeSections with all fields set to null. */
+export function emptySections(): NarrativeSections {
+	return Object.fromEntries(NARRATIVE_SECTION_FIELDS.map((f) => [f, null])) as unknown as NarrativeSections;
+}
+
 export interface ParserChainOutput {
 	text: string | null;
 	thinking: string | null;
@@ -44,6 +64,9 @@ export interface ParserChain {
 	flush(): ParserChainOutput;
 }
 
+/** Prefix used for accumulator keys corresponding to section fields. */
+export const SECTION_ACC_PREFIX = 'section_';
+
 /**
  * Combined parser chain: thinking → sax-section.
  * ThinkingTagParser strips <think/> blocks first, then the SAX-based
@@ -56,38 +79,11 @@ export function createParserChain(): ParserChain {
 
 	const parserChain = [thinkingParser, saxSectionParser];
 
-	const SECTION_FIELDS: (keyof NarrativeSections)[] = [
-		'storyTitle',
-		'actNumber',
-		'sessionNumber',
-		'sceneNumber',
-		'sceneTitle',
-		'background',
-		'narrativeBody',
-		'cg',
-		'currentContext',
-		'activePlotThreads',
-		'decisionContext',
-	];
-
 	function extractSectionsFromAcc(acc: Record<string, unknown>): NarrativeSections | null {
 		let hasAny = false;
-		const sections: NarrativeSections = {
-			storyTitle: null,
-			actNumber: null,
-			sessionNumber: null,
-			sceneNumber: null,
-			sceneTitle: null,
-			background: null,
-			narrativeBody: null,
-			cg: null,
-			currentContext: null,
-			activePlotThreads: null,
-			decisionContext: null,
-		};
-		for (const field of SECTION_FIELDS) {
-			const accKey = 'section_' + field;
-			const value = acc[accKey];
+		const sections = emptySections();
+		for (const field of NARRATIVE_SECTION_FIELDS) {
+			const value = acc[SECTION_ACC_PREFIX + field];
 			if (typeof value === 'string' && value.length > 0) {
 				sections[field] = value;
 				hasAny = true;

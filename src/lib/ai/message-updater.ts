@@ -1,34 +1,18 @@
 import type { GameData } from '$lib/db/messages';
 import type { StreamState } from './chat-callbacks';
-import type { NarrativeSections, ParserChainOutput } from './parser-chain';
-
-function emptySections(): NarrativeSections {
-	return {
-		storyTitle: null,
-		actNumber: null,
-		sessionNumber: null,
-		sceneNumber: null,
-		sceneTitle: null,
-		background: null,
-		narrativeBody: null,
-		cg: null,
-		currentContext: null,
-		activePlotThreads: null,
-		decisionContext: null,
-	};
-}
+import { type NarrativeSections, emptySections, NARRATIVE_SECTION_FIELDS } from './parser-chain';
 
 function mergeSections(existing: NarrativeSections | null, incoming: NarrativeSections | null): NarrativeSections | null {
 	if (!incoming) return existing;
 	if (!existing) return incoming;
-	const result: NarrativeSections = { ...emptySections() };
-	for (const key of Object.keys(result) as (keyof NarrativeSections)[]) {
-		result[key] = incoming[key] ?? existing[key];
+	const result = emptySections();
+	for (const field of NARRATIVE_SECTION_FIELDS) {
+		result[field] = incoming[field] ?? existing[field];
 	}
 	return result;
 }
 
-export function applyParserOutput(state: StreamState, output: ParserChainOutput): StreamState {
+export function applyParserOutput(state: StreamState, output: import('./parser-chain').ParserChainOutput): StreamState {
 	return {
 		content: state.content + (output.text ?? ''),
 		reasoning: appendDelta(state.reasoning, output.thinking),
