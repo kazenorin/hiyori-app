@@ -1,4 +1,4 @@
-import type {MessageBase} from '$lib/db/messages';
+import type { MessageBase } from '$lib/db/messages';
 import { streamWithRetry, type RetryConfig } from '$lib/ai/chat-stream';
 import type { StreamState } from '$lib/ai/chat-callbacks';
 import { getReviewerProviderConfig, getMainProviderConfig, SESSION_NUMBER_REGEX } from '$lib/stores/settings.svelte';
@@ -8,13 +8,14 @@ import { log } from '$lib/logging/logger';
 import { getActiveNarrationTemplateOrDefault, getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
 import { type ToolSet } from 'ai';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
-import type { GameData } from "$lib/db/messages";
-import type { NarrativeSections } from '$lib/ai/parser-chain';
+import type { GameData } from '$lib/db/messages';
+import { type NarrativeSections, extractSectionsFromText } from '$lib/ai/parser-chain';
 
 export interface ReviewLoopResult {
 	content: string;
 	scratchpad: string;
 	revisedContent: string;
+	sections: NarrativeSections | null;
 	resultMetadata: StreamResultMetadata;
 }
 
@@ -101,10 +102,12 @@ export async function streamReview(
 	}
 
 	const scratchpad = accumulator.state.reviewScratchpad ?? '';
+	const sections = extractSectionsFromText(revisedNarrative);
 	return {
 		content,
 		scratchpad,
 		revisedContent: revisedNarrative,
+		sections,
 		resultMetadata,
 	};
 }
@@ -137,6 +140,12 @@ export async function runReviewLoop(
 	);
 
 	if (reviewResult) {
+		// Apply final sections extracted from the revised narrative
+		const currentMessage = getCurrentMessage();
+		setCurrentMessage({
+			...currentMessage,
+			sections: reviewResult.sections ?? currentMessage.sections,
+		});
 		return reviewResult.resultMetadata;
 	} else {
 		setCurrentMessage({

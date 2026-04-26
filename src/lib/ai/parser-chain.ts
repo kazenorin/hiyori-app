@@ -139,3 +139,15 @@ function runFlush(parserChain: StreamParser<Record<string, unknown>>[], acc: Rec
 
 	return text;
 }
+
+/**
+ * Parse raw text through a fresh parser chain and extract NarrativeSections.
+ * Useful for extracting sections from revised narrative text that was
+ * captured as raw content inside a `# Revised Narrative` block.
+ */
+export function extractSectionsFromText(text: string): NarrativeSections | null {
+	const chain = createParserChain();
+	const feedOutput = chain.feed(text);
+	const flushOutput = chain.flush();
+	return flushOutput.sections ?? feedOutput.sections;
+}

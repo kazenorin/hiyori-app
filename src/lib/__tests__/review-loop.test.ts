@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('$lib/fs/prompts', () => ({
 	loadSystemPrompt: vi.fn(async () => 'Main system prompt with trigger-editor-mode-fragment'),
 	loadEditorModeExtractionPrompt: vi.fn(
-		async () => '# Editor Mode\n\nReview the output.\n\n{knownCharacterNameList}\n\n# Review Scratchpad...'
+		async () => '# Editor Mode\n\nReview the output.\n\n{knownCharacterNameList}\n\n# Review Scratchpad\n\n...'
 	),
 	loadNarrationContent: vi.fn(async () => 'Narration extraction prompt\n\nNarration template'),
 }));

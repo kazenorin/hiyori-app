@@ -27,7 +27,7 @@
 [Narrative Body - Dialogue or direct thoughts. Focus on sensory details, physical reactions, internal psychology, and content rules. Ensure smooth transitions.]
 
 ## CG
-[CG: Visual Novel style artwork description. Describe camera angle, lighting, expressions, body positioning, and environmental details.]
+[Visual Novel style artwork description. Describe camera angle, lighting, expressions, body positioning, and environmental details. Write on a single line for this section.]
 
 ## Status Update
 
