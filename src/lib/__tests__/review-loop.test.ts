@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('$lib/fs/prompts', () => ({
 	loadSystemPrompt: vi.fn(async () => 'Main system prompt with trigger-editor-mode-fragment'),
 	loadEditorModeExtractionPrompt: vi.fn(
-		async () => '# Editor Mode\n\nReview the output.\n\n{knownCharacterNameList}\n\n<review_scratchpad>...'
+		async () => '# Editor Mode\n\nReview the output.\n\n{knownCharacterNameList}\n\n# Review Scratchpad...'
 	),
 	loadNarrationContent: vi.fn(async () => 'Narration extraction prompt\n\nNarration template'),
 }));
@@ -36,18 +36,22 @@ vi.mock('$lib/logging/logger', () => ({
 	},
 }));
 
-// Mock chat-stream
+/**
+ * Creates a mock StreamAccumulator with state derived from
+ * markdown-header-based output (# Review Scratchpad, # Revised Narrative).
+ * This mirrors how the SAX section parser populates StreamState.
+ */
 const mockStreamAccumulator = (content: string) => {
-	const scratchpad = extractTagContent(content, 'review_scratchpad');
-	const revisedNarrative = extractTagContent(content, 'revised_narrative');
+	const reviewMatch = content.match(/^# Review Scratchpad\s*\n([\s\S]*?)(?=\n# Revised Narrative)/m);
+	const revisedMatch = content.match(/^# Revised Narrative\s*\n([\s\S]*?)$/m);
 	return {
 		callbacks: {} as any,
 		state: {
 			content,
 			reasoning: null,
 			gameData: null,
-			reviewScratchpad: scratchpad,
-			revisedNarrative,
+			reviewScratchpad: reviewMatch ? reviewMatch[1].trim() : null,
+			revisedNarrative: revisedMatch ? revisedMatch[1].trim() : null,
 			revisedGameData: null,
 		},
 		resultMetadata: Promise.resolve({
@@ -57,16 +61,6 @@ const mockStreamAccumulator = (content: string) => {
 		}),
 	};
 };
-
-function extractTagContent(text: string, tag: string): string | null {
-	const openTag = `<${tag}>`;
-	const closeTag = `</${tag}>`;
-	const start = text.indexOf(openTag);
-	if (start === -1) return null;
-	const end = text.indexOf(closeTag, start);
-	if (end === -1) return null;
-	return text.slice(start + openTag.length, end).trim();
-}
 
 const mockReviewerConfig = {
 	id: 'reviewer-id',
@@ -102,23 +96,21 @@ describe('review-loop', () => {
 	});
 
 	describe('streamReview', () => {
-		it('returns null when no revised_narrative tag found', async () => {
-			mockStreamWithRetryResult = mockStreamAccumulator('Just some text without the right tags');
+		it('returns null when no Revised Narrative section found', async () => {
+			mockStreamWithRetryResult = mockStreamAccumulator('Just some text without the right sections');
 
 			const result = await streamReview(baseTranscript);
 			expect(result).toBeNull();
 		});
 
-		it('extracts revised_narrative and review_scratchpad', async () => {
-			const response = `<review_scratchpad>
+		it('extracts Revised Narrative and Review Scratchpad from markdown headers', async () => {
+			const response = `# Review Scratchpad
 - Rule 1 Analysis: No issues found.
 - Rule 2 Analysis: Character "Bob" contradicts established traits.
 - Planned Fixes: Change Bob's dialogue to match.
-</review_scratchpad>
 
-<revised_narrative>
-The corrected narrative output goes here.
-</revised_narrative>`;
+# Revised Narrative
+The corrected narrative output goes here.`;
 
 			mockStreamWithRetryResult = mockStreamAccumulator(response);
 
@@ -130,8 +122,8 @@ The corrected narrative output goes here.
 			expect(result.revisedContent).toBe('The corrected narrative output goes here.');
 		});
 
-		it('returns empty scratchpad when review_scratchpad tag is missing', async () => {
-			mockStreamWithRetryResult = mockStreamAccumulator('<revised_narrative>\nFixed output.\n</revised_narrative>');
+		it('returns empty scratchpad when Review Scratchpad section is missing', async () => {
+			mockStreamWithRetryResult = mockStreamAccumulator(`# Revised Narrative\nFixed output.`);
 
 			const result = (await streamReview(baseTranscript)) as ReviewLoopResult;
 
@@ -140,7 +132,7 @@ The corrected narrative output goes here.
 		});
 
 		it('sends transcript as-is with editor prompt appended as user message', async () => {
-			mockStreamWithRetryResult = mockStreamAccumulator('<revised_narrative>\nFixed.\n</revised_narrative>');
+			mockStreamWithRetryResult = mockStreamAccumulator('# Revised Narrative\nFixed.');
 
 			await streamReview(baseTranscript);
 
@@ -168,7 +160,7 @@ The corrected narrative output goes here.
 		});
 
 		it('replaces {knownCharacterNameList} with character names in editor prompt', async () => {
-			mockStreamWithRetryResult = mockStreamAccumulator('<revised_narrative>\nDone.\n</revised_narrative>');
+			mockStreamWithRetryResult = mockStreamAccumulator('# Revised Narrative\nDone.');
 
 			await streamReview(baseTranscript);
 
@@ -180,7 +172,7 @@ The corrected narrative output goes here.
 
 		it('falls back to main provider when reviewer config is unset', async () => {
 			mockReviewerProviderConfig = undefined;
-			mockStreamWithRetryResult = mockStreamAccumulator('<revised_narrative>\nFixed.\n</revised_narrative>');
+			mockStreamWithRetryResult = mockStreamAccumulator('# Revised Narrative\nFixed.');
 
 			const result = (await streamReview(baseTranscript)) as ReviewLoopResult;
 			expect(result).not.toBeNull();

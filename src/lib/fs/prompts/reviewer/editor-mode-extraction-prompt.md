@@ -29,7 +29,7 @@ Rewrite the corrected scene under the `# Revised Narrative` section, enclosed by
 - **Preserve Story:** Do not alter unflagged plot events, truncate the text, or add new story beats. Rule 6 fixes are exempt from the Preserve Story constraint.
 - **Seamless:** Do not acknowledge the review process. The text must read seamlessly.
 - **Output Format:** You MUST conform to the provided format.
-- **No Violations:** If no violations are found, output the original text unchanged inside `<revised_narrative>`.
+- **No Violations:** If no violations are found, output the original text unchanged under the `# Revised Narrative` section.
 
 Strictly follow the exact structure under the `### Output Template` section:
 
