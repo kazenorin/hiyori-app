@@ -9,6 +9,7 @@ import { getActiveNarrationTemplateOrDefault, getActiveSystemPromptOrDefault } f
 import { type ToolSet } from 'ai';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
 import type { GameData } from "$lib/db/messages";
+import type { NarrativeSections } from '$lib/ai/parser-chain';
 
 export interface ReviewLoopResult {
 	content: string;
@@ -27,6 +28,7 @@ export interface ReviewableMessage {
 	reasoning?: string;
 	reviewScratchpad?: string;
 	gameData?: GameData;
+	sections?: NarrativeSections;
 }
 
 export interface ReviewLoopOptions {
@@ -128,6 +130,7 @@ export async function runReviewLoop(
 				reviewScratchpad: state.reviewScratchpad ?? currentMessage.reviewScratchpad,
 				reasoning: state.reasoning ?? currentMessage.reasoning,
 				gameData: state.revisedGameData ?? state.gameData ?? currentMessage.gameData,
+				sections: state.sections ?? currentMessage.sections,
 			});
 		},
 		options.tools
