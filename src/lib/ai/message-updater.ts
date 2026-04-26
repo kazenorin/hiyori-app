@@ -7,7 +7,9 @@ function mergeSections(existing: NarrativeSections | null, incoming: NarrativeSe
 	if (!existing) return incoming;
 	const result = emptySections();
 	for (const field of NARRATIVE_SECTION_FIELDS) {
-		result[field] = incoming[field] ?? existing[field];
+		const e = existing[field];
+		const i = incoming[field];
+		result[field] = e && i ? e + i : (i ?? e);
 	}
 	return result;
 }

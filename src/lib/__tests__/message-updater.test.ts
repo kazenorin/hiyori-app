@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { applyParserOutput, applyReasoningDelta } from '../ai/message-updater';
 import type { GameData } from '../db/messages';
+import type { NarrativeSections } from '../ai/parser-chain';
 
 const emptyState = {
 	content: '',
@@ -133,6 +134,98 @@ describe('message-updater', () => {
 				sections: null,
 			});
 			expect(result).not.toBe(emptyState);
+		});
+
+		it('concatenates section deltas across streaming chunks', () => {
+			const s1: NarrativeSections = {
+				storyTitle: null,
+				actNumber: null,
+				sessionNumber: null,
+				sceneNumber: null,
+				sceneTitle: null,
+				background: 'A dark ',
+				narrativeBody: null,
+				cg: null,
+				currentContext: null,
+				activePlotThreads: null,
+				decisionContext: null,
+			};
+			let state = applyParserOutput(emptyState, {
+				text: null,
+				thinking: null,
+				gameData: null,
+				reviewScratchpad: null,
+				revisedNarrative: null,
+				revisedGameData: null,
+				sections: s1,
+			});
+			const s2: NarrativeSections = {
+				storyTitle: null,
+				actNumber: null,
+				sessionNumber: null,
+				sceneNumber: null,
+				sceneTitle: null,
+				background: 'forest.\n',
+				narrativeBody: 'The hero',
+				cg: null,
+				currentContext: null,
+				activePlotThreads: null,
+				decisionContext: null,
+			};
+			state = applyParserOutput(state, {
+				text: null,
+				thinking: null,
+				gameData: null,
+				reviewScratchpad: null,
+				revisedNarrative: null,
+				revisedGameData: null,
+				sections: s2,
+			});
+			expect(state.sections).not.toBeNull();
+			expect(state.sections!.background).toBe('A dark forest.\n');
+			expect(state.sections!.narrativeBody).toBe('The hero');
+		});
+
+		it('preserves existing section when incoming is null', () => {
+			const existing: NarrativeSections = {
+				storyTitle: 'My Story',
+				actNumber: null,
+				sessionNumber: null,
+				sceneNumber: null,
+				sceneTitle: null,
+				background: 'The setting.',
+				narrativeBody: null,
+				cg: null,
+				currentContext: null,
+				activePlotThreads: null,
+				decisionContext: null,
+			};
+			const state = { ...emptyState, sections: existing };
+			const incoming: NarrativeSections = {
+				storyTitle: null,
+				actNumber: '3',
+				sessionNumber: null,
+				sceneNumber: null,
+				sceneTitle: null,
+				background: null,
+				narrativeBody: null,
+				cg: null,
+				currentContext: null,
+				activePlotThreads: null,
+				decisionContext: null,
+			};
+			const result = applyParserOutput(state, {
+				text: null,
+				thinking: null,
+				gameData: null,
+				reviewScratchpad: null,
+				revisedNarrative: null,
+				revisedGameData: null,
+				sections: incoming,
+			});
+			expect(result.sections!.storyTitle).toBe('My Story');
+			expect(result.sections!.actNumber).toBe('3');
+			expect(result.sections!.background).toBe('The setting.');
 		});
 	});
 

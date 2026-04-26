@@ -659,7 +659,7 @@
 									</div>
 								{/if}
 
-								{#if message.content}
+								{#if message.content || hasStructuralFields(message.sections)}
 									<div class="leading-relaxed text-surface-950-50">
 										{#if hasStructuralFields(message.sections) && storyMessageTemplate}
 											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.sections!, message.gameData)} />
@@ -671,7 +671,7 @@
 								{#if getIsStreaming() && message === getMessages().at(-1)}
 									<span
 										data-streaming-cursor
-										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"
+										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content || hasStructuralFields(message.sections) ? 'mt-2' : ''}"
 									></span>
 								{/if}
 								{#if message.metadata}
