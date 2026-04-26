@@ -30,7 +30,7 @@ function feedAll(chunks: string[]): {
 		if (output.reviewScratchpad) reviewScratchpad = (reviewScratchpad ?? '') + output.reviewScratchpad;
 		if (output.revisedNarrative) revisedNarrative = (revisedNarrative ?? '') + output.revisedNarrative;
 		if (output.revisedGameData) revisedGameData = output.revisedGameData;
-		if (output.sections) sections = sections ? { ...sections, ...output.sections } : output.sections;
+		if (output.sections) sections = sections ? { ...sections!, ...output.sections } : output.sections;
 	}
 
 	const flushed = chain.flush();
@@ -40,7 +40,7 @@ function feedAll(chunks: string[]): {
 	if (flushed.reviewScratchpad) reviewScratchpad = (reviewScratchpad ?? '') + flushed.reviewScratchpad;
 	if (flushed.revisedNarrative) revisedNarrative = (revisedNarrative ?? '') + flushed.revisedNarrative;
 	if (flushed.revisedGameData) revisedGameData = flushed.revisedGameData;
-	if (flushed.sections) sections = sections ? { ...sections, ...flushed.sections } : flushed.sections;
+	if (flushed.sections) sections = sections ? { ...sections!, ...flushed.sections } : flushed.sections;
 
 	return { text, thinking, gameData, reviewScratchpad, revisedNarrative, revisedGameData, sections };
 }

@@ -52,6 +52,7 @@
 	import {getActLine} from '$lib/db/act-lines';
 	import {log} from '$lib/logging/logger';
 	import type {Story} from "$lib/db/stories";
+	import { onMount } from 'svelte';
 
 	let input = $state('');
 	let chatContainer = $state<HTMLDivElement | null>(null);
@@ -62,8 +63,8 @@
 	let storyMessageTemplate = $state<string>('');
 
 	// Preload template on mount
-	$effect(() => {
-		loadStoryMessageTemplate().then((t) => { storyMessageTemplate = t; });
+	onMount(() => {
+		loadStoryMessageTemplate().then((t) => { storyMessageTemplate = t; }).catch(() => {});
 	});
 	let lastWbMessageIdx = $derived(findLastIndex(getWorldBuilderMessages(), (m) => m.role === 'assistant'));
 
@@ -661,7 +662,7 @@
 								{#if message.content}
 									<div class="leading-relaxed text-surface-950-50">
 										{#if hasStructuralFields(message.sections) && storyMessageTemplate}
-											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.sections, message.gameData)} />
+											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.sections!, message.gameData)} />
 										{:else}
 											<MarkdownContent content={message.content} />
 										{/if}

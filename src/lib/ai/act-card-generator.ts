@@ -181,6 +181,7 @@ export async function streamActCard(
 				reviewScratchpad: null,
 				revisedNarrative: null,
 				revisedGameData: null,
+				sections: null,
 			});
 		},
 		config

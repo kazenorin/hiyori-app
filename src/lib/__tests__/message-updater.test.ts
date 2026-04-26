@@ -9,6 +9,7 @@ const emptyState = {
 	reviewScratchpad: null as string | null,
 	revisedNarrative: null as string | null,
 	revisedGameData: null as GameData | null,
+	sections: null as null,
 };
 
 describe('message-updater', () => {
@@ -21,6 +22,7 @@ describe('message-updater', () => {
 				reviewScratchpad: null,
 				revisedNarrative: null,
 				revisedGameData: null,
+				sections: null,
 			});
 			expect(result.content).toBe('Hello');
 			expect(result.reasoning).toBe('');
@@ -35,6 +37,7 @@ describe('message-updater', () => {
 				reviewScratchpad: null,
 				revisedNarrative: null,
 				revisedGameData: null,
+				sections: null,
 			});
 			expect(result.reasoning).toBe('reasoning');
 			expect(result.content).toBe('');
@@ -49,6 +52,7 @@ describe('message-updater', () => {
 				reviewScratchpad: null,
 				revisedNarrative: null,
 				revisedGameData: null,
+				sections: null,
 			});
 			expect(result.gameData).toEqual(gd);
 		});
@@ -62,6 +66,7 @@ describe('message-updater', () => {
 				reviewScratchpad: null,
 				revisedNarrative: null,
 				revisedGameData: null,
+				sections: null,
 			});
 			expect(result.gameData).toBeNull();
 		});
@@ -75,6 +80,7 @@ describe('message-updater', () => {
 				reviewScratchpad: null,
 				revisedNarrative: null,
 				revisedGameData: null,
+				sections: null,
 			});
 			expect(result.gameData).toBeNull();
 		});
@@ -87,6 +93,7 @@ describe('message-updater', () => {
 				reviewScratchpad: null,
 				revisedNarrative: null,
 				revisedGameData: null,
+				sections: null,
 			});
 			expect(result.content).toBe('content');
 			expect(result.reasoning).toBe('thought');
@@ -100,6 +107,7 @@ describe('message-updater', () => {
 				reviewScratchpad: null,
 				revisedNarrative: null,
 				revisedGameData: null,
+				sections: null,
 			});
 			state = applyParserOutput(state, {
 				text: ' world',
@@ -108,6 +116,7 @@ describe('message-updater', () => {
 				reviewScratchpad: null,
 				revisedNarrative: null,
 				revisedGameData: null,
+				sections: null,
 			});
 			expect(state.content).toBe('Hello world');
 			expect(state.reasoning).toBe(' think');
@@ -121,6 +130,7 @@ describe('message-updater', () => {
 				reviewScratchpad: null,
 				revisedNarrative: null,
 				revisedGameData: null,
+				sections: null,
 			});
 			expect(result).not.toBe(emptyState);
 		});

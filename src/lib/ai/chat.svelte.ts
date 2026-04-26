@@ -141,6 +141,7 @@ async function persistMessage(actLineId: string, message: Message): Promise<void
 		gameData: message.gameData,
 		sceneNumber: message.sceneNumber,
 		sessionNumber: message.sessionNumber,
+		sections: message.sections,
 	});
 	const seq = await dbActLines.getNextSequence(actLineId);
 	await dbActLines.addMessageToLine(actLineId, message.id, seq);
