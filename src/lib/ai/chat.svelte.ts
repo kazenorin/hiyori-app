@@ -8,6 +8,7 @@ import {
 } from '$lib/stores/settings.svelte';
 import { getActiveStoryId, getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
 import type { GameData, MessageBase } from '$lib/db/messages';
+import type { NarrativeSections } from './parser-chain';
 import * as dbMessages from '$lib/db/messages';
 import type { ModelMessage } from 'ai';
 import * as dbActLines from '$lib/db/act-lines';
@@ -33,6 +34,7 @@ export interface Message {
 	sessionNumber?: number;
 	draftContent?: string;
 	reviewScratchpad?: string;
+	sections?: NarrativeSections;
 }
 
 let messages = $state<Message[]>([]);
@@ -69,6 +71,7 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 		gameData: m.gameData,
 		sceneNumber: m.sceneNumber,
 		sessionNumber: m.sessionNumber,
+		sections: m.sections,
 	}));
 	error = null;
 }
@@ -292,6 +295,7 @@ export async function sendMessage(
 					[settings.reviewerEnabled ? 'draftContent' : 'content']: state.content,
 					reasoning: state.reasoning ?? currentMessage.reasoning,
 					gameData: state.revisedGameData ?? state.gameData ?? currentMessage.gameData,
+					sections: state.sections ?? currentMessage.sections,
 				});
 			},
 			(err: unknown) => {
@@ -334,12 +338,20 @@ export async function sendMessage(
 }
 
 async function determineSceneNumberAndNextSessionNumber(messageIdx: number, explicitSessionNumber?: number): Promise<void> {
-	const content = messages[messageIdx].content;
+	const msg = messages[messageIdx];
+	const content = msg.content;
+
+	// Try sections first, fall back to regex parsing from content
+	const sectionsSessionNumber = msg.sections?.sessionNumber ? parseInt(msg.sections.sessionNumber, 10) : undefined;
+	const sectionsSceneNumber = msg.sections?.sceneNumber ? parseInt(msg.sections.sceneNumber, 10) : undefined;
 
 	const lastSessionNumber = findLastNonNullSessionNumber();
-	const sessionNumber = lastSessionNumber != null ? lastSessionNumber + 1 : (explicitSessionNumber ?? parseSessionNumber(content) ?? 1);
+	const sessionNumber =
+		lastSessionNumber != null
+			? lastSessionNumber + 1
+			: (explicitSessionNumber ?? sectionsSessionNumber ?? parseSessionNumber(content) ?? 1);
 
-	const sceneNumber = parseSceneNumber(content);
+	const sceneNumber = sectionsSceneNumber ?? parseSceneNumber(content);
 
 	messages[messageIdx] = {
 		...messages[messageIdx],
@@ -364,9 +376,28 @@ function toHistoryMessage(message: Message): MessageBase {
 	if (message.role !== 'assistant') {
 		return { role: message.role, content: message.content };
 	}
+
+	// Reconstruct content from sections when available
+	const content = message.sections ? sectionsToMarkdown(message.sections) : message.content;
 	const gd = message.gameData ? message.gameData : placeholderContent();
 	const gameDataContent = '\n' + gameDataToMarkdown(gd);
-	return { role: 'assistant', content: message.content + gameDataContent };
+	return { role: 'assistant', content: content + gameDataContent };
+}
+
+function sectionsToMarkdown(sections: NarrativeSections): string {
+	const lines: string[] = [];
+	if (sections.storyTitle) lines.push('## Story Information', '', '### Story Title', sections.storyTitle);
+	if (sections.actNumber) lines.push('', '### Act Number', sections.actNumber);
+	if (sections.sessionNumber) lines.push('', '### Session number', sections.sessionNumber);
+	if (sections.sceneNumber) lines.push('', '### Scene', '', '#### Scene number', sections.sceneNumber);
+	if (sections.sceneTitle) lines.push('', '#### Scene title', sections.sceneTitle);
+	if (sections.background) lines.push('', '## Background', sections.background);
+	if (sections.narrativeBody) lines.push('', '## Narrative Body', sections.narrativeBody);
+	if (sections.cg) lines.push('', '## CG', sections.cg);
+	if (sections.currentContext) lines.push('', '## Status Update', '', '### Current Context', sections.currentContext);
+	if (sections.activePlotThreads) lines.push('', '### Active Plot Threads', sections.activePlotThreads);
+	if (sections.decisionContext) lines.push('', '## Decision context', sections.decisionContext);
+	return lines.join('\n');
 }
 
 function gameDataToMarkdown(gd: GameData): string {

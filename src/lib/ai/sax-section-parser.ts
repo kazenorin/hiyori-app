@@ -8,6 +8,13 @@ const SCRATCHPAD = 'Scratchpad';
 const REVIEW_SCRATCHPAD = 'Review Scratchpad';
 const REVISED_NARRATIVE = 'Revised Narrative';
 const GAME_DATA = 'Game Data';
+const STORY_INFORMATION = 'Story Information';
+const BACKGROUND = 'Background';
+const NARRATIVE_BODY = 'Narrative Body';
+const CG = 'CG';
+const STATUS_UPDATE = 'Status Update';
+const DECISION_CONTEXT = 'Decision Context';
+const SCENE = 'Scene';
 
 // Game data subsection names (kebab-case normalized header names)
 const SUB_WORLD_STATE = 'world-state';
@@ -30,7 +37,18 @@ interface GameDataTracker {
 	fallbackBuffer: string;
 }
 
-type SectionMode = 'normal' | 'suppress' | 'captureReview' | 'captureRevised' | 'gameData';
+type SectionField =
+	| 'storyTitle'
+	| 'actNumber'
+	| 'sessionNumber'
+	| 'sceneNumber'
+	| 'sceneTitle'
+	| 'background'
+	| 'narrativeBody'
+	| 'cg'
+	| 'currentContext'
+	| 'activePlotThreads'
+	| 'decisionContext';
 
 function createGameDataTracker(): GameDataTracker {
 	return {
@@ -65,15 +83,84 @@ function finalizeGameData(tracker: GameDataTracker): GameData | null {
 }
 
 /**
+ * Find a header in the context stack by level and/or name.
+ */
+function findHeaderInContext(context: readonly ContextNode[], name?: string, level?: number): ContextNode | undefined {
+	for (let i = context.length - 1; i >= 0; i--) {
+		const node = context[i];
+		if (node.type !== 'header') continue;
+		if (level !== undefined && node.headerLevel !== level) continue;
+		if (name !== undefined && node.name !== name) continue;
+		return node;
+	}
+	return undefined;
+}
+
+/**
+ * Check if a header with the given kebab-case normalized name is in the context stack.
+ */
+function hasHeaderName(context: readonly ContextNode[], normalizedName: string): boolean {
+	for (let i = context.length - 1; i >= 0; i--) {
+		const node = context[i];
+		if (node.type === 'header' && node.name && kebabCase(node.name) === normalizedName) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Determine which section field a header maps to, based on header name and context hierarchy.
+ */
+function resolveSectionField(name: string, level: number, context: readonly ContextNode[]): SectionField | null {
+	const normalized = kebabCase(name);
+
+	// H2 direct-mapped sections
+	if (level === 2) {
+		if (normalized === kebabCase(BACKGROUND)) return 'background';
+		if (normalized === kebabCase(NARRATIVE_BODY)) return 'narrativeBody';
+		if (normalized === kebabCase(CG)) return 'cg';
+		if (normalized === kebabCase(DECISION_CONTEXT)) return 'decisionContext';
+		return null;
+	}
+
+	// H3 under Story Information
+	if (level === 3 && hasHeaderName(context, kebabCase(STORY_INFORMATION))) {
+		if (normalized === kebabCase('Story Title')) return 'storyTitle';
+		if (normalized === kebabCase('Act Number')) return 'actNumber';
+		if (normalized === kebabCase('Session number')) return 'sessionNumber';
+		// "Scene" is a grouping header, not a direct field
+		return null;
+	}
+
+	// H4 under Scene (under Story Information)
+	if (level === 4 && hasHeaderName(context, kebabCase(SCENE)) && hasHeaderName(context, kebabCase(STORY_INFORMATION))) {
+		if (normalized === kebabCase('Scene number')) return 'sceneNumber';
+		if (normalized === kebabCase('Scene title')) return 'sceneTitle';
+		return null;
+	}
+
+	// H3 under Status Update
+	if (level === 3 && hasHeaderName(context, kebabCase(STATUS_UPDATE))) {
+		if (normalized === kebabCase('Current Context')) return 'currentContext';
+		if (normalized === kebabCase('Active Plot Threads')) return 'activePlotThreads';
+		return null;
+	}
+
+	return null;
+}
+
+/**
  * Streaming parser that wraps MarkdownSaxParser for section detection
- * and text routing. Replaces HeadingSectionParser, RevisedNarrativeParser,
- * and MarkdownGameDataParser with a single SAX-based implementation.
+ * and text routing. Uses the SAX context stack to determine which section
+ * text belongs to, eliminating manual mode tracking.
  *
  * Section routing:
  * - ## Scratchpad → suppress text
  * - # Review Scratchpad → body streams to acc.review_scratchpad
  * - # Revised Narrative → body captured to local buffer; embedded ## Game Data parsed on flush
  * - ## Game Data (top-level or inside Revised Narrative) → parsed from SAX events
+ * - Narrative sections (Background, Narrative Body, CG, etc.) → captured as individual fields
  * - All other content → passthrough as text delta
  */
 export function createSaxSectionParser(): StreamParser<Record<string, unknown>> {
@@ -81,10 +168,11 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 	let pendingText = '';
 	let currentAcc: Record<string, unknown>;
 
-	// Cross-call state (persists across feed calls)
-	let sectionMode: SectionMode = 'normal';
-	let previousModeBeforeSuppress: SectionMode | null = null;
+	// Suppress state (Scratchpad sections)
+	let suppressing = false;
 	let _suppressDepth = 0;
+
+	// Skip header name text within special sections
 	let skipNextText = false;
 
 	// Revised narrative capture
@@ -104,14 +192,30 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 	let pendingGameData: GameData | null = null;
 	let pendingRevisedGameData: GameData | null = null;
 
+	// Current narrative section field being captured
+	let currentSectionField: SectionField | null = null;
+
 	// Accumulator key constants
 	const ACC_REVIEW = 'review_scratchpad';
 	const ACC_NARRATIVE = 'revised_narrative';
 	const ACC_GAME_DATA = 'gameData';
 	const ACC_REVISED_GAME_DATA = 'revisedGameData';
 
+	/**
+	 * Check if we're currently inside a capturing context
+	 * (Review Scratchpad, Revised Narrative, or a narrative section).
+	 */
+	function isInsideSpecialSection(context: readonly ContextNode[]): boolean {
+		return (
+			!!findHeaderInContext(context, REVIEW_SCRATCHPAD, 1) ||
+			!!findHeaderInContext(context, REVISED_NARRATIVE, 1) ||
+			currentSectionField !== null ||
+			activeGameData !== null
+		);
+	}
+
 	const saxParser = createMarkdownSaxParser({
-		onEnterElement(element: ElementInfo, _context: readonly ContextNode[]): void {
+		onEnterElement(element: ElementInfo, context: readonly ContextNode[]): void {
 			if (element.type === 'page' || element.type === 'root') return;
 
 			if (element.type === 'header') {
@@ -120,21 +224,18 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 
 				// Check for special sections
 				if (name === SCRATCHPAD && level === 2) {
-					previousModeBeforeSuppress = sectionMode;
-					sectionMode = 'suppress';
+					suppressing = true;
 					_suppressDepth = element.depth;
 					skipNextText = true;
 					return;
 				}
 
 				if (name === REVIEW_SCRATCHPAD && level === 1) {
-					sectionMode = 'captureReview';
 					skipNextText = true;
 					return;
 				}
 
 				if (name === REVISED_NARRATIVE && level === 1) {
-					sectionMode = 'captureRevised';
 					revisedBodyBuffer = '';
 					skipNextText = true;
 					return;
@@ -144,19 +245,18 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 					const tracker = createGameDataTracker();
 					activeGameData = tracker;
 
-					if (sectionMode === 'captureRevised') {
+					const inRevised = !!findHeaderInContext(context, REVISED_NARRATIVE, 1);
+					if (inRevised) {
 						revisedGameData = tracker;
-						sectionMode = 'gameData';
 					} else {
 						topLevelGameData = tracker;
-						sectionMode = 'gameData';
 					}
 
 					skipNextText = true;
 					return;
 				}
 
-				// Sub-headers within game data section
+				// Game data sub-headers
 				if (activeGameData) {
 					const tracker = activeGameData;
 
@@ -178,6 +278,29 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 					tracker.skipHeaderName = true;
 					return;
 				}
+
+				// Inside Revised Narrative or Review Scratchpad — don't capture narrative sections,
+				// and include header names as content (not suppressed)
+				const inRevisedNarrative = !!findHeaderInContext(context, REVISED_NARRATIVE, 1);
+				const inReviewScratchpad = !!findHeaderInContext(context, REVIEW_SCRATCHPAD, 1);
+				if (inRevisedNarrative || inReviewScratchpad) {
+					// Header names flow as text content in these sections
+					return;
+				}
+
+				// Narrative section headers (only outside special sections)
+				const field = resolveSectionField(name, level, context);
+				if (field) {
+					currentSectionField = field;
+					skipNextText = true;
+					return;
+				}
+
+				// Grouping headers (Story Information, Scene, Status Update) — skip name text
+				if (isInsideSpecialSection(context)) {
+					skipNextText = true;
+				}
+				return;
 			}
 
 			// List element within game data
@@ -213,14 +336,7 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 
 			// Leaving Scratchpad
 			if (name === SCRATCHPAD && level === 2) {
-				sectionMode = previousModeBeforeSuppress ?? 'normal';
-				previousModeBeforeSuppress = null;
-				return;
-			}
-
-			// Leaving Review Scratchpad
-			if (name === REVIEW_SCRATCHPAD && level === 1) {
-				sectionMode = 'normal';
+				suppressing = false;
 				return;
 			}
 
@@ -247,23 +363,24 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 
 				if (tracker === revisedGameData) {
 					revisedGameData = null;
-					sectionMode = 'captureRevised';
 				} else {
 					topLevelGameData = null;
-					sectionMode = 'normal';
 				}
 				activeGameData = null;
 				return;
 			}
 
-			// Leaving Revised Narrative
-			if (name === REVISED_NARRATIVE && level === 1) {
-				sectionMode = 'normal';
+			// Leaving a narrative section header — clear field tracking
+			if (currentSectionField !== null) {
+				const field = resolveSectionField(name, level, _context);
+				if (field === currentSectionField) {
+					currentSectionField = null;
+				}
 				return;
 			}
 		},
 
-		onText(text: string, _context: readonly ContextNode[]): void {
+		onText(text: string, context: readonly ContextNode[]): void {
 			// Skip header names within special sections
 			if (skipNextText) {
 				skipNextText = false;
@@ -297,29 +414,32 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 				return;
 			}
 
-			// Section routing
-			switch (sectionMode) {
-				case 'suppress':
-					return;
+			// Suppress Scratchpad text
+			if (suppressing) return;
 
-				case 'captureReview':
-					currentAcc[ACC_REVIEW] = (currentAcc[ACC_REVIEW] ?? '') + text;
-					return;
-
-				case 'captureRevised':
-					revisedBodyBuffer += text;
-					currentAcc[ACC_NARRATIVE] = (currentAcc[ACC_NARRATIVE] ?? '') + text;
-					revisedSentLength = revisedBodyBuffer.length;
-					return;
-				case 'gameData':
-					// Handled by activeGameData above
-					return;
-
-				case 'normal':
-				default:
-					pendingText += text;
-					return;
+			// Review Scratchpad — check context
+			if (findHeaderInContext(context, REVIEW_SCRATCHPAD, 1)) {
+				currentAcc[ACC_REVIEW] = (currentAcc[ACC_REVIEW] ?? '') + text;
+				return;
 			}
+
+			// Revised Narrative — check context (but not if game data is active)
+			if (findHeaderInContext(context, REVISED_NARRATIVE, 1)) {
+				revisedBodyBuffer += text;
+				currentAcc[ACC_NARRATIVE] = (currentAcc[ACC_NARRATIVE] ?? '') + text;
+				revisedSentLength = revisedBodyBuffer.length;
+				return;
+			}
+
+			// Narrative section field
+			if (currentSectionField) {
+				const accKey = 'section_' + currentSectionField;
+				currentAcc[accKey] = (currentAcc[accKey] ?? '') + text;
+				return;
+			}
+
+			// Default: passthrough
+			pendingText += text;
 		},
 	});
 
@@ -378,8 +498,9 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 		revisedBodyBuffer = '';
 		revisedSentLength = 0;
 
-		// Reset section state
-		sectionMode = 'normal';
+		// Reset state
+		suppressing = false;
+		currentSectionField = null;
 
 		return pendingText;
 	}

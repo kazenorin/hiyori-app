@@ -46,6 +46,8 @@
 	import {Accordion} from '@skeletonlabs/skeleton-svelte';
 	import {findLastIndex} from 'lodash';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
+	import { hasStructuralFields, renderTemplate } from '$lib/ai/template-renderer';
+	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
 	import {generateActPlot} from '$lib/ai/act-plot-generator';
 	import {getActLine} from '$lib/db/act-lines';
 	import {log} from '$lib/logging/logger';
@@ -57,6 +59,12 @@
 	let copiedId = $state<string | null>(null);
 	let latestDecisions = $derived(getLatestDecisions());
 	let lastMessageIdx = $derived(findLastIndex(getMessages(), (m) => m.role === 'assistant'));
+	let storyMessageTemplate = $state<string>('');
+
+	// Preload template on mount
+	$effect(() => {
+		loadStoryMessageTemplate().then((t) => { storyMessageTemplate = t; });
+	});
 	let lastWbMessageIdx = $derived(findLastIndex(getWorldBuilderMessages(), (m) => m.role === 'assistant'));
 
 	// World builder story creation state
@@ -652,7 +660,11 @@
 
 								{#if message.content}
 									<div class="leading-relaxed text-surface-950-50">
-										<MarkdownContent content={message.content} />
+										{#if hasStructuralFields(message.sections) && storyMessageTemplate}
+											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.sections, message.gameData)} />
+										{:else}
+											<MarkdownContent content={message.content} />
+										{/if}
 									</div>
 								{/if}
 								{#if getIsStreaming() && message === getMessages().at(-1)}

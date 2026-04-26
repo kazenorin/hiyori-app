@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createParserChain } from '../ai/parser-chain';
+import { createParserChain, type NarrativeSections } from '../ai/parser-chain';
 import type { GameData } from '../db/messages';
 
 const T = 'think';
@@ -11,6 +11,7 @@ function feedAll(chunks: string[]): {
 	reviewScratchpad: string | null;
 	revisedNarrative: string | null;
 	revisedGameData: GameData | null;
+	sections: NarrativeSections | null;
 } {
 	const chain = createParserChain();
 	let text = '';
@@ -19,6 +20,7 @@ function feedAll(chunks: string[]): {
 	let reviewScratchpad: string | null = null;
 	let revisedNarrative: string | null = null;
 	let revisedGameData: GameData | null = null;
+	let sections: NarrativeSections | null = null;
 
 	for (const chunk of chunks) {
 		const output = chain.feed(chunk);
@@ -28,6 +30,7 @@ function feedAll(chunks: string[]): {
 		if (output.reviewScratchpad) reviewScratchpad = (reviewScratchpad ?? '') + output.reviewScratchpad;
 		if (output.revisedNarrative) revisedNarrative = (revisedNarrative ?? '') + output.revisedNarrative;
 		if (output.revisedGameData) revisedGameData = output.revisedGameData;
+		if (output.sections) sections = sections ? { ...sections, ...output.sections } : output.sections;
 	}
 
 	const flushed = chain.flush();
@@ -37,8 +40,9 @@ function feedAll(chunks: string[]): {
 	if (flushed.reviewScratchpad) reviewScratchpad = (reviewScratchpad ?? '') + flushed.reviewScratchpad;
 	if (flushed.revisedNarrative) revisedNarrative = (revisedNarrative ?? '') + flushed.revisedNarrative;
 	if (flushed.revisedGameData) revisedGameData = flushed.revisedGameData;
+	if (flushed.sections) sections = sections ? { ...sections, ...flushed.sections } : flushed.sections;
 
-	return { text, thinking, gameData, reviewScratchpad, revisedNarrative, revisedGameData };
+	return { text, thinking, gameData, reviewScratchpad, revisedNarrative, revisedGameData, sections };
 }
 
 const GAME_DATA_MD = [
@@ -311,5 +315,131 @@ describe('Revised Narrative with ## Scratchpad (suppress-nesting)', () => {
 		expect(revisedNarrative).toContain('Story');
 		expect(revisedNarrative).toContain('Content here.');
 		expect(revisedNarrative).not.toContain('[Hidden]');
+	});
+});
+
+describe('Narrative Sections', () => {
+	it('captures all narrative sections from structured output', () => {
+		const input = [
+			'## Scratchpad',
+			'[Planning notes]',
+			'',
+			'## Story Information',
+			'',
+			'### Story Title',
+			'The Great Adventure',
+			'',
+			'### Act Number',
+			'3',
+			'',
+			'### Session number',
+			'7',
+			'',
+			'### Scene',
+			'',
+			'#### Scene number',
+			'12',
+			'',
+			'#### Scene title',
+			'The Dark Forest',
+			'',
+			'## Background',
+			'A moonlit clearing in an ancient forest.',
+			'',
+			'## Narrative Body',
+			'The hero stepped forward cautiously.',
+			'',
+			'## CG',
+			'Wide shot, moonlit clearing, hero silhouette.',
+			'',
+			'## Status Update',
+			'',
+			'### Current Context',
+			'Approaching the ancient ruins.',
+			'',
+			'### Active Plot Threads',
+			'- The missing artifact',
+			'- The traitor in the party',
+			'',
+			'## Decision context',
+			'Choose how to enter the ruins.',
+		].join('\n');
+
+		const { sections, text } = feedAll([input]);
+
+		expect(sections).not.toBeNull();
+		expect(sections!.storyTitle).toContain('The Great Adventure');
+		expect(sections!.actNumber).toContain('3');
+		expect(sections!.sessionNumber).toContain('7');
+		expect(sections!.sceneNumber).toContain('12');
+		expect(sections!.sceneTitle).toContain('The Dark Forest');
+		expect(sections!.background).toContain('A moonlit clearing in an ancient forest.');
+		expect(sections!.narrativeBody).toContain('The hero stepped forward cautiously.');
+		expect(sections!.cg).toContain('Wide shot, moonlit clearing, hero silhouette.');
+		expect(sections!.currentContext).toContain('Approaching the ancient ruins.');
+		expect(sections!.activePlotThreads).toContain('missing artifact');
+		expect(sections!.decisionContext).toContain('Choose how to enter the ruins.');
+		// Scratchpad should be suppressed
+		expect(text).not.toContain('[Planning notes]');
+	});
+
+	it('captures partial sections with null for missing fields', () => {
+		const input = ['## Background', 'A dark and stormy night.', '', '## Narrative Body', 'Something happened.'].join('\n');
+
+		const { sections } = feedAll([input]);
+
+		expect(sections).not.toBeNull();
+		expect(sections!.background).toContain('A dark and stormy night.');
+		expect(sections!.narrativeBody).toContain('Something happened.');
+		expect(sections!.storyTitle).toBeNull();
+		expect(sections!.actNumber).toBeNull();
+		expect(sections!.cg).toBeNull();
+	});
+
+	it('returns null sections when no structured content', () => {
+		const { sections } = feedAll(['Just plain text here.']);
+		expect(sections).toBeNull();
+	});
+
+	it('streams sections progressively across feed calls', () => {
+		const chain = createParserChain();
+
+		// Header-only feed: section field is set but no content yet
+		const output1 = chain.feed('## Background\n');
+		// No sections yet — the header name is skipped and no body text has arrived
+		expect(output1.sections).toBeNull();
+
+		// Content feed: section body arrives
+		const output2 = chain.feed('A dark forest.\n');
+		expect(output2.sections).not.toBeNull();
+		expect(output2.sections!.background).toContain('dark forest');
+	});
+
+	it('captures sections alongside game data', () => {
+		const input = [
+			'## Background',
+			'The setting sun.',
+			'',
+			'## Narrative Body',
+			'The story unfolds.',
+			'',
+			'## Game Data',
+			'',
+			'### World State',
+			'The world is at peace.',
+			'',
+			'### Decisions',
+			'- Fight',
+			'- Flee',
+		].join('\n');
+
+		const { sections, gameData } = feedAll([input]);
+
+		expect(sections).not.toBeNull();
+		expect(sections!.background).toContain('The setting sun.');
+		expect(sections!.narrativeBody).toContain('The story unfolds.');
+		expect(gameData).not.toBeNull();
+		expect(gameData!.worldState).toBe('The world is at peace.');
+		expect(gameData!.decisions).toEqual(['Fight', 'Flee']);
 	});
 });

@@ -73,6 +73,7 @@ const migrationStatements: string[][] = [
 	],
 	[`ALTER TABLE messages ADD COLUMN scene_number INTEGER`],
 	[`ALTER TABLE messages ADD COLUMN session_number INTEGER`],
+	[`ALTER TABLE messages ADD COLUMN sections TEXT`],
 ];
 
 export async function runMigrations(): Promise<void> {

@@ -1,4 +1,5 @@
 import { getDatabase } from './database';
+import type { NarrativeSections } from '$lib/ai/parser-chain';
 
 export interface GameData {
 	worldState: string;
@@ -19,6 +20,7 @@ export interface Message extends MessageBase {
 	gameData?: GameData;
 	sceneNumber?: number;
 	sessionNumber?: number;
+	sections?: NarrativeSections;
 	createdAt: number;
 }
 
@@ -31,6 +33,7 @@ interface MessageRow {
 	game_data: string | null;
 	scene_number: number | null;
 	session_number: number | null;
+	sections: string | null;
 	created_at: number;
 }
 
@@ -73,16 +76,30 @@ function rowToMessage(row: MessageRow): Message {
 		gameData: parseGameData(row.game_data),
 		sceneNumber: row.scene_number ?? undefined,
 		sessionNumber: row.session_number ?? undefined,
+		sections: parseSections(row.sections),
 		createdAt: row.created_at,
 	};
+}
+
+function parseSections(raw: string | null): NarrativeSections | undefined {
+	if (!raw) return undefined;
+	try {
+		const parsed = JSON.parse(raw);
+		if (typeof parsed === 'object' && parsed !== null) {
+			return parsed as NarrativeSections;
+		}
+		return undefined;
+	} catch {
+		return undefined;
+	}
 }
 
 export async function createMessage(message: Omit<Message, 'createdAt'>): Promise<Message> {
 	const db = getDatabase();
 	const now = Date.now();
 	await db.execute(
-		`INSERT INTO messages (id, role, content, reasoning, metadata, game_data, scene_number, session_number, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		`INSERT INTO messages (id, role, content, reasoning, metadata, game_data, scene_number, session_number, sections, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		[
 			message.id,
 			message.role,
@@ -92,6 +109,7 @@ export async function createMessage(message: Omit<Message, 'createdAt'>): Promis
 			message.gameData ? JSON.stringify(message.gameData) : null,
 			message.sceneNumber ?? null,
 			message.sessionNumber ?? null,
+			message.sections ? JSON.stringify(message.sections) : null,
 			now,
 		]
 	);

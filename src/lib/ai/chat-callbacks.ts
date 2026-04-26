@@ -1,5 +1,5 @@
 import type { StreamCallbacks, StreamResultMetadata } from './streaming';
-import { createParserChain, hasContent } from './parser-chain';
+import { createParserChain, hasContent, type NarrativeSections } from './parser-chain';
 import { applyParserOutput, applyReasoningDelta } from './message-updater';
 import type { GameData } from '$lib/db/messages';
 
@@ -10,6 +10,7 @@ export interface StreamState {
 	reviewScratchpad: string | null;
 	revisedNarrative: string | null;
 	revisedGameData: GameData | null;
+	sections: NarrativeSections | null;
 }
 
 export interface StreamAccumulator {
@@ -38,6 +39,7 @@ export function createStreamAccumulator(onUpdate?: OnStreamUpdate, onError?: OnS
 		reviewScratchpad: null,
 		revisedNarrative: null,
 		revisedGameData: null,
+		sections: null,
 	};
 
 	function notify(): void {

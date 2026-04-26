@@ -3,6 +3,20 @@ import { createSaxSectionParser } from './sax-section-parser';
 import type { GameData } from '$lib/db/messages';
 import type { StreamParser } from './stream-parser';
 
+export interface NarrativeSections {
+	storyTitle: string | null;
+	actNumber: string | null;
+	sessionNumber: string | null;
+	sceneNumber: string | null;
+	sceneTitle: string | null;
+	background: string | null;
+	narrativeBody: string | null;
+	cg: string | null;
+	currentContext: string | null;
+	activePlotThreads: string | null;
+	decisionContext: string | null;
+}
+
 export interface ParserChainOutput {
 	text: string | null;
 	thinking: string | null;
@@ -10,10 +24,19 @@ export interface ParserChainOutput {
 	reviewScratchpad: string | null;
 	revisedNarrative: string | null;
 	revisedGameData: GameData | null;
+	sections: NarrativeSections | null;
 }
 
 export function hasContent(output: ParserChainOutput) {
-	return output.text || output.thinking || output.gameData || output.reviewScratchpad || output.revisedNarrative || output.revisedGameData;
+	return (
+		output.text ||
+		output.thinking ||
+		output.gameData ||
+		output.reviewScratchpad ||
+		output.revisedNarrative ||
+		output.revisedGameData ||
+		output.sections
+	);
 }
 
 export interface ParserChain {
@@ -32,6 +55,46 @@ export function createParserChain(): ParserChain {
 	const saxSectionParser = createSaxSectionParser();
 
 	const parserChain = [thinkingParser, saxSectionParser];
+
+	const SECTION_FIELDS: (keyof NarrativeSections)[] = [
+		'storyTitle',
+		'actNumber',
+		'sessionNumber',
+		'sceneNumber',
+		'sceneTitle',
+		'background',
+		'narrativeBody',
+		'cg',
+		'currentContext',
+		'activePlotThreads',
+		'decisionContext',
+	];
+
+	function extractSectionsFromAcc(acc: Record<string, unknown>): NarrativeSections | null {
+		let hasAny = false;
+		const sections: NarrativeSections = {
+			storyTitle: null,
+			actNumber: null,
+			sessionNumber: null,
+			sceneNumber: null,
+			sceneTitle: null,
+			background: null,
+			narrativeBody: null,
+			cg: null,
+			currentContext: null,
+			activePlotThreads: null,
+			decisionContext: null,
+		};
+		for (const field of SECTION_FIELDS) {
+			const accKey = 'section_' + field;
+			const value = acc[accKey];
+			if (typeof value === 'string' && value.length > 0) {
+				sections[field] = value;
+				hasAny = true;
+			}
+		}
+		return hasAny ? sections : null;
+	}
 
 	function runChain(initialText: string, mode: 'feed' | 'flush'): ParserChainOutput {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -52,6 +115,7 @@ export function createParserChain(): ParserChain {
 			reviewScratchpad: acc.review_scratchpad as string | null,
 			revisedNarrative: acc.revised_narrative as string | null,
 			revisedGameData: acc.revisedGameData as GameData | null,
+			sections: extractSectionsFromAcc(acc),
 		};
 	}
 
