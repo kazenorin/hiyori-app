@@ -27,12 +27,17 @@ const migrationStatements: string[][] = [
 			content TEXT NOT NULL,
 			reasoning TEXT,
 			metadata TEXT,
+			variables TEXT,
+			draft_variables TEXT,
+			scene_number INTEGER,
+			session_number INTEGER,
 			created_at INTEGER NOT NULL
 		)`,
 		`CREATE TABLE IF NOT EXISTS act_line_meta (
 			id TEXT PRIMARY KEY,
 			act_id TEXT NOT NULL,
 			name TEXT NOT NULL,
+			is_main_line INTEGER NOT NULL DEFAULT 0,
 			created_at INTEGER NOT NULL
 		)`,
 		`CREATE TABLE IF NOT EXISTS act_lines (
@@ -41,9 +46,17 @@ const migrationStatements: string[][] = [
 			sequence INTEGER NOT NULL,
 			PRIMARY KEY (act_line_id, message_id, sequence)
 		)`,
-		`CREATE INDEX IF NOT EXISTS idx_act_lines_line ON act_lines(act_line_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_act_line_meta_act ON act_line_meta(act_id)`,
-		`CREATE INDEX IF NOT EXISTS idx_acts_story ON acts(story_id)`,
+		`CREATE TABLE IF NOT EXISTS act_line_premises (
+			act_line_id TEXT NOT NULL,
+			message_id TEXT NOT NULL,
+			sequence INTEGER NOT NULL,
+			PRIMARY KEY (act_line_id, message_id, sequence)
+		)`,
+		`CREATE TABLE IF NOT EXISTS story_folders (
+			story_id TEXT PRIMARY KEY,
+			folder_name TEXT NOT NULL,
+			created_at INTEGER NOT NULL
+		)`,
 		`CREATE TABLE IF NOT EXISTS app_state (
 			id INTEGER PRIMARY KEY CHECK (id = 1),
 			active_story_id TEXT,
@@ -51,29 +64,12 @@ const migrationStatements: string[][] = [
 			active_act_line_id TEXT
 		)`,
 		`INSERT OR IGNORE INTO app_state (id) VALUES (1)`,
-	],
-	[
-		`CREATE TABLE IF NOT EXISTS story_folders (
-			story_id TEXT PRIMARY KEY,
-			folder_name TEXT NOT NULL,
-			created_at INTEGER NOT NULL
-		)`,
+		`CREATE INDEX IF NOT EXISTS idx_act_lines_line ON act_lines(act_line_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_act_line_premises_line ON act_line_premises(act_line_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_act_line_meta_act ON act_line_meta(act_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_acts_story ON acts(story_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_story_folders_folder ON story_folders(folder_name)`,
 	],
-	[`ALTER TABLE act_line_meta ADD COLUMN is_main_line INTEGER NOT NULL DEFAULT 0`],
-	[`ALTER TABLE messages ADD COLUMN game_data TEXT`],
-	[
-		`CREATE TABLE IF NOT EXISTS act_line_premises (
-			act_line_id TEXT NOT NULL,
-			message_id TEXT NOT NULL,
-			sequence INTEGER NOT NULL,
-			PRIMARY KEY (act_line_id, message_id, sequence)
-		)`,
-		`CREATE INDEX IF NOT EXISTS idx_act_line_premises_line ON act_line_premises(act_line_id)`,
-	],
-	[`ALTER TABLE messages ADD COLUMN scene_number INTEGER`],
-	[`ALTER TABLE messages ADD COLUMN session_number INTEGER`],
-	[`ALTER TABLE messages ADD COLUMN sections TEXT`],
 ];
 
 export async function runMigrations(): Promise<void> {
@@ -90,15 +86,7 @@ export async function runMigrations(): Promise<void> {
 
 	for (let i = currentVersion; i < migrationStatements.length; i++) {
 		for (const stmt of migrationStatements[i]) {
-			try {
-				await db.execute(stmt);
-			} catch (err) {
-				// Allow idempotent re-run of ALTER TABLE statements
-				if (stmt.startsWith('ALTER TABLE') && err instanceof Error && err.message.includes('duplicate column')) {
-					continue;
-				}
-				throw err;
-			}
+			await db.execute(stmt);
 		}
 
 		await db.execute('INSERT INTO schema_version (version) VALUES ($1)', [i + 1]);

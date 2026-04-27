@@ -1,16 +1,11 @@
 import type { StreamCallbacks, StreamResultMetadata } from './streaming';
-import { createParserChain, hasContent, type NarrativeSections } from './parser-chain';
+import { createParserChain, hasContent, type NarrativeVariables } from './parser-chain';
 import { applyParserOutput, applyReasoningDelta } from './message-updater';
-import type { GameData } from '$lib/db/messages';
 
 export interface StreamState {
 	content: string;
 	reasoning: string | null;
-	gameData: GameData | null;
-	reviewScratchpad: string | null;
-	revisedNarrative: string | null;
-	revisedGameData: GameData | null;
-	sections: NarrativeSections | null;
+	variables: NarrativeVariables | null;
 }
 
 export interface StreamAccumulator {
@@ -24,7 +19,7 @@ export type OnStreamError = (err: unknown) => void;
 
 /**
  * Creates streaming callbacks that process text through the parser chain
- * (thinking tags → game-data blocks) and accumulate state.
+ * (thinking tags → sax-section) and accumulate state.
  *
  * @param onUpdate - called with the accumulated state after each delta
  * @param onError - called when a stream error occurs
@@ -35,11 +30,7 @@ export function createStreamAccumulator(onUpdate?: OnStreamUpdate, onError?: OnS
 	let state: StreamState = {
 		content: '',
 		reasoning: null,
-		gameData: null,
-		reviewScratchpad: null,
-		revisedNarrative: null,
-		revisedGameData: null,
-		sections: null,
+		variables: null,
 	};
 
 	function notify(): void {

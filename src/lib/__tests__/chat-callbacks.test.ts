@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createStreamAccumulator, type StreamState } from '../ai/chat-callbacks';
-import type { GameData } from '../db/messages';
+import type { GameDataFields } from '../ai/parser-chain';
 
 const T = 'think';
 const emptyMetadata = {
@@ -13,7 +13,7 @@ const emptyMetadata = {
 	durationMs: 1,
 };
 
-function feedAll(chunks: string[]): { text: string; reasoning: string | null; gameData: GameData | null } {
+function feedAll(chunks: string[]): { text: string; reasoning: string | null; gameData: GameDataFields | null } {
 	const acc = createStreamAccumulator();
 
 	for (const chunk of chunks) {
@@ -25,7 +25,7 @@ function feedAll(chunks: string[]): { text: string; reasoning: string | null; ga
 	return {
 		text: acc.state.content,
 		reasoning: acc.state.reasoning,
-		gameData: acc.state.gameData,
+		gameData: acc.state.variables?.gameData ?? null,
 	};
 }
 
@@ -102,16 +102,19 @@ describe('createStreamAccumulator', () => {
 			expect(result.text).toContain('Story');
 		});
 
-		it('skips game data with empty worldState', () => {
+		it('collects game data even with whitespace-only world state', () => {
 			const gd = ['## Game Data', '', '### World State', '', '   ', '', '### Decisions', '', '- A'].join('\n');
 			const result = feedAll([gd]);
-			expect(result.gameData).toBeNull();
+			expect(result.gameData).not.toBeNull();
+			expect(result.gameData?.decisions).toEqual(['A']);
 		});
 
-		it('skips game data with empty decisions', () => {
+		it('collects game data even without decisions list items', () => {
 			const gd = ['## Game Data', '', '### World State', '', 'State', '', '### Decisions', ''].join('\n');
 			const result = feedAll([gd]);
-			expect(result.gameData).toBeNull();
+			expect(result.gameData).not.toBeNull();
+			expect(result.gameData?.worldState).toContain('State');
+			expect(result.gameData?.decisions).toEqual([]);
 		});
 
 		it('extracts game data alongside thinking tags', () => {

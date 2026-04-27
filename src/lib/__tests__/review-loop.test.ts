@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import type { NarrativeVariables } from '../ai/parser-chain';
 
 // Mock prompts
 vi.mock('$lib/fs/prompts', () => ({
@@ -42,17 +43,31 @@ vi.mock('$lib/logging/logger', () => ({
  * This mirrors how the SAX section parser populates StreamState.
  */
 const mockStreamAccumulator = (content: string) => {
-	const reviewMatch = content.match(/^# Review Scratchpad\s*\n([\s\S]*?)(?=\n# Revised Narrative)/m);
-	const revisedMatch = content.match(/^# Revised Narrative\s*\n([\s\S]*?)$/m);
+	const scratchpadMatch = content.match(/^# Review Scratchpad\s*\n([\s\S]*?)(?=\n# Revised Narrative)/m);
+	const narrativeMatch = content.match(/^# Revised Narrative\s*\n([\s\S]*?)$/m);
+
+	const vars: NarrativeVariables = {
+		scratchpad: scratchpadMatch ? scratchpadMatch[1].trim() : null,
+		storyTitle: null,
+		actNumber: null,
+		sessionNumber: null,
+		sceneNumber: null,
+		sceneTitle: null,
+		background: null,
+		narrativeBody: narrativeMatch ? narrativeMatch[1].trim() : null,
+		cg: null,
+		currentContext: null,
+		activePlotThreads: null,
+		decisionContext: null,
+		gameData: null,
+	};
+
 	return {
 		callbacks: {} as any,
 		state: {
 			content,
 			reasoning: null,
-			gameData: null,
-			reviewScratchpad: reviewMatch ? reviewMatch[1].trim() : null,
-			revisedNarrative: revisedMatch ? revisedMatch[1].trim() : null,
-			revisedGameData: null,
+			variables: vars,
 		},
 		resultMetadata: Promise.resolve({
 			finishReason: 'stop',
@@ -96,14 +111,26 @@ describe('review-loop', () => {
 	});
 
 	describe('streamReview', () => {
-		it('returns null when no Revised Narrative section found', async () => {
-			mockStreamWithRetryResult = mockStreamAccumulator('Just some text without the right sections');
+		it('returns null when no narrative variables with content found', async () => {
+			mockStreamWithRetryResult = {
+				callbacks: {} as any,
+				state: {
+					content: 'Just some text without the right sections',
+					reasoning: null,
+					variables: null,
+				},
+				resultMetadata: Promise.resolve({
+					finishReason: 'stop',
+					usage: { inputTokens: 0, outputTokens: 0, totalTokens: 0 },
+					durationMs: 0,
+				}),
+			};
 
 			const result = await streamReview(baseTranscript);
 			expect(result).toBeNull();
 		});
 
-		it('extracts Revised Narrative and Review Scratchpad from markdown headers', async () => {
+		it('extracts narrative variables from Review Scratchpad and Revised Narrative sections', async () => {
 			const response = `# Review Scratchpad
 - Rule 1 Analysis: No issues found.
 - Rule 2 Analysis: Character "Bob" contradicts established traits.
@@ -117,18 +144,18 @@ The corrected narrative output goes here.`;
 			const result = (await streamReview(baseTranscript)) as ReviewLoopResult;
 
 			expect(result).not.toBeNull();
-			expect(result.scratchpad).toContain('Rule 1 Analysis');
-			expect(result.scratchpad).toContain('Planned Fixes');
-			expect(result.revisedContent).toBe('The corrected narrative output goes here.');
+			expect(result.variables.scratchpad).toContain('Rule 1 Analysis');
+			expect(result.variables.scratchpad).toContain('Planned Fixes');
+			expect(result.variables.narrativeBody).toBe('The corrected narrative output goes here.');
 		});
 
-		it('returns empty scratchpad when Review Scratchpad section is missing', async () => {
+		it('returns null scratchpad when Review Scratchpad section is missing', async () => {
 			mockStreamWithRetryResult = mockStreamAccumulator(`# Revised Narrative\nFixed output.`);
 
 			const result = (await streamReview(baseTranscript)) as ReviewLoopResult;
 
-			expect(result.scratchpad).toBe('');
-			expect(result.revisedContent).toBe('Fixed output.');
+			expect(result.variables.scratchpad).toBeNull();
+			expect(result.variables.narrativeBody).toBe('Fixed output.');
 		});
 
 		it('sends transcript as-is with editor prompt appended as user message', async () => {

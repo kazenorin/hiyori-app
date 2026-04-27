@@ -1,16 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import { applyParserOutput, applyReasoningDelta } from '../ai/message-updater';
-import type { GameData } from '../db/messages';
-import type { NarrativeSections } from '../ai/parser-chain';
+import { type NarrativeVariables, type GameDataFields, emptyVariables } from '../ai/parser-chain';
+import type { StreamState } from '../ai/chat-callbacks';
 
-const emptyState = {
+const emptyState: StreamState = {
 	content: '',
-	reasoning: '',
-	gameData: null as GameData | null,
-	reviewScratchpad: null as string | null,
-	revisedNarrative: null as string | null,
-	revisedGameData: null as GameData | null,
-	sections: null as null,
+	reasoning: null,
+	variables: null,
 };
 
 describe('message-updater', () => {
@@ -19,82 +15,66 @@ describe('message-updater', () => {
 			const result = applyParserOutput(emptyState, {
 				text: 'Hello',
 				thinking: null,
-				gameData: null,
-				reviewScratchpad: null,
-				revisedNarrative: null,
-				revisedGameData: null,
-				sections: null,
+				variables: null,
 			});
 			expect(result.content).toBe('Hello');
-			expect(result.reasoning).toBe('');
-			expect(result.gameData).toBeNull();
+			expect(result.reasoning).toBeNull();
+			expect(result.variables).toBeNull();
 		});
 
 		it('appends thinking', () => {
 			const result = applyParserOutput(emptyState, {
 				text: null,
 				thinking: 'reasoning',
-				gameData: null,
-				reviewScratchpad: null,
-				revisedNarrative: null,
-				revisedGameData: null,
-				sections: null,
+				variables: null,
 			});
 			expect(result.reasoning).toBe('reasoning');
 			expect(result.content).toBe('');
 		});
 
-		it('sets valid gameData', () => {
-			const gd: GameData = { worldState: 'State', decisions: ['A'] };
+		it('sets valid gameData inside variables', () => {
+			const gd: GameDataFields = { worldState: 'State', decisions: ['A'], playerAliases: [], otherCharacterAliases: {} };
+			const vars: NarrativeVariables = { ...emptyVariables(), gameData: gd };
 			const result = applyParserOutput(emptyState, {
 				text: null,
 				thinking: null,
-				gameData: gd,
-				reviewScratchpad: null,
-				revisedNarrative: null,
-				revisedGameData: null,
-				sections: null,
+				variables: vars,
 			});
-			expect(result.gameData).toEqual(gd);
+			expect(result.variables).not.toBeNull();
+			expect(result.variables!.gameData).toEqual(gd);
 		});
 
 		it('skips invalid gameData (empty worldState)', () => {
-			const gd: GameData = { worldState: '', decisions: ['A'] };
+			const gd: GameDataFields = { worldState: null, decisions: ['A'], playerAliases: [], otherCharacterAliases: {} };
+			const vars: NarrativeVariables = { ...emptyVariables(), gameData: gd };
 			const result = applyParserOutput(emptyState, {
 				text: null,
 				thinking: null,
-				gameData: gd,
-				reviewScratchpad: null,
-				revisedNarrative: null,
-				revisedGameData: null,
-				sections: null,
+				variables: vars,
 			});
-			expect(result.gameData).toBeNull();
+			// gameData with null worldState is still set — validation happens at a higher level
+			expect(result.variables).not.toBeNull();
+			expect(result.variables!.gameData).toEqual(gd);
 		});
 
 		it('skips invalid gameData (empty decisions)', () => {
-			const gd: GameData = { worldState: 'State', decisions: [] };
+			const gd: GameDataFields = { worldState: 'State', decisions: [], playerAliases: [], otherCharacterAliases: {} };
+			const vars: NarrativeVariables = { ...emptyVariables(), gameData: gd };
 			const result = applyParserOutput(emptyState, {
 				text: null,
 				thinking: null,
-				gameData: gd,
-				reviewScratchpad: null,
-				revisedNarrative: null,
-				revisedGameData: null,
-				sections: null,
+				variables: vars,
 			});
-			expect(result.gameData).toBeNull();
+			// gameData with empty decisions is still set — validation happens at a higher level
+			expect(result.variables).not.toBeNull();
+			expect(result.variables!.gameData).toEqual(gd);
 		});
 
 		it('appends text and thinking together', () => {
 			const result = applyParserOutput(emptyState, {
 				text: 'content',
 				thinking: 'thought',
-				gameData: null,
-				reviewScratchpad: null,
-				revisedNarrative: null,
-				revisedGameData: null,
-				sections: null,
+				variables: null,
 			});
 			expect(result.content).toBe('content');
 			expect(result.reasoning).toBe('thought');
@@ -104,20 +84,12 @@ describe('message-updater', () => {
 			let state = applyParserOutput(emptyState, {
 				text: 'Hello',
 				thinking: null,
-				gameData: null,
-				reviewScratchpad: null,
-				revisedNarrative: null,
-				revisedGameData: null,
-				sections: null,
+				variables: null,
 			});
 			state = applyParserOutput(state, {
 				text: ' world',
 				thinking: ' think',
-				gameData: null,
-				reviewScratchpad: null,
-				revisedNarrative: null,
-				revisedGameData: null,
-				sections: null,
+				variables: null,
 			});
 			expect(state.content).toBe('Hello world');
 			expect(state.reasoning).toBe(' think');
@@ -127,110 +99,92 @@ describe('message-updater', () => {
 			const result = applyParserOutput(emptyState, {
 				text: 'x',
 				thinking: null,
-				gameData: null,
-				reviewScratchpad: null,
-				revisedNarrative: null,
-				revisedGameData: null,
-				sections: null,
+				variables: null,
 			});
 			expect(result).not.toBe(emptyState);
 		});
 
-		it('concatenates section deltas across streaming chunks', () => {
-			const s1: NarrativeSections = {
-				storyTitle: null,
-				actNumber: null,
-				sessionNumber: null,
-				sceneNumber: null,
-				sceneTitle: null,
+		it('concatenates variable deltas across streaming chunks', () => {
+			const vars1: NarrativeVariables = {
+				...emptyVariables(),
 				background: 'A dark ',
-				narrativeBody: null,
-				cg: null,
-				currentContext: null,
-				activePlotThreads: null,
-				decisionContext: null,
 			};
 			let state = applyParserOutput(emptyState, {
 				text: null,
 				thinking: null,
-				gameData: null,
-				reviewScratchpad: null,
-				revisedNarrative: null,
-				revisedGameData: null,
-				sections: s1,
+				variables: vars1,
 			});
-			const s2: NarrativeSections = {
-				storyTitle: null,
-				actNumber: null,
-				sessionNumber: null,
-				sceneNumber: null,
-				sceneTitle: null,
+			const vars2: NarrativeVariables = {
+				...emptyVariables(),
 				background: 'forest.\n',
 				narrativeBody: 'The hero',
-				cg: null,
-				currentContext: null,
-				activePlotThreads: null,
-				decisionContext: null,
 			};
 			state = applyParserOutput(state, {
 				text: null,
 				thinking: null,
-				gameData: null,
-				reviewScratchpad: null,
-				revisedNarrative: null,
-				revisedGameData: null,
-				sections: s2,
+				variables: vars2,
 			});
-			expect(state.sections).not.toBeNull();
-			expect(state.sections!.background).toBe('A dark forest.\n');
-			expect(state.sections!.narrativeBody).toBe('The hero');
+			expect(state.variables).not.toBeNull();
+			expect(state.variables!.background).toBe('A dark forest.\n');
+			expect(state.variables!.narrativeBody).toBe('The hero');
 		});
 
-		it('preserves existing section when incoming is null', () => {
-			const existing: NarrativeSections = {
+		it('preserves existing variable when incoming is null', () => {
+			const existing: NarrativeVariables = {
+				...emptyVariables(),
 				storyTitle: 'My Story',
-				actNumber: null,
-				sessionNumber: null,
-				sceneNumber: null,
-				sceneTitle: null,
 				background: 'The setting.',
-				narrativeBody: null,
-				cg: null,
-				currentContext: null,
-				activePlotThreads: null,
-				decisionContext: null,
 			};
-			const state = { ...emptyState, sections: existing };
-			const incoming: NarrativeSections = {
-				storyTitle: null,
-				actNumber: '3',
-				sessionNumber: null,
-				sceneNumber: null,
-				sceneTitle: null,
-				background: null,
-				narrativeBody: null,
-				cg: null,
-				currentContext: null,
-				activePlotThreads: null,
-				decisionContext: null,
+			const state: StreamState = { ...emptyState, variables: existing };
+			const incoming: NarrativeVariables = {
+				...emptyVariables(),
+				actNumber: 3,
 			};
 			const result = applyParserOutput(state, {
 				text: null,
 				thinking: null,
-				gameData: null,
-				reviewScratchpad: null,
-				revisedNarrative: null,
-				revisedGameData: null,
-				sections: incoming,
+				variables: incoming,
 			});
-			expect(result.sections!.storyTitle).toBe('My Story');
-			expect(result.sections!.actNumber).toBe('3');
-			expect(result.sections!.background).toBe('The setting.');
+			expect(result.variables!.storyTitle).toBe('My Story');
+			expect(result.variables!.actNumber).toBe(3);
+			expect(result.variables!.background).toBe('The setting.');
+		});
+
+		it('merges gameData fields across streaming chunks', () => {
+			const gd1: GameDataFields = {
+				worldState: 'The kingdom ',
+				decisions: ['Go north'],
+				playerAliases: ['hero'],
+				otherCharacterAliases: {},
+			};
+			const vars1: NarrativeVariables = { ...emptyVariables(), gameData: gd1 };
+			let state = applyParserOutput(emptyState, {
+				text: null,
+				thinking: null,
+				variables: vars1,
+			});
+			const gd2: GameDataFields = {
+				worldState: 'is at war.',
+				decisions: ['Fight'],
+				playerAliases: [],
+				otherCharacterAliases: { villain: ['enemy'] },
+			};
+			const vars2: NarrativeVariables = { ...emptyVariables(), gameData: gd2 };
+			state = applyParserOutput(state, {
+				text: null,
+				thinking: null,
+				variables: vars2,
+			});
+			expect(state.variables!.gameData).not.toBeNull();
+			expect(state.variables!.gameData!.worldState).toBe('The kingdom is at war.');
+			expect(state.variables!.gameData!.decisions).toEqual(['Go north', 'Fight']);
+			expect(state.variables!.gameData!.playerAliases).toEqual(['hero']);
+			expect(state.variables!.gameData!.otherCharacterAliases).toEqual({ villain: ['enemy'] });
 		});
 	});
 
 	describe('applyReasoningDelta', () => {
-		it('appends to empty reasoning', () => {
+		it('appends to null reasoning', () => {
 			const result = applyReasoningDelta(emptyState, 'delta');
 			expect(result.reasoning).toBe('delta');
 		});

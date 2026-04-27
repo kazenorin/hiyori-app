@@ -1,6 +1,6 @@
 // Transcript parsers for multiple JSON formats
 
-import type { GameData } from '$lib/db/messages';
+import type { GameDataFields } from '$lib/ai/parser-chain';
 import type { TranscriptFormat, ParsedTranscript, ParsedMessage, OpenWebUIExport, OpenWebUIMessage } from './types';
 import { validateFileSize } from '$lib/utils/async';
 
@@ -178,7 +178,7 @@ function isSimpleOpenAIFormat(json: unknown): boolean {
 
 // === Format C: Open WebUI Format ===
 
-export function parseOpenWebUIFormat(json: unknown, skipOptionalMalformed: boolean): ParsedTranscript {
+export function parseOpenWebUIFormat(json: unknown, _skipOptionalMalformed: boolean): ParsedTranscript {
 	if (!isOpenWebUIFormat(json)) {
 		throw new Error('Invalid Open WebUI format');
 	}
@@ -216,7 +216,7 @@ export function parseOpenWebUIFormat(json: unknown, skipOptionalMalformed: boole
 	}
 
 	// Convert to ParsedMessage format
-	const parsed: ParsedMessage[] = longestSequence.map((msg) => convertOpenWebUIMessage(msg, skipOptionalMalformed));
+	const parsed: ParsedMessage[] = longestSequence.map((msg) => convertOpenWebUIMessage(msg));
 
 	return { format: 'openwebui', messages: parsed };
 }
@@ -257,7 +257,7 @@ function buildSequence(head: OpenWebUIMessage, idToMessage: Map<string, OpenWebU
 	return sequence;
 }
 
-function convertOpenWebUIMessage(msg: OpenWebUIMessage, _skipOptionalMalformed: boolean): ParsedMessage {
+function convertOpenWebUIMessage(msg: OpenWebUIMessage): ParsedMessage {
 	const parsed: ParsedMessage = {
 		role: msg.role,
 		content: msg.content,
@@ -315,7 +315,7 @@ function safeParseJson(json: string): unknown | null {
 	}
 }
 
-function parseGameData(raw: string, skipOptionalMalformed: boolean): GameData | null {
+function parseGameData(raw: string, skipOptionalMalformed: boolean): GameDataFields | null {
 	try {
 		const parsed = JSON.parse(raw);
 		if (
@@ -325,7 +325,7 @@ function parseGameData(raw: string, skipOptionalMalformed: boolean): GameData | 
 			Array.isArray(parsed.decisions) &&
 			parsed.decisions.every((d: unknown) => typeof d === 'string')
 		) {
-			return { worldState: parsed.worldState, decisions: parsed.decisions };
+			return { worldState: parsed.worldState, decisions: parsed.decisions, playerAliases: [], otherCharacterAliases: {} };
 		}
 		return null;
 	} catch {

@@ -2,7 +2,7 @@
 // Pass 1: Traditional extraction from markdown headers/keywords
 // Pass 2: LLM-based extraction for remaining messages
 
-import type { GameData } from '$lib/db/messages';
+import type { GameDataFields } from '$lib/ai/parser-chain';
 import type { GameDataDetectionResult, GameDataExtractionResult, ParsedMessage } from './types';
 import { buildMetadata, type RetryConfig, streamWithRetry } from '$lib/ai/chat-stream';
 import { loadChoicesExtractionPrompt } from '$lib/fs/prompts';
@@ -20,7 +20,7 @@ import { getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
  *   2. Bold bracket markers (**[DECISION POINT]**, **[CHOICES]**, etc.)
  * Supports list items in plain and blockquote form (> 1., > *, etc.)
  */
-export function extractGameDataTraditional(content: string): GameData | null {
+export function extractGameDataTraditional(content: string): GameDataFields | null {
 	// Split on markdown headers OR bold bracket markers containing decision keywords
 	// Pattern 1: #{1,6} headers
 	// Pattern 2: **[...]** where brackets contain decision keywords
@@ -60,6 +60,8 @@ export function extractGameDataTraditional(content: string): GameData | null {
 			return {
 				worldState: worldState.trim(),
 				decisions,
+				playerAliases: [],
+				otherCharacterAliases: {},
 			};
 		}
 	}
@@ -194,7 +196,7 @@ export async function extractGameDataWithLLM(
 			providerConfig
 		);
 
-		const gameData = acc.state.gameData;
+		const gameData = acc.state.variables?.gameData ?? null;
 		const metadata = await acc.resultMetadata;
 
 		results.push({

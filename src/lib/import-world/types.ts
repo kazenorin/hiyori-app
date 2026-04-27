@@ -1,6 +1,6 @@
 // Core types for Import World feature
 
-import type { GameData } from '$lib/db/messages';
+import type { GameDataFields } from '$lib/ai/parser-chain';
 
 // === Transcript Format Detection ===
 
@@ -43,7 +43,7 @@ export interface ParsedMessage {
 	content: string;
 	reasoning?: string;
 	metadata?: string;
-	gameData?: GameData;
+	gameData?: GameDataFields;
 }
 
 // === Open WebUI Specific Types ===
@@ -131,7 +131,7 @@ export interface ValidationWarning {
 
 export interface GameDataExtractionResult {
 	messageIndex: number;
-	gameData: GameData | null;
+	gameData: GameDataFields | null;
 	source: 'traditional' | 'llm' | 'none';
 	metadata?: string;
 }

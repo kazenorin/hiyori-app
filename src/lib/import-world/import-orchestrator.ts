@@ -10,6 +10,7 @@ import { BaseDirectory, mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { loadStories } from '$lib/stores/stories.svelte';
 import { kebabCase } from 'lodash';
 import type { ImportFormData, ImportProgressUpdate, ImportResult, ParsedMessage } from './types';
+import { emptyVariables } from '$lib/ai/parser-chain';
 import type { RetryConfig } from '$lib/ai/chat-stream';
 import { parseTranscriptFile } from './transcript-parsers';
 import { formatIntoScenes, generateActFromCards } from './act-generator';
@@ -449,7 +450,7 @@ async function createMessagesFromParsed(
 				content: msg.content,
 				reasoning: msg.reasoning,
 				metadata: msg.metadata,
-				gameData: msg.gameData,
+				variables: msg.gameData ? { ...emptyVariables(), gameData: msg.gameData } : undefined,
 			});
 
 			await addMessageToLine(actLineId, messageId, sequence++);

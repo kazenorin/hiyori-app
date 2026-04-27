@@ -1,13 +1,24 @@
 import { createThinkingTagParser } from './thinking-tag-parser';
 import { createSaxSectionParser } from './sax-section-parser';
-import type { GameData } from '$lib/db/messages';
-import type { StreamParser } from './stream-parser';
+import type { StreamParser, ParserAccumulator } from './stream-parser';
 
-export interface NarrativeSections {
+// --- Types ---
+
+/** Structured game data extracted from ## Game Data section */
+export interface GameDataFields {
+	worldState: string | null;
+	decisions: string[]; // parsed from list items (ordered/unordered)
+	playerAliases: string[]; // parsed from list items
+	otherCharacterAliases: Record<string, string[]>; // character name → aliases
+}
+
+/** All narrative variables with proper types per field */
+export interface NarrativeVariables {
+	scratchpad: string | null;
 	storyTitle: string | null;
-	actNumber: string | null;
-	sessionNumber: string | null;
-	sceneNumber: string | null;
+	actNumber: number | null;
+	sessionNumber: number | null;
+	sceneNumber: number | null;
 	sceneTitle: string | null;
 	background: string | null;
 	narrativeBody: string | null;
@@ -15,10 +26,14 @@ export interface NarrativeSections {
 	currentContext: string | null;
 	activePlotThreads: string | null;
 	decisionContext: string | null;
+	gameData: GameDataFields | null;
 }
 
-/** Canonical list of all NarrativeSections field names — single source of truth. */
-export const NARRATIVE_SECTION_FIELDS: (keyof NarrativeSections)[] = [
+// --- Field lists ---
+
+/** Canonical list of all NarrativeVariables keys (excluding gameData). */
+export const NARRATIVE_VARIABLE_FIELDS: (keyof NarrativeVariables)[] = [
+	'scratchpad',
 	'storyTitle',
 	'actNumber',
 	'sessionNumber',
@@ -32,31 +47,55 @@ export const NARRATIVE_SECTION_FIELDS: (keyof NarrativeSections)[] = [
 	'decisionContext',
 ];
 
-/** Create a NarrativeSections with all fields set to null. */
-export function emptySections(): NarrativeSections {
-	return Object.fromEntries(NARRATIVE_SECTION_FIELDS.map((f) => [f, null])) as unknown as NarrativeSections;
+/** Number fields that need parseInt conversion from accumulated text. */
+export const NUMBER_FIELDS: ReadonlySet<keyof NarrativeVariables> = new Set(['actNumber', 'sessionNumber', 'sceneNumber']);
+
+// --- Helpers ---
+
+/** Type-safe setter for NarrativeVariables fields, bypassing the index signature constraint. */
+export function setField(obj: NarrativeVariables, key: keyof NarrativeVariables, value: string | number): void {
+	(obj as unknown as Record<string, unknown>)[key] = value;
 }
+
+/** Create an empty GameDataFields. */
+export function emptyGameDataFields(): GameDataFields {
+	return {
+		worldState: null,
+		decisions: [],
+		playerAliases: [],
+		otherCharacterAliases: {},
+	};
+}
+
+/** Create a NarrativeVariables with all fields set to null/empty. */
+export function emptyVariables(): NarrativeVariables {
+	return {
+		scratchpad: null,
+		storyTitle: null,
+		actNumber: null,
+		sessionNumber: null,
+		sceneNumber: null,
+		sceneTitle: null,
+		background: null,
+		narrativeBody: null,
+		cg: null,
+		currentContext: null,
+		activePlotThreads: null,
+		decisionContext: null,
+		gameData: null,
+	};
+}
+
+// --- Parser chain ---
 
 export interface ParserChainOutput {
 	text: string | null;
 	thinking: string | null;
-	gameData: GameData | null;
-	reviewScratchpad: string | null;
-	revisedNarrative: string | null;
-	revisedGameData: GameData | null;
-	sections: NarrativeSections | null;
+	variables: NarrativeVariables | null;
 }
 
-export function hasContent(output: ParserChainOutput) {
-	return (
-		output.text ||
-		output.thinking ||
-		output.gameData ||
-		output.reviewScratchpad ||
-		output.revisedNarrative ||
-		output.revisedGameData ||
-		output.sections
-	);
+export function hasContent(output: ParserChainOutput): boolean {
+	return !!(output.text || output.thinking || output.variables);
 }
 
 export interface ParserChain {
@@ -64,8 +103,37 @@ export interface ParserChain {
 	flush(): ParserChainOutput;
 }
 
-/** Prefix used for accumulator keys corresponding to section fields. */
-export const SECTION_ACC_PREFIX = 'section_';
+/**
+ * Extract NarrativeVariables from the raw accumulator.
+ * Number fields are parsed from text via parseInt; gameData is taken directly.
+ */
+function extractVariables(acc: Record<string, unknown>): NarrativeVariables | null {
+	const vars = emptyVariables();
+	let hasAny = false;
+
+	for (const field of NARRATIVE_VARIABLE_FIELDS) {
+		const value = acc[field];
+		if (typeof value === 'string' && value.length > 0) {
+			if (NUMBER_FIELDS.has(field)) {
+				const parsed = parseInt(value, 10);
+				if (!isNaN(parsed)) {
+					setField(vars, field, parsed);
+				}
+			} else {
+				setField(vars, field, value);
+			}
+			hasAny = true;
+		}
+	}
+
+	// GameDataFields from GameDataAccumulator
+	if (acc.gameData && typeof acc.gameData === 'object') {
+		vars.gameData = acc.gameData as GameDataFields;
+		hasAny = true;
+	}
+
+	return hasAny ? vars : null;
+}
 
 /**
  * Combined parser chain: thinking → sax-section.
@@ -79,39 +147,20 @@ export function createParserChain(): ParserChain {
 
 	const parserChain = [thinkingParser, saxSectionParser];
 
-	function extractSectionsFromAcc(acc: Record<string, unknown>): NarrativeSections | null {
-		let hasAny = false;
-		const sections = emptySections();
-		for (const field of NARRATIVE_SECTION_FIELDS) {
-			const value = acc[SECTION_ACC_PREFIX + field];
-			if (typeof value === 'string' && value.length > 0) {
-				sections[field] = value;
-				hasAny = true;
-			}
-		}
-		return hasAny ? sections : null;
-	}
-
 	function runChain(initialText: string, mode: 'feed' | 'flush'): ParserChainOutput {
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const acc: any = {
+		const acc: Record<string, unknown> & { thinking: string | null } = {
 			thinking: null,
-			gameData: null,
-			revisedGameData: null,
-			review_scratchpad: null,
-			revised_narrative: null,
 		};
 
-		const text = mode === 'feed' ? parserChain.reduce((t, parser) => parser.feed(t, acc), initialText) : runFlush(parserChain, acc);
+		const text =
+			mode === 'feed'
+				? parserChain.reduce((t, parser) => parser.feed(t, acc as ParserAccumulator<typeof acc>), initialText)
+				: runFlush(parserChain, acc as ParserAccumulator<typeof acc>);
 
 		return {
 			text: text || null,
-			thinking: acc.thinking as string | null,
-			gameData: acc.gameData as GameData | null,
-			reviewScratchpad: acc.review_scratchpad as string | null,
-			revisedNarrative: acc.revised_narrative as string | null,
-			revisedGameData: acc.revisedGameData as GameData | null,
-			sections: extractSectionsFromAcc(acc),
+			thinking: (acc.thinking as string | null) ?? null,
+			variables: extractVariables(acc),
 		};
 	}
 
@@ -138,16 +187,4 @@ function runFlush(parserChain: StreamParser<Record<string, unknown>>[], acc: Rec
 	}
 
 	return text;
-}
-
-/**
- * Parse raw text through a fresh parser chain and extract NarrativeSections.
- * Useful for extracting sections from revised narrative text that was
- * captured as raw content inside a `# Revised Narrative` block.
- */
-export function extractSectionsFromText(text: string): NarrativeSections | null {
-	const chain = createParserChain();
-	const feedOutput = chain.feed(text);
-	const flushOutput = chain.flush();
-	return flushOutput.sections ?? feedOutput.sections;
 }

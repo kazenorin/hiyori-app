@@ -1,12 +1,13 @@
 import { getDatabase } from './database';
-import { type NarrativeSections, emptySections, NARRATIVE_SECTION_FIELDS } from '$lib/ai/parser-chain';
-
-export interface GameData {
-	worldState: string;
-	decisions: string[];
-	playerAliases?: string[];
-	aliases?: string[][];
-}
+import {
+	type NarrativeVariables,
+	type GameDataFields,
+	emptyVariables,
+	NARRATIVE_VARIABLE_FIELDS,
+	NUMBER_FIELDS,
+	emptyGameDataFields,
+	setField,
+} from '$lib/ai/parser-chain';
 
 export interface MessageBase {
 	role: 'user' | 'assistant';
@@ -17,10 +18,10 @@ export interface Message extends MessageBase {
 	id: string;
 	reasoning?: string;
 	metadata?: string;
-	gameData?: GameData;
 	sceneNumber?: number;
 	sessionNumber?: number;
-	sections?: NarrativeSections;
+	variables?: NarrativeVariables;
+	draftVariables?: NarrativeVariables;
 	createdAt: number;
 }
 
@@ -30,40 +31,55 @@ interface MessageRow {
 	content: string;
 	reasoning: string | null;
 	metadata: string | null;
-	game_data: string | null;
+	variables: string | null;
+	draft_variables: string | null;
 	scene_number: number | null;
 	session_number: number | null;
-	sections: string | null;
 	created_at: number;
 }
 
-export function parseGameData(raw: string | null): GameData | undefined {
+export function parseVariables(raw: string | null): NarrativeVariables | undefined {
 	if (!raw) return undefined;
 	try {
 		const parsed = JSON.parse(raw);
-		if (
-			typeof parsed === 'object' &&
-			parsed !== null &&
-			typeof parsed.worldState === 'string' &&
-			Array.isArray(parsed.decisions) &&
-			parsed.decisions.every((d: unknown) => typeof d === 'string')
-		) {
-			const result: GameData = { worldState: parsed.worldState, decisions: parsed.decisions };
-			if (Array.isArray(parsed.playerAliases) && parsed.playerAliases.every((d: unknown) => typeof d === 'string')) {
-				result.playerAliases = parsed.playerAliases;
-			}
-			if (
-				Array.isArray(parsed.aliases) &&
-				parsed.aliases.every((a: unknown) => Array.isArray(a) && (a as unknown[]).every((d: unknown) => typeof d === 'string'))
-			) {
-				result.aliases = parsed.aliases;
-			}
-			return result;
+		if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+			return undefined;
 		}
-		return undefined;
+		const result = emptyVariables();
+		for (const field of NARRATIVE_VARIABLE_FIELDS) {
+			const value = parsed[field];
+			if (NUMBER_FIELDS.has(field)) {
+				if (typeof value === 'number') {
+					setField(result, field, value);
+				}
+			} else if (typeof value === 'string') {
+				setField(result, field, value);
+			}
+		}
+		if (parsed.gameData && typeof parsed.gameData === 'object') {
+			result.gameData = parseGameDataFields(parsed.gameData);
+		}
+		return result;
 	} catch {
 		return undefined;
 	}
+}
+
+function parseGameDataFields(raw: Record<string, unknown>): GameDataFields {
+	const gd = emptyGameDataFields();
+	if (typeof raw.worldState === 'string') gd.worldState = raw.worldState;
+	if (Array.isArray(raw.decisions)) gd.decisions = raw.decisions.filter((d: unknown) => typeof d === 'string');
+	if (Array.isArray(raw.playerAliases)) gd.playerAliases = raw.playerAliases.filter((d: unknown) => typeof d === 'string');
+	if (raw.otherCharacterAliases && typeof raw.otherCharacterAliases === 'object' && !Array.isArray(raw.otherCharacterAliases)) {
+		const record: Record<string, string[]> = {};
+		for (const [key, val] of Object.entries(raw.otherCharacterAliases)) {
+			if (Array.isArray(val)) {
+				record[key] = val.filter((d: unknown) => typeof d === 'string');
+			}
+		}
+		gd.otherCharacterAliases = record;
+	}
+	return gd;
 }
 
 function rowToMessage(row: MessageRow): Message {
@@ -73,39 +89,19 @@ function rowToMessage(row: MessageRow): Message {
 		content: row.content,
 		reasoning: row.reasoning ?? undefined,
 		metadata: row.metadata ?? undefined,
-		gameData: parseGameData(row.game_data),
+		variables: parseVariables(row.variables),
+		draftVariables: parseVariables(row.draft_variables),
 		sceneNumber: row.scene_number ?? undefined,
 		sessionNumber: row.session_number ?? undefined,
-		sections: parseSections(row.sections),
 		createdAt: row.created_at,
 	};
-}
-
-function parseSections(raw: string | null): NarrativeSections | undefined {
-	if (!raw) return undefined;
-	try {
-		const parsed = JSON.parse(raw);
-		if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
-			return undefined;
-		}
-		const result = emptySections();
-		for (const field of NARRATIVE_SECTION_FIELDS) {
-			const value = parsed[field];
-			if (typeof value === 'string') {
-				result[field] = value;
-			}
-		}
-		return result;
-	} catch {
-		return undefined;
-	}
 }
 
 export async function createMessage(message: Omit<Message, 'createdAt'>): Promise<Message> {
 	const db = getDatabase();
 	const now = Date.now();
 	await db.execute(
-		`INSERT INTO messages (id, role, content, reasoning, metadata, game_data, scene_number, session_number, sections, created_at)
+		`INSERT INTO messages (id, role, content, reasoning, metadata, variables, draft_variables, scene_number, session_number, created_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		[
 			message.id,
@@ -113,10 +109,10 @@ export async function createMessage(message: Omit<Message, 'createdAt'>): Promis
 			message.content,
 			message.reasoning ?? null,
 			message.metadata ?? null,
-			message.gameData ? JSON.stringify(message.gameData) : null,
+			message.variables ? JSON.stringify(message.variables) : null,
+			message.draftVariables ? JSON.stringify(message.draftVariables) : null,
 			message.sceneNumber ?? null,
 			message.sessionNumber ?? null,
-			message.sections ? JSON.stringify(message.sections) : null,
 			now,
 		]
 	);

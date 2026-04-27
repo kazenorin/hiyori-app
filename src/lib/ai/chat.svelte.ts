@@ -7,8 +7,8 @@ import {
 	settings,
 } from '$lib/stores/settings.svelte';
 import { getActiveStoryId, getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
-import type { GameData, MessageBase } from '$lib/db/messages';
-import type { NarrativeSections } from './parser-chain';
+import type { MessageBase } from '$lib/db/messages';
+import type { NarrativeVariables, GameDataFields } from './parser-chain';
 import * as dbMessages from '$lib/db/messages';
 import type { ModelMessage } from 'ai';
 import * as dbActLines from '$lib/db/act-lines';
@@ -22,6 +22,8 @@ import { log } from '$lib/logging/logger';
 import { buildTools } from '$lib/ai/tools/tools';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
 import { getErrorMessage } from '$lib/utils/error-handling';
+import { hasStructuralFields, renderTemplate } from './template-renderer';
+import { storyMessageTemplate } from '$lib/fs/view-templates';
 
 export interface Message {
 	id: string;
@@ -29,12 +31,11 @@ export interface Message {
 	content: string;
 	reasoning?: string;
 	metadata?: MessageMetadata;
-	gameData?: GameData;
 	sceneNumber?: number;
 	sessionNumber?: number;
-	draftContent?: string;
+	draft?: NarrativeVariables;
+	result?: NarrativeVariables;
 	reviewScratchpad?: string;
-	sections?: NarrativeSections;
 }
 
 let messages = $state<Message[]>([]);
@@ -68,10 +69,10 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 		content: m.content,
 		reasoning: m.reasoning,
 		metadata: parseMetadata(m.metadata),
-		gameData: m.gameData,
 		sceneNumber: m.sceneNumber,
 		sessionNumber: m.sessionNumber,
-		sections: m.sections,
+		draft: m.draftVariables,
+		result: m.variables,
 	}));
 	error = null;
 }
@@ -138,10 +139,10 @@ async function persistMessage(actLineId: string, message: Message): Promise<void
 		content: message.content,
 		reasoning: message.reasoning,
 		metadata: message.metadata ? JSON.stringify(message.metadata) : undefined,
-		gameData: message.gameData,
 		sceneNumber: message.sceneNumber,
 		sessionNumber: message.sessionNumber,
-		sections: message.sections,
+		variables: message.result,
+		draftVariables: message.draft,
 	});
 	const seq = await dbActLines.getNextSequence(actLineId);
 	await dbActLines.addMessageToLine(actLineId, message.id, seq);
@@ -203,7 +204,8 @@ function runMemoryPipeline(storyId: string | null, actLineId: string, message: M
 	if (!settings.memoryEnabled) return;
 	if (!storyId || !actLineId) return;
 	memoryPipelineRunning = true;
-	memoryPipelinePromise = runMemoryExtractionPipeline(message.content, storyId, actLineId, message.id, message.gameData)
+	const gameData = message.result?.gameData ?? undefined;
+	memoryPipelinePromise = runMemoryExtractionPipeline(message.content, storyId, actLineId, message.id, gameData)
 		.then((result) => log.debug('memory-pipeline', `Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`))
 		.catch((err) => log.error('memory-pipeline', 'Pipeline failed', err))
 		.finally(() => {
@@ -225,6 +227,11 @@ function updateMetaData(getCurrentMessage: () => Message, resultMetadata: Stream
 	if (resultMetadata) {
 		getCurrentMessage().metadata = buildMetadata(resultMetadata, providerConfig.model);
 	}
+}
+
+function renderFromVariables(vars: NarrativeVariables | null | undefined): string {
+	if (!vars || !hasStructuralFields(vars)) return '';
+	return renderTemplate(storyMessageTemplate, vars);
 }
 
 export async function sendMessage(
@@ -291,13 +298,21 @@ export async function sendMessage(
 			abortController!.signal,
 			(state: StreamState) => {
 				const currentMessage = getCurrentMessage();
-				setCurrentMessage({
-					...currentMessage,
-					[settings.reviewerEnabled ? 'draftContent' : 'content']: state.content,
-					reasoning: state.reasoning ?? currentMessage.reasoning,
-					gameData: state.revisedGameData ?? state.gameData ?? currentMessage.gameData,
-					sections: state.sections ?? currentMessage.sections,
-				});
+				const vars = state.variables;
+				if (settings.reviewerEnabled) {
+					setCurrentMessage({
+						...currentMessage,
+						draft: vars ?? currentMessage.draft,
+						reasoning: state.reasoning ?? currentMessage.reasoning,
+					});
+				} else {
+					setCurrentMessage({
+						...currentMessage,
+						result: vars ?? currentMessage.result,
+						content: vars ? renderFromVariables(vars) : currentMessage.content,
+						reasoning: state.reasoning ?? currentMessage.reasoning,
+					});
+				}
 			},
 			(err: unknown) => {
 				const errorMessage = getErrorMessage(err);
@@ -313,13 +328,36 @@ export async function sendMessage(
 
 		// Review loop: run editor mode, revise if needed
 		if (settings.reviewerEnabled) {
+			// Render draft to content for the reviewer to see
+			const preReviewMsg = getCurrentMessage();
+			if (!preReviewMsg.content && preReviewMsg.draft) {
+				setCurrentMessage({
+					...preReviewMsg,
+					content: renderFromVariables(preReviewMsg.draft),
+				});
+			}
+
 			const sessionNumber = message.sessionNumber ?? findLastNonNullSessionNumber();
-			const reviewedMetadata = await runReviewLoop(getCurrentMessage, (msg) => setCurrentMessage(msg as Message), history, {
-				sessionNumber,
-				tools,
-			});
+			const reviewedMetadata = await runReviewLoop(
+				getCurrentMessage,
+				(msg: import('$lib/reviewer/review-loop').ReviewableMessage) => setCurrentMessage(msg as Message),
+				history,
+				{
+					sessionNumber,
+					tools,
+				}
+			);
 			updateMetaData(getCurrentMessage, reviewedMetadata, providerConfig);
 			await log.debug('send-message', `Session ${sessionNumber} review completed`);
+
+			// Render final content from result
+			const finalMsg = getCurrentMessage();
+			if (finalMsg.result) {
+				setCurrentMessage({
+					...finalMsg,
+					content: renderFromVariables(finalMsg.result),
+				});
+			}
 		}
 
 		// Determine sceneNumber and sessionNumber for the assistant response
@@ -340,19 +378,18 @@ export async function sendMessage(
 
 async function determineSceneNumberAndNextSessionNumber(messageIdx: number, explicitSessionNumber?: number): Promise<void> {
 	const msg = messages[messageIdx];
-	const content = msg.content;
+	const vars = msg.result ?? msg.draft;
 
-	// Try sections first, fall back to regex parsing from content
-	const sectionsSessionNumber = msg.sections?.sessionNumber ? parseInt(msg.sections.sessionNumber, 10) : undefined;
-	const sectionsSceneNumber = msg.sections?.sceneNumber ? parseInt(msg.sections.sceneNumber, 10) : undefined;
+	const varsSceneNumber = vars?.sceneNumber;
+	const varsSessionNumber = vars?.sessionNumber;
 
 	const lastSessionNumber = findLastNonNullSessionNumber();
 	const sessionNumber =
 		lastSessionNumber != null
 			? lastSessionNumber + 1
-			: (explicitSessionNumber ?? sectionsSessionNumber ?? parseSessionNumber(content) ?? 1);
+			: (explicitSessionNumber ?? varsSessionNumber ?? parseSessionNumber(msg.content) ?? 1);
 
-	const sceneNumber = sectionsSceneNumber ?? parseSceneNumber(content);
+	const sceneNumber = varsSceneNumber ?? parseSceneNumber(msg.content);
 
 	messages[messageIdx] = {
 		...messages[messageIdx],
@@ -378,47 +415,48 @@ function toHistoryMessage(message: Message): MessageBase {
 		return { role: message.role, content: message.content };
 	}
 
-	// Reconstruct content from sections when available
-	const content = message.sections ? sectionsToMarkdown(message.sections) : message.content;
-	const gd = message.gameData ? message.gameData : placeholderContent();
+	const vars = message.result ?? message.draft;
+	const content = vars ? variablesToMarkdown(vars) : message.content;
+	const gd = vars?.gameData ?? placeholderContent();
 	const gameDataContent = '\n' + gameDataToMarkdown(gd);
 	return { role: 'assistant', content: content + gameDataContent };
 }
 
-function sectionsToMarkdown(sections: NarrativeSections): string {
+function variablesToMarkdown(vars: NarrativeVariables): string {
 	const lines: string[] = [];
-	if (sections.storyTitle) lines.push('## Story Information', '', '### Story Title', sections.storyTitle);
-	if (sections.actNumber) lines.push('', '### Act Number', sections.actNumber);
-	if (sections.sessionNumber) lines.push('', '### Session number', sections.sessionNumber);
-	if (sections.sceneNumber) lines.push('', '### Scene', '', '#### Scene number', sections.sceneNumber);
-	if (sections.sceneTitle) lines.push('', '#### Scene title', sections.sceneTitle);
-	if (sections.background) lines.push('', '## Background', sections.background);
-	if (sections.narrativeBody) lines.push('', '## Narrative Body', sections.narrativeBody);
-	if (sections.cg) lines.push('', '## CG', sections.cg);
-	if (sections.currentContext) lines.push('', '## Status Update', '', '### Current Context', sections.currentContext);
-	if (sections.activePlotThreads) lines.push('', '### Active Plot Threads', sections.activePlotThreads);
-	if (sections.decisionContext) lines.push('', '## Decision context', sections.decisionContext);
+	if (vars.storyTitle) lines.push('## Story Information', '', '### Story Title', vars.storyTitle);
+	if (vars.actNumber != null) lines.push('', '### Act Number', String(vars.actNumber));
+	if (vars.sessionNumber != null) lines.push('', '### Session number', String(vars.sessionNumber));
+	if (vars.sceneNumber != null) lines.push('', '### Scene', '', '#### Scene number', String(vars.sceneNumber));
+	if (vars.sceneTitle) lines.push('', '#### Scene title', vars.sceneTitle);
+	if (vars.background) lines.push('', '## Background', vars.background);
+	if (vars.narrativeBody) lines.push('', '## Narrative Body', vars.narrativeBody);
+	if (vars.cg) lines.push('', '## CG', vars.cg);
+	if (vars.currentContext) lines.push('', '## Status Update', '', '### Current Context', vars.currentContext);
+	if (vars.activePlotThreads) lines.push('', '### Active Plot Threads', vars.activePlotThreads);
+	if (vars.decisionContext) lines.push('', '## Decision context', vars.decisionContext);
 	return lines.join('\n');
 }
 
-function gameDataToMarkdown(gd: GameData): string {
-	const lines = ['## Game Data', '', '### World State', '', gd.worldState, '', '### Decisions', ''];
+function gameDataToMarkdown(gd: GameDataFields): string {
+	const lines = ['## Game Data', '', '### World State', '', gd.worldState ?? '', '', '### Decisions', ''];
 	for (const decision of gd.decisions) {
 		lines.push(`- ${decision}`);
 	}
-	if (gd.playerAliases && gd.playerAliases.length > 0) {
+	if (gd.playerAliases.length > 0) {
 		lines.push('', '### Player Aliases', '');
 		for (const alias of gd.playerAliases) {
 			lines.push(`- ${alias}`);
 		}
 	}
-	if (gd.aliases && gd.aliases.length > 0) {
+	const aliases = Object.entries(gd.otherCharacterAliases);
+	if (aliases.length > 0) {
 		lines.push('', '### Other Character Aliases', '');
-		for (const aliasGroup of gd.aliases) {
-			if (aliasGroup.length > 0) {
-				lines.push('', `#### ${aliasGroup[0]}`, '');
-				for (let i = 1; i < aliasGroup.length; i++) {
-					lines.push(`- ${aliasGroup[i]}`);
+		for (const [name, charAliases] of aliases) {
+			if (charAliases.length > 0) {
+				lines.push('', `#### ${name}`, '');
+				for (const alias of charAliases) {
+					lines.push(`- ${alias}`);
 				}
 			}
 		}
@@ -431,10 +469,12 @@ function randomItem<T>(items: readonly T[]): T {
 }
 
 // Randomized history for placeholder content so that to encourage the LLM to actually offer options
-function placeholderContent(): GameData {
+function placeholderContent(): GameDataFields {
 	return {
 		worldState: randomWorldStateMessage(),
 		decisions: [1, 2, 3, 4].map((i) => randomPositionalDecisions(i)),
+		playerAliases: [],
+		otherCharacterAliases: {},
 	};
 }
 
@@ -487,8 +527,8 @@ export function stopStreaming(): void {
 
 export function getLatestDecisions(): string[] {
 	for (let i = messages.length - 1; i >= 0; i--) {
-		if (messages[i].role === 'assistant' && messages[i].gameData?.decisions?.length) {
-			return messages[i].gameData!.decisions;
+		if (messages[i].role === 'assistant' && messages[i].result?.gameData?.decisions?.length) {
+			return messages[i].result!.gameData!.decisions;
 		}
 	}
 	return [];

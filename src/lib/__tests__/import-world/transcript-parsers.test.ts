@@ -106,6 +106,8 @@ describe('parseAppExportFormat', () => {
 		expect(result.messages[0].gameData).toEqual({
 			worldState: 'test',
 			decisions: ['a', 'b'],
+			playerAliases: [],
+			otherCharacterAliases: {},
 		});
 	});
 

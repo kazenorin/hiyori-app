@@ -49,18 +49,11 @@ describe('migrations', () => {
 		expect(tableNames).toContain('schema_version');
 	});
 
-	it('adds is_main_line column (migration 3)', async () => {
-		await runMigrations();
-		const cols = testDb._db.pragma('table_info(act_line_meta)') as Array<{ name: string }>;
-		const colNames = cols.map((c) => c.name);
-		expect(colNames).toContain('is_main_line');
-	});
-
 	it('is idempotent - running twice does not error', async () => {
 		await runMigrations();
 		await runMigrations();
 		const versions = testDb._db.prepare('SELECT version FROM schema_version ORDER BY version').all();
-		expect(versions).toHaveLength(8);
+		expect(versions).toHaveLength(1);
 	});
 });
 
@@ -223,9 +216,25 @@ describe('act-lines operations', () => {
 			id: 'msg-2',
 			role: 'assistant',
 			content: 'Shared Assistant',
-			gameData: {
-				worldState: 'State',
-				decisions: ['A', 'B'],
+			variables: {
+				scratchpad: null,
+				storyTitle: null,
+				actNumber: null,
+				sessionNumber: null,
+				sceneNumber: null,
+				sceneTitle: null,
+				background: null,
+				narrativeBody: null,
+				cg: null,
+				currentContext: null,
+				activePlotThreads: null,
+				decisionContext: null,
+				gameData: {
+					worldState: 'State',
+					decisions: ['A', 'B'],
+					playerAliases: [],
+					otherCharacterAliases: {},
+				},
 			},
 		});
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
@@ -247,17 +256,27 @@ describe('act-lines operations', () => {
 		// Verify msg-2 still exists (line-2 still references it)
 		const msg2 = await messages.getMessage('msg-2');
 		expect(msg2).not.toBeNull();
-		expect(msg2!.gameData).toEqual({ worldState: 'State', decisions: ['A', 'B'] });
+		expect(msg2!.variables?.gameData).toEqual({
+			worldState: 'State',
+			decisions: ['A', 'B'],
+			playerAliases: [],
+			otherCharacterAliases: {},
+		});
 
 		// Verify line-1 no longer has msg-3
 		const line1Msgs = await actLines.getMessagesForLine('line-1');
 		expect(line1Msgs).toHaveLength(2);
 		expect(line1Msgs.map((m) => m.id)).toEqual(['msg-1', 'msg-2']);
 
-		// Verify line-2 still has msg-1 and msg-2 with game data
+		// Verify line-2 still has msg-1 and msg-2 with game data in variables
 		const line2Msgs = await actLines.getMessagesForLine('line-2');
 		expect(line2Msgs).toHaveLength(2);
-		expect(line2Msgs[1].gameData).toEqual({ worldState: 'State', decisions: ['A', 'B'] });
+		expect(line2Msgs[1].variables?.gameData).toEqual({
+			worldState: 'State',
+			decisions: ['A', 'B'],
+			playerAliases: [],
+			otherCharacterAliases: {},
+		});
 	});
 
 	it('deletes message when no other line references it', async () => {
@@ -269,14 +288,30 @@ describe('act-lines operations', () => {
 		expect(await messages.getMessage('msg-1')).toBeNull();
 	});
 
-	it('preserves game data for shared messages after delete on one line', async () => {
+	it('preserves variables for shared messages after delete on one line', async () => {
 		await messages.createMessage({
 			id: 'msg-1',
 			role: 'assistant',
 			content: 'Content',
-			gameData: {
-				worldState: 'World',
-				decisions: ['X'],
+			variables: {
+				scratchpad: null,
+				storyTitle: null,
+				actNumber: null,
+				sessionNumber: null,
+				sceneNumber: null,
+				sceneTitle: null,
+				background: null,
+				narrativeBody: null,
+				cg: null,
+				currentContext: null,
+				activePlotThreads: null,
+				decisionContext: null,
+				gameData: {
+					worldState: 'World',
+					decisions: ['X'],
+					playerAliases: [],
+					otherCharacterAliases: {},
+				},
 			},
 		});
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
@@ -288,11 +323,21 @@ describe('act-lines operations', () => {
 		// Message should still exist and line-2 should still have it with game data
 		const msg = await messages.getMessage('msg-1');
 		expect(msg).not.toBeNull();
-		expect(msg!.gameData).toEqual({ worldState: 'World', decisions: ['X'] });
+		expect(msg!.variables?.gameData).toEqual({
+			worldState: 'World',
+			decisions: ['X'],
+			playerAliases: [],
+			otherCharacterAliases: {},
+		});
 
 		const line2Msgs = await actLines.getMessagesForLine('line-2');
 		expect(line2Msgs).toHaveLength(1);
-		expect(line2Msgs[0].gameData).toEqual({ worldState: 'World', decisions: ['X'] });
+		expect(line2Msgs[0].variables?.gameData).toEqual({
+			worldState: 'World',
+			decisions: ['X'],
+			playerAliases: [],
+			otherCharacterAliases: {},
+		});
 	});
 
 	it('branches from a line copying messages up to sequence', async () => {

@@ -177,11 +177,7 @@ export async function streamActCard(
 			onProgress({
 				content: '',
 				reasoning: `Attempt ${attempt} failed: ${err.message}. Retrying...`,
-				gameData: null,
-				reviewScratchpad: null,
-				revisedNarrative: null,
-				revisedGameData: null,
-				sections: null,
+				variables: null,
 			});
 		},
 		config

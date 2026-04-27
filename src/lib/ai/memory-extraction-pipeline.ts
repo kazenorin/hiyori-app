@@ -1,17 +1,17 @@
-import {generateText} from 'ai';
-import {createModel} from './provider';
+import { generateText } from 'ai';
+import { createModel } from './provider';
 import {
 	type EmbeddingProviderConfig,
 	getEmbeddingProviderConfig,
 	getMemoryProviderConfig,
 	type MemoryProviderConfig,
 } from '$lib/stores/settings.svelte';
-import {loadMemoryExtractionPrompt, loadMemoryExtractionSystemPrompt} from '$lib/fs/prompts';
-import {type ExtractedMemories, parseMemoryExtract} from '$lib/memory/memory-extract-parser';
-import {Memory} from '$lib/memory/memory';
-import type {GameData} from '$lib/db/messages';
-import {isAuthError, toError, withRetry} from '$lib/utils/async';
-import {log} from '$lib/logging/logger';
+import { loadMemoryExtractionPrompt, loadMemoryExtractionSystemPrompt } from '$lib/fs/prompts';
+import { type ExtractedMemories, parseMemoryExtract } from '$lib/memory/memory-extract-parser';
+import { Memory } from '$lib/memory/memory';
+import type { GameDataFields } from './parser-chain';
+import { isAuthError, toError, withRetry } from '$lib/utils/async';
+import { log } from '$lib/logging/logger';
 
 export interface PipelineResult {
 	charactersProcessed: number;
@@ -29,7 +29,7 @@ export async function runMemoryExtractionPipeline(
 	storyId: string,
 	actLineId: string,
 	messageId: string,
-	gameData?: GameData
+	gameData?: GameDataFields
 ): Promise<PipelineResult> {
 	const llmConfig = getMemoryProviderConfig();
 	if (!llmConfig) {
@@ -56,7 +56,10 @@ export async function runMemoryExtractionPipeline(
 	const result = await persistMemoriesWithRetry(extracted, storyId, actLineId, messageId, embeddingConfig);
 
 	// Step 4: Persist aliases from GameData
-	const aliasGroups = [...(gameData?.aliases ?? []), ...(gameData?.playerAliases?.length ? [gameData.playerAliases] : [])];
+	const aliasGroups = [
+		...(gameData?.playerAliases?.length ? [gameData.playerAliases] : []),
+		...Object.values(gameData?.otherCharacterAliases ?? {}),
+	];
 	if (aliasGroups.length > 0) {
 		result.aliasesAdded = await persistAliases(embeddingConfig, storyId, actLineId, messageId, aliasGroups);
 	}

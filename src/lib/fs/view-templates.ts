@@ -1,11 +1,13 @@
 import { Prompt, registerDefaults, loadViewTemplate, loadViewTemplateForStory } from './prompt-loader';
-import storyMessageTemplate from './view-templates/story-message-template.md?raw';
+import storyMessageTemplateRaw from './view-templates/story-message-template.md?raw';
+
+export const storyMessageTemplate = storyMessageTemplateRaw;
 
 const STORY_MESSAGE_TEMPLATE_PATH = 'story-message-template.md';
 
 const storyMessageTemplatePrompt = new Prompt({
 	relativePath: STORY_MESSAGE_TEMPLATE_PATH,
-	defaultContent: storyMessageTemplate,
+	defaultContent: storyMessageTemplateRaw,
 	baseDir: 'config/view-templates',
 });
 

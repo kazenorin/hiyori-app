@@ -605,7 +605,7 @@
 									</div>
 								{/if}
 
-								{#if message.draftContent}
+								{#if message.draft && message.result}
 									<div class="mb-3">
 										<Accordion collapsible>
 											<Accordion.Item value="draft">
@@ -622,7 +622,7 @@
 																{...attributes}
 																class="text-xs text-surface-500 leading-relaxed border-l-2 border-surface-200-800 pl-3 mt-2"
 															>
-																<MarkdownContent content={message.draftContent ?? ''} />
+																{#if hasStructuralFields(message.draft) && storyMessageTemplate}<MarkdownContent content={renderTemplate(storyMessageTemplate, message.draft)} />{:else}<MarkdownContent content={message.content} />{/if}
 															</div>
 														{/if}
 													{/snippet}
@@ -659,10 +659,10 @@
 									</div>
 								{/if}
 
-								{#if message.content || hasStructuralFields(message.sections)}
+								{#if message.content || hasStructuralFields(message.result ?? message.draft)}
 									<div class="leading-relaxed text-surface-950-50">
-										{#if hasStructuralFields(message.sections) && storyMessageTemplate}
-											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.sections!, message.gameData)} />
+										{#if hasStructuralFields(message.result ?? message.draft) && storyMessageTemplate}
+											<MarkdownContent content={renderTemplate(storyMessageTemplate, (message.result ?? message.draft)!)} />
 										{:else}
 											<MarkdownContent content={message.content} />
 										{/if}
@@ -671,7 +671,7 @@
 								{#if getIsStreaming() && message === getMessages().at(-1)}
 									<span
 										data-streaming-cursor
-										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content || hasStructuralFields(message.sections) ? 'mt-2' : ''}"
+										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content || hasStructuralFields(message.result ?? message.draft) ? 'mt-2' : ''}"
 									></span>
 								{/if}
 								{#if message.metadata}

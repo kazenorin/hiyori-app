@@ -1,32 +1,37 @@
-import { type NarrativeSections, NARRATIVE_SECTION_FIELDS } from './parser-chain';
-import type { GameData } from '$lib/db/messages';
+import { type NarrativeVariables, NARRATIVE_VARIABLE_FIELDS, NUMBER_FIELDS } from './parser-chain';
 
 /**
  * Check if a message has structural fields that indicate template-based rendering.
  */
-export function hasStructuralFields(sections?: NarrativeSections | null): boolean {
-	if (!sections) return false;
-	return !!(sections.storyTitle || sections.actNumber || sections.sessionNumber || sections.sceneNumber || sections.sceneTitle);
+export function hasStructuralFields(vars?: NarrativeVariables | null): boolean {
+	if (!vars) return false;
+	return !!(vars.storyTitle || vars.actNumber || vars.sessionNumber || vars.sceneNumber || vars.sceneTitle);
 }
 
 /**
- * Render a view template by substituting {placeholder} tokens with section values.
+ * Render a view template by substituting {placeholder} tokens with variable values.
  */
-export function renderTemplate(template: string, sections: NarrativeSections, gameData?: GameData | null): string {
+export function renderTemplate(template: string, vars: NarrativeVariables): string {
 	let result = template;
-
-	for (const key of NARRATIVE_SECTION_FIELDS) {
-		const value = sections[key];
-		result = result.replaceAll(`{${key}}`, value ?? '');
+	for (const key of NARRATIVE_VARIABLE_FIELDS) {
+		const value = vars[key];
+		if (typeof value === 'string') {
+			result = result.replaceAll(`{${key}}`, value);
+		} else if (typeof value === 'number') {
+			result = result.replaceAll(`{${key}}`, String(value));
+		} else if (NUMBER_FIELDS.has(key)) {
+			result = result.replaceAll(`{${key}}`, '1');
+		} else {
+			result = result.replaceAll(`{${key}}`, '');
+		}
 	}
-
-	// Game data: format decisions as a numbered list
-	if (gameData?.decisions?.length) {
-		const decisionsText = gameData.decisions.map((d, i) => `${i + 1}. ${d}`).join('\n');
+	// Decisions placeholder: format as numbered list from gameData
+	const decisions = vars.gameData?.decisions;
+	if (decisions && decisions.length > 0) {
+		const decisionsText = decisions.map((d, i) => `${i + 1}. ${d}`).join('\n');
 		result = result.replaceAll('{decisions}', decisionsText);
 	} else {
 		result = result.replaceAll('{decisions}', '');
 	}
-
 	return result;
 }

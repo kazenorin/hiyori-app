@@ -202,7 +202,7 @@ export async function formatIntoScenes(
 				role: 'assistant',
 				content: processedSceneContent,
 				reasoning: acc.state.reasoning ?? undefined,
-				gameData: acc.state.gameData ?? undefined,
+				gameData: acc.state.variables?.gameData ?? undefined,
 			});
 
 			log(JSON.stringify(await acc.resultMetadata, null, 2));

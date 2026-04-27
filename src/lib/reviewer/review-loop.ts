@@ -8,14 +8,10 @@ import { log } from '$lib/logging/logger';
 import { getActiveNarrationTemplateOrDefault, getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
 import { type ToolSet } from 'ai';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
-import type { GameData } from '$lib/db/messages';
-import { type NarrativeSections, extractSectionsFromText } from '$lib/ai/parser-chain';
+import type { NarrativeVariables } from '$lib/ai/parser-chain';
 
 export interface ReviewLoopResult {
-	content: string;
-	scratchpad: string;
-	revisedContent: string;
-	sections: NarrativeSections | null;
+	variables: NarrativeVariables;
 	resultMetadata: StreamResultMetadata;
 }
 
@@ -25,11 +21,10 @@ export interface ReviewLoopResult {
  */
 export interface ReviewableMessage {
 	content: string;
-	draftContent?: string;
+	draft?: NarrativeVariables;
+	result?: NarrativeVariables;
 	reasoning?: string;
 	reviewScratchpad?: string;
-	gameData?: GameData;
-	sections?: NarrativeSections;
 }
 
 export interface ReviewLoopOptions {
@@ -44,7 +39,7 @@ function getProviderConfig() {
 }
 
 function getPreprocessedContent(draftMessage: ReviewableMessage, options: ReviewLoopOptions): string {
-	let baseContent = draftMessage.draftContent ?? draftMessage.content;
+	let baseContent = draftMessage.content;
 
 	if (options.sessionNumber) {
 		const expectedNextSessionNumber = options.sessionNumber + 1;
@@ -54,6 +49,25 @@ function getPreprocessedContent(draftMessage: ReviewableMessage, options: Review
 	}
 
 	return baseContent;
+}
+
+/**
+ * Check if variables contain meaningful narrative content (not just scratchpad).
+ */
+function hasNarrativeContent(vars: NarrativeVariables): boolean {
+	return !!(
+		vars.storyTitle ||
+		vars.actNumber ||
+		vars.sessionNumber ||
+		vars.sceneNumber ||
+		vars.sceneTitle ||
+		vars.background ||
+		vars.narrativeBody ||
+		vars.cg ||
+		vars.currentContext ||
+		vars.activePlotThreads ||
+		vars.decisionContext
+	);
 }
 
 export async function streamReview(
@@ -93,21 +107,14 @@ export async function streamReview(
 		log.info('review-loop', 'Editor mode produced revised narrative'),
 	]);
 
-	const content = accumulator.state.content;
-
-	const revisedNarrative = accumulator.state.revisedNarrative;
-	if (!revisedNarrative) {
-		await log.debug('review-loop', 'No revised_narrative found in response, passing through');
+	const vars = accumulator.state.variables;
+	if (!vars || !hasNarrativeContent(vars)) {
+		await log.debug('review-loop', 'No revised narrative found in response, passing through');
 		return null;
 	}
 
-	const scratchpad = accumulator.state.reviewScratchpad ?? '';
-	const sections = extractSectionsFromText(revisedNarrative);
 	return {
-		content,
-		scratchpad,
-		revisedContent: revisedNarrative,
-		sections,
+		variables: vars,
 		resultMetadata,
 	};
 }
@@ -127,32 +134,29 @@ export async function runReviewLoop(
 		historyWithDraft,
 		(state: StreamState) => {
 			const currentMessage = getCurrentMessage();
+			const vars = state.variables;
 			setCurrentMessage({
 				...currentMessage,
-				content: state.revisedNarrative ?? currentMessage.content,
-				reviewScratchpad: state.reviewScratchpad ?? currentMessage.reviewScratchpad,
+				result: vars ?? currentMessage.result ?? currentMessage.draft,
+				reviewScratchpad: vars?.scratchpad ?? currentMessage.reviewScratchpad,
 				reasoning: state.reasoning ?? currentMessage.reasoning,
-				gameData: state.revisedGameData ?? state.gameData ?? currentMessage.gameData,
-				sections: state.sections ?? currentMessage.sections,
 			});
 		},
 		options.tools
 	);
 
 	if (reviewResult) {
-		// Apply final sections extracted from the revised narrative
 		const currentMessage = getCurrentMessage();
 		setCurrentMessage({
 			...currentMessage,
-			sections: reviewResult.sections ?? currentMessage.sections,
+			result: reviewResult.variables ?? currentMessage.result ?? currentMessage.draft,
 		});
 		return reviewResult.resultMetadata;
 	} else {
 		setCurrentMessage({
 			...draftMessage,
-			draftContent: undefined,
+			result: draftMessage.draft,
 			reviewScratchpad: undefined,
-			content: draftContent,
 		});
 		return null;
 	}
