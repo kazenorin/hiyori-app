@@ -1,9 +1,9 @@
-import { createMarkdownSaxParser, type ElementInfo, type ContextNode } from '$lib/markdown/markdown-sax-parser';
-import type { StreamParser } from './stream-parser';
-import type { GameDataFields } from './narrative-types';
-import { FIELD_DESCRIPTORS } from './narrative-types';
-import { mergeGameDataFields } from './message-updater';
-import { kebabCase } from 'lodash';
+import {type ContextNode, createMarkdownSaxParser, type ElementInfo} from '$lib/markdown/markdown-sax-parser';
+import type {StreamParser} from './stream-parser';
+import type {GameDataFields} from './narrative-types';
+import {FIELD_DESCRIPTORS} from './narrative-types';
+import {mergeGameDataFields} from './message-updater';
+import {kebabCase} from 'lodash';
 
 // --- Element accumulator interface ---
 
@@ -34,11 +34,11 @@ function hasHeaderName(context: readonly ContextNode[], normalizedName: string):
 const NAMES_REVISED_NARRATIVE = kebabCase('Revised Narrative');
 const NAMES_GAME_DATA = kebabCase('Game Data');
 
-// Game data subsection name constants (kebab-case)
-const SUB_WORLD_STATE = kebabCase('World State');
-const SUB_DECISIONS = kebabCase('Decisions');
-const SUB_PLAYER_ALIASES = kebabCase('Player Aliases');
-const SUB_OTHER_CHAR_ALIASES = kebabCase('Other Character Aliases');
+// Game data subsection name constants in kebab-case
+const SUB_WORLD_STATE = 'world-state' as const;
+const SUB_DECISIONS = 'decisions' as const;
+const SUB_PLAYER_ALIASES = 'player-aliases' as const;
+const SUB_OTHER_CHAR_ALIASES = 'other-character-aliases' as const;
 
 type Subsection = typeof SUB_WORLD_STATE | typeof SUB_DECISIONS | typeof SUB_PLAYER_ALIASES | typeof SUB_OTHER_CHAR_ALIASES | null;
 
@@ -88,7 +88,7 @@ const sectionAccumulators: ElementAccumulator[] = FIELD_DESCRIPTORS.map((desc) =
 	const kebabParents = desc.parentSections.map((s) => kebabCase(s));
 	return createSectionAccumulator(
 		desc.fieldName as string,
-		(name, ctx) => name === kebabName && kebabParents.every((p) => hasHeaderName(ctx, p)),
+		(name, ctx) => name === kebabName && kebabParents.every((p) => hasHeaderName(ctx, p))
 	);
 });
 

@@ -17,7 +17,7 @@ import { type StreamState } from '$lib/ai/chat-callbacks';
 import { buildMetadata, type MessageMetadata, streamChatResponse } from './chat-stream';
 import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
 import { Memory } from '$lib/memory/memory';
-import { runReviewLoop } from '$lib/reviewer/review-loop';
+import { runReviewLoop, type ReviewableMessage } from '$lib/reviewer/review-loop';
 import { log } from '$lib/logging/logger';
 import { buildTools } from '$lib/ai/tools/tools';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
@@ -335,7 +335,7 @@ export async function sendMessage(
 			const sessionNumber = message.sessionNumber ?? findLastNonNullSessionNumber();
 			const reviewedMetadata = await runReviewLoop(
 				getCurrentMessage,
-				(msg: import('$lib/reviewer/review-loop').ReviewableMessage) => setCurrentMessage(msg as Message),
+				(msg: ReviewableMessage) => setCurrentMessage(msg as Message),
 				history,
 				{
 					sessionNumber,

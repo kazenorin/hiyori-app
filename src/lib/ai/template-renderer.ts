@@ -8,6 +8,13 @@ import {
 
 const SERIALIZABLE_FIELDS = FIELD_DESCRIPTORS.filter((d) => d.includeInSerialization);
 
+// Game data markdown headers
+const GD_SECTION = '## Game Data';
+const GD_WORLD_STATE = '### World State';
+const GD_DECISIONS = '### Decisions';
+const GD_PLAYER_ALIASES = '### Player Aliases';
+const GD_OTHER_CHAR_ALIASES = '### Other Character Aliases';
+
 // --- Checks ---
 
 /**
@@ -109,19 +116,19 @@ export function variablesToMarkdown(vars: NarrativeVariables): string {
 
 /** Serialize GameDataFields to structured markdown for LLM history. */
 export function gameDataToMarkdown(gd: GameDataFields): string {
-	const lines = ['## Game Data', '', '### World State', '', gd.worldState ?? '', '', '### Decisions', ''];
+	const lines = [GD_SECTION, '', GD_WORLD_STATE, '', gd.worldState ?? '', '', GD_DECISIONS, ''];
 	for (const decision of gd.decisions) {
 		lines.push(`- ${decision}`);
 	}
 	if (gd.playerAliases.length > 0) {
-		lines.push('', '### Player Aliases', '');
+		lines.push('', GD_PLAYER_ALIASES, '');
 		for (const alias of gd.playerAliases) {
 			lines.push(`- ${alias}`);
 		}
 	}
 	const aliases = Object.entries(gd.otherCharacterAliases);
 	if (aliases.length > 0) {
-		lines.push('', '### Other Character Aliases', '');
+		lines.push('', GD_OTHER_CHAR_ALIASES, '');
 		for (const [name, charAliases] of aliases) {
 			if (charAliases.length > 0) {
 				lines.push('', `#### ${name}`, '');
