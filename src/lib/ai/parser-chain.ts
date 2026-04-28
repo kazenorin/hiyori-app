@@ -2,96 +2,35 @@ import { createThinkingTagParser } from './thinking-tag-parser';
 import { createSaxSectionParser } from './sax-section-parser';
 import type { StreamParser, ParserAccumulator } from './stream-parser';
 
-// --- Types ---
+// Re-export all types and helpers from narrative-types (single source of truth)
+export type {
+	NarrativeVariables,
+	GameDataFields,
+	FieldDescriptor,
+} from './narrative-types';
+export {
+	FIELD_DESCRIPTORS,
+	NARRATIVE_VARIABLE_FIELDS,
+	NUMBER_FIELDS,
+	setField,
+	emptyGameDataFields,
+	emptyVariables,
+} from './narrative-types';
 
-/** Structured game data extracted from ## Game Data section */
-export interface GameDataFields {
-	worldState: string | null;
-	decisions: string[]; // parsed from list items (ordered/unordered)
-	playerAliases: string[]; // parsed from list items
-	otherCharacterAliases: Record<string, string[]>; // character name → aliases
-}
-
-/** All narrative variables with proper types per field */
-export interface NarrativeVariables {
-	scratchpad: string | null;
-	storyTitle: string | null;
-	actNumber: number | null;
-	sessionNumber: number | null;
-	sceneNumber: number | null;
-	sceneTitle: string | null;
-	background: string | null;
-	narrativeBody: string | null;
-	cg: string | null;
-	currentContext: string | null;
-	activePlotThreads: string | null;
-	decisionContext: string | null;
-	gameData: GameDataFields | null;
-}
-
-// --- Field lists ---
-
-/** Canonical list of all NarrativeVariables keys (excluding gameData). */
-export const NARRATIVE_VARIABLE_FIELDS: (keyof NarrativeVariables)[] = [
-	'scratchpad',
-	'storyTitle',
-	'actNumber',
-	'sessionNumber',
-	'sceneNumber',
-	'sceneTitle',
-	'background',
-	'narrativeBody',
-	'cg',
-	'currentContext',
-	'activePlotThreads',
-	'decisionContext',
-];
-
-/** Number fields that need parseInt conversion from accumulated text. */
-export const NUMBER_FIELDS: ReadonlySet<keyof NarrativeVariables> = new Set(['actNumber', 'sessionNumber', 'sceneNumber']);
-
-// --- Helpers ---
-
-/** Type-safe setter for NarrativeVariables fields, bypassing the index signature constraint. */
-export function setField(obj: NarrativeVariables, key: keyof NarrativeVariables, value: string | number): void {
-	(obj as unknown as Record<string, unknown>)[key] = value;
-}
-
-/** Create an empty GameDataFields. */
-export function emptyGameDataFields(): GameDataFields {
-	return {
-		worldState: null,
-		decisions: [],
-		playerAliases: [],
-		otherCharacterAliases: {},
-	};
-}
-
-/** Create a NarrativeVariables with all fields set to null/empty. */
-export function emptyVariables(): NarrativeVariables {
-	return {
-		scratchpad: null,
-		storyTitle: null,
-		actNumber: null,
-		sessionNumber: null,
-		sceneNumber: null,
-		sceneTitle: null,
-		background: null,
-		narrativeBody: null,
-		cg: null,
-		currentContext: null,
-		activePlotThreads: null,
-		decisionContext: null,
-		gameData: null,
-	};
-}
+// Import for local use in extractVariables
+import {
+	NARRATIVE_VARIABLE_FIELDS,
+	NUMBER_FIELDS,
+	setField,
+	emptyVariables,
+} from './narrative-types';
 
 // --- Parser chain ---
 
 export interface ParserChainOutput {
 	text: string | null;
 	thinking: string | null;
-	variables: NarrativeVariables | null;
+	variables: import('./narrative-types').NarrativeVariables | null;
 }
 
 export function hasContent(output: ParserChainOutput): boolean {
@@ -107,7 +46,7 @@ export interface ParserChain {
  * Extract NarrativeVariables from the raw accumulator.
  * Number fields are parsed from text via parseInt; gameData is taken directly.
  */
-function extractVariables(acc: Record<string, unknown>): NarrativeVariables | null {
+function extractVariables(acc: Record<string, unknown>): import('./narrative-types').NarrativeVariables | null {
 	const vars = emptyVariables();
 	let hasAny = false;
 
@@ -128,7 +67,7 @@ function extractVariables(acc: Record<string, unknown>): NarrativeVariables | nu
 
 	// GameDataFields from GameDataAccumulator
 	if (acc.gameData && typeof acc.gameData === 'object') {
-		vars.gameData = acc.gameData as GameDataFields;
+		vars.gameData = acc.gameData as import('./narrative-types').GameDataFields;
 		hasAny = true;
 	}
 

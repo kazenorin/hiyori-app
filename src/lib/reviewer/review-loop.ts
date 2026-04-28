@@ -9,6 +9,7 @@ import { getActiveNarrationTemplateOrDefault, getActiveSystemPromptOrDefault } f
 import { type ToolSet } from 'ai';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
 import type { NarrativeVariables } from '$lib/ai/parser-chain';
+import { hasNarrativeBody } from '$lib/ai/template-renderer';
 
 export interface ReviewLoopResult {
 	variables: NarrativeVariables;
@@ -51,25 +52,6 @@ function getPreprocessedContent(draftMessage: ReviewableMessage, options: Review
 	return baseContent;
 }
 
-/**
- * Check if variables contain meaningful narrative content (not just scratchpad).
- */
-function hasNarrativeContent(vars: NarrativeVariables): boolean {
-	return !!(
-		vars.storyTitle ||
-		vars.actNumber ||
-		vars.sessionNumber ||
-		vars.sceneNumber ||
-		vars.sceneTitle ||
-		vars.background ||
-		vars.narrativeBody ||
-		vars.cg ||
-		vars.currentContext ||
-		vars.activePlotThreads ||
-		vars.decisionContext
-	);
-}
-
 export async function streamReview(
 	history: MessageBase[],
 	onProgress?: (state: StreamState) => void,
@@ -108,7 +90,7 @@ export async function streamReview(
 	]);
 
 	const vars = accumulator.state.variables;
-	if (!vars || !hasNarrativeContent(vars)) {
+	if (!vars || !hasNarrativeBody(vars)) {
 		await log.debug('review-loop', 'No revised narrative found in response, passing through');
 		return null;
 	}

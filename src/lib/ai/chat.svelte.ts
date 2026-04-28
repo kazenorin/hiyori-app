@@ -22,7 +22,7 @@ import { log } from '$lib/logging/logger';
 import { buildTools } from '$lib/ai/tools/tools';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
 import { getErrorMessage } from '$lib/utils/error-handling';
-import { hasStructuralFields, renderTemplate } from './template-renderer';
+import { renderFromVariables, variablesToMarkdown, gameDataToMarkdown } from './template-renderer';
 import { storyMessageTemplate } from '$lib/fs/view-templates';
 
 export interface Message {
@@ -229,11 +229,6 @@ function updateMetaData(getCurrentMessage: () => Message, resultMetadata: Stream
 	}
 }
 
-function renderFromVariables(vars: NarrativeVariables | null | undefined): string {
-	if (!vars || !hasStructuralFields(vars)) return '';
-	return renderTemplate(storyMessageTemplate, vars);
-}
-
 export async function sendMessage(
 	actLineId: string,
 	message: {
@@ -309,7 +304,7 @@ export async function sendMessage(
 					setCurrentMessage({
 						...currentMessage,
 						result: vars ?? currentMessage.result,
-						content: vars ? renderFromVariables(vars) : currentMessage.content,
+						content: vars ? renderFromVariables(vars, storyMessageTemplate) : currentMessage.content,
 						reasoning: state.reasoning ?? currentMessage.reasoning,
 					});
 				}
@@ -333,7 +328,7 @@ export async function sendMessage(
 			if (!preReviewMsg.content && preReviewMsg.draft) {
 				setCurrentMessage({
 					...preReviewMsg,
-					content: renderFromVariables(preReviewMsg.draft),
+					content: renderFromVariables(preReviewMsg.draft, storyMessageTemplate),
 				});
 			}
 
@@ -355,7 +350,7 @@ export async function sendMessage(
 			if (finalMsg.result) {
 				setCurrentMessage({
 					...finalMsg,
-					content: renderFromVariables(finalMsg.result),
+					content: renderFromVariables(finalMsg.result, storyMessageTemplate),
 				});
 			}
 		}
@@ -420,48 +415,6 @@ function toHistoryMessage(message: Message): MessageBase {
 	const gd = vars?.gameData ?? placeholderContent();
 	const gameDataContent = '\n' + gameDataToMarkdown(gd);
 	return { role: 'assistant', content: content + gameDataContent };
-}
-
-function variablesToMarkdown(vars: NarrativeVariables): string {
-	const lines: string[] = [];
-	if (vars.storyTitle) lines.push('## Story Information', '', '### Story Title', vars.storyTitle);
-	if (vars.actNumber != null) lines.push('', '### Act Number', String(vars.actNumber));
-	if (vars.sessionNumber != null) lines.push('', '### Session number', String(vars.sessionNumber));
-	if (vars.sceneNumber != null) lines.push('', '### Scene', '', '#### Scene number', String(vars.sceneNumber));
-	if (vars.sceneTitle) lines.push('', '#### Scene title', vars.sceneTitle);
-	if (vars.background) lines.push('', '## Background', vars.background);
-	if (vars.narrativeBody) lines.push('', '## Narrative Body', vars.narrativeBody);
-	if (vars.cg) lines.push('', '## CG', vars.cg);
-	if (vars.currentContext) lines.push('', '## Status Update', '', '### Current Context', vars.currentContext);
-	if (vars.activePlotThreads) lines.push('', '### Active Plot Threads', vars.activePlotThreads);
-	if (vars.decisionContext) lines.push('', '## Decision context', vars.decisionContext);
-	return lines.join('\n');
-}
-
-function gameDataToMarkdown(gd: GameDataFields): string {
-	const lines = ['## Game Data', '', '### World State', '', gd.worldState ?? '', '', '### Decisions', ''];
-	for (const decision of gd.decisions) {
-		lines.push(`- ${decision}`);
-	}
-	if (gd.playerAliases.length > 0) {
-		lines.push('', '### Player Aliases', '');
-		for (const alias of gd.playerAliases) {
-			lines.push(`- ${alias}`);
-		}
-	}
-	const aliases = Object.entries(gd.otherCharacterAliases);
-	if (aliases.length > 0) {
-		lines.push('', '### Other Character Aliases', '');
-		for (const [name, charAliases] of aliases) {
-			if (charAliases.length > 0) {
-				lines.push('', `#### ${name}`, '');
-				for (const alias of charAliases) {
-					lines.push(`- ${alias}`);
-				}
-			}
-		}
-	}
-	return lines.join('\n');
 }
 
 function randomItem<T>(items: readonly T[]): T {

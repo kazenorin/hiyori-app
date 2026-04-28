@@ -3,8 +3,7 @@ import {
 	type NarrativeVariables,
 	type GameDataFields,
 	emptyVariables,
-	NARRATIVE_VARIABLE_FIELDS,
-	NUMBER_FIELDS,
+	FIELD_DESCRIPTORS,
 	emptyGameDataFields,
 	setField,
 } from '$lib/ai/parser-chain';
@@ -46,14 +45,14 @@ export function parseVariables(raw: string | null): NarrativeVariables | undefin
 			return undefined;
 		}
 		const result = emptyVariables();
-		for (const field of NARRATIVE_VARIABLE_FIELDS) {
-			const value = parsed[field];
-			if (NUMBER_FIELDS.has(field)) {
+		for (const desc of FIELD_DESCRIPTORS) {
+			const value = parsed[desc.fieldName];
+			if (desc.isNumber) {
 				if (typeof value === 'number') {
-					setField(result, field, value);
+					setField(result, desc.fieldName, value);
 				}
 			} else if (typeof value === 'string') {
-				setField(result, field, value);
+				setField(result, desc.fieldName, value);
 			}
 		}
 		if (parsed.gameData && typeof parsed.gameData === 'object') {

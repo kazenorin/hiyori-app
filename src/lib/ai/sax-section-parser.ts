@@ -1,6 +1,7 @@
 import { createMarkdownSaxParser, type ElementInfo, type ContextNode } from '$lib/markdown/markdown-sax-parser';
 import type { StreamParser } from './stream-parser';
-import type { GameDataFields } from './parser-chain';
+import type { GameDataFields } from './narrative-types';
+import { FIELD_DESCRIPTORS } from './narrative-types';
 import { mergeGameDataFields } from './message-updater';
 import { kebabCase } from 'lodash';
 
@@ -29,26 +30,7 @@ function hasHeaderName(context: readonly ContextNode[], normalizedName: string):
 	return false;
 }
 
-// Precomputed kebab-case values for header names
-const KC_STORY_INFORMATION = kebabCase('Story Information');
-const KC_SCENE = kebabCase('Scene');
-const KC_STATUS_UPDATE = kebabCase('Status Update');
-
-// Header name constants (kebab-case normalized)
-const NAMES_STORY_TITLE = kebabCase('Story Title');
-const NAMES_ACT_NUMBER = kebabCase('Act Number');
-const NAMES_SESSION_NUMBER = kebabCase('Session number');
-const NAMES_SCENE_NUMBER = kebabCase('Scene number');
-const NAMES_SCENE_TITLE = kebabCase('Scene title');
-const NAMES_CURRENT_CONTEXT = kebabCase('Current Context');
-const NAMES_ACTIVE_PLOT_THREADS = kebabCase('Active Plot Threads');
-const NAMES_BACKGROUND = kebabCase('Background');
-const NAMES_NARRATIVE_BODY = kebabCase('Narrative Body');
-const NAMES_CG = kebabCase('CG');
-const NAMES_DECISION_CONTEXT = kebabCase('Decision context');
-
-// Special section name constants (kebab-case)
-const NAMES_REVIEW_SCRATCHPAD = kebabCase('Review Scratchpad');
+// Special section name constants (kebab-case) — not field descriptors
 const NAMES_REVISED_NARRATIVE = kebabCase('Revised Narrative');
 const NAMES_GAME_DATA = kebabCase('Game Data');
 
@@ -99,35 +81,16 @@ function createSectionAccumulator(fieldName: string, matcher: HeaderMatcher): El
 	};
 }
 
-// --- Build section accumulators ---
+// --- Build section accumulators from field descriptors ---
 
-const sectionAccumulators: ElementAccumulator[] = [
-	// Direct-mapped sections (any level, no parent required)
-	createSectionAccumulator('background', (name) => name === NAMES_BACKGROUND),
-	createSectionAccumulator('narrativeBody', (name) => name === NAMES_NARRATIVE_BODY),
-	createSectionAccumulator('cg', (name) => name === NAMES_CG),
-	createSectionAccumulator('decisionContext', (name) => name === NAMES_DECISION_CONTEXT),
-	createSectionAccumulator('scratchpad', (name) => name === NAMES_REVIEW_SCRATCHPAD),
-
-	// Under Story Information
-	createSectionAccumulator('storyTitle', (name, ctx) => name === NAMES_STORY_TITLE && hasHeaderName(ctx, KC_STORY_INFORMATION)),
-	createSectionAccumulator('actNumber', (name, ctx) => name === NAMES_ACT_NUMBER && hasHeaderName(ctx, KC_STORY_INFORMATION)),
-	createSectionAccumulator('sessionNumber', (name, ctx) => name === NAMES_SESSION_NUMBER && hasHeaderName(ctx, KC_STORY_INFORMATION)),
-
-	// Under Scene → under Story Information
-	createSectionAccumulator(
-		'sceneNumber',
-		(name, ctx) => name === NAMES_SCENE_NUMBER && hasHeaderName(ctx, KC_SCENE) && hasHeaderName(ctx, KC_STORY_INFORMATION)
-	),
-	createSectionAccumulator(
-		'sceneTitle',
-		(name, ctx) => name === NAMES_SCENE_TITLE && hasHeaderName(ctx, KC_SCENE) && hasHeaderName(ctx, KC_STORY_INFORMATION)
-	),
-
-	// Under Status Update
-	createSectionAccumulator('currentContext', (name, ctx) => name === NAMES_CURRENT_CONTEXT && hasHeaderName(ctx, KC_STATUS_UPDATE)),
-	createSectionAccumulator('activePlotThreads', (name, ctx) => name === NAMES_ACTIVE_PLOT_THREADS && hasHeaderName(ctx, KC_STATUS_UPDATE)),
-];
+const sectionAccumulators: ElementAccumulator[] = FIELD_DESCRIPTORS.map((desc) => {
+	const kebabName = kebabCase(desc.headerName);
+	const kebabParents = desc.parentSections.map((s) => kebabCase(s));
+	return createSectionAccumulator(
+		desc.fieldName as string,
+		(name, ctx) => name === kebabName && kebabParents.every((p) => hasHeaderName(ctx, p)),
+	);
+});
 
 // --- Revised Narrative accumulator ---
 

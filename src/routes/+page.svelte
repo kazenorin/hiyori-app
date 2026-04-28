@@ -46,7 +46,7 @@
 	import {Accordion} from '@skeletonlabs/skeleton-svelte';
 	import {findLastIndex} from 'lodash';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
-	import { hasStructuralFields, renderTemplate } from '$lib/ai/template-renderer';
+	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
 	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
 	import {generateActPlot} from '$lib/ai/act-plot-generator';
 	import {getActLine} from '$lib/db/act-lines';
@@ -622,7 +622,7 @@
 																{...attributes}
 																class="text-xs text-surface-500 leading-relaxed border-l-2 border-surface-200-800 pl-3 mt-2"
 															>
-																{#if hasStructuralFields(message.draft) && storyMessageTemplate}<MarkdownContent content={renderTemplate(storyMessageTemplate, message.draft)} />{:else}<MarkdownContent content={message.content} />{/if}
+																{#if hasTemplateMetadata(message.draft) && storyMessageTemplate}<MarkdownContent content={renderTemplate(storyMessageTemplate, message.draft)} />{:else}<MarkdownContent content={message.content} />{/if}
 															</div>
 														{/if}
 													{/snippet}
@@ -659,9 +659,9 @@
 									</div>
 								{/if}
 
-								{#if message.content || hasStructuralFields(message.result ?? message.draft)}
+								{#if message.content || hasTemplateMetadata(message.result ?? message.draft)}
 									<div class="leading-relaxed text-surface-950-50">
-										{#if hasStructuralFields(message.result ?? message.draft) && storyMessageTemplate}
+										{#if hasTemplateMetadata(message.result ?? message.draft) && storyMessageTemplate}
 											<MarkdownContent content={renderTemplate(storyMessageTemplate, (message.result ?? message.draft)!)} />
 										{:else}
 											<MarkdownContent content={message.content} />
@@ -671,7 +671,7 @@
 								{#if getIsStreaming() && message === getMessages().at(-1)}
 									<span
 										data-streaming-cursor
-										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content || hasStructuralFields(message.result ?? message.draft) ? 'mt-2' : ''}"
+										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content || hasTemplateMetadata(message.result ?? message.draft) ? 'mt-2' : ''}"
 									></span>
 								{/if}
 								{#if message.metadata}
