@@ -323,15 +323,6 @@ export async function sendMessage(
 
 		// Review loop: run editor mode, revise if needed
 		if (settings.reviewerEnabled) {
-			// Render draft to content for the reviewer to see
-			const preReviewMsg = getCurrentMessage();
-			if (!preReviewMsg.content && preReviewMsg.draft) {
-				setCurrentMessage({
-					...preReviewMsg,
-					content: renderFromVariables(preReviewMsg.draft, storyMessageTemplate),
-				});
-			}
-
 			const sessionNumber = message.sessionNumber ?? findLastNonNullSessionNumber();
 			const reviewedMetadata = await runReviewLoop(
 				getCurrentMessage,

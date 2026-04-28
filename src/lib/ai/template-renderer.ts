@@ -35,7 +35,9 @@ export const hasStructuralFields = hasTemplateMetadata;
 export function hasNarrativeBody(vars: NarrativeVariables): boolean {
 	return NARRATIVE_VARIABLE_FIELDS.some((key) => {
 		if (key === 'scratchpad') return false;
-		return vars[key] != null;
+		const val = vars[key];
+		if (Array.isArray(val)) return val.length > 0;
+		return val != null;
 	});
 }
 
@@ -48,8 +50,10 @@ export function renderTemplate(template: string, vars: NarrativeVariables): stri
 	let result = template;
 	for (const key of NARRATIVE_VARIABLE_FIELDS) {
 		const value = vars[key];
-		if (typeof value === 'string') {
-			result = result.replaceAll(`{${key}}`, value);
+		if (Array.isArray(value)) {
+			result = result.replaceAll(`{${key}}`, value.map((item) => `- ${item}`).join('\n'));
+		} else if (typeof value === 'string') {
+			result = result.replaceAll(`{${key}}`, value.trim());
 		} else if (typeof value === 'number') {
 			result = result.replaceAll(`{${key}}`, String(value));
 		} else if (NUMBER_FIELDS.has(key)) {
@@ -108,7 +112,11 @@ export function variablesToMarkdown(vars: NarrativeVariables): string {
 		// Emit field header and value
 		const fieldLevel = 2 + targetPath.length;
 		lines.push('#'.repeat(fieldLevel) + ' ' + desc.headerName);
-		lines.push(desc.isNumber ? String(value) : (value as string));
+		if (Array.isArray(value)) {
+			for (const item of value) lines.push(`- ${item}`);
+		} else {
+			lines.push(desc.isNumber ? String(value) : (value as string).trim());
+		}
 	}
 
 	return lines.join('\n');

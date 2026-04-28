@@ -18,7 +18,7 @@ export interface NarrativeVariables {
 	narrativeBody: string | null;
 	cg: string | null;
 	currentContext: string | null;
-	activePlotThreads: string | null;
+	activePlotThreads: string[] | null;
 	decisionContext: string | null;
 	gameData: GameDataFields | null;
 }
@@ -37,21 +37,60 @@ export interface FieldDescriptor {
 	parentSections: string[];
 	/** Whether this field appears in LLM history serialization */
 	includeInSerialization: boolean;
+	/** Whether this field is a list type (parsed from list items, rendered as bullet list) */
+	isList?: boolean;
 }
 
 /** Single source of truth for all narrative variable fields (excluding gameData). */
 export const FIELD_DESCRIPTORS: readonly FieldDescriptor[] = [
 	{ fieldName: 'scratchpad', headerName: 'Review Scratchpad', isNumber: false, parentSections: [], includeInSerialization: false },
-	{ fieldName: 'storyTitle', headerName: 'Story Title', isNumber: false, parentSections: ['Story Information'], includeInSerialization: true },
+	{
+		fieldName: 'storyTitle',
+		headerName: 'Story Title',
+		isNumber: false,
+		parentSections: ['Story Information'],
+		includeInSerialization: true,
+	},
 	{ fieldName: 'actNumber', headerName: 'Act Number', isNumber: true, parentSections: ['Story Information'], includeInSerialization: true },
-	{ fieldName: 'sessionNumber', headerName: 'Session number', isNumber: true, parentSections: ['Story Information'], includeInSerialization: true },
-	{ fieldName: 'sceneNumber', headerName: 'Scene number', isNumber: true, parentSections: ['Story Information', 'Scene'], includeInSerialization: true },
-	{ fieldName: 'sceneTitle', headerName: 'Scene title', isNumber: false, parentSections: ['Story Information', 'Scene'], includeInSerialization: true },
+	{
+		fieldName: 'sessionNumber',
+		headerName: 'Session number',
+		isNumber: true,
+		parentSections: ['Story Information'],
+		includeInSerialization: true,
+	},
+	{
+		fieldName: 'sceneNumber',
+		headerName: 'Scene number',
+		isNumber: true,
+		parentSections: ['Story Information', 'Scene'],
+		includeInSerialization: true,
+	},
+	{
+		fieldName: 'sceneTitle',
+		headerName: 'Scene title',
+		isNumber: false,
+		parentSections: ['Story Information', 'Scene'],
+		includeInSerialization: true,
+	},
 	{ fieldName: 'background', headerName: 'Background', isNumber: false, parentSections: [], includeInSerialization: true },
 	{ fieldName: 'narrativeBody', headerName: 'Narrative Body', isNumber: false, parentSections: [], includeInSerialization: true },
 	{ fieldName: 'cg', headerName: 'CG', isNumber: false, parentSections: [], includeInSerialization: true },
-	{ fieldName: 'currentContext', headerName: 'Current Context', isNumber: false, parentSections: ['Status Update'], includeInSerialization: true },
-	{ fieldName: 'activePlotThreads', headerName: 'Active Plot Threads', isNumber: false, parentSections: ['Status Update'], includeInSerialization: true },
+	{
+		fieldName: 'currentContext',
+		headerName: 'Current Context',
+		isNumber: false,
+		parentSections: ['Status Update'],
+		includeInSerialization: true,
+	},
+	{
+		fieldName: 'activePlotThreads',
+		headerName: 'Active Plot Threads',
+		isNumber: false,
+		isList: true,
+		parentSections: ['Status Update'],
+		includeInSerialization: true,
+	},
 	{ fieldName: 'decisionContext', headerName: 'Decision context', isNumber: false, parentSections: [], includeInSerialization: true },
 ];
 
@@ -62,13 +101,18 @@ export const NARRATIVE_VARIABLE_FIELDS: (keyof NarrativeVariables)[] = FIELD_DES
 
 /** Number fields that need parseInt conversion from accumulated text. Derived from FIELD_DESCRIPTORS. */
 export const NUMBER_FIELDS: ReadonlySet<keyof NarrativeVariables> = new Set(
-	FIELD_DESCRIPTORS.filter((d) => d.isNumber).map((d) => d.fieldName),
+	FIELD_DESCRIPTORS.filter((d) => d.isNumber).map((d) => d.fieldName)
+);
+
+/** List fields that are parsed from bullet items. Derived from FIELD_DESCRIPTORS. */
+export const LIST_FIELDS: ReadonlySet<keyof NarrativeVariables> = new Set(
+	FIELD_DESCRIPTORS.filter((d) => d.isList).map((d) => d.fieldName)
 );
 
 // --- Helpers ---
 
 /** Type-safe setter for NarrativeVariables fields, bypassing the index signature constraint. */
-export function setField(obj: NarrativeVariables, key: keyof NarrativeVariables, value: string | number): void {
+export function setField(obj: NarrativeVariables, key: keyof NarrativeVariables, value: string | number | string[]): void {
 	(obj as unknown as Record<string, unknown>)[key] = value;
 }
 
@@ -95,7 +139,7 @@ export function emptyVariables(): NarrativeVariables {
 		narrativeBody: null,
 		cg: null,
 		currentContext: null,
-		activePlotThreads: null,
+		activePlotThreads: [],
 		decisionContext: null,
 		gameData: null,
 	};

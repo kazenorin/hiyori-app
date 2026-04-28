@@ -42,34 +42,41 @@ function feedAll(chunks: string[]): {
 
 /** Merge two NarrativeVariables: for string fields, concatenate; for number fields, keep latest; for gameData, deep-merge. */
 function mergeVariables(base: NarrativeVariables, incoming: NarrativeVariables): NarrativeVariables {
-	const result: NarrativeVariables = { ...base };
+  const result: NarrativeVariables = { ...base };
 
-	for (const key of Object.keys(incoming) as (keyof NarrativeVariables)[]) {
-		const val = incoming[key];
-		if (val === null || val === undefined) continue;
+  // Cast 'res' once to a mutable dictionary to satisfy TypeScript inside the loop
+  const res = result as unknown as Record<string, unknown>;
 
-		if (key === 'gameData') {
-			const baseGd = base.gameData;
-			const incGd = val as GameDataFields;
-			if (baseGd) {
-				result.gameData = {
-					worldState: (baseGd.worldState ?? '') + (incGd.worldState ?? '') || null,
-					decisions: [...baseGd.decisions, ...incGd.decisions],
-					playerAliases: [...baseGd.playerAliases, ...incGd.playerAliases],
-					otherCharacterAliases: { ...baseGd.otherCharacterAliases, ...incGd.otherCharacterAliases },
-				};
-			} else {
-				result.gameData = incGd;
-			}
-		} else if (typeof val === 'number') {
-			(result as unknown as Record<string, unknown>)[key] = val;
-		} else if (typeof val === 'string') {
-			const existing = base[key];
-			(result as unknown as Record<string, unknown>)[key] = (typeof existing === 'string' ? existing : '') + val;
-		}
-	}
+  for (const key of Object.keys(incoming) as (keyof NarrativeVariables)[]) {
+    const val = incoming[key];
+    const existing = base[key];
 
-	return result;
+    if (val === null || val === undefined) continue;
+
+    if (key === 'gameData') {
+      const baseGd = base.gameData;
+      const incGd = val as GameDataFields;
+
+      if (baseGd) {
+        res.gameData = {
+          worldState: (baseGd.worldState ?? '') + (incGd.worldState ?? '') || null,
+          decisions: [...baseGd.decisions, ...incGd.decisions],
+          playerAliases: [...baseGd.playerAliases, ...incGd.playerAliases],
+          otherCharacterAliases: { ...baseGd.otherCharacterAliases, ...incGd.otherCharacterAliases },
+        };
+      } else {
+        res.gameData = incGd;
+      }
+    } else if (typeof val === 'number') {
+      res[key] = val;
+    } else if (typeof val === 'string') {
+      res[key] = (typeof existing === 'string' ? existing : '') + val;
+    } else if (Array.isArray(val)) {
+      res[key] = Array.isArray(existing) ? [...existing, ...val] : val;
+    }
+  }
+
+  return result;
 }
 
 const GAME_DATA_MD = [
@@ -408,7 +415,7 @@ describe('Narrative Variables', () => {
 		expect(variables!.narrativeBody).toContain('The hero stepped forward cautiously.');
 		expect(variables!.cg).toContain('Wide shot, moonlit clearing, hero silhouette.');
 		expect(variables!.currentContext).toContain('Approaching the ancient ruins.');
-		expect(variables!.activePlotThreads).toContain('missing artifact');
+		expect(variables!.activePlotThreads).toEqual(['The missing artifact', 'The traitor in the party']);
 		expect(variables!.decisionContext).toContain('Choose how to enter the ruins.');
 		// Scratchpad content passes through as visible text (## Scratchpad is not
 		// the same as # Review Scratchpad which is captured into variables.scratchpad)

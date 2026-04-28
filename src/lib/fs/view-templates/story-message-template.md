@@ -19,9 +19,12 @@
 **STATUS UPDATE**
 
 - **Current Context:** {currentContext}
-- **Active Plot Threads:** {activePlotThreads}
+
+**Active Plot Threads:**
+{activePlotThreads}
 
 ---
 
 **DECISION POINT**
+
 {decisionContext}

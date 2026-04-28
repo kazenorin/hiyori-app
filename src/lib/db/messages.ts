@@ -47,7 +47,13 @@ export function parseVariables(raw: string | null): NarrativeVariables | undefin
 		const result = emptyVariables();
 		for (const desc of FIELD_DESCRIPTORS) {
 			const value = parsed[desc.fieldName];
-			if (desc.isNumber) {
+			if (desc.isList && Array.isArray(value)) {
+				setField(
+					result,
+					desc.fieldName,
+					value.filter((v: unknown) => typeof v === 'string')
+				);
+			} else if (desc.isNumber) {
 				if (typeof value === 'number') {
 					setField(result, desc.fieldName, value);
 				}

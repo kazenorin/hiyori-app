@@ -44,6 +44,55 @@ type Subsection = typeof SUB_WORLD_STATE | typeof SUB_DECISIONS | typeof SUB_PLA
 
 // --- Section accumulator factory ---
 
+function createListAccumulator(fieldName: string, matcher: HeaderMatcher): ElementAccumulator {
+	let inList = false;
+	let listItemText = '';
+	let headerDetected = false;
+
+	return {
+		onEnterElement(element, context, _acc): void {
+			if (element.type === 'header') {
+				const normalized = kebabCase(element.name ?? '');
+				if (matcher(normalized, context)) {
+					headerDetected = true;
+					inList = false;
+				}
+			}
+			if (headerDetected && element.type === 'list') {
+				inList = true;
+				listItemText = '';
+			}
+		},
+		onLeaveElement(element, _context, acc): void {
+			if (headerDetected && element.type === 'list') {
+				const trimmed = listItemText.trim();
+				if (trimmed) {
+					const arr = (acc[fieldName] as string[] | undefined) ?? [];
+					arr.push(trimmed);
+					acc[fieldName] = arr;
+				}
+				inList = false;
+			}
+		},
+		onText(text, context, _acc): boolean {
+			if (!headerDetected) return false;
+			// Skip header name text (contamination prevention)
+			for (let i = context.length - 1; i >= 0; i--) {
+				const node = context[i];
+				if (node.type === 'header' && matcher(kebabCase(node.name ?? ''), context)) {
+					if (text === (node.name ?? '')) return true;
+					break;
+				}
+			}
+			if (inList) {
+				listItemText += text;
+				return true;
+			}
+			return true; // consume non-list text under this header
+		},
+	};
+}
+
 function createSectionAccumulator(fieldName: string, matcher: HeaderMatcher): ElementAccumulator {
 	let hasCaptured = false;
 	return {
@@ -86,10 +135,14 @@ function createSectionAccumulator(fieldName: string, matcher: HeaderMatcher): El
 const sectionAccumulators: ElementAccumulator[] = FIELD_DESCRIPTORS.map((desc) => {
 	const kebabName = kebabCase(desc.headerName);
 	const kebabParents = desc.parentSections.map((s) => kebabCase(s));
-	return createSectionAccumulator(
-		desc.fieldName as string,
-		(name, ctx) => name === kebabName && kebabParents.every((p) => hasHeaderName(ctx, p))
-	);
+
+	const fieldName: string = desc.fieldName;
+	const headerMatcher: HeaderMatcher = (name, ctx) => name === kebabName && kebabParents.every((p) => hasHeaderName(ctx, p));
+	if (desc.isList) {
+		return createListAccumulator(fieldName, headerMatcher)
+	} else {
+		return createSectionAccumulator(fieldName, headerMatcher)
+	}
 });
 
 // --- Revised Narrative accumulator ---
@@ -102,10 +155,8 @@ function createRevisedNarrativeAccumulator(): ElementAccumulator {
 			// Section accumulators will still capture individual fields.
 			if (hasHeaderName(context, NAMES_REVISED_NARRATIVE)) {
 				// Check if we're also inside Game Data — if so, let game data handle it
-				if (hasHeaderName(context, NAMES_GAME_DATA)) {
-					return false;
-				}
-				return true; // consume text, don't passthrough
+				return !hasHeaderName(context, NAMES_GAME_DATA);
+				 // consume text, don't passthrough
 			}
 			return false;
 		},

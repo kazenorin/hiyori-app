@@ -9,7 +9,7 @@ import { getActiveNarrationTemplateOrDefault, getActiveSystemPromptOrDefault } f
 import { type ToolSet } from 'ai';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
 import type { NarrativeVariables } from '$lib/ai/parser-chain';
-import { hasNarrativeBody } from '$lib/ai/template-renderer';
+import {hasNarrativeBody, renderFromVariables} from '$lib/ai/template-renderer';
 
 export interface ReviewLoopResult {
 	variables: NarrativeVariables;
@@ -108,7 +108,15 @@ export async function runReviewLoop(
 	options: ReviewLoopOptions
 ): Promise<StreamResultMetadata | null> {
 	const draftMessage = getCurrentMessage();
-	const draftContent = getPreprocessedContent(draftMessage, options);
+
+	// Render draft variables to contentForReview if content is empty (draft is not shown in main chat)
+	let contentForReview = draftMessage.content;
+	if (!contentForReview && draftMessage.draft) {
+		const narrationTemplate = await getActiveNarrationTemplateOrDefault();
+		contentForReview = renderFromVariables(draftMessage.draft, narrationTemplate);
+	}
+
+	const draftContent = getPreprocessedContent({...draftMessage, content: contentForReview}, options);
 
 	const historyWithDraft: MessageBase[] = [...history, { role: 'assistant', content: draftContent }];
 

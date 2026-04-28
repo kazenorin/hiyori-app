@@ -57,7 +57,7 @@ const mockStreamAccumulator = (content: string) => {
 		narrativeBody: narrativeMatch ? narrativeMatch[1].trim() : null,
 		cg: null,
 		currentContext: null,
-		activePlotThreads: null,
+		activePlotThreads: [],
 		decisionContext: null,
 		gameData: null,
 	};

@@ -3,27 +3,19 @@ import { createSaxSectionParser } from './sax-section-parser';
 import type { StreamParser, ParserAccumulator } from './stream-parser';
 
 // Re-export all types and helpers from narrative-types (single source of truth)
-export type {
-	NarrativeVariables,
-	GameDataFields,
-	FieldDescriptor,
-} from './narrative-types';
+export type { NarrativeVariables, GameDataFields, FieldDescriptor } from './narrative-types';
 export {
 	FIELD_DESCRIPTORS,
 	NARRATIVE_VARIABLE_FIELDS,
 	NUMBER_FIELDS,
+	LIST_FIELDS,
 	setField,
 	emptyGameDataFields,
 	emptyVariables,
 } from './narrative-types';
 
 // Import for local use in extractVariables
-import {
-	NARRATIVE_VARIABLE_FIELDS,
-	NUMBER_FIELDS,
-	setField,
-	emptyVariables,
-} from './narrative-types';
+import { NARRATIVE_VARIABLE_FIELDS, NUMBER_FIELDS, LIST_FIELDS, setField, emptyVariables } from './narrative-types';
 
 // --- Parser chain ---
 
@@ -52,7 +44,10 @@ function extractVariables(acc: Record<string, unknown>): import('./narrative-typ
 
 	for (const field of NARRATIVE_VARIABLE_FIELDS) {
 		const value = acc[field];
-		if (typeof value === 'string' && value.length > 0) {
+		if (LIST_FIELDS.has(field) && Array.isArray(value) && value.length > 0) {
+			setField(vars, field, value);
+			hasAny = true;
+		} else if (typeof value === 'string' && value.length > 0) {
 			if (NUMBER_FIELDS.has(field)) {
 				const parsed = parseInt(value, 10);
 				if (!isNaN(parsed)) {

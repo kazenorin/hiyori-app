@@ -227,7 +227,7 @@ describe('act-lines operations', () => {
 				narrativeBody: null,
 				cg: null,
 				currentContext: null,
-				activePlotThreads: null,
+				activePlotThreads: [],
 				decisionContext: null,
 				gameData: {
 					worldState: 'State',
@@ -304,7 +304,7 @@ describe('act-lines operations', () => {
 				narrativeBody: null,
 				cg: null,
 				currentContext: null,
-				activePlotThreads: null,
+				activePlotThreads: [],
 				decisionContext: null,
 				gameData: {
 					worldState: 'World',
