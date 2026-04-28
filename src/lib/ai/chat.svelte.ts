@@ -256,7 +256,7 @@ export async function sendMessage(
 	error = null;
 
 	const responseMessage = newMessage('assistant');
-	let newMessagesCount: number
+	let newMessagesCount: number = 0;
 	if (!!message.bodyText && message.bodyText.trim().length > 0) {
 		const userMessage = await persistUserMessage({ ...message, bodyText: message.bodyText }, actLineId);
 		messages = [...messages, userMessage, responseMessage];

@@ -94,6 +94,7 @@ export function variablesToMarkdown(vars: NarrativeVariables): string {
 	for (const desc of SERIALIZABLE_FIELDS) {
 		const value = vars[desc.fieldName];
 		if (value == null) continue;
+		if (Array.isArray(value) && value.length === 0) continue;
 
 		const targetPath = desc.parentSections;
 
