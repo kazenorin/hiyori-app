@@ -1,6 +1,7 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
+import { fetch } from '@tauri-apps/plugin-http';
 
 export function createModel(config: ProviderConfig) {
 	if (!config.apiKey) {
@@ -13,6 +14,7 @@ export function createModel(config: ProviderConfig) {
 		const provider = createOpenAICompatible({
 			name: config.name || 'openai-compatible',
 			baseURL,
+			fetch,
 			apiKey: config.apiKey,
 		});
 		return provider.chatModel(config.model);
@@ -21,6 +23,7 @@ export function createModel(config: ProviderConfig) {
 	const provider = createOpenAI({
 		apiKey: config.apiKey,
 		baseURL,
+		fetch,
 	});
 
 	if (config.apiType === 'chat-completions') {

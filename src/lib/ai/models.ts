@@ -1,3 +1,5 @@
+import { fetch } from '@tauri-apps/plugin-http';
+
 export interface ModelInfo {
 	id: string;
 	owned_by: string;
