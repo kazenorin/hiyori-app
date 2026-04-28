@@ -659,10 +659,10 @@
 									</div>
 								{/if}
 
-								{#if message.content || hasTemplateMetadata(message.result)}
+								{#if message.content || hasTemplateMetadata(message.result ?? message.draft)}
 									<div class="leading-relaxed text-surface-950-50">
-										{#if hasTemplateMetadata(message.result) && storyMessageTemplate}
-											<MarkdownContent content={renderTemplate(storyMessageTemplate, (message.result)!)} />
+										{#if hasTemplateMetadata(message.result ?? message.draft) && storyMessageTemplate}
+											<MarkdownContent content={renderTemplate(storyMessageTemplate, (message.result ?? message.draft)!)} />
 										{:else}
 											<MarkdownContent content={message.content} />
 										{/if}
@@ -671,7 +671,7 @@
 								{#if getIsStreaming() && message === getMessages().at(-1)}
 									<span
 										data-streaming-cursor
-										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content || hasTemplateMetadata(message.result) ? 'mt-2' : ''}"
+										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content || hasTemplateMetadata(message.result ?? message.draft) ? 'mt-2' : ''}"
 									></span>
 								{/if}
 								{#if message.metadata}

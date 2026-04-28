@@ -30,6 +30,12 @@ function mergeVariables(existing: NarrativeVariables | null, incoming: Narrative
 		const i = incoming[field];
 		if (typeof e === 'string' && typeof i === 'string') {
 			setField(result, field, e + i);
+		} else if (Array.isArray(e) && Array.isArray(i)) {
+			setField(result, field, [...e, ...i]);
+		} else if (Array.isArray(i)) {
+			setField(result, field, i);
+		} else if (Array.isArray(e)) {
+			setField(result, field, e);
 		} else {
 			const val = (i ?? e) as string | number | null;
 			if (val !== null) setField(result, field, val);

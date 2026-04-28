@@ -1,9 +1,9 @@
-import {type ContextNode, createMarkdownSaxParser, type ElementInfo} from '$lib/markdown/markdown-sax-parser';
-import type {StreamParser} from './stream-parser';
-import type {GameDataFields} from './narrative-types';
-import {FIELD_DESCRIPTORS} from './narrative-types';
-import {mergeGameDataFields} from './message-updater';
-import {kebabCase} from 'lodash';
+import { type ContextNode, createMarkdownSaxParser, type ElementInfo } from '$lib/markdown/markdown-sax-parser';
+import type { StreamParser } from './stream-parser';
+import type { GameDataFields } from './narrative-types';
+import { FIELD_DESCRIPTORS } from './narrative-types';
+import { mergeGameDataFields } from './message-updater';
+import { kebabCase } from 'lodash';
 
 // --- Element accumulator interface ---
 
@@ -45,9 +45,11 @@ type Subsection = typeof SUB_WORLD_STATE | typeof SUB_DECISIONS | typeof SUB_PLA
 // --- Section accumulator factory ---
 
 function createListAccumulator(fieldName: string, matcher: HeaderMatcher): ElementAccumulator {
+	let headerDetected = false;
 	let inList = false;
 	let listItemText = '';
-	let headerDetected = false;
+	let betweenLists = false;
+	let continuityBroken = false;
 
 	return {
 		onEnterElement(element, context, _acc): void {
@@ -56,15 +58,18 @@ function createListAccumulator(fieldName: string, matcher: HeaderMatcher): Eleme
 				if (matcher(normalized, context)) {
 					headerDetected = true;
 					inList = false;
+					betweenLists = false;
+					continuityBroken = false;
 				}
 			}
-			if (headerDetected && element.type === 'list') {
+			if (headerDetected && !continuityBroken && element.type === 'list') {
 				inList = true;
 				listItemText = '';
+				betweenLists = false;
 			}
 		},
 		onLeaveElement(element, _context, acc): void {
-			if (headerDetected && element.type === 'list') {
+			if (headerDetected && !continuityBroken && element.type === 'list' && inList) {
 				const trimmed = listItemText.trim();
 				if (trimmed) {
 					const arr = (acc[fieldName] as string[] | undefined) ?? [];
@@ -72,10 +77,13 @@ function createListAccumulator(fieldName: string, matcher: HeaderMatcher): Eleme
 					acc[fieldName] = arr;
 				}
 				inList = false;
+				betweenLists = true;
 			}
 		},
 		onText(text, context, _acc): boolean {
 			if (!headerDetected) return false;
+			if (continuityBroken) return false;
+
 			// Skip header name text (contamination prevention)
 			for (let i = context.length - 1; i >= 0; i--) {
 				const node = context[i];
@@ -84,11 +92,20 @@ function createListAccumulator(fieldName: string, matcher: HeaderMatcher): Eleme
 					break;
 				}
 			}
+
 			if (inList) {
 				listItemText += text;
 				return true;
 			}
-			return true; // consume non-list text under this header
+
+			// Text between list blocks (including blank lines) → continuity broken
+			if (betweenLists) {
+				continuityBroken = true;
+				return false;
+			}
+
+			// Text before first list (intro text under header)
+			return true;
 		},
 	};
 }
@@ -139,9 +156,9 @@ const sectionAccumulators: ElementAccumulator[] = FIELD_DESCRIPTORS.map((desc) =
 	const fieldName: string = desc.fieldName;
 	const headerMatcher: HeaderMatcher = (name, ctx) => name === kebabName && kebabParents.every((p) => hasHeaderName(ctx, p));
 	if (desc.isList) {
-		return createListAccumulator(fieldName, headerMatcher)
+		return createListAccumulator(fieldName, headerMatcher);
 	} else {
-		return createSectionAccumulator(fieldName, headerMatcher)
+		return createSectionAccumulator(fieldName, headerMatcher);
 	}
 });
 
@@ -156,7 +173,7 @@ function createRevisedNarrativeAccumulator(): ElementAccumulator {
 			if (hasHeaderName(context, NAMES_REVISED_NARRATIVE)) {
 				// Check if we're also inside Game Data — if so, let game data handle it
 				return !hasHeaderName(context, NAMES_GAME_DATA);
-				 // consume text, don't passthrough
+				// consume text, don't passthrough
 			}
 			return false;
 		},

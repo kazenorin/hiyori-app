@@ -6,7 +6,7 @@ import { type StreamAccumulator, type StreamState } from '$lib/ai/chat-callbacks
 import { streamChatResponse } from './chat-stream';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
-import type {Message} from '$lib/ai/chat.svelte';
+import type {UIMessage} from '$lib/ai/chat.svelte';
 import type {MessageBase} from '$lib/db/messages';
 
 export interface WorldBuilderMessage {
@@ -231,7 +231,7 @@ async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<vo
 	}
 
 	const messageIdx = messages.length - 1;
-	function getCurrentMessage(): Message {
+	function getCurrentMessage(): UIMessage {
 		return messages[messageIdx];
 	}
 

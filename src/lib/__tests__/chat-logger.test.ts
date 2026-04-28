@@ -72,7 +72,7 @@ describe('chat-logger', () => {
 		it('writes to main-chat.log when logLevel is debug', async () => {
 			await logMainChat({
 				systemPrompt: 'You are a GM',
-				messages: [{ role: 'user', content: 'Hello' }],
+				newMessages: [{ role: 'user', content: 'Hello' }],
 			});
 
 			expect(mockWriteTextFile).toHaveBeenCalledWith(
@@ -85,7 +85,7 @@ describe('chat-logger', () => {
 		it('includes system prompt in log content', async () => {
 			await logMainChat({
 				systemPrompt: 'You are a GM',
-				messages: [],
+				newMessages: [],
 			});
 
 			const loggedContent = mockWriteTextFile.mock.calls[0][1] as string;
@@ -96,7 +96,7 @@ describe('chat-logger', () => {
 		it('includes messages in log content', async () => {
 			await logMainChat({
 				systemPrompt: 'prompt',
-				messages: [
+				newMessages: [
 					{ role: 'user', content: 'Hello' },
 					{ role: 'assistant', content: 'Hi there' },
 				],
@@ -112,7 +112,7 @@ describe('chat-logger', () => {
 		it('formats timestamp in entry', async () => {
 			await logMainChat({
 				systemPrompt: 'prompt',
-				messages: [],
+				newMessages: [],
 			});
 
 			const loggedContent = mockWriteTextFile.mock.calls[0][1] as string;
@@ -124,7 +124,7 @@ describe('chat-logger', () => {
 
 			await logMainChat({
 				systemPrompt: 'prompt',
-				messages: [],
+				newMessages: [],
 			});
 
 			expect(mockWriteTextFile).not.toHaveBeenCalled();
@@ -135,7 +135,7 @@ describe('chat-logger', () => {
 
 			await logMainChat({
 				systemPrompt: 'prompt',
-				messages: [],
+				newMessages: [],
 			});
 
 			expect(mockWriteTextFile).not.toHaveBeenCalled();

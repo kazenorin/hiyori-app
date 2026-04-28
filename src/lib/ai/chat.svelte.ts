@@ -25,7 +25,7 @@ import { getErrorMessage } from '$lib/utils/error-handling';
 import { renderFromVariables, variablesToMarkdown, gameDataToMarkdown } from './template-renderer';
 import { storyMessageTemplate } from '$lib/fs/view-templates';
 
-export interface Message {
+export interface UIMessage {
 	id: string;
 	role: 'user' | 'assistant';
 	content: string;
@@ -38,14 +38,14 @@ export interface Message {
 	reviewScratchpad?: string;
 }
 
-let messages = $state<Message[]>([]);
+let messages = $state<UIMessage[]>([]);
 let isStreaming = $state(false);
 let error = $state<string | null>(null);
 let abortController: AbortController | null = null;
 let memoryPipelineRunning = $state(false);
 let memoryPipelinePromise: Promise<void> | null = null;
 
-export function getMessages(): Message[] {
+export function getMessages(): UIMessage[] {
 	return messages;
 }
 
@@ -132,7 +132,7 @@ function narrowNarrationMessage(msg: ModelMessage): MessageBase | null {
 	return null;
 }
 
-async function persistMessage(actLineId: string, message: Message): Promise<void> {
+async function persistMessage(actLineId: string, message: UIMessage): Promise<void> {
 	await dbMessages.createMessage({
 		id: message.id,
 		role: 'assistant',
@@ -160,7 +160,7 @@ async function persistUserMessage(
 	const userSessionNumber = message.sessionNumber ?? findLastNonNullSessionNumber();
 	const userSceneNumber = findLastNonNullSceneNumber();
 
-	const userMessage: Message = {
+	const userMessage: UIMessage = {
 		id: crypto.randomUUID(),
 		role: 'user',
 		content: message.bodyText,
@@ -200,7 +200,7 @@ async function handleStreamError(err: unknown, messageId: string, actLineId: str
 	}
 }
 
-function runMemoryPipeline(storyId: string | null, actLineId: string, message: Message): void {
+function runMemoryPipeline(storyId: string | null, actLineId: string, message: UIMessage): void {
 	if (!settings.memoryEnabled) return;
 	if (!storyId || !actLineId) return;
 	memoryPipelineRunning = true;
@@ -214,7 +214,7 @@ function runMemoryPipeline(storyId: string | null, actLineId: string, message: M
 		});
 }
 
-function newMessage(role: 'user' | 'assistant'): Message {
+function newMessage(role: 'user' | 'assistant'): UIMessage {
 	return {
 		id: crypto.randomUUID(),
 		role: role,
@@ -223,7 +223,7 @@ function newMessage(role: 'user' | 'assistant'): Message {
 	};
 }
 
-function updateMetaData(getCurrentMessage: () => Message, resultMetadata: StreamResultMetadata | null, providerConfig: ProviderConfig) {
+function updateMetaData(getCurrentMessage: () => UIMessage, resultMetadata: StreamResultMetadata | null, providerConfig: ProviderConfig) {
 	if (resultMetadata) {
 		getCurrentMessage().metadata = buildMetadata(resultMetadata, providerConfig.model);
 	}
@@ -256,20 +256,23 @@ export async function sendMessage(
 	error = null;
 
 	const responseMessage = newMessage('assistant');
+	let newMessagesCount: number
 	if (!!message.bodyText && message.bodyText.trim().length > 0) {
 		const userMessage = await persistUserMessage({ ...message, bodyText: message.bodyText }, actLineId);
 		messages = [...messages, userMessage, responseMessage];
+		newMessagesCount = 2;
 	} else {
 		messages = [...messages, responseMessage];
+		newMessagesCount = 1;
 	}
 
 	const messageIdx = messages.length - 1;
 
-	function getCurrentMessage(): Message {
+	function getCurrentMessage(): UIMessage {
 		return messages[messageIdx];
 	}
 
-	function setCurrentMessage(message: Message) {
+	function setCurrentMessage(message: UIMessage) {
 		messages[messageIdx] = message;
 	}
 
@@ -323,10 +326,19 @@ export async function sendMessage(
 
 		// Review loop: run editor mode, revise if needed
 		if (settings.reviewerEnabled) {
+			// Render draft to content for the reviewer to see
+			const preReviewMsg = getCurrentMessage();
+			if (!preReviewMsg.content && preReviewMsg.draft) {
+				setCurrentMessage({
+					...preReviewMsg,
+					content: renderFromVariables(preReviewMsg.draft, storyMessageTemplate),
+				});
+			}
+
 			const sessionNumber = message.sessionNumber ?? findLastNonNullSessionNumber();
 			const reviewedMetadata = await runReviewLoop(
 				getCurrentMessage,
-				(msg: ReviewableMessage) => setCurrentMessage(msg as Message),
+				(msg: ReviewableMessage) => setCurrentMessage(msg as UIMessage),
 				history,
 				{
 					sessionNumber,
@@ -350,7 +362,7 @@ export async function sendMessage(
 		await determineSceneNumberAndNextSessionNumber(messageIdx, message.sessionNumber);
 
 		// Persist with accumulated content (not result.content)
-		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({ systemPrompt, messages })]);
+		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({systemPrompt, newMessages: messages.slice(-newMessagesCount), history})]);
 
 		// Run memory extraction pipeline in background (non-blocking)
 		runMemoryPipeline(storyId, actLineId, getCurrentMessage());
@@ -396,7 +408,7 @@ function parseSceneNumber(content: string): number | undefined {
 	return match ? parseInt(match[1], 10) : undefined;
 }
 
-function toHistoryMessage(message: Message): MessageBase {
+function toHistoryMessage(message: UIMessage): MessageBase {
 	if (message.role !== 'assistant') {
 		return { role: message.role, content: message.content };
 	}
@@ -613,7 +625,7 @@ export async function deleteOrphanedUserMessages(actLineId: string): Promise<voi
 	}
 }
 
-export function isUserMessage(message: Message): boolean {
+export function isUserMessage(message: UIMessage): boolean {
 	return message.role === 'user';
 }
 
