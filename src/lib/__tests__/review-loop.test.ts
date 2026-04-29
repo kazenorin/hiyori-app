@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { NarrativeVariables } from '../ai/parser-chain';
+import type { NarrativeVariables } from '../ai/narrative-types';
 
 // Mock prompts
 vi.mock('$lib/fs/prompts', () => ({

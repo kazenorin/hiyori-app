@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createParserChain, type NarrativeVariables, type GameDataFields } from '../ai/parser-chain';
+import type {NarrativeVariables, GameDataFields} from '../ai/narrative-types';
+import {createParserChain} from '../ai/parser-chain';
 
 const T = 'think';
 
@@ -179,7 +180,7 @@ describe('ParserChain', () => {
 			const input = 'Before\n# Review Scratchpad\nCheck pacing and tone\n# Revised Narrative\nAfter';
 			const { text, variables } = feedAll([input]);
 			// SAX parser emits header name as text, so "Review Scratchpad" is included
-			expect(variables?.scratchpad).toContain('Check pacing and tone');
+			expect(variables?.reviewScratchpad).toContain('Check pacing and tone');
 			expect(text).not.toContain('Check pacing');
 		});
 
@@ -187,20 +188,20 @@ describe('ParserChain', () => {
 			const input = '<' + T + '>Let me review</' + T + '>\n# Review Scratchpad\nPacing is off\n# Revised Narrative\nStory text';
 			const { thinking, variables } = feedAll([input]);
 			expect(thinking).toBe('Let me review');
-			expect(variables?.scratchpad).toContain('Pacing is off');
+			expect(variables?.reviewScratchpad).toContain('Pacing is off');
 		});
 
 		it('handles # Review Scratchpad split across chunks after thinking', () => {
 			const chunks = ['<' + T + '>Thought</' + T + '>', '\n# Review Scratchpad\nReview', ' notes\n# Revised Narrative\n Story'];
 			const { thinking, variables } = feedAll(chunks);
 			expect(thinking).toBe('Thought');
-			expect(variables?.scratchpad).toContain('Review notes');
+			expect(variables?.reviewScratchpad).toContain('Review notes');
 		});
 
 		it('flushes incomplete # Review Scratchpad at EOF', () => {
 			const chunks = ['Text\n# Review Scratchpad\nUnfinished review'];
 			const { variables } = feedAll(chunks);
-			expect(variables?.scratchpad).toContain('Unfinished review');
+			expect(variables?.reviewScratchpad).toContain('Unfinished review');
 		});
 	});
 
@@ -215,7 +216,7 @@ describe('ParserChain', () => {
 		it('extracts # Revised Narrative after # Review Scratchpad', () => {
 			const input = '# Review Scratchpad\nFix pacing\n# Revised Narrative\nBetter pacing here';
 			const { variables } = feedAll([input]);
-			expect(variables?.scratchpad).toContain('Fix pacing');
+			expect(variables?.reviewScratchpad).toContain('Fix pacing');
 			// Revised narrative text is consumed
 		});
 	});
@@ -254,7 +255,7 @@ describe('ParserChain', () => {
 				'\nThe sun set over the hills';
 			const { thinking, variables } = feedAll([input]);
 			expect(thinking).toBe('Analyzing narrative');
-			expect(variables?.scratchpad).toContain('Tone is inconsistent');
+			expect(variables?.reviewScratchpad).toContain('Tone is inconsistent');
 			expect(variables?.gameData).toBeNull();
 		});
 
@@ -262,7 +263,7 @@ describe('ParserChain', () => {
 			const chunks = ['<' + T + '>Deep ', 'thought</think', '>', '\n# Review Scratchpad\nReview', '\n# Revised Narrative\nRev', 'ised'];
 			const { thinking, variables } = feedAll(chunks);
 			expect(thinking).toBe('Deep thought');
-			expect(variables?.scratchpad).toContain('Review');
+			expect(variables?.reviewScratchpad).toContain('Review');
 			expect(variables?.gameData).toBeNull();
 		});
 
@@ -302,14 +303,14 @@ describe('Revised Narrative with ## Scratchpad (suppress-nesting)', () => {
 		// Review scratchpad should have the review content
 		// Note: SAX parser strips list markers, so "- Rule 1: OK" becomes "Rule 1: OK"
 		// SAX parser also emits header name as text, so "Review Scratchpad" prefix is included
-		expect(variables?.scratchpad).toContain('Rule 1: OK');
+		expect(variables?.reviewScratchpad).toContain('Rule 1: OK');
 
 		// Story title should be captured as a variable
 		expect(variables?.storyTitle).toContain('My Story');
 		// Background should be captured (includes header name prefix)
 		expect(variables?.background).toContain('The setting.');
-		// Scratchpad content inside Revised Narrative is suppressed
-		expect(variables?.scratchpad).not.toContain('[Planning notes]');
+		// Scratchpad content should be captured
+		expect(variables?.scratchpad).toContain('[Planning notes]');
 	});
 
 	it('streams revised narrative content progressively during feed', () => {
@@ -327,6 +328,7 @@ describe('Revised Narrative with ## Scratchpad (suppress-nesting)', () => {
 		const chain = createParserChain();
 		let background = '';
 		let scratchpad = '';
+		let reviewScratchpad = '';
 
 		for (const chunk of chunks) {
 			const output = chain.feed(chunk);
@@ -335,6 +337,9 @@ describe('Revised Narrative with ## Scratchpad (suppress-nesting)', () => {
 			}
 			if (output.variables?.scratchpad) {
 				scratchpad += output.variables.scratchpad;
+			}
+			if (output.variables?.reviewScratchpad) {
+				reviewScratchpad += output.variables.reviewScratchpad;
 			}
 		}
 
@@ -345,9 +350,13 @@ describe('Revised Narrative with ## Scratchpad (suppress-nesting)', () => {
 		if (flushed.variables?.scratchpad) {
 			scratchpad += flushed.variables.scratchpad;
 		}
+		if (flushed.variables?.reviewScratchpad) {
+			reviewScratchpad += flushed.variables.reviewScratchpad;
+		}
 
 		expect(background).toContain('Content here.');
-		expect(scratchpad).not.toContain('[Hidden]');
+		expect(scratchpad).toContain('[Hidden]');
+		expect(reviewScratchpad).toContain('Analysis');
 	});
 });
 
@@ -400,7 +409,7 @@ describe('Narrative Variables', () => {
 		// Feed line by line (with trailing newlines) to simulate streaming
 		const chunks = lines.map((l) => l + '\n');
 
-		const { variables, text } = feedAll(chunks);
+		const { variables } = feedAll(chunks);
 
 		expect(variables).not.toBeNull();
 		// Note: ## Scratchpad does NOT populate variables.scratchpad — that field
@@ -417,9 +426,8 @@ describe('Narrative Variables', () => {
 		expect(variables!.currentContext).toContain('Approaching the ancient ruins.');
 		expect(variables!.activePlotThreads).toEqual(['The missing artifact', 'The traitor in the party']);
 		expect(variables!.decisionContext).toContain('Choose how to enter the ruins.');
-		// Scratchpad content passes through as visible text (## Scratchpad is not
-		// the same as # Review Scratchpad which is captured into variables.scratchpad)
-		expect(text).toContain('[Planning notes]');
+		// ## Scratchpad is not the same as # Review Scratchpad
+		expect(variables!.scratchpad).toContain('[Planning notes]');
 	});
 
 	it('captures partial variables with null for missing fields', () => {

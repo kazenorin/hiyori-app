@@ -2,19 +2,7 @@ import { createThinkingTagParser } from './thinking-tag-parser';
 import { createSaxSectionParser } from './sax-section-parser';
 import type { StreamParser, ParserAccumulator } from './stream-parser';
 
-// Re-export all types and helpers from narrative-types (single source of truth)
-export type { NarrativeVariables, GameDataFields, FieldDescriptor } from './narrative-types';
-export {
-	FIELD_DESCRIPTORS,
-	NARRATIVE_VARIABLE_FIELDS,
-	NUMBER_FIELDS,
-	LIST_FIELDS,
-	setField,
-	emptyGameDataFields,
-	emptyVariables,
-} from './narrative-types';
-
-// Import for local use in extractVariables
+import type { NarrativeVariables, GameDataFields } from "./narrative-types";
 import { NARRATIVE_VARIABLE_FIELDS, NUMBER_FIELDS, LIST_FIELDS, setField, emptyVariables } from './narrative-types';
 
 // --- Parser chain ---
@@ -22,7 +10,7 @@ import { NARRATIVE_VARIABLE_FIELDS, NUMBER_FIELDS, LIST_FIELDS, setField, emptyV
 export interface ParserChainOutput {
 	text: string | null;
 	thinking: string | null;
-	variables: import('./narrative-types').NarrativeVariables | null;
+	variables: NarrativeVariables | null;
 }
 
 export function hasContent(output: ParserChainOutput): boolean {
@@ -38,7 +26,7 @@ export interface ParserChain {
  * Extract NarrativeVariables from the raw accumulator.
  * Number fields are parsed from text via parseInt; gameData is taken directly.
  */
-function extractVariables(acc: Record<string, unknown>): import('./narrative-types').NarrativeVariables | null {
+function extractVariables(acc: Record<string, unknown>): NarrativeVariables | null {
 	const vars = emptyVariables();
 	let hasAny = false;
 
@@ -62,7 +50,7 @@ function extractVariables(acc: Record<string, unknown>): import('./narrative-typ
 
 	// GameDataFields from GameDataAccumulator
 	if (acc.gameData && typeof acc.gameData === 'object') {
-		vars.gameData = acc.gameData as import('./narrative-types').GameDataFields;
+		vars.gameData = acc.gameData as GameDataFields;
 		hasAny = true;
 	}
 

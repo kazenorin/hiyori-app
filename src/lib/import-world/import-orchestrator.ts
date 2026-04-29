@@ -10,7 +10,7 @@ import { BaseDirectory, mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { loadStories } from '$lib/stores/stories.svelte';
 import { kebabCase } from 'lodash';
 import type { ImportFormData, ImportProgressUpdate, ImportResult, ParsedMessage } from './types';
-import { emptyVariables } from '$lib/ai/parser-chain';
+import { emptyVariables } from '$lib/ai/narrative-types';
 import type { RetryConfig } from '$lib/ai/chat-stream';
 import { parseTranscriptFile } from './transcript-parsers';
 import { formatIntoScenes, generateActFromCards } from './act-generator';

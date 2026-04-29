@@ -1,5 +1,6 @@
 import type { StreamCallbacks, StreamResultMetadata } from './streaming';
-import { createParserChain, hasContent, type NarrativeVariables } from './parser-chain';
+import type {NarrativeVariables} from './narrative-types';
+import {createParserChain, hasContent} from './parser-chain';
 import { applyParserOutput, applyReasoningDelta } from './message-updater';
 
 export interface StreamState {

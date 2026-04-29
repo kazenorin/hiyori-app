@@ -1,6 +1,6 @@
 // Core types for Import World feature
 
-import type { GameDataFields } from '$lib/ai/parser-chain';
+import type { GameDataFields } from '$lib/ai/narrative-types';
 
 // === Transcript Format Detection ===
 

@@ -1,6 +1,6 @@
 // Transcript parsers for multiple JSON formats
 
-import type { GameDataFields } from '$lib/ai/parser-chain';
+import type { GameDataFields } from "$lib/ai/narrative-types";
 import type { TranscriptFormat, ParsedTranscript, ParsedMessage, OpenWebUIExport, OpenWebUIMessage } from './types';
 import { validateFileSize } from '$lib/utils/async';
 

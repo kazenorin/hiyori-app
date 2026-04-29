@@ -2,7 +2,7 @@
 // Pass 1: Traditional extraction from markdown headers/keywords
 // Pass 2: LLM-based extraction for remaining messages
 
-import type { GameDataFields } from '$lib/ai/parser-chain';
+import type { GameDataFields } from '$lib/ai/narrative-types';
 import type { GameDataDetectionResult, GameDataExtractionResult, ParsedMessage } from './types';
 import { buildMetadata, type RetryConfig, streamWithRetry } from '$lib/ai/chat-stream';
 import { loadChoicesExtractionPrompt } from '$lib/fs/prompts';

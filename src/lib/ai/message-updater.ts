@@ -1,4 +1,11 @@
-import { type NarrativeVariables, type GameDataFields, emptyVariables, NARRATIVE_VARIABLE_FIELDS, setField } from './parser-chain';
+import {
+	type NarrativeVariables,
+	type GameDataFields,
+	emptyVariables,
+	NARRATIVE_VARIABLE_FIELDS,
+	setField
+} from './narrative-types';
+import { type ParserChainOutput } from './parser-chain';
 import type { StreamState } from './chat-callbacks';
 
 function mergeCharacterAliases(existing: Record<string, string[]>, incoming: Record<string, string[]>): Record<string, string[]> {
@@ -45,7 +52,7 @@ function mergeVariables(existing: NarrativeVariables | null, incoming: Narrative
 	return result;
 }
 
-export function applyParserOutput(state: StreamState, output: import('./parser-chain').ParserChainOutput): StreamState {
+export function applyParserOutput(state: StreamState, output: ParserChainOutput): StreamState {
 	return {
 		content: state.content + (output.text ?? ''),
 		reasoning: appendDelta(state.reasoning, output.thinking),

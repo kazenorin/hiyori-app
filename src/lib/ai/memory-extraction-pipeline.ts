@@ -9,7 +9,7 @@ import {
 import { loadMemoryExtractionPrompt, loadMemoryExtractionSystemPrompt } from '$lib/fs/prompts';
 import { type ExtractedMemories, parseMemoryExtract } from '$lib/memory/memory-extract-parser';
 import { Memory } from '$lib/memory/memory';
-import type { GameDataFields } from './parser-chain';
+import type { GameDataFields } from './narrative-types';
 import { isAuthError, toError, withRetry } from '$lib/utils/async';
 import { log } from '$lib/logging/logger';
 

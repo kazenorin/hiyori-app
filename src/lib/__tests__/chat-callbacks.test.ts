@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createStreamAccumulator, type StreamState } from '../ai/chat-callbacks';
-import type { GameDataFields } from '../ai/parser-chain';
+import type { GameDataFields } from '../ai/narrative-types';
 
 const T = 'think';
 const emptyMetadata = {

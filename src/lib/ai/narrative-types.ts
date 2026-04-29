@@ -9,6 +9,7 @@ export interface GameDataFields {
 /** All narrative variables with proper types per field */
 export interface NarrativeVariables {
 	scratchpad: string | null;
+	reviewScratchpad: string | null;
 	storyTitle: string | null;
 	actNumber: number | null;
 	sessionNumber: number | null;
@@ -43,7 +44,8 @@ export interface FieldDescriptor {
 
 /** Single source of truth for all narrative variable fields (excluding gameData). */
 export const FIELD_DESCRIPTORS: readonly FieldDescriptor[] = [
-	{ fieldName: 'scratchpad', headerName: 'Review Scratchpad', isNumber: false, parentSections: [], includeInSerialization: false },
+	{ fieldName: 'scratchpad', headerName: 'Scratchpad', isNumber: false, parentSections: [], includeInSerialization: false },
+	{ fieldName: 'reviewScratchpad', headerName: 'Review Scratchpad', isNumber: false, parentSections: [], includeInSerialization: false },
 	{
 		fieldName: 'storyTitle',
 		headerName: 'Story Title',
@@ -130,6 +132,7 @@ export function emptyGameDataFields(): GameDataFields {
 export function emptyVariables(): NarrativeVariables {
 	return {
 		scratchpad: null,
+		reviewScratchpad: null,
 		storyTitle: null,
 		actNumber: null,
 		sessionNumber: null,
