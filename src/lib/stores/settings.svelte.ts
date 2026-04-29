@@ -4,7 +4,7 @@ import { omitBy } from 'lodash';
 export const SCENE_NUMBER_REGEX = /Scene number\s*(\d+)/i;
 export const SESSION_NUMBER_REGEX = /Session number\s*(\d+)/i;
 
-export type Provider = 'openai' | 'openai-compatible';
+export type Provider = 'openai' | 'openai-compatible' | 'ollama';
 export type ApiType = 'chat-completions' | 'responses';
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 

@@ -1,5 +1,6 @@
 import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { createOllama } from 'ai-sdk-ollama';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
 import { fetch } from '@tauri-apps/plugin-http';
 
@@ -9,6 +10,12 @@ export function createModel(config: ProviderConfig) {
 	}
 
 	const baseURL = config.baseURL || 'https://api.openai.com/v1';
+
+
+	if (config.provider === 'ollama') {
+		const provider = createOllama({baseURL, apiKey: config.apiKey, fetch});
+		return provider.chat(config.model);
+	}
 
 	if (config.provider === 'openai-compatible') {
 		const provider = createOpenAICompatible({
@@ -39,6 +46,11 @@ export function createEmbeddingModel(config: ProviderConfig) {
 	}
 
 	const baseURL = config.baseURL || 'https://api.openai.com/v1';
+
+	if (config.provider === 'ollama') {
+		const provider = createOllama({baseURL, apiKey: config.apiKey, fetch});
+		return provider.embedding(config.model);
+	}
 
 	if (config.provider === 'openai-compatible') {
 		const provider = createOpenAICompatible({

@@ -69,6 +69,8 @@
 	function handleProviderChange() {
 		if (formProvider === 'openai') {
 			formBaseURL = 'https://api.openai.com/v1';
+		} else if (formProvider === 'ollama') {
+			formBaseURL = 'https://ollama.com';
 		} else {
 			formBaseURL = '';
 		}
@@ -125,7 +127,7 @@
 		isLoadingModels = true;
 		modelsError = null;
 		try {
-			availableModels = await fetchModels({ baseURL: formBaseURL, apiKey: formApiKey });
+			availableModels = await fetchModels({ baseURL: formBaseURL, apiKey: formApiKey, provider: formProvider });
 		} catch (err: unknown) {
 			modelsError = err instanceof Error ? err.message : 'Failed to fetch models';
 			availableModels = [];
@@ -163,7 +165,7 @@
 				{#if isEditing(config)}
 					<!-- Edit Form -->
 					<div class="card p-4 space-y-3 border border-primary-500-300">
-						{#each settings.providers as c}
+						{#each settings.providers as c(c)}
 							{#if c.id === config.id}
 								{@const isMain = mainProviderId === config.id}
 								<p class="text-xs text-surface-500">
@@ -185,6 +187,7 @@
 									<select class="select mt-1" onchange={() => handleProviderChange()} bind:value={formProvider}>
 										<option value="openai">OpenAI</option>
 										<option value="openai-compatible">OpenAI-Compatible</option>
+										<option value="ollama">Ollama</option>
 									</select>
 								</label>
 
@@ -241,6 +244,9 @@
 								<label class="block">
 									<span class="text-sm font-medium text-surface-700-300">API Key</span>
 									<input class="input mt-1" type="password" placeholder="sk-..." bind:value={formApiKey} />
+									<span class="text-xs text-surface-500 mt-1 block"
+										>Required for cloud models/providers</span
+									>
 								</label>
 							</div>
 						</details>
@@ -252,12 +258,12 @@
 				{:else}
 					<!-- Provider Card -->
 					<div
-						class="flex items-center justify-between p-3 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150"
+						class="flex items-center justify-between p-3 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150"
 					>
 						<div class="min-w-0">
 							<p class="text-sm font-medium truncate">{config.name}</p>
 							<p class="text-xs text-surface-500 truncate">
-								{config.provider === 'openai' ? 'OpenAI' : 'OpenAI-Compatible'} · {config.model}
+								{config.provider === 'openai' ? 'OpenAI' : config.provider === 'ollama' ? 'Ollama' : 'OpenAI-Compatible'} · {config.model}
 							</p>
 						</div>
 						<div class="flex items-center gap-1 shrink-0">
@@ -290,6 +296,7 @@
 								<select class="select mt-1" onchange={() => handleProviderChange()} bind:value={formProvider}>
 									<option value="openai">OpenAI</option>
 									<option value="openai-compatible">OpenAI-Compatible</option>
+									<option value="ollama">Ollama</option>
 								</select>
 							</label>
 
@@ -310,7 +317,7 @@
 								<span class="text-sm font-medium text-surface-700-300">Base URL</span>
 								<input class="input mt-1" type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} />
 								<span class="text-xs text-surface-500 mt-1 block"
-									>Local: http://localhost:11434/v1 (Ollama), http://localhost:1234/v1 (LM Studio)</span
+									>Local: http://localhost:11434/v1 (Local Ollama), http://localhost:1234/v1 (LM Studio)</span
 								>
 							</label>
 
@@ -346,6 +353,9 @@
 							<label class="block">
 								<span class="text-sm font-medium text-surface-700-300">API Key</span>
 								<input class="input mt-1" type="password" placeholder="sk-..." bind:value={formApiKey} />
+								<span class="text-xs text-surface-500 mt-1 block"
+									>Required for cloud models/providers</span
+								>
 							</label>
 						</div>
 					</details>

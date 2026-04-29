@@ -61,6 +61,7 @@
 		"@tauri-apps/plugin-log": "^2.8.0",
 		"@tauri-apps/plugin-sql": "^2.4.0",
 		"ai": "^6.0.149",
+		"ai-sdk-ollama": "^3.8.3",
 		"dompurify": "^3.3.3",
 		"lodash": "^4.18.1",
 		"marked": "^18.0.0",
