@@ -3,8 +3,13 @@ import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { getActiveStory } from '$lib/stores/stories.svelte';
 import { getSettings } from '$lib/stores/settings.svelte';
 import { log } from './logger';
-import type { NarrativeVariables } from "$lib/ai/narrative-types";
-import type { MessageBase } from "$lib/db/messages";
+import type { NarrativeVariables } from '$lib/ai/narrative-types';
+import type { MessageBase } from '$lib/db/messages';
+
+interface ChatLogMessage extends MessageBase {
+	draftVariables?: NarrativeVariables;
+	variables?: NarrativeVariables;
+}
 
 function isDebugEnabled(): boolean {
 	return getSettings().logLevel === 'debug';
@@ -40,35 +45,31 @@ async function appendToStoryLog(filename: string, label: string, content: string
  */
 export async function logMainChat(context: {
 	systemPrompt: string;
-	newMessages: Array<MessageBase & {
-		draft?: NarrativeVariables;
-		result?: NarrativeVariables;
-	}>,
-	history?: Array<MessageBase & {
-		draft?: NarrativeVariables;
-		result?: NarrativeVariables;
-	}>
+	newMessages: ChatLogMessage[];
+	history?: ChatLogMessage[];
 }): Promise<void> {
 	const parts: string[] = [];
 
 	parts.push(`=== SYSTEM PROMPT ===\n${context.systemPrompt}`);
 
-	const messagesStr = [...(context.history ?? []), ...context.newMessages].map((m) => {
-		let result: string = `--- [${m.role.toUpperCase()}] ---\n`;
-		if (m.draft) {
-			result += 'Draft:\n';
-			result += JSON.stringify(m.draft, null, 2);
-			result += '\n';
-		}
-		if (m.result) {
-			result += 'Result:\n';
-			result += JSON.stringify(m.result, null, 2);
-			result += '\n';
-		}
-		result += 'Content:\n';
-		result += `${m.content}\n`;
-		return result;
-	}).join('\n\n');
+	const messagesStr = [...(context.history ?? []), ...context.newMessages]
+		.map((m) => {
+			let result: string = `--- [${m.role.toUpperCase()}] ---\n`;
+			if (m.draftVariables) {
+				result += 'Draft:\n';
+				result += JSON.stringify(m.draftVariables, null, 2);
+				result += '\n';
+			}
+			if (m.variables) {
+				result += 'Result:\n';
+				result += JSON.stringify(m.variables, null, 2);
+				result += '\n';
+			}
+			result += 'Content:\n';
+			result += `${m.content}\n`;
+			return result;
+		})
+		.join('\n\n');
 	parts.push(`=== MESSAGES ===\n${messagesStr}`);
 
 	const content = parts.join('\n\n');

@@ -33,8 +33,8 @@ export interface UIMessage {
 	metadata?: MessageMetadata;
 	sceneNumber?: number;
 	sessionNumber?: number;
-	draft?: NarrativeVariables;
-	result?: NarrativeVariables;
+	variables?: NarrativeVariables;
+	draftVariables?: NarrativeVariables;
 	reviewScratchpad?: string;
 }
 
@@ -71,8 +71,8 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 		metadata: parseMetadata(m.metadata),
 		sceneNumber: m.sceneNumber,
 		sessionNumber: m.sessionNumber,
-		draft: m.draftVariables,
-		result: m.variables,
+		draftVariables: m.draftVariables,
+		variables: m.variables,
 	}));
 	error = null;
 }
@@ -141,8 +141,8 @@ async function persistMessage(actLineId: string, message: UIMessage): Promise<vo
 		metadata: message.metadata ? JSON.stringify(message.metadata) : undefined,
 		sceneNumber: message.sceneNumber,
 		sessionNumber: message.sessionNumber,
-		variables: message.result,
-		draftVariables: message.draft,
+		variables: message.variables,
+		draftVariables: message.draftVariables,
 	});
 	const seq = await dbActLines.getNextSequence(actLineId);
 	await dbActLines.addMessageToLine(actLineId, message.id, seq);
@@ -204,7 +204,7 @@ function runMemoryPipeline(storyId: string | null, actLineId: string, message: U
 	if (!settings.memoryEnabled) return;
 	if (!storyId || !actLineId) return;
 	memoryPipelineRunning = true;
-	const gameData = message.result?.gameData ?? undefined;
+	const gameData = message.variables?.gameData ?? undefined;
 	memoryPipelinePromise = runMemoryExtractionPipeline(message.content, storyId, actLineId, message.id, gameData)
 		.then((result) => log.debug('memory-pipeline', `Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`))
 		.catch((err) => log.error('memory-pipeline', 'Pipeline failed', err))
@@ -300,13 +300,13 @@ export async function sendMessage(
 				if (settings.reviewerEnabled) {
 					setCurrentMessage({
 						...currentMessage,
-						draft: vars ?? currentMessage.draft,
+						draftVariables: vars ?? currentMessage.draftVariables,
 						reasoning: state.reasoning ?? currentMessage.reasoning,
 					});
 				} else {
 					setCurrentMessage({
 						...currentMessage,
-						result: vars ?? currentMessage.result,
+						variables: vars ?? currentMessage.variables,
 						content: vars ? renderFromVariables(vars, storyMessageTemplate) : currentMessage.content,
 						reasoning: state.reasoning ?? currentMessage.reasoning,
 					});
@@ -328,10 +328,10 @@ export async function sendMessage(
 		if (settings.reviewerEnabled) {
 			// Render draft to content for the reviewer to see
 			const preReviewMsg = getCurrentMessage();
-			if (!preReviewMsg.content && preReviewMsg.draft) {
+			if (!preReviewMsg.content && preReviewMsg.draftVariables) {
 				setCurrentMessage({
 					...preReviewMsg,
-					content: renderFromVariables(preReviewMsg.draft, storyMessageTemplate),
+					content: renderFromVariables(preReviewMsg.draftVariables, storyMessageTemplate),
 				});
 			}
 
@@ -350,10 +350,10 @@ export async function sendMessage(
 
 			// Render final content from result
 			const finalMsg = getCurrentMessage();
-			if (finalMsg.result) {
+			if (finalMsg.variables) {
 				setCurrentMessage({
 					...finalMsg,
-					content: renderFromVariables(finalMsg.result, storyMessageTemplate),
+					content: renderFromVariables(finalMsg.variables, storyMessageTemplate),
 				});
 			}
 		}
@@ -362,7 +362,10 @@ export async function sendMessage(
 		await determineSceneNumberAndNextSessionNumber(messageIdx, message.sessionNumber);
 
 		// Persist with accumulated content (not result.content)
-		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({systemPrompt, newMessages: messages.slice(-newMessagesCount), history})]);
+		await Promise.all([
+			persistMessage(actLineId, getCurrentMessage()),
+			logMainChat({ systemPrompt, newMessages: messages.slice(-newMessagesCount), history }),
+		]);
 
 		// Run memory extraction pipeline in background (non-blocking)
 		runMemoryPipeline(storyId, actLineId, getCurrentMessage());
@@ -376,7 +379,7 @@ export async function sendMessage(
 
 async function determineSceneNumberAndNextSessionNumber(messageIdx: number, explicitSessionNumber?: number): Promise<void> {
 	const msg = messages[messageIdx];
-	const vars = msg.result ?? msg.draft;
+	const vars = msg.variables ?? msg.draftVariables;
 
 	const varsSceneNumber = vars?.sceneNumber;
 	const varsSessionNumber = vars?.sessionNumber;
@@ -413,7 +416,7 @@ function toHistoryMessage(message: UIMessage): MessageBase {
 		return { role: message.role, content: message.content };
 	}
 
-	const vars = message.result ?? message.draft;
+	const vars = message.variables ?? message.draftVariables;
 	const content = vars ? variablesToMarkdown(vars) : message.content;
 	const gd = vars?.gameData ?? placeholderContent();
 	const gameDataContent = '\n' + gameDataToMarkdown(gd);
@@ -483,8 +486,8 @@ export function stopStreaming(): void {
 
 export function getLatestDecisions(): string[] {
 	for (let i = messages.length - 1; i >= 0; i--) {
-		if (messages[i].role === 'assistant' && messages[i].result?.gameData?.decisions?.length) {
-			return messages[i].result!.gameData!.decisions;
+		if (messages[i].role === 'assistant' && messages[i].variables?.gameData?.decisions?.length) {
+			return messages[i].variables!.gameData!.decisions;
 		}
 	}
 	return [];

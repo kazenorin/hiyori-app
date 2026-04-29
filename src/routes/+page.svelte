@@ -605,7 +605,7 @@
 									</div>
 								{/if}
 
-								{#if message.draft && message.result}
+								{#if message.draftVariables && message.variables}
 									<div class="mb-3">
 										<Accordion collapsible>
 											<Accordion.Item value="draft">
@@ -622,7 +622,7 @@
 																{...attributes}
 																class="text-xs text-surface-500 leading-relaxed border-l-2 border-surface-200-800 pl-3 mt-2"
 															>
-																{#if hasTemplateMetadata(message.draft) && storyMessageTemplate}<MarkdownContent content={renderTemplate(storyMessageTemplate, message.draft!)} />{:else}<MarkdownContent content={message.content} />{/if}
+																{#if hasTemplateMetadata(message.draftVariables) && storyMessageTemplate}<MarkdownContent content={renderTemplate(storyMessageTemplate, message.draftVariables!)} />{:else}<MarkdownContent content={message.content} />{/if}
 															</div>
 														{/if}
 													{/snippet}
@@ -659,10 +659,10 @@
 									</div>
 								{/if}
 
-								{#if message.content || hasTemplateMetadata(message.result ?? message.draft)}
+								{#if message.content || hasTemplateMetadata(message.variables ?? message.draftVariables)}
 									<div class="leading-relaxed text-surface-950-50">
-										{#if hasTemplateMetadata(message.result ?? message.draft) && storyMessageTemplate}
-											<MarkdownContent content={renderTemplate(storyMessageTemplate, (message.result ?? message.draft)!)} />
+										{#if hasTemplateMetadata(message.variables ?? message.draftVariables) && storyMessageTemplate}
+											<MarkdownContent content={renderTemplate(storyMessageTemplate, (message.variables ?? message.draftVariables)!)} />
 										{:else}
 											<MarkdownContent content={message.content} />
 										{/if}
@@ -671,7 +671,7 @@
 								{#if getIsStreaming() && message === getMessages().at(-1)}
 									<span
 										data-streaming-cursor
-										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content || hasTemplateMetadata(message.result ?? message.draft) ? 'mt-2' : ''}"
+										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content || hasTemplateMetadata(message.variables ?? message.draftVariables) ? 'mt-2' : ''}"
 									></span>
 								{/if}
 								{#if message.metadata}

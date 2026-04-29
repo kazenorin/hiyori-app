@@ -20,11 +20,10 @@ export interface ReviewLoopResult {
  * Minimal message interface for review loop callbacks.
  * UI-layer Message type shouldn't be imported here to avoid circular deps.
  */
-export interface ReviewableMessage {
-	content: string;
-	draft?: NarrativeVariables;
-	result?: NarrativeVariables;
+export interface ReviewableMessage extends MessageBase {
 	reasoning?: string;
+	variables?: NarrativeVariables;
+	draftVariables?: NarrativeVariables;
 	reviewScratchpad?: string;
 }
 
@@ -119,7 +118,7 @@ export async function runReviewLoop(
 			const vars = state.variables;
 			setCurrentMessage({
 				...currentMessage,
-				result: vars ?? currentMessage.result ?? currentMessage.draft,
+				variables: vars ?? currentMessage.variables ?? currentMessage.draftVariables,
 				reviewScratchpad: vars?.scratchpad ?? currentMessage.reviewScratchpad,
 				reasoning: state.reasoning ?? currentMessage.reasoning,
 			});
@@ -131,13 +130,13 @@ export async function runReviewLoop(
 		const currentMessage = getCurrentMessage();
 		setCurrentMessage({
 			...currentMessage,
-			result: reviewResult.variables ?? currentMessage.result ?? currentMessage.draft,
+			variables: reviewResult.variables ?? currentMessage.variables ?? currentMessage.draftVariables,
 		});
 		return reviewResult.resultMetadata;
 	} else {
 		setCurrentMessage({
 			...draftMessage,
-			result: draftMessage.draft,
+			variables: draftMessage.draftVariables,
 			reviewScratchpad: undefined,
 		});
 		return null;
