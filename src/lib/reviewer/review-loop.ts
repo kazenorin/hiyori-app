@@ -24,7 +24,6 @@ export interface ReviewableMessage extends MessageBase {
 	reasoning?: string;
 	variables?: NarrativeVariables;
 	draftVariables?: NarrativeVariables;
-	reviewScratchpad?: string;
 }
 
 export interface ReviewLoopOptions {
@@ -119,7 +118,6 @@ export async function runReviewLoop(
 			setCurrentMessage({
 				...currentMessage,
 				variables: vars ?? currentMessage.variables ?? currentMessage.draftVariables,
-				reviewScratchpad: vars?.scratchpad ?? currentMessage.reviewScratchpad,
 				reasoning: state.reasoning ?? currentMessage.reasoning,
 			});
 		},
@@ -137,7 +135,6 @@ export async function runReviewLoop(
 		setCurrentMessage({
 			...draftMessage,
 			variables: draftMessage.draftVariables,
-			reviewScratchpad: undefined,
 		});
 		return null;
 	}

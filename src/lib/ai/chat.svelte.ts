@@ -35,7 +35,6 @@ export interface UIMessage {
 	sessionNumber?: number;
 	variables?: NarrativeVariables;
 	draftVariables?: NarrativeVariables;
-	reviewScratchpad?: string;
 }
 
 let messages = $state<UIMessage[]>([]);

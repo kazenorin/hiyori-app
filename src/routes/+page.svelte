@@ -605,34 +605,7 @@
 									</div>
 								{/if}
 
-								{#if message.draftVariables && message.variables}
-									<div class="mb-3">
-										<Accordion collapsible>
-											<Accordion.Item value="draft">
-												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
-													<span>Draft</span>
-													<Accordion.ItemIndicator>
-														<span class="transition-transform duration-150 text-surface-500">▼</span>
-													</Accordion.ItemIndicator>
-												</Accordion.ItemTrigger>
-												<Accordion.ItemContent>
-													{#snippet element(attributes)}
-														{#if !attributes.hidden}
-															<div
-																{...attributes}
-																class="text-xs text-surface-500 leading-relaxed border-l-2 border-surface-200-800 pl-3 mt-2"
-															>
-																{#if hasTemplateMetadata(message.draftVariables) && storyMessageTemplate}<MarkdownContent content={renderTemplate(storyMessageTemplate, message.draftVariables!)} />{:else}<MarkdownContent content={message.content} />{/if}
-															</div>
-														{/if}
-													{/snippet}
-												</Accordion.ItemContent>
-											</Accordion.Item>
-										</Accordion>
-									</div>
-								{/if}
-
-								{#if message.reviewScratchpad}
+								{#if message.draftVariables?.scratchpad}
 									<div class="mb-3">
 										<Accordion collapsible>
 											<Accordion.Item value="review">
@@ -649,7 +622,7 @@
 																{...attributes}
 																class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
 															>
-																{message.reviewScratchpad}
+																{message.draftVariables?.scratchpad}
 															</div>
 														{/if}
 													{/snippet}
@@ -659,19 +632,73 @@
 									</div>
 								{/if}
 
-								{#if message.content || hasTemplateMetadata(message.variables ?? message.draftVariables)}
+								{#if message.draftVariables}
+									<div class="mb-3">
+										<Accordion collapsible>
+											<Accordion.Item value="draft">
+												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
+													<span>Draft</span>
+													<Accordion.ItemIndicator>
+														<span class="transition-transform duration-150 text-surface-500">▼</span>
+													</Accordion.ItemIndicator>
+												</Accordion.ItemTrigger>
+												<Accordion.ItemContent>
+													{#snippet element(attributes)}
+														{#if !attributes.hidden}
+															<div
+																{...attributes}
+																class="text-xs text-surface-500 leading-relaxed border-l-2 border-surface-200-800 pl-3 mt-2"
+															>
+																{#if message.draftVariables && hasTemplateMetadata(message.draftVariables) && storyMessageTemplate}
+																	<MarkdownContent content={renderTemplate(storyMessageTemplate, message.draftVariables)} />
+																{/if}
+															</div>
+														{/if}
+													{/snippet}
+												</Accordion.ItemContent>
+											</Accordion.Item>
+										</Accordion>
+									</div>
+								{/if}
+
+								{#if message.variables?.scratchpad}
+									<div class="mb-3">
+										<Accordion collapsible>
+											<Accordion.Item value="review">
+												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
+													<span>Review</span>
+													<Accordion.ItemIndicator>
+														<span class="transition-transform duration-150 text-surface-500">▼</span>
+													</Accordion.ItemIndicator>
+												</Accordion.ItemTrigger>
+												<Accordion.ItemContent>
+													{#snippet element(attributes)}
+														{#if !attributes.hidden}
+															<div
+																{...attributes}
+																class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
+															>
+																{message.variables?.scratchpad}
+															</div>
+														{/if}
+													{/snippet}
+												</Accordion.ItemContent>
+											</Accordion.Item>
+										</Accordion>
+									</div>
+								{/if}
+
+								{#if message.variables && hasTemplateMetadata(message.variables)}
 									<div class="leading-relaxed text-surface-950-50">
-										{#if hasTemplateMetadata(message.variables ?? message.draftVariables) && storyMessageTemplate}
-											<MarkdownContent content={renderTemplate(storyMessageTemplate, (message.variables ?? message.draftVariables)!)} />
-										{:else}
-											<MarkdownContent content={message.content} />
+										{#if storyMessageTemplate}
+											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables)} />
 										{/if}
 									</div>
 								{/if}
 								{#if getIsStreaming() && message === getMessages().at(-1)}
 									<span
 										data-streaming-cursor
-										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content || hasTemplateMetadata(message.variables ?? message.draftVariables) ? 'mt-2' : ''}"
+										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content || hasTemplateMetadata(message.variables) ? 'mt-2' : ''}"
 									></span>
 								{/if}
 								{#if message.metadata}
