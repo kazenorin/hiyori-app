@@ -8,7 +8,7 @@ import {
 } from '$lib/stores/settings.svelte';
 import { getActiveStoryId, getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
 import type { MessageBase } from '$lib/db/messages';
-import type { NarrativeVariables, GameDataFields } from './parser-chain';
+import type { NarrativeVariables, GameDataFields } from './narrative-types';
 import * as dbMessages from '$lib/db/messages';
 import type { ModelMessage } from 'ai';
 import * as dbActLines from '$lib/db/act-lines';
@@ -30,6 +30,7 @@ export interface UIMessage {
 	role: 'user' | 'assistant';
 	content: string;
 	reasoning?: string;
+	draftReasoning?: string;
 	metadata?: MessageMetadata;
 	sceneNumber?: number;
 	sessionNumber?: number;
@@ -296,17 +297,23 @@ export async function sendMessage(
 			(state: StreamState) => {
 				const currentMessage = getCurrentMessage();
 				const vars = state.variables;
+				// review needs to see the content too
+				const content = vars ? renderFromVariables(vars, storyMessageTemplate) : currentMessage.content;
+
 				if (settings.reviewerEnabled) {
 					setCurrentMessage({
 						...currentMessage,
+						content: content,
+						variables: undefined,
 						draftVariables: vars ?? currentMessage.draftVariables,
-						reasoning: state.reasoning ?? currentMessage.reasoning,
+						reasoning: undefined,
+						draftReasoning: state.reasoning ?? currentMessage.draftReasoning,
 					});
 				} else {
 					setCurrentMessage({
 						...currentMessage,
 						variables: vars ?? currentMessage.variables,
-						content: vars ? renderFromVariables(vars, storyMessageTemplate) : currentMessage.content,
+						content: content,
 						reasoning: state.reasoning ?? currentMessage.reasoning,
 					});
 				}
@@ -325,15 +332,6 @@ export async function sendMessage(
 
 		// Review loop: run editor mode, revise if needed
 		if (settings.reviewerEnabled) {
-			// Render draft to content for the reviewer to see
-			const preReviewMsg = getCurrentMessage();
-			if (!preReviewMsg.content && preReviewMsg.draftVariables) {
-				setCurrentMessage({
-					...preReviewMsg,
-					content: renderFromVariables(preReviewMsg.draftVariables, storyMessageTemplate),
-				});
-			}
-
 			const sessionNumber = message.sessionNumber ?? findLastNonNullSessionNumber();
 			const reviewedMetadata = await runReviewLoop(
 				getCurrentMessage,

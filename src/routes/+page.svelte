@@ -578,12 +578,12 @@
 							</div>
 						{:else}
 							<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message">
-								{#if message.reasoning}
+								{#if message.draftReasoning}
 									<div class="mb-3">
 										<Accordion collapsible>
-											<Accordion.Item value="reasoning">
+											<Accordion.Item value="draftReasoning">
 												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
-													<span>Reasoning</span>
+													<span>Draft Reasoning</span>
 													<Accordion.ItemIndicator>
 														<span class="transition-transform duration-150 text-surface-500">▼</span>
 													</Accordion.ItemIndicator>
@@ -595,7 +595,7 @@
 																{...attributes}
 																class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
 															>
-																{message.reasoning}
+																<MarkdownContent content={message.draftReasoning!} />
 															</div>
 														{/if}
 													{/snippet}
@@ -608,9 +608,9 @@
 								{#if message.draftVariables?.scratchpad}
 									<div class="mb-3">
 										<Accordion collapsible>
-											<Accordion.Item value="review">
+											<Accordion.Item value="draftScratchpad">
 												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
-													<span>Review</span>
+													<span>Draft Scratchpad</span>
 													<Accordion.ItemIndicator>
 														<span class="transition-transform duration-150 text-surface-500">▼</span>
 													</Accordion.ItemIndicator>
@@ -622,7 +622,7 @@
 																{...attributes}
 																class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
 															>
-																{message.draftVariables?.scratchpad}
+																<MarkdownContent content={message.draftVariables!.scratchpad!} />
 															</div>
 														{/if}
 													{/snippet}
@@ -661,10 +661,37 @@
 									</div>
 								{/if}
 
-								{#if message.variables?.scratchpad}
+								{#if message.reasoning}
 									<div class="mb-3">
 										<Accordion collapsible>
-											<Accordion.Item value="review">
+											<Accordion.Item value="reasoning">
+												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
+													<span>Reasoning</span>
+													<Accordion.ItemIndicator>
+														<span class="transition-transform duration-150 text-surface-500">▼</span>
+													</Accordion.ItemIndicator>
+												</Accordion.ItemTrigger>
+												<Accordion.ItemContent>
+													{#snippet element(attributes)}
+														{#if !attributes.hidden}
+															<div
+																{...attributes}
+																class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
+															>
+																{message.reasoning}
+															</div>
+														{/if}
+													{/snippet}
+												</Accordion.ItemContent>
+											</Accordion.Item>
+										</Accordion>
+									</div>
+								{/if}
+
+								{#if message.variables?.reviewScratchpad}
+									<div class="mb-3">
+										<Accordion collapsible>
+											<Accordion.Item value="reviewScratchpad">
 												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
 													<span>Review</span>
 													<Accordion.ItemIndicator>
@@ -678,7 +705,34 @@
 																{...attributes}
 																class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
 															>
-																{message.variables?.scratchpad}
+																<MarkdownContent content={message.variables!.reviewScratchpad!} />
+															</div>
+														{/if}
+													{/snippet}
+												</Accordion.ItemContent>
+											</Accordion.Item>
+										</Accordion>
+									</div>
+								{/if}
+
+								{#if message.variables?.scratchpad}
+									<div class="mb-3">
+										<Accordion collapsible>
+											<Accordion.Item value="scratchpad">
+												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
+													<span>Scratchpad</span>
+													<Accordion.ItemIndicator>
+														<span class="transition-transform duration-150 text-surface-500">▼</span>
+													</Accordion.ItemIndicator>
+												</Accordion.ItemTrigger>
+												<Accordion.ItemContent>
+													{#snippet element(attributes)}
+														{#if !attributes.hidden}
+															<div
+																{...attributes}
+																class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
+															>
+																<MarkdownContent content={message.variables!.scratchpad!} />
 															</div>
 														{/if}
 													{/snippet}
@@ -692,6 +746,8 @@
 									<div class="leading-relaxed text-surface-950-50">
 										{#if storyMessageTemplate}
 											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables)} />
+										{:else}
+											<MarkdownContent content={message.content} />
 										{/if}
 									</div>
 								{/if}

@@ -8,7 +8,7 @@ import { log } from '$lib/logging/logger';
 import { getActiveNarrationTemplateOrDefault, getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
 import { type ToolSet } from 'ai';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
-import type { NarrativeVariables } from '$lib/ai/parser-chain';
+import type { NarrativeVariables } from '$lib/ai/narrative-types';
 import { hasNarrativeBody } from '$lib/ai/template-renderer';
 
 export interface ReviewLoopResult {
@@ -117,7 +117,7 @@ export async function runReviewLoop(
 			const vars = state.variables;
 			setCurrentMessage({
 				...currentMessage,
-				variables: vars ?? currentMessage.variables ?? currentMessage.draftVariables,
+				variables: vars ?? currentMessage.variables,
 				reasoning: state.reasoning ?? currentMessage.reasoning,
 			});
 		},
@@ -128,7 +128,7 @@ export async function runReviewLoop(
 		const currentMessage = getCurrentMessage();
 		setCurrentMessage({
 			...currentMessage,
-			variables: reviewResult.variables ?? currentMessage.variables ?? currentMessage.draftVariables,
+			variables: reviewResult.variables ?? currentMessage.variables,
 		});
 		return reviewResult.resultMetadata;
 	} else {
