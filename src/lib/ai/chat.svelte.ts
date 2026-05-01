@@ -329,6 +329,7 @@ export async function sendMessage(
 		const previousSceneNumber = findLastNonNullSceneNumber();
 		const completedScenes = previousSceneNumber != null ? previousSceneNumber + 1 : 1;
 		const templateReplacements = { sceneNumber: String(completedScenes) };
+		const targetWordCount = 400;
 
 		// Pipeline callback helpers
 		const renderContent = (vars: NarrativeVariables | null | undefined, fallback: string): string => {
@@ -412,7 +413,6 @@ export async function sendMessage(
 
 		const result = await runPipeline({
 			providerConfigs: buildPipelineProviderConfigs(),
-			systemPrompt,
 			generalInstructions,
 			worldContent,
 			actPlot,
@@ -429,6 +429,7 @@ export async function sendMessage(
 				runMemoryPipeline(storyId, actLineId, getCurrentMessage());
 			},
 			completedScenes,
+			targetWordCount,
 		});
 
 		// Update metadata from Editor phase

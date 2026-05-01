@@ -37,7 +37,6 @@ const SECTION = {
 	WRITER_OUTPUT: '\n## Writer Output\n',
 	REVIEWER_OUTPUT: '\n## Reviewer Output\n',
 	EDITOR_OUTPUT: '\n## Editor Output\n',
-	ACT_SUMMARY_TEMPLATE: '\n## Act Summary Template\n',
 	PREVIOUS_ACT_SUMMARY: '\n## Previous Act Summary\n',
 };
 
@@ -52,7 +51,6 @@ export interface PipelineProviderConfigs {
 
 export interface PipelineInput {
 	providerConfigs: PipelineProviderConfigs;
-	systemPrompt: string;
 	generalInstructions: string;
 	worldContent: string;
 	actPlot: string;
@@ -64,6 +62,7 @@ export interface PipelineInput {
 	callbacks: PipelineCallbacks;
 	memoryRunner?: (actSummary: string | undefined) => void;
 	completedScenes?: number;
+	targetWordCount?: number;
 }
 
 /** Parameters for a streaming pipeline phase. Shared fields come from base params. */
@@ -180,7 +179,6 @@ function toUserMessages(contents: string[]): MessageBase[] {
 export async function runPipeline(input: PipelineInput): Promise<PipelineState & { editorMetadata?: StreamResultMetadata }> {
 	const {
 		providerConfigs,
-		systemPrompt,
 		generalInstructions,
 		worldContent,
 		actPlot,
@@ -192,11 +190,13 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		callbacks,
 		memoryRunner,
 		completedScenes,
+		targetWordCount,
 	} = input;
 
-	const baseSystem = [systemPrompt, generalInstructions].join('\n\n');
-	const baseParams: Omit<StreamingPhaseParams, 'phaseName' | 'messages' | 'providerConfig' | 'buildStateUpdate'> = {
-		systemPrompt: baseSystem,
+	const defaultTargetWordCount = 400;
+	const effectTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
+
+	const sharedParams = {
 		abortSignal,
 		tools,
 		callbacks,
@@ -244,12 +244,15 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		const result = await executeStreamingPhase(
 			{
 				phaseName: 'PLOT_PLANNER',
-				...baseParams,
+				systemPrompt: plotPlannerPrompt
+					.replaceAll('{generalInstructions}', generalInstructions)
+					.replaceAll('{targetWordCount}', effectTargetWordCount),
+				...sharedParams,
 				messages: toUserMessages([
-					plotPlannerPrompt,
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
+					"Generate a Scene Plot based on the available information in the chat history."
 				]),
 				providerConfig: providerConfigs.plotPlanner,
 				buildStateUpdate: (ss) => ({ scenePlot: ss.content }),
@@ -264,14 +267,17 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		const result = await executeStreamingPhase(
 			{
 				phaseName: 'WRITER',
-				...baseParams,
+				systemPrompt: writerPrompt
+					.replaceAll('{generalInstructions}', generalInstructions)
+					.replaceAll('{targetWordCount}', effectTargetWordCount),
+				...sharedParams,
 				messages: toUserMessages([
-					writerPrompt,
 					SECTION.WRITER_OUTPUT_TEMPLATE + writerTemplate,
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
 					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
+					"Write a story prose based on the available information in the chat history."
 				]),
 				providerConfig: providerConfigs.writer,
 				buildStateUpdate: (ss) => ({ writerOutput: ss.content }),
@@ -286,14 +292,15 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		const result = await executeStreamingPhase(
 			{
 				phaseName: 'REVIEWER',
-				...baseParams,
+				systemPrompt: reviewerPrompt.replaceAll('{generalInstructions}', generalInstructions),
+				...sharedParams,
 				messages: toUserMessages([
-					reviewerPrompt,
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
 					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
 					SECTION.WRITER_OUTPUT + (state.writerOutput ?? ''),
+					"Perform a review on the writer's output based on the available information in the chat history."
 				]),
 				providerConfig: providerConfigs.reviewer,
 				buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),
@@ -308,9 +315,11 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		const result = await executeStreamingPhase(
 			{
 				phaseName: 'EDITOR',
-				...baseParams,
+				systemPrompt: editorPrompt
+					.replaceAll('{generalInstructions}', generalInstructions)
+					.replaceAll('{targetWordCount}', effectTargetWordCount),
+				...sharedParams,
 				messages: toUserMessages([
-					editorPrompt,
 					SECTION.WRITER_OUTPUT_TEMPLATE + writerTemplate,
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
@@ -318,6 +327,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
 					SECTION.WRITER_OUTPUT + (state.writerOutput ?? ''),
 					SECTION.REVIEWER_OUTPUT + (state.reviewerOutput ?? ''),
+					"Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history."
 				]),
 				providerConfig: providerConfigs.editor,
 				buildStateUpdate: (ss) => ({
@@ -337,9 +347,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	callbacks.onPhaseStart('SUMMARIZER');
 
 	const gmPromise = (async (): Promise<{ content: string; streamState: StreamState }> => {
-		const gmSystem = [systemPrompt, gameMasterPrompt].join('\n\n');
 
-		const gmPrompt = toUserMessages([
+		const gmMessages = toUserMessages([
 			SECTION.ACT_PLOT + actPlot,
 			SECTION.ACT_SUMMARY + actSummary,
 			SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
@@ -348,8 +357,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 
 		const result = await runStreamingPhase(
 			'GAME_MASTER',
-			gmSystem,
-			gmPrompt,
+			gameMasterPrompt,
+			gmMessages,
 			providerConfigs.gameMaster,
 			abortSignal,
 			undefined,
@@ -367,10 +376,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 			processedTemplate = processedTemplate.replaceAll('{completedScenes}', String(completedScenes));
 		}
 
-		const summarizerSystem = [systemPrompt, summarizerPrompt].join('\n\n');
-
+		const summarizerSystem = summarizerPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
 		const summarizerMessages = toUserMessages([
-			SECTION.ACT_SUMMARY_TEMPLATE + processedTemplate,
 			SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
 			SECTION.EDITOR_OUTPUT + (state.editorOutput ?? ''),
 		]);
