@@ -1,18 +1,23 @@
 import {
 	getMainProviderConfig,
 	getMemoryProviderConfig,
+	getPlotPlannerProviderConfig,
+	getWriterProviderConfig,
+	getReviewerProviderConfig,
+	getEditorProviderConfig,
+	getGameMasterProviderConfig,
+	getSummarizerProviderConfig,
 	type ProviderConfig,
 	settings,
 } from '$lib/stores/settings.svelte';
-import { getActiveStoryId, getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
+import { getActiveStoryId, getActiveSystemPromptOrDefault, getActiveActPlotContent, getActiveActSummary } from '$lib/stores/stories.svelte';
 import type { MessageBase } from '$lib/db/messages';
-import type { NarrativeVariables, GameDataFields } from './narrative-types';
+import type { NarrativeVariables, GameDataFields, UIScenePhase, PhaseName } from './narrative-types';
 import * as dbMessages from '$lib/db/messages';
 import type { ModelMessage } from 'ai';
 import * as dbActLines from '$lib/db/act-lines';
 import { logMainChat } from '$lib/logging/chat-logger';
-import { type StreamState } from '$lib/ai/chat-callbacks';
-import { buildMetadata, type MessageMetadata, streamChatResponse } from './chat-stream';
+import { buildMetadata, type MessageMetadata } from './chat-stream';
 import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
 import { Memory } from '$lib/memory/memory';
 import { log } from '$lib/logging/logger';
@@ -21,16 +26,20 @@ import type { StreamResultMetadata } from '$lib/ai/streaming';
 import { getErrorMessage } from '$lib/utils/error-handling';
 import { renderFromVariables, variablesToMarkdown, gameDataToMarkdown } from './template-renderer';
 import { storyMessageTemplate } from '$lib/fs/view-templates';
+import { runPipeline, type PipelineProviderConfigs } from './pipeline';
+import type { PipelineState, PipelineCallbacks, PhaseStreamState } from './pipeline-types';
+import { loadGeneralInstructions } from '$lib/fs/prompts';
 
 export interface UIMessage {
 	id: string;
 	role: 'user' | 'assistant';
 	content: string;
 	reasoning?: string;
-	draftReasoning?: string;
 	metadata?: MessageMetadata;
 	sceneNumber?: number;
 	variables?: NarrativeVariables;
+	phases?: UIScenePhase[];
+	summary?: string;
 }
 
 let messages = $state<UIMessage[]>([]);
@@ -66,6 +75,8 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 		metadata: parseMetadata(m.metadata),
 		sceneNumber: m.sceneNumber,
 		variables: m.variables,
+		summary: m.summary,
+		// phases is ephemeral — not loaded from DB
 	}));
 	error = null;
 }
@@ -90,6 +101,13 @@ function findLastNonNullSceneNumber(): number | undefined {
 		if (messages[i].sceneNumber != null) return messages[i].sceneNumber;
 	}
 	return undefined;
+}
+
+function getLatestActSummary(): string {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		if (messages[i].summary) return messages[i].summary!;
+	}
+	return '';
 }
 
 function getHistory(message: {
@@ -126,6 +144,7 @@ async function persistMessage(actLineId: string, message: UIMessage): Promise<vo
 		metadata: message.metadata ? JSON.stringify(message.metadata) : undefined,
 		sceneNumber: message.sceneNumber,
 		variables: message.variables,
+		summary: message.summary,
 	});
 	const seq = await dbActLines.getNextSequence(actLineId);
 	await dbActLines.addMessageToLine(actLineId, message.id, seq);
@@ -183,7 +202,7 @@ function runMemoryPipeline(storyId: string | null, actLineId: string, message: U
 	if (!settings.memoryEnabled) return;
 	if (!storyId || !actLineId) return;
 	memoryPipelineRunning = true;
-	memoryPipelinePromise = runMemoryExtractionPipeline(message.content, storyId, actLineId, message.id, undefined)
+	memoryPipelinePromise = runMemoryExtractionPipeline(message.content, storyId, actLineId, message.id, message.summary ?? undefined)
 		.then((result) => log.debug('memory-pipeline', `Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`))
 		.catch((err) => log.error('memory-pipeline', 'Pipeline failed', err))
 		.finally(() => {
@@ -198,6 +217,7 @@ function newMessage(role: 'user' | 'assistant'): UIMessage {
 		role: role,
 		content: '',
 		reasoning: '',
+		phases: [],
 	};
 }
 
@@ -205,6 +225,38 @@ function updateMetaData(getCurrentMessage: () => UIMessage, resultMetadata: Stre
 	if (resultMetadata) {
 		getCurrentMessage().metadata = buildMetadata(resultMetadata, providerConfig.model);
 	}
+}
+
+/** Build provider configs for all 6 pipeline roles */
+function buildPipelineProviderConfigs(): PipelineProviderConfigs {
+	return {
+		plotPlanner: getPlotPlannerProviderConfig() ?? getMainProviderConfig(),
+		writer: getWriterProviderConfig() ?? getMainProviderConfig(),
+		reviewer: getReviewerProviderConfig() ?? getMainProviderConfig(),
+		editor: getEditorProviderConfig() ?? getMainProviderConfig(),
+		gameMaster: getGameMasterProviderConfig() ?? getMainProviderConfig(),
+		summarizer: getSummarizerProviderConfig() ?? getMainProviderConfig(),
+	};
+}
+
+/** Merge Editor variables with GM game data into final NarrativeVariables */
+function buildFinalVariables(
+	editorVariables: NarrativeVariables | null | undefined,
+	gameData: GameDataFields | null | undefined
+): NarrativeVariables | undefined {
+	if (!editorVariables && !gameData) return undefined;
+	return {
+		sceneTitle: editorVariables?.sceneTitle ?? null,
+		background: editorVariables?.background ?? null,
+		narrativeBody: editorVariables?.narrativeBody ?? null,
+		cg: editorVariables?.cg ?? null,
+		gameData: gameData ?? editorVariables?.gameData ?? null,
+	};
+}
+
+/** Format PhaseName for display */
+function formatPhaseName(name: PhaseName): string {
+	return name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export async function sendMessage(
@@ -221,12 +273,12 @@ export async function sendMessage(
 		return;
 	}
 
-	const providerConfig = getMainProviderConfig();
-	if (!providerConfig?.apiKey) {
+	const mainConfig = getMainProviderConfig();
+	if (!mainConfig?.apiKey) {
 		error = 'Please configure your API key in Settings.';
 		return;
 	}
-	if (!providerConfig?.model) {
+	if (!mainConfig?.model) {
 		error = 'Please configure a model name in Settings.';
 		return;
 	}
@@ -267,39 +319,120 @@ export async function sendMessage(
 			await memoryPipelinePromise;
 		}
 
-		const resultMetadata = await streamChatResponse(
-			systemPrompt,
-			history,
-			abortController!.signal,
-			(state: StreamState) => {
-				const currentMessage = getCurrentMessage();
-				const vars = state.variables;
-				const content = vars ? renderFromVariables(vars, storyMessageTemplate) : currentMessage.content;
+		// Load pipeline context
+		const generalInstructions = await loadGeneralInstructions();
+		const worldContent = (await import('$lib/stores/stories.svelte')).getActiveWorldContent() ?? '';
+		const actPlot = getActiveActPlotContent() ?? '';
+		const actSummary = getLatestActSummary() || getActiveActSummary();
+		const userMessage = message.bodyText ?? '';
 
-				setCurrentMessage({
-					...currentMessage,
-					variables: vars ?? currentMessage.variables,
-					content: content,
-					reasoning: state.reasoning ?? currentMessage.reasoning,
-				});
+		const pipelineCallbacks: PipelineCallbacks = {
+			onPhaseStart: (phase: PhaseName) => {
+				// Editor is shown as main content, not a phase accordion
+				if (phase === 'EDITOR') return;
+				const current = getCurrentMessage();
+				const phases = [...(current.phases ?? []), { phaseName: phase, content: '' }];
+				setCurrentMessage({ ...current, phases });
 			},
-			(err: unknown) => {
+			onPhaseStream: (phase: PhaseName, streamState: PhaseStreamState) => {
+				if (phase === 'EDITOR') {
+					// Update main content/reasoning/variables directly
+					const vars = streamState.variables;
+					const content = vars ? renderFromVariables(vars, storyMessageTemplate) : streamState.content;
+					setCurrentMessage({
+						...getCurrentMessage(),
+						content,
+						reasoning: streamState.reasoning ?? getCurrentMessage().reasoning,
+						variables: vars ?? getCurrentMessage().variables,
+					});
+					return;
+				}
+
+				// Update phase content
+				const current = getCurrentMessage();
+				const phases = (current.phases ?? []).map((p) =>
+					p.phaseName === phase ? { ...p, content: streamState.content, reasoning: streamState.reasoning ?? undefined } : p
+				);
+				setCurrentMessage({ ...current, phases });
+			},
+			onPhaseComplete: (phase: PhaseName, pipelineState: PipelineState) => {
+				if (phase === 'EDITOR') {
+					// Update main content with final editor output
+					const vars = pipelineState.editorVariables;
+					const content = vars
+						? renderFromVariables(vars, storyMessageTemplate)
+						: (pipelineState.editorOutput ?? getCurrentMessage().content);
+					setCurrentMessage({
+						...getCurrentMessage(),
+						content,
+						reasoning: pipelineState.editorReasoning ?? getCurrentMessage().reasoning,
+						variables: vars ?? getCurrentMessage().variables,
+					});
+					return;
+				}
+
+				// Update phase content
+				const current = getCurrentMessage();
+				const phases = (current.phases ?? []).map((p) =>
+					p.phaseName === phase ? { ...p, content: getPhaseContent(phase, pipelineState) } : p
+				);
+
+				// After GM completes, merge game data into variables
+				if (phase === 'GAME_MASTER') {
+					const finalVars = buildFinalVariables(current.variables, pipelineState.gameData);
+					const content = finalVars ? renderFromVariables(finalVars, storyMessageTemplate) : current.content;
+					setCurrentMessage({ ...current, content, variables: finalVars ?? current.variables, phases });
+				} else {
+					setCurrentMessage({ ...current, phases });
+				}
+			},
+			onError: (phase: PhaseName, err: unknown) => {
 				const errorMessage = getErrorMessage(err);
-				log.error('send-message', errorMessage, err);
+				log.error('pipeline', `Phase ${phase} failed: ${errorMessage}`, err);
 				error = errorMessage;
 			},
-			providerConfig,
-			tools
-		).then((acc) => acc.resultMetadata);
+			onAllComplete: (pipelineState: PipelineState) => {
+				const current = getCurrentMessage();
+				const finalVars = buildFinalVariables(current.variables ?? pipelineState.editorVariables, pipelineState.gameData);
+				const content = finalVars ? renderFromVariables(finalVars, storyMessageTemplate) : (pipelineState.editorOutput ?? current.content);
+				setCurrentMessage({
+					...current,
+					content,
+					variables: finalVars ?? current.variables,
+					summary: pipelineState.actSummary ?? current.summary,
+				});
+			},
+		};
 
-		// Update message with accumulated content and final metadata
-		updateMetaData(getCurrentMessage, resultMetadata, providerConfig);
+		const result = await runPipeline({
+			providerConfigs: buildPipelineProviderConfigs(),
+			systemPrompt,
+			generalInstructions,
+			worldContent,
+			actPlot,
+			actSummary,
+			userMessage,
+			history,
+			abortSignal: abortController!.signal,
+			tools,
+			callbacks: pipelineCallbacks,
+		});
 
+		// Update metadata from Editor phase
+		if (result.editorMetadata) {
+			const editorConfig = getEditorProviderConfig() ?? mainConfig;
+			updateMetaData(getCurrentMessage, result.editorMetadata, editorConfig);
+		}
 
-		// Determine sceneNumber for the assistant response
-		await determineSceneNumber(messageIdx);
+		// Determine sceneNumber programmatically
+		const previousSceneNumber = findLastNonNullSceneNumber();
+		const sceneNumber = previousSceneNumber != null ? previousSceneNumber + 1 : 1;
+		messages[messageIdx] = {
+			...messages[messageIdx],
+			sceneNumber,
+		};
 
-		// Persist with accumulated content (not result.content)
+		// Persist with accumulated content
 		await Promise.all([
 			persistMessage(actLineId, getCurrentMessage()),
 			logMainChat({ systemPrompt, newMessages: messages.slice(-newMessagesCount), history }),
@@ -315,21 +448,22 @@ export async function sendMessage(
 	}
 }
 
-async function determineSceneNumber(messageIdx: number): Promise<void> {
-	const msg = messages[messageIdx];
-	const sceneNumber = parseSceneNumber(msg.content);
-
-	messages[messageIdx] = {
-		...messages[messageIdx],
-		sceneNumber,
-	};
-
-	await log.info('send-message', `Prepared scene ${sceneNumber}`);
-}
-
-function parseSceneNumber(content: string): number | undefined {
-	const match = /Scene number\s*(\d+)/i.exec(content);
-	return match ? parseInt(match[1], 10) : undefined;
+/** Get the final content string for a completed phase from PipelineState */
+function getPhaseContent(phase: PhaseName, state: PipelineState): string {
+	switch (phase) {
+		case 'PLOT_PLANNER':
+			return state.scenePlot ?? '';
+		case 'WRITER':
+			return state.writerOutput ?? '';
+		case 'REVIEWER':
+			return state.reviewerOutput ?? '';
+		case 'EDITOR':
+			return state.editorOutput ?? '';
+		case 'GAME_MASTER':
+			return state.gameMasterOutput ?? '';
+		case 'SUMMARIZER':
+			return state.actSummary ?? '';
+	}
 }
 
 function toHistoryMessage(message: UIMessage): MessageBase {
@@ -339,65 +473,10 @@ function toHistoryMessage(message: UIMessage): MessageBase {
 
 	const vars = message.variables;
 	const content = vars ? variablesToMarkdown(vars) : message.content;
-	const gd = vars?.gameData ?? placeholderContent();
-	const gameDataContent = '\n' + gameDataToMarkdown(gd);
+	const gd = vars?.gameData;
+	// Only include game data in history if it has meaningful content
+	const gameDataContent = gd ? '\n' + gameDataToMarkdown(gd) : '';
 	return { role: 'assistant', content: content + gameDataContent };
-}
-
-function randomItem<T>(items: readonly T[]): T {
-	return items[Math.floor(Math.random() * items.length)];
-}
-
-// Randomized history for placeholder content so that to encourage the LLM to actually offer options
-function placeholderContent(): GameDataFields {
-	return {
-		activePlotThreads: [],
-		decisionContext: randomWorldStateMessage(),
-		decisions: [1, 2, 3, 4].map((i) => randomPositionalDecisions(i)),
-	};
-}
-
-function randomWorldStateMessage(): string {
-	const intros = ['Refer to', 'Check', 'Look at', 'Review', 'Consult', 'See', 'Use', 'Read'] as const;
-
-	const subjects = [
-		'the chat history',
-		'the conversation above',
-		'the messages above',
-		'the earlier conversation',
-		'the discussion above',
-		'the story so far',
-		'the story above',
-		'what was said earlier',
-		'the earlier messages',
-		'the previous context',
-	] as const;
-
-	const endings = [
-		'.',
-		' for context.',
-		' for details.',
-		' for reference.',
-		' to understand the situation.',
-		' to see what happened before.',
-	] as const;
-
-	return `${randomItem(intros)} ${randomItem(subjects)}${randomItem(endings)}`;
-}
-
-function randomPositionalDecisions(i: number): string {
-	return randomItem([
-		`Option ${i}.`,
-		`Select option ${i}.`,
-		`Pick option ${i}.`,
-		`Go with option ${i}.`,
-		`Option ${i} sounds right.`,
-		`I will choose option ${i}.`,
-		`I want to select option ${i}.`,
-		`My choice is option ${i}.`,
-		`For this decision, choose option ${i}.`,
-		`Option ${i} will be selected.`,
-	] as const);
 }
 
 export function stopStreaming(): void {

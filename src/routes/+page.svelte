@@ -153,6 +153,11 @@
 	// Track whether story was already created to prevent duplicates on retry
 	let storyCreated = $state(false);
 
+	/** Format PhaseName for display in the UI */
+	function formatPhaseName(name: string): string {
+		return name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+	}
+
 	/**
 	 * Ensure story is created from world builder content.
 	 * Returns true if story exists (either already created or newly created).
@@ -578,97 +583,48 @@
 							</div>
 						{:else}
 							<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message">
-								{#if message.draftReasoning}
-									<div class="mb-3">
-										<Accordion collapsible>
-											<Accordion.Item value="draftReasoning">
-												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
-													<span>Draft Reasoning</span>
-													<Accordion.ItemIndicator>
-														<span class="transition-transform duration-150 text-surface-500">▼</span>
-													</Accordion.ItemIndicator>
-												</Accordion.ItemTrigger>
-												<Accordion.ItemContent>
-													{#snippet element(attributes)}
-														{#if !attributes.hidden}
-															<div
-																{...attributes}
-																class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
-															>
-																<MarkdownContent content={message.draftReasoning!} />
-															</div>
-														{/if}
-													{/snippet}
-												</Accordion.ItemContent>
-											</Accordion.Item>
-										</Accordion>
-									</div>
+								<!-- Pipeline phase accordions -->
+								{#if message.phases && message.phases.length > 0}
+									{#each message.phases as phase, pi (pi)}
+										<div class="mb-3">
+											<Accordion collapsible>
+												<Accordion.Item value={phase.phaseName}>
+													<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
+														<span>{formatPhaseName(phase.phaseName)}</span>
+														<Accordion.ItemIndicator>
+															<span class="transition-transform duration-150 text-surface-500">&#9660;</span>
+														</Accordion.ItemIndicator>
+													</Accordion.ItemTrigger>
+													<Accordion.ItemContent>
+														{#snippet element(attributes)}
+															{#if !attributes.hidden}
+																<div
+																	{...attributes}
+																	class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
+																>
+																	{#if phase.reasoning}
+																		<div class="mb-2 italic text-surface-400">{phase.reasoning}</div>
+																	{/if}
+																	<MarkdownContent content={phase.content} />
+																</div>
+															{/if}
+														{/snippet}
+													</Accordion.ItemContent>
+												</Accordion.Item>
+											</Accordion>
+										</div>
+									{/each}
 								{/if}
 
-								{#if message.draftVariables?.scratchpad}
-									<div class="mb-3">
-										<Accordion collapsible>
-											<Accordion.Item value="draftScratchpad">
-												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
-													<span>Draft Scratchpad</span>
-													<Accordion.ItemIndicator>
-														<span class="transition-transform duration-150 text-surface-500">▼</span>
-													</Accordion.ItemIndicator>
-												</Accordion.ItemTrigger>
-												<Accordion.ItemContent>
-													{#snippet element(attributes)}
-														{#if !attributes.hidden}
-															<div
-																{...attributes}
-																class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
-															>
-																<MarkdownContent content={message.draftVariables!.scratchpad!} />
-															</div>
-														{/if}
-													{/snippet}
-												</Accordion.ItemContent>
-											</Accordion.Item>
-										</Accordion>
-									</div>
-								{/if}
-
-								{#if message.draftVariables}
-									<div class="mb-3">
-										<Accordion collapsible>
-											<Accordion.Item value="draft">
-												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
-													<span>Draft</span>
-													<Accordion.ItemIndicator>
-														<span class="transition-transform duration-150 text-surface-500">▼</span>
-													</Accordion.ItemIndicator>
-												</Accordion.ItemTrigger>
-												<Accordion.ItemContent>
-													{#snippet element(attributes)}
-														{#if !attributes.hidden}
-															<div
-																{...attributes}
-																class="text-xs text-surface-500 leading-relaxed border-l-2 border-surface-200-800 pl-3 mt-2"
-															>
-																{#if message.draftVariables && hasTemplateMetadata(message.draftVariables) && storyMessageTemplate}
-																	<MarkdownContent content={renderTemplate(storyMessageTemplate, message.draftVariables)} />
-																{/if}
-															</div>
-														{/if}
-													{/snippet}
-												</Accordion.ItemContent>
-											</Accordion.Item>
-										</Accordion>
-									</div>
-								{/if}
-
-								{#if message.reasoning}
+								<!-- Editor reasoning (for non-pipeline messages or loaded from DB) -->
+								{#if message.reasoning && (!message.phases || message.phases.length === 0)}
 									<div class="mb-3">
 										<Accordion collapsible>
 											<Accordion.Item value="reasoning">
 												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
 													<span>Reasoning</span>
 													<Accordion.ItemIndicator>
-														<span class="transition-transform duration-150 text-surface-500">▼</span>
+														<span class="transition-transform duration-150 text-surface-500">&#9660;</span>
 													</Accordion.ItemIndicator>
 												</Accordion.ItemTrigger>
 												<Accordion.ItemContent>
@@ -688,60 +644,7 @@
 									</div>
 								{/if}
 
-								{#if message.variables?.reviewScratchpad}
-									<div class="mb-3">
-										<Accordion collapsible>
-											<Accordion.Item value="reviewScratchpad">
-												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
-													<span>Review</span>
-													<Accordion.ItemIndicator>
-														<span class="transition-transform duration-150 text-surface-500">▼</span>
-													</Accordion.ItemIndicator>
-												</Accordion.ItemTrigger>
-												<Accordion.ItemContent>
-													{#snippet element(attributes)}
-														{#if !attributes.hidden}
-															<div
-																{...attributes}
-																class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
-															>
-																<MarkdownContent content={message.variables!.reviewScratchpad!} />
-															</div>
-														{/if}
-													{/snippet}
-												</Accordion.ItemContent>
-											</Accordion.Item>
-										</Accordion>
-									</div>
-								{/if}
-
-								{#if message.variables?.scratchpad}
-									<div class="mb-3">
-										<Accordion collapsible>
-											<Accordion.Item value="scratchpad">
-												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
-													<span>Scratchpad</span>
-													<Accordion.ItemIndicator>
-														<span class="transition-transform duration-150 text-surface-500">▼</span>
-													</Accordion.ItemIndicator>
-												</Accordion.ItemTrigger>
-												<Accordion.ItemContent>
-													{#snippet element(attributes)}
-														{#if !attributes.hidden}
-															<div
-																{...attributes}
-																class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
-															>
-																<MarkdownContent content={message.variables!.scratchpad!} />
-															</div>
-														{/if}
-													{/snippet}
-												</Accordion.ItemContent>
-											</Accordion.Item>
-										</Accordion>
-									</div>
-								{/if}
-
+								<!-- Main content: Editor output -->
 								{#if message.variables && hasTemplateMetadata(message.variables)}
 									<div class="leading-relaxed text-surface-950-50">
 										{#if storyMessageTemplate}
@@ -751,16 +654,36 @@
 										{/if}
 									</div>
 								{/if}
+
 								{#if getIsStreaming() && message === getMessages().at(-1)}
 									<span
 										data-streaming-cursor
 										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content || hasTemplateMetadata(message.variables) ? 'mt-2' : ''}"
 									></span>
 								{/if}
+
+								<!-- Game data: activePlotThreads + decisionContext -->
+								{#if message.variables?.gameData?.activePlotThreads?.length || message.variables?.gameData?.decisionContext}
+									<div class="mt-3 pt-3 border-t border-surface-200-800">
+										<div class="text-xs font-medium text-surface-500 mb-2">Game Data</div>
+										{#if message.variables.gameData.activePlotThreads.length > 0}
+											<div class="text-xs text-surface-500 mb-1">
+												<span class="font-medium">Active Plot Threads:</span>
+												{message.variables.gameData.activePlotThreads.join(', ')}
+											</div>
+										{/if}
+										{#if message.variables.gameData.decisionContext}
+											<div class="text-xs text-surface-500">
+												<span class="font-medium">Decision Context:</span>
+												{message.variables.gameData.decisionContext}
+											</div>
+										{/if}
+									</div>
+								{/if}
+
 								{#if message.metadata}
 									<pre
-										class="mt-4 pt-3 border-t border-surface-200-800 text-xs text-surface-500 font-mono leading-relaxed">model:       {message
-											.metadata.model}
+										class="mt-4 pt-3 border-t border-surface-200-800 text-xs text-surface-500 font-mono leading-relaxed">model:       {message.metadata.model}
 finish:      {message.metadata.finishReason}
 tokens:      {message.metadata.promptTokens} prompt + {message.metadata.completionTokens} completion = {message.metadata.totalTokens} total
 duration:    {message.metadata.durationMs}ms</pre>

@@ -8,13 +8,11 @@ import { getLogFilePath } from '$lib/ai/world-builder.svelte';
 import { Memory } from '$lib/memory/memory';
 import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 import type { ModelMessage } from 'ai';
-import {
-	loadStorySystemPrompt,
-	loadSystemPrompt,
-} from '$lib/fs/prompts';
+import { loadStorySystemPrompt, loadSystemPrompt } from '$lib/fs/prompts';
 import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-folders';
-import { writeTextFile, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { writeTextFile, readTextFile, exists, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
+import { buildLineDir } from '$lib/ai/card-output-path';
 
 export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
 
@@ -30,6 +28,8 @@ let isSelectingStory = $state(false);
 let activeSystemPrompt = $state<string | null>(null);
 let activeWorldContent = $state<string | null>(null);
 let activeInterviewTranscript = $state<ModelMessage[]>([]);
+let activeActPlotContent = $state<string>('');
+let activeActSummary = $state<string>('');
 
 export function getStories(): dbStories.Story[] {
 	return stories;
@@ -67,6 +67,12 @@ export async function getActiveSystemPromptOrDefault(): Promise<string> {
 export function getActiveWorldContent(): string | null {
 	return activeWorldContent;
 }
+export function getActiveActPlotContent(): string {
+	return activeActPlotContent;
+}
+export function getActiveActSummary(): string {
+	return activeActSummary;
+}
 /**
  * Combined narration context as message array.
  * This is what gets prepended as hidden messages on every AI call.
@@ -90,7 +96,6 @@ export function getActiveNarrationContext(): ModelMessage[] {
 		result.push(...interview);
 		result.push({ role: 'user', content: 'That was the end of the interview transcript.' });
 	}
-
 
 	if (result.length > 0) {
 		const act = acts.find((a) => a.id === activeActId);
@@ -139,6 +144,8 @@ function resetStoryContent(): void {
 	activeSystemPrompt = null;
 	activeWorldContent = null;
 	activeInterviewTranscript = [];
+	activeActPlotContent = '';
+	activeActSummary = '';
 }
 
 export async function selectStory(storyId: string | null): Promise<void> {
@@ -191,8 +198,51 @@ export async function selectActLine(actLineId: string | null): Promise<void> {
 		} catch {
 			activeInterviewTranscript = [];
 		}
+		await loadActPlotAndSummary();
 	} else {
 		activeInterviewTranscript = [];
+		activeActPlotContent = '';
+		activeActSummary = '';
+	}
+}
+
+/**
+ * Load act plot content from file and latest act summary from DB messages.
+ */
+async function loadActPlotAndSummary(): Promise<void> {
+	activeActPlotContent = '';
+	activeActSummary = '';
+
+	if (!activeStoryId || !activeActLineId || !activeStoryName) return;
+
+	try {
+		// Load act plot file
+		const storyFolder = await resolveStoryFolder(activeStoryId, activeStoryName);
+		const act = acts.find((a) => a.id === activeActId);
+		const actLine = actLines.find((l) => l.id === activeActLineId);
+		if (act && actLine) {
+			const lineDir = buildLineDir(storyFolder, act.actNumber, actLine.isMainLine, actLine.id);
+			const plotPath = `${lineDir}/act-plot.md`;
+			const plotExists = await exists(plotPath, { baseDir: BaseDirectory.AppData });
+			if (plotExists) {
+				activeActPlotContent = await readTextFile(plotPath, { baseDir: BaseDirectory.AppData });
+			}
+		}
+	} catch {
+		// Act plot file may not exist yet
+	}
+
+	try {
+		// Load latest act summary from DB messages
+		const dbMsgs = await dbActLines.getMessagesForLine(activeActLineId);
+		for (let i = dbMsgs.length - 1; i >= 0; i--) {
+			if (dbMsgs[i].summary) {
+				activeActSummary = dbMsgs[i].summary!;
+				return;
+			}
+		}
+	} catch {
+		// Summary may not exist yet
 	}
 }
 
@@ -306,7 +356,10 @@ async function copyMemoriesForFork(fromLineId: string, toLineId: string, fromSeq
 
 		const memory = new Memory(config);
 		const result = await memory.copyMemoriesForFork(storyId, fromLineId, toLineId, messageIds);
-		log.info('fork', `Copied ${result.memoriesCopied} memories, ${result.locationsCopied} locations, ${result.aliasesCopied} aliases to line ${toLineId}`);
+		log.info(
+			'fork',
+			`Copied ${result.memoriesCopied} memories, ${result.locationsCopied} locations, ${result.aliasesCopied} aliases to line ${toLineId}`
+		);
 	} catch (err) {
 		log.error('fork', 'Failed to copy memories for fork', err);
 	}
