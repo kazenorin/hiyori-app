@@ -42,11 +42,13 @@
 		getActiveSystemPrompt,
 		getActiveSystemPromptOrDefault,
 		getIsSelectingStory,
+		setActiveActPlotContent,
 	} from '$lib/stores/stories.svelte';
 	import {Accordion} from '@skeletonlabs/skeleton-svelte';
 	import {findLastIndex} from 'lodash';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
+	import { formatPhaseName } from '$lib/ai/narrative-types';
 	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
 	import {generateActPlot} from '$lib/ai/act-plot-generator';
 	import {getActLine} from '$lib/db/act-lines';
@@ -153,11 +155,6 @@
 	// Track whether story was already created to prevent duplicates on retry
 	let storyCreated = $state(false);
 
-	/** Format PhaseName for display in the UI */
-	function formatPhaseName(name: string): string {
-		return name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-	}
-
 	/**
 	 * Ensure story is created from world builder content.
 	 * Returns true if story exists (either already created or newly created).
@@ -195,7 +192,8 @@
 	async function startGame(storyId: string, storyName: string, actLineId: string, worldContent: string): Promise<void> {
 		const actLine = await getActLine(actLineId);
 		const isMainLine = actLine?.isMainLine ?? true;
-		await generateActPlot(storyId, storyName, worldContent, actLineId, isMainLine);
+		const result = await generateActPlot(storyId, storyName, worldContent, actLineId, isMainLine);
+		setActiveActPlotContent(result.content);
 
 		exitWorldBuilderMode();
 
@@ -648,7 +646,7 @@
 								{#if message.variables && hasTemplateMetadata(message.variables)}
 									<div class="leading-relaxed text-surface-950-50">
 										{#if storyMessageTemplate}
-											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables)} />
+											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)} />
 										{:else}
 											<MarkdownContent content={message.content} />
 										{/if}

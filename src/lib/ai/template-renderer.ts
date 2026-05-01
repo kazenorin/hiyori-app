@@ -1,9 +1,4 @@
-import {
-	type NarrativeVariables,
-	type GameDataFields,
-	FIELD_DESCRIPTORS,
-	NARRATIVE_VARIABLE_FIELDS,
-} from './narrative-types';
+import { type NarrativeVariables, type GameDataFields, FIELD_DESCRIPTORS, NARRATIVE_VARIABLE_FIELDS } from './narrative-types';
 
 const SERIALIZABLE_FIELDS = FIELD_DESCRIPTORS.filter((d) => d.includeInSerialization);
 
@@ -42,51 +37,49 @@ export function hasNarrativeBody(vars: NarrativeVariables): boolean {
 
 /**
  * Render a view template by substituting {placeholder} tokens with variable values.
+ * Uses single-pass regex replacement to avoid order-dependent behavior and
+ * second-order substitution. Extra replacements take precedence over narrative variables.
  */
-export function renderTemplate(template: string, vars: NarrativeVariables): string {
-	let result = template;
+export function renderTemplate(template: string, vars: NarrativeVariables, extraReplacements?: Record<string, string>): string {
+	// Build merged replacement map (extra replacements override narrative variables on collision)
+	const replacements: Record<string, string> = {};
+
 	for (const key of NARRATIVE_VARIABLE_FIELDS) {
 		const value = vars[key];
 		if (Array.isArray(value)) {
-			result = result.replaceAll(`{${key}}`, value.map((item) => `- ${item}`).join('\n'));
+			replacements[key] = value.map((item) => `- ${item}`).join('\n');
 		} else if (typeof value === 'string') {
-			result = result.replaceAll(`{${key}}`, value.trim());
+			replacements[key] = value.trim();
 		} else {
-			result = result.replaceAll(`{${key}}`, '');
+			replacements[key] = '';
 		}
 	}
+
 	// Game data placeholders
 	const gd = vars.gameData;
-	if (gd) {
-		// {activePlotThreads} from gameData
-		if (gd.activePlotThreads.length > 0) {
-			result = result.replaceAll('{activePlotThreads}', gd.activePlotThreads.map((t) => `- ${t}`).join('\n'));
-		} else {
-			result = result.replaceAll('{activePlotThreads}', '');
-		}
-		// {decisionContext} from gameData
-		result = result.replaceAll('{decisionContext}', gd.decisionContext ?? '');
-		// {decisions} from gameData
-		if (gd.decisions.length > 0) {
-			const decisionsText = gd.decisions.map((d, i) => `${i + 1}. ${d}`).join('\n');
-			result = result.replaceAll('{decisions}', decisionsText);
-		} else {
-			result = result.replaceAll('{decisions}', '');
-		}
-	} else {
-		result = result.replaceAll('{activePlotThreads}', '');
-		result = result.replaceAll('{decisionContext}', '');
-		result = result.replaceAll('{decisions}', '');
+	replacements['activePlotThreads'] = gd?.activePlotThreads.length ? gd.activePlotThreads.map((t) => `- ${t}`).join('\n') : '';
+	replacements['decisionContext'] = gd?.decisionContext ?? '';
+	replacements['decisions'] = gd?.decisions.length ? gd.decisions.map((d, i) => `${i + 1}. ${d}`).join('\n') : '';
+
+	// Extra replacements override narrative variables (e.g., programmatic sceneNumber over LLM output)
+	if (extraReplacements) {
+		Object.assign(replacements, extraReplacements);
 	}
-	return result;
+
+	// Single-pass replacement — avoids second-order substitution and order-dependent behavior
+	return template.replace(/\{(\w+)\}/g, (_, key: string) => replacements[key] ?? `{${key}}`);
 }
 
 /**
  * Render template from variables, returning empty string if no template metadata present.
  */
-export function renderFromVariables(vars: NarrativeVariables | null | undefined, template: string): string {
+export function renderFromVariables(
+	vars: NarrativeVariables | null | undefined,
+	template: string,
+	extraReplacements?: Record<string, string>
+): string {
 	if (!vars || !hasTemplateMetadata(vars)) return '';
-	return renderTemplate(template, vars);
+	return renderTemplate(template, vars, extraReplacements);
 }
 
 // --- Serialization (for LLM history) ---

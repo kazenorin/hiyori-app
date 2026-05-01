@@ -8,6 +8,16 @@ import type { PhaseName } from './narrative-types';
 import type { PipelineState, PipelineCallbacks, PhaseStreamState } from './pipeline-types';
 import type { StreamState } from './chat-callbacks';
 import type { StreamResultMetadata } from './streaming';
+import {
+	loadPlotPlannerPrompt,
+	loadWriterPrompt,
+	loadWriterOutputTemplate,
+	loadReviewerPrompt,
+	loadEditorPrompt,
+	loadGameMasterPrompt,
+	loadSummarizerPrompt,
+	loadActSummaryTemplate,
+} from '$lib/fs/prompts';
 
 export interface PipelineProviderConfigs {
 	plotPlanner: ProviderConfig | undefined;
@@ -25,17 +35,44 @@ export interface PipelineInput {
 	worldContent: string;
 	actPlot: string;
 	actSummary: string;
-	userMessage: string;
 	history: MessageBase[];
 	abortSignal: AbortSignal;
 	tools?: ToolSet;
 	callbacks: PipelineCallbacks;
-	memoryRunner?: () => Promise<void>;
+	memoryRunner?: () => void;
 	completedScenes?: number;
 }
 
 function updateState(prev: PipelineState, patch: Partial<PipelineState>): PipelineState {
 	return { ...prev, ...patch };
+}
+
+/**
+ * Execute a streaming phase with full lifecycle management (start, stream, complete, error).
+ * Returns the updated pipeline state and stream result metadata.
+ */
+async function executeStreamingPhase(
+	phaseName: PhaseName,
+	state: PipelineState,
+	systemPrompt: string,
+	messages: MessageBase[],
+	providerConfig: ProviderConfig | undefined,
+	abortSignal: AbortSignal,
+	tools: ToolSet | undefined,
+	callbacks: PipelineCallbacks,
+	buildStateUpdate: (streamState: StreamState) => Partial<PipelineState>
+): Promise<{ state: PipelineState; streamState: StreamState; metadata: StreamResultMetadata }> {
+	state = updateState(state, { currentPhase: phaseName });
+	callbacks.onPhaseStart(phaseName);
+	try {
+		const result = await runStreamingPhase(phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks);
+		state = updateState(state, buildStateUpdate(result.state));
+		callbacks.onPhaseComplete(phaseName, state);
+		return { state, streamState: result.state, metadata: result.metadata };
+	} catch (err: unknown) {
+		callbacks.onError(phaseName, err);
+		throw err;
+	}
 }
 
 /**
@@ -76,13 +113,14 @@ async function runStreamingPhase(
  * Run a single non-streaming phase (e.g., Summarizer) and return the generated text.
  */
 async function runNonStreamingPhase(
+	phaseName: string,
 	systemPrompt: string,
 	messages: MessageBase[],
 	providerConfig: ProviderConfig | undefined,
 	abortSignal: AbortSignal
 ): Promise<string> {
 	if (!providerConfig) {
-		throw new Error('No provider configured for SUMMARIZER. Please set one in Settings.');
+		throw new Error(`No provider configured for ${phaseName}. Please set one in Settings.`);
 	}
 
 	const model = createModel(providerConfig);
@@ -109,7 +147,6 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		worldContent,
 		actPlot,
 		actSummary,
-		userMessage,
 		history,
 		abortSignal,
 		tools,
@@ -120,47 +157,36 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 
 	let state: PipelineState = { currentPhase: null };
 	let editorMetadata: StreamResultMetadata | undefined;
+	const writerTemplate = await loadWriterOutputTemplate();
 
 	// --- Phase 1: Plot Planner ---
-	state = updateState(state, { currentPhase: 'PLOT_PLANNER' });
-	callbacks.onPhaseStart('PLOT_PLANNER');
-
-	try {
+	{
 		const plotPlannerSystem = [
 			systemPrompt,
 			generalInstructions,
-			await (await import('$lib/fs/prompts')).loadPlotPlannerPrompt(),
+			await loadPlotPlannerPrompt(),
 			'\n## World Content\n' + worldContent,
 			'\n## Act Plot\n' + actPlot,
 			'\n## Act Summary\n' + actSummary,
 		].join('\n\n');
 
-		const plotPlannerMessages: MessageBase[] = [...history, { role: 'user' as const, content: userMessage }];
-
-		const result = await runStreamingPhase(
+		const result = await executeStreamingPhase(
 			'PLOT_PLANNER',
+			state,
 			plotPlannerSystem,
-			plotPlannerMessages,
+			history,
 			providerConfigs.plotPlanner,
 			abortSignal,
 			tools,
-			callbacks
+			callbacks,
+			(ss) => ({ scenePlot: ss.content })
 		);
-
-		state = updateState(state, { scenePlot: result.state.content });
-		callbacks.onPhaseComplete('PLOT_PLANNER', state);
-	} catch (err: unknown) {
-		callbacks.onError('PLOT_PLANNER', err);
-		throw err;
+		state = result.state;
 	}
 
 	// --- Phase 2: Writer ---
-	state = updateState(state, { currentPhase: 'WRITER' });
-	callbacks.onPhaseStart('WRITER');
-
-	try {
-		const writerPromptContent = await (await import('$lib/fs/prompts')).loadWriterPrompt();
-		const writerTemplate = await (await import('$lib/fs/prompts')).loadWriterOutputTemplate();
+	{
+		const writerPromptContent = await loadWriterPrompt();
 		const writerSystem = [
 			systemPrompt,
 			generalInstructions,
@@ -172,31 +198,23 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 			'\n## Scene Plot\n' + (state.scenePlot ?? ''),
 		].join('\n\n');
 
-		const writerMessages: MessageBase[] = [...history, { role: 'user' as const, content: userMessage }];
-
-		const result = await runStreamingPhase(
+		const result = await executeStreamingPhase(
 			'WRITER',
+			state,
 			writerSystem,
-			writerMessages,
+			history,
 			providerConfigs.writer,
 			abortSignal,
 			undefined,
-			callbacks
+			callbacks,
+			(ss) => ({ writerOutput: ss.content })
 		);
-
-		state = updateState(state, { writerOutput: result.state.content });
-		callbacks.onPhaseComplete('WRITER', state);
-	} catch (err: unknown) {
-		callbacks.onError('WRITER', err);
-		throw err;
+		state = result.state;
 	}
 
 	// --- Phase 3: Reviewer ---
-	state = updateState(state, { currentPhase: 'REVIEWER' });
-	callbacks.onPhaseStart('REVIEWER');
-
-	try {
-		const reviewerPromptContent = await (await import('$lib/fs/prompts')).loadReviewerPrompt();
+	{
+		const reviewerPromptContent = await loadReviewerPrompt();
 		const reviewerSystem = [
 			generalInstructions,
 			reviewerPromptContent,
@@ -211,30 +229,23 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 			{ role: 'user' as const, content: 'Review the Writer Output above against the General Instructions and Review Rules.' },
 		];
 
-		const result = await runStreamingPhase(
+		const result = await executeStreamingPhase(
 			'REVIEWER',
+			state,
 			reviewerSystem,
 			reviewerMessages,
 			providerConfigs.reviewer,
 			abortSignal,
 			tools,
-			callbacks
+			callbacks,
+			(ss) => ({ reviewerOutput: ss.content })
 		);
-
-		state = updateState(state, { reviewerOutput: result.state.content });
-		callbacks.onPhaseComplete('REVIEWER', state);
-	} catch (err: unknown) {
-		callbacks.onError('REVIEWER', err);
-		throw err;
+		state = result.state;
 	}
 
 	// --- Phase 4: Editor ---
-	state = updateState(state, { currentPhase: 'EDITOR' });
-	callbacks.onPhaseStart('EDITOR');
-
-	try {
-		const editorPromptContent = await (await import('$lib/fs/prompts')).loadEditorPrompt();
-		const writerTemplate = await (await import('$lib/fs/prompts')).loadWriterOutputTemplate();
+	{
+		const editorPromptContent = await loadEditorPrompt();
 		const editorSystem = [
 			generalInstructions,
 			editorPromptContent,
@@ -254,26 +265,23 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 			},
 		];
 
-		const result = await runStreamingPhase(
+		const result = await executeStreamingPhase(
 			'EDITOR',
+			state,
 			editorSystem,
 			editorMessages,
 			providerConfigs.editor,
 			abortSignal,
 			undefined,
-			callbacks
+			callbacks,
+			(ss) => ({
+				editorOutput: ss.content,
+				editorVariables: ss.variables,
+				editorReasoning: ss.reasoning,
+			})
 		);
-
-		state = updateState(state, {
-			editorOutput: result.state.content,
-			editorVariables: result.state.variables,
-			editorReasoning: result.state.reasoning,
-		});
+		state = result.state;
 		editorMetadata = result.metadata;
-		callbacks.onPhaseComplete('EDITOR', state);
-	} catch (err: unknown) {
-		callbacks.onError('EDITOR', err);
-		throw err;
 	}
 
 	// --- Phase 5 & 6: Game Master + Summarizer (parallel) + Memory (fire-and-forget) ---
@@ -281,7 +289,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	callbacks.onPhaseStart('SUMMARIZER');
 
 	const gmPromise = (async (): Promise<{ content: string; streamState: StreamState }> => {
-		const gmPromptContent = await (await import('$lib/fs/prompts')).loadGameMasterPrompt();
+		const gmPromptContent = await loadGameMasterPrompt();
 		const gmSystem = [
 			gmPromptContent,
 			'\n## Act Plot\n' + actPlot,
@@ -306,12 +314,12 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	})();
 
 	const summarizerPromise = (async (): Promise<string> => {
-		const summarizerPromptContent = await (await import('$lib/fs/prompts')).loadSummarizerPrompt();
-		let summaryTemplate = await (await import('$lib/fs/prompts')).loadActSummaryTemplate();
+		const summarizerPromptContent = await loadSummarizerPrompt();
+		let summaryTemplate = await loadActSummaryTemplate();
 
 		// Inject programmatic completed scenes count
 		if (completedScenes != null) {
-			summaryTemplate = summaryTemplate.replace('{completedScenes}', String(completedScenes));
+			summaryTemplate = summaryTemplate.replaceAll('{completedScenes}', String(completedScenes));
 		}
 
 		const summarizerSystem = [
@@ -323,32 +331,41 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 
 		const summarizerMessages: MessageBase[] = [{ role: 'user' as const, content: 'Update the Act Summary based on the new scene.' }];
 
-		return runNonStreamingPhase(summarizerSystem, summarizerMessages, providerConfigs.summarizer, abortSignal);
+		return runNonStreamingPhase('SUMMARIZER', summarizerSystem, summarizerMessages, providerConfigs.summarizer, abortSignal);
 	})();
 
 	// Fire-and-forget memory runner in parallel
 	if (memoryRunner) {
-		memoryRunner().catch(() => {
-			// Errors are logged inside the memory runner itself
-		});
+		memoryRunner();
 	}
 
-	try {
-		const [gmResult, newActSummary] = await Promise.all([gmPromise, summarizerPromise]);
+	const results = await Promise.allSettled([gmPromise, summarizerPromise]);
 
-		// Extract game data from GM stream state
+	// Handle GM result
+	if (results[0].status === 'fulfilled') {
+		const gmResult = results[0].value;
 		const gmVariables = gmResult.streamState.variables;
-
 		state = updateState(state, {
 			gameMasterOutput: gmResult.content,
 			gameData: gmVariables?.gameData ?? null,
-			actSummary: newActSummary,
 		});
 		callbacks.onPhaseComplete('GAME_MASTER', state);
+	} else {
+		callbacks.onError('GAME_MASTER', results[0].reason);
+	}
+
+	// Handle Summarizer result
+	if (results[1].status === 'fulfilled') {
+		state = updateState(state, { actSummary: results[1].value });
 		callbacks.onPhaseComplete('SUMMARIZER', state);
-	} catch (err: unknown) {
-		callbacks.onError('GAME_MASTER', err);
-		throw err;
+	} else {
+		callbacks.onError('SUMMARIZER', results[1].reason);
+		// Summarizer failure is non-fatal — the act summary is not essential to the immediate response
+	}
+
+	// Throw if GM failed (essential game data)
+	if (results[0].status === 'rejected') {
+		throw results[0].reason;
 	}
 
 	state = updateState(state, { currentPhase: null });

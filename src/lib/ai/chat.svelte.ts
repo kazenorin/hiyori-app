@@ -10,7 +10,13 @@ import {
 	type ProviderConfig,
 	settings,
 } from '$lib/stores/settings.svelte';
-import { getActiveStoryId, getActiveSystemPromptOrDefault, getActiveActPlotContent, getActiveActSummary } from '$lib/stores/stories.svelte';
+import {
+	getActiveStoryId,
+	getActiveSystemPromptOrDefault,
+	getActiveActPlotContent,
+	getActiveActSummary,
+	getActiveWorldContent,
+} from '$lib/stores/stories.svelte';
 import type { MessageBase } from '$lib/db/messages';
 import type { NarrativeVariables, GameDataFields, UIScenePhase, PhaseName } from './narrative-types';
 import * as dbMessages from '$lib/db/messages';
@@ -254,11 +260,6 @@ function buildFinalVariables(
 	};
 }
 
-/** Format PhaseName for display */
-function formatPhaseName(name: PhaseName): string {
-	return name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
 export async function sendMessage(
 	actLineId: string,
 	message: {
@@ -321,12 +322,39 @@ export async function sendMessage(
 
 		// Load pipeline context
 		const generalInstructions = await loadGeneralInstructions();
-		const worldContent = (await import('$lib/stores/stories.svelte')).getActiveWorldContent() ?? '';
+		const worldContent = getActiveWorldContent() ?? '';
 		const actPlot = getActiveActPlotContent() ?? '';
 		const actSummary = getLatestActSummary() || getActiveActSummary();
-		const userMessage = message.bodyText ?? '';
 		const previousSceneNumber = findLastNonNullSceneNumber();
 		const completedScenes = previousSceneNumber != null ? previousSceneNumber + 1 : 1;
+		const templateReplacements = { sceneNumber: String(completedScenes) };
+
+		// Pipeline callback helpers
+		const renderContent = (vars: NarrativeVariables | null | undefined, fallback: string): string => {
+			if (!vars) return fallback;
+			const rendered = renderFromVariables(vars, storyMessageTemplate, templateReplacements);
+			return rendered || fallback;
+		};
+
+		const updatePhaseInList = (phase: PhaseName, update: Partial<UIScenePhase>): void => {
+			const current = getCurrentMessage();
+			const phases = (current.phases ?? []).map((p) => (p.phaseName === phase ? { ...p, ...update } : p));
+			setCurrentMessage({ ...current, phases });
+		};
+
+		const updateEditorMessage = (
+			content: string,
+			reasoning: string | null | undefined,
+			variables: NarrativeVariables | null | undefined
+		): void => {
+			const current = getCurrentMessage();
+			setCurrentMessage({
+				...current,
+				content,
+				reasoning: reasoning ?? current.reasoning,
+				variables: variables ?? current.variables,
+			});
+		};
 
 		const pipelineCallbacks: PipelineCallbacks = {
 			onPhaseStart: (phase: PhaseName) => {
@@ -338,54 +366,29 @@ export async function sendMessage(
 			},
 			onPhaseStream: (phase: PhaseName, streamState: PhaseStreamState) => {
 				if (phase === 'EDITOR') {
-					// Update main content/reasoning/variables directly
-					const vars = streamState.variables;
-					const content = vars ? renderFromVariables(vars, storyMessageTemplate) : streamState.content;
-					setCurrentMessage({
-						...getCurrentMessage(),
-						content,
-						reasoning: streamState.reasoning ?? getCurrentMessage().reasoning,
-						variables: vars ?? getCurrentMessage().variables,
-					});
+					updateEditorMessage(renderContent(streamState.variables, streamState.content), streamState.reasoning, streamState.variables);
 					return;
 				}
-
-				// Update phase content
-				const current = getCurrentMessage();
-				const phases = (current.phases ?? []).map((p) =>
-					p.phaseName === phase ? { ...p, content: streamState.content, reasoning: streamState.reasoning ?? undefined } : p
-				);
-				setCurrentMessage({ ...current, phases });
+				updatePhaseInList(phase, { content: streamState.content, reasoning: streamState.reasoning ?? undefined });
 			},
 			onPhaseComplete: (phase: PhaseName, pipelineState: PipelineState) => {
 				if (phase === 'EDITOR') {
-					// Update main content with final editor output
-					const vars = pipelineState.editorVariables;
-					const content = vars
-						? renderFromVariables(vars, storyMessageTemplate)
-						: (pipelineState.editorOutput ?? getCurrentMessage().content);
-					setCurrentMessage({
-						...getCurrentMessage(),
-						content,
-						reasoning: pipelineState.editorReasoning ?? getCurrentMessage().reasoning,
-						variables: vars ?? getCurrentMessage().variables,
-					});
+					updateEditorMessage(
+						renderContent(pipelineState.editorVariables, pipelineState.editorOutput ?? getCurrentMessage().content),
+						pipelineState.editorReasoning,
+						pipelineState.editorVariables
+					);
 					return;
 				}
 
-				// Update phase content
-				const current = getCurrentMessage();
-				const phases = (current.phases ?? []).map((p) =>
-					p.phaseName === phase ? { ...p, content: getPhaseContent(phase, pipelineState) } : p
-				);
+				updatePhaseInList(phase, { content: getPhaseContent(phase, pipelineState) });
 
 				// After GM completes, merge game data into variables
 				if (phase === 'GAME_MASTER') {
+					const current = getCurrentMessage();
 					const finalVars = buildFinalVariables(current.variables, pipelineState.gameData);
-					const content = finalVars ? renderFromVariables(finalVars, storyMessageTemplate) : current.content;
-					setCurrentMessage({ ...current, content, variables: finalVars ?? current.variables, phases });
-				} else {
-					setCurrentMessage({ ...current, phases });
+					const content = renderContent(finalVars, current.content);
+					setCurrentMessage({ ...current, content, variables: finalVars ?? current.variables });
 				}
 			},
 			onError: (phase: PhaseName, err: unknown) => {
@@ -396,7 +399,7 @@ export async function sendMessage(
 			onAllComplete: (pipelineState: PipelineState) => {
 				const current = getCurrentMessage();
 				const finalVars = buildFinalVariables(current.variables ?? pipelineState.editorVariables, pipelineState.gameData);
-				const content = finalVars ? renderFromVariables(finalVars, storyMessageTemplate) : (pipelineState.editorOutput ?? current.content);
+				const content = renderContent(finalVars, pipelineState.editorOutput ?? current.content);
 				setCurrentMessage({
 					...current,
 					content,
@@ -413,15 +416,13 @@ export async function sendMessage(
 			worldContent,
 			actPlot,
 			actSummary,
-			userMessage,
 			history,
 			abortSignal: abortController!.signal,
 			tools,
 			callbacks: pipelineCallbacks,
-			memoryRunner: () => new Promise<void>((resolve) => {
+			memoryRunner: () => {
 				runMemoryPipeline(storyId, actLineId, getCurrentMessage());
-				resolve();
-			}),
+			},
 			completedScenes,
 		});
 
@@ -443,7 +444,6 @@ export async function sendMessage(
 			persistMessage(actLineId, getCurrentMessage()),
 			logMainChat({ systemPrompt, newMessages: messages.slice(-newMessagesCount), history }),
 		]);
-
 	} catch (err: unknown) {
 		await handleStreamError(err, responseMessage.id, actLineId);
 	} finally {

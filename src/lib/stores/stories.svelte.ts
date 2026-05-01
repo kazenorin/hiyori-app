@@ -70,6 +70,12 @@ export function getActiveWorldContent(): string | null {
 export function getActiveActPlotContent(): string {
 	return activeActPlotContent;
 }
+/** Set the active act plot content. Only updates when an act line is currently selected. */
+export function setActiveActPlotContent(content: string): void {
+	if (activeActLineId) {
+		activeActPlotContent = content;
+	}
+}
 export function getActiveActSummary(): string {
 	return activeActSummary;
 }
