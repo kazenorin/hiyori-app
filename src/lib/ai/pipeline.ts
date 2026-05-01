@@ -56,25 +56,31 @@ export interface PipelineInput {
 	completedScenes?: number;
 }
 
+/** Parameters for a streaming pipeline phase. Shared fields come from base params. */
+interface StreamingPhaseParams {
+	phaseName: PhaseName;
+	systemPrompt: string;
+	messages: MessageBase[];
+	providerConfig: ProviderConfig | undefined;
+	abortSignal: AbortSignal;
+	tools: ToolSet | undefined;
+	callbacks: PipelineCallbacks;
+	buildStateUpdate: (streamState: StreamState) => Partial<PipelineState>;
+}
+
 function updateState(prev: PipelineState, patch: Partial<PipelineState>): PipelineState {
 	return { ...prev, ...patch };
 }
 
 /**
  * Execute a streaming phase with full lifecycle management (start, stream, complete, error).
- * Returns the updated pipeline state and stream result metadata.
+ * All shared context (abort signal, tools, callbacks) comes from the params object.
  */
 async function executeStreamingPhase(
-	phaseName: PhaseName,
-	state: PipelineState,
-	systemPrompt: string,
-	messages: MessageBase[],
-	providerConfig: ProviderConfig | undefined,
-	abortSignal: AbortSignal,
-	tools: ToolSet | undefined,
-	callbacks: PipelineCallbacks,
-	buildStateUpdate: (streamState: StreamState) => Partial<PipelineState>
+	params: StreamingPhaseParams,
+	state: PipelineState
 ): Promise<{ state: PipelineState; streamState: StreamState; metadata: StreamResultMetadata }> {
+	const { phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, buildStateUpdate } = params;
 	state = updateState(state, { currentPhase: phaseName });
 	callbacks.onPhaseStart(phaseName);
 	try {
@@ -177,6 +183,12 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	} = input;
 
 	const baseSystem = [systemPrompt, generalInstructions].join('\n\n');
+	const baseParams: Omit<StreamingPhaseParams, 'phaseName' | 'messages' | 'providerConfig' | 'buildStateUpdate'> = {
+		systemPrompt: baseSystem,
+		abortSignal,
+		tools,
+		callbacks,
+	};
 
 	let state: PipelineState = { currentPhase: null };
 	let editorMetadata: StreamResultMetadata | undefined;
@@ -184,104 +196,92 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 
 	// --- Phase 1: Plot Planner ---
 	{
-		const plotPlannerPrompt = toUserMessages([
-			await loadPlotPlannerPrompt(),
-			SECTION.WORLD_CONTENT + worldContent,
-			SECTION.ACT_PLOT + actPlot,
-			SECTION.ACT_SUMMARY + actSummary,
-		]);
-
 		const result = await executeStreamingPhase(
-			'PLOT_PLANNER',
-			state,
-			baseSystem,
-			plotPlannerPrompt,
-			providerConfigs.plotPlanner,
-			abortSignal,
-			tools,
-			callbacks,
-			(ss) => ({ scenePlot: ss.content })
+			{
+				phaseName: 'PLOT_PLANNER',
+				...baseParams,
+				messages: toUserMessages([
+					await loadPlotPlannerPrompt(),
+					SECTION.WORLD_CONTENT + worldContent,
+					SECTION.ACT_PLOT + actPlot,
+					SECTION.ACT_SUMMARY + actSummary,
+				]),
+				providerConfig: providerConfigs.plotPlanner,
+				buildStateUpdate: (ss) => ({ scenePlot: ss.content }),
+			},
+			state
 		);
 		state = result.state;
 	}
 
 	// --- Phase 2: Writer ---
 	{
-		const writerPrompt = toUserMessages([
-			await loadWriterPrompt(),
-			SECTION.WRITER_OUTPUT_TEMPLATE + writerTemplate,
-			SECTION.WORLD_CONTENT + worldContent,
-			SECTION.ACT_PLOT + actPlot,
-			SECTION.ACT_SUMMARY + actSummary,
-			SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
-		]);
-
 		const result = await executeStreamingPhase(
-			'WRITER',
-			state,
-			baseSystem,
-			writerPrompt,
-			providerConfigs.writer,
-			abortSignal,
-			undefined,
-			callbacks,
-			(ss) => ({ writerOutput: ss.content })
+			{
+				phaseName: 'WRITER',
+				...baseParams,
+				messages: toUserMessages([
+					await loadWriterPrompt(),
+					SECTION.WRITER_OUTPUT_TEMPLATE + writerTemplate,
+					SECTION.WORLD_CONTENT + worldContent,
+					SECTION.ACT_PLOT + actPlot,
+					SECTION.ACT_SUMMARY + actSummary,
+					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
+				]),
+				providerConfig: providerConfigs.writer,
+				buildStateUpdate: (ss) => ({ writerOutput: ss.content }),
+			},
+			state
 		);
 		state = result.state;
 	}
 
 	// --- Phase 3: Reviewer ---
 	{
-		const reviewerPrompt = toUserMessages([
-			await loadReviewerPrompt(),
-			SECTION.WORLD_CONTENT + worldContent,
-			SECTION.ACT_PLOT + actPlot,
-			SECTION.ACT_SUMMARY + actSummary,
-			SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
-			SECTION.WRITER_OUTPUT + (state.writerOutput ?? ''),
-		]);
-
 		const result = await executeStreamingPhase(
-			'REVIEWER',
-			state,
-			baseSystem,
-			reviewerPrompt,
-			providerConfigs.reviewer,
-			abortSignal,
-			tools,
-			callbacks,
-			(ss) => ({ reviewerOutput: ss.content })
+			{
+				phaseName: 'REVIEWER',
+				...baseParams,
+				messages: toUserMessages([
+					await loadReviewerPrompt(),
+					SECTION.WORLD_CONTENT + worldContent,
+					SECTION.ACT_PLOT + actPlot,
+					SECTION.ACT_SUMMARY + actSummary,
+					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
+					SECTION.WRITER_OUTPUT + (state.writerOutput ?? ''),
+				]),
+				providerConfig: providerConfigs.reviewer,
+				buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),
+			},
+			state
 		);
 		state = result.state;
 	}
 
 	// --- Phase 4: Editor ---
 	{
-		const editorPrompt = toUserMessages([
-			await loadEditorPrompt(),
-			SECTION.WRITER_OUTPUT_TEMPLATE + writerTemplate,
-			SECTION.WORLD_CONTENT + worldContent,
-			SECTION.ACT_PLOT + actPlot,
-			SECTION.ACT_SUMMARY + actSummary,
-			SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
-			SECTION.WRITER_OUTPUT + (state.writerOutput ?? ''),
-			SECTION.REVIEWER_OUTPUT + (state.reviewerOutput ?? ''),
-		]);
-
 		const result = await executeStreamingPhase(
-			'EDITOR',
-			state,
-			baseSystem,
-			editorPrompt,
-			providerConfigs.editor,
-			abortSignal,
-			undefined,
-			callbacks,
-			(ss) => ({
-				editorOutput: ss.content,
-				editorVariables: ss.variables,
-				editorReasoning: ss.reasoning,
-			})
+			{
+				phaseName: 'EDITOR',
+				...baseParams,
+				messages: toUserMessages([
+					await loadEditorPrompt(),
+					SECTION.WRITER_OUTPUT_TEMPLATE + writerTemplate,
+					SECTION.WORLD_CONTENT + worldContent,
+					SECTION.ACT_PLOT + actPlot,
+					SECTION.ACT_SUMMARY + actSummary,
+					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
+					SECTION.WRITER_OUTPUT + (state.writerOutput ?? ''),
+					SECTION.REVIEWER_OUTPUT + (state.reviewerOutput ?? ''),
+				]),
+				providerConfig: providerConfigs.editor,
+				buildStateUpdate: (ss) => ({
+					editorOutput: ss.content,
+					editorVariables: ss.variables,
+					editorReasoning: ss.reasoning,
+				}),
+			},
+			state
 		);
 		state = result.state;
 		editorMetadata = result.metadata;
