@@ -9,7 +9,7 @@ import {
 import { loadMemoryExtractionPrompt, loadMemoryExtractionSystemPrompt } from '$lib/fs/prompts';
 import { type ExtractedMemories, parseMemoryExtract } from '$lib/memory/memory-extract-parser';
 import { Memory } from '$lib/memory/memory';
-import { parseCharacterAliases, type CharacterAliasEntry } from './act-summary-parser';
+import { parseCharacterAliases } from './act-summary-parser';
 import { isAuthError, toError, withRetry } from '$lib/utils/async';
 import { log } from '$lib/logging/logger';
 
