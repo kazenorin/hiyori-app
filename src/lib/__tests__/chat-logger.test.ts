@@ -56,7 +56,11 @@ function defaultSettings() {
 		memoryEnabled: true,
 		memoryProviderRole: 'main',
 		embeddingProviderRole: 'main',
-		reviewerEnabled: false,
+			plotPlannerProviderRole: 'main',
+		writerProviderRole: 'main',
+		editorProviderRole: 'main',
+		gameMasterProviderRole: 'main',
+		summarizerProviderRole: 'main',
 		reviewerProviderRole: 'main',
 	};
 }

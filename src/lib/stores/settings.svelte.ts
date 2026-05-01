@@ -1,9 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { omitBy } from 'lodash';
 
-export const SCENE_NUMBER_REGEX = /Scene number\s*(\d+)/i;
-export const SESSION_NUMBER_REGEX = /Session number\s*(\d+)/i;
-
 export type Provider = 'openai' | 'openai-compatible' | 'ollama';
 export type ApiType = 'chat-completions' | 'responses';
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
@@ -33,8 +30,12 @@ export interface Settings {
 	memoryEnabled: boolean;
 	memoryProviderRole: string;
 	embeddingProviderRole: string;
-	reviewerEnabled: boolean;
+	plotPlannerProviderRole: string;
+	writerProviderRole: string;
 	reviewerProviderRole: string;
+	editorProviderRole: string;
+	gameMasterProviderRole: string;
+	summarizerProviderRole: string;
 }
 
 const STORAGE_KEY = 'byoa-settings';
@@ -47,8 +48,12 @@ const defaults: Settings = {
 	memoryEnabled: true,
 	memoryProviderRole: 'main',
 	embeddingProviderRole: 'main',
-	reviewerEnabled: false,
+	plotPlannerProviderRole: 'main',
+	writerProviderRole: 'main',
 	reviewerProviderRole: 'main',
+	editorProviderRole: 'main',
+	gameMasterProviderRole: 'main',
+	summarizerProviderRole: 'main',
 };
 
 /**
@@ -74,8 +79,12 @@ function migrateFromFlatSettings(raw: Record<string, unknown>): Settings {
 		memoryEnabled: (raw.memoryEnabled as boolean) ?? true,
 		memoryProviderRole: (raw.memoryProviderRole as string) || 'main',
 		embeddingProviderRole: (raw.embeddingProviderRole as string) || 'main',
-		reviewerEnabled: (raw.reviewerEnabled as boolean) ?? false,
+		plotPlannerProviderRole: (raw.plotPlannerProviderRole as string) || 'main',
+		writerProviderRole: (raw.writerProviderRole as string) || 'main',
 		reviewerProviderRole: (raw.reviewerProviderRole as string) || 'main',
+		editorProviderRole: (raw.editorProviderRole as string) || 'main',
+		gameMasterProviderRole: (raw.gameMasterProviderRole as string) || 'main',
+		summarizerProviderRole: (raw.summarizerProviderRole as string) || 'main',
 	};
 }
 
@@ -167,6 +176,57 @@ export function getReviewerProviderConfig(): ProviderConfig | undefined {
 }
 
 export type ReviewerProviderConfig = NonNullable<ReturnType<typeof getReviewerProviderConfig>>;
+
+export function getPlotPlannerProviderConfig(): ProviderConfig | undefined {
+	const role = settings.plotPlannerProviderRole || 'main';
+	const id = settings.roleAssignments[role];
+	const config = id ? getProviderConfig(id) : getProviderConfig(role);
+	if (!config?.apiKey) return undefined;
+	return config;
+}
+
+export type PlotPlannerProviderConfig = NonNullable<ReturnType<typeof getPlotPlannerProviderConfig>>;
+
+export function getWriterProviderConfig(): ProviderConfig | undefined {
+	const role = settings.writerProviderRole || 'main';
+	const id = settings.roleAssignments[role];
+	const config = id ? getProviderConfig(id) : getProviderConfig(role);
+	if (!config?.apiKey) return undefined;
+	return config;
+}
+
+export type WriterProviderConfig = NonNullable<ReturnType<typeof getWriterProviderConfig>>;
+
+export function getEditorProviderConfig(): ProviderConfig | undefined {
+	const role = settings.editorProviderRole || 'main';
+	const id = settings.roleAssignments[role];
+	const config = id ? getProviderConfig(id) : getProviderConfig(role);
+	if (!config?.apiKey) return undefined;
+	return config;
+}
+
+export type EditorProviderConfig = NonNullable<ReturnType<typeof getEditorProviderConfig>>;
+
+export function getGameMasterProviderConfig(): ProviderConfig | undefined {
+	const role = settings.gameMasterProviderRole || 'main';
+	const id = settings.roleAssignments[role];
+	const config = id ? getProviderConfig(id) : getProviderConfig(role);
+	if (!config?.apiKey) return undefined;
+	return config;
+}
+
+export type GameMasterProviderConfig = NonNullable<ReturnType<typeof getGameMasterProviderConfig>>;
+
+export function getSummarizerProviderConfig(): ProviderConfig | undefined {
+	const role = settings.summarizerProviderRole || 'main';
+	const id = settings.roleAssignments[role];
+	const config = id ? getProviderConfig(id) : getProviderConfig(role);
+	if (!config?.apiKey) return undefined;
+	return config;
+}
+
+export type SummarizerProviderConfig = NonNullable<ReturnType<typeof getSummarizerProviderConfig>>;
+
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
 	const id = settings.roleAssignments[role];
 	if (!id) return undefined;
@@ -208,8 +268,12 @@ export async function updateSettings(
 			| 'memoryEnabled'
 			| 'memoryProviderRole'
 			| 'embeddingProviderRole'
-			| 'reviewerEnabled'
+			| 'plotPlannerProviderRole'
+			| 'writerProviderRole'
 			| 'reviewerProviderRole'
+			| 'editorProviderRole'
+			| 'gameMasterProviderRole'
+			| 'summarizerProviderRole'
 		>
 	>
 ): Promise<void> {
@@ -221,8 +285,12 @@ export async function updateSettings(
 	if (partial.memoryEnabled !== undefined) settings.memoryEnabled = partial.memoryEnabled;
 	if (partial.memoryProviderRole !== undefined) settings.memoryProviderRole = partial.memoryProviderRole;
 	if (partial.embeddingProviderRole !== undefined) settings.embeddingProviderRole = partial.embeddingProviderRole;
-	if (partial.reviewerEnabled !== undefined) settings.reviewerEnabled = partial.reviewerEnabled;
+	if (partial.plotPlannerProviderRole !== undefined) settings.plotPlannerProviderRole = partial.plotPlannerProviderRole;
+	if (partial.writerProviderRole !== undefined) settings.writerProviderRole = partial.writerProviderRole;
 	if (partial.reviewerProviderRole !== undefined) settings.reviewerProviderRole = partial.reviewerProviderRole;
+	if (partial.editorProviderRole !== undefined) settings.editorProviderRole = partial.editorProviderRole;
+	if (partial.gameMasterProviderRole !== undefined) settings.gameMasterProviderRole = partial.gameMasterProviderRole;
+	if (partial.summarizerProviderRole !== undefined) settings.summarizerProviderRole = partial.summarizerProviderRole;
 	persist();
 
 	// Apply font size preference when fontSize changes

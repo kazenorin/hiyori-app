@@ -6,7 +6,7 @@ export interface GameDataFields {
 }
 
 /** Phase names for multi-phase narrative generation */
-export type PhaseName = 'PLOT_PLANNER' | 'WRITER' | 'REVIEWER' | 'GAME_MASTER' | 'SUMMARIZER';
+export type PhaseName = 'PLOT_PLANNER' | 'WRITER' | 'REVIEWER' | 'EDITOR' | 'GAME_MASTER' | 'SUMMARIZER';
 
 /** A single phase within a UI scene, produced during streaming */
 export interface UIScenePhase {

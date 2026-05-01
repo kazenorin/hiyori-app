@@ -2,7 +2,6 @@ import {
 	getMainProviderConfig,
 	getMemoryProviderConfig,
 	type ProviderConfig,
-	SCENE_NUMBER_REGEX,
 	settings,
 } from '$lib/stores/settings.svelte';
 import { getActiveStoryId, getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
@@ -16,7 +15,6 @@ import { type StreamState } from '$lib/ai/chat-callbacks';
 import { buildMetadata, type MessageMetadata, streamChatResponse } from './chat-stream';
 import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
 import { Memory } from '$lib/memory/memory';
-import { runReviewLoop, type ReviewableMessage } from '$lib/reviewer/review-loop';
 import { log } from '$lib/logging/logger';
 import { buildTools } from '$lib/ai/tools/tools';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
@@ -276,25 +274,14 @@ export async function sendMessage(
 			(state: StreamState) => {
 				const currentMessage = getCurrentMessage();
 				const vars = state.variables;
-				// review needs to see the content too
 				const content = vars ? renderFromVariables(vars, storyMessageTemplate) : currentMessage.content;
 
-				if (settings.reviewerEnabled) {
-					setCurrentMessage({
-						...currentMessage,
-						content: content,
-						variables: vars ?? currentMessage.variables,
-						reasoning: undefined,
-						draftReasoning: state.reasoning ?? currentMessage.draftReasoning,
-					});
-				} else {
-					setCurrentMessage({
-						...currentMessage,
-						variables: vars ?? currentMessage.variables,
-						content: content,
-						reasoning: state.reasoning ?? currentMessage.reasoning,
-					});
-				}
+				setCurrentMessage({
+					...currentMessage,
+					variables: vars ?? currentMessage.variables,
+					content: content,
+					reasoning: state.reasoning ?? currentMessage.reasoning,
+				});
 			},
 			(err: unknown) => {
 				const errorMessage = getErrorMessage(err);
@@ -308,28 +295,6 @@ export async function sendMessage(
 		// Update message with accumulated content and final metadata
 		updateMetaData(getCurrentMessage, resultMetadata, providerConfig);
 
-		// Review loop: run editor mode, revise if needed
-		if (settings.reviewerEnabled) {
-			const reviewedMetadata = await runReviewLoop(
-				getCurrentMessage,
-				(msg: ReviewableMessage) => setCurrentMessage(msg as UIMessage),
-				history,
-				{
-					tools,
-				}
-			);
-			updateMetaData(getCurrentMessage, reviewedMetadata, providerConfig);
-			await log.debug('send-message', `Review completed`);
-
-			// Render final content from result
-			const finalMsg = getCurrentMessage();
-			if (finalMsg.variables) {
-				setCurrentMessage({
-					...finalMsg,
-					content: renderFromVariables(finalMsg.variables, storyMessageTemplate),
-				});
-			}
-		}
 
 		// Determine sceneNumber for the assistant response
 		await determineSceneNumber(messageIdx);
@@ -363,7 +328,7 @@ async function determineSceneNumber(messageIdx: number): Promise<void> {
 }
 
 function parseSceneNumber(content: string): number | undefined {
-	const match = SCENE_NUMBER_REGEX.exec(content);
+	const match = /Scene number\s*(\d+)/i.exec(content);
 	return match ? parseInt(match[1], 10) : undefined;
 }
 

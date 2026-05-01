@@ -1,15 +1,35 @@
 // Unified prompt loading module
-// Replaces: system-prompt.ts, narration-template.ts, world-prompts.ts, act-card-prompts.ts, character-card-prompts.ts
+// Replaces: system-prompt.ts, world-prompts.ts, act-card-prompts.ts, character-card-prompts.ts
 
 import { Prompt, loadPromptForStory, registerDefaults } from './prompt-loader';
-import { settings } from '$lib/stores/settings.svelte';
 
 // === Bundled Default Imports ===
 
-// System & Narration
+// System
 import defaultSystemPrompt from './prompts/system-prompt.md?raw';
-import defaultNarrationExtractionPrompt from './prompts/narration-extraction-prompt.md?raw';
-import defaultNarrationTemplate from './prompts/narration-template.md?raw';
+
+// General Instructions
+import defaultGeneralInstructions from './prompts/general-instructions.md?raw';
+
+// Pipeline: Plot Planner
+import defaultPlotPlannerPrompt from './prompts/plot-planner/plot-planner-prompt.md?raw';
+
+// Pipeline: Writer
+import defaultWriterPrompt from './prompts/writer/writer-prompt.md?raw';
+import defaultWriterOutputTemplate from './prompts/writer/writer-output-template.md?raw';
+
+// Pipeline: Reviewer
+import defaultReviewerPrompt from './prompts/reviewer/reviewer-prompt.md?raw';
+
+// Pipeline: Editor
+import defaultEditorPrompt from './prompts/editor/editor-prompt.md?raw';
+
+// Pipeline: Game Master
+import defaultGameMasterPrompt from './prompts/game-master/game-master-prompt.md?raw';
+
+// Pipeline: Summarizer
+import defaultSummarizerPrompt from './prompts/summarizer/summarizer-prompt.md?raw';
+import defaultActSummaryTemplate from './prompts/summarizer/act-summary-template.md?raw';
 
 // World
 import defaultWorldTemplate from './prompts/world/world-template.md?raw';
@@ -38,15 +58,18 @@ import defaultChoicesExtractionPrompt from './prompts/import/choices-extraction-
 import defaultMemoryExtractionSystemPrompt from './prompts/memories/memory-extraction-system-prompt.md?raw';
 import defaultMemoryExtractionPrompt from './prompts/memories/memory-extraction-prompt.md?raw';
 
-// Reviewer
-import defaultEditorModeExtractionPrompt from './prompts/reviewer/editor-mode-extraction-prompt.md?raw';
-import defaultTriggerEditorModeFragment from './prompts/reviewer/trigger-editor-mode-fragment.md?raw';
-
 // Re-export for consumers that need raw content
 export {
 	defaultSystemPrompt,
-	defaultNarrationExtractionPrompt,
-	defaultNarrationTemplate,
+	defaultGeneralInstructions,
+	defaultPlotPlannerPrompt,
+	defaultWriterPrompt,
+	defaultWriterOutputTemplate,
+	defaultReviewerPrompt,
+	defaultEditorPrompt,
+	defaultGameMasterPrompt,
+	defaultSummarizerPrompt,
+	defaultActSummaryTemplate,
 	defaultWorldTemplate,
 	defaultGenerateWorldFromChatPrompt,
 	defaultGenerateWorldFromChatSystemPrompt,
@@ -64,22 +87,35 @@ export {
 	defaultChoicesExtractionPrompt,
 	defaultMemoryExtractionSystemPrompt,
 	defaultMemoryExtractionPrompt,
-	defaultEditorModeExtractionPrompt,
-	defaultTriggerEditorModeFragment,
 };
 
 // === Prompt Config Instances ===
 
-// System & Narration
+// System
 const systemPrompt = new Prompt({ relativePath: 'system-prompt.md', defaultContent: defaultSystemPrompt });
-const narrationExtractionPrompt = new Prompt({
-	relativePath: 'narration-extraction-prompt.md',
-	defaultContent: defaultNarrationExtractionPrompt,
-});
-const narrationTemplate = new Prompt({
-	relativePath: 'narration-template.md',
-	defaultContent: defaultNarrationTemplate,
-});
+
+// General Instructions
+const generalInstructions = new Prompt({ relativePath: 'general-instructions.md', defaultContent: defaultGeneralInstructions });
+
+// Pipeline: Plot Planner
+const plotPlannerPrompt = new Prompt({ relativePath: 'plot-planner/plot-planner-prompt.md', defaultContent: defaultPlotPlannerPrompt });
+
+// Pipeline: Writer
+const writerPrompt = new Prompt({ relativePath: 'writer/writer-prompt.md', defaultContent: defaultWriterPrompt });
+const writerOutputTemplate = new Prompt({ relativePath: 'writer/writer-output-template.md', defaultContent: defaultWriterOutputTemplate });
+
+// Pipeline: Reviewer
+const reviewerPrompt = new Prompt({ relativePath: 'reviewer/reviewer-prompt.md', defaultContent: defaultReviewerPrompt });
+
+// Pipeline: Editor
+const editorPrompt = new Prompt({ relativePath: 'editor/editor-prompt.md', defaultContent: defaultEditorPrompt });
+
+// Pipeline: Game Master
+const gameMasterPrompt = new Prompt({ relativePath: 'game-master/game-master-prompt.md', defaultContent: defaultGameMasterPrompt });
+
+// Pipeline: Summarizer
+const summarizerPrompt = new Prompt({ relativePath: 'summarizer/summarizer-prompt.md', defaultContent: defaultSummarizerPrompt });
+const actSummaryTemplate = new Prompt({ relativePath: 'summarizer/act-summary-template.md', defaultContent: defaultActSummaryTemplate });
 
 // World
 const worldTemplate = new Prompt({ relativePath: 'world/world-template.md', defaultContent: defaultWorldTemplate });
@@ -156,32 +192,18 @@ const memoryExtractionPrompt = new Prompt({
 	defaultContent: defaultMemoryExtractionPrompt,
 });
 
-// Reviewer
-const editorModeExtractionPrompt = new Prompt({
-	relativePath: 'reviewer/editor-mode-extraction-prompt.md',
-	defaultContent: defaultEditorModeExtractionPrompt,
-});
-const triggerEditorModeFragment = new Prompt({
-	relativePath: 'reviewer/trigger-editor-mode-fragment.md',
-	defaultContent: defaultTriggerEditorModeFragment,
-});
-
 // === Load Functions ===
 
-export const loadSystemPrompt = async (): Promise<string> => {
-	if (settings.reviewerEnabled) {
-		const [a, b] = await Promise.all([systemPrompt.load(), triggerEditorModeFragment.load()]);
-		return a + b;
-	} else {
-		return systemPrompt.load();
-	}
-};
-export const loadNarrationExtractionPrompt = (): Promise<string> => narrationExtractionPrompt.load();
-export const loadNarrationTemplate = (): Promise<string> => narrationTemplate.load();
-export async function loadNarrationContent(): Promise<string> {
-	const [extraction, template] = await Promise.all([narrationExtractionPrompt.load(), narrationTemplate.load()]);
-	return extraction.replace('{narrationTemplate}', template);
-}
+export const loadSystemPrompt = (): Promise<string> => systemPrompt.load();
+export const loadGeneralInstructions = (): Promise<string> => generalInstructions.load();
+export const loadPlotPlannerPrompt = (): Promise<string> => plotPlannerPrompt.load();
+export const loadWriterPrompt = (): Promise<string> => writerPrompt.load();
+export const loadWriterOutputTemplate = (): Promise<string> => writerOutputTemplate.load();
+export const loadReviewerPrompt = (): Promise<string> => reviewerPrompt.load();
+export const loadEditorPrompt = (): Promise<string> => editorPrompt.load();
+export const loadGameMasterPrompt = (): Promise<string> => gameMasterPrompt.load();
+export const loadSummarizerPrompt = (): Promise<string> => summarizerPrompt.load();
+export const loadActSummaryTemplate = (): Promise<string> => actSummaryTemplate.load();
 export const loadWorldTemplate = (): Promise<string> => worldTemplate.load();
 export const loadGenerateWorldFromChatPrompt = (): Promise<string> => generateWorldFromChatPrompt.load();
 export const loadGenerateWorldFromChatSystemPrompt = (): Promise<string> => generateWorldFromChatSystemPrompt.load();
@@ -199,39 +221,12 @@ export const loadActGenerationPrompt = (): Promise<string> => actGenerationPromp
 export const loadChoicesExtractionPrompt = (): Promise<string> => choicesExtractionPrompt.load();
 export const loadMemoryExtractionSystemPrompt = (): Promise<string> => memoryExtractionSystemPrompt.load();
 export const loadMemoryExtractionPrompt = (): Promise<string> => memoryExtractionPrompt.load();
-export const loadEditorModeExtractionPrompt = (): Promise<string> => editorModeExtractionPrompt.load();
-export const loadTriggerEditorModeFragment = (): Promise<string> => triggerEditorModeFragment.load();
 
 export const getDefaultSystemPromptContent = () => defaultSystemPrompt;
-export const getDefaultNarrationExtractionPromptContent = () => defaultNarrationExtractionPrompt;
-export const getDefaultNarrationTemplateContent = () => defaultNarrationTemplate;
 
 // Story-specific loaders
 export async function loadStorySystemPrompt(storyId: string, storyName: string): Promise<string> {
-	if (settings.reviewerEnabled) {
-		const [a, b] = await Promise.all([
-			loadPromptForStory(storyId, storyName, systemPrompt.relativePath, systemPrompt.defaultContent),
-			triggerEditorModeFragment.load(),
-		]);
-		return a + b;
-	}
 	return loadPromptForStory(storyId, storyName, systemPrompt.relativePath, systemPrompt.defaultContent);
-}
-
-export async function loadStoryNarrationExtractionPrompt(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, narrationExtractionPrompt.relativePath, narrationExtractionPrompt.defaultContent);
-}
-
-export async function loadStoryNarrationTemplate(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, narrationTemplate.relativePath, narrationTemplate.defaultContent);
-}
-
-export async function loadStoryNarrationContent(storyId: string, storyName: string): Promise<string> {
-	const [extraction, template] = await Promise.all([
-		loadStoryNarrationExtractionPrompt(storyId, storyName),
-		loadStoryNarrationTemplate(storyId, storyName),
-	]);
-	return extraction.replace('{narrationTemplate}', template);
 }
 
 // === Ensure All Base Configs ===
@@ -241,7 +236,15 @@ export { ensureAllBaseConfigs } from './prompt-loader';
 // Register all defaults so ensureAllBaseConfigs() can create them on launch
 registerDefaults([
 	systemPrompt,
-	narrationTemplate,
+	generalInstructions,
+	plotPlannerPrompt,
+	writerPrompt,
+	writerOutputTemplate,
+	reviewerPrompt,
+	editorPrompt,
+	gameMasterPrompt,
+	summarizerPrompt,
+	actSummaryTemplate,
 	worldTemplate,
 	generateWorldFromChatPrompt,
 	generateWorldFromChatSystemPrompt,
@@ -259,6 +262,4 @@ registerDefaults([
 	choicesExtractionPrompt,
 	memoryExtractionSystemPrompt,
 	memoryExtractionPrompt,
-	editorModeExtractionPrompt,
-	triggerEditorModeFragment,
 ]);

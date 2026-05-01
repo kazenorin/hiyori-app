@@ -2,10 +2,9 @@ import type { MessageBase } from '$lib/db/messages';
 import { streamWithRetry, type RetryConfig } from '$lib/ai/chat-stream';
 import type { StreamState } from '$lib/ai/chat-callbacks';
 import { getReviewerProviderConfig, getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { loadEditorModeExtractionPrompt } from '$lib/fs/prompts';
-import { knownCharacterNameList } from '$lib/memory/memory';
+import { loadReviewerPrompt, loadEditorPrompt, loadGeneralInstructions, loadWriterOutputTemplate } from '$lib/fs/prompts';
 import { log } from '$lib/logging/logger';
-import { getActiveNarrationTemplateOrDefault, getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
+import { getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
 import { type ToolSet } from 'ai';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
 import type { NarrativeVariables } from '$lib/ai/narrative-types';
@@ -40,18 +39,23 @@ export async function streamReview(
 	onProgress?: (state: StreamState) => void,
 	tools?: ToolSet
 ): Promise<ReviewLoopResult | null> {
-	const [systemPrompt, narrationTemplate, editorTemplate, characterNames] = await Promise.all([
+	const [systemPrompt, reviewerTemplate, editorTemplate, generalInstructions, writerOutputTemplate] = await Promise.all([
 		getActiveSystemPromptOrDefault(),
-		getActiveNarrationTemplateOrDefault(),
-		loadEditorModeExtractionPrompt(),
-		knownCharacterNameList(),
+		loadReviewerPrompt(),
+		loadEditorPrompt(),
+		loadGeneralInstructions(),
+		loadWriterOutputTemplate(),
 	]);
 
-	const editorModePrompt = editorTemplate
-		.replace('{knownCharacterNameList}', JSON.stringify(characterNames))
-		.replace('{narrationTemplate}', narrationTemplate);
+	// Combine general instructions, reviewer prompt, editor prompt, and writer output template
+	const combinedPrompt = [
+		generalInstructions,
+		reviewerTemplate,
+		editorTemplate,
+		'\n## Writer Output Template\n' + writerOutputTemplate,
+	].join('\n\n');
 
-	const historyWithEditorPrompt = [...history, { role: 'user' as const, content: editorModePrompt }];
+	const historyWithEditorPrompt = [...history, { role: 'user' as const, content: combinedPrompt }];
 
 	const providerConfig = getProviderConfig();
 

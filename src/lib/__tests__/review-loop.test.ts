@@ -3,28 +3,22 @@ import type { NarrativeVariables } from '../ai/narrative-types';
 
 // Mock prompts
 vi.mock('$lib/fs/prompts', () => ({
-	loadSystemPrompt: vi.fn(async () => 'Main system prompt with trigger-editor-mode-fragment'),
-	loadEditorModeExtractionPrompt: vi.fn(
-		async () => '# Editor Mode\n\nReview the output.\n\n{knownCharacterNameList}\n\n# Review Scratchpad\n\n...'
-	),
-	loadNarrationContent: vi.fn(async () => 'Narration extraction prompt\n\nNarration template'),
+	loadSystemPrompt: vi.fn(async () => 'Main system prompt'),
+	loadReviewerPrompt: vi.fn(async () => '# Reviewer\n\nReview the output against the rules.'),
+	loadEditorPrompt: vi.fn(async () => '# Editor\n\nRevise based on reviewer feedback.'),
+	loadGeneralInstructions: vi.fn(async () => '# General Instructions\n\nWriting style and review rules.'),
+	loadWriterOutputTemplate: vi.fn(async () => '## Scene Title\n{sceneTitle}\n\n## Narrative Body\n{narrativeBody}'),
 }));
 
 vi.mock('$lib/stores/stories.svelte', () => ({
-	getActiveSystemPromptOrDefault: vi.fn(async () => 'Main system prompt with trigger-editor-mode-fragment'),
-	getActiveNarrationTemplateOrDefault: vi.fn(async () => 'Narration extraction prompt\n\nNarration template'),
+	getActiveSystemPromptOrDefault: vi.fn(async () => 'Main system prompt'),
 }));
 
 // Mock settings - import settings for loadSystemPrompt behavior
 vi.mock('$lib/stores/settings.svelte', () => ({
-	settings: { reviewerEnabled: true },
+	settings: {},
 	getReviewerProviderConfig: vi.fn(() => mockReviewerProviderConfig),
 	getMainProviderConfig: vi.fn(() => mockReviewerConfig),
-}));
-
-// Mock memory
-vi.mock('$lib/memory/memory', () => ({
-	knownCharacterNameList: vi.fn(async () => ['Elena Thornwood', 'Marcus Vale']),
 }));
 
 // Mock logger
@@ -39,7 +33,7 @@ vi.mock('$lib/logging/logger', () => ({
 
 /**
  * Creates a mock StreamAccumulator with state derived from
- * markdown-header-based output (# Review Scratchpad, # Revised Narrative).
+ * markdown-header-based output.
  * This mirrors how the SAX section parser populates StreamState.
  */
 const mockStreamAccumulator = (content: string) => {
@@ -121,13 +115,8 @@ describe('review-loop', () => {
 			expect(result).toBeNull();
 		});
 
-		it('extracts narrative variables from Review Scratchpad and Revised Narrative sections', async () => {
-			const response = `# Review Scratchpad
-- Rule 1 Analysis: No issues found.
-- Rule 2 Analysis: Character "Bob" contradicts established traits.
-- Planned Fixes: Change Bob's dialogue to match.
-
-# Revised Narrative
+		it('extracts narrative variables from Revised Narrative sections', async () => {
+			const response = `# Revised Narrative
 The corrected narrative output goes here.`;
 
 			mockStreamWithRetryResult = mockStreamAccumulator(response);
@@ -146,7 +135,7 @@ The corrected narrative output goes here.`;
 			expect(result.variables.narrativeBody).toBe('Fixed output.');
 		});
 
-		it('sends transcript as-is with editor prompt appended as user message', async () => {
+		it('sends transcript with combined reviewer/editor prompt appended as user message', async () => {
 			mockStreamWithRetryResult = mockStreamAccumulator('# Revised Narrative\nFixed.');
 
 			await streamReview(baseTranscript);
@@ -156,9 +145,9 @@ The corrected narrative output goes here.`;
 			const [systemPromptArg, historyArg] = vi.mocked(streamWithRetry).mock.calls[0];
 
 			// System prompt from loadSystemPrompt
-			expect(systemPromptArg).toBe('Main system prompt with trigger-editor-mode-fragment');
+			expect(systemPromptArg).toBe('Main system prompt');
 
-			// History = transcript + editor prompt as last user message
+			// History = transcript + combined prompt as last user message
 			expect(historyArg.length).toBe(baseTranscript.length + 1);
 
 			// First messages match the transcript exactly
@@ -166,23 +155,23 @@ The corrected narrative output goes here.`;
 				expect(historyArg[i]).toEqual(baseTranscript[i]);
 			}
 
-			// Last message is the editor prompt
+			// Last message is the combined reviewer/editor prompt
 			const lastMsg = historyArg[historyArg.length - 1];
 			expect(lastMsg.role).toBe('user');
-			expect(lastMsg.content).toContain('# Editor Mode');
-			expect(lastMsg.content).toContain('["Elena Thornwood","Marcus Vale"]');
-			expect(lastMsg.content).not.toContain('{knownCharacterNameList}');
+			expect(lastMsg.content).toContain('# General Instructions');
+			expect(lastMsg.content).toContain('# Reviewer');
+			expect(lastMsg.content).toContain('# Editor');
+			expect(lastMsg.content).toContain('Writer Output Template');
 		});
 
-		it('replaces {knownCharacterNameList} with character names in editor prompt', async () => {
+		it('includes writer output template in combined prompt', async () => {
 			mockStreamWithRetryResult = mockStreamAccumulator('# Revised Narrative\nDone.');
 
 			await streamReview(baseTranscript);
 
 			const lastMsg = vi.mocked(streamWithRetry).mock.calls[0][1].at(-1)!;
-			expect(lastMsg.content).toContain('Elena Thornwood');
-			expect(lastMsg.content).toContain('Marcus Vale');
-			expect(lastMsg.content).not.toContain('{knownCharacterNameList}');
+			expect(lastMsg.content).toContain('Scene Title');
+			expect(lastMsg.content).toContain('Narrative Body');
 		});
 
 		it('falls back to main provider when reviewer config is unset', async () => {

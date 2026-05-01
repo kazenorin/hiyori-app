@@ -11,9 +11,6 @@ import type { ModelMessage } from 'ai';
 import {
 	loadStorySystemPrompt,
 	loadSystemPrompt,
-	loadNarrationTemplate,
-	loadStoryNarrationExtractionPrompt,
-	loadStoryNarrationTemplate,
 } from '$lib/fs/prompts';
 import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-folders';
 import { writeTextFile, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
@@ -31,8 +28,6 @@ let activeActLineId = $state<string | null>(null);
 let isLoading = $state(true);
 let isSelectingStory = $state(false);
 let activeSystemPrompt = $state<string | null>(null);
-let activeNarrationExtractionPrompt = $state<string | null>(null);
-let activeNarrationTemplate = $state<string | null>(null);
 let activeWorldContent = $state<string | null>(null);
 let activeInterviewTranscript = $state<ModelMessage[]>([]);
 
@@ -69,15 +64,6 @@ export function getActiveSystemPrompt(): string | null {
 export async function getActiveSystemPromptOrDefault(): Promise<string> {
 	return activeSystemPrompt ?? (await loadSystemPrompt());
 }
-export function getActiveNarrationExtractionPrompt(): string | null {
-	return activeNarrationExtractionPrompt;
-}
-export function getActiveNarrationTemplate(): string | null {
-	return activeNarrationTemplate;
-}
-export async function getActiveNarrationTemplateOrDefault(): Promise<string> {
-	return activeNarrationTemplate ?? (await loadNarrationTemplate());
-}
 export function getActiveWorldContent(): string | null {
 	return activeWorldContent;
 }
@@ -105,13 +91,6 @@ export function getActiveNarrationContext(): ModelMessage[] {
 		result.push({ role: 'user', content: 'That was the end of the interview transcript.' });
 	}
 
-	const narration =
-		activeNarrationExtractionPrompt && activeNarrationTemplate
-			? activeNarrationExtractionPrompt.replace('{narrationTemplate}', activeNarrationTemplate)
-			: null;
-	if (narration) {
-		result.push({ role: 'user', content: narration });
-	}
 
 	if (result.length > 0) {
 		const act = acts.find((a) => a.id === activeActId);
@@ -147,21 +126,17 @@ export async function loadActLines(actId: string): Promise<void> {
 }
 
 /**
- * Load story-specific content (system prompt, narration template, world content).
+ * Load story-specific content (system prompt, world content).
  * Shared between selectStory and restoreState to ensure consistent behavior.
  */
 async function loadStoryContent(storyId: string, storyName: string): Promise<void> {
 	activeSystemPrompt = await loadStorySystemPrompt(storyId, storyName);
-	activeNarrationExtractionPrompt = await loadStoryNarrationExtractionPrompt(storyId, storyName);
-	activeNarrationTemplate = await loadStoryNarrationTemplate(storyId, storyName);
 	await ensureWorldFile(storyId, storyName);
 	activeWorldContent = await loadStoryWorldContent(storyId, storyName);
 }
 
 function resetStoryContent(): void {
 	activeSystemPrompt = null;
-	activeNarrationExtractionPrompt = null;
-	activeNarrationTemplate = null;
 	activeWorldContent = null;
 	activeInterviewTranscript = [];
 }
