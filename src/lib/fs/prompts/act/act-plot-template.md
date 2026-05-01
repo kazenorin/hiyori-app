@@ -2,8 +2,8 @@
 
 ## Story Structure
 
-- **Target Sessions:** [35-50 sessions recommended]
-- **Target Word Count per Session:** [400-500 words]
+- **Target Scenes:** [35-50 scenes recommended]
+- **Target Word Count per Scene:** [400-500 words]
 - **Estimated Total Words:** [14,000-25,000 words]
 
 ## Premise
@@ -22,25 +22,25 @@
 
 ## Major Events
 
-### Climactic Event 1 (Target to happen at around 16 sessions after start)
+### Climactic Event 1 (Target to happen at around 16 scenes after start)
 
 **Setup:** [What should be established before this event]
 **Event:** [What happens - the dramatic moment]
 **Impact:** [Emotional/narrative aftermath, how it changes the story direction]
 
-### Climactic Event 2 (Target to happen at around 16 sessions after Climactic Event 1)
+### Climactic Event 2 (Target to happen at around 16 scenes after Climactic Event 1)
 
 **Setup:** [What should be established before this event]
 **Event:** [What happens - the dramatic moment]
 **Impact:** [Emotional/narrative aftermath, how it changes the story direction]
 
-### Climactic Event 3 (Target to happen at around 16 sessions after Climactic Event 2)
+### Climactic Event 3 (Target to happen at around 16 scenes after Climactic Event 2)
 
 **Setup:** [What should be established before this event]
 **Event:** [What happens - the dramatic moment]
 **Impact:** [Emotional/narrative aftermath, how it changes the story direction]
 
-[Add or remove events as appropriate to match target session count]
+[Add or remove events as appropriate to match target scene count]
 
 ## Possible Endings
 
