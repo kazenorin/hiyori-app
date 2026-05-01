@@ -24,14 +24,13 @@ const migrationStatements: string[][] = [
 		`CREATE TABLE IF NOT EXISTS messages (
 			id TEXT PRIMARY KEY,
 			role TEXT NOT NULL,
-			content TEXT NOT NULL,
+			content TEXT NOT NULL DEFAULT '',
 			reasoning TEXT,
 			metadata TEXT,
 			variables TEXT,
-			draft_variables TEXT,
+			summary TEXT,
 			scene_number INTEGER,
-			session_number INTEGER,
-			created_at INTEGER NOT NULL
+			created_at INTEGER NOT NULL DEFAULT (0)
 		)`,
 		`CREATE TABLE IF NOT EXISTS act_line_meta (
 			id TEXT PRIMARY KEY,

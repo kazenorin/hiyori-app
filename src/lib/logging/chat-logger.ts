@@ -7,7 +7,6 @@ import type { NarrativeVariables } from '$lib/ai/narrative-types';
 import type { MessageBase } from '$lib/db/messages';
 
 interface ChatLogMessage extends MessageBase {
-	draftVariables?: NarrativeVariables;
 	variables?: NarrativeVariables;
 }
 
@@ -55,13 +54,8 @@ export async function logMainChat(context: {
 	const messagesStr = [...(context.history ?? []), ...context.newMessages]
 		.map((m) => {
 			let result: string = `--- [${m.role.toUpperCase()}] ---\n`;
-			if (m.draftVariables) {
-				result += 'Draft:\n';
-				result += JSON.stringify(m.draftVariables, null, 2);
-				result += '\n';
-			}
 			if (m.variables) {
-				result += 'Result:\n';
+				result += 'Variables:\n';
 				result += JSON.stringify(m.variables, null, 2);
 				result += '\n';
 			}

@@ -31,16 +31,14 @@ function hasHeaderName(context: readonly ContextNode[], normalizedName: string):
 }
 
 // Special section name constants (kebab-case) — not field descriptors
-const NAMES_REVISED_NARRATIVE = kebabCase('Revised Narrative');
 const NAMES_GAME_DATA = kebabCase('Game Data');
 
 // Game data subsection name constants in kebab-case
-const SUB_WORLD_STATE = 'world-state' as const;
+const SUB_ACTIVE_PLOT_THREADS = 'active-plot-threads' as const;
+const SUB_DECISION_CONTEXT = 'decision-context' as const;
 const SUB_DECISIONS = 'decisions' as const;
-const SUB_PLAYER_ALIASES = 'player-aliases' as const;
-const SUB_OTHER_CHAR_ALIASES = 'other-character-aliases' as const;
 
-type Subsection = typeof SUB_WORLD_STATE | typeof SUB_DECISIONS | typeof SUB_PLAYER_ALIASES | typeof SUB_OTHER_CHAR_ALIASES | null;
+type Subsection = typeof SUB_ACTIVE_PLOT_THREADS | typeof SUB_DECISION_CONTEXT | typeof SUB_DECISIONS | null;
 
 // --- Section accumulator factory ---
 
@@ -155,41 +153,18 @@ const sectionAccumulators: ElementAccumulator[] = FIELD_DESCRIPTORS.map((desc) =
 
 	const fieldName: string = desc.fieldName;
 	const headerMatcher: HeaderMatcher = (name, ctx) => name === kebabName && kebabParents.every((p) => hasHeaderName(ctx, p));
-	if (desc.isList) {
-		return createListAccumulator(fieldName, headerMatcher);
-	} else {
-		return createSectionAccumulator(fieldName, headerMatcher);
-	}
+	// All NarrativeVariables fields are now section (text) accumulators — no list fields at this level
+	return createSectionAccumulator(fieldName, headerMatcher);
 });
-
-// --- Revised Narrative accumulator ---
-
-function createRevisedNarrativeAccumulator(): ElementAccumulator {
-	return {
-		onText(text, context, _acc): boolean {
-			// When inside Revised Narrative (and not inside Game Data),
-			// consume the text so it doesn't passthrough as pendingText.
-			// Section accumulators will still capture individual fields.
-			if (hasHeaderName(context, NAMES_REVISED_NARRATIVE)) {
-				// Check if we're also inside Game Data — if so, let game data handle it
-				return !hasHeaderName(context, NAMES_GAME_DATA);
-				// consume text, don't passthrough
-			}
-			return false;
-		},
-	};
-}
 
 // --- Game Data accumulator ---
 
 interface GameDataTracker {
 	gameDataLevel: number;
 	subsection: Subsection;
-	aliasCharacter: string | null;
-	worldState: string;
+	decisionContext: string;
 	decisions: string[];
-	playerAliases: string[];
-	otherCharacterAliases: Record<string, string[]>;
+	activePlotThreads: string[];
 	inList: boolean;
 	listItemText: string;
 }
@@ -198,11 +173,9 @@ function createGameDataTracker(level: number): GameDataTracker {
 	return {
 		gameDataLevel: level,
 		subsection: null,
-		aliasCharacter: null,
-		worldState: '',
+		decisionContext: '',
 		decisions: [],
-		playerAliases: [],
-		otherCharacterAliases: {},
+		activePlotThreads: [],
 		inList: false,
 		listItemText: '',
 	};
@@ -210,10 +183,9 @@ function createGameDataTracker(level: number): GameDataTracker {
 
 function finalizeGameDataTracker(tracker: GameDataTracker): GameDataFields {
 	return {
-		worldState: tracker.worldState.trim() || null,
+		activePlotThreads: [...tracker.activePlotThreads],
+		decisionContext: tracker.decisionContext.trim() || null,
 		decisions: [...tracker.decisions],
-		playerAliases: [...tracker.playerAliases],
-		otherCharacterAliases: { ...tracker.otherCharacterAliases },
 	};
 }
 
@@ -242,22 +214,11 @@ function createGameDataAccumulator(): ElementAccumulator {
 
 				// Subsections at gameDataLevel + 1
 				if (level === tracker.gameDataLevel + 1) {
-					if (normalized === SUB_WORLD_STATE) tracker.subsection = SUB_WORLD_STATE;
+					if (normalized === SUB_ACTIVE_PLOT_THREADS) tracker.subsection = SUB_ACTIVE_PLOT_THREADS;
+					else if (normalized === SUB_DECISION_CONTEXT) tracker.subsection = SUB_DECISION_CONTEXT;
 					else if (normalized === SUB_DECISIONS) tracker.subsection = SUB_DECISIONS;
-					else if (normalized === SUB_PLAYER_ALIASES) tracker.subsection = SUB_PLAYER_ALIASES;
-					else if (normalized === SUB_OTHER_CHAR_ALIASES) tracker.subsection = SUB_OTHER_CHAR_ALIASES;
 					else tracker.subsection = null;
-					tracker.aliasCharacter = null;
 					return;
-				}
-
-				// Character name headers at gameDataLevel + 2 (under Other Character Aliases)
-				if (level === tracker.gameDataLevel + 2 && tracker.subsection === SUB_OTHER_CHAR_ALIASES) {
-					const charName = element.name ?? '';
-					tracker.aliasCharacter = charName;
-					if (!tracker.otherCharacterAliases[charName]) {
-						tracker.otherCharacterAliases[charName] = [];
-					}
 				}
 				return;
 			}
@@ -280,11 +241,7 @@ function createGameDataAccumulator(): ElementAccumulator {
 				const text = tracker.listItemText.trimEnd();
 				if (text) {
 					if (tracker.subsection === SUB_DECISIONS) tracker.decisions.push(text);
-					else if (tracker.subsection === SUB_PLAYER_ALIASES) tracker.playerAliases.push(text);
-					else if (tracker.subsection === SUB_OTHER_CHAR_ALIASES && tracker.aliasCharacter) {
-						const charAliases = tracker.otherCharacterAliases[tracker.aliasCharacter];
-						if (charAliases) charAliases.push(text);
-					}
+					else if (tracker.subsection === SUB_ACTIVE_PLOT_THREADS) tracker.activePlotThreads.push(text);
 				}
 				tracker.inList = false;
 				tracker.listItemText = '';
@@ -318,9 +275,9 @@ function createGameDataAccumulator(): ElementAccumulator {
 				return true;
 			}
 
-			// World state text
-			if (tracker.subsection === SUB_WORLD_STATE) {
-				tracker.worldState += text;
+			// Decision context text
+			if (tracker.subsection === SUB_DECISION_CONTEXT) {
+				tracker.decisionContext += text;
 				return true;
 			}
 
@@ -334,7 +291,7 @@ function createGameDataAccumulator(): ElementAccumulator {
 
 /**
  * Streaming parser that wraps MarkdownSaxParser with composite accumulators
- * for section detection, game data extraction, and review content capture.
+ * for section detection and game data extraction.
  *
  * No suppression logic — the parser simply routes text to accumulators.
  * Unhandled text becomes passthrough (pendingText).
@@ -343,7 +300,7 @@ export function createSaxSectionParser(): StreamParser<Record<string, unknown>> 
 	let pendingText = '';
 	let currentAcc: Record<string, unknown>;
 
-	const accumulators: ElementAccumulator[] = [...sectionAccumulators, createGameDataAccumulator(), createRevisedNarrativeAccumulator()];
+	const accumulators: ElementAccumulator[] = [...sectionAccumulators, createGameDataAccumulator()];
 
 	const saxParser = createMarkdownSaxParser({
 		onEnterElement(element, context): void {

@@ -32,9 +32,7 @@ interface MessageInLine {
 	reasoning: string | null;
 	metadata: string | null;
 	variables: string | null;
-	draft_variables: string | null;
 	scene_number: number | null;
-	session_number: number | null;
 	created_at: number;
 	sequence: number;
 }
@@ -101,7 +99,7 @@ export async function getMessagesForLine(actLineId: string): Promise<Message[]> 
 	const db = getDatabase();
 	const rows = await db.select<MessageInLine[]>(
 		`
-		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.draft_variables, m.scene_number, m.session_number, m.created_at, al.sequence
+		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.scene_number, m.created_at, al.sequence
 		FROM act_lines al
 		JOIN messages m ON al.message_id = m.id
 		WHERE al.act_line_id = $1
@@ -117,9 +115,7 @@ export async function getMessagesForLine(actLineId: string): Promise<Message[]> 
 		reasoning: row.reasoning ?? undefined,
 		metadata: row.metadata ?? undefined,
 		variables: parseVariables(row.variables),
-		draftVariables: parseVariables(row.draft_variables),
 		sceneNumber: row.scene_number ?? undefined,
-		sessionNumber: row.session_number ?? undefined,
 		createdAt: row.created_at,
 	}));
 }
@@ -319,7 +315,7 @@ export async function getPremisesMessages(actLineId: string): Promise<Message[]>
 	const db = getDatabase();
 	const rows = await db.select<MessageInLine[]>(
 		`
-		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.draft_variables, m.scene_number, m.session_number, m.created_at, p.sequence
+		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.scene_number, m.created_at, p.sequence
 		FROM act_line_premises p
 		JOIN messages m ON p.message_id = m.id
 		WHERE p.act_line_id = $1
@@ -335,9 +331,7 @@ export async function getPremisesMessages(actLineId: string): Promise<Message[]>
 		reasoning: row.reasoning ?? undefined,
 		metadata: row.metadata ?? undefined,
 		variables: parseVariables(row.variables),
-		draftVariables: parseVariables(row.draft_variables),
 		sceneNumber: row.scene_number ?? undefined,
-		sessionNumber: row.session_number ?? undefined,
 		createdAt: row.created_at,
 	}));
 }

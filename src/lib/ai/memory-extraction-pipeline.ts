@@ -9,7 +9,7 @@ import {
 import { loadMemoryExtractionPrompt, loadMemoryExtractionSystemPrompt } from '$lib/fs/prompts';
 import { type ExtractedMemories, parseMemoryExtract } from '$lib/memory/memory-extract-parser';
 import { Memory } from '$lib/memory/memory';
-import type { GameDataFields } from './narrative-types';
+import { parseCharacterAliases, type CharacterAliasEntry } from './act-summary-parser';
 import { isAuthError, toError, withRetry } from '$lib/utils/async';
 import { log } from '$lib/logging/logger';
 
@@ -29,7 +29,7 @@ export async function runMemoryExtractionPipeline(
 	storyId: string,
 	actLineId: string,
 	messageId: string,
-	gameData?: GameDataFields
+	actSummary?: string
 ): Promise<PipelineResult> {
 	const llmConfig = getMemoryProviderConfig();
 	if (!llmConfig) {
@@ -55,13 +55,15 @@ export async function runMemoryExtractionPipeline(
 	await log.debug('memory-pipeline', `persisting memories for message=${messageId}...`);
 	const result = await persistMemoriesWithRetry(extracted, storyId, actLineId, messageId, embeddingConfig);
 
-	// Step 4: Persist aliases from GameData
-	const aliasGroups = [
-		...(gameData?.playerAliases?.length ? [gameData.playerAliases] : []),
-		...Object.values(gameData?.otherCharacterAliases ?? {}),
-	];
-	if (aliasGroups.length > 0) {
-		result.aliasesAdded = await persistAliases(embeddingConfig, storyId, actLineId, messageId, aliasGroups);
+	// Step 4: Persist aliases from act summary
+	if (actSummary) {
+		const aliasEntries = parseCharacterAliases(actSummary);
+		const aliasGroups = aliasEntries
+			.filter((entry) => entry.aliases.length > 0)
+			.map((entry) => entry.aliases);
+		if (aliasGroups.length > 0) {
+			result.aliasesAdded = await persistAliases(embeddingConfig, storyId, actLineId, messageId, aliasGroups);
+		}
 	}
 
 	return result;
@@ -97,9 +99,9 @@ async function persistMemoriesWithRetry(
 		errors: [],
 	};
 
-	for (const [character, locations] of Object.entries(extracted)) {
+	for (const [character, locations] of Object.entries(extracted) as [string, { [location: string]: string[] }][]) {
 		let characterSuccess = true;
-		for (const [location, memories] of Object.entries(locations)) {
+		for (const [location, memories] of Object.entries(locations) as [string, string[]][]) {
 			// Per-location retry scope — avoids duplicating previously succeeded locations
 			try {
 				const { memoriesAdded, locationAdded } = await persistLocationWithRetry(

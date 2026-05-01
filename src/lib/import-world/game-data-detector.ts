@@ -58,10 +58,9 @@ export function extractGameDataTraditional(content: string): GameDataFields | nu
 		// Need at least 2 decisions to be valid
 		if (decisions.length >= 2) {
 			return {
-				worldState: worldState.trim(),
+				activePlotThreads: [],
+				decisionContext: worldState.trim() || null,
 				decisions,
-				playerAliases: [],
-				otherCharacterAliases: {},
 			};
 		}
 	}

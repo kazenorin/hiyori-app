@@ -43,22 +43,13 @@ vi.mock('$lib/logging/logger', () => ({
  * This mirrors how the SAX section parser populates StreamState.
  */
 const mockStreamAccumulator = (content: string) => {
-	const scratchpadMatch = content.match(/^# Review Scratchpad\s*\n([\s\S]*?)(?=\n# Revised Narrative)/m);
 	const narrativeMatch = content.match(/^# Revised Narrative\s*\n([\s\S]*?)$/m);
 
 	const vars: NarrativeVariables = {
-		scratchpad: scratchpadMatch ? scratchpadMatch[1].trim() : null,
-		storyTitle: null,
-		actNumber: null,
-		sessionNumber: null,
-		sceneNumber: null,
 		sceneTitle: null,
 		background: null,
 		narrativeBody: narrativeMatch ? narrativeMatch[1].trim() : null,
 		cg: null,
-		currentContext: null,
-		activePlotThreads: [],
-		decisionContext: null,
 		gameData: null,
 	};
 
@@ -144,17 +135,14 @@ The corrected narrative output goes here.`;
 			const result = (await streamReview(baseTranscript)) as ReviewLoopResult;
 
 			expect(result).not.toBeNull();
-			expect(result.variables.scratchpad).toContain('Rule 1 Analysis');
-			expect(result.variables.scratchpad).toContain('Planned Fixes');
 			expect(result.variables.narrativeBody).toBe('The corrected narrative output goes here.');
 		});
 
-		it('returns null scratchpad when Review Scratchpad section is missing', async () => {
+		it('returns narrativeBody when Revised Narrative section is present', async () => {
 			mockStreamWithRetryResult = mockStreamAccumulator(`# Revised Narrative\nFixed output.`);
 
 			const result = (await streamReview(baseTranscript)) as ReviewLoopResult;
 
-			expect(result.variables.scratchpad).toBeNull();
 			expect(result.variables.narrativeBody).toBe('Fixed output.');
 		});
 

@@ -8,23 +8,13 @@ import {
 import { type ParserChainOutput } from './parser-chain';
 import type { StreamState } from './chat-callbacks';
 
-function mergeCharacterAliases(existing: Record<string, string[]>, incoming: Record<string, string[]>): Record<string, string[]> {
-	const result: Record<string, string[]> = { ...existing };
-	for (const [key, aliases] of Object.entries(incoming)) {
-		result[key] = [...(result[key] ?? []), ...aliases];
-	}
-	return result;
-}
-
 export function mergeGameDataFields(existing: GameDataFields | null, incoming: GameDataFields | null): GameDataFields | null {
 	if (!incoming) return existing;
 	if (!existing) return incoming;
 	return {
-		worldState:
-			existing.worldState && incoming.worldState ? existing.worldState + incoming.worldState : (incoming.worldState ?? existing.worldState),
+		activePlotThreads: [...existing.activePlotThreads, ...incoming.activePlotThreads],
+		decisionContext: incoming.decisionContext ?? existing.decisionContext,
 		decisions: [...existing.decisions, ...incoming.decisions],
-		playerAliases: [...existing.playerAliases, ...incoming.playerAliases],
-		otherCharacterAliases: mergeCharacterAliases(existing.otherCharacterAliases, incoming.otherCharacterAliases),
 	};
 }
 
@@ -44,7 +34,7 @@ function mergeVariables(existing: NarrativeVariables | null, incoming: Narrative
 		} else if (Array.isArray(e)) {
 			setField(result, field, e);
 		} else {
-			const val = (i ?? e) as string | number | null;
+			const val = (i ?? e) as string | null;
 			if (val !== null) setField(result, field, val);
 		}
 	}

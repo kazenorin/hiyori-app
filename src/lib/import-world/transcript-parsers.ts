@@ -321,11 +321,14 @@ function parseGameData(raw: string, skipOptionalMalformed: boolean): GameDataFie
 		if (
 			parsed &&
 			typeof parsed === 'object' &&
-			typeof parsed.worldState === 'string' &&
 			Array.isArray(parsed.decisions) &&
 			parsed.decisions.every((d: unknown) => typeof d === 'string')
 		) {
-			return { worldState: parsed.worldState, decisions: parsed.decisions, playerAliases: [], otherCharacterAliases: {} };
+			return {
+				activePlotThreads: Array.isArray(parsed.activePlotThreads) ? parsed.activePlotThreads : [],
+				decisionContext: typeof parsed.decisionContext === 'string' ? parsed.decisionContext : (typeof parsed.worldState === 'string' ? parsed.worldState : null),
+				decisions: parsed.decisions,
+			};
 		}
 		return null;
 	} catch {

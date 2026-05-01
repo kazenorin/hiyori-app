@@ -3,7 +3,6 @@ import {
 	getMemoryProviderConfig,
 	type ProviderConfig,
 	SCENE_NUMBER_REGEX,
-	SESSION_NUMBER_REGEX,
 	settings,
 } from '$lib/stores/settings.svelte';
 import { getActiveStoryId, getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
@@ -33,9 +32,7 @@ export interface UIMessage {
 	draftReasoning?: string;
 	metadata?: MessageMetadata;
 	sceneNumber?: number;
-	sessionNumber?: number;
 	variables?: NarrativeVariables;
-	draftVariables?: NarrativeVariables;
 }
 
 let messages = $state<UIMessage[]>([]);
@@ -70,8 +67,6 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 		reasoning: m.reasoning,
 		metadata: parseMetadata(m.metadata),
 		sceneNumber: m.sceneNumber,
-		sessionNumber: m.sessionNumber,
-		draftVariables: m.draftVariables,
 		variables: m.variables,
 	}));
 	error = null;
@@ -99,18 +94,10 @@ function findLastNonNullSceneNumber(): number | undefined {
 	return undefined;
 }
 
-function findLastNonNullSessionNumber(): number | undefined {
-	for (let i = messages.length - 1; i >= 0; i--) {
-		if (messages[i].sessionNumber != null) return messages[i].sessionNumber;
-	}
-	return undefined;
-}
-
 function getHistory(message: {
 	bodyText: string | undefined;
 	systemPrompt: string | undefined;
 	narrationContent: ModelMessage[] | undefined;
-	sessionNumber?: number;
 }): MessageBase[] {
 	const narrations = message.narrationContent?.length ? message.narrationContent.map(narrowNarrationMessage).filter((m) => m !== null) : [];
 	// exclude the first message (current message) to get the existing messages
@@ -140,9 +127,7 @@ async function persistMessage(actLineId: string, message: UIMessage): Promise<vo
 		reasoning: message.reasoning,
 		metadata: message.metadata ? JSON.stringify(message.metadata) : undefined,
 		sceneNumber: message.sceneNumber,
-		sessionNumber: message.sessionNumber,
 		variables: message.variables,
-		draftVariables: message.draftVariables,
 	});
 	const seq = await dbActLines.getNextSequence(actLineId);
 	await dbActLines.addMessageToLine(actLineId, message.id, seq);
@@ -153,18 +138,15 @@ async function persistUserMessage(
 		bodyText: string;
 		systemPrompt: string | undefined;
 		narrationContent: ModelMessage[] | undefined;
-		sessionNumber?: number;
 	},
 	actLineId: string
 ) {
-	const userSessionNumber = message.sessionNumber ?? findLastNonNullSessionNumber();
 	const userSceneNumber = findLastNonNullSceneNumber();
 
 	const userMessage: UIMessage = {
 		id: crypto.randomUUID(),
 		role: 'user',
 		content: message.bodyText,
-		sessionNumber: userSessionNumber,
 		sceneNumber: userSceneNumber,
 	};
 
@@ -174,7 +156,6 @@ async function persistUserMessage(
 		role: userMessage.role,
 		content: userMessage.content,
 		sceneNumber: userSceneNumber,
-		sessionNumber: userSessionNumber,
 	});
 
 	const userSeq = await dbActLines.getNextSequence(actLineId);
@@ -204,8 +185,7 @@ function runMemoryPipeline(storyId: string | null, actLineId: string, message: U
 	if (!settings.memoryEnabled) return;
 	if (!storyId || !actLineId) return;
 	memoryPipelineRunning = true;
-	const gameData = message.variables?.gameData ?? undefined;
-	memoryPipelinePromise = runMemoryExtractionPipeline(message.content, storyId, actLineId, message.id, gameData)
+	memoryPipelinePromise = runMemoryExtractionPipeline(message.content, storyId, actLineId, message.id, undefined)
 		.then((result) => log.debug('memory-pipeline', `Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`))
 		.catch((err) => log.error('memory-pipeline', 'Pipeline failed', err))
 		.finally(() => {
@@ -235,7 +215,6 @@ export async function sendMessage(
 		bodyText: string | undefined;
 		systemPrompt: string | undefined;
 		narrationContent: ModelMessage[] | undefined;
-		sessionNumber?: number;
 	}
 ): Promise<void> {
 	const storyIdPromise = dbActLines.getStoryIdForActLine(actLineId);
@@ -304,8 +283,7 @@ export async function sendMessage(
 					setCurrentMessage({
 						...currentMessage,
 						content: content,
-						variables: undefined,
-						draftVariables: vars ?? currentMessage.draftVariables,
+						variables: vars ?? currentMessage.variables,
 						reasoning: undefined,
 						draftReasoning: state.reasoning ?? currentMessage.draftReasoning,
 					});
@@ -332,18 +310,16 @@ export async function sendMessage(
 
 		// Review loop: run editor mode, revise if needed
 		if (settings.reviewerEnabled) {
-			const sessionNumber = message.sessionNumber ?? findLastNonNullSessionNumber();
 			const reviewedMetadata = await runReviewLoop(
 				getCurrentMessage,
 				(msg: ReviewableMessage) => setCurrentMessage(msg as UIMessage),
 				history,
 				{
-					sessionNumber,
 					tools,
 				}
 			);
 			updateMetaData(getCurrentMessage, reviewedMetadata, providerConfig);
-			await log.debug('send-message', `Session ${sessionNumber} review completed`);
+			await log.debug('send-message', `Review completed`);
 
 			// Render final content from result
 			const finalMsg = getCurrentMessage();
@@ -355,8 +331,8 @@ export async function sendMessage(
 			}
 		}
 
-		// Determine sceneNumber and sessionNumber for the assistant response
-		await determineSceneNumberAndNextSessionNumber(messageIdx, message.sessionNumber);
+		// Determine sceneNumber for the assistant response
+		await determineSceneNumber(messageIdx);
 
 		// Persist with accumulated content (not result.content)
 		await Promise.all([
@@ -374,33 +350,16 @@ export async function sendMessage(
 	}
 }
 
-async function determineSceneNumberAndNextSessionNumber(messageIdx: number, explicitSessionNumber?: number): Promise<void> {
+async function determineSceneNumber(messageIdx: number): Promise<void> {
 	const msg = messages[messageIdx];
-	const vars = msg.variables ?? msg.draftVariables;
-
-	const varsSceneNumber = vars?.sceneNumber;
-	const varsSessionNumber = vars?.sessionNumber;
-
-	const lastSessionNumber = findLastNonNullSessionNumber();
-	const sessionNumber =
-		lastSessionNumber != null
-			? lastSessionNumber + 1
-			: (explicitSessionNumber ?? varsSessionNumber ?? parseSessionNumber(msg.content) ?? 1);
-
-	const sceneNumber = varsSceneNumber ?? parseSceneNumber(msg.content);
+	const sceneNumber = parseSceneNumber(msg.content);
 
 	messages[messageIdx] = {
 		...messages[messageIdx],
 		sceneNumber,
-		sessionNumber,
 	};
 
-	await log.info('send-message', `Prepared session ${sessionNumber}, last scene was ${sceneNumber}`);
-}
-
-function parseSessionNumber(content: string): number | undefined {
-	const match = SESSION_NUMBER_REGEX.exec(content);
-	return match ? parseInt(match[1], 10) : undefined;
+	await log.info('send-message', `Prepared scene ${sceneNumber}`);
 }
 
 function parseSceneNumber(content: string): number | undefined {
@@ -413,7 +372,7 @@ function toHistoryMessage(message: UIMessage): MessageBase {
 		return { role: message.role, content: message.content };
 	}
 
-	const vars = message.variables ?? message.draftVariables;
+	const vars = message.variables;
 	const content = vars ? variablesToMarkdown(vars) : message.content;
 	const gd = vars?.gameData ?? placeholderContent();
 	const gameDataContent = '\n' + gameDataToMarkdown(gd);
@@ -427,10 +386,9 @@ function randomItem<T>(items: readonly T[]): T {
 // Randomized history for placeholder content so that to encourage the LLM to actually offer options
 function placeholderContent(): GameDataFields {
 	return {
-		worldState: randomWorldStateMessage(),
+		activePlotThreads: [],
+		decisionContext: randomWorldStateMessage(),
 		decisions: [1, 2, 3, 4].map((i) => randomPositionalDecisions(i)),
-		playerAliases: [],
-		otherCharacterAliases: {},
 	};
 }
 
@@ -501,7 +459,6 @@ export async function sendInitialNarration(actLineId: string, narrationContent: 
 		bodyText: undefined,
 		systemPrompt: systemPrompt,
 		narrationContent: narrationContent,
-		sessionNumber: 0,
 	});
 }
 

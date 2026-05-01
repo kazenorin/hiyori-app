@@ -217,23 +217,14 @@ describe('act-lines operations', () => {
 			role: 'assistant',
 			content: 'Shared Assistant',
 			variables: {
-				scratchpad: null,
-				storyTitle: null,
-				actNumber: null,
-				sessionNumber: null,
-				sceneNumber: null,
 				sceneTitle: null,
 				background: null,
 				narrativeBody: null,
 				cg: null,
-				currentContext: null,
-				activePlotThreads: [],
-				decisionContext: null,
 				gameData: {
-					worldState: 'State',
+					activePlotThreads: [],
+					decisionContext: null,
 					decisions: ['A', 'B'],
-					playerAliases: [],
-					otherCharacterAliases: {},
 				},
 			},
 		});
@@ -257,10 +248,9 @@ describe('act-lines operations', () => {
 		const msg2 = await messages.getMessage('msg-2');
 		expect(msg2).not.toBeNull();
 		expect(msg2!.variables?.gameData).toEqual({
-			worldState: 'State',
+			activePlotThreads: [],
+			decisionContext: null,
 			decisions: ['A', 'B'],
-			playerAliases: [],
-			otherCharacterAliases: {},
 		});
 
 		// Verify line-1 no longer has msg-3
@@ -272,10 +262,9 @@ describe('act-lines operations', () => {
 		const line2Msgs = await actLines.getMessagesForLine('line-2');
 		expect(line2Msgs).toHaveLength(2);
 		expect(line2Msgs[1].variables?.gameData).toEqual({
-			worldState: 'State',
+			activePlotThreads: [],
+			decisionContext: null,
 			decisions: ['A', 'B'],
-			playerAliases: [],
-			otherCharacterAliases: {},
 		});
 	});
 
@@ -294,23 +283,14 @@ describe('act-lines operations', () => {
 			role: 'assistant',
 			content: 'Content',
 			variables: {
-				scratchpad: null,
-				storyTitle: null,
-				actNumber: null,
-				sessionNumber: null,
-				sceneNumber: null,
 				sceneTitle: null,
 				background: null,
 				narrativeBody: null,
 				cg: null,
-				currentContext: null,
-				activePlotThreads: [],
-				decisionContext: null,
 				gameData: {
-					worldState: 'World',
+					activePlotThreads: [],
+					decisionContext: null,
 					decisions: ['X'],
-					playerAliases: [],
-					otherCharacterAliases: {},
 				},
 			},
 		});
@@ -324,19 +304,17 @@ describe('act-lines operations', () => {
 		const msg = await messages.getMessage('msg-1');
 		expect(msg).not.toBeNull();
 		expect(msg!.variables?.gameData).toEqual({
-			worldState: 'World',
+			activePlotThreads: [],
+			decisionContext: null,
 			decisions: ['X'],
-			playerAliases: [],
-			otherCharacterAliases: {},
 		});
 
 		const line2Msgs = await actLines.getMessagesForLine('line-2');
 		expect(line2Msgs).toHaveLength(1);
 		expect(line2Msgs[0].variables?.gameData).toEqual({
-			worldState: 'World',
+			activePlotThreads: [],
+			decisionContext: null,
 			decisions: ['X'],
-			playerAliases: [],
-			otherCharacterAliases: {},
 		});
 	});
 

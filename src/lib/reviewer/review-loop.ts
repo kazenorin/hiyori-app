@@ -1,7 +1,7 @@
 import type { MessageBase } from '$lib/db/messages';
 import { streamWithRetry, type RetryConfig } from '$lib/ai/chat-stream';
 import type { StreamState } from '$lib/ai/chat-callbacks';
-import { getReviewerProviderConfig, getMainProviderConfig, SESSION_NUMBER_REGEX } from '$lib/stores/settings.svelte';
+import { getReviewerProviderConfig, getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { loadEditorModeExtractionPrompt } from '$lib/fs/prompts';
 import { knownCharacterNameList } from '$lib/memory/memory';
 import { log } from '$lib/logging/logger';
@@ -23,11 +23,9 @@ export interface ReviewLoopResult {
 export interface ReviewableMessage extends MessageBase {
 	reasoning?: string;
 	variables?: NarrativeVariables;
-	draftVariables?: NarrativeVariables;
 }
 
 export interface ReviewLoopOptions {
-	sessionNumber?: number;
 	tools?: ToolSet;
 }
 
@@ -35,19 +33,6 @@ const RETRY_CONFIG: RetryConfig = { retryCount: 2, backoffIntervalSeconds: 2 };
 
 function getProviderConfig() {
 	return getReviewerProviderConfig() ?? getMainProviderConfig();
-}
-
-function getPreprocessedContent(draftMessage: ReviewableMessage, options: ReviewLoopOptions): string {
-	let baseContent = draftMessage.content;
-
-	if (options.sessionNumber) {
-		const expectedNextSessionNumber = options.sessionNumber + 1;
-		baseContent = baseContent.replace(SESSION_NUMBER_REGEX, (match, p1) => {
-			return match.replace(p1, expectedNextSessionNumber.toString());
-		});
-	}
-
-	return baseContent;
 }
 
 export async function streamReview(
@@ -106,9 +91,8 @@ export async function runReviewLoop(
 	options: ReviewLoopOptions
 ): Promise<StreamResultMetadata | null> {
 	const draftMessage = getCurrentMessage();
-	const draftContent = getPreprocessedContent(draftMessage, options);
 
-	const historyWithDraft: MessageBase[] = [...history, { role: 'assistant', content: draftContent }];
+	const historyWithDraft: MessageBase[] = [...history, { role: 'assistant', content: draftMessage.content }];
 
 	const reviewResult = await streamReview(
 		historyWithDraft,
@@ -132,10 +116,7 @@ export async function runReviewLoop(
 		});
 		return reviewResult.resultMetadata;
 	} else {
-		setCurrentMessage({
-			...draftMessage,
-			variables: draftMessage.draftVariables,
-		});
+		// No review result — keep current variables as-is
 		return null;
 	}
 }
