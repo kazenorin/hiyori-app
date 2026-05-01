@@ -242,8 +242,8 @@ async function loadActPlotAndSummary(): Promise<void> {
 		// Load latest act summary from DB messages
 		const dbMsgs = await dbActLines.getMessagesForLine(activeActLineId);
 		for (let i = dbMsgs.length - 1; i >= 0; i--) {
-			if (dbMsgs[i].summary) {
-				activeActSummary = dbMsgs[i].summary!;
+			if (dbMsgs[i].actSummary) {
+				activeActSummary = dbMsgs[i].actSummary!;
 				return;
 			}
 		}

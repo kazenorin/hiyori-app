@@ -45,7 +45,7 @@ export interface UIMessage {
 	sceneNumber?: number;
 	variables?: NarrativeVariables;
 	phases?: UIScenePhase[];
-	summary?: string;
+	actSummary?: string;
 }
 
 let messages = $state<UIMessage[]>([]);
@@ -81,7 +81,7 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 		metadata: parseMetadata(m.metadata),
 		sceneNumber: m.sceneNumber,
 		variables: m.variables,
-		summary: m.summary,
+		actSummary: m.actSummary,
 		// phases is ephemeral — not loaded from DB
 	}));
 	error = null;
@@ -111,7 +111,7 @@ function findLastNonNullSceneNumber(): number | undefined {
 
 function getLatestActSummary(): string {
 	for (let i = messages.length - 1; i >= 0; i--) {
-		if (messages[i].summary) return messages[i].summary!;
+		if (messages[i].actSummary) return messages[i].actSummary!;
 	}
 	return '';
 }
@@ -150,7 +150,7 @@ async function persistMessage(actLineId: string, message: UIMessage): Promise<vo
 		metadata: message.metadata ? JSON.stringify(message.metadata) : undefined,
 		sceneNumber: message.sceneNumber,
 		variables: message.variables,
-		summary: message.summary,
+		actSummary: message.actSummary,
 	});
 	const seq = await dbActLines.getNextSequence(actLineId);
 	await dbActLines.addMessageToLine(actLineId, message.id, seq);
@@ -208,7 +208,7 @@ function runMemoryPipeline(storyId: string | null, actLineId: string, message: U
 	if (!settings.memoryEnabled) return;
 	if (!storyId || !actLineId) return;
 	memoryPipelineRunning = true;
-	memoryPipelinePromise = runMemoryExtractionPipeline(message.content, storyId, actLineId, message.id, message.summary ?? undefined)
+	memoryPipelinePromise = runMemoryExtractionPipeline(message.content, storyId, actLineId, message.id, message.actSummary ?? undefined)
 		.then((result) => log.debug('memory-pipeline', `Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`))
 		.catch((err) => log.error('memory-pipeline', 'Pipeline failed', err))
 		.finally(() => {
@@ -404,7 +404,7 @@ export async function sendMessage(
 					...current,
 					content,
 					variables: finalVars ?? current.variables,
-					summary: pipelineState.actSummary ?? current.summary,
+					actSummary: pipelineState.actSummary ?? current.actSummary,
 				});
 			},
 		};

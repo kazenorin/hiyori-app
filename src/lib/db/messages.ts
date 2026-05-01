@@ -18,7 +18,7 @@ export interface Message extends MessageBase {
 	reasoning?: string;
 	metadata?: string;
 	sceneNumber?: number;
-	summary?: string;
+	actSummary?: string;
 	variables?: NarrativeVariables;
 	createdAt: number;
 }
@@ -30,7 +30,7 @@ interface MessageRow {
 	reasoning: string | null;
 	metadata: string | null;
 	variables: string | null;
-	summary: string | null;
+	act_summary: string | null;
 	scene_number: number | null;
 	created_at: number;
 }
@@ -80,7 +80,7 @@ function rowToMessage(row: MessageRow): Message {
 		reasoning: row.reasoning ?? undefined,
 		metadata: row.metadata ?? undefined,
 		variables: parseVariables(row.variables),
-		summary: row.summary ?? undefined,
+		actSummary: row.act_summary ?? undefined,
 		sceneNumber: row.scene_number ?? undefined,
 		createdAt: row.created_at,
 	};
@@ -90,7 +90,7 @@ export async function createMessage(message: Omit<Message, 'createdAt'>): Promis
 	const db = getDatabase();
 	const now = Date.now();
 	await db.execute(
-		`INSERT INTO messages (id, role, content, reasoning, metadata, variables, summary, scene_number, created_at)
+		`INSERT INTO messages (id, role, content, reasoning, metadata, variables, act_summary, scene_number, created_at)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		[
 			message.id,
@@ -99,7 +99,7 @@ export async function createMessage(message: Omit<Message, 'createdAt'>): Promis
 			message.reasoning ?? null,
 			message.metadata ?? null,
 			message.variables ? JSON.stringify(message.variables) : null,
-			message.summary ?? null,
+			message.actSummary ?? null,
 			message.sceneNumber ?? null,
 			now,
 		]

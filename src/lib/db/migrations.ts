@@ -28,7 +28,7 @@ const migrationStatements: string[][] = [
 			reasoning TEXT,
 			metadata TEXT,
 			variables TEXT,
-			summary TEXT,
+			act_summary TEXT,
 			scene_number INTEGER,
 			created_at INTEGER NOT NULL DEFAULT (0)
 		)`,
