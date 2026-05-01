@@ -13,6 +13,7 @@ import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStory
 import { writeTextFile, readTextFile, exists, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { buildLineDir } from '$lib/ai/card-output-path';
+import { generateActPlot } from '$lib/ai/act-plot-generator';
 
 export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
 
@@ -232,6 +233,17 @@ async function loadActPlotAndSummary(): Promise<void> {
 			const plotExists = await exists(plotPath, { baseDir: BaseDirectory.AppData });
 			if (plotExists) {
 				activeActPlotContent = await readTextFile(plotPath, { baseDir: BaseDirectory.AppData });
+			} else {
+				// Generate act plot if it doesn't exist yet
+				const result = await generateActPlot(
+					activeStoryId,
+					activeStoryName,
+					activeWorldContent ?? '',
+					activeActLineId,
+					actLine.isMainLine,
+					act.actNumber
+				);
+				activeActPlotContent = result.content;
 			}
 		}
 	} catch {

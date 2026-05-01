@@ -192,7 +192,7 @@
 	async function startGame(storyId: string, storyName: string, actLineId: string, worldContent: string): Promise<void> {
 		const actLine = await getActLine(actLineId);
 		const isMainLine = actLine?.isMainLine ?? true;
-		const result = await generateActPlot(storyId, storyName, worldContent, actLineId, isMainLine);
+		const result = await generateActPlot(storyId, storyName, worldContent, actLineId, isMainLine, 1);
 		setActiveActPlotContent(result.content);
 
 		exitWorldBuilderMode();
