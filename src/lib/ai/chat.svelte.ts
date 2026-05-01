@@ -416,11 +416,13 @@ export async function sendMessage(
 			worldContent,
 			actPlot,
 			actSummary,
-			history,
 			abortSignal: abortController!.signal,
 			tools,
 			callbacks: pipelineCallbacks,
-			memoryRunner: () => {
+			memoryRunner: (actSummary: string | undefined) => {
+				if (actSummary) {
+					setCurrentMessage({ ...getCurrentMessage(), actSummary });
+				}
 				runMemoryPipeline(storyId, actLineId, getCurrentMessage());
 			},
 			completedScenes,
