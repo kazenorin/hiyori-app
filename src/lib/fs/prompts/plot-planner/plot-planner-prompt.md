@@ -11,18 +11,18 @@ You are responsible for generating a Scene Plot that guides the next narrative o
 ## Plot Alignment
 
 - Identify the upcoming climactic event from the Act Plot.
-- Determine the target session number for this event (targeting approximately 16 sessions per climactic event).
-- Calculate how many sessions remain between the current session and the target.
+- Determine the target scene number for this event (targeting approximately 16 scenes per climactic event).
+- Calculate how many scenes remain between the current scene and the target.
 
 ## Pacing Management
 
-- **On track:** Identify one element from the climactic event (character, location, object, or theme) and plant a subtle reference to it in this session.
-- **Within 6 sessions of the event (no enabling scene reached):** Actively steer toward an enabling scene. Allow expanded narrative output to facilitate this.
-- **More than 6 sessions past the event (no enabling scene reached):** Abandon this event. Redirect planning toward the next scheduled climactic event.
+- **On track:** Identify one element from the climactic event (character, location, object, or theme) and plant a subtle reference to it in this scene.
+- **Within 6 scenes of the event (no enabling scene reached):** Actively steer toward an enabling scene. Allow expanded narrative output to facilitate this.
+- **More than 6 scenes past the event (no enabling scene reached):** Abandon this event. Redirect planning toward the next scheduled climactic event.
 
 ## Short-Term Roadmap
 
-Draft a brief plan for the current session and the next 6 upcoming sessions. For each, outline:
+Draft a brief plan for the current scene and the next 6 upcoming scenes. For each, outline:
 - Location
 - Key NPC reaction
 - Plot catalyst
@@ -37,8 +37,8 @@ Produce your Scene Plot using the following template:
 
 ## Plot Alignment
 - Upcoming climactic event: [description]
-- Target session: [number]
-- Sessions remaining: [number]
+- Target scene: [number]
+- Scenes remaining: [number]
 
 ## Narrative State
 - Current location: [description]
@@ -47,20 +47,20 @@ Produce your Scene Plot using the following template:
 - Player choice impact: [how previous choice affects plan]
 
 ## Pacing Decision
-- Status: [on track / within 6 sessions / past event]
+- Status: [on track / within 6 scenes / past event]
 - Action: [specific steering action]
 
-## Session Roadmap
-### Session [N]: Current
+## Scene Roadmap
+### Scene [N]: Current
 - Location: [where]
 - NPC reaction: [what NPCs do]
 - Plot catalyst: [what drives the scene]
 - Enabling scene progress: [how this moves toward the event]
 
-### Session [N+1]: Next
+### Scene [N+1]: Next
 - [same structure]
 
-[Continue for next 6 sessions]
+[Continue for next 6 scenes]
 
 ## Pre-Output Verification
 - Plan matches roadmap: [yes/no]

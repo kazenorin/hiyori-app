@@ -30,6 +30,8 @@ export interface PipelineInput {
 	abortSignal: AbortSignal;
 	tools?: ToolSet;
 	callbacks: PipelineCallbacks;
+	memoryRunner?: () => Promise<void>;
+	completedScenes?: number;
 }
 
 function updateState(prev: PipelineState, patch: Partial<PipelineState>): PipelineState {
@@ -97,7 +99,7 @@ async function runNonStreamingPhase(
 /**
  * Run the full narrative generation pipeline.
  *
- * Phases run sequentially 1-4, then Game Master and Summarizer run in parallel.
+ * Phases run sequentially 1-4, then Game Master, Summarizer, and Memory run in parallel.
  */
 export async function runPipeline(input: PipelineInput): Promise<PipelineState & { editorMetadata?: StreamResultMetadata }> {
 	const {
@@ -112,6 +114,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		abortSignal,
 		tools,
 		callbacks,
+		memoryRunner,
+		completedScenes,
 	} = input;
 
 	let state: PipelineState = { currentPhase: null };
@@ -128,6 +132,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 			await (await import('$lib/fs/prompts')).loadPlotPlannerPrompt(),
 			'\n## World Content\n' + worldContent,
 			'\n## Act Plot\n' + actPlot,
+			'\n## Act Summary\n' + actSummary,
 		].join('\n\n');
 
 		const plotPlannerMessages: MessageBase[] = [...history, { role: 'user' as const, content: userMessage }];
@@ -163,6 +168,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 			'\n## Writer Output Template\n' + writerTemplate,
 			'\n## World Content\n' + worldContent,
 			'\n## Act Plot\n' + actPlot,
+			'\n## Act Summary\n' + actSummary,
 			'\n## Scene Plot\n' + (state.scenePlot ?? ''),
 		].join('\n\n');
 
@@ -191,7 +197,15 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 
 	try {
 		const reviewerPromptContent = await (await import('$lib/fs/prompts')).loadReviewerPrompt();
-		const reviewerSystem = [generalInstructions, reviewerPromptContent, '\n## Writer Output\n' + (state.writerOutput ?? '')].join('\n\n');
+		const reviewerSystem = [
+			generalInstructions,
+			reviewerPromptContent,
+			'\n## World Content\n' + worldContent,
+			'\n## Act Plot\n' + actPlot,
+			'\n## Act Summary\n' + actSummary,
+			'\n## Scene Plot\n' + (state.scenePlot ?? ''),
+			'\n## Writer Output\n' + (state.writerOutput ?? ''),
+		].join('\n\n');
 
 		const reviewerMessages: MessageBase[] = [
 			{ role: 'user' as const, content: 'Review the Writer Output above against the General Instructions and Review Rules.' },
@@ -225,6 +239,10 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 			generalInstructions,
 			editorPromptContent,
 			'\n## Writer Output Template\n' + writerTemplate,
+			'\n## World Content\n' + worldContent,
+			'\n## Act Plot\n' + actPlot,
+			'\n## Act Summary\n' + actSummary,
+			'\n## Scene Plot\n' + (state.scenePlot ?? ''),
 			'\n## Writer Output\n' + (state.writerOutput ?? ''),
 			'\n## Reviewer Output\n' + (state.reviewerOutput ?? ''),
 		].join('\n\n');
@@ -258,12 +276,19 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		throw err;
 	}
 
-	// --- Phase 5 & 6: Game Master + Summarizer (parallel) ---
+	// --- Phase 5 & 6: Game Master + Summarizer (parallel) + Memory (fire-and-forget) ---
 	callbacks.onPhaseStart('GAME_MASTER');
+	callbacks.onPhaseStart('SUMMARIZER');
 
 	const gmPromise = (async (): Promise<{ content: string; streamState: StreamState }> => {
 		const gmPromptContent = await (await import('$lib/fs/prompts')).loadGameMasterPrompt();
-		const gmSystem = [gmPromptContent, '\n## Editor Output\n' + (state.editorOutput ?? '')].join('\n\n');
+		const gmSystem = [
+			gmPromptContent,
+			'\n## Act Plot\n' + actPlot,
+			'\n## Act Summary\n' + actSummary,
+			'\n## Scene Plot\n' + (state.scenePlot ?? ''),
+			'\n## Editor Output\n' + (state.editorOutput ?? ''),
+		].join('\n\n');
 
 		const gmMessages: MessageBase[] = [{ role: 'user' as const, content: 'Generate game data from the Editor Output above.' }];
 
@@ -282,7 +307,13 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 
 	const summarizerPromise = (async (): Promise<string> => {
 		const summarizerPromptContent = await (await import('$lib/fs/prompts')).loadSummarizerPrompt();
-		const summaryTemplate = await (await import('$lib/fs/prompts')).loadActSummaryTemplate();
+		let summaryTemplate = await (await import('$lib/fs/prompts')).loadActSummaryTemplate();
+
+		// Inject programmatic completed scenes count
+		if (completedScenes != null) {
+			summaryTemplate = summaryTemplate.replace('{completedScenes}', String(completedScenes));
+		}
+
 		const summarizerSystem = [
 			summarizerPromptContent,
 			'\n## Act Summary Template\n' + summaryTemplate,
@@ -294,6 +325,13 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 
 		return runNonStreamingPhase(summarizerSystem, summarizerMessages, providerConfigs.summarizer, abortSignal);
 	})();
+
+	// Fire-and-forget memory runner in parallel
+	if (memoryRunner) {
+		memoryRunner().catch(() => {
+			// Errors are logged inside the memory runner itself
+		});
+	}
 
 	try {
 		const [gmResult, newActSummary] = await Promise.all([gmPromise, summarizerPromise]);
@@ -307,6 +345,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 			actSummary: newActSummary,
 		});
 		callbacks.onPhaseComplete('GAME_MASTER', state);
+		callbacks.onPhaseComplete('SUMMARIZER', state);
 	} catch (err: unknown) {
 		callbacks.onError('GAME_MASTER', err);
 		throw err;

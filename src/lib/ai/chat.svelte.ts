@@ -325,6 +325,8 @@ export async function sendMessage(
 		const actPlot = getActiveActPlotContent() ?? '';
 		const actSummary = getLatestActSummary() || getActiveActSummary();
 		const userMessage = message.bodyText ?? '';
+		const previousSceneNumber = findLastNonNullSceneNumber();
+		const completedScenes = previousSceneNumber != null ? previousSceneNumber + 1 : 1;
 
 		const pipelineCallbacks: PipelineCallbacks = {
 			onPhaseStart: (phase: PhaseName) => {
@@ -416,6 +418,11 @@ export async function sendMessage(
 			abortSignal: abortController!.signal,
 			tools,
 			callbacks: pipelineCallbacks,
+			memoryRunner: () => new Promise<void>((resolve) => {
+				runMemoryPipeline(storyId, actLineId, getCurrentMessage());
+				resolve();
+			}),
+			completedScenes,
 		});
 
 		// Update metadata from Editor phase
@@ -424,9 +431,8 @@ export async function sendMessage(
 			updateMetaData(getCurrentMessage, result.editorMetadata, editorConfig);
 		}
 
-		// Determine sceneNumber programmatically
-		const previousSceneNumber = findLastNonNullSceneNumber();
-		const sceneNumber = previousSceneNumber != null ? previousSceneNumber + 1 : 1;
+		// Scene number already computed as completedScenes above
+		const sceneNumber = completedScenes;
 		messages[messageIdx] = {
 			...messages[messageIdx],
 			sceneNumber,
@@ -438,8 +444,6 @@ export async function sendMessage(
 			logMainChat({ systemPrompt, newMessages: messages.slice(-newMessagesCount), history }),
 		]);
 
-		// Run memory extraction pipeline in background (non-blocking)
-		runMemoryPipeline(storyId, actLineId, getCurrentMessage());
 	} catch (err: unknown) {
 		await handleStreamError(err, responseMessage.id, actLineId);
 	} finally {
