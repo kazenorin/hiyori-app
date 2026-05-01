@@ -12,6 +12,7 @@ import {
 } from '$lib/stores/settings.svelte';
 import {
 	getActiveStoryId,
+	getActiveStoryName,
 	getActiveSystemPromptOrDefault,
 	getActiveActPlotContent,
 	getActiveActSummary,
@@ -34,7 +35,7 @@ import { renderFromVariables, variablesToMarkdown, gameDataToMarkdown } from './
 import { storyMessageTemplate } from '$lib/fs/view-templates';
 import { runPipeline, type PipelineProviderConfigs } from './pipeline';
 import type { PipelineState, PipelineCallbacks, PhaseStreamState } from './pipeline-types';
-import { loadGeneralInstructions } from '$lib/fs/prompts';
+import { getActiveGeneralInstructionsOrDefault } from '$lib/stores/stories.svelte';
 
 export interface UIMessage {
 	id: string;
@@ -321,7 +322,7 @@ export async function sendMessage(
 		}
 
 		// Load pipeline context
-		const generalInstructions = await loadGeneralInstructions();
+		const generalInstructions = await getActiveGeneralInstructionsOrDefault();
 		const worldContent = getActiveWorldContent() ?? '';
 		const actPlot = getActiveActPlotContent() ?? '';
 		const actSummary = getLatestActSummary() || getActiveActSummary();
@@ -416,6 +417,8 @@ export async function sendMessage(
 			worldContent,
 			actPlot,
 			actSummary,
+			storyId: storyId ?? undefined,
+			storyName: getActiveStoryName() ?? undefined,
 			abortSignal: abortController!.signal,
 			tools,
 			callbacks: pipelineCallbacks,

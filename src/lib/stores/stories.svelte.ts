@@ -8,7 +8,7 @@ import { getLogFilePath } from '$lib/ai/world-builder.svelte';
 import { Memory } from '$lib/memory/memory';
 import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 import type { ModelMessage } from 'ai';
-import { loadStorySystemPrompt, loadSystemPrompt } from '$lib/fs/prompts';
+import { loadStorySystemPrompt, loadStoryGeneralInstructions, loadSystemPrompt, loadGeneralInstructions } from '$lib/fs/prompts';
 import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-folders';
 import { writeTextFile, readTextFile, exists, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
@@ -27,6 +27,7 @@ let activeActLineId = $state<string | null>(null);
 let isLoading = $state(true);
 let isSelectingStory = $state(false);
 let activeSystemPrompt = $state<string | null>(null);
+let activeGeneralInstructions = $state<string | null>(null);
 let activeWorldContent = $state<string | null>(null);
 let activeInterviewTranscript = $state<ModelMessage[]>([]);
 let activeActPlotContent = $state<string>('');
@@ -64,6 +65,12 @@ export function getActiveSystemPrompt(): string | null {
 }
 export async function getActiveSystemPromptOrDefault(): Promise<string> {
 	return activeSystemPrompt ?? (await loadSystemPrompt());
+}
+export function getActiveGeneralInstructions(): string | null {
+	return activeGeneralInstructions;
+}
+export async function getActiveGeneralInstructionsOrDefault(): Promise<string> {
+	return activeGeneralInstructions ?? (await loadGeneralInstructions());
 }
 export function getActiveWorldContent(): string | null {
 	return activeWorldContent;
@@ -143,12 +150,14 @@ export async function loadActLines(actId: string): Promise<void> {
  */
 async function loadStoryContent(storyId: string, storyName: string): Promise<void> {
 	activeSystemPrompt = await loadStorySystemPrompt(storyId, storyName);
+	activeGeneralInstructions = await loadStoryGeneralInstructions(storyId, storyName);
 	await ensureWorldFile(storyId, storyName);
 	activeWorldContent = await loadStoryWorldContent(storyId, storyName);
 }
 
 function resetStoryContent(): void {
 	activeSystemPrompt = null;
+	activeGeneralInstructions = null;
 	activeWorldContent = null;
 	activeInterviewTranscript = [];
 	activeActPlotContent = '';

@@ -5,7 +5,7 @@ import type { ProviderConfig } from '$lib/stores/settings.svelte';
 import { streamChatResponse } from './chat-stream';
 import { createModel } from './provider';
 import type { PhaseName } from './narrative-types';
-import type { PipelineState, PipelineCallbacks, PhaseStreamState } from './pipeline-types';
+import type { PipelineState, PipelineCallbacks } from './pipeline-types';
 import type { StreamState } from './chat-callbacks';
 import type { StreamResultMetadata } from './streaming';
 import {
@@ -17,6 +17,14 @@ import {
 	loadGameMasterPrompt,
 	loadSummarizerPrompt,
 	loadActSummaryTemplate,
+	loadStoryPlotPlannerPrompt,
+	loadStoryWriterPrompt,
+	loadStoryWriterOutputTemplate,
+	loadStoryReviewerPrompt,
+	loadStoryEditorPrompt,
+	loadStoryGameMasterPrompt,
+	loadStorySummarizerPrompt,
+	loadStoryActSummaryTemplate,
 } from '$lib/fs/prompts';
 
 // Markdown section headings used in phase prompts
@@ -49,6 +57,8 @@ export interface PipelineInput {
 	worldContent: string;
 	actPlot: string;
 	actSummary: string;
+	storyId?: string;
+	storyName?: string;
 	abortSignal: AbortSignal;
 	tools?: ToolSet;
 	callbacks: PipelineCallbacks;
@@ -175,6 +185,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		worldContent,
 		actPlot,
 		actSummary,
+		storyId,
+		storyName,
 		abortSignal,
 		tools,
 		callbacks,
@@ -192,7 +204,40 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 
 	let state: PipelineState = { currentPhase: null };
 	let editorMetadata: StreamResultMetadata | undefined;
-	const writerTemplate = await loadWriterOutputTemplate();
+
+	// Load prompts — story-specific if storyId is provided, global otherwise
+	const [
+		plotPlannerPrompt,
+		writerPrompt,
+		writerTemplate,
+		reviewerPrompt,
+		editorPrompt,
+		gameMasterPrompt,
+		summarizerPrompt,
+		summaryTemplate,
+	] = await Promise.all(
+		storyId && storyName
+			? [
+					loadStoryPlotPlannerPrompt(storyId, storyName),
+					loadStoryWriterPrompt(storyId, storyName),
+					loadStoryWriterOutputTemplate(storyId, storyName),
+					loadStoryReviewerPrompt(storyId, storyName),
+					loadStoryEditorPrompt(storyId, storyName),
+					loadStoryGameMasterPrompt(storyId, storyName),
+					loadStorySummarizerPrompt(storyId, storyName),
+					loadStoryActSummaryTemplate(storyId, storyName),
+				]
+			: [
+					loadPlotPlannerPrompt(),
+					loadWriterPrompt(),
+					loadWriterOutputTemplate(),
+					loadReviewerPrompt(),
+					loadEditorPrompt(),
+					loadGameMasterPrompt(),
+					loadSummarizerPrompt(),
+					loadActSummaryTemplate(),
+				]
+	);
 
 	// --- Phase 1: Plot Planner ---
 	{
@@ -201,7 +246,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 				phaseName: 'PLOT_PLANNER',
 				...baseParams,
 				messages: toUserMessages([
-					await loadPlotPlannerPrompt(),
+					plotPlannerPrompt,
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
@@ -221,7 +266,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 				phaseName: 'WRITER',
 				...baseParams,
 				messages: toUserMessages([
-					await loadWriterPrompt(),
+					writerPrompt,
 					SECTION.WRITER_OUTPUT_TEMPLATE + writerTemplate,
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
@@ -243,7 +288,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 				phaseName: 'REVIEWER',
 				...baseParams,
 				messages: toUserMessages([
-					await loadReviewerPrompt(),
+					reviewerPrompt,
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
@@ -265,7 +310,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 				phaseName: 'EDITOR',
 				...baseParams,
 				messages: toUserMessages([
-					await loadEditorPrompt(),
+					editorPrompt,
 					SECTION.WRITER_OUTPUT_TEMPLATE + writerTemplate,
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
@@ -292,7 +337,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	callbacks.onPhaseStart('SUMMARIZER');
 
 	const gmPromise = (async (): Promise<{ content: string; streamState: StreamState }> => {
-		const gmSystem = [systemPrompt, await loadGameMasterPrompt()].join('\n\n');
+		const gmSystem = [systemPrompt, gameMasterPrompt].join('\n\n');
 
 		const gmPrompt = toUserMessages([
 			SECTION.ACT_PLOT + actPlot,
@@ -315,22 +360,22 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	})();
 
 	const summarizerPromise = (async (): Promise<string> => {
-		let summaryTemplate = await loadActSummaryTemplate();
+		let processedTemplate = summaryTemplate;
 
 		// Inject programmatic completed scenes count
 		if (completedScenes != null) {
-			summaryTemplate = summaryTemplate.replaceAll('{completedScenes}', String(completedScenes));
+			processedTemplate = processedTemplate.replaceAll('{completedScenes}', String(completedScenes));
 		}
 
-		const summarizerSystem = [systemPrompt, await loadSummarizerPrompt()].join('\n\n');
+		const summarizerSystem = [systemPrompt, summarizerPrompt].join('\n\n');
 
-		const summarizerPrompt = toUserMessages([
-			SECTION.ACT_SUMMARY_TEMPLATE + summaryTemplate,
+		const summarizerMessages = toUserMessages([
+			SECTION.ACT_SUMMARY_TEMPLATE + processedTemplate,
 			SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
 			SECTION.EDITOR_OUTPUT + (state.editorOutput ?? ''),
 		]);
 
-		return runNonStreamingPhase('SUMMARIZER', summarizerSystem, summarizerPrompt, providerConfigs.summarizer, abortSignal);
+		return runNonStreamingPhase('SUMMARIZER', summarizerSystem, summarizerMessages, providerConfigs.summarizer, abortSignal);
 	})();
 
 	await Promise.all([

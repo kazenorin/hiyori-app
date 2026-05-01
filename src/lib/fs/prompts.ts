@@ -229,6 +229,43 @@ export async function loadStorySystemPrompt(storyId: string, storyName: string):
 	return loadPromptForStory(storyId, storyName, systemPrompt.relativePath, systemPrompt.defaultContent);
 }
 
+export async function loadStoryGeneralInstructions(storyId: string, storyName: string): Promise<string> {
+	return loadPromptForStory(storyId, storyName, generalInstructions.relativePath, generalInstructions.defaultContent);
+}
+
+// Story-specific pipeline prompt loaders
+export async function loadStoryPlotPlannerPrompt(storyId: string, storyName: string): Promise<string> {
+	return loadPromptForStory(storyId, storyName, plotPlannerPrompt.relativePath, plotPlannerPrompt.defaultContent);
+}
+
+export async function loadStoryWriterPrompt(storyId: string, storyName: string): Promise<string> {
+	return loadPromptForStory(storyId, storyName, writerPrompt.relativePath, writerPrompt.defaultContent);
+}
+
+export async function loadStoryWriterOutputTemplate(storyId: string, storyName: string): Promise<string> {
+	return loadPromptForStory(storyId, storyName, writerOutputTemplate.relativePath, writerOutputTemplate.defaultContent);
+}
+
+export async function loadStoryReviewerPrompt(storyId: string, storyName: string): Promise<string> {
+	return loadPromptForStory(storyId, storyName, reviewerPrompt.relativePath, reviewerPrompt.defaultContent);
+}
+
+export async function loadStoryEditorPrompt(storyId: string, storyName: string): Promise<string> {
+	return loadPromptForStory(storyId, storyName, editorPrompt.relativePath, editorPrompt.defaultContent);
+}
+
+export async function loadStoryGameMasterPrompt(storyId: string, storyName: string): Promise<string> {
+	return loadPromptForStory(storyId, storyName, gameMasterPrompt.relativePath, gameMasterPrompt.defaultContent);
+}
+
+export async function loadStorySummarizerPrompt(storyId: string, storyName: string): Promise<string> {
+	return loadPromptForStory(storyId, storyName, summarizerPrompt.relativePath, summarizerPrompt.defaultContent);
+}
+
+export async function loadStoryActSummaryTemplate(storyId: string, storyName: string): Promise<string> {
+	return loadPromptForStory(storyId, storyName, actSummaryTemplate.relativePath, actSummaryTemplate.defaultContent);
+}
+
 // === Ensure All Base Configs ===
 
 export { ensureAllBaseConfigs } from './prompt-loader';
