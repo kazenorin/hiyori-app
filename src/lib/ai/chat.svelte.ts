@@ -444,11 +444,9 @@ export async function sendMessage(
 			updateMetaData(getCurrentMessage, result.editorMetadata, editorConfig);
 		}
 
-		// Scene number already computed as completedScenes above
-		const sceneNumber = completedScenes;
 		messages[messageIdx] = {
 			...messages[messageIdx],
-			sceneNumber,
+			sceneNumber: completedScenes,
 		};
 
 		// Persist with accumulated content

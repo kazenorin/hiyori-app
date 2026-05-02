@@ -266,8 +266,11 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 				]
 	);
 
+	let newActSummary = actSummary;
+
 	// --- Phase 0: Summarizer (only when player has responded) ---
 	if (playerResponse) {
+		callbacks.onPhaseStart('SUMMARIZER');
 		let processedTemplate = summaryTemplate;
 
 		// Inject programmatic completed scenes count
@@ -282,13 +285,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 			SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
 		]);
 
-		const newActSummary = await runNonStreamingPhase(
-			'SUMMARIZER',
-			summarizerSystem,
-			summarizerMessages,
-			providerConfigs.summarizer,
-			abortSignal
-		);
+		newActSummary = await runNonStreamingPhase('SUMMARIZER', summarizerSystem, summarizerMessages, providerConfigs.summarizer, abortSignal);
 		state = updateState(state, { actSummary: newActSummary });
 		callbacks.onPhaseComplete('SUMMARIZER', state);
 
@@ -309,7 +306,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 				messages: toUserMessages([
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
-					SECTION.ACT_SUMMARY + actSummary,
+					SECTION.ACT_SUMMARY + newActSummary,
 					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
 					'Generate a Scene Plot based on the available information in the chat history.',
 				]),
@@ -334,7 +331,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 					SECTION.WRITER_OUTPUT_TEMPLATE + writerTemplate,
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
-					SECTION.ACT_SUMMARY + actSummary,
+					SECTION.ACT_SUMMARY + newActSummary,
 					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
 					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
 					'Write a story prose based on the available information in the chat history.',
@@ -357,7 +354,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 				messages: toUserMessages([
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
-					SECTION.ACT_SUMMARY + actSummary,
+					SECTION.ACT_SUMMARY + newActSummary,
 					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
 					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
 					SECTION.WRITER_OUTPUT + (state.writerOutput ?? ''),
@@ -384,7 +381,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 					SECTION.WRITER_OUTPUT_TEMPLATE + writerTemplate,
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
-					SECTION.ACT_SUMMARY + actSummary,
+					SECTION.ACT_SUMMARY + newActSummary,
 					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
 					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
 					SECTION.WRITER_OUTPUT + (state.writerOutput ?? ''),
@@ -413,7 +410,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 				...sharedParams,
 				messages: toUserMessages([
 					SECTION.ACT_PLOT + actPlot,
-					SECTION.ACT_SUMMARY + (state.actSummary ?? ''),
+					SECTION.ACT_SUMMARY + newActSummary,
 					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
 					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
 					SECTION.EDITOR_OUTPUT + (state.editorOutput ?? ''),

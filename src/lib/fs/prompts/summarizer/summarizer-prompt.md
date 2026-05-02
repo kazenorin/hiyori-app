@@ -8,7 +8,7 @@ Produce a concise running summary of the act's progression.
 ## Instructions
 
 1. Read the previous Act Summary (if available).
-2. Read the new Editor Output for the current scene.
+2. Read the new Editor Output and the Player Response for the current scene.
 3. Update the summary by adding the new scene information and updating character summaries.
 4. Follow the Act Summary template exactly.
 
