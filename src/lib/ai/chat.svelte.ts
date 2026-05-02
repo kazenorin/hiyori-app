@@ -297,6 +297,8 @@ export async function sendMessage(
 		newMessagesCount = 1;
 	}
 
+	const playerResponse = getPlayerResponse()
+
 	const messageIdx = messages.length - 1;
 
 	function getCurrentMessage(): UIMessage {
@@ -417,6 +419,7 @@ export async function sendMessage(
 			worldContent,
 			actPlot,
 			actSummary,
+			playerResponse,
 			storyId: storyId ?? undefined,
 			storyName: getActiveStoryName() ?? undefined,
 			abortSignal: abortController!.signal,
@@ -474,6 +477,13 @@ function getPhaseContent(phase: PhaseName, state: PipelineState): string {
 		case 'SUMMARIZER':
 			return state.actSummary ?? '';
 	}
+}
+
+function getPlayerResponse(): string | undefined {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		if (messages[i].role === 'user') return messages[i].content
+	}
+	return undefined;
 }
 
 function toHistoryMessage(message: UIMessage): MessageBase {

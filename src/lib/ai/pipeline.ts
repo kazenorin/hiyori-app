@@ -8,6 +8,7 @@ import type { PhaseName } from './narrative-types';
 import type { PipelineState, PipelineCallbacks } from './pipeline-types';
 import type { StreamState } from './chat-callbacks';
 import type { StreamResultMetadata } from './streaming';
+import { variablesToMarkdown } from './template-renderer';
 import {
 	loadPlotPlannerPrompt,
 	loadWriterPrompt,
@@ -32,6 +33,7 @@ const SECTION = {
 	WORLD_CONTENT: '\n## World Content\n',
 	ACT_PLOT: '\n## Act Plot\n',
 	ACT_SUMMARY: '\n## Act Summary\n',
+	PLAYER_RESPONSE: '\n## Player Response\n',
 	SCENE_PLOT: '\n## Scene Plot\n',
 	WRITER_OUTPUT_TEMPLATE: '\n## Writer Output Template\n',
 	WRITER_OUTPUT: '\n## Writer Output\n',
@@ -39,6 +41,23 @@ const SECTION = {
 	EDITOR_OUTPUT: '\n## Editor Output\n',
 	PREVIOUS_ACT_SUMMARY: '\n## Previous Act Summary\n',
 };
+
+/**
+ * Reconstruct full output text from a StreamState.
+ * The SaxSectionParser routes structured sections (Scene Title, Background,
+ * Narrative Body, CG) into `variables` and leaves unhandled text in `content`.
+ * For phases that output the writer template format, we need to combine both
+ * to get the complete output.
+ */
+function fullOutput(ss: StreamState): string {
+	if (ss.variables && (ss.variables.sceneTitle || ss.variables.narrativeBody)) {
+		const parts: string[] = [];
+		if (ss.content) parts.push(ss.content);
+		parts.push(variablesToMarkdown(ss.variables));
+		return parts.join('\n');
+	}
+	return ss.content;
+}
 
 export interface PipelineProviderConfigs {
 	plotPlanner: ProviderConfig | undefined;
@@ -55,6 +74,7 @@ export interface PipelineInput {
 	worldContent: string;
 	actPlot: string;
 	actSummary: string;
+	playerResponse: string | undefined;
 	storyId?: string;
 	storyName?: string;
 	abortSignal: AbortSignal;
@@ -183,6 +203,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		worldContent,
 		actPlot,
 		actSummary,
+		playerResponse,
 		storyId,
 		storyName,
 		abortSignal,
@@ -194,7 +215,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	} = input;
 
 	const defaultTargetWordCount = 400;
-	const effectTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
+	const effectiveTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
+	const effectivePlayerResponse = playerResponse ?? '(no response)';
 
 	const sharedParams = {
 		abortSignal,
@@ -246,13 +268,14 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 				phaseName: 'PLOT_PLANNER',
 				systemPrompt: plotPlannerPrompt
 					.replaceAll('{generalInstructions}', generalInstructions)
-					.replaceAll('{targetWordCount}', effectTargetWordCount),
+					.replaceAll('{targetWordCount}', effectiveTargetWordCount),
 				...sharedParams,
 				messages: toUserMessages([
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
-					"Generate a Scene Plot based on the available information in the chat history."
+					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
+					'Generate a Scene Plot based on the available information in the chat history.',
 				]),
 				providerConfig: providerConfigs.plotPlanner,
 				buildStateUpdate: (ss) => ({ scenePlot: ss.content }),
@@ -269,7 +292,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 				phaseName: 'WRITER',
 				systemPrompt: writerPrompt
 					.replaceAll('{generalInstructions}', generalInstructions)
-					.replaceAll('{targetWordCount}', effectTargetWordCount),
+					.replaceAll('{targetWordCount}', effectiveTargetWordCount),
 				...sharedParams,
 				messages: toUserMessages([
 					SECTION.WRITER_OUTPUT_TEMPLATE + writerTemplate,
@@ -277,10 +300,11 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
 					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
-					"Write a story prose based on the available information in the chat history."
+					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
+					'Write a story prose based on the available information in the chat history.',
 				]),
 				providerConfig: providerConfigs.writer,
-				buildStateUpdate: (ss) => ({ writerOutput: ss.content }),
+				buildStateUpdate: (ss) => ({ writerOutput: fullOutput(ss) }),
 			},
 			state
 		);
@@ -299,8 +323,9 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
 					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
+					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
 					SECTION.WRITER_OUTPUT + (state.writerOutput ?? ''),
-					"Perform a review on the writer's output based on the available information in the chat history."
+					"Perform a review on the writer's output based on the available information in the chat history.",
 				]),
 				providerConfig: providerConfigs.reviewer,
 				buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),
@@ -317,7 +342,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 				phaseName: 'EDITOR',
 				systemPrompt: editorPrompt
 					.replaceAll('{generalInstructions}', generalInstructions)
-					.replaceAll('{targetWordCount}', effectTargetWordCount),
+					.replaceAll('{targetWordCount}', effectiveTargetWordCount),
 				...sharedParams,
 				messages: toUserMessages([
 					SECTION.WRITER_OUTPUT_TEMPLATE + writerTemplate,
@@ -325,13 +350,14 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
 					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
+					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
 					SECTION.WRITER_OUTPUT + (state.writerOutput ?? ''),
 					SECTION.REVIEWER_OUTPUT + (state.reviewerOutput ?? ''),
-					"Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history."
+					'Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history.',
 				]),
 				providerConfig: providerConfigs.editor,
 				buildStateUpdate: (ss) => ({
-					editorOutput: ss.content,
+					editorOutput: fullOutput(ss),
 					editorVariables: ss.variables,
 					editorReasoning: ss.reasoning,
 				}),
@@ -352,6 +378,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 			SECTION.ACT_PLOT + actPlot,
 			SECTION.ACT_SUMMARY + actSummary,
 			SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
+			SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
 			SECTION.EDITOR_OUTPUT + (state.editorOutput ?? ''),
 		]);
 
