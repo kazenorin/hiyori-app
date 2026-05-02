@@ -9,6 +9,8 @@ import type { PipelineCallbacks, PipelineState } from './pipeline-types';
 import type { StreamState } from './chat-callbacks';
 import type { StreamResultMetadata } from './streaming';
 import { variablesToMarkdown } from './template-renderer';
+import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
+import { log } from '$lib/logging/logger';
 import {
 	loadActSummaryTemplate,
 	loadEditorPrompt,
@@ -79,6 +81,8 @@ export interface PipelineInput {
 	playerResponse: string | undefined;
 	storyId?: string;
 	storyName?: string;
+	actLineId?: string;
+	playerMessageId?: string;
 	abortSignal: AbortSignal;
 	tools?: ToolSet;
 	callbacks: PipelineCallbacks;
@@ -210,6 +214,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		playerResponse,
 		storyId,
 		storyName,
+		actLineId,
+		playerMessageId,
 		abortSignal,
 		tools,
 		callbacks,
@@ -298,6 +304,15 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		state = updateState(state, { actSummary: newActSummary });
 		callbacks.onPhaseComplete('SUMMARIZER', state);
 
+		// Run memory extraction after summary is available (must complete before Phase 1
+		// because Plot Planner queries memories via tools)
+		if (previousNarrativeVariables?.narrativeBody && actLineId && playerMessageId && storyId) {
+			try {
+				await runMemoryExtractionPipeline(previousNarrativeVariables.narrativeBody, storyId, actLineId, playerMessageId, newActSummary);
+			} catch (err) {
+				log.error('memory-pipeline', 'Memory extraction failed', err);
+			}
+		}
 	}
 	// --- Phase 1: Plot Planner ---
 	{

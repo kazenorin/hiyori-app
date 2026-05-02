@@ -25,7 +25,6 @@ import type { ModelMessage } from 'ai';
 import * as dbActLines from '$lib/db/act-lines';
 import { logMainChat } from '$lib/logging/chat-logger';
 import { buildMetadata, type MessageMetadata } from './chat-stream';
-import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
 import { Memory } from '$lib/memory/memory';
 import { log } from '$lib/logging/logger';
 import { buildTools } from '$lib/ai/tools/tools';
@@ -52,15 +51,9 @@ let messages = $state<UIMessage[]>([]);
 let isStreaming = $state(false);
 let error = $state<string | null>(null);
 let abortController: AbortController | null = null;
-let memoryPipelineRunning = $state(false);
-let memoryPipelinePromise: Promise<void> | null = null;
 
 export function getMessages(): UIMessage[] {
 	return messages;
-}
-
-export function isMemoryPipelineRunning(): boolean {
-	return memoryPipelineRunning;
 }
 
 export function getIsStreaming(): boolean {
@@ -204,19 +197,6 @@ async function handleStreamError(err: unknown, messageId: string, actLineId: str
 	}
 }
 
-function runMemoryPipeline(storyId: string | null, actLineId: string, message: UIMessage): void {
-	if (!settings.memoryEnabled) return;
-	if (!storyId || !actLineId) return;
-	memoryPipelineRunning = true;
-	memoryPipelinePromise = runMemoryExtractionPipeline(message.content, storyId, actLineId, message.id, message.actSummary ?? undefined)
-		.then((result) => log.debug('memory-pipeline', `Processed ${result.charactersProcessed} characters, ${result.memoriesAdded} memories`))
-		.catch((err) => log.error('memory-pipeline', 'Pipeline failed', err))
-		.finally(() => {
-			memoryPipelinePromise = null;
-			memoryPipelineRunning = false;
-		});
-}
-
 function newMessage(role: 'user' | 'assistant'): UIMessage {
 	return {
 		id: crypto.randomUUID(),
@@ -318,11 +298,6 @@ export async function sendMessage(
 	try {
 		const systemPrompt = message.systemPrompt ?? (await getActiveSystemPromptOrDefault());
 		const history = getHistory(message);
-
-		// Await any in-flight memory pipeline before starting a new response
-		if (memoryPipelinePromise) {
-			await memoryPipelinePromise;
-		}
 
 		// Load pipeline context
 		const generalInstructions = await getActiveGeneralInstructionsOrDefault();
@@ -429,6 +404,8 @@ export async function sendMessage(
 			callbacks: pipelineCallbacks,
 			completedScenes,
 			targetWordCount,
+			actLineId: settings.memoryEnabled ? actLineId : undefined,
+			playerMessageId: settings.memoryEnabled ? getPlayerMessageId() : undefined,
 		});
 
 		// Update metadata from Editor phase
@@ -447,9 +424,6 @@ export async function sendMessage(
 			persistMessage(actLineId, getCurrentMessage()),
 			logMainChat({ systemPrompt, newMessages: messages.slice(-newMessagesCount), history }),
 		]);
-
-		// Run memory extraction after pipeline completes and content is persisted
-		runMemoryPipeline(storyId, actLineId, getCurrentMessage());
 	} catch (err: unknown) {
 		await handleStreamError(err, responseMessage.id, actLineId);
 	} finally {
@@ -487,6 +461,13 @@ function getPreviousNarrativeMessage(): NarrativeVariables | undefined {
 function getPlayerResponse(): string | undefined {
 	for (let i = messages.length - 1; i >= 0; i--) {
 		if (messages[i].role === 'user') return messages[i].content;
+	}
+	return undefined;
+}
+
+function getPlayerMessageId(): string | undefined {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		if (messages[i].role === 'user') return messages[i].id;
 	}
 	return undefined;
 }

@@ -8,7 +8,6 @@
 		getLatestDecisions,
 		getMessages,
 		isUserMessage,
-		isMemoryPipelineRunning,
 		loadActLineMessages,
 		regenerateLastResponse,
 		sendInitialNarration,
@@ -719,12 +718,7 @@ duration:    {message.metadata.durationMs}ms</pre>
 					{/each}
 				{/if}
 
-				{#if isMemoryPipelineRunning()}
-					<div class="max-w-2xl mx-auto mt-4 text-sm text-surface-500 flex items-center gap-2">
-						<span class="inline-block w-4 h-4 border-2 border-surface-400 border-t-transparent rounded-full animate-spin"></span>
-						Processing memories...
-					</div>
-				{:else if latestDecisions.length > 0 && !getIsStreaming()}
+				{#if latestDecisions.length > 0 && !getIsStreaming()}
 					<div class="max-w-2xl mx-auto space-y-2 mt-4">
 						{#each latestDecisions as decision, i (i)}
 							<button
@@ -758,15 +752,11 @@ duration:    {message.metadata.durationMs}ms</pre>
 				aria-label="Message input"
 				bind:value={input}
 				onkeydown={handleKeydown}
-				disabled={getIsStreaming() || isMemoryPipelineRunning()}
+				disabled={getIsStreaming()}
 			></textarea>
 
 			<div class="mt-3">
-				{#if isMemoryPipelineRunning()}
-					<button class="btn preset-filled-primary-500 w-full opacity-50 cursor-not-allowed" type="button" disabled>
-						Processing memories...
-					</button>
-				{:else if getIsStreaming()}
+				{#if getIsStreaming()}
 					<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopStreaming}> Stop </button>
 				{:else}
 					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> Send </button>
