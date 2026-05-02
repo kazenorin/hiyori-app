@@ -396,16 +396,13 @@ export async function sendMessage(
 			actPlot,
 			actSummary,
 			previousNarrativeVariables,
-			playerResponse,
-			storyId: storyId ?? undefined,
-			storyName: getActiveStoryName() ?? undefined,
+			player: playerResponse ? { playerResponse, playerMessageId: getPlayerMessageId()! } : undefined,
+			story: storyId ? { storyId, storyName: getActiveStoryName()!, actLineId } : undefined,
 			abortSignal: abortController!.signal,
 			tools,
 			callbacks: pipelineCallbacks,
 			completedScenes,
 			targetWordCount,
-			actLineId: settings.memoryEnabled ? actLineId : undefined,
-			playerMessageId: settings.memoryEnabled ? getPlayerMessageId() : undefined,
 		});
 
 		// Update metadata from Editor phase
@@ -522,14 +519,22 @@ export async function regenerateLastResponse(
 	const lastAssistantMsgIdx = currentMessages.findLastIndex((m) => m.role === 'assistant');
 	if (lastAssistantMsgIdx === -1) return;
 
-	const messageIdsToRemove = messages.slice(lastAssistantMsgIdx).map((m) => m.id);
+	const assistantMessageIds = messages.slice(lastAssistantMsgIdx).map((m) => m.id);
 
 	const targetMessageIdx = currentMessages.findIndex((m) => m.id === messageId);
-	if (messageIdsToRemove.length !== 1 || targetMessageIdx !== lastAssistantMsgIdx) {
+	if (assistantMessageIds.length !== 1 || targetMessageIdx !== lastAssistantMsgIdx) {
 		error = 'Message state is stale, reloading messages from database.';
 		await loadActLineMessages(actLineId);
 		return;
 	}
+
+	// Include the preceding player message ID for memory cleanup,
+	// since memories are stored under the player message ID
+	const playerMessageIds: string[] = [];
+	if (lastAssistantMsgIdx > 0 && messages[lastAssistantMsgIdx - 1].role === 'user') {
+		playerMessageIds.push(messages[lastAssistantMsgIdx - 1].id);
+	}
+	const messageIdsToRemove = [...playerMessageIds, ...assistantMessageIds];
 
 	messages = messages.slice(0, lastAssistantMsgIdx);
 

@@ -71,6 +71,19 @@ export interface PipelineProviderConfigs {
 	summarizer: ProviderConfig | undefined;
 }
 
+/** Story identification context. All fields are present together or all absent. */
+export interface StoryContext {
+	storyId: string;
+	storyName: string;
+	actLineId: string;
+}
+
+/** Player response context. Both fields are present together or both absent. */
+export interface PlayerContext {
+	playerResponse: string;
+	playerMessageId: string;
+}
+
 export interface PipelineInput {
 	providerConfigs: PipelineProviderConfigs;
 	generalInstructions: string;
@@ -78,11 +91,8 @@ export interface PipelineInput {
 	actPlot: string;
 	actSummary: string;
 	previousNarrativeVariables: NarrativeVariables | undefined;
-	playerResponse: string | undefined;
-	storyId?: string;
-	storyName?: string;
-	actLineId?: string;
-	playerMessageId?: string;
+	player?: PlayerContext;
+	story?: StoryContext;
 	abortSignal: AbortSignal;
 	tools?: ToolSet;
 	callbacks: PipelineCallbacks;
@@ -211,17 +221,20 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		actPlot,
 		actSummary,
 		previousNarrativeVariables,
-		playerResponse,
-		storyId,
-		storyName,
-		actLineId,
-		playerMessageId,
+		player,
+		story,
 		abortSignal,
 		tools,
 		callbacks,
 		completedScenes,
 		targetWordCount,
 	} = input;
+
+	const storyId = story?.storyId;
+	const storyName = story?.storyName;
+	const actLineId = story?.actLineId;
+	const playerResponse = player?.playerResponse;
+	const playerMessageId = player?.playerMessageId;
 
 	const defaultTargetWordCount = 400;
 	const effectiveTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
