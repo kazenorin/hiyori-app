@@ -18,7 +18,7 @@ vi.mock('$lib/db/database', () => ({
 
 describe('act-lines helpers', () => {
 	let getActNumberForActLine: typeof import('$lib/db/act-lines').getActNumberForActLine;
-	let getStoryIdForActLine: typeof import('$lib/db/act-lines').getStoryIdForActLine;
+	let getStoryForActLine: typeof import('$lib/db/act-lines').getStoryForActLine;
 	let batchResolveActLineInfo: typeof import('$lib/db/act-lines').batchResolveActLineInfo;
 
 	beforeEach(async () => {
@@ -31,7 +31,7 @@ describe('act-lines helpers', () => {
 
 		const mod = await import('$lib/db/act-lines');
 		getActNumberForActLine = mod.getActNumberForActLine;
-		getStoryIdForActLine = mod.getStoryIdForActLine;
+		getStoryForActLine = mod.getStoryForActLine;
 		batchResolveActLineInfo = mod.batchResolveActLineInfo;
 	});
 
@@ -49,16 +49,16 @@ describe('act-lines helpers', () => {
 		});
 	});
 
-	describe('getStoryIdForActLine', () => {
-		it('returns story ID when act line exists', async () => {
-			mockDbSelectResults = [[{ story_id: 'story-42' }]];
-			const result = await getStoryIdForActLine('line-1');
-			expect(result).toBe('story-42');
+	describe('getStoryForActLine', () => {
+		it('returns Story when act line exists', async () => {
+			mockDbSelectResults = [[{ id: 'story-42', name: 'My Story', created_at: 1000, updated_at: 2000 }]];
+			const result = await getStoryForActLine('line-1');
+			expect(result).toEqual({ id: 'story-42', name: 'My Story', createdAt: 1000, updatedAt: 2000 });
 		});
 
 		it('throws when act line not found', async () => {
 			mockDbSelectResults = [[]];
-			await expect(getStoryIdForActLine('nonexistent')).rejects.toThrow('Orphaned Act Line with no Story');
+			await expect(getStoryForActLine('nonexistent')).rejects.toThrow('Orphaned Act Line with no Story');
 		});
 	});
 

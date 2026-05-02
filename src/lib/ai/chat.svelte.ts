@@ -12,9 +12,7 @@ import {
 } from '$lib/stores/settings.svelte';
 import {
 	getActiveActPlotContent,
-	getActiveGeneralInstructionsOrDefault,
 	getActiveStoryId,
-	getActiveStoryName,
 	getActiveSystemPromptOrDefault,
 	getActiveWorldContent,
 } from '$lib/stores/stories.svelte';
@@ -32,7 +30,7 @@ import type { StreamResultMetadata } from '$lib/ai/streaming';
 import { getErrorMessage } from '$lib/utils/error-handling';
 import { gameDataToMarkdown, renderFromVariables, variablesToMarkdown } from './template-renderer';
 import { storyMessageTemplate } from '$lib/fs/view-templates';
-import { type PipelineProviderConfigs, runPipeline } from './pipeline';
+import { type PipelineProviderConfigs, type PlayerContext, runPipeline } from './pipeline';
 import type { PhaseStreamState, PipelineCallbacks, PipelineState } from './pipeline-types';
 
 export interface UIMessage {
@@ -248,7 +246,7 @@ export async function sendMessage(
 		narrationContent: ModelMessage[] | undefined;
 	}
 ): Promise<void> {
-	const storyIdPromise = dbActLines.getStoryIdForActLine(actLineId);
+	const storyPromise = dbActLines.getStoryForActLine(actLineId);
 	if (!message.bodyText && !message.systemPrompt && !message.narrationContent) {
 		await log.warn('send-message', 'Called with no body, system prompt, or narration content');
 		return;
@@ -278,7 +276,7 @@ export async function sendMessage(
 		newMessagesCount = 1;
 	}
 
-	const playerResponse = getPlayerResponse();
+	const playerContext = getPlayerContext();
 
 	const messageIdx = messages.length - 1;
 
@@ -292,7 +290,8 @@ export async function sendMessage(
 
 	isStreaming = true;
 	abortController = new AbortController();
-	const storyId = await storyIdPromise;
+	const story = await storyPromise;
+	const storyId = story.id;
 	const tools = await buildTools(storyId, actLineId);
 
 	try {
@@ -300,7 +299,6 @@ export async function sendMessage(
 		const history = getHistory(message);
 
 		// Load pipeline context
-		const generalInstructions = await getActiveGeneralInstructionsOrDefault();
 		const worldContent = getActiveWorldContent() ?? '';
 		const actPlot = getActiveActPlotContent() ?? '';
 		const actSummary = getLatestActSummary();
@@ -390,17 +388,18 @@ export async function sendMessage(
 		};
 
 		const result = await runPipeline({
-			providerConfigs: buildPipelineProviderConfigs(),
-			generalInstructions,
+			execution: {
+				providerConfigs: buildPipelineProviderConfigs(),
+				abortSignal: abortController!.signal,
+				tools,
+				callbacks: pipelineCallbacks,
+			},
 			worldContent,
 			actPlot,
 			actSummary,
 			previousNarrativeVariables,
-			player: playerResponse ? { playerResponse, playerMessageId: getPlayerMessageId()! } : undefined,
-			story: storyId ? { storyId, storyName: getActiveStoryName()!, actLineId } : undefined,
-			abortSignal: abortController!.signal,
-			tools,
-			callbacks: pipelineCallbacks,
+			player: playerContext,
+			story: { storyId: story.id, storyName: story.name, actLineId },
 			completedScenes,
 			targetWordCount,
 		});
@@ -455,16 +454,11 @@ function getPreviousNarrativeMessage(): NarrativeVariables | undefined {
 	return undefined;
 }
 
-function getPlayerResponse(): string | undefined {
+function getPlayerContext(): PlayerContext | undefined {
 	for (let i = messages.length - 1; i >= 0; i--) {
-		if (messages[i].role === 'user') return messages[i].content;
-	}
-	return undefined;
-}
-
-function getPlayerMessageId(): string | undefined {
-	for (let i = messages.length - 1; i >= 0; i--) {
-		if (messages[i].role === 'user') return messages[i].id;
+		if (messages[i].role === 'user') {
+			return { playerResponse: messages[i].content, playerMessageId: messages[i].id };
+		}
 	}
 	return undefined;
 }

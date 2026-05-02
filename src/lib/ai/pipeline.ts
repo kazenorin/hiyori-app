@@ -15,11 +15,13 @@ import {
 	loadActSummaryTemplate,
 	loadEditorPrompt,
 	loadGameMasterPrompt,
+	loadGeneralInstructions,
 	loadPlotPlannerPrompt,
 	loadReviewerPrompt,
 	loadStoryActSummaryTemplate,
 	loadStoryEditorPrompt,
 	loadStoryGameMasterPrompt,
+	loadStoryGeneralInstructions,
 	loadStoryPlotPlannerPrompt,
 	loadStoryReviewerPrompt,
 	loadStorySummarizerPrompt,
@@ -84,18 +86,21 @@ export interface PlayerContext {
 	playerMessageId: string;
 }
 
-export interface PipelineInput {
+export interface PipelineExecution {
 	providerConfigs: PipelineProviderConfigs;
-	generalInstructions: string;
+	abortSignal: AbortSignal;
+	tools?: ToolSet;
+	callbacks: PipelineCallbacks;
+}
+
+export interface PipelineInput {
+	execution: PipelineExecution;
 	worldContent: string;
 	actPlot: string;
 	actSummary: string;
 	previousNarrativeVariables: NarrativeVariables | undefined;
 	player?: PlayerContext;
 	story?: StoryContext;
-	abortSignal: AbortSignal;
-	tools?: ToolSet;
-	callbacks: PipelineCallbacks;
 	completedScenes?: number;
 	targetWordCount?: number;
 }
@@ -214,21 +219,10 @@ function toUserMessages(contents: string[]): MessageBase[] {
  * Context is passed as user messages, not stuffed into the system prompt.
  */
 export async function runPipeline(input: PipelineInput): Promise<PipelineState & { editorMetadata?: StreamResultMetadata }> {
-	const {
-		providerConfigs,
-		generalInstructions,
-		worldContent,
-		actPlot,
-		actSummary,
-		previousNarrativeVariables,
-		player,
-		story,
-		abortSignal,
-		tools,
-		callbacks,
-		completedScenes,
-		targetWordCount,
-	} = input;
+	const { execution, worldContent, actPlot, actSummary, previousNarrativeVariables, player, story, completedScenes, targetWordCount } =
+		input;
+
+	const { providerConfigs, abortSignal, tools, callbacks } = execution;
 
 	const storyId = story?.storyId;
 	const storyName = story?.storyName;
@@ -252,6 +246,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	// Load prompts — story-specific if storyId is provided, global otherwise
 	const [
 		plotPlannerPrompt,
+		generalInstructions,
 		writerPrompt,
 		writerTemplate,
 		reviewerPrompt,
@@ -262,6 +257,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	] = await Promise.all(
 		storyId && storyName
 			? [
+					loadStoryGeneralInstructions(storyId, storyName),
 					loadStoryPlotPlannerPrompt(storyId, storyName),
 					loadStoryWriterPrompt(storyId, storyName),
 					loadStoryWriterOutputTemplate(storyId, storyName),
@@ -272,6 +268,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 					loadStoryActSummaryTemplate(storyId, storyName),
 				]
 			: [
+					loadGeneralInstructions(),
 					loadPlotPlannerPrompt(),
 					loadWriterPrompt(),
 					loadWriterOutputTemplate(),
