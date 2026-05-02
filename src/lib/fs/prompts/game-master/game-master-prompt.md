@@ -12,9 +12,10 @@ Extract the mechanical and tracking information needed for gameplay.
 
 ## Rules
 
-- **Active Plot Threads:** List unresolved situations or immediate goals visible to the player.
-- **Decision Context:** Provide a brief contextual description of the moment of choice.
-- **Decisions:** Generate 3-4 specific, actionable choices available to the player. Include at least one escalating/aggressive option and one observational/defensive option.
+- **Active Plot Threads:** Identify unresolved situations and immediate goals currently visible to the player using concise bullet points.
+- **Decision Context:** Provide a brief, 1-2 sentence framing of the exact moment the player must act.
+- **Actionable Choices:** Generate 3-4 specific choices. Keep each choice short, direct, and strictly action-oriented (e.g., under 15 words). Do not over-describe the action or explain the potential outcome.
+- **Choice Variety:** Ensure the generated choices include at least one escalating/aggressive option and one observational/defensive option.
 
 ## Output Format
 

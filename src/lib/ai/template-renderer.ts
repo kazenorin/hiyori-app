@@ -67,7 +67,7 @@ export function renderTemplate(template: string, vars: NarrativeVariables, extra
 	}
 
 	// Single-pass replacement — avoids second-order substitution and order-dependent behavior
-	return template.replace(/\{(\w+)\}/g, (_, key: string) => replacements[key] ?? `{${key}}`);
+	return template.replace(/\{(\w+)}/g, (_, key: string) => replacements[key] ?? `{${key}}`);
 }
 
 /**

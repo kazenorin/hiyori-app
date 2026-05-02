@@ -285,7 +285,7 @@ export async function sendMessage(
 	}
 	error = null;
 
-	const previousNarrativeBody = getPreviousNarrativeBody();
+	const previousNarrativeVariables = getPreviousNarrativeMessage();
 
 	const responseMessage = newMessage('assistant');
 	let newMessagesCount: number = 0;
@@ -420,7 +420,7 @@ export async function sendMessage(
 			worldContent,
 			actPlot,
 			actSummary,
-			previousNarrativeBody,
+			previousNarrativeVariables,
 			playerResponse,
 			storyId: storyId ?? undefined,
 			storyName: getActiveStoryName() ?? undefined,
@@ -479,10 +479,10 @@ function getPhaseContent(phase: PhaseName, state: PipelineState): string {
 	}
 }
 
-function getPreviousNarrativeBody(): string | undefined {
+function getPreviousNarrativeMessage(): NarrativeVariables | undefined {
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const message = messages[i];
-		if (message.role === 'assistant' && message.variables?.narrativeBody) return message.variables.narrativeBody;
+		if (message.role === 'assistant' && message.variables?.narrativeBody) return message.variables;
 	}
 	return undefined;
 }

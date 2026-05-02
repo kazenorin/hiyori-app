@@ -4,28 +4,28 @@ import type { MessageBase } from '$lib/db/messages';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
 import { streamChatResponse } from './chat-stream';
 import { createModel } from './provider';
-import type { PhaseName } from './narrative-types';
-import type { PipelineState, PipelineCallbacks } from './pipeline-types';
+import type { NarrativeVariables, PhaseName } from './narrative-types';
+import type { PipelineCallbacks, PipelineState } from './pipeline-types';
 import type { StreamState } from './chat-callbacks';
 import type { StreamResultMetadata } from './streaming';
 import { variablesToMarkdown } from './template-renderer';
 import {
-	loadPlotPlannerPrompt,
-	loadWriterPrompt,
-	loadWriterOutputTemplate,
-	loadReviewerPrompt,
+	loadActSummaryTemplate,
 	loadEditorPrompt,
 	loadGameMasterPrompt,
-	loadSummarizerPrompt,
-	loadActSummaryTemplate,
-	loadStoryPlotPlannerPrompt,
-	loadStoryWriterPrompt,
-	loadStoryWriterOutputTemplate,
-	loadStoryReviewerPrompt,
+	loadPlotPlannerPrompt,
+	loadReviewerPrompt,
+	loadStoryActSummaryTemplate,
 	loadStoryEditorPrompt,
 	loadStoryGameMasterPrompt,
+	loadStoryPlotPlannerPrompt,
+	loadStoryReviewerPrompt,
 	loadStorySummarizerPrompt,
-	loadStoryActSummaryTemplate,
+	loadStoryWriterOutputTemplate,
+	loadStoryWriterPrompt,
+	loadSummarizerPrompt,
+	loadWriterOutputTemplate,
+	loadWriterPrompt,
 } from '$lib/fs/prompts';
 
 // Markdown section headings used in phase prompts
@@ -75,7 +75,7 @@ export interface PipelineInput {
 	worldContent: string;
 	actPlot: string;
 	actSummary: string;
-	previousNarrativeBody: string | undefined;
+	previousNarrativeVariables: NarrativeVariables | undefined;
 	playerResponse: string | undefined;
 	storyId?: string;
 	storyName?: string;
@@ -207,7 +207,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		worldContent,
 		actPlot,
 		actSummary,
-		previousNarrativeBody,
+		previousNarrativeVariables,
 		playerResponse,
 		storyId,
 		storyName,
@@ -279,11 +279,22 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		}
 
 		const summarizerSystem = summarizerPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
-		const summarizerMessages = toUserMessages([
-			SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
-			SECTION.PREVIOUS_NARRATIVE_BODY + (previousNarrativeBody ?? ''),
-			SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
-		]);
+
+		let summarizerMessages: MessageBase[];
+		if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
+			summarizerMessages = toUserMessages([
+				SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
+				SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeVariables.narrativeBody,
+				SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
+				`Update the Act Summary adding information for the previous scene: "Scene ${completedScenes}: ${previousNarrativeVariables.sceneTitle ?? 'Untitled'}"`,
+			]);
+		} else {
+			summarizerMessages = toUserMessages([
+				SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
+				SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
+				`Update the Act Summary for Scene ${completedScenes ?? 1} based on the Player Response.`,
+			]);
+		}
 
 		newActSummary = await runNonStreamingPhase('SUMMARIZER', summarizerSystem, summarizerMessages, providerConfigs.summarizer, abortSignal);
 		state = updateState(state, { actSummary: newActSummary });
