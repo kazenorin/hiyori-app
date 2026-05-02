@@ -40,6 +40,7 @@ const SECTION = {
 	REVIEWER_OUTPUT: '\n## Reviewer Output\n',
 	EDITOR_OUTPUT: '\n## Editor Output\n',
 	PREVIOUS_ACT_SUMMARY: '\n## Previous Act Summary\n',
+	PREVIOUS_NARRATIVE_BODY: '\n## Previous Narrative Body\n',
 };
 
 /**
@@ -74,6 +75,7 @@ export interface PipelineInput {
 	worldContent: string;
 	actPlot: string;
 	actSummary: string;
+	previousNarrativeBody: string | undefined;
 	playerResponse: string | undefined;
 	storyId?: string;
 	storyName?: string;
@@ -192,9 +194,11 @@ function toUserMessages(contents: string[]): MessageBase[] {
 /**
  * Run the full narrative generation pipeline.
  *
- * Phases run sequentially 1-4, then Game Master, Summarizer, and Memory run in parallel.
- * Context (world content, act plot, summaries, prior phase outputs) is passed as user messages,
- * not stuffed into the system prompt. The system prompt contains only persona and general instructions.
+ * Phase 0 (Summarizer) runs first if playerResponse is defined, producing an updated
+ * act summary from the previous scene's narrative body and the player's decision.
+ * Phases 1-4 run sequentially (Plot Planner -> Writer -> Reviewer -> Editor).
+ * Phase 5 (Game Master) runs last, producing game data from the edited output.
+ * Context is passed as user messages, not stuffed into the system prompt.
  */
 export async function runPipeline(input: PipelineInput): Promise<PipelineState & { editorMetadata?: StreamResultMetadata }> {
 	const {
@@ -203,6 +207,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		worldContent,
 		actPlot,
 		actSummary,
+		previousNarrativeBody,
 		playerResponse,
 		storyId,
 		storyName,
@@ -261,6 +266,37 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 				]
 	);
 
+	// --- Phase 0: Summarizer (only when player has responded) ---
+	if (playerResponse) {
+		let processedTemplate = summaryTemplate;
+
+		// Inject programmatic completed scenes count
+		if (completedScenes != null) {
+			processedTemplate = processedTemplate.replaceAll('{completedScenes}', String(completedScenes));
+		}
+
+		const summarizerSystem = summarizerPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
+		const summarizerMessages = toUserMessages([
+			SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
+			SECTION.PREVIOUS_NARRATIVE_BODY + (previousNarrativeBody ?? ''),
+			SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
+		]);
+
+		const newActSummary = await runNonStreamingPhase(
+			'SUMMARIZER',
+			summarizerSystem,
+			summarizerMessages,
+			providerConfigs.summarizer,
+			abortSignal
+		);
+		state = updateState(state, { actSummary: newActSummary });
+		callbacks.onPhaseComplete('SUMMARIZER', state);
+
+		// Fire-and-forget memory runner after summary is available
+		if (memoryRunner) {
+			memoryRunner(newActSummary);
+		}
+	}
 	// --- Phase 1: Plot Planner ---
 	{
 		const result = await executeStreamingPhase(
@@ -368,85 +404,32 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		editorMetadata = result.metadata;
 	}
 
-	// --- Phase 5 & 6: Game Master + Summarizer (parallel) + Memory (fire-and-forget) ---
-	callbacks.onPhaseStart('GAME_MASTER');
-	callbacks.onPhaseStart('SUMMARIZER');
-
-	const gmPromise = (async (): Promise<{ content: string; streamState: StreamState }> => {
-
-		const gmMessages = toUserMessages([
-			SECTION.ACT_PLOT + actPlot,
-			SECTION.ACT_SUMMARY + actSummary,
-			SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
-			SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
-			SECTION.EDITOR_OUTPUT + (state.editorOutput ?? ''),
-		]);
-
-		const result = await runStreamingPhase(
-			'GAME_MASTER',
-			gameMasterPrompt,
-			gmMessages,
-			providerConfigs.gameMaster,
-			abortSignal,
-			undefined,
-			callbacks
+	// --- Phase 5: Game Master ---
+	{
+		const result = await executeStreamingPhase(
+			{
+				phaseName: 'GAME_MASTER',
+				systemPrompt: gameMasterPrompt,
+				...sharedParams,
+				messages: toUserMessages([
+					SECTION.ACT_PLOT + actPlot,
+					SECTION.ACT_SUMMARY + (state.actSummary ?? ''),
+					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
+					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
+					SECTION.EDITOR_OUTPUT + (state.editorOutput ?? ''),
+				]),
+				providerConfig: providerConfigs.gameMaster,
+				buildStateUpdate: (ss) => ({
+					gameMasterOutput: ss.content,
+					gameData: ss.variables?.gameData ?? null,
+				}),
+			},
+			state
 		);
-
-		return { content: result.state.content, streamState: result.state };
-	})();
-
-	const summarizerPromise = (async (): Promise<string> => {
-		let processedTemplate = summaryTemplate;
-
-		// Inject programmatic completed scenes count
-		if (completedScenes != null) {
-			processedTemplate = processedTemplate.replaceAll('{completedScenes}', String(completedScenes));
-		}
-
-		const summarizerSystem = summarizerPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
-		const summarizerMessages = toUserMessages([
-			SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
-			SECTION.EDITOR_OUTPUT + (state.editorOutput ?? ''),
-		]);
-
-		return runNonStreamingPhase('SUMMARIZER', summarizerSystem, summarizerMessages, providerConfigs.summarizer, abortSignal);
-	})();
-
-	await Promise.all([
-		// Handle GM result
-		gmPromise
-			.then((gmResult) => {
-				const gmVariables = gmResult.streamState.variables;
-				state = updateState(state, {
-					gameMasterOutput: gmResult.content,
-					gameData: gmVariables?.gameData ?? null,
-				});
-				callbacks.onPhaseComplete('GAME_MASTER', state);
-			})
-			.catch((reason) => {
-				callbacks.onError('GAME_MASTER', reason);
-				// Throw if GM failed (essential game data)
-				throw reason;
-			}),
-		// Handle Summarizer result
-		summarizerPromise
-			.then((newActSummary) => {
-				state = updateState(state, { actSummary: newActSummary });
-				callbacks.onPhaseComplete('SUMMARIZER', state);
-
-				// Fire-and-forget memory runner after summary is available
-				if (memoryRunner) {
-					memoryRunner(newActSummary);
-				}
-			})
-			.catch((reason) => {
-				callbacks.onError('SUMMARIZER', reason);
-				// Summarizer failure is non-fatal — the act summary is not essential to the immediate response
-			}),
-	]);
+		state = result.state;
+	}
 
 	state = updateState(state, { currentPhase: null });
 	callbacks.onAllComplete(state);
-
 	return { ...state, editorMetadata };
 }

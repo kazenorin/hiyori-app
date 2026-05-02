@@ -286,6 +286,8 @@ export async function sendMessage(
 	}
 	error = null;
 
+	const previousNarrativeBody = getPreviousNarrativeBody()
+
 	const responseMessage = newMessage('assistant');
 	let newMessagesCount: number = 0;
 	if (!!message.bodyText && message.bodyText.trim().length > 0) {
@@ -419,6 +421,7 @@ export async function sendMessage(
 			worldContent,
 			actPlot,
 			actSummary,
+			previousNarrativeBody,
 			playerResponse,
 			storyId: storyId ?? undefined,
 			storyName: getActiveStoryName() ?? undefined,
@@ -477,6 +480,14 @@ function getPhaseContent(phase: PhaseName, state: PipelineState): string {
 		case 'SUMMARIZER':
 			return state.actSummary ?? '';
 	}
+}
+
+function getPreviousNarrativeBody(): string | undefined {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		const message = messages[i];
+		if (message.role === 'assistant' && message.variables?.narrativeBody) return message.variables.narrativeBody;
+	}
+	return undefined;
 }
 
 function getPlayerResponse(): string | undefined {
