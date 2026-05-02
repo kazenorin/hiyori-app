@@ -5,7 +5,7 @@ import type {MessageBase} from '$lib/db/messages';
 import type { StreamAccumulator, StreamState } from '$lib/ai/chat-callbacks';
 import { type RetryConfig, streamWithRetry } from '$lib/ai/chat-stream';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { loadSystemPrompt, loadNarrationContent } from '$lib/fs/prompts';
+import { loadSystemPrompt, loadWriterOutputTemplate } from '$lib/fs/prompts';
 import { sleep } from '$lib/utils/async';
 import type { ParsedMessage } from './types';
 import {
@@ -168,7 +168,7 @@ export async function formatIntoScenes(
 		};
 	}
 
-	const narration = await loadNarrationContent();
+	const narration = await loadWriterOutputTemplate();
 
 	// Step 1: Break raw content into scenes (using markdown headers)
 	const rawScenes = breakIntoScenes(rawContent);

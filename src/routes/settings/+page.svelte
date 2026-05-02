@@ -452,26 +452,57 @@
 			</label>
 		</section>
 
-		<!-- Review & Quality -->
+		<!-- Pipeline Roles -->
 		<section class="card p-6 space-y-4">
-			<h2 class="h4">Review & Quality</h2>
-			<span class="text-xs text-surface-500">Run a QA reviewer on GM outputs before delivering to the player.</span>
+			<h2 class="h4">Pipeline Roles</h2>
+			<span class="text-xs text-surface-500">Assign providers to each pipeline phase. All default to the main provider.</span>
 
-			<label class="flex items-center gap-2">
-				<input
-					type="checkbox"
-					class="checkbox"
-					checked={settings.reviewerEnabled}
-					onchange={(e) => updateSettings({ reviewerEnabled: (e.currentTarget as HTMLInputElement).checked })}
-				/>
-				<span class="text-sm font-medium text-surface-700-300">Enable review loop</span>
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">Plot Planner</span>
+				<select
+					class="select mt-1"
+					onchange={(e) => {
+						const value = (e.currentTarget as HTMLSelectElement).value;
+						updateSettings({ plotPlannerProviderRole: value });
+					}}
+				>
+					{#if settings.providers.length === 0}
+						<option value="" disabled selected>No providers configured</option>
+					{:else}
+						<option value="main" selected={settings.plotPlannerProviderRole === 'main'}>Main Provider</option>
+						{#each settings.providers as config (config.id)}
+							<option value={config.id} selected={settings.plotPlannerProviderRole === config.id}>{config.name}</option>
+						{/each}
+					{/if}
+				</select>
+				<span class="text-xs text-surface-500 mt-1 block">Plans the scene plot and pacing before writing.</span>
 			</label>
 
 			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Reviewer Provider</span>
+				<span class="text-sm font-medium text-surface-700-300">Writer</span>
 				<select
 					class="select mt-1"
-					disabled={!settings.reviewerEnabled}
+					onchange={(e) => {
+						const value = (e.currentTarget as HTMLSelectElement).value;
+						updateSettings({ writerProviderRole: value });
+					}}
+				>
+					{#if settings.providers.length === 0}
+						<option value="" disabled selected>No providers configured</option>
+					{:else}
+						<option value="main" selected={settings.writerProviderRole === 'main'}>Main Provider</option>
+						{#each settings.providers as config (config.id)}
+							<option value={config.id} selected={settings.writerProviderRole === config.id}>{config.name}</option>
+						{/each}
+					{/if}
+				</select>
+				<span class="text-xs text-surface-500 mt-1 block">Writes the narrative prose from the scene plot.</span>
+			</label>
+
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">Reviewer</span>
+				<select
+					class="select mt-1"
 					onchange={(e) => {
 						const value = (e.currentTarget as HTMLSelectElement).value;
 						updateSettings({ reviewerProviderRole: value });
@@ -486,7 +517,70 @@
 						{/each}
 					{/if}
 				</select>
-				<span class="text-xs text-surface-500 mt-1 block">The LLM provider used to review and revise GM outputs.</span>
+				<span class="text-xs text-surface-500 mt-1 block">Reviews writer output for violations against writing rules.</span>
+			</label>
+
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">Editor</span>
+				<select
+					class="select mt-1"
+					onchange={(e) => {
+						const value = (e.currentTarget as HTMLSelectElement).value;
+						updateSettings({ editorProviderRole: value });
+					}}
+				>
+					{#if settings.providers.length === 0}
+						<option value="" disabled selected>No providers configured</option>
+					{:else}
+						<option value="main" selected={settings.editorProviderRole === 'main'}>Main Provider</option>
+						{#each settings.providers as config (config.id)}
+							<option value={config.id} selected={settings.editorProviderRole === config.id}>{config.name}</option>
+						{/each}
+					{/if}
+				</select>
+				<span class="text-xs text-surface-500 mt-1 block">Revises writer output based on reviewer feedback.</span>
+			</label>
+
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">Game Master</span>
+				<select
+					class="select mt-1"
+					onchange={(e) => {
+						const value = (e.currentTarget as HTMLSelectElement).value;
+						updateSettings({ gameMasterProviderRole: value });
+					}}
+				>
+					{#if settings.providers.length === 0}
+						<option value="" disabled selected>No providers configured</option>
+					{:else}
+						<option value="main" selected={settings.gameMasterProviderRole === 'main'}>Main Provider</option>
+						{#each settings.providers as config (config.id)}
+							<option value={config.id} selected={settings.gameMasterProviderRole === config.id}>{config.name}</option>
+						{/each}
+					{/if}
+				</select>
+				<span class="text-xs text-surface-500 mt-1 block">Generates game data (decisions, plot threads) from the narrative.</span>
+			</label>
+
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">Summarizer</span>
+				<select
+					class="select mt-1"
+					onchange={(e) => {
+						const value = (e.currentTarget as HTMLSelectElement).value;
+						updateSettings({ summarizerProviderRole: value });
+					}}
+				>
+					{#if settings.providers.length === 0}
+						<option value="" disabled selected>No providers configured</option>
+					{:else}
+						<option value="main" selected={settings.summarizerProviderRole === 'main'}>Main Provider</option>
+						{#each settings.providers as config (config.id)}
+							<option value={config.id} selected={settings.summarizerProviderRole === config.id}>{config.name}</option>
+						{/each}
+					{/if}
+				</select>
+				<span class="text-xs text-surface-500 mt-1 block">Updates the act summary after each scene.</span>
 			</label>
 		</section>
 

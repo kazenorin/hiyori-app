@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type {NarrativeVariables, GameDataFields} from '../ai/narrative-types';
-import {createParserChain} from '../ai/parser-chain';
+import type { NarrativeVariables, GameDataFields } from '../ai/narrative-types';
+import { createParserChain } from '../ai/parser-chain';
 
 const T = 'think';
 
@@ -41,51 +41,51 @@ function feedAll(chunks: string[]): {
 	return { text, thinking, variables };
 }
 
-/** Merge two NarrativeVariables: for string fields, concatenate; for number fields, keep latest; for gameData, deep-merge. */
+/** Merge two NarrativeVariables: for string fields, concatenate; for gameData, deep-merge. */
 function mergeVariables(base: NarrativeVariables, incoming: NarrativeVariables): NarrativeVariables {
-  const result: NarrativeVariables = { ...base };
+	const result: NarrativeVariables = { ...base };
 
-  // Cast 'res' once to a mutable dictionary to satisfy TypeScript inside the loop
-  const res = result as unknown as Record<string, unknown>;
+	const res = result as unknown as Record<string, unknown>;
 
-  for (const key of Object.keys(incoming) as (keyof NarrativeVariables)[]) {
-    const val = incoming[key];
-    const existing = base[key];
+	for (const key of Object.keys(incoming) as (keyof NarrativeVariables)[]) {
+		const val = incoming[key];
+		const existing = base[key];
 
-    if (val === null || val === undefined) continue;
+		if (val === null || val === undefined) continue;
 
-    if (key === 'gameData') {
-      const baseGd = base.gameData;
-      const incGd = val as GameDataFields;
+		if (key === 'gameData') {
+			const baseGd = base.gameData;
+			const incGd = val as GameDataFields;
 
-      if (baseGd) {
-        res.gameData = {
-          worldState: (baseGd.worldState ?? '') + (incGd.worldState ?? '') || null,
-          decisions: [...baseGd.decisions, ...incGd.decisions],
-          playerAliases: [...baseGd.playerAliases, ...incGd.playerAliases],
-          otherCharacterAliases: { ...baseGd.otherCharacterAliases, ...incGd.otherCharacterAliases },
-        };
-      } else {
-        res.gameData = incGd;
-      }
-    } else if (typeof val === 'number') {
-      res[key] = val;
-    } else if (typeof val === 'string') {
-      res[key] = (typeof existing === 'string' ? existing : '') + val;
-    } else if (Array.isArray(val)) {
-      res[key] = Array.isArray(existing) ? [...existing, ...val] : val;
-    }
-  }
+			if (baseGd) {
+				res.gameData = {
+					activePlotThreads: [...baseGd.activePlotThreads, ...incGd.activePlotThreads],
+					decisionContext: incGd.decisionContext ?? baseGd.decisionContext,
+					decisions: [...baseGd.decisions, ...incGd.decisions],
+				};
+			} else {
+				res.gameData = incGd;
+			}
+		} else if (typeof val === 'string') {
+			res[key] = (typeof existing === 'string' ? existing : '') + val;
+		} else if (Array.isArray(val)) {
+			res[key] = Array.isArray(existing) ? [...existing, ...val] : val;
+		}
+	}
 
-  return result;
+	return result;
 }
 
 const GAME_DATA_MD = [
 	'## Game Data',
 	'',
-	'### World State',
+	'### Active Plot Threads',
 	'',
-	'The hero stands at a crossroads.',
+	'- The missing artifact',
+	'',
+	'### Decision Context',
+	'',
+	'Choose your path.',
 	'',
 	'### Decisions',
 	'',
@@ -99,6 +99,8 @@ describe('ParserChain', () => {
 		const { text, variables } = feedAll([input]);
 		expect(variables?.gameData).not.toBeNull();
 		expect(variables?.gameData?.decisions).toEqual(['Go left', 'Go right']);
+		expect(variables?.gameData?.activePlotThreads).toEqual(['The missing artifact']);
+		expect(variables?.gameData?.decisionContext).toContain('Choose your path');
 		expect(text).toContain('Story text');
 	});
 
@@ -175,214 +177,36 @@ describe('ParserChain', () => {
 		});
 	});
 
-	describe('Review Scratchpad extraction', () => {
-		it('extracts # Review Scratchpad and hides it from text', () => {
-			const input = 'Before\n# Review Scratchpad\nCheck pacing and tone\n# Revised Narrative\nAfter';
-			const { text, variables } = feedAll([input]);
-			// SAX parser emits header name as text, so "Review Scratchpad" is included
-			expect(variables?.reviewScratchpad).toContain('Check pacing and tone');
-			expect(text).not.toContain('Check pacing');
-		});
-
-		it('extracts # Review Scratchpad after thinking tags', () => {
-			const input = '<' + T + '>Let me review</' + T + '>\n# Review Scratchpad\nPacing is off\n# Revised Narrative\nStory text';
-			const { thinking, variables } = feedAll([input]);
-			expect(thinking).toBe('Let me review');
-			expect(variables?.reviewScratchpad).toContain('Pacing is off');
-		});
-
-		it('handles # Review Scratchpad split across chunks after thinking', () => {
-			const chunks = ['<' + T + '>Thought</' + T + '>', '\n# Review Scratchpad\nReview', ' notes\n# Revised Narrative\n Story'];
-			const { thinking, variables } = feedAll(chunks);
-			expect(thinking).toBe('Thought');
-			expect(variables?.reviewScratchpad).toContain('Review notes');
-		});
-
-		it('flushes incomplete # Review Scratchpad at EOF', () => {
-			const chunks = ['Text\n# Review Scratchpad\nUnfinished review'];
-			const { variables } = feedAll(chunks);
-			expect(variables?.reviewScratchpad).toContain('Unfinished review');
-		});
-	});
-
-	describe('Revised Narrative extraction', () => {
-		it('extracts # Revised Narrative content into variables', () => {
-			const input = 'Original\n# Revised Narrative\nImproved version';
-			const { text } = feedAll([input]);
-			// Revised narrative text is consumed (not passed through as visible text)
-			expect(text).not.toContain('Improved version');
-		});
-
-		it('extracts # Revised Narrative after # Review Scratchpad', () => {
-			const input = '# Review Scratchpad\nFix pacing\n# Revised Narrative\nBetter pacing here';
-			const { variables } = feedAll([input]);
-			expect(variables?.reviewScratchpad).toContain('Fix pacing');
-			// Revised narrative text is consumed
-		});
-	});
-
-	describe('Revised Narrative with embedded game data', () => {
-		it('extracts game data from # Revised Narrative into variables.gameData', () => {
-			const narrativeMd = 'The story continues\n' + GAME_DATA_MD;
-			const input = '# Revised Narrative\n' + narrativeMd;
-			const { variables } = feedAll([input]);
-			expect(variables?.gameData).not.toBeNull();
-			expect(variables?.gameData?.decisions).toEqual(['Go left', 'Go right']);
-		});
-
-		it('accumulates game data from both draft and revised sections', () => {
-			const draftMd = ['## Game Data', '', '### World State', '', 'draft state', '', '### Decisions', '', '- draft choice'].join('\n');
-			const revisedMd = 'Revised text\n' + GAME_DATA_MD;
-			const input = 'Draft text\n' + draftMd + '\n# Revised Narrative\n' + revisedMd;
-			const { variables } = feedAll([input]);
-			expect(variables?.gameData).not.toBeNull();
-			// Both draft and revised game data are accumulated
-			expect(variables?.gameData?.decisions).toEqual(['draft choice', 'Go left', 'Go right']);
-		});
-	});
-
-	describe('full chain: thinking + review + revised + game data', () => {
+	describe('full chain: thinking + game data', () => {
 		it('extracts all layers in sequence', () => {
 			const input =
-				'<' +
-				T +
-				'>Analyzing narrative</' +
-				T +
-				'>' +
-				'\n# Review Scratchpad' +
-				'\nTone is inconsistent' +
-				'\n# Revised Narrative' +
-				'\nThe sun set over the hills';
+				'<' + T + '>Analyzing narrative</' + T + '>' + '\n' + GAME_DATA_MD;
 			const { thinking, variables } = feedAll([input]);
 			expect(thinking).toBe('Analyzing narrative');
-			expect(variables?.reviewScratchpad).toContain('Tone is inconsistent');
-			expect(variables?.gameData).toBeNull();
+			expect(variables?.gameData).not.toBeNull();
 		});
 
-		it('handles all layers split across chunks', () => {
-			const chunks = ['<' + T + '>Deep ', 'thought</think', '>', '\n# Review Scratchpad\nReview', '\n# Revised Narrative\nRev', 'ised'];
+		it('handles layers split across chunks', () => {
+			const chunks = ['<' + T + '>Deep ', 'thought</think', '>', '\n' + GAME_DATA_MD];
 			const { thinking, variables } = feedAll(chunks);
 			expect(thinking).toBe('Deep thought');
-			expect(variables?.reviewScratchpad).toContain('Review');
-			expect(variables?.gameData).toBeNull();
+			expect(variables?.gameData).not.toBeNull();
 		});
 
-		it('omits missing layers', () => {
+		it('omits game data when not present', () => {
 			const input = '<' + T + '>Just thinking</' + T + '>Story text';
 			const { thinking, variables, text } = feedAll([input]);
 			expect(thinking).toBe('Just thinking');
-			expect(variables?.scratchpad).toBeFalsy();
 			expect(variables?.gameData).toBeFalsy();
 			expect(text).toBe('Story text');
 		});
 	});
 });
 
-describe('Revised Narrative with ## Scratchpad (suppress-nesting)', () => {
-	it('captures revised narrative content after ## Scratchpad', () => {
-		// This tests the bug where ## Scratchpad inside # Revised Narrative
-		// would cause section mode to reset to 'normal' instead of 'captureRevised'
-		const input = [
-			'# Review Scratchpad',
-			'- Rule 1: OK',
-			'',
-			'# Revised Narrative',
-			'## Scratchpad',
-			'[Planning notes]',
-			'',
-			'## Story Information',
-			'',
-			'### Story Title',
-			'My Story',
-			'',
-			'## Background',
-			'The setting.',
-		].join('\n');
-		const { variables } = feedAll([input]);
-
-		// Review scratchpad should have the review content
-		// Note: SAX parser strips list markers, so "- Rule 1: OK" becomes "Rule 1: OK"
-		// SAX parser also emits header name as text, so "Review Scratchpad" prefix is included
-		expect(variables?.reviewScratchpad).toContain('Rule 1: OK');
-
-		// Story title should be captured as a variable
-		expect(variables?.storyTitle).toContain('My Story');
-		// Background should be captured (includes header name prefix)
-		expect(variables?.background).toContain('The setting.');
-		// Scratchpad content should be captured
-		expect(variables?.scratchpad).toContain('[Planning notes]');
-	});
-
-	it('streams revised narrative content progressively during feed', () => {
-		// Test that narrative variables accumulate across feed calls
-		const chunks = [
-			'# Review Scratchpad\n',
-			'- Analysis\n',
-			'\n# Revised Narrative\n',
-			'## Scratchpad\n',
-			'[Hidden]\n',
-			'\n## Background\n',
-			'Content here.\n',
-		];
-
-		const chain = createParserChain();
-		let background = '';
-		let scratchpad = '';
-		let reviewScratchpad = '';
-
-		for (const chunk of chunks) {
-			const output = chain.feed(chunk);
-			if (output.variables?.background) {
-				background += output.variables.background;
-			}
-			if (output.variables?.scratchpad) {
-				scratchpad += output.variables.scratchpad;
-			}
-			if (output.variables?.reviewScratchpad) {
-				reviewScratchpad += output.variables.reviewScratchpad;
-			}
-		}
-
-		const flushed = chain.flush();
-		if (flushed.variables?.background) {
-			background += flushed.variables.background;
-		}
-		if (flushed.variables?.scratchpad) {
-			scratchpad += flushed.variables.scratchpad;
-		}
-		if (flushed.variables?.reviewScratchpad) {
-			reviewScratchpad += flushed.variables.reviewScratchpad;
-		}
-
-		expect(background).toContain('Content here.');
-		expect(scratchpad).toContain('[Hidden]');
-		expect(reviewScratchpad).toContain('Analysis');
-	});
-});
-
 describe('Narrative Variables', () => {
 	it('captures all narrative variables from structured output', () => {
 		const lines = [
-			'## Scratchpad',
-			'[Planning notes]',
-			'',
-			'## Story Information',
-			'',
-			'### Story Title',
-			'The Great Adventure',
-			'',
-			'### Act Number',
-			'3',
-			'',
-			'### Session number',
-			'7',
-			'',
-			'### Scene',
-			'',
-			'#### Scene number',
-			'12',
-			'',
-			'#### Scene title',
+			'## Scene title',
 			'The Dark Forest',
 			'',
 			'## Background',
@@ -394,40 +218,35 @@ describe('Narrative Variables', () => {
 			'## CG',
 			'Wide shot, moonlit clearing, hero silhouette.',
 			'',
-			'## Status Update',
-			'',
-			'### Current Context',
-			'Approaching the ancient ruins.',
+			'## Game Data',
 			'',
 			'### Active Plot Threads',
+			'',
 			'- The missing artifact',
 			'- The traitor in the party',
 			'',
-			'## Decision context',
+			'### Decision Context',
+			'',
 			'Choose how to enter the ruins.',
+			'',
+			'### Decisions',
+			'',
+			'- Enter through the front gate',
+			'- Sneak through the back',
 		];
-		// Feed line by line (with trailing newlines) to simulate streaming
 		const chunks = lines.map((l) => l + '\n');
 
 		const { variables } = feedAll(chunks);
 
 		expect(variables).not.toBeNull();
-		// Note: ## Scratchpad does NOT populate variables.scratchpad — that field
-		// is only populated by "# Review Scratchpad" headers. Plain ## Scratchpad
-		// content passes through as visible text.
-		expect(variables!.storyTitle).toContain('The Great Adventure');
-		expect(variables!.actNumber).toBe(3);
-		expect(variables!.sessionNumber).toBe(7);
-		expect(variables!.sceneNumber).toBe(12);
 		expect(variables!.sceneTitle).toContain('The Dark Forest');
 		expect(variables!.background).toContain('A moonlit clearing in an ancient forest.');
 		expect(variables!.narrativeBody).toContain('The hero stepped forward cautiously.');
 		expect(variables!.cg).toContain('Wide shot, moonlit clearing, hero silhouette.');
-		expect(variables!.currentContext).toContain('Approaching the ancient ruins.');
-		expect(variables!.activePlotThreads).toEqual(['The missing artifact', 'The traitor in the party']);
-		expect(variables!.decisionContext).toContain('Choose how to enter the ruins.');
-		// ## Scratchpad is not the same as # Review Scratchpad
-		expect(variables!.scratchpad).toContain('[Planning notes]');
+		expect(variables!.gameData).not.toBeNull();
+		expect(variables!.gameData!.activePlotThreads).toEqual(['The missing artifact', 'The traitor in the party']);
+		expect(variables!.gameData!.decisionContext).toContain('Choose how to enter the ruins');
+		expect(variables!.gameData!.decisions).toEqual(['Enter through the front gate', 'Sneak through the back']);
 	});
 
 	it('captures partial variables with null for missing fields', () => {
@@ -438,8 +257,7 @@ describe('Narrative Variables', () => {
 		expect(variables).not.toBeNull();
 		expect(variables!.background).toContain('A dark and stormy night.');
 		expect(variables!.narrativeBody).toContain('Something happened.');
-		expect(variables!.storyTitle).toBeNull();
-		expect(variables!.actNumber).toBeNull();
+		expect(variables!.sceneTitle).toBeNull();
 		expect(variables!.cg).toBeNull();
 	});
 
@@ -472,8 +290,13 @@ describe('Narrative Variables', () => {
 			'',
 			'## Game Data',
 			'',
-			'### World State',
-			'The world is at peace.',
+			'### Active Plot Threads',
+			'',
+			'- The quest',
+			'',
+			'### Decision Context',
+			'',
+			'A crossroads.',
 			'',
 			'### Decisions',
 			'- Fight',
@@ -486,8 +309,8 @@ describe('Narrative Variables', () => {
 		expect(variables!.background).toContain('The setting sun.');
 		expect(variables!.narrativeBody).toContain('The story unfolds.');
 		expect(variables!.gameData).not.toBeNull();
-		// SAX parser emits "World State" header name as text within game data
-		expect(variables!.gameData!.worldState).toContain('The world is at peace.');
+		expect(variables!.gameData!.activePlotThreads).toEqual(['The quest']);
+		expect(variables!.gameData!.decisionContext).toContain('A crossroads');
 		expect(variables!.gameData!.decisions).toEqual(['Fight', 'Flee']);
 	});
 });

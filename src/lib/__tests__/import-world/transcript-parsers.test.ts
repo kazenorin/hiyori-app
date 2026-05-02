@@ -98,16 +98,15 @@ describe('parseAppExportFormat', () => {
 				{
 					role: 'assistant',
 					content: 'Response',
-					game_data: '{"worldState":"test","decisions":["a","b"]}',
+					game_data: '{"activePlotThreads":[],"decisionContext":"test","decisions":["a","b"]}',
 				},
 			],
 		};
 		const result = parseAppExportFormat(json, false);
 		expect(result.messages[0].gameData).toEqual({
-			worldState: 'test',
+			activePlotThreads: [],
+			decisionContext: 'test',
 			decisions: ['a', 'b'],
-			playerAliases: [],
-			otherCharacterAliases: {},
 		});
 	});
 

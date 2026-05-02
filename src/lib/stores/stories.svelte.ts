@@ -8,16 +8,12 @@ import { getLogFilePath } from '$lib/ai/world-builder.svelte';
 import { Memory } from '$lib/memory/memory';
 import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 import type { ModelMessage } from 'ai';
-import {
-	loadStorySystemPrompt,
-	loadSystemPrompt,
-	loadNarrationTemplate,
-	loadStoryNarrationExtractionPrompt,
-	loadStoryNarrationTemplate,
-} from '$lib/fs/prompts';
+import { loadStorySystemPrompt, loadSystemPrompt } from '$lib/fs/prompts';
 import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-folders';
-import { writeTextFile, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { writeTextFile, readTextFile, exists, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
+import { buildLineDir } from '$lib/ai/card-output-path';
+import { generateActPlot } from '$lib/ai/act-plot-generator';
 
 export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
 
@@ -31,10 +27,9 @@ let activeActLineId = $state<string | null>(null);
 let isLoading = $state(true);
 let isSelectingStory = $state(false);
 let activeSystemPrompt = $state<string | null>(null);
-let activeNarrationExtractionPrompt = $state<string | null>(null);
-let activeNarrationTemplate = $state<string | null>(null);
 let activeWorldContent = $state<string | null>(null);
 let activeInterviewTranscript = $state<ModelMessage[]>([]);
+let activeActPlotContent = $state<string>('');
 
 export function getStories(): dbStories.Story[] {
 	return stories;
@@ -69,17 +64,17 @@ export function getActiveSystemPrompt(): string | null {
 export async function getActiveSystemPromptOrDefault(): Promise<string> {
 	return activeSystemPrompt ?? (await loadSystemPrompt());
 }
-export function getActiveNarrationExtractionPrompt(): string | null {
-	return activeNarrationExtractionPrompt;
-}
-export function getActiveNarrationTemplate(): string | null {
-	return activeNarrationTemplate;
-}
-export async function getActiveNarrationTemplateOrDefault(): Promise<string> {
-	return activeNarrationTemplate ?? (await loadNarrationTemplate());
-}
 export function getActiveWorldContent(): string | null {
 	return activeWorldContent;
+}
+export function getActiveActPlotContent(): string {
+	return activeActPlotContent;
+}
+/** Set the active act plot content. Only updates when an act line is currently selected. */
+export function setActiveActPlotContent(content: string): void {
+	if (activeActLineId) {
+		activeActPlotContent = content;
+	}
 }
 /**
  * Combined narration context as message array.
@@ -103,14 +98,6 @@ export function getActiveNarrationContext(): ModelMessage[] {
 		});
 		result.push(...interview);
 		result.push({ role: 'user', content: 'That was the end of the interview transcript.' });
-	}
-
-	const narration =
-		activeNarrationExtractionPrompt && activeNarrationTemplate
-			? activeNarrationExtractionPrompt.replace('{narrationTemplate}', activeNarrationTemplate)
-			: null;
-	if (narration) {
-		result.push({ role: 'user', content: narration });
 	}
 
 	if (result.length > 0) {
@@ -147,23 +134,20 @@ export async function loadActLines(actId: string): Promise<void> {
 }
 
 /**
- * Load story-specific content (system prompt, narration template, world content).
+ * Load story-specific content (system prompt, world content).
  * Shared between selectStory and restoreState to ensure consistent behavior.
  */
 async function loadStoryContent(storyId: string, storyName: string): Promise<void> {
 	activeSystemPrompt = await loadStorySystemPrompt(storyId, storyName);
-	activeNarrationExtractionPrompt = await loadStoryNarrationExtractionPrompt(storyId, storyName);
-	activeNarrationTemplate = await loadStoryNarrationTemplate(storyId, storyName);
 	await ensureWorldFile(storyId, storyName);
 	activeWorldContent = await loadStoryWorldContent(storyId, storyName);
 }
 
 function resetStoryContent(): void {
 	activeSystemPrompt = null;
-	activeNarrationExtractionPrompt = null;
-	activeNarrationTemplate = null;
 	activeWorldContent = null;
 	activeInterviewTranscript = [];
+	activeActPlotContent = '';
 }
 
 export async function selectStory(storyId: string | null): Promise<void> {
@@ -216,8 +200,47 @@ export async function selectActLine(actLineId: string | null): Promise<void> {
 		} catch {
 			activeInterviewTranscript = [];
 		}
+		await ensureActPlot();
 	} else {
 		activeInterviewTranscript = [];
+		activeActPlotContent = '';
+	}
+}
+
+/**
+ * Ensure the act plot file exists (generating it if needed) and load its content.
+ */
+async function ensureActPlot(): Promise<void> {
+	activeActPlotContent = '';
+
+	if (!activeStoryId || !activeActLineId || !activeStoryName) return;
+
+	try {
+		// Load act plot file
+		const storyFolder = await resolveStoryFolder(activeStoryId, activeStoryName);
+		const act = acts.find((a) => a.id === activeActId);
+		const actLine = actLines.find((l) => l.id === activeActLineId);
+		if (act && actLine) {
+			const lineDir = buildLineDir(storyFolder, act.actNumber, actLine.isMainLine, actLine.id);
+			const plotPath = `${lineDir}/act-plot.md`;
+			const plotExists = await exists(plotPath, { baseDir: BaseDirectory.AppData });
+			if (plotExists) {
+				activeActPlotContent = await readTextFile(plotPath, { baseDir: BaseDirectory.AppData });
+			} else {
+				// Generate act plot if it doesn't exist yet
+				const result = await generateActPlot(
+					activeStoryId,
+					activeStoryName,
+					activeWorldContent ?? '',
+					activeActLineId,
+					actLine.isMainLine,
+					act.actNumber
+				);
+				activeActPlotContent = result.content;
+			}
+		}
+	} catch {
+		// Act plot file may not exist yet
 	}
 }
 
@@ -331,7 +354,10 @@ async function copyMemoriesForFork(fromLineId: string, toLineId: string, fromSeq
 
 		const memory = new Memory(config);
 		const result = await memory.copyMemoriesForFork(storyId, fromLineId, toLineId, messageIds);
-		log.info('fork', `Copied ${result.memoriesCopied} memories, ${result.locationsCopied} locations, ${result.aliasesCopied} aliases to line ${toLineId}`);
+		log.info(
+			'fork',
+			`Copied ${result.memoriesCopied} memories, ${result.locationsCopied} locations, ${result.aliasesCopied} aliases to line ${toLineId}`
+		);
 	} catch (err) {
 		log.error('fork', 'Failed to copy memories for fork', err);
 	}
@@ -358,6 +384,7 @@ export async function restoreState(): Promise<void> {
 	}
 	if (state.activeActLineId) {
 		activeActLineId = state.activeActLineId;
+		await ensureActPlot();
 	}
 	isLoading = false;
 }

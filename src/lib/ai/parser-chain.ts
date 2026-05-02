@@ -2,8 +2,8 @@ import { createThinkingTagParser } from './thinking-tag-parser';
 import { createSaxSectionParser } from './sax-section-parser';
 import type { StreamParser, ParserAccumulator } from './stream-parser';
 
-import type { NarrativeVariables, GameDataFields } from "./narrative-types";
-import { NARRATIVE_VARIABLE_FIELDS, NUMBER_FIELDS, LIST_FIELDS, setField, emptyVariables } from './narrative-types';
+import type { NarrativeVariables, GameDataFields } from './narrative-types';
+import { NARRATIVE_VARIABLE_FIELDS, setField, emptyVariables } from './narrative-types';
 
 // --- Parser chain ---
 
@@ -24,7 +24,7 @@ export interface ParserChain {
 
 /**
  * Extract NarrativeVariables from the raw accumulator.
- * Number fields are parsed from text via parseInt; gameData is taken directly.
+ * String fields are taken directly; gameData is taken directly.
  */
 function extractVariables(acc: Record<string, unknown>): NarrativeVariables | null {
 	const vars = emptyVariables();
@@ -32,18 +32,8 @@ function extractVariables(acc: Record<string, unknown>): NarrativeVariables | nu
 
 	for (const field of NARRATIVE_VARIABLE_FIELDS) {
 		const value = acc[field];
-		if (LIST_FIELDS.has(field) && Array.isArray(value) && value.length > 0) {
+		if (typeof value === 'string' && value.length > 0) {
 			setField(vars, field, value);
-			hasAny = true;
-		} else if (typeof value === 'string' && value.length > 0) {
-			if (NUMBER_FIELDS.has(field)) {
-				const parsed = parseInt(value, 10);
-				if (!isNaN(parsed)) {
-					setField(vars, field, parsed);
-				}
-			} else {
-				setField(vars, field, value);
-			}
 			hasAny = true;
 		}
 	}

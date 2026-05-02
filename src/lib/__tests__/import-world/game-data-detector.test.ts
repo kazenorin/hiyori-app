@@ -18,7 +18,7 @@ What will you do?
 		expect(result).not.toBeNull();
 		expect(result!.decisions).toHaveLength(4);
 		expect(result!.decisions[0]).toBe('Fight the dragon');
-		expect(result!.worldState).toBe('What will you do?');
+		expect(result!.decisionContext).toBe('What will you do?');
 	});
 
 	it('extracts from "## Choices" header', () => {
@@ -101,7 +101,7 @@ Nothing happened.`;
 		expect(extractGameDataTraditional('Just plain text here.')).toBeNull();
 	});
 
-	it('extracts worldState from text between header and list items', () => {
+	it('extracts decisionContext from text between header and list items', () => {
 		const content = `## Decisions
 
 The dragon approaches from the north.
@@ -112,10 +112,10 @@ The dragon approaches from the north.
 
 		const result = extractGameDataTraditional(content);
 		expect(result).not.toBeNull();
-		expect(result!.worldState).toBe('The dragon approaches from the north.');
+		expect(result!.decisionContext).toBe('The dragon approaches from the north.');
 	});
 
-	it('sets worldState to empty string when no text between header and list', () => {
+	it('sets decisionContext to null when no text between header and list', () => {
 		const content = `## Choices
 
 * Option 1
@@ -123,7 +123,7 @@ The dragon approaches from the north.
 
 		const result = extractGameDataTraditional(content);
 		expect(result).not.toBeNull();
-		expect(result!.worldState).toBe('');
+		expect(result!.decisionContext).toBeNull();
 	});
 
 	it('strips bold markers from decision text', () => {
@@ -252,7 +252,7 @@ It's getting late, what should you do?
 		expect(result!.decisions).toHaveLength(5);
 		expect(result!.decisions[0]).toBe('Go to bed.');
 		expect(result!.decisions[4]).toBe('Free choice - describe what you will do');
-		expect(result!.worldState).toBe("It's getting late, what should you do?");
+		expect(result!.decisionContext).toBe("It's getting late, what should you do?");
 	});
 
 	it('extracts from **[CHOICES]** bold bracket marker', () => {
@@ -270,7 +270,7 @@ What do you do?
 		expect(result).not.toBeNull();
 		expect(result!.decisions).toHaveLength(3);
 		expect(result!.decisions[0]).toBe('Bribe the guard');
-		expect(result!.worldState).toBe('What do you do?');
+		expect(result!.decisionContext).toBe('What do you do?');
 	});
 
 	it('extracts from **[OPTIONS]** bold bracket marker with plain numbered list', () => {
@@ -300,7 +300,7 @@ Pick your path:
 		const result = extractGameDataTraditional(content);
 		expect(result).not.toBeNull();
 		expect(result!.decisions).toHaveLength(3);
-		expect(result!.worldState).toBe('');
+		expect(result!.decisionContext).toBeNull();
 	});
 
 	// === Blockquote list item patterns ===
@@ -317,7 +317,7 @@ The bridge is collapsing!
 		const result = extractGameDataTraditional(content);
 		expect(result).not.toBeNull();
 		expect(result!.decisions).toHaveLength(3);
-		expect(result!.worldState).toBe('The bridge is collapsing!');
+		expect(result!.decisionContext).toBe('The bridge is collapsing!');
 	});
 
 	it('handles blockquote bullet list with markdown headers', () => {

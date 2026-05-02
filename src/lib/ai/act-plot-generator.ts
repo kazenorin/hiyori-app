@@ -6,7 +6,7 @@ import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { buildLineDir } from './card-output-path';
 import { log } from '$lib/logging/logger';
-import {getActNumberForActLine, getPremisesMessages} from '$lib/db/act-lines';
+import { getActNumberForActLine, getPremisesMessages } from '$lib/db/act-lines';
 
 export interface GenerateActPlotResult {
 	filePath: string;
@@ -33,24 +33,23 @@ export async function loadInterviewTranscript(actLineId: string): Promise<ModelM
 }
 
 /**
- * Generate an act-plot.md file for a newly created story's first act.
+ * Generate an act-plot.md file for a story act.
  * Uses world.md content and optional interview transcript to generate story structure and planning.
- *
- * Note: actNumber is hardcoded to 1 because this is only called from the
- * world builder flow, which always creates Act 1.
  *
  * @param storyId - The story's unique identifier
  * @param storyName - The story's display name
  * @param worldContent - The world.md content (already generated)
- * @param actLineId - The main act line ID (for path construction and interview lookup)
+ * @param actLineId - The act line ID (for path construction and interview lookup)
  * @param isMainLine - Whether this is the main story line
+ * @param actNumber - The act number (used for output path and prompt)
  */
 export async function generateActPlot(
 	storyId: string,
 	storyName: string,
 	worldContent: string,
 	actLineId: string,
-	isMainLine: boolean
+	isMainLine: boolean,
+	actNumber: number
 ): Promise<GenerateActPlotResult> {
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) {
@@ -60,8 +59,9 @@ export async function generateActPlot(
 	// Load prompts and interview transcript in parallel
 	const [template, generationPrompt, systemPrompt, interviewTranscript] = await Promise.all([
 		loadActPlotTemplate(),
-		Promise.all([getActNumberForActLine(actLineId), loadActPlotGenerationPrompt()])
-			.then(([actNumber, prompt]) => prompt.replace('{actNumber}', (actNumber ?? 1).toString())),
+		Promise.all([getActNumberForActLine(actLineId), loadActPlotGenerationPrompt()]).then(([actNumber, prompt]) =>
+			prompt.replace('{actNumber}', (actNumber ?? 1).toString())
+		),
 		loadStorySystemPrompt(storyId, storyName),
 		loadInterviewTranscript(actLineId),
 	]);
@@ -107,7 +107,7 @@ export async function generateActPlot(
 
 		// Resolve output path: {storyFolder}/act-1/{lineSubDir}/act-plot.md
 		const storyFolder = await resolveStoryFolder(storyId, storyName);
-		const lineDir = buildLineDir(storyFolder, 1, isMainLine, actLineId);
+		const lineDir = buildLineDir(storyFolder, actNumber, isMainLine, actLineId);
 		const filePath = `${lineDir}/act-plot.md`;
 
 		// Write file

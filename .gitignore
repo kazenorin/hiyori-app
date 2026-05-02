@@ -2,6 +2,7 @@
 # AI Agents & LLM Tools
 # =========================
 .claude/settings.local.json
+.claude/worktrees/
 .claude/history/
 CLAUDE.local.md
 

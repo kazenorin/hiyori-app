@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { applyParserOutput, applyReasoningDelta } from '../ai/message-updater';
+import { applyParserOutput, applyReasoningDelta, mergeGameDataFields } from '../ai/message-updater';
 import { type NarrativeVariables, type GameDataFields, emptyVariables } from '../ai/narrative-types';
 import type { StreamState } from '../ai/chat-callbacks';
 
@@ -33,39 +33,13 @@ describe('message-updater', () => {
 		});
 
 		it('sets valid gameData inside variables', () => {
-			const gd: GameDataFields = { worldState: 'State', decisions: ['A'], playerAliases: [], otherCharacterAliases: {} };
+			const gd: GameDataFields = { activePlotThreads: ['thread1'], decisionContext: 'A choice', decisions: ['A'] };
 			const vars: NarrativeVariables = { ...emptyVariables(), gameData: gd };
 			const result = applyParserOutput(emptyState, {
 				text: null,
 				thinking: null,
 				variables: vars,
 			});
-			expect(result.variables).not.toBeNull();
-			expect(result.variables!.gameData).toEqual(gd);
-		});
-
-		it('skips invalid gameData (empty worldState)', () => {
-			const gd: GameDataFields = { worldState: null, decisions: ['A'], playerAliases: [], otherCharacterAliases: {} };
-			const vars: NarrativeVariables = { ...emptyVariables(), gameData: gd };
-			const result = applyParserOutput(emptyState, {
-				text: null,
-				thinking: null,
-				variables: vars,
-			});
-			// gameData with null worldState is still set — validation happens at a higher level
-			expect(result.variables).not.toBeNull();
-			expect(result.variables!.gameData).toEqual(gd);
-		});
-
-		it('skips invalid gameData (empty decisions)', () => {
-			const gd: GameDataFields = { worldState: 'State', decisions: [], playerAliases: [], otherCharacterAliases: {} };
-			const vars: NarrativeVariables = { ...emptyVariables(), gameData: gd };
-			const result = applyParserOutput(emptyState, {
-				text: null,
-				thinking: null,
-				variables: vars,
-			});
-			// gameData with empty decisions is still set — validation happens at a higher level
 			expect(result.variables).not.toBeNull();
 			expect(result.variables!.gameData).toEqual(gd);
 		});
@@ -132,30 +106,29 @@ describe('message-updater', () => {
 		it('preserves existing variable when incoming is null', () => {
 			const existing: NarrativeVariables = {
 				...emptyVariables(),
-				storyTitle: 'My Story',
+				sceneTitle: 'My Scene',
 				background: 'The setting.',
 			};
 			const state: StreamState = { ...emptyState, variables: existing };
 			const incoming: NarrativeVariables = {
 				...emptyVariables(),
-				actNumber: 3,
+				narrativeBody: 'The story.',
 			};
 			const result = applyParserOutput(state, {
 				text: null,
 				thinking: null,
 				variables: incoming,
 			});
-			expect(result.variables!.storyTitle).toBe('My Story');
-			expect(result.variables!.actNumber).toBe(3);
+			expect(result.variables!.sceneTitle).toBe('My Scene');
+			expect(result.variables!.narrativeBody).toBe('The story.');
 			expect(result.variables!.background).toBe('The setting.');
 		});
 
 		it('merges gameData fields across streaming chunks', () => {
 			const gd1: GameDataFields = {
-				worldState: 'The kingdom ',
+				activePlotThreads: ['artifact'],
+				decisionContext: 'Choose your path.',
 				decisions: ['Go north'],
-				playerAliases: ['hero'],
-				otherCharacterAliases: {},
 			};
 			const vars1: NarrativeVariables = { ...emptyVariables(), gameData: gd1 };
 			let state = applyParserOutput(emptyState, {
@@ -164,10 +137,9 @@ describe('message-updater', () => {
 				variables: vars1,
 			});
 			const gd2: GameDataFields = {
-				worldState: 'is at war.',
+				activePlotThreads: ['traitor'],
+				decisionContext: null,
 				decisions: ['Fight'],
-				playerAliases: [],
-				otherCharacterAliases: { villain: ['enemy'] },
 			};
 			const vars2: NarrativeVariables = { ...emptyVariables(), gameData: gd2 };
 			state = applyParserOutput(state, {
@@ -176,10 +148,51 @@ describe('message-updater', () => {
 				variables: vars2,
 			});
 			expect(state.variables!.gameData).not.toBeNull();
-			expect(state.variables!.gameData!.worldState).toBe('The kingdom is at war.');
+			expect(state.variables!.gameData!.activePlotThreads).toEqual(['artifact', 'traitor']);
+			expect(state.variables!.gameData!.decisionContext).toBe('Choose your path.');
 			expect(state.variables!.gameData!.decisions).toEqual(['Go north', 'Fight']);
-			expect(state.variables!.gameData!.playerAliases).toEqual(['hero']);
-			expect(state.variables!.gameData!.otherCharacterAliases).toEqual({ villain: ['enemy'] });
+		});
+	});
+
+	describe('mergeGameDataFields', () => {
+		it('returns existing when incoming is null', () => {
+			const existing: GameDataFields = { activePlotThreads: ['a'], decisionContext: 'ctx', decisions: ['d'] };
+			const result = mergeGameDataFields(existing, null);
+			expect(result).toBe(existing);
+		});
+
+		it('returns incoming when existing is null', () => {
+			const incoming: GameDataFields = { activePlotThreads: ['a'], decisionContext: 'ctx', decisions: ['d'] };
+			const result = mergeGameDataFields(null, incoming);
+			expect(result).toBe(incoming);
+		});
+
+		it('concatenates activePlotThreads arrays', () => {
+			const existing: GameDataFields = { activePlotThreads: ['a'], decisionContext: null, decisions: [] };
+			const incoming: GameDataFields = { activePlotThreads: ['b'], decisionContext: null, decisions: [] };
+			const result = mergeGameDataFields(existing, incoming);
+			expect(result!.activePlotThreads).toEqual(['a', 'b']);
+		});
+
+		it('takes incoming decisionContext when set', () => {
+			const existing: GameDataFields = { activePlotThreads: [], decisionContext: 'old', decisions: [] };
+			const incoming: GameDataFields = { activePlotThreads: [], decisionContext: 'new', decisions: [] };
+			const result = mergeGameDataFields(existing, incoming);
+			expect(result!.decisionContext).toBe('new');
+		});
+
+		it('keeps existing decisionContext when incoming is null', () => {
+			const existing: GameDataFields = { activePlotThreads: [], decisionContext: 'existing', decisions: [] };
+			const incoming: GameDataFields = { activePlotThreads: [], decisionContext: null, decisions: [] };
+			const result = mergeGameDataFields(existing, incoming);
+			expect(result!.decisionContext).toBe('existing');
+		});
+
+		it('concatenates decisions arrays', () => {
+			const existing: GameDataFields = { activePlotThreads: [], decisionContext: null, decisions: ['A'] };
+			const incoming: GameDataFields = { activePlotThreads: [], decisionContext: null, decisions: ['B'] };
+			const result = mergeGameDataFields(existing, incoming);
+			expect(result!.decisions).toEqual(['A', 'B']);
 		});
 	});
 

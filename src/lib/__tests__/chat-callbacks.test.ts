@@ -32,9 +32,13 @@ function feedAll(chunks: string[]): { text: string; reasoning: string | null; ga
 const GAME_DATA_MD = [
 	'## Game Data',
 	'',
-	'### World State',
+	'### Active Plot Threads',
 	'',
-	'The hero stands at a crossroads.',
+	'- The artifact',
+	'',
+	'### Decision Context',
+	'',
+	'A choice awaits.',
 	'',
 	'### Decisions',
 	'',
@@ -99,22 +103,16 @@ describe('createStreamAccumulator', () => {
 			const result = feedAll([input]);
 			expect(result.gameData).not.toBeNull();
 			expect(result.gameData?.decisions).toEqual(['Go left', 'Go right']);
+			expect(result.gameData?.activePlotThreads).toEqual(['The artifact']);
+			expect(result.gameData?.decisionContext).toContain('A choice awaits');
 			expect(result.text).toContain('Story');
 		});
 
-		it('collects game data even with whitespace-only world state', () => {
-			const gd = ['## Game Data', '', '### World State', '', '   ', '', '### Decisions', '', '- A'].join('\n');
+		it('collects game data with only decisions', () => {
+			const gd = ['## Game Data', '', '### Decisions', '', '- A', '- B'].join('\n');
 			const result = feedAll([gd]);
 			expect(result.gameData).not.toBeNull();
-			expect(result.gameData?.decisions).toEqual(['A']);
-		});
-
-		it('collects game data even without decisions list items', () => {
-			const gd = ['## Game Data', '', '### World State', '', 'State', '', '### Decisions', ''].join('\n');
-			const result = feedAll([gd]);
-			expect(result.gameData).not.toBeNull();
-			expect(result.gameData?.worldState).toContain('State');
-			expect(result.gameData?.decisions).toEqual([]);
+			expect(result.gameData?.decisions).toEqual(['A', 'B']);
 		});
 
 		it('extracts game data alongside thinking tags', () => {

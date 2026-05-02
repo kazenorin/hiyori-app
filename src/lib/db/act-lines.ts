@@ -2,6 +2,7 @@ import Database from '@tauri-apps/plugin-sql';
 import { getDatabase } from './database';
 import type { Message } from './messages';
 import { parseVariables } from './messages';
+import type { Story } from './stories';
 
 export interface ActLineMeta {
 	id: string;
@@ -32,9 +33,8 @@ interface MessageInLine {
 	reasoning: string | null;
 	metadata: string | null;
 	variables: string | null;
-	draft_variables: string | null;
 	scene_number: number | null;
-	session_number: number | null;
+	act_summary: string | null;
 	created_at: number;
 	sequence: number;
 }
@@ -101,7 +101,7 @@ export async function getMessagesForLine(actLineId: string): Promise<Message[]> 
 	const db = getDatabase();
 	const rows = await db.select<MessageInLine[]>(
 		`
-		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.draft_variables, m.scene_number, m.session_number, m.created_at, al.sequence
+		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.scene_number, m.act_summary, m.created_at, al.sequence
 		FROM act_lines al
 		JOIN messages m ON al.message_id = m.id
 		WHERE al.act_line_id = $1
@@ -117,9 +117,8 @@ export async function getMessagesForLine(actLineId: string): Promise<Message[]> 
 		reasoning: row.reasoning ?? undefined,
 		metadata: row.metadata ?? undefined,
 		variables: parseVariables(row.variables),
-		draftVariables: parseVariables(row.draft_variables),
 		sceneNumber: row.scene_number ?? undefined,
-		sessionNumber: row.session_number ?? undefined,
+		actSummary: row.act_summary ?? undefined,
 		createdAt: row.created_at,
 	}));
 }
@@ -178,14 +177,15 @@ export async function getActNumberForActLine(actLineId: string): Promise<number 
 	return rows.length > 0 ? rows[0].act_number : null;
 }
 
-export async function getStoryIdForActLine(actLineId: string): Promise<string> {
+export async function getStoryForActLine(actLineId: string): Promise<Story> {
 	const db = getDatabase();
-	const rows = await db.select<{ story_id: string }[]>(
-		'SELECT a.story_id FROM act_line_meta alm JOIN acts a ON a.id = alm.act_id WHERE alm.id = $1',
+	const rows = await db.select<{ id: string; name: string; created_at: number; updated_at: number }[]>(
+		'SELECT s.id, s.name, s.created_at, s.updated_at FROM act_line_meta alm JOIN acts a ON a.id = alm.act_id JOIN stories s ON s.id = a.story_id WHERE alm.id = $1',
 		[actLineId]
 	);
 	if (rows.length > 0) {
-		return rows[0].story_id;
+		const row = rows[0];
+		return { id: row.id, name: row.name, createdAt: row.created_at, updatedAt: row.updated_at };
 	} else {
 		throw new Error('Orphaned Act Line with no Story');
 	}
@@ -319,7 +319,7 @@ export async function getPremisesMessages(actLineId: string): Promise<Message[]>
 	const db = getDatabase();
 	const rows = await db.select<MessageInLine[]>(
 		`
-		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.draft_variables, m.scene_number, m.session_number, m.created_at, p.sequence
+		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.scene_number, m.act_summary, m.created_at, p.sequence
 		FROM act_line_premises p
 		JOIN messages m ON p.message_id = m.id
 		WHERE p.act_line_id = $1
@@ -335,9 +335,8 @@ export async function getPremisesMessages(actLineId: string): Promise<Message[]>
 		reasoning: row.reasoning ?? undefined,
 		metadata: row.metadata ?? undefined,
 		variables: parseVariables(row.variables),
-		draftVariables: parseVariables(row.draft_variables),
 		sceneNumber: row.scene_number ?? undefined,
-		sessionNumber: row.session_number ?? undefined,
+		actSummary: row.act_summary ?? undefined,
 		createdAt: row.created_at,
 	}));
 }
@@ -355,10 +354,7 @@ export async function removeMessagesFromPremises(actLineId: string, messageIds: 
 	const db = getDatabase();
 
 	const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
-	await db.execute(`DELETE FROM act_line_premises WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [
-		actLineId,
-		...messageIds,
-	]);
+	await db.execute(`DELETE FROM act_line_premises WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [actLineId, ...messageIds]);
 
 	await removeOrphanedMessages(db, messageIds);
 	return messageIds;

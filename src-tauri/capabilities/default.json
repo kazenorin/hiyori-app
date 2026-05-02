@@ -95,12 +95,18 @@
 		{
 			"identifier": "http:default",
 			"allow": [
-			  {
-				  "url": "https://ollama.com"
-			  },
-			  {
-				  "url": "https://integrate.api.nvidia.com"
-			  }
+				{
+					"url": "http://*"
+				},
+				{
+					"url": "https://*"
+				},
+				{
+					"url": "http://*:*"
+				},
+				{
+					"url": "https://*:*"
+				}
 		  ]
 		},
     "sql:default",

@@ -18,9 +18,8 @@ export interface Message extends MessageBase {
 	reasoning?: string;
 	metadata?: string;
 	sceneNumber?: number;
-	sessionNumber?: number;
+	actSummary?: string;
 	variables?: NarrativeVariables;
-	draftVariables?: NarrativeVariables;
 	createdAt: number;
 }
 
@@ -31,9 +30,8 @@ interface MessageRow {
 	reasoning: string | null;
 	metadata: string | null;
 	variables: string | null;
-	draft_variables: string | null;
+	act_summary: string | null;
 	scene_number: number | null;
-	session_number: number | null;
 	created_at: number;
 }
 
@@ -47,17 +45,7 @@ export function parseVariables(raw: string | null): NarrativeVariables | undefin
 		const result = emptyVariables();
 		for (const desc of FIELD_DESCRIPTORS) {
 			const value = parsed[desc.fieldName];
-			if (desc.isList && Array.isArray(value)) {
-				setField(
-					result,
-					desc.fieldName,
-					value.filter((v: unknown) => typeof v === 'string')
-				);
-			} else if (desc.isNumber) {
-				if (typeof value === 'number') {
-					setField(result, desc.fieldName, value);
-				}
-			} else if (typeof value === 'string') {
+			if (typeof value === 'string') {
 				setField(result, desc.fieldName, value);
 			}
 		}
@@ -72,17 +60,14 @@ export function parseVariables(raw: string | null): NarrativeVariables | undefin
 
 function parseGameDataFields(raw: Record<string, unknown>): GameDataFields {
 	const gd = emptyGameDataFields();
-	if (typeof raw.worldState === 'string') gd.worldState = raw.worldState;
-	if (Array.isArray(raw.decisions)) gd.decisions = raw.decisions.filter((d: unknown) => typeof d === 'string');
-	if (Array.isArray(raw.playerAliases)) gd.playerAliases = raw.playerAliases.filter((d: unknown) => typeof d === 'string');
-	if (raw.otherCharacterAliases && typeof raw.otherCharacterAliases === 'object' && !Array.isArray(raw.otherCharacterAliases)) {
-		const record: Record<string, string[]> = {};
-		for (const [key, val] of Object.entries(raw.otherCharacterAliases)) {
-			if (Array.isArray(val)) {
-				record[key] = val.filter((d: unknown) => typeof d === 'string');
-			}
-		}
-		gd.otherCharacterAliases = record;
+	if (Array.isArray(raw.activePlotThreads)) {
+		gd.activePlotThreads = raw.activePlotThreads.filter((d: unknown) => typeof d === 'string');
+	}
+	if (typeof raw.decisionContext === 'string') {
+		gd.decisionContext = raw.decisionContext;
+	}
+	if (Array.isArray(raw.decisions)) {
+		gd.decisions = raw.decisions.filter((d: unknown) => typeof d === 'string');
 	}
 	return gd;
 }
@@ -95,9 +80,8 @@ function rowToMessage(row: MessageRow): Message {
 		reasoning: row.reasoning ?? undefined,
 		metadata: row.metadata ?? undefined,
 		variables: parseVariables(row.variables),
-		draftVariables: parseVariables(row.draft_variables),
+		actSummary: row.act_summary ?? undefined,
 		sceneNumber: row.scene_number ?? undefined,
-		sessionNumber: row.session_number ?? undefined,
 		createdAt: row.created_at,
 	};
 }
@@ -106,8 +90,8 @@ export async function createMessage(message: Omit<Message, 'createdAt'>): Promis
 	const db = getDatabase();
 	const now = Date.now();
 	await db.execute(
-		`INSERT INTO messages (id, role, content, reasoning, metadata, variables, draft_variables, scene_number, session_number, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		`INSERT INTO messages (id, role, content, reasoning, metadata, variables, act_summary, scene_number, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
 		[
 			message.id,
 			message.role,
@@ -115,9 +99,8 @@ export async function createMessage(message: Omit<Message, 'createdAt'>): Promis
 			message.reasoning ?? null,
 			message.metadata ?? null,
 			message.variables ? JSON.stringify(message.variables) : null,
-			message.draftVariables ? JSON.stringify(message.draftVariables) : null,
+			message.actSummary ?? null,
 			message.sceneNumber ?? null,
-			message.sessionNumber ?? null,
 			now,
 		]
 	);

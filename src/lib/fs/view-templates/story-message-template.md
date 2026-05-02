@@ -1,12 +1,4 @@
-# {storyTitle}
-
-## Act {actNumber}
-
-> Session {sessionNumber}
-
----
-
-### SCENE {sceneNumber}: {sceneTitle}
+## Scene {sceneNumber}: {sceneTitle}
 
 **Background:** {background}
 
@@ -16,15 +8,10 @@
 
 ---
 
-**STATUS UPDATE**
-
-- **Current Context:** {currentContext}
-
-**Active Plot Threads:**
+**Active Plot Threads**
 {activePlotThreads}
 
 ---
 
 **DECISION POINT**
-
 {decisionContext}

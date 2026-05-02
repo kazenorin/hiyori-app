@@ -1,4 +1,4 @@
-import type {MessageBase} from '$lib/db/messages';
+import type { MessageBase } from '$lib/db/messages';
 import { type ToolSet } from 'ai';
 import { executeStream, type StreamResultMetadata } from './streaming';
 import { getMainProviderConfig, type ProviderConfig } from '../stores/settings.svelte';
@@ -65,7 +65,7 @@ export async function streamChatResponse(
 					reasoningSummary: 'detailed',
 				},
 			},
-			tools
+			tools,
 		},
 		accumulator.callbacks
 	);

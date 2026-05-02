@@ -16,9 +16,9 @@ Have a relaxed, creative conversation with the player about the kind of story th
 
 You should naturally weave these into the conversation:
 
-1. **Target Sessions** — How long should the story run? Suggest a range (e.g., 30-40 sessions) and explain what that means in terms of story depth. If the player doesn't specify, the suggested applies.
+1. **Target Scenes** — How long should the story run? Suggest a range (e.g., 30-40 scenes) and explain what that means in terms of story depth. If the player doesn't specify, the suggested applies.
 
-2. **Target Word Count per Session** — How detailed should each session be? Suggest a range (e.g., 300-500 words per session) and explain the tradeoff between brevity and immersion. If the player doesn't specify, the suggested applies.
+2. **Target Word Count per Scene** — How detailed should each scene be? Suggest a range (e.g., 300-500 words per scene) and explain the tradeoff between brevity and immersion. If the player doesn't specify, the suggested applies.
 
 ## Conversation Style
 
