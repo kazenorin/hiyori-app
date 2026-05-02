@@ -58,9 +58,7 @@ export async function runMemoryExtractionPipeline(
 	// Step 4: Persist aliases from act summary
 	if (actSummary) {
 		const aliasEntries = parseCharacterAliases(actSummary);
-		const aliasGroups = aliasEntries
-			.filter((entry) => entry.aliases.length > 0)
-			.map((entry) => entry.aliases);
+		const aliasGroups = aliasEntries.filter((entry) => entry.aliases.length > 0).map((entry) => entry.aliases);
 		if (aliasGroups.length > 0) {
 			result.aliasesAdded = await persistAliases(embeddingConfig, storyId, actLineId, messageId, aliasGroups);
 		}

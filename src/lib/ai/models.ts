@@ -38,7 +38,9 @@ export async function fetchModels(settings: { baseURL: string; apiKey: string; p
 			throw new Error('Invalid response format from models API');
 		}
 
-		return (data.data as ModelInfo[]).sort((a, b) => a.id.localeCompare(b.id));
+		return Array.from(
+			new Map((data.data as ModelInfo[]).map((item) => [item.id, item])).values()
+		).sort((a, b) => a.id.localeCompare(b.id));
 	} finally {
 		clearTimeout(timeoutId);
 	}
