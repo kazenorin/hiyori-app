@@ -31,7 +31,6 @@ let activeGeneralInstructions = $state<string | null>(null);
 let activeWorldContent = $state<string | null>(null);
 let activeInterviewTranscript = $state<ModelMessage[]>([]);
 let activeActPlotContent = $state<string>('');
-let activeActSummary = $state<string>('');
 
 export function getStories(): dbStories.Story[] {
 	return stories;
@@ -83,9 +82,6 @@ export function setActiveActPlotContent(content: string): void {
 	if (activeActLineId) {
 		activeActPlotContent = content;
 	}
-}
-export function getActiveActSummary(): string {
-	return activeActSummary;
 }
 /**
  * Combined narration context as message array.
@@ -161,7 +157,6 @@ function resetStoryContent(): void {
 	activeWorldContent = null;
 	activeInterviewTranscript = [];
 	activeActPlotContent = '';
-	activeActSummary = '';
 }
 
 export async function selectStory(storyId: string | null): Promise<void> {
@@ -214,20 +209,18 @@ export async function selectActLine(actLineId: string | null): Promise<void> {
 		} catch {
 			activeInterviewTranscript = [];
 		}
-		await loadActPlotAndSummary();
+		await ensureActPlot();
 	} else {
 		activeInterviewTranscript = [];
 		activeActPlotContent = '';
-		activeActSummary = '';
 	}
 }
 
 /**
- * Load act plot content from file and latest act summary from DB messages.
+ * Ensure the act plot file exists (generating it if needed) and load its content.
  */
-async function loadActPlotAndSummary(): Promise<void> {
+async function ensureActPlot(): Promise<void> {
 	activeActPlotContent = '';
-	activeActSummary = '';
 
 	if (!activeStoryId || !activeActLineId || !activeStoryName) return;
 
@@ -257,19 +250,6 @@ async function loadActPlotAndSummary(): Promise<void> {
 		}
 	} catch {
 		// Act plot file may not exist yet
-	}
-
-	try {
-		// Load latest act summary from DB messages
-		const dbMsgs = await dbActLines.getMessagesForLine(activeActLineId);
-		for (let i = dbMsgs.length - 1; i >= 0; i--) {
-			if (dbMsgs[i].actSummary) {
-				activeActSummary = dbMsgs[i].actSummary!;
-				return;
-			}
-		}
-	} catch {
-		// Summary may not exist yet
 	}
 }
 
@@ -413,6 +393,7 @@ export async function restoreState(): Promise<void> {
 	}
 	if (state.activeActLineId) {
 		activeActLineId = state.activeActLineId;
+		await ensureActPlot();
 	}
 	isLoading = false;
 }

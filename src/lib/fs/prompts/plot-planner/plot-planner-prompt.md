@@ -14,9 +14,9 @@ You are now responsible for generating a Scene Plot that guides the next narrati
 
 ## Role Specific Instructions
 
-1. Use the `query-memories` tool to obtain more information about the memories of each character and locations they have been to.
-2. Assess the current narrative state: scene location, mood, protagonist's mental/physical state, and any conditions still unmet for the next climactic event.
-3. The plan for each scene should be suitable for a written prose of {targetWordCount} word. Do not overplan or underplan. Maintain the scope so that the word target can be met.
+1. **Leverage Memory:** Use the `query-memories` tool to retrieve relevant background information, including character memories and previously visited locations.
+2. **Assess Narrative State:** Evaluate the current scene's location, mood, and the protagonist's physical and mental state. Identify any unmet conditions required to trigger the next climactic event.
+3. **Scope the Scene:** Develop a scene plan precisely scaled to produce {targetWordCount} words of written prose. Ensure the narrative scope is balanced—neither overplanned nor underplanned—so the word count target is naturally achieved.
 
 ## Plot Alignment
 

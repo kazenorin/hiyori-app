@@ -33,6 +33,7 @@ interface MessageInLine {
 	metadata: string | null;
 	variables: string | null;
 	scene_number: number | null;
+	act_summary: string | null;
 	created_at: number;
 	sequence: number;
 }
@@ -99,7 +100,7 @@ export async function getMessagesForLine(actLineId: string): Promise<Message[]> 
 	const db = getDatabase();
 	const rows = await db.select<MessageInLine[]>(
 		`
-		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.scene_number, m.created_at, al.sequence
+		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.scene_number, m.act_summary, m.created_at, al.sequence
 		FROM act_lines al
 		JOIN messages m ON al.message_id = m.id
 		WHERE al.act_line_id = $1
@@ -116,6 +117,7 @@ export async function getMessagesForLine(actLineId: string): Promise<Message[]> 
 		metadata: row.metadata ?? undefined,
 		variables: parseVariables(row.variables),
 		sceneNumber: row.scene_number ?? undefined,
+		actSummary: row.act_summary ?? undefined,
 		createdAt: row.created_at,
 	}));
 }
@@ -315,7 +317,7 @@ export async function getPremisesMessages(actLineId: string): Promise<Message[]>
 	const db = getDatabase();
 	const rows = await db.select<MessageInLine[]>(
 		`
-		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.scene_number, m.created_at, p.sequence
+		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.scene_number, m.act_summary, m.created_at, p.sequence
 		FROM act_line_premises p
 		JOIN messages m ON p.message_id = m.id
 		WHERE p.act_line_id = $1
@@ -332,6 +334,7 @@ export async function getPremisesMessages(actLineId: string): Promise<Message[]>
 		metadata: row.metadata ?? undefined,
 		variables: parseVariables(row.variables),
 		sceneNumber: row.scene_number ?? undefined,
+		actSummary: row.act_summary ?? undefined,
 		createdAt: row.created_at,
 	}));
 }
@@ -349,10 +352,7 @@ export async function removeMessagesFromPremises(actLineId: string, messageIds: 
 	const db = getDatabase();
 
 	const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
-	await db.execute(`DELETE FROM act_line_premises WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [
-		actLineId,
-		...messageIds,
-	]);
+	await db.execute(`DELETE FROM act_line_premises WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [actLineId, ...messageIds]);
 
 	await removeOrphanedMessages(db, messageIds);
 	return messageIds;

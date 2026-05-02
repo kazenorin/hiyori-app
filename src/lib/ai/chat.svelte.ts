@@ -1,26 +1,26 @@
 import {
+	getEditorProviderConfig,
+	getGameMasterProviderConfig,
 	getMainProviderConfig,
 	getMemoryProviderConfig,
 	getPlotPlannerProviderConfig,
-	getWriterProviderConfig,
 	getReviewerProviderConfig,
-	getEditorProviderConfig,
-	getGameMasterProviderConfig,
 	getSummarizerProviderConfig,
+	getWriterProviderConfig,
 	type ProviderConfig,
 	settings,
 } from '$lib/stores/settings.svelte';
 import {
+	getActiveActPlotContent,
+	getActiveGeneralInstructionsOrDefault,
 	getActiveStoryId,
 	getActiveStoryName,
 	getActiveSystemPromptOrDefault,
-	getActiveActPlotContent,
-	getActiveActSummary,
 	getActiveWorldContent,
 } from '$lib/stores/stories.svelte';
 import type { MessageBase } from '$lib/db/messages';
-import type { NarrativeVariables, GameDataFields, UIScenePhase, PhaseName } from './narrative-types';
 import * as dbMessages from '$lib/db/messages';
+import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from './narrative-types';
 import type { ModelMessage } from 'ai';
 import * as dbActLines from '$lib/db/act-lines';
 import { logMainChat } from '$lib/logging/chat-logger';
@@ -31,11 +31,10 @@ import { log } from '$lib/logging/logger';
 import { buildTools } from '$lib/ai/tools/tools';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
 import { getErrorMessage } from '$lib/utils/error-handling';
-import { renderFromVariables, variablesToMarkdown, gameDataToMarkdown } from './template-renderer';
+import { gameDataToMarkdown, renderFromVariables, variablesToMarkdown } from './template-renderer';
 import { storyMessageTemplate } from '$lib/fs/view-templates';
-import { runPipeline, type PipelineProviderConfigs } from './pipeline';
-import type { PipelineState, PipelineCallbacks, PhaseStreamState } from './pipeline-types';
-import { getActiveGeneralInstructionsOrDefault } from '$lib/stores/stories.svelte';
+import { type PipelineProviderConfigs, runPipeline } from './pipeline';
+import type { PhaseStreamState, PipelineCallbacks, PipelineState } from './pipeline-types';
 
 export interface UIMessage {
 	id: string;
@@ -286,7 +285,7 @@ export async function sendMessage(
 	}
 	error = null;
 
-	const previousNarrativeBody = getPreviousNarrativeBody()
+	const previousNarrativeBody = getPreviousNarrativeBody();
 
 	const responseMessage = newMessage('assistant');
 	let newMessagesCount: number = 0;
@@ -299,7 +298,7 @@ export async function sendMessage(
 		newMessagesCount = 1;
 	}
 
-	const playerResponse = getPlayerResponse()
+	const playerResponse = getPlayerResponse();
 
 	const messageIdx = messages.length - 1;
 
@@ -329,7 +328,7 @@ export async function sendMessage(
 		const generalInstructions = await getActiveGeneralInstructionsOrDefault();
 		const worldContent = getActiveWorldContent() ?? '';
 		const actPlot = getActiveActPlotContent() ?? '';
-		const actSummary = getLatestActSummary() || getActiveActSummary();
+		const actSummary = getLatestActSummary();
 		const previousSceneNumber = findLastNonNullSceneNumber();
 		const completedScenes = previousSceneNumber != null ? previousSceneNumber + 1 : 1;
 		const templateReplacements = { sceneNumber: String(completedScenes) };
@@ -490,7 +489,7 @@ function getPreviousNarrativeBody(): string | undefined {
 
 function getPlayerResponse(): string | undefined {
 	for (let i = messages.length - 1; i >= 0; i--) {
-		if (messages[i].role === 'user') return messages[i].content
+		if (messages[i].role === 'user') return messages[i].content;
 	}
 	return undefined;
 }
