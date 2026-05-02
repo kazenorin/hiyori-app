@@ -82,7 +82,6 @@ export interface PipelineInput {
 	abortSignal: AbortSignal;
 	tools?: ToolSet;
 	callbacks: PipelineCallbacks;
-	memoryRunner?: (actSummary: string | undefined) => void;
 	completedScenes?: number;
 	targetWordCount?: number;
 }
@@ -214,7 +213,6 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		abortSignal,
 		tools,
 		callbacks,
-		memoryRunner,
 		completedScenes,
 		targetWordCount,
 	} = input;
@@ -300,10 +298,6 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		state = updateState(state, { actSummary: newActSummary });
 		callbacks.onPhaseComplete('SUMMARIZER', state);
 
-		// Fire-and-forget memory runner after summary is available
-		if (memoryRunner) {
-			memoryRunner(newActSummary);
-		}
 	}
 	// --- Phase 1: Plot Planner ---
 	{

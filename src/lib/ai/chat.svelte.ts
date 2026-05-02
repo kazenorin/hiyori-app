@@ -427,12 +427,6 @@ export async function sendMessage(
 			abortSignal: abortController!.signal,
 			tools,
 			callbacks: pipelineCallbacks,
-			memoryRunner: (actSummary: string | undefined) => {
-				if (actSummary) {
-					setCurrentMessage({ ...getCurrentMessage(), actSummary });
-				}
-				runMemoryPipeline(storyId, actLineId, getCurrentMessage());
-			},
 			completedScenes,
 			targetWordCount,
 		});
@@ -453,6 +447,9 @@ export async function sendMessage(
 			persistMessage(actLineId, getCurrentMessage()),
 			logMainChat({ systemPrompt, newMessages: messages.slice(-newMessagesCount), history }),
 		]);
+
+		// Run memory extraction after pipeline completes and content is persisted
+		runMemoryPipeline(storyId, actLineId, getCurrentMessage());
 	} catch (err: unknown) {
 		await handleStreamError(err, responseMessage.id, actLineId);
 	} finally {
