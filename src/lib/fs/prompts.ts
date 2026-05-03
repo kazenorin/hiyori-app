@@ -266,6 +266,58 @@ export async function loadStoryActSummaryTemplate(storyId: string, storyName: st
 	return loadPromptForStory(storyId, storyName, actSummaryTemplate.relativePath, actSummaryTemplate.defaultContent);
 }
 
+// === Prompt loaders ===
+
+export interface PromptLoader {
+	loadByStory: (storyId: string, storyName: string) => Promise<string>;
+	loadDefault: () => Promise<string>;
+}
+
+export const generalInstructionsLoader: PromptLoader = {
+	loadByStory: loadStoryGeneralInstructions,
+	loadDefault: loadGeneralInstructions,
+};
+
+export const plotPlannerSystemPromptLoader: PromptLoader = {
+	loadByStory: loadStoryPlotPlannerPrompt,
+	loadDefault: loadPlotPlannerPrompt,
+};
+
+export const writerSystemPromptLoader: PromptLoader = {
+	loadByStory: loadStoryWriterPrompt,
+	loadDefault: loadWriterPrompt,
+};
+
+export const writerOutputTemplateLoader: PromptLoader = {
+	loadByStory: loadStoryWriterOutputTemplate,
+	loadDefault: loadWriterOutputTemplate,
+};
+
+export const reviewerSystemPromptTemplateLoader: PromptLoader = {
+	loadByStory: loadStoryReviewerPrompt,
+	loadDefault: loadReviewerPrompt,
+};
+
+export const editorSystemPromptLoader: PromptLoader = {
+	loadByStory: loadStoryEditorPrompt,
+	loadDefault: loadEditorPrompt,
+};
+
+export const gameMasterSystemPromptLoader: PromptLoader = {
+	loadByStory: loadStoryGameMasterPrompt,
+	loadDefault: loadGameMasterPrompt,
+};
+
+export const summarizerPromptLoader: PromptLoader = {
+	loadByStory: loadStorySummarizerPrompt,
+	loadDefault: loadSummarizerPrompt,
+};
+
+export const actSummaryTemplateLoader: PromptLoader = {
+	loadByStory: loadStoryActSummaryTemplate,
+	loadDefault: loadActSummaryTemplate,
+};
+
 // === Ensure All Base Configs ===
 
 export { ensureAllBaseConfigs } from './prompt-loader';

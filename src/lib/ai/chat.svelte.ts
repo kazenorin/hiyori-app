@@ -10,16 +10,9 @@ import {
 	type ProviderConfig,
 	settings,
 } from '$lib/stores/settings.svelte';
-import {
-	getActiveActPlotContent,
-	getActiveStoryId,
-	getActiveSystemPromptOrDefault,
-	getActiveWorldContent,
-} from '$lib/stores/stories.svelte';
-import type { MessageBase } from '$lib/db/messages';
+import { getActiveActPlotContent, getActiveStoryId, getActiveWorldContent } from '$lib/stores/stories.svelte';
 import * as dbMessages from '$lib/db/messages';
 import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from './narrative-types';
-import type { ModelMessage } from 'ai';
 import * as dbActLines from '$lib/db/act-lines';
 import { logMainChat } from '$lib/logging/chat-logger';
 import { buildMetadata, type MessageMetadata } from './chat-stream';
@@ -28,7 +21,7 @@ import { log } from '$lib/logging/logger';
 import { buildTools } from '$lib/ai/tools/tools';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
 import { getErrorMessage } from '$lib/utils/error-handling';
-import { gameDataToMarkdown, renderFromVariables, variablesToMarkdown } from './template-renderer';
+import { renderFromVariables } from './template-renderer';
 import { storyMessageTemplate } from '$lib/fs/view-templates';
 import { type PipelineProviderConfigs, type PlayerContext, runPipeline } from './pipeline';
 import type { PhaseStreamState, PipelineCallbacks, PipelineState } from './pipeline-types';
@@ -107,31 +100,6 @@ function getLatestActSummary(): string {
 	return '';
 }
 
-function getHistory(message: {
-	bodyText: string | undefined;
-	systemPrompt: string | undefined;
-	narrationContent: ModelMessage[] | undefined;
-}): MessageBase[] {
-	const narrations = message.narrationContent?.length ? message.narrationContent.map(narrowNarrationMessage).filter((m) => m !== null) : [];
-	// exclude the first message (current message) to get the existing messages
-	const existing = messages.slice(0, -1).map((m) => toHistoryMessage(m));
-	return [...narrations, ...existing];
-}
-
-function narrowNarrationMessage(msg: ModelMessage): MessageBase | null {
-	if (msg.role !== 'user' && msg.role !== 'assistant') return null;
-	if (typeof msg.content === 'string') {
-		return { role: msg.role, content: msg.content };
-	}
-	// Handle array content - extract text parts
-	if (Array.isArray(msg.content)) {
-		const textParts = msg.content.filter((part) => part.type === 'text');
-		const text = textParts.map((part) => (part as { type: 'text'; text: string }).text).join('\n');
-		return { role: msg.role, content: text };
-	}
-	return null;
-}
-
 async function persistMessage(actLineId: string, message: UIMessage): Promise<void> {
 	await dbMessages.createMessage({
 		id: message.id,
@@ -147,20 +115,12 @@ async function persistMessage(actLineId: string, message: UIMessage): Promise<vo
 	await dbActLines.addMessageToLine(actLineId, message.id, seq);
 }
 
-async function persistUserMessage(
-	message: {
-		bodyText: string;
-		systemPrompt: string | undefined;
-		narrationContent: ModelMessage[] | undefined;
-		sceneNumber: number;
-	},
-	actLineId: string
-) {
+async function persistUserMessage(playerResponse: string, sceneNumber: number, actLineId: string) {
 	const userMessage: UIMessage = {
 		id: crypto.randomUUID(),
 		role: 'user',
-		content: message.bodyText,
-		sceneNumber: message.sceneNumber,
+		content: playerResponse,
+		sceneNumber: sceneNumber,
 	};
 
 	// Persist user message
@@ -238,19 +198,13 @@ function buildFinalVariables(
 	};
 }
 
-export async function sendMessage(
-	actLineId: string,
-	message: {
-		bodyText: string | undefined;
-		systemPrompt: string | undefined;
-		narrationContent: ModelMessage[] | undefined;
-	}
-): Promise<void> {
-	const storyPromise = dbActLines.getStoryForActLine(actLineId);
-	if (!message.bodyText && !message.systemPrompt && !message.narrationContent) {
-		await log.warn('send-message', 'Called with no body, system prompt, or narration content');
+export async function sendMessage(actLineId: string, message: string, isInitialMessage: boolean = false): Promise<void> {
+	if (message.trim().length === 0 && !isInitialMessage) {
+		await log.warn('send-message', 'Not initial message and called with no message body.');
 		return;
 	}
+	const targetWordCount = 400; // TODO: make this configurable via settings
+	const storyPromise = dbActLines.getStoryForActLine(actLineId);
 
 	const mainConfig = getMainProviderConfig();
 	if (!mainConfig?.apiKey) {
@@ -264,16 +218,16 @@ export async function sendMessage(
 	error = null;
 
 	// Get previous variables before creating new message
-	const previousNarrativeVariables = getPreviousNarrativeMessage(messages);
+	const previousNarrativeVariables = isInitialMessage ? undefined : getPreviousNarrativeMessage(messages);
 
 	// Scene starts with the assistant's story message, and ends with the player's response.
-	const previousSceneNumber = findLastNonNullSceneNumber() ?? 0;
+	const previousSceneNumber = isInitialMessage ? 0 : (findLastNonNullSceneNumber() ?? 0);
 	const nextSceneNumber = previousSceneNumber + 1;
 
 	const responseMessage = newMessage('assistant', nextSceneNumber);
 	let newMessagesCount: number = 0;
-	if (!!message.bodyText && message.bodyText.trim().length > 0) {
-		const userMessage = await persistUserMessage({ ...message, bodyText: message.bodyText, sceneNumber: previousSceneNumber }, actLineId);
+	if (message.trim().length > 0) {
+		const userMessage = await persistUserMessage(message, previousSceneNumber, actLineId);
 		messages = [...messages, userMessage, responseMessage];
 		newMessagesCount = 2;
 	} else {
@@ -282,7 +236,7 @@ export async function sendMessage(
 	}
 
 	// Get player context after possibly adding new userMessage (Player Response)
-	const playerContext = getPlayerContext(messages);
+	const playerContext = isInitialMessage ? undefined : getPlayerContext(messages);
 
 	const messageIdx = messages.length - 1;
 
@@ -301,15 +255,11 @@ export async function sendMessage(
 	const tools = await buildTools(storyId, actLineId);
 
 	try {
-		const systemPrompt = message.systemPrompt ?? (await getActiveSystemPromptOrDefault());
-		const history = getHistory(message);
-
 		// Load pipeline context
 		const worldContent = getActiveWorldContent() ?? '';
 		const actPlot = getActiveActPlotContent() ?? '';
 		const actSummary = getLatestActSummary();
 		const templateReplacements = { sceneNumber: String(nextSceneNumber) };
-		const targetWordCount = 400;
 
 		// Pipeline callback helpers
 		const renderContent = (vars: NarrativeVariables | null | undefined, fallback: string): string => {
@@ -420,10 +370,7 @@ export async function sendMessage(
 		};
 
 		// Persist with accumulated content
-		await Promise.all([
-			persistMessage(actLineId, getCurrentMessage()),
-			logMainChat({ systemPrompt, newMessages: messages.slice(-newMessagesCount), history }),
-		]);
+		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({ newMessages: messages.slice(-newMessagesCount) })]);
 	} catch (err: unknown) {
 		await handleStreamError(err, responseMessage.id, actLineId);
 	} finally {
@@ -467,19 +414,6 @@ function getPlayerContext(messages: UIMessage[]): PlayerContext | undefined {
 	return undefined;
 }
 
-function toHistoryMessage(message: UIMessage): MessageBase {
-	if (message.role !== 'assistant') {
-		return { role: message.role, content: message.content };
-	}
-
-	const vars = message.variables;
-	const content = vars ? variablesToMarkdown(vars) : message.content;
-	const gd = vars?.gameData;
-	// Only include game data in history if it has meaningful content
-	const gameDataContent = gd ? '\n' + gameDataToMarkdown(gd) : '';
-	return { role: 'assistant', content: content + gameDataContent };
-}
-
 export function stopStreaming(): void {
 	abortController?.abort();
 }
@@ -516,76 +450,85 @@ export function getLatestDecisionContext(): string | null {
  * The narration message is never persisted or shown in the UI.
  * Only the assistant's response (the opening narrative) is persisted and displayed.
  */
-export async function sendInitialNarration(actLineId: string, narrationContent: ModelMessage[], systemPrompt?: string): Promise<void> {
+export async function sendInitialNarration(actLineId: string): Promise<void> {
 	messages = [];
-	return await sendMessage(actLineId, {
-		bodyText: undefined,
-		systemPrompt: systemPrompt,
-		narrationContent: narrationContent,
-	});
+	return await sendMessage(actLineId, '', true);
 }
 
-export async function regenerateLastResponse(
-	actLineId: string,
-	messageId: string,
-	narrationContent: ModelMessage[],
-	systemPrompt?: string
-): Promise<void> {
+/**
+ * Remove messages from the given index onwards: remove from DB and cleanup memories,
+ * then update local state. Returns true if removal succeeded, false if DB removal failed
+ * (in which case local state is unchanged).
+ */
+async function removeMessagesFromIndex(actLineId: string, startIdx: number): Promise<boolean> {
+	const messageIdsToRemove = messages.slice(startIdx).map((m) => m.id);
+
+	let removedIds: string[] = [];
+	try {
+		removedIds = await dbActLines.removeMessagesFromActLine(actLineId, messageIdsToRemove);
+	} catch (err) {
+		await log.error('remove-messages-from-index', 'Message removal failed', err);
+		return false;
+	}
+
+	// DB removal succeeded — now update local state
+	messages = messages.slice(0, startIdx);
+
+	if (removedIds.length > 0) {
+		try {
+			await removeMemoriesFromActLine(actLineId, removedIds);
+		} catch (err) {
+			await log.error('remove-messages-from-index', 'Memory cleanup failed', err);
+		}
+	}
+	return true;
+}
+
+export async function regenerateLastResponse(actLineId: string, messageId: string): Promise<void> {
 	const currentMessages = [...messages];
 	const lastAssistantMsgIdx = currentMessages.findLastIndex((m) => m.role === 'assistant');
 	if (lastAssistantMsgIdx === -1) return;
 
-	const assistantMessageIds = messages.slice(lastAssistantMsgIdx).map((m) => m.id);
-
 	const targetMessageIdx = currentMessages.findIndex((m) => m.id === messageId);
-	if (assistantMessageIds.length !== 1 || targetMessageIdx !== lastAssistantMsgIdx) {
+	if (targetMessageIdx !== lastAssistantMsgIdx) {
 		error = 'Message state is stale, reloading messages from database.';
 		await loadActLineMessages(actLineId);
 		return;
 	}
 
-	// Include the preceding player message ID for memory cleanup,
-	// since memories are stored under the player message ID
-	const playerMessageIds: string[] = [];
-	if (lastAssistantMsgIdx > 0 && messages[lastAssistantMsgIdx - 1].role === 'user') {
-		playerMessageIds.push(messages[lastAssistantMsgIdx - 1].id);
+	// If the assistant message is the first message, regenerate as initial narration
+	if (lastAssistantMsgIdx === 0) {
+		const removed = await removeMessagesFromIndex(actLineId, 0);
+		if (!removed) {
+			await loadActLineMessages(actLineId);
+			return;
+		}
+		await sendInitialNarration(actLineId);
+		return;
 	}
-	const messageIdsToRemove = [...playerMessageIds, ...assistantMessageIds];
 
-	messages = messages.slice(0, lastAssistantMsgIdx);
+	// The message before the assistant must be a user message
+	if (currentMessages[lastAssistantMsgIdx - 1].role !== 'user') {
+		await log.warn('regenerate-last-response', 'No user message found before assistant message');
+		error = 'Cannot regenerate: no user message found before the assistant response.';
+		await loadActLineMessages(actLineId);
+		return;
+	}
 
-	// Send new response first (persists to DB), then remove old messages
+	const userMessageContent = currentMessages[lastAssistantMsgIdx - 1].content;
+
+	// Send the new response first (safe — original data intact on failure)
 	try {
-		await sendMessage(actLineId, { bodyText: undefined, systemPrompt: systemPrompt, narrationContent: narrationContent });
+		await sendMessage(actLineId, userMessageContent);
 	} catch (err) {
 		await log.error('regenerate-last-response', 'Failed to regenerate response', err);
 		await loadActLineMessages(actLineId);
 		return;
 	}
 
-	// Check the NEW message content (last message in array after sendMessage)
-	const newMessage = messages.at(-1);
-	if (!newMessage?.content) {
-		error = 'Regenerated message is empty, reloading messages from database.';
-		await loadActLineMessages(actLineId);
-		return;
-	}
-
-	let removedIds: string[] = [];
-	try {
-		removedIds = await dbActLines.removeMessagesFromActLine(actLineId, messageIdsToRemove);
-	} catch (err) {
-		await log.error('regenerate-last-response', 'Old message removal failed', err);
-		await loadActLineMessages(actLineId);
-	}
-
-	if (removedIds.length > 0) {
-		try {
-			await removeMemoriesFromActLine(actLineId, removedIds);
-		} catch (err) {
-			await log.error('regenerate-last-response', 'Memory cleanup failed', err);
-		}
-	}
+	// Remove old messages only after new response succeeded
+	const exchangeStartIdx = lastAssistantMsgIdx - 1;
+	await removeMessagesFromIndex(actLineId, exchangeStartIdx);
 }
 
 export async function deleteLastExchange(actLineId: string): Promise<void> {
@@ -599,24 +542,7 @@ export async function deleteLastExchange(actLineId: string): Promise<void> {
 		lastUserMsgIdx--;
 	}
 
-	const messageIdsToRemove = messages.slice(lastUserMsgIdx).map((m) => m.id);
-	messages = messages.slice(0, lastUserMsgIdx);
-
-	let removedIds: string[] = [];
-	try {
-		removedIds = await dbActLines.removeMessagesFromActLine(actLineId, messageIdsToRemove);
-	} catch (err) {
-		await log.error('delete-last-exchange', 'Message removal failed', err);
-		return;
-	}
-
-	if (removedIds.length > 0) {
-		try {
-			await removeMemoriesFromActLine(actLineId, removedIds);
-		} catch (err) {
-			await log.error('delete-last-exchange', 'Memory cleanup failed', err);
-		}
-	}
+	await removeMessagesFromIndex(actLineId, lastUserMsgIdx);
 }
 
 /**
@@ -633,24 +559,7 @@ export async function deleteOrphanedUserMessages(actLineId: string): Promise<voi
 		lastUserMsgIdx--;
 	}
 
-	const messageIdsToRemove = messages.slice(lastUserMsgIdx).map((m) => m.id);
-	messages = messages.slice(0, lastUserMsgIdx);
-
-	let removedIds: string[] = [];
-	try {
-		removedIds = await dbActLines.removeMessagesFromActLine(actLineId, messageIdsToRemove);
-	} catch (err) {
-		await log.error('delete-orphaned-user-messages', 'Message removal failed', err);
-		return;
-	}
-
-	if (removedIds.length > 0) {
-		try {
-			await removeMemoriesFromActLine(actLineId, removedIds);
-		} catch (err) {
-			await log.error('delete-orphaned-user-messages', 'Memory cleanup failed', err);
-		}
-	}
+	await removeMessagesFromIndex(actLineId, lastUserMsgIdx);
 }
 
 export function isUserMessage(message: UIMessage): boolean {

@@ -38,9 +38,7 @@
 		forkActLine,
 		getActiveAct,
 		getActiveActLineId,
-		getActiveNarrationContext,
 		getActiveStory,
-		getActiveSystemPrompt,
 		getActiveSystemPromptOrDefault,
 		getIsSelectingStory,
 		setActiveActPlotContent,
@@ -90,7 +88,7 @@
 	async function handleRegenerate(messageId: string) {
 		const actLineId = getActiveActLineId();
 		if (!actLineId || getIsStreaming()) return;
-		await regenerateLastResponse(actLineId, messageId, getActiveNarrationContext(), getActiveSystemPrompt() ?? undefined);
+		await regenerateLastResponse(actLineId, messageId);
 	}
 
 	async function handleDelete() {
@@ -137,11 +135,7 @@
 		const actLineId = getActiveActLineId();
 		if (!actLineId) return;
 		input = '';
-		sendMessage(actLineId, {
-			bodyText: text,
-			systemPrompt: getActiveSystemPrompt() ?? undefined,
-			narrationContent: getActiveNarrationContext(),
-		});
+		sendMessage(actLineId, text);
 	}
 
 	function handleCreateFromWorldBuilder() {
@@ -201,7 +195,7 @@
 
 		exitWorldBuilderMode();
 
-		sendInitialNarration(actLineId, getActiveNarrationContext(), getActiveSystemPrompt() ?? undefined)
+		sendInitialNarration(actLineId)
 			.then(() => log.debug('story-creation', 'initial narration sent'));
 	}
 
@@ -289,11 +283,7 @@
 		if (getIsStreaming()) return;
 		const actLineId = getActiveActLineId();
 		if (!actLineId) return;
-		sendMessage(actLineId, {
-			bodyText: decision,
-			systemPrompt: getActiveSystemPrompt() ?? undefined,
-			narrationContent: getActiveNarrationContext(),
-		});
+		sendMessage(actLineId, decision);
 	}
 
 	function isCursorVisible(container: HTMLDivElement | null) {

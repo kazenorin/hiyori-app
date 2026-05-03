@@ -43,13 +43,15 @@ async function appendToStoryLog(filename: string, label: string, content: string
  * Called before each AI call in the main chat.
  */
 export async function logMainChat(context: {
-	systemPrompt: string;
 	newMessages: ChatLogMessage[];
+	systemPrompt?: string;
 	history?: ChatLogMessage[];
 }): Promise<void> {
 	const parts: string[] = [];
 
-	parts.push(`=== SYSTEM PROMPT ===\n${context.systemPrompt}`);
+	if (context.systemPrompt) {
+		parts.push(`=== SYSTEM PROMPT ===\n${context.systemPrompt}`);
+	}
 
 	const messagesStr = [...(context.history ?? []), ...context.newMessages]
 		.map((m) => {

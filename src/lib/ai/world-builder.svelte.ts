@@ -6,8 +6,7 @@ import { type StreamAccumulator, type StreamState } from '$lib/ai/chat-callbacks
 import { streamChatResponse } from './chat-stream';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
-import type {UIMessage} from '$lib/ai/chat.svelte';
-import type {MessageBase} from '$lib/db/messages';
+import type { MessageBase } from '$lib/db/messages';
 
 export interface WorldBuilderMessage {
 	id: string;
@@ -231,7 +230,7 @@ async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<vo
 	}
 
 	const messageIdx = messages.length - 1;
-	function getCurrentMessage(): UIMessage {
+	function getCurrentMessage(): WorldBuilderMessage {
 		return messages[messageIdx];
 	}
 
@@ -275,13 +274,13 @@ async function persistInterviewMessages(
 
 	try {
 		if (userMessage) {
-			await dbMessages.createMessage({id: userMessage.id, role: userMessage.role, content: userMessage.content});
+			await dbMessages.createMessage({ id: userMessage.id, role: userMessage.role, content: userMessage.content });
 			const userSeq = await dbActLines.getNextPremisesSequence(interviewActLineId);
 			await dbActLines.addMessageToPremises(interviewActLineId, userMessage.id, userSeq);
 		}
 
 		if (assistantMessage.content) {
-			await dbMessages.createMessage({id: assistantMessage.id, role: 'assistant', content: assistantMessage.content});
+			await dbMessages.createMessage({ id: assistantMessage.id, role: 'assistant', content: assistantMessage.content });
 			const assistantSeq = await dbActLines.getNextPremisesSequence(interviewActLineId);
 			await dbActLines.addMessageToPremises(interviewActLineId, assistantMessage.id, assistantSeq);
 		}

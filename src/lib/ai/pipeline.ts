@@ -12,24 +12,16 @@ import { variablesToMarkdown } from './template-renderer';
 import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
 import { log } from '$lib/logging/logger';
 import {
-	loadActSummaryTemplate,
-	loadEditorPrompt,
-	loadGameMasterPrompt,
-	loadGeneralInstructions,
-	loadPlotPlannerPrompt,
-	loadReviewerPrompt,
-	loadStoryActSummaryTemplate,
-	loadStoryEditorPrompt,
-	loadStoryGameMasterPrompt,
-	loadStoryGeneralInstructions,
-	loadStoryPlotPlannerPrompt,
-	loadStoryReviewerPrompt,
-	loadStorySummarizerPrompt,
-	loadStoryWriterOutputTemplate,
-	loadStoryWriterPrompt,
-	loadSummarizerPrompt,
-	loadWriterOutputTemplate,
-	loadWriterPrompt,
+	generalInstructionsLoader,
+	plotPlannerSystemPromptLoader,
+	writerSystemPromptLoader,
+	writerOutputTemplateLoader,
+	reviewerSystemPromptTemplateLoader,
+	editorSystemPromptLoader,
+	gameMasterSystemPromptLoader,
+	summarizerPromptLoader,
+	actSummaryTemplateLoader,
+	type PromptLoader,
 } from '$lib/fs/prompts';
 
 // Markdown section headings used in phase prompts
@@ -46,6 +38,20 @@ const SECTION = {
 	PREVIOUS_ACT_SUMMARY: '\n## Previous Act Summary\n',
 	PREVIOUS_NARRATIVE_BODY: '\n## Previous Narrative Body\n',
 };
+
+const promptLoaderDefinitions = {
+	generalInstructions: generalInstructionsLoader,
+	plotPlannerSystemPrompt: plotPlannerSystemPromptLoader,
+	writerSystemPrompt: writerSystemPromptLoader,
+	writerOutputTemplate: writerOutputTemplateLoader,
+	reviewerSystemPromptTemplate: reviewerSystemPromptTemplateLoader,
+	editorSystemPrompt: editorSystemPromptLoader,
+	gameMasterSystemPrompt: gameMasterSystemPromptLoader,
+	summarizerPrompt: summarizerPromptLoader,
+	actSummaryTemplate: actSummaryTemplateLoader,
+} satisfies Record<string, PromptLoader>;
+
+type LoadedPrompts = Record<keyof typeof promptLoaderDefinitions, string>;
 
 /**
  * Reconstruct full output text from a StreamState.
@@ -209,6 +215,19 @@ function toUserMessages(contents: string[]): MessageBase[] {
 	return contents.map((content) => ({ role: 'user' as const, content }));
 }
 
+async function loadPrompts(storyId: string | undefined, storyName: string | undefined): Promise<LoadedPrompts> {
+	type Keys = keyof typeof promptLoaderDefinitions;
+	const keys = Object.keys(promptLoaderDefinitions) as Keys[];
+
+	const values = await Promise.all(
+		storyId && storyName
+			? keys.map((key) => promptLoaderDefinitions[key].loadByStory(storyId, storyName))
+			: keys.map((key) => promptLoaderDefinitions[key].loadDefault())
+	);
+
+	return Object.fromEntries(keys.map((key, i) => [key, values[i]])) as LoadedPrompts;
+}
+
 /**
  * Run the full narrative generation pipeline.
  *
@@ -232,7 +251,6 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 
 	const defaultTargetWordCount = 400; // TODO: make this configurable in settings
 	const effectiveTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
-	const effectivePlayerResponse = playerResponse ?? '(no response)';
 
 	const sharedParams = {
 		abortSignal,
@@ -243,42 +261,32 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	let state: PipelineState = { currentPhase: null };
 	let editorMetadata: StreamResultMetadata | undefined;
 
+	// Hardcoded prompts
+	const gameMasterExtractionPrompt = 'Generate the game data based on the available information in the chat history.';
+	const editorExtractionPrompt =
+		'Apply suggestions from the reviewer output to the writer output. ' +
+		'Judge whether the suggestions are necessary based on the available information in the chat history.';
+	const reviewerExtractionPrompt = `Perform a review on the writer's output based on the available information in the chat history.`;
+	const writerExtractionPrompt = 'Write a story prose based on the available information in the chat history.';
+	const plotPlannerExtractionPrompt = 'Generate a Scene Plot based on the available information in the chat history.';
+
+	const summarizerFallbackExtractionPromptTemplate = 'Update the Act Summary for Scene {completedScenes} based on the Player Response.';
+	const summarizerExtractionPromptTemplate =
+		'Update the Act Summary adding information for the previous scene: "Scene {completedScenes}: {sceneTitle}"';
+
 	// Load prompts — story-specific if storyId is provided, global otherwise
-	const [
-		plotPlannerPrompt,
+
+	const {
 		generalInstructions,
-		writerPrompt,
-		writerTemplate,
-		reviewerPrompt,
-		editorPrompt,
-		gameMasterPrompt,
+		plotPlannerSystemPrompt,
+		writerSystemPrompt,
+		writerOutputTemplate,
+		reviewerSystemPromptTemplate,
+		editorSystemPrompt,
+		gameMasterSystemPrompt,
 		summarizerPrompt,
-		summaryTemplate,
-	] = await Promise.all(
-		storyId && storyName
-			? [
-					loadStoryGeneralInstructions(storyId, storyName),
-					loadStoryPlotPlannerPrompt(storyId, storyName),
-					loadStoryWriterPrompt(storyId, storyName),
-					loadStoryWriterOutputTemplate(storyId, storyName),
-					loadStoryReviewerPrompt(storyId, storyName),
-					loadStoryEditorPrompt(storyId, storyName),
-					loadStoryGameMasterPrompt(storyId, storyName),
-					loadStorySummarizerPrompt(storyId, storyName),
-					loadStoryActSummaryTemplate(storyId, storyName),
-				]
-			: [
-					loadGeneralInstructions(),
-					loadPlotPlannerPrompt(),
-					loadWriterPrompt(),
-					loadWriterOutputTemplate(),
-					loadReviewerPrompt(),
-					loadEditorPrompt(),
-					loadGameMasterPrompt(),
-					loadSummarizerPrompt(),
-					loadActSummaryTemplate(),
-				]
-	);
+		actSummaryTemplate,
+	} = await loadPrompts(storyId, storyName);
 
 	let newActSummary = actSummary;
 
@@ -287,26 +295,33 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		callbacks.onPhaseStart('SUMMARIZER');
 
 		// Inject programmatic completed scenes count
-		const processedTemplate = summaryTemplate.replaceAll('{completedScenes}', String(completedScenes));
-		const summarizerSystem = summarizerPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
-
+		const processedTemplate = actSummaryTemplate.replaceAll('{completedScenes}', String(completedScenes));
+		const summarizerSystemPrompt = summarizerPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
 		let summarizerMessages: MessageBase[];
 		if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
 			summarizerMessages = toUserMessages([
 				SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
 				SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeVariables.narrativeBody,
-				SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
-				`Update the Act Summary adding information for the previous scene: "Scene ${completedScenes}: ${previousNarrativeVariables.sceneTitle ?? 'Untitled'}"`,
+				...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+				summarizerExtractionPromptTemplate
+					.replaceAll('{completedScenes}', String(completedScenes))
+					.replaceAll('{sceneTitle}', previousNarrativeVariables.sceneTitle ?? ''),
 			]);
 		} else {
 			summarizerMessages = toUserMessages([
 				SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
-				SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
-				`Update the Act Summary for Scene ${completedScenes} based on the Player Response.`,
+				...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+				summarizerFallbackExtractionPromptTemplate.replaceAll('{completedScenes}', String(completedScenes)),
 			]);
 		}
 
-		newActSummary = await runNonStreamingPhase('SUMMARIZER', summarizerSystem, summarizerMessages, providerConfigs.summarizer, abortSignal);
+		newActSummary = await runNonStreamingPhase(
+			'SUMMARIZER',
+			summarizerSystemPrompt,
+			summarizerMessages,
+			providerConfigs.summarizer,
+			abortSignal
+		);
 		state = updateState(state, { actSummary: newActSummary });
 		callbacks.onPhaseComplete('SUMMARIZER', state);
 
@@ -325,7 +340,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		const result = await executeStreamingPhase(
 			{
 				phaseName: 'PLOT_PLANNER',
-				systemPrompt: plotPlannerPrompt
+				systemPrompt: plotPlannerSystemPrompt
 					.replaceAll('{generalInstructions}', generalInstructions)
 					.replaceAll('{targetWordCount}', effectiveTargetWordCount),
 				...sharedParams,
@@ -333,8 +348,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + newActSummary,
-					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
-					'Generate a Scene Plot based on the available information in the chat history.',
+					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+					plotPlannerExtractionPrompt,
 				]),
 				providerConfig: providerConfigs.plotPlanner,
 				buildStateUpdate: (ss) => ({ scenePlot: ss.content }),
@@ -349,18 +364,18 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		const result = await executeStreamingPhase(
 			{
 				phaseName: 'WRITER',
-				systemPrompt: writerPrompt
+				systemPrompt: writerSystemPrompt
 					.replaceAll('{generalInstructions}', generalInstructions)
 					.replaceAll('{targetWordCount}', effectiveTargetWordCount),
 				...sharedParams,
 				messages: toUserMessages([
-					SECTION.WRITER_OUTPUT_TEMPLATE + writerTemplate,
+					SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + newActSummary,
-					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
-					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
-					'Write a story prose based on the available information in the chat history.',
+					...(state.scenePlot ? [SECTION.SCENE_PLOT + state.scenePlot] : []),
+					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+					writerExtractionPrompt,
 				]),
 				providerConfig: providerConfigs.writer,
 				buildStateUpdate: (ss) => ({ writerOutput: fullOutput(ss) }),
@@ -375,16 +390,16 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		const result = await executeStreamingPhase(
 			{
 				phaseName: 'REVIEWER',
-				systemPrompt: reviewerPrompt.replaceAll('{generalInstructions}', generalInstructions),
+				systemPrompt: reviewerSystemPromptTemplate.replaceAll('{generalInstructions}', generalInstructions),
 				...sharedParams,
 				messages: toUserMessages([
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + newActSummary,
-					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
-					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
-					SECTION.WRITER_OUTPUT + (state.writerOutput ?? ''),
-					"Perform a review on the writer's output based on the available information in the chat history.",
+					...(state.scenePlot ? [SECTION.SCENE_PLOT + state.scenePlot] : []),
+					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+					...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
+					reviewerExtractionPrompt,
 				]),
 				providerConfig: providerConfigs.reviewer,
 				buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),
@@ -399,20 +414,20 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		const result = await executeStreamingPhase(
 			{
 				phaseName: 'EDITOR',
-				systemPrompt: editorPrompt
+				systemPrompt: editorSystemPrompt
 					.replaceAll('{generalInstructions}', generalInstructions)
 					.replaceAll('{targetWordCount}', effectiveTargetWordCount),
 				...sharedParams,
 				messages: toUserMessages([
-					SECTION.WRITER_OUTPUT_TEMPLATE + writerTemplate,
+					SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + newActSummary,
-					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
-					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
-					SECTION.WRITER_OUTPUT + (state.writerOutput ?? ''),
-					SECTION.REVIEWER_OUTPUT + (state.reviewerOutput ?? ''),
-					'Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history.',
+					...(state.scenePlot ? [SECTION.SCENE_PLOT + state.scenePlot] : []),
+					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+					...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
+					...(state.reviewerOutput ? [SECTION.REVIEWER_OUTPUT + state.reviewerOutput] : []),
+					editorExtractionPrompt,
 				]),
 				providerConfig: providerConfigs.editor,
 				buildStateUpdate: (ss) => ({
@@ -432,14 +447,15 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		const result = await executeStreamingPhase(
 			{
 				phaseName: 'GAME_MASTER',
-				systemPrompt: gameMasterPrompt,
+				systemPrompt: gameMasterSystemPrompt,
 				...sharedParams,
 				messages: toUserMessages([
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + newActSummary,
-					SECTION.SCENE_PLOT + (state.scenePlot ?? ''),
-					SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
-					SECTION.EDITOR_OUTPUT + (state.editorOutput ?? ''),
+					...(state.scenePlot ? [SECTION.SCENE_PLOT + state.scenePlot] : []),
+					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+					...(state.editorOutput ? [SECTION.EDITOR_OUTPUT + state.editorOutput] : []),
+					gameMasterExtractionPrompt,
 				]),
 				providerConfig: providerConfigs.gameMaster,
 				buildStateUpdate: (ss) => ({
