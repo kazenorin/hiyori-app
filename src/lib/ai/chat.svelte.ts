@@ -489,6 +489,24 @@ export function getLatestDecisions(): string[] {
 	return [];
 }
 
+export function getLatestActivePlotThreads(): string[] {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		if (messages[i].role === 'assistant' && messages[i].variables?.gameData?.activePlotThreads?.length) {
+			return messages[i].variables!.gameData!.activePlotThreads;
+		}
+	}
+	return [];
+}
+
+export function getLatestDecisionContext(): string | null {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		if (messages[i].role === 'assistant' && messages[i].variables?.gameData?.decisionContext) {
+			return messages[i].variables!.gameData!.decisionContext;
+		}
+	}
+	return null;
+}
+
 /**
  * Send the narration template as a hidden message.
  * The narration message is never persisted or shown in the UI.
