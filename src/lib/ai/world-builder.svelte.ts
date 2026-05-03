@@ -14,6 +14,11 @@ export interface WorldBuilderMessage {
 	content: string;
 }
 
+export interface ForkInterviewContext {
+	sourcePremises: MessageBase[];
+	actSummary: string;
+}
+
 const COMPLETION_MARKER = '[WORLD_BUILDER_COMPLETE]';
 const seedMsg = { role: 'user' as const, content: 'I want to create a new story. Please help me build a world.' };
 
@@ -138,7 +143,12 @@ export async function enterWorldBuilderMode(): Promise<void> {
 	await streamNextResponse();
 }
 
-export async function enterActPlotInterviewMode(actLineId: string, systemPrompt: string, worldContent: string): Promise<void> {
+export async function enterActPlotInterviewMode(
+	actLineId: string,
+	systemPrompt: string,
+	worldContent: string,
+	forkContext?: ForkInterviewContext
+): Promise<void> {
 	// Preserve world content before reset clears it
 	interviewWorldContent = worldContent;
 
@@ -158,6 +168,19 @@ export async function enterActPlotInterviewMode(actLineId: string, systemPrompt:
 		{ role: 'user', content: `The following is the world setting for the story:\n\n---\n\n${worldContent}` },
 		{ role: 'user', content: interviewPrompt },
 	];
+
+	// When forking, include source premises and act summary so the interview
+	// LLM knows the original line's interview decisions and story state
+	if (forkContext) {
+		const forkMessages = forkContext.sourcePremises.map((msg) => ({ role: msg.role, content: msg.content }));
+		interviewHiddenContext = [...interviewHiddenContext, ...forkMessages];
+		if (forkContext.actSummary) {
+			interviewHiddenContext = [
+				...interviewHiddenContext,
+				{ role: 'user', content: `Summary of events at the point of divergence:\n\n${forkContext.actSummary}` },
+			];
+		}
+	}
 
 	// Start streaming without a visible seed message
 	await streamNextResponse();

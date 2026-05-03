@@ -36,11 +36,14 @@
 	import {
 		createStoryFromWorldBuilder,
 		forkActLine,
+		forkActLineForInterview,
 		getActiveAct,
 		getActiveActLineId,
 		getActiveStory,
 		getActiveSystemPromptOrDefault,
+		getActiveWorldContent,
 		getIsSelectingStory,
+		selectActLineQuiet,
 		setActiveActPlotContent,
 	} from '$lib/stores/stories.svelte';
 	import {Accordion} from '@skeletonlabs/skeleton-svelte';
@@ -52,7 +55,7 @@
 	import { formatPhaseName } from '$lib/ai/narrative-types';
 	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
 	import {generateActPlot} from '$lib/ai/act-plot-generator';
-	import {getActLine} from '$lib/db/act-lines';
+	import {getActLine, getPremisesMessages} from '$lib/db/act-lines';
 	import {log} from '$lib/logging/logger';
 	import type {Story} from "$lib/db/stories";
 	import { onMount } from 'svelte';
@@ -79,6 +82,14 @@
 	let showCreateStoryOptions = $state(false);
 	let isCreatingStory = $state(false);
 	let createStoryError = $state<string | null>(null);
+	let isForking = $state(false);
+	let forkChoiceIndex = $state<number | null>(null);
+
+	// Reset fork choice when navigating to a different act line
+	$effect(() => {
+		getActiveActLineId();
+		forkChoiceIndex = null;
+	});
 
 	async function handleCopy(messageId: string, content: string) {
 		await navigator.clipboard.writeText(content);
@@ -119,10 +130,57 @@
 	async function handleFork(messageIndex: number) {
 		const actLineId = getActiveActLineId();
 		const act = getActiveAct();
-		if (!actLineId || !act || getIsStreaming()) return;
-		const { branchSeq, name } = await getForkSequence(actLineId, messageIndex);
-		const line = await forkActLine(actLineId, branchSeq, act.id, name);
-		await loadActLineMessages(line.id);
+		if (!actLineId || !act || getIsStreaming() || isForking) return;
+		forkChoiceIndex = messageIndex;
+	}
+
+	async function handleForkDirect(messageIndex: number) {
+		const actLineId = getActiveActLineId();
+		const act = getActiveAct();
+		if (!actLineId || !act || getIsStreaming() || isForking) return;
+		isForking = true;
+		forkChoiceIndex = null;
+		try {
+			const { branchSeq, name } = await getForkSequence(actLineId, messageIndex);
+			const line = await forkActLine(actLineId, branchSeq, act.id, name);
+			await loadActLineMessages(line.id);
+		} finally {
+			isForking = false;
+		}
+	}
+
+	async function handleForkWithInterview(messageIndex: number) {
+		const actLineId = getActiveActLineId();
+		const act = getActiveAct();
+		if (!actLineId || !act || getIsStreaming() || isForking) return;
+
+		const worldContent = getActiveWorldContent();
+		if (!worldContent) return;
+
+		isForking = true;
+		forkChoiceIndex = null;
+		try {
+			const { branchSeq, name } = await getForkSequence(actLineId, messageIndex);
+			const line = await forkActLineForInterview(actLineId, branchSeq, act.id, name);
+			await selectActLineQuiet(line.id);
+
+			// Load source premises and act summary for interview context
+			const sourcePremises = await getPremisesMessages(actLineId);
+			const msgs = getMessages();
+			const actSummary = msgs[messageIndex]?.actSummary ?? '';
+
+			const systemPrompt = await getActiveSystemPromptOrDefault();
+			await enterActPlotInterviewMode(line.id, systemPrompt, worldContent, { sourcePremises, actSummary });
+		} catch (err) {
+			await log.error('fork', 'Failed to start fork interview', err);
+			createStoryError = err instanceof Error ? err.message : 'Failed to start fork interview';
+		} finally {
+			isForking = false;
+		}
+	}
+
+	function cancelForkChoice() {
+		forkChoiceIndex = null;
 	}
 
 	function handleSubmit() {
@@ -633,11 +691,31 @@ duration:    {message.metadata.durationMs}ms</pre>
 												title="Copy message"
 												onclick={() => handleCopy(message.id, message.content)}>{copiedId === message.id ? 'Copied' : 'Copy'}</button
 											>
+										{#if forkChoiceIndex === i}
+											<div class="flex gap-2 items-center">
+												<button
+													class="text-xs bg-surface-100-800 hover:bg-surface-200-700 text-primary-500 px-2 py-1 rounded transition-colors"
+													onclick={() => handleForkDirect(i)}
+												>Keep current plot</button
+												>
+												<button
+													class="text-xs bg-surface-100-800 hover:bg-surface-200-700 text-primary-500 px-2 py-1 rounded transition-colors"
+													onclick={() => handleForkWithInterview(i)}
+												>Tell us what's different</button
+												>
+												<button
+													class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+													onclick={cancelForkChoice}
+												>Cancel</button
+												>
+											</div>
+										{:else}
 											<button
 												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 												title="Fork from here"
-												onclick={() => handleFork(i)}>Fork</button
-											>
+												disabled={isForking || getIsStreaming()}
+											onclick={() => handleFork(i)}>{isForking ? 'Forking...' : 'Fork'}</button>
+										{/if}
 										{/if}
 										{#if i === lastMessageIdx}
 											<button
