@@ -61,6 +61,8 @@
 	let chatContainer = $state<HTMLDivElement | null>(null);
 	let wbChatContainer = $state<HTMLDivElement | null>(null);
 	let copiedId = $state<string | null>(null);
+	let wasChatStreaming = $state(false);
+	let wasWbStreaming = $state(false);
 	let latestDecisions = $derived(getLatestDecisions());
 	let latestActivePlotThreads = $derived(getLatestActivePlotThreads());
 	let latestDecisionContext = $derived(getLatestDecisionContext());
@@ -345,6 +347,26 @@
 			mutationObserver.disconnect();
 			resizeObserver.disconnect();
 		};
+	});
+
+	$effect(() => {
+		const isStreaming = getIsStreaming();
+		if (wasChatStreaming && !isStreaming && chatContainer) {
+			requestAnimationFrame(() => {
+				chatContainer!.scrollTop = chatContainer!.scrollHeight;
+			});
+		}
+		wasChatStreaming = isStreaming;
+	});
+
+	$effect(() => {
+		const isStreaming = getIsWorldBuilderStreaming();
+		if (wasWbStreaming && !isStreaming && wbChatContainer) {
+			requestAnimationFrame(() => {
+				wbChatContainer!.scrollTop = wbChatContainer!.scrollHeight;
+			});
+		}
+		wasWbStreaming = isStreaming;
 	});
 </script>
 
