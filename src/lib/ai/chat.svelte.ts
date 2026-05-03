@@ -225,7 +225,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 	const nextSceneNumber = previousSceneNumber + 1;
 
 	const responseMessage = newMessage('assistant', nextSceneNumber);
-	let newMessagesCount: number = 0;
+	let newMessagesCount: number;
 	if (message.trim().length > 0) {
 		const userMessage = await persistUserMessage(message, previousSceneNumber, actLineId);
 		messages = [...messages, userMessage, responseMessage];
@@ -302,6 +302,10 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 					return;
 				}
 				updatePhaseInList(phase, { content: streamState.content, reasoning: streamState.reasoning ?? undefined });
+			},
+			onPhaseRetry: (phase: PhaseName, attempt: number, maxAttempts: number) => {
+				// Show retry feedback in the phase content — the next stream will overwrite this
+				updatePhaseInList(phase, { content: `Retrying (attempt ${attempt}/${maxAttempts})...` });
 			},
 			onPhaseComplete: (phase: PhaseName, pipelineState: PipelineState) => {
 				if (phase === 'EDITOR') {

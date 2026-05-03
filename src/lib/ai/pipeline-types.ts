@@ -27,6 +27,7 @@ export interface PhaseStreamState {
 export interface PipelineCallbacks {
 	onPhaseStart: (phase: PhaseName) => void;
 	onPhaseStream: (phase: PhaseName, streamState: PhaseStreamState) => void;
+	onPhaseRetry: (phase: PhaseName, attempt: number, maxAttempts: number) => void;
 	onPhaseComplete: (phase: PhaseName, state: PipelineState) => void;
 	onError: (phase: PhaseName, error: unknown) => void;
 	onAllComplete: (state: PipelineState) => void;

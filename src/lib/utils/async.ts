@@ -79,3 +79,29 @@ export function isAuthError(error: Error): boolean {
 	const msg = error.message.toLowerCase();
 	return msg.includes('401') || msg.includes('403') || msg.includes('unauthorized') || msg.includes('forbidden');
 }
+
+/**
+ * Check if an error is an AbortError (user-initiated cancellation).
+ */
+export function isAbortError(error: Error): boolean {
+	return error instanceof DOMException && error.name === 'AbortError';
+}
+
+/**
+ * Sleep for the specified duration, but reject early if the abort signal fires.
+ * Throws a DOMException with name 'AbortError' if the signal aborts during the sleep.
+ */
+export function sleepOrAbort(ms: number, signal: AbortSignal): Promise<void> {
+	return new Promise((resolve, reject) => {
+		if (signal.aborted) {
+			reject(new DOMException('Aborted', 'AbortError'));
+			return;
+		}
+		const timer = setTimeout(resolve, ms);
+		const onAbort = () => {
+			clearTimeout(timer);
+			reject(new DOMException('Aborted', 'AbortError'));
+		};
+		signal.addEventListener('abort', onAbort, { once: true });
+	});
+}

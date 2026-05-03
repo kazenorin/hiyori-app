@@ -2,7 +2,7 @@ import type { ToolSet } from 'ai';
 import { generateText } from 'ai';
 import type { MessageBase } from '$lib/db/messages';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
-import { streamChatResponse } from './chat-stream';
+import { streamWithRetry, DEFAULT_RETRY_CONFIG, type RetryConfig } from './chat-stream';
 import { createModel } from './provider';
 import type { NarrativeVariables, PhaseName } from './narrative-types';
 import type { PipelineCallbacks, PipelineState } from './pipeline-types';
@@ -109,6 +109,7 @@ export interface PipelineInput {
 	story?: StoryContext;
 	completedScenes: number;
 	targetWordCount?: number;
+	retryConfig?: RetryConfig;
 }
 
 /** Parameters for a streaming pipeline phase. Shared fields come from base params. */
@@ -120,6 +121,7 @@ interface StreamingPhaseParams {
 	abortSignal: AbortSignal;
 	tools: ToolSet | undefined;
 	callbacks: PipelineCallbacks;
+	retryConfig: RetryConfig;
 	buildStateUpdate: (streamState: StreamState) => Partial<PipelineState>;
 }
 
@@ -135,11 +137,11 @@ async function executeStreamingPhase(
 	params: StreamingPhaseParams,
 	state: PipelineState
 ): Promise<{ state: PipelineState; streamState: StreamState; metadata: StreamResultMetadata }> {
-	const { phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, buildStateUpdate } = params;
+	const { phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig, buildStateUpdate } = params;
 	state = updateState(state, { currentPhase: phaseName });
 	callbacks.onPhaseStart(phaseName);
 	try {
-		const result = await runStreamingPhase(phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks);
+		const result = await runStreamingPhase(phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig);
 		state = updateState(state, buildStateUpdate(result.state));
 		callbacks.onPhaseComplete(phaseName, state);
 		return { state, streamState: result.state, metadata: result.metadata };
@@ -150,7 +152,7 @@ async function executeStreamingPhase(
 }
 
 /**
- * Run a single streaming phase and return the accumulated stream state.
+ * Run a single streaming phase with retry and return the accumulated stream state.
  */
 async function runStreamingPhase(
 	phaseName: PhaseName,
@@ -159,25 +161,31 @@ async function runStreamingPhase(
 	providerConfig: ProviderConfig | undefined,
 	abortSignal: AbortSignal,
 	tools: ToolSet | undefined,
-	callbacks: PipelineCallbacks
+	callbacks: PipelineCallbacks,
+	retryConfig: RetryConfig
 ): Promise<{ state: StreamState; metadata: StreamResultMetadata }> {
 	if (!providerConfig) {
 		throw new Error(`No provider configured for ${phaseName}. Please set one in Settings.`);
 	}
 
-	const accumulator = await streamChatResponse(
-		systemPrompt,
-		messages,
-		abortSignal,
-		(streamState: StreamState) => {
+	const accumulator = await streamWithRetry(systemPrompt, messages, {
+		retryConfig,
+		onProgress: (streamState: StreamState) => {
 			callbacks.onPhaseStream(phaseName, streamState);
 		},
-		(err: unknown) => {
-			throw err instanceof Error ? err : new Error(String(err));
+		onError: () => {
+			// Intermediate attempt errors are logged here; the final error
+			// is thrown and caught by executeStreamingPhase's catch block.
 		},
 		providerConfig,
-		tools
-	);
+		tools,
+		abortSignal,
+		onRetry: callbacks.onPhaseRetry
+			? (attempt: number, maxAttempts: number) => {
+					callbacks.onPhaseRetry!(phaseName, attempt, maxAttempts);
+				}
+			: undefined,
+	});
 
 	const metadata = await accumulator.resultMetadata;
 	return { state: accumulator.state, metadata };
@@ -252,10 +260,13 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	const defaultTargetWordCount = 400; // TODO: make this configurable in settings
 	const effectiveTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
 
+	const retryConfig = input.retryConfig ?? DEFAULT_RETRY_CONFIG;
+
 	const sharedParams = {
 		abortSignal,
 		tools,
 		callbacks,
+		retryConfig,
 	};
 
 	let state: PipelineState = { currentPhase: null };

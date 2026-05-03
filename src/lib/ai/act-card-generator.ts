@@ -1,8 +1,8 @@
-import type {MessageBase} from '$lib/db/messages';
+import type { MessageBase } from '$lib/db/messages';
 import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
-import {loadActCardTemplate, loadActExtractionPrompt, loadStorySystemPrompt} from '$lib/fs/prompts';
+import { loadActCardTemplate, loadActExtractionPrompt, loadStorySystemPrompt } from '$lib/fs/prompts';
 import { exportActLine } from './act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
@@ -68,7 +68,7 @@ export async function generateActCard(): Promise<GenerateActCardResult> {
 		loadActCardTemplate(),
 		loadActExtractionPrompt(),
 		loadStorySystemPrompt(story.id, story.name),
-		loadStoryWorldContent(story.id)
+		loadStoryWorldContent(story.id),
 	]);
 
 	// Build AI call
@@ -151,16 +151,11 @@ export async function streamActCard(
 		loadActCardTemplate(),
 		loadActExtractionPrompt(),
 		loadStorySystemPrompt(story.id, story.name),
-		loadStoryWorldContent(story.id)
+		loadStoryWorldContent(story.id),
 	]);
 
 	// Build messages for streaming
-	const userMessages: MessageBase[] = buildUserMessages(
-		contents,
-		template,
-		extractionPrompt,
-		world
-	).map((content) => ({
+	const userMessages: MessageBase[] = buildUserMessages(contents, template, extractionPrompt, world).map((content) => ({
 		role: 'user',
 		content,
 	}));
@@ -168,20 +163,18 @@ export async function streamActCard(
 	await logActCardActivity('generation-start', `Act line: ${actLineId}`);
 
 	// Stream with retry
-	const accumulator = await streamWithRetry(
-		systemPrompt,
-		userMessages,
+	const accumulator = await streamWithRetry(systemPrompt, userMessages, {
 		retryConfig,
 		onProgress,
-		(err, attempt) => {
+		onError: (err, attempt) => {
 			onProgress({
 				content: '',
 				reasoning: `Attempt ${attempt} failed: ${err.message}. Retrying...`,
 				variables: null,
 			});
 		},
-		config
-	);
+		providerConfig: config,
+	});
 
 	const content = accumulator.state.content;
 

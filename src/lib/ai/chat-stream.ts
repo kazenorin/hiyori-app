@@ -4,11 +4,26 @@ import { executeStream, type StreamResultMetadata } from './streaming';
 import { getMainProviderConfig, type ProviderConfig } from '../stores/settings.svelte';
 import { createStreamAccumulator, type StreamAccumulator, type StreamState } from './chat-callbacks';
 import { createModel } from './provider';
-import { isAuthError, sleep } from '$lib/utils/async';
+import { isAbortError, isAuthError, sleepOrAbort } from '$lib/utils/async';
 
 export interface RetryConfig {
 	retryCount: number;
 	backoffIntervalSeconds: number;
+}
+
+export const DEFAULT_RETRY_CONFIG: RetryConfig = {
+	retryCount: 2,
+	backoffIntervalSeconds: 2,
+};
+
+export interface StreamWithRetryOptions {
+	retryConfig: RetryConfig;
+	onProgress: (state: StreamState) => void;
+	onError: (err: Error, attempt: number) => void;
+	providerConfig?: ProviderConfig;
+	tools?: ToolSet;
+	abortSignal?: AbortSignal;
+	onRetry?: (attempt: number, maxAttempts: number) => void;
 }
 
 export interface MessageMetadata {
@@ -75,45 +90,77 @@ export async function streamChatResponse(
 
 /**
  * Execute a streaming LLM call with retry logic.
- * Extracts the duplicated retry pattern from generateActFromCards and formatIntoScenes.
+ * Awaits the stream's result metadata to detect mid-stream errors,
+ * then retries with linear backoff if the error is retryable.
+ * Abort errors and auth errors are not retried.
  */
 export async function streamWithRetry(
 	systemPrompt: string,
 	messages: MessageBase[],
-	retryConfig: RetryConfig,
-	onProgress: (state: StreamState) => void,
-	onError: (err: Error, attempt: number) => void,
-	providerConfig: ProviderConfig | undefined = getMainProviderConfig(),
-	tools?: ToolSet
+	options: StreamWithRetryOptions
 ): Promise<StreamAccumulator> {
-	const abortController = new AbortController();
+	const { retryConfig, onProgress, onError, providerConfig = getMainProviderConfig(), tools, abortSignal, onRetry } = options;
+
+	const maxAttempts = retryConfig.retryCount + 1;
 	let lastError: Error | null = null;
 
-	for (let attempt = 0; attempt <= retryConfig.retryCount; attempt++) {
+	for (let attempt = 0; attempt < maxAttempts; attempt++) {
+		// Check for external abort before starting attempt
+		if (abortSignal?.aborted) {
+			throw new DOMException('Aborted', 'AbortError');
+		}
+
 		try {
-			return await streamChatResponse(
+			const accumulator = await streamChatResponse(
 				systemPrompt,
 				messages,
-				abortController.signal,
+				abortSignal ?? new AbortController().signal,
 				onProgress,
-				(err: unknown) => {
-					onError(err instanceof Error ? err : new Error(String(err)), attempt + 1);
+				(_err: unknown) => {
+					// Stream errors are reported via callback but don't throw.
+					// The resultMetadata promise will reject for mid-stream errors.
+					// Error reporting is handled in the catch block below.
 				},
 				providerConfig,
 				tools
 			);
+
+			// KEY: await resultMetadata to detect mid-stream errors.
+			// executeStream never throws — errors are communicated via callbacks.
+			// The accumulator's resultMetadata promise rejects on error, resolves on success.
+			await accumulator.resultMetadata;
+
+			return accumulator;
 		} catch (e) {
 			lastError = e instanceof Error ? e : new Error(String(e));
+
+			// Don't retry on auth errors
 			if (isAuthError(lastError)) {
 				throw new Error('Authentication failed. Please check your API key in Settings.');
 			}
-			onError(lastError, attempt + 1);
 
-			if (attempt < retryConfig.retryCount) {
-				await sleep(retryConfig.backoffIntervalSeconds * 1000 * (attempt + 1));
+			// Don't retry on user-initiated abort
+			if (isAbortError(lastError)) {
+				throw lastError;
+			}
+
+			// If this was the last attempt, throw
+			if (attempt >= retryConfig.retryCount) {
+				throw lastError;
+			}
+
+			onError(lastError, attempt + 1);
+			onRetry?.(attempt + 1, maxAttempts);
+
+			// Backoff with abort awareness
+			const backoffMs = retryConfig.backoffIntervalSeconds * 1000 * (attempt + 1);
+			if (abortSignal) {
+				await sleepOrAbort(backoffMs, abortSignal);
+			} else {
+				await new Promise((resolve) => setTimeout(resolve, backoffMs));
 			}
 		}
 	}
 
-	throw lastError;
+	throw lastError ?? new Error('Retry failed');
 }

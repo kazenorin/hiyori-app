@@ -185,14 +185,16 @@ export async function extractGameDataWithLLM(
 				{ role: 'user', content: choicesExtractionPrompt },
 				{ role: 'user', content: msg.content },
 			],
-			retryConfig,
-			(state) => {
-				onProgress(msgIndex, state);
-			},
-			(err, attempt) => {
-				onError(msgIndex, err, attempt);
-			},
-			providerConfig
+			{
+				retryConfig,
+				onProgress: (state) => {
+					onProgress(msgIndex, state);
+				},
+				onError: (err, attempt) => {
+					onError(msgIndex, err, attempt);
+				},
+				providerConfig,
+			}
 		);
 
 		const gameData = acc.state.variables?.gameData ?? null;
