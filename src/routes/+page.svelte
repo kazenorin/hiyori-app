@@ -715,7 +715,7 @@ duration:    {message.metadata.durationMs}ms</pre>
 		</div>
 
 			<!-- Pinned control section -->
-			<ChatControls decisions={latestDecisions} activePlotThreads={latestActivePlotThreads} decisionContext={latestDecisionContext} isStreaming={getIsStreaming()} onDecisionClick={handleDecisionClick} />
+			<ChatControls decisions={latestDecisions} activePlotThreads={latestActivePlotThreads} decisionContext={latestDecisionContext} isStreaming={getIsStreaming()} onDecisionClick={handleDecisionClick} chatContainer={chatContainer} />
 		</div>
 
 		<!-- Right-side input panel -->
