@@ -20,7 +20,7 @@
 		chatContainer
 	}: Props = $props();
 
-	const SCROLL_BOTTOM_THRESHOLD_PX = 40;
+	const SCROLL_BOTTOM_THRESHOLD_PX = 5;
 
 	let isPinned = $state(false);
 	let isUserExpanded = $state(false);

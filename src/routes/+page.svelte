@@ -47,6 +47,7 @@
 	import {findLastIndex} from 'lodash';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import ChatControls from '$lib/components/ChatControls.svelte';
+	import WorldBuilderControls from '$lib/components/WorldBuilderControls.svelte';
 	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
 	import { formatPhaseName } from '$lib/ai/narrative-types';
 	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
@@ -356,7 +357,8 @@
 		</div>
 	{:else if getIsWorldBuilderActive()}
 		<!-- World builder mode -->
-		<div bind:this={wbChatContainer} class="flex-1 overflow-y-auto p-6">
+		<div class="flex-1 flex flex-col min-h-0">
+			<div bind:this={wbChatContainer} class="flex-1 overflow-y-auto p-6">
 			<div class="px-8 space-y-4">
 				<div class="text-center py-4">
 					<h2 class="h2 font-display text-surface-700-300 mb-2">World Builder</h2>
@@ -419,90 +421,28 @@
 					{/if}
 				{/each}
 
-				{#if getIsWorldBuilderComplete() && !getActPlotInterview()}
-					{#if showCreateStoryOptions}
-						<div class="rounded-(--radius-container) bg-primary-100-900 p-6 space-y-4">
-							<h3 class="h3 font-display text-primary-900-100 text-center">Create "{getWorldBuilderStoryName()}"?</h3>
-
-							{#if isCreatingStory}
-								<div class="flex items-center justify-center gap-3 py-4">
-									<span class="inline-block w-4 h-4 border-2 border-surface-400 border-t-transparent rounded-full animate-spin"></span>
-									<span class="text-sm text-primary-700-300">Creating story and generating plot...</span>
-								</div>
-							{:else if createStoryError}
-								<div class="rounded-(--radius-container) bg-error-100-900 p-4 mb-2">
-									<p class="text-sm text-error-700-300">{createStoryError}</p>
-								</div>
-								<div class="flex gap-3 justify-center">
-									<button class="btn preset-filled-primary-500" type="button" onclick={handleCreateStoryImmediate}> Try Again </button>
-									<button class="btn preset-tonal" type="button" onclick={cancelCreateStoryOptions}> Cancel </button>
-								</div>
-							{:else}
-								<div class="flex flex-col gap-3">
-									<button
-										class="w-full text-left p-4 rounded-(--radius-container) border border-primary-200-800 hover:bg-primary-200-800 transition-colors duration-150"
-										type="button"
-										onclick={handleCreateStoryImmediate}
-									>
-										<span class="font-medium text-primary-900-100 mb-1">Start immediately</span><br/>
-										<span class="text-sm text-primary-700-300">Create the story and begin your adventure right away.</span>
-									</button>
-									<button
-										class="w-full text-left p-4 rounded-(--radius-container) border border-primary-200-800 hover:bg-primary-200-800 transition-colors duration-150"
-										type="button"
-										onclick={handleCreateActPlotInterview}
-									>
-										<span class="font-medium text-primary-900-100 mb-1">Tell us about the story</span><br/>
-										<span class="text-sm text-primary-700-300">Discuss the story's direction before starting your adventure.</span>
-									</button>
-								</div>
-								<div class="flex justify-center mt-2">
-									<button class="btn preset-tonal" type="button" onclick={cancelCreateStoryOptions}> Cancel </button>
-								</div>
-							{/if}
-						</div>
-					{:else}
-						<div class="rounded-(--radius-container) bg-primary-100-900 p-6 text-center space-y-4">
-							<h3 class="h3 font-display text-primary-900-100">Create "{getWorldBuilderStoryName()}"?</h3>
-							<p class="text-sm text-primary-700-300">Your world document is ready. Create the story and start your adventure?</p>
-							<div class="flex gap-3 justify-center">
-								<button class="btn preset-filled-primary-500" type="button" onclick={handleCreateFromWorldBuilder}> Create Story </button>
-								<button class="btn preset-tonal" type="button" onclick={exitWorldBuilderMode}> Cancel </button>
-							</div>
-						</div>
-					{/if}
-				{/if}
-
-				{#if getActPlotInterview() && !getIsWorldBuilderStreaming()}
-					{#if isCreatingStory}
-						<div class="rounded-(--radius-container) bg-success-100-900 p-6 text-center space-y-3">
-							<div class="flex items-center justify-center gap-3">
-								<span class="inline-block w-4 h-4 border-2 border-surface-400 border-t-transparent rounded-full animate-spin"></span>
-								<span class="text-sm text-success-700-300">Generating act plot and starting the game...</span>
-							</div>
-						</div>
-					{:else if createStoryError}
-						<div class="rounded-(--radius-container) bg-error-100-900 p-4">
-							<p class="text-sm text-error-700-300">{createStoryError}</p>
-						</div>
-					{:else}
-						<div class="flex justify-center">
-							<button
-								class="btn preset-filled-success-500"
-								type="button"
-								onclick={handleStartGameAfterInterview}
-							> Start Game </button>
-						</div>
-					{/if}
-				{/if}
-
-				{#if getWorldBuilderError()}
-					<div class="rounded-(--radius-container) bg-error-100-900 p-4">
-						<p class="text-sm text-error-700-300">{getWorldBuilderError()}</p>
-					</div>
-				{/if}
 			</div>
 		</div>
+
+			<WorldBuilderControls
+				isComplete={getIsWorldBuilderComplete()}
+				storyName={getWorldBuilderStoryName()}
+				showCreateStoryOptions={showCreateStoryOptions}
+				isCreatingStory={isCreatingStory}
+				createStoryError={createStoryError}
+				worldBuilderError={getWorldBuilderError()}
+				isInterviewMode={getActPlotInterview()}
+				isStreaming={getIsWorldBuilderStreaming()}
+				onCreateStory={handleCreateFromWorldBuilder}
+				onStartImmediate={handleCreateStoryImmediate}
+				onStartInterview={handleCreateActPlotInterview}
+				onStartGame={handleStartGameAfterInterview}
+				onCancel={exitWorldBuilderMode}
+				onDismissOptions={cancelCreateStoryOptions}
+				onRetry={handleCreateStoryImmediate}
+				chatContainer={wbChatContainer}
+			/>
+			</div>
 
 		<!-- Right-side input panel -->
 		<aside class="w-80 border-l border-surface-200-800 flex flex-col p-4 bg-surface-50-950">
