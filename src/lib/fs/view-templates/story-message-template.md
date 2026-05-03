@@ -5,13 +5,3 @@
 {narrativeBody}
 
 **[CG:** {cg} **]**
-
----
-
-**Active Plot Threads**
-{activePlotThreads}
-
----
-
-**DECISION POINT**
-{decisionContext}

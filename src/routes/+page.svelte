@@ -5,6 +5,8 @@
 		getError,
 		getForkSequence,
 		getIsStreaming,
+		getLatestActivePlotThreads,
+		getLatestDecisionContext,
 		getLatestDecisions,
 		getMessages,
 		isUserMessage,
@@ -46,6 +48,7 @@
 	import {Accordion} from '@skeletonlabs/skeleton-svelte';
 	import {findLastIndex} from 'lodash';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
+	import ChatControls from '$lib/components/ChatControls.svelte';
 	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
 	import { formatPhaseName } from '$lib/ai/narrative-types';
 	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
@@ -60,6 +63,8 @@
 	let wbChatContainer = $state<HTMLDivElement | null>(null);
 	let copiedId = $state<string | null>(null);
 	let latestDecisions = $derived(getLatestDecisions());
+	let latestActivePlotThreads = $derived(getLatestActivePlotThreads());
+	let latestDecisionContext = $derived(getLatestDecisionContext());
 	let lastMessageIdx = $derived(findLastIndex(getMessages(), (m) => m.role === 'assistant'));
 	let storyMessageTemplate = $state<string>('');
 
@@ -435,7 +440,7 @@
 									<span class="text-sm text-primary-700-300">Creating story and generating plot...</span>
 								</div>
 							{:else if createStoryError}
-								<div class="rounded-lg bg-error-100-900 p-4 mb-2">
+								<div class="rounded-(--radius-container) bg-error-100-900 p-4 mb-2">
 									<p class="text-sm text-error-700-300">{createStoryError}</p>
 								</div>
 								<div class="flex gap-3 justify-center">
@@ -445,7 +450,7 @@
 							{:else}
 								<div class="flex flex-col gap-3">
 									<button
-										class="w-full text-left p-4 rounded-lg border border-primary-200-800 hover:bg-primary-200-800 transition-colors duration-150"
+										class="w-full text-left p-4 rounded-(--radius-container) border border-primary-200-800 hover:bg-primary-200-800 transition-colors duration-150"
 										type="button"
 										onclick={handleCreateStoryImmediate}
 									>
@@ -453,7 +458,7 @@
 										<span class="text-sm text-primary-700-300">Create the story and begin your adventure right away.</span>
 									</button>
 									<button
-										class="w-full text-left p-4 rounded-lg border border-primary-200-800 hover:bg-primary-200-800 transition-colors duration-150"
+										class="w-full text-left p-4 rounded-(--radius-container) border border-primary-200-800 hover:bg-primary-200-800 transition-colors duration-150"
 										type="button"
 										onclick={handleCreateActPlotInterview}
 									>
@@ -544,9 +549,11 @@
 			</div>
 		</div>
 	{:else}
-		<!-- Chat messages area -->
-		<div bind:this={chatContainer} class="flex-1 overflow-y-auto p-6">
-			<div class="px-8 space-y-4">
+		<!-- Middle column: scrollable chat + pinned controls -->
+		<div class="flex-1 flex flex-col min-h-0">
+			<!-- Chat messages area -->
+			<div bind:this={chatContainer} class="flex-1 overflow-y-auto p-6">
+				<div class="px-8 space-y-4">
 				{#if getMessages().length === 0}
 					<div class="flex flex-col items-center justify-center py-24 text-center">
 						<h2 class="h2 font-display text-surface-700-300 mb-3">Begin Your Adventure</h2>
@@ -659,25 +666,6 @@
 									></span>
 								{/if}
 
-								<!-- Game data: activePlotThreads + decisionContext -->
-								{#if message.variables?.gameData?.activePlotThreads?.length || message.variables?.gameData?.decisionContext}
-									<div class="mt-3 pt-3 border-t border-surface-200-800">
-										<div class="text-xs font-medium text-surface-500 mb-2">Game Data</div>
-										{#if message.variables.gameData.activePlotThreads.length > 0}
-											<div class="text-xs text-surface-500 mb-1">
-												<span class="font-medium">Active Plot Threads:</span>
-												{message.variables.gameData.activePlotThreads.join(', ')}
-											</div>
-										{/if}
-										{#if message.variables.gameData.decisionContext}
-											<div class="text-xs text-surface-500">
-												<span class="font-medium">Decision Context:</span>
-												{message.variables.gameData.decisionContext}
-											</div>
-										{/if}
-									</div>
-								{/if}
-
 								{#if message.metadata}
 									<pre
 										class="mt-4 pt-3 border-t border-surface-200-800 text-xs text-surface-500 font-mono leading-relaxed">model:       {message.metadata.model}
@@ -718,26 +706,16 @@ duration:    {message.metadata.durationMs}ms</pre>
 					{/each}
 				{/if}
 
-				{#if latestDecisions.length > 0 && !getIsStreaming()}
-					<div class="max-w-2xl mx-auto space-y-2 mt-4">
-						{#each latestDecisions as decision, i (i)}
-							<button
-								class="btn preset-filled-primary-500 w-full text-left line-clamp-2 whitespace-normal"
-								type="button"
-								onclick={() => handleDecisionClick(decision)}
-							>
-								{i + 1}. {decision}
-							</button>
-						{/each}
-					</div>
-				{/if}
-
 				{#if getError()}
 					<div class="rounded-(--radius-container) bg-error-100-900 p-4">
 						<p class="text-sm text-error-700-300">{getError()}</p>
 					</div>
 				{/if}
 			</div>
+		</div>
+
+			<!-- Pinned control section -->
+			<ChatControls decisions={latestDecisions} activePlotThreads={latestActivePlotThreads} decisionContext={latestDecisionContext} isStreaming={getIsStreaming()} onDecisionClick={handleDecisionClick} />
 		</div>
 
 		<!-- Right-side input panel -->

@@ -55,10 +55,9 @@ export function renderTemplate(template: string, vars: NarrativeVariables, extra
 		}
 	}
 
-	// Game data placeholders
+	// Game data placeholders (only decisions — activePlotThreads and decisionContext
+	// are displayed in the control section, not in the message template)
 	const gd = vars.gameData;
-	replacements['activePlotThreads'] = gd?.activePlotThreads.length ? gd.activePlotThreads.map((t) => `- ${t}`).join('\n') : '';
-	replacements['decisionContext'] = gd?.decisionContext ?? '';
 	replacements['decisions'] = gd?.decisions.length ? gd.decisions.map((d, i) => `${i + 1}. ${d}`).join('\n') : '';
 
 	// Extra replacements override narrative variables (e.g., programmatic sceneNumber over LLM output)
