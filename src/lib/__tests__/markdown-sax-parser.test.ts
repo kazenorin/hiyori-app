@@ -444,5 +444,111 @@ describe('MarkdownSaxParser', () => {
 			expect(rootLeaves).toHaveLength(1);
 			expect(enters(events, 'page')).toHaveLength(0);
 		});
+
+	describe('raw content capture', () => {
+		it('captures raw content in header elements', () => {
+			const events = feedAll(['## Background\nSome text\n']);
+			const bgLeave = leaves(events, 'header').find((e) => (e.data as ElementInfo).name === 'Background')!;
+			expect(bgLeave).toBeDefined();
+			expect((bgLeave.data as ElementInfo).rawContent).toBe('Some text\n');
+		});
+
+		it('excludes heading line from element own rawContent (justEntered)', () => {
+			const events = feedAll(['## Background\nContent here\n']);
+			const bgLeave = leaves(events, 'header').find((e) => (e.data as ElementInfo).name === 'Background')!;
+			expect((bgLeave.data as ElementInfo).rawContent).not.toContain('Background');
+			expect((bgLeave.data as ElementInfo).rawContent).toBe('Content here\n');
+		});
+
+		it('includes sub-heading lines in parent rawContent', () => {
+			const events = feedAll(['## Background\n### History\nAncient trees\n']);
+			const bgLeave = leaves(events, 'header').find((e) => (e.data as ElementInfo).name === 'Background')!;
+			expect((bgLeave.data as ElementInfo).rawContent).toContain('### History\n');
+			expect((bgLeave.data as ElementInfo).rawContent).toContain('Ancient trees\n');
+		});
+
+		it('excludes own heading line but includes sub-heading line via justEntered', () => {
+			const events = feedAll(['## Background\n### History\nOld tale\n']);
+			const historyLeave = leaves(events, 'header').find((e) => (e.data as ElementInfo).name === 'History')!;
+			expect((historyLeave.data as ElementInfo).rawContent).not.toContain('History');
+			expect((historyLeave.data as ElementInfo).rawContent).toBe('Old tale\n');
+		});
+
+		it('captures list items in raw content', () => {
+			const events = feedAll(['## Background\n- Ancient trees\n- A clearing\n']);
+			const bgLeave = leaves(events, 'header').find((e) => (e.data as ElementInfo).name === 'Background')!;
+			expect((bgLeave.data as ElementInfo).rawContent).toContain('- Ancient trees\n');
+			expect((bgLeave.data as ElementInfo).rawContent).toContain('- A clearing\n');
+		});
+
+		it('captures list element rawContent', () => {
+			const events = feedAll(['## Background\n- item1\n- item2\n']);
+			const listLeaves = leaves(events, 'list');
+			expect(listLeaves.length).toBeGreaterThanOrEqual(2);
+			const firstList = listLeaves[0];
+			expect((firstList.data as ElementInfo).rawContent).toContain('item1');
+		});
+
+		it('justEntered flag clears after one raw line', () => {
+			const events = feedAll(['## Background\nLine 1\nLine 2\n']);
+			const bgLeave = leaves(events, 'header').find((e) => (e.data as ElementInfo).name === 'Background')!;
+			const raw = (bgLeave.data as ElementInfo).rawContent!;
+			expect(raw).toBe('Line 1\nLine 2\n');
+			expect(raw).not.toContain('Background');
+		});
+
+		it('page elements accumulate raw content', () => {
+			const events = feedAll(['## Title\nHello\n']);
+			const pageLeave = leaves(events, 'page')[0];
+			expect((pageLeave.data as ElementInfo).rawContent).toContain('Hello\n');
+		});
+
+		it('handles document split across chunks for raw content', () => {
+			const events = feedAll(['## B', 'ackground\n', 'Some content\n']);
+			const bgLeave = leaves(events, 'header').find((e) => (e.data as ElementInfo).name === 'Background')!;
+			expect((bgLeave.data as ElementInfo).rawContent).toBe('Some content\n');
+		});
+
+		it('onRawLine callback receives raw lines', () => {
+			const rawLines: string[] = [];
+			const parser = createMarkdownSaxParser({
+				onEnterElement: () => {},
+				onLeaveElement: () => {},
+				onText: () => {},
+				onRawLine: (line) => rawLines.push(line),
+			});
+			parser.feed('## Background\nHello\n');
+			parser.flush();
+			expect(rawLines).toEqual(['## Background\n', 'Hello\n']);
+		});
+
+		it('onRawLine receives flush remainder', () => {
+			const rawLines: string[] = [];
+			const parser = createMarkdownSaxParser({
+				onEnterElement: () => {},
+				onLeaveElement: () => {},
+				onText: () => {},
+				onRawLine: (line) => rawLines.push(line),
+			});
+			parser.feed('Hello');
+			parser.flush();
+			expect(rawLines).toEqual(['Hello']);
+		});
+	});
+
+		it('justEntered clears correctly across streaming chunks', () => {
+			const events = feedAll(['## Background', '\nSome ', 'content\n']);
+			const bgLeave = leaves(events, 'header').find((e) => (e.data as ElementInfo).name === 'Background')!;
+			expect((bgLeave.data as ElementInfo).rawContent).toBe('Some content\n');
+			expect((bgLeave.data as ElementInfo).rawContent).not.toContain('Background');
+		});
+
+		it('header immediately followed by HR has no rawContent (empty section)', () => {
+			const events = feedAll(['## Background\n---\n']);
+			const bgLeave = leaves(events, 'header').find((e) => (e.data as ElementInfo).name === 'Background')!;
+			// Header with no content before HR: rawContent is undefined (empty string is omitted)
+			expect((bgLeave.data as ElementInfo).rawContent).toBeUndefined();
+		});
+
 	});
 });
