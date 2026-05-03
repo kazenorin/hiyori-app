@@ -5,12 +5,17 @@ import type { StreamParser, ParserAccumulator } from './stream-parser';
 import type { NarrativeVariables, GameDataFields } from './narrative-types';
 import { NARRATIVE_VARIABLE_FIELDS, setField, emptyVariables } from './narrative-types';
 
+/** Key used on the accumulator to track finalized fields. Must match sax-section-parser. */
+const FINALIZED_FIELDS_KEY = '__finalized';
+
 // --- Parser chain ---
 
 export interface ParserChainOutput {
 	text: string | null;
 	thinking: string | null;
 	variables: NarrativeVariables | null;
+	/** Field names whose values are finalized (raw content) and should replace rather than concatenate on merge. */
+	finalizedFields: Set<string>;
 }
 
 export function hasContent(output: ParserChainOutput): boolean {
@@ -26,7 +31,7 @@ export interface ParserChain {
  * Extract NarrativeVariables from the raw accumulator.
  * String fields are taken directly; gameData is taken directly.
  */
-function extractVariables(acc: Record<string, unknown>): NarrativeVariables | null {
+function extractVariables(acc: Record<string, unknown>): { variables: NarrativeVariables | null; finalizedFields: Set<string> } {
 	const vars = emptyVariables();
 	let hasAny = false;
 
@@ -44,7 +49,8 @@ function extractVariables(acc: Record<string, unknown>): NarrativeVariables | nu
 		hasAny = true;
 	}
 
-	return hasAny ? vars : null;
+	const finalizedFields = (acc[FINALIZED_FIELDS_KEY] as Set<string> | undefined) ?? new Set<string>();
+	return { variables: hasAny ? vars : null, finalizedFields };
 }
 
 /**
@@ -69,10 +75,12 @@ export function createParserChain(): ParserChain {
 				? parserChain.reduce((t, parser) => parser.feed(t, acc as ParserAccumulator<typeof acc>), initialText)
 				: runFlush(parserChain, acc as ParserAccumulator<typeof acc>);
 
+		const { variables, finalizedFields } = extractVariables(acc);
 		return {
 			text: text || null,
 			thinking: (acc.thinking as string | null) ?? null,
-			variables: extractVariables(acc),
+			variables,
+			finalizedFields,
 		};
 	}
 

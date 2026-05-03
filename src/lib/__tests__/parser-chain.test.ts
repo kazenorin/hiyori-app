@@ -13,6 +13,7 @@ function feedAll(chunks: string[]): {
 	let text = '';
 	let thinking: string | null = null;
 	let variables: NarrativeVariables | null = null;
+	let finalizedFields = new Set<string>();
 
 	for (const chunk of chunks) {
 		const output = chain.feed(chunk);
@@ -20,10 +21,11 @@ function feedAll(chunks: string[]): {
 		if (output.thinking) thinking = (thinking ?? '') + output.thinking;
 		if (output.variables) {
 			if (variables) {
-				variables = mergeVariables(variables, output.variables);
+				variables = mergeVariables(variables, output.variables, finalizedFields);
 			} else {
 				variables = output.variables;
 			}
+			finalizedFields = new Set([...finalizedFields, ...output.finalizedFields]);
 		}
 	}
 
@@ -32,17 +34,22 @@ function feedAll(chunks: string[]): {
 	if (flushed.thinking) thinking = (thinking ?? '') + flushed.thinking;
 	if (flushed.variables) {
 		if (variables) {
-			variables = mergeVariables(variables, flushed.variables);
+			variables = mergeVariables(variables, flushed.variables, finalizedFields);
 		} else {
 			variables = flushed.variables;
 		}
+		finalizedFields = new Set([...finalizedFields, ...flushed.finalizedFields]);
 	}
 
 	return { text, thinking, variables };
 }
 
-/** Merge two NarrativeVariables: for string fields, concatenate; for gameData, deep-merge. */
-function mergeVariables(base: NarrativeVariables, incoming: NarrativeVariables): NarrativeVariables {
+/** Merge two NarrativeVariables: for string fields, concatenate (or replace if finalized); for gameData, deep-merge. */
+function mergeVariables(
+	base: NarrativeVariables,
+	incoming: NarrativeVariables,
+	finalizedFields: Set<string> = new Set()
+): NarrativeVariables {
 	const result: NarrativeVariables = { ...base };
 
 	const res = result as unknown as Record<string, unknown>;
@@ -67,7 +74,8 @@ function mergeVariables(base: NarrativeVariables, incoming: NarrativeVariables):
 				res.gameData = incGd;
 			}
 		} else if (typeof val === 'string') {
-			res[key] = (typeof existing === 'string' ? existing : '') + val;
+			// Finalized fields (raw content from onLeaveElement) replace rather than concatenate
+			res[key] = finalizedFields.has(key as string) ? val : (typeof existing === 'string' ? existing : '') + val;
 		} else if (Array.isArray(val)) {
 			res[key] = Array.isArray(existing) ? [...existing, ...val] : val;
 		}
@@ -179,8 +187,7 @@ describe('ParserChain', () => {
 
 	describe('full chain: thinking + game data', () => {
 		it('extracts all layers in sequence', () => {
-			const input =
-				'<' + T + '>Analyzing narrative</' + T + '>' + '\n' + GAME_DATA_MD;
+			const input = '<' + T + '>Analyzing narrative</' + T + '>' + '\n' + GAME_DATA_MD;
 			const { thinking, variables } = feedAll([input]);
 			expect(thinking).toBe('Analyzing narrative');
 			expect(variables?.gameData).not.toBeNull();
@@ -312,5 +319,76 @@ describe('Narrative Variables', () => {
 		expect(variables!.gameData!.activePlotThreads).toEqual(['The quest']);
 		expect(variables!.gameData!.decisionContext).toContain('A crossroads');
 		expect(variables!.gameData!.decisions).toEqual(['Fight', 'Flee']);
+	});
+});
+
+describe('raw content capture', () => {
+	it('captures raw markdown with list markers in section fields', () => {
+		const input = ['## Background', '- Ancient trees', '- A clearing', '', '## Narrative Body', 'The hero arrived.'].join('\n');
+
+		const { variables } = feedAll([input]);
+
+		expect(variables).not.toBeNull();
+		// Background should contain raw markdown with list markers
+		expect(variables!.background).toContain('- Ancient trees');
+		expect(variables!.background).toContain('- A clearing');
+		// Narrative Body should contain raw text
+		expect(variables!.narrativeBody).toContain('The hero arrived.');
+	});
+
+	it('captures raw content with sub-headers in parent sections', () => {
+		const input = ['## Background', '### History', 'Old tales of the forest.'].join('\n');
+
+		const { variables } = feedAll([input]);
+
+		expect(variables).not.toBeNull();
+		// Background should include the sub-header in its raw content
+		expect(variables!.background).toContain('### History');
+		expect(variables!.background).toContain('Old tales of the forest.');
+	});
+
+	it('preserves indentation in raw content', () => {
+		const input = ['## Background', '- item one', '  - nested item', '- item two'].join('\n');
+
+		const { variables } = feedAll([input]);
+
+		expect(variables).not.toBeNull();
+		expect(variables!.background).toContain('- item one');
+		expect(variables!.background).toContain('  - nested item');
+		expect(variables!.background).toContain('- item two');
+	});
+
+	it('raw content excludes heading line of own section', () => {
+		const input = ['## Background', 'Some text here.'].join('\n');
+
+		const { variables } = feedAll([input]);
+
+		expect(variables).not.toBeNull();
+		// The heading line "## Background" should NOT be in the raw content
+		expect(variables!.background).not.toContain('## Background');
+		expect(variables!.background).toContain('Some text here.');
+	});
+
+	it('excludes subsection header name from Decision Context', () => {
+		const input = [
+			'Story text.',
+			'',
+			'## Game Data',
+			'',
+			'### Decision Context',
+			'',
+			'Choose your path carefully.',
+			'',
+			'### Decisions',
+			'',
+			'- Go left',
+			'- Go right',
+		].join('\n');
+
+		const { variables } = feedAll([input]);
+
+		expect(variables?.gameData).not.toBeNull();
+		expect(variables?.gameData?.decisionContext).not.toContain('Decision Context');
+		expect(variables?.gameData?.decisionContext).toContain('Choose your path carefully.');
 	});
 });

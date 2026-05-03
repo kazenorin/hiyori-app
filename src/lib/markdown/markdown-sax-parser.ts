@@ -8,6 +8,10 @@ export interface ContextNode {
 	listLevel?: number;
 	ordered?: boolean;
 	indentation?: number;
+	/** Accumulated raw markdown content while this element is on the stack. */
+	rawContent: string;
+	/** True for one onRawLine call after entering a header element — excludes the heading line from this element's rawContent. */
+	justEntered: boolean;
 }
 
 export interface ElementInfo {
@@ -17,12 +21,16 @@ export interface ElementInfo {
 	name?: string;
 	listLevel?: number;
 	ordered?: boolean;
+	/** Raw markdown content accumulated while this element was on the stack. Excludes the element's own heading line. */
+	rawContent?: string;
 }
 
 export interface MarkdownSaxCallbacks {
 	onEnterElement: (element: ElementInfo, context: readonly ContextNode[]) => void;
 	onLeaveElement: (element: ElementInfo, context: readonly ContextNode[]) => void;
 	onText: (text: string, context: readonly ContextNode[]) => void;
+	/** Called for each raw line after structural processing. Skips heading lines for elements with justEntered=true. */
+	onRawLine?: (line: string, context: readonly ContextNode[]) => void;
 }
 
 export interface MarkdownSaxParser {
@@ -98,16 +106,19 @@ function isStructuralStartChar(ch: string): boolean {
 }
 
 function toElementInfo(node: ContextNode): ElementInfo {
-	switch (node.type) {
-		case 'root':
-			return { type: 'root', depth: 0 };
-		case 'page':
-			return { type: 'page', depth: 1 };
-		case 'header':
-			return { type: 'header', depth: node.depth, headerLevel: node.headerLevel, name: node.name };
-		case 'list':
-			return { type: 'list', depth: node.depth, listLevel: node.listLevel, ordered: node.ordered };
-	}
+	const base = (() => {
+		switch (node.type) {
+			case 'root':
+				return { type: 'root' as const, depth: 0 };
+			case 'page':
+				return { type: 'page' as const, depth: 1 };
+			case 'header':
+				return { type: 'header' as const, depth: node.depth, headerLevel: node.headerLevel, name: node.name };
+			case 'list':
+				return { type: 'list' as const, depth: node.depth, listLevel: node.listLevel, ordered: node.ordered };
+		}
+	})();
+	return node.rawContent ? { ...base, rawContent: node.rawContent } : base;
 }
 
 /**
@@ -120,6 +131,12 @@ function toElementInfo(node: ContextNode): ElementInfo {
  *
  * All callbacks receive the current context stack, enabling consumers
  * to know the full hierarchy (which list in which header of which page).
+ *
+ * When `onRawLine` is provided, each complete raw line (including the newline)
+ * is emitted after structural processing. Elements with `justEntered=true`
+ * (set when a header is pushed) skip one raw line (the heading line itself)
+ * and then the flag is cleared. All other elements on the stack accumulate
+ * raw content from every raw line they receive.
  */
 export function createMarkdownSaxParser(callbacks: MarkdownSaxCallbacks): MarkdownSaxParser {
 	let lineBuffer = '';
@@ -127,9 +144,10 @@ export function createMarkdownSaxParser(callbacks: MarkdownSaxCallbacks): Markdo
 	let seenNonWhitespace = false;
 	let streamingLineContent = false;
 	let lineTextAccum = '';
+	let rawLineAccum = '';
 	let atLineStart = true;
 	let pageOpen = false;
-	const stack: ContextNode[] = [{ type: 'root', depth: 0 }];
+	const stack: ContextNode[] = [{ type: 'root', depth: 0, rawContent: '', justEntered: false }];
 
 	callbacks.onEnterElement(toElementInfo(stack[0]), stack);
 
@@ -149,7 +167,7 @@ export function createMarkdownSaxParser(callbacks: MarkdownSaxCallbacks): Markdo
 
 	function ensurePageOpen(): void {
 		if (!pageOpen) {
-			push({ type: 'page', depth: 1 });
+			push({ type: 'page', depth: 1, rawContent: '', justEntered: false });
 			pageOpen = true;
 		}
 	}
@@ -157,6 +175,20 @@ export function createMarkdownSaxParser(callbacks: MarkdownSaxCallbacks): Markdo
 	function emitText(text: string): void {
 		ensurePageOpen();
 		callbacks.onText(text, stack);
+	}
+
+	/** Emit a raw line: update element rawContent on the stack and invoke the optional callback. */
+	function emitRawLine(line: string): void {
+		// Update each element on the stack: skip justEntered headers (clearing the flag), append to others
+		for (let i = 0; i < stack.length; i++) {
+			const node = stack[i];
+			if (node.justEntered) {
+				node.justEntered = false;
+			} else {
+				node.rawContent += line;
+			}
+		}
+		callbacks.onRawLine?.(line, stack);
 	}
 
 	function findNearestListOnStack(): number {
@@ -198,7 +230,7 @@ export function createMarkdownSaxParser(callbacks: MarkdownSaxCallbacks): Markdo
 	function processHeader(level: number, name: string): void {
 		ensurePageOpen();
 		closeToHeaderLevel(level);
-		push({ type: 'header', depth: level, headerLevel: level, name });
+		push({ type: 'header', depth: level, headerLevel: level, name, rawContent: '', justEntered: true });
 		if (name) callbacks.onText(name, stack);
 	}
 
@@ -213,6 +245,8 @@ export function createMarkdownSaxParser(callbacks: MarkdownSaxCallbacks): Markdo
 			listLevel: nesting.listLevel,
 			ordered,
 			indentation,
+			rawContent: '',
+			justEntered: false,
 		});
 		if (content) callbacks.onText(content, stack);
 	}
@@ -241,7 +275,7 @@ export function createMarkdownSaxParser(callbacks: MarkdownSaxCallbacks): Markdo
 	function processHR(): void {
 		ensurePageOpen();
 		while (current().type !== 'root') pop();
-		push({ type: 'page', depth: 1 });
+		push({ type: 'page', depth: 1, rawContent: '', justEntered: false });
 		pageOpen = true;
 	}
 
@@ -369,10 +403,17 @@ export function createMarkdownSaxParser(callbacks: MarkdownSaxCallbacks): Markdo
 		feed(chunk: string): void {
 			for (let i = 0; i < chunk.length; i++) {
 				const char = chunk[i];
+				rawLineAccum += char;
 				if (streamingLineContent) handleStreamingChar(char);
 				else if (bufferingLine) handleBufferingChar(char);
 				else if (atLineStart) handleLineStartChar(char);
 				else handleBodyChar(char);
+
+				// After structural processing, emit raw line on newline
+				if (char === '\n') {
+					emitRawLine(rawLineAccum);
+					rawLineAccum = '';
+				}
 			}
 
 			// Emit accumulated streaming text at end of feed
@@ -393,6 +434,12 @@ export function createMarkdownSaxParser(callbacks: MarkdownSaxCallbacks): Markdo
 				processClassified(classifyLine(stripTrailingNewline(lineBuffer)), lineBuffer);
 				lineBuffer = '';
 				bufferingLine = false;
+			}
+
+			// Emit remaining raw line content after structural processing
+			if (rawLineAccum) {
+				emitRawLine(rawLineAccum);
+				rawLineAccum = '';
 			}
 
 			while (stack.length > 0) pop();

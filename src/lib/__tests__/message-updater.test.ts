@@ -16,6 +16,7 @@ describe('message-updater', () => {
 				text: 'Hello',
 				thinking: null,
 				variables: null,
+				finalizedFields: new Set(),
 			});
 			expect(result.content).toBe('Hello');
 			expect(result.reasoning).toBeNull();
@@ -27,6 +28,7 @@ describe('message-updater', () => {
 				text: null,
 				thinking: 'reasoning',
 				variables: null,
+				finalizedFields: new Set(),
 			});
 			expect(result.reasoning).toBe('reasoning');
 			expect(result.content).toBe('');
@@ -39,6 +41,7 @@ describe('message-updater', () => {
 				text: null,
 				thinking: null,
 				variables: vars,
+				finalizedFields: new Set(),
 			});
 			expect(result.variables).not.toBeNull();
 			expect(result.variables!.gameData).toEqual(gd);
@@ -49,6 +52,7 @@ describe('message-updater', () => {
 				text: 'content',
 				thinking: 'thought',
 				variables: null,
+				finalizedFields: new Set(),
 			});
 			expect(result.content).toBe('content');
 			expect(result.reasoning).toBe('thought');
@@ -59,11 +63,13 @@ describe('message-updater', () => {
 				text: 'Hello',
 				thinking: null,
 				variables: null,
+				finalizedFields: new Set(),
 			});
 			state = applyParserOutput(state, {
 				text: ' world',
 				thinking: ' think',
 				variables: null,
+				finalizedFields: new Set(),
 			});
 			expect(state.content).toBe('Hello world');
 			expect(state.reasoning).toBe(' think');
@@ -74,6 +80,7 @@ describe('message-updater', () => {
 				text: 'x',
 				thinking: null,
 				variables: null,
+				finalizedFields: new Set(),
 			});
 			expect(result).not.toBe(emptyState);
 		});
@@ -87,6 +94,7 @@ describe('message-updater', () => {
 				text: null,
 				thinking: null,
 				variables: vars1,
+				finalizedFields: new Set(),
 			});
 			const vars2: NarrativeVariables = {
 				...emptyVariables(),
@@ -97,10 +105,36 @@ describe('message-updater', () => {
 				text: null,
 				thinking: null,
 				variables: vars2,
+				finalizedFields: new Set(),
 			});
 			expect(state.variables).not.toBeNull();
 			expect(state.variables!.background).toBe('A dark forest.\n');
 			expect(state.variables!.narrativeBody).toBe('The hero');
+		});
+
+		it('replaces finalized fields instead of concatenating', () => {
+			const vars1: NarrativeVariables = {
+				...emptyVariables(),
+				background: 'A dark ',
+			};
+			let state = applyParserOutput(emptyState, {
+				text: null,
+				thinking: null,
+				variables: vars1,
+				finalizedFields: new Set(),
+			});
+			const vars2: NarrativeVariables = {
+				...emptyVariables(),
+				background: 'A dark forest.\n',
+			};
+			state = applyParserOutput(state, {
+				text: null,
+				thinking: null,
+				variables: vars2,
+				finalizedFields: new Set(['background']),
+			});
+			// Finalized field should be replaced, not concatenated
+			expect(state.variables!.background).toBe('A dark forest.\n');
 		});
 
 		it('preserves existing variable when incoming is null', () => {
@@ -118,6 +152,7 @@ describe('message-updater', () => {
 				text: null,
 				thinking: null,
 				variables: incoming,
+				finalizedFields: new Set(),
 			});
 			expect(result.variables!.sceneTitle).toBe('My Scene');
 			expect(result.variables!.narrativeBody).toBe('The story.');
@@ -135,6 +170,7 @@ describe('message-updater', () => {
 				text: null,
 				thinking: null,
 				variables: vars1,
+				finalizedFields: new Set(),
 			});
 			const gd2: GameDataFields = {
 				activePlotThreads: ['traitor'],
@@ -146,6 +182,7 @@ describe('message-updater', () => {
 				text: null,
 				thinking: null,
 				variables: vars2,
+				finalizedFields: new Set(),
 			});
 			expect(state.variables!.gameData).not.toBeNull();
 			expect(state.variables!.gameData!.activePlotThreads).toEqual(['artifact', 'traitor']);

@@ -1,10 +1,4 @@
-import {
-	type NarrativeVariables,
-	type GameDataFields,
-	emptyVariables,
-	NARRATIVE_VARIABLE_FIELDS,
-	setField
-} from './narrative-types';
+import { type NarrativeVariables, type GameDataFields, emptyVariables, NARRATIVE_VARIABLE_FIELDS, setField } from './narrative-types';
 import { type ParserChainOutput } from './parser-chain';
 import type { StreamState } from './chat-callbacks';
 
@@ -18,7 +12,11 @@ export function mergeGameDataFields(existing: GameDataFields | null, incoming: G
 	};
 }
 
-function mergeVariables(existing: NarrativeVariables | null, incoming: NarrativeVariables | null): NarrativeVariables | null {
+function mergeVariables(
+	existing: NarrativeVariables | null,
+	incoming: NarrativeVariables | null,
+	finalizedFields: Set<string> = new Set()
+): NarrativeVariables | null {
 	if (!incoming) return existing;
 	if (!existing) return incoming;
 	const result = emptyVariables();
@@ -26,7 +24,8 @@ function mergeVariables(existing: NarrativeVariables | null, incoming: Narrative
 		const e = existing[field];
 		const i = incoming[field];
 		if (typeof e === 'string' && typeof i === 'string') {
-			setField(result, field, e + i);
+			// Finalized fields (raw content from onLeaveElement) replace rather than concatenate
+			setField(result, field, finalizedFields.has(field as string) ? i : e + i);
 		} else if (Array.isArray(e) && Array.isArray(i)) {
 			setField(result, field, [...e, ...i]);
 		} else if (Array.isArray(i)) {
@@ -46,7 +45,7 @@ export function applyParserOutput(state: StreamState, output: ParserChainOutput)
 	return {
 		content: state.content + (output.text ?? ''),
 		reasoning: appendDelta(state.reasoning, output.thinking),
-		variables: mergeVariables(state.variables, output.variables),
+		variables: mergeVariables(state.variables, output.variables, output.finalizedFields),
 	};
 }
 

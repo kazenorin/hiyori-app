@@ -5,6 +5,9 @@ import { FIELD_DESCRIPTORS } from './narrative-types';
 import { mergeGameDataFields } from './message-updater';
 import { kebabCase } from 'lodash';
 
+/** Key used on the accumulator to track which fields have been finalized with raw content. */
+const FINALIZED_FIELDS_KEY = '__finalized';
+
 // --- Element accumulator interface ---
 
 interface ElementAccumulator {
@@ -54,6 +57,24 @@ function createSectionAccumulator(fieldName: string, matcher: HeaderMatcher): El
 				}
 			}
 		},
+		onLeaveElement(element, context, acc): void {
+			// When a matching header is finalized, override the field with raw content
+			if (element.type === 'header' && element.rawContent) {
+				const normalized = kebabCase(element.name ?? '');
+				// Use the full matcher (which checks parent sections) to avoid
+				// matching nested headers with the same name under different parents
+				if (matcher(normalized, context)) {
+					acc[fieldName] = element.rawContent;
+					// Mark field as finalized so mergeVariables replaces instead of concatenates
+					let finalized = acc[FINALIZED_FIELDS_KEY] as Set<string> | undefined;
+					if (!finalized) {
+						finalized = new Set<string>();
+						acc[FINALIZED_FIELDS_KEY] = finalized;
+					}
+					finalized.add(fieldName);
+				}
+			}
+		},
 		onText(text, context, acc): boolean {
 			for (let i = context.length - 1; i >= 0; i--) {
 				const node = context[i];
@@ -96,6 +117,8 @@ const sectionAccumulators: ElementAccumulator[] = FIELD_DESCRIPTORS.map((desc) =
 interface GameDataTracker {
 	gameDataLevel: number;
 	subsection: Subsection;
+	/** Header name of the current subsection; used to skip the first text event (the heading itself). */
+	subsectionName: string;
 	decisionContext: string;
 	decisions: string[];
 	activePlotThreads: string[];
@@ -107,6 +130,7 @@ function createGameDataTracker(level: number): GameDataTracker {
 	return {
 		gameDataLevel: level,
 		subsection: null,
+		subsectionName: '',
 		decisionContext: '',
 		decisions: [],
 		activePlotThreads: [],
@@ -148,10 +172,19 @@ function createGameDataAccumulator(): ElementAccumulator {
 
 				// Subsections at gameDataLevel + 1
 				if (level === tracker.gameDataLevel + 1) {
-					if (normalized === SUB_ACTIVE_PLOT_THREADS) tracker.subsection = SUB_ACTIVE_PLOT_THREADS;
-					else if (normalized === SUB_DECISION_CONTEXT) tracker.subsection = SUB_DECISION_CONTEXT;
-					else if (normalized === SUB_DECISIONS) tracker.subsection = SUB_DECISIONS;
-					else tracker.subsection = null;
+					if (normalized === SUB_ACTIVE_PLOT_THREADS) {
+						tracker.subsection = SUB_ACTIVE_PLOT_THREADS;
+						tracker.subsectionName = element.name ?? '';
+					} else if (normalized === SUB_DECISION_CONTEXT) {
+						tracker.subsection = SUB_DECISION_CONTEXT;
+						tracker.subsectionName = element.name ?? '';
+					} else if (normalized === SUB_DECISIONS) {
+						tracker.subsection = SUB_DECISIONS;
+						tracker.subsectionName = element.name ?? '';
+					} else {
+						tracker.subsection = null;
+						tracker.subsectionName = '';
+					}
 					return;
 				}
 				return;
@@ -206,6 +239,12 @@ function createGameDataAccumulator(): ElementAccumulator {
 			// List item text
 			if (tracker.inList) {
 				tracker.listItemText += text;
+				return true;
+			}
+
+			// Skip the subsection header name (e.g. "Decision Context") on first text event
+			if (tracker.subsectionName && text === tracker.subsectionName) {
+				tracker.subsectionName = '';
 				return true;
 			}
 
