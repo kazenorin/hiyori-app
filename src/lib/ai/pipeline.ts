@@ -101,7 +101,7 @@ export interface PipelineInput {
 	previousNarrativeVariables: NarrativeVariables | undefined;
 	player?: PlayerContext;
 	story?: StoryContext;
-	completedScenes?: number;
+	completedScenes: number;
 	targetWordCount?: number;
 }
 
@@ -230,7 +230,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	const playerResponse = player?.playerResponse;
 	const playerMessageId = player?.playerMessageId;
 
-	const defaultTargetWordCount = 400;
+	const defaultTargetWordCount = 400; // TODO: make this configurable in settings
 	const effectiveTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
 	const effectivePlayerResponse = playerResponse ?? '(no response)';
 
@@ -283,15 +283,11 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	let newActSummary = actSummary;
 
 	// --- Phase 0: Summarizer (only when player has responded) ---
-	if (playerResponse) {
+	if (playerResponse && completedScenes > 0) {
 		callbacks.onPhaseStart('SUMMARIZER');
-		let processedTemplate = summaryTemplate;
 
 		// Inject programmatic completed scenes count
-		if (completedScenes != null) {
-			processedTemplate = processedTemplate.replaceAll('{completedScenes}', String(completedScenes));
-		}
-
+		const processedTemplate = summaryTemplate.replaceAll('{completedScenes}', String(completedScenes));
 		const summarizerSystem = summarizerPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
 
 		let summarizerMessages: MessageBase[];
@@ -306,7 +302,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 			summarizerMessages = toUserMessages([
 				SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
 				SECTION.PLAYER_RESPONSE + effectivePlayerResponse,
-				`Update the Act Summary for Scene ${completedScenes ?? 1} based on the Player Response.`,
+				`Update the Act Summary for Scene ${completedScenes} based on the Player Response.`,
 			]);
 		}
 
@@ -320,7 +316,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 			try {
 				await runMemoryExtractionPipeline(previousNarrativeVariables.narrativeBody, storyId, actLineId, playerMessageId, newActSummary);
 			} catch (err) {
-				log.error('memory-pipeline', 'Memory extraction failed', err);
+				await log.error('memory-pipeline', 'Memory extraction failed', err);
 			}
 		}
 	}

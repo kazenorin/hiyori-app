@@ -39,7 +39,7 @@ export interface UIMessage {
 	content: string;
 	reasoning?: string;
 	metadata?: MessageMetadata;
-	sceneNumber?: number;
+	sceneNumber: number;
 	variables?: NarrativeVariables;
 	phases?: UIScenePhase[];
 	actSummary?: string;
@@ -70,7 +70,7 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 		content: m.content,
 		reasoning: m.reasoning,
 		metadata: parseMetadata(m.metadata),
-		sceneNumber: m.sceneNumber,
+		sceneNumber: m.sceneNumber ?? 0,
 		variables: m.variables,
 		actSummary: m.actSummary,
 		// phases is ephemeral — not loaded from DB
@@ -152,16 +152,15 @@ async function persistUserMessage(
 		bodyText: string;
 		systemPrompt: string | undefined;
 		narrationContent: ModelMessage[] | undefined;
+		sceneNumber: number;
 	},
 	actLineId: string
 ) {
-	const userSceneNumber = findLastNonNullSceneNumber();
-
 	const userMessage: UIMessage = {
 		id: crypto.randomUUID(),
 		role: 'user',
 		content: message.bodyText,
-		sceneNumber: userSceneNumber,
+		sceneNumber: message.sceneNumber,
 	};
 
 	// Persist user message
@@ -169,7 +168,7 @@ async function persistUserMessage(
 		id: userMessage.id,
 		role: userMessage.role,
 		content: userMessage.content,
-		sceneNumber: userSceneNumber,
+		sceneNumber: userMessage.sceneNumber,
 	});
 
 	const userSeq = await dbActLines.getNextSequence(actLineId);
@@ -195,13 +194,14 @@ async function handleStreamError(err: unknown, messageId: string, actLineId: str
 	}
 }
 
-function newMessage(role: 'user' | 'assistant'): UIMessage {
+function newMessage(role: 'user' | 'assistant', sceneNumber: number): UIMessage {
 	return {
 		id: crypto.randomUUID(),
 		role: role,
 		content: '',
 		reasoning: '',
 		phases: [],
+		sceneNumber,
 	};
 }
 
@@ -263,12 +263,17 @@ export async function sendMessage(
 	}
 	error = null;
 
-	const previousNarrativeVariables = getPreviousNarrativeMessage();
+	// Get previous variables before creating new message
+	const previousNarrativeVariables = getPreviousNarrativeMessage(messages);
 
-	const responseMessage = newMessage('assistant');
+	// Scene starts with the assistant's story message, and ends with the player's response.
+	const previousSceneNumber = findLastNonNullSceneNumber() ?? 0;
+	const nextSceneNumber = previousSceneNumber + 1;
+
+	const responseMessage = newMessage('assistant', nextSceneNumber);
 	let newMessagesCount: number = 0;
 	if (!!message.bodyText && message.bodyText.trim().length > 0) {
-		const userMessage = await persistUserMessage({ ...message, bodyText: message.bodyText }, actLineId);
+		const userMessage = await persistUserMessage({ ...message, bodyText: message.bodyText, sceneNumber: previousSceneNumber }, actLineId);
 		messages = [...messages, userMessage, responseMessage];
 		newMessagesCount = 2;
 	} else {
@@ -276,7 +281,8 @@ export async function sendMessage(
 		newMessagesCount = 1;
 	}
 
-	const playerContext = getPlayerContext();
+	// Get player context after possibly adding new userMessage (Player Response)
+	const playerContext = getPlayerContext(messages);
 
 	const messageIdx = messages.length - 1;
 
@@ -302,9 +308,7 @@ export async function sendMessage(
 		const worldContent = getActiveWorldContent() ?? '';
 		const actPlot = getActiveActPlotContent() ?? '';
 		const actSummary = getLatestActSummary();
-		const previousSceneNumber = findLastNonNullSceneNumber();
-		const completedScenes = previousSceneNumber != null ? previousSceneNumber + 1 : 1;
-		const templateReplacements = { sceneNumber: String(completedScenes) };
+		const templateReplacements = { sceneNumber: String(nextSceneNumber) };
 		const targetWordCount = 400;
 
 		// Pipeline callback helpers
@@ -400,7 +404,7 @@ export async function sendMessage(
 			previousNarrativeVariables,
 			player: playerContext,
 			story: { storyId: story.id, storyName: story.name, actLineId },
-			completedScenes,
+			completedScenes: previousSceneNumber, // previous scene was just completed by the Player Response
 			targetWordCount,
 		});
 
@@ -412,7 +416,7 @@ export async function sendMessage(
 
 		messages[messageIdx] = {
 			...messages[messageIdx],
-			sceneNumber: completedScenes,
+			sceneNumber: nextSceneNumber,
 		};
 
 		// Persist with accumulated content
@@ -446,7 +450,7 @@ function getPhaseContent(phase: PhaseName, state: PipelineState): string {
 	}
 }
 
-function getPreviousNarrativeMessage(): NarrativeVariables | undefined {
+function getPreviousNarrativeMessage(messages: UIMessage[]): NarrativeVariables | undefined {
 	for (let i = messages.length - 1; i >= 0; i--) {
 		const message = messages[i];
 		if (message.role === 'assistant' && message.variables?.narrativeBody) return message.variables;
@@ -454,7 +458,7 @@ function getPreviousNarrativeMessage(): NarrativeVariables | undefined {
 	return undefined;
 }
 
-function getPlayerContext(): PlayerContext | undefined {
+function getPlayerContext(messages: UIMessage[]): PlayerContext | undefined {
 	for (let i = messages.length - 1; i >= 0; i--) {
 		if (messages[i].role === 'user') {
 			return { playerResponse: messages[i].content, playerMessageId: messages[i].id };
