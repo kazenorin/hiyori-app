@@ -2,7 +2,7 @@ import type { ToolSet } from 'ai';
 import { generateText } from 'ai';
 import type { MessageBase } from '$lib/db/messages';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
-import { streamWithRetry, DEFAULT_RETRY_CONFIG, type RetryConfig } from './chat-stream';
+import { DEFAULT_RETRY_CONFIG, type RetryConfig, streamWithRetry } from './chat-stream';
 import { createModel } from './provider';
 import type { NarrativeVariables, PhaseName } from './narrative-types';
 import type { PipelineCallbacks, PipelineState } from './pipeline-types';
@@ -12,20 +12,20 @@ import { variablesToMarkdown } from './template-renderer';
 import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
 import { log } from '$lib/logging/logger';
 import {
-	generalInstructionsLoader,
-	plotPlannerSystemPromptLoader,
-	writerSystemPromptLoader,
-	writerOutputTemplateLoader,
-	reviewerSystemPromptTemplateLoader,
+	actSummaryIncrementalTemplateLoader,
+	actSummaryTemplateLoader,
 	editorSystemPromptLoader,
 	gameMasterSystemPromptLoader,
-	summarizerPromptLoader,
-	actSummaryTemplateLoader,
-	summarizerIncrementalPromptLoader,
-	actSummaryIncrementalTemplateLoader,
+	generalInstructionsLoader,
+	plotPlannerSystemPromptLoader,
 	type PromptLoader,
+	reviewerSystemPromptTemplateLoader,
+	summarizerIncrementalPromptLoader,
+	summarizerPromptLoader,
+	writerOutputTemplateLoader,
+	writerSystemPromptLoader,
 } from '$lib/fs/prompts';
-import { parseActSummary, parseIncrementalOutput, mergeActSummary, serializeActSummary } from './act-summary-parser';
+import { mergeActSummary, parseActSummary, parseIncrementalOutput, serializeActSummary } from './act-summary-parser';
 
 // Markdown section headings used in phase prompts
 const SECTION = {
@@ -43,6 +43,20 @@ const SECTION = {
 	EXISTING_ACT_SUMMARY: '\n## Existing Act Summary\n',
 };
 
+// Hardcoded prompts
+const gameMasterExtractionPrompt = 'Generate the game data based on the available information in the chat history.';
+const editorExtractionPrompt =
+	'Apply suggestions from the reviewer output to the writer output. ' +
+	'Judge whether the suggestions are necessary based on the available information in the chat history.';
+const reviewerExtractionPrompt = `Perform a review on the writer's output based on the available information in the chat history.`;
+const writerExtractionPrompt = 'Write a story prose based on the available information in the chat history.';
+const plotPlannerExtractionPrompt = 'Generate a Scene Plot based on the available information in the chat history.';
+
+const summarizerFallbackExtractionPromptTemplate = 'Update the Act Summary for Scene {completedScenes} based on the Player Response.';
+const summarizerExtractionPromptTemplate =
+	'Update the Act Summary adding information for the previous scene: "Scene {completedScenes}: {sceneTitle}"';
+
+// Dynamic prompts
 const promptLoaderDefinitions = {
 	generalInstructions: generalInstructionsLoader,
 	plotPlannerSystemPrompt: plotPlannerSystemPromptLoader,
@@ -242,6 +256,80 @@ async function loadPrompts(storyId: string | undefined, storyName: string | unde
 	return Object.fromEntries(keys.map((key, i) => [key, values[i]])) as LoadedPrompts;
 }
 
+function playerResponseSection(playerContext: PlayerContext | undefined) {
+	const playerResponse = playerContext?.playerResponse;
+	return playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : [];
+}
+
+function buildSummarizerMessages(input: PipelineInput, actSummaryHeading: string) {
+	const { previousNarrativeVariables, actSummary, completedScenes } = input;
+	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
+
+	if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
+		return toUserMessages([
+			actSummaryHeading + actSummary,
+			SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeVariables.narrativeBody,
+			...playerResponseSection(input.player),
+			summarizerExtractionPromptTemplate.replaceAll('{completedScenes}', String(completedScenes)).replaceAll('{sceneTitle}', sceneTitle),
+		]);
+	} else {
+		return toUserMessages([
+			actSummaryHeading + actSummary,
+			...playerResponseSection(input.player),
+			summarizerFallbackExtractionPromptTemplate.replaceAll('{completedScenes}', String(completedScenes)),
+		]);
+	}
+}
+
+async function generateFullSummary(input: PipelineInput, loadedPrompts: LoadedPrompts) {
+	const { summarizerPrompt, actSummaryTemplate } = loadedPrompts;
+	const { completedScenes, execution } = input;
+	const { providerConfigs, abortSignal } = execution;
+
+	// === FIRST SUMMARY: Full generation (existing behavior) ===
+	const processedTemplate = actSummaryTemplate.replaceAll('{completedScenes}', String(completedScenes));
+	const summarizerSystemPrompt = summarizerPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
+
+	const summarizerMessages = buildSummarizerMessages(input, SECTION.PREVIOUS_ACT_SUMMARY);
+
+	return await runNonStreamingPhase('SUMMARIZER', summarizerSystemPrompt, summarizerMessages, providerConfigs.summarizer, abortSignal);
+}
+
+async function generateIncrementalSummary(input: PipelineInput, loadedPrompts: LoadedPrompts) {
+	const { actSummaryIncrementalTemplate, summarizerIncrementalPrompt } = loadedPrompts;
+	const { actSummary, completedScenes, previousNarrativeVariables, execution } = input;
+	const { providerConfigs, abortSignal } = execution;
+
+	// === INCREMENTAL UPDATE: Parse, merge, serialize ===
+	const sceneNumber = String(completedScenes);
+	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
+	const processedTemplate = actSummaryIncrementalTemplate
+		.replaceAll('{completedScenes}', String(completedScenes))
+		.replaceAll('{sceneNumber}', sceneNumber)
+		.replaceAll('{sceneTitle}', sceneTitle);
+
+	const incrementalSystemPrompt = summarizerIncrementalPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
+
+	const incrementalMessages = buildSummarizerMessages(input, SECTION.EXISTING_ACT_SUMMARY);
+	const incrementalRaw = await runNonStreamingPhase(
+		'SUMMARIZER',
+		incrementalSystemPrompt,
+		incrementalMessages,
+		providerConfigs.summarizer,
+		abortSignal
+	);
+
+	try {
+		const existingParsed = parseActSummary(actSummary);
+		const incrementalParsed = parseIncrementalOutput(incrementalRaw);
+		const merged = mergeActSummary(existingParsed, incrementalParsed);
+		return serializeActSummary(merged);
+	} catch (err) {
+		await log.warn('pipeline', `Incremental act summary parse/merge failed, falling back to full summary: ${err}`);
+		return generateFullSummary(input, loadedPrompts);
+	}
+}
+
 /**
  * Run the full narrative generation pipeline.
  *
@@ -278,21 +366,9 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	let state: PipelineState = { currentPhase: null };
 	let editorMetadata: StreamResultMetadata | undefined;
 
-	// Hardcoded prompts
-	const gameMasterExtractionPrompt = 'Generate the game data based on the available information in the chat history.';
-	const editorExtractionPrompt =
-		'Apply suggestions from the reviewer output to the writer output. ' +
-		'Judge whether the suggestions are necessary based on the available information in the chat history.';
-	const reviewerExtractionPrompt = `Perform a review on the writer's output based on the available information in the chat history.`;
-	const writerExtractionPrompt = 'Write a story prose based on the available information in the chat history.';
-	const plotPlannerExtractionPrompt = 'Generate a Scene Plot based on the available information in the chat history.';
-
-	const summarizerFallbackExtractionPromptTemplate = 'Update the Act Summary for Scene {completedScenes} based on the Player Response.';
-	const summarizerExtractionPromptTemplate =
-		'Update the Act Summary adding information for the previous scene: "Scene {completedScenes}: {sceneTitle}"';
-
 	// Load prompts — story-specific if storyId is provided, global otherwise
 
+	const loadedPrompts = await loadPrompts(storyId, storyName);
 	const {
 		generalInstructions,
 		plotPlannerSystemPrompt,
@@ -301,11 +377,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		reviewerSystemPromptTemplate,
 		editorSystemPrompt,
 		gameMasterSystemPrompt,
-		summarizerPrompt,
-		actSummaryTemplate,
-		summarizerIncrementalPrompt,
-		actSummaryIncrementalTemplate,
-	} = await loadPrompts(storyId, storyName);
+	} = loadedPrompts;
 
 	let newActSummary = actSummary;
 
@@ -314,79 +386,9 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		callbacks.onPhaseStart('SUMMARIZER');
 
 		if (!actSummary) {
-			// === FIRST SUMMARY: Full generation (existing behavior) ===
-			const processedTemplate = actSummaryTemplate.replaceAll('{completedScenes}', String(completedScenes));
-			const summarizerSystemPrompt = summarizerPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
-			let summarizerMessages: MessageBase[];
-			if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
-				summarizerMessages = toUserMessages([
-					SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
-					SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeVariables.narrativeBody,
-					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
-					summarizerExtractionPromptTemplate
-						.replaceAll('{completedScenes}', String(completedScenes))
-						.replaceAll('{sceneTitle}', previousNarrativeVariables.sceneTitle ?? ''),
-				]);
-			} else {
-				summarizerMessages = toUserMessages([
-					SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
-					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
-					summarizerFallbackExtractionPromptTemplate.replaceAll('{completedScenes}', String(completedScenes)),
-				]);
-			}
-
-			newActSummary = await runNonStreamingPhase(
-				'SUMMARIZER',
-				summarizerSystemPrompt,
-				summarizerMessages,
-				providerConfigs.summarizer,
-				abortSignal
-			);
+			newActSummary = await generateFullSummary(input, loadedPrompts);
 		} else {
-			// === INCREMENTAL UPDATE: Parse, merge, serialize ===
-			const sceneNumber = String(completedScenes);
-			const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
-			const processedTemplate = actSummaryIncrementalTemplate
-				.replaceAll('{completedScenes}', String(completedScenes))
-				.replaceAll('{sceneNumber}', sceneNumber)
-				.replaceAll('{sceneTitle}', sceneTitle);
-			const incrementalSystemPrompt = summarizerIncrementalPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
-
-			let incrementalMessages: MessageBase[];
-			if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
-				incrementalMessages = toUserMessages([
-					SECTION.EXISTING_ACT_SUMMARY + actSummary,
-					SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeVariables.narrativeBody,
-					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
-					summarizerExtractionPromptTemplate
-						.replaceAll('{completedScenes}', String(completedScenes))
-						.replaceAll('{sceneTitle}', sceneTitle),
-				]);
-			} else {
-				incrementalMessages = toUserMessages([
-					SECTION.EXISTING_ACT_SUMMARY + actSummary,
-					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
-					summarizerFallbackExtractionPromptTemplate.replaceAll('{completedScenes}', String(completedScenes)),
-				]);
-			}
-
-			const incrementalRaw = await runNonStreamingPhase(
-				'SUMMARIZER',
-				incrementalSystemPrompt,
-				incrementalMessages,
-				providerConfigs.summarizer,
-				abortSignal
-			);
-
-			try {
-				const existingParsed = parseActSummary(actSummary);
-				const incrementalParsed = parseIncrementalOutput(incrementalRaw);
-				const merged = mergeActSummary(existingParsed, incrementalParsed);
-				newActSummary = serializeActSummary(merged);
-			} catch (err) {
-				await log.warn('pipeline', `Incremental act summary parse/merge failed, using raw output: ${err}`);
-				newActSummary = incrementalRaw;
-			}
+			newActSummary = await generateIncrementalSummary(input, loadedPrompts);
 		}
 
 		state = updateState(state, { actSummary: newActSummary });

@@ -97,13 +97,23 @@ const SECTION_HEADERS: Record<string, Section | undefined> = {
 
 // === Parsing ===
 
+const COMPLETED_SCENES_LABEL = 'Completed scenes';
+
+/**
+ * Strip code block fences wrapping the markdown.
+ * LLMs sometimes wrap output in ``` or ```lang ... ``` blocks.
+ */
+function stripCodeFences(text: string): string {
+	return text.replace(/^```[^\n]*\n/, '').replace(/\n```[\s]*$/, '');
+}
+
 /**
  * Parse a full act summary markdown string into structured data.
  * Uses marked.lexer() to tokenize, then walks tokens to extract
  * Progress, Scene Summaries, and Character Summaries sections.
  */
 export function parseActSummary(markdown: string): ActSummary {
-	const tokens = marked.lexer(markdown);
+	const tokens = marked.lexer(stripCodeFences(markdown));
 	const result: ActSummary = { completedScenes: 0, scenes: [], characters: [] };
 
 	let currentSection: Section | null = null;
@@ -140,7 +150,7 @@ export function parseActSummary(markdown: string): ActSummary {
 
 			if (currentSection === 'progress') {
 				for (const item of list.items) {
-					const match = item.text.match(/Completed scenes:\s*(\d+)/i);
+					const match = item.text.match(new RegExp(`${COMPLETED_SCENES_LABEL}:\\s*(\\d+)`, 'i'));
 					if (match) {
 						result.completedScenes = parseInt(match[1], 10);
 					}
@@ -261,7 +271,7 @@ export function serializeActSummary(data: ActSummary): string {
 	lines.push('# Act Summary');
 	lines.push('');
 	lines.push('## Progress');
-	lines.push(`- Completed scenes: ${data.completedScenes}`);
+	lines.push(`- ${COMPLETED_SCENES_LABEL}: ${data.completedScenes}`);
 	lines.push('');
 	lines.push('## Scene Summaries');
 
@@ -299,7 +309,7 @@ export function serializeActSummary(data: ActSummary): string {
  * Uses the same tokenization as parseActSummary but expects a subset.
  */
 export function parseIncrementalOutput(markdown: string): IncrementalUpdate {
-	const tokens = marked.lexer(markdown);
+	const tokens = marked.lexer(stripCodeFences(markdown));
 	const result: IncrementalUpdate = { characterUpdates: [] };
 
 	let currentSection: Section | null = null;
@@ -342,7 +352,7 @@ export function parseIncrementalOutput(markdown: string): IncrementalUpdate {
 
 			if (currentSection === 'progress') {
 				for (const item of list.items) {
-					const match = item.text.match(/Completed scenes:\s*(\d+)/i);
+					const match = item.text.match(new RegExp(`${COMPLETED_SCENES_LABEL}:\\s*(\\d+)`, 'i'));
 					if (match) {
 						result.completedScenes = parseInt(match[1], 10);
 					}

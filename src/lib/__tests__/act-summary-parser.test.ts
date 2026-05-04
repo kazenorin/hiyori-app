@@ -227,6 +227,51 @@ describe('serializeActSummary', () => {
 	});
 });
 
+describe('code fence stripping', () => {
+	it('parses act summary wrapped in bare code fence', () => {
+		const wrapped = '```\n' + SAMPLE_ACT_SUMMARY + '\n```';
+		const result = parseActSummary(wrapped);
+		expect(result.completedScenes).toBe(2);
+		expect(result.scenes).toHaveLength(2);
+		expect(result.characters).toHaveLength(2);
+	});
+
+	it('parses act summary wrapped in code fence with language tag', () => {
+		const wrapped = '```markdown\n' + SAMPLE_ACT_SUMMARY + '\n```';
+		const result = parseActSummary(wrapped);
+		expect(result.completedScenes).toBe(2);
+		expect(result.scenes).toHaveLength(2);
+	});
+
+	it('parses incremental output wrapped in code fence', () => {
+		const incremental = `\`\`\`markdown
+## Progress
+- Completed scenes: 3
+
+## Scene Summaries
+### Scene 3: The Forest
+Location: An ancient forest
+Summary: The hero discovers a hidden path.
+
+## Character Summaries
+### Elena Shadowcrest
+- Aliases: [Elena, The Shadow, Shadow]
+- Scene 3: Elena guides the hero through the forest.
+\`\`\``;
+
+		const result = parseIncrementalOutput(incremental);
+		expect(result.completedScenes).toBe(3);
+		expect(result.newScene?.title).toBe('The Forest');
+		expect(result.characterUpdates).toHaveLength(1);
+	});
+
+	it('leaves plain markdown unchanged', () => {
+		const result = parseActSummary(SAMPLE_ACT_SUMMARY);
+		expect(result.completedScenes).toBe(2);
+		expect(result.scenes).toHaveLength(2);
+	});
+});
+
 describe('parseIncrementalOutput', () => {
 	it('parses an incremental update with a new scene and character updates', () => {
 		const markdown = `## Progress
