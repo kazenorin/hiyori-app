@@ -9,6 +9,7 @@
 		createStoryError: string | null;
 		worldBuilderError: string | null;
 		isInterviewMode: boolean;
+		hasInterviewMessages: boolean;
 		isStreaming: boolean;
 		onCreateStory: () => void;
 		onStartImmediate: () => void;
@@ -28,6 +29,7 @@
 		createStoryError,
 		worldBuilderError,
 		isInterviewMode,
+		hasInterviewMessages,
 		isStreaming,
 		onCreateStory,
 		onStartImmediate,
@@ -52,7 +54,7 @@
 
 	let hasContent = $derived(
 		(isComplete && !isInterviewMode) ||
-			(isInterviewMode && !isStreaming) ||
+			(isInterviewMode && hasInterviewMessages && !isStreaming) ||
 			createStoryError != null ||
 			worldBuilderError != null
 	);
@@ -60,7 +62,7 @@
 	let summaryText = $derived.by(() => {
 		if (createStoryError) return 'Error creating story';
 		if (worldBuilderError) return 'World builder error';
-		if (isInterviewMode && !isStreaming) return 'Ready to start game';
+		if (isInterviewMode && hasInterviewMessages && !isStreaming) return 'Ready to start game';
 		if (isComplete && !isInterviewMode) {
 			if (showCreateStoryOptions) return 'Story creation options';
 			return storyName ? `Create "${storyName}"?` : 'Create story?';

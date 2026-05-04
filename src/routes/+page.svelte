@@ -516,6 +516,7 @@
 				createStoryError={createStoryError}
 				worldBuilderError={getWorldBuilderError()}
 				isInterviewMode={getActPlotInterview()}
+				hasInterviewMessages={getWorldBuilderMessages().some((m) => m.role === 'user')}
 				isStreaming={getIsWorldBuilderStreaming()}
 				onCreateStory={handleCreateFromWorldBuilder}
 				onStartImmediate={handleCreateStoryImmediate}
