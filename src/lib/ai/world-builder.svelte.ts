@@ -147,7 +147,8 @@ export async function enterActPlotInterviewMode(
 	actLineId: string,
 	systemPrompt: string,
 	worldContent: string,
-	forkContext?: ForkInterviewContext
+	forkContext?: ForkInterviewContext,
+	autoStart: boolean = true
 ): Promise<void> {
 	// Preserve world content before reset clears it
 	interviewWorldContent = worldContent;
@@ -183,7 +184,9 @@ export async function enterActPlotInterviewMode(
 	}
 
 	// Start streaming without a visible seed message
-	await streamNextResponse();
+	if (autoStart) {
+		await streamNextResponse();
+	}
 }
 
 export async function sendWorldBuilderMessage(text: string): Promise<void> {

@@ -170,7 +170,7 @@
 			const actSummary = msgs[messageIndex]?.actSummary ?? '';
 
 			const systemPrompt = await getActiveSystemPromptOrDefault();
-			await enterActPlotInterviewMode(line.id, systemPrompt, worldContent, { sourcePremises, actSummary });
+			await enterActPlotInterviewMode(line.id, systemPrompt, worldContent, { sourcePremises, actSummary }, false);
 		} catch (err) {
 			await log.error('fork', 'Failed to start fork interview', err);
 			createStoryError = err instanceof Error ? err.message : 'Failed to start fork interview';
@@ -248,7 +248,7 @@
 	/**
 	 * Generate act plot, exit world builder, and start the game.
 	 */
-	async function startGame(storyId: string, storyName: string, actLineId: string, worldContent: string): Promise<void> {
+	async function startGame(storyId: string, storyName: string, actLineId: string, worldContent: string, skipInitialNarration: boolean = false): Promise<void> {
 		const actLine = await getActLine(actLineId);
 		const isMainLine = actLine?.isMainLine ?? true;
 		const result = await generateActPlot(storyId, storyName, worldContent, actLineId, isMainLine, 1);
@@ -256,8 +256,12 @@
 
 		exitWorldBuilderMode();
 
-		sendInitialNarration(actLineId)
-			.then(() => log.debug('story-creation', 'initial narration sent'));
+		if (skipInitialNarration) {
+			await loadActLineMessages(actLineId);
+		} else {
+			sendInitialNarration(actLineId)
+				.then(() => log.debug('story-creation', 'initial narration sent'));
+		}
 	}
 
 	async function handleCreateStoryImmediate() {
@@ -324,7 +328,7 @@
 
 			const worldContent = getWorldBuilderContent();
 			if (worldContent) {
-				await startGame(refs.story.id, refs.story.name, refs.actLineId, worldContent);
+				await startGame(refs.story.id, refs.story.name, refs.actLineId, worldContent, true);
 			}
 		} catch (err) {
 			createStoryError = err instanceof Error ? err.message : 'Failed to start game';
