@@ -92,7 +92,32 @@ export async function updateActLine(id: string, name: string): Promise<void> {
 
 export async function deleteActLine(id: string): Promise<void> {
 	const db = getDatabase();
-	await db.execute('DELETE FROM act_line_meta WHERE id = $1', [id]);
+
+	// Collect all message IDs from both junction tables before deletion
+	const lineMessageRows = await db.select<{ message_id: string }[]>('SELECT message_id FROM act_lines WHERE act_line_id = $1', [id]);
+	const premiseMessageRows = await db.select<{ message_id: string }[]>('SELECT message_id FROM act_line_premises WHERE act_line_id = $1', [
+		id,
+	]);
+	const messageIds = [...new Set([...lineMessageRows.map((r) => r.message_id), ...premiseMessageRows.map((r) => r.message_id)])];
+
+	try {
+		await db.execute('BEGIN');
+
+		// Delete junction table entries
+		await db.execute('DELETE FROM act_lines WHERE act_line_id = $1', [id]);
+		await db.execute('DELETE FROM act_line_premises WHERE act_line_id = $1', [id]);
+
+		// Garbage-collect messages no longer referenced by any act line or premises
+		await removeOrphanedMessages(db, messageIds);
+
+		// Delete the act line metadata row
+		await db.execute('DELETE FROM act_line_meta WHERE id = $1', [id]);
+
+		await db.execute('COMMIT');
+	} catch (err) {
+		await db.execute('ROLLBACK');
+		throw err;
+	}
 }
 
 // === act_lines operations ===
