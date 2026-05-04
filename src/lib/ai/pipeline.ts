@@ -21,8 +21,11 @@ import {
 	gameMasterSystemPromptLoader,
 	summarizerPromptLoader,
 	actSummaryTemplateLoader,
+	summarizerIncrementalPromptLoader,
+	actSummaryIncrementalTemplateLoader,
 	type PromptLoader,
 } from '$lib/fs/prompts';
+import { parseActSummary, parseIncrementalOutput, mergeActSummary, serializeActSummary } from './act-summary-parser';
 
 // Markdown section headings used in phase prompts
 const SECTION = {
@@ -37,6 +40,7 @@ const SECTION = {
 	EDITOR_OUTPUT: '\n## Editor Output\n',
 	PREVIOUS_ACT_SUMMARY: '\n## Previous Act Summary\n',
 	PREVIOUS_NARRATIVE_BODY: '\n## Previous Narrative Body\n',
+	EXISTING_ACT_SUMMARY: '\n## Existing Act Summary\n',
 };
 
 const promptLoaderDefinitions = {
@@ -49,6 +53,8 @@ const promptLoaderDefinitions = {
 	gameMasterSystemPrompt: gameMasterSystemPromptLoader,
 	summarizerPrompt: summarizerPromptLoader,
 	actSummaryTemplate: actSummaryTemplateLoader,
+	summarizerIncrementalPrompt: summarizerIncrementalPromptLoader,
+	actSummaryIncrementalTemplate: actSummaryIncrementalTemplateLoader,
 } satisfies Record<string, PromptLoader>;
 
 type LoadedPrompts = Record<keyof typeof promptLoaderDefinitions, string>;
@@ -297,6 +303,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 		gameMasterSystemPrompt,
 		summarizerPrompt,
 		actSummaryTemplate,
+		summarizerIncrementalPrompt,
+		actSummaryIncrementalTemplate,
 	} = await loadPrompts(storyId, storyName);
 
 	let newActSummary = actSummary;
@@ -305,34 +313,82 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineState &
 	if (playerResponse && completedScenes > 0) {
 		callbacks.onPhaseStart('SUMMARIZER');
 
-		// Inject programmatic completed scenes count
-		const processedTemplate = actSummaryTemplate.replaceAll('{completedScenes}', String(completedScenes));
-		const summarizerSystemPrompt = summarizerPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
-		let summarizerMessages: MessageBase[];
-		if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
-			summarizerMessages = toUserMessages([
-				SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
-				SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeVariables.narrativeBody,
-				...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
-				summarizerExtractionPromptTemplate
-					.replaceAll('{completedScenes}', String(completedScenes))
-					.replaceAll('{sceneTitle}', previousNarrativeVariables.sceneTitle ?? ''),
-			]);
+		if (!actSummary) {
+			// === FIRST SUMMARY: Full generation (existing behavior) ===
+			const processedTemplate = actSummaryTemplate.replaceAll('{completedScenes}', String(completedScenes));
+			const summarizerSystemPrompt = summarizerPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
+			let summarizerMessages: MessageBase[];
+			if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
+				summarizerMessages = toUserMessages([
+					SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
+					SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeVariables.narrativeBody,
+					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+					summarizerExtractionPromptTemplate
+						.replaceAll('{completedScenes}', String(completedScenes))
+						.replaceAll('{sceneTitle}', previousNarrativeVariables.sceneTitle ?? ''),
+				]);
+			} else {
+				summarizerMessages = toUserMessages([
+					SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
+					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+					summarizerFallbackExtractionPromptTemplate.replaceAll('{completedScenes}', String(completedScenes)),
+				]);
+			}
+
+			newActSummary = await runNonStreamingPhase(
+				'SUMMARIZER',
+				summarizerSystemPrompt,
+				summarizerMessages,
+				providerConfigs.summarizer,
+				abortSignal
+			);
 		} else {
-			summarizerMessages = toUserMessages([
-				SECTION.PREVIOUS_ACT_SUMMARY + actSummary,
-				...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
-				summarizerFallbackExtractionPromptTemplate.replaceAll('{completedScenes}', String(completedScenes)),
-			]);
+			// === INCREMENTAL UPDATE: Parse, merge, serialize ===
+			const sceneNumber = String(completedScenes);
+			const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
+			const processedTemplate = actSummaryIncrementalTemplate
+				.replaceAll('{completedScenes}', String(completedScenes))
+				.replaceAll('{sceneNumber}', sceneNumber)
+				.replaceAll('{sceneTitle}', sceneTitle);
+			const incrementalSystemPrompt = summarizerIncrementalPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
+
+			let incrementalMessages: MessageBase[];
+			if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
+				incrementalMessages = toUserMessages([
+					SECTION.EXISTING_ACT_SUMMARY + actSummary,
+					SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeVariables.narrativeBody,
+					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+					summarizerExtractionPromptTemplate
+						.replaceAll('{completedScenes}', String(completedScenes))
+						.replaceAll('{sceneTitle}', sceneTitle),
+				]);
+			} else {
+				incrementalMessages = toUserMessages([
+					SECTION.EXISTING_ACT_SUMMARY + actSummary,
+					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+					summarizerFallbackExtractionPromptTemplate.replaceAll('{completedScenes}', String(completedScenes)),
+				]);
+			}
+
+			const incrementalRaw = await runNonStreamingPhase(
+				'SUMMARIZER',
+				incrementalSystemPrompt,
+				incrementalMessages,
+				providerConfigs.summarizer,
+				abortSignal
+			);
+
+			try {
+				const existingParsed = parseActSummary(actSummary);
+				const incrementalParsed = parseIncrementalOutput(incrementalRaw);
+				const merged = mergeActSummary(existingParsed, incrementalParsed);
+				newActSummary = serializeActSummary(merged);
+			} catch (err) {
+				await log.warn('pipeline', `Incremental act summary parse/merge failed, using raw output: ${err}`);
+				newActSummary = incrementalRaw;
+			}
 		}
 
-		newActSummary = await runNonStreamingPhase(
-			'SUMMARIZER',
-			summarizerSystemPrompt,
-			summarizerMessages,
-			providerConfigs.summarizer,
-			abortSignal
-		);
 		state = updateState(state, { actSummary: newActSummary });
 		callbacks.onPhaseComplete('SUMMARIZER', state);
 

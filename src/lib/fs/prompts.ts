@@ -30,6 +30,8 @@ import defaultGameMasterPrompt from './prompts/game-master/game-master-prompt.md
 // Pipeline: Summarizer
 import defaultSummarizerPrompt from './prompts/summarizer/summarizer-prompt.md?raw';
 import defaultActSummaryTemplate from './prompts/summarizer/act-summary-template.md?raw';
+import defaultSummarizerIncrementalPrompt from './prompts/summarizer/summarizer-incremental-prompt.md?raw';
+import defaultActSummaryIncrementalTemplate from './prompts/summarizer/act-summary-incremental-template.md?raw';
 
 // World
 import defaultWorldTemplate from './prompts/world/world-template.md?raw';
@@ -70,6 +72,8 @@ export {
 	defaultGameMasterPrompt,
 	defaultSummarizerPrompt,
 	defaultActSummaryTemplate,
+	defaultSummarizerIncrementalPrompt,
+	defaultActSummaryIncrementalTemplate,
 	defaultWorldTemplate,
 	defaultGenerateWorldFromChatPrompt,
 	defaultGenerateWorldFromChatSystemPrompt,
@@ -116,6 +120,14 @@ const gameMasterPrompt = new Prompt({ relativePath: 'game-master/game-master-pro
 // Pipeline: Summarizer
 const summarizerPrompt = new Prompt({ relativePath: 'summarizer/summarizer-prompt.md', defaultContent: defaultSummarizerPrompt });
 const actSummaryTemplate = new Prompt({ relativePath: 'summarizer/act-summary-template.md', defaultContent: defaultActSummaryTemplate });
+const summarizerIncrementalPrompt = new Prompt({
+	relativePath: 'summarizer/summarizer-incremental-prompt.md',
+	defaultContent: defaultSummarizerIncrementalPrompt,
+});
+const actSummaryIncrementalTemplate = new Prompt({
+	relativePath: 'summarizer/act-summary-incremental-template.md',
+	defaultContent: defaultActSummaryIncrementalTemplate,
+});
 
 // World
 const worldTemplate = new Prompt({ relativePath: 'world/world-template.md', defaultContent: defaultWorldTemplate });
@@ -204,6 +216,8 @@ export const loadEditorPrompt = (): Promise<string> => editorPrompt.load();
 export const loadGameMasterPrompt = (): Promise<string> => gameMasterPrompt.load();
 export const loadSummarizerPrompt = (): Promise<string> => summarizerPrompt.load();
 export const loadActSummaryTemplate = (): Promise<string> => actSummaryTemplate.load();
+export const loadSummarizerIncrementalPrompt = (): Promise<string> => summarizerIncrementalPrompt.load();
+export const loadActSummaryIncrementalTemplate = (): Promise<string> => actSummaryIncrementalTemplate.load();
 export const loadWorldTemplate = (): Promise<string> => worldTemplate.load();
 export const loadGenerateWorldFromChatPrompt = (): Promise<string> => generateWorldFromChatPrompt.load();
 export const loadGenerateWorldFromChatSystemPrompt = (): Promise<string> => generateWorldFromChatSystemPrompt.load();
@@ -266,6 +280,14 @@ export async function loadStoryActSummaryTemplate(storyId: string, storyName: st
 	return loadPromptForStory(storyId, storyName, actSummaryTemplate.relativePath, actSummaryTemplate.defaultContent);
 }
 
+export async function loadStorySummarizerIncrementalPrompt(storyId: string, storyName: string): Promise<string> {
+	return loadPromptForStory(storyId, storyName, summarizerIncrementalPrompt.relativePath, summarizerIncrementalPrompt.defaultContent);
+}
+
+export async function loadStoryActSummaryIncrementalTemplate(storyId: string, storyName: string): Promise<string> {
+	return loadPromptForStory(storyId, storyName, actSummaryIncrementalTemplate.relativePath, actSummaryIncrementalTemplate.defaultContent);
+}
+
 // === Prompt loaders ===
 
 export interface PromptLoader {
@@ -318,6 +340,16 @@ export const actSummaryTemplateLoader: PromptLoader = {
 	loadDefault: loadActSummaryTemplate,
 };
 
+export const summarizerIncrementalPromptLoader: PromptLoader = {
+	loadByStory: loadStorySummarizerIncrementalPrompt,
+	loadDefault: loadSummarizerIncrementalPrompt,
+};
+
+export const actSummaryIncrementalTemplateLoader: PromptLoader = {
+	loadByStory: loadStoryActSummaryIncrementalTemplate,
+	loadDefault: loadActSummaryIncrementalTemplate,
+};
+
 // === Ensure All Base Configs ===
 
 export { ensureAllBaseConfigs } from './prompt-loader';
@@ -334,6 +366,8 @@ registerDefaults([
 	gameMasterPrompt,
 	summarizerPrompt,
 	actSummaryTemplate,
+	summarizerIncrementalPrompt,
+	actSummaryIncrementalTemplate,
 	worldTemplate,
 	generateWorldFromChatPrompt,
 	generateWorldFromChatSystemPrompt,
