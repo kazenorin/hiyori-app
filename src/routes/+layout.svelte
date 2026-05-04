@@ -222,7 +222,7 @@
 				await deleteAct(id);
 				clearMessages();
 			} else if (type === 'line') {
-				await deleteActLine(id);
+				await deleteActLine(id, removeFolder);
 				clearMessages();
 			}
 		} catch (err) {
@@ -543,11 +543,13 @@
 						removed.
 					{:else if confirmDelete.type === 'act'}
 						Are you sure you want to delete <strong>{confirmDelete.name}</strong>? All lines within this act will also be removed.
+					{:else if confirmDelete.type === 'line'}
+						Are you sure you want to delete <strong>{confirmDelete.name}</strong>? All messages in this line will also be removed.
 					{:else}
 						Are you sure you want to delete <strong>{confirmDelete.name}</strong>?
 					{/if}
 				</p>
-				{#if confirmDelete.type === 'story'}
+				{#if confirmDelete.type === 'story' || confirmDelete.type === 'line'}
 					<div class="flex flex-col gap-2">
 						<button
 							class="w-full px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"

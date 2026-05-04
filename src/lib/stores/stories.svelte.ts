@@ -321,8 +321,27 @@ export async function deleteAct(id: string): Promise<void> {
 	}
 }
 
-export async function deleteActLine(id: string): Promise<void> {
+export async function deleteActLine(id: string, removeFolder: boolean = false): Promise<void> {
+	// Read metadata before DB deletion (needed for folder path construction)
+	const line = actLines.find((l) => l.id === id);
+	const act = line ? acts.find((a) => a.id === line.actId) : null;
+	const storyId = activeStoryId;
+	const storyName = activeStoryName;
+
+	// Perform full DB cleanup (act_line_meta + junctions + orphaned messages)
 	await dbActLines.deleteActLine(id);
+
+	// Remove folder if requested
+	if (removeFolder && line && act && storyId && storyName) {
+		try {
+			const storyFolder = await resolveStoryFolder(storyId, storyName);
+			const lineDir = buildLineDir(storyFolder, act.actNumber, line.isMainLine, line.id);
+			await remove(lineDir, { baseDir: BaseDirectory.AppData, recursive: true });
+		} catch (err) {
+			await log.error('delete-act-line', 'Failed to remove line folder', err);
+		}
+	}
+
 	actLines = actLines.filter((l) => l.id !== id);
 	if (activeActLineId === id) {
 		activeActLineId = null;
@@ -373,7 +392,7 @@ async function copyActPlotForFork(fromLineId: string, toLineId: string): Promise
 			await copyFile(fromPath, toPath, { fromPathBaseDir: BaseDirectory.AppData, toPathBaseDir: BaseDirectory.AppData });
 		}
 	} catch (err) {
-		await	log.error('fork', 'Failed to copy act-plot for fork', err);
+		await log.error('fork', 'Failed to copy act-plot for fork', err);
 	}
 }
 
