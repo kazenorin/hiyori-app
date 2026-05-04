@@ -14,6 +14,11 @@ export interface WorldBuilderMessage {
 	content: string;
 }
 
+export interface ForkInterviewContext {
+	sourcePremises: WorldBuilderMessage[];
+	actSummary: string;
+}
+
 const COMPLETION_MARKER = '[WORLD_BUILDER_COMPLETE]';
 const seedMsg = { role: 'user' as const, content: 'I want to create a new story. Please help me build a world.' };
 
@@ -29,6 +34,7 @@ let logFilePath: string | null = null;
 
 // Act-plot interview state
 let actPlotInterview = $state(false);
+let gameResumeInterview = $state(false);
 let interviewActLineId: string | null = null;
 let interviewSystemPrompt: string | null = null;
 let interviewHiddenContext: MessageBase[] = [];
@@ -65,6 +71,9 @@ export function getLogFilePath(): string | null {
 export function getActPlotInterview(): boolean {
 	return actPlotInterview;
 }
+export function getGameResumeInterview(): boolean {
+	return gameResumeInterview;
+}
 export function getInterviewActLineId(): string | null {
 	return interviewActLineId;
 }
@@ -82,6 +91,7 @@ function resetState(): void {
 	cachedSystemPrompt = null;
 	cachedWorldTemplate = null;
 	actPlotInterview = false;
+	gameResumeInterview = false;
 	interviewActLineId = null;
 	interviewSystemPrompt = null;
 	interviewHiddenContext = [];
@@ -138,7 +148,12 @@ export async function enterWorldBuilderMode(): Promise<void> {
 	await streamNextResponse();
 }
 
-export async function enterActPlotInterviewMode(actLineId: string, systemPrompt: string, worldContent: string): Promise<void> {
+export async function enterActPlotInterviewMode(
+	actLineId: string,
+	systemPrompt: string,
+	worldContent: string,
+	forkContext?: ForkInterviewContext,
+): Promise<void> {
 	// Preserve world content before reset clears it
 	interviewWorldContent = worldContent;
 
@@ -159,7 +174,17 @@ export async function enterActPlotInterviewMode(actLineId: string, systemPrompt:
 		{ role: 'user', content: interviewPrompt },
 	];
 
-	// Start streaming without a visible seed message
+	// When forking, include source premises and act summary so the interview
+	// LLM knows the original line's interview decisions and story state
+	if (forkContext) {
+		gameResumeInterview = true;
+		messages = [...messages, ...forkContext.sourcePremises];
+		if (forkContext.actSummary) {
+			const userMessage = `We will resume a story act right after this sequence of events occured:\n\n${forkContext.actSummary}`;
+			return await sendWorldBuilderMessage(userMessage);
+		}
+	}
+
 	await streamNextResponse();
 }
 

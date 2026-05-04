@@ -295,6 +295,16 @@ export async function branchFromLine(
 		const params = entries.flatMap((e) => [newLineId, e.message_id, e.sequence]);
 		await db.execute(`INSERT INTO act_lines (act_line_id, message_id, sequence) VALUES ${values}`, params);
 
+		// Copy premises (interview transcript) — always predates act line messages
+		const premises = await db.select<ActLineEntryRow[]>('SELECT * FROM act_line_premises WHERE act_line_id = $1 ORDER BY sequence', [
+			fromLineId,
+		]);
+		if (premises.length > 0) {
+			const pValues = premises.map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(', ');
+			const pParams = premises.flatMap((p) => [newLineId, p.message_id, p.sequence]);
+			await db.execute(`INSERT INTO act_line_premises (act_line_id, message_id, sequence) VALUES ${pValues}`, pParams);
+		}
+
 		await db.execute('COMMIT');
 	} catch (err) {
 		await db.execute('ROLLBACK');

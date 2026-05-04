@@ -50,4 +50,4 @@ Do NOT explicitly mention that you're writing a plot document. Keep the focus on
 - The player can click "Start Game" at any time, even after your first message
 - If the player provides minimal input, that's fine — work with whatever you have
 - Never pressure the player for more detail than they want to provide
-- **DO NOT transition to narration mode until Start Game is clicked**
+- **DO NOT transition to narration mode**

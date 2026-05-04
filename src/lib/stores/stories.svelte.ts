@@ -10,7 +10,7 @@ import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 import type { ModelMessage } from 'ai';
 import { loadStorySystemPrompt, loadSystemPrompt } from '$lib/fs/prompts';
 import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-folders';
-import { writeTextFile, readTextFile, exists, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { writeTextFile, readTextFile, exists, remove, copyFile, mkdir, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { buildLineDir } from '$lib/ai/card-output-path';
 import { generateActPlot } from '$lib/ai/act-plot-generator';
@@ -334,11 +334,93 @@ export async function forkActLine(fromLineId: string, fromSequence: number, actI
 	const newLineId = crypto.randomUUID();
 	const line = await dbActLines.branchFromLine(newLineId, fromLineId, fromSequence, actId, name);
 	actLines = [...actLines, line];
+
+	// Copy act-plot file from source to forked line before selectActLine triggers ensureActPlot
+	await copyActPlotForFork(fromLineId, line.id);
+
 	await selectActLine(line.id);
 
 	await copyMemoriesForFork(fromLineId, line.id, fromSequence);
 
 	return line;
+}
+
+/**
+ * Copy the act-plot.md file from the source act line to the forked line.
+ * This prevents ensureActPlot from regenerating the act-plot via LLM.
+ */
+async function copyActPlotForFork(fromLineId: string, toLineId: string): Promise<void> {
+	const storyId = activeStoryId;
+	const storyName = activeStoryName;
+	if (!storyId || !storyName) return;
+
+	const act = acts.find((a) => a.id === activeActId);
+	if (!act) return;
+
+	const fromLine = actLines.find((l) => l.id === fromLineId);
+	const toLine = actLines.find((l) => l.id === toLineId);
+	if (!fromLine || !toLine) return;
+
+	try {
+		const storyFolder = await resolveStoryFolder(storyId, storyName);
+		const fromDir = buildLineDir(storyFolder, act.actNumber, fromLine.isMainLine, fromLineId);
+		const toDir = buildLineDir(storyFolder, act.actNumber, false, toLineId);
+		const fromPath = `${fromDir}/act-plot.md`;
+		const toPath = `${toDir}/act-plot.md`;
+
+		if (await exists(fromPath, { baseDir: BaseDirectory.AppData })) {
+			await mkdir(toDir, { baseDir: BaseDirectory.AppData, recursive: true });
+			await copyFile(fromPath, toPath, { fromPathBaseDir: BaseDirectory.AppData, toPathBaseDir: BaseDirectory.AppData });
+		}
+	} catch (err) {
+		await	log.error('fork', 'Failed to copy act-plot for fork', err);
+	}
+}
+
+/**
+ * Fork an act line for the interview path: copies messages and premises,
+ * but does NOT copy the act-plot file or select the line.
+ * Call selectActLineQuiet after this to set the active line without
+ * triggering act-plot generation.
+ */
+export async function forkActLineForInterview(
+	fromLineId: string,
+	fromSequence: number,
+	actId: string,
+	name: string
+): Promise<dbActLines.ActLineMeta> {
+	const newLineId = crypto.randomUUID();
+	const line = await dbActLines.branchFromLine(newLineId, fromLineId, fromSequence, actId, name);
+	actLines = [...actLines, line];
+
+	// Do NOT copy act-plot — it will be generated after the interview
+	// Do NOT call selectActLine — it would trigger ensureActPlot
+
+	await copyMemoriesForFork(fromLineId, line.id, fromSequence);
+
+	return line;
+}
+
+/**
+ * Set the active act line and load premises, but skip act-plot generation.
+ * Use before entering world-builder interview mode so the active line is
+ * set correctly without triggering ensureActPlot.
+ */
+export async function selectActLineQuiet(actLineId: string): Promise<void> {
+	activeActLineId = actLineId;
+	await dbAppState.setActiveActLine(actLineId);
+
+	try {
+		const premises = await dbActLines.getPremisesMessages(actLineId);
+		activeInterviewTranscript = premises
+			.filter((m) => m.role === 'user' || m.role === 'assistant')
+			.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+	} catch {
+		activeInterviewTranscript = [];
+	}
+
+	// Intentionally skip ensureActPlot — act-plot will be generated after interview
+	activeActPlotContent = '';
 }
 
 async function copyMemoriesForFork(fromLineId: string, toLineId: string, fromSequence: number): Promise<void> {

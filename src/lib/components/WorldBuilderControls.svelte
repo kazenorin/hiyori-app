@@ -9,11 +9,13 @@
 		createStoryError: string | null;
 		worldBuilderError: string | null;
 		isInterviewMode: boolean;
+		isGameResumeMode: boolean;
+		hasInterviewMessages: boolean;
 		isStreaming: boolean;
 		onCreateStory: () => void;
 		onStartImmediate: () => void;
 		onStartInterview: () => void;
-		onStartGame: () => void;
+		onStartGame: (isGameResumeMode: boolean) => void;
 		onCancel: () => void;
 		onDismissOptions: () => void;
 		onRetry: () => void;
@@ -28,6 +30,8 @@
 		createStoryError,
 		worldBuilderError,
 		isInterviewMode,
+		isGameResumeMode,
+		hasInterviewMessages,
 		isStreaming,
 		onCreateStory,
 		onStartImmediate,
@@ -52,7 +56,7 @@
 
 	let hasContent = $derived(
 		(isComplete && !isInterviewMode) ||
-			(isInterviewMode && !isStreaming) ||
+			(isInterviewMode && hasInterviewMessages && !isStreaming) ||
 			createStoryError != null ||
 			worldBuilderError != null
 	);
@@ -60,7 +64,7 @@
 	let summaryText = $derived.by(() => {
 		if (createStoryError) return 'Error creating story';
 		if (worldBuilderError) return 'World builder error';
-		if (isInterviewMode && !isStreaming) return 'Ready to start game';
+		if (isInterviewMode && hasInterviewMessages && !isStreaming) return 'Ready to start game';
 		if (isComplete && !isInterviewMode) {
 			if (showCreateStoryOptions) return 'Story creation options';
 			return storyName ? `Create "${storyName}"?` : 'Create story?';
@@ -216,7 +220,7 @@
 								<button
 									class="btn preset-filled-success-500"
 									type="button"
-									onclick={onStartGame}
+									onclick={() => onStartGame(isGameResumeMode)}
 								> Start Game </button>
 							</div>
 						{/if}
