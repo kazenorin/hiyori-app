@@ -15,7 +15,7 @@ export interface WorldBuilderMessage {
 }
 
 export interface ForkInterviewContext {
-	sourcePremises: MessageBase[];
+	sourcePremises: WorldBuilderMessage[];
 	actSummary: string;
 }
 
@@ -34,6 +34,7 @@ let logFilePath: string | null = null;
 
 // Act-plot interview state
 let actPlotInterview = $state(false);
+let gameResumeInterview = $state(false);
 let interviewActLineId: string | null = null;
 let interviewSystemPrompt: string | null = null;
 let interviewHiddenContext: MessageBase[] = [];
@@ -70,6 +71,9 @@ export function getLogFilePath(): string | null {
 export function getActPlotInterview(): boolean {
 	return actPlotInterview;
 }
+export function getGameResumeInterview(): boolean {
+	return gameResumeInterview;
+}
 export function getInterviewActLineId(): string | null {
 	return interviewActLineId;
 }
@@ -87,6 +91,7 @@ function resetState(): void {
 	cachedSystemPrompt = null;
 	cachedWorldTemplate = null;
 	actPlotInterview = false;
+	gameResumeInterview = false;
 	interviewActLineId = null;
 	interviewSystemPrompt = null;
 	interviewHiddenContext = [];
@@ -148,7 +153,6 @@ export async function enterActPlotInterviewMode(
 	systemPrompt: string,
 	worldContent: string,
 	forkContext?: ForkInterviewContext,
-	autoStart: boolean = true
 ): Promise<void> {
 	// Preserve world content before reset clears it
 	interviewWorldContent = worldContent;
@@ -173,20 +177,15 @@ export async function enterActPlotInterviewMode(
 	// When forking, include source premises and act summary so the interview
 	// LLM knows the original line's interview decisions and story state
 	if (forkContext) {
-		const forkMessages = forkContext.sourcePremises.map((msg) => ({ role: msg.role, content: msg.content }));
-		interviewHiddenContext = [...interviewHiddenContext, ...forkMessages];
+		gameResumeInterview = true;
+		messages = [...messages, ...forkContext.sourcePremises];
 		if (forkContext.actSummary) {
-			interviewHiddenContext = [
-				...interviewHiddenContext,
-				{ role: 'user', content: `Summary of events at the point of divergence:\n\n${forkContext.actSummary}` },
-			];
+			const userMessage = `We will resume a story act right after this sequence of events occured:\n\n${forkContext.actSummary}`;
+			return await sendWorldBuilderMessage(userMessage);
 		}
 	}
 
-	// Start streaming without a visible seed message
-	if (autoStart) {
-		await streamNextResponse();
-	}
+	await streamNextResponse();
 }
 
 export async function sendWorldBuilderMessage(text: string): Promise<void> {

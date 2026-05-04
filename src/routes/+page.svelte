@@ -21,6 +21,7 @@
 		enterActPlotInterviewMode,
 		exitWorldBuilderMode,
 		getActPlotInterview,
+		getGameResumeInterview,
 		getError as getWorldBuilderError,
 		getIsActive as getIsWorldBuilderActive,
 		getIsComplete as getIsWorldBuilderComplete,
@@ -170,7 +171,7 @@
 			const actSummary = msgs[messageIndex]?.actSummary ?? '';
 
 			const systemPrompt = await getActiveSystemPromptOrDefault();
-			await enterActPlotInterviewMode(line.id, systemPrompt, worldContent, { sourcePremises, actSummary }, false);
+			await enterActPlotInterviewMode(line.id, systemPrompt, worldContent, { sourcePremises, actSummary });
 		} catch (err) {
 			await log.error('fork', 'Failed to start fork interview', err);
 			createStoryError = err instanceof Error ? err.message : 'Failed to start fork interview';
@@ -248,7 +249,7 @@
 	/**
 	 * Generate act plot, exit world builder, and start the game.
 	 */
-	async function startGame(storyId: string, storyName: string, actLineId: string, worldContent: string, skipInitialNarration: boolean = false): Promise<void> {
+	async function startGame(storyId: string, storyName: string, actLineId: string, worldContent: string, isResumeGame: boolean = false): Promise<void> {
 		const actLine = await getActLine(actLineId);
 		const isMainLine = actLine?.isMainLine ?? true;
 		const result = await generateActPlot(storyId, storyName, worldContent, actLineId, isMainLine, 1);
@@ -256,7 +257,7 @@
 
 		exitWorldBuilderMode();
 
-		if (skipInitialNarration) {
+		if (isResumeGame) {
 			await loadActLineMessages(actLineId);
 		} else {
 			sendInitialNarration(actLineId)
@@ -316,7 +317,7 @@
 		}
 	}
 
-	async function handleStartGameAfterInterview() {
+	async function handleStartGameAfterInterview(isGameResumeMode: boolean) {
 		const refs = getActLineAndStory();
 		if (!refs) return;
 
@@ -328,7 +329,7 @@
 
 			const worldContent = getWorldBuilderContent();
 			if (worldContent) {
-				await startGame(refs.story.id, refs.story.name, refs.actLineId, worldContent, true);
+				await startGame(refs.story.id, refs.story.name, refs.actLineId, worldContent, isGameResumeMode);
 			}
 		} catch (err) {
 			createStoryError = err instanceof Error ? err.message : 'Failed to start game';
@@ -516,6 +517,7 @@
 				createStoryError={createStoryError}
 				worldBuilderError={getWorldBuilderError()}
 				isInterviewMode={getActPlotInterview()}
+				isGameResumeMode={getGameResumeInterview()}
 				hasInterviewMessages={getWorldBuilderMessages().some((m) => m.role === 'user')}
 				isStreaming={getIsWorldBuilderStreaming()}
 				onCreateStory={handleCreateFromWorldBuilder}

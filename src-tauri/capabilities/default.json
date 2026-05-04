@@ -10,6 +10,17 @@
     "log:default",
     "fs:default",
     {
+      "identifier": "fs:allow-copy-file",
+			"allow": [
+				{
+					"path": "$APPDATA/*"
+				},
+				{
+					"path": "$APPDATA/**"
+				}
+			]
+    },
+    {
       "identifier": "fs:allow-exists",
 			"allow": [
 				{

@@ -373,7 +373,7 @@ async function copyActPlotForFork(fromLineId: string, toLineId: string): Promise
 			await copyFile(fromPath, toPath, { fromPathBaseDir: BaseDirectory.AppData, toPathBaseDir: BaseDirectory.AppData });
 		}
 	} catch (err) {
-		log.error('fork', 'Failed to copy act-plot for fork', err);
+		await	log.error('fork', 'Failed to copy act-plot for fork', err);
 	}
 }
 
