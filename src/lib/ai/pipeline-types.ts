@@ -8,6 +8,7 @@ export interface PipelineState {
 	currentPhase: PhaseName | null;
 	scenePlot?: string;
 	writerOutput?: string;
+	writerVariables?: NarrativeVariables | null;
 	reviewerOutput?: string;
 	editorOutput?: string;
 	editorVariables?: NarrativeVariables | null;
@@ -31,4 +32,9 @@ export interface PipelineCallbacks {
 	onPhaseComplete: (phase: PhaseName, state: PipelineState) => void;
 	onError: (phase: PhaseName, error: unknown) => void;
 	onAllComplete: (state: PipelineState) => void;
+}
+
+export interface AsyncPhaseResults {
+	actSummary?: string;
+	scenePlot?: string;
 }

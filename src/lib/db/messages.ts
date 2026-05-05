@@ -19,6 +19,7 @@ export interface Message extends MessageBase {
 	metadata?: string;
 	sceneNumber?: number;
 	actSummary?: string;
+	scenePlot?: string;
 	variables?: NarrativeVariables;
 	createdAt: number;
 }
@@ -31,6 +32,7 @@ interface MessageRow {
 	metadata: string | null;
 	variables: string | null;
 	act_summary: string | null;
+	scene_plot: string | null;
 	scene_number: number | null;
 	created_at: number;
 }
@@ -81,6 +83,7 @@ function rowToMessage(row: MessageRow): Message {
 		metadata: row.metadata ?? undefined,
 		variables: parseVariables(row.variables),
 		actSummary: row.act_summary ?? undefined,
+		scenePlot: row.scene_plot ?? undefined,
 		sceneNumber: row.scene_number ?? undefined,
 		createdAt: row.created_at,
 	};
@@ -90,8 +93,8 @@ export async function createMessage(message: Omit<Message, 'createdAt'>): Promis
 	const db = getDatabase();
 	const now = Date.now();
 	await db.execute(
-		`INSERT INTO messages (id, role, content, reasoning, metadata, variables, act_summary, scene_number, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		`INSERT INTO messages (id, role, content, reasoning, metadata, variables, act_summary, scene_plot, scene_number, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
 		[
 			message.id,
 			message.role,
@@ -100,6 +103,7 @@ export async function createMessage(message: Omit<Message, 'createdAt'>): Promis
 			message.metadata ?? null,
 			message.variables ? JSON.stringify(message.variables) : null,
 			message.actSummary ?? null,
+			message.scenePlot ?? null,
 			message.sceneNumber ?? null,
 			now,
 		]
@@ -116,4 +120,25 @@ export async function getMessage(id: string): Promise<Message | null> {
 export async function deleteMessage(id: string): Promise<void> {
 	const db = getDatabase();
 	await db.execute('DELETE FROM messages WHERE id = $1', [id]);
+}
+
+export async function updateMessageFields(id: string, fields: { actSummary?: string; scenePlot?: string }): Promise<void> {
+	const updates: string[] = [];
+	const values: unknown[] = [];
+	let paramIdx = 1;
+
+	if (fields.actSummary !== undefined) {
+		updates.push(`act_summary = $${paramIdx++}`);
+		values.push(fields.actSummary);
+	}
+	if (fields.scenePlot !== undefined) {
+		updates.push(`scene_plot = $${paramIdx++}`);
+		values.push(fields.scenePlot);
+	}
+	if (updates.length === 0) return;
+
+	values.push(id);
+	const db = getDatabase();
+	const whereClause = `id = $${paramIdx}`;
+	await db.execute(`UPDATE messages SET ${updates.join(', ')} WHERE ${whereClause}`, values);
 }

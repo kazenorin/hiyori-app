@@ -53,7 +53,7 @@ describe('migrations', () => {
 		await runMigrations();
 		await runMigrations();
 		const versions = testDb._db.prepare('SELECT version FROM schema_version ORDER BY version').all();
-		expect(versions).toHaveLength(1);
+		expect(versions).toHaveLength(2);
 	});
 });
 
@@ -491,6 +491,69 @@ describe('messages CRUD', () => {
 		await messages.createMessage({ id: 'msg-1', role: 'user', content: 'Hello' });
 		await messages.deleteMessage('msg-1');
 		expect(await messages.getMessage('msg-1')).toBeNull();
+	});
+
+	it('creates and retrieves a message with scenePlot', async () => {
+		const msg = await messages.createMessage({
+			id: 'msg-sp',
+			role: 'assistant',
+			content: 'Scene text',
+			scenePlot: 'The hero arrives at the castle',
+		});
+		expect(msg.scenePlot).toBe('The hero arrives at the castle');
+
+		const fetched = await messages.getMessage('msg-sp');
+		expect(fetched).not.toBeNull();
+		expect(fetched!.scenePlot).toBe('The hero arrives at the castle');
+	});
+
+	it('creates message without scenePlot and it stays undefined', async () => {
+		const msg = await messages.createMessage({
+			id: 'msg-nosp',
+			role: 'user',
+			content: 'Hello',
+		});
+		expect(msg.scenePlot).toBeUndefined();
+
+		const fetched = await messages.getMessage('msg-nosp');
+		expect(fetched).not.toBeNull();
+		expect(fetched!.scenePlot).toBeUndefined();
+	});
+
+	it('updates message fields with actSummary and scenePlot', async () => {
+		await messages.createMessage({
+			id: 'msg-upd',
+			role: 'assistant',
+			content: 'Initial',
+		});
+
+		await messages.updateMessageFields('msg-upd', {
+			actSummary: 'Summary of act',
+			scenePlot: 'Plot for scene',
+		});
+
+		const fetched = await messages.getMessage('msg-upd');
+		expect(fetched).not.toBeNull();
+		expect(fetched!.actSummary).toBe('Summary of act');
+		expect(fetched!.scenePlot).toBe('Plot for scene');
+	});
+
+	it('updateMessageFields only updates specified fields', async () => {
+		await messages.createMessage({
+			id: 'msg-partial',
+			role: 'assistant',
+			content: 'Content',
+			actSummary: 'Existing summary',
+		});
+
+		await messages.updateMessageFields('msg-partial', {
+			scenePlot: 'New plot',
+		});
+
+		const fetched = await messages.getMessage('msg-partial');
+		expect(fetched).not.toBeNull();
+		expect(fetched!.actSummary).toBe('Existing summary');
+		expect(fetched!.scenePlot).toBe('New plot');
 	});
 });
 

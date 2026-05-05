@@ -24,7 +24,7 @@ import { getErrorMessage } from '$lib/utils/error-handling';
 import { renderFromVariables } from './template-renderer';
 import { storyMessageTemplate } from '$lib/fs/view-templates';
 import { type PipelineProviderConfigs, type PlayerContext, runPipeline } from './pipeline';
-import type { PhaseStreamState, PipelineCallbacks, PipelineState } from './pipeline-types';
+import type { AsyncPhaseResults, PhaseStreamState, PipelineCallbacks, PipelineState } from './pipeline-types';
 
 export interface UIMessage {
 	id: string;
@@ -36,12 +36,14 @@ export interface UIMessage {
 	variables?: NarrativeVariables;
 	phases?: UIScenePhase[];
 	actSummary?: string;
+	scenePlot?: string;
 }
 
 let messages = $state<UIMessage[]>([]);
 let isStreaming = $state(false);
 let error = $state<string | null>(null);
 let abortController: AbortController | null = null;
+let pendingAsyncPhases: Promise<AsyncPhaseResults | void> | null = null;
 
 export function getMessages(): UIMessage[] {
 	return messages;
@@ -66,12 +68,25 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 		sceneNumber: m.sceneNumber ?? 0,
 		variables: m.variables,
 		actSummary: m.actSummary,
+		scenePlot: m.scenePlot,
 		// phases is ephemeral — not loaded from DB
 	}));
 	error = null;
 }
 
-export function clearMessages(): void {
+export async function clearMessages(): Promise<void> {
+	if (pendingAsyncPhases) {
+		try {
+			await pendingAsyncPhases;
+		} catch (err) {
+			if (err instanceof DOMException && err.name === 'AbortError') {
+				await log.warn('clear-messages', 'Async phases aborted');
+			} else {
+				await log.error('clear-messages', 'Async phases failed', err);
+			}
+		}
+		pendingAsyncPhases = null;
+	}
 	messages = [];
 	error = null;
 	isStreaming = false;
@@ -100,6 +115,13 @@ function getLatestActSummary(): string {
 	return '';
 }
 
+function getLatestScenePlot(): string {
+	for (let i = messages.length - 1; i >= 0; i--) {
+		if (messages[i].scenePlot) return messages[i].scenePlot!;
+	}
+	return '';
+}
+
 async function persistMessage(actLineId: string, message: UIMessage): Promise<void> {
 	await dbMessages.createMessage({
 		id: message.id,
@@ -110,6 +132,7 @@ async function persistMessage(actLineId: string, message: UIMessage): Promise<vo
 		sceneNumber: message.sceneNumber,
 		variables: message.variables,
 		actSummary: message.actSummary,
+		scenePlot: message.scenePlot,
 	});
 	const seq = await dbActLines.getNextSequence(actLineId);
 	await dbActLines.addMessageToLine(actLineId, message.id, seq);
@@ -203,6 +226,20 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		await log.warn('send-message', 'Not initial message and called with no message body.');
 		return;
 	}
+
+	// Wait for any pending async phases from the previous pipeline run
+	if (pendingAsyncPhases) {
+		try {
+			await pendingAsyncPhases;
+		} catch (err) {
+			if (err instanceof DOMException && err.name === 'AbortError') {
+				await log.warn('send-message', 'Previous async phases aborted, proceeding without results.');
+			} else {
+				throw err;
+			}
+		}
+		pendingAsyncPhases = null;
+	}
 	const targetWordCount = 400; // TODO: make this configurable via settings
 	const storyPromise = dbActLines.getStoryForActLine(actLineId);
 
@@ -259,6 +296,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		const worldContent = getActiveWorldContent() ?? '';
 		const actPlot = getActiveActPlotContent() ?? '';
 		const actSummary = getLatestActSummary();
+		const previousScenePlot = getLatestScenePlot();
 		const templateReplacements = { sceneNumber: String(nextSceneNumber) };
 
 		// Pipeline callback helpers
@@ -340,7 +378,6 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 					...current,
 					content,
 					variables: finalVars ?? current.variables,
-					actSummary: pipelineState.actSummary ?? current.actSummary,
 				});
 			},
 		};
@@ -356,6 +393,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 			actPlot,
 			actSummary,
 			previousNarrativeVariables,
+			previousScenePlot,
 			player: playerContext,
 			story: { storyId: story.id, storyName: story.name, actLineId },
 			completedScenes: previousSceneNumber, // previous scene was just completed by the Player Response
@@ -375,6 +413,42 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 
 		// Persist with accumulated content
 		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({ newMessages: messages.slice(-newMessagesCount) })]);
+
+		// Store async phases
+		const assistantMessageId = getCurrentMessage().id;
+		pendingAsyncPhases =
+			result.asyncPhases?.then(async (asyncResults) => {
+				if (asyncResults.actSummary !== undefined || asyncResults.scenePlot !== undefined) {
+					await dbMessages.updateMessageFields(assistantMessageId, {
+						actSummary: asyncResults.actSummary,
+						scenePlot: asyncResults.scenePlot,
+					});
+				}
+				const targetMessageIdx = messages.findLastIndex((m) => m.id === assistantMessageId);
+				if (targetMessageIdx >= 0) {
+					const existing = messages[targetMessageIdx];
+					const updatedPhases = existing.phases ? [...existing.phases] : [];
+					if (asyncResults.actSummary !== undefined) {
+						updatedPhases.push({ phaseName: 'SUMMARIZER' as PhaseName, content: asyncResults.actSummary });
+					}
+					if (asyncResults.scenePlot !== undefined) {
+						updatedPhases.push({ phaseName: 'PLOT_PLANNER' as PhaseName, content: asyncResults.scenePlot });
+					}
+					messages[targetMessageIdx] = {
+						...existing,
+						actSummary: asyncResults.actSummary ?? existing.actSummary,
+						scenePlot: asyncResults.scenePlot ?? existing.scenePlot,
+						phases: updatedPhases,
+					};
+				}
+				return asyncResults;
+			}).catch(async (err) => {
+				if (err instanceof DOMException && err.name === 'AbortError') {
+					await log.warn('send-message', 'Async phases aborted');
+				} else {
+					await log.error('send-message', 'Async phases failed', err);
+				}
+			}) ?? null;
 	} catch (err: unknown) {
 		await handleStreamError(err, responseMessage.id, actLineId);
 	} finally {
