@@ -8,6 +8,14 @@ import { marked, type Tokens } from 'marked';
  * We structurally verify both markers (case-insensitive) rather than doing
  * a fragile substring match on raw text.
  */
+/**
+ * Strip code block fences wrapping the markdown.
+ * LLMs sometimes wrap output in ``` or ```lang ... ``` blocks.
+ */
+function stripCodeFences(text: string): string {
+	return text.replace(/^```[^\n]*\n/, '').replace(/\n```[\s]*$/, '');
+}
+
 export function reviewerAcceptsAsIs(reviewerOutput: string | undefined): boolean {
 	if (!reviewerOutput) return false;
 
@@ -15,7 +23,7 @@ export function reviewerAcceptsAsIs(reviewerOutput: string | undefined): boolean
 	let violationsZero = false;
 	let recommendationAccept = false;
 
-	const tokens = marked.lexer(reviewerOutput);
+	const tokens = marked.lexer(stripCodeFences(reviewerOutput));
 
 	for (const token of tokens) {
 		if (token.type === 'heading') {

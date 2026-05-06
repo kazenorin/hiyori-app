@@ -88,4 +88,20 @@ Total violations: 0. Recommendation: accept as-is.`;
 
 		expect(reviewerAcceptsAsIs(output)).toBe(true);
 	});
+
+	it('strips code fences before parsing', () => {
+		const output = `\`\`\`markdown
+# Review Output
+
+## Violations
+None.
+
+## Summary
+- Total violations: 0
+- Severity: none
+- Recommendation: accept as-is
+\`\`\``;
+
+		expect(reviewerAcceptsAsIs(output)).toBe(true);
+	});
 });
