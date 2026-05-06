@@ -503,9 +503,9 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 	// --- Sequential Phase 3: Editor (skip LLM if reviewer accepts as-is) ---
 	{
-		const reviewerAcceptAsIs = state.reviewerOutput?.includes('accept as-is');
+		const editorSkip = reviewerAcceptsAsIs(state.reviewerOutput);
 
-		if (reviewerAcceptAsIs) {
+		if (editorSkip) {
 			state = updateState(state, {
 				currentPhase: 'EDITOR',
 				editorOutput: state.writerOutput,
