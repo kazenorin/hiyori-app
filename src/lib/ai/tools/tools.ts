@@ -1,5 +1,6 @@
 import { buildMemoryTools } from '$lib/ai/tools/query-memories';
 import { buildActPlotTools } from '$lib/ai/tools/read-act-plot';
+import { buildSceneTools } from '$lib/ai/tools/read-scene';
 import { getStory, type Story } from '$lib/db/stories';
 import { getActLine, type ActLineMeta } from '$lib/db/act-lines';
 import { getAct, type Act } from '$lib/db/acts';
@@ -24,6 +25,7 @@ export async function buildTools(storyId: string, actLineId: string): Promise<To
 	const tools: ToolSet = {
 		...buildMemoryTools(storyId, actLineId),
 		...buildActPlotTools(ctx),
+		...buildSceneTools(ctx),
 	};
 
 	return Object.keys(tools).length > 0 ? tools : undefined;
