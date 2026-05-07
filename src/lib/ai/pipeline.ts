@@ -221,7 +221,8 @@ async function runNonStreamingPhase(
 	systemPrompt: string,
 	messages: MessageBase[],
 	providerConfig: ProviderConfig | undefined,
-	abortSignal: AbortSignal
+	abortSignal: AbortSignal,
+	tools?: ToolSet
 ): Promise<string> {
 	if (!providerConfig) {
 		throw new Error(`No provider configured for ${phaseName}. Please set one in Settings.`);
@@ -233,6 +234,7 @@ async function runNonStreamingPhase(
 		messages,
 		system: systemPrompt,
 		abortSignal,
+		...(tools && Object.keys(tools).length > 0 ? { tools, maxSteps: 5 } : {}),
 	});
 
 	return result.text;
@@ -359,7 +361,14 @@ async function runPlotPlanner(input: PipelineInput, loadedPrompts: LoadedPrompts
 		plotPlannerExtractionPrompt,
 	]);
 
-	return await runNonStreamingPhase('PLOT_PLANNER', systemPrompt, messages, providerConfigs.plotPlanner, abortSignal);
+	return await runNonStreamingPhase(
+		'PLOT_PLANNER',
+		systemPrompt,
+		messages,
+		providerConfigs.plotPlanner,
+		abortSignal,
+		input.execution.tools
+	);
 }
 
 /**
