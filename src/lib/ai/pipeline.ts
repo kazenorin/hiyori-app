@@ -29,7 +29,13 @@ import {
 } from '$lib/fs/prompts';
 import { mergeActSummary, parseActSummary, parseIncrementalOutput, serializeActSummary } from './act-summary-parser';
 import { reviewerAcceptsAsIs } from './reviewer-output-parser';
-import { NARRATIVE_DESCRIPTORS, REVIEWER_DESCRIPTORS, EDITOR_DESCRIPTORS, GAME_MASTER_DESCRIPTORS, PLOT_PLANNER_DESCRIPTORS } from './descriptors';
+import {
+	NARRATIVE_DESCRIPTORS,
+	REVIEWER_DESCRIPTORS,
+	EDITOR_DESCRIPTORS,
+	GAME_MASTER_DESCRIPTORS,
+	PLOT_PLANNER_DESCRIPTORS,
+} from './descriptors';
 
 // Markdown section headings used in phase prompts
 const SECTION = {
@@ -54,7 +60,8 @@ const editorExtractionPrompt =
 	'Judge whether the suggestions are necessary based on the available information in the chat history.';
 const reviewerExtractionPrompt = `Perform a review on the writer's output based on the available information in the chat history.`;
 const writerExtractionPrompt = 'Write a story prose based on the available information in the chat history.';
-const plotPlannerExtractionPrompt = 'Generate a Scene Plot based on the available information in the chat history.';
+const plotPlannerExtractionPromptTemplate =
+	'The current scene is Scene {currentScene}. Plan a Scene Plot based on the available information in the chat history.';
 
 const summarizerFallbackExtractionPromptTemplate = 'Update the Act Summary for Scene {completedScenes} based on the Player Response.';
 const summarizerExtractionPromptTemplate =
@@ -323,7 +330,7 @@ async function generateIncrementalSummary(input: PipelineInput, loadedPrompts: L
 	const sceneNumber = String(completedScenes);
 	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
 	const processedTemplate = actSummaryIncrementalTemplate
-		.replaceAll('{completedScenes}', String(completedScenes))
+		.replaceAll('{completedScenes}', sceneNumber)
 		.replaceAll('{sceneNumber}', sceneNumber)
 		.replaceAll('{sceneTitle}', sceneTitle);
 
@@ -582,7 +589,10 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					...sharedParams,
 					tools: filterToolsForPhase(tools, 'PLOT_PLANNER'),
 					descriptors: PLOT_PLANNER_DESCRIPTORS,
-					messages: toUserMessages([...sharedSections, plotPlannerExtractionPrompt]),
+					messages: toUserMessages([
+						...sharedSections,
+						plotPlannerExtractionPromptTemplate.replaceAll('{currentScene}', String(completedScenes + 1)),
+					]),
 					providerConfig: providerConfigs.plotPlanner,
 					buildStateUpdate: (ss) => ({
 						scenePlot: ss.content,
