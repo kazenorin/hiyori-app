@@ -85,10 +85,11 @@ describe('message-updater', () => {
 			expect(result).not.toBe(emptyState);
 		});
 
-		it('concatenates variable deltas across streaming chunks', () => {
+		it('replaces variables on each parse (replace semantics)', () => {
+			// First parse produces partial variables
 			const vars1: NarrativeVariables = {
 				...emptyVariables(),
-				background: 'A dark ',
+				background: 'A dark forest.\n',
 			};
 			let state = applyParserOutput(emptyState, {
 				text: null,
@@ -96,9 +97,10 @@ describe('message-updater', () => {
 				variables: vars1,
 				finalizedFields: new Set(),
 			});
+			// Second parse produces more complete variables
 			const vars2: NarrativeVariables = {
 				...emptyVariables(),
-				background: 'forest.\n',
+				background: 'A dark forest.\n',
 				narrativeBody: 'The hero',
 			};
 			state = applyParserOutput(state, {
@@ -112,31 +114,6 @@ describe('message-updater', () => {
 			expect(state.variables!.narrativeBody).toBe('The hero');
 		});
 
-		it('replaces finalized fields instead of concatenating', () => {
-			const vars1: NarrativeVariables = {
-				...emptyVariables(),
-				background: 'A dark ',
-			};
-			let state = applyParserOutput(emptyState, {
-				text: null,
-				thinking: null,
-				variables: vars1,
-				finalizedFields: new Set(),
-			});
-			const vars2: NarrativeVariables = {
-				...emptyVariables(),
-				background: 'A dark forest.\n',
-			};
-			state = applyParserOutput(state, {
-				text: null,
-				thinking: null,
-				variables: vars2,
-				finalizedFields: new Set(['background']),
-			});
-			// Finalized field should be replaced, not concatenated
-			expect(state.variables!.background).toBe('A dark forest.\n');
-		});
-
 		it('preserves existing variable when incoming is null', () => {
 			const existing: NarrativeVariables = {
 				...emptyVariables(),
@@ -144,22 +121,17 @@ describe('message-updater', () => {
 				background: 'The setting.',
 			};
 			const state: StreamState = { ...emptyState, variables: existing };
-			const incoming: NarrativeVariables = {
-				...emptyVariables(),
-				narrativeBody: 'The story.',
-			};
 			const result = applyParserOutput(state, {
 				text: null,
 				thinking: null,
-				variables: incoming,
+				variables: null,
 				finalizedFields: new Set(),
 			});
 			expect(result.variables!.sceneTitle).toBe('My Scene');
-			expect(result.variables!.narrativeBody).toBe('The story.');
 			expect(result.variables!.background).toBe('The setting.');
 		});
 
-		it('merges gameData fields across streaming chunks', () => {
+		it('replaces gameData on each parse (replace semantics)', () => {
 			const gd1: GameDataFields = {
 				activePlotThreads: ['artifact'],
 				decisionContext: 'Choose your path.',
@@ -172,10 +144,11 @@ describe('message-updater', () => {
 				variables: vars1,
 				finalizedFields: new Set(),
 			});
+			// Second parse with updated game data replaces the first
 			const gd2: GameDataFields = {
-				activePlotThreads: ['traitor'],
-				decisionContext: null,
-				decisions: ['Fight'],
+				activePlotThreads: ['artifact', 'traitor'],
+				decisionContext: 'Choose your path.',
+				decisions: ['Go north', 'Fight'],
 			};
 			const vars2: NarrativeVariables = { ...emptyVariables(), gameData: gd2 };
 			state = applyParserOutput(state, {
@@ -185,6 +158,7 @@ describe('message-updater', () => {
 				finalizedFields: new Set(),
 			});
 			expect(state.variables!.gameData).not.toBeNull();
+			// The second parse's complete game data replaces the first
 			expect(state.variables!.gameData!.activePlotThreads).toEqual(['artifact', 'traitor']);
 			expect(state.variables!.gameData!.decisionContext).toBe('Choose your path.');
 			expect(state.variables!.gameData!.decisions).toEqual(['Go north', 'Fight']);

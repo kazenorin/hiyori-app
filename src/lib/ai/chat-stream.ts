@@ -3,6 +3,7 @@ import { type ToolSet } from 'ai';
 import { executeStream, type StreamResultMetadata } from './streaming';
 import { getMainProviderConfig, type ProviderConfig } from '../stores/settings.svelte';
 import { createStreamAccumulator, type StreamAccumulator, type StreamState } from './chat-callbacks';
+import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
 import { createModel } from './provider';
 import { isAbortError, isAuthError, sleepOrAbort } from '$lib/utils/async';
 
@@ -24,6 +25,7 @@ export interface StreamWithRetryOptions {
 	tools?: ToolSet;
 	abortSignal?: AbortSignal;
 	onRetry?: (attempt: number, maxAttempts: number) => void;
+	descriptors?: OutputDescriptor[];
 }
 
 export interface MessageMetadata {
@@ -58,7 +60,8 @@ export async function streamChatResponse(
 	onStateUpdate: (state: StreamState) => void,
 	onError: (err: unknown) => void,
 	providerConfig: ProviderConfig | undefined,
-	tools?: ToolSet
+	tools?: ToolSet,
+	descriptors?: OutputDescriptor[]
 ): Promise<StreamAccumulator> {
 	if (!providerConfig) {
 		throw new Error('No main provider configured. Please set one in Settings.');
@@ -66,7 +69,7 @@ export async function streamChatResponse(
 	const model = createModel(providerConfig);
 
 	// Create stream accumulator with parser chain integrated
-	const accumulator = createStreamAccumulator(onStateUpdate, onError);
+	const accumulator = createStreamAccumulator(onStateUpdate, onError, descriptors);
 
 	await executeStream(
 		{
@@ -99,7 +102,7 @@ export async function streamWithRetry(
 	messages: MessageBase[],
 	options: StreamWithRetryOptions
 ): Promise<StreamAccumulator> {
-	const { retryConfig, onProgress, onError, providerConfig = getMainProviderConfig(), tools, abortSignal, onRetry } = options;
+	const { retryConfig, onProgress, onError, providerConfig = getMainProviderConfig(), tools, abortSignal, onRetry, descriptors } = options;
 
 	const maxAttempts = retryConfig.retryCount + 1;
 	let lastError: Error | null = null;
@@ -122,7 +125,8 @@ export async function streamWithRetry(
 					// Error reporting is handled in the catch block below.
 				},
 				providerConfig,
-				tools
+				tools,
+				descriptors
 			);
 
 			// KEY: await resultMetadata to detect mid-stream errors.

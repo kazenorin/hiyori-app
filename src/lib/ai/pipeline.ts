@@ -8,6 +8,7 @@ import type { NarrativeVariables, PhaseName } from './narrative-types';
 import type { AsyncPhaseResults, PipelineCallbacks, PipelineState } from './pipeline-types';
 import type { StreamState } from './chat-callbacks';
 import type { StreamResultMetadata } from './streaming';
+import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
 import { variablesToMarkdown } from './template-renderer';
 import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
 import { log } from '$lib/logging/logger';
@@ -27,6 +28,7 @@ import {
 } from '$lib/fs/prompts';
 import { mergeActSummary, parseActSummary, parseIncrementalOutput, serializeActSummary } from './act-summary-parser';
 import { reviewerAcceptsAsIs } from './reviewer-output-parser';
+import { NARRATIVE_DESCRIPTORS, REVIEWER_DESCRIPTORS, EDITOR_DESCRIPTORS, GAME_MASTER_DESCRIPTORS } from './descriptors';
 
 // Markdown section headings used in phase prompts
 const SECTION = {
@@ -76,10 +78,9 @@ type LoadedPrompts = Record<keyof typeof promptLoaderDefinitions, string>;
 
 /**
  * Reconstruct full output text from a StreamState.
- * The SaxSectionParser routes structured sections (Scene Title, Background,
- * Narrative Body, CG) into `variables` and leaves unhandled text in `content`.
- * For phases that output the writer template format, we need to combine both
- * to get the complete output.
+ * The narrative stream parser routes structured sections (Scene Title, Background,
+ * Narrative Body, CG) into `variables` and accumulates all text in `content`.
+ * For phases that output the writer template format, we combine both.
  */
 function fullOutput(ss: StreamState): string {
 	if (ss.variables && (ss.variables.sceneTitle || ss.variables.narrativeBody)) {
@@ -144,6 +145,7 @@ interface StreamingPhaseParams {
 	tools: ToolSet | undefined;
 	callbacks: PipelineCallbacks;
 	retryConfig: RetryConfig;
+	descriptors: OutputDescriptor[];
 	buildStateUpdate: (streamState: StreamState) => Partial<PipelineState>;
 }
 
@@ -159,11 +161,11 @@ async function executeStreamingPhase(
 	params: StreamingPhaseParams,
 	state: PipelineState
 ): Promise<{ state: PipelineState; streamState: StreamState; metadata: StreamResultMetadata }> {
-	const { phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig, buildStateUpdate } = params;
+	const { phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig, descriptors, buildStateUpdate } = params;
 	state = updateState(state, { currentPhase: phaseName });
 	callbacks.onPhaseStart(phaseName);
 	try {
-		const result = await runStreamingPhase(phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig);
+		const result = await runStreamingPhase(phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig, descriptors);
 		state = updateState(state, buildStateUpdate(result.state));
 		callbacks.onPhaseComplete(phaseName, state);
 		return { state, streamState: result.state, metadata: result.metadata };
@@ -184,7 +186,8 @@ async function runStreamingPhase(
 	abortSignal: AbortSignal,
 	tools: ToolSet | undefined,
 	callbacks: PipelineCallbacks,
-	retryConfig: RetryConfig
+	retryConfig: RetryConfig,
+	descriptors: OutputDescriptor[]
 ): Promise<{ state: StreamState; metadata: StreamResultMetadata }> {
 	if (!providerConfig) {
 		throw new Error(`No provider configured for ${phaseName}. Please set one in Settings.`);
@@ -202,6 +205,7 @@ async function runStreamingPhase(
 		providerConfig,
 		tools,
 		abortSignal,
+		descriptors,
 		onRetry: callbacks.onPhaseRetry
 			? (attempt: number, maxAttempts: number) => {
 					callbacks.onPhaseRetry!(phaseName, attempt, maxAttempts);
@@ -464,6 +468,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					.replaceAll('{generalInstructions}', generalInstructions)
 					.replaceAll('{targetWordCount}', effectiveTargetWordCount),
 				...sharedParams,
+				descriptors: NARRATIVE_DESCRIPTORS,
 				messages: toUserMessages([
 					SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
 					SECTION.WORLD_CONTENT + worldContent,
@@ -492,6 +497,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				phaseName: 'REVIEWER',
 				systemPrompt: reviewerSystemPromptTemplate.replaceAll('{generalInstructions}', generalInstructions),
 				...sharedParams,
+				descriptors: REVIEWER_DESCRIPTORS,
 				messages: toUserMessages([
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
@@ -531,6 +537,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 						.replaceAll('{generalInstructions}', generalInstructions)
 						.replaceAll('{targetWordCount}', effectiveTargetWordCount),
 					...sharedParams,
+				descriptors: EDITOR_DESCRIPTORS,
 					messages: toUserMessages([
 						SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
 						SECTION.WORLD_CONTENT + worldContent,
@@ -564,6 +571,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				phaseName: 'GAME_MASTER',
 				systemPrompt: gameMasterSystemPrompt,
 				...sharedParams,
+				descriptors: GAME_MASTER_DESCRIPTORS,
 				messages: toUserMessages([
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,

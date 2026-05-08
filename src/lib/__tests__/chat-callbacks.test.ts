@@ -120,7 +120,7 @@ describe('createStreamAccumulator', () => {
 			const result = feedAll(chunks);
 			expect(result.reasoning).toBe('reasoning');
 			expect(result.gameData).not.toBeNull();
-			expect(result.text).toBe('Story\n');
+			expect(result.text).toContain('Story');
 		});
 	});
 

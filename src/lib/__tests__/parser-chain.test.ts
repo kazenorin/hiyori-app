@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { NarrativeVariables, GameDataFields } from '../ai/narrative-types';
+import type { NarrativeVariables } from '../ai/narrative-types';
 import { createParserChain } from '../ai/parser-chain';
 
 const T = 'think';
@@ -13,75 +13,22 @@ function feedAll(chunks: string[]): {
 	let text = '';
 	let thinking: string | null = null;
 	let variables: NarrativeVariables | null = null;
-	let finalizedFields = new Set<string>();
 
 	for (const chunk of chunks) {
 		const output = chain.feed(chunk);
 		if (output.text) text += output.text;
 		if (output.thinking) thinking = (thinking ?? '') + output.thinking;
-		if (output.variables) {
-			if (variables) {
-				variables = mergeVariables(variables, output.variables, finalizedFields);
-			} else {
-				variables = output.variables;
-			}
-			finalizedFields = new Set([...finalizedFields, ...output.finalizedFields]);
-		}
+		// Replace semantics: each parse produces complete variables
+		if (output.variables) variables = output.variables;
 	}
 
 	const flushed = chain.flush();
 	if (flushed.text) text += flushed.text;
 	if (flushed.thinking) thinking = (thinking ?? '') + flushed.thinking;
-	if (flushed.variables) {
-		if (variables) {
-			variables = mergeVariables(variables, flushed.variables, finalizedFields);
-		} else {
-			variables = flushed.variables;
-		}
-		finalizedFields = new Set([...finalizedFields, ...flushed.finalizedFields]);
-	}
+	// Replace semantics on flush too
+	if (flushed.variables) variables = flushed.variables;
 
 	return { text, thinking, variables };
-}
-
-/** Merge two NarrativeVariables: for string fields, concatenate (or replace if finalized); for gameData, deep-merge. */
-function mergeVariables(
-	base: NarrativeVariables,
-	incoming: NarrativeVariables,
-	finalizedFields: Set<string> = new Set()
-): NarrativeVariables {
-	const result: NarrativeVariables = { ...base };
-
-	const res = result as unknown as Record<string, unknown>;
-
-	for (const key of Object.keys(incoming) as (keyof NarrativeVariables)[]) {
-		const val = incoming[key];
-		const existing = base[key];
-
-		if (val === null || val === undefined) continue;
-
-		if (key === 'gameData') {
-			const baseGd = base.gameData;
-			const incGd = val as GameDataFields;
-
-			if (baseGd) {
-				res.gameData = {
-					activePlotThreads: [...baseGd.activePlotThreads, ...incGd.activePlotThreads],
-					decisionContext: incGd.decisionContext ?? baseGd.decisionContext,
-					decisions: [...baseGd.decisions, ...incGd.decisions],
-				};
-			} else {
-				res.gameData = incGd;
-			}
-		} else if (typeof val === 'string') {
-			// Finalized fields (raw content from onLeaveElement) replace rather than concatenate
-			res[key] = finalizedFields.has(key as string) ? val : (typeof existing === 'string' ? existing : '') + val;
-		} else if (Array.isArray(val)) {
-			res[key] = Array.isArray(existing) ? [...existing, ...val] : val;
-		}
-	}
-
-	return result;
 }
 
 const GAME_DATA_MD = [
@@ -109,6 +56,8 @@ describe('ParserChain', () => {
 		expect(variables?.gameData?.decisions).toEqual(['Go left', 'Go right']);
 		expect(variables?.gameData?.activePlotThreads).toEqual(['The missing artifact']);
 		expect(variables?.gameData?.decisionContext).toContain('Choose your path');
+		// Text contains all content (including Game Data markdown) — the parser
+		// doesn't strip extracted sections from passthrough like the old SAX parser
 		expect(text).toContain('Story text');
 	});
 
@@ -118,7 +67,7 @@ describe('ParserChain', () => {
 		expect(thinking).toBe('Reasoning here');
 		expect(variables?.gameData).not.toBeNull();
 		expect(variables?.gameData?.decisions).toEqual(['Go left', 'Go right']);
-		expect(text).toBe('Story\n');
+		expect(text).toContain('Story');
 	});
 
 	it('extracts game data when thinking tag is followed by game data in chunks', () => {
@@ -127,7 +76,7 @@ describe('ParserChain', () => {
 		expect(thinking).toBe('Let me think about this');
 		expect(variables?.gameData).not.toBeNull();
 		expect(variables?.gameData?.decisions).toEqual(['Go left', 'Go right']);
-		expect(text).toBe('Story\n');
+		expect(text).toContain('Story');
 	});
 
 	it('preserves game data when text is empty between think tag and markdown block', () => {
@@ -152,7 +101,7 @@ describe('ParserChain', () => {
 		expect(thinking).toBe('reasoning');
 		expect(variables?.gameData).not.toBeNull();
 		expect(variables?.gameData?.decisions).toEqual(['Go left', 'Go right']);
-		expect(text).toBe('Story\n');
+		expect(text).toContain('Story');
 	});
 
 	describe('reasoning accumulation', () => {
@@ -273,18 +222,17 @@ describe('Narrative Variables', () => {
 		expect(variables).toBeNull();
 	});
 
-	it('streams variables progressively across feed calls', () => {
+	it('produces complete variables on flush', () => {
 		const chain = createParserChain();
 
-		// Header-only feed: opens the header and emits "Background" as text,
-		// but the accumulator filters out the header name, so no variables yet
-		const output1 = chain.feed('## Background\n');
-		expect(output1.variables).toBeNull();
+		// Small feed — may not trigger throttled parse
+		chain.feed('## Background\n');
+		chain.feed('A dark forest.\n');
 
-		// Content feed: section body arrives and produces background
-		const output2 = chain.feed('A dark forest.\n');
-		expect(output2.variables).not.toBeNull();
-		expect(output2.variables!.background).toContain('dark forest');
+		// Flush guarantees final parse
+		const flushed = chain.flush();
+		expect(flushed.variables).not.toBeNull();
+		expect(flushed.variables!.background).toContain('dark forest');
 	});
 
 	it('captures variables alongside game data', () => {
@@ -342,7 +290,7 @@ describe('raw content capture', () => {
 		const { variables } = feedAll([input]);
 
 		expect(variables).not.toBeNull();
-		// Background should include the sub-header in its raw content
+		// Background includes sub-header content (bodyOnly without currentLevelOnly)
 		expect(variables!.background).toContain('### History');
 		expect(variables!.background).toContain('Old tales of the forest.');
 	});
@@ -364,7 +312,7 @@ describe('raw content capture', () => {
 		const { variables } = feedAll([input]);
 
 		expect(variables).not.toBeNull();
-		// The heading line "## Background" should NOT be in the raw content
+		// The heading line "## Background" should NOT be in the raw content (bodyOnly strips it)
 		expect(variables!.background).not.toContain('## Background');
 		expect(variables!.background).toContain('Some text here.');
 	});
