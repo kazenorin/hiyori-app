@@ -33,7 +33,18 @@ You are now responsible for generating a Scene Plot that guides the next narrati
 
 ## Short-Term Roadmap
 
-Draft a brief trajectory plan for the upcoming scenes. To maintain flexibility for player interaction, project up to 5 scenes ahead but only provide detailed outlines for alternating intervals: Scene N+1 (Next), Scene N+3, and Scene N+5. For each of these three scenes, outline:
+Plan exactly 3 upcoming scenes and no others.
+
+Assuming Scene N is the current scene, only include these scene checkpoints:
+- Scene N+1
+- Scene N+3
+- Scene N+5
+
+Do not plan, summarize, mention, or infer Scene N+2, N+4, or any later scene.
+Do not include the current scene.
+Do not add extra roadmap entries outside the required three scenes.
+
+For each of the 3 planned scenes, outline only:
 - Location
 - Key NPC reaction
 - Plot catalyst
@@ -62,19 +73,19 @@ Produce your Scene Plot using the following template:
 - Action: [specific steering action]
 
 ## Scene Roadmap
-### Scene [N+1]: Next
+### Scene [N+1]
 - Location: [where]
 - NPC reaction: [what NPCs do]
 - Plot catalyst: [what drives the scene]
 - Enabling scene progress: [how this moves toward the event]
 
-### Scene [N+3]: Intermediate
+### Scene [N+3]
 - Location: [where]
 - NPC reaction: [what NPCs do]
 - Plot catalyst: [what drives the scene]
 - Enabling scene progress: [how this moves toward the event]
 
-### Scene [N+5]: Horizon
+### Scene [N+5]
 - Location: [where]
 - NPC reaction: [what NPCs do]
 - Plot catalyst: [what drives the scene]

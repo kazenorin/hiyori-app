@@ -58,10 +58,11 @@ const gameMasterExtractionPrompt = 'Generate the game data based on the availabl
 const editorExtractionPrompt =
 	'Apply suggestions from the reviewer output to the writer output. ' +
 	'Judge whether the suggestions are necessary based on the available information in the chat history.';
-const reviewerExtractionPrompt = `Perform a review on the writer's output based on the available information in the chat history.`;
-const writerExtractionPrompt = 'Write a story prose based on the available information in the chat history.';
+const reviewerExtractionPromptTemplate = `Perform a review on the writer's output for Scene {currentScene} based on the available information in the chat history.`;
+const writerExtractionPromptTemplate =
+	'Write a story prose for Scene {currentScene} based on the available information in the chat history.';
 const plotPlannerExtractionPromptTemplate =
-	'The current scene is Scene {currentScene}. Plan a Scene Plot based on the available information in the chat history.';
+	'The current scene is Scene {currentScene}. Plan a Scene Plot for the next scenes ({nPlus1}, {nPlus3}, {nPlus5}) based on the available information in the chat history.';
 
 const summarizerFallbackExtractionPromptTemplate = 'Update the Act Summary for Scene {completedScenes} based on the Player Response.';
 const summarizerExtractionPromptTemplate =
@@ -395,6 +396,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 	const defaultTargetWordCount = 400; // TODO: make this configurable in settings
 	const effectiveTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
+	const currentScene = completedScenes > 0 ? String(completedScenes + 1) : '1';
 
 	const previousNarrativeBody = previousNarrativeVariables?.narrativeBody;
 
@@ -462,7 +464,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
 					...(previousNarrativeBody ? [SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeBody] : []),
 					...playerResponseSection(player),
-					writerExtractionPrompt,
+					writerExtractionPromptTemplate.replaceAll('{currentScene}', currentScene),
 				]),
 				providerConfig: providerConfigs.writer,
 				buildStateUpdate: (ss) => ({
@@ -492,7 +494,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					...(previousNarrativeBody ? [SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeBody] : []),
 					...playerResponseSection(player),
 					...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
-					reviewerExtractionPrompt,
+					reviewerExtractionPromptTemplate.replaceAll('{currentScene}', currentScene),
 				]),
 				providerConfig: providerConfigs.reviewer,
 				buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),
@@ -591,7 +593,11 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					descriptors: PLOT_PLANNER_DESCRIPTORS,
 					messages: toUserMessages([
 						...sharedSections,
-						plotPlannerExtractionPromptTemplate.replaceAll('{currentScene}', String(completedScenes + 1)),
+						plotPlannerExtractionPromptTemplate
+							.replaceAll('{currentScene}', currentScene)
+							.replaceAll('{nPlus1}', String(completedScenes + 2))
+							.replaceAll('{nPlus3}', String(completedScenes + 4))
+							.replaceAll('{nPlus5}', String(completedScenes + 6)),
 					]),
 					providerConfig: providerConfigs.plotPlanner,
 					buildStateUpdate: (ss) => ({
