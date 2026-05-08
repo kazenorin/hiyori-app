@@ -11,6 +11,7 @@ import type { StreamResultMetadata } from './streaming';
 import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
 import { variablesToMarkdown } from './template-renderer';
 import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
+import { filterToolsForPhase } from '$lib/ai/tools/tools';
 import { log } from '$lib/logging/logger';
 import {
 	actSummaryIncrementalTemplateLoader,
@@ -360,7 +361,7 @@ export interface PipelineResult {
  */
 async function runPlotPlanner(input: PipelineInput, loadedPrompts: LoadedPrompts, effectiveTargetWordCount: string): Promise<string> {
 	const { worldContent, actPlot, actSummary, execution } = input;
-	const { providerConfigs, abortSignal } = execution;
+	const { providerConfigs, abortSignal, tools } = execution;
 	const playerResponse = input.player?.playerResponse;
 	const { plotPlannerSystemPrompt, generalInstructions } = loadedPrompts;
 
@@ -382,7 +383,7 @@ async function runPlotPlanner(input: PipelineInput, loadedPrompts: LoadedPrompts
 		messages,
 		providerConfigs.plotPlanner,
 		abortSignal,
-		input.execution.tools
+		filterToolsForPhase(tools, 'PLOT_PLANNER')
 	);
 }
 
@@ -424,7 +425,6 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 	const sharedParams = {
 		abortSignal,
-		tools,
 		callbacks,
 		retryConfig,
 	};
@@ -479,6 +479,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					.replaceAll('{generalInstructions}', generalInstructions)
 					.replaceAll('{targetWordCount}', effectiveTargetWordCount),
 				...sharedParams,
+				tools: filterToolsForPhase(tools, 'WRITER'),
 				descriptors: NARRATIVE_DESCRIPTORS,
 				messages: toUserMessages([
 					SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
@@ -508,6 +509,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				phaseName: 'REVIEWER',
 				systemPrompt: reviewerSystemPromptTemplate.replaceAll('{generalInstructions}', generalInstructions),
 				...sharedParams,
+				tools: filterToolsForPhase(tools, 'REVIEWER'),
 				descriptors: REVIEWER_DESCRIPTORS,
 				messages: toUserMessages([
 					SECTION.WORLD_CONTENT + worldContent,
@@ -548,6 +550,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 						.replaceAll('{generalInstructions}', generalInstructions)
 						.replaceAll('{targetWordCount}', effectiveTargetWordCount),
 					...sharedParams,
+					tools: filterToolsForPhase(tools, 'EDITOR'),
 					descriptors: EDITOR_DESCRIPTORS,
 					messages: toUserMessages([
 						SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
@@ -582,6 +585,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				phaseName: 'GAME_MASTER',
 				systemPrompt: gameMasterSystemPrompt,
 				...sharedParams,
+				tools: filterToolsForPhase(tools, 'GAME_MASTER'),
 				descriptors: GAME_MASTER_DESCRIPTORS,
 				messages: toUserMessages([
 					SECTION.ACT_PLOT + actPlot,
