@@ -1,5 +1,6 @@
 import { createNarrativeStreamParser } from './narrative-stream-parser';
 import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
+import type { NarrativeVariables } from './narrative-types';
 import { NARRATIVE_DESCRIPTORS } from './descriptors';
 
 // --- Parser chain ---
@@ -7,7 +8,7 @@ import { NARRATIVE_DESCRIPTORS } from './descriptors';
 export interface ParserChainOutput {
 	text: string | null;
 	thinking: string | null;
-	variables: import('./narrative-types').NarrativeVariables | null;
+	variables: NarrativeVariables | null;
 	/** Unused in the new parser — kept for interface compatibility. */
 	finalizedFields: Set<string>;
 }
