@@ -3,7 +3,7 @@ import type { StreamParser } from './stream-parser';
 import type { GameDataFields } from './narrative-types';
 import { FIELD_DESCRIPTORS } from './narrative-types';
 import { mergeGameDataFields } from './message-updater';
-import { kebabCase } from 'lodash';
+import { kebabCase } from 'lodash-es';
 
 /** Key used on the accumulator to track which fields have been finalized with raw content. */
 const FINALIZED_FIELDS_KEY = '__finalized';

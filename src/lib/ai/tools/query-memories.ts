@@ -1,6 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
-import { sampleSize } from 'lodash';
+import { sampleSize } from 'lodash-es';
 import { Memory, type MemoryItem } from '$lib/memory/memory';
 import { batchResolveActLineInfo } from '$lib/db/act-lines';
 import { fileLog } from '$lib/logging/logger';

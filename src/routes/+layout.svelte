@@ -1,7 +1,7 @@
 <script lang="ts">
 	import './+layout.css';
 	import { onMount } from 'svelte';
-	import { clamp } from 'lodash';
+	import { clamp } from 'lodash-es';
 	import { goto } from '$app/navigation';
 	import { initializeApp } from '$lib/app/init.svelte';
 	import { log } from '$lib/logging/logger';

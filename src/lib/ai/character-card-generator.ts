@@ -14,7 +14,7 @@ import { getAct } from '$lib/db/acts';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { getActiveStoryId, getActiveActId, getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
 import { mkdir, writeTextFile, readTextFile, exists, BaseDirectory } from '@tauri-apps/plugin-fs';
-import { kebabCase } from 'lodash';
+import { kebabCase } from 'lodash-es';
 import { log } from '$lib/logging/logger';
 import { logCharacterCardActivity } from '$lib/logging/chat-logger';
 import { buildLineDir } from './card-output-path';

@@ -1,5 +1,5 @@
 import { marked, type Tokens } from 'marked';
-import { kebabCase } from 'lodash';
+import { kebabCase } from 'lodash-es';
 
 // === Existing interface and function (used by memory-extraction-pipeline) ===
 

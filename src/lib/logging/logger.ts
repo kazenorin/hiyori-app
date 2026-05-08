@@ -1,6 +1,6 @@
 import { attachConsole, debug as tauriDebug, error as tauriError, info as tauriInfo, warn as tauriWarn } from '@tauri-apps/plugin-log';
 import { BaseDirectory, mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
-import { kebabCase } from 'lodash';
+import { kebabCase } from 'lodash-es';
 import { getSettings, LOG_LEVEL_VALUES, type LogLevel } from '$lib/stores/settings.svelte';
 
 let attached = false;

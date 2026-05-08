@@ -8,7 +8,7 @@ import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { deleteStoryFolder } from '$lib/db/story-folders';
 import { BaseDirectory, mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { loadStories } from '$lib/stores/stories.svelte';
-import { kebabCase } from 'lodash';
+import { kebabCase } from 'lodash-es';
 import type { ImportFormData, ImportProgressUpdate, ImportResult, ParsedMessage } from './types';
 import { emptyVariables } from '$lib/ai/narrative-types';
 import type { RetryConfig } from '$lib/ai/chat-stream';

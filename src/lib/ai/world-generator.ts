@@ -1,6 +1,6 @@
 import type {MessageBase} from '$lib/db/messages';
 import { streamText } from 'ai';
-import { maxBy } from 'lodash';
+import { maxBy } from 'lodash-es';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
 import { loadWorldTemplate, loadGenerateWorldFromChatPrompt, loadGenerateWorldFromChatSystemPrompt } from '$lib/fs/prompts';

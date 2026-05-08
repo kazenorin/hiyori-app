@@ -48,7 +48,7 @@
 		setActiveActPlotContent,
 	} from '$lib/stores/stories.svelte';
 	import {Accordion} from '@skeletonlabs/skeleton-svelte';
-	import {findLastIndex} from 'lodash';
+	import {findLastIndex} from 'lodash-es';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import ChatControls from '$lib/components/ChatControls.svelte';
 	import WorldBuilderControls from '$lib/components/WorldBuilderControls.svelte';

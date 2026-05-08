@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { omitBy } from 'lodash';
+import { omitBy } from 'lodash-es';
 
 export type Provider = 'openai' | 'openai-compatible' | 'ollama';
 export type ApiType = 'chat-completions' | 'responses';

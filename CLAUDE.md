@@ -34,7 +34,7 @@ Check `local-references/*` for local reference files (if any).
 
 ## Lodash Usage
 
-The project uses lodash for common utility operations. Import from `lodash` (not `lodash-es`):
+The project uses lodash-es for common utility operations. Import from `lodash-es` (not `lodash`):
 
 - `clamp` — clamping values to a range
 - `kebabCase` — string to kebab-case for file naming
