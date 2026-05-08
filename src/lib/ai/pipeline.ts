@@ -221,7 +221,8 @@ async function runNonStreamingPhase(
 	systemPrompt: string,
 	messages: MessageBase[],
 	providerConfig: ProviderConfig | undefined,
-	abortSignal: AbortSignal
+	abortSignal: AbortSignal,
+	tools?: ToolSet
 ): Promise<string> {
 	if (!providerConfig) {
 		throw new Error(`No provider configured for ${phaseName}. Please set one in Settings.`);
@@ -233,6 +234,7 @@ async function runNonStreamingPhase(
 		messages,
 		system: systemPrompt,
 		abortSignal,
+		...(tools && Object.keys(tools).length > 0 ? { tools, maxSteps: 5 } : {}),
 	});
 
 	return result.text;
@@ -359,7 +361,14 @@ async function runPlotPlanner(input: PipelineInput, loadedPrompts: LoadedPrompts
 		plotPlannerExtractionPrompt,
 	]);
 
-	return await runNonStreamingPhase('PLOT_PLANNER', systemPrompt, messages, providerConfigs.plotPlanner, abortSignal);
+	return await runNonStreamingPhase(
+		'PLOT_PLANNER',
+		systemPrompt,
+		messages,
+		providerConfigs.plotPlanner,
+		abortSignal,
+		input.execution.tools
+	);
 }
 
 /**
@@ -390,11 +399,11 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	const storyId = story?.storyId;
 	const storyName = story?.storyName;
 	const actLineId = story?.actLineId;
-	const playerResponse = player?.playerResponse;
-	const playerMessageId = player?.playerMessageId;
 
 	const defaultTargetWordCount = 400; // TODO: make this configurable in settings
 	const effectiveTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
+
+	const previousNarrativeBody = previousNarrativeVariables?.narrativeBody;
 
 	const retryConfig = input.retryConfig ?? DEFAULT_RETRY_CONFIG;
 
@@ -421,20 +430,18 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 	// --- Async phases (Summarizer + Plot Planner parallel, then Memory) ---
 	const asyncPhases = (async (): Promise<AsyncPhaseResults> => {
-		let newActSummary: string | undefined;
-
-		if (playerResponse && completedScenes > 0) {
+		if (player?.playerResponse && completedScenes > 0) {
 			// Summarizer + Plot Planner run in parallel
-			const [summaryResult, plotResult] = await Promise.all([
+			const [newActSummary, plotResult] = await Promise.all([
 				actSummary ? generateIncrementalSummary(input, loadedPrompts) : generateFullSummary(input, loadedPrompts),
 				runPlotPlanner(input, loadedPrompts, effectiveTargetWordCount),
 			]);
-			newActSummary = summaryResult;
 
 			// Memory extraction depends on Summarizer result
-			if (previousNarrativeVariables?.narrativeBody && actLineId && playerMessageId && storyId) {
+			const playerMessageId = player.playerMessageId;
+			if (previousNarrativeBody && actLineId && playerMessageId && storyId) {
 				try {
-					await runMemoryExtractionPipeline(previousNarrativeVariables.narrativeBody, storyId, actLineId, playerMessageId, newActSummary);
+					await runMemoryExtractionPipeline(previousNarrativeBody, storyId, actLineId, playerMessageId, newActSummary);
 				} catch (err) {
 					await log.error('memory-pipeline', 'Memory extraction failed', err);
 				}
@@ -463,7 +470,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
 					...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
-					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+					...(previousNarrativeBody ? [SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeBody] : []),
+					...playerResponseSection(player),
 					writerExtractionPrompt,
 				]),
 				providerConfig: providerConfigs.writer,
@@ -489,7 +497,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
 					...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
-					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+					...(previousNarrativeBody ? [SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeBody] : []),
+					...playerResponseSection(player),
 					...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
 					reviewerExtractionPrompt,
 				]),
@@ -528,7 +537,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 						SECTION.ACT_PLOT + actPlot,
 						SECTION.ACT_SUMMARY + actSummary,
 						...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
-						...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+						...(previousNarrativeBody ? [SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeBody] : []),
+						...playerResponseSection(player),
 						...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
 						...(state.reviewerOutput ? [SECTION.REVIEWER_OUTPUT + state.reviewerOutput] : []),
 						editorExtractionPrompt,
@@ -558,7 +568,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
 					...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
-					...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
+					...(previousNarrativeBody ? [SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeBody] : []),
+					...playerResponseSection(player),
 					...(state.editorOutput ? [SECTION.EDITOR_OUTPUT + state.editorOutput] : []),
 					gameMasterExtractionPrompt,
 				]),
