@@ -1,4 +1,4 @@
-import  { stepCountIs, type ToolSet } from 'ai';
+import { stepCountIs, type ToolSet } from 'ai';
 import { generateText } from 'ai';
 import type { MessageBase } from '$lib/db/messages';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
