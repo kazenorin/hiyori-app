@@ -364,6 +364,12 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 					const content = renderContent(finalVars, current.content);
 					setCurrentMessage({...current, content, variables: finalVars ?? current.variables});
 				}
+
+				// After Plot Planner completes, store scene plot on the message
+				if (phase === 'PLOT_PLANNER' && pipelineState.scenePlot) {
+					const current = getCurrentMessage();
+					setCurrentMessage({...current, scenePlot: pipelineState.scenePlot});
+				}
 			},
 			onError: (phase: PhaseName, err: unknown) => {
 				const errorMessage = getErrorMessage(err);
@@ -418,10 +424,9 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		const assistantMessageId = getCurrentMessage().id;
 		pendingAsyncPhases =
 			result.asyncPhases?.then(async (asyncResults) => {
-				if (asyncResults.actSummary !== undefined || asyncResults.scenePlot !== undefined) {
+				if (asyncResults.actSummary !== undefined) {
 					await dbMessages.updateMessageFields(assistantMessageId, {
 						actSummary: asyncResults.actSummary,
-						scenePlot: asyncResults.scenePlot,
 					});
 				}
 				const targetMessageIdx = messages.findLastIndex((m) => m.id === assistantMessageId);
@@ -431,13 +436,9 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 					if (asyncResults.actSummary !== undefined) {
 						updatedPhases.push({phaseName: 'SUMMARIZER' as PhaseName, content: asyncResults.actSummary});
 					}
-					if (asyncResults.scenePlot !== undefined) {
-						updatedPhases.push({phaseName: 'PLOT_PLANNER' as PhaseName, content: asyncResults.scenePlot});
-					}
 					messages[targetMessageIdx] = {
 						...existing,
 						actSummary: asyncResults.actSummary ?? existing.actSummary,
-						scenePlot: asyncResults.scenePlot ?? existing.scenePlot,
 						phases: updatedPhases,
 					};
 				}

@@ -34,3 +34,6 @@ export const REVIEWER_DESCRIPTORS: OutputDescriptor[] = [];
 
 /** Editor phase — scene fields only (game data comes from GM phase). */
 export const EDITOR_DESCRIPTORS: OutputDescriptor[] = SCENE_DESCRIPTORS;
+
+/** Plot Planner phase — no variable extraction needed (returns raw content as scenePlot). */
+export const PLOT_PLANNER_DESCRIPTORS: OutputDescriptor[] = [];

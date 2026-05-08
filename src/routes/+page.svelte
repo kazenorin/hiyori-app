@@ -14,7 +14,7 @@
 		regenerateLastResponse,
 		sendInitialNarration,
 		sendMessage,
-		stopStreaming,
+		stopStreaming, type UIMessage,
 	} from '$lib/ai/chat.svelte';
 	import {
 		deleteLastWorldBuilderExchange,
@@ -32,7 +32,7 @@
 		regenerateLastWorldBuilderResponse,
 		removeLastInterviewAssistantMessage,
 		sendWorldBuilderMessage,
-		stopStreaming as stopWorldBuilderStreaming,
+		stopStreaming as stopWorldBuilderStreaming, type WorldBuilderMessage,
 	} from '$lib/ai/world-builder.svelte';
 	import {
 		createStoryFromWorldBuilder,
@@ -48,7 +48,6 @@
 		setActiveActPlotContent,
 	} from '$lib/stores/stories.svelte';
 	import {Accordion} from '@skeletonlabs/skeleton-svelte';
-	import {findLastIndex} from 'lodash-es';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import ChatControls from '$lib/components/ChatControls.svelte';
 	import WorldBuilderControls from '$lib/components/WorldBuilderControls.svelte';
@@ -70,14 +69,14 @@
 	let latestDecisions = $derived(getLatestDecisions());
 	let latestActivePlotThreads = $derived(getLatestActivePlotThreads());
 	let latestDecisionContext = $derived(getLatestDecisionContext());
-	let lastMessageIdx = $derived(findLastIndex(getMessages(), (m) => m.role === 'assistant'));
+	let lastMessageIdx = $derived(getMessages().findLastIndex((m: UIMessage) => m.role === 'assistant'));
 	let storyMessageTemplate = $state<string>('');
 
 	// Preload template on mount
 	onMount(() => {
 		loadStoryMessageTemplate().then((t) => { storyMessageTemplate = t; }).catch(() => {});
 	});
-	let lastWbMessageIdx = $derived(findLastIndex(getWorldBuilderMessages(), (m) => m.role === 'assistant'));
+	let lastWbMessageIdx = $derived(getWorldBuilderMessages().findLastIndex((m: WorldBuilderMessage) => m.role === 'assistant'));
 
 	// World builder story creation state
 	let showCreateStoryOptions = $state(false);

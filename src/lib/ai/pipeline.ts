@@ -29,7 +29,7 @@ import {
 } from '$lib/fs/prompts';
 import { mergeActSummary, parseActSummary, parseIncrementalOutput, serializeActSummary } from './act-summary-parser';
 import { reviewerAcceptsAsIs } from './reviewer-output-parser';
-import { NARRATIVE_DESCRIPTORS, REVIEWER_DESCRIPTORS, EDITOR_DESCRIPTORS, GAME_MASTER_DESCRIPTORS } from './descriptors';
+import { NARRATIVE_DESCRIPTORS, REVIEWER_DESCRIPTORS, EDITOR_DESCRIPTORS, GAME_MASTER_DESCRIPTORS, PLOT_PLANNER_DESCRIPTORS } from './descriptors';
 
 // Markdown section headings used in phase prompts
 const SECTION = {
@@ -356,42 +356,13 @@ export interface PipelineResult {
 }
 
 /**
- * Returns the generated scene plot text.
- */
-async function runPlotPlanner(input: PipelineInput, loadedPrompts: LoadedPrompts, effectiveTargetWordCount: string): Promise<string> {
-	const { worldContent, actPlot, actSummary, execution } = input;
-	const { providerConfigs, abortSignal, tools } = execution;
-	const playerResponse = input.player?.playerResponse;
-	const { plotPlannerSystemPrompt, generalInstructions } = loadedPrompts;
-
-	const systemPrompt = plotPlannerSystemPrompt
-		.replaceAll('{generalInstructions}', generalInstructions)
-		.replaceAll('{targetWordCount}', effectiveTargetWordCount);
-
-	const messages = toUserMessages([
-		SECTION.WORLD_CONTENT + worldContent,
-		SECTION.ACT_PLOT + actPlot,
-		SECTION.ACT_SUMMARY + actSummary,
-		...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
-		plotPlannerExtractionPrompt,
-	]);
-
-	return await runNonStreamingPhase(
-		'PLOT_PLANNER',
-		systemPrompt,
-		messages,
-		providerConfigs.plotPlanner,
-		abortSignal,
-		filterToolsForPhase(tools, 'PLOT_PLANNER')
-	);
-}
-
-/**
  * Run the full narrative generation pipeline.
  *
- * Sequential phases (Writer → Reviewer → Editor → Game Master) run in order.
- * Async phases (Summarizer + Plot Planner in parallel, then Memory Extraction)
- * run concurrently with the sequential chain and resolve afterward.
+ * Sequential phases: Writer → Reviewer → Editor → [Game Master ‖ Plot Planner].
+ * Game Master and Plot Planner run concurrently after Editor completes,
+ * sharing the same context (editor output, act plot, etc.) with per-phase extraction prompts.
+ * Async phases (Summarizer, then Memory Extraction) run concurrently with the
+ * sequential chain and resolve afterward.
  * Editor LLM call is skipped when the reviewer indicates "accept as-is".
  * Context is passed as user messages, not stuffed into the system prompt.
  */
@@ -440,16 +411,15 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		reviewerSystemPromptTemplate,
 		editorSystemPrompt,
 		gameMasterSystemPrompt,
+		plotPlannerSystemPrompt,
 	} = loadedPrompts;
 
-	// --- Async phases (Summarizer + Plot Planner parallel, then Memory) ---
+	// --- Async phases (Summarizer, then Memory) ---
 	const asyncPhases = (async (): Promise<AsyncPhaseResults> => {
 		if (player?.playerResponse && completedScenes > 0) {
-			// Summarizer + Plot Planner run in parallel
-			const [newActSummary, plotResult] = await Promise.all([
-				actSummary ? generateIncrementalSummary(input, loadedPrompts) : generateFullSummary(input, loadedPrompts),
-				runPlotPlanner(input, loadedPrompts, effectiveTargetWordCount),
-			]);
+			const newActSummary = actSummary
+				? await generateIncrementalSummary(input, loadedPrompts)
+				: await generateFullSummary(input, loadedPrompts);
 
 			// Memory extraction depends on Summarizer result
 			const playerMessageId = player.playerMessageId;
@@ -461,12 +431,9 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				}
 			}
 
-			return { actSummary: newActSummary, scenePlot: plotResult };
-		} else {
-			// No player response — only run Plot Planner
-			const plotResult = await runPlotPlanner(input, loadedPrompts, effectiveTargetWordCount);
-			return { scenePlot: plotResult };
+			return { actSummary: newActSummary };
 		}
+		return {};
 	})();
 
 	// --- Sequential Phase 1: Writer ---
@@ -577,33 +544,56 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		}
 	}
 
-	// --- Sequential Phase 4: Game Master ---
+	// --- Phase 4: Game Master + Plot Planner (concurrent) ---
 	{
-		const result = await executeStreamingPhase(
-			{
-				phaseName: 'GAME_MASTER',
-				systemPrompt: gameMasterSystemPrompt,
-				...sharedParams,
-				tools: filterToolsForPhase(tools, 'GAME_MASTER'),
-				descriptors: GAME_MASTER_DESCRIPTORS,
-				messages: toUserMessages([
-					SECTION.ACT_PLOT + actPlot,
-					SECTION.ACT_SUMMARY + actSummary,
-					...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
-					...(previousNarrativeBody ? [SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeBody] : []),
-					...playerResponseSection(player),
-					...(state.editorOutput ? [SECTION.EDITOR_OUTPUT + state.editorOutput] : []),
-					gameMasterExtractionPrompt,
-				]),
-				providerConfig: providerConfigs.gameMaster,
-				buildStateUpdate: (ss) => ({
-					gameMasterOutput: ss.content,
-					gameData: ss.variables?.gameData ?? null,
-				}),
-			},
-			state
-		);
-		state = result.state;
+		const editorOutput = state.editorOutput ?? '';
+		const sharedSections = [
+			SECTION.ACT_PLOT + actPlot,
+			SECTION.ACT_SUMMARY + actSummary,
+			...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
+			...(previousNarrativeBody ? [SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeBody] : []),
+			...playerResponseSection(player),
+			...(editorOutput ? [SECTION.EDITOR_OUTPUT + editorOutput] : []),
+		];
+
+		const [gmResult, plotResult] = await Promise.all([
+			executeStreamingPhase(
+				{
+					phaseName: 'GAME_MASTER',
+					systemPrompt: gameMasterSystemPrompt,
+					...sharedParams,
+					tools: filterToolsForPhase(tools, 'GAME_MASTER'),
+					descriptors: GAME_MASTER_DESCRIPTORS,
+					messages: toUserMessages([...sharedSections, gameMasterExtractionPrompt]),
+					providerConfig: providerConfigs.gameMaster,
+					buildStateUpdate: (ss) => ({
+						gameMasterOutput: ss.content,
+						gameData: ss.variables?.gameData ?? null,
+					}),
+				},
+				state
+			),
+			executeStreamingPhase(
+				{
+					phaseName: 'PLOT_PLANNER',
+					systemPrompt: plotPlannerSystemPrompt
+						.replaceAll('{generalInstructions}', generalInstructions)
+						.replaceAll('{targetWordCount}', effectiveTargetWordCount),
+					...sharedParams,
+					tools: filterToolsForPhase(tools, 'PLOT_PLANNER'),
+					descriptors: PLOT_PLANNER_DESCRIPTORS,
+					messages: toUserMessages([...sharedSections, plotPlannerExtractionPrompt]),
+					providerConfig: providerConfigs.plotPlanner,
+					buildStateUpdate: (ss) => ({
+						scenePlot: ss.content,
+					}),
+				},
+				state
+			),
+		]);
+
+		state = gmResult.state;
+		state = updateState(state, { scenePlot: plotResult.state.scenePlot });
 	}
 
 	state = updateState(state, { currentPhase: null });

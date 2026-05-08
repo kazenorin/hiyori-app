@@ -36,5 +36,4 @@ export interface PipelineCallbacks {
 
 export interface AsyncPhaseResults {
 	actSummary?: string;
-	scenePlot?: string;
 }
