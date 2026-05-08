@@ -101,24 +101,15 @@ export async function deleteActLine(id: string): Promise<void> {
 	]);
 	const messageIds = [...new Set([...lineMessageRows.map((r) => r.message_id), ...premiseMessageRows.map((r) => r.message_id)])];
 
-	try {
-		await db.execute('BEGIN');
+	// Delete junction table entries
+	await db.execute('DELETE FROM act_lines WHERE act_line_id = $1', [id]);
+	await db.execute('DELETE FROM act_line_premises WHERE act_line_id = $1', [id]);
 
-		// Delete junction table entries
-		await db.execute('DELETE FROM act_lines WHERE act_line_id = $1', [id]);
-		await db.execute('DELETE FROM act_line_premises WHERE act_line_id = $1', [id]);
+	// Garbage-collect messages no longer referenced by any act line or premises
+	await removeOrphanedMessages(db, messageIds);
 
-		// Garbage-collect messages no longer referenced by any act line or premises
-		await removeOrphanedMessages(db, messageIds);
-
-		// Delete the act line metadata row
-		await db.execute('DELETE FROM act_line_meta WHERE id = $1', [id]);
-
-		await db.execute('COMMIT');
-	} catch (err) {
-		await db.execute('ROLLBACK');
-		throw err;
-	}
+	// Delete the act line metadata row
+	await db.execute('DELETE FROM act_line_meta WHERE id = $1', [id]);
 }
 
 // === act_lines operations ===
@@ -314,28 +305,19 @@ export async function branchFromLine(
 
 	if (entries.length === 0) return lineMeta;
 
-	try {
-		await db.execute('BEGIN');
+	// Batch insert all entries
+	const values = entries.map((e, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(', ');
+	const params = entries.flatMap((e) => [newLineId, e.message_id, e.sequence]);
+	await db.execute(`INSERT INTO act_lines (act_line_id, message_id, sequence) VALUES ${values}`, params);
 
-		// Batch insert all entries
-		const values = entries.map((e, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(', ');
-		const params = entries.flatMap((e) => [newLineId, e.message_id, e.sequence]);
-		await db.execute(`INSERT INTO act_lines (act_line_id, message_id, sequence) VALUES ${values}`, params);
-
-		// Copy premises (interview transcript) — always predates act line messages
-		const premises = await db.select<ActLineEntryRow[]>('SELECT * FROM act_line_premises WHERE act_line_id = $1 ORDER BY sequence', [
-			fromLineId,
-		]);
-		if (premises.length > 0) {
-			const pValues = premises.map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(', ');
-			const pParams = premises.flatMap((p) => [newLineId, p.message_id, p.sequence]);
-			await db.execute(`INSERT INTO act_line_premises (act_line_id, message_id, sequence) VALUES ${pValues}`, pParams);
-		}
-
-		await db.execute('COMMIT');
-	} catch (err) {
-		await db.execute('ROLLBACK');
-		throw err;
+	// Copy premises (interview transcript) — always predates act line messages
+	const premises = await db.select<ActLineEntryRow[]>('SELECT * FROM act_line_premises WHERE act_line_id = $1 ORDER BY sequence', [
+		fromLineId,
+	]);
+	if (premises.length > 0) {
+		const pValues = premises.map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(', ');
+		const pParams = premises.flatMap((p) => [newLineId, p.message_id, p.sequence]);
+		await db.execute(`INSERT INTO act_line_premises (act_line_id, message_id, sequence) VALUES ${pValues}`, pParams);
 	}
 
 	return lineMeta;

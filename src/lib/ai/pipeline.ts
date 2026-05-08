@@ -1,4 +1,4 @@
-import type { ToolSet } from 'ai';
+import { stepCountIs, type ToolSet } from 'ai';
 import { generateText } from 'ai';
 import type { MessageBase } from '$lib/db/messages';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
@@ -11,6 +11,7 @@ import type { StreamResultMetadata } from './streaming';
 import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
 import { variablesToMarkdown } from './template-renderer';
 import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
+import { filterToolsForPhase } from '$lib/ai/tools/tools';
 import { log } from '$lib/logging/logger';
 import {
 	actSummaryIncrementalTemplateLoader,
@@ -84,10 +85,7 @@ type LoadedPrompts = Record<keyof typeof promptLoaderDefinitions, string>;
  */
 function fullOutput(ss: StreamState): string {
 	if (ss.variables && (ss.variables.sceneTitle || ss.variables.narrativeBody)) {
-		const parts: string[] = [];
-		if (ss.content) parts.push(ss.content);
-		parts.push(variablesToMarkdown(ss.variables));
-		return parts.join('\n');
+		return variablesToMarkdown(ss.variables);
 	}
 	return ss.content;
 }
@@ -237,7 +235,8 @@ async function runNonStreamingPhase(
 	messages: MessageBase[],
 	providerConfig: ProviderConfig | undefined,
 	abortSignal: AbortSignal,
-	tools?: ToolSet
+	tools?: ToolSet,
+	maxSteps: number = 10
 ): Promise<string> {
 	if (!providerConfig) {
 		throw new Error(`No provider configured for ${phaseName}. Please set one in Settings.`);
@@ -249,7 +248,8 @@ async function runNonStreamingPhase(
 		messages,
 		system: systemPrompt,
 		abortSignal,
-		...(tools && Object.keys(tools).length > 0 ? { tools, maxSteps: 5 } : {}),
+		...(tools && Object.keys(tools).length > 0 ? { tools } : {}),
+		stopWhen: stepCountIs(maxSteps),
 	});
 
 	return result.text;
@@ -360,7 +360,7 @@ export interface PipelineResult {
  */
 async function runPlotPlanner(input: PipelineInput, loadedPrompts: LoadedPrompts, effectiveTargetWordCount: string): Promise<string> {
 	const { worldContent, actPlot, actSummary, execution } = input;
-	const { providerConfigs, abortSignal } = execution;
+	const { providerConfigs, abortSignal, tools } = execution;
 	const playerResponse = input.player?.playerResponse;
 	const { plotPlannerSystemPrompt, generalInstructions } = loadedPrompts;
 
@@ -382,7 +382,7 @@ async function runPlotPlanner(input: PipelineInput, loadedPrompts: LoadedPrompts
 		messages,
 		providerConfigs.plotPlanner,
 		abortSignal,
-		input.execution.tools
+		filterToolsForPhase(tools, 'PLOT_PLANNER')
 	);
 }
 
@@ -424,7 +424,6 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 	const sharedParams = {
 		abortSignal,
-		tools,
 		callbacks,
 		retryConfig,
 	};
@@ -479,6 +478,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					.replaceAll('{generalInstructions}', generalInstructions)
 					.replaceAll('{targetWordCount}', effectiveTargetWordCount),
 				...sharedParams,
+				tools: filterToolsForPhase(tools, 'WRITER'),
 				descriptors: NARRATIVE_DESCRIPTORS,
 				messages: toUserMessages([
 					SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
@@ -508,6 +508,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				phaseName: 'REVIEWER',
 				systemPrompt: reviewerSystemPromptTemplate.replaceAll('{generalInstructions}', generalInstructions),
 				...sharedParams,
+				tools: filterToolsForPhase(tools, 'REVIEWER'),
 				descriptors: REVIEWER_DESCRIPTORS,
 				messages: toUserMessages([
 					SECTION.WORLD_CONTENT + worldContent,
@@ -548,6 +549,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 						.replaceAll('{generalInstructions}', generalInstructions)
 						.replaceAll('{targetWordCount}', effectiveTargetWordCount),
 					...sharedParams,
+					tools: filterToolsForPhase(tools, 'EDITOR'),
 					descriptors: EDITOR_DESCRIPTORS,
 					messages: toUserMessages([
 						SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
@@ -582,6 +584,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				phaseName: 'GAME_MASTER',
 				systemPrompt: gameMasterSystemPrompt,
 				...sharedParams,
+				tools: filterToolsForPhase(tools, 'GAME_MASTER'),
 				descriptors: GAME_MASTER_DESCRIPTORS,
 				messages: toUserMessages([
 					SECTION.ACT_PLOT + actPlot,
