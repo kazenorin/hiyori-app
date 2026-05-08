@@ -161,11 +161,22 @@ async function executeStreamingPhase(
 	params: StreamingPhaseParams,
 	state: PipelineState
 ): Promise<{ state: PipelineState; streamState: StreamState; metadata: StreamResultMetadata }> {
-	const { phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig, descriptors, buildStateUpdate } = params;
+	const { phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig, descriptors, buildStateUpdate } =
+		params;
 	state = updateState(state, { currentPhase: phaseName });
 	callbacks.onPhaseStart(phaseName);
 	try {
-		const result = await runStreamingPhase(phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig, descriptors);
+		const result = await runStreamingPhase(
+			phaseName,
+			systemPrompt,
+			messages,
+			providerConfig,
+			abortSignal,
+			tools,
+			callbacks,
+			retryConfig,
+			descriptors
+		);
 		state = updateState(state, buildStateUpdate(result.state));
 		callbacks.onPhaseComplete(phaseName, state);
 		return { state, streamState: result.state, metadata: result.metadata };
@@ -537,7 +548,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 						.replaceAll('{generalInstructions}', generalInstructions)
 						.replaceAll('{targetWordCount}', effectiveTargetWordCount),
 					...sharedParams,
-				descriptors: EDITOR_DESCRIPTORS,
+					descriptors: EDITOR_DESCRIPTORS,
 					messages: toUserMessages([
 						SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
 						SECTION.WORLD_CONTENT + worldContent,

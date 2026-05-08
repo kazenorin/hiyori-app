@@ -29,7 +29,11 @@ export type OnStreamError = (err: unknown) => void;
  * @param descriptors - OutputDescriptor configurations for the pipeline phase.
  *                       Defaults to NARRATIVE_DESCRIPTORS (scene + game data).
  */
-export function createStreamAccumulator(onUpdate?: OnStreamUpdate, onError?: OnStreamError, descriptors: OutputDescriptor[] = NARRATIVE_DESCRIPTORS): StreamAccumulator {
+export function createStreamAccumulator(
+	onUpdate?: OnStreamUpdate,
+	onError?: OnStreamError,
+	descriptors: OutputDescriptor[] = NARRATIVE_DESCRIPTORS
+): StreamAccumulator {
 	const chain = createParserChain(descriptors);
 	const { promise: resultMetadataPromise, resolve: resolveResult, reject: rejectResult } = Promise.withResolvers<StreamResultMetadata>();
 	let state: StreamState = {

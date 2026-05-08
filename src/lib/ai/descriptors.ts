@@ -14,7 +14,11 @@ export const SCENE_DESCRIPTORS: OutputDescriptor[] = [
  * would overwrite the gameData object. The narrative-stream-parser assembles GameDataFields.
  */
 export const GAME_DATA_DESCRIPTORS: OutputDescriptor[] = [
-	{ outputPath: 'activePlotThreads', match: { type: 'list', listIndex: 0, parent: { type: 'header', content: 'Active Plot Threads' } }, bodyOnly: true },
+	{
+		outputPath: 'activePlotThreads',
+		match: { type: 'list', listIndex: 0, parent: { type: 'header', content: 'Active Plot Threads' } },
+		bodyOnly: true,
+	},
 	{ outputPath: 'decisionContext', match: { type: 'header', content: 'Decision Context' }, bodyOnly: true, currentLevelOnly: true },
 	{ outputPath: 'decisions', match: { type: 'list', listIndex: 0, parent: { type: 'header', content: 'Decisions' } }, bodyOnly: true },
 ];
