@@ -1,4 +1,4 @@
-import type { ToolSet } from 'ai';
+import  { stepCountIs, type ToolSet } from 'ai';
 import { generateText } from 'ai';
 import type { MessageBase } from '$lib/db/messages';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
@@ -235,7 +235,8 @@ async function runNonStreamingPhase(
 	messages: MessageBase[],
 	providerConfig: ProviderConfig | undefined,
 	abortSignal: AbortSignal,
-	tools?: ToolSet
+	tools?: ToolSet,
+	maxSteps: number = 10
 ): Promise<string> {
 	if (!providerConfig) {
 		throw new Error(`No provider configured for ${phaseName}. Please set one in Settings.`);
@@ -247,7 +248,8 @@ async function runNonStreamingPhase(
 		messages,
 		system: systemPrompt,
 		abortSignal,
-		...(tools && Object.keys(tools).length > 0 ? { tools, maxSteps: 5 } : {}),
+		...(tools && Object.keys(tools).length > 0 ? { tools } : {}),
+		stopWhen: stepCountIs(maxSteps),
 	});
 
 	return result.text;

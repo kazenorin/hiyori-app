@@ -4,7 +4,7 @@ import type { LanguageModel } from 'ai';
 import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
 import { fileLog } from '$lib/logging/logger';
 
-const DEFAULT_MAX_STEPS = 5;
+const DEFAULT_MAX_STEPS = 10;
 
 export interface StreamConfig {
 	model: LanguageModel;
