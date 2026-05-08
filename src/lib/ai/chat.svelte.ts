@@ -10,21 +10,21 @@ import {
 	type ProviderConfig,
 	settings,
 } from '$lib/stores/settings.svelte';
-import { getActiveActPlotContent, getActiveStoryId, getActiveWorldContent } from '$lib/stores/stories.svelte';
+import {getActiveActPlotContent, getActiveStoryId, getActiveWorldContent} from '$lib/stores/stories.svelte';
 import * as dbMessages from '$lib/db/messages';
-import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from './narrative-types';
+import type {GameDataFields, NarrativeVariables, PhaseName, UIScenePhase} from './narrative-types';
 import * as dbActLines from '$lib/db/act-lines';
-import { logMainChat } from '$lib/logging/chat-logger';
-import { buildMetadata, type MessageMetadata } from './chat-stream';
-import { Memory } from '$lib/memory/memory';
-import { log } from '$lib/logging/logger';
-import { buildTools } from '$lib/ai/tools/tools';
-import type { StreamResultMetadata } from '$lib/ai/streaming';
-import { getErrorMessage } from '$lib/utils/error-handling';
-import { renderFromVariables } from './template-renderer';
-import { storyMessageTemplate } from '$lib/fs/view-templates';
-import { type PipelineProviderConfigs, type PlayerContext, runPipeline } from './pipeline';
-import type { AsyncPhaseResults, PhaseStreamState, PipelineCallbacks, PipelineState } from './pipeline-types';
+import {logMainChat} from '$lib/logging/chat-logger';
+import {buildMetadata, type MessageMetadata} from './chat-stream';
+import {Memory} from '$lib/memory/memory';
+import {log} from '$lib/logging/logger';
+import {buildTools} from '$lib/ai/tools/tools';
+import type {StreamResultMetadata} from '$lib/ai/streaming';
+import {getErrorMessage} from '$lib/utils/error-handling';
+import {renderFromVariables} from './template-renderer';
+import {storyMessageTemplate} from '$lib/fs/view-templates';
+import {type PipelineProviderConfigs, type PlayerContext, runPipeline} from './pipeline';
+import type {AsyncPhaseResults, PhaseStreamState, PipelineCallbacks, PipelineState} from './pipeline-types';
 
 export interface UIMessage {
 	id: string;
@@ -297,7 +297,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		const actPlot = getActiveActPlotContent() ?? '';
 		const actSummary = getLatestActSummary();
 		const previousScenePlot = getLatestScenePlot();
-		const templateReplacements = { sceneNumber: String(nextSceneNumber) };
+		const templateReplacements = {sceneNumber: String(nextSceneNumber)};
 
 		// Pipeline callback helpers
 		const renderContent = (vars: NarrativeVariables | null | undefined, fallback: string): string => {
@@ -308,8 +308,8 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 
 		const updatePhaseInList = (phase: PhaseName, update: Partial<UIScenePhase>): void => {
 			const current = getCurrentMessage();
-			const phases = (current.phases ?? []).map((p) => (p.phaseName === phase ? { ...p, ...update } : p));
-			setCurrentMessage({ ...current, phases });
+			const phases = (current.phases ?? []).map((p) => (p.phaseName === phase ? {...p, ...update} : p));
+			setCurrentMessage({...current, phases});
 		};
 
 		const updateEditorMessage = (
@@ -331,19 +331,19 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 				// Editor is shown as main content, not a phase accordion
 				if (phase === 'EDITOR') return;
 				const current = getCurrentMessage();
-				const phases = [...(current.phases ?? []), { phaseName: phase, content: '' }];
-				setCurrentMessage({ ...current, phases });
+				const phases = [...(current.phases ?? []), {phaseName: phase, content: ''}];
+				setCurrentMessage({...current, phases});
 			},
 			onPhaseStream: (phase: PhaseName, streamState: PhaseStreamState) => {
 				if (phase === 'EDITOR') {
 					updateEditorMessage(renderContent(streamState.variables, streamState.content), streamState.reasoning, streamState.variables);
 					return;
 				}
-				updatePhaseInList(phase, { content: streamState.content, reasoning: streamState.reasoning ?? undefined });
+				updatePhaseInList(phase, {content: streamState.content, reasoning: streamState.reasoning ?? undefined});
 			},
 			onPhaseRetry: (phase: PhaseName, attempt: number, maxAttempts: number) => {
 				// Show retry feedback in the phase content — the next stream will overwrite this
-				updatePhaseInList(phase, { content: `Retrying (attempt ${attempt}/${maxAttempts})...` });
+				updatePhaseInList(phase, {content: `Retrying (attempt ${attempt}/${maxAttempts})...`});
 			},
 			onPhaseComplete: (phase: PhaseName, pipelineState: PipelineState) => {
 				if (phase === 'EDITOR') {
@@ -355,14 +355,14 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 					return;
 				}
 
-				updatePhaseInList(phase, { content: getPhaseContent(phase, pipelineState) });
+				updatePhaseInList(phase, {content: getPhaseContent(phase, pipelineState)});
 
 				// After GM completes, merge game data into variables
 				if (phase === 'GAME_MASTER') {
 					const current = getCurrentMessage();
 					const finalVars = buildFinalVariables(current.variables, pipelineState.gameData);
 					const content = renderContent(finalVars, current.content);
-					setCurrentMessage({ ...current, content, variables: finalVars ?? current.variables });
+					setCurrentMessage({...current, content, variables: finalVars ?? current.variables});
 				}
 			},
 			onError: (phase: PhaseName, err: unknown) => {
@@ -395,7 +395,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 			previousNarrativeVariables,
 			previousScenePlot,
 			player: playerContext,
-			story: { storyId: story.id, storyName: story.name, actLineId },
+			story: {storyId: story.id, storyName: story.name, actLineId},
 			completedScenes: previousSceneNumber, // previous scene was just completed by the Player Response
 			targetWordCount,
 		});
@@ -412,7 +412,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		};
 
 		// Persist with accumulated content
-		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({ newMessages: messages.slice(-newMessagesCount) })]);
+		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({newMessages: messages.slice(-newMessagesCount)})]);
 
 		// Store async phases
 		const assistantMessageId = getCurrentMessage().id;
@@ -429,10 +429,10 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 					const existing = messages[targetMessageIdx];
 					const updatedPhases = existing.phases ? [...existing.phases] : [];
 					if (asyncResults.actSummary !== undefined) {
-						updatedPhases.push({ phaseName: 'SUMMARIZER' as PhaseName, content: asyncResults.actSummary });
+						updatedPhases.push({phaseName: 'SUMMARIZER' as PhaseName, content: asyncResults.actSummary});
 					}
 					if (asyncResults.scenePlot !== undefined) {
-						updatedPhases.push({ phaseName: 'PLOT_PLANNER' as PhaseName, content: asyncResults.scenePlot });
+						updatedPhases.push({phaseName: 'PLOT_PLANNER' as PhaseName, content: asyncResults.scenePlot});
 					}
 					messages[targetMessageIdx] = {
 						...existing,
@@ -486,7 +486,7 @@ function getPreviousNarrativeMessage(messages: UIMessage[]): NarrativeVariables 
 function getPlayerContext(messages: UIMessage[]): PlayerContext | undefined {
 	for (let i = messages.length - 1; i >= 0; i--) {
 		if (messages[i].role === 'user') {
-			return { playerResponse: messages[i].content, playerMessageId: messages[i].id };
+			return {playerResponse: messages[i].content, playerMessageId: messages[i].id};
 		}
 	}
 	return undefined;
@@ -538,19 +538,14 @@ export async function sendInitialNarration(actLineId: string): Promise<void> {
  * then update local state. Returns true if removal succeeded, false if DB removal failed
  * (in which case local state is unchanged).
  */
-async function removeMessagesFromIndex(actLineId: string, startIdx: number): Promise<boolean> {
-	const messageIdsToRemove = messages.slice(startIdx).map((m) => m.id);
-
+async function removeMessagesById(actLineId: string, messageIds: string[]): Promise<boolean> {
 	let removedIds: string[] = [];
 	try {
-		removedIds = await dbActLines.removeMessagesFromActLine(actLineId, messageIdsToRemove);
+		removedIds = await dbActLines.removeMessagesFromActLine(actLineId, messageIds);
 	} catch (err) {
 		await log.error('remove-messages-from-index', 'Message removal failed', err);
 		return false;
 	}
-
-	// DB removal succeeded — now update local state
-	messages = messages.slice(0, startIdx);
 
 	if (removedIds.length > 0) {
 		try {
@@ -576,24 +571,31 @@ export async function regenerateLastResponse(actLineId: string, messageId: strin
 
 	// If the assistant message is the first message, regenerate as initial narration
 	if (lastAssistantMsgIdx === 0) {
-		const removed = await removeMessagesFromIndex(actLineId, 0);
+		const removed = await removeMessagesById(actLineId, [messageId]);
 		if (!removed) {
 			await loadActLineMessages(actLineId);
 			return;
 		}
+		// sendInitialNarration will reset `messages` array
 		await sendInitialNarration(actLineId);
 		return;
 	}
 
 	// The message before the assistant must be a user message
-	if (currentMessages[lastAssistantMsgIdx - 1].role !== 'user') {
+	const exchangeStartIdx = lastAssistantMsgIdx - 1;
+	if (currentMessages[exchangeStartIdx].role !== 'user') {
 		await log.warn('regenerate-last-response', 'No user message found before assistant message');
 		error = 'Cannot regenerate: no user message found before the assistant response.';
 		await loadActLineMessages(actLineId);
 		return;
 	}
 
-	const userMessageContent = currentMessages[lastAssistantMsgIdx - 1].content;
+	const userMessageContent = currentMessages[exchangeStartIdx].content;
+
+	// Compute IDs before slicing, then remove from DB and update local state
+	const messageIdsToRemove = messages.slice(exchangeStartIdx).map((m) => m.id);
+	await removeMessagesById(actLineId, messageIdsToRemove);
+	messages = messages.slice(0, exchangeStartIdx);
 
 	// Send the new response first (safe — original data intact on failure)
 	try {
@@ -603,10 +605,6 @@ export async function regenerateLastResponse(actLineId: string, messageId: strin
 		await loadActLineMessages(actLineId);
 		return;
 	}
-
-	// Remove old messages only after new response succeeded
-	const exchangeStartIdx = lastAssistantMsgIdx - 1;
-	await removeMessagesFromIndex(actLineId, exchangeStartIdx);
 }
 
 export async function deleteLastExchange(actLineId: string): Promise<void> {
@@ -620,7 +618,10 @@ export async function deleteLastExchange(actLineId: string): Promise<void> {
 		lastUserMsgIdx--;
 	}
 
-	await removeMessagesFromIndex(actLineId, lastUserMsgIdx);
+	const messageIdsToRemove = messages.slice(lastUserMsgIdx).map((m) => m.id);
+	if (await removeMessagesById(actLineId, messageIdsToRemove)) {
+		messages = messages.slice(0, lastUserMsgIdx);
+	}
 }
 
 /**
@@ -637,7 +638,10 @@ export async function deleteOrphanedUserMessages(actLineId: string): Promise<voi
 		lastUserMsgIdx--;
 	}
 
-	await removeMessagesFromIndex(actLineId, lastUserMsgIdx);
+	const messageIdsToRemove = messages.slice(lastUserMsgIdx).map((m) => m.id);
+	if (await removeMessagesById(actLineId, messageIdsToRemove)) {
+		messages = messages.slice(0, lastUserMsgIdx);
+	}
 }
 
 export function isUserMessage(message: UIMessage): boolean {
