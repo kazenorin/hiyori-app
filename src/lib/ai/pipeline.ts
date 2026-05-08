@@ -85,10 +85,7 @@ type LoadedPrompts = Record<keyof typeof promptLoaderDefinitions, string>;
  */
 function fullOutput(ss: StreamState): string {
 	if (ss.variables && (ss.variables.sceneTitle || ss.variables.narrativeBody)) {
-		const parts: string[] = [];
-		if (ss.content) parts.push(ss.content);
-		parts.push(variablesToMarkdown(ss.variables));
-		return parts.join('\n');
+		return variablesToMarkdown(ss.variables);
 	}
 	return ss.content;
 }
