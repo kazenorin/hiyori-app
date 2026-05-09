@@ -62,4 +62,13 @@ export async function resolveLineDir(storyFolder: string, actNumber: number, act
 	return `${actDir}/${computeLineSubdir(false, actLineId)}`;
 }
 
+/**
+ * Resolve the directory path for an act line, handling both main and non-main lines.
+ * Uses a direct path for main lines, resolves from disk for non-main lines.
+ */
+export async function getLineDir(storyFolder: string, actNumber: number, isMainLine: boolean, actLineId: string): Promise<string> {
+	if (isMainLine) return buildLineDir(storyFolder, actNumber, true, actLineId);
+	return resolveLineDir(storyFolder, actNumber, actLineId);
+}
+
 export { computeLineSubdir as _computeLineSubdirForTest, buildLineSubdirSuffix as _buildLineSubdirSuffixForTest };

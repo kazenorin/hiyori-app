@@ -12,7 +12,7 @@ import { loadStorySystemPrompt, loadSystemPrompt } from '$lib/fs/prompts';
 import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-folders';
 import { writeTextFile, readTextFile, exists, remove, copyFile, mkdir, rename, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
-import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, resolveLineSubdir } from '$lib/ai/card-output-path';
+import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, getLineDir, resolveLineSubdir } from '$lib/ai/card-output-path';
 import { generateActPlot, type ActPlotPhase } from '$lib/ai/act-plot-generator';
 
 export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
@@ -229,7 +229,7 @@ async function ensureActPlot(): Promise<void> {
 		const act = acts.find((a) => a.id === activeActId);
 		const actLine = actLines.find((l) => l.id === activeActLineId);
 		if (act && actLine) {
-			const lineDir = buildLineDir(storyFolder, act.actNumber, actLine.isMainLine, actLine.id, buildLineSubdirSuffix(actLine.name));
+			const lineDir = await getLineDir(storyFolder, act.actNumber, actLine.isMainLine, actLine.id);
 			const plotPath = `${lineDir}/act-plot.md`;
 			const plotExists = await exists(plotPath, { baseDir: BaseDirectory.AppData });
 			if (plotExists) {
@@ -373,7 +373,7 @@ export async function deleteActLine(id: string, removeFolder: boolean = false): 
 	if (removeFolder && line && act && storyId && storyName) {
 		try {
 			const storyFolder = await resolveStoryFolder(storyId, storyName);
-			const lineDir = buildLineDir(storyFolder, act.actNumber, line.isMainLine, line.id, buildLineSubdirSuffix(line.name));
+			const lineDir = await getLineDir(storyFolder, act.actNumber, line.isMainLine, line.id);
 			await remove(lineDir, { baseDir: BaseDirectory.AppData, recursive: true });
 		} catch (err) {
 			await log.error('delete-act-line', 'Failed to remove line folder', err);
@@ -420,7 +420,7 @@ async function copyActPlotForFork(fromLineId: string, toLineId: string): Promise
 
 	try {
 		const storyFolder = await resolveStoryFolder(storyId, storyName);
-		const fromDir = buildLineDir(storyFolder, act.actNumber, fromLine.isMainLine, fromLineId, buildLineSubdirSuffix(fromLine.name));
+		const fromDir = await getLineDir(storyFolder, act.actNumber, fromLine.isMainLine, fromLineId);
 		const toDir = buildLineDir(storyFolder, act.actNumber, false, toLineId, buildLineSubdirSuffix(toLine.name));
 		const fromPath = `${fromDir}/act-plot.md`;
 		const toPath = `${toDir}/act-plot.md`;

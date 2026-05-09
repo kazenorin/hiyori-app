@@ -10,7 +10,7 @@ import {
 } from '$lib/fs/prompts';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
-import { buildLineDir, resolveLineDir } from './card-output-path';
+import { getLineDir } from './card-output-path';
 import { log } from '$lib/logging/logger';
 import { getPremisesMessages, getPreviousActSummary } from '$lib/db/act-lines';
 import { reviewerAcceptsAsIs } from './reviewer-output-parser';
@@ -220,9 +220,7 @@ export async function generateActPlot(
 
 	// Write output file
 	const storyFolder = await resolveStoryFolder(storyId, storyName);
-	const lineDir = isMainLine
-		? buildLineDir(storyFolder, actNumber, true, actLineId)
-		: await resolveLineDir(storyFolder, actNumber, actLineId);
+	const lineDir = await getLineDir(storyFolder, actNumber, isMainLine, actLineId);
 	const filePath = `${lineDir}/act-plot.md`;
 
 	await mkdir(lineDir, { baseDir: BaseDirectory.AppData, recursive: true });

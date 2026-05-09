@@ -9,7 +9,7 @@ import { getAct } from '$lib/db/acts';
 import { loadStoryWorldContent, resolveStoryFolder } from '$lib/fs/story-folders';
 import { getActiveStoryId, getActiveActId, getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
 import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
-import { buildLineDir, resolveLineDir } from './card-output-path';
+import { getLineDir } from './card-output-path';
 import { logActCardActivity } from '$lib/logging/chat-logger';
 import { streamWithRetry, type RetryConfig } from './chat-stream';
 import type { StreamState } from './chat-callbacks';
@@ -92,9 +92,7 @@ async function resolveActCardContext(): Promise<ActCardContext> {
 
 async function resolveAndWrite(ctx: ActCardContext, content: string): Promise<string> {
 	const storyFolder = await resolveStoryFolder(ctx.storyId, ctx.storyName);
-	const lineDir = ctx.isMainLine
-		? buildLineDir(storyFolder, ctx.actNumber, true, ctx.actLineId)
-		: await resolveLineDir(storyFolder, ctx.actNumber, ctx.actLineId);
+	const lineDir = await getLineDir(storyFolder, ctx.actNumber, ctx.isMainLine, ctx.actLineId);
 	const filePath = `${lineDir}/act-card.md`;
 
 	await mkdir(lineDir, { baseDir: BaseDirectory.AppData, recursive: true });
