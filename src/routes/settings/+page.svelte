@@ -563,6 +563,27 @@
 			</label>
 
 			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">Minor Task Agent</span>
+				<select
+					class="select mt-1"
+					onchange={(e) => {
+						const value = (e.currentTarget as HTMLSelectElement).value;
+						updateSettings({ minorTaskAgentProviderRole: value });
+					}}
+				>
+					{#if settings.providers.length === 0}
+						<option value="" disabled selected>No providers configured</option>
+					{:else}
+						<option value="main" selected={settings.minorTaskAgentProviderRole === 'main'}>Main Provider</option>
+						{#each settings.providers as config (config.id)}
+							<option value={config.id} selected={settings.minorTaskAgentProviderRole === config.id}>{config.name}</option>
+						{/each}
+					{/if}
+				</select>
+				<span class="text-xs text-surface-500 mt-1 block">Lightweight tasks like template fitting. Use a small, fast model.</span>
+			</label>
+
+			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">Summarizer</span>
 				<select
 					class="select mt-1"

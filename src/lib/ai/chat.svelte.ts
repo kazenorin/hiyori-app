@@ -6,25 +6,26 @@ import {
 	getPlotPlannerProviderConfig,
 	getReviewerProviderConfig,
 	getSummarizerProviderConfig,
+	getMinorTaskAgentProviderConfig,
 	getWriterProviderConfig,
 	type ProviderConfig,
 	settings,
 } from '$lib/stores/settings.svelte';
-import {getActiveActPlotContent, getActiveStoryId, getActiveWorldContent} from '$lib/stores/stories.svelte';
+import { getActiveActPlotContent, getActiveStoryId, getActiveWorldContent } from '$lib/stores/stories.svelte';
 import * as dbMessages from '$lib/db/messages';
-import type {GameDataFields, NarrativeVariables, PhaseName, UIScenePhase} from './narrative-types';
+import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from './narrative-types';
 import * as dbActLines from '$lib/db/act-lines';
-import {logMainChat} from '$lib/logging/chat-logger';
-import {buildMetadata, type MessageMetadata} from './chat-stream';
-import {Memory} from '$lib/memory/memory';
-import {log} from '$lib/logging/logger';
-import {buildTools} from '$lib/ai/tools/tools';
-import type {StreamResultMetadata} from '$lib/ai/streaming';
-import {getErrorMessage} from '$lib/utils/error-handling';
-import {renderFromVariables} from './template-renderer';
-import {storyMessageTemplate} from '$lib/fs/view-templates';
-import {type PipelineProviderConfigs, type PlayerContext, runPipeline} from './pipeline';
-import type {AsyncPhaseResults, PhaseStreamState, PipelineCallbacks, PipelineState} from './pipeline-types';
+import { logMainChat } from '$lib/logging/chat-logger';
+import { buildMetadata, type MessageMetadata } from './chat-stream';
+import { Memory } from '$lib/memory/memory';
+import { log } from '$lib/logging/logger';
+import { buildTools } from '$lib/ai/tools/tools';
+import type { StreamResultMetadata } from '$lib/ai/streaming';
+import { getErrorMessage } from '$lib/utils/error-handling';
+import { renderFromVariables } from './template-renderer';
+import { storyMessageTemplate } from '$lib/fs/view-templates';
+import { type PipelineProviderConfigs, type PlayerContext, runPipeline } from './pipeline';
+import type { AsyncPhaseResults, PhaseStreamState, PipelineCallbacks, PipelineState } from './pipeline-types';
 
 export interface UIMessage {
 	id: string;
@@ -203,6 +204,7 @@ function buildPipelineProviderConfigs(): PipelineProviderConfigs {
 		editor: getEditorProviderConfig() ?? getMainProviderConfig(),
 		gameMaster: getGameMasterProviderConfig() ?? getMainProviderConfig(),
 		summarizer: getSummarizerProviderConfig() ?? getMainProviderConfig(),
+		minorTaskAgent: getMinorTaskAgentProviderConfig() ?? getMainProviderConfig(),
 	};
 }
 
@@ -297,7 +299,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		const actPlot = getActiveActPlotContent() ?? '';
 		const actSummary = getLatestActSummary();
 		const previousScenePlot = getLatestScenePlot();
-		const templateReplacements = {sceneNumber: String(nextSceneNumber)};
+		const templateReplacements = { sceneNumber: String(nextSceneNumber) };
 
 		// Pipeline callback helpers
 		const renderContent = (vars: NarrativeVariables | null | undefined, fallback: string): string => {
@@ -308,8 +310,8 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 
 		const updatePhaseInList = (phase: PhaseName, update: Partial<UIScenePhase>): void => {
 			const current = getCurrentMessage();
-			const phases = (current.phases ?? []).map((p) => (p.phaseName === phase ? {...p, ...update} : p));
-			setCurrentMessage({...current, phases});
+			const phases = (current.phases ?? []).map((p) => (p.phaseName === phase ? { ...p, ...update } : p));
+			setCurrentMessage({ ...current, phases });
 		};
 
 		const updateEditorMessage = (
@@ -331,44 +333,60 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 				// Editor is shown as main content, not a phase accordion
 				if (phase === 'EDITOR') return;
 				const current = getCurrentMessage();
-				const phases = [...(current.phases ?? []), {phaseName: phase, content: ''}];
-				setCurrentMessage({...current, phases});
+				const phases = [...(current.phases ?? []), { phaseName: phase, content: '' }];
+				setCurrentMessage({ ...current, phases });
 			},
 			onPhaseStream: (phase: PhaseName, streamState: PhaseStreamState) => {
 				if (phase === 'EDITOR') {
 					updateEditorMessage(renderContent(streamState.variables, streamState.content), streamState.reasoning, streamState.variables);
 					return;
 				}
-				updatePhaseInList(phase, {content: streamState.content, reasoning: streamState.reasoning ?? undefined});
+				updatePhaseInList(phase, { content: streamState.content, reasoning: streamState.reasoning ?? undefined });
 			},
 			onPhaseRetry: (phase: PhaseName, attempt: number, maxAttempts: number) => {
 				// Show retry feedback in the phase content — the next stream will overwrite this
-				updatePhaseInList(phase, {content: `Retrying (attempt ${attempt}/${maxAttempts})...`});
+				updatePhaseInList(phase, { content: `Retrying (attempt ${attempt}/${maxAttempts})...` });
 			},
 			onPhaseComplete: (phase: PhaseName, pipelineState: PipelineState) => {
 				if (phase === 'EDITOR') {
 					updateEditorMessage(
-						renderContent(pipelineState.editorVariables, pipelineState.editorOutput ?? getCurrentMessage().content),
-						pipelineState.editorReasoning,
-						pipelineState.editorVariables
+							renderContent(pipelineState.editorVariables, pipelineState.editorOutput ?? getCurrentMessage().content),
+							pipelineState.editorReasoning,
+							pipelineState.editorVariables
 					);
 					return;
 				}
+				if (phase === 'TEMPLATE_FITTER') {
+					// Re-render based on what the fitter updated
+					if (pipelineState.editorVariables) {
+						updateEditorMessage(
+							renderContent(pipelineState.editorVariables, pipelineState.editorOutput ?? getCurrentMessage().content),
+							pipelineState.editorReasoning,
+							pipelineState.editorVariables
+						);
+					} else if (pipelineState.gameData) {
+						const current = getCurrentMessage();
+						const finalVars = buildFinalVariables(current.variables, pipelineState.gameData);
+						const content = renderContent(finalVars, current.content);
+						setCurrentMessage({ ...current, content, variables: finalVars ?? current.variables });
+					}
+					return;
+				}
 
-				updatePhaseInList(phase, {content: getPhaseContent(phase, pipelineState)});
+				updatePhaseInList(phase, { content: getPhaseContent(phase, pipelineState) });
 
 				// After GM completes, merge game data into variables
 				if (phase === 'GAME_MASTER') {
 					const current = getCurrentMessage();
 					const finalVars = buildFinalVariables(current.variables, pipelineState.gameData);
 					const content = renderContent(finalVars, current.content);
-					setCurrentMessage({...current, content, variables: finalVars ?? current.variables});
+					setCurrentMessage({ ...current, content, variables: finalVars ?? current.variables });
 				}
 
 				// After Plot Planner completes, store scene plot on the message
 				if (phase === 'PLOT_PLANNER' && pipelineState.scenePlot) {
 					const current = getCurrentMessage();
-					setCurrentMessage({...current, scenePlot: pipelineState.scenePlot});
+					setCurrentMessage({ ...current, scenePlot: pipelineState.scenePlot });
 				}
 			},
 			onError: (phase: PhaseName, err: unknown) => {
@@ -401,7 +419,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 			previousNarrativeVariables,
 			previousScenePlot,
 			player: playerContext,
-			story: {storyId: story.id, storyName: story.name, actLineId},
+			story: { storyId: story.id, storyName: story.name, actLineId },
 			completedScenes: previousSceneNumber, // previous scene was just completed by the Player Response
 			targetWordCount,
 		});
@@ -418,38 +436,40 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		};
 
 		// Persist with accumulated content
-		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({newMessages: messages.slice(-newMessagesCount)})]);
+		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({ newMessages: messages.slice(-newMessagesCount) })]);
 
 		// Store async phases
 		const assistantMessageId = getCurrentMessage().id;
 		pendingAsyncPhases =
-			result.asyncPhases?.then(async (asyncResults) => {
-				if (asyncResults.actSummary !== undefined) {
-					await dbMessages.updateMessageFields(assistantMessageId, {
-						actSummary: asyncResults.actSummary,
-					});
-				}
-				const targetMessageIdx = messages.findLastIndex((m) => m.id === assistantMessageId);
-				if (targetMessageIdx >= 0) {
-					const existing = messages[targetMessageIdx];
-					const updatedPhases = existing.phases ? [...existing.phases] : [];
+			result.asyncPhases
+				?.then(async (asyncResults) => {
 					if (asyncResults.actSummary !== undefined) {
-						updatedPhases.push({phaseName: 'SUMMARIZER' as PhaseName, content: asyncResults.actSummary});
+						await dbMessages.updateMessageFields(assistantMessageId, {
+							actSummary: asyncResults.actSummary,
+						});
 					}
-					messages[targetMessageIdx] = {
-						...existing,
-						actSummary: asyncResults.actSummary ?? existing.actSummary,
-						phases: updatedPhases,
-					};
-				}
-				return asyncResults;
-			}).catch(async (err) => {
-				if (err instanceof DOMException && err.name === 'AbortError') {
-					await log.warn('send-message', 'Async phases aborted');
-				} else {
-					await log.error('send-message', 'Async phases failed', err);
-				}
-			}) ?? null;
+					const targetMessageIdx = messages.findLastIndex((m) => m.id === assistantMessageId);
+					if (targetMessageIdx >= 0) {
+						const existing = messages[targetMessageIdx];
+						const updatedPhases = existing.phases ? [...existing.phases] : [];
+						if (asyncResults.actSummary !== undefined) {
+							updatedPhases.push({ phaseName: 'SUMMARIZER' as PhaseName, content: asyncResults.actSummary });
+						}
+						messages[targetMessageIdx] = {
+							...existing,
+							actSummary: asyncResults.actSummary ?? existing.actSummary,
+							phases: updatedPhases,
+						};
+					}
+					return asyncResults;
+				})
+				.catch(async (err) => {
+					if (err instanceof DOMException && err.name === 'AbortError') {
+						await log.warn('send-message', 'Async phases aborted');
+					} else {
+						await log.error('send-message', 'Async phases failed', err);
+					}
+				}) ?? null;
 	} catch (err: unknown) {
 		await handleStreamError(err, responseMessage.id, actLineId);
 	} finally {
@@ -473,6 +493,8 @@ function getPhaseContent(phase: PhaseName, state: PipelineState): string {
 			return state.gameMasterOutput ?? '';
 		case 'SUMMARIZER':
 			return state.actSummary ?? '';
+		case 'TEMPLATE_FITTER':
+			return '';
 	}
 }
 
@@ -487,7 +509,7 @@ function getPreviousNarrativeMessage(messages: UIMessage[]): NarrativeVariables 
 function getPlayerContext(messages: UIMessage[]): PlayerContext | undefined {
 	for (let i = messages.length - 1; i >= 0; i--) {
 		if (messages[i].role === 'user') {
-			return {playerResponse: messages[i].content, playerMessageId: messages[i].id};
+			return { playerResponse: messages[i].content, playerMessageId: messages[i].id };
 		}
 	}
 	return undefined;

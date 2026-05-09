@@ -62,6 +62,7 @@ function defaultSettings() {
 		gameMasterProviderRole: 'main',
 		summarizerProviderRole: 'main',
 		reviewerProviderRole: 'main',
+		minorTaskAgentProviderRole: 'main',
 	};
 }
 

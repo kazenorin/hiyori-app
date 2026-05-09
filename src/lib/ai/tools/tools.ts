@@ -21,6 +21,7 @@ export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 	WRITER: ['read-scene', 'query-memories', 'evaluate-risk'],
 	REVIEWER: ['read-scene', 'query-memories'],
 	EDITOR: [],
+	TEMPLATE_FITTER: [],
 	GAME_MASTER: ['read-scene', 'query-memories'],
 };
 

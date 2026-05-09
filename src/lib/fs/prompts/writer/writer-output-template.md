@@ -1,11 +1,15 @@
 ## Scene Title
-{sceneTitle}
+
+[single-line short title of the scene]
 
 ## Background
-{background}
+
+[a short description to describe the visual background of the scene]
 
 ## Narrative Body
-{narrativeBody}
+
+[the prose content of the narration]
 
 ## CG
-{cg}
+
+[a descriptive illustration depicting the moment of highest visual impact]
