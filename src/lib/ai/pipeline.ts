@@ -39,6 +39,8 @@ import {
 	GM_TEMPLATE_FITTER_DESCRIPTORS,
 } from './descriptors';
 
+const defaultTargetWordCount = 400;
+
 // Markdown section headings used in phase prompts
 const SECTION = {
 	WORLD_CONTENT: '\n## World Content\n',
@@ -455,7 +457,6 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	const storyName = story?.storyName;
 	const actLineId = story?.actLineId;
 
-	const defaultTargetWordCount = 400; // TODO: make this configurable in settings
 	const effectiveTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
 	const currentScene = completedScenes > 0 ? String(completedScenes + 1) : '1';
 

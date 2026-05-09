@@ -37,6 +37,7 @@ export interface Settings {
 	gameMasterProviderRole: string;
 	summarizerProviderRole: string;
 	minorTaskAgentProviderRole: string;
+	targetWordCount: number;
 }
 
 const STORAGE_KEY = 'byoa-settings';
@@ -56,6 +57,7 @@ const defaults: Settings = {
 	gameMasterProviderRole: 'main',
 	summarizerProviderRole: 'main',
 	minorTaskAgentProviderRole: 'main',
+	targetWordCount: 400,
 };
 
 /**
@@ -88,6 +90,7 @@ function migrateFromFlatSettings(raw: Record<string, unknown>): Settings {
 		gameMasterProviderRole: (raw.gameMasterProviderRole as string) || 'main',
 		summarizerProviderRole: (raw.summarizerProviderRole as string) || 'main',
 		minorTaskAgentProviderRole: 'main',
+		targetWordCount: (raw.targetWordCount as number) ?? 400,
 	};
 }
 
@@ -288,6 +291,7 @@ export async function updateSettings(
 			| 'gameMasterProviderRole'
 			| 'summarizerProviderRole'
 			| 'minorTaskAgentProviderRole'
+				| 'targetWordCount'
 		>
 	>
 ): Promise<void> {
@@ -306,6 +310,7 @@ export async function updateSettings(
 	if (partial.gameMasterProviderRole !== undefined) settings.gameMasterProviderRole = partial.gameMasterProviderRole;
 	if (partial.summarizerProviderRole !== undefined) settings.summarizerProviderRole = partial.summarizerProviderRole;
 	if (partial.minorTaskAgentProviderRole !== undefined) settings.minorTaskAgentProviderRole = partial.minorTaskAgentProviderRole;
+	if (partial.targetWordCount !== undefined) settings.targetWordCount = partial.targetWordCount;
 	persist();
 
 	// Apply font size preference when fontSize changes

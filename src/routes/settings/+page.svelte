@@ -605,6 +605,30 @@
 			</label>
 		</section>
 
+		<!-- Narrative -->
+		<section class="card p-6 space-y-4">
+			<h2 class="h4">Narrative</h2>
+
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">Target Word Count</span>
+				<input
+					type="number"
+					class="input mt-1 w-32"
+					min="50"
+					max="2000"
+					step="50"
+					value={settings.targetWordCount}
+					onchange={(e) => {
+						const val = parseInt((e.currentTarget as HTMLInputElement).value, 10);
+						if (!isNaN(val) && val >= 50 && val <= 2000) updateSettings({ targetWordCount: val });
+					}}
+				/>
+				<span class="text-xs text-surface-500 mt-1 block"
+					>Target word count per scene for the Writer phase. Default: 400.</span
+				>
+			</label>
+		</section>
+
 		<!-- Developer -->
 		<section class="card p-6 space-y-4">
 			<h2 class="h4">Developer</h2>

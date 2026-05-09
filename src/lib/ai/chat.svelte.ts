@@ -242,7 +242,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		}
 		pendingAsyncPhases = null;
 	}
-	const targetWordCount = 400; // TODO: make this configurable via settings
+	const targetWordCount = settings.targetWordCount;
 	const storyPromise = dbActLines.getStoryForActLine(actLineId);
 
 	const mainConfig = getMainProviderConfig();

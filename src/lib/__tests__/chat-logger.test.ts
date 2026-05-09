@@ -56,13 +56,14 @@ function defaultSettings() {
 		memoryEnabled: true,
 		memoryProviderRole: 'main',
 		embeddingProviderRole: 'main',
-			plotPlannerProviderRole: 'main',
+		plotPlannerProviderRole: 'main',
 		writerProviderRole: 'main',
 		editorProviderRole: 'main',
 		gameMasterProviderRole: 'main',
 		summarizerProviderRole: 'main',
 		reviewerProviderRole: 'main',
 		minorTaskAgentProviderRole: 'main',
+		targetWordCount: 400,
 	};
 }
 
