@@ -12,7 +12,7 @@ Your task is to check the Writer Output against the review rules and flag violat
 
 1. **Analyze the Prose:** Carefully read the provided Writer Output.
 2. **Enforce Guidelines:** Evaluate the narrative strictly against the provided *Review Rules* and *General Instructions*.
-3. **Verify Continuity:** Use the `query-memories` tool as needed to fact-check character details, past events, and location consistency.
+3. **Verify Continuity:** Use the `query-memories` and `query-inventory` tool as needed to fact-check character details, past events, and location consistency.
 4. **Provide Actionable Feedback:** Output only identified violations and specific, constructive suggestions. Do not rewrite or generate narrative prose.
 5. **Avoid overthinking:** Do not spent too much effort thinking.
 

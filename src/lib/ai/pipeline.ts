@@ -364,12 +364,11 @@ function buildSummarizerMessages(input: PipelineInput, actSummaryHeading: string
 
 async function generateFullSummary(input: PipelineInput, loadedPrompts: LoadedPrompts) {
 	const { summarizerPrompt, actSummaryTemplate } = loadedPrompts;
-	const { completedScenes, execution } = input;
+	const { execution } = input;
 	const { providerConfigs, abortSignal } = execution;
 
 	// === FIRST SUMMARY: Full generation (existing behavior) ===
-	const processedTemplate = actSummaryTemplate.replaceAll('{completedScenes}', String(completedScenes));
-	const summarizerSystemPrompt = summarizerPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
+	const summarizerSystemPrompt = summarizerPrompt.replaceAll('{actSummaryTemplate}', actSummaryTemplate);
 
 	const summarizerMessages = buildSummarizerMessages(input, SECTION.PREVIOUS_ACT_SUMMARY);
 

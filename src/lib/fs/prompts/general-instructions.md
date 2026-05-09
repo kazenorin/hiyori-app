@@ -10,7 +10,6 @@
 - Strict Cause and Effect: The world reacts logically to the player's inputs, meaning previous decisions, physical states, and environmental factors must carry over into current scenes.
 - Plot Continuity: Actively track the narrative to prevent plot holes, continuity errors, or forgotten characters.
 - Reactive NPCs: Non-player characters are not puppets, and their reactions are dictated by their unique personalities, current circumstances, and stakes.
-- Memories: Use the `query-memories` tool to obtain more information about the memories of each character and locations.
 
 ### Immersion Constraints
 

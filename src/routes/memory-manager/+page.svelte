@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { Memory, type MemoryItem, type LocationItem } from '$lib/memory/memory';
+	import type { InventoryItem } from '$lib/memory/inventory-types';
 	import { getEmbeddingProviderConfig, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 	import {
 		getActiveStory,
@@ -20,6 +21,7 @@
 	import { log } from '$lib/logging/logger';
 
 	let memories = $state<MemoryItem[]>([]);
+	let inventoryItems = $state<InventoryItem[]>([]);
 	let locations = $state<LocationItem[]>([]);
 	let searchQuery = $state('');
 	let searchResults = $state<MemoryItem[]>([]);
@@ -60,6 +62,15 @@
 		const memory = new Memory(embeddingConfig);
 		memories = await memory.getAll({ storyId: activeStoryId, actLineId: activeActLineId ?? undefined });
 		locations = await memory.getAllLocations({ storyId: activeStoryId, actLineId: activeActLineId ?? undefined });
+		if (activeActLineId) {
+			try {
+				inventoryItems = await memory.getInventoryByActLine(activeStoryId, activeActLineId);
+			} catch {
+				inventoryItems = [];
+			}
+		} else {
+			inventoryItems = [];
+		}
 	}
 
 	function appendConsole(text: string) {
@@ -224,6 +235,7 @@
 			const memory = new Memory(embeddingConfig);
 			await memory.reset();
 			memories = [];
+			inventoryItems = [];
 			locations = [];
 			searchResults = [];
 			locationSearchResults = [];
@@ -503,6 +515,31 @@
 						<div class="p-3 rounded-[var(--radius-base)] bg-surface-100-900">
 							<p class="text-sm">{loc.location}</p>
 							<p class="text-xs text-surface-500">{loc.createdAt}</p>
+						</div>
+					{/each}
+				</div>
+			{/if}
+		</section>
+
+		<!-- All Inventory -->
+		<section class="card p-6 space-y-4">
+			<div class="flex items-center justify-between">
+				<h2 class="h4">All Inventory ({inventoryItems.length})</h2>
+			</div>
+
+			{#if inventoryItems.length === 0}
+				<p class="text-sm text-surface-500">No inventory stored yet.</p>
+			{:else}
+				<div class="space-y-2">
+					{#each inventoryItems as item (item.id)}
+						<div class="p-3 rounded-[var(--radius-base)] bg-surface-100-900">
+							<p class="text-sm font-medium">{item.itemName}</p>
+							<p class="text-xs text-surface-500">
+								{item.characterCanonicalName} &middot; {item.category} &middot; {item.equipStatus}
+								{#if item.description}
+									&middot; {item.description}
+								{/if}
+							</p>
 						</div>
 					{/each}
 				</div>

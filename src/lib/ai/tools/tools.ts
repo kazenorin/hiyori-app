@@ -1,4 +1,5 @@
 import { buildMemoryTools } from '$lib/ai/tools/query-memories';
+import { buildInventoryTools } from '$lib/ai/tools/query-inventory';
 import { buildActPlotTools } from '$lib/ai/tools/read-act-plot';
 import { buildSceneTools } from '$lib/ai/tools/read-scene';
 import { buildRiskTools } from '$lib/ai/tools/evaluate-risk';
@@ -17,12 +18,12 @@ export interface ToolContext {
 /** Maps each pipeline phase to the tool names it is allowed to use. */
 export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 	SUMMARIZER: [],
-	PLOT_PLANNER: ['read-scene', 'query-memories'],
-	WRITER: ['read-scene', 'query-memories', 'evaluate-risk'],
-	REVIEWER: ['read-scene', 'query-memories'],
+	PLOT_PLANNER: ['read-scene', 'query-memories', 'query-inventory'],
+	WRITER: ['read-scene', 'query-memories', 'query-inventory', 'evaluate-risk'],
+	REVIEWER: ['read-scene', 'query-memories', 'query-inventory'],
 	EDITOR: [],
 	TEMPLATE_FITTER: [],
-	GAME_MASTER: ['read-scene', 'query-memories'],
+	GAME_MASTER: ['read-scene', 'query-memories', 'query-inventory'],
 };
 
 /** Filter a full ToolSet down to only the tools allowed for a given phase. */
@@ -50,6 +51,7 @@ export async function buildTools(storyId: string, actLineId: string): Promise<To
 
 	const tools: ToolSet = {
 		...buildMemoryTools(storyId, actLineId),
+		...buildInventoryTools(storyId, actLineId),
 		...buildActPlotTools(ctx),
 		...buildSceneTools(ctx),
 		...buildRiskTools(ctx),

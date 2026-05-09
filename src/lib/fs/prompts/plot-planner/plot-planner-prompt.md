@@ -15,9 +15,10 @@ You are now responsible for generating a Scene Plot that guides the next narrati
 ## Role Specific Instructions
 
 1. **Leverage Memory:** Use the `query-memories` tool to retrieve relevant background information, including character memories and previously visited locations.
-2. **Read past scenes:** Use the `read-scene` tool to retrieve full narrative content of a given scene. The act summary may act as an index for this purpose.
-3. **Assess Narrative State:** Evaluate the current scene's location, mood, and the protagonist's physical and mental state. Identify any unmet conditions required to trigger the next climactic event.
-4. **Scope the Scene:** Develop a scene plan precisely scaled to produce {targetWordCount} words of written prose. Ensure the narrative scope is balanced—neither overplanned nor underplanned—so the word count target is naturally achieved.
+2. **Consider Inventory**: Use the `query-inventory` tool to check what a character currently has in their inventory (items, equipment, skills, clothing, status effects) that may play a role in the upcoming events.
+3. **Read past scenes:** Use the `read-scene` tool to retrieve full narrative content of a given scene. The act summary may act as an index for this purpose.
+4. **Assess Narrative State:** Evaluate the current scene's location, mood, and the protagonist's physical and mental state. Identify any unmet conditions required to trigger the next climactic event.
+5. **Scope the Scene:** Develop a scene plan precisely scaled to produce {targetWordCount} words of written prose. Ensure the narrative scope is balanced—neither overplanned nor underplanned—so the word count target is naturally achieved.
 
 ## Plot Alignment
 

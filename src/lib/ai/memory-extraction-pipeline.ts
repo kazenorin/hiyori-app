@@ -8,6 +8,7 @@ import {
 } from '$lib/stores/settings.svelte';
 import { loadMemoryExtractionPrompt, loadMemoryExtractionSystemPrompt } from '$lib/fs/prompts';
 import { type ExtractedMemories, parseMemoryExtract } from '$lib/memory/memory-extract-parser';
+import type { ExtractedInventory } from '$lib/memory/inventory-types';
 import { Memory } from '$lib/memory/memory';
 import { parseCharacterAliases } from './act-summary-parser';
 import { isAuthError, toError, withRetry } from '$lib/utils/async';
@@ -18,6 +19,8 @@ export interface PipelineResult {
 	memoriesAdded: number;
 	locationsAdded: number;
 	aliasesAdded: number;
+	inventoryAdded: number;
+	inventoryChangesAdded: number;
 	errors: string[];
 }
 
@@ -94,12 +97,14 @@ async function persistMemoriesWithRetry(
 		memoriesAdded: 0,
 		locationsAdded: 0,
 		aliasesAdded: 0,
+		inventoryAdded: 0,
+		inventoryChangesAdded: 0,
 		errors: [],
 	};
 
-	for (const [character, locations] of Object.entries(extracted) as [string, { [location: string]: string[] }][]) {
+	for (const [character, characterData] of Object.entries(extracted)) {
 		let characterSuccess = true;
-		for (const [location, memories] of Object.entries(locations) as [string, string[]][]) {
+		for (const [location, memories] of Object.entries(characterData.locations)) {
 			// Per-location retry scope — avoids duplicating previously succeeded locations
 			try {
 				const { memoriesAdded, locationAdded } = await persistLocationWithRetry(
@@ -120,6 +125,31 @@ async function persistMemoriesWithRetry(
 				characterSuccess = false;
 			}
 		}
+
+		// Persist inventory if present
+		if (characterData.inventory && characterData.inventory.items.length > 0) {
+			try {
+				const inventoryAdded = await memory.addInventory(storyId, actLineId, messageId, character, characterData.inventory.items);
+				result.inventoryAdded += inventoryAdded;
+			} catch (err) {
+				const msg = toError(err).message;
+				result.errors.push(`Character ${character}, Inventory: ${msg}`);
+				await log.error('memory-pipeline', `Failed to persist inventory for ${character}`, err);
+			}
+		}
+
+		// Persist inventory changes if present
+		if (characterData.inventory?.changes && characterData.inventory.changes.length > 0) {
+			try {
+				const changesAdded = await memory.addInventoryChanges(storyId, actLineId, messageId, character, characterData.inventory.changes);
+				result.inventoryChangesAdded += changesAdded;
+			} catch (err) {
+				const msg = toError(err).message;
+				result.errors.push(`Character ${character}, Inventory Changes: ${msg}`);
+				await log.error('memory-pipeline', `Failed to persist inventory changes for ${character}`, err);
+			}
+		}
+
 		if (characterSuccess) {
 			result.charactersProcessed += 1;
 		}

@@ -472,7 +472,7 @@ async function copyMemoriesForFork(fromLineId: string, toLineId: string, fromSeq
 		const result = await memory.copyMemoriesForFork(storyId, fromLineId, toLineId, messageIds);
 		log.info(
 			'fork',
-			`Copied ${result.memoriesCopied} memories, ${result.locationsCopied} locations, ${result.aliasesCopied} aliases to line ${toLineId}`
+			`Copied ${result.memoriesCopied} memories, ${result.locationsCopied} locations, ${result.aliasesCopied} aliases, ${result.inventoryCopied} inventory items to line ${toLineId}`
 		);
 	} catch (err) {
 		log.error('fork', 'Failed to copy memories for fork', err);
