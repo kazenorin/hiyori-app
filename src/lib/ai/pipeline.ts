@@ -51,9 +51,8 @@ const SECTION = {
 	REVIEWER_OUTPUT: '\n## Reviewer Output\n',
 	EDITOR_OUTPUT: '\n## Editor Output\n',
 	GAME_MASTER_OUTPUT: '\n## Game Master Output\n',
-	PREVIOUS_ACT_SUMMARY: '\n## Previous Act Summary\n',
-	PREVIOUS_NARRATIVE_BODY: '\n## Previous Narrative Body\n',
-	EXISTING_ACT_SUMMARY: '\n## Existing Act Summary\n',
+	PREVIOUS_ACT_SUMMARY: '\n## Act Summary {summarizedScenes}\n',
+	PREVIOUS_NARRATIVE_BODY: '\n## Narrative Body for Scene {completedScenes}\n',
 };
 
 // Hardcoded prompts
@@ -65,7 +64,7 @@ const reviewerExtractionPromptTemplate = `Perform a review on the writer's outpu
 const writerExtractionPromptTemplate =
 	'Write a story prose for Scene {currentScene} based on the available information in the chat history.';
 const plotPlannerExtractionPromptTemplate =
-	'The current scene is Scene {currentScene}. Plan a Scene Plot for the next scenes ({nPlus1}, {nPlus3}, {nPlus5}) based on the available information in the chat history.';
+	'The current scene is Scene {currentScene}. Plan a Scene Plot for the Immediate Next Scene, Near-Term Beat (Flexible), and Mid-Term Goal (Flexible) based on the available information in the chat history.';
 
 const summarizerFallbackExtractionPromptTemplate = 'Update the Act Summary for Scene {completedScenes} based on the Player Response.';
 const summarizerExtractionPromptTemplate =
@@ -342,9 +341,13 @@ function playerResponseSection(playerContext: PlayerContext | undefined) {
 	return playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : [];
 }
 
-function buildSummarizerMessages(input: PipelineInput, actSummaryHeading: string) {
+function buildSummarizerMessages(input: PipelineInput) {
 	const { previousNarrativeVariables, actSummary, completedScenes } = input;
 	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
+	const actSummaryHeading = SECTION.PREVIOUS_ACT_SUMMARY.replaceAll(
+		'{summarizedScenes}',
+		completedScenes <= 1 ? '' : `(up to Scene ${completedScenes - 1})`
+	);
 
 	if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
 		return toUserMessages([
@@ -370,7 +373,7 @@ async function generateFullSummary(input: PipelineInput, loadedPrompts: LoadedPr
 	// === FIRST SUMMARY: Full generation (existing behavior) ===
 	const summarizerSystemPrompt = summarizerPrompt.replaceAll('{actSummaryTemplate}', actSummaryTemplate);
 
-	const summarizerMessages = buildSummarizerMessages(input, SECTION.PREVIOUS_ACT_SUMMARY);
+	const summarizerMessages = buildSummarizerMessages(input);
 
 	return await runNonStreamingPhase('SUMMARIZER', summarizerSystemPrompt, summarizerMessages, providerConfigs.summarizer, abortSignal);
 }
@@ -390,7 +393,7 @@ async function generateIncrementalSummary(input: PipelineInput, loadedPrompts: L
 
 	const incrementalSystemPrompt = summarizerIncrementalPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
 
-	const incrementalMessages = buildSummarizerMessages(input, SECTION.EXISTING_ACT_SUMMARY);
+	const incrementalMessages = buildSummarizerMessages(input);
 	const incrementalRaw = await runNonStreamingPhase(
 		'SUMMARIZER',
 		incrementalSystemPrompt,
@@ -414,6 +417,11 @@ export interface PipelineResult {
 	state: PipelineState;
 	editorMetadata?: StreamResultMetadata;
 	asyncPhases?: Promise<AsyncPhaseResults>;
+}
+
+function formatPreviousNarrativeBody(previousNarrativeBody: string | null | undefined, completedScenes: number) {
+	if (!previousNarrativeBody || previousNarrativeBody.trim().length === 0) return [];
+	return SECTION.PREVIOUS_NARRATIVE_BODY.replaceAll('{completedScenes}', String(completedScenes)) + previousNarrativeBody;
 }
 
 /**
@@ -515,7 +523,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
 					...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
-					...(previousNarrativeBody ? [SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeBody] : []),
+					...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 					...playerResponseSection(player),
 					writerExtractionPromptTemplate.replaceAll('{currentScene}', currentScene),
 				]),
@@ -544,7 +552,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
 					...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
-					...(previousNarrativeBody ? [SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeBody] : []),
+					...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 					...playerResponseSection(player),
 					...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
 					reviewerExtractionPromptTemplate.replaceAll('{currentScene}', currentScene),
@@ -586,7 +594,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 						SECTION.ACT_PLOT + actPlot,
 						SECTION.ACT_SUMMARY + actSummary,
 						...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
-						...(previousNarrativeBody ? [SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeBody] : []),
+						...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 						...playerResponseSection(player),
 						...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
 						...(state.reviewerOutput ? [SECTION.REVIEWER_OUTPUT + state.reviewerOutput] : []),
@@ -642,7 +650,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 			SECTION.ACT_PLOT + actPlot,
 			SECTION.ACT_SUMMARY + actSummary,
 			...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
-			...(previousNarrativeBody ? [SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeBody] : []),
+			...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 			...playerResponseSection(player),
 			...(editorOutput ? [SECTION.EDITOR_OUTPUT + editorOutput] : []),
 		];
@@ -673,14 +681,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					...sharedParams,
 					tools: filterToolsForPhase(tools, 'PLOT_PLANNER'),
 					descriptors: PLOT_PLANNER_DESCRIPTORS,
-					messages: toUserMessages([
-						...sharedSections,
-						plotPlannerExtractionPromptTemplate
-							.replaceAll('{currentScene}', currentScene)
-							.replaceAll('{nPlus1}', String(completedScenes + 2))
-							.replaceAll('{nPlus3}', String(completedScenes + 4))
-							.replaceAll('{nPlus5}', String(completedScenes + 6)),
-					]),
+					messages: toUserMessages([...sharedSections, plotPlannerExtractionPromptTemplate.replaceAll('{currentScene}', currentScene)]),
 					providerConfig: providerConfigs.plotPlanner,
 					buildStateUpdate: (ss) => ({
 						scenePlot: ss.content,

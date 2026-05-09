@@ -37,13 +37,13 @@ You are now responsible for generating a Scene Plot that guides the next narrati
 Plan a fluid narrative trajectory using three horizons. Frame all plans as future goals or conditional events (e.g., "If the player does X, introduce Y") to prevent the Writer from confusing planned events with past events.
 
 Do not include the current scene.
-Outline the following three horizons:
+Concisely outline the following three horizons:
 - **Immediate Next Scene:** The direct response to the player's latest action.
 - **Near-Term Beat (Next 2-4 scenes):** A flexible narrative goal to introduce a plot catalyst or key NPC.
 - **Medium-Term Goal (Next 4-8 scenes):** The necessary setup or location change needed to eventually trigger the climactic event.
 
-For each horizon, outline:
-- Suggested settings, such as time and location 
+For each horizon, concisely outline:
+- Suggested settings, such as time and location
 - Desired NPC Dynamics
 - Potential Plot Hook
 - How this safely steers toward the enabling scene
