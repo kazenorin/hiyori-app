@@ -202,6 +202,8 @@ function updateState(prev: PipelineState, patch: Partial<PipelineState>): Pipeli
 /**
  * Execute a streaming phase with full lifecycle management (start, stream, complete, error).
  * All shared context (abort signal, tools, callbacks) comes from the params object.
+ * Retries the entire phase (including buildStateUpdate) up to retryConfig.retryCount times.
+ * Inner stream retries are deducted from the outer budget when streamWithRetry consumes them.
  */
 async function executeStreamingPhase(
 	params: StreamingPhaseParams,
@@ -209,27 +211,37 @@ async function executeStreamingPhase(
 ): Promise<{ state: PipelineState; streamState: StreamState; metadata: StreamResultMetadata }> {
 	const { phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig, descriptors, buildStateUpdate } =
 		params;
-	state = updateState(state, { currentPhase: phaseName });
-	callbacks.onPhaseStart(phaseName);
-	try {
-		const result = await runStreamingPhase(
-			phaseName,
-			systemPrompt,
-			messages,
-			providerConfig,
-			abortSignal,
-			tools,
-			callbacks,
-			retryConfig,
-			descriptors
-		);
-		state = updateState(state, buildStateUpdate(result.state));
-		callbacks.onPhaseComplete(phaseName, state);
-		return { state, streamState: result.state, metadata: result.metadata };
-	} catch (err: unknown) {
-		callbacks.onError(phaseName, err);
-		throw err;
+	let remainingRetries = retryConfig.retryCount;
+	let lastError: unknown;
+
+	while (remainingRetries >= 0) {
+		if (abortSignal?.aborted) throw new DOMException('Aborted', 'AbortError');
+		state = updateState(state, { currentPhase: phaseName });
+		callbacks.onPhaseStart(phaseName);
+		let streamResult: Awaited<ReturnType<typeof runStreamingPhase>> | undefined;
+		try {
+			streamResult = await runStreamingPhase(
+				phaseName,
+				systemPrompt,
+				messages,
+				providerConfig,
+				abortSignal,
+				tools,
+				callbacks,
+				{ retryCount: remainingRetries, backoffIntervalSeconds: retryConfig.backoffIntervalSeconds },
+				descriptors
+			);
+			state = updateState(state, buildStateUpdate(streamResult.state));
+			callbacks.onPhaseComplete(phaseName, state);
+			return { state, streamState: streamResult.state, metadata: streamResult.metadata };
+		} catch (err: unknown) {
+			lastError = err;
+			remainingRetries -= streamResult?.retriesConsumed ?? remainingRetries;
+		}
 	}
+
+	callbacks.onError(phaseName, lastError);
+	throw lastError;
 }
 
 /**
@@ -245,11 +257,12 @@ async function runStreamingPhase(
 	callbacks: PipelineCallbacks,
 	retryConfig: RetryConfig,
 	descriptors: OutputDescriptor[]
-): Promise<{ state: StreamState; metadata: StreamResultMetadata }> {
+): Promise<{ state: StreamState; metadata: StreamResultMetadata; retriesConsumed: number }> {
 	if (!providerConfig) {
 		throw new Error(`No provider configured for ${phaseName}. Please set one in Settings.`);
 	}
 
+	let retriesConsumed = 0;
 	const accumulator = await streamWithRetry(systemPrompt, messages, {
 		retryConfig,
 		onProgress: (streamState: StreamState) => {
@@ -266,12 +279,13 @@ async function runStreamingPhase(
 		onRetry: callbacks.onPhaseRetry
 			? (attempt: number, maxAttempts: number) => {
 					callbacks.onPhaseRetry!(phaseName, attempt, maxAttempts);
+					retriesConsumed++;
 				}
 			: undefined,
 	});
 
 	const metadata = await accumulator.resultMetadata;
-	return { state: accumulator.state, metadata };
+	return { state: accumulator.state, metadata, retriesConsumed };
 }
 
 /**
