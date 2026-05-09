@@ -274,12 +274,14 @@ function splitByHeaders(content: string): MarkdownSection[] {
 
 			stack.push(section);
 		} else if (token.type === 'hr') {
-			while (stack.length > 0) {
-				const popped = stack.pop()!;
-				popped.rawEnd = tokenStart;
-				sections.push(popped);
+			if (stack.length > 0) {
+				for (const section of stack) {
+					if (section.bodyClosed) continue;
+					section.body += (section.body ? '\n' : '') + raw.trim();
+				}
+			} else {
+				group++;
 			}
-			group++;
 		} else if (stack.length > 0) {
 			for (const section of stack) {
 				if (section.bodyClosed) continue;

@@ -87,7 +87,7 @@ describe('parseContent', () => {
 			expect(output.result).toBeNull();
 		});
 
-		it('returns null when ancestor filter excludes header across HR', () => {
+		it('returns match when ancestor filter includes header across HR', () => {
 			const descriptors: OutputDescriptor[] = [
 				{ outputPath: 'result', match: { type: 'header', content: 'Level 4', ancestor: { type: 'header', content: 'Level 1' } } },
 			];
@@ -95,10 +95,11 @@ describe('parseContent', () => {
 lv1
 
 ---
+
 #### Level 4
 lv4`;
 			const output = parseContent(inputContent, descriptors);
-			expect(output.result).toBeNull();
+			expect(output.result).toBe('#### Level 4\nlv4');
 		});
 
 		it('parses with header body only', () => {
@@ -690,7 +691,7 @@ Some text between lists
 
 	describe('descendancy rules', () => {
 		describe('descendancy boundaries', () => {
-			it('horizontal rules break descendancy', () => {
+			it('horizontal rules do not break descendancy', () => {
 				const descriptors: OutputDescriptor[] = [
 					{ outputPath: 'output1', match: { type: 'header', content: 'Level 1' } },
 					{ outputPath: 'output2', match: { type: 'header', content: 'Level 3' } },
@@ -708,8 +709,7 @@ lv4
 `;
 
 				const output = parseContent(inputContent, descriptors);
-
-				expect(output).toHaveProperty('output1', '# Level 1\nlv1\n## Level 2\nlv2');
+				expect(output).toHaveProperty('output1', '# Level 1\nlv1\n## Level 2\nlv2\n\n---\n### Level 3\nlv3\n#### Level 4\nlv4');
 				expect(output).toHaveProperty('output2', '### Level 3\nlv3\n#### Level 4\nlv4');
 			});
 
@@ -796,7 +796,7 @@ lv4
 				expect(output).toHaveProperty('output', '#### Level 4\nlv4');
 			});
 
-			it('horizontal rules break ancestry', () => {
+			it('horizontal rules do not break ancestry', () => {
 				const descriptors: OutputDescriptor[] = [
 					{ outputPath: 'output1', match: { type: 'header', content: 'Level 2', ancestor: { type: 'header', content: 'Level 1' } } },
 					{ outputPath: 'output2', match: { type: 'header', content: 'Level 4', ancestor: { type: 'header', content: 'Level 1' } } },
@@ -816,14 +816,14 @@ lv4
 
 				const output = parseContent(inputContent, descriptors);
 
-				expect(output).toHaveProperty('output1', '## Level 2\nlv2');
-				expect(output).toHaveProperty('output2', null);
+				expect(output).toHaveProperty('output1', '## Level 2\nlv2\n\n---\n### Level 3\nlv3\n#### Level 4\nlv4');
+				expect(output).toHaveProperty('output2', '#### Level 4\nlv4');
 				expect(output).toHaveProperty('output3', '#### Level 4\nlv4');
 			});
 		});
 
 		describe('parent filter', () => {
-			it('horizontal rules break parents and children', () => {
+			it('horizontal rules do not break parents and children', () => {
 				const descriptors: OutputDescriptor[] = [
 					{
 						outputPath: 'output',
@@ -836,6 +836,7 @@ lv1
 lv2
 
 ---
+
 ### Level 3
 lv3
 #### Level 4
@@ -844,7 +845,7 @@ lv4
 
 				const output = parseContent(inputContent, descriptors);
 
-				expect(output).toHaveProperty('output', null);
+				expect(output).toHaveProperty('output', '### Level 3\nlv3\n#### Level 4\nlv4');
 			});
 
 			it('higher leveled headers break parents and children', () => {
