@@ -350,9 +350,9 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 			onPhaseComplete: (phase: PhaseName, pipelineState: PipelineState) => {
 				if (phase === 'EDITOR') {
 					updateEditorMessage(
-							renderContent(pipelineState.editorVariables, pipelineState.editorOutput ?? getCurrentMessage().content),
-							pipelineState.editorReasoning,
-							pipelineState.editorVariables
+						renderContent(pipelineState.editorVariables, pipelineState.editorOutput ?? getCurrentMessage().content),
+						pipelineState.editorReasoning,
+						pipelineState.editorVariables
 					);
 					return;
 				}
@@ -680,13 +680,12 @@ export async function getForkSequence(actLineId: string, assistantMessageIndex: 
 	const assistantSeq = await dbActLines.getMessageSequence(actLineId, assistantMsg.id);
 	if (assistantSeq === null) throw new Error('Could not find message sequence');
 
-	const preceding = messages.slice(0, assistantMessageIndex);
-	const userMsgIdx = preceding.map((m) => m.role).lastIndexOf('user');
-	const userMsg = userMsgIdx >= 0 ? messages[userMsgIdx] : null;
+	const sceneTitle = assistantMsg.variables?.sceneTitle;
+	const sceneLabel = sceneTitle ? `Scene ${assistantMsg.sceneNumber}: ${sceneTitle}` : `Scene ${assistantMsg.sceneNumber}`;
 
 	return {
 		branchSeq: assistantSeq,
-		name: userMsg ? `Fork from "${userMsg.content.slice(0, 30)}${userMsg.content.length > 30 ? '...' : ''}"` : 'New Branch',
+		name: `Fork from "${sceneLabel}"`,
 	};
 }
 

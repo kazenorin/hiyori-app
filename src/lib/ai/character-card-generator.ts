@@ -17,7 +17,7 @@ import { mkdir, writeTextFile, readTextFile, exists, BaseDirectory } from '@taur
 import { kebabCase } from 'lodash-es';
 import { log } from '$lib/logging/logger';
 import { logCharacterCardActivity } from '$lib/logging/chat-logger';
-import { buildLineDir } from './card-output-path';
+import { buildLineDir, resolveLineDir } from './card-output-path';
 
 // === Types ===
 
@@ -207,7 +207,9 @@ function computeCardFilename(canonicalName: string): string {
 export { computeCardFilename as _computeCardFilenameForTest };
 
 async function loadActCard(storyFolder: string, actNumber: number, isMainLine: boolean, actLineId: string): Promise<string | null> {
-	const lineDir = buildLineDir(storyFolder, actNumber, isMainLine, actLineId);
+	const lineDir = isMainLine
+		? buildLineDir(storyFolder, actNumber, true, actLineId)
+		: await resolveLineDir(storyFolder, actNumber, actLineId);
 	const path = `${lineDir}/act-card.md`;
 
 	try {
@@ -227,7 +229,9 @@ async function loadExistingCharacterCard(
 	isMainLine: boolean,
 	actLineId: string
 ): Promise<string | null> {
-	const lineDir = buildLineDir(storyFolder, actNumber, isMainLine, actLineId);
+	const lineDir = isMainLine
+		? buildLineDir(storyFolder, actNumber, true, actLineId)
+		: await resolveLineDir(storyFolder, actNumber, actLineId);
 	const charactersDir = `${lineDir}/characters`;
 	const filename = computeCardFilename(canonicalName);
 	const path = `${charactersDir}/${filename}`;
@@ -369,7 +373,9 @@ export async function generateCharacterCard(
 	);
 
 	// Save file
-	const lineDir = buildLineDir(storyFolder, currentAct.actNumber, isMainLine, actLineId);
+	const lineDir = isMainLine
+		? buildLineDir(storyFolder, currentAct.actNumber, true, actLineId)
+		: await resolveLineDir(storyFolder, currentAct.actNumber, actLineId);
 	const charactersDir = `${lineDir}/characters`;
 	const filename = computeCardFilename(entry.canonicalName);
 	const filePath = `${charactersDir}/${filename}`;

@@ -10,9 +10,9 @@ import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 import type { ModelMessage } from 'ai';
 import { loadStorySystemPrompt, loadSystemPrompt } from '$lib/fs/prompts';
 import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-folders';
-import { writeTextFile, readTextFile, exists, remove, copyFile, mkdir, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { writeTextFile, readTextFile, exists, remove, copyFile, mkdir, rename, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
-import { buildLineDir } from '$lib/ai/card-output-path';
+import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, resolveLineSubdir } from '$lib/ai/card-output-path';
 import { generateActPlot, type ActPlotPhase } from '$lib/ai/act-plot-generator';
 
 export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
@@ -229,7 +229,7 @@ async function ensureActPlot(): Promise<void> {
 		const act = acts.find((a) => a.id === activeActId);
 		const actLine = actLines.find((l) => l.id === activeActLineId);
 		if (act && actLine) {
-			const lineDir = buildLineDir(storyFolder, act.actNumber, actLine.isMainLine, actLine.id);
+			const lineDir = buildLineDir(storyFolder, act.actNumber, actLine.isMainLine, actLine.id, buildLineSubdirSuffix(actLine.name));
 			const plotPath = `${lineDir}/act-plot.md`;
 			const plotExists = await exists(plotPath, { baseDir: BaseDirectory.AppData });
 			if (plotExists) {
@@ -297,6 +297,29 @@ export async function renameAct(id: string, newName: string): Promise<void> {
 export async function renameActLine(id: string, newName: string): Promise<void> {
 	await dbActLines.updateActLine(id, newName);
 	actLines = actLines.map((l) => (l.id === id ? { ...l, name: newName } : l));
+
+	// Rename folder on disk to match new name
+	const storyId = activeStoryId;
+	const storyName = stories.find((s) => s.id === storyId)?.name;
+	const act = acts.find((a) => a.id === activeActId);
+	if (storyId && storyName && act) {
+		try {
+			const storyFolder = await resolveStoryFolder(storyId, storyName);
+			const actDir = `${storyFolder}/act-${act.actNumber}`;
+			const oldSubdir = await resolveLineSubdir(actDir, id);
+			if (oldSubdir) {
+				const newSubdir = computeLineSubdir(false, id, buildLineSubdirSuffix(newName));
+				if (oldSubdir !== newSubdir) {
+					await rename(`${actDir}/${oldSubdir}`, `${actDir}/${newSubdir}`, {
+						oldPathBaseDir: BaseDirectory.AppData,
+						newPathBaseDir: BaseDirectory.AppData,
+					});
+				}
+			}
+		} catch (err) {
+			await log.error('act-line', 'Failed to rename act line folder', err);
+		}
+	}
 }
 
 export async function deleteStory(id: string, removeFolder: boolean = false): Promise<void> {
@@ -350,7 +373,7 @@ export async function deleteActLine(id: string, removeFolder: boolean = false): 
 	if (removeFolder && line && act && storyId && storyName) {
 		try {
 			const storyFolder = await resolveStoryFolder(storyId, storyName);
-			const lineDir = buildLineDir(storyFolder, act.actNumber, line.isMainLine, line.id);
+			const lineDir = buildLineDir(storyFolder, act.actNumber, line.isMainLine, line.id, buildLineSubdirSuffix(line.name));
 			await remove(lineDir, { baseDir: BaseDirectory.AppData, recursive: true });
 		} catch (err) {
 			await log.error('delete-act-line', 'Failed to remove line folder', err);
@@ -397,8 +420,8 @@ async function copyActPlotForFork(fromLineId: string, toLineId: string): Promise
 
 	try {
 		const storyFolder = await resolveStoryFolder(storyId, storyName);
-		const fromDir = buildLineDir(storyFolder, act.actNumber, fromLine.isMainLine, fromLineId);
-		const toDir = buildLineDir(storyFolder, act.actNumber, false, toLineId);
+		const fromDir = buildLineDir(storyFolder, act.actNumber, fromLine.isMainLine, fromLineId, buildLineSubdirSuffix(fromLine.name));
+		const toDir = buildLineDir(storyFolder, act.actNumber, false, toLineId, buildLineSubdirSuffix(toLine.name));
 		const fromPath = `${fromDir}/act-plot.md`;
 		const toPath = `${toDir}/act-plot.md`;
 
