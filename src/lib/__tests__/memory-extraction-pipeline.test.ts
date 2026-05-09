@@ -117,7 +117,7 @@ vi.mock('$lib/logging/logger', () => ({
 }));
 
 const defaultParsed: ExtractedMemories = {
-	elena: { tavern: ['Elena sat by the fire.'] },
+	elena: { locations: { tavern: ['Elena sat by the fire.'] } },
 };
 
 describe('memory-extraction-pipeline', () => {
@@ -210,11 +210,15 @@ describe('memory-extraction-pipeline', () => {
 		it('persists all characters and locations', async () => {
 			mockParseMemoryExtract.mockReturnValue({
 				elena: {
-					tavern: ['Memory 1', 'Memory 2'],
-					forest: ['Memory 3'],
+					locations: {
+						tavern: ['Memory 1', 'Memory 2'],
+						forest: ['Memory 3'],
+					},
 				},
 				marcus: {
-					castle: ['Memory 4'],
+					locations: {
+						castle: ['Memory 4'],
+					},
 				},
 			});
 
@@ -238,8 +242,10 @@ describe('memory-extraction-pipeline', () => {
 		it('retries per-location on failure', async () => {
 			mockParseMemoryExtract.mockReturnValue({
 				elena: {
-					tavern: ['Memory 1'],
-					forest: ['Memory 2'],
+					locations: {
+						tavern: ['Memory 1'],
+						forest: ['Memory 2'],
+					},
 				},
 			});
 
@@ -261,8 +267,10 @@ describe('memory-extraction-pipeline', () => {
 			const { log } = await import('$lib/logging/logger');
 			mockParseMemoryExtract.mockReturnValue({
 				elena: {
-					tavern: ['Memory 1'],
-					forest: ['Memory 2'],
+					locations: {
+						tavern: ['Memory 1'],
+						forest: ['Memory 2'],
+					},
 				},
 			});
 

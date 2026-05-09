@@ -6,13 +6,13 @@ Extract the mechanical and tracking information needed for gameplay.
 
 ## Instructions
 
-1. Read the Editor Output (the final narrative text after review and revision).
+1. Read the Editor Output (the final narrative text after review and revision). Optionally consider using available tools to obtain additional information.
 2. Identify active plot threads, decision context, and player-facing choices.
 3. Output game data using the GM Output format.
 
 ## Rules
 
-- **Active Plot Threads:** Identify unresolved situations and immediate goals currently visible to the player using concise bullet points.
+- **Active Plot Threads:** Identify unresolved situations and immediate goals currently visible to the player using concise bullet points. Limit to 6 points.
 - **Decision Context:** Provide a brief, 1-2 sentence framing of the exact moment the player must act.
 - **Actionable Choices:** Generate 3-4 specific choices. Keep each choice short, direct, and strictly action-oriented (e.g., under 15 words). Do not over-describe the action or explain the potential outcome.
 - **Choice Variety:** Ensure the generated choices include at least one escalating/aggressive option and one observational/defensive option.

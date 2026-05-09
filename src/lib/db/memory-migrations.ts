@@ -7,20 +7,20 @@ interface SchemaVersion {
 const memoryMigrationStatements: string[][] = [
 	[
 		`CREATE TABLE IF NOT EXISTS memory_config (
-			key TEXT PRIMARY KEY,
-			value TEXT NOT NULL
-		)`,
+				key TEXT PRIMARY KEY,
+				value TEXT NOT NULL
+			)`,
 		`CREATE TABLE IF NOT EXISTS memory_meta (
-			id TEXT PRIMARY KEY,
-			vec_rowid INTEGER UNIQUE,
-			content TEXT NOT NULL,
-			message_id TEXT NOT NULL,
-			story_id TEXT NOT NULL,
-			act_line_id TEXT NOT NULL,
-			character_canonical_name TEXT NOT NULL,
-			location TEXT NOT NULL,
-			created_at TEXT DEFAULT CURRENT_TIMESTAMP
-		)`,
+				id TEXT PRIMARY KEY,
+				vec_rowid INTEGER UNIQUE,
+				content TEXT NOT NULL,
+				message_id TEXT NOT NULL,
+				story_id TEXT NOT NULL,
+				act_line_id TEXT NOT NULL,
+				character_canonical_name TEXT NOT NULL,
+				location TEXT NOT NULL,
+				created_at TEXT DEFAULT CURRENT_TIMESTAMP
+			)`,
 		`CREATE INDEX IF NOT EXISTS idx_memory_meta_story ON memory_meta(story_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_memory_meta_act_line ON memory_meta(act_line_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_memory_meta_character ON memory_meta(character_canonical_name)`,
@@ -28,28 +28,59 @@ const memoryMigrationStatements: string[][] = [
 	],
 	[
 		`CREATE TABLE IF NOT EXISTS location_meta (
-			id TEXT PRIMARY KEY,
-			vec_rowid INTEGER UNIQUE,
-			location_text TEXT NOT NULL,
-			message_id TEXT NOT NULL,
-			story_id TEXT NOT NULL,
-			act_line_id TEXT NOT NULL,
-			created_at TEXT DEFAULT CURRENT_TIMESTAMP
-		)`,
+				id TEXT PRIMARY KEY,
+				vec_rowid INTEGER UNIQUE,
+				location_text TEXT NOT NULL,
+				message_id TEXT NOT NULL,
+				story_id TEXT NOT NULL,
+				act_line_id TEXT NOT NULL,
+				created_at TEXT DEFAULT CURRENT_TIMESTAMP
+			)`,
 		`CREATE INDEX IF NOT EXISTS idx_location_meta_story ON location_meta(story_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_location_meta_act_line ON location_meta(act_line_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_location_meta_message ON location_meta(message_id)`,
 	],
 	[
 		`CREATE TABLE IF NOT EXISTS aliases (
-			story_id TEXT NOT NULL,
-			act_line_id TEXT NOT NULL,
-			alias TEXT NOT NULL,
-			alias_group TEXT NOT NULL,
-			message_id TEXT NOT NULL,
-			PRIMARY KEY (story_id, act_line_id, alias)
-		)`,
+				story_id TEXT NOT NULL,
+				act_line_id TEXT NOT NULL,
+				alias TEXT NOT NULL,
+				alias_group TEXT NOT NULL,
+				message_id TEXT NOT NULL,
+				PRIMARY KEY (story_id, act_line_id, alias)
+			)`,
 		`CREATE INDEX IF NOT EXISTS idx_aliases_message ON aliases(message_id)`,
+	],
+	[
+		`CREATE TABLE IF NOT EXISTS inventory (
+				id TEXT PRIMARY KEY,
+				story_id TEXT NOT NULL,
+				act_line_id TEXT NOT NULL,
+				character_canonical_name TEXT NOT NULL,
+				item_name TEXT NOT NULL,
+				category TEXT NOT NULL,
+				equip_status TEXT NOT NULL DEFAULT 'carried',
+				description TEXT,
+				message_id TEXT NOT NULL,
+				created_at TEXT DEFAULT CURRENT_TIMESTAMP
+			)`,
+		`CREATE TABLE IF NOT EXISTS inventory_changes (
+				id TEXT PRIMARY KEY,
+				story_id TEXT NOT NULL,
+				act_line_id TEXT NOT NULL,
+				character_canonical_name TEXT NOT NULL,
+				item_name TEXT NOT NULL,
+				change_type TEXT NOT NULL,
+				description TEXT,
+				message_id TEXT NOT NULL,
+				created_at TEXT DEFAULT CURRENT_TIMESTAMP
+			)`,
+		`CREATE INDEX IF NOT EXISTS idx_inventory_character ON inventory(character_canonical_name)`,
+		`CREATE INDEX IF NOT EXISTS idx_inventory_act_line ON inventory(act_line_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_inventory_story ON inventory(story_id)`,
+		`CREATE UNIQUE INDEX IF NOT EXISTS idx_inventory_unique ON inventory(act_line_id, character_canonical_name, item_name)`,
+		`CREATE INDEX IF NOT EXISTS idx_inventory_changes_character ON inventory_changes(character_canonical_name)`,
+		`CREATE INDEX IF NOT EXISTS idx_inventory_changes_act_line ON inventory_changes(act_line_id)`,
 	],
 ];
 

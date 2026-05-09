@@ -1,6 +1,3 @@
-## Progress
-- Completed scenes: {completedScenes}
-
 ## Scene Summaries
 ### Scene {sceneNumber}: {sceneTitle}
 Location: [location of where the scene took place.]

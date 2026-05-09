@@ -1,8 +1,5 @@
 # Act Summary
 
-## Progress
-- Completed scenes: {completedScenes}
-
 ## Scene Summaries
 ### Scene [N]: [Scene title]
 Location: [location of where the scene took place.]

@@ -699,6 +699,7 @@ async function removeMemoriesFromActLine(actLineId: string, messageIdsToRemove: 
 			await memory.deleteByMessages(storyId, actLineId, messageIdsToRemove);
 			await memory.deleteLocationsByMessages(storyId, actLineId, messageIdsToRemove);
 			await memory.deleteAliasesByMessages(storyId, actLineId, messageIdsToRemove);
+			await memory.deleteInventoryByMessages(storyId, actLineId, messageIdsToRemove);
 		}
 	}
 }

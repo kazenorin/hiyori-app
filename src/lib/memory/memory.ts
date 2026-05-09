@@ -3,6 +3,8 @@ import Database from '@tauri-apps/plugin-sql';
 import { getMemoryDatabase } from '$lib/db/memory-database';
 import { createEmbeddingModel } from '$lib/ai/provider';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
+import type { InventoryCategory, EquipStatus, InventoryItem, InventoryChange } from './inventory-types';
+import { toInventoryItem, toInventoryChange } from './inventory-types';
 
 function cosineDistance(a: number[], b: number[]): number {
 	let dot = 0,
@@ -741,8 +743,8 @@ export class Memory {
 		fromLineId: string,
 		toLineId: string,
 		messageIds: string[]
-	): Promise<{ memoriesCopied: number; locationsCopied: number; aliasesCopied: number }> {
-		if (messageIds.length === 0) return { memoriesCopied: 0, locationsCopied: 0, aliasesCopied: 0 };
+	): Promise<{ memoriesCopied: number; locationsCopied: number; aliasesCopied: number; inventoryCopied: number }> {
+		if (messageIds.length === 0) return { memoriesCopied: 0, locationsCopied: 0, aliasesCopied: 0, inventoryCopied: 0 };
 		const db = getMemoryDatabase();
 		const msgPlaceholders = messageIds.map((_, i) => `$${i + 3}`).join(', ');
 
@@ -809,9 +811,9 @@ export class Memory {
 		}
 
 		const aliasesCopied = await this.copyAliasesForFork(storyId, fromLineId, toLineId);
-		return { memoriesCopied: memRows.length, locationsCopied: locRows.length, aliasesCopied };
+		const inventoryCopied = await this.copyInventoryForFork(storyId, fromLineId, toLineId);
+		return { memoriesCopied: memRows.length, locationsCopied: locRows.length, aliasesCopied, inventoryCopied };
 	}
-
 
 	async addAliases(storyId: string, actLineId: string, messageId: string, aliases: string[][]): Promise<void> {
 		if (aliases.length === 0) return;
@@ -853,7 +855,9 @@ export class Memory {
 		);
 		const count = countRows[0]?.cnt ?? 0;
 		await db.execute(`DELETE FROM aliases WHERE story_id = $1 AND act_line_id = $2 AND message_id IN (${placeholders})`, [
-			storyId, actLineId, ...messageIds,
+			storyId,
+			actLineId,
+			...messageIds,
 		]);
 		return count;
 	}
@@ -884,6 +888,182 @@ export class Memory {
 		return rows.length;
 	}
 
+	// --- Inventory methods ---
+
+	async addInventory(
+		storyId: string,
+		actLineId: string,
+		messageId: string,
+		characterCanonicalName: string,
+		items: { name: string; category: InventoryCategory; equipStatus: EquipStatus; description?: string }[]
+	): Promise<number> {
+		if (items.length === 0) return 0;
+		const db = getMemoryDatabase();
+
+		for (const item of items) {
+			const id = crypto.randomUUID();
+			await db.execute(
+				`INSERT INTO inventory (id, story_id, act_line_id, character_canonical_name, item_name, category, equip_status, description, message_id)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+				 ON CONFLICT(act_line_id, character_canonical_name, item_name) DO UPDATE SET
+						category = excluded.category,
+						equip_status = excluded.equip_status,
+						description = excluded.description,
+						message_id = excluded.message_id`,
+				[id, storyId, actLineId, characterCanonicalName, item.name, item.category, item.equipStatus, item.description ?? null, messageId]
+			);
+		}
+		return items.length;
+	}
+
+	async addInventoryChanges(
+		storyId: string,
+		actLineId: string,
+		messageId: string,
+		characterCanonicalName: string,
+		changes: { itemName: string; changeType: InventoryChange['changeType']; description?: string }[]
+	): Promise<number> {
+		if (changes.length === 0) return 0;
+		const db = getMemoryDatabase();
+
+		for (const change of changes) {
+			const id = crypto.randomUUID();
+			await db.execute(
+				`INSERT INTO inventory_changes (id, story_id, act_line_id, character_canonical_name, item_name, change_type, description, message_id)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+				[id, storyId, actLineId, characterCanonicalName, change.itemName, change.changeType, change.description ?? null, messageId]
+			);
+		}
+		return changes.length;
+	}
+
+	async getInventory(
+		characterCanonicalName: string,
+		options: { storyId: string; actLineId: string; category?: InventoryCategory }
+	): Promise<InventoryItem[]> {
+		const db = getMemoryDatabase();
+
+		const sql = options.category
+			? 'SELECT * FROM inventory WHERE story_id = $1 AND act_line_id = $2 AND character_canonical_name = $3 AND category = $4 ORDER BY item_name'
+			: 'SELECT * FROM inventory WHERE story_id = $1 AND act_line_id = $2 AND character_canonical_name = $3 ORDER BY item_name';
+		const params = options.category
+			? [options.storyId, options.actLineId, characterCanonicalName, options.category]
+			: [options.storyId, options.actLineId, characterCanonicalName];
+
+		const rows = await db.select<Array<Record<string, unknown>>>(sql, params);
+		return rows.map((row) => toInventoryItem(row));
+	}
+
+	async getInventoryByActLine(storyId: string, actLineId: string): Promise<InventoryItem[]> {
+		const db = getMemoryDatabase();
+		const rows = await db.select<Array<Record<string, unknown>>>(
+			'SELECT * FROM inventory WHERE story_id = $1 AND act_line_id = $2 ORDER BY character_canonical_name, item_name',
+			[storyId, actLineId]
+		);
+		return rows.map((row) => toInventoryItem(row));
+	}
+
+	async getInventoryChanges(
+		characterCanonicalName: string,
+		options: { storyId: string; actLineId: string }
+	): Promise<InventoryChange[]> {
+		const db = getMemoryDatabase();
+		const rows = await db.select<Array<Record<string, unknown>>>(
+			'SELECT * FROM inventory_changes WHERE story_id = $1 AND act_line_id = $2 AND character_canonical_name = $3 ORDER BY created_at',
+			[options.storyId, options.actLineId, characterCanonicalName]
+		);
+		return rows.map((row) => toInventoryChange(row));
+	}
+
+	async deleteInventoryByActLine(storyId: string, actLineId: string): Promise<number> {
+		const db = getMemoryDatabase();
+		const countRows = await db.select<Array<{ cnt: number }>>(
+			'SELECT COUNT(*) as cnt FROM inventory WHERE story_id = $1 AND act_line_id = $2',
+			[storyId, actLineId]
+		);
+		const count = countRows[0]?.cnt ?? 0;
+
+		await db.execute('DELETE FROM inventory WHERE story_id = $1 AND act_line_id = $2', [storyId, actLineId]);
+		await db.execute('DELETE FROM inventory_changes WHERE story_id = $1 AND act_line_id = $2', [storyId, actLineId]);
+		return count;
+	}
+
+	async deleteInventoryByMessages(storyId: string, actLineId: string, messageIds: string[]): Promise<number> {
+		if (messageIds.length === 0) return 0;
+		const db = getMemoryDatabase();
+		const placeholders = messageIds.map((_, i) => `$${i + 3}`).join(', ');
+
+		const countRows = await db.select<Array<{ cnt: number }>>(
+			`SELECT COUNT(*) as cnt FROM inventory WHERE story_id = $1 AND act_line_id = $2 AND message_id IN (${placeholders})`,
+			[storyId, actLineId, ...messageIds]
+		);
+		const count = countRows[0]?.cnt ?? 0;
+
+		await db.execute(`DELETE FROM inventory WHERE story_id = $1 AND act_line_id = $2 AND message_id IN (${placeholders})`, [
+			storyId,
+			actLineId,
+			...messageIds,
+		]);
+		await db.execute(`DELETE FROM inventory_changes WHERE story_id = $1 AND act_line_id = $2 AND message_id IN (${placeholders})`, [
+			storyId,
+			actLineId,
+			...messageIds,
+		]);
+		return count;
+	}
+
+	async copyInventoryForFork(storyId: string, fromLineId: string, toLineId: string): Promise<number> {
+		const db = getMemoryDatabase();
+		const rows = await db.select<Array<Record<string, unknown>>>('SELECT * FROM inventory WHERE story_id = $1 AND act_line_id = $2', [
+			storyId,
+			fromLineId,
+		]);
+
+		for (const row of rows) {
+			const item = toInventoryItem(row);
+			await db.execute(
+				`INSERT INTO inventory (id, story_id, act_line_id, character_canonical_name, item_name, category, equip_status, description, message_id)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+				[
+					crypto.randomUUID(),
+					storyId,
+					toLineId,
+					item.characterCanonicalName,
+					item.itemName,
+					item.category,
+					item.equipStatus,
+					item.description,
+					item.messageId,
+				]
+			);
+		}
+
+		// Copy changes too
+		const changeRows = await db.select<Array<Record<string, unknown>>>(
+			'SELECT * FROM inventory_changes WHERE story_id = $1 AND act_line_id = $2',
+			[storyId, fromLineId]
+		);
+		for (const row of changeRows) {
+			const change = toInventoryChange(row);
+			await db.execute(
+				`INSERT INTO inventory_changes (id, story_id, act_line_id, character_canonical_name, item_name, change_type, description, message_id)
+				 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+				[
+					crypto.randomUUID(),
+					storyId,
+					toLineId,
+					change.characterCanonicalName,
+					change.itemName,
+					change.changeType,
+					change.description,
+					change.messageId,
+				]
+			);
+		}
+
+		return rows.length;
+	}
+
 	async reset(): Promise<void> {
 		const db = getMemoryDatabase();
 		await db.execute('DELETE FROM vec_memories');
@@ -891,6 +1071,8 @@ export class Memory {
 		await db.execute('DELETE FROM vec_locations');
 		await db.execute('DELETE FROM location_meta');
 		await db.execute('DELETE FROM aliases');
+		await db.execute('DELETE FROM inventory');
+		await db.execute('DELETE FROM inventory_changes');
 		await db.execute("DELETE FROM memory_config WHERE key IN ('vec_dimension', 'model_key', 'loc_vec_dimension', 'loc_model_key')");
 
 		// Reset in-memory cache

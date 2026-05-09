@@ -44,7 +44,8 @@ export async function regenerateMemoriesForCurrentLine(onProgress?: (message: st
 		const memory = new Memory(embeddingConfig);
 		const deletedMemories = await memory.deleteByActLine(storyId, actLineId);
 		const deletedLocations = await memory.deleteLocationsByActLine(storyId, actLineId);
-		const delMsg = `Deleted ${deletedMemories} memories and ${deletedLocations} locations`;
+		const deletedInventory = await memory.deleteInventoryByActLine(storyId, actLineId);
+		const delMsg = `Deleted ${deletedMemories} memories, ${deletedLocations} locations, ${deletedInventory} inventory`;
 		await log.info('memory-regen', delMsg);
 		onProgress?.(delMsg);
 
@@ -66,6 +67,7 @@ export async function regenerateMemoriesForCurrentLine(onProgress?: (message: st
 		let _totalCharacters = 0;
 		let totalMemories = 0;
 		let totalLocations = 0;
+		let totalInventory = 0;
 		let errorCount = 0;
 
 		for (let i = 0; i < assistantMessages.length; i++) {
@@ -78,9 +80,10 @@ export async function regenerateMemoriesForCurrentLine(onProgress?: (message: st
 				_totalCharacters += result.charactersProcessed;
 				totalMemories += result.memoriesAdded;
 				totalLocations += result.locationsAdded;
+				totalInventory += result.inventoryAdded;
 				errorCount += result.errors.length;
 
-				const progressMsg = `  → Extracted ${result.memoriesAdded} memories, ${result.locationsAdded} locations`;
+				const progressMsg = `  → Extracted ${result.memoriesAdded} memories, ${result.locationsAdded} locations, ${result.inventoryAdded} inventory items`;
 				onProgress?.(progressMsg);
 			} catch (err) {
 				errorCount += 1;
