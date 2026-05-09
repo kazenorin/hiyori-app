@@ -4,12 +4,12 @@ import type { MessageBase } from '$lib/db/messages';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
 import { DEFAULT_RETRY_CONFIG, type RetryConfig, streamWithRetry } from './chat-stream';
 import { createModel } from './provider';
-import type { NarrativeVariables, PhaseName } from './narrative-types';
+import type { GameDataFields, NarrativeVariables, PhaseName } from './narrative-types';
 import type { AsyncPhaseResults, PipelineCallbacks, PipelineState } from './pipeline-types';
 import type { StreamState } from './chat-callbacks';
 import type { StreamResultMetadata } from './streaming';
 import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
-import { variablesToMarkdown } from './template-renderer';
+import { variablesToMarkdown, hasTemplateMetadata } from './template-renderer';
 import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
 import { filterToolsForPhase } from '$lib/ai/tools/tools';
 import { log } from '$lib/logging/logger';
@@ -35,6 +35,8 @@ import {
 	EDITOR_DESCRIPTORS,
 	GAME_MASTER_DESCRIPTORS,
 	PLOT_PLANNER_DESCRIPTORS,
+	EDITOR_TEMPLATE_FITTER_DESCRIPTORS,
+	GM_TEMPLATE_FITTER_DESCRIPTORS,
 } from './descriptors';
 
 // Markdown section headings used in phase prompts
@@ -48,6 +50,7 @@ const SECTION = {
 	WRITER_OUTPUT: '\n## Writer Output\n',
 	REVIEWER_OUTPUT: '\n## Reviewer Output\n',
 	EDITOR_OUTPUT: '\n## Editor Output\n',
+	GAME_MASTER_OUTPUT: '\n## Game Master Output\n',
 	PREVIOUS_ACT_SUMMARY: '\n## Previous Act Summary\n',
 	PREVIOUS_NARRATIVE_BODY: '\n## Previous Narrative Body\n',
 	EXISTING_ACT_SUMMARY: '\n## Existing Act Summary\n',
@@ -67,6 +70,13 @@ const plotPlannerExtractionPromptTemplate =
 const summarizerFallbackExtractionPromptTemplate = 'Update the Act Summary for Scene {completedScenes} based on the Player Response.';
 const summarizerExtractionPromptTemplate =
 	'Update the Act Summary adding information for the previous scene: "Scene {completedScenes}: {sceneTitle}"';
+
+const templateFitterSystemPrompt =
+	'You are a template-fitting assistant. Your sole task is to restructure provided content into a specific markdown template format without altering any of the original content. Preserve every word \u2014 only add the required section headers.';
+const editorTemplateFitterExtractionPrompt =
+	'The "Editor Output" does not follow the required template format. Restructure it to match the Writer Output Template by inserting the appropriate section headers defined by "Writer Output Template" without changing any content. If a section is missing from the content, add the header with no body.';
+const gmTemplateFitterExtractionPrompt =
+	'The "Game Master Output" does not follow the required game data format. Restructure it to match the game data template by inserting the appropriate section headers defined by the "Game Data" template without changing any content. If a section is missing from the content, add the header with no body.';
 
 // Dynamic prompts
 const promptLoaderDefinitions = {
@@ -98,6 +108,35 @@ function fullOutput(ss: StreamState): string {
 	return ss.content;
 }
 
+/** True if a string value is present (non-null and non-blank). */
+function hasContent(value: string | null | undefined): value is string {
+	return value != null && value.trim().length > 0;
+}
+
+/** Merge fitter variables with original, preferring original non-blank values. */
+function mergeVariables(original: NarrativeVariables | null, fitter: NarrativeVariables | null): NarrativeVariables | null {
+	if (!fitter) return original;
+	if (!original) return fitter;
+	return {
+		sceneTitle: hasContent(original.sceneTitle) ? original.sceneTitle : fitter.sceneTitle,
+		background: hasContent(original.background) ? original.background : fitter.background,
+		narrativeBody: hasContent(original.narrativeBody) ? original.narrativeBody : fitter.narrativeBody,
+		cg: hasContent(original.cg) ? original.cg : fitter.cg,
+		gameData: original.gameData ?? fitter.gameData,
+	};
+}
+
+/** Merge fitter game data with original, preferring original non-empty values. */
+function mergeGameData(original: GameDataFields | null, fitter: GameDataFields | null): GameDataFields | null {
+	if (!fitter) return original;
+	if (!original) return fitter;
+	return {
+		activePlotThreads: original.activePlotThreads.length > 0 ? original.activePlotThreads : fitter.activePlotThreads,
+		decisionContext: hasContent(original.decisionContext) ? original.decisionContext : fitter.decisionContext,
+		decisions: original.decisions.length > 0 ? original.decisions : fitter.decisions,
+	};
+}
+
 export interface PipelineProviderConfigs {
 	plotPlanner: ProviderConfig | undefined;
 	writer: ProviderConfig | undefined;
@@ -105,6 +144,7 @@ export interface PipelineProviderConfigs {
 	editor: ProviderConfig | undefined;
 	gameMaster: ProviderConfig | undefined;
 	summarizer: ProviderConfig | undefined;
+	minorTaskAgent: ProviderConfig | undefined;
 }
 
 /** Story identification context. All fields are present together or all absent. */
@@ -162,6 +202,8 @@ function updateState(prev: PipelineState, patch: Partial<PipelineState>): Pipeli
 /**
  * Execute a streaming phase with full lifecycle management (start, stream, complete, error).
  * All shared context (abort signal, tools, callbacks) comes from the params object.
+ * Retries the entire phase (including buildStateUpdate) up to retryConfig.retryCount times.
+ * Inner stream retries are deducted from the outer budget when streamWithRetry consumes them.
  */
 async function executeStreamingPhase(
 	params: StreamingPhaseParams,
@@ -169,27 +211,37 @@ async function executeStreamingPhase(
 ): Promise<{ state: PipelineState; streamState: StreamState; metadata: StreamResultMetadata }> {
 	const { phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig, descriptors, buildStateUpdate } =
 		params;
-	state = updateState(state, { currentPhase: phaseName });
-	callbacks.onPhaseStart(phaseName);
-	try {
-		const result = await runStreamingPhase(
-			phaseName,
-			systemPrompt,
-			messages,
-			providerConfig,
-			abortSignal,
-			tools,
-			callbacks,
-			retryConfig,
-			descriptors
-		);
-		state = updateState(state, buildStateUpdate(result.state));
-		callbacks.onPhaseComplete(phaseName, state);
-		return { state, streamState: result.state, metadata: result.metadata };
-	} catch (err: unknown) {
-		callbacks.onError(phaseName, err);
-		throw err;
+	let remainingRetries = retryConfig.retryCount;
+	let lastError: unknown;
+
+	while (remainingRetries >= 0) {
+		if (abortSignal?.aborted) throw new DOMException('Aborted', 'AbortError');
+		state = updateState(state, { currentPhase: phaseName });
+		callbacks.onPhaseStart(phaseName);
+		let streamResult: Awaited<ReturnType<typeof runStreamingPhase>> | undefined;
+		try {
+			streamResult = await runStreamingPhase(
+				phaseName,
+				systemPrompt,
+				messages,
+				providerConfig,
+				abortSignal,
+				tools,
+				callbacks,
+				{ retryCount: remainingRetries, backoffIntervalSeconds: retryConfig.backoffIntervalSeconds },
+				descriptors
+			);
+			state = updateState(state, buildStateUpdate(streamResult.state));
+			callbacks.onPhaseComplete(phaseName, state);
+			return { state, streamState: streamResult.state, metadata: streamResult.metadata };
+		} catch (err: unknown) {
+			lastError = err;
+			remainingRetries -= streamResult?.retriesConsumed ?? remainingRetries;
+		}
 	}
+
+	callbacks.onError(phaseName, lastError);
+	throw lastError;
 }
 
 /**
@@ -205,11 +257,12 @@ async function runStreamingPhase(
 	callbacks: PipelineCallbacks,
 	retryConfig: RetryConfig,
 	descriptors: OutputDescriptor[]
-): Promise<{ state: StreamState; metadata: StreamResultMetadata }> {
+): Promise<{ state: StreamState; metadata: StreamResultMetadata; retriesConsumed: number }> {
 	if (!providerConfig) {
 		throw new Error(`No provider configured for ${phaseName}. Please set one in Settings.`);
 	}
 
+	let retriesConsumed = 0;
 	const accumulator = await streamWithRetry(systemPrompt, messages, {
 		retryConfig,
 		onProgress: (streamState: StreamState) => {
@@ -226,12 +279,13 @@ async function runStreamingPhase(
 		onRetry: callbacks.onPhaseRetry
 			? (attempt: number, maxAttempts: number) => {
 					callbacks.onPhaseRetry!(phaseName, attempt, maxAttempts);
+					retriesConsumed++;
 				}
 			: undefined,
 	});
 
 	const metadata = await accumulator.resultMetadata;
-	return { state: accumulator.state, metadata };
+	return { state: accumulator.state, metadata, retriesConsumed };
 }
 
 /**
@@ -452,12 +506,12 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				phaseName: 'WRITER',
 				systemPrompt: writerSystemPrompt
 					.replaceAll('{generalInstructions}', generalInstructions)
-					.replaceAll('{targetWordCount}', effectiveTargetWordCount),
+					.replaceAll('{targetWordCount}', effectiveTargetWordCount)
+					.replaceAll('{writerOutputTemplate}', writerOutputTemplate),
 				...sharedParams,
 				tools: filterToolsForPhase(tools, 'WRITER'),
 				descriptors: NARRATIVE_DESCRIPTORS,
 				messages: toUserMessages([
-					SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
 					SECTION.ACT_SUMMARY + actSummary,
@@ -523,12 +577,12 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					phaseName: 'EDITOR',
 					systemPrompt: editorSystemPrompt
 						.replaceAll('{generalInstructions}', generalInstructions)
-						.replaceAll('{targetWordCount}', effectiveTargetWordCount),
+						.replaceAll('{targetWordCount}', effectiveTargetWordCount)
+						.replaceAll('{writerOutputTemplate}', writerOutputTemplate),
 					...sharedParams,
 					tools: filterToolsForPhase(tools, 'EDITOR'),
 					descriptors: EDITOR_DESCRIPTORS,
 					messages: toUserMessages([
-						SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
 						SECTION.WORLD_CONTENT + worldContent,
 						SECTION.ACT_PLOT + actPlot,
 						SECTION.ACT_SUMMARY + actSummary,
@@ -551,6 +605,35 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 			state = result.state;
 			editorMetadata = result.metadata;
 		}
+	}
+
+	// --- Template fitting for Editor (if variables lack template metadata) ---
+	if (!hasTemplateMetadata(state.editorVariables) && state.editorOutput) {
+		const originalEditorVars = state.editorVariables ?? null;
+		const fitterResult = await executeStreamingPhase(
+			{
+				phaseName: 'TEMPLATE_FITTER',
+				systemPrompt: templateFitterSystemPrompt,
+				...sharedParams,
+				tools: undefined,
+				descriptors: EDITOR_TEMPLATE_FITTER_DESCRIPTORS,
+				messages: toUserMessages([
+					SECTION.EDITOR_OUTPUT + (state.editorOutput ?? ''),
+					SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
+					editorTemplateFitterExtractionPrompt,
+				]),
+				providerConfig: providerConfigs.minorTaskAgent,
+				buildStateUpdate: (ss) => {
+					const merged = mergeVariables(originalEditorVars, ss.variables);
+					return {
+						editorVariables: merged,
+						editorOutput: merged ? variablesToMarkdown(merged) : state.editorOutput,
+					};
+				},
+			},
+			state
+		);
+		state = fitterResult.state;
 	}
 
 	// --- Phase 4: Game Master + Plot Planner (concurrent) ---
@@ -610,6 +693,32 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 		state = gmResult.state;
 		state = updateState(state, { scenePlot: plotResult.state.scenePlot });
+	}
+
+	// --- Template fitting for GM (if gameData lacks required structure) ---
+	if (!state.gameData?.decisions?.length && state.gameMasterOutput) {
+		const originalGameData = state.gameData ?? null;
+		const gmFitterResult = await executeStreamingPhase(
+			{
+				phaseName: 'TEMPLATE_FITTER',
+				systemPrompt: templateFitterSystemPrompt,
+				...sharedParams,
+				tools: undefined,
+				descriptors: GM_TEMPLATE_FITTER_DESCRIPTORS,
+				messages: toUserMessages([
+					SECTION.EDITOR_OUTPUT + (state.editorOutput ?? ''),
+					SECTION.GAME_MASTER_OUTPUT + (state.gameMasterOutput ?? ''),
+					gmTemplateFitterExtractionPrompt,
+				]),
+				providerConfig: providerConfigs.minorTaskAgent,
+				buildStateUpdate: (ss) => {
+					const merged = mergeGameData(originalGameData, ss.variables?.gameData ?? null);
+					return { gameData: merged };
+				},
+			},
+			state
+		);
+		state = gmFitterResult.state;
 	}
 
 	state = updateState(state, { currentPhase: null });

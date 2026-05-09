@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { parseContent } from '$lib/chat-stream-parser';
 import type { OutputDescriptor } from '$lib/chat-stream-parser';
+import { get } from 'lodash-es';
 
 describe('SKILL.md examples', () => {
 	describe('Quick Start', () => {
@@ -219,7 +220,7 @@ Some analysis text
 			];
 			const inputContent = '# Score\n95';
 			const output = parseContent(inputContent, descriptors);
-			expect(output.meta.scores.quality).toBe('95');
+			expect(get(output, 'meta.scores.quality')).toBe('95');
 		});
 
 		it('pre-populated output object', () => {

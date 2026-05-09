@@ -36,21 +36,7 @@ You are now responsible for writing story prose from a Scene Plot. Your job is t
 You MUST output use the exact template below. Your response must begin exactly with `## Scene Title`. (Do not output anything else before the Scene Title).
 
 ```markdown
-## Scene Title
-
-[single-line short title of the scene]
-
-## Background
-
-[a short description to describe the visual background of the scene]
-
-## Narrative Body
-
-[the prose content of the narration, incorporating the outcome of the player's action as determined by the evaluate-risk tool]
-
-## CG
-
-[a descriptive illustration depicting the moment of highest visual impact]
+{writerOutputTemplate}
 ```
 
 - **Scene Title**: A short title reflecting the current scene's theme or focus.

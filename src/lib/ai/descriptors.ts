@@ -37,3 +37,9 @@ export const EDITOR_DESCRIPTORS: OutputDescriptor[] = SCENE_DESCRIPTORS;
 
 /** Plot Planner phase — no variable extraction needed (returns raw content as scenePlot). */
 export const PLOT_PLANNER_DESCRIPTORS: OutputDescriptor[] = [];
+
+/** Template Fitter for Editor output — scene fields only. */
+export const EDITOR_TEMPLATE_FITTER_DESCRIPTORS: OutputDescriptor[] = SCENE_DESCRIPTORS;
+
+/** Template Fitter for GM output — game data fields only. */
+export const GM_TEMPLATE_FITTER_DESCRIPTORS: OutputDescriptor[] = GAME_DATA_DESCRIPTORS;

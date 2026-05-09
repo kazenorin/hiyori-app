@@ -32,21 +32,7 @@ You MUST output ONLY the revised text using the exact template below. Do not inc
 Your response must begin exactly with `## Scene Title`.
 
 ```markdown
-## Scene Title
-
-[single-line short title of the scene]
-
-## Background
-
-[a short description to describe the visual background of the scene]
-
-## Narrative Body
-
-[the prose content of the narration]
-
-## CG
-
-[a descriptive illustration depicting the moment of highest visual impact]
+{writerOutputTemplate}
 ```
 
 - **Scene Title**: A short title reflecting the current scene's theme or focus.
