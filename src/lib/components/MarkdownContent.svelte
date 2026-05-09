@@ -22,14 +22,6 @@
 	.markdown-content {
 		font-size: var(--text-base);
 	}
-	.markdown-content :global(h1) {
-		font-size: var(--text-2xl);
-		@apply font-bold mt-6 mb-3;
-	}
-	.markdown-content :global(h2) {
-		font-size: var(--text-xl);
-		@apply font-semibold mt-5 mb-2;
-	}
 	.markdown-content :global(h3) {
 		font-size: var(--text-lg);
 		@apply font-semibold mt-4 mb-2;
@@ -39,7 +31,7 @@
 		@apply font-semibold mt-3 mb-1;
 	}
 	.markdown-content :global(p) {
-		@apply mb-3 leading-relaxed;
+		@apply mb-3 leading-relaxed max-w-[72ch];
 	}
 	.markdown-content :global(p:last-child) {
 		@apply mb-0;
@@ -80,7 +72,7 @@
 		@apply text-primary-600;
 	}
 	.markdown-content :global(strong) {
-		@apply font-semibold;
+		@apply font-semibold text-primary-900-100;
 	}
 	.markdown-content :global(em) {
 		@apply italic;

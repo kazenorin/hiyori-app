@@ -468,9 +468,9 @@
 							</div>
 						</div>
 					{:else}
-						<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message">
+						<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
 							{#if message.content}
-								<div class="leading-relaxed text-surface-950-50">
+								<div class="leading-relaxed text-surface-800-200">
 									<MarkdownContent content={message.content} />
 								</div>
 							{/if}
@@ -602,7 +602,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message">
+							<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
 								<!-- Pipeline phase accordions -->
 								{#if message.phases && message.phases.length > 0}
 									{#each message.phases as phase, pi (pi)}
@@ -666,7 +666,7 @@
 
 								<!-- Main content: Editor output -->
 								{#if message.variables && hasTemplateMetadata(message.variables)}
-									<div class="leading-relaxed text-surface-950-50">
+									<div class="leading-relaxed text-surface-800-200">
 										{#if storyMessageTemplate}
 											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)} />
 										{:else}
