@@ -13,7 +13,7 @@ import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStory
 import { writeTextFile, readTextFile, exists, remove, copyFile, mkdir, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { buildLineDir } from '$lib/ai/card-output-path';
-import { generateActPlot } from '$lib/ai/act-plot-generator';
+import { generateActPlot, type ActPlotPhase } from '$lib/ai/act-plot-generator';
 
 export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
 
@@ -30,6 +30,8 @@ let activeSystemPrompt = $state<string | null>(null);
 let activeWorldContent = $state<string | null>(null);
 let activeInterviewTranscript = $state<ModelMessage[]>([]);
 let activeActPlotContent = $state<string>('');
+let actPlotGenerationActive = $state(false);
+let actPlotGenerationPhase = $state<ActPlotPhase | null>(null);
 
 export function getStories(): dbStories.Story[] {
 	return stories;
@@ -75,6 +77,12 @@ export function setActiveActPlotContent(content: string): void {
 	if (activeActLineId) {
 		activeActPlotContent = content;
 	}
+}
+export function getActPlotGenerationActive(): boolean {
+	return actPlotGenerationActive;
+}
+export function getActPlotGenerationPhase(): ActPlotPhase | null {
+	return actPlotGenerationPhase;
 }
 /**
  * Combined narration context as message array.
@@ -228,19 +236,26 @@ async function ensureActPlot(): Promise<void> {
 				activeActPlotContent = await readTextFile(plotPath, { baseDir: BaseDirectory.AppData });
 			} else {
 				// Generate act plot if it doesn't exist yet
+				actPlotGenerationActive = true;
 				const result = await generateActPlot(
 					activeStoryId,
 					activeStoryName,
 					activeWorldContent ?? '',
 					activeActLineId,
 					actLine.isMainLine,
-					act.actNumber
+					act.actNumber,
+					(phase) => {
+						actPlotGenerationPhase = phase;
+					}
 				);
 				activeActPlotContent = result.content;
+				actPlotGenerationActive = false;
+				actPlotGenerationPhase = null;
 			}
 		}
 	} catch {
-		// Act plot file may not exist yet
+		actPlotGenerationActive = false;
+		actPlotGenerationPhase = null;
 	}
 }
 

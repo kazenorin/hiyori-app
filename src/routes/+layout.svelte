@@ -13,6 +13,8 @@
 		getActiveActId,
 		getActiveActLineId,
 		getIsLoading,
+		getActPlotGenerationActive,
+		getActPlotGenerationPhase,
 		selectStory,
 		selectAct,
 		selectActLine,
@@ -640,6 +642,31 @@
 				>
 					Cancel
 				</button>
+			</div>
+		</div>
+	{/if}
+
+	<!-- Act Plot Generation Overlay -->
+	{#if getActPlotGenerationActive()}
+		<div
+			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+			role="alert"
+			aria-live="polite"
+			aria-busy="true"
+		>
+			<div class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-8 text-center">
+				<div class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+				<p class="mt-4 text-surface-950-50">
+					{#if getActPlotGenerationPhase() === 'writing'}
+						Writing act plot...
+					{:else if getActPlotGenerationPhase() === 'reviewing'}
+						Reviewing act plot...
+					{:else if getActPlotGenerationPhase() === 'editing'}
+						Editing act plot...
+					{:else}
+						Generating act plot...
+					{/if}
+				</p>
 			</div>
 		</div>
 	{/if}

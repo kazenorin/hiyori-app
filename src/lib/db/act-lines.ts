@@ -380,6 +380,24 @@ export async function removeMessagesFromPremises(actLineId: string, messageIds: 
 	return messageIds;
 }
 
+export async function getPreviousActSummary(actLineId: string): Promise<string | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ act_summary: string }[]>(
+		`SELECT m.act_summary
+		 FROM act_line_meta alm
+		 JOIN acts a ON a.id = alm.act_id
+		 JOIN act_line_meta prev_alm ON a.continues_from_act_line_id = prev_alm.id
+		 JOIN act_lines al ON prev_alm.id = al.act_line_id
+		 JOIN messages m ON al.message_id = m.id
+		 WHERE alm.id = $1
+		   AND m.act_summary IS NOT NULL
+		 ORDER BY al.sequence DESC
+		 LIMIT 1`,
+		[actLineId]
+	);
+	return rows.length > 0 ? rows[0].act_summary : null;
+}
+
 async function removeOrphanedMessages(db: Database, messageIds: string[]): Promise<string[]> {
 	const deleted: string[] = [];
 	for (const msgId of messageIds) {

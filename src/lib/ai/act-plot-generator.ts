@@ -1,17 +1,26 @@
 import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
-import { loadActPlotTemplate, loadActPlotGenerationPrompt, loadStorySystemPrompt } from '$lib/fs/prompts';
+import {
+	loadActPlotTemplate,
+	loadActPlotGenerationPrompt,
+	loadActPlotSystemPrompt,
+	loadActPlotReviewerPrompt,
+	loadActPlotEditorPrompt,
+} from '$lib/fs/prompts';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { buildLineDir } from './card-output-path';
 import { log } from '$lib/logging/logger';
-import { getActNumberForActLine, getPremisesMessages } from '$lib/db/act-lines';
+import { getPremisesMessages, getPreviousActSummary } from '$lib/db/act-lines';
+import { reviewerAcceptsAsIs } from './reviewer-output-parser';
 
 export interface GenerateActPlotResult {
 	filePath: string;
 	content: string;
 }
+
+export type ActPlotPhase = 'writing' | 'reviewing' | 'editing';
 
 /**
  * Load interview transcript from act_line_premises for a given act line.
@@ -32,9 +41,79 @@ export async function loadInterviewTranscript(actLineId: string): Promise<ModelM
 	}
 }
 
+function buildWriterMessages(
+	worldContent: string,
+	interviewTranscript: ModelMessage[],
+	previousActSummary: string | null,
+	generationPrompt: string,
+	template: string
+): ModelMessage[] {
+	const messages: ModelMessage[] = [{ role: 'user', content: '## World Content\n\n' + worldContent }];
+
+	if (previousActSummary) {
+		messages.push({ role: 'user', content: '## Previous Act Summary\n\n' + previousActSummary });
+	}
+
+	const hasValidInterview = interviewTranscript.some((m) => m.role === 'user');
+	if (hasValidInterview) {
+		messages.push({
+			role: 'user',
+			content: '## Interview Transcript\n\nThe following is an interview exchange about the story and premises.',
+		});
+		messages.push(...interviewTranscript);
+	}
+
+	messages.push({ role: 'user', content: generationPrompt });
+	messages.push({ role: 'user', content: '## Template\n\n' + template });
+
+	return messages;
+}
+
+function buildReviewerMessages(
+	worldContent: string,
+	previousActSummary: string | null,
+	writerOutput: string,
+	reviewerPrompt: string
+): ModelMessage[] {
+	const messages: ModelMessage[] = [{ role: 'user', content: '## World Content\n\n' + worldContent }];
+
+	if (previousActSummary) {
+		messages.push({ role: 'user', content: '## Previous Act Summary\n\n' + previousActSummary });
+	}
+
+	messages.push({ role: 'user', content: '## Writer Output\n\n' + writerOutput });
+	messages.push({ role: 'user', content: reviewerPrompt });
+
+	return messages;
+}
+
+function buildEditorMessages(
+	worldContent: string,
+	previousActSummary: string | null,
+	writerOutput: string,
+	reviewerOutput: string,
+	editorPrompt: string
+): ModelMessage[] {
+	const messages: ModelMessage[] = [{ role: 'user', content: '## World Content\n\n' + worldContent }];
+
+	if (previousActSummary) {
+		messages.push({ role: 'user', content: '## Previous Act Summary\n\n' + previousActSummary });
+	}
+
+	messages.push({ role: 'user', content: '## Writer Output\n\n' + writerOutput });
+	messages.push({ role: 'user', content: '## Reviewer Feedback\n\n' + reviewerOutput });
+	messages.push({ role: 'user', content: editorPrompt });
+
+	return messages;
+}
+
 /**
- * Generate an act-plot.md file for a story act.
- * Uses world.md content and optional interview transcript to generate story structure and planning.
+ * Generate an act-plot.md file using a 3-phase pipeline:
+ * 1. WRITER — generates the initial act plot
+ * 2. REVIEWER — evaluates the act plot for issues
+ * 3. EDITOR — revises the act plot based on reviewer feedback (skipped if reviewer accepts)
+ *
+ * If the reviewer or editor phase fails, falls back to writer output.
  *
  * @param storyId - The story's unique identifier
  * @param storyName - The story's display name
@@ -42,6 +121,7 @@ export async function loadInterviewTranscript(actLineId: string): Promise<ModelM
  * @param actLineId - The act line ID (for path construction and interview lookup)
  * @param isMainLine - Whether this is the main story line
  * @param actNumber - The act number (used for output path and prompt)
+ * @param onPhaseChange - Optional callback for UI phase indicator
  */
 export async function generateActPlot(
 	storyId: string,
@@ -49,74 +129,103 @@ export async function generateActPlot(
 	worldContent: string,
 	actLineId: string,
 	isMainLine: boolean,
-	actNumber: number
+	actNumber: number,
+	onPhaseChange?: (phase: ActPlotPhase) => void
 ): Promise<GenerateActPlotResult> {
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) {
 		throw new Error('No main provider configured. Please set one in Settings.');
 	}
 
-	// Load prompts and interview transcript in parallel
-	const [template, generationPrompt, systemPrompt, interviewTranscript] = await Promise.all([
-		loadActPlotTemplate(),
-		Promise.all([getActNumberForActLine(actLineId), loadActPlotGenerationPrompt()]).then(([actNumber, prompt]) =>
-			prompt.replace('{actNumber}', (actNumber ?? 1).toString())
-		),
-		loadStorySystemPrompt(storyId, storyName),
-		loadInterviewTranscript(actLineId),
-	]);
-
-	const hasValidInterview = interviewTranscript.some((m) => m.role === 'user');
-
-	const userMessages: ModelMessage[] = [
-		{ role: 'user', content: 'The following is the world setting for the story.' },
-		{ role: 'user', content: worldContent },
-	];
-
-	if (hasValidInterview) {
-		userMessages.push({ role: 'user', content: 'The following is an interview exchange about the story and premises.' });
-		userMessages.push(...interviewTranscript);
-		userMessages.push({ role: 'user', content: 'Use the above information to generate an act plot.' });
-	}
-
-	userMessages.push({ role: 'user', content: generationPrompt });
-	userMessages.push({ role: 'user', content: `## Template\n\n${template}` });
+	// Load prompts and context in parallel
+	const [template, generationPrompt, systemPrompt, reviewerPrompt, editorPrompt, interviewTranscript, previousActSummary] =
+		await Promise.all([
+			loadActPlotTemplate(),
+			loadActPlotGenerationPrompt().then((p) => p.replace('{actNumber}', actNumber.toString())),
+			loadActPlotSystemPrompt(),
+			loadActPlotReviewerPrompt(),
+			loadActPlotEditorPrompt(),
+			loadInterviewTranscript(actLineId),
+			getPreviousActSummary(actLineId),
+		]);
 
 	const model = createModel(config);
 
 	await log.info(
 		'act-plot-generator',
-		`Starting act-plot generation for story: ${storyName} (interview: ${hasValidInterview ? 'yes' : 'no'})`
+		`Starting act-plot pipeline for story: ${storyName} (interview: ${interviewTranscript.some((m) => m.role === 'user') ? 'yes' : 'no'}, prev-summary: ${previousActSummary ? 'yes' : 'no'})`
 	);
 
-	try {
-		const result = await generateText({
-			model,
-			system: systemPrompt,
-			messages: userMessages,
-		});
+	// Phase 1: WRITER
+	onPhaseChange?.('writing');
+	await log.info('act-plot-generator', 'Phase 1: WRITER');
 
-		// Validate response before writing
-		const text = result.text.trim();
-		if (!text) {
-			// noinspection ExceptionCaughtLocallyJS
-			throw new Error('LLM returned an empty response for act-plot generation.');
-		}
+	const writerMessages = buildWriterMessages(worldContent, interviewTranscript, previousActSummary, generationPrompt, template);
+	const writerResult = await generateText({ model, system: systemPrompt, messages: writerMessages });
+	const writerText = writerResult.text.trim();
 
-		await log.info('act-plot-generator', `Act-plot generation complete. Tokens: ${result.usage.totalTokens}, Length: ${text.length} chars`);
-
-		// Resolve output path: {storyFolder}/act-1/{lineSubDir}/act-plot.md
-		const storyFolder = await resolveStoryFolder(storyId, storyName);
-		const lineDir = buildLineDir(storyFolder, actNumber, isMainLine, actLineId);
-		const filePath = `${lineDir}/act-plot.md`;
-
-		// Write file
-		await mkdir(lineDir, { baseDir: BaseDirectory.AppData, recursive: true });
-		await writeTextFile(filePath, text, { baseDir: BaseDirectory.AppData });
-
-		return { filePath, content: text };
-	} catch (err) {
-		await log.error('act-plot-generator', `Act-plot generation failed for story: ${storyName}`, err);
-		throw err;
+	if (!writerText) {
+		throw new Error('Writer returned an empty response for act-plot generation.');
 	}
+
+	await log.info('act-plot-generator', `Writer complete. Tokens: ${writerResult.usage.totalTokens}, Length: ${writerText.length} chars`);
+
+	// Phases 2+3: REVIEWER → EDITOR (with fallback to writer output on failure)
+	let finalText: string;
+
+	try {
+		// Phase 2: REVIEWER
+		onPhaseChange?.('reviewing');
+		await log.info('act-plot-generator', 'Phase 2: REVIEWER');
+
+		const reviewerMessages = buildReviewerMessages(worldContent, previousActSummary, writerText, reviewerPrompt);
+		const reviewerResult = await generateText({ model, system: systemPrompt, messages: reviewerMessages });
+		const reviewerText = reviewerResult.text.trim();
+
+		await log.info(
+			'act-plot-generator',
+			`Reviewer complete. Tokens: ${reviewerResult.usage.totalTokens}, Accepts-as-is: ${reviewerAcceptsAsIs(reviewerText)}`
+		);
+
+		if (reviewerAcceptsAsIs(reviewerText)) {
+			await log.info('act-plot-generator', 'Editor phase skipped — reviewer accepted as-is');
+			finalText = writerText;
+		} else {
+			// Phase 3: EDITOR
+			onPhaseChange?.('editing');
+			await log.info('act-plot-generator', 'Phase 3: EDITOR');
+
+			const editorMessages = buildEditorMessages(worldContent, previousActSummary, writerText, reviewerText, editorPrompt);
+			const editorResult = await generateText({ model, system: systemPrompt, messages: editorMessages });
+			const editorText = editorResult.text.trim();
+
+			if (!editorText) {
+				await log.warn('act-plot-generator', 'Editor returned empty response, falling back to writer output');
+				finalText = writerText;
+			} else {
+				finalText = editorText;
+				await log.info(
+					'act-plot-generator',
+					`Editor complete. Tokens: ${editorResult.usage.totalTokens}, Length: ${editorText.length} chars`
+				);
+			}
+		}
+	} catch (err) {
+		await log.warn(
+			'act-plot-generator',
+			`Review/edit phase failed, falling back to writer output: ${err instanceof Error ? err.message : String(err)}`
+		);
+		finalText = writerText;
+	}
+
+	// Write output file
+	const storyFolder = await resolveStoryFolder(storyId, storyName);
+	const lineDir = buildLineDir(storyFolder, actNumber, isMainLine, actLineId);
+	const filePath = `${lineDir}/act-plot.md`;
+
+	await mkdir(lineDir, { baseDir: BaseDirectory.AppData, recursive: true });
+	await writeTextFile(filePath, finalText, { baseDir: BaseDirectory.AppData });
+
+	await log.info('act-plot-generator', `Act-plot pipeline complete for story: ${storyName}`);
+	return { filePath, content: finalText };
 }

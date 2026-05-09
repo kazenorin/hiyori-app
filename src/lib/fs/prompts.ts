@@ -44,6 +44,9 @@ import defaultActCardTemplate from './prompts/act/act-card-template.md?raw';
 import defaultActExtractionPrompt from './prompts/act/act-extraction-prompt.md?raw';
 import defaultActPlotTemplate from './prompts/act/act-plot-template.md?raw';
 import defaultActPlotGenerationPrompt from './prompts/act/act-plot-generation-prompt.md?raw';
+import defaultActPlotSystemPrompt from './prompts/act/act-plot-system-prompt.md?raw';
+import defaultActPlotReviewerPrompt from './prompts/act/act-plot-reviewer-prompt.md?raw';
+import defaultActPlotEditorPrompt from './prompts/act/act-plot-editor-prompt.md?raw';
 import defaultInterviewExtractionPrompt from './prompts/interview-extraction-prompt.md?raw';
 
 // Character
@@ -83,6 +86,9 @@ export {
 	defaultActPlotTemplate,
 	defaultActPlotGenerationPrompt,
 	defaultInterviewExtractionPrompt,
+	defaultActPlotSystemPrompt,
+	defaultActPlotReviewerPrompt,
+	defaultActPlotEditorPrompt,
 	defaultCharacterCardTemplate,
 	defaultCharacterCardExtractionPrompt,
 	defaultCharacterCardExtractionSystemPrompt,
@@ -161,6 +167,18 @@ const actPlotGenerationPrompt = new Prompt({
 	relativePath: 'act/act-plot-generation-prompt.md',
 	defaultContent: defaultActPlotGenerationPrompt,
 });
+const actPlotSystemPrompt = new Prompt({
+	relativePath: 'act/act-plot-system-prompt.md',
+	defaultContent: defaultActPlotSystemPrompt,
+});
+const actPlotReviewerPrompt = new Prompt({
+	relativePath: 'act/act-plot-reviewer-prompt.md',
+	defaultContent: defaultActPlotReviewerPrompt,
+});
+const actPlotEditorPrompt = new Prompt({
+	relativePath: 'act/act-plot-editor-prompt.md',
+	defaultContent: defaultActPlotEditorPrompt,
+});
 const interviewExtractionPrompt = new Prompt({
 	relativePath: 'interview-extraction-prompt.md',
 	defaultContent: defaultInterviewExtractionPrompt,
@@ -226,6 +244,9 @@ export const loadActCardTemplate = (): Promise<string> => actCardTemplate.load()
 export const loadActExtractionPrompt = (): Promise<string> => actExtractionPrompt.load();
 export const loadActPlotTemplate = (): Promise<string> => actPlotTemplate.load();
 export const loadActPlotGenerationPrompt = (): Promise<string> => actPlotGenerationPrompt.load();
+export const loadActPlotSystemPrompt = (): Promise<string> => actPlotSystemPrompt.load();
+export const loadActPlotReviewerPrompt = (): Promise<string> => actPlotReviewerPrompt.load();
+export const loadActPlotEditorPrompt = (): Promise<string> => actPlotEditorPrompt.load();
 export const loadInterviewExtractionPrompt = (): Promise<string> => interviewExtractionPrompt.load();
 export const loadCharacterCardTemplate = (): Promise<string> => characterCardTemplate.load();
 export const loadCharacterCardExtractionPrompt = (): Promise<string> => characterCardExtractionPrompt.load();
@@ -376,6 +397,9 @@ registerDefaults([
 	actExtractionPrompt,
 	actPlotTemplate,
 	actPlotGenerationPrompt,
+	actPlotSystemPrompt,
+	actPlotReviewerPrompt,
+	actPlotEditorPrompt,
 	interviewExtractionPrompt,
 	characterCardTemplate,
 	characterCardExtractionPrompt,
