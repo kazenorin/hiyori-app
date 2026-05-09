@@ -31,7 +31,7 @@
 		@apply font-semibold mt-3 mb-1;
 	}
 	.markdown-content :global(p) {
-		@apply mb-3 leading-relaxed max-w-[72ch];
+		@apply mb-3 leading-relaxed;
 	}
 	.markdown-content :global(p:last-child) {
 		@apply mb-0;
