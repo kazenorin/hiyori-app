@@ -4,7 +4,7 @@ import type { MessageBase } from '$lib/db/messages';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
 import { DEFAULT_RETRY_CONFIG, type RetryConfig, streamWithRetry } from './chat-stream';
 import { createModel } from './provider';
-import type { NarrativeVariables, PhaseName } from './narrative-types';
+import type { GameDataFields, NarrativeVariables, PhaseName } from './narrative-types';
 import type { AsyncPhaseResults, PipelineCallbacks, PipelineState } from './pipeline-types';
 import type { StreamState } from './chat-callbacks';
 import type { StreamResultMetadata } from './streaming';
@@ -106,6 +106,35 @@ function fullOutput(ss: StreamState): string {
 		return variablesToMarkdown(ss.variables);
 	}
 	return ss.content;
+}
+
+/** True if a string value is present (non-null and non-blank). */
+function hasContent(value: string | null | undefined): value is string {
+	return value != null && value.trim().length > 0;
+}
+
+/** Merge fitter variables with original, preferring original non-blank values. */
+function mergeVariables(original: NarrativeVariables | null, fitter: NarrativeVariables | null): NarrativeVariables | null {
+	if (!fitter) return original;
+	if (!original) return fitter;
+	return {
+		sceneTitle: hasContent(original.sceneTitle) ? original.sceneTitle : fitter.sceneTitle,
+		background: hasContent(original.background) ? original.background : fitter.background,
+		narrativeBody: hasContent(original.narrativeBody) ? original.narrativeBody : fitter.narrativeBody,
+		cg: hasContent(original.cg) ? original.cg : fitter.cg,
+		gameData: original.gameData ?? fitter.gameData,
+	};
+}
+
+/** Merge fitter game data with original, preferring original non-empty values. */
+function mergeGameData(original: GameDataFields | null, fitter: GameDataFields | null): GameDataFields | null {
+	if (!fitter) return original;
+	if (!original) return fitter;
+	return {
+		activePlotThreads: original.activePlotThreads.length > 0 ? original.activePlotThreads : fitter.activePlotThreads,
+		decisionContext: hasContent(original.decisionContext) ? original.decisionContext : fitter.decisionContext,
+		decisions: original.decisions.length > 0 ? original.decisions : fitter.decisions,
+	};
 }
 
 export interface PipelineProviderConfigs {
@@ -566,6 +595,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 	// --- Template fitting for Editor (if variables lack template metadata) ---
 	if (!hasTemplateMetadata(state.editorVariables) && state.editorOutput) {
+		const originalEditorVars = state.editorVariables ?? null;
 		const fitterResult = await executeStreamingPhase(
 			{
 				phaseName: 'TEMPLATE_FITTER',
@@ -579,10 +609,13 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					editorTemplateFitterExtractionPrompt,
 				]),
 				providerConfig: providerConfigs.minorTaskAgent,
-				buildStateUpdate: (ss) => ({
-					editorOutput: fullOutput(ss),
-					editorVariables: ss.variables,
-				}),
+				buildStateUpdate: (ss) => {
+					const merged = mergeVariables(originalEditorVars, ss.variables);
+					return {
+						editorVariables: merged,
+						editorOutput: merged ? variablesToMarkdown(merged) : state.editorOutput,
+					};
+				},
 			},
 			state
 		);
@@ -650,6 +683,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 	// --- Template fitting for GM (if gameData lacks required structure) ---
 	if (!state.gameData?.decisions?.length && state.gameMasterOutput) {
+		const originalGameData = state.gameData ?? null;
 		const gmFitterResult = await executeStreamingPhase(
 			{
 				phaseName: 'TEMPLATE_FITTER',
@@ -663,9 +697,10 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					gmTemplateFitterExtractionPrompt,
 				]),
 				providerConfig: providerConfigs.minorTaskAgent,
-				buildStateUpdate: (ss) => ({
-					gameData: ss.variables?.gameData ?? null,
-				}),
+				buildStateUpdate: (ss) => {
+					const merged = mergeGameData(originalGameData, ss.variables?.gameData ?? null);
+					return { gameData: merged };
+				},
 			},
 			state
 		);
