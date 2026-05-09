@@ -33,22 +33,19 @@ You are now responsible for generating a Scene Plot that guides the next narrati
 
 ## Short-Term Roadmap
 
-Plan exactly 3 upcoming scenes and no others.
+Plan a fluid narrative trajectory using three horizons. Frame all plans as future goals or conditional events (e.g., "If the player does X, introduce Y") to prevent the Writer from confusing planned events with past events.
 
-Assuming Scene N is the current scene, only include these scene checkpoints:
-- Scene N+1
-- Scene N+3
-- Scene N+5
-
-Do not plan, summarize, mention, or infer Scene N+2, N+4, or any later scene.
 Do not include the current scene.
-Do not add extra roadmap entries outside the required three scenes.
+Outline the following three horizons:
+- **Immediate Next Scene:** The direct response to the player's latest action.
+- **Near-Term Beat (Next 2-4 scenes):** A flexible narrative goal to introduce a plot catalyst or key NPC.
+- **Medium-Term Goal (Next 4-8 scenes):** The necessary setup or location change needed to eventually trigger the climactic event.
 
-For each of the 3 planned scenes, outline only:
-- Location
-- Key NPC reaction
-- Plot catalyst
-- How it moves toward the enabling scene
+For each horizon, outline:
+- Suggested settings, such as time and location 
+- Desired NPC Dynamics
+- Potential Plot Hook
+- How this safely steers toward the enabling scene
 
 ## Output Format
 
@@ -59,40 +56,40 @@ Produce your Scene Plot using the following template:
 
 ## Plot Alignment
 - Upcoming climactic event: [description]
-- Target scene: [number]
-- Scenes remaining: [number]
+- Target scene: [approximate target number]
+- Scenes remaining: [approximate number]
 
 ## Narrative State
-- Current location: [description]
+- Current location: [description of where they are NOW]
 - Protagonist state: [mental/physical state]
-- Unmet conditions: [list]
-- Player choice impact: [how previous choice affects plan]
+- Unmet conditions: [list of what still needs to happen]
+- Player choice impact: [how the most recent choice alters the upcoming plan]
 
 ## Pacing Decision
 - Status: [on track / within 6 scenes / past event]
-- Action: [specific steering action]
+- Action: [specific steering action for the writer to focus on]
 
-## Scene Roadmap
-### Scene [N+1]
-- Location: [where]
-- NPC reaction: [what NPCs do]
-- Plot catalyst: [what drives the scene]
-- Enabling scene progress: [how this moves toward the event]
+## Future Narrative Trajectory
+### Immediate Next Scene
+- Suggested Setting: [where the writer should ideally place the scene]
+- Desired NPC Dynamics: [how NPCs should react to the player's last move]
+- Potential Plot Hook: [what new element can drive this specific scene]
+- Enabling Progress: [how this moves toward the upcoming climactic event]
 
-### Scene [N+3]
-- Location: [where]
-- NPC reaction: [what NPCs do]
-- Plot catalyst: [what drives the scene]
-- Enabling scene progress: [how this moves toward the event]
+### Near-Term Beat (Flexible)
+- Suggested Setting: [potential future location]
+- Desired NPC Dynamics: [relationships or conflicts to develop]
+- Potential Plot Hook: [clues, items, or reveals to drop soon]
+- Enabling Progress: [how to gently steer the player]
 
-### Scene [N+5]
-- Location: [where]
-- NPC reaction: [what NPCs do]
-- Plot catalyst: [what drives the scene]
-- Enabling scene progress: [how this moves toward the event]
+### Mid-Term Goal (Flexible)
+- Suggested Setting: [where the story needs to go eventually]
+- Desired NPC Dynamics: [character arcs to push toward]
+- Potential Plot Hook: [the major catalyst needed before the climactic event]
+- Enabling Progress: [the bridge between current events and the climax]
 
 ## Pre-Output Verification
-- Plan matches roadmap: [yes/no]
-- Choices advance plan: [yes/no]
+- Plan uses future/conditional phrasing: [yes/no]
+- Plan respects player's latest choice: [yes/no]
 - At least one unmet condition addressed: [yes/no]
 ```

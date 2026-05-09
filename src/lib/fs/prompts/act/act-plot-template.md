@@ -42,7 +42,7 @@
 
 [Add or remove events as appropriate to match target scene count]
 
-## Possible Endings
+## Possible Endings (Target to happen at around 16 scenes after Climactic Event 3)
 
 ### Ending 1: [Title] (Good)
 
