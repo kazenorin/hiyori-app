@@ -42,6 +42,144 @@ The project uses lodash-es for common utility operations. Import from `lodash-es
 - `maxBy` — finding max element by property
 - `findLastIndex` — finding last matching index
 - `sampleSize` — random sampling from arrays
+- `set` — deep path assignment (used by stream parser for `outputPath`)
+
+## Database Architecture
+
+**Singleton SQLite** via `@tauri-apps/plugin-sql`. Managed in `src/lib/db/database.ts`:
+
+- `initDatabase()` — lazy initialization, loads `sqlite:byoa.db`
+- `getDatabase()` — returns the singleton (throws if not initialized)
+
+### Schema Migrations
+
+Migrations are in `src/lib/db/migrations.ts`, run sequentially on app startup:
+
+| # | Description |
+|---|---|
+| 0 | Initial: `stories`, `acts`, `messages`, `act_line_meta`, `act_lines`, `act_line_premises`, `story_folders`, `app_state` + indexes |
+| 1 | `ALTER TABLE messages ADD COLUMN scene_plot TEXT` |
+| 2 | `ALTER TABLE messages ADD COLUMN important_phrases TEXT` |
+
+### Message Types
+
+The `Message` type (`src/lib/db/messages.ts`) is the canonical DB representation:
+
+```typescript
+interface Message {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  reasoning?: string;
+  metadata?: string;
+  sceneNumber?: number;
+  actSummary?: string;
+  scenePlot?: string;
+  importantPhrases?: string;     // newline-separated string in DB
+  variables?: NarrativeVariables; // JSON-serialized in DB
+  createdAt: number;
+}
+```
+
+`MessageRow` maps the snake_case DB columns to camelCase. `mapRowToMessage(row)` converts `MessageRow → Message`. Key helpers:
+
+- `parseImportantPhrases(raw)` — splits on `\n`, returns `string[] | undefined`
+- `serializeImportantPhrases(phrases)` — joins with `\n`
+- `parseVariables(raw)` — JSON parse + `FIELD_DESCRIPTORS` field mapping
+- `updateMessageFields(id, fields)` — partial update for `actSummary`, `scenePlot`, `importantPhrases`
+
+### Act Line Architecture
+
+Act lines model branching narratives. Each act has one or more act lines (the main line plus any branches).
+
+**Tables:**
+
+- `act_line_meta` — metadata (id, actId, name, isMainLine)
+- `act_lines` — junction table (act_line_id, message_id, sequence) linking messages to act lines
+- `act_line_premises` — interview transcript messages (same structure, predates act line messages)
+- `acts` — act records with `continues_from_act_line_id` for cross-act branching
+
+**Key operations** (`src/lib/db/act-lines.ts`):
+
+- `getMessagesForLine()` / `getPremisesMessages()` — retrieve messages via JOIN (both use `mapRowToMessage`)
+- `branchFromLine(newLineId, fromLineId, fromSequence, actId, name)` — copies entries up to `fromSequence` + premises
+- `batchResolveActLineInfo(items)` — batch-resolves act numbers, max sequences, and per-message sequences
+- `getPreviousActSummary(actLineId)` — fetches last act_summary from the previous act's main line (via `continues_from_act_line_id` chain)
+- `removeOrphanedMessages()` — garbage-collects messages no longer referenced by any act line or premises
+
+**Shared message safety**: `removeMessagesFromActLine()` only deletes `messages` rows when no other act line references them (prevents data loss on forked lines).
+
+## Settings Architecture
+
+**`src/lib/stores/settings.svelte.ts`** — Svelte 5 `$state` rune persisted to `localStorage`.
+
+### Provider Configs
+
+Multi-provider setup with role-based assignment:
+
+```typescript
+interface ProviderConfig {
+  id: string;
+  name: string;
+  provider: 'openai' | 'openai-compatible' | 'ollama';
+  apiType: 'chat-completions' | 'responses';
+  baseURL: string;
+  model: string;
+  apiKey: string;
+}
+
+interface Settings {
+  providers: ProviderConfig[];
+  roleAssignments: Record<string, string>;  // role name → provider config id
+  // Per-role provider role strings (resolved via roleAssignments)
+  plotPlannerProviderRole: string;
+  writerProviderRole: string;
+  reviewerProviderRole: string;
+  editorProviderRole: string;
+  gameMasterProviderRole: string;
+  summarizerProviderRole: string;
+  memoryProviderRole: string;
+  embeddingProviderRole: string;
+  minorTaskAgentProviderRole: string;
+  // Feature toggles
+  importantPhraseHighlighting: boolean;  // default: false
+  // Other
+  logLevel: LogLevel;
+  fontSize: number;
+  memoryEnabled: boolean;
+  targetWordCount: number;  // default: 400
+}
+```
+
+### Role Resolution
+
+Each role has a `get<X>ProviderConfig()` function following this pattern:
+
+```typescript
+function getWriterProviderConfig(): ProviderConfig | undefined {
+  const role = settings.writerProviderRole || 'main';
+  const id = settings.roleAssignments[role];
+  const config = id ? getProviderConfig(id) : getProviderConfig(role);
+  if (!config?.apiKey) return undefined;
+  return config;
+}
+```
+
+Roles fall back to `main` if not explicitly configured. The `main` role is the default provider.
+
+### Provider Config CRUD
+
+- `addProviderConfig(partial)` — creates with UUID
+- `updateProviderConfig(id, partial)` — updates in-place
+- `deleteProviderConfig(id)` — removes + cleans up `roleAssignments`
+
+### Guard Helpers
+
+- `isPhraseHighlightingEnabled()` — returns `settings.importantPhraseHighlighting && !!getMinorTaskAgentProviderConfig()`
+
+### Migration
+
+`migrateFromFlatSettings()` detects old flat shape (`provider: string` without `providers: []`) and converts to multi-provider, assigning the old config to the `main` role.
 
 ## Prompt Loading System
 
@@ -61,13 +199,20 @@ The app uses a unified prompt loading system with a `Prompt` class pattern:
   - Registers all defaults on module load for `ensureAllBaseConfigs()`
 
 - **`src/lib/fs/prompts/`**: Bundled default markdown files organized by category
-  - `system-prompt.md`, `narration-extraction-prompt.md`, `narration-template.md` at root
+  - `system-prompt.md`, `general-instructions.md` at root
   - `world/`: world-template.md, generate-world-from-chat-prompt.md, etc.
-  - `act/`: act-card-template.md, act-extraction-prompt.md
+  - `act/`: act-card-template.md, act-plot-template.md, act-plot-generation-prompt.md
   - `character/`: character-card-template.md, summarize-characters-in-act.md, etc.
   - `memories/`: memory-extraction-prompt.md, memory-extraction-template.md
   - `reviewer/`: editor-mode-extraction-prompt.md, trigger-editor-mode-fragment.md
+  - `editor/`: editor system prompt
+  - `writer/`: writer system prompt + output template
+  - `game-master/`: game master system prompt
+  - `plot-planner/`: plot planner system prompt
+  - `summarizer/`: summarizer prompt + incremental prompt + templates
+  - `features/`: important-phrases-prompt.md
   - `import/`: import-related prompt templates
+  - `interview-extraction-prompt.md`
 
 ### AppData Structure
 
@@ -78,8 +223,7 @@ AppData/
   config/
     prompt-templates/
       system-prompt.md
-      narration-extraction-prompt.md
-      narration-template.md
+      general-instructions.md
       world/
         world-template.md
         ...
@@ -94,6 +238,9 @@ AppData/
         ...
       reviewer/
         editor-mode-extraction-prompt.md
+        ...
+      features/
+        important-phrases-prompt.md
         ...
 ```
 
@@ -112,6 +259,254 @@ Each story folder can contain its own `prompt-templates/` subdirectory with stor
 1. Story-specific: `<story-folder>/prompt-templates/<relativePath>`
 2. Base file: `config/prompt-templates/<relativePath>`
 3. Bundled default (in-memory fallback)
+
+## Narrative Generation Pipeline
+
+The core pipeline orchestrates multi-phase narrative generation. **Not to be confused with the Streaming Pipeline** (which handles low-level LLM stream parsing).
+
+### Architecture
+
+**`src/lib/ai/pipeline.ts`** — `runPipeline()` function; **`src/lib/ai/pipeline-types.ts`** — types.
+
+### Execution Flow
+
+```
+Sequential chain:
+  Writer → Reviewer → Editor → [Template Fitter for Editor]
+                                → Important Phrases Extraction (fire-and-forget)
+                                → Game Master ‖ Plot Planner (concurrent)
+                                  → [Template Fitter for GM]
+
+Async chain (starts concurrently with sequential):
+  Summarizer → Memory Extraction
+```
+
+Phase details:
+
+1. **Writer** — Streams narrative with `NARRATIVE_DESCRIPTORS` (scene fields + game data)
+2. **Reviewer** — Streams review; if `reviewerAcceptsAsIs()`, skips Editor
+3. **Editor** — Streams refined prose with `EDITOR_DESCRIPTORS` (scene fields only)
+4. **Template Fitter (Editor)** — If editor output lacks template metadata, restructures to match writer template format
+5. **Important Phrases Extraction** — After Editor, calls `extractImportantPhrases()` on `narrativeBody` (fire-and-forget, gated by `isPhraseHighlightingEnabled()`)
+6. **Game Master + Plot Planner** — Run in parallel via `Promise.all`, sharing same context
+7. **Template Fitter (GM)** — If GM output lacks decisions, restructures to match game data template format
+
+Async phases start immediately and resolve after the sequential chain. The `PipelineResult` includes:
+- `state: PipelineState` — final pipeline state
+- `editorMetadata?: StreamResultMetadata` — Editor phase token usage
+- `asyncPhases?: Promise<AsyncPhaseResults>` — Summarizer + Memory results
+- `importantPhrasesPromise?: Promise<string[] | null>` — separate promise to avoid race with `asyncPhases`
+
+### Pipeline Types
+
+```typescript
+// narrative-types.ts
+type PhaseName = 'PLOT_PLANNER' | 'WRITER' | 'REVIEWER' | 'EDITOR' | 'TEMPLATE_FITTER' | 'GAME_MASTER' | 'SUMMARIZER';
+
+interface PipelineProviderConfigs {
+  plotPlanner, writer, reviewer, editor, gameMaster, summarizer, minorTaskAgent: ProviderConfig | undefined;
+}
+
+interface PipelineCallbacks {
+  onPhaseStart, onPhaseStream, onPhaseRetry, onPhaseComplete, onError, onAllComplete;
+}
+```
+
+### Descriptors System
+
+**`src/lib/ai/descriptors.ts`** — defines which fields each phase extracts from LLM output using `OutputDescriptor[]`. The stream parser (`src/lib/chat-stream-parser/`) uses these to route structured sections into `NarrativeVariables` or `GameDataFields`:
+
+| Descriptor Set | Used By | Extracts |
+|---|---|---|
+| `SCENE_DESCRIPTORS` | Writer, Editor, Editor Template Fitter | sceneTitle, background, narrativeBody, cg |
+| `GAME_DATA_DESCRIPTORS` | GM, GM Template Fitter | activePlotThreads, decisionContext, decisions |
+| `NARRATIVE_DESCRIPTORS` | Writer | scene + game data (combined) |
+| `REVIEWER_DESCRIPTORS` | Reviewer | (none — raw text) |
+| `PLOT_PLANNER_DESCRIPTORS` | Plot Planner | (none — raw text) |
+
+### Chat Stream Parser
+
+**`src/lib/chat-stream-parser/`** — descriptor-based extraction from LLM markdown output:
+
+- `types.ts` — `OutputDescriptor`, match types (`HeaderMatch`, `ListMatch`, `ListItemMatch`, `ListLabeledItemMatch`)
+- `parser.ts` — `parseContent(content, descriptors)` dispatches to header/list extractors; uses `marked.lexer()` for tokenization; sets values via lodash `set()` with paths like `'sceneTitle'` or `'activePlotThreads[0]'`
+
+### Narrative Variables
+
+```typescript
+// narrative-types.ts
+interface NarrativeVariables {
+  sceneTitle: string | null;
+  background: string | null;
+  narrativeBody: string | null;
+  cg: string | null;
+  gameData: GameDataFields | null;
+}
+
+interface GameDataFields {
+  activePlotThreads: string[];
+  decisionContext: string | null;
+  decisions: string[];
+}
+```
+
+`FIELD_DESCRIPTORS` defines canonical field ordering for serialization/deserialization.
+
+## Chat State Management
+
+**`src/lib/ai/chat.svelte.ts`** — Svelte 5 runes (`$state`) managing the main chat UI.
+
+### UIMessage Type
+
+```typescript
+interface UIMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  reasoning?: string;
+  metadata?: MessageMetadata;
+  sceneNumber: number;
+  variables?: NarrativeVariables;
+  phases?: UIScenePhase[];       // non-EDITOR phases shown as accordion
+  actSummary?: string;
+  scenePlot?: string;
+  importantPhrases?: string[];   // parsed from DB string (not raw string)
+}
+```
+
+`UIMessage.importantPhrases` is `string[]` (array for UI use), while `Message.importantPhrases` is `string` (newline-separated for DB storage). Conversion happens via `parseImportantPhrases()` / `serializeImportantPhrases()`.
+
+### Message Lifecycle
+
+| Function | Purpose |
+|---|---|
+| `newMessage(role, sceneNumber)` | Creates blank UIMessage with `crypto.randomUUID()` |
+| `persistMessage(actLineId, message)` | Writes to `messages` DB + `act_lines` junction table |
+| `loadActLineMessages(actLineId)` | Loads messages, maps to UIMessages, triggers backfill if needed |
+| `backfillImportantPhrases(msgs, deps)` | Extracts missing phrases for assistant messages with `narrativeBody` |
+| `sendMessage(actLineId, message)` | Full pipeline orchestration |
+
+### sendMessage Flow
+
+1. Waits for any `pendingAsyncPhases` from previous run
+2. Gets previous narrative variables via `getPreviousNarrativeMessage()`
+3. Creates user + assistant messages, adds to `messages` array
+4. Builds `PipelineProviderConfigs` — maps 7 roles to provider configs (falls back to `main`)
+5. Builds `PipelineCallbacks` for phase accordion, editor content, and final merge
+6. Calls `runPipeline()`, handles `importantPhrasesPromise` (fire-and-forget)
+7. On error: `handleStreamError()` persists partial content on `AbortError`, otherwise removes message
+
+## Dialogue Preprocessor
+
+**`src/lib/utils/dialogue-preprocessor.ts`** — `preprocessDialogue(content, characterNames?, importantPhrases?)` applies highlighting with strict precedence rules.
+
+### 7-Step Pipeline
+
+1. **Mask HTML block regions** — Nesting-aware state machine for `HTML_BLOCK_TAGS` (div, header, aside, section, article, main, footer, nav, blockquote, pre, table). Whole regions masked as units.
+2. **Mask inline HTML tags** — `/<[^>]+>/g`
+3. **Wrap dialogue quotes** — `"([^"\\]|\\.)*"` → `<span class="dialogue">...</span>`
+4. **Mask dialogue spans** — Subsequent passes can't match inside dialogue
+5. **Wrap important phrases** — `highlightTerms(result, phrases, 'highlighted-phrase', mask, false)` — no word boundaries (exact substring match)
+6. **Wrap character names** — `highlightTerms(result, names, 'character-name', mask)` — word boundary enforcement
+7. **Restore all masks** — Unmask in reverse order
+
+**Precedence**: dialogue > highlighted-phrase > character-name
+
+Masking uses `\x00<CLASS>_MASK_<index>\x00` placeholders.
+
+## Important Phrase Highlighting
+
+Background LLM extraction + UI highlighting of key narrative phrases.
+
+### Extraction
+
+**`src/lib/ai/important-phrases-extractor.ts`** — `extractImportantPhrases(narrativeBody: string): Promise<string[]>`
+
+- Uses MinorTaskAgent provider (`getMinorTaskAgentProviderConfig()`)
+- System prompt: `features/important-phrases-prompt.md`
+- Retries: `RETRY_COUNT=2`, `BACKOFF_MS=2000`, skips on auth errors
+- Parses response: split by newline, trim, filter empty, limit to `MAX_PHRASES=5`
+- On failure: logs error, returns `[]` (non-blocking)
+
+### Integration Points
+
+- **Pipeline**: After Editor phase, starts extraction as `importantPhrasesPromise` (fire-and-forget). Gated by `isPhraseHighlightingEnabled()`.
+- **Chat**: On `sendMessage()` completion, resolves promise → persists via `updateMessageFields()` → updates `UIMessage` in place
+- **Backfill**: On `loadActLineMessages()`, iterates assistant messages missing `importantPhrases` and extracts sequentially
+- **Rendering**: `MarkdownContent.svelte` passes `importantPhrases` to `preprocessDialogue()`
+
+### Feature Gate
+
+Enabled only when `settings.importantPhraseHighlighting === true` AND `getMinorTaskAgentProviderConfig()` returns a valid config. Check via `isPhraseHighlightingEnabled()`.
+
+## Template Rendering
+
+**`src/lib/ai/template-renderer.ts`** — renders `NarrativeVariables` into the story message template.
+
+- `renderFromVariables(variables, template, extraReplacements?)` — renders if `hasTemplateMetadata()` (has `sceneTitle`), otherwise returns empty string
+- `renderTemplate(template, variables, extraReplacements?)` — single-pass `{placeholder}` replacement; arrays become bullet lists
+- `variablesToMarkdown(variables)` — serializes back to markdown for LLM history
+- `gameDataToMarkdown(gameData)` — serializes `GameDataFields`
+- `hasTemplateMetadata(variables)` — checks for `sceneTitle` field
+
+**`src/lib/fs/view-templates.ts`** — loads view templates (story-message-template.md) with story-specific override support.
+
+## Act Summary System
+
+**`src/lib/ai/act-summary-parser.ts`** — parses and merges structured act summaries.
+
+### Types
+
+```typescript
+interface ActSummary {
+  completedScenes: number;
+  scenes: SceneSummary[];
+  characters: CharacterSummary[];
+}
+interface IncrementalUpdate {
+  completedScenes?: number;
+  newScene?: SceneSummary;
+  characterUpdates?: CharacterSummary[];
+}
+```
+
+### Key Functions
+
+- `parseActSummary(text)` — parses full markdown via `marked.lexer()`, extracts Progress, Scene Summaries, Character Summaries
+- `parseIncrementalOutput(text)` — parses incremental LLM output
+- `serializeActSummary(summary)` — converts back to markdown
+- `mergeActSummary(existing, incremental)` — merges incremental into existing: `completedScenes` overridden, new scene appended, characters matched by name with alias union and scene entry append
+- `parseCharacterAliases(text)` — parses `### [Name]` + `- Aliases: [...]` format
+
+The pipeline uses incremental summaries when an existing `actSummary` exists (faster), otherwise generates a full summary.
+
+## Act Plot System
+
+**`src/lib/ai/act-plot-generator.ts`** — generates `act-plot.md` using a Writer → Reviewer → Editor pipeline (same pattern as the main pipeline but simpler).
+
+- Uses world content, previous act summary, and interview transcript (`act_line_premises`) as context
+- Writes to `{lineDir}/act-plot.md`
+- Triggered by `ensureActPlot()` in `stories.svelte.ts` when an act line is selected and no act-plot file exists
+
+### Read-Act-Plot Tool
+
+**`src/lib/ai/tools/read-act-plot.ts`** — `createReadActPlotTool()` gives the LLM access to the current act plot during chat.
+
+## AI Tools
+
+**`src/lib/ai/tools/tools.ts`** — `buildTools(storyId, actLineId)` combines all tool sets:
+
+| Tool | File | Purpose |
+|---|---|---|
+| `query-memories` | `query-memories.ts` | Semantic search over character memories and locations |
+| `query-inventory` | `query-inventory.ts` | Search and modify inventory items |
+| `evaluate-risk` | `evaluate-risk.ts` | Dice-roll risk evaluation (-1/0/1 outcome) |
+| `read-act-plot` | `read-act-plot.ts` | Read the current act plot file |
+| `read-scene` | `read-scene.ts` | Read messages for a specific scene number |
+
+### Risk Model
+
+**`src/lib/ai/risk-model.ts`** — `evaluateRisk(riskLevel, random)`: maps risk level 1–10 to outcome probabilities. Higher risk → higher chance of bad outcome (-1). Neutral (0) and good (1) outcomes are also possible.
 
 ## Memory System
 
@@ -155,8 +550,6 @@ The AI can query memories during chat via a tool:
     2. `characterQuery` only → `search()` (sorted by relevance, sliced to limit)
     3. `timeAndLocation` only → `searchLocations()` + `sampleByLocation()` + `sampleSize()` (random sampling)
   - Returns memories with `actNumber`, `messagesAgo`, `location`, and content
-
-- **`src/lib/ai/tools/tools.ts`**: `buildTools()` combines memory + other tool sets
 
 ### Memory Regeneration
 
@@ -221,7 +614,7 @@ executeStream (streaming.ts)
 - **`parser-chain.ts`**: Chains thinking-tag parser then game-data parser. `feed()` returns `ParserChainOutput` (`text`, `thinking`, `gameData`). `flush()` drains buffered state.
 - **`thinking-tag-parser.ts`**: Character-by-character state machine that extracts `think`-tag blocks. Separates reasoning content from visible text.
 - **`message-updater.ts`**: Pure immutable helpers for `StreamState` updates: `applyParserOutput`, `applyReasoningDelta`. Private `isValidGameData()` validates game data before applying.
-- **`chat-stream.ts`**: Shared library function `streamChatResponse()` — creates model, accumulator, calls `executeStream`, returns `MessageMetadata`. Used by both `chat.svelte.ts` and `world-builder.svelte.ts`.
+- **`chat-stream.ts`**: Shared library function `streamChatResponse()` — creates model, accumulator, calls `executeStream`, returns `MessageMetadata`. Used by both `chat.svelte.ts` and `world-builder.svelte.ts`. Includes `streamWithRetry()` with exponential backoff.
 
 ## Thinking Tags
 
@@ -239,7 +632,6 @@ During main chat streaming, ```json blocks containing `worldState`(string) and`d
 - **Rendering**: Decisions are rendered as clickable buttons below messages. Game data shows in a collapsed accordion on the assistant message card. Buttons are limited to 2 lines via `line-clamp`.
 - **History injection**: `toHistoryMessage()` in `chat.svelte.ts` appends game data JSON to message content when building LLM history, so the model sees prior game state.
 - **Persistence**: `game_data` column in `messages` table (migration 4). Canonical types: `GameData` interface and `parseGameData()` in `src/lib/db/messages.ts`.
-- **Shared message safety**: `removeMessagesFromActLine()` in `act-lines.ts` only deletes `messages` rows when no other act line references them (prevents data loss on forked lines).
 
 ## Character and Act Card Generation
 
@@ -308,6 +700,19 @@ LIMIT 5;
 
 　— API Reference:　https://alexgarcia.xyz/sqlite-vec/api-reference.html
 　— vec0 virtual tables:　https://alexgarcia.xyz/sqlite-vec/features/vec0.html
+
+## Utility Functions
+
+### Error Handling (`src/lib/utils/error-handling.ts`)
+
+- `getErrorMessage(err: unknown): string` — narrows `AISDKError`, `APICallError`, standard `Error`
+
+### Async Utilities (`src/lib/utils/async.ts`)
+
+- `withRetry<T>(fn, options)` — exponential backoff retry with `shouldRetry`/`onRetry` hooks
+- `isAuthError(error)` — checks 401/403/unauthorized/forbidden
+- `isAbortError(error)` — checks `DOMException` `AbortError`
+- `sleepOrAbort(ms, signal)` — sleep that rejects on abort signal
 
 ## IntelliJ MCP Usage
 
