@@ -63,6 +63,7 @@ function defaultSettings() {
 		summarizerProviderRole: 'main',
 		reviewerProviderRole: 'main',
 		minorTaskAgentProviderRole: 'main',
+		importantPhraseHighlighting: false,
 		targetWordCount: 400,
 	};
 }

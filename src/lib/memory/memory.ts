@@ -963,10 +963,7 @@ export class Memory {
 		return rows.map((row) => toInventoryItem(row));
 	}
 
-	async getInventoryChanges(
-		characterCanonicalName: string,
-		options: { storyId: string; actLineId: string }
-	): Promise<InventoryChange[]> {
+	async getInventoryChanges(characterCanonicalName: string, options: { storyId: string; actLineId: string }): Promise<InventoryChange[]> {
 		const db = getMemoryDatabase();
 		const rows = await db.select<Array<Record<string, unknown>>>(
 			'SELECT * FROM inventory_changes WHERE story_id = $1 AND act_line_id = $2 AND character_canonical_name = $3 ORDER BY created_at',

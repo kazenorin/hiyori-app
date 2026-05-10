@@ -20,11 +20,12 @@ export interface Message extends MessageBase {
 	sceneNumber?: number;
 	actSummary?: string;
 	scenePlot?: string;
+	importantPhrases?: string;
 	variables?: NarrativeVariables;
 	createdAt: number;
 }
 
-interface MessageRow {
+export interface MessageRow {
 	id: string;
 	role: string;
 	content: string;
@@ -33,8 +34,35 @@ interface MessageRow {
 	variables: string | null;
 	act_summary: string | null;
 	scene_plot: string | null;
+	important_phrases: string | null;
 	scene_number: number | null;
 	created_at: number;
+}
+
+export function mapRowToMessage(row: MessageRow): Message {
+	return {
+		id: row.id,
+		role: row.role as 'user' | 'assistant',
+		content: row.content,
+		reasoning: row.reasoning ?? undefined,
+		metadata: row.metadata ?? undefined,
+		variables: parseVariables(row.variables),
+		actSummary: row.act_summary ?? undefined,
+		scenePlot: row.scene_plot ?? undefined,
+		importantPhrases: row.important_phrases ?? undefined,
+		sceneNumber: row.scene_number ?? undefined,
+		createdAt: row.created_at,
+	};
+}
+
+export function parseImportantPhrases(raw: string | null | undefined): string[] | undefined {
+	if (!raw) return undefined;
+	const phrases = raw.split('\n').filter(Boolean);
+	return phrases.length > 0 ? phrases : undefined;
+}
+
+export function serializeImportantPhrases(phrases: string[]): string {
+	return phrases.join('\n');
 }
 
 export function parseVariables(raw: string | null): NarrativeVariables | undefined {
@@ -74,27 +102,12 @@ function parseGameDataFields(raw: Record<string, unknown>): GameDataFields {
 	return gd;
 }
 
-function rowToMessage(row: MessageRow): Message {
-	return {
-		id: row.id,
-		role: row.role as 'user' | 'assistant',
-		content: row.content,
-		reasoning: row.reasoning ?? undefined,
-		metadata: row.metadata ?? undefined,
-		variables: parseVariables(row.variables),
-		actSummary: row.act_summary ?? undefined,
-		scenePlot: row.scene_plot ?? undefined,
-		sceneNumber: row.scene_number ?? undefined,
-		createdAt: row.created_at,
-	};
-}
-
 export async function createMessage(message: Omit<Message, 'createdAt'>): Promise<Message> {
 	const db = getDatabase();
 	const now = Date.now();
 	await db.execute(
-		`INSERT INTO messages (id, role, content, reasoning, metadata, variables, act_summary, scene_plot, scene_number, created_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
+		`INSERT INTO messages (id, role, content, reasoning, metadata, variables, act_summary, scene_plot, important_phrases, scene_number, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 		[
 			message.id,
 			message.role,
@@ -104,6 +117,7 @@ export async function createMessage(message: Omit<Message, 'createdAt'>): Promis
 			message.variables ? JSON.stringify(message.variables) : null,
 			message.actSummary ?? null,
 			message.scenePlot ?? null,
+			message.importantPhrases ?? null,
 			message.sceneNumber ?? null,
 			now,
 		]
@@ -114,7 +128,7 @@ export async function createMessage(message: Omit<Message, 'createdAt'>): Promis
 export async function getMessage(id: string): Promise<Message | null> {
 	const db = getDatabase();
 	const rows = await db.select<MessageRow[]>('SELECT * FROM messages WHERE id = $1', [id]);
-	return rows.length > 0 ? rowToMessage(rows[0]) : null;
+	return rows.length > 0 ? mapRowToMessage(rows[0]) : null;
 }
 
 export async function deleteMessage(id: string): Promise<void> {
@@ -122,7 +136,10 @@ export async function deleteMessage(id: string): Promise<void> {
 	await db.execute('DELETE FROM messages WHERE id = $1', [id]);
 }
 
-export async function updateMessageFields(id: string, fields: { actSummary?: string; scenePlot?: string }): Promise<void> {
+export async function updateMessageFields(
+	id: string,
+	fields: { actSummary?: string; scenePlot?: string; importantPhrases?: string }
+): Promise<void> {
 	const updates: string[] = [];
 	const values: unknown[] = [];
 	let paramIdx = 1;
@@ -134,6 +151,10 @@ export async function updateMessageFields(id: string, fields: { actSummary?: str
 	if (fields.scenePlot !== undefined) {
 		updates.push(`scene_plot = $${paramIdx++}`);
 		values.push(fields.scenePlot);
+	}
+	if (fields.importantPhrases !== undefined) {
+		updates.push(`important_phrases = $${paramIdx++}`);
+		values.push(fields.importantPhrases);
 	}
 	if (updates.length === 0) return;
 

@@ -2,6 +2,7 @@
 	import {
 		deleteLastExchange,
 		deleteOrphanedUserMessages,
+		getCharacterNames,
 		getError,
 		getForkSequence,
 		getIsStreaming,
@@ -70,6 +71,7 @@
 	let latestActivePlotThreads = $derived(getLatestActivePlotThreads());
 	let latestDecisionContext = $derived(getLatestDecisionContext());
 	let lastMessageIdx = $derived(getMessages().findLastIndex((m: UIMessage) => m.role === 'assistant'));
+	let characterNames = $derived(getCharacterNames());
 	let storyMessageTemplate = $state<string>('');
 
 	// Preload template on mount
@@ -471,7 +473,7 @@
 						<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
 							{#if message.content}
 								<div class="leading-relaxed text-surface-800-200">
-									<MarkdownContent content={message.content} />
+									<MarkdownContent content={message.content}  characterNames={characterNames} />
 								</div>
 							{/if}
 							{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
@@ -668,9 +670,9 @@
 								{#if message.variables && hasTemplateMetadata(message.variables)}
 									<div class="leading-relaxed text-surface-800-200">
 										{#if storyMessageTemplate}
-											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)} />
+											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)}  characterNames={characterNames} importantPhrases={message.importantPhrases} />
 										{:else}
-											<MarkdownContent content={message.content} />
+											<MarkdownContent content={message.content}  characterNames={characterNames} importantPhrases={message.importantPhrases} />
 										{/if}
 									</div>
 								{/if}

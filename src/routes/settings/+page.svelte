@@ -6,6 +6,7 @@
 		deleteProviderConfig,
 		assignRole,
 		updateSettings,
+		getMinorTaskAgentProviderConfig,
 		type ProviderConfig,
 		type Provider,
 		type ApiType,
@@ -390,6 +391,39 @@
 					{/if}
 				</select>
 			</label>
+
+				<label class="block">
+					<span class="text-sm font-medium text-surface-700-300">Minor Task Agent</span>
+					<select
+						class="select mt-1"
+						onchange={(e) => {
+							const value = (e.currentTarget as HTMLSelectElement).value;
+							updateSettings({ minorTaskAgentProviderRole: value });
+						}}
+					>
+						{#if settings.providers.length === 0}
+							<option value="" disabled selected>No providers configured</option>
+						{:else}
+							<option value="main" selected={settings.minorTaskAgentProviderRole === 'main'}>Main Provider</option>
+							{#each settings.providers as config (config.id)}
+								<option value={config.id} selected={settings.minorTaskAgentProviderRole === config.id}>{config.name}</option>
+							{/each}
+						{/if}
+					</select>
+					<span class="text-xs text-surface-500 mt-1 block">Lightweight LLM for background tasks like phrase extraction and template fitting. Use a small, fast model.</span>
+				</label>
+
+				<label class="flex items-center gap-2">
+					<input
+						type="checkbox"
+						class="checkbox"
+						checked={settings.importantPhraseHighlighting}
+						disabled={!getMinorTaskAgentProviderConfig()}
+						onchange={(e) => updateSettings({ importantPhraseHighlighting: (e.currentTarget as HTMLInputElement).checked })}
+					/>
+					<span class="text-sm font-medium text-surface-700-300">Important phrase highlighting</span>
+				</label>
+				<span class="text-xs text-surface-500">Automatically extract and highlight key phrases in narrative text. Requires Minor Task Agent.</span>
 		</section>
 
 		<!-- Memory -->
@@ -560,27 +594,6 @@
 					{/if}
 				</select>
 				<span class="text-xs text-surface-500 mt-1 block">Generates game data (decisions, plot threads) from the narrative.</span>
-			</label>
-
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Minor Task Agent</span>
-				<select
-					class="select mt-1"
-					onchange={(e) => {
-						const value = (e.currentTarget as HTMLSelectElement).value;
-						updateSettings({ minorTaskAgentProviderRole: value });
-					}}
-				>
-					{#if settings.providers.length === 0}
-						<option value="" disabled selected>No providers configured</option>
-					{:else}
-						<option value="main" selected={settings.minorTaskAgentProviderRole === 'main'}>Main Provider</option>
-						{#each settings.providers as config (config.id)}
-							<option value={config.id} selected={settings.minorTaskAgentProviderRole === config.id}>{config.name}</option>
-						{/each}
-					{/if}
-				</select>
-				<span class="text-xs text-surface-500 mt-1 block">Lightweight tasks like template fitting. Use a small, fast model.</span>
 			</label>
 
 			<label class="block">
