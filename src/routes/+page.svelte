@@ -80,6 +80,15 @@
 	let fetchGeneration = 0;
 
 	// Fetch inventory items: batch on act line switch, incremental for new messages
+	function fetchInventory(actLineId: string, apply: (map: Record<string, string[]>) => void) {
+		const gen = ++fetchGeneration;
+		getInventoryNamesByActLine(actLineId).then((map) => {
+			if (fetchGeneration === gen) apply(map);
+		}).catch(() => {
+			if (fetchGeneration === gen) apply({});
+		});
+	}
+
 	$effect(() => {
 		const actLineId = getActiveActLineId();
 		if (!settings.memoryEnabled || !actLineId) {
@@ -93,17 +102,7 @@
 		if (actLineId !== prevActLineId) {
 			prevActLineId = actLineId;
 			inventoryNamesMap = {};
-			const gen = ++fetchGeneration;
-
-			getInventoryNamesByActLine(actLineId).then((map) => {
-				if (fetchGeneration === gen) {
-					inventoryNamesMap = map;
-				}
-			}).catch(() => {
-				if (fetchGeneration === gen) {
-					inventoryNamesMap = {};
-				}
-			});
+			fetchInventory(actLineId, (map) => { inventoryNamesMap = map; });
 			return;
 		}
 
@@ -115,23 +114,12 @@
 
 		if (newMessageIds.length === 0) return;
 
-		const gen = ++fetchGeneration;
-		getInventoryNamesByActLine(actLineId).then((fullMap) => {
-			if (fetchGeneration === gen) {
-				const additions: Record<string, string[]> = {};
-				for (const msgId of newMessageIds) {
-					additions[msgId] = fullMap[msgId] ?? [];
-				}
-				inventoryNamesMap = { ...inventoryNamesMap, ...additions };
+		fetchInventory(actLineId, (fullMap) => {
+			const additions: Record<string, string[]> = {};
+			for (const msgId of newMessageIds) {
+				additions[msgId] = fullMap[msgId] ?? [];
 			}
-		}).catch(() => {
-			if (fetchGeneration === gen) {
-				const additions: Record<string, string[]> = {};
-				for (const msgId of newMessageIds) {
-					additions[msgId] = [];
-				}
-				inventoryNamesMap = { ...inventoryNamesMap, ...additions };
-			}
+			inventoryNamesMap = { ...inventoryNamesMap, ...additions };
 		});
 	});
 

@@ -103,7 +103,7 @@
 			@apply text-secondary-800-200;
 		}
 		:global(span.inventory-item) {
-			@apply text-secondary-800-200;
+			@apply text-tertiary-800-200;
 		}
 	}
 </style>

@@ -107,6 +107,20 @@ function extractBlockRegion(content: string, start: number, tagName: string): { 
 	return null;
 }
 
+function highlightTerms(text: string, names: string[], spanClass: string, maskAfter?: (text: string) => string): string {
+	if (names.length === 0) return text;
+
+	const sorted = [...names].sort((a, b) => b.length - a.length);
+	const pattern = new RegExp(`\\b(${sorted.map((n) => escapeRegex(n)).join('|')})\\b`, 'g');
+	let result = text.replace(pattern, (match) => `<span class="${spanClass}">${match}</span>`);
+
+	if (maskAfter) {
+		result = result.replace(new RegExp(`<span class="${spanClass}">[^<]*<\\/span>`, 'g'), (match) => maskAfter(match));
+	}
+
+	return result;
+}
+
 export function preprocessDialogue(content: string, characterNames: string[] = [], inventoryNames: string[] = []): string {
 	const masks: string[] = [];
 
@@ -137,22 +151,11 @@ export function preprocessDialogue(content: string, characterNames: string[] = [
 	// Step 4: Mask dialogue spans so subsequent passes don't match inside them
 	result = result.replace(/<span class="dialogue">[^<]*<\/span>/g, (match) => mask(match));
 
-	// Step 5: Wrap character names (longest first to avoid partial matches)
-	if (characterNames.length > 0) {
-		const sorted = [...characterNames].sort((a, b) => b.length - a.length);
-		const namePattern = new RegExp(`\\b(${sorted.map((n) => escapeRegex(n)).join('|')})\\b`, 'g');
-		result = result.replace(namePattern, (match) => `<span class="character-name">${match}</span>`);
+	// Step 5: Wrap character names (mask afterward so inventory pass can't match inside them)
+	result = highlightTerms(result, characterNames, 'character-name', mask);
 
-		// Mask character-name spans so inventory pass doesn't match inside them
-		result = result.replace(/<span class="character-name">[^<]*<\/span>/g, (match) => mask(match));
-	}
-
-	// Step 6: Wrap inventory items (longest first to avoid partial matches)
-	if (inventoryNames.length > 0) {
-		const sorted = [...inventoryNames].sort((a, b) => b.length - a.length);
-		const itemPattern = new RegExp(`\\b(${sorted.map((n) => escapeRegex(n)).join('|')})\\b`, 'g');
-		result = result.replace(itemPattern, (match) => `<span class="inventory-item">${match}</span>`);
-	}
+	// Step 6: Wrap inventory items
+	result = highlightTerms(result, inventoryNames, 'inventory-item');
 
 	// Step 7: Restore all masks
 	return unmask(result);
