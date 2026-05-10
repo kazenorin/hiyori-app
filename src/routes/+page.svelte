@@ -106,21 +106,12 @@
 			return;
 		}
 
-		// Same act line — batch fetch and filter for new messages only
+		// Same act line — fetch if any scene numbers are missing from map
 		const msgs = getMessages();
-		const newSceneNumbers = msgs
-			.filter((m) => m.sceneNumber != null && !(m.sceneNumber in inventoryNamesMap))
-			.map((m) => m.sceneNumber!);
+		const hasNew = msgs.some((m) => m.sceneNumber != null && !(m.sceneNumber in inventoryNamesMap));
+		if (!hasNew) return;
 
-		if (newSceneNumbers.length === 0) return;
-
-		fetchInventory(actLineId, (fullMap) => {
-			const additions: Record<number, string[]> = {};
-			for (const sceneNum of newSceneNumbers) {
-				additions[sceneNum] = fullMap[sceneNum] ?? [];
-			}
-			inventoryNamesMap = { ...inventoryNamesMap, ...additions };
-		});
+		fetchInventory(actLineId, (map) => { inventoryNamesMap = map; });
 	});
 
 	// Preload template on mount
