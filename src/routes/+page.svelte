@@ -443,8 +443,8 @@
 		</div>
 	{:else if getIsWorldBuilderActive()}
 		<!-- World builder mode -->
-		<div class="flex-1 flex flex-col min-h-0">
-			<div bind:this={wbChatContainer} class="flex-1 overflow-y-auto p-6">
+		<div class="flex-1 flex flex-col min-h-0 min-w-0">
+			<div bind:this={wbChatContainer} class="flex-1 overflow-y-auto p-6 min-w-0">
 			<div class="px-8 space-y-4">
 				<div class="text-center py-4">
 					<h2 class="h2 font-display text-surface-700-300 mb-2">World Builder</h2>
@@ -568,9 +568,9 @@
 		</div>
 	{:else}
 		<!-- Middle column: scrollable chat + pinned controls -->
-		<div class="flex-1 flex flex-col min-h-0">
+		<div class="flex-1 flex flex-col min-h-0 min-w-0">
 			<!-- Chat messages area -->
-			<div bind:this={chatContainer} class="flex-1 overflow-y-auto p-6">
+			<div bind:this={chatContainer} class="flex-1 overflow-y-auto p-6 min-w-0">
 				<div class="px-8 space-y-4">
 				{#if getMessages().length === 0}
 					<div class="flex flex-col items-center justify-center py-24 text-center">
