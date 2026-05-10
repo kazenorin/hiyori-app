@@ -104,18 +104,18 @@
 	--color-secondary-contrast-900: var(--color-secondary-contrast-light);
 	--color-secondary-contrast-950: var(--color-secondary-contrast-light);
 
-	/* --- Tertiary: Dusty Rose --- */
-	--color-tertiary-50: oklch(95% 0.02 20deg);
-	--color-tertiary-100: oklch(91% 0.03 18deg);
-	--color-tertiary-200: oklch(86% 0.05 16deg);
-	--color-tertiary-300: oklch(80% 0.06 14deg);
-	--color-tertiary-400: oklch(74% 0.08 12deg);
-	--color-tertiary-500: oklch(66% 0.09 10deg);
-	--color-tertiary-600: oklch(58% 0.08 10deg);
-	--color-tertiary-700: oklch(50% 0.07 10deg);
-	--color-tertiary-800: oklch(42% 0.06 10deg);
-	--color-tertiary-900: oklch(35% 0.05 10deg);
-	--color-tertiary-950: oklch(27% 0.04 10deg);
+	/* --- Tertiary: Blue --- */
+	--color-tertiary-50: oklch(95.11% 0.02 256deg);
+	--color-tertiary-100: oklch(86.67% 0.03 275.58deg);
+	--color-tertiary-200: oklch(78.32% 0.07 259.07deg);
+	--color-tertiary-300: oklch(70.34% 0.11 255.22deg);
+	--color-tertiary-400: oklch(62.96% 0.16 254.54deg);
+	--color-tertiary-500: oklch(56.64% 0.19 256.63deg);
+	--color-tertiary-600: oklch(50.19% 0.16 256.64deg);
+	--color-tertiary-700: oklch(43.79% 0.13 257.95deg);
+	--color-tertiary-800: oklch(37.64% 0.09 261.94deg);
+	--color-tertiary-900: oklch(31.75% 0.05 283.47deg);
+	--color-tertiary-950: oklch(26.97% 0.04 256deg);
 	--color-tertiary-contrast-dark: var(--color-tertiary-950);
 	--color-tertiary-contrast-light: var(--color-tertiary-50);
 	--color-tertiary-contrast-50: var(--color-tertiary-contrast-dark);

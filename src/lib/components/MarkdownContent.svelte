@@ -89,4 +89,12 @@
 	.markdown-content :global(td) {
 		@apply border border-surface-200-800 px-3 py-2;
 	}
+	.markdown-content {
+		:global(span.dialogue) {
+			@apply text-primary-800-200;
+		}
+		:global(strong span.dialogue) {
+			@apply font-semibold text-primary-900-100;
+		}
+	}
 </style>
