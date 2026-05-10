@@ -75,12 +75,12 @@
 	let lastMessageIdx = $derived(getMessages().findLastIndex((m: UIMessage) => m.role === 'assistant'));
 	let characterNames = $derived(getCharacterNames());
 	let storyMessageTemplate = $state<string>('');
-	let inventoryNamesMap = $state<Record<string, string[]>>({});
+	let inventoryNamesMap = $state<Record<number, string[]>>({});
 	let prevActLineId: string | null = null;
 	let fetchGeneration = 0;
 
 	// Fetch inventory items: batch on act line switch, incremental for new messages
-	function fetchInventory(actLineId: string, apply: (map: Record<string, string[]>) => void) {
+	function fetchInventory(actLineId: string, apply: (map: Record<number, string[]>) => void) {
 		const gen = ++fetchGeneration;
 		getInventoryNamesByActLine(actLineId).then((map) => {
 			if (fetchGeneration === gen) apply(map);
@@ -108,16 +108,16 @@
 
 		// Same act line — batch fetch and filter for new messages only
 		const msgs = getMessages();
-		const newMessageIds = msgs
-			.filter((m) => m.id && !(m.id in inventoryNamesMap))
-			.map((m) => m.id);
+		const newSceneNumbers = msgs
+			.filter((m) => m.sceneNumber != null && !(m.sceneNumber in inventoryNamesMap))
+			.map((m) => m.sceneNumber!);
 
-		if (newMessageIds.length === 0) return;
+		if (newSceneNumbers.length === 0) return;
 
 		fetchInventory(actLineId, (fullMap) => {
-			const additions: Record<string, string[]> = {};
-			for (const msgId of newMessageIds) {
-				additions[msgId] = fullMap[msgId] ?? [];
+			const additions: Record<number, string[]> = {};
+			for (const sceneNum of newSceneNumbers) {
+				additions[sceneNum] = fullMap[sceneNum] ?? [];
 			}
 			inventoryNamesMap = { ...inventoryNamesMap, ...additions };
 		});
@@ -522,7 +522,7 @@
 						<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
 							{#if message.content}
 								<div class="leading-relaxed text-surface-800-200">
-									<MarkdownContent content={message.content}  characterNames={characterNames} inventoryNames={inventoryNamesMap[message.id] ?? []} />
+									<MarkdownContent content={message.content}  characterNames={characterNames} inventoryNames={inventoryNamesMap[message.sceneNumber!] ?? []} />
 								</div>
 							{/if}
 							{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
@@ -719,9 +719,9 @@
 								{#if message.variables && hasTemplateMetadata(message.variables)}
 									<div class="leading-relaxed text-surface-800-200">
 										{#if storyMessageTemplate}
-											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)}  characterNames={characterNames} inventoryNames={inventoryNamesMap[message.id] ?? []} />
+											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)}  characterNames={characterNames} inventoryNames={inventoryNamesMap[message.sceneNumber!] ?? []} />
 										{:else}
-											<MarkdownContent content={message.content}  characterNames={characterNames} inventoryNames={inventoryNamesMap[message.id] ?? []} />
+											<MarkdownContent content={message.content}  characterNames={characterNames} inventoryNames={inventoryNamesMap[message.sceneNumber!] ?? []} />
 										{/if}
 									</div>
 								{/if}
