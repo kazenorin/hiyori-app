@@ -31,9 +31,9 @@ pub fn run() {
                     Target::new(TargetKind::LogDir { file_name: None }),
                     Target::new(TargetKind::Webview),
                 ])
-                // Use Trace level so fern passes all messages; actual filtering
+                // Use Debug level so fern passes all messages; actual filtering
                 // is controlled by log::set_max_level() via the set_log_level command
-                .level(log::LevelFilter::Trace)
+                .level(log::LevelFilter::Debug)
                 .rotation_strategy(tauri_plugin_log::RotationStrategy::KeepSome(3))
                 .max_file_size(100_000)
                 .timezone_strategy(tauri_plugin_log::TimezoneStrategy::UseLocal)
