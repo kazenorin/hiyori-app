@@ -63,7 +63,7 @@
 	}
 	.markdown-content :global(pre) {
 		font-size: var(--text-xs);
-		@apply font-mono bg-surface-200-800 rounded-lg p-4 overflow-x-auto my-3;
+		@apply font-mono bg-surface-200-800 rounded-lg p-4 overflow-x-auto overflow-y-auto max-h-96 my-3;
 	}
 	.markdown-content :global(pre code) {
 		@apply bg-transparent p-0 rounded-none;

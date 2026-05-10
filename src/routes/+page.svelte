@@ -55,7 +55,7 @@
 	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
 	import { formatPhaseName } from '$lib/ai/narrative-types';
 	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
-	import {generateActPlot, type GenerateActPlotParams} from '$lib/ai/act-plot-generator';
+	import { generateActPlot } from '$lib/ai/act-plot-generator';
 	import {getActLine, getPremisesMessages} from '$lib/db/act-lines';
 	import {log} from '$lib/logging/logger';
 	import type {Story} from "$lib/db/stories";
@@ -253,7 +253,7 @@
 	async function startGame(storyId: string, storyName: string, actLineId: string, worldContent: string, isResumeGame: boolean = false): Promise<void> {
 		const actLine = await getActLine(actLineId);
 		const isMainLine = actLine?.isMainLine ?? true;
-		const result = await generateActPlot({ storyId, storyName, worldContent, actLineId, isMainLine, actNumber: 1 });
+		const result = await generateActPlot({ storyId, storyName, worldContent, actLineId, isMainLine, actNumber: 1, isResumeGame });
 		setActiveActPlotContent(result.content);
 
 		exitWorldBuilderMode();
@@ -581,8 +581,8 @@
 					{#each getMessages() as message, i (message.id)}
 						{#if message.role === 'user'}
 							<div class="flex justify-end">
-								<div class="max-w-[80%] rounded-(--radius-container) bg-primary-100-900 p-5">
-									<div class="leading-relaxed text-primary-900-100">
+								<div class="max-w-[80%] min-w-0 rounded-(--radius-container) bg-primary-100-900 p-5">
+									<div class="leading-relaxed text-primary-900-100 min-w-0">
 										<MarkdownContent content={message.content} />
 									</div>
 									{#if !getIsStreaming()}
