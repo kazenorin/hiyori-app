@@ -6,12 +6,11 @@
 	interface Props {
 		content: string;
 		characterNames?: string[];
-		inventoryNames?: string[];
 	}
 
-	let { content, characterNames = [], inventoryNames = [] }: Props = $props();
+	let { content, characterNames = [] }: Props = $props();
 
-	let html = $derived(DOMPurify.sanitize(marked.parse(preprocessDialogue(content, characterNames, inventoryNames), { async: false }) as string));
+	let html = $derived(DOMPurify.sanitize(marked.parse(preprocessDialogue(content, characterNames), { async: false }) as string));
 </script>
 
 <div class="markdown-content">
@@ -101,9 +100,6 @@
 		}
 		:global(span.character-name) {
 			@apply text-secondary-800-200;
-		}
-		:global(span.inventory-item) {
-			@apply text-tertiary-800-200;
 		}
 	}
 </style>

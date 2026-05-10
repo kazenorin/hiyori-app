@@ -55,8 +55,6 @@
 	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
 	import { formatPhaseName } from '$lib/ai/narrative-types';
 	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
-	import { getInventoryNamesByActLine } from '$lib/memory/memory';
-	import { settings } from '$lib/stores/settings.svelte';
 	import {generateActPlot} from '$lib/ai/act-plot-generator';
 	import {getActLine, getPremisesMessages} from '$lib/db/act-lines';
 	import {log} from '$lib/logging/logger';
@@ -75,44 +73,6 @@
 	let lastMessageIdx = $derived(getMessages().findLastIndex((m: UIMessage) => m.role === 'assistant'));
 	let characterNames = $derived(getCharacterNames());
 	let storyMessageTemplate = $state<string>('');
-	let inventoryNamesMap = $state<Record<number, string[]>>({});
-	let prevActLineId: string | null = null;
-	let fetchGeneration = 0;
-
-	// Fetch inventory items: batch on act line switch, incremental for new messages
-	function fetchInventory(actLineId: string, apply: (map: Record<number, string[]>) => void) {
-		const gen = ++fetchGeneration;
-		getInventoryNamesByActLine(actLineId).then((map) => {
-			if (fetchGeneration === gen) apply(map);
-		}).catch(() => {
-			if (fetchGeneration === gen) apply({});
-		});
-	}
-
-	$effect(() => {
-		const actLineId = getActiveActLineId();
-		if (!settings.memoryEnabled || !actLineId) {
-			inventoryNamesMap = {};
-			prevActLineId = null;
-			fetchGeneration++;
-			return;
-		}
-
-		// Act line changed — batch fetch all inventory for the new act line
-		if (actLineId !== prevActLineId) {
-			prevActLineId = actLineId;
-			inventoryNamesMap = {};
-			fetchInventory(actLineId, (map) => { inventoryNamesMap = map; });
-			return;
-		}
-
-		// Same act line — fetch if any scene numbers are missing from map
-		const msgs = getMessages();
-		const hasNew = msgs.some((m) => m.sceneNumber != null && !(m.sceneNumber in inventoryNamesMap));
-		if (!hasNew) return;
-
-		fetchInventory(actLineId, (map) => { inventoryNamesMap = map; });
-	});
 
 	// Preload template on mount
 	onMount(() => {
@@ -513,7 +473,7 @@
 						<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
 							{#if message.content}
 								<div class="leading-relaxed text-surface-800-200">
-									<MarkdownContent content={message.content}  characterNames={characterNames} inventoryNames={inventoryNamesMap[message.sceneNumber!] ?? []} />
+									<MarkdownContent content={message.content}  characterNames={characterNames} />
 								</div>
 							{/if}
 							{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
@@ -710,9 +670,9 @@
 								{#if message.variables && hasTemplateMetadata(message.variables)}
 									<div class="leading-relaxed text-surface-800-200">
 										{#if storyMessageTemplate}
-											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)}  characterNames={characterNames} inventoryNames={inventoryNamesMap[message.sceneNumber!] ?? []} />
+											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)}  characterNames={characterNames} />
 										{:else}
-											<MarkdownContent content={message.content}  characterNames={characterNames} inventoryNames={inventoryNamesMap[message.sceneNumber!] ?? []} />
+											<MarkdownContent content={message.content}  characterNames={characterNames} />
 										{/if}
 									</div>
 								{/if}

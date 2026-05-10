@@ -1,6 +1,6 @@
 /**
- * Preprocesses content to wrap dialogue (text in double quotes),
- * character names, and inventory items with highlighting spans.
+ * Preprocesses content to wrap dialogue (text in double quotes)
+ * and character names with highlighting spans.
  *
  * HTML protection strategy:
  * 1. Block-level regions are masked as whole units using a state-machine
@@ -121,7 +121,7 @@ function highlightTerms(text: string, names: string[], spanClass: string, maskAf
 	return result;
 }
 
-export function preprocessDialogue(content: string, characterNames: string[] = [], inventoryNames: string[] = []): string {
+export function preprocessDialogue(content: string, characterNames: string[] = []): string {
 	const masks: string[] = [];
 
 	function mask(text: string): string {
@@ -151,13 +151,10 @@ export function preprocessDialogue(content: string, characterNames: string[] = [
 	// Step 4: Mask dialogue spans so subsequent passes don't match inside them
 	result = result.replace(/<span class="dialogue">[^<]*<\/span>/g, (match) => mask(match));
 
-	// Step 5: Wrap character names (mask afterward so inventory pass can't match inside them)
+	// Step 5: Wrap character names (mask afterward so subsequent passes can't match inside them)
 	result = highlightTerms(result, characterNames, 'character-name', mask);
 
-	// Step 6: Wrap inventory items
-	result = highlightTerms(result, inventoryNames, 'inventory-item');
-
-	// Step 7: Restore all masks
+	// Step 6: Restore all masks
 	return unmask(result);
 }
 

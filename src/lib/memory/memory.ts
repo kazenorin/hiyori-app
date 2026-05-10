@@ -1,7 +1,6 @@
 import { embed, embedMany } from 'ai';
 import Database from '@tauri-apps/plugin-sql';
 import { getMemoryDatabase } from '$lib/db/memory-database';
-import { getDatabase } from '$lib/db/database';
 import { createEmbeddingModel } from '$lib/ai/provider';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
 import type { InventoryCategory, EquipStatus, InventoryItem, InventoryChange } from './inventory-types';
@@ -1087,37 +1086,5 @@ export async function knownCharacterNameList(): Promise<string[]> {
 		return rows.map((r) => r.character_canonical_name.replace(/-/g, ' '));
 	} catch {
 		return [];
-	}
-}
-
-export async function getInventoryNamesByActLine(actLineId: string): Promise<Record<number, string[]>> {
-	const memDb = getMemoryDatabase();
-	const mainDb = getDatabase();
-	try {
-		const [invRows, msgRows] = await Promise.all([
-			memDb.select<Array<{ message_id: string; item_name: string }>>('SELECT message_id, item_name FROM inventory WHERE act_line_id = $1', [
-				actLineId,
-			]),
-			mainDb.select<Array<{ id: string; scene_number: number | null }>>(
-				`SELECT m.id, m.scene_number FROM act_lines al JOIN messages m ON al.message_id = m.id WHERE al.act_line_id = $1`,
-				[actLineId]
-			),
-		]);
-
-		const msgToScene = new Map<string, number>();
-		for (const row of msgRows) {
-			if (row.scene_number != null) msgToScene.set(row.id, row.scene_number);
-		}
-
-		const map: Record<number, string[]> = {};
-		for (const row of invRows) {
-			const sceneNum = msgToScene.get(row.message_id);
-			if (sceneNum == null) continue;
-			if (!map[sceneNum]) map[sceneNum] = [];
-			if (!map[sceneNum].includes(row.item_name)) map[sceneNum].push(row.item_name);
-		}
-		return map;
-	} catch {
-		return {};
 	}
 }
