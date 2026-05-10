@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
+	import { preprocessDialogue } from '$lib/utils/dialogue-preprocessor';
 
 	interface Props {
 		content: string;
@@ -8,7 +9,7 @@
 
 	let { content }: Props = $props();
 
-	let html = $derived(DOMPurify.sanitize(marked.parse(content, { async: false }) as string));
+	let html = $derived(DOMPurify.sanitize(marked.parse(preprocessDialogue(content), { async: false }) as string));
 </script>
 
 <div class="markdown-content">
