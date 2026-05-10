@@ -1,3 +1,4 @@
+import { parseCharacterAliases } from '$lib/ai/act-summary-parser';
 import {
 	getEditorProviderConfig,
 	getGameMasterProviderConfig,
@@ -121,6 +122,18 @@ function getLatestScenePlot(): string {
 		if (messages[i].scenePlot) return messages[i].scenePlot!;
 	}
 	return '';
+}
+
+export function getCharacterNames(): string[] {
+	const actSummary = getLatestActSummary();
+	if (!actSummary) return [];
+	const entries = parseCharacterAliases(actSummary);
+	const names: string[] = [];
+	for (const entry of entries) {
+		names.push(entry.characterName);
+		names.push(...entry.aliases);
+	}
+	return names;
 }
 
 async function persistMessage(actLineId: string, message: UIMessage): Promise<void> {

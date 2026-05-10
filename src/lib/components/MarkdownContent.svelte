@@ -5,11 +5,12 @@
 
 	interface Props {
 		content: string;
+		characterNames?: string[];
 	}
 
-	let { content }: Props = $props();
+	let { content, characterNames = [] }: Props = $props();
 
-	let html = $derived(DOMPurify.sanitize(marked.parse(preprocessDialogue(content), { async: false }) as string));
+	let html = $derived(DOMPurify.sanitize(marked.parse(preprocessDialogue(content, characterNames), { async: false }) as string));
 </script>
 
 <div class="markdown-content">
@@ -96,6 +97,9 @@
 		}
 		:global(strong span.dialogue) {
 			@apply font-semibold text-primary-900-100;
+		}
+		:global(span.character-name) {
+			@apply text-secondary-800-200;
 		}
 	}
 </style>
