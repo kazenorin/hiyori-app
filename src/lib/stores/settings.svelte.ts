@@ -37,6 +37,7 @@ export interface Settings {
 	gameMasterProviderRole: string;
 	summarizerProviderRole: string;
 	minorTaskAgentProviderRole: string;
+	importantPhraseHighlighting: boolean;
 	targetWordCount: number;
 }
 
@@ -57,6 +58,7 @@ const defaults: Settings = {
 	gameMasterProviderRole: 'main',
 	summarizerProviderRole: 'main',
 	minorTaskAgentProviderRole: 'main',
+	importantPhraseHighlighting: false,
 	targetWordCount: 400,
 };
 
@@ -90,6 +92,7 @@ function migrateFromFlatSettings(raw: Record<string, unknown>): Settings {
 		gameMasterProviderRole: (raw.gameMasterProviderRole as string) || 'main',
 		summarizerProviderRole: (raw.summarizerProviderRole as string) || 'main',
 		minorTaskAgentProviderRole: 'main',
+		importantPhraseHighlighting: false,
 		targetWordCount: (raw.targetWordCount as number) ?? 400,
 	};
 }
@@ -243,6 +246,10 @@ export function getMinorTaskAgentProviderConfig(): ProviderConfig | undefined {
 
 export type MinorTaskAgentProviderConfig = NonNullable<ReturnType<typeof getMinorTaskAgentProviderConfig>>;
 
+export function isPhraseHighlightingEnabled(): boolean {
+	return settings.importantPhraseHighlighting && !!getMinorTaskAgentProviderConfig();
+}
+
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
 	const id = settings.roleAssignments[role];
 	if (!id) return undefined;
@@ -291,7 +298,8 @@ export async function updateSettings(
 			| 'gameMasterProviderRole'
 			| 'summarizerProviderRole'
 			| 'minorTaskAgentProviderRole'
-				| 'targetWordCount'
+			| 'importantPhraseHighlighting'
+			| 'targetWordCount'
 		>
 	>
 ): Promise<void> {
@@ -310,6 +318,7 @@ export async function updateSettings(
 	if (partial.gameMasterProviderRole !== undefined) settings.gameMasterProviderRole = partial.gameMasterProviderRole;
 	if (partial.summarizerProviderRole !== undefined) settings.summarizerProviderRole = partial.summarizerProviderRole;
 	if (partial.minorTaskAgentProviderRole !== undefined) settings.minorTaskAgentProviderRole = partial.minorTaskAgentProviderRole;
+	if (partial.importantPhraseHighlighting !== undefined) settings.importantPhraseHighlighting = partial.importantPhraseHighlighting;
 	if (partial.targetWordCount !== undefined) settings.targetWordCount = partial.targetWordCount;
 	persist();
 

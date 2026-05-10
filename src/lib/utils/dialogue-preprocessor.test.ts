@@ -159,4 +159,64 @@ describe('preprocessDialogue', () => {
 			);
 		});
 	});
+
+	describe('important phrase highlighting', () => {
+		it('wraps a single phrase', () => {
+			expect(preprocessDialogue('The ancient sword glowed.', [], ['ancient sword'])).toBe(
+				'The <span class="highlighted-phrase">ancient sword</span> glowed.'
+			);
+		});
+
+		it('wraps multiple phrases', () => {
+			expect(preprocessDialogue('The ancient sword and dark forest.', [], ['ancient sword', 'dark forest'])).toBe(
+				'The <span class="highlighted-phrase">ancient sword</span> and <span class="highlighted-phrase">dark forest</span>.'
+			);
+		});
+
+		it('matches longer phrases before shorter to avoid partial matches', () => {
+			expect(preprocessDialogue('The ancient sword of power glowed.', [], ['ancient sword', 'ancient sword of power'])).toBe(
+				'The <span class="highlighted-phrase">ancient sword of power</span> glowed.'
+			);
+		});
+
+		it('does not wrap phrases inside dialogue', () => {
+			expect(preprocessDialogue('"The ancient sword glowed"', [], ['ancient sword'])).toBe(
+				'<span class="dialogue">"The ancient sword glowed"</span>'
+			);
+		});
+
+		it('wraps phrases outside dialogue but not inside', () => {
+			expect(preprocessDialogue('The ancient sword "glowed"', [], ['ancient sword'])).toBe(
+				'The <span class="highlighted-phrase">ancient sword</span> <span class="dialogue">"glowed"</span>'
+			);
+		});
+
+		it('phrase takes precedence over character name', () => {
+			expect(preprocessDialogue('The ancient sword Arthur gleamed.', ['Arthur'], ['ancient sword Arthur'])).toBe(
+				'The <span class="highlighted-phrase">ancient sword Arthur</span> gleamed.'
+			);
+		});
+
+		it('does not wrap phrases inside HTML blocks', () => {
+			expect(preprocessDialogue('<div>ancient sword</div>', [], ['ancient sword'])).toBe(
+				'<div>ancient sword</div>'
+			);
+		});
+
+		it('wraps phrases between HTML blocks', () => {
+			expect(preprocessDialogue('ancient sword <div>skip</div> dark forest', [], ['ancient sword', 'dark forest'])).toBe(
+				'<span class="highlighted-phrase">ancient sword</span> <div>skip</div> <span class="highlighted-phrase">dark forest</span>'
+			);
+		});
+
+		it('empty array is no-op', () => {
+			expect(preprocessDialogue('The ancient sword glowed.', [], [])).toBe('The ancient sword glowed.');
+		});
+
+		it('phrase matches without word boundaries', () => {
+			expect(preprocessDialogue('The xancient swordy glowed.', [], ['ancient sword'])).toBe(
+				'The x<span class="highlighted-phrase">ancient sword</span>y glowed.'
+			);
+		});
+	});
 });

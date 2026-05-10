@@ -8,7 +8,7 @@
  * 2. Remaining inline HTML tags are masked individually to protect
  *    attribute values like class="..." from dialogue matching.
  *
- * Generated spans (dialogue, character-name) are also masked before
+ * Generated spans (dialogue, highlighted-phrase, character-name) are also masked before
  * subsequent passes to avoid double-wrapping.
  */
 
@@ -107,11 +107,12 @@ function extractBlockRegion(content: string, start: number, tagName: string): { 
 	return null;
 }
 
-function highlightTerms(text: string, names: string[], spanClass: string, maskAfter?: (text: string) => string): string {
+function highlightTerms(text: string, names: string[], spanClass: string, maskAfter?: (text: string) => string, wordBoundaries: boolean = true): string {
 	if (names.length === 0) return text;
 
 	const sorted = [...names].sort((a, b) => b.length - a.length);
-	const pattern = new RegExp(`\\b(${sorted.map((n) => escapeRegex(n)).join('|')})\\b`, 'g');
+	const boundary = wordBoundaries ? '\\b' : '';
+	const pattern = new RegExp(`${boundary}(${sorted.map((n) => escapeRegex(n)).join('|')})${boundary}`, 'g');
 	let result = text.replace(pattern, (match) => `<span class="${spanClass}">${match}</span>`);
 
 	if (maskAfter) {
@@ -121,7 +122,7 @@ function highlightTerms(text: string, names: string[], spanClass: string, maskAf
 	return result;
 }
 
-export function preprocessDialogue(content: string, characterNames: string[] = []): string {
+export function preprocessDialogue(content: string, characterNames: string[] = [], importantPhrases: string[] = []): string {
 	const masks: string[] = [];
 
 	function mask(text: string): string {
@@ -151,10 +152,13 @@ export function preprocessDialogue(content: string, characterNames: string[] = [
 	// Step 4: Mask dialogue spans so subsequent passes don't match inside them
 	result = result.replace(/<span class="dialogue">[^<]*<\/span>/g, (match) => mask(match));
 
-	// Step 5: Wrap character names (mask afterward so subsequent passes can't match inside them)
+	// Step 5: Wrap important phrases (no word boundaries — exact substring match)
+	result = highlightTerms(result, importantPhrases, 'highlighted-phrase', mask, false);
+
+	// Step 6: Wrap character names (mask afterward so subsequent passes can't match inside them)
 	result = highlightTerms(result, characterNames, 'character-name', mask);
 
-	// Step 6: Restore all masks
+	// Step 7: Restore all masks
 	return unmask(result);
 }
 

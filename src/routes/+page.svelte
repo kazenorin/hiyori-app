@@ -670,9 +670,9 @@
 								{#if message.variables && hasTemplateMetadata(message.variables)}
 									<div class="leading-relaxed text-surface-800-200">
 										{#if storyMessageTemplate}
-											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)}  characterNames={characterNames} />
+											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)}  characterNames={characterNames} importantPhrases={message.importantPhrases} />
 										{:else}
-											<MarkdownContent content={message.content}  characterNames={characterNames} />
+											<MarkdownContent content={message.content}  characterNames={characterNames} importantPhrases={message.importantPhrases} />
 										{/if}
 									</div>
 								{/if}

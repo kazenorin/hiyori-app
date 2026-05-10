@@ -70,6 +70,7 @@ const migrationStatements: string[][] = [
 		`CREATE INDEX IF NOT EXISTS idx_story_folders_folder ON story_folders(folder_name)`,
 	],
 	[`ALTER TABLE messages ADD COLUMN scene_plot TEXT`],
+	[`ALTER TABLE messages ADD COLUMN important_phrases TEXT`]
 ];
 
 export async function runMigrations(): Promise<void> {

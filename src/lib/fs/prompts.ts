@@ -59,6 +59,9 @@ import defaultSummarizeCharactersInAct from './prompts/character/summarize-chara
 import defaultActGenerationPrompt from './prompts/import/act-generation-prompt.md?raw';
 import defaultChoicesExtractionPrompt from './prompts/import/choices-extraction-prompt.md?raw';
 
+// Features
+import defaultImportantPhrasesPrompt from './prompts/features/important-phrases-prompt.md?raw';
+
 // Memories
 import defaultMemoryExtractionSystemPrompt from './prompts/memories/memory-extraction-system-prompt.md?raw';
 import defaultMemoryExtractionPrompt from './prompts/memories/memory-extraction-prompt.md?raw';
@@ -95,6 +98,7 @@ export {
 	defaultSummarizeCharactersInAct,
 	defaultActGenerationPrompt,
 	defaultChoicesExtractionPrompt,
+	defaultImportantPhrasesPrompt,
 	defaultMemoryExtractionSystemPrompt,
 	defaultMemoryExtractionPrompt,
 };
@@ -222,6 +226,12 @@ const memoryExtractionPrompt = new Prompt({
 	defaultContent: defaultMemoryExtractionPrompt,
 });
 
+// Features
+const importantPhrasesPrompt = new Prompt({
+	relativePath: 'features/important-phrases-prompt.md',
+	defaultContent: defaultImportantPhrasesPrompt,
+});
+
 // === Load Functions ===
 
 export const loadSystemPrompt = (): Promise<string> => systemPrompt.load();
@@ -254,6 +264,7 @@ export const loadCharacterCardExtractionSystemPrompt = (): Promise<string> => ch
 export const loadSummarizeCharactersInAct = (): Promise<string> => summarizeCharactersInAct.load();
 export const loadActGenerationPrompt = (): Promise<string> => actGenerationPrompt.load();
 export const loadChoicesExtractionPrompt = (): Promise<string> => choicesExtractionPrompt.load();
+export const loadImportantPhrasesPrompt = (): Promise<string> => importantPhrasesPrompt.load();
 export const loadMemoryExtractionSystemPrompt = (): Promise<string> => memoryExtractionSystemPrompt.load();
 export const loadMemoryExtractionPrompt = (): Promise<string> => memoryExtractionPrompt.load();
 
@@ -407,6 +418,7 @@ registerDefaults([
 	summarizeCharactersInAct,
 	actGenerationPrompt,
 	choicesExtractionPrompt,
+	importantPhrasesPrompt,
 	memoryExtractionSystemPrompt,
 	memoryExtractionPrompt,
 ]);

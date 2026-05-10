@@ -1,7 +1,7 @@
 import Database from '@tauri-apps/plugin-sql';
 import { getDatabase } from './database';
 import type { Message } from './messages';
-import { parseVariables } from './messages';
+import { type MessageRow, mapRowToMessage } from './messages';
 import type { Story } from './stories';
 
 export interface ActLineMeta {
@@ -23,20 +23,6 @@ interface ActLineMetaRow {
 interface ActLineEntryRow {
 	act_line_id: string;
 	message_id: string;
-	sequence: number;
-}
-
-interface MessageInLine {
-	id: string;
-	role: string;
-	content: string;
-	reasoning: string | null;
-	metadata: string | null;
-	variables: string | null;
-	scene_number: number | null;
-	act_summary: string | null;
-	scene_plot: string | null;
-	created_at: number;
 	sequence: number;
 }
 
@@ -116,9 +102,9 @@ export async function deleteActLine(id: string): Promise<void> {
 
 export async function getMessagesForLine(actLineId: string): Promise<Message[]> {
 	const db = getDatabase();
-	const rows = await db.select<MessageInLine[]>(
+	const rows = await db.select<MessageRow[]>(
 		`
-		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.scene_number, m.act_summary, m.scene_plot, m.created_at, al.sequence
+		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.scene_number, m.act_summary, m.scene_plot, m.important_phrases, m.created_at, al.sequence
 		FROM act_lines al
 		JOIN messages m ON al.message_id = m.id
 		WHERE al.act_line_id = $1
@@ -127,18 +113,7 @@ export async function getMessagesForLine(actLineId: string): Promise<Message[]> 
 		[actLineId]
 	);
 
-	return rows.map((row) => ({
-		id: row.id,
-		role: row.role as 'user' | 'assistant',
-		content: row.content,
-		reasoning: row.reasoning ?? undefined,
-		metadata: row.metadata ?? undefined,
-		variables: parseVariables(row.variables),
-		sceneNumber: row.scene_number ?? undefined,
-		actSummary: row.act_summary ?? undefined,
-		scenePlot: row.scene_plot ?? undefined,
-		createdAt: row.created_at,
-	}));
+	return rows.map(mapRowToMessage);
 }
 
 export async function addMessageToLine(actLineId: string, messageId: string, sequence: number): Promise<void> {
@@ -336,9 +311,9 @@ export async function addMessageToPremises(actLineId: string, messageId: string,
 
 export async function getPremisesMessages(actLineId: string): Promise<Message[]> {
 	const db = getDatabase();
-	const rows = await db.select<MessageInLine[]>(
+	const rows = await db.select<MessageRow[]>(
 		`
-		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.scene_number, m.act_summary, m.scene_plot, m.created_at, p.sequence
+		SELECT m.id, m.role, m.content, m.reasoning, m.metadata, m.variables, m.scene_number, m.act_summary, m.scene_plot, m.important_phrases, m.created_at, p.sequence
 		FROM act_line_premises p
 		JOIN messages m ON p.message_id = m.id
 		WHERE p.act_line_id = $1
@@ -347,18 +322,7 @@ export async function getPremisesMessages(actLineId: string): Promise<Message[]>
 		[actLineId]
 	);
 
-	return rows.map((row) => ({
-		id: row.id,
-		role: row.role as 'user' | 'assistant',
-		content: row.content,
-		reasoning: row.reasoning ?? undefined,
-		metadata: row.metadata ?? undefined,
-		variables: parseVariables(row.variables),
-		sceneNumber: row.scene_number ?? undefined,
-		actSummary: row.act_summary ?? undefined,
-		scenePlot: row.scene_plot ?? undefined,
-		createdAt: row.created_at,
-	}));
+	return rows.map(mapRowToMessage);
 }
 
 export async function getNextPremisesSequence(actLineId: string): Promise<number> {

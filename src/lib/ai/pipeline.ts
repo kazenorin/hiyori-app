@@ -11,6 +11,8 @@ import type { StreamResultMetadata } from './streaming';
 import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
 import { variablesToMarkdown, hasTemplateMetadata } from './template-renderer';
 import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
+import { extractImportantPhrases } from './important-phrases-extractor';
+import { isPhraseHighlightingEnabled } from '$lib/stores/settings.svelte';
 import { filterToolsForPhase } from '$lib/ai/tools/tools';
 import { log } from '$lib/logging/logger';
 import {
@@ -419,6 +421,7 @@ export interface PipelineResult {
 	state: PipelineState;
 	editorMetadata?: StreamResultMetadata;
 	asyncPhases?: Promise<AsyncPhaseResults>;
+	importantPhrasesPromise?: Promise<string[] | null>;
 }
 
 function formatPreviousNarrativeBody(previousNarrativeBody: string | null | undefined, completedScenes: number) {
@@ -644,6 +647,20 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		state = fitterResult.state;
 	}
 
+	// --- Important phrases extraction (after Editor, before GM/PlotPlanner) ---
+	let importantPhrasesPromise: Promise<string[] | null> | undefined;
+	if (isPhraseHighlightingEnabled()) {
+		const narrativeBody = state.editorVariables?.narrativeBody;
+		if (narrativeBody && narrativeBody.trim().length > 0) {
+			importantPhrasesPromise = extractImportantPhrases(narrativeBody)
+				.then((phrases) => (phrases.length > 0 ? phrases : null))
+				.catch(async (err) => {
+					await log.error('pipeline', 'Important phrases extraction failed', err);
+					return null;
+				});
+		}
+	}
+
 	// --- Phase 4: Game Master + Plot Planner (concurrent) ---
 	{
 		const editorOutput = state.editorOutput ?? '';
@@ -724,5 +741,5 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 	state = updateState(state, { currentPhase: null });
 	callbacks.onAllComplete(state);
-	return { state, editorMetadata, asyncPhases };
+	return { state, editorMetadata, asyncPhases, importantPhrasesPromise };
 }

@@ -1,4 +1,5 @@
 import { parseCharacterAliases } from '$lib/ai/act-summary-parser';
+import { extractImportantPhrases } from './important-phrases-extractor';
 import {
 	getEditorProviderConfig,
 	getGameMasterProviderConfig,
@@ -9,11 +10,13 @@ import {
 	getSummarizerProviderConfig,
 	getMinorTaskAgentProviderConfig,
 	getWriterProviderConfig,
+	isPhraseHighlightingEnabled,
 	type ProviderConfig,
 	settings,
 } from '$lib/stores/settings.svelte';
 import { getActiveActPlotContent, getActiveStoryId, getActiveWorldContent } from '$lib/stores/stories.svelte';
 import * as dbMessages from '$lib/db/messages';
+import { parseImportantPhrases, serializeImportantPhrases } from '$lib/db/messages';
 import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from './narrative-types';
 import * as dbActLines from '$lib/db/act-lines';
 import { logMainChat } from '$lib/logging/chat-logger';
@@ -39,6 +42,7 @@ export interface UIMessage {
 	phases?: UIScenePhase[];
 	actSummary?: string;
 	scenePlot?: string;
+	importantPhrases?: string[];
 }
 
 let messages = $state<UIMessage[]>([]);
@@ -71,9 +75,39 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 		variables: m.variables,
 		actSummary: m.actSummary,
 		scenePlot: m.scenePlot,
-		// phases is ephemeral — not loaded from DB
+		importantPhrases: parseImportantPhrases(m.importantPhrases),
 	}));
 	error = null;
+
+	if (isPhraseHighlightingEnabled()) {
+		await backfillImportantPhrases(messages, {
+			extract: extractImportantPhrases,
+			persist: (id, text) => dbMessages.updateMessageFields(id, { importantPhrases: text }),
+		});
+	}
+}
+
+export async function backfillImportantPhrases(
+	msgs: UIMessage[],
+	deps: {
+		extract: (narrativeBody: string) => Promise<string[]>;
+		persist: (messageId: string, phrasesText: string) => Promise<void>;
+	}
+): Promise<void> {
+	for (let i = 0; i < msgs.length; i++) {
+		const msg = msgs[i];
+		if (msg.role === 'assistant' && !msg.importantPhrases?.length && msg.variables?.narrativeBody) {
+			try {
+				const phrases = await deps.extract(msg.variables.narrativeBody);
+				if (phrases.length > 0) {
+					await deps.persist(msg.id, serializeImportantPhrases(phrases));
+					msgs[i] = { ...msgs[i], importantPhrases: phrases };
+				}
+			} catch (err) {
+				await log.error('backfill-phrases', `Failed to extract phrases for message=${msg.id}`, err);
+			}
+		}
+	}
 }
 
 export async function clearMessages(): Promise<void> {
@@ -147,6 +181,7 @@ async function persistMessage(actLineId: string, message: UIMessage): Promise<vo
 		variables: message.variables,
 		actSummary: message.actSummary,
 		scenePlot: message.scenePlot,
+		importantPhrases: message.importantPhrases ? serializeImportantPhrases(message.importantPhrases) : undefined,
 	});
 	const seq = await dbActLines.getNextSequence(actLineId);
 	await dbActLines.addMessageToLine(actLineId, message.id, seq);
@@ -483,6 +518,26 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 						await log.error('send-message', 'Async phases failed', err);
 					}
 				}) ?? null;
+
+		// Handle important phrases extraction (fire-and-forget)
+		const phrasesPromise = result.importantPhrasesPromise;
+		if (phrasesPromise) {
+			phrasesPromise
+				.then(async (phrases) => {
+					if (phrases && phrases.length > 0) {
+						await dbMessages.updateMessageFields(assistantMessageId, {
+							importantPhrases: serializeImportantPhrases(phrases),
+						});
+						const idx = messages.findLastIndex((m) => m.id === assistantMessageId);
+						if (idx >= 0) {
+							messages[idx] = { ...messages[idx], importantPhrases: phrases };
+						}
+					}
+				})
+				.catch(async (err) => {
+					await log.error('send-message', 'Important phrases extraction failed', err);
+				});
+		}
 	} catch (err: unknown) {
 		await handleStreamError(err, responseMessage.id, actLineId);
 	} finally {
