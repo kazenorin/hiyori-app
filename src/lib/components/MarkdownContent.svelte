@@ -6,11 +6,12 @@
 	interface Props {
 		content: string;
 		characterNames?: string[];
+		inventoryNames?: string[];
 	}
 
-	let { content, characterNames = [] }: Props = $props();
+	let { content, characterNames = [], inventoryNames = [] }: Props = $props();
 
-	let html = $derived(DOMPurify.sanitize(marked.parse(preprocessDialogue(content, characterNames), { async: false }) as string));
+	let html = $derived(DOMPurify.sanitize(marked.parse(preprocessDialogue(content, characterNames, inventoryNames), { async: false }) as string));
 </script>
 
 <div class="markdown-content">
@@ -99,6 +100,9 @@
 			@apply font-semibold text-primary-900-100;
 		}
 		:global(span.character-name) {
+			@apply text-secondary-800-200;
+		}
+		:global(span.inventory-item) {
 			@apply text-secondary-800-200;
 		}
 	}

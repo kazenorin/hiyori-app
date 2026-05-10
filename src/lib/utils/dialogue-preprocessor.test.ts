@@ -147,4 +147,68 @@ describe('preprocessDialogue', () => {
 			);
 		});
 	});
+
+	describe('inventory item highlighting', () => {
+		it('wraps a single inventory item', () => {
+			expect(preprocessDialogue('He drew the Sword.', [], ['Sword'])).toBe('He drew the <span class="inventory-item">Sword</span>.');
+		});
+
+		it('wraps multiple inventory items', () => {
+			expect(preprocessDialogue('He took the Sword and Shield.', [], ['Sword', 'Shield'])).toBe(
+				'He took the <span class="inventory-item">Sword</span> and <span class="inventory-item">Shield</span>.'
+			);
+		});
+
+		it('does not wrap items inside dialogue spans', () => {
+			expect(preprocessDialogue('"Take the Sword," he said.', [], ['Sword'])).toBe(
+				'<span class="dialogue">"Take the Sword,"</span> he said.'
+			);
+		});
+
+		it('does not wrap items inside character-name spans', () => {
+			expect(preprocessDialogue('Arthur nodded.', ['Arthur'], ['Arthur'])).toBe('<span class="character-name">Arthur</span> nodded.');
+		});
+
+		it('does not wrap items inside HTML blocks', () => {
+			expect(preprocessDialogue('<div>Sword</div>', [], ['Sword'])).toBe('<div>Sword</div>');
+		});
+
+		it('matches longer names before shorter ones', () => {
+			expect(preprocessDialogue('He drew the Longsword.', [], ['Sword', 'Longsword'])).toBe(
+				'He drew the <span class="inventory-item">Longsword</span>.'
+			);
+		});
+
+		it('uses word boundaries to avoid partial matches', () => {
+			expect(preprocessDialogue('The swordsmith worked.', [], ['Sword'])).toBe('The swordsmith worked.');
+		});
+
+		it('handles empty inventoryNames (no-op)', () => {
+			expect(preprocessDialogue('Sword here.', [], [])).toBe('Sword here.');
+		});
+	});
+
+	describe('combined dialogue + character names + inventory', () => {
+		it('highlights all three types', () => {
+			expect(preprocessDialogue('Arthur drew the Sword.', ['Arthur'], ['Sword'])).toBe(
+				'<span class="character-name">Arthur</span> drew the <span class="inventory-item">Sword</span>.'
+			);
+		});
+
+		it('inventory takes precedence when name and item share text but are separate spans', () => {
+			expect(preprocessDialogue('Arthur held the Sword and spoke "hello"', ['Arthur'], ['Sword'])).toBe(
+				'<span class="character-name">Arthur</span> held the <span class="inventory-item">Sword</span> and spoke <span class="dialogue">"hello"</span>'
+			);
+		});
+
+		it('character name inside dialogue is not highlighted', () => {
+			expect(preprocessDialogue('"Arthur!" he called.', ['Arthur'], [])).toBe('<span class="dialogue">"Arthur!"</span> he called.');
+		});
+
+		it('inventory item inside dialogue is not highlighted', () => {
+			expect(preprocessDialogue('"Take the Sword," he said.', [], ['Sword'])).toBe(
+				'<span class="dialogue">"Take the Sword,"</span> he said.'
+			);
+		});
+	});
 });

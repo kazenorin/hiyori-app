@@ -55,6 +55,8 @@
 	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
 	import { formatPhaseName } from '$lib/ai/narrative-types';
 	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
+	import { getInventoryNamesByActLine } from '$lib/memory/memory';
+	import { settings } from '$lib/stores/settings.svelte';
 	import {generateActPlot} from '$lib/ai/act-plot-generator';
 	import {getActLine, getPremisesMessages} from '$lib/db/act-lines';
 	import {log} from '$lib/logging/logger';
@@ -72,6 +74,61 @@
 	let latestDecisionContext = $derived(getLatestDecisionContext());
 	let lastMessageIdx = $derived(getMessages().findLastIndex((m: UIMessage) => m.role === 'assistant'));
 	let storyMessageTemplate = $state<string>('');
+	let inventoryNamesMap = $state<Record<string, string[]>>({});
+	let prevActLineId: string | null = null;
+
+	// Fetch inventory items: batch on act line switch, incremental for new messages
+	$effect(() => {
+		const actLineId = getActiveActLineId();
+		if (!settings.memoryEnabled || !actLineId) {
+			inventoryNamesMap = {};
+			prevActLineId = null;
+			return;
+		}
+
+		// Act line changed — batch fetch all inventory for the new act line
+		if (actLineId !== prevActLineId) {
+			prevActLineId = actLineId;
+			inventoryNamesMap = {};
+
+			getInventoryNamesByActLine(actLineId).then((map) => {
+				if (getActiveActLineId() === actLineId) {
+					inventoryNamesMap = map;
+				}
+			}).catch(() => {
+				if (getActiveActLineId() === actLineId) {
+					inventoryNamesMap = {};
+				}
+			});
+			return;
+		}
+
+		// Same act line — batch fetch and filter for new messages only
+		const msgs = getMessages();
+		const newMessageIds = msgs
+			.filter((m) => m.id && !(m.id in inventoryNamesMap))
+			.map((m) => m.id);
+
+		if (newMessageIds.length === 0) return;
+
+		getInventoryNamesByActLine(actLineId).then((fullMap) => {
+			if (getActiveActLineId() === actLineId) {
+				const additions: Record<string, string[]> = {};
+				for (const msgId of newMessageIds) {
+					additions[msgId] = fullMap[msgId] ?? [];
+				}
+				inventoryNamesMap = { ...inventoryNamesMap, ...additions };
+			}
+		}).catch(() => {
+			if (getActiveActLineId() === actLineId) {
+				const additions: Record<string, string[]> = {};
+				for (const msgId of newMessageIds) {
+					additions[msgId] = [];
+				}
+				inventoryNamesMap = { ...inventoryNamesMap, ...additions };
+			}
+		});
+	});
 
 	// Preload template on mount
 	onMount(() => {
@@ -472,7 +529,7 @@
 						<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
 							{#if message.content}
 								<div class="leading-relaxed text-surface-800-200">
-									<MarkdownContent content={message.content}  characterNames={getCharacterNames()} />
+									<MarkdownContent content={message.content}  characterNames={getCharacterNames()} inventoryNames={inventoryNamesMap[message.id] ?? []} />
 								</div>
 							{/if}
 							{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
@@ -669,9 +726,9 @@
 								{#if message.variables && hasTemplateMetadata(message.variables)}
 									<div class="leading-relaxed text-surface-800-200">
 										{#if storyMessageTemplate}
-											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)}  characterNames={getCharacterNames()} />
+											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)}  characterNames={getCharacterNames()} inventoryNames={inventoryNamesMap[message.id] ?? []} />
 										{:else}
-											<MarkdownContent content={message.content}  characterNames={getCharacterNames()} />
+											<MarkdownContent content={message.content}  characterNames={getCharacterNames()} inventoryNames={inventoryNamesMap[message.id] ?? []} />
 										{/if}
 									</div>
 								{/if}

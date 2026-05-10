@@ -963,10 +963,7 @@ export class Memory {
 		return rows.map((row) => toInventoryItem(row));
 	}
 
-	async getInventoryChanges(
-		characterCanonicalName: string,
-		options: { storyId: string; actLineId: string }
-	): Promise<InventoryChange[]> {
+	async getInventoryChanges(characterCanonicalName: string, options: { storyId: string; actLineId: string }): Promise<InventoryChange[]> {
 		const db = getMemoryDatabase();
 		const rows = await db.select<Array<Record<string, unknown>>>(
 			'SELECT * FROM inventory_changes WHERE story_id = $1 AND act_line_id = $2 AND character_canonical_name = $3 ORDER BY created_at',
@@ -1089,5 +1086,39 @@ export async function knownCharacterNameList(): Promise<string[]> {
 		return rows.map((r) => r.character_canonical_name.replace(/-/g, ' '));
 	} catch {
 		return [];
+	}
+}
+
+export async function getInventoryItemNamesByMessageId(messageId: string): Promise<string[]> {
+	const db = getMemoryDatabase();
+	try {
+		const rows = await db.select<Array<{ item_name: string }>>('SELECT DISTINCT item_name FROM inventory WHERE message_id = $1', [
+			messageId,
+		]);
+		return rows.map((r) => r.item_name);
+	} catch {
+		return [];
+	}
+}
+
+export async function getInventoryNamesByActLine(actLineId: string): Promise<Record<string, string[]>> {
+	const db = getMemoryDatabase();
+	try {
+		const rows = await db.select<Array<{ message_id: string; item_name: string }>>(
+			'SELECT message_id, item_name FROM inventory WHERE act_line_id = $1',
+			[actLineId]
+		);
+		const map: Record<string, string[]> = {};
+		for (const row of rows) {
+			if (!map[row.message_id]) {
+				map[row.message_id] = [];
+			}
+			if (!map[row.message_id].includes(row.item_name)) {
+				map[row.message_id].push(row.item_name);
+			}
+		}
+		return map;
+	} catch {
+		return {};
 	}
 }

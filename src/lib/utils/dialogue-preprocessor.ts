@@ -1,6 +1,6 @@
 /**
- * Preprocesses content to wrap dialogue (text in double quotes) and
- * character names with highlighting spans.
+ * Preprocesses content to wrap dialogue (text in double quotes),
+ * character names, and inventory items with highlighting spans.
  *
  * Two layers of HTML protection:
  * 1. Block-level elements (div, header, aside, etc.) — entire regions
@@ -8,8 +8,8 @@
  * 2. Inline HTML tags (<span>, <br/>, etc.) — individual tags masked
  *    to protect attribute values like class="..." from dialogue matching.
  *
- * Character names inside dialogue spans are also protected to avoid
- * double-wrapping.
+ * Generated spans (dialogue, character-name) are also masked before
+ * subsequent passes to avoid double-wrapping.
  */
 
 const HTML_BLOCK_TAGS = ['div', 'header', 'aside', 'section', 'article', 'main', 'footer', 'nav', 'blockquote', 'pre', 'table'] as const;
@@ -26,7 +26,12 @@ const DIALOGUE_PATTERN = /"([^"\\]|\\.)*"/g;
 const PLACEHOLDER_PREFIX = '\x00DIALOGUE_MASK_';
 const PLACEHOLDER_SUFFIX = '\x00';
 
-export function preprocessDialogue(content: string, characterNames: string[] = []): string {
+export interface PreprocessOptions {
+	characterNames?: string[];
+	inventoryNames?: string[];
+}
+
+export function preprocessDialogue(content: string, characterNames: string[] = [], inventoryNames: string[] = []): string {
 	const masks: string[] = [];
 
 	function mask(text: string): string {
@@ -53,17 +58,27 @@ export function preprocessDialogue(content: string, characterNames: string[] = [
 		return `<span class="dialogue">${match}</span>`;
 	});
 
-	// Step 4: Mask generated dialogue spans so character names inside them aren't double-wrapped
+	// Step 4: Mask dialogue spans so subsequent passes don't match inside them
 	result = result.replace(/<span class="dialogue">[^<]*<\/span>/g, (match) => mask(match));
 
-	// Step 5: Wrap character names (longest first to avoid partial matches like "Arthur" inside "Sir Arthur")
+	// Step 5: Wrap character names (longest first to avoid partial matches)
 	if (characterNames.length > 0) {
 		const sorted = [...characterNames].sort((a, b) => b.length - a.length);
 		const namePattern = new RegExp(`\\b(${sorted.map((n) => escapeRegex(n)).join('|')})\\b`, 'g');
 		result = result.replace(namePattern, (match) => `<span class="character-name">${match}</span>`);
+
+		// Mask character-name spans so inventory pass doesn't match inside them
+		result = result.replace(/<span class="character-name">[^<]*<\/span>/g, (match) => mask(match));
 	}
 
-	// Step 6: Restore all masks
+	// Step 6: Wrap inventory items (longest first to avoid partial matches)
+	if (inventoryNames.length > 0) {
+		const sorted = [...inventoryNames].sort((a, b) => b.length - a.length);
+		const itemPattern = new RegExp(`\\b(${sorted.map((n) => escapeRegex(n)).join('|')})\\b`, 'g');
+		result = result.replace(itemPattern, (match) => `<span class="inventory-item">${match}</span>`);
+	}
+
+	// Step 7: Restore all masks
 	return unmask(result);
 }
 
