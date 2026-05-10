@@ -74,6 +74,18 @@ describe('preprocessDialogue', () => {
 		it('does not match quotes in HTML attributes of inline tags', () => {
 			expect(preprocessDialogue('<span class="foo">text</span>')).toBe('<span class="foo">text</span>');
 		});
+
+		it('protects quotes inside nested block elements', () => {
+			expect(preprocessDialogue('<div>before<div>"nested"</div>after</div>')).toBe('<div>before<div>"nested"</div>after</div>');
+		});
+
+		it('protects quotes inside deeply nested blocks', () => {
+			expect(preprocessDialogue('<div>outer<aside>"deep"</aside>tail</div>')).toBe('<div>outer<aside>"deep"</aside>tail</div>');
+		});
+
+		it('protects character names inside nested block elements', () => {
+			expect(preprocessDialogue('<div><div>Arthur</div>more</div>', ['Arthur'])).toBe('<div><div>Arthur</div>more</div>');
+		});
 	});
 
 	describe('character name highlighting', () => {

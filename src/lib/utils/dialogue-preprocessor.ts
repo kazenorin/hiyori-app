@@ -2,22 +2,17 @@
  * Preprocesses content to wrap dialogue (text in double quotes),
  * character names, and inventory items with highlighting spans.
  *
- * Two layers of HTML protection:
- * 1. Block-level elements (div, header, aside, etc.) — entire regions
- *    masked to protect both attributes and content inside them.
- * 2. Inline HTML tags (<span>, <br/>, etc.) — individual tags masked
- *    to protect attribute values like class="..." from dialogue matching.
+ * HTML protection strategy:
+ * 1. Block-level regions are masked as whole units using a state-machine
+ *    parser that correctly handles nested elements.
+ * 2. Remaining inline HTML tags are masked individually to protect
+ *    attribute values like class="..." from dialogue matching.
  *
  * Generated spans (dialogue, character-name) are also masked before
  * subsequent passes to avoid double-wrapping.
  */
 
-const HTML_BLOCK_TAGS = ['div', 'header', 'aside', 'section', 'article', 'main', 'footer', 'nav', 'blockquote', 'pre', 'table'] as const;
-
-const HTML_BLOCK_PATTERN = new RegExp(
-	`<(?:${HTML_BLOCK_TAGS.join('|')})(?:\\s[^>]*)?>[\\s\\S]*?<\\/(?:${HTML_BLOCK_TAGS.join('|')})>`,
-	'gi'
-);
+const HTML_BLOCK_TAGS = new Set(['div', 'header', 'aside', 'section', 'article', 'main', 'footer', 'nav', 'blockquote', 'pre', 'table']);
 
 const INLINE_TAG_PATTERN = /<[^>]+>/g;
 
@@ -26,9 +21,90 @@ const DIALOGUE_PATTERN = /"([^"\\]|\\.)*"/g;
 const PLACEHOLDER_PREFIX = '\x00DIALOGUE_MASK_';
 const PLACEHOLDER_SUFFIX = '\x00';
 
-export interface PreprocessOptions {
-	characterNames?: string[];
-	inventoryNames?: string[];
+/**
+ * Mask block-level HTML regions using a nesting-aware state machine.
+ * Correctly handles nested block elements like <div><div>nested</div>text</div>.
+ */
+function maskBlockRegions(content: string, maskFn: (text: string) => string): string {
+	const result: string[] = [];
+	let i = 0;
+	const len = content.length;
+
+	while (i < len) {
+		if (content[i] === '<') {
+			const tagEnd = content.indexOf('>', i);
+			if (tagEnd === -1) {
+				result.push(content.slice(i));
+				break;
+			}
+
+			const tag = content.slice(i, tagEnd + 1);
+			const tagNameMatch = tag.match(/^<\/?(\w+)/);
+
+			if (tagNameMatch && HTML_BLOCK_TAGS.has(tagNameMatch[1].toLowerCase())) {
+				// Found a block-level opening tag — capture the entire region
+				const tagName = tagNameMatch[1].toLowerCase();
+				const region = extractBlockRegion(content, i, tagName);
+				if (region) {
+					result.push(maskFn(content.slice(region.start, region.end)));
+					i = region.end;
+					continue;
+				}
+			}
+
+			result.push(tag);
+			i = tagEnd + 1;
+		} else {
+			result.push(content[i]);
+			i++;
+		}
+	}
+
+	return result.join('');
+}
+
+/**
+ * Extract a block-level region starting at position `start` with tag `tagName`.
+ * Tracks nesting depth to correctly match the closing tag.
+ */
+function extractBlockRegion(content: string, start: number, tagName: string): { start: number; end: number } | null {
+	let depth = 0;
+	let i = start;
+	const len = content.length;
+	const openRe = new RegExp(`^<${tagName}(?:\\s|>)`, 'i');
+	const closeRe = new RegExp(`^<\\/${tagName}\\s*>`, 'i');
+
+	while (i < len) {
+		if (content[i] === '<') {
+			const rest = content.slice(i);
+			if (openRe.test(rest)) {
+				depth++;
+				const gt = content.indexOf('>', i);
+				if (gt === -1) return null;
+				i = gt + 1;
+				continue;
+			}
+			if (closeRe.test(rest)) {
+				depth--;
+				const gt = content.indexOf('>', i);
+				if (gt === -1) return null;
+				i = gt + 1;
+				if (depth === 0) {
+					return { start, end: i };
+				}
+				continue;
+			}
+			// Some other tag — skip it
+			const gt = content.indexOf('>', i);
+			if (gt === -1) return null;
+			i = gt + 1;
+			continue;
+		}
+		i++;
+	}
+
+	// Unmatched block tag — return null, don't mask
+	return null;
 }
 
 export function preprocessDialogue(content: string, characterNames: string[] = [], inventoryNames: string[] = []): string {
@@ -47,8 +123,8 @@ export function preprocessDialogue(content: string, characterNames: string[] = [
 		);
 	}
 
-	// Step 1: Mask HTML block regions (protects content inside them)
-	let result = content.replace(HTML_BLOCK_PATTERN, (match) => mask(match));
+	// Step 1: Mask HTML block regions (nesting-aware, protects content inside them)
+	let result = maskBlockRegions(content, mask);
 
 	// Step 2: Mask remaining inline HTML tags (protects attribute values like class="...")
 	result = result.replace(INLINE_TAG_PATTERN, (match) => mask(match));

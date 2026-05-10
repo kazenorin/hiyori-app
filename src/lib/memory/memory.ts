@@ -1089,18 +1089,6 @@ export async function knownCharacterNameList(): Promise<string[]> {
 	}
 }
 
-export async function getInventoryItemNamesByMessageId(messageId: string): Promise<string[]> {
-	const db = getMemoryDatabase();
-	try {
-		const rows = await db.select<Array<{ item_name: string }>>('SELECT DISTINCT item_name FROM inventory WHERE message_id = $1', [
-			messageId,
-		]);
-		return rows.map((r) => r.item_name);
-	} catch {
-		return [];
-	}
-}
-
 export async function getInventoryNamesByActLine(actLineId: string): Promise<Record<string, string[]>> {
 	const db = getMemoryDatabase();
 	try {

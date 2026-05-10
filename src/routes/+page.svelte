@@ -73,9 +73,11 @@
 	let latestActivePlotThreads = $derived(getLatestActivePlotThreads());
 	let latestDecisionContext = $derived(getLatestDecisionContext());
 	let lastMessageIdx = $derived(getMessages().findLastIndex((m: UIMessage) => m.role === 'assistant'));
+	let characterNames = $derived(getCharacterNames());
 	let storyMessageTemplate = $state<string>('');
 	let inventoryNamesMap = $state<Record<string, string[]>>({});
 	let prevActLineId: string | null = null;
+	let fetchGeneration = 0;
 
 	// Fetch inventory items: batch on act line switch, incremental for new messages
 	$effect(() => {
@@ -83,6 +85,7 @@
 		if (!settings.memoryEnabled || !actLineId) {
 			inventoryNamesMap = {};
 			prevActLineId = null;
+			fetchGeneration++;
 			return;
 		}
 
@@ -90,13 +93,14 @@
 		if (actLineId !== prevActLineId) {
 			prevActLineId = actLineId;
 			inventoryNamesMap = {};
+			const gen = ++fetchGeneration;
 
 			getInventoryNamesByActLine(actLineId).then((map) => {
-				if (getActiveActLineId() === actLineId) {
+				if (fetchGeneration === gen) {
 					inventoryNamesMap = map;
 				}
 			}).catch(() => {
-				if (getActiveActLineId() === actLineId) {
+				if (fetchGeneration === gen) {
 					inventoryNamesMap = {};
 				}
 			});
@@ -111,8 +115,9 @@
 
 		if (newMessageIds.length === 0) return;
 
+		const gen = ++fetchGeneration;
 		getInventoryNamesByActLine(actLineId).then((fullMap) => {
-			if (getActiveActLineId() === actLineId) {
+			if (fetchGeneration === gen) {
 				const additions: Record<string, string[]> = {};
 				for (const msgId of newMessageIds) {
 					additions[msgId] = fullMap[msgId] ?? [];
@@ -120,7 +125,7 @@
 				inventoryNamesMap = { ...inventoryNamesMap, ...additions };
 			}
 		}).catch(() => {
-			if (getActiveActLineId() === actLineId) {
+			if (fetchGeneration === gen) {
 				const additions: Record<string, string[]> = {};
 				for (const msgId of newMessageIds) {
 					additions[msgId] = [];
@@ -529,7 +534,7 @@
 						<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
 							{#if message.content}
 								<div class="leading-relaxed text-surface-800-200">
-									<MarkdownContent content={message.content}  characterNames={getCharacterNames()} inventoryNames={inventoryNamesMap[message.id] ?? []} />
+									<MarkdownContent content={message.content}  characterNames={characterNames} inventoryNames={inventoryNamesMap[message.id] ?? []} />
 								</div>
 							{/if}
 							{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
@@ -726,9 +731,9 @@
 								{#if message.variables && hasTemplateMetadata(message.variables)}
 									<div class="leading-relaxed text-surface-800-200">
 										{#if storyMessageTemplate}
-											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)}  characterNames={getCharacterNames()} inventoryNames={inventoryNamesMap[message.id] ?? []} />
+											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)}  characterNames={characterNames} inventoryNames={inventoryNamesMap[message.id] ?? []} />
 										{:else}
-											<MarkdownContent content={message.content}  characterNames={getCharacterNames()} inventoryNames={inventoryNamesMap[message.id] ?? []} />
+											<MarkdownContent content={message.content}  characterNames={characterNames} inventoryNames={inventoryNamesMap[message.id] ?? []} />
 										{/if}
 									</div>
 								{/if}
