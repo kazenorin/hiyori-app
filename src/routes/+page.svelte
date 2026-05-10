@@ -55,7 +55,7 @@
 	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
 	import { formatPhaseName } from '$lib/ai/narrative-types';
 	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
-	import {generateActPlot} from '$lib/ai/act-plot-generator';
+	import {generateActPlot, type GenerateActPlotParams} from '$lib/ai/act-plot-generator';
 	import {getActLine, getPremisesMessages} from '$lib/db/act-lines';
 	import {log} from '$lib/logging/logger';
 	import type {Story} from "$lib/db/stories";
@@ -253,7 +253,7 @@
 	async function startGame(storyId: string, storyName: string, actLineId: string, worldContent: string, isResumeGame: boolean = false): Promise<void> {
 		const actLine = await getActLine(actLineId);
 		const isMainLine = actLine?.isMainLine ?? true;
-		const result = await generateActPlot(storyId, storyName, worldContent, actLineId, isMainLine, 1);
+		const result = await generateActPlot({ storyId, storyName, worldContent, actLineId, isMainLine, actNumber: 1 });
 		setActiveActPlotContent(result.content);
 
 		exitWorldBuilderMode();

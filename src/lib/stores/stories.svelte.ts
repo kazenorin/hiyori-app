@@ -13,7 +13,7 @@ import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStory
 import { writeTextFile, readTextFile, exists, remove, copyFile, mkdir, rename, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, getLineDir, resolveLineSubdir } from '$lib/ai/card-output-path';
-import { generateActPlot, type ActPlotPhase } from '$lib/ai/act-plot-generator';
+import { generateActPlot, type ActPlotPhase, type GenerateActPlotParams } from '$lib/ai/act-plot-generator';
 
 export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
 
@@ -237,17 +237,17 @@ async function ensureActPlot(): Promise<void> {
 			} else {
 				// Generate act plot if it doesn't exist yet
 				actPlotGenerationActive = true;
-				const result = await generateActPlot(
-					activeStoryId,
-					activeStoryName,
-					activeWorldContent ?? '',
-					activeActLineId,
-					actLine.isMainLine,
-					act.actNumber,
-					(phase) => {
+				const result = await generateActPlot({
+					storyId: activeStoryId,
+					storyName: activeStoryName,
+					worldContent: activeWorldContent ?? '',
+					actLineId: activeActLineId,
+					isMainLine: actLine.isMainLine,
+					actNumber: act.actNumber,
+					onPhaseChange: (phase) => {
 						actPlotGenerationPhase = phase;
-					}
-				);
+					},
+				});
 				activeActPlotContent = result.content;
 				actPlotGenerationActive = false;
 				actPlotGenerationPhase = null;

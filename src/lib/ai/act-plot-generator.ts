@@ -12,8 +12,14 @@ import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { getLineDir } from './card-output-path';
 import { log } from '$lib/logging/logger';
-import { getPremisesMessages, getPreviousActSummary } from '$lib/db/act-lines';
+import { getLastSceneNumber, getPremisesMessages, getPreviousActSummary } from '$lib/db/act-lines';
 import { reviewerAcceptsAsIs } from './reviewer-output-parser';
+
+const ACT_PLOT_RESUME_NOTE = `---
+
+## Important Note
+
+This Act Line is restarted from Scene {sceneNumber}, plot and events that happened at or prior to Scene {sceneNumber} may be have a different plot, or written from another perspective.`;
 
 export interface GenerateActPlotResult {
 	filePath: string;
@@ -107,6 +113,17 @@ function buildEditorMessages(
 	return messages;
 }
 
+export interface GenerateActPlotParams {
+	storyId: string;
+	storyName: string;
+	worldContent: string;
+	actLineId: string;
+	isMainLine: boolean;
+	actNumber: number;
+	isResumeGame?: boolean;
+	onPhaseChange?: (phase: ActPlotPhase) => void;
+}
+
 /**
  * Generate an act-plot.md file using a 3-phase pipeline:
  * 1. WRITER — generates the initial act plot
@@ -114,24 +131,9 @@ function buildEditorMessages(
  * 3. EDITOR — revises the act plot based on reviewer feedback (skipped if reviewer accepts)
  *
  * If the reviewer or editor phase fails, falls back to writer output.
- *
- * @param storyId - The story's unique identifier
- * @param storyName - The story's display name
- * @param worldContent - The world.md content (already generated)
- * @param actLineId - The act line ID (for path construction and interview lookup)
- * @param isMainLine - Whether this is the main story line
- * @param actNumber - The act number (used for output path and prompt)
- * @param onPhaseChange - Optional callback for UI phase indicator
  */
-export async function generateActPlot(
-	storyId: string,
-	storyName: string,
-	worldContent: string,
-	actLineId: string,
-	isMainLine: boolean,
-	actNumber: number,
-	onPhaseChange?: (phase: ActPlotPhase) => void
-): Promise<GenerateActPlotResult> {
+export async function generateActPlot(params: GenerateActPlotParams): Promise<GenerateActPlotResult> {
+	const { storyId, storyName, worldContent, actLineId, isMainLine, actNumber, isResumeGame = false, onPhaseChange } = params;
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) {
 		throw new Error('No main provider configured. Please set one in Settings.');
@@ -216,6 +218,12 @@ export async function generateActPlot(
 			`Review/edit phase failed, falling back to writer output: ${err instanceof Error ? err.message : String(err)}`
 		);
 		finalText = writerText;
+	}
+
+	// Prepend resume-game note if applicable
+	if (isResumeGame) {
+		const lastSceneNumber = (await getLastSceneNumber(actLineId)) ?? 1;
+		finalText = ACT_PLOT_RESUME_NOTE.replace('{sceneNumber}', lastSceneNumber.toString()) + '\n\n' + finalText;
 	}
 
 	// Write output file
