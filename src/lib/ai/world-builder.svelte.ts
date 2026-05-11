@@ -1,5 +1,10 @@
 import { getMainProviderConfig, type ProviderConfig } from '$lib/stores/settings.svelte';
-import { loadWorldBuilderSystemPrompt, loadWorldTemplate, loadInterviewExtractionPrompt } from '$lib/fs/prompts';
+import {
+	loadWorldBuilderSystemPrompt,
+	loadWorldTemplate,
+	loadInterviewExtractionPrompt,
+	loadActPlotInterviewSystemPrompt,
+} from '$lib/fs/prompts';
 import { generateWorldBuilderLogFilename, logWorldBuilderChat } from '$lib/logging/chat-logger';
 import { log } from '$lib/logging/logger';
 import { type StreamAccumulator, type StreamState } from '$lib/ai/chat-callbacks';
@@ -150,7 +155,6 @@ export async function enterWorldBuilderMode(): Promise<void> {
 
 export async function enterActPlotInterviewMode(
 	actLineId: string,
-	systemPrompt: string,
 	worldContent: string,
 	forkContext?: ForkInterviewContext
 ): Promise<void> {
@@ -162,8 +166,7 @@ export async function enterActPlotInterviewMode(
 	isActive = true;
 	actPlotInterview = true;
 	interviewActLineId = actLineId;
-	// TODO: currently both callers (fork with interview and create new with interview) are using the default system prompt, use a dedicated system prompt instead
-	interviewSystemPrompt = systemPrompt;
+	interviewSystemPrompt = await loadActPlotInterviewSystemPrompt();
 	interviewWorldContent = worldContent;
 
 	// Load interview extraction prompt

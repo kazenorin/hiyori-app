@@ -42,7 +42,6 @@
 		getActiveAct,
 		getActiveActLineId,
 		getActiveStory,
-		getActiveSystemPromptOrDefault,
 		getActiveWorldContent,
 		getIsSelectingStory,
 		selectActLineQuiet,
@@ -171,8 +170,7 @@
 			const msgs = getMessages();
 			const actSummary = msgs[messageIndex]?.actSummary ?? '';
 
-			const systemPrompt = await getActiveSystemPromptOrDefault();
-			await enterActPlotInterviewMode(line.id, systemPrompt, worldContent, { sourcePremises, actSummary });
+			await enterActPlotInterviewMode(line.id, worldContent, { sourcePremises, actSummary });
 		} catch (err) {
 			await log.error('fork', 'Failed to start fork interview', err);
 			createStoryError = err instanceof Error ? err.message : 'Failed to start fork interview';
@@ -303,14 +301,13 @@
 				return;
 			}
 
-			const systemPrompt = await getActiveSystemPromptOrDefault();
 			const worldContent = getWorldBuilderContent();
 			if (!worldContent) {
 				createStoryError = 'World content not available';
 				isCreatingStory = false;
 				return;
 			}
-			await enterActPlotInterviewMode(refs.actLineId, systemPrompt, worldContent);
+			await enterActPlotInterviewMode(refs.actLineId, worldContent);
 		} catch (err) {
 			createStoryError = err instanceof Error ? err.message : 'Failed to start interview';
 		} finally {
