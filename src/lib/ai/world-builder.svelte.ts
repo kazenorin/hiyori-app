@@ -2,7 +2,8 @@ import { getMainProviderConfig, type ProviderConfig } from '$lib/stores/settings
 import {
 	loadWorldBuilderSystemPrompt,
 	loadWorldTemplate,
-	loadInterviewExtractionPrompt,
+	loadActPlotInterviewExtractionPrompt,
+	loadGeneralInstructions,
 	loadActPlotInterviewSystemPrompt,
 } from '$lib/fs/prompts';
 import { generateWorldBuilderLogFilename, logWorldBuilderChat } from '$lib/logging/chat-logger';
@@ -41,13 +42,13 @@ let logFilePath: string | null = null;
 let actPlotInterview = $state(false);
 let gameResumeInterview = $state(false);
 let interviewActLineId: string | null = null;
-let interviewSystemPrompt: string | null = null;
 let interviewHiddenContext: MessageBase[] = [];
 let interviewWorldContent: string | null = null;
 
 // Cached prompts loaded once on enter
-let cachedSystemPrompt: string | null = null;
+let cachedWorldBuilderPrompt: string | null = null;
 let cachedWorldTemplate: string | null = null;
+let cachedInterviewSystemPrompt: string | null = null;
 
 export function getIsActive(): boolean {
 	return isActive;
@@ -93,12 +94,12 @@ function resetState(): void {
 	isComplete = false;
 	abortController = null;
 	logFilePath = null;
-	cachedSystemPrompt = null;
+	cachedWorldBuilderPrompt = null;
 	cachedWorldTemplate = null;
+	cachedInterviewSystemPrompt = null;
 	actPlotInterview = false;
 	gameResumeInterview = false;
 	interviewActLineId = null;
-	interviewSystemPrompt = null;
 	interviewHiddenContext = [];
 	interviewWorldContent = null;
 }
@@ -110,8 +111,8 @@ export function exitWorldBuilderMode(): void {
 	resetState();
 }
 
-function buildFullSystemPrompt(): string {
-	return (cachedSystemPrompt ?? '') + '\n\n---\n\n' + (cachedWorldTemplate ?? '') + '\n\n---\n\n';
+function buildFullWorldBuildPrompt(): string {
+	return (cachedWorldBuilderPrompt ?? '') + '\n\n---\n\n' + (cachedWorldTemplate ?? '') + '\n\n---\n\n';
 }
 
 /**
@@ -147,8 +148,9 @@ export async function enterWorldBuilderMode(): Promise<void> {
 	logFilePath = generateWorldBuilderLogFilename();
 
 	// Load and cache prompts once
-	cachedSystemPrompt = await loadWorldBuilderSystemPrompt();
-	cachedWorldTemplate = await loadWorldTemplate();
+	const [worldBuilderPrompt, worldTemplate] = await Promise.all([loadWorldBuilderSystemPrompt(), loadWorldTemplate()]);
+	cachedWorldBuilderPrompt = worldBuilderPrompt;
+	cachedWorldTemplate = worldTemplate;
 
 	await streamNextResponse();
 }
@@ -158,25 +160,25 @@ export async function enterActPlotInterviewMode(
 	worldContent: string,
 	forkContext?: ForkInterviewContext
 ): Promise<void> {
-	// Preserve world content before reset clears it
-	interviewWorldContent = worldContent;
-
 	// Reset world builder state but keep isActive true
 	resetState();
 	isActive = true;
 	actPlotInterview = true;
 	interviewActLineId = actLineId;
-	interviewSystemPrompt = await loadActPlotInterviewSystemPrompt();
 	interviewWorldContent = worldContent;
 
-	// Load interview extraction prompt
-	const interviewPrompt = await loadInterviewExtractionPrompt();
+	// Load interview system prompt with general instructions injected and interview extraction prompt
+	const [generalInstructions, interviewSystemPrompt, interviewPrompt] = await Promise.all([
+		loadGeneralInstructions(),
+		loadActPlotInterviewSystemPrompt(),
+		loadActPlotInterviewExtractionPrompt(),
+	]);
+
+	// Inject general instructions into the interview system prompt and cache it
+	cachedInterviewSystemPrompt = interviewSystemPrompt.replace('{generalInstructions}', generalInstructions);
 
 	// Build hidden context (invisible to user, sent to LLM every turn)
-	interviewHiddenContext = [
-		{ role: 'user', content: `The following is the world setting for the story:\n\n---\n\n${worldContent}` },
-		{ role: 'user', content: interviewPrompt },
-	];
+	interviewHiddenContext = [{ role: 'user', content: interviewPrompt.replace('{worldContent}', worldContent) }];
 
 	// When forking, include source premises and act summary so the interview
 	// LLM knows the original line's interview decisions and story state
@@ -338,7 +340,7 @@ async function streamWorldBuilderChat(
 	abortSignal: AbortSignal,
 	providerConfig: ProviderConfig
 ): Promise<StreamAccumulator> {
-	const fullSystemPrompt = actPlotInterview && interviewSystemPrompt ? interviewSystemPrompt : buildFullSystemPrompt();
+	const fullSystemPrompt = actPlotInterview && cachedInterviewSystemPrompt ? cachedInterviewSystemPrompt : buildFullWorldBuildPrompt();
 	// Prepend hidden context for interview mode (invisible to user, but sent to LLM)
 	const llmHistory = actPlotInterview ? [...interviewHiddenContext, ...history] : history;
 	const result = await Promise.all([
