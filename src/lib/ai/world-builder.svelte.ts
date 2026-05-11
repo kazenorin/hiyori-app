@@ -152,7 +152,7 @@ export async function enterActPlotInterviewMode(
 	actLineId: string,
 	systemPrompt: string,
 	worldContent: string,
-	forkContext?: ForkInterviewContext,
+	forkContext?: ForkInterviewContext
 ): Promise<void> {
 	// Preserve world content before reset clears it
 	interviewWorldContent = worldContent;
@@ -162,6 +162,7 @@ export async function enterActPlotInterviewMode(
 	isActive = true;
 	actPlotInterview = true;
 	interviewActLineId = actLineId;
+	// TODO: currently both callers (fork with interview and create new with interview) are using the default system prompt, use a dedicated system prompt instead
 	interviewSystemPrompt = systemPrompt;
 	interviewWorldContent = worldContent;
 
