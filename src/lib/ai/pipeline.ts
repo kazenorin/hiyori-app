@@ -421,7 +421,6 @@ export interface PipelineResult {
 	state: PipelineState;
 	editorMetadata?: StreamResultMetadata;
 	asyncPhases?: Promise<AsyncPhaseResults>;
-	importantPhrasesPromise?: Promise<string[] | null>;
 }
 
 function formatPreviousNarrativeBody(previousNarrativeBody: string | null | undefined, completedScenes: number) {
@@ -648,15 +647,17 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	}
 
 	// --- Important phrases extraction (after Editor, before GM/PlotPlanner) ---
-	let importantPhrasesPromise: Promise<string[] | null> | undefined;
 	if (isPhraseHighlightingEnabled()) {
 		const narrativeBody = state.editorVariables?.narrativeBody;
 		if (narrativeBody && narrativeBody.trim().length > 0) {
-			importantPhrasesPromise = extractImportantPhrases(narrativeBody)
-				.then((phrases) => (phrases.length > 0 ? phrases : null))
+			extractImportantPhrases(narrativeBody)
+				.then((phrases) => {
+					if (phrases.length > 0) {
+						callbacks.onPhrasesExtracted?.(phrases);
+					}
+				})
 				.catch(async (err) => {
 					await log.error('pipeline', 'Important phrases extraction failed', err);
-					return null;
 				});
 		}
 	}
@@ -741,5 +742,5 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 	state = updateState(state, { currentPhase: null });
 	callbacks.onAllComplete(state);
-	return { state, editorMetadata, asyncPhases, importantPhrasesPromise };
+	return { state, editorMetadata, asyncPhases };
 }

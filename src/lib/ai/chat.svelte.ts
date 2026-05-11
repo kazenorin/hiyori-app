@@ -452,6 +452,17 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 					variables: finalVars ?? current.variables,
 				});
 			},
+			onPhrasesExtracted: (phrases: string[]) => {
+				const current = getCurrentMessage();
+				dbMessages
+					.updateMessageFields(current.id, {
+						importantPhrases: serializeImportantPhrases(phrases),
+					})
+					.catch(async (err) => {
+						await log.error('send-message', 'Failed to persist important phrases', err);
+					});
+				setCurrentMessage({ ...current, importantPhrases: phrases });
+			},
 		};
 
 		const result = await runPipeline({
@@ -518,26 +529,6 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 						await log.error('send-message', 'Async phases failed', err);
 					}
 				}) ?? null;
-
-		// Handle important phrases extraction (fire-and-forget)
-		const phrasesPromise = result.importantPhrasesPromise;
-		if (phrasesPromise) {
-			phrasesPromise
-				.then(async (phrases) => {
-					if (phrases && phrases.length > 0) {
-						await dbMessages.updateMessageFields(assistantMessageId, {
-							importantPhrases: serializeImportantPhrases(phrases),
-						});
-						const idx = messages.findLastIndex((m) => m.id === assistantMessageId);
-						if (idx >= 0) {
-							messages[idx] = { ...messages[idx], importantPhrases: phrases };
-						}
-					}
-				})
-				.catch(async (err) => {
-					await log.error('send-message', 'Important phrases extraction failed', err);
-				});
-		}
 	} catch (err: unknown) {
 		await handleStreamError(err, responseMessage.id, actLineId);
 	} finally {

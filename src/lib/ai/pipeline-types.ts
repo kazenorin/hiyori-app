@@ -31,6 +31,7 @@ export interface PipelineCallbacks {
 	onPhaseRetry: (phase: PhaseName, attempt: number, maxAttempts: number) => void;
 	onPhaseComplete: (phase: PhaseName, state: PipelineState) => void;
 	onError: (phase: PhaseName, error: unknown) => void;
+	onPhrasesExtracted?: (phrases: string[]) => void;
 	onAllComplete: (state: PipelineState) => void;
 }
 
