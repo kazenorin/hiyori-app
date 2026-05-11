@@ -222,10 +222,10 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<Ge
 		finalText = writerText;
 	}
 
-	// Prepend resume-game note if applicable
+	// Append resume-game note if applicable
 	if (isResumeGame) {
 		const lastSceneNumber = (await getLastSceneNumber(actLineId)) ?? 1;
-		finalText = finalText + '\n\n' + ACT_PLOT_RESUME_NOTE.replace('{sceneNumber}', lastSceneNumber.toString());
+		finalText = finalText + '\n\n' + ACT_PLOT_RESUME_NOTE.replaceAll('{sceneNumber}', lastSceneNumber.toString());
 	}
 
 	// Write output file
