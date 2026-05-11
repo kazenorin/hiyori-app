@@ -15,15 +15,16 @@
 		regenerateLastResponse,
 		sendInitialNarration,
 		sendMessage,
-		stopStreaming, type UIMessage,
+		stopStreaming,
+		type UIMessage,
 	} from '$lib/ai/chat.svelte';
 	import {
 		deleteLastWorldBuilderExchange,
 		enterActPlotInterviewMode,
 		exitWorldBuilderMode,
 		getActPlotInterview,
-		getGameResumeInterview,
 		getError as getWorldBuilderError,
+		getGameResumeInterview,
 		getIsActive as getIsWorldBuilderActive,
 		getIsComplete as getIsWorldBuilderComplete,
 		getIsStreaming as getIsWorldBuilderStreaming,
@@ -33,7 +34,8 @@
 		regenerateLastWorldBuilderResponse,
 		removeLastInterviewAssistantMessage,
 		sendWorldBuilderMessage,
-		stopStreaming as stopWorldBuilderStreaming, type WorldBuilderMessage,
+		stopStreaming as stopWorldBuilderStreaming,
+		type WorldBuilderMessage,
 	} from '$lib/ai/world-builder.svelte';
 	import {
 		createStoryFromWorldBuilder,
@@ -51,14 +53,14 @@
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import ChatControls from '$lib/components/ChatControls.svelte';
 	import WorldBuilderControls from '$lib/components/WorldBuilderControls.svelte';
-	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
-	import { formatPhaseName } from '$lib/ai/narrative-types';
-	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
-	import { generateActPlot } from '$lib/ai/act-plot-generator';
-	import {getActLine, getPremisesMessages} from '$lib/db/act-lines';
+	import {hasTemplateMetadata, renderTemplate} from '$lib/ai/template-renderer';
+	import {formatPhaseName} from '$lib/ai/narrative-types';
+	import {loadStoryMessageTemplate} from '$lib/fs/view-templates';
+	import {generateActPlot} from '$lib/ai/act-plot-generator';
+	import {getActLine} from '$lib/db/act-lines';
 	import {log} from '$lib/logging/logger';
 	import type {Story} from "$lib/db/stories";
-	import { onMount } from 'svelte';
+	import {onMount} from 'svelte';
 
 	let input = $state('');
 	let chatContainer = $state<HTMLDivElement | null>(null);
@@ -165,12 +167,13 @@
 			const line = await forkActLineForInterview(actLineId, branchSeq, act.id, name);
 			await selectActLineQuiet(line.id);
 
-			// Load source premises and act summary for interview context
-			const sourcePremises = await getPremisesMessages(actLineId);
-			const msgs = getMessages();
-			const actSummary = msgs[messageIndex]?.actSummary ?? '';
+			const forkedMessage = (getMessages())[messageIndex];
+			const actSummary = forkedMessage?.actSummary ?? '';
+			const narrativeBody = forkedMessage?.variables?.narrativeBody ?? '';
+			const sceneNumber = forkedMessage?.sceneNumber ?? 1;
+			const sceneTitle = forkedMessage?.variables?.sceneTitle ?? '';
 
-			await enterActPlotInterviewMode(line.id, worldContent, { sourcePremises, actSummary });
+			await enterActPlotInterviewMode(line.id, worldContent, { actSummary, narrativeBody, sceneNumber, sceneTitle });
 		} catch (err) {
 			await log.error('fork', 'Failed to start fork interview', err);
 			createStoryError = err instanceof Error ? err.message : 'Failed to start fork interview';

@@ -21,12 +21,31 @@ export interface WorldBuilderMessage {
 }
 
 export interface ForkInterviewContext {
-	sourcePremises: WorldBuilderMessage[];
 	actSummary: string;
+	narrativeBody: string;
+	sceneNumber: number;
+	sceneTitle: string;
 }
 
 const COMPLETION_MARKER = '[WORLD_BUILDER_COMPLETE]';
+const SCENE_HEADER = `# Scene`;
+const CURRENT_SCENE = `Current Scene`;
+
 const seedMsg = { role: 'user' as const, content: 'I want to create a new story. Please help me build a world.' };
+
+const resumeStoryActPrefix = `Continue the pre-game interview based on the latest story context below.
+
+The content represents what already happened. Use it only as context to understand the player’s direction and preferences.
+
+Do NOT continue the story, narrate scenes, or generate plot content. Stay strictly in interview mode.
+
+---`;
+
+const resumeStoryActSuffix = `
+
+---
+
+Resume the interview conversation naturally from here, helping the player refine what they want next.`;
 
 let isActive = $state(false);
 let messages = $state<WorldBuilderMessage[]>([]);
@@ -180,14 +199,26 @@ export async function enterActPlotInterviewMode(
 	// Build hidden context (invisible to user, sent to LLM every turn)
 	interviewHiddenContext = [{ role: 'user', content: interviewPrompt.replace('{worldContent}', worldContent) }];
 
-	// When forking, include source premises and act summary so the interview
-	// LLM knows the original line's interview decisions and story state
+	// When forking, include act summary so the interview
+	// LLM knows the story state prior to the fork point
 	if (forkContext) {
 		gameResumeInterview = true;
-		messages = [...messages, ...forkContext.sourcePremises];
-		if (forkContext.actSummary) {
-			const userMessage = `We will resume a story act right after this sequence of events occured:\n\n${forkContext.actSummary}`;
-			return await sendWorldBuilderMessage(userMessage);
+		const hasSceneContext = forkContext.sceneNumber && forkContext.sceneTitle && forkContext.narrativeBody;
+
+		if (forkContext.actSummary || hasSceneContext) {
+			const sections: string[] = [resumeStoryActPrefix];
+
+			if (forkContext.actSummary) {
+				sections.push(`\n\n${forkContext.actSummary}`);
+			}
+			if (hasSceneContext) {
+				sections.push(
+					`\n\n${SCENE_HEADER} ${forkContext.sceneNumber}: ${forkContext.sceneTitle} *(${CURRENT_SCENE})*\n\n${forkContext.narrativeBody}`
+				);
+			}
+
+			sections.push(resumeStoryActSuffix);
+			return await sendWorldBuilderMessage(sections.join(''));
 		}
 	}
 
