@@ -48,22 +48,21 @@
 		getIsSelectingStory,
 		selectActLineQuiet,
 		setActiveActPlotContent,
-		getActiveActPlotContent,
 	} from '$lib/stores/stories.svelte';
 	import {Accordion} from '@skeletonlabs/skeleton-svelte';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import ChatControls from '$lib/components/ChatControls.svelte';
 	import WorldBuilderControls from '$lib/components/WorldBuilderControls.svelte';
 	import {hasTemplateMetadata, renderTemplate} from '$lib/ai/template-renderer';
+	import {emptyVariables, type NarrativeVariables} from '$lib/ai/narrative-types';
 	import {formatPhaseName} from '$lib/ai/narrative-types';
 	import {loadStoryMessageTemplate} from '$lib/fs/view-templates';
 	import {generateActPlot} from '$lib/ai/act-plot-generator';
 	import {getActLine, getMessagesForLine} from '$lib/db/act-lines';
 	import {log} from '$lib/logging/logger';
 	import {generateTurnOfEvents} from '$lib/ai/turn-of-events-generator';
-	import {updateMessageFields} from '$lib/db/messages';
-	import {regenerateGameData} from '$lib/ai/game-data-regenerator';
-	import type {NarrativeVariables} from '$lib/ai/narrative-types';
+	import {type Message, updateMessageFields} from '$lib/db/messages';
+	import {type GameDataRegenerationContext, regenerateGameData} from '$lib/ai/game-data-regenerator';
 	import type {Story} from "$lib/db/stories";
 	import {onMount} from 'svelte';
 
@@ -253,47 +252,42 @@
 		return { actLineId, story };
 	}
 
-	/**
-	 * Generate act plot, exit world builder, and start the game.
-	 */
-	async function startGame(storyId: string, storyName: string, actLineId: string, worldContent: string, isResumeGame: boolean = false): Promise<void> {
-		const actLine = await getActLine(actLineId);
-		const isMainLine = actLine?.isMainLine ?? true;
-		const result = await generateActPlot({ storyId, storyName, worldContent, actLineId, isMainLine, actNumber: 1, isResumeGame });
-		setActiveActPlotContent(result.content);
-
-		exitWorldBuilderMode();
-
-		if (isResumeGame) {
-			await loadActLineMessages(actLineId);
-		} else {
-			sendInitialNarration(actLineId)
-				.then(() => log.debug('story-creation', 'initial narration sent'));
-		}
-	}
-
 	async function handleCreateStoryImmediate() {
 		isCreatingStory = true;
 		createStoryError = null;
 
+		const refs = getActLineAndStory();
+		const worldContent = getWorldBuilderContent();
+		const storyCreated = await ensureStoryCreated();
+
+		if (!refs || !worldContent || !storyCreated) {
+			createStoryError = 'Missing required contents.';
+			isCreatingStory = false;
+			return;
+		}
+
 		try {
-			if (!await ensureStoryCreated()) return;
-
-			const refs = getActLineAndStory();
-			if (!refs) {
-				isCreatingStory = false;
-				return;
-			}
-
-			const worldContent = getWorldBuilderContent();
-			if (!worldContent) return;
-
-			await startGame(refs.story.id, refs.story.name, refs.actLineId, worldContent);
+			const actLine = await getActLine(refs.actLineId);
+			const isMainLine = actLine?.isMainLine ?? true;
+			const actPlot = await generateActPlot({
+				storyId: refs.story.id,
+				storyName: refs.story.name,
+				worldContent,
+				actLineId: refs.actLineId,
+				isMainLine,
+				actNumber: 1,
+				isResumeGame: false
+			});
+			setActiveActPlotContent(actPlot.content);
 		} catch (err) {
 			createStoryError = err instanceof Error ? err.message : 'Failed to create story';
 		} finally {
 			isCreatingStory = false;
 		}
+
+		exitWorldBuilderMode();
+		await sendInitialNarration(refs.actLineId)
+			.then(() => log.debug('story-creation', 'initial narration sent'));
 	}
 
 	async function handleCreateActPlotInterview() {
@@ -333,16 +327,48 @@
 		try {
 			await removeLastInterviewAssistantMessage();
 
-			if (isGameResumeMode) {
-				const enriched = await enrichForkedMessageWithTurnOfEvents(refs.actLineId);
-				if (enriched) {
-					await regenerateGameDataForForkedMessage(enriched);
-				}
-			}
-
 			const worldContent = getWorldBuilderContent();
 			if (worldContent) {
-				await startGame(refs.story.id, refs.story.name, refs.actLineId, worldContent, isGameResumeMode);
+				let forkedMessage: Message | undefined = undefined;
+				if (isGameResumeMode) {
+					forkedMessage = await enrichForkedMessageWithTurnOfEvents(refs.actLineId);
+				}
+
+				const actLine = await getActLine(refs.actLineId);
+				const isMainLine = actLine?.isMainLine ?? true;
+
+				const actPlotResult = await generateActPlot({
+					storyId: refs.story.id,
+					storyName: refs.story.name,
+					worldContent,
+					actLineId: refs.actLineId,
+					isMainLine,
+					actNumber: 1,
+					isResumeGame: isGameResumeMode
+				});
+				setActiveActPlotContent(actPlotResult.content);
+
+				if (forkedMessage) {
+					await regenerateGameDataForForkedMessage(forkedMessage.id, {
+						worldContent,
+						actPlot: actPlotResult.content,
+						actSummary: forkedMessage.actSummary ?? '',
+						sceneNumber: forkedMessage.sceneNumber ?? 1,
+						narrativeVariables: forkedMessage.variables ?? emptyVariables(),
+						playerResponse: null,
+					});
+				}
+
+				exitWorldBuilderMode();
+
+				if (isGameResumeMode) {
+					await loadActLineMessages(refs.actLineId);
+				} else {
+					sendInitialNarration(refs.actLineId)
+						.then(() => log.debug('story-creation', 'initial narration sent'));
+				}
+			} else {
+				createStoryError = 'World content not available';
 			}
 		} catch (err) {
 			createStoryError = err instanceof Error ? err.message : 'Failed to start game';
@@ -351,13 +377,13 @@
 		}
 	}
 
-	async function enrichForkedMessageWithTurnOfEvents(actLineId: string): Promise<{ messageId: string; actSummary: string; sceneNumber: number; variables: NarrativeVariables } | null> {
+	async function enrichForkedMessageWithTurnOfEvents(actLineId: string): Promise<Message | undefined> {
 		const lineMessages = await getMessagesForLine(actLineId);
 		const lastAssistant = lineMessages.findLast((m) => m.role === 'assistant');
-		if (!lastAssistant || !lastAssistant.variables?.narrativeBody) return null;
+		if (!lastAssistant || !lastAssistant.variables?.narrativeBody) return undefined;
 
 		const interviewMessages = getWorldBuilderMessages();
-		if (interviewMessages.length === 0) return null;
+		if (interviewMessages.length === 0) return undefined;
 
 		const turnOfEventsText = await generateTurnOfEvents({
 			actSummary: lastAssistant.actSummary ?? '',
@@ -375,30 +401,20 @@
 		await updateMessageFields(lastAssistant.id, {
 			variables: JSON.stringify(enrichedVariables),
 		});
-
-		return { messageId: lastAssistant.id, actSummary: lastAssistant.actSummary ?? '', sceneNumber: lastAssistant.sceneNumber ?? 1, variables: enrichedVariables };
+		return {
+			...lastAssistant,
+			variables: enrichedVariables
+		};
 	}
 
-	async function regenerateGameDataForForkedMessage(enriched: { messageId: string; actSummary: string; sceneNumber: number; variables: NarrativeVariables }) {
-		const worldContent = getWorldBuilderContent();
-		const actPlot = getActiveActPlotContent();
-		if (!worldContent || !actPlot) return;
-
-		const regeneratedGameData = await regenerateGameData({
-			worldContent,
-			actPlot,
-			actSummary: enriched.actSummary,
-			narrativeVariables: enriched.variables,
-			playerResponse: null,
-			sceneNumber: enriched.sceneNumber,
-		});
-
+	async function regenerateGameDataForForkedMessage(messageId: string, ctx: GameDataRegenerationContext) {
+		const regeneratedGameData = await regenerateGameData(ctx);
 		if (regeneratedGameData) {
 			const updatedVariables: NarrativeVariables = {
-				...enriched.variables,
+				...ctx.narrativeVariables,
 				gameData: regeneratedGameData,
 			};
-			await updateMessageFields(enriched.messageId, {
+			await updateMessageFields(messageId, {
 				variables: JSON.stringify(updatedVariables),
 			});
 		}

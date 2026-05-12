@@ -11,18 +11,20 @@ import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
 import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection } from '$lib/definitions/section-constants';
 import { gameMasterExtractionPrompt } from '$lib/definitions/static-prompts';
 
+export interface GameDataRegenerationContext {
+	worldContent: string;
+	actPlot: string;
+	actSummary: string;
+	sceneNumber: number;
+	narrativeVariables: NarrativeVariables;
+	playerResponse: string | null;
+}
+
 /**
  * Regenerate GameData for an existing message using non-streaming GM phase.
  * Used when enriching a forked message with turnOfEvents.
  */
-export async function regenerateGameData(params: {
-	worldContent: string;
-	actPlot: string;
-	actSummary: string;
-	narrativeVariables: NarrativeVariables;
-	playerResponse: string | null;
-	sceneNumber: number;
-}): Promise<GameDataFields | null> {
+export async function regenerateGameData(params: GameDataRegenerationContext): Promise<GameDataFields | null> {
 	const { worldContent, actPlot, actSummary, narrativeVariables, playerResponse, sceneNumber } = params;
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) return null;
