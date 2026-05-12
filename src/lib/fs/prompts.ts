@@ -45,9 +45,11 @@ import defaultActExtractionPrompt from './prompts/act/act-extraction-prompt.md?r
 import defaultActPlotTemplate from './prompts/act/act-plot-template.md?raw';
 import defaultActPlotGenerationPrompt from './prompts/act/act-plot-generation-prompt.md?raw';
 import defaultActPlotSystemPrompt from './prompts/act/act-plot-system-prompt.md?raw';
+import defaultActPlotInterviewSystemPrompt from './prompts/act/act-plot-interview-system-prompt.md?raw';
 import defaultActPlotReviewerPrompt from './prompts/act/act-plot-reviewer-prompt.md?raw';
 import defaultActPlotEditorPrompt from './prompts/act/act-plot-editor-prompt.md?raw';
-import defaultInterviewExtractionPrompt from './prompts/interview-extraction-prompt.md?raw';
+import defaultActPlotInterviewExtractionPrompt from './prompts/act/act-plot-interview-extraction-prompt.md?raw';
+import defaultActPlotInterviewTurnOfEventsPrompt from './prompts/act/act-plot-interview-turn-of-events-prompt.md?raw';
 
 // Character
 import defaultCharacterCardTemplate from './prompts/character/character-card-template.md?raw';
@@ -88,8 +90,10 @@ export {
 	defaultActExtractionPrompt,
 	defaultActPlotTemplate,
 	defaultActPlotGenerationPrompt,
-	defaultInterviewExtractionPrompt,
+	defaultActPlotInterviewExtractionPrompt,
+	defaultActPlotInterviewTurnOfEventsPrompt,
 	defaultActPlotSystemPrompt,
+	defaultActPlotInterviewSystemPrompt,
 	defaultActPlotReviewerPrompt,
 	defaultActPlotEditorPrompt,
 	defaultCharacterCardTemplate,
@@ -175,6 +179,10 @@ const actPlotSystemPrompt = new Prompt({
 	relativePath: 'act/act-plot-system-prompt.md',
 	defaultContent: defaultActPlotSystemPrompt,
 });
+const actPlotInterviewSystemPrompt = new Prompt({
+	relativePath: 'act/act-plot-interview-system-prompt.md',
+	defaultContent: defaultActPlotInterviewSystemPrompt,
+});
 const actPlotReviewerPrompt = new Prompt({
 	relativePath: 'act/act-plot-reviewer-prompt.md',
 	defaultContent: defaultActPlotReviewerPrompt,
@@ -183,9 +191,13 @@ const actPlotEditorPrompt = new Prompt({
 	relativePath: 'act/act-plot-editor-prompt.md',
 	defaultContent: defaultActPlotEditorPrompt,
 });
-const interviewExtractionPrompt = new Prompt({
-	relativePath: 'interview-extraction-prompt.md',
-	defaultContent: defaultInterviewExtractionPrompt,
+const actPlotInterviewExtractionPrompt = new Prompt({
+	relativePath: 'act/act-plot-interview-extraction-prompt.md',
+	defaultContent: defaultActPlotInterviewExtractionPrompt,
+});
+const actPlotInterviewTurnOfEventsPrompt = new Prompt({
+	relativePath: 'act/act-plot-interview-turn-of-events-prompt.md',
+	defaultContent: defaultActPlotInterviewTurnOfEventsPrompt,
 });
 
 // Character
@@ -255,9 +267,11 @@ export const loadActExtractionPrompt = (): Promise<string> => actExtractionPromp
 export const loadActPlotTemplate = (): Promise<string> => actPlotTemplate.load();
 export const loadActPlotGenerationPrompt = (): Promise<string> => actPlotGenerationPrompt.load();
 export const loadActPlotSystemPrompt = (): Promise<string> => actPlotSystemPrompt.load();
+export const loadActPlotInterviewSystemPrompt = (): Promise<string> => actPlotInterviewSystemPrompt.load();
 export const loadActPlotReviewerPrompt = (): Promise<string> => actPlotReviewerPrompt.load();
 export const loadActPlotEditorPrompt = (): Promise<string> => actPlotEditorPrompt.load();
-export const loadInterviewExtractionPrompt = (): Promise<string> => interviewExtractionPrompt.load();
+export const loadActPlotInterviewExtractionPrompt = (): Promise<string> => actPlotInterviewExtractionPrompt.load();
+export const loadActPlotInterviewTurnOfEventsPrompt = (): Promise<string> => actPlotInterviewTurnOfEventsPrompt.load();
 export const loadCharacterCardTemplate = (): Promise<string> => characterCardTemplate.load();
 export const loadCharacterCardExtractionPrompt = (): Promise<string> => characterCardExtractionPrompt.load();
 export const loadCharacterCardExtractionSystemPrompt = (): Promise<string> => characterCardExtractionSystemPrompt.load();
@@ -409,9 +423,11 @@ registerDefaults([
 	actPlotTemplate,
 	actPlotGenerationPrompt,
 	actPlotSystemPrompt,
+	actPlotInterviewSystemPrompt,
 	actPlotReviewerPrompt,
 	actPlotEditorPrompt,
-	interviewExtractionPrompt,
+	actPlotInterviewExtractionPrompt,
+	actPlotInterviewTurnOfEventsPrompt,
 	characterCardTemplate,
 	characterCardExtractionPrompt,
 	characterCardExtractionSystemPrompt,

@@ -12,7 +12,7 @@ import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { getLineDir } from './card-output-path';
 import { log } from '$lib/logging/logger';
-import { getLastSceneNumber, getPremisesMessages, getPreviousActSummary } from '$lib/db/act-lines';
+import { getLastSceneNumber, getPremisesMessages, getPreviousActSummary, getLatestTurnOfEvents } from '$lib/db/act-lines';
 import { reviewerAcceptsAsIs } from './reviewer-output-parser';
 
 const LOG_TAG = 'act-plot-generator';
@@ -20,6 +20,7 @@ const LOG_TAG = 'act-plot-generator';
 const SECTION_HEADERS = {
 	WORLD_CONTENT: '## World Content\n\n',
 	PREVIOUS_ACT_SUMMARY: '## Previous Act Summary\n\n',
+	TURN_OF_EVENTS: '## Turn Of Events\n\n',
 	INTERVIEW_TRANSCRIPT: '## Interview Transcript\n\nThe following is an interview exchange about the story and premises.',
 	WRITER_OUTPUT: '## Writer Output\n\n',
 	REVIEWER_FEEDBACK: '## Reviewer Feedback\n\n',
@@ -62,6 +63,7 @@ function buildWriterMessages(
 	worldContent: string,
 	interviewTranscript: ModelMessage[],
 	previousActSummary: string | null,
+	turnOfEvents: string | null,
 	generationPrompt: string,
 	template: string
 ): ModelMessage[] {
@@ -77,6 +79,10 @@ function buildWriterMessages(
 		messages.push(...interviewTranscript);
 	}
 
+	if (turnOfEvents) {
+		messages.push({ role: 'user', content: SECTION_HEADERS.TURN_OF_EVENTS + turnOfEvents });
+	}
+
 	messages.push({ role: 'user', content: generationPrompt });
 	messages.push({ role: 'user', content: SECTION_HEADERS.TEMPLATE + template });
 
@@ -86,6 +92,7 @@ function buildWriterMessages(
 function buildReviewerMessages(
 	worldContent: string,
 	previousActSummary: string | null,
+	turnOfEvents: string | null,
 	writerOutput: string,
 	reviewerPrompt: string
 ): ModelMessage[] {
@@ -93,6 +100,10 @@ function buildReviewerMessages(
 
 	if (previousActSummary) {
 		messages.push({ role: 'user', content: SECTION_HEADERS.PREVIOUS_ACT_SUMMARY + previousActSummary });
+	}
+
+	if (turnOfEvents) {
+		messages.push({ role: 'user', content: SECTION_HEADERS.TURN_OF_EVENTS + turnOfEvents });
 	}
 
 	messages.push({ role: 'user', content: SECTION_HEADERS.WRITER_OUTPUT + writerOutput });
@@ -104,6 +115,7 @@ function buildReviewerMessages(
 function buildEditorMessages(
 	worldContent: string,
 	previousActSummary: string | null,
+	turnOfEvents: string | null,
 	writerOutput: string,
 	reviewerOutput: string,
 	editorPrompt: string
@@ -112,6 +124,10 @@ function buildEditorMessages(
 
 	if (previousActSummary) {
 		messages.push({ role: 'user', content: SECTION_HEADERS.PREVIOUS_ACT_SUMMARY + previousActSummary });
+	}
+
+	if (turnOfEvents) {
+		messages.push({ role: 'user', content: SECTION_HEADERS.TURN_OF_EVENTS + turnOfEvents });
 	}
 
 	messages.push({ role: 'user', content: SECTION_HEADERS.WRITER_OUTPUT + writerOutput });
@@ -148,7 +164,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<Ge
 	}
 
 	// Load prompts and context in parallel
-	const [template, generationPrompt, systemPrompt, reviewerPrompt, editorPrompt, interviewTranscript, previousActSummary] =
+	const [template, generationPrompt, systemPrompt, reviewerPrompt, editorPrompt, interviewTranscript, previousActSummary, turnOfEvents] =
 		await Promise.all([
 			loadActPlotTemplate(),
 			loadActPlotGenerationPrompt().then((p) => p.replace('{actNumber}', actNumber.toString())),
@@ -157,20 +173,28 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<Ge
 			loadActPlotEditorPrompt(),
 			loadInterviewTranscript(actLineId),
 			getPreviousActSummary(actLineId),
+			isResumeGame ? getLatestTurnOfEvents(actLineId) : Promise.resolve(null),
 		]);
 
 	const model = createModel(config);
 
 	await log.info(
 		LOG_TAG,
-		`Starting act-plot pipeline for story: ${storyName} (interview: ${interviewTranscript.some((m) => m.role === 'user') ? 'yes' : 'no'}, prev-summary: ${previousActSummary ? 'yes' : 'no'})`
+		`Starting act-plot pipeline for story: ${storyName} (interview: ${interviewTranscript.some((m) => m.role === 'user') ? 'yes' : 'no'}, prev-summary: ${previousActSummary ? 'yes' : 'no'}, turnOfEvents: ${turnOfEvents ? 'yes' : 'no'})`
 	);
 
 	// Phase 1: WRITER
 	onPhaseChange?.('writing');
 	await log.info(LOG_TAG, 'Phase 1: WRITER');
 
-	const writerMessages = buildWriterMessages(worldContent, interviewTranscript, previousActSummary, generationPrompt, template);
+	const writerMessages = buildWriterMessages(
+		worldContent,
+		interviewTranscript,
+		previousActSummary,
+		turnOfEvents,
+		generationPrompt,
+		template
+	);
 	const writerResult = await generateText({ model, system: systemPrompt, messages: writerMessages });
 	const writerText = writerResult.text.trim();
 
@@ -188,7 +212,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<Ge
 		onPhaseChange?.('reviewing');
 		await log.info(LOG_TAG, 'Phase 2: REVIEWER');
 
-		const reviewerMessages = buildReviewerMessages(worldContent, previousActSummary, writerText, reviewerPrompt);
+		const reviewerMessages = buildReviewerMessages(worldContent, previousActSummary, turnOfEvents, writerText, reviewerPrompt);
 		const reviewerResult = await generateText({ model, system: systemPrompt, messages: reviewerMessages });
 		const reviewerText = reviewerResult.text.trim();
 
@@ -205,7 +229,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<Ge
 			onPhaseChange?.('editing');
 			await log.info(LOG_TAG, 'Phase 3: EDITOR');
 
-			const editorMessages = buildEditorMessages(worldContent, previousActSummary, writerText, reviewerText, editorPrompt);
+			const editorMessages = buildEditorMessages(worldContent, previousActSummary, turnOfEvents, writerText, reviewerText, editorPrompt);
 			const editorResult = await generateText({ model, system: systemPrompt, messages: editorMessages });
 			const editorText = editorResult.text.trim();
 

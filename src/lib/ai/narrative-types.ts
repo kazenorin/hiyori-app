@@ -20,6 +20,7 @@ export interface NarrativeVariables {
 	sceneTitle: string | null;
 	background: string | null;
 	narrativeBody: string | null;
+	turnOfEvents: string | null;
 	cg: string | null;
 	gameData: GameDataFields | null;
 }
@@ -43,6 +44,7 @@ export const FIELD_DESCRIPTORS: readonly FieldDescriptor[] = [
 	{ fieldName: 'sceneTitle', headerName: 'Scene title', parentSections: [], includeInSerialization: true },
 	{ fieldName: 'background', headerName: 'Background', parentSections: [], includeInSerialization: true },
 	{ fieldName: 'narrativeBody', headerName: 'Narrative Body', parentSections: [], includeInSerialization: true },
+	{ fieldName: 'turnOfEvents', headerName: 'Turn Of Events', parentSections: [], includeInSerialization: true },
 	{ fieldName: 'cg', headerName: 'CG', parentSections: [], includeInSerialization: true },
 ];
 
@@ -50,6 +52,34 @@ export const FIELD_DESCRIPTORS: readonly FieldDescriptor[] = [
 
 /** Canonical list of all NarrativeVariables keys (excluding gameData). Derived from FIELD_DESCRIPTORS. */
 export const NARRATIVE_VARIABLE_FIELDS: (keyof NarrativeVariables)[] = FIELD_DESCRIPTORS.map((d) => d.fieldName);
+
+// --- Assembly helpers ---
+
+/** Assemble GameDataFields from a flat parsed result. */
+function assembleGameData(result: Record<string, unknown>): GameDataFields | null {
+	const threads = result.activePlotThreads as string[] | undefined;
+	const context = result.decisionContext as string | undefined;
+	const decisions = result.decisions as string[] | undefined;
+	const hasAny = (threads && threads.length > 0) || context || (decisions && decisions.length > 0);
+	if (!hasAny) return null;
+	return {
+		activePlotThreads: threads ?? [],
+		decisionContext: context ?? null,
+		decisions: decisions ?? [],
+	};
+}
+
+/** Map a flat parseContent result to NarrativeVariables. */
+export function assembleVariables(result: Record<string, unknown>): NarrativeVariables {
+	return {
+		sceneTitle: (result.sceneTitle as string) ?? null,
+		background: (result.background as string) ?? null,
+		narrativeBody: (result.narrativeBody as string) ?? null,
+		turnOfEvents: (result.turnOfEvents as string) ?? null,
+		cg: (result.cg as string) ?? null,
+		gameData: assembleGameData(result),
+	};
+}
 
 // --- Helpers ---
 
@@ -73,6 +103,7 @@ export function emptyVariables(): NarrativeVariables {
 		sceneTitle: null,
 		background: null,
 		narrativeBody: null,
+		turnOfEvents: null,
 		cg: null,
 		gameData: null,
 	};

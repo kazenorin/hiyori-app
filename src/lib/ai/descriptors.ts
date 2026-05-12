@@ -5,6 +5,7 @@ export const SCENE_DESCRIPTORS: OutputDescriptor[] = [
 	{ outputPath: 'sceneTitle', match: { type: 'header', content: 'Scene title' }, bodyOnly: true, currentLevelOnly: true },
 	{ outputPath: 'background', match: { type: 'header', content: 'Background' }, bodyOnly: true },
 	{ outputPath: 'narrativeBody', match: { type: 'header', content: 'Narrative Body' }, bodyOnly: true },
+	{ outputPath: 'turnOfEvents', match: { type: 'header', content: 'Turn Of Events' }, bodyOnly: true },
 	{ outputPath: 'cg', match: { type: 'header', content: 'CG' }, bodyOnly: true },
 ];
 

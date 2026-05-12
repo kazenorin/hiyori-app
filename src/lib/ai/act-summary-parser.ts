@@ -77,6 +77,9 @@ export interface ActSummary {
 	completedScenes: number;
 	scenes: SceneSummary[];
 	characters: CharacterSummary[];
+	turnOfEvents: string | null;
+	turnOfEventsSceneNumber: number | null;
+	turnOfEventsSceneTitle: string | null;
 }
 
 export interface IncrementalUpdate {
@@ -114,7 +117,14 @@ function stripCodeFences(text: string): string {
  */
 export function parseActSummary(markdown: string): ActSummary {
 	const tokens = marked.lexer(stripCodeFences(markdown));
-	const result: ActSummary = { completedScenes: 0, scenes: [], characters: [] };
+	const result: ActSummary = {
+		completedScenes: 0,
+		scenes: [],
+		characters: [],
+		turnOfEvents: null,
+		turnOfEventsSceneNumber: null,
+		turnOfEventsSceneTitle: null,
+	};
 
 	let currentSection: Section | null = null;
 	let currentScene: SceneSummary | null = null;
@@ -299,6 +309,14 @@ export function serializeActSummary(data: ActSummary): string {
 		lines.push('');
 	}
 
+	if (data.turnOfEvents && data.turnOfEvents.trim().length > 0) {
+		lines.push('## Turn Of Events');
+		if (data.turnOfEventsSceneNumber != null && data.turnOfEventsSceneTitle) {
+			lines.push(`### Scene ${data.turnOfEventsSceneNumber}: ${data.turnOfEventsSceneTitle}`);
+		}
+		lines.push(data.turnOfEvents);
+	}
+
 	return lines.join('\n').trimEnd();
 }
 
@@ -408,6 +426,9 @@ export function mergeActSummary(existing: ActSummary, incremental: IncrementalUp
 		completedScenes: incremental.completedScenes ?? existing.completedScenes,
 		scenes: incremental.newScene ? [...existing.scenes, incremental.newScene] : [...existing.scenes],
 		characters: [...existing.characters.map((c) => ({ ...c, aliases: [...c.aliases], sceneEntries: [...c.sceneEntries] }))],
+		turnOfEvents: existing.turnOfEvents,
+		turnOfEventsSceneNumber: existing.turnOfEventsSceneNumber,
+		turnOfEventsSceneTitle: existing.turnOfEventsSceneTitle,
 	};
 
 	for (const update of incremental.characterUpdates) {

@@ -1,43 +1,23 @@
 import { parseContent } from '$lib/chat-stream-parser';
 import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
 import { createThinkingTagParser } from './thinking-tag-parser';
-import type { NarrativeVariables, GameDataFields } from './narrative-types';
+import type { NarrativeVariables } from './narrative-types';
+import { assembleVariables } from './narrative-types';
 import { NARRATIVE_DESCRIPTORS } from './descriptors';
 import type { ParserChainOutput } from './parser-chain';
 
 const THROTTLE_MS = 150;
 const MIN_NEW_CHARS = 50;
 
-/**
- * Map flat parseContent result to NarrativeVariables.
- * Scene fields come from SCENE_DESCRIPTORS (outputPath: 'sceneTitle', etc).
- * Game data fields come from GAME_DATA_DESCRIPTORS (outputPath: 'activePlotThreads', etc).
- */
-function assembleVariables(result: Record<string, unknown>): NarrativeVariables {
-	return {
-		sceneTitle: (result.sceneTitle as string) ?? null,
-		background: (result.background as string) ?? null,
-		narrativeBody: (result.narrativeBody as string) ?? null,
-		cg: (result.cg as string) ?? null,
-		gameData: assembleGameData(result),
-	};
-}
-
-function assembleGameData(result: Record<string, unknown>): GameDataFields | null {
-	const threads = result.activePlotThreads as string[] | undefined;
-	const context = result.decisionContext as string | undefined;
-	const decisions = result.decisions as string[] | undefined;
-	const hasAny = (threads && threads.length > 0) || context || (decisions && decisions.length > 0);
-	if (!hasAny) return null;
-	return {
-		activePlotThreads: threads ?? [],
-		decisionContext: context ?? null,
-		decisions: decisions ?? [],
-	};
-}
-
 function hasFields(vars: NarrativeVariables): boolean {
-	return vars.sceneTitle !== null || vars.background !== null || vars.narrativeBody !== null || vars.cg !== null || vars.gameData !== null;
+	return (
+		vars.sceneTitle !== null ||
+		vars.background !== null ||
+		vars.narrativeBody !== null ||
+		vars.turnOfEvents !== null ||
+		vars.cg !== null ||
+		vars.gameData !== null
+	);
 }
 
 /**

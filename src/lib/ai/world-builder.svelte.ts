@@ -1,5 +1,11 @@
 import { getMainProviderConfig, type ProviderConfig } from '$lib/stores/settings.svelte';
-import { loadWorldBuilderSystemPrompt, loadWorldTemplate, loadInterviewExtractionPrompt } from '$lib/fs/prompts';
+import {
+	loadWorldBuilderSystemPrompt,
+	loadWorldTemplate,
+	loadActPlotInterviewExtractionPrompt,
+	loadGeneralInstructions,
+	loadActPlotInterviewSystemPrompt,
+} from '$lib/fs/prompts';
 import { generateWorldBuilderLogFilename, logWorldBuilderChat } from '$lib/logging/chat-logger';
 import { log } from '$lib/logging/logger';
 import { type StreamAccumulator, type StreamState } from '$lib/ai/chat-callbacks';
@@ -15,12 +21,31 @@ export interface WorldBuilderMessage {
 }
 
 export interface ForkInterviewContext {
-	sourcePremises: WorldBuilderMessage[];
 	actSummary: string;
+	narrativeBody: string;
+	sceneNumber: number;
+	sceneTitle: string;
 }
 
 const COMPLETION_MARKER = '[WORLD_BUILDER_COMPLETE]';
+const SCENE_HEADER = `# Scene`;
+const CURRENT_SCENE = `Current Scene`;
+
 const seedMsg = { role: 'user' as const, content: 'I want to create a new story. Please help me build a world.' };
+
+const resumeStoryActPrefix = `Continue the pre-game interview based on the latest story context below.
+
+The content represents what already happened. Use it only as context to understand the player’s direction and preferences.
+
+Do NOT continue the story, narrate scenes, or generate plot content. Stay strictly in interview mode.
+
+---`;
+
+const resumeStoryActSuffix = `
+
+---
+
+Resume the interview conversation naturally from here, helping the player refine what they want next.`;
 
 let isActive = $state(false);
 let messages = $state<WorldBuilderMessage[]>([]);
@@ -36,13 +61,13 @@ let logFilePath: string | null = null;
 let actPlotInterview = $state(false);
 let gameResumeInterview = $state(false);
 let interviewActLineId: string | null = null;
-let interviewSystemPrompt: string | null = null;
 let interviewHiddenContext: MessageBase[] = [];
 let interviewWorldContent: string | null = null;
 
 // Cached prompts loaded once on enter
-let cachedSystemPrompt: string | null = null;
+let cachedWorldBuilderPrompt: string | null = null;
 let cachedWorldTemplate: string | null = null;
+let cachedInterviewSystemPrompt: string | null = null;
 
 export function getIsActive(): boolean {
 	return isActive;
@@ -88,12 +113,12 @@ function resetState(): void {
 	isComplete = false;
 	abortController = null;
 	logFilePath = null;
-	cachedSystemPrompt = null;
+	cachedWorldBuilderPrompt = null;
 	cachedWorldTemplate = null;
+	cachedInterviewSystemPrompt = null;
 	actPlotInterview = false;
 	gameResumeInterview = false;
 	interviewActLineId = null;
-	interviewSystemPrompt = null;
 	interviewHiddenContext = [];
 	interviewWorldContent = null;
 }
@@ -105,8 +130,8 @@ export function exitWorldBuilderMode(): void {
 	resetState();
 }
 
-function buildFullSystemPrompt(): string {
-	return (cachedSystemPrompt ?? '') + '\n\n---\n\n' + (cachedWorldTemplate ?? '') + '\n\n---\n\n';
+function buildFullWorldBuildPrompt(): string {
+	return (cachedWorldBuilderPrompt ?? '') + '\n\n---\n\n' + (cachedWorldTemplate ?? '') + '\n\n---\n\n';
 }
 
 /**
@@ -142,46 +167,58 @@ export async function enterWorldBuilderMode(): Promise<void> {
 	logFilePath = generateWorldBuilderLogFilename();
 
 	// Load and cache prompts once
-	cachedSystemPrompt = await loadWorldBuilderSystemPrompt();
-	cachedWorldTemplate = await loadWorldTemplate();
+	const [worldBuilderPrompt, worldTemplate] = await Promise.all([loadWorldBuilderSystemPrompt(), loadWorldTemplate()]);
+	cachedWorldBuilderPrompt = worldBuilderPrompt;
+	cachedWorldTemplate = worldTemplate;
 
 	await streamNextResponse();
 }
 
 export async function enterActPlotInterviewMode(
 	actLineId: string,
-	systemPrompt: string,
 	worldContent: string,
-	forkContext?: ForkInterviewContext,
+	forkContext?: ForkInterviewContext
 ): Promise<void> {
-	// Preserve world content before reset clears it
-	interviewWorldContent = worldContent;
-
 	// Reset world builder state but keep isActive true
 	resetState();
 	isActive = true;
 	actPlotInterview = true;
 	interviewActLineId = actLineId;
-	interviewSystemPrompt = systemPrompt;
 	interviewWorldContent = worldContent;
 
-	// Load interview extraction prompt
-	const interviewPrompt = await loadInterviewExtractionPrompt();
+	// Load interview system prompt with general instructions injected and interview extraction prompt
+	const [generalInstructions, interviewSystemPrompt, interviewPrompt] = await Promise.all([
+		loadGeneralInstructions(),
+		loadActPlotInterviewSystemPrompt(),
+		loadActPlotInterviewExtractionPrompt(),
+	]);
+
+	// Inject general instructions into the interview system prompt and cache it
+	cachedInterviewSystemPrompt = interviewSystemPrompt.replace('{generalInstructions}', generalInstructions);
 
 	// Build hidden context (invisible to user, sent to LLM every turn)
-	interviewHiddenContext = [
-		{ role: 'user', content: `The following is the world setting for the story:\n\n---\n\n${worldContent}` },
-		{ role: 'user', content: interviewPrompt },
-	];
+	interviewHiddenContext = [{ role: 'user', content: interviewPrompt.replace('{worldContent}', worldContent) }];
 
-	// When forking, include source premises and act summary so the interview
-	// LLM knows the original line's interview decisions and story state
+	// When forking, include act summary so the interview
+	// LLM knows the story state prior to the fork point
 	if (forkContext) {
 		gameResumeInterview = true;
-		messages = [...messages, ...forkContext.sourcePremises];
-		if (forkContext.actSummary) {
-			const userMessage = `We will resume a story act right after this sequence of events occured:\n\n${forkContext.actSummary}`;
-			return await sendWorldBuilderMessage(userMessage);
+		const hasSceneContext = forkContext.sceneNumber && forkContext.sceneTitle && forkContext.narrativeBody;
+
+		if (forkContext.actSummary || hasSceneContext) {
+			const sections: string[] = [resumeStoryActPrefix];
+
+			if (forkContext.actSummary) {
+				sections.push(`\n\n${forkContext.actSummary}`);
+			}
+			if (hasSceneContext) {
+				sections.push(
+					`\n\n${SCENE_HEADER} ${forkContext.sceneNumber}: ${forkContext.sceneTitle} *(${CURRENT_SCENE})*\n\n${forkContext.narrativeBody}`
+				);
+			}
+
+			sections.push(resumeStoryActSuffix);
+			return await sendWorldBuilderMessage(sections.join(''));
 		}
 	}
 
@@ -334,7 +371,7 @@ async function streamWorldBuilderChat(
 	abortSignal: AbortSignal,
 	providerConfig: ProviderConfig
 ): Promise<StreamAccumulator> {
-	const fullSystemPrompt = actPlotInterview && interviewSystemPrompt ? interviewSystemPrompt : buildFullSystemPrompt();
+	const fullSystemPrompt = actPlotInterview && cachedInterviewSystemPrompt ? cachedInterviewSystemPrompt : buildFullWorldBuildPrompt();
 	// Prepend hidden context for interview mode (invisible to user, but sent to LLM)
 	const llmHistory = actPlotInterview ? [...interviewHiddenContext, ...history] : history;
 	const result = await Promise.all([

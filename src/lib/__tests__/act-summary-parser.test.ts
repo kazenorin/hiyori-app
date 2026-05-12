@@ -167,6 +167,9 @@ describe('serializeActSummary', () => {
 					],
 				},
 			],
+			turnOfEvents: null,
+			turnOfEventsSceneNumber: null,
+			turnOfEventsSceneTitle: null,
 		};
 
 		const result = serializeActSummary(data);
@@ -190,6 +193,9 @@ describe('serializeActSummary', () => {
 			completedScenes: 0,
 			scenes: [],
 			characters: [],
+			turnOfEvents: null,
+			turnOfEventsSceneNumber: null,
+			turnOfEventsSceneTitle: null,
 		};
 
 		const result = serializeActSummary(data);
@@ -224,7 +230,36 @@ describe('serializeActSummary', () => {
 				expect(reparsed.characters[i].sceneEntries[j].summary).toBe(original.characters[i].sceneEntries[j].summary);
 			}
 		}
+		});
+		it('serializes turnOfEvents section when present', () => {
+		const data: ActSummary = {
+			completedScenes: 2,
+			scenes: [],
+			characters: [],
+			turnOfEvents: null,
+			turnOfEventsSceneNumber: null,
+			turnOfEventsSceneTitle: null,
+		};
+		expect(serializeActSummary(data)).not.toContain('## Turn Of Events');
+
+		const withTurnOfEvents: ActSummary = {
+			completedScenes: 3,
+			scenes: [],
+			characters: [],
+			turnOfEvents: 'Shift the story toward uncovering the conspiracy.',
+			turnOfEventsSceneNumber: 3,
+			turnOfEventsSceneTitle: 'The Revelation',
+		};
+		const result = serializeActSummary(withTurnOfEvents);
+		expect(result).toContain('## Turn Of Events');
+		expect(result).toContain('### Scene 3: The Revelation');
+		expect(result).toContain('Shift the story toward uncovering the conspiracy.');
+		// Turn Of Events should appear after Character Summaries
+		const toeIdx = result.indexOf('## Turn Of Events');
+		const charIdx = result.indexOf('## Character Summaries');
+		expect(toeIdx).toBeGreaterThan(charIdx);
 	});
+
 });
 
 describe('code fence stripping', () => {
@@ -323,6 +358,9 @@ Summary: The hero discovers a hidden path through the woods.
 describe('mergeActSummary', () => {
 	it('merges a new scene into existing summary', () => {
 		const existing: ActSummary = {
+			turnOfEvents: null,
+			turnOfEventsSceneNumber: null,
+			turnOfEventsSceneTitle: null,
 			completedScenes: 2,
 			scenes: [
 				{ sceneNumber: 1, title: 'The Arrival', location: 'A village', summary: 'Hero arrives.' },
@@ -361,6 +399,9 @@ describe('mergeActSummary', () => {
 
 	it('adds a new character to existing summary', () => {
 		const existing: ActSummary = {
+			turnOfEvents: null,
+			turnOfEventsSceneNumber: null,
+			turnOfEventsSceneTitle: null,
 			completedScenes: 1,
 			scenes: [{ sceneNumber: 1, title: 'Start', location: 'Town', summary: 'Beginning.' }],
 			characters: [
@@ -393,6 +434,9 @@ describe('mergeActSummary', () => {
 
 	it('does not mutate existing arrays', () => {
 		const existing: ActSummary = {
+			turnOfEvents: null,
+			turnOfEventsSceneNumber: null,
+			turnOfEventsSceneTitle: null,
 			completedScenes: 1,
 			scenes: [{ sceneNumber: 1, title: 'Start', location: 'Town', summary: 'Beginning.' }],
 			characters: [
@@ -460,4 +504,24 @@ Summary: The hero discovers a hidden path.
 		expect(reparsed.scenes).toHaveLength(3);
 		expect(reparsed.characters).toHaveLength(3);
 	});
+
+		it('preserves existing turnOfEvents during merge', () => {
+			const existing: ActSummary = {
+				completedScenes: 2,
+				scenes: [],
+				characters: [],
+				turnOfEvents: 'A sudden betrayal changes everything.',
+				turnOfEventsSceneNumber: 2,
+				turnOfEventsSceneTitle: 'Betrayal',
+			};
+			const incremental: IncrementalUpdate = {
+				completedScenes: 3,
+				newScene: { sceneNumber: 3, title: 'Aftermath', location: 'Castle', summary: 'Fallout from the betrayal.' },
+				characterUpdates: [],
+			};
+			const merged = mergeActSummary(existing, incremental);
+			expect(merged.turnOfEvents).toBe('A sudden betrayal changes everything.');
+			expect(merged.turnOfEventsSceneNumber).toBe(2);
+			expect(merged.turnOfEventsSceneTitle).toBe('Betrayal');
+		});
 });

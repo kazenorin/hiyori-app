@@ -1,10 +1,23 @@
 import { stepCountIs, type ToolSet } from 'ai';
 import { generateText } from 'ai';
 import type { MessageBase } from '$lib/db/messages';
-import type { ProviderConfig } from '$lib/stores/settings.svelte';
+import { type ProviderConfig } from '$lib/stores/settings.svelte';
 import { DEFAULT_RETRY_CONFIG, type RetryConfig, streamWithRetry } from './chat-stream';
 import { createModel } from './provider';
 import type { GameDataFields, NarrativeVariables, PhaseName } from './narrative-types';
+import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection } from '$lib/definitions/section-constants';
+import {
+	gameMasterExtractionPrompt,
+	editorExtractionPrompt,
+	reviewerExtractionPromptTemplate,
+	writerExtractionPromptTemplate,
+	plotPlannerExtractionPromptTemplate,
+	summarizerFallbackExtractionPromptTemplate,
+	summarizerExtractionPromptTemplate,
+	templateFitterSystemPrompt,
+	editorTemplateFitterExtractionPrompt,
+	gmTemplateFitterExtractionPrompt,
+} from '$lib/definitions/static-prompts';
 import type { AsyncPhaseResults, PipelineCallbacks, PipelineState } from './pipeline-types';
 import type { StreamState } from './chat-callbacks';
 import type { StreamResultMetadata } from './streaming';
@@ -42,44 +55,6 @@ import {
 } from './descriptors';
 
 const defaultTargetWordCount = 400;
-
-// Markdown section headings used in phase prompts
-const SECTION = {
-	WORLD_CONTENT: '\n## World Content\n',
-	ACT_PLOT: '\n## Act Plot\n',
-	ACT_SUMMARY: '\n## Act Summary\n',
-	PLAYER_RESPONSE: '\n## Player Response\n',
-	SCENE_PLOT: '\n## Scene Plot\n',
-	WRITER_OUTPUT_TEMPLATE: '\n## Writer Output Template\n',
-	WRITER_OUTPUT: '\n## Writer Output\n',
-	REVIEWER_OUTPUT: '\n## Reviewer Output\n',
-	EDITOR_OUTPUT: '\n## Editor Output\n',
-	GAME_MASTER_OUTPUT: '\n## Game Master Output\n',
-	PREVIOUS_ACT_SUMMARY: '\n## Act Summary {summarizedScenes}\n',
-	PREVIOUS_NARRATIVE_BODY: '\n## Narrative Body for Scene {completedScenes}\n',
-};
-
-// Hardcoded prompts
-const gameMasterExtractionPrompt = 'Generate the game data based on the available information in the chat history.';
-const editorExtractionPrompt =
-	'Apply suggestions from the reviewer output to the writer output. ' +
-	'Judge whether the suggestions are necessary based on the available information in the chat history.';
-const reviewerExtractionPromptTemplate = `Perform a review on the writer's output for Scene {currentScene} based on the available information in the chat history.`;
-const writerExtractionPromptTemplate =
-	'Write a story prose for Scene {currentScene} based on the available information in the chat history.';
-const plotPlannerExtractionPromptTemplate =
-	'The current scene is Scene {currentScene}. Plan a Scene Plot for the Immediate Next Scene, Near-Term Beat (Flexible), and Mid-Term Goal (Flexible) based on the available information in the chat history.';
-
-const summarizerFallbackExtractionPromptTemplate = 'Update the Act Summary for Scene {completedScenes} based on the Player Response.';
-const summarizerExtractionPromptTemplate =
-	'Update the Act Summary adding information for the previous scene: "Scene {completedScenes}: {sceneTitle}"';
-
-const templateFitterSystemPrompt =
-	'You are a template-fitting assistant. Your sole task is to restructure provided content into a specific markdown template format without altering any of the original content. Preserve every word \u2014 only add the required section headers.';
-const editorTemplateFitterExtractionPrompt =
-	'The "Editor Output" does not follow the required template format. Restructure it to match the Writer Output Template by inserting the appropriate section headers defined by "Writer Output Template" without changing any content. If a section is missing from the content, add the header with no body.';
-const gmTemplateFitterExtractionPrompt =
-	'The "Game Master Output" does not follow the required game data format. Restructure it to match the game data template by inserting the appropriate section headers defined by the "Game Data" template without changing any content. If a section is missing from the content, add the header with no body.';
 
 // Dynamic prompts
 const promptLoaderDefinitions = {
@@ -124,6 +99,7 @@ function mergeVariables(original: NarrativeVariables | null, fitter: NarrativeVa
 		sceneTitle: hasContent(original.sceneTitle) ? original.sceneTitle : fitter.sceneTitle,
 		background: hasContent(original.background) ? original.background : fitter.background,
 		narrativeBody: hasContent(original.narrativeBody) ? original.narrativeBody : fitter.narrativeBody,
+		turnOfEvents: hasContent(original.turnOfEvents) ? original.turnOfEvents : fitter.turnOfEvents,
 		cg: hasContent(original.cg) ? original.cg : fitter.cg,
 		gameData: original.gameData ?? fitter.gameData,
 	};
@@ -358,6 +334,7 @@ function buildSummarizerMessages(input: PipelineInput) {
 			actSummaryHeading + actSummary,
 			SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeVariables.narrativeBody,
 			...playerResponseSection(input.player),
+			...formatTurnOfEventsSection(previousNarrativeVariables.turnOfEvents),
 			summarizerExtractionPromptTemplate.replaceAll('{completedScenes}', String(completedScenes)).replaceAll('{sceneTitle}', sceneTitle),
 		]);
 	} else {
@@ -379,7 +356,20 @@ async function generateFullSummary(input: PipelineInput, loadedPrompts: LoadedPr
 
 	const summarizerMessages = buildSummarizerMessages(input);
 
-	return await runNonStreamingPhase('SUMMARIZER', summarizerSystemPrompt, summarizerMessages, providerConfigs.summarizer, abortSignal);
+	const rawSummary = await runNonStreamingPhase('SUMMARIZER', summarizerSystemPrompt, summarizerMessages, providerConfigs.summarizer, abortSignal);
+	const { completedScenes, previousNarrativeVariables } = input;
+	try {
+		const parsed = parseActSummary(rawSummary);
+		parsed.completedScenes = completedScenes;
+		if (previousNarrativeVariables?.turnOfEvents) {
+			parsed.turnOfEvents = previousNarrativeVariables.turnOfEvents;
+			parsed.turnOfEventsSceneNumber = completedScenes;
+			parsed.turnOfEventsSceneTitle = previousNarrativeVariables.sceneTitle ?? '';
+		}
+		return serializeActSummary(parsed);
+	} catch {
+		return rawSummary;
+	}
 }
 
 async function generateIncrementalSummary(input: PipelineInput, loadedPrompts: LoadedPrompts) {
@@ -410,6 +400,14 @@ async function generateIncrementalSummary(input: PipelineInput, loadedPrompts: L
 		const existingParsed = parseActSummary(actSummary);
 		const incrementalParsed = parseIncrementalOutput(incrementalRaw);
 		const merged = mergeActSummary(existingParsed, incrementalParsed);
+		// Override completedScenes with the programmatic value (more reliable than LLM-parsed)
+		merged.completedScenes = completedScenes;
+		// Inject turnOfEvents from previousNarrativeVariables (overwrites any existing)
+		if (previousNarrativeVariables?.turnOfEvents) {
+			merged.turnOfEvents = previousNarrativeVariables.turnOfEvents;
+			merged.turnOfEventsSceneNumber = completedScenes;
+			merged.turnOfEventsSceneTitle = previousNarrativeVariables.sceneTitle ?? '';
+		}
 		return serializeActSummary(merged);
 	} catch (err) {
 		await log.warn('pipeline', `Incremental act summary parse/merge failed, falling back to full summary: ${err}`);
@@ -421,11 +419,6 @@ export interface PipelineResult {
 	state: PipelineState;
 	editorMetadata?: StreamResultMetadata;
 	asyncPhases?: Promise<AsyncPhaseResults>;
-}
-
-function formatPreviousNarrativeBody(previousNarrativeBody: string | null | undefined, completedScenes: number) {
-	if (!previousNarrativeBody || previousNarrativeBody.trim().length === 0) return [];
-	return SECTION.PREVIOUS_NARRATIVE_BODY.replaceAll('{completedScenes}', String(completedScenes)) + previousNarrativeBody;
 }
 
 /**
@@ -463,6 +456,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	const currentScene = completedScenes > 0 ? String(completedScenes + 1) : '1';
 
 	const previousNarrativeBody = previousNarrativeVariables?.narrativeBody;
+	const previousTurnOfEvents = previousNarrativeVariables?.turnOfEvents;
 
 	const retryConfig = input.retryConfig ?? DEFAULT_RETRY_CONFIG;
 
@@ -528,6 +522,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
 					...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 					...playerResponseSection(player),
+					...formatTurnOfEventsSection(previousTurnOfEvents),
 					writerExtractionPromptTemplate.replaceAll('{currentScene}', currentScene),
 				]),
 				providerConfig: providerConfigs.writer,
@@ -557,6 +552,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
 					...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 					...playerResponseSection(player),
+					...formatTurnOfEventsSection(previousTurnOfEvents),
 					...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
 					reviewerExtractionPromptTemplate.replaceAll('{currentScene}', currentScene),
 				]),
@@ -599,6 +595,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 						...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
 						...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 						...playerResponseSection(player),
+						...formatTurnOfEventsSection(previousTurnOfEvents),
 						...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
 						...(state.reviewerOutput ? [SECTION.REVIEWER_OUTPUT + state.reviewerOutput] : []),
 						editorExtractionPrompt,
@@ -671,6 +668,9 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 			...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
 			...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 			...playerResponseSection(player),
+			...formatTurnOfEventsSection(previousTurnOfEvents),
+			// editorOutput (from variablesToMarkdown) may include a turnOfEvents section for the current scene,
+			// which is distinct from previousTurnOfEvents above (the previous scene's).
 			...(editorOutput ? [SECTION.EDITOR_OUTPUT + editorOutput] : []),
 		];
 
