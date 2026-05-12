@@ -321,7 +321,7 @@ async function runNonStreamingPhase(
 	return {
 		text: result.text,
 		metadata: {
-			finishReason: (await result.finishReason) ?? 'unknown',
+			finishReason: result.finishReason ?? 'unknown',
 			usage: {
 				inputTokens: usage.inputTokens ?? 0,
 				outputTokens: usage.outputTokens ?? 0,
