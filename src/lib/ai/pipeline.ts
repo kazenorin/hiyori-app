@@ -2,7 +2,7 @@ import { stepCountIs, type ToolSet } from 'ai';
 import { generateText } from 'ai';
 import type { MessageBase } from '$lib/db/messages';
 import { type ProviderConfig } from '$lib/stores/settings.svelte';
-import { DEFAULT_RETRY_CONFIG, type RetryConfig, streamWithRetry } from './chat-stream';
+import { DEFAULT_RETRY_CONFIG, type RetryConfig, type PhaseMetadata, toPhaseMetadata, streamWithRetry } from './chat-stream';
 import { createModel } from './provider';
 import type { GameDataFields, NarrativeVariables, PhaseName } from './narrative-types';
 import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection } from '$lib/definitions/section-constants';
@@ -20,7 +20,7 @@ import {
 } from '$lib/definitions/static-prompts';
 import type { AsyncPhaseResults, PipelineCallbacks, PipelineState } from './pipeline-types';
 import type { StreamState } from './chat-callbacks';
-import type { StreamResultMetadata } from './streaming';
+import { type StreamResultMetadata, extractCacheTokens } from './streaming';
 import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
 import { variablesToMarkdown, hasTemplateMetadata } from './template-renderer';
 import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
@@ -178,6 +178,28 @@ function updateState(prev: PipelineState, patch: Partial<PipelineState>): Pipeli
 	return { ...prev, ...patch };
 }
 
+function aggregateMetadata(
+	acc: StreamResultMetadata | null,
+	phase: StreamResultMetadata,
+	modelId: string | null | undefined
+): StreamResultMetadata {
+	if (!acc) {
+		return { ...phase, models: new Set(modelId ? [modelId] : []) };
+	}
+	return {
+		finishReason: phase.finishReason,
+		usage: {
+			inputTokens: acc.usage.inputTokens + phase.usage.inputTokens,
+			outputTokens: acc.usage.outputTokens + phase.usage.outputTokens,
+			totalTokens: acc.usage.totalTokens + phase.usage.totalTokens,
+			cacheReadTokens: (acc.usage.cacheReadTokens ?? 0) + (phase.usage.cacheReadTokens ?? 0) || undefined,
+			cacheWriteTokens: (acc.usage.cacheWriteTokens ?? 0) + (phase.usage.cacheWriteTokens ?? 0) || undefined,
+		},
+		durationMs: acc.durationMs + phase.durationMs,
+		models: new Set([...acc.models, ...(modelId ? [modelId] : [])]),
+	};
+}
+
 /**
  * Execute a streaming phase with full lifecycle management (start, stream, complete, error).
  * All shared context (abort signal, tools, callbacks) comes from the params object.
@@ -268,7 +290,7 @@ async function runStreamingPhase(
 }
 
 /**
- * Run a single non-streaming phase (e.g., Summarizer) and return the generated text.
+ * Run a single non-streaming phase (e.g., Summarizer) and return the generated text and metadata.
  */
 async function runNonStreamingPhase(
 	phaseName: string,
@@ -278,12 +300,13 @@ async function runNonStreamingPhase(
 	abortSignal: AbortSignal,
 	tools?: ToolSet,
 	maxSteps: number = 10
-): Promise<string> {
+): Promise<{ text: string; metadata: StreamResultMetadata }> {
 	if (!providerConfig) {
 		throw new Error(`No provider configured for ${phaseName}. Please set one in Settings.`);
 	}
 
 	const model = createModel(providerConfig);
+	const startTime = Date.now();
 	const result = await generateText({
 		model,
 		messages,
@@ -293,7 +316,22 @@ async function runNonStreamingPhase(
 		stopWhen: stepCountIs(maxSteps),
 	});
 
-	return result.text;
+	const usage = result.usage;
+	const cacheTokens = extractCacheTokens(usage as unknown as Record<string, unknown>);
+	return {
+		text: result.text,
+		metadata: {
+			finishReason: (await result.finishReason) ?? 'unknown',
+			usage: {
+				inputTokens: usage.inputTokens ?? 0,
+				outputTokens: usage.outputTokens ?? 0,
+				totalTokens: usage.totalTokens ?? 0,
+				...cacheTokens,
+			},
+			durationMs: Date.now() - startTime,
+			models: new Set(providerConfig.model ? [providerConfig.model] : []),
+		},
+	};
 }
 
 /**
@@ -346,7 +384,10 @@ function buildSummarizerMessages(input: PipelineInput) {
 	}
 }
 
-async function generateFullSummary(input: PipelineInput, loadedPrompts: LoadedPrompts) {
+async function generateFullSummary(
+	input: PipelineInput,
+	loadedPrompts: LoadedPrompts
+): Promise<{ actSummary: string; metadata: StreamResultMetadata }> {
 	const { summarizerPrompt, actSummaryTemplate } = loadedPrompts;
 	const { execution } = input;
 	const { providerConfigs, abortSignal } = execution;
@@ -356,7 +397,13 @@ async function generateFullSummary(input: PipelineInput, loadedPrompts: LoadedPr
 
 	const summarizerMessages = buildSummarizerMessages(input);
 
-	const rawSummary = await runNonStreamingPhase('SUMMARIZER', summarizerSystemPrompt, summarizerMessages, providerConfigs.summarizer, abortSignal);
+	const { text: rawSummary, metadata } = await runNonStreamingPhase(
+		'SUMMARIZER',
+		summarizerSystemPrompt,
+		summarizerMessages,
+		providerConfigs.summarizer,
+		abortSignal
+	);
 	const { completedScenes, previousNarrativeVariables } = input;
 	try {
 		const parsed = parseActSummary(rawSummary);
@@ -366,13 +413,16 @@ async function generateFullSummary(input: PipelineInput, loadedPrompts: LoadedPr
 			parsed.turnOfEventsSceneNumber = completedScenes;
 			parsed.turnOfEventsSceneTitle = previousNarrativeVariables.sceneTitle ?? '';
 		}
-		return serializeActSummary(parsed);
+		return { actSummary: serializeActSummary(parsed), metadata };
 	} catch {
-		return rawSummary;
+		return { actSummary: rawSummary, metadata };
 	}
 }
 
-async function generateIncrementalSummary(input: PipelineInput, loadedPrompts: LoadedPrompts) {
+async function generateIncrementalSummary(
+	input: PipelineInput,
+	loadedPrompts: LoadedPrompts
+): Promise<{ actSummary: string; metadata: StreamResultMetadata }> {
 	const { actSummaryIncrementalTemplate, summarizerIncrementalPrompt } = loadedPrompts;
 	const { actSummary, completedScenes, previousNarrativeVariables, execution } = input;
 	const { providerConfigs, abortSignal } = execution;
@@ -388,7 +438,7 @@ async function generateIncrementalSummary(input: PipelineInput, loadedPrompts: L
 	const incrementalSystemPrompt = summarizerIncrementalPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
 
 	const incrementalMessages = buildSummarizerMessages(input);
-	const incrementalRaw = await runNonStreamingPhase(
+	const { text: incrementalRaw, metadata } = await runNonStreamingPhase(
 		'SUMMARIZER',
 		incrementalSystemPrompt,
 		incrementalMessages,
@@ -408,7 +458,7 @@ async function generateIncrementalSummary(input: PipelineInput, loadedPrompts: L
 			merged.turnOfEventsSceneNumber = completedScenes;
 			merged.turnOfEventsSceneTitle = previousNarrativeVariables.sceneTitle ?? '';
 		}
-		return serializeActSummary(merged);
+		return { actSummary: serializeActSummary(merged), metadata };
 	} catch (err) {
 		await log.warn('pipeline', `Incremental act summary parse/merge failed, falling back to full summary: ${err}`);
 		return generateFullSummary(input, loadedPrompts);
@@ -417,7 +467,8 @@ async function generateIncrementalSummary(input: PipelineInput, loadedPrompts: L
 
 export interface PipelineResult {
 	state: PipelineState;
-	editorMetadata?: StreamResultMetadata;
+	aggregatedMetadata?: StreamResultMetadata;
+	phases?: PhaseMetadata[];
 	asyncPhases?: Promise<AsyncPhaseResults>;
 }
 
@@ -467,7 +518,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	};
 
 	let state: PipelineState = { currentPhase: null };
-	let editorMetadata: StreamResultMetadata | undefined;
+	let aggregatedMetadata: StreamResultMetadata | null = null;
+	const phaseEntries: PhaseMetadata[] = [];
 
 	// Load prompts — story-specific if storyId is provided, global otherwise
 	const loadedPrompts = await loadPrompts(storyId, storyName);
@@ -484,21 +536,19 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	// --- Async phases (Summarizer, then Memory) ---
 	const asyncPhases = (async (): Promise<AsyncPhaseResults> => {
 		if (player?.playerResponse && completedScenes > 0) {
-			const newActSummary = actSummary
-				? await generateIncrementalSummary(input, loadedPrompts)
-				: await generateFullSummary(input, loadedPrompts);
+			const result = actSummary ? await generateIncrementalSummary(input, loadedPrompts) : await generateFullSummary(input, loadedPrompts);
 
 			// Memory extraction depends on Summarizer result
 			const playerMessageId = player.playerMessageId;
 			if (previousNarrativeBody && actLineId && playerMessageId && storyId) {
 				try {
-					await runMemoryExtractionPipeline(previousNarrativeBody, storyId, actLineId, playerMessageId, newActSummary);
+					await runMemoryExtractionPipeline(previousNarrativeBody, storyId, actLineId, playerMessageId, result.actSummary);
 				} catch (err) {
 					await log.error('memory-pipeline', 'Memory extraction failed', err);
 				}
 			}
 
-			return { actSummary: newActSummary };
+			return { actSummary: result.actSummary, summarizerMetadata: result.metadata };
 		}
 		return {};
 	})();
@@ -534,6 +584,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 			state
 		);
 		state = result.state;
+		aggregatedMetadata = aggregateMetadata(aggregatedMetadata, result.metadata, providerConfigs.writer?.model);
+		phaseEntries.push(toPhaseMetadata('WRITER', result.metadata, providerConfigs.writer?.model));
 	}
 
 	// --- Sequential Phase 2: Reviewer ---
@@ -562,6 +614,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 			state
 		);
 		state = result.state;
+		aggregatedMetadata = aggregateMetadata(aggregatedMetadata, result.metadata, providerConfigs.reviewer?.model);
+		phaseEntries.push(toPhaseMetadata('REVIEWER', result.metadata, providerConfigs.reviewer?.model));
 	}
 
 	// --- Sequential Phase 3: Editor (skip LLM if reviewer accepts as-is) ---
@@ -610,7 +664,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				state
 			);
 			state = result.state;
-			editorMetadata = result.metadata;
+			aggregatedMetadata = aggregateMetadata(aggregatedMetadata, result.metadata, providerConfigs.editor?.model);
+			phaseEntries.push(toPhaseMetadata('EDITOR', result.metadata, providerConfigs.editor?.model));
 		}
 	}
 
@@ -641,6 +696,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 			state
 		);
 		state = fitterResult.state;
+		aggregatedMetadata = aggregateMetadata(aggregatedMetadata, fitterResult.metadata, providerConfigs.minorTaskAgent?.model);
+		phaseEntries.push(toPhaseMetadata('EDITOR_TEMPLATE_FITTER', fitterResult.metadata, providerConfigs.minorTaskAgent?.model));
 	}
 
 	// --- Important phrases extraction (after Editor, before GM/PlotPlanner) ---
@@ -712,6 +769,10 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 		state = gmResult.state;
 		state = updateState(state, { scenePlot: plotResult.state.scenePlot });
+		aggregatedMetadata = aggregateMetadata(aggregatedMetadata, gmResult.metadata, providerConfigs.gameMaster?.model);
+		phaseEntries.push(toPhaseMetadata('GAME_MASTER', gmResult.metadata, providerConfigs.gameMaster?.model));
+		aggregatedMetadata = aggregateMetadata(aggregatedMetadata, plotResult.metadata, providerConfigs.plotPlanner?.model);
+		phaseEntries.push(toPhaseMetadata('PLOT_PLANNER', plotResult.metadata, providerConfigs.plotPlanner?.model));
 	}
 
 	// --- Template fitting for GM (if gameData lacks required structure) ---
@@ -738,9 +799,16 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 			state
 		);
 		state = gmFitterResult.state;
+		aggregatedMetadata = aggregateMetadata(aggregatedMetadata, gmFitterResult.metadata, providerConfigs.minorTaskAgent?.model);
+		phaseEntries.push(toPhaseMetadata('GM_TEMPLATE_FITTER', gmFitterResult.metadata, providerConfigs.minorTaskAgent?.model));
 	}
 
 	state = updateState(state, { currentPhase: null });
 	callbacks.onAllComplete(state);
-	return { state, editorMetadata, asyncPhases };
+	return {
+		state,
+		aggregatedMetadata: aggregatedMetadata ?? undefined,
+		phases: phaseEntries.length > 0 ? phaseEntries : undefined,
+		asyncPhases,
+	};
 }

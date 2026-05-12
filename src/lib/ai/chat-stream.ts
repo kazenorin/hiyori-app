@@ -28,23 +28,56 @@ export interface StreamWithRetryOptions {
 	descriptors?: OutputDescriptor[];
 }
 
-export interface MessageMetadata {
+export interface PhaseMetadata {
+	phaseName: string;
 	model: string;
 	finishReason: string;
-	promptTokens: number;
-	completionTokens: number;
+	inputTokens: number;
+	outputTokens: number;
 	totalTokens: number;
+	cacheReadTokens?: number;
+	cacheWriteTokens?: number;
 	durationMs: number;
 }
 
-export function buildMetadata(result: StreamResultMetadata, model?: string): MessageMetadata {
+export interface MessageMetadata {
+	model: string;
+	finishReason: string;
+	inputTokens: number;
+	outputTokens: number;
+	totalTokens: number;
+	cacheReadTokens?: number;
+	cacheWriteTokens?: number;
+	durationMs: number;
+	phases?: PhaseMetadata[];
+}
+
+export function buildMetadata(result: StreamResultMetadata, model?: string, phases?: PhaseMetadata[]): MessageMetadata {
+	const resolvedModel = model ?? (result.models.size > 0 ? [...result.models].join(', ') : 'unknown');
 	return {
-		model: model ?? 'unknown',
+		model: resolvedModel,
 		finishReason: result.finishReason,
-		promptTokens: result.usage.inputTokens,
-		completionTokens: result.usage.outputTokens,
+		inputTokens: result.usage.inputTokens,
+		outputTokens: result.usage.outputTokens,
 		totalTokens: result.usage.totalTokens,
+		cacheReadTokens: result.usage.cacheReadTokens,
+		cacheWriteTokens: result.usage.cacheWriteTokens,
 		durationMs: result.durationMs,
+		phases,
+	};
+}
+
+export function toPhaseMetadata(phaseName: string, meta: StreamResultMetadata, model: string | null | undefined): PhaseMetadata {
+	return {
+		phaseName,
+		model: model ?? 'unknown',
+		finishReason: meta.finishReason,
+		inputTokens: meta.usage.inputTokens,
+		outputTokens: meta.usage.outputTokens,
+		totalTokens: meta.usage.totalTokens,
+		cacheReadTokens: meta.usage.cacheReadTokens,
+		cacheWriteTokens: meta.usage.cacheWriteTokens,
+		durationMs: meta.durationMs,
 	};
 }
 
@@ -74,6 +107,7 @@ export async function streamChatResponse(
 	await executeStream(
 		{
 			model,
+			modelId: providerConfig.model,
 			messages: history,
 			systemPrompt,
 			abortSignal: abortSignal,

@@ -18,6 +18,7 @@
 		stopStreaming,
 		type UIMessage,
 	} from '$lib/ai/chat.svelte';
+	import MetadataPanel from '$lib/components/MetadataPanel.svelte';
 	import {
 		deleteLastWorldBuilderExchange,
 		enterActPlotInterviewMode,
@@ -766,11 +767,7 @@
 								{/if}
 
 								{#if message.metadata}
-									<pre
-										class="mt-4 pt-3 border-t border-surface-200-800 text-xs text-surface-500 font-mono leading-relaxed">model:       {message.metadata.model}
-finish:      {message.metadata.finishReason}
-tokens:      {message.metadata.promptTokens} prompt + {message.metadata.completionTokens} completion = {message.metadata.totalTokens} total
-duration:    {message.metadata.durationMs}ms</pre>
+									<MetadataPanel metadata={message.metadata} />
 								{/if}
 								{#if !getIsStreaming()}
 									<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">

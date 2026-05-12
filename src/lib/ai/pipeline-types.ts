@@ -1,5 +1,6 @@
 import type { PhaseName, UIScenePhase } from './narrative-types';
 import type { NarrativeVariables, GameDataFields } from './narrative-types';
+import type { StreamResultMetadata } from './streaming';
 
 // Re-export for consumers that import from pipeline-types
 export type { PhaseName, UIScenePhase };
@@ -37,4 +38,5 @@ export interface PipelineCallbacks {
 
 export interface AsyncPhaseResults {
 	actSummary?: string;
+	summarizerMetadata?: StreamResultMetadata;
 }

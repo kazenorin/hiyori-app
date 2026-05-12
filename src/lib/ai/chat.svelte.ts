@@ -20,7 +20,7 @@ import { parseImportantPhrases, serializeImportantPhrases } from '$lib/db/messag
 import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from './narrative-types';
 import * as dbActLines from '$lib/db/act-lines';
 import { logMainChat } from '$lib/logging/chat-logger';
-import { buildMetadata, type MessageMetadata } from './chat-stream';
+import { buildMetadata, toPhaseMetadata, type MessageMetadata, type PhaseMetadata } from './chat-stream';
 import { Memory } from '$lib/memory/memory';
 import { log } from '$lib/logging/logger';
 import { buildTools } from '$lib/ai/tools/tools';
@@ -131,7 +131,17 @@ export async function clearMessages(): Promise<void> {
 function parseMetadata(raw: string | undefined | null): MessageMetadata | undefined {
 	if (!raw) return undefined;
 	try {
-		return JSON.parse(raw);
+		const parsed = JSON.parse(raw);
+		// Migration: rename old field names
+		if ('promptTokens' in parsed && !('inputTokens' in parsed)) {
+			parsed.inputTokens = parsed.promptTokens;
+			delete parsed.promptTokens;
+		}
+		if ('completionTokens' in parsed && !('outputTokens' in parsed)) {
+			parsed.outputTokens = parsed.completionTokens;
+			delete parsed.completionTokens;
+		}
+		return parsed;
 	} catch {
 		return undefined;
 	}
@@ -237,9 +247,13 @@ function newMessage(role: 'user' | 'assistant', sceneNumber: number): UIMessage 
 	};
 }
 
-function updateMetaData(getCurrentMessage: () => UIMessage, resultMetadata: StreamResultMetadata | null, providerConfig: ProviderConfig) {
+function updateMetaData(
+	getCurrentMessage: () => UIMessage,
+	resultMetadata: StreamResultMetadata | null,
+	phases?: PhaseMetadata[]
+) {
 	if (resultMetadata) {
-		getCurrentMessage().metadata = buildMetadata(resultMetadata, providerConfig.model);
+		getCurrentMessage().metadata = buildMetadata(resultMetadata, undefined, phases);
 	}
 }
 
@@ -484,10 +498,9 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 			targetWordCount,
 		});
 
-		// Update metadata from Editor phase
-		if (result.editorMetadata) {
-			const editorConfig = getEditorProviderConfig() ?? mainConfig;
-			updateMetaData(getCurrentMessage, result.editorMetadata, editorConfig);
+		// Update metadata from pipeline phases
+		if (result.aggregatedMetadata) {
+			updateMetaData(getCurrentMessage, result.aggregatedMetadata, result.phases);
 		}
 
 		messages[messageIdx] = {
@@ -503,23 +516,54 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		pendingAsyncPhases =
 			result.asyncPhases
 				?.then(async (asyncResults) => {
-					if (asyncResults.actSummary !== undefined) {
-						await dbMessages.updateMessageFields(assistantMessageId, {
-							actSummary: asyncResults.actSummary,
-						});
-					}
 					const targetMessageIdx = messages.findLastIndex((m) => m.id === assistantMessageId);
 					if (targetMessageIdx >= 0) {
 						const existing = messages[targetMessageIdx];
 						const updatedPhases = existing.phases ? [...existing.phases] : [];
+						const metadataUpdates: { actSummary?: string; metadata?: string } = {};
+
 						if (asyncResults.actSummary !== undefined) {
 							updatedPhases.push({ phaseName: 'SUMMARIZER' as PhaseName, content: asyncResults.actSummary });
+							metadataUpdates.actSummary = asyncResults.actSummary;
 						}
-						messages[targetMessageIdx] = {
-							...existing,
-							actSummary: asyncResults.actSummary ?? existing.actSummary,
-							phases: updatedPhases,
-						};
+
+						if (asyncResults.summarizerMetadata) {
+							const sm = asyncResults.summarizerMetadata;
+							const summarizerModel = getSummarizerProviderConfig()?.model ?? getMainProviderConfig()?.model ?? 'unknown';
+							const phaseEntry = toPhaseMetadata('SUMMARIZER', sm, summarizerModel);
+
+							const existingMeta = existing.metadata;
+							const mergedPhases = [...(existingMeta?.phases ?? []), phaseEntry];
+							const merged: MessageMetadata = {
+								model: existingMeta?.model ?? summarizerModel,
+								finishReason: existingMeta?.finishReason ?? sm.finishReason,
+								inputTokens: (existingMeta?.inputTokens ?? 0) + sm.usage.inputTokens,
+								outputTokens: (existingMeta?.outputTokens ?? 0) + sm.usage.outputTokens,
+								totalTokens: (existingMeta?.totalTokens ?? 0) + sm.usage.totalTokens,
+								cacheReadTokens: (existingMeta?.cacheReadTokens ?? 0) + (sm.usage.cacheReadTokens ?? 0) || undefined,
+								cacheWriteTokens: (existingMeta?.cacheWriteTokens ?? 0) + (sm.usage.cacheWriteTokens ?? 0) || undefined,
+								durationMs: (existingMeta?.durationMs ?? 0) + sm.durationMs,
+								phases: mergedPhases,
+							};
+							metadataUpdates.metadata = JSON.stringify(merged);
+
+							messages[targetMessageIdx] = {
+								...existing,
+								actSummary: asyncResults.actSummary ?? existing.actSummary,
+								phases: updatedPhases,
+								metadata: merged,
+							};
+						} else {
+							messages[targetMessageIdx] = {
+								...existing,
+								actSummary: asyncResults.actSummary ?? existing.actSummary,
+								phases: updatedPhases,
+							};
+						}
+
+						if (Object.keys(metadataUpdates).length > 0) {
+							await dbMessages.updateMessageFields(assistantMessageId, metadataUpdates);
+						}
 					}
 					return asyncResults;
 				})

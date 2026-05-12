@@ -28,6 +28,7 @@ const defaultMetadata: StreamResultMetadata = {
 	finishReason: 'stop',
 	usage: { inputTokens: 10, outputTokens: 20, totalTokens: 30 },
 	durationMs: 100,
+	models: new Set(['gpt-4']),
 };
 
 function setupStreamSuccess(metadata: StreamResultMetadata = defaultMetadata): void {

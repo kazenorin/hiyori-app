@@ -1,5 +1,5 @@
-import type {MessageBase} from '$lib/db/messages';
-import {stepCountIs, streamText, type ToolSet} from 'ai';
+import type { MessageBase } from '$lib/db/messages';
+import { stepCountIs, streamText, type ToolSet } from 'ai';
 import type { LanguageModel } from 'ai';
 import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
 import { fileLog } from '$lib/logging/logger';
@@ -8,6 +8,7 @@ const DEFAULT_MAX_STEPS = 10;
 
 export interface StreamConfig {
 	model: LanguageModel;
+	modelId?: string;
 	messages: MessageBase[];
 	systemPrompt: string;
 	abortSignal: AbortSignal;
@@ -29,8 +30,21 @@ export interface StreamResultMetadata {
 		inputTokens: number;
 		outputTokens: number;
 		totalTokens: number;
+		cacheReadTokens?: number;
+		cacheWriteTokens?: number;
 	};
 	durationMs: number;
+	models: Set<string>;
+}
+
+export function extractCacheTokens(usage: Record<string, unknown>): { cacheReadTokens?: number; cacheWriteTokens?: number } {
+	const details = usage.inputTokenDetails;
+	if (!details || typeof details !== 'object') return {};
+	const d = details as Record<string, unknown>;
+	return {
+		cacheReadTokens: typeof d.cacheReadTokens === 'number' ? d.cacheReadTokens : undefined,
+		cacheWriteTokens: typeof d.cacheWriteTokens === 'number' ? d.cacheWriteTokens : undefined,
+	};
 }
 
 /**
@@ -55,10 +69,12 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 
 		const result = streamText({
 			...baseConfig,
-			...(hasTools ? {
-				tools: config.tools,
-				stopWhen: stepCountIs(!!config.maxSteps && config.maxSteps > 0 ? config.maxSteps : DEFAULT_MAX_STEPS)
-			} : {}),
+			...(hasTools
+				? {
+						tools: config.tools,
+						stopWhen: stepCountIs(!!config.maxSteps && config.maxSteps > 0 ? config.maxSteps : DEFAULT_MAX_STEPS),
+					}
+				: {}),
 		});
 
 		for await (const part of result.fullStream) {
@@ -89,15 +105,17 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 			callbacks.onError(new Error('empty response from stream'));
 			await fileLog('warn', 'streaming', `empty body\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`);
 		} else {
+			const cacheTokens = extractCacheTokens(usage as unknown as Record<string, unknown>);
 			callbacks.onComplete({
 				finishReason,
 				usage: {
-					...usage,
 					inputTokens: usage.inputTokens ?? 0,
 					outputTokens: usage.outputTokens ?? 0,
 					totalTokens: usage.totalTokens ?? 0,
+					...cacheTokens,
 				},
 				durationMs: Date.now() - startTime,
+				models: new Set(config.modelId ? [config.modelId] : []),
 			});
 
 			await fileLog('debug', 'streaming', `${text}\n\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`);

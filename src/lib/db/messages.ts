@@ -164,7 +164,7 @@ export async function deleteMessage(id: string): Promise<void> {
 
 export async function updateMessageFields(
 	id: string,
-	fields: { actSummary?: string; scenePlot?: string; importantPhrases?: string; variables?: string }
+	fields: { actSummary?: string; scenePlot?: string; importantPhrases?: string; variables?: string; metadata?: string }
 ): Promise<void> {
 	const updates: string[] = [];
 	const values: unknown[] = [];
@@ -185,6 +185,10 @@ export async function updateMessageFields(
 	if (fields.variables !== undefined) {
 		updates.push(`variables = $${paramIdx++}`);
 		values.push(fields.variables);
+	}
+	if (fields.metadata !== undefined) {
+		updates.push(`metadata = $${paramIdx++}`);
+		values.push(fields.metadata);
 	}
 	if (updates.length === 0) return;
 

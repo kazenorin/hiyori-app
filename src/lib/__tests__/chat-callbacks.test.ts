@@ -11,6 +11,7 @@ const emptyMetadata = {
 		totalTokens: 0,
 	},
 	durationMs: 1,
+	models: new Set<string>(),
 };
 
 function feedAll(chunks: string[]): { text: string; reasoning: string | null; gameData: GameDataFields | null } {
