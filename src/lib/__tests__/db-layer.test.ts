@@ -220,6 +220,7 @@ describe('act-lines operations', () => {
 				sceneTitle: null,
 				background: null,
 				narrativeBody: null,
+				turnOfEvents: null,
 				cg: null,
 				gameData: {
 					activePlotThreads: [],
@@ -286,6 +287,7 @@ describe('act-lines operations', () => {
 				sceneTitle: null,
 				background: null,
 				narrativeBody: null,
+				turnOfEvents: null,
 				cg: null,
 				gameData: {
 					activePlotThreads: [],

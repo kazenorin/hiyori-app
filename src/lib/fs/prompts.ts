@@ -49,6 +49,7 @@ import defaultActPlotInterviewSystemPrompt from './prompts/act/act-plot-intervie
 import defaultActPlotReviewerPrompt from './prompts/act/act-plot-reviewer-prompt.md?raw';
 import defaultActPlotEditorPrompt from './prompts/act/act-plot-editor-prompt.md?raw';
 import defaultActPlotInterviewExtractionPrompt from './prompts/act/act-plot-interview-extraction-prompt.md?raw';
+import defaultActPlotInterviewTurnOfEventsPrompt from './prompts/act/act-plot-interview-turn-of-events-prompt.md?raw';
 
 // Character
 import defaultCharacterCardTemplate from './prompts/character/character-card-template.md?raw';
@@ -90,6 +91,7 @@ export {
 	defaultActPlotTemplate,
 	defaultActPlotGenerationPrompt,
 	defaultActPlotInterviewExtractionPrompt,
+	defaultActPlotInterviewTurnOfEventsPrompt,
 	defaultActPlotSystemPrompt,
 	defaultActPlotInterviewSystemPrompt,
 	defaultActPlotReviewerPrompt,
@@ -193,6 +195,10 @@ const actPlotInterviewExtractionPrompt = new Prompt({
 	relativePath: 'act/act-plot-interview-extraction-prompt.md',
 	defaultContent: defaultActPlotInterviewExtractionPrompt,
 });
+const actPlotInterviewTurnOfEventsPrompt = new Prompt({
+	relativePath: 'act/act-plot-interview-turn-of-events-prompt.md',
+	defaultContent: defaultActPlotInterviewTurnOfEventsPrompt,
+});
 
 // Character
 const characterCardTemplate = new Prompt({
@@ -265,6 +271,7 @@ export const loadActPlotInterviewSystemPrompt = (): Promise<string> => actPlotIn
 export const loadActPlotReviewerPrompt = (): Promise<string> => actPlotReviewerPrompt.load();
 export const loadActPlotEditorPrompt = (): Promise<string> => actPlotEditorPrompt.load();
 export const loadActPlotInterviewExtractionPrompt = (): Promise<string> => actPlotInterviewExtractionPrompt.load();
+export const loadActPlotInterviewTurnOfEventsPrompt = (): Promise<string> => actPlotInterviewTurnOfEventsPrompt.load();
 export const loadCharacterCardTemplate = (): Promise<string> => characterCardTemplate.load();
 export const loadCharacterCardExtractionPrompt = (): Promise<string> => characterCardExtractionPrompt.load();
 export const loadCharacterCardExtractionSystemPrompt = (): Promise<string> => characterCardExtractionSystemPrompt.load();
@@ -420,6 +427,7 @@ registerDefaults([
 	actPlotReviewerPrompt,
 	actPlotEditorPrompt,
 	actPlotInterviewExtractionPrompt,
+	actPlotInterviewTurnOfEventsPrompt,
 	characterCardTemplate,
 	characterCardExtractionPrompt,
 	characterCardExtractionSystemPrompt,

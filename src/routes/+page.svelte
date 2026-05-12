@@ -48,6 +48,7 @@
 		getIsSelectingStory,
 		selectActLineQuiet,
 		setActiveActPlotContent,
+		getActiveActPlotContent,
 	} from '$lib/stores/stories.svelte';
 	import {Accordion} from '@skeletonlabs/skeleton-svelte';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
@@ -57,8 +58,12 @@
 	import {formatPhaseName} from '$lib/ai/narrative-types';
 	import {loadStoryMessageTemplate} from '$lib/fs/view-templates';
 	import {generateActPlot} from '$lib/ai/act-plot-generator';
-	import {getActLine} from '$lib/db/act-lines';
+	import {getActLine, getMessagesForLine} from '$lib/db/act-lines';
 	import {log} from '$lib/logging/logger';
+	import {generateTurnOfEvents} from '$lib/ai/turn-of-events-generator';
+	import {updateMessageFields} from '$lib/db/messages';
+	import {regenerateGameData} from '$lib/ai/game-data-regenerator';
+	import type {NarrativeVariables} from '$lib/ai/narrative-types';
 	import type {Story} from "$lib/db/stories";
 	import {onMount} from 'svelte';
 
@@ -328,6 +333,13 @@
 		try {
 			await removeLastInterviewAssistantMessage();
 
+			if (isGameResumeMode) {
+				const enriched = await enrichForkedMessageWithTurnOfEvents(refs.actLineId);
+				if (enriched) {
+					await regenerateGameDataForForkedMessage(enriched);
+				}
+			}
+
 			const worldContent = getWorldBuilderContent();
 			if (worldContent) {
 				await startGame(refs.story.id, refs.story.name, refs.actLineId, worldContent, isGameResumeMode);
@@ -336,6 +348,59 @@
 			createStoryError = err instanceof Error ? err.message : 'Failed to start game';
 		} finally {
 			isCreatingStory = false;
+		}
+	}
+
+	async function enrichForkedMessageWithTurnOfEvents(actLineId: string): Promise<{ messageId: string; actSummary: string; sceneNumber: number; variables: NarrativeVariables } | null> {
+		const lineMessages = await getMessagesForLine(actLineId);
+		const lastAssistant = lineMessages.findLast((m) => m.role === 'assistant');
+		if (!lastAssistant || !lastAssistant.variables?.narrativeBody) return null;
+
+		const interviewMessages = getWorldBuilderMessages();
+		if (interviewMessages.length === 0) return null;
+
+		const turnOfEventsText = await generateTurnOfEvents({
+			actSummary: lastAssistant.actSummary ?? '',
+			narrativeBody: lastAssistant.variables.narrativeBody,
+			sceneNumber: lastAssistant.sceneNumber ?? 1,
+			sceneTitle: lastAssistant.variables.sceneTitle ?? '',
+			interviewMessages: interviewMessages.filter((m) => m.role === 'user' || m.role === 'assistant'),
+		});
+
+		const enrichedVariables: NarrativeVariables = {
+			...lastAssistant.variables,
+			turnOfEvents: turnOfEventsText,
+		};
+
+		await updateMessageFields(lastAssistant.id, {
+			variables: JSON.stringify(enrichedVariables),
+		});
+
+		return { messageId: lastAssistant.id, actSummary: lastAssistant.actSummary ?? '', sceneNumber: lastAssistant.sceneNumber ?? 1, variables: enrichedVariables };
+	}
+
+	async function regenerateGameDataForForkedMessage(enriched: { messageId: string; actSummary: string; sceneNumber: number; variables: NarrativeVariables }) {
+		const worldContent = getWorldBuilderContent();
+		const actPlot = getActiveActPlotContent();
+		if (!worldContent || !actPlot) return;
+
+		const regeneratedGameData = await regenerateGameData({
+			worldContent,
+			actPlot,
+			actSummary: enriched.actSummary,
+			narrativeVariables: enriched.variables,
+			playerResponse: null,
+			sceneNumber: enriched.sceneNumber,
+		});
+
+		if (regeneratedGameData) {
+			const updatedVariables: NarrativeVariables = {
+				...enriched.variables,
+				gameData: regeneratedGameData,
+			};
+			await updateMessageFields(enriched.messageId, {
+				variables: JSON.stringify(updatedVariables),
+			});
 		}
 	}
 

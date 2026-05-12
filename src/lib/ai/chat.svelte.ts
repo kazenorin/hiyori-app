@@ -266,6 +266,7 @@ function buildFinalVariables(
 		sceneTitle: editorVariables?.sceneTitle ?? null,
 		background: editorVariables?.background ?? null,
 		narrativeBody: editorVariables?.narrativeBody ?? null,
+		turnOfEvents: editorVariables?.turnOfEvents ?? null,
 		cg: editorVariables?.cg ?? null,
 		gameData: gameData ?? editorVariables?.gameData ?? null,
 	};
