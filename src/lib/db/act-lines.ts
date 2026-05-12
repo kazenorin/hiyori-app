@@ -377,6 +377,22 @@ export async function removeMessagesFromPremises(actLineId: string, messageIds: 
 	return messageIds;
 }
 
+export async function getLatestTurnOfEvents(actLineId: string): Promise<string | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ turn_of_events: string }[]>(
+		`SELECT json_extract(m.variables, '$.turnOfEvents') as turn_of_events
+		 FROM act_lines al
+		 JOIN messages m ON al.message_id = m.id
+		 WHERE al.act_line_id = $1
+		   AND m.variables IS NOT NULL
+		   AND json_extract(m.variables, '$.turnOfEvents') IS NOT NULL
+		 ORDER BY al.sequence DESC
+		 LIMIT 1`,
+		[actLineId]
+	);
+	return rows.length > 0 ? rows[0].turn_of_events : null;
+}
+
 export async function getPreviousActSummary(actLineId: string): Promise<string | null> {
 	const db = getDatabase();
 	const rows = await db.select<{ act_summary: string }[]>(

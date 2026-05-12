@@ -376,6 +376,130 @@ describe('act-lines operations', () => {
 	it('returns null when no lines exist for act', async () => {
 		expect(await actLines.getMainLineForAct('act-1')).toBeNull();
 	});
+
+	describe('getLatestTurnOfEvents', () => {
+		it('returns the latest turnOfEvents from messages in an act line', async () => {
+			await messages.createMessage({
+				id: 'msg-1',
+				role: 'assistant',
+				content: 'Scene 1',
+				variables: { sceneTitle: null, background: null, narrativeBody: 'body1', turnOfEvents: null, cg: null, gameData: null },
+			});
+			await messages.createMessage({
+				id: 'msg-2',
+				role: 'assistant',
+				content: 'Scene 2',
+				variables: {
+					sceneTitle: null,
+					background: null,
+					narrativeBody: 'body2',
+					turnOfEvents: 'Shift the story toward uncovering the conspiracy.',
+					cg: null,
+					gameData: null,
+				},
+			});
+			await actLines.addMessageToLine('line-1', 'msg-1', 1);
+			await actLines.addMessageToLine('line-1', 'msg-2', 2);
+
+			const result = await actLines.getLatestTurnOfEvents('line-1');
+			expect(result).toBe('Shift the story toward uncovering the conspiracy.');
+		});
+
+		it('returns the most recent turnOfEvents when multiple messages have it', async () => {
+			await messages.createMessage({
+				id: 'msg-1',
+				role: 'assistant',
+				content: 'S1',
+				variables: { sceneTitle: null, background: null, narrativeBody: 'b1', turnOfEvents: 'First turn', cg: null, gameData: null },
+			});
+			await messages.createMessage({
+				id: 'msg-2',
+				role: 'assistant',
+				content: 'S2',
+				variables: { sceneTitle: null, background: null, narrativeBody: 'b2', turnOfEvents: 'Second turn', cg: null, gameData: null },
+			});
+			await actLines.addMessageToLine('line-1', 'msg-1', 1);
+			await actLines.addMessageToLine('line-1', 'msg-2', 2);
+
+			const result = await actLines.getLatestTurnOfEvents('line-1');
+			expect(result).toBe('Second turn');
+		});
+
+		it('returns null when no messages have turnOfEvents', async () => {
+			await messages.createMessage({
+				id: 'msg-1',
+				role: 'assistant',
+				content: 'S1',
+				variables: { sceneTitle: null, background: null, narrativeBody: 'b1', turnOfEvents: null, cg: null, gameData: null },
+			});
+			await actLines.addMessageToLine('line-1', 'msg-1', 1);
+
+			expect(await actLines.getLatestTurnOfEvents('line-1')).toBeNull();
+		});
+
+		it('returns null when messages have no variables', async () => {
+			await messages.createMessage({ id: 'msg-1', role: 'assistant', content: 'S1' });
+			await actLines.addMessageToLine('line-1', 'msg-1', 1);
+
+			expect(await actLines.getLatestTurnOfEvents('line-1')).toBeNull();
+		});
+
+		it('returns null when act line has no messages', async () => {
+			expect(await actLines.getLatestTurnOfEvents('line-1')).toBeNull();
+		});
+	});
+
+	describe('getPreviousActSummary', () => {
+		it('returns the latest actSummary from the previous act line', async () => {
+			await acts.createAct('act-prev', 'story-1', 'Previous Act', 1);
+			await actLines.createActLine('line-prev', 'act-prev', 'prev line', true);
+			await messages.createMessage({
+				id: 'msg-prev',
+				role: 'assistant',
+				content: 'Prev scene',
+				actSummary: 'Previous act summary content',
+			});
+			await actLines.addMessageToLine('line-prev', 'msg-prev', 1);
+
+			await acts.createAct('act-2', 'story-1', 'Current Act', 2, 'line-prev');
+			await actLines.createActLine('line-cur', 'act-2', 'current line', true);
+
+			const result = await actLines.getPreviousActSummary('line-cur');
+			expect(result).toBe('Previous act summary content');
+		});
+
+		it('returns the most recent actSummary when multiple messages have one', async () => {
+			await acts.createAct('act-prev', 'story-1', 'Previous Act', 1);
+			await actLines.createActLine('line-prev', 'act-prev', 'prev line', true);
+			await messages.createMessage({ id: 'msg-p1', role: 'assistant', content: 'Older', actSummary: 'Older summary' });
+			await messages.createMessage({ id: 'msg-p2', role: 'assistant', content: 'Newer', actSummary: 'Newer summary' });
+			await actLines.addMessageToLine('line-prev', 'msg-p1', 1);
+			await actLines.addMessageToLine('line-prev', 'msg-p2', 2);
+
+			await acts.createAct('act-2', 'story-1', 'Current Act', 2, 'line-prev');
+			await actLines.createActLine('line-cur', 'act-2', 'current line', true);
+
+			const result = await actLines.getPreviousActSummary('line-cur');
+			expect(result).toBe('Newer summary');
+		});
+
+		it('returns null when the previous act line has no messages with actSummary', async () => {
+			await acts.createAct('act-prev', 'story-1', 'Previous Act', 1);
+			await actLines.createActLine('line-prev', 'act-prev', 'prev line', true);
+			await messages.createMessage({ id: 'msg-prev', role: 'assistant', content: 'No summary' });
+			await actLines.addMessageToLine('line-prev', 'msg-prev', 1);
+
+			await acts.createAct('act-2', 'story-1', 'Current Act', 2, 'line-prev');
+			await actLines.createActLine('line-cur', 'act-2', 'current line', true);
+
+			expect(await actLines.getPreviousActSummary('line-cur')).toBeNull();
+		});
+
+		it('returns null when the current act has no continuation', async () => {
+			await actLines.createActLine('line-cur', 'act-1', 'current line', true);
+			expect(await actLines.getPreviousActSummary('line-cur')).toBeNull();
+		});
+	});
 });
 
 describe('act_line_premises operations', () => {
