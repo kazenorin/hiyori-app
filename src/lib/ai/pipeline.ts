@@ -356,7 +356,20 @@ async function generateFullSummary(input: PipelineInput, loadedPrompts: LoadedPr
 
 	const summarizerMessages = buildSummarizerMessages(input);
 
-	return await runNonStreamingPhase('SUMMARIZER', summarizerSystemPrompt, summarizerMessages, providerConfigs.summarizer, abortSignal);
+	const rawSummary = await runNonStreamingPhase('SUMMARIZER', summarizerSystemPrompt, summarizerMessages, providerConfigs.summarizer, abortSignal);
+	const { completedScenes, previousNarrativeVariables } = input;
+	try {
+		const parsed = parseActSummary(rawSummary);
+		parsed.completedScenes = completedScenes;
+		if (previousNarrativeVariables?.turnOfEvents) {
+			parsed.turnOfEvents = previousNarrativeVariables.turnOfEvents;
+			parsed.turnOfEventsSceneNumber = completedScenes;
+			parsed.turnOfEventsSceneTitle = previousNarrativeVariables.sceneTitle ?? '';
+		}
+		return serializeActSummary(parsed);
+	} catch {
+		return rawSummary;
+	}
 }
 
 async function generateIncrementalSummary(input: PipelineInput, loadedPrompts: LoadedPrompts) {
@@ -387,6 +400,14 @@ async function generateIncrementalSummary(input: PipelineInput, loadedPrompts: L
 		const existingParsed = parseActSummary(actSummary);
 		const incrementalParsed = parseIncrementalOutput(incrementalRaw);
 		const merged = mergeActSummary(existingParsed, incrementalParsed);
+		// Override completedScenes with the programmatic value (more reliable than LLM-parsed)
+		merged.completedScenes = completedScenes;
+		// Inject turnOfEvents from previousNarrativeVariables (overwrites any existing)
+		if (previousNarrativeVariables?.turnOfEvents) {
+			merged.turnOfEvents = previousNarrativeVariables.turnOfEvents;
+			merged.turnOfEventsSceneNumber = completedScenes;
+			merged.turnOfEventsSceneTitle = previousNarrativeVariables.sceneTitle ?? '';
+		}
 		return serializeActSummary(merged);
 	} catch (err) {
 		await log.warn('pipeline', `Incremental act summary parse/merge failed, falling back to full summary: ${err}`);
