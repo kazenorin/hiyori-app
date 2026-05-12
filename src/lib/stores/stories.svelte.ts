@@ -450,6 +450,18 @@ export async function forkActLineForInterview(
 	const { lineMeta, remappedMessageIds } = await dbActLines.branchFromLine(newLineId, fromLineId, fromSequence, actId, name);
 	actLines = [...actLines, lineMeta];
 
+	// Create the line directory with proper naming at fork time
+	const storyId = activeStoryId;
+	const storyName = activeStoryName;
+	if (storyId && storyName) {
+		const act = acts.find((a) => a.id === activeActId);
+		const storyFolder = await resolveStoryFolder(storyId, storyName);
+		if (act && storyFolder) {
+			const lineDir = buildLineDir(storyFolder, act.actNumber, false, lineMeta.id, buildLineSubdirSuffix(name));
+			await mkdir(lineDir, { baseDir: BaseDirectory.AppData, recursive: true });
+		}
+	}
+
 	// Do NOT copy act-plot — it will be generated after the interview
 	// Do NOT call selectActLine — it would trigger ensureActPlot
 
@@ -480,7 +492,12 @@ export async function selectActLineQuiet(actLineId: string): Promise<void> {
 	activeActPlotContent = '';
 }
 
-async function copyMemoriesForFork(fromLineId: string, toLineId: string, fromSequence: number, remappedMessageIds: Map<string, string>): Promise<void> {
+async function copyMemoriesForFork(
+	fromLineId: string,
+	toLineId: string,
+	fromSequence: number,
+	remappedMessageIds: Map<string, string>
+): Promise<void> {
 	const storyId = activeStoryId;
 	if (!storyId || !settings.memoryEnabled) return;
 
