@@ -125,6 +125,32 @@ export async function createMessage(message: Omit<Message, 'createdAt'>): Promis
 	return { ...message, createdAt: now };
 }
 
+/** Clone a message row with a new ID. Returns the cloned message, or null if source not found. */
+export async function cloneMessage(sourceId: string, newId: string): Promise<Message | null> {
+	const db = getDatabase();
+	const rows = await db.select<MessageRow[]>('SELECT * FROM messages WHERE id = $1', [sourceId]);
+	if (rows.length === 0) return null;
+	const row = rows[0];
+	await db.execute(
+		`INSERT INTO messages (id, role, content, reasoning, metadata, variables, act_summary, scene_plot, important_phrases, scene_number, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		[
+			newId,
+			row.role,
+			row.content,
+			row.reasoning,
+			row.metadata,
+			row.variables,
+			row.act_summary,
+			row.scene_plot,
+			row.important_phrases,
+			row.scene_number,
+			row.created_at,
+		]
+	);
+	return mapRowToMessage({ ...row, id: newId });
+}
+
 export async function getMessage(id: string): Promise<Message | null> {
 	const db = getDatabase();
 	const rows = await db.select<MessageRow[]>('SELECT * FROM messages WHERE id = $1', [id]);

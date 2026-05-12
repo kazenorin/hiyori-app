@@ -83,7 +83,6 @@ describe('stories CRUD', () => {
 
 	it('returns all stories sorted by updated_at DESC', async () => {
 		await stories.createStory('id-1', 'First');
-		// Ensure different timestamps (Date.now() in same tick returns same value)
 		const db = testDb._db;
 		db.prepare('UPDATE stories SET updated_at = updated_at - 1').run();
 		await stories.createStory('id-2', 'Second');
@@ -209,8 +208,7 @@ describe('act-lines operations', () => {
 		expect(msgs).toHaveLength(1);
 	});
 
-	it('does not delete shared message when other line still references it', async () => {
-		// Create shared messages
+	it('deletes orphaned messages but preserves shared ones', async () => {
 		await messages.createMessage({ id: 'msg-1', role: 'user', content: 'Shared User' });
 		await messages.createMessage({
 			id: 'msg-2',
@@ -232,41 +230,25 @@ describe('act-lines operations', () => {
 		await actLines.addMessageToLine('line-1', 'msg-1', 1);
 		await actLines.addMessageToLine('line-1', 'msg-2', 2);
 
-		// Fork from line-1 at sequence 2 (copies msg-1 and msg-2)
+		// Fork from line-1 — the forked line's last message is a clone, not shared
 		await actLines.branchFromLine('line-2', 'line-1', 2, 'act-1', 'fork');
 
-		// Add extra message to line-1 only
+		// Add and remove an orphan message from line-1
 		await messages.createMessage({ id: 'msg-3', role: 'assistant', content: 'Only on line-1' });
 		await actLines.addMessageToLine('line-1', 'msg-3', 3);
-
-		// Remove msg-3 from line-1 (should delete msg-3, but NOT msg-2 since line-2 still references it)
 		await actLines.removeMessagesFromActLine('line-1', ['msg-3']);
 
-		// Verify msg-3 was deleted (only line-1 referenced it)
+		// msg-3 was orphan — deleted
 		expect(await messages.getMessage('msg-3')).toBeNull();
 
-		// Verify msg-2 still exists (line-2 still references it)
-		const msg2 = await messages.getMessage('msg-2');
-		expect(msg2).not.toBeNull();
-		expect(msg2!.variables?.gameData).toEqual({
-			activePlotThreads: [],
-			decisionContext: null,
-			decisions: ['A', 'B'],
-		});
+		// msg-1 and msg-2 still exist — line-1 still references them
+		expect(await messages.getMessage('msg-1')).not.toBeNull();
+		expect(await messages.getMessage('msg-2')).not.toBeNull();
 
-		// Verify line-1 no longer has msg-3
+		// line-1 unchanged
 		const line1Msgs = await actLines.getMessagesForLine('line-1');
 		expect(line1Msgs).toHaveLength(2);
 		expect(line1Msgs.map((m) => m.id)).toEqual(['msg-1', 'msg-2']);
-
-		// Verify line-2 still has msg-1 and msg-2 with game data in variables
-		const line2Msgs = await actLines.getMessagesForLine('line-2');
-		expect(line2Msgs).toHaveLength(2);
-		expect(line2Msgs[1].variables?.gameData).toEqual({
-			activePlotThreads: [],
-			decisionContext: null,
-			decisions: ['A', 'B'],
-		});
 	});
 
 	it('deletes message when no other line references it', async () => {
@@ -278,49 +260,7 @@ describe('act-lines operations', () => {
 		expect(await messages.getMessage('msg-1')).toBeNull();
 	});
 
-	it('preserves variables for shared messages after delete on one line', async () => {
-		await messages.createMessage({
-			id: 'msg-1',
-			role: 'assistant',
-			content: 'Content',
-			variables: {
-				sceneTitle: null,
-				background: null,
-				narrativeBody: null,
-				turnOfEvents: null,
-				cg: null,
-				gameData: {
-					activePlotThreads: [],
-					decisionContext: null,
-					decisions: ['X'],
-				},
-			},
-		});
-		await actLines.addMessageToLine('line-1', 'msg-1', 1);
-		await actLines.addMessageToLine('line-2', 'msg-1', 1);
-
-		// Delete from line-1 only
-		await actLines.removeMessagesFromActLine('line-1', ['msg-1']);
-
-		// Message should still exist and line-2 should still have it with game data
-		const msg = await messages.getMessage('msg-1');
-		expect(msg).not.toBeNull();
-		expect(msg!.variables?.gameData).toEqual({
-			activePlotThreads: [],
-			decisionContext: null,
-			decisions: ['X'],
-		});
-
-		const line2Msgs = await actLines.getMessagesForLine('line-2');
-		expect(line2Msgs).toHaveLength(1);
-		expect(line2Msgs[0].variables?.gameData).toEqual({
-			activePlotThreads: [],
-			decisionContext: null,
-			decisions: ['X'],
-		});
-	});
-
-	it('branches from a line copying messages up to sequence', async () => {
+	it('branches from a line copying messages up to sequence with cloned fork-point message', async () => {
 		await messages.createMessage({ id: 'msg-1', role: 'user', content: 'Q1' });
 		await messages.createMessage({ id: 'msg-2', role: 'assistant', content: 'A1' });
 		await messages.createMessage({ id: 'msg-3', role: 'user', content: 'Q2' });
@@ -328,12 +268,67 @@ describe('act-lines operations', () => {
 		await actLines.addMessageToLine('line-1', 'msg-2', 2);
 		await actLines.addMessageToLine('line-1', 'msg-3', 3);
 
-		const branch = await actLines.branchFromLine('line-2', 'line-1', 2, 'act-1', 'fork');
-		expect(branch.id).toBe('line-2');
-		expect(branch.isMainLine).toBe(false);
+		const { lineMeta, remappedMessageIds } = await actLines.branchFromLine('line-2', 'line-1', 2, 'act-1', 'fork');
 
+		// Line meta is correct
+		expect(lineMeta.id).toBe('line-2');
+		expect(lineMeta.isMainLine).toBe(false);
+
+		// Forked line has 2 messages
 		const branchMsgs = await actLines.getMessagesForLine('line-2');
 		expect(branchMsgs).toHaveLength(2);
+
+		// First message is shared (same ID)
+		expect(branchMsgs[0].id).toBe('msg-1');
+
+		// Last message is a clone (different ID)
+		const clonedId = remappedMessageIds.get('msg-2')!;
+		expect(clonedId).toBeDefined();
+		expect(branchMsgs[1].id).toBe(clonedId);
+		expect(branchMsgs[1].content).toBe('A1');
+
+		// Only the fork-point message is remapped
+		expect(remappedMessageIds.size).toBe(1);
+	});
+
+	it('fork-point message clone isolates metadata writes', async () => {
+		await messages.createMessage({
+			id: 'msg-1',
+			role: 'assistant',
+			content: 'Original content',
+			variables: {
+				sceneTitle: null,
+				background: null,
+				narrativeBody: 'Original body',
+				turnOfEvents: null,
+				cg: null,
+				gameData: null,
+			},
+		});
+		await actLines.addMessageToLine('line-1', 'msg-1', 1);
+
+		const { remappedMessageIds } = await actLines.branchFromLine('line-2', 'line-1', 1, 'act-1', 'fork');
+		const clonedId = remappedMessageIds.get('msg-1')!;
+
+		// Write metadata to the cloned message on the forked line
+		await messages.updateMessageFields(clonedId, {
+			variables: JSON.stringify({
+				sceneTitle: null,
+				background: null,
+				narrativeBody: 'Original body',
+				turnOfEvents: 'A sudden turn',
+				cg: null,
+				gameData: null,
+			}),
+		});
+
+		// Original message is unaffected
+		const original = await messages.getMessage('msg-1');
+		expect(original!.variables?.turnOfEvents).toBeNull();
+
+		// Cloned message has the enriched data
+		const cloned = await messages.getMessage(clonedId);
+		expect(cloned!.variables?.turnOfEvents).toBe('A sudden turn');
 	});
 
 	it('updates an act line name', async () => {
@@ -444,7 +439,6 @@ describe('act_line_premises operations', () => {
 
 		await actLines.removeMessagesFromPremises('line-1', ['msg-1']);
 
-		// Message should still exist because act_lines still references it
 		expect(await messages.getMessage('msg-1')).not.toBeNull();
 	});
 
@@ -493,6 +487,51 @@ describe('messages CRUD', () => {
 		await messages.createMessage({ id: 'msg-1', role: 'user', content: 'Hello' });
 		await messages.deleteMessage('msg-1');
 		expect(await messages.getMessage('msg-1')).toBeNull();
+	});
+
+	it('clones a message with a new ID preserving all fields', async () => {
+		await messages.createMessage({
+			id: 'msg-src',
+			role: 'assistant',
+			content: 'Source content',
+			reasoning: 'Thought process',
+			actSummary: 'Act summary text',
+			variables: {
+				sceneTitle: null,
+				background: null,
+				narrativeBody: 'Narrative text',
+				turnOfEvents: null,
+				cg: null,
+				gameData: {
+					activePlotThreads: ['Thread A'],
+					decisionContext: 'Choose wisely',
+					decisions: ['Go left'],
+				},
+			},
+		});
+
+		const cloned = await messages.cloneMessage('msg-src', 'msg-clone');
+		expect(cloned).not.toBeNull();
+		expect(cloned!.id).toBe('msg-clone');
+		expect(cloned!.content).toBe('Source content');
+		expect(cloned!.reasoning).toBe('Thought process');
+		expect(cloned!.actSummary).toBe('Act summary text');
+		expect(cloned!.variables?.narrativeBody).toBe('Narrative text');
+		expect(cloned!.variables?.gameData?.decisions).toEqual(['Go left']);
+
+		// Original is unchanged
+		const original = await messages.getMessage('msg-src');
+		expect(original!.id).toBe('msg-src');
+
+		// Clone is independent — writing to it doesn't affect original
+		await messages.updateMessageFields('msg-clone', { actSummary: 'Updated clone' });
+		expect((await messages.getMessage('msg-src'))!.actSummary).toBe('Act summary text');
+		expect((await messages.getMessage('msg-clone'))!.actSummary).toBe('Updated clone');
+	});
+
+	it('returns null when cloning nonexistent message', async () => {
+		const result = await messages.cloneMessage('nope', 'msg-clone');
+		expect(result).toBeNull();
 	});
 
 	it('creates and retrieves a message with scenePlot', async () => {

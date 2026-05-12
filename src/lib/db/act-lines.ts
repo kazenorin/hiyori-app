@@ -1,7 +1,7 @@
 import Database from '@tauri-apps/plugin-sql';
 import { getDatabase } from './database';
 import type { Message } from './messages';
-import { type MessageRow, mapRowToMessage } from './messages';
+import { type MessageRow, mapRowToMessage, cloneMessage } from './messages';
 import type { Story } from './stories';
 
 export interface ActLineMeta {
@@ -260,13 +260,19 @@ export async function batchResolveActLineInfo(
 	return result;
 }
 
+export interface BranchResult {
+	lineMeta: ActLineMeta;
+	/** Remapped message IDs: original → cloned. Empty for non-fork-point messages. */
+	remappedMessageIds: Map<string, string>;
+}
+
 export async function branchFromLine(
 	newLineId: string,
 	fromLineId: string,
 	fromSequence: number,
 	actId: string,
 	name: string
-): Promise<ActLineMeta> {
+): Promise<BranchResult> {
 	const db = getDatabase();
 
 	// Create new act line meta (branches are never main lines)
@@ -278,11 +284,24 @@ export async function branchFromLine(
 		[fromLineId, fromSequence]
 	);
 
-	if (entries.length === 0) return lineMeta;
+	if (entries.length === 0) return { lineMeta, remappedMessageIds: new Map() };
 
-	// Batch insert all entries
-	const values = entries.map((e, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(', ');
-	const params = entries.flatMap((e) => [newLineId, e.message_id, e.sequence]);
+	// Clone the last message at the fork point so the forked line owns its own copy.
+	// This prevents metadata writes (e.g. turnOfEvents) on the forked line from
+	// polluting the original line's message.
+	const lastEntry = entries[entries.length - 1];
+	const clonedId = crypto.randomUUID();
+	await cloneMessage(lastEntry.message_id, clonedId);
+
+	const remappedMessageIds = new Map<string, string>();
+	remappedMessageIds.set(lastEntry.message_id, clonedId);
+
+	// Build junction entries: all share original message_ids except the last,
+	// which points to the cloned message.
+	const forkedEntries = entries.map((e, i) => (i === entries.length - 1 ? { ...e, message_id: clonedId } : e));
+
+	const values = forkedEntries.map((e, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(', ');
+	const params = forkedEntries.flatMap((e) => [newLineId, e.message_id, e.sequence]);
 	await db.execute(`INSERT INTO act_lines (act_line_id, message_id, sequence) VALUES ${values}`, params);
 
 	// Copy premises (interview transcript) — always predates act line messages
@@ -295,7 +314,7 @@ export async function branchFromLine(
 		await db.execute(`INSERT INTO act_line_premises (act_line_id, message_id, sequence) VALUES ${pValues}`, pParams);
 	}
 
-	return lineMeta;
+	return { lineMeta, remappedMessageIds };
 }
 
 export async function getLastSceneNumber(actLineId: string): Promise<number | null> {

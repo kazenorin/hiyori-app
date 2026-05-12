@@ -389,17 +389,17 @@ export async function deleteActLine(id: string, removeFolder: boolean = false): 
 
 export async function forkActLine(fromLineId: string, fromSequence: number, actId: string, name: string): Promise<dbActLines.ActLineMeta> {
 	const newLineId = crypto.randomUUID();
-	const line = await dbActLines.branchFromLine(newLineId, fromLineId, fromSequence, actId, name);
-	actLines = [...actLines, line];
+	const { lineMeta, remappedMessageIds } = await dbActLines.branchFromLine(newLineId, fromLineId, fromSequence, actId, name);
+	actLines = [...actLines, lineMeta];
 
 	// Copy act-plot file from source to forked line before selectActLine triggers ensureActPlot
-	await copyActPlotForFork(fromLineId, line.id);
+	await copyActPlotForFork(fromLineId, lineMeta.id);
 
-	await selectActLine(line.id);
+	await selectActLine(lineMeta.id);
 
-	await copyMemoriesForFork(fromLineId, line.id, fromSequence);
+	await copyMemoriesForFork(fromLineId, lineMeta.id, fromSequence, remappedMessageIds);
 
-	return line;
+	return lineMeta;
 }
 
 /**
@@ -447,15 +447,15 @@ export async function forkActLineForInterview(
 	name: string
 ): Promise<dbActLines.ActLineMeta> {
 	const newLineId = crypto.randomUUID();
-	const line = await dbActLines.branchFromLine(newLineId, fromLineId, fromSequence, actId, name);
-	actLines = [...actLines, line];
+	const { lineMeta, remappedMessageIds } = await dbActLines.branchFromLine(newLineId, fromLineId, fromSequence, actId, name);
+	actLines = [...actLines, lineMeta];
 
 	// Do NOT copy act-plot — it will be generated after the interview
 	// Do NOT call selectActLine — it would trigger ensureActPlot
 
-	await copyMemoriesForFork(fromLineId, line.id, fromSequence);
+	await copyMemoriesForFork(fromLineId, lineMeta.id, fromSequence, remappedMessageIds);
 
-	return line;
+	return lineMeta;
 }
 
 /**
@@ -480,7 +480,7 @@ export async function selectActLineQuiet(actLineId: string): Promise<void> {
 	activeActPlotContent = '';
 }
 
-async function copyMemoriesForFork(fromLineId: string, toLineId: string, fromSequence: number): Promise<void> {
+async function copyMemoriesForFork(fromLineId: string, toLineId: string, fromSequence: number, remappedMessageIds: Map<string, string>): Promise<void> {
 	const storyId = activeStoryId;
 	if (!storyId || !settings.memoryEnabled) return;
 
@@ -491,8 +491,11 @@ async function copyMemoriesForFork(fromLineId: string, toLineId: string, fromSeq
 		const messageIds = await dbActLines.getMessageIdsUpToSequence(fromLineId, fromSequence);
 		if (messageIds.length === 0) return;
 
+		// Remap message IDs: cloned messages on the forked line have new IDs
+		const remappedIds = messageIds.map((id) => remappedMessageIds.get(id) ?? id);
+
 		const memory = new Memory(config);
-		const result = await memory.copyMemoriesForFork(storyId, fromLineId, toLineId, messageIds);
+		const result = await memory.copyMemoriesForFork(storyId, fromLineId, toLineId, remappedIds);
 		log.info(
 			'fork',
 			`Copied ${result.memoriesCopied} memories, ${result.locationsCopied} locations, ${result.aliasesCopied} aliases, ${result.inventoryCopied} inventory items to line ${toLineId}`
