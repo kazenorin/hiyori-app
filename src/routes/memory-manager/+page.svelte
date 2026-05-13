@@ -116,7 +116,7 @@
 					});
 				}
 			});
-			addProgress(t('memoryManager.actCardSaved', { file: result.filePath.split('/').pop() }));
+			addProgress(t('memoryManager.actCardSaved', { file: result.filePath.split('/').pop() ?? 'unknown' }));
 			status = t('memoryManager.actCardGenerated');
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : t('memoryManager.generationFailed');

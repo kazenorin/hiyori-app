@@ -348,8 +348,8 @@ export async function updateSettings(
 		try {
 			const { setLocale } = await import('$lib/i18n');
 			await setLocale(partial.locale);
-		} catch {
-			// i18n system may fail to load locale
+		} catch (err) {
+			console.error("Failed to sync locale to i18n:", err);
 		}
 	}
 }

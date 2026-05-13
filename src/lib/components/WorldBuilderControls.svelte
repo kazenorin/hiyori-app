@@ -260,8 +260,8 @@
 							</div>
 						{:else}
 							<div class="rounded-(--radius-container) bg-primary-100-900 p-6 text-center space-y-4">
-								<h3 class="h3 font-display text-primary-900-100">Create "{storyName ?? 'Story'}"?</h3>
-								<p class="text-sm text-primary-700-300">Your world document is ready. Create the story and start your adventure?</p>
+								<h3 class="h3 font-display text-primary-900-100">{t('components.worldBuilderControls.createStoryPrompt', { name: storyName ?? t('components.worldBuilderControls.createStoryDefault') })}</h3>
+								<p class="text-sm text-primary-700-300">{t('components.worldBuilderControls.worldReadyPrompt')}</p>
 								<div class="flex gap-3 justify-center">
 									<button class="btn preset-filled-primary-500" type="button" onclick={onCreateStory}> {t('components.worldBuilderControls.createStory')} </button>
 									<button class="btn preset-tonal" type="button" onclick={onCancel}> {t('components.worldBuilderControls.cancel')}</button>
