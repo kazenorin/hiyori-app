@@ -1,4 +1,5 @@
 import en from './locales/en.json';
+import zhHantHK from './locales/zh-Hant-HK.json';
 import { log } from '$lib/logging/logger';
 
 export type Locale = string;
@@ -29,6 +30,7 @@ let flatTranslations = $derived<Record<string, string>>(flatten(translations));
 
 const localeLoaders: Record<Locale, () => Promise<Translations>> = {
 	en: async () => en as unknown as Translations,
+	'zh-Hant-HK': async () => zhHantHK as unknown as Translations,
 };
 
 export function registerLocale(locale: Locale, loader: () => Promise<Translations>): void {

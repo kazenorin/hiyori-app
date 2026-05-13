@@ -651,6 +651,7 @@
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.locale')}</span>
 				<select class="select mt-1" onchange={(e) => updateSettings({ locale: (e.currentTarget as HTMLSelectElement).value })}>
 					<option value="en" selected={settings.locale === 'en'}>English</option>
+					<option value="zh-Hant-HK" selected={settings.locale === 'zh-Hant-HK'}>繁體中文（香港）</option>
 				</select>
 			</label>
 
