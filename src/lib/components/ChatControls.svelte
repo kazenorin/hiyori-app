@@ -38,9 +38,9 @@
 	let summaryText = $derived.by(() => {
 		const parts: string[] = [];
 		if (decisionContext !== null) parts.push(t('components.chatControls.decisionPoint'));
-		if (decisions.length > 0) parts.push(`${decisions.length} Decision${decisions.length !== 1 ? 's' : ''}`);
+		if (decisions.length > 0) parts.push(t(decisions.length === 1 ? 'components.chatControls.decision_one' : 'components.chatControls.decision_other', { count: decisions.length }));
 		if (activePlotThreads.length > 0)
-			parts.push(`${activePlotThreads.length} Thread${activePlotThreads.length !== 1 ? 's' : ''}`);
+			parts.push(t(activePlotThreads.length === 1 ? 'components.chatControls.thread_one' : 'components.chatControls.thread_other', { count: activePlotThreads.length }));
 		return parts.join(' · ');
 	});
 

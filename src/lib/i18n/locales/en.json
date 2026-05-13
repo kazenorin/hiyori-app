@@ -158,7 +158,11 @@
 			"controls": "Controls",
 			"activePlotThreads": "Active Plot Threads",
 			"decisionPoint": "Decision Point",
-			"decisions": "Decisions"
+			"decisions": "Decisions",
+			"decision_one": "{count} Decision",
+			"decision_other": "{count} Decisions",
+			"thread_one": "{count} Thread",
+			"thread_other": "{count} Threads"
 		},
 		"worldBuilderControls": {
 			"controls": "Controls",
