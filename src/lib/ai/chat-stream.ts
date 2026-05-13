@@ -3,6 +3,7 @@ import { type ToolSet } from 'ai';
 import { executeStream, type StreamResultMetadata } from './streaming';
 import { getMainProviderConfig, type ProviderConfig } from '../stores/settings.svelte';
 import { createStreamAccumulator, type StreamAccumulator, type StreamState } from './chat-callbacks';
+import { ERR_NO_MAIN_PROVIDER, ERR_AUTH_FAILED } from '$lib/definitions/error-messages';
 import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
 import { createModel } from './provider';
 import { isAbortError, isAuthError, sleepOrAbort } from '$lib/utils/async';
@@ -97,7 +98,7 @@ export async function streamChatResponse(
 	descriptors?: OutputDescriptor[]
 ): Promise<StreamAccumulator> {
 	if (!providerConfig) {
-		throw new Error('No main provider configured. Please set one in Settings.');
+		throw new Error(ERR_NO_MAIN_PROVIDER);
 	}
 	const model = createModel(providerConfig);
 
@@ -174,7 +175,7 @@ export async function streamWithRetry(
 
 			// Don't retry on auth errors
 			if (isAuthError(lastError)) {
-				throw new Error('Authentication failed. Please check your API key in Settings.');
+				throw new Error(ERR_AUTH_FAILED);
 			}
 
 			// Don't retry on user-initiated abort

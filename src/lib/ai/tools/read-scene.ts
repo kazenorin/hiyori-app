@@ -8,6 +8,11 @@ import { fileLog, log } from '$lib/logging/logger';
 const SCENE_BODY_HEADER = `### Scene Body`;
 const PLAYER_RESPONSE_HEADER = `### Player Response`;
 
+const TOOL_DESCRIPTION =
+	'Read the content of a specific scene in the current act. Returns the narrative body (assistant response) and the player response for the given scene number, formatted in Markdown.';
+const NO_SCENE_FOUND = (sceneNumber: number) => `No scene found with scene number ${sceneNumber}.`;
+const SCENE_NO_CONTENT = (sceneNumber: number) => `Scene ${sceneNumber} exists but contains no readable content.`;
+
 interface SceneRow {
 	role: string;
 	content: string;
@@ -34,8 +39,7 @@ export function createReadSceneTool(ctx: ToolContext) {
 	});
 
 	return tool({
-		description:
-			'Read the content of a specific scene in the current act. Returns the narrative body (assistant response) and the player response for the given scene number, formatted in Markdown.',
+		description: TOOL_DESCRIPTION,
 		inputSchema,
 		execute: async (input: z.infer<typeof inputSchema>): Promise<string> => {
 			const { sceneNumber } = input;
@@ -46,7 +50,7 @@ export function createReadSceneTool(ctx: ToolContext) {
 			const rows = await querySceneMessages(actLine.id, sceneNumber);
 
 			if (rows.length === 0) {
-				return `No scene found with scene number ${sceneNumber}.`;
+				return NO_SCENE_FOUND(sceneNumber);
 			}
 
 			const assistantMsg = rows.find((r) => r.role === 'assistant');
@@ -63,7 +67,7 @@ export function createReadSceneTool(ctx: ToolContext) {
 			}
 
 			if (parts.length === 0) {
-				return `Scene ${sceneNumber} exists but contains no readable content.`;
+				return SCENE_NO_CONTENT(sceneNumber);
 			}
 
 			const result = parts.join('\n\n');

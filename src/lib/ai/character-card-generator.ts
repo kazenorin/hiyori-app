@@ -18,6 +18,16 @@ import { kebabCase } from 'lodash-es';
 import { log } from '$lib/logging/logger';
 import { logCharacterCardActivity } from '$lib/logging/chat-logger';
 import { getLineDir } from './card-output-path';
+import {
+	TRANSCRIPT_START,
+	TRANSCRIPT_END,
+	ACT_CARD_LABEL,
+	CHARACTER_CARD_LABEL,
+	CHARACTER_EXTRACTION_PREFIX,
+	CHARACTER_EXTRACTION_INSTRUCTION,
+	CHARACTER_CARD_GENERATION_INSTRUCTION,
+} from '$lib/definitions/llm-context-labels';
+import { ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT, ERR_NO_CHARACTERS_SELECTED } from '$lib/definitions/error-messages';
 
 // === Types ===
 
@@ -76,11 +86,11 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 	if (!story) throw new Error(ERR_NO_CONTEXT);
 
 	const config = getMainProviderConfig();
-	if (!config?.apiKey) throw new Error('No main provider configured.');
+	if (!config?.apiKey) throw new Error(ERR_NO_MAIN_PROVIDER);
 
 	const allMessages = await getMessagesForLine(actLineId);
 	const transcript: string[] = exportActLine(allMessages);
-	if (transcript.length === 0) throw new Error('No narrative content found in this act line.');
+	if (transcript.length === 0) throw new Error(ERR_NO_NARRATIVE_CONTENT);
 
 	const summarizePrompt = await loadSummarizeCharactersInAct();
 	const systemPrompt = await loadStorySystemPrompt(story.id, story.name);
@@ -97,14 +107,13 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 	const messages: ModelMessage[] = [
 		{
 			role: 'user',
-			content:
-				'I need your help to extract all the characters from the current act.\nThe following messages will contain the transcript of the current act:',
+			content: CHARACTER_EXTRACTION_PREFIX,
 		},
 		...transcript.map(toUserModelMessage),
-		{ role: 'user', content: 'The previous message was the end of the transcript of the current act.' },
+		{ role: 'user', content: TRANSCRIPT_END },
 		{
 			role: 'user',
-			content: `Extract all the characters from the current act according to the following rules: ${summarizePrompt}`,
+			content: CHARACTER_EXTRACTION_INSTRUCTION(summarizePrompt),
 		},
 	];
 	const result = await generateText({ model, system: systemPrompt, messages });
@@ -251,7 +260,7 @@ async function loadPreviousActCards(storyFolder: string, lineage: ActLineageEntr
 
 		const actCard = await loadActCard(storyFolder, entry.actNumber, entry.isMainLine, entry.actLineId);
 		if (actCard) {
-			sections.push(`The following message contains the Act Card from Act ${entry.actNumber}`);
+			sections.push(ACT_CARD_LABEL(entry.actNumber));
 			sections.push(actCard);
 		}
 	}
@@ -268,7 +277,7 @@ async function loadPreviousCharacterCards(
 	for (const entry of lineage) {
 		const card = await loadExistingCharacterCard(storyFolder, entry.actNumber, canonicalName, entry.isMainLine, entry.actLineId);
 		if (card) {
-			sections.push(`The following message contains the previous Character Card of ${characterName} from Act ${entry.actNumber}`);
+			sections.push(CHARACTER_CARD_LABEL(characterName, entry.actNumber));
 			sections.push(card);
 		}
 	}
@@ -282,9 +291,9 @@ function buildGenerationMessages(
 	userPrompt: string
 ): ModelMessage[] {
 	return [
-		{ role: 'user', content: 'The following messages will contain the transcript of the current act:' },
+		{ role: 'user', content: TRANSCRIPT_START },
 		...transcript.map(toUserModelMessage),
-		{ role: 'user', content: 'The previous message was the end of the transcript of the current act.' },
+		{ role: 'user', content: TRANSCRIPT_END },
 		...previousActCards.map(toUserModelMessage),
 		...existingCards.map(toUserModelMessage),
 		{ role: 'user', content: userPrompt },
@@ -309,7 +318,7 @@ export async function generateCharacterCard(
 	}
 
 	const config = getMainProviderConfig();
-	if (!config?.apiKey) throw new Error('No main provider configured.');
+	if (!config?.apiKey) throw new Error(ERR_NO_MAIN_PROVIDER);
 
 	if (!entry.canonicalName.trim()) {
 		throw new Error(`Character name resolves to empty identifier: "${entry.character}"`);
@@ -350,7 +359,7 @@ export async function generateCharacterCard(
 		loadPreviousCharacterCards(storyFolder, lineage, entry.canonicalName, entry.character),
 	]);
 
-	const userPrompt = `Based on the information from the chat history, generate a new Character Card according to the following rules:\n${namedExtractionPrompt}\n---\n${namedTemplate}`;
+	const userPrompt = CHARACTER_CARD_GENERATION_INSTRUCTION(namedExtractionPrompt, namedTemplate);
 	const messages = buildGenerationMessages(transcript, previousActCards, existingCards, userPrompt);
 
 	const model = createModel(config);
@@ -399,7 +408,7 @@ export async function generateCharacterCards(
 		);
 	}
 
-	if (selected.length === 0) throw new Error('No characters selected for generation.');
+	if (selected.length === 0) throw new Error(ERR_NO_CHARACTERS_SELECTED);
 
 	const lineage = await buildActLineage();
 

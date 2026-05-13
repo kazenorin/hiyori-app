@@ -3,6 +3,7 @@ import { stepCountIs, streamText, type ToolSet } from 'ai';
 import type { LanguageModel } from 'ai';
 import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
 import { fileLog } from '$lib/logging/logger';
+import { ERR_EMPTY_STREAM } from '$lib/definitions/error-messages';
 
 const DEFAULT_MAX_STEPS = 10;
 
@@ -102,7 +103,7 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 		const [usage, finishReason, text] = await Promise.all([result.usage, result.finishReason.then((s) => s ?? 'unknown'), result.text]);
 
 		if (text.trim().length === 0) {
-			callbacks.onError(new Error('empty response from stream'));
+			callbacks.onError(new Error(ERR_EMPTY_STREAM));
 			await fileLog('warn', 'streaming', `empty body\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`);
 		} else {
 			const cacheTokens = extractCacheTokens(usage as unknown as Record<string, unknown>);

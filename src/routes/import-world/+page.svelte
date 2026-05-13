@@ -2,6 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { getImportWorldStore } from './import-state.svelte';
 	import { executeImport } from '$lib/import-world/import-orchestrator';
+	import { t } from '$lib/i18n';
 
 	const store = getImportWorldStore();
 
@@ -34,8 +35,8 @@
 <div class="flex-1 overflow-y-auto p-6">
 	<div class="max-w-3xl mx-auto space-y-6">
 		<div class="flex items-center justify-between">
-			<h1 class="h2 font-display">Import World</h1>
-			<button class="btn preset-tonal" type="button" onclick={handleBack} disabled={store.isImporting}> Back to Chat </button>
+			<h1 class="h2 font-display">{t('importWorld.heading')}</h1>
+			<button class="btn preset-tonal" type="button" onclick={handleBack} disabled={store.isImporting}> {t('importWorld.backToChat')} </button>
 		</div>
 
 		<!-- Import Progress (shown at top for visibility) -->
@@ -43,9 +44,9 @@
 			<section class="card p-6 space-y-4">
 				<h2 class="h4">
 					{#if store.importComplete}
-						Import Complete
+						{t('importWorld.importComplete')}
 					{:else}
-						Import Progress
+						{t('importWorld.importProgress')}
 					{/if}
 				</h2>
 
@@ -54,7 +55,7 @@
 					<div class="flex items-center gap-2">
 						<div class="animate-spin h-4 w-4 border-2 border-primary-500 border-t-transparent rounded-full"></div>
 						<span class="text-sm text-surface-700-300">
-							{store.progressUpdates[store.progressUpdates.length - 1]?.message ?? 'Processing...'}
+							{store.progressUpdates[store.progressUpdates.length - 1]?.message ?? t('importWorld.processing')}
 						</span>
 					</div>
 				{/if}
@@ -65,7 +66,7 @@
 						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 							<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
 						</svg>
-						<span class="text-sm font-medium">Story imported successfully. You can find it in the sidebar.</span>
+						<span class="text-sm font-medium">{t('importWorld.storyImportedSuccessfully')}</span>
 					</div>
 				{/if}
 
@@ -79,16 +80,16 @@
 				<!-- Error display -->
 				{#if store.importError}
 					<div class="card p-4 border border-error-500">
-						<h3 class="text-sm font-semibold text-error-600">Import Failed</h3>
+						<h3 class="text-sm font-semibold text-error-600">{t('importWorld.importFailed')}</h3>
 						<p class="text-sm text-error-500 mt-1">{store.importError}</p>
 					</div>
 				{/if}
 
 				<!-- Progress log -->
 				<details>
-					<summary class="text-sm font-medium cursor-pointer text-surface-500">Full Log</summary>
+					<summary class="text-sm font-medium cursor-pointer text-surface-500">{t('importWorld.fullLog')}</summary>
 					<div class="mt-2 space-y-1 max-h-64 overflow-y-auto">
-						{#each store.progressUpdates as update}
+						{#each store.progressUpdates as update, i (i)}
 							<p class="text-xs text-surface-500">
 								<span class="font-mono">[{update.phase}]</span>
 								{update.message}
@@ -106,8 +107,8 @@
 		{#if !store.isImporting}
 			{#if store.validationResult && store.validationResult.errors.length > 0}
 				<div class="card p-4 border border-error-500 bg-error-50 dark:bg-error-950 space-y-2">
-					<h3 class="text-sm font-semibold text-error-700 dark:text-error-400">Validation Errors</h3>
-					{#each store.validationResult.errors as error}
+					<h3 class="text-sm font-semibold text-error-700 dark:text-error-400">{t('importWorld.validationErrors')}</h3>
+					{#each store.validationResult.errors as error, i (i)}
 						<p class="text-sm text-error-600 dark:text-error-400">{error.message}</p>
 					{/each}
 				</div>
@@ -117,10 +118,10 @@
 			{#if store.showValidationWarnings && store.validationResult?.warnings}
 				<details class="card p-4 border border-warning-500 bg-warning-50 dark:bg-warning-950">
 					<summary class="text-sm font-semibold text-warning-700 dark:text-warning-400 cursor-pointer">
-						Warnings ({store.validationResult.warnings.length})
+						{t('importWorld.warnings', { count: store.validationResult.warnings.length })}
 					</summary>
 					<div class="mt-2 space-y-1">
-						{#each store.validationResult.warnings as warning}
+						{#each store.validationResult.warnings as warning, i (i)}
 							<p class="text-sm text-warning-600 dark:text-warning-400">{warning.message}</p>
 						{/each}
 					</div>
@@ -129,23 +130,23 @@
 
 			<!-- Story Name -->
 			<section class="card p-6 space-y-4">
-				<h2 class="h4">Story Details</h2>
+				<h2 class="h4">{t('importWorld.storyDetails')}</h2>
 
 				<label class="block">
-					<span class="text-sm font-medium text-surface-700-300">Story Name</span>
-					<span class="text-xs text-surface-500 ml-2">(optional)</span>
+					<span class="text-sm font-medium text-surface-700-300">{t('importWorld.storyName')}</span>
+					<span class="text-xs text-surface-500 ml-2">{t('importWorld.optional')}</span>
 					<input
 						class="input mt-1"
 						type="text"
-						placeholder="Auto-generated if empty"
+						placeholder="{t('importWorld.autoGeneratedPlaceholder')}"
 						bind:value={store.storyName}
 						disabled={store.isImporting || store.importComplete}
 					/>
 				</label>
 
 				<label class="block">
-					<span class="text-sm font-medium text-surface-700-300">World Building File</span>
-					<span class="text-xs text-surface-500 ml-2">(.md or .txt)</span>
+					<span class="text-sm font-medium text-surface-700-300">{t('importWorld.worldBuildingFile')}</span>
+					<span class="text-xs text-surface-500 ml-2">{t('importWorld.mdOrTxtHint')}</span>
 					<input
 						class="input mt-1"
 						type="file"
@@ -162,42 +163,42 @@
 			<!-- Acts -->
 			<section class="card p-6 space-y-4">
 				<div class="flex items-center justify-between">
-					<h2 class="h4">Acts / Chapters</h2>
+					<h2 class="h4">{t('importWorld.actsChapters')}</h2>
 					<button
 						class="btn preset-tonal text-sm"
 						type="button"
 						onclick={store.addAct}
 						disabled={store.isImporting || store.importComplete}
 					>
-						+ Add Act
+						{t('importWorld.addAct')}
 					</button>
 				</div>
 
 				{#if store.acts.length === 0}
-					<p class="text-sm text-surface-500">No acts added. Click "Add Act" to add one.</p>
+					<p class="text-sm text-surface-500">{t('importWorld.noActsAdded')}</p>
 				{/if}
 
 				{#each store.acts as act, index (act.id)}
 					<div class="card p-4 space-y-3 border border-surface-200-800">
 						<div class="flex items-center justify-between">
-							<h3 class="text-sm font-semibold">Act {index + 1}</h3>
+							<h3 class="text-sm font-semibold">{t('importWorld.act', { n: index + 1 })}</h3>
 							<button
 								class="btn variant-ghost text-sm text-error-600"
 								type="button"
 								onclick={() => store.removeAct(act.id)}
 								disabled={store.isImporting || store.importComplete}
 							>
-								Remove
+								{t('importWorld.remove')}
 							</button>
 						</div>
 
 						<label class="block">
-							<span class="text-sm font-medium text-surface-700-300">Act Name</span>
-							<span class="text-xs text-surface-500 ml-2">(optional)</span>
+							<span class="text-sm font-medium text-surface-700-300">{t('importWorld.actName')}</span>
+							<span class="text-xs text-surface-500 ml-2">{t('importWorld.optional')}</span>
 							<input
 								class="input mt-1"
 								type="text"
-								placeholder="Auto-generated if empty"
+								placeholder="{t('importWorld.autoGeneratedPlaceholder')}"
 								value={act.name}
 								oninput={(e) => store.updateActName(act.id, (e.target as HTMLInputElement).value)}
 								disabled={store.isImporting || store.importComplete}
@@ -205,8 +206,8 @@
 						</label>
 
 						<label class="block">
-							<span class="text-sm font-medium text-surface-700-300">Act / Chapter File</span>
-							<span class="text-xs text-surface-500 ml-2">(.md or .txt)</span>
+							<span class="text-sm font-medium text-surface-700-300">{t('importWorld.actChapterFile')}</span>
+							<span class="text-xs text-surface-500 ml-2">{t('importWorld.mdOrTxtHint')}</span>
 							<input
 								class="input mt-1"
 								type="file"
@@ -220,8 +221,8 @@
 						</label>
 
 						<label class="block">
-							<span class="text-sm font-medium text-surface-700-300">Transcript</span>
-							<span class="text-xs text-surface-500 ml-2">(.json)</span>
+							<span class="text-sm font-medium text-surface-700-300">{t('importWorld.transcript')}</span>
+							<span class="text-xs text-surface-500 ml-2">{t('importWorld.jsonHint')}</span>
 							<input
 								class="input mt-1"
 								type="file"
@@ -240,42 +241,42 @@
 			<!-- Characters -->
 			<section class="card p-6 space-y-4">
 				<div class="flex items-center justify-between">
-					<h2 class="h4">Characters</h2>
+					<h2 class="h4">{t('importWorld.characters')}</h2>
 					<button
 						class="btn preset-tonal text-sm"
 						type="button"
 						onclick={store.addCharacter}
 						disabled={store.isImporting || store.importComplete}
 					>
-						+ Add Character
+						{t('importWorld.addCharacter')}
 					</button>
 				</div>
 
 				{#if store.characters.length === 0}
-					<p class="text-sm text-surface-500">No characters added. Click "Add Character" to add one.</p>
+					<p class="text-sm text-surface-500">{t('importWorld.noCharactersAdded')}</p>
 				{/if}
 
 				{#each store.characters as character (character.id)}
 					<div class="card p-4 space-y-3 border border-surface-200-800">
 						<div class="flex items-center justify-between">
-							<h3 class="text-sm font-semibold">Character</h3>
+							<h3 class="text-sm font-semibold">{t('importWorld.character')}</h3>
 							<button
 								class="btn variant-ghost text-sm text-error-600"
 								type="button"
 								onclick={() => store.removeCharacter(character.id)}
 								disabled={store.isImporting || store.importComplete}
 							>
-								Remove
+								{t('importWorld.remove')}
 							</button>
 						</div>
 
 						<label class="block">
-							<span class="text-sm font-medium text-surface-700-300">Character Name</span>
-							<span class="text-xs text-surface-500 ml-2">(optional)</span>
+							<span class="text-sm font-medium text-surface-700-300">{t('importWorld.characterName')}</span>
+							<span class="text-xs text-surface-500 ml-2">{t('importWorld.optional')}</span>
 							<input
 								class="input mt-1"
 								type="text"
-								placeholder="Derived from card if empty"
+								placeholder="{t('importWorld.derivedFromCardPlaceholder')}"
 								value={character.name}
 								oninput={(e) => store.updateCharacterName(character.id, (e.target as HTMLInputElement).value)}
 								disabled={store.isImporting || store.importComplete}
@@ -283,8 +284,8 @@
 						</label>
 
 						<label class="block">
-							<span class="text-sm font-medium text-surface-700-300">Character Card</span>
-							<span class="text-xs text-surface-500 ml-2">(.md or .txt, required)</span>
+							<span class="text-sm font-medium text-surface-700-300">{t('importWorld.characterCard')}</span>
+							<span class="text-xs text-surface-500 ml-2">{t('importWorld.mdOrTxtRequiredHint')}</span>
 							<input
 								class="input mt-1"
 								type="file"
@@ -302,7 +303,7 @@
 
 			<!-- Import Settings -->
 			<section class="card p-6 space-y-4">
-				<h2 class="h4">Import Settings</h2>
+				<h2 class="h4">{t('importWorld.importSettings')}</h2>
 
 				<label class="flex items-center gap-2">
 					<input
@@ -311,12 +312,12 @@
 						bind:checked={store.skipOptionalMalformed}
 						disabled={store.isImporting || store.importComplete}
 					/>
-					<span class="text-sm text-surface-700-300">Skip malformed optional data</span>
+					<span class="text-sm text-surface-700-300">{t('importWorld.skipMalformed')}</span>
 				</label>
 
 				<div class="grid grid-cols-2 gap-4">
 					<label class="block">
-						<span class="text-sm font-medium text-surface-700-300">LLM Retry Count</span>
+						<span class="text-sm font-medium text-surface-700-300">{t('importWorld.llmRetryCount')}</span>
 						<input
 							class="input mt-1"
 							type="number"
@@ -328,7 +329,7 @@
 					</label>
 
 					<label class="block">
-						<span class="text-sm font-medium text-surface-700-300">Backoff Interval (s)</span>
+						<span class="text-sm font-medium text-surface-700-300">{t('importWorld.backoffInterval')}</span>
 						<input
 							class="input mt-1"
 							type="number"
@@ -345,11 +346,11 @@
 		<!-- Submit -->
 		<div class="flex justify-end gap-3 pb-8">
 			{#if store.importComplete}
-				<button class="btn variant-filled" type="button" onclick={handleBack}> Back to Chat </button>
+				<button class="btn variant-filled" type="button" onclick={handleBack}> {t('importWorld.backToChat')} </button>
 			{:else}
-				<button class="btn variant-ghost" type="button" onclick={handleBack} disabled={store.isImporting}> Cancel </button>
+				<button class="btn variant-ghost" type="button" onclick={handleBack} disabled={store.isImporting}> {t('importWorld.cancel')} </button>
 				<button class="btn variant-filled" type="button" onclick={handleImport} disabled={store.isImporting}>
-					{store.isImporting ? 'Importing...' : 'Import Story'}
+					{store.isImporting ? t('importWorld.importing') : t('importWorld.importStory')}
 				</button>
 			{/if}
 		</div>

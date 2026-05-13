@@ -181,7 +181,7 @@ function parseInventoryChangeItem(text: string): ExtractedInventoryChange | null
 	const changeType = match[1].toLowerCase();
 	if (!INVENTORY_CHANGE_TYPES.includes(changeType as InventoryChange['changeType'])) return null;
 
-	let rest = match[2].trim();
+	const rest = match[2].trim();
 
 	// Split "Item Name - Description"
 	const dashIndex = rest.indexOf(' - ');

@@ -5,6 +5,7 @@ import { createEmbeddingModel } from '$lib/ai/provider';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
 import type { InventoryCategory, EquipStatus, InventoryItem, InventoryChange } from './inventory-types';
 import { toInventoryItem, toInventoryChange } from './inventory-types';
+import { ERR_FAILED_VECTOR_ROWID, ERR_FAILED_LOCATION_VECTOR_ROWID } from '$lib/definitions/error-messages';
 
 function cosineDistance(a: number[], b: number[]): number {
 	let dot = 0,
@@ -369,7 +370,7 @@ export class Memory {
 			const vecRowid = rowResult[0]?.rowid;
 
 			if (!vecRowid) {
-				throw new Error('Failed to retrieve vector rowid after insert');
+				throw new Error(ERR_FAILED_VECTOR_ROWID);
 			}
 			vecRowids.push(vecRowid);
 		}
@@ -412,7 +413,7 @@ export class Memory {
 		const vecRowid = rowResult[0]?.rowid;
 
 		if (!vecRowid) {
-			throw new Error('Failed to retrieve location vector rowid after insert');
+			throw new Error(ERR_FAILED_LOCATION_VECTOR_ROWID);
 		}
 
 		await db.execute(
@@ -773,7 +774,7 @@ export class Memory {
 			]);
 			const vecResult = await db.select<VecRow[]>('SELECT last_insert_rowid() as rowid');
 			const newVecRowid = vecResult[0]?.rowid;
-			if (!newVecRowid) throw new Error('Failed to retrieve vector rowid after insert');
+			if (!newVecRowid) throw new Error(ERR_FAILED_VECTOR_ROWID);
 
 			await db.execute(
 				`INSERT INTO memory_meta (id, vec_rowid, content, message_id, story_id, act_line_id, character_canonical_name, location)
@@ -801,7 +802,7 @@ export class Memory {
 			await db.execute('INSERT INTO vec_locations(story_id, embedding) VALUES ($1, $2)', [storyId, row.embeddingJson]);
 			const vecResult = await db.select<VecRow[]>('SELECT last_insert_rowid() as rowid');
 			const newVecRowid = vecResult[0]?.rowid;
-			if (!newVecRowid) throw new Error('Failed to retrieve location vector rowid after insert');
+			if (!newVecRowid) throw new Error(ERR_FAILED_LOCATION_VECTOR_ROWID);
 
 			await db.execute(
 				`INSERT INTO location_meta (id, vec_rowid, location_text, message_id, story_id, act_line_id)

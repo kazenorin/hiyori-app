@@ -34,7 +34,7 @@ let showValidationWarnings = $state(false);
 
 // === Derived ===
 
-let canSubmit = $derived(!isImporting && !importComplete);
+const canSubmit = $derived(!isImporting && !importComplete);
 
 // === Form Actions ===
 

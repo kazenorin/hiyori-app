@@ -11,7 +11,6 @@ import {
 	getMinorTaskAgentProviderConfig,
 	getWriterProviderConfig,
 	isPhraseHighlightingEnabled,
-	type ProviderConfig,
 	settings,
 } from '$lib/stores/settings.svelte';
 import { getActiveActPlotContent, getActiveStoryId, getActiveWorldContent } from '$lib/stores/stories.svelte';
@@ -26,6 +25,7 @@ import { log } from '$lib/logging/logger';
 import { buildTools } from '$lib/ai/tools/tools';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
 import { getErrorMessage } from '$lib/utils/error-handling';
+import { ERR_INVALID_MESSAGE_ROLE, ERR_MESSAGE_SEQUENCE_NOT_FOUND } from '$lib/definitions/error-messages';
 import { renderFromVariables } from './template-renderer';
 import { storyMessageTemplate } from '$lib/fs/view-templates';
 import { type PipelineProviderConfigs, type PlayerContext, runPipeline } from './pipeline';
@@ -247,11 +247,7 @@ function newMessage(role: 'user' | 'assistant', sceneNumber: number): UIMessage 
 	};
 }
 
-function updateMetaData(
-	getCurrentMessage: () => UIMessage,
-	resultMetadata: StreamResultMetadata | null,
-	phases?: PhaseMetadata[]
-) {
+function updateMetaData(getCurrentMessage: () => UIMessage, resultMetadata: StreamResultMetadata | null, phases?: PhaseMetadata[]) {
 	if (resultMetadata) {
 		getCurrentMessage().metadata = buildMetadata(resultMetadata, undefined, phases);
 	}
@@ -778,11 +774,11 @@ export function isUserMessage(message: UIMessage): boolean {
 export async function getForkSequence(actLineId: string, assistantMessageIndex: number): Promise<{ branchSeq: number; name: string }> {
 	const assistantMsg = messages[assistantMessageIndex];
 	if (!assistantMsg || assistantMsg.role !== 'assistant') {
-		throw new Error('Invalid message: expected assistant message');
+		throw new Error(ERR_INVALID_MESSAGE_ROLE);
 	}
 
 	const assistantSeq = await dbActLines.getMessageSequence(actLineId, assistantMsg.id);
-	if (assistantSeq === null) throw new Error('Could not find message sequence');
+	if (assistantSeq === null) throw new Error(ERR_MESSAGE_SEQUENCE_NOT_FOUND);
 
 	const sceneTitle = assistantMsg.variables?.sceneTitle;
 	const sceneLabel = sceneTitle ? `Scene ${assistantMsg.sceneNumber}: ${sceneTitle}` : `Scene ${assistantMsg.sceneNumber}`;

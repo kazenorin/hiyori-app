@@ -1,4 +1,4 @@
-import { type NarrativeVariables, type GameDataFields } from './narrative-types';
+import { type GameDataFields } from './narrative-types';
 import { type ParserChainOutput } from './parser-chain';
 import type { StreamState } from './chat-callbacks';
 

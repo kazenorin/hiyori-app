@@ -12,13 +12,11 @@
 		getActiveStoryId,
 		getActiveActId,
 		getActiveActLineId,
-		getIsLoading,
 		getActPlotGenerationActive,
 		getActPlotGenerationPhase,
 		selectStory,
 		selectAct,
 		selectActLine,
-		createStory,
 		createAct,
 		createActLine,
 		deleteStory,
@@ -28,9 +26,10 @@
 		renameAct,
 		renameActLine,
 	} from '$lib/stores/stories.svelte';
-	import { getMessages, getIsStreaming, loadActLineMessages, clearMessages } from '$lib/ai/chat.svelte';
+	import { loadActLineMessages, clearMessages } from '$lib/ai/chat.svelte';
 	import { enterWorldBuilderMode, exitWorldBuilderMode, getIsActive as getIsWorldBuilderActive } from '$lib/ai/world-builder.svelte';
 	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
+	import { t } from '$lib/i18n';
 
 	let { children } = $props();
 	let appError = $state<string | null>(null);
@@ -56,10 +55,7 @@
 	let showNewStoryModal = $state(false);
 
 	// Font size slider state
-	let fontSizeSlider = $state(getSettings().fontSize);
-	$effect(() => {
-		fontSizeSlider = getSettings().fontSize;
-	});
+	let fontSizeSlider = $derived(getSettings().fontSize);
 
 	function handleFontSizeChange(e: Event) {
 		const value = parseFloat((e.currentTarget as HTMLInputElement).value);
@@ -247,7 +243,7 @@
 			</div>
 		{:else}
 			<div class="text-center space-y-2">
-				<div class="text-surface-500 animate-pulse">Loading...</div>
+				<div class="text-surface-500 animate-pulse">{t('sidebar.loading')}</div>
 				<div class="text-xs text-surface-600">{initStatus}</div>
 			</div>
 		{/if}
@@ -295,7 +291,7 @@
 										e.stopPropagation();
 										startRename('story', story.id, story.name);
 									}}
-									title="Rename story">&#9998;</button
+									title={t('sidebar.renameStory')}>&#9998;</button
 								>
 							{/if}
 							<button
@@ -305,7 +301,7 @@
 									e.stopPropagation();
 									requestDeleteStory(story.id, story.name);
 								}}
-								title="Delete story">&times;</button
+								title={t('sidebar.deleteStory')}>&times;</button
 							>
 						</div>
 
@@ -340,7 +336,7 @@
 												type="text"
 											/>
 										{:else}
-											<span class="truncate flex-1 text-surface-700-300">Act {act.actNumber}: {act.name}</span>
+											<span class="truncate flex-1 text-surface-700-300">{t('sidebar.actLabel', { n: act.actNumber })}: {act.name}</span>
 											<button
 												class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 												type="button"
@@ -348,7 +344,7 @@
 													e.stopPropagation();
 													startRename('act', act.id, act.name);
 												}}
-												title="Rename act">&#9998;</button
+												title={t('sidebar.renameAct')}>&#9998;</button
 											>
 										{/if}
 										<button
@@ -358,7 +354,7 @@
 												e.stopPropagation();
 												requestDeleteAct(act.id, act.name);
 											}}
-											title="Delete act">&times;</button
+											title={t('sidebar.deleteAct')}>&times;</button
 										>
 									</div>
 
@@ -400,7 +396,7 @@
 															e.stopPropagation();
 															startRename('line', line.id, line.name);
 														}}
-														title="Rename line">&#9998;</button
+														title={t('sidebar.renameLine')}>&#9998;</button
 													>
 												{/if}
 												<button
@@ -410,7 +406,7 @@
 														e.stopPropagation();
 														requestDeleteActLine(line.id, line.name);
 													}}
-													title="Delete line">&times;</button
+													title={t('sidebar.deleteLine')}>&times;</button
 												>
 											</div>
 										{/each}
@@ -421,7 +417,7 @@
 												<div class="flex gap-1">
 													<input
 														class="input text-xs flex-1"
-														placeholder="Line name"
+														placeholder={t('sidebar.lineNamePlaceholder')}
 														bind:value={newActLineName}
 														onkeydown={(e) => e.key === 'Enter' && handleCreateActLine()}
 													/>
@@ -434,7 +430,7 @@
 												type="button"
 												onclick={() => (showNewActLine = true)}
 											>
-												+ New Line
+												{t('sidebar.newLine')}
 											</button>
 										{/if}
 									{/if}
@@ -447,7 +443,7 @@
 									<div class="flex gap-1">
 										<input
 											class="input text-xs flex-1"
-											placeholder="Act name"
+											placeholder={t('sidebar.actNamePlaceholder')}
 											bind:value={newActName}
 											onkeydown={(e) => e.key === 'Enter' && handleCreateAct()}
 										/>
@@ -460,7 +456,7 @@
 									type="button"
 									onclick={() => (showNewAct = true)}
 								>
-									+ New Act
+									{t('sidebar.newAct')}
 								</button>
 							{/if}
 						{/if}
@@ -473,7 +469,7 @@
 					type="button"
 					onclick={handleNewStory}
 				>
-					+ New Story
+					{t('sidebar.newStory')}
 				</button>
 			</nav>
 
@@ -496,19 +492,19 @@
 					href="/"
 					class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 				>
-					Chat
+					{t('sidebar.chat')}
 				</a>
 				<a
 					href="/settings"
 					class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 				>
-					Settings
+					{t('sidebar.settings')}
 				</a>
 				<a
 					href="/memory-manager"
 					class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 				>
-					Memory Manager
+					{t('sidebar.memoryManager')}
 				</a>
 			</div>
 		</aside>
@@ -537,18 +533,17 @@
 				onkeydown={(e) => e.stopPropagation()}
 			>
 				<h3 id="delete-dialog-title" class="text-lg font-semibold text-surface-900-100 mb-2">
-					Delete {confirmDelete.type}?
+					{t('sidebar.deleteConfirmTitle', { type: confirmDelete.type })}
 				</h3>
 				<p class="text-sm text-surface-600-400 mb-5">
 					{#if confirmDelete.type === 'story'}
-						Are you sure you want to delete <strong>{confirmDelete.name}</strong>? All acts and lines within this story will also be
-						removed.
+						{t('sidebar.deleteStoryConfirm', { name: confirmDelete.name })}
 					{:else if confirmDelete.type === 'act'}
-						Are you sure you want to delete <strong>{confirmDelete.name}</strong>? All lines within this act will also be removed.
+						{t('sidebar.deleteActConfirm', { name: confirmDelete.name })}
 					{:else if confirmDelete.type === 'line'}
-						Are you sure you want to delete <strong>{confirmDelete.name}</strong>? All messages in this line will also be removed.
+						{t('sidebar.deleteLineConfirm', { name: confirmDelete.name })}
 					{:else}
-						Are you sure you want to delete <strong>{confirmDelete.name}</strong>?
+						{t('sidebar.deleteGenericConfirm', { name: confirmDelete.name })}
 					{/if}
 				</p>
 				{#if confirmDelete.type === 'story' || confirmDelete.type === 'line'}
@@ -558,14 +553,14 @@
 							type="button"
 							onclick={() => confirmDeleteAction(false)}
 						>
-							Delete (keep folder)
+							{t('sidebar.deleteKeepFolder')}
 						</button>
 						<button
 							class="w-full px-4 py-2 rounded-lg bg-error-700 hover:bg-error-800 text-white text-sm font-medium transition-colors"
 							type="button"
 							onclick={() => confirmDeleteAction(true)}
 						>
-							Delete with folder
+							{t('sidebar.deleteWithFolder')}
 						</button>
 						<button
 							bind:this={cancelButton}
@@ -573,7 +568,7 @@
 							type="button"
 							onclick={cancelDelete}
 						>
-							Cancel
+							{t('sidebar.cancel')}
 						</button>
 					</div>
 				{:else}
@@ -584,14 +579,14 @@
 							type="button"
 							onclick={cancelDelete}
 						>
-							Cancel
+							{t('sidebar.cancel')}
 						</button>
 						<button
 							class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
 							type="button"
 							onclick={() => confirmDeleteAction()}
 						>
-							Delete
+							{t('sidebar.deleteLabel')}
 						</button>
 					</div>
 				{/if}
@@ -616,23 +611,23 @@
 				onclick={(e) => e.stopPropagation()}
 				onkeydown={(e) => e.stopPropagation()}
 			>
-				<h3 id="new-story-dialog-title" class="text-lg font-semibold text-surface-900-100 mb-4">Create New Story</h3>
+				<h3 id="new-story-dialog-title" class="text-lg font-semibold text-surface-900-100 mb-4">{t('sidebar.createNewStory')}</h3>
 				<div class="flex flex-col gap-3">
 					<button
 						class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
 						type="button"
 						onclick={handleStartWorldBuilder}
 					>
-						<div class="font-medium text-surface-900-100 mb-1">World Builder</div>
-						<div class="text-sm text-surface-600-400">Guided interview to create a world from scratch with AI assistance.</div>
+						<div class="font-medium text-surface-900-100 mb-1">{t('sidebar.worldBuilder')}</div>
+						<div class="text-sm text-surface-600-400">{t('sidebar.worldBuilderDescription')}</div>
 					</button>
 					<button
 						class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
 						type="button"
 						onclick={handleStartImportWorld}
 					>
-						<div class="font-medium text-surface-900-100 mb-1">Import World</div>
-						<div class="text-sm text-surface-600-400">Bring an existing world document and start playing immediately.</div>
+						<div class="font-medium text-surface-900-100 mb-1">{t('sidebar.importWorld')}</div>
+						<div class="text-sm text-surface-600-400">{t('sidebar.importWorldDescription')}</div>
 					</button>
 				</div>
 				<button
@@ -640,7 +635,7 @@
 					type="button"
 					onclick={cancelNewStory}
 				>
-					Cancel
+					{t('sidebar.cancel')}
 				</button>
 			</div>
 		</div>
@@ -658,13 +653,13 @@
 				<div class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
 				<p class="mt-4 text-surface-950-50">
 					{#if getActPlotGenerationPhase() === 'writing'}
-						Writing act plot...
+						{t('sidebar.actPlotWriting')}
 					{:else if getActPlotGenerationPhase() === 'reviewing'}
-						Reviewing act plot...
+						{t('sidebar.actPlotReviewing')}
 					{:else if getActPlotGenerationPhase() === 'editing'}
-						Editing act plot...
+						{t('sidebar.actPlotEditing')}
 					{:else}
-						Generating act plot...
+						{t('sidebar.actPlotGenerating')}
 					{/if}
 				</p>
 			</div>

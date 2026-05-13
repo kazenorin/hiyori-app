@@ -4,6 +4,7 @@ import { getActiveStoryId, getActiveActLineId } from './stories.svelte';
 import { getMessagesForLine } from '$lib/db/act-lines';
 import { runMemoryExtractionPipeline } from '$lib/ai/memory-extraction-pipeline';
 import { log } from '$lib/logging/logger';
+import { ERR_EMBEDDING_PROVIDER_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 
 let isRegenerating = $state(false);
 let error = $state<string | null>(null);
@@ -37,7 +38,7 @@ export async function regenerateMemoriesForCurrentLine(onProgress?: (message: st
 	try {
 		const embeddingConfig = getEmbeddingProviderConfig();
 		if (!embeddingConfig) {
-			throw new Error('Embedding provider not configured');
+			throw new Error(ERR_EMBEDDING_PROVIDER_NOT_CONFIGURED);
 		}
 
 		// Delete existing memories and locations for this act line
@@ -67,7 +68,7 @@ export async function regenerateMemoriesForCurrentLine(onProgress?: (message: st
 		let _totalCharacters = 0;
 		let totalMemories = 0;
 		let totalLocations = 0;
-		let totalInventory = 0;
+		let _totalInventory = 0;
 		let errorCount = 0;
 
 		for (let i = 0; i < assistantMessages.length; i++) {
@@ -80,7 +81,7 @@ export async function regenerateMemoriesForCurrentLine(onProgress?: (message: st
 				_totalCharacters += result.charactersProcessed;
 				totalMemories += result.memoriesAdded;
 				totalLocations += result.locationsAdded;
-				totalInventory += result.inventoryAdded;
+				_totalInventory += result.inventoryAdded;
 				errorCount += result.errors.length;
 
 				const progressMsg = `  → Extracted ${result.memoriesAdded} memories, ${result.locationsAdded} locations, ${result.inventoryAdded} inventory items`;

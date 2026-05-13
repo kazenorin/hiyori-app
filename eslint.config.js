@@ -7,7 +7,7 @@ import globals from 'globals';
 
 export default tseslint.config(
 	{
-		ignores: ['.svelte-kit/**', 'build/**', 'dist/**', 'node_modules/**', 'src-tauri/**', '.idea/**', '*.local'],
+		ignores: ['.svelte-kit/**', 'build/**', 'dist/**', 'node_modules/**', 'src-tauri/**', '.idea/**', '*.local', 'local-references/**', 'eslint.config.js'],
 	},
 
 	js.configs.recommended,
@@ -46,6 +46,7 @@ export default tseslint.config(
 				},
 			],
 			'@typescript-eslint/no-explicit-any': 'warn',
+			'svelte/no-navigation-without-resolve': 'off',
 		},
 	},
 

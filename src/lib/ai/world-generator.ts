@@ -1,4 +1,4 @@
-import type {MessageBase} from '$lib/db/messages';
+import type { MessageBase } from '$lib/db/messages';
 import { streamText } from 'ai';
 import { maxBy } from 'lodash-es';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
@@ -7,6 +7,7 @@ import { loadWorldTemplate, loadGenerateWorldFromChatPrompt, loadGenerateWorldFr
 import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED, ERR_NO_MESSAGES_FOR_WORLD } from '$lib/definitions/error-messages';
 
 /**
  * Trace back through the act line chain to collect the full message history.
@@ -58,7 +59,7 @@ export async function generateWorld(storyId: string, folderName: string, abortSi
 	const config = getMainProviderConfig();
 
 	if (!config?.apiKey || !config?.model) {
-		throw new Error('API key and model must be configured in Settings.');
+		throw new Error(ERR_API_KEY_AND_MODEL_NOT_CONFIGURED);
 	}
 
 	const systemPrompt = await loadGenerateWorldFromChatSystemPrompt();
@@ -69,7 +70,7 @@ export async function generateWorld(storyId: string, folderName: string, abortSi
 	const messages = await traceStoryMessages(storyId);
 
 	if (messages.length === 0) {
-		throw new Error('No messages found in story to generate world from.');
+		throw new Error(ERR_NO_MESSAGES_FOR_WORLD);
 	}
 
 	// Append the instruction + template as the final user message

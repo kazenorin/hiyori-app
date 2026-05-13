@@ -1,4 +1,5 @@
 import { getMainProviderConfig, type ProviderConfig } from '$lib/stores/settings.svelte';
+import { WORLD_BUILDER_SEED, RESUME_STORY_ACT_PREFIX, RESUME_STORY_ACT_SUFFIX } from '$lib/definitions/llm-context-labels';
 import {
 	loadWorldBuilderSystemPrompt,
 	loadWorldTemplate,
@@ -31,21 +32,11 @@ const COMPLETION_MARKER = '[WORLD_BUILDER_COMPLETE]';
 const SCENE_HEADER = `# Scene`;
 const CURRENT_SCENE = `Current Scene`;
 
-const seedMsg = { role: 'user' as const, content: 'I want to create a new story. Please help me build a world.' };
+const seedMsg = { role: 'user' as const, content: WORLD_BUILDER_SEED };
 
-const resumeStoryActPrefix = `Continue the pre-game interview based on the latest story context below.
+const resumeStoryActPrefix = RESUME_STORY_ACT_PREFIX;
 
-The content represents what already happened. Use it only as context to understand the player’s direction and preferences.
-
-Do NOT continue the story, narrate scenes, or generate plot content. Stay strictly in interview mode.
-
----`;
-
-const resumeStoryActSuffix = `
-
----
-
-Resume the interview conversation naturally from here, helping the player refine what they want next.`;
+const resumeStoryActSuffix = RESUME_STORY_ACT_SUFFIX;
 
 let isActive = $state(false);
 let messages = $state<WorldBuilderMessage[]>([]);

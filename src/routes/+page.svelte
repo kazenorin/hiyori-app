@@ -66,6 +66,7 @@
 	import {type GameDataRegenerationContext, regenerateGameData} from '$lib/ai/game-data-regenerator';
 	import type {Story} from "$lib/db/stories";
 	import {onMount} from 'svelte';
+	import {t} from '$lib/i18n';
 
 	let input = $state('');
 	let chatContainer = $state<HTMLDivElement | null>(null);
@@ -82,7 +83,7 @@
 
 	// Preload template on mount
 	onMount(() => {
-		loadStoryMessageTemplate().then((t) => { storyMessageTemplate = t; }).catch(() => {});
+		loadStoryMessageTemplate().then((tmpl) => { storyMessageTemplate = tmpl; }).catch(() => {});
 	});
 	let lastWbMessageIdx = $derived(getWorldBuilderMessages().findLastIndex((m: WorldBuilderMessage) => m.role === 'assistant'));
 
@@ -181,7 +182,7 @@
 			await enterActPlotInterviewMode(line.id, worldContent, { actSummary, narrativeBody, sceneNumber, sceneTitle });
 		} catch (err) {
 			await log.error('fork', 'Failed to start fork interview', err);
-			createStoryError = err instanceof Error ? err.message : 'Failed to start fork interview';
+			createStoryError = err instanceof Error ? err.message : t('errors.failedToStartForkInterview');
 		} finally {
 			isForking = false;
 		}
@@ -247,7 +248,7 @@
 		const story = getActiveStory();
 
 		if (!actLineId || !story) {
-			createStoryError = 'Story creation failed: missing act line or story reference';
+			createStoryError = t('errors.storyCreationFailed');
 			return null;
 		}
 		return { actLineId, story };
@@ -262,7 +263,7 @@
 		const storyCreated = await ensureStoryCreated();
 
 		if (!refs || !worldContent || !storyCreated) {
-			createStoryError = 'Missing required contents.';
+			createStoryError = t('errors.missingRequiredContents');
 			isCreatingStory = false;
 			return;
 		}
@@ -281,7 +282,7 @@
 			});
 			setActiveActPlotContent(actPlot.content);
 		} catch (err) {
-			createStoryError = err instanceof Error ? err.message : 'Failed to create story';
+			createStoryError = err instanceof Error ? err.message : t('errors.failedToCreateStory');
 		} finally {
 			isCreatingStory = false;
 		}
@@ -306,13 +307,13 @@
 
 			const worldContent = getWorldBuilderContent();
 			if (!worldContent) {
-				createStoryError = 'World content not available';
+				createStoryError = t('errors.worldContentNotAvailable');
 				isCreatingStory = false;
 				return;
 			}
 			await enterActPlotInterviewMode(refs.actLineId, worldContent);
 		} catch (err) {
-			createStoryError = err instanceof Error ? err.message : 'Failed to start interview';
+			createStoryError = err instanceof Error ? err.message : t('errors.failedToStartInterview');
 		} finally {
 			isCreatingStory = false;
 		}
@@ -369,10 +370,10 @@
 						.then(() => log.debug('story-creation', 'initial narration sent'));
 				}
 			} else {
-				createStoryError = 'World content not available';
+				createStoryError = t('errors.worldContentNotAvailable');
 			}
 		} catch (err) {
-			createStoryError = err instanceof Error ? err.message : 'Failed to start game';
+			createStoryError = err instanceof Error ? err.message : t('errors.failedToStartGame');
 		} finally {
 			isCreatingStory = false;
 		}
@@ -520,7 +521,7 @@
 	{#if getIsSelectingStory()}
 		<div class="flex-1 flex items-center justify-center">
 			<div class="text-center space-y-3">
-				<div class="text-surface-500 animate-pulse">Loading story...</div>
+				<div class="text-surface-500 animate-pulse">{t('chat.loadingStory')}</div>
 			</div>
 		</div>
 	{:else if getIsWorldBuilderActive()}
@@ -529,8 +530,8 @@
 			<div bind:this={wbChatContainer} class="flex-1 overflow-y-auto p-6 min-w-0">
 			<div class="px-8 space-y-4">
 				<div class="text-center py-4">
-					<h2 class="h2 font-display text-surface-700-300 mb-2">World Builder</h2>
-					<p class="text-xs text-surface-500">Answer questions to build your story's world. Say "let's start" when ready.</p>
+					<h2 class="h2 font-display text-surface-700-300 mb-2">{t('chat.worldBuilder')}</h2>
+					<p class="text-xs text-surface-500">{t('chat.worldBuilderPrompt')}</p>
 				</div>
 
 				{#each getWorldBuilderMessages() as message, i (message.id)}
@@ -545,7 +546,7 @@
 										<button
 											class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
 											title="Copy message"
-											onclick={() => handleCopy(message.id, message.content)}>{copiedId === message.id ? 'Copied' : 'Copy'}</button
+											onclick={() => handleCopy(message.id, message.content)}>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
 										>
 									</div>
 								{/if}
@@ -569,18 +570,18 @@
 									<button
 										class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 										title="Copy message"
-										onclick={() => handleCopy(message.id, message.content)}>{copiedId === message.id ? 'Copied' : 'Copy'}</button
+										onclick={() => handleCopy(message.id, message.content)}>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
 									>
 									{#if i === lastWbMessageIdx}
 										<button
 											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 											title="Regenerate response"
-											onclick={handleWorldBuilderRegenerate}>Regenerate</button
+											onclick={handleWorldBuilderRegenerate}>{t('chat.regenerate')}</button
 										>
 										<button
 											class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
 											title="Delete last exchange"
-											onclick={handleWorldBuilderDelete}>Delete</button
+											onclick={handleWorldBuilderDelete}>{t('chat.delete')}</button
 										>
 									{/if}
 								</div>
@@ -617,15 +618,15 @@
 		<!-- Right-side input panel -->
 		<aside class="w-80 border-l border-surface-200-800 flex flex-col p-4 bg-surface-50-950">
 			<div class="flex items-center justify-between mb-3">
-				<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">World Builder</span>
+				<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('chat.worldBuilder')}</span>
 				<button class="text-xs text-surface-500 hover:text-error-500 transition-colors" type="button" onclick={exitWorldBuilderMode}>
-					Exit
+					{t('chat.exit')}
 				</button>
 			</div>
 
 			<textarea
 				class="input flex-1 resize-none text-sm leading-relaxed"
-				placeholder="Describe your world...&#10;&#10;Enter to send, Shift+Enter for new line."
+				placeholder={t('chat.worldBuilderPlaceholder')}
 				aria-label="World builder input"
 				bind:value={input}
 				onkeydown={handleKeydown}
@@ -634,9 +635,9 @@
 
 			<div class="mt-3">
 				{#if getIsWorldBuilderStreaming()}
-					<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopWorldBuilderStreaming}> Stop </button>
+					<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopWorldBuilderStreaming}> {t('chat.stop')} </button>
 				{:else if !getIsWorldBuilderComplete() || getActPlotInterview()}
-					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> Send </button>
+					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
 				{/if}
 			</div>
 		</aside>
@@ -644,8 +645,8 @@
 		<!-- Empty state — no act line selected -->
 		<div class="flex-1 flex items-center justify-center">
 			<div class="text-center space-y-3">
-				<h2 class="h2 font-display text-surface-700-300">No Act Line Selected</h2>
-				<p class="text-surface-400-500 max-w-lg">Create a story, add an act, then select or create an act line to start chatting.</p>
+				<h2 class="h2 font-display text-surface-700-300">{t('chat.noActLineSelected')}</h2>
+				<p class="text-surface-400-500 max-w-lg">{t('chat.emptyState')}</p>
 			</div>
 		</div>
 	{:else}
@@ -656,8 +657,8 @@
 				<div class="px-8 space-y-4">
 				{#if getMessages().length === 0}
 					<div class="flex flex-col items-center justify-center py-24 text-center">
-						<h2 class="h2 font-display text-surface-700-300 mb-3">Begin Your Adventure</h2>
-						<p class="text-surface-400-500 max-w-lg">Type a message to start chatting with the AI.</p>
+						<h2 class="h2 font-display text-surface-700-300 mb-3">{t('chat.beginAdventure')}</h2>
+						<p class="text-surface-400-500 max-w-lg">{t('chat.emptyChat')}</p>
 					</div>
 				{:else}
 					{#each getMessages() as message, i (message.id)}
@@ -672,13 +673,13 @@
 											<button
 												class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
 												title="Copy message"
-												onclick={() => handleCopy(message.id, message.content)}>{copiedId === message.id ? 'Copied' : 'Copy'}</button
+												onclick={() => handleCopy(message.id, message.content)}>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
 											>
 											{#if i === getMessages().length - 1 && isUserMessage(message)}
 												<button
 													class="text-xs text-error-500 hover:text-error-700 transition-colors"
 													title="Delete message"
-													onclick={() => handleDeleteOrphanedUserMessages()}>Delete</button
+													onclick={() => handleDeleteOrphanedUserMessages()}>{t('chat.delete')}</button
 												>
 											{/if}
 										</div>
@@ -726,7 +727,7 @@
 										<Accordion collapsible>
 											<Accordion.Item value="reasoning">
 												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
-													<span>Reasoning</span>
+													<span>{t('chat.reasoning')}</span>
 													<Accordion.ItemIndicator>
 														<span class="transition-transform duration-150 text-surface-500">&#9660;</span>
 													</Accordion.ItemIndicator>
@@ -775,24 +776,24 @@
 											<button
 												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 												title="Copy message"
-												onclick={() => handleCopy(message.id, message.content)}>{copiedId === message.id ? 'Copied' : 'Copy'}</button
+												onclick={() => handleCopy(message.id, message.content)}>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
 											>
 										{#if forkChoiceIndex === i}
 											<div class="flex gap-2 items-center">
 												<button
 													class="text-xs bg-surface-100-800 hover:bg-surface-200-700 text-primary-500 px-2 py-1 rounded transition-colors"
 													onclick={() => handleForkDirect(i)}
-												>Keep current plot</button
+												>{t('chat.keepCurrentPlot')}</button
 												>
 												<button
 													class="text-xs bg-surface-100-800 hover:bg-surface-200-700 text-primary-500 px-2 py-1 rounded transition-colors"
 													onclick={() => handleForkWithInterview(i)}
-												>Tell us what's different</button
+												>{t('chat.tellUsWhatsDifferent')}</button
 												>
 												<button
 													class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 													onclick={cancelForkChoice}
-												>Cancel</button
+												>{t('chat.cancel')}</button
 												>
 											</div>
 										{:else}
@@ -800,19 +801,19 @@
 												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 												title="Fork from here"
 												disabled={isForking || getIsStreaming()}
-											onclick={() => handleFork(i)}>{isForking ? 'Forking...' : 'Fork'}</button>
+											onclick={() => handleFork(i)}>{isForking ? t('chat.forking') : t('chat.fork')}</button>
 										{/if}
 										{/if}
 										{#if i === lastMessageIdx}
 											<button
 												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 												title="Regenerate response"
-												onclick={() => handleRegenerate(message.id)}>Regenerate</button
+												onclick={() => handleRegenerate(message.id)}>{t('chat.regenerate')}</button
 											>
 											<button
 												class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
 												title="Delete last exchange"
-												onclick={handleDelete}>Delete</button
+												onclick={handleDelete}>{t('chat.delete')}</button
 											>
 										{/if}
 									</div>
@@ -837,12 +838,12 @@
 		<!-- Right-side input panel -->
 		<aside class="w-80 border-l border-surface-200-800 flex flex-col p-4 bg-surface-50-950">
 			<div class="flex items-center justify-between mb-3">
-				<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">Message</span>
+				<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('chat.message')}</span>
 			</div>
 
 			<textarea
 				class="input flex-1 resize-none text-sm leading-relaxed"
-				placeholder="Type your message...&#10;&#10;Enter to send, Shift+Enter for new line."
+				placeholder={t('chat.chatPlaceholder')}
 				aria-label="Message input"
 				bind:value={input}
 				onkeydown={handleKeydown}
@@ -851,9 +852,9 @@
 
 			<div class="mt-3">
 				{#if getIsStreaming()}
-					<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopStreaming}> Stop </button>
+					<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopStreaming}> {t('chat.stop')} </button>
 				{:else}
-					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> Send </button>
+					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
 				{/if}
 			</div>
 		</aside>

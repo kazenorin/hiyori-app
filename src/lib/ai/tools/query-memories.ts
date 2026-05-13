@@ -44,7 +44,6 @@ async function toResults(items: MemoryItem[]): Promise<MemoryResult[]> {
 	});
 }
 
-
 function deduplicateMemoryItems(items: MemoryItem[]): MemoryItem[] {
 	const seen = new Set<string>();
 	return items
@@ -56,77 +55,64 @@ function deduplicateMemoryItems(items: MemoryItem[]): MemoryItem[] {
 		.sort((a, b) => (a.score ?? Infinity) - (b.score ?? Infinity));
 }
 
+const CHARACTER_QUERY_DESC =
+	'A short description of the character or topic to search memories for (e.g. "Elena", "the blacksmith"). If omitted, the tool will return memories based on the time-location query context parameter.';
+const TIME_AND_LOCATION_DESC =
+	'A short description of the location or time period (e.g., "The Tavern", "Dawn in the Forest"). If omitted, will return memories of the given character.';
+const CURRENT_ACT_ONLY_DESC =
+	'If true, searches only recent memories from the current act. Set to false to retrieve long-term lore or events from past acts.';
+const TOOL_DESCRIPTION = `Search the game's memory database to recall past events, locations visited, or character interactions. You must provide a character query, a time-location query for context, or both. Returns a list of recalled memories with their act number, recency, and location.`;
+
 export function createQueryMemoriesTool(context: QueryMemoriesContext) {
 	const { memory, storyId, actLineId } = context;
 
 	const inputSchema = z.object({
-		characterQuery: z
-			.string()
-			.optional()
-			.describe(
-				'A short description of the character or topic to search memories for (e.g. "Elena", "the blacksmith"). If omitted, the tool will return memories based on the time-location query context parameter.'
-			),
-		timeAndLocation: z
-			.string()
-			.optional()
-			.describe(
-				'A short description of the location or time period (e.g., "The Tavern", "Dawn in the Forest"). If omitted, will return memories of the given character.'
-			),
-		currentActOnly: z
-			.boolean()
-			.optional()
-			.default(true)
-			.describe(
-				'If true, searches only recent memories from the current act. Set to false to retrieve long-term lore or events from past acts.'
-			),
+		characterQuery: z.string().optional().describe(CHARACTER_QUERY_DESC),
+		timeAndLocation: z.string().optional().describe(TIME_AND_LOCATION_DESC),
+		currentActOnly: z.boolean().optional().default(true).describe(CURRENT_ACT_ONLY_DESC),
 	});
 
 	return tool({
-		description: `Search the game's memory database to recall past events, locations visited, or character interactions. You must provide a character query, a time-location query for context, or both. Returns a list of recalled memories with their act number, recency, and location.`,
+		description: TOOL_DESCRIPTION,
 		inputSchema,
-			execute: async (input: z.infer<typeof inputSchema>): Promise<MemoryResult[]> => {
-				const { characterQuery, timeAndLocation, currentActOnly } = input;
-				await fileLog(
-					'debug',
-					'tool',
-					`triggering query memories:
+		execute: async (input: z.infer<typeof inputSchema>): Promise<MemoryResult[]> => {
+			const { characterQuery, timeAndLocation, currentActOnly } = input;
+			await fileLog(
+				'debug',
+				'tool',
+				`triggering query memories:
 				  characterQuery=${characterQuery}
 				  timeAndLocation=${timeAndLocation}
 				  currentActOnly=${currentActOnly}`
-				);
-				const opts = {
-					storyId,
-					actLineId: currentActOnly ? actLineId : undefined,
-					limit: 10,
-				};
+			);
+			const opts = {
+				storyId,
+				actLineId: currentActOnly ? actLineId : undefined,
+				limit: 10,
+			};
 
-				let items: MemoryItem[];
+			let items: MemoryItem[];
 
-				if (characterQuery && timeAndLocation) {
-					const resolvedNames = await memory.resolveAliases(storyId, actLineId, characterQuery);
-					const allItems = await Promise.all(
-						resolvedNames.map((name) => memory.searchByLocation(name, timeAndLocation, opts))
-					);
-					items = deduplicateMemoryItems(allItems.flat());
-					return await toResults(items.slice(0, opts.limit));
-				} else if (characterQuery) {
-					const resolvedNames = await memory.resolveAliases(storyId, actLineId, characterQuery);
-					const allItems = await Promise.all(
-						resolvedNames.map((name) => memory.search(name, opts))
-					);
-					items = deduplicateMemoryItems(allItems.flat());
-					return await toResults(items.slice(0, opts.limit));
-				} else if (timeAndLocation) {
-					const locations = await memory.searchLocations(timeAndLocation, opts);
-					items = await Promise.all(locations.map((location) => memory.sampleByLocation(location, opts.limit))).then((p) => p.flat());
-					return await toResults(sampleSize(items, opts.limit));
-				} else {
-					return [];
-				}
-			},
+			if (characterQuery && timeAndLocation) {
+				const resolvedNames = await memory.resolveAliases(storyId, actLineId, characterQuery);
+				const allItems = await Promise.all(resolvedNames.map((name) => memory.searchByLocation(name, timeAndLocation, opts)));
+				items = deduplicateMemoryItems(allItems.flat());
+				return await toResults(items.slice(0, opts.limit));
+			} else if (characterQuery) {
+				const resolvedNames = await memory.resolveAliases(storyId, actLineId, characterQuery);
+				const allItems = await Promise.all(resolvedNames.map((name) => memory.search(name, opts)));
+				items = deduplicateMemoryItems(allItems.flat());
+				return await toResults(items.slice(0, opts.limit));
+			} else if (timeAndLocation) {
+				const locations = await memory.searchLocations(timeAndLocation, opts);
+				items = await Promise.all(locations.map((location) => memory.sampleByLocation(location, opts.limit))).then((p) => p.flat());
+				return await toResults(sampleSize(items, opts.limit));
+			} else {
+				return [];
+			}
+		},
 	});
 }
-
 
 export function buildMemoryTools(storyId: string | null, actLineId: string): ToolSet {
 	if (!settings.memoryEnabled) return {};

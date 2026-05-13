@@ -14,6 +14,7 @@ import {
 } from '$lib/fs/prompts';
 import { initLogging, log } from '$lib/logging/logger';
 import { getSettings } from '$lib/stores/settings.svelte';
+import { loadLocale } from '$lib/i18n';
 
 let initialized = false;
 let initializing = false;
@@ -25,6 +26,7 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 	try {
 		await initLogging();
 		const settings = getSettings();
+		await loadLocale(settings.locale || 'en');
 		try {
 			const { invoke } = await import('@tauri-apps/api/core');
 			await invoke('set_log_level', { level: settings.logLevel });

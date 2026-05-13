@@ -13,6 +13,13 @@ import { getLineDir } from './card-output-path';
 import { logActCardActivity } from '$lib/logging/chat-logger';
 import { streamWithRetry, type RetryConfig } from './chat-stream';
 import type { StreamState } from './chat-callbacks';
+import { WORLD_CONTEXT_LABEL, TRANSCRIPT_START, ACT_CARD_TRANSCRIPT_END } from '$lib/definitions/llm-context-labels';
+import {
+	ERR_NO_MAIN_PROVIDER,
+	ERR_NO_ACT_LINE_SELECTED,
+	ERR_NO_NARRATIVE_CONTENT,
+	ERR_ACTIVE_ACT_NOT_FOUND,
+} from '$lib/definitions/error-messages';
 
 export interface GenerateActCardResult {
 	filePath: string;
@@ -20,15 +27,8 @@ export interface GenerateActCardResult {
 }
 
 function buildUserMessages(contents: string[], template: string, extractionPrompt: string, world: string | null): string[] {
-	const worldPrompt = world ? ['The world setting is based on the following:', world] : [];
-	return [
-		...worldPrompt,
-		'The following messages will contain the transcript of the current act:',
-		...contents,
-		'The previous message was the end of the transcript of the current act. The following message will contain the Act Card template:',
-		template,
-		extractionPrompt,
-	];
+	const worldPrompt = world ? [WORLD_CONTEXT_LABEL, world] : [];
+	return [...worldPrompt, TRANSCRIPT_START, ...contents, ACT_CARD_TRANSCRIPT_END, template, extractionPrompt];
 }
 
 interface ActCardContext {
@@ -49,23 +49,23 @@ async function resolveActCardContext(): Promise<ActCardContext> {
 	const story = getActiveStory();
 
 	if (!storyId || !actId || !actLineId || !story) {
-		throw new Error('No active act line selected.');
+		throw new Error(ERR_NO_ACT_LINE_SELECTED);
 	}
 
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) {
-		throw new Error('No main provider configured. Please set one in Settings.');
+		throw new Error(ERR_NO_MAIN_PROVIDER);
 	}
 
 	const allMessages = await getMessagesForLine(actLineId);
 	const contents = exportActLine(allMessages);
 	if (contents.length === 0) {
-		throw new Error('No narrative content found in this act line.');
+		throw new Error(ERR_NO_NARRATIVE_CONTENT);
 	}
 
 	const act = await getAct(actId);
 	if (!act) {
-		throw new Error('Active act not found.');
+		throw new Error(ERR_ACTIVE_ACT_NOT_FOUND);
 	}
 
 	const actLine = await getActLine(actLineId);

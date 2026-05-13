@@ -13,7 +13,7 @@ import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStory
 import { writeTextFile, readTextFile, exists, remove, copyFile, mkdir, rename, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, getLineDir, resolveLineSubdir } from '$lib/ai/card-output-path';
-import { generateActPlot, type ActPlotPhase, type GenerateActPlotParams } from '$lib/ai/act-plot-generator';
+import { generateActPlot, type ActPlotPhase } from '$lib/ai/act-plot-generator';
 
 export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
 

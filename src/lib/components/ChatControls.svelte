@@ -1,6 +1,7 @@
 <script lang="ts">
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import { slide } from 'svelte/transition';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		decisions: string[];
@@ -36,7 +37,7 @@
 
 	let summaryText = $derived.by(() => {
 		const parts: string[] = [];
-		if (decisionContext !== null) parts.push('Decision Point');
+		if (decisionContext !== null) parts.push(t('components.chatControls.decisionPoint'));
 		if (decisions.length > 0) parts.push(`${decisions.length} Decision${decisions.length !== 1 ? 's' : ''}`);
 		if (activePlotThreads.length > 0)
 			parts.push(`${activePlotThreads.length} Thread${activePlotThreads.length !== 1 ? 's' : ''}`);
@@ -133,7 +134,7 @@
 		{:else}
 			<div transition:slide={{ duration: 200 }} aria-expanded="true">
 				<div class="flex items-start justify-between px-8 pt-3">
-					<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">Controls</span>
+					<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('components.chatControls.controls')}</span>
 					<button
 						class="btn btn-sm variant-ghost text-surface-500"
 						type="button"
@@ -154,20 +155,20 @@
 				<div class="space-y-2 px-8 pb-3">
 					{#if decisionContext}
 						<div class="mb-1">
-							<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">Decision Point</span>
+							<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('components.chatControls.decisionPoint')}</span>
 							<div class="text-surface-950-50"><MarkdownContent content={decisionContext} /></div>
 						</div>
 					{/if}
 					<div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
 						{#if activePlotThreads.length > 0}
 							<div>
-								<div class="text-xs font-medium text-surface-500 uppercase tracking-wider mb-1">Active Plot Threads</div>
-								<MarkdownContent content={activePlotThreads.map((t) => `- ${t}`).join('\n')} />
+								<div class="text-xs font-medium text-surface-500 uppercase tracking-wider mb-1">{t('components.chatControls.activePlotThreads')}</div>
+								<MarkdownContent content={activePlotThreads.map((thread) => `- ${thread}`).join('\n')} />
 							</div>
 						{/if}
 						{#if decisions.length > 0}
 							<div>
-								<div class="text-xs font-medium text-surface-500 uppercase tracking-wider mb-1">Decisions</div>
+								<div class="text-xs font-medium text-surface-500 uppercase tracking-wider mb-1">{t('components.chatControls.decisions')}</div>
 								<div class="space-y-1">
 									{#each decisions as decision, i (i)}
 										<button

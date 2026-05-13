@@ -14,18 +14,10 @@ import { getLineDir } from './card-output-path';
 import { log } from '$lib/logging/logger';
 import { getLastSceneNumber, getPremisesMessages, getPreviousActSummary, getLatestTurnOfEvents } from '$lib/db/act-lines';
 import { reviewerAcceptsAsIs } from './reviewer-output-parser';
+import { ACT_PLOT_SECTION } from '$lib/definitions/section-constants';
+import { ERR_NO_MAIN_PROVIDER, ERR_EMPTY_ACT_PLOT_WRITER } from '$lib/definitions/error-messages';
 
 const LOG_TAG = 'act-plot-generator';
-
-const SECTION_HEADERS = {
-	WORLD_CONTENT: '## World Content\n\n',
-	PREVIOUS_ACT_SUMMARY: '## Previous Act Summary\n\n',
-	TURN_OF_EVENTS: '## Turn Of Events\n\n',
-	INTERVIEW_TRANSCRIPT: '## Interview Transcript\n\nThe following is an interview exchange about the story and premises.',
-	WRITER_OUTPUT: '## Writer Output\n\n',
-	REVIEWER_FEEDBACK: '## Reviewer Feedback\n\n',
-	TEMPLATE: '## Template\n\n',
-} as const;
 
 const ACT_PLOT_RESUME_NOTE = `---
 
@@ -67,24 +59,24 @@ function buildWriterMessages(
 	generationPrompt: string,
 	template: string
 ): ModelMessage[] {
-	const messages: ModelMessage[] = [{ role: 'user', content: SECTION_HEADERS.WORLD_CONTENT + worldContent }];
+	const messages: ModelMessage[] = [{ role: 'user', content: ACT_PLOT_SECTION.WORLD_CONTENT + worldContent }];
 
 	if (previousActSummary) {
-		messages.push({ role: 'user', content: SECTION_HEADERS.PREVIOUS_ACT_SUMMARY + previousActSummary });
+		messages.push({ role: 'user', content: ACT_PLOT_SECTION.PREVIOUS_ACT_SUMMARY + previousActSummary });
 	}
 
 	const hasValidInterview = interviewTranscript.some((m) => m.role === 'user');
 	if (hasValidInterview) {
-		messages.push({ role: 'user', content: SECTION_HEADERS.INTERVIEW_TRANSCRIPT });
+		messages.push({ role: 'user', content: ACT_PLOT_SECTION.INTERVIEW_TRANSCRIPT });
 		messages.push(...interviewTranscript);
 	}
 
 	if (turnOfEvents) {
-		messages.push({ role: 'user', content: SECTION_HEADERS.TURN_OF_EVENTS + turnOfEvents });
+		messages.push({ role: 'user', content: ACT_PLOT_SECTION.TURN_OF_EVENTS + turnOfEvents });
 	}
 
 	messages.push({ role: 'user', content: generationPrompt });
-	messages.push({ role: 'user', content: SECTION_HEADERS.TEMPLATE + template });
+	messages.push({ role: 'user', content: ACT_PLOT_SECTION.TEMPLATE + template });
 
 	return messages;
 }
@@ -96,17 +88,17 @@ function buildReviewerMessages(
 	writerOutput: string,
 	reviewerPrompt: string
 ): ModelMessage[] {
-	const messages: ModelMessage[] = [{ role: 'user', content: SECTION_HEADERS.WORLD_CONTENT + worldContent }];
+	const messages: ModelMessage[] = [{ role: 'user', content: ACT_PLOT_SECTION.WORLD_CONTENT + worldContent }];
 
 	if (previousActSummary) {
-		messages.push({ role: 'user', content: SECTION_HEADERS.PREVIOUS_ACT_SUMMARY + previousActSummary });
+		messages.push({ role: 'user', content: ACT_PLOT_SECTION.PREVIOUS_ACT_SUMMARY + previousActSummary });
 	}
 
 	if (turnOfEvents) {
-		messages.push({ role: 'user', content: SECTION_HEADERS.TURN_OF_EVENTS + turnOfEvents });
+		messages.push({ role: 'user', content: ACT_PLOT_SECTION.TURN_OF_EVENTS + turnOfEvents });
 	}
 
-	messages.push({ role: 'user', content: SECTION_HEADERS.WRITER_OUTPUT + writerOutput });
+	messages.push({ role: 'user', content: ACT_PLOT_SECTION.WRITER_OUTPUT + writerOutput });
 	messages.push({ role: 'user', content: reviewerPrompt });
 
 	return messages;
@@ -120,18 +112,18 @@ function buildEditorMessages(
 	reviewerOutput: string,
 	editorPrompt: string
 ): ModelMessage[] {
-	const messages: ModelMessage[] = [{ role: 'user', content: SECTION_HEADERS.WORLD_CONTENT + worldContent }];
+	const messages: ModelMessage[] = [{ role: 'user', content: ACT_PLOT_SECTION.WORLD_CONTENT + worldContent }];
 
 	if (previousActSummary) {
-		messages.push({ role: 'user', content: SECTION_HEADERS.PREVIOUS_ACT_SUMMARY + previousActSummary });
+		messages.push({ role: 'user', content: ACT_PLOT_SECTION.PREVIOUS_ACT_SUMMARY + previousActSummary });
 	}
 
 	if (turnOfEvents) {
-		messages.push({ role: 'user', content: SECTION_HEADERS.TURN_OF_EVENTS + turnOfEvents });
+		messages.push({ role: 'user', content: ACT_PLOT_SECTION.TURN_OF_EVENTS + turnOfEvents });
 	}
 
-	messages.push({ role: 'user', content: SECTION_HEADERS.WRITER_OUTPUT + writerOutput });
-	messages.push({ role: 'user', content: SECTION_HEADERS.REVIEWER_FEEDBACK + reviewerOutput });
+	messages.push({ role: 'user', content: ACT_PLOT_SECTION.WRITER_OUTPUT + writerOutput });
+	messages.push({ role: 'user', content: ACT_PLOT_SECTION.REVIEWER_FEEDBACK + reviewerOutput });
 	messages.push({ role: 'user', content: editorPrompt });
 
 	return messages;
@@ -160,7 +152,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<Ge
 	const { storyId, storyName, worldContent, actLineId, isMainLine, actNumber, isResumeGame = false, onPhaseChange } = params;
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) {
-		throw new Error('No main provider configured. Please set one in Settings.');
+		throw new Error(ERR_NO_MAIN_PROVIDER);
 	}
 
 	// Load prompts and context in parallel
@@ -199,7 +191,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<Ge
 	const writerText = writerResult.text.trim();
 
 	if (!writerText) {
-		throw new Error('Writer returned an empty response for act-plot generation.');
+		throw new Error(ERR_EMPTY_ACT_PLOT_WRITER);
 	}
 
 	await log.info(LOG_TAG, `Writer complete. Tokens: ${writerResult.usage.totalTokens}, Length: ${writerText.length} chars`);

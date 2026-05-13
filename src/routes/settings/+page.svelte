@@ -13,6 +13,7 @@
 		type LogLevel,
 	} from '$lib/stores/settings.svelte';
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
+	import { t } from '$lib/i18n';
 
 	// Editing state
 	let editingId = $state<string | null>(null);
@@ -79,7 +80,7 @@
 
 	function handleSaveNew() {
 		const config = addProviderConfig({
-			name: formName || 'Untitled Provider',
+			name: formName || t('settings.untitledProvider'),
 			provider: formProvider,
 			apiType: formApiType,
 			baseURL: formBaseURL,
@@ -113,7 +114,7 @@
 
 	function handleDuplicate(config: ProviderConfig) {
 		const copy = addProviderConfig({
-			name: config.name + ' (copy)',
+			name: config.name + t('settings.copySuffix'),
 			provider: config.provider,
 			apiType: config.apiType,
 			baseURL: config.baseURL,
@@ -130,7 +131,7 @@
 		try {
 			availableModels = await fetchModels({ baseURL: formBaseURL, apiKey: formApiKey, provider: formProvider });
 		} catch (err: unknown) {
-			modelsError = err instanceof Error ? err.message : 'Failed to fetch models';
+			modelsError = err instanceof Error ? err.message : t('settings.failedToFetchModels');
 			availableModels = [];
 		} finally {
 			isLoadingModels = false;
@@ -146,19 +147,19 @@
 
 <div class="flex-1 overflow-y-auto p-6">
 	<div class="max-w-2xl mx-auto space-y-8">
-		<h1 class="h2 font-display">Settings</h1>
+		<h1 class="h2 font-display">{t('settings.heading')}</h1>
 
-		<p class="text-sm text-surface-500">Settings are saved automatically.</p>
+		<p class="text-sm text-surface-500">{t('settings.settingsAutoSaved')}</p>
 
 		<!-- AI Providers -->
 		<section class="card p-6 space-y-4">
 			<div class="flex items-center justify-between">
-				<h2 class="h4">AI Providers</h2>
-				<button class="btn preset-tonal" type="button" onclick={startAdd}> + Add Provider </button>
+				<h2 class="h4">{t('settings.aiProviders')}</h2>
+				<button class="btn preset-tonal" type="button" onclick={startAdd}> {t('settings.addProvider')} </button>
 			</div>
 
 			{#if settings.providers.length === 0 && !isAddingNew}
-				<p class="text-sm text-surface-500 py-2">No providers configured. Add one to get started.</p>
+				<p class="text-sm text-surface-500 py-2">{t('settings.noProvidersAdd')}</p>
 			{/if}
 
 			<!-- Provider List -->
@@ -170,53 +171,53 @@
 							{#if c.id === config.id}
 								{@const isMain = mainProviderId === config.id}
 								<p class="text-xs text-surface-500">
-									Editing{#if isMain}
-										(main provider){/if}
+									{t('settings.editing')}{#if isMain}
+										{t('settings.mainProviderTag')}{/if}
 								</p>
 							{/if}
 						{/each}
 						<details open>
-							<summary class="text-sm font-medium cursor-pointer">{formName || 'Untitled'}</summary>
+							<summary class="text-sm font-medium cursor-pointer">{formName || t('settings.untitled')}</summary>
 							<div class="mt-3 space-y-3">
 								<label class="block">
-									<span class="text-sm font-medium text-surface-700-300">Name</span>
-									<input class="input mt-1" type="text" placeholder="e.g. OpenAI GPT-4o" bind:value={formName} />
+									<span class="text-sm font-medium text-surface-700-300">{t('settings.name')}</span>
+									<input class="input mt-1" type="text" placeholder={t('settings.namePlaceholder')} bind:value={formName} />
 								</label>
 
 								<label class="block">
-									<span class="text-sm font-medium text-surface-700-300">API Provider</span>
+									<span class="text-sm font-medium text-surface-700-300">{t('settings.apiProvider')}</span>
 									<select class="select mt-1" onchange={() => handleProviderChange()} bind:value={formProvider}>
-										<option value="openai">OpenAI</option>
-										<option value="openai-compatible">OpenAI-Compatible</option>
-										<option value="ollama">Ollama</option>
+										<option value="openai">{t('settings.providers.openai')}</option>
+										<option value="openai-compatible">{t('settings.providers.openaiCompatible')}</option>
+										<option value="ollama">{t('settings.providers.ollama')}</option>
 									</select>
 								</label>
 
 								{#if formProvider === 'openai'}
 									<label class="block">
-										<span class="text-sm font-medium text-surface-700-300">API Type</span>
+										<span class="text-sm font-medium text-surface-700-300">{t('settings.apiType')}</span>
 										<select class="select mt-1" bind:value={formApiType}>
-											<option value="responses">Responses</option>
-											<option value="chat-completions">Chat Completions</option>
+											<option value="responses">{t('settings.apiTypes.responses')}</option>
+											<option value="chat-completions">{t('settings.apiTypes.chatCompletions')}</option>
 										</select>
 										<span class="text-xs text-surface-500 mt-1 block"
-											>Responses uses the OpenAI Responses API. Chat Completions uses /chat/completions.</span
+											>{t('settings.apiTypeHint')}</span
 										>
 									</label>
 								{/if}
 
 								<label class="block">
-									<span class="text-sm font-medium text-surface-700-300">Base URL</span>
+									<span class="text-sm font-medium text-surface-700-300">{t('settings.baseUrl')}</span>
 									<input class="input mt-1" type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} />
 									<span class="text-xs text-surface-500 mt-1 block"
-										>Local: http://localhost:11434/v1 (Ollama), http://localhost:1234/v1 (LM Studio)</span
+										>{t('settings.baseUrlHint')}</span
 									>
 								</label>
 
 								<div>
 									<div class="flex items-end gap-2">
 										<label class="flex-1">
-											<span class="text-sm font-medium text-surface-700-300">Model</span>
+											<span class="text-sm font-medium text-surface-700-300">{t('settings.model')}</span>
 											{#if availableModels.length > 0}
 												<select class="select mt-1" bind:value={formModel}>
 													{#each availableModels as model (model.id)}
@@ -224,17 +225,17 @@
 													{/each}
 												</select>
 											{:else}
-												<input class="input mt-1" type="text" placeholder="gpt-4o" bind:value={formModel} />
+												<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
 											{/if}
 										</label>
 										<button class="btn preset-tonal shrink-0" type="button" onclick={handleFetchModels} disabled={isLoadingModels}>
-											{isLoadingModels ? 'Loading...' : 'Fetch Models'}
+											{isLoadingModels ? t('settings.loading') : t('settings.fetchModels')}
 										</button>
 									</div>
 									{#if availableModels.length > 0}
 										<label class="block mt-2">
-											<span class="text-xs text-surface-500">Or type manually</span>
-											<input class="input mt-1" type="text" placeholder="gpt-4o" bind:value={formModel} />
+											<span class="text-xs text-surface-500">{t('settings.modelOrType')}</span>
+											<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
 										</label>
 									{/if}
 									{#if modelsError}
@@ -243,17 +244,17 @@
 								</div>
 
 								<label class="block">
-									<span class="text-sm font-medium text-surface-700-300">API Key</span>
+									<span class="text-sm font-medium text-surface-700-300">{t('settings.apiKey')}</span>
 									<input class="input mt-1" type="password" placeholder="sk-..." bind:value={formApiKey} />
 									<span class="text-xs text-surface-500 mt-1 block"
-										>Required for cloud models/providers</span
+										>{t('settings.apiKeyHint')}</span
 									>
 								</label>
 							</div>
 						</details>
 						<div class="flex gap-2">
-							<button class="btn preset-filled" type="button" onclick={handleSaveEdit}> Save </button>
-							<button class="btn preset-tonal" type="button" onclick={cancelEdit}> Cancel </button>
+							<button class="btn preset-filled" type="button" onclick={handleSaveEdit}> {t('settings.save')} </button>
+							<button class="btn preset-tonal" type="button" onclick={cancelEdit}> {t('settings.cancel')} </button>
 						</div>
 					</div>
 				{:else}
@@ -264,15 +265,15 @@
 						<div class="min-w-0">
 							<p class="text-sm font-medium truncate">{config.name}</p>
 							<p class="text-xs text-surface-500 truncate">
-								{config.provider === 'openai' ? 'OpenAI' : config.provider === 'ollama' ? 'Ollama' : 'OpenAI-Compatible'} · {config.model}
+								{config.provider === 'openai' ? t('settings.providers.openai') : config.provider === 'ollama' ? t('settings.providers.ollama') : t('settings.providers.openaiCompatible')} · {config.model}
 							</p>
 						</div>
 						<div class="flex items-center gap-1 shrink-0">
-							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => handleDuplicate(config)}> Copy </button>
-							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => startEdit(config)}> Edit </button>
+							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => handleDuplicate(config)}> {t('settings.copy')} </button>
+							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => startEdit(config)}> {t('settings.edit')} </button>
 							{#if mainProviderId !== config.id}
 								<button class="btn preset-tonal text-xs px-2 py-1 text-error-700-300" type="button" onclick={() => handleDelete(config.id)}>
-									Delete
+									{t('settings.delete')}
 								</button>
 							{/if}
 						</div>
@@ -283,49 +284,49 @@
 			<!-- Add New Provider Form -->
 			{#if isAddingNew}
 				<div class="card p-4 space-y-3 border border-primary-500-300">
-					<p class="text-xs text-surface-500">New provider</p>
+					<p class="text-xs text-surface-500">{t('settings.newProvider')}</p>
 					<details open>
-						<summary class="text-sm font-medium cursor-pointer">{formName || 'New Provider'}</summary>
+						<summary class="text-sm font-medium cursor-pointer">{formName || t('settings.newProviderTitle')}</summary>
 						<div class="mt-3 space-y-3">
 							<label class="block">
-								<span class="text-sm font-medium text-surface-700-300">Name</span>
-								<input class="input mt-1" type="text" placeholder="e.g. OpenAI GPT-4o" bind:value={formName} />
+								<span class="text-sm font-medium text-surface-700-300">{t('settings.name')}</span>
+								<input class="input mt-1" type="text" placeholder={t('settings.namePlaceholder')} bind:value={formName} />
 							</label>
 
 							<label class="block">
-								<span class="text-sm font-medium text-surface-700-300">API Provider</span>
+								<span class="text-sm font-medium text-surface-700-300">{t('settings.apiProvider')}</span>
 								<select class="select mt-1" onchange={() => handleProviderChange()} bind:value={formProvider}>
-									<option value="openai">OpenAI</option>
-									<option value="openai-compatible">OpenAI-Compatible</option>
-									<option value="ollama">Ollama</option>
+									<option value="openai">{t('settings.providers.openai')}</option>
+									<option value="openai-compatible">{t('settings.providers.openaiCompatible')}</option>
+									<option value="ollama">{t('settings.providers.ollama')}</option>
 								</select>
 							</label>
 
 							{#if formProvider === 'openai'}
 								<label class="block">
-									<span class="text-sm font-medium text-surface-700-300">API Type</span>
+									<span class="text-sm font-medium text-surface-700-300">{t('settings.apiType')}</span>
 									<select class="select mt-1" bind:value={formApiType}>
-										<option value="responses">Responses</option>
-										<option value="chat-completions">Chat Completions</option>
+										<option value="responses">{t('settings.apiTypes.responses')}</option>
+										<option value="chat-completions">{t('settings.apiTypes.chatCompletions')}</option>
 									</select>
 									<span class="text-xs text-surface-500 mt-1 block"
-										>Responses uses the OpenAI Responses API. Chat Completions uses /chat/completions.</span
+										>{t('settings.apiTypeHint')}</span
 									>
 								</label>
 							{/if}
 
 							<label class="block">
-								<span class="text-sm font-medium text-surface-700-300">Base URL</span>
+								<span class="text-sm font-medium text-surface-700-300">{t('settings.baseUrl')}</span>
 								<input class="input mt-1" type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} />
 								<span class="text-xs text-surface-500 mt-1 block"
-									>Local: http://localhost:11434/v1 (Local Ollama), http://localhost:1234/v1 (LM Studio)</span
+									>{t('settings.baseUrlHint')}</span
 								>
 							</label>
 
 							<div>
 								<div class="flex items-end gap-2">
 									<label class="flex-1">
-										<span class="text-sm font-medium text-surface-700-300">Model</span>
+										<span class="text-sm font-medium text-surface-700-300">{t('settings.model')}</span>
 										{#if availableModels.length > 0}
 											<select class="select mt-1" bind:value={formModel}>
 												{#each availableModels as model (model.id)}
@@ -333,17 +334,17 @@
 												{/each}
 											</select>
 										{:else}
-											<input class="input mt-1" type="text" placeholder="gpt-4o" bind:value={formModel} />
+											<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
 										{/if}
 									</label>
 									<button class="btn preset-tonal shrink-0" type="button" onclick={handleFetchModels} disabled={isLoadingModels}>
-										{isLoadingModels ? 'Loading...' : 'Fetch Models'}
+										{isLoadingModels ? t('settings.loading') : t('settings.fetchModels')}
 									</button>
 								</div>
 								{#if availableModels.length > 0}
 									<label class="block mt-2">
-										<span class="text-xs text-surface-500">Or type manually</span>
-										<input class="input mt-1" type="text" placeholder="gpt-4o" bind:value={formModel} />
+										<span class="text-xs text-surface-500">{t('settings.modelOrType')}</span>
+										<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
 									</label>
 								{/if}
 								{#if modelsError}
@@ -352,17 +353,17 @@
 							</div>
 
 							<label class="block">
-								<span class="text-sm font-medium text-surface-700-300">API Key</span>
+								<span class="text-sm font-medium text-surface-700-300">{t('settings.apiKey')}</span>
 								<input class="input mt-1" type="password" placeholder="sk-..." bind:value={formApiKey} />
 								<span class="text-xs text-surface-500 mt-1 block"
-									>Required for cloud models/providers</span
+									>{t('settings.apiKeyHint')}</span
 								>
 							</label>
 						</div>
 					</details>
 					<div class="flex gap-2">
-						<button class="btn preset-filled" type="button" onclick={handleSaveNew}> Add Provider </button>
-						<button class="btn preset-tonal" type="button" onclick={cancelEdit}> Cancel </button>
+						<button class="btn preset-filled" type="button" onclick={handleSaveNew}> {t('settings.addProviderButton')} </button>
+						<button class="btn preset-tonal" type="button" onclick={cancelEdit}> {t('settings.cancel')} </button>
 					</div>
 				</div>
 			{/if}
@@ -370,11 +371,11 @@
 
 		<!-- Provider Roles -->
 		<section class="card p-6 space-y-4">
-			<h2 class="h4">Provider Roles</h2>
-			<span class="text-xs text-surface-500">Assign providers to functions. The main provider is used for chat and world building.</span>
+			<h2 class="h4">{t('settings.providerRoles')}</h2>
+			<span class="text-xs text-surface-500">{t('settings.providerRolesDescription')}</span>
 
 			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Main Provider</span>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.mainProvider')}</span>
 				<select
 					class="select mt-1"
 					onchange={(e) => {
@@ -383,7 +384,7 @@
 					}}
 				>
 					{#if settings.providers.length === 0}
-						<option value="" disabled selected>No providers configured</option>
+						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
 					{:else}
 						{#each settings.providers as config (config.id)}
 							<option value={config.id} selected={mainProviderId === config.id}>{config.name}</option>
@@ -393,7 +394,7 @@
 			</label>
 
 				<label class="block">
-					<span class="text-sm font-medium text-surface-700-300">Minor Task Agent</span>
+					<span class="text-sm font-medium text-surface-700-300">{t('settings.minorTaskAgent')}</span>
 					<select
 						class="select mt-1"
 						onchange={(e) => {
@@ -402,15 +403,15 @@
 						}}
 					>
 						{#if settings.providers.length === 0}
-							<option value="" disabled selected>No providers configured</option>
+							<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
 						{:else}
-							<option value="main" selected={settings.minorTaskAgentProviderRole === 'main'}>Main Provider</option>
+							<option value="main" selected={settings.minorTaskAgentProviderRole === 'main'}>{t('settings.mainProvider')}</option>
 							{#each settings.providers as config (config.id)}
 								<option value={config.id} selected={settings.minorTaskAgentProviderRole === config.id}>{config.name}</option>
 							{/each}
 						{/if}
 					</select>
-					<span class="text-xs text-surface-500 mt-1 block">Lightweight LLM for background tasks like phrase extraction and template fitting. Use a small, fast model.</span>
+					<span class="text-xs text-surface-500 mt-1 block">{t('settings.minorTaskAgentDescription')}</span>
 				</label>
 
 				<label class="flex items-center gap-2">
@@ -421,15 +422,15 @@
 						disabled={!getMinorTaskAgentProviderConfig()}
 						onchange={(e) => updateSettings({ importantPhraseHighlighting: (e.currentTarget as HTMLInputElement).checked })}
 					/>
-					<span class="text-sm font-medium text-surface-700-300">Important phrase highlighting</span>
+					<span class="text-sm font-medium text-surface-700-300">{t('settings.phraseHighlighting')}</span>
 				</label>
-				<span class="text-xs text-surface-500">Automatically extract and highlight key phrases in narrative text. Requires Minor Task Agent.</span>
+				<span class="text-xs text-surface-500">{t('settings.phraseHighlightingDescription')}</span>
 		</section>
 
 		<!-- Memory -->
 		<section class="card p-6 space-y-4">
-			<h2 class="h4">Memory</h2>
-			<span class="text-xs text-surface-500">Automatically save and recall context from past conversations.</span>
+			<h2 class="h4">{t('settings.memory')}</h2>
+			<span class="text-xs text-surface-500">{t('settings.enableMemoryDescription')}</span>
 
 			<label class="flex items-center gap-2">
 				<input
@@ -438,11 +439,11 @@
 					checked={settings.memoryEnabled}
 					onchange={(e) => updateSettings({ memoryEnabled: (e.currentTarget as HTMLInputElement).checked })}
 				/>
-				<span class="text-sm font-medium text-surface-700-300">Enable memory</span>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.enableMemory')}</span>
 			</label>
 
 			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Memory Provider</span>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.memoryProvider')}</span>
 				<select
 					class="select mt-1"
 					disabled={!settings.memoryEnabled}
@@ -452,19 +453,19 @@
 					}}
 				>
 					{#if settings.providers.length === 0}
-						<option value="" disabled selected>No providers configured</option>
+						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
 					{:else}
-						<option value="main" selected={settings.memoryProviderRole === 'main'}>Main Provider</option>
+						<option value="main" selected={settings.memoryProviderRole === 'main'}>{t('settings.mainProvider')}</option>
 						{#each settings.providers as config (config.id)}
 							<option value={config.id} selected={settings.memoryProviderRole === config.id}>{config.name}</option>
 						{/each}
 					{/if}
 				</select>
-				<span class="text-xs text-surface-500 mt-1 block">The LLM provider used to extract memories from chat responses.</span>
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.memoryProviderDescription')}</span>
 			</label>
 
 			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Embedding Provider</span>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.embeddingProvider')}</span>
 				<select
 					class="select mt-1"
 					disabled={!settings.memoryEnabled}
@@ -474,25 +475,25 @@
 					}}
 				>
 					{#if settings.providers.length === 0}
-						<option value="" disabled selected>No providers configured</option>
+						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
 					{:else}
-						<option value="main" selected={settings.embeddingProviderRole === 'main'}>Main Provider</option>
+						<option value="main" selected={settings.embeddingProviderRole === 'main'}>{t('settings.mainProvider')}</option>
 						{#each settings.providers as config (config.id)}
 							<option value={config.id} selected={settings.embeddingProviderRole === config.id}>{config.name}</option>
 						{/each}
 					{/if}
 				</select>
-				<span class="text-xs text-surface-500 mt-1 block">The provider used to generate embeddings for memory search.</span>
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.embeddingProviderDescription')}</span>
 			</label>
 		</section>
 
 		<!-- Pipeline Roles -->
 		<section class="card p-6 space-y-4">
-			<h2 class="h4">Pipeline Roles</h2>
-			<span class="text-xs text-surface-500">Assign providers to each pipeline phase. All default to the main provider.</span>
+			<h2 class="h4">{t('settings.pipelineRoles')}</h2>
+			<span class="text-xs text-surface-500">{t('settings.pipelineRolesDescription')}</span>
 
 			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Plot Planner</span>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.plotPlanner')}</span>
 				<select
 					class="select mt-1"
 					onchange={(e) => {
@@ -501,19 +502,19 @@
 					}}
 				>
 					{#if settings.providers.length === 0}
-						<option value="" disabled selected>No providers configured</option>
+						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
 					{:else}
-						<option value="main" selected={settings.plotPlannerProviderRole === 'main'}>Main Provider</option>
+						<option value="main" selected={settings.plotPlannerProviderRole === 'main'}>{t('settings.mainProvider')}</option>
 						{#each settings.providers as config (config.id)}
 							<option value={config.id} selected={settings.plotPlannerProviderRole === config.id}>{config.name}</option>
 						{/each}
 					{/if}
 				</select>
-				<span class="text-xs text-surface-500 mt-1 block">Plans the scene plot and pacing before writing.</span>
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.plotPlannerDescription')}</span>
 			</label>
 
 			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Writer</span>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.writer')}</span>
 				<select
 					class="select mt-1"
 					onchange={(e) => {
@@ -522,19 +523,19 @@
 					}}
 				>
 					{#if settings.providers.length === 0}
-						<option value="" disabled selected>No providers configured</option>
+						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
 					{:else}
-						<option value="main" selected={settings.writerProviderRole === 'main'}>Main Provider</option>
+						<option value="main" selected={settings.writerProviderRole === 'main'}>{t('settings.mainProvider')}</option>
 						{#each settings.providers as config (config.id)}
 							<option value={config.id} selected={settings.writerProviderRole === config.id}>{config.name}</option>
 						{/each}
 					{/if}
 				</select>
-				<span class="text-xs text-surface-500 mt-1 block">Writes the narrative prose from the scene plot.</span>
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.writerDescription')}</span>
 			</label>
 
 			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Reviewer</span>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.reviewer')}</span>
 				<select
 					class="select mt-1"
 					onchange={(e) => {
@@ -543,19 +544,19 @@
 					}}
 				>
 					{#if settings.providers.length === 0}
-						<option value="" disabled selected>No providers configured</option>
+						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
 					{:else}
-						<option value="main" selected={settings.reviewerProviderRole === 'main'}>Main Provider</option>
+						<option value="main" selected={settings.reviewerProviderRole === 'main'}>{t('settings.mainProvider')}</option>
 						{#each settings.providers as config (config.id)}
 							<option value={config.id} selected={settings.reviewerProviderRole === config.id}>{config.name}</option>
 						{/each}
 					{/if}
 				</select>
-				<span class="text-xs text-surface-500 mt-1 block">Reviews writer output for violations against writing rules.</span>
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.reviewerDescription')}</span>
 			</label>
 
 			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Editor</span>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.editor')}</span>
 				<select
 					class="select mt-1"
 					onchange={(e) => {
@@ -564,19 +565,19 @@
 					}}
 				>
 					{#if settings.providers.length === 0}
-						<option value="" disabled selected>No providers configured</option>
+						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
 					{:else}
-						<option value="main" selected={settings.editorProviderRole === 'main'}>Main Provider</option>
+						<option value="main" selected={settings.editorProviderRole === 'main'}>{t('settings.mainProvider')}</option>
 						{#each settings.providers as config (config.id)}
 							<option value={config.id} selected={settings.editorProviderRole === config.id}>{config.name}</option>
 						{/each}
 					{/if}
 				</select>
-				<span class="text-xs text-surface-500 mt-1 block">Revises writer output based on reviewer feedback.</span>
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.editorDescription')}</span>
 			</label>
 
 			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Game Master</span>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.gameMaster')}</span>
 				<select
 					class="select mt-1"
 					onchange={(e) => {
@@ -585,19 +586,19 @@
 					}}
 				>
 					{#if settings.providers.length === 0}
-						<option value="" disabled selected>No providers configured</option>
+						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
 					{:else}
-						<option value="main" selected={settings.gameMasterProviderRole === 'main'}>Main Provider</option>
+						<option value="main" selected={settings.gameMasterProviderRole === 'main'}>{t('settings.mainProvider')}</option>
 						{#each settings.providers as config (config.id)}
 							<option value={config.id} selected={settings.gameMasterProviderRole === config.id}>{config.name}</option>
 						{/each}
 					{/if}
 				</select>
-				<span class="text-xs text-surface-500 mt-1 block">Generates game data (decisions, plot threads) from the narrative.</span>
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.gameMasterDescription')}</span>
 			</label>
 
 			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Summarizer</span>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.summarizer')}</span>
 				<select
 					class="select mt-1"
 					onchange={(e) => {
@@ -606,24 +607,24 @@
 					}}
 				>
 					{#if settings.providers.length === 0}
-						<option value="" disabled selected>No providers configured</option>
+						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
 					{:else}
-						<option value="main" selected={settings.summarizerProviderRole === 'main'}>Main Provider</option>
+						<option value="main" selected={settings.summarizerProviderRole === 'main'}>{t('settings.mainProvider')}</option>
 						{#each settings.providers as config (config.id)}
 							<option value={config.id} selected={settings.summarizerProviderRole === config.id}>{config.name}</option>
 						{/each}
 					{/if}
 				</select>
-				<span class="text-xs text-surface-500 mt-1 block">Updates the act summary after each scene.</span>
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.summarizerDescription')}</span>
 			</label>
 		</section>
 
 		<!-- Narrative -->
 		<section class="card p-6 space-y-4">
-			<h2 class="h4">Narrative</h2>
+			<h2 class="h4">{t('settings.narrative')}</h2>
 
 			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Target Word Count</span>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.targetWordCount')}</span>
 				<input
 					type="number"
 					class="input mt-1 w-32"
@@ -637,28 +638,35 @@
 					}}
 				/>
 				<span class="text-xs text-surface-500 mt-1 block"
-					>Target word count per scene for the Writer phase. Default: 400.</span
+					>{t('settings.targetWordCountDescription')}</span
 				>
 			</label>
 		</section>
 
 		<!-- Developer -->
 		<section class="card p-6 space-y-4">
-			<h2 class="h4">Developer</h2>
+			<h2 class="h4">{t('settings.developer')}</h2>
 
 			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">Log Level</span>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.locale')}</span>
+				<select class="select mt-1" onchange={(e) => updateSettings({ locale: (e.currentTarget as HTMLSelectElement).value })}>
+					<option value="en" selected={settings.locale === 'en'}>English</option>
+				</select>
+			</label>
+
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.logLevel')}</span>
 				<select
 					class="select mt-1"
 					onchange={(e) => updateSettings({ logLevel: (e.currentTarget as HTMLSelectElement).value as LogLevel })}
 				>
-					<option value="error" selected={settings.logLevel === 'error'}>Error</option>
-					<option value="warn" selected={settings.logLevel === 'warn'}>Warn</option>
-					<option value="info" selected={settings.logLevel === 'info'}>Info (default)</option>
-					<option value="debug" selected={settings.logLevel === 'debug'}>Debug</option>
+					<option value="error" selected={settings.logLevel === 'error'}>{t('settings.logLevels.error')}</option>
+					<option value="warn" selected={settings.logLevel === 'warn'}>{t('settings.logLevels.warn')}</option>
+					<option value="info" selected={settings.logLevel === 'info'}>{t('settings.logLevels.info')}</option>
+					<option value="debug" selected={settings.logLevel === 'debug'}>{t('settings.logLevels.debug')}</option>
 				</select>
 				<span class="text-xs text-surface-500 mt-1 block"
-					>Debug logs include full AI chat context. Logs are written to the app log directory.</span
+					>{t('settings.logLevelDescription')}</span
 				>
 			</label>
 		</section>

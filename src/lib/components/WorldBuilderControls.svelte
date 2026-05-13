@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		isComplete: boolean;
@@ -62,12 +63,12 @@
 	);
 
 	let summaryText = $derived.by(() => {
-		if (createStoryError) return 'Error creating story';
-		if (worldBuilderError) return 'World builder error';
-		if (isInterviewMode && hasInterviewMessages && !isStreaming) return 'Ready to start game';
+		if (createStoryError) return t('components.worldBuilderControls.errorCreatingStory');
+		if (worldBuilderError) return t('components.worldBuilderControls.worldBuilderError');
+		if (isInterviewMode && hasInterviewMessages && !isStreaming) return t('components.worldBuilderControls.readyToStartGame');
 		if (isComplete && !isInterviewMode) {
-			if (showCreateStoryOptions) return 'Story creation options';
-			return storyName ? `Create "${storyName}"?` : 'Create story?';
+			if (showCreateStoryOptions) return t('components.worldBuilderControls.storyCreationOptions');
+			return storyName ? t('components.worldBuilderControls.createStoryPrompt', { name: storyName }) : t('components.worldBuilderControls.createStoryDefault');
 		}
 		return '';
 	});
@@ -175,7 +176,7 @@
 		{:else}
 			<div transition:slide={{ duration: 200 }} aria-expanded="true">
 				<div class="flex items-start justify-between px-8 pt-3">
-					<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">Controls</span>
+					<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('components.worldBuilderControls.controls')}</span>
 					<button
 						class="btn btn-sm variant-ghost text-surface-500"
 						type="button"
@@ -204,15 +205,15 @@
 							<p class="text-sm text-error-700-300">{createStoryError}</p>
 						</div>
 						<div class="flex gap-3 justify-center">
-							<button class="btn preset-filled-primary-500" type="button" onclick={onRetry}> Try Again </button>
-							<button class="btn preset-tonal" type="button" onclick={onDismissOptions}> Cancel </button>
+							<button class="btn preset-filled-primary-500" type="button" onclick={onRetry}> {t('components.worldBuilderControls.tryAgain')} </button>
+							<button class="btn preset-tonal" type="button" onclick={onDismissOptions}> {t('components.worldBuilderControls.cancel')} </button>
 						</div>
 					{:else if isInterviewMode}
 						{#if isCreatingStory}
 							<div class="rounded-(--radius-container) bg-success-100-900 p-6 text-center space-y-3">
 								<div class="flex items-center justify-center gap-3">
 									<span class="inline-block w-4 h-4 border-2 border-surface-400 border-t-transparent rounded-full animate-spin"></span>
-									<span class="text-sm text-success-700-300">Generating act plot and starting the game...</span>
+									<span class="text-sm text-success-700-300">{t('components.worldBuilderControls.generatingPlot')}</span>
 								</div>
 							</div>
 						{:else}
@@ -221,7 +222,7 @@
 									class="btn preset-filled-success-500"
 									type="button"
 									onclick={() => onStartGame(isGameResumeMode)}
-								> Start Game </button>
+								> {t('components.worldBuilderControls.startGame')} </button>
 							</div>
 						{/if}
 					{:else if isComplete && !isInterviewMode}
@@ -231,7 +232,7 @@
 								{#if isCreatingStory}
 									<div class="flex items-center justify-center gap-3 py-4">
 										<span class="inline-block w-4 h-4 border-2 border-surface-400 border-t-transparent rounded-full animate-spin"></span>
-										<span class="text-sm text-primary-700-300">Creating story and generating plot...</span>
+										<span class="text-sm text-primary-700-300">{t('components.worldBuilderControls.creatingStory')}</span>
 									</div>
 								{:else}
 									<div class="flex flex-col gap-3">
@@ -240,20 +241,20 @@
 											type="button"
 											onclick={onStartImmediate}
 										>
-											<span class="font-medium text-primary-900-100 mb-1">Start immediately</span><br/>
-											<span class="text-sm text-primary-700-300">Create the story and begin your adventure right away.</span>
+											<span class="font-medium text-primary-900-100 mb-1">{t('components.worldBuilderControls.startImmediately')}</span><br/>
+											<span class="text-sm text-primary-700-300">{t('components.worldBuilderControls.createStoryDescription')}</span>
 										</button>
 										<button
 											class="w-full text-left p-4 rounded-(--radius-container) border border-primary-200-800 hover:bg-primary-200-800 transition-colors duration-150"
 											type="button"
 											onclick={onStartInterview}
 										>
-											<span class="font-medium text-primary-900-100 mb-1">Tell us about the story</span><br/>
-											<span class="text-sm text-primary-700-300">Discuss the story's direction before starting your adventure.</span>
+											<span class="font-medium text-primary-900-100 mb-1">{t('components.worldBuilderControls.tellUsAboutStory')}</span><br/>
+											<span class="text-sm text-primary-700-300">{t('components.worldBuilderControls.discussDirectionDescription')}</span>
 										</button>
 									</div>
 									<div class="flex justify-center mt-2">
-										<button class="btn preset-tonal" type="button" onclick={onDismissOptions}> Cancel </button>
+										<button class="btn preset-tonal" type="button" onclick={onDismissOptions}> {t('components.worldBuilderControls.cancel')} </button>
 									</div>
 								{/if}
 							</div>
@@ -262,8 +263,8 @@
 								<h3 class="h3 font-display text-primary-900-100">Create "{storyName ?? 'Story'}"?</h3>
 								<p class="text-sm text-primary-700-300">Your world document is ready. Create the story and start your adventure?</p>
 								<div class="flex gap-3 justify-center">
-									<button class="btn preset-filled-primary-500" type="button" onclick={onCreateStory}> Create Story </button>
-									<button class="btn preset-tonal" type="button" onclick={onCancel}> Cancel </button>
+									<button class="btn preset-filled-primary-500" type="button" onclick={onCreateStory}> {t('components.worldBuilderControls.createStory')} </button>
+									<button class="btn preset-tonal" type="button" onclick={onCancel}> {t('components.worldBuilderControls.cancel')}</button>
 								</div>
 							</div>
 						{/if}

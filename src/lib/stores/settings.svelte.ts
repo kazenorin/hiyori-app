@@ -25,6 +25,7 @@ export interface ProviderConfig {
 export interface Settings {
 	providers: ProviderConfig[];
 	roleAssignments: Record<string, string>;
+	locale: string;
 	logLevel: LogLevel;
 	fontSize: number;
 	memoryEnabled: boolean;
@@ -46,6 +47,7 @@ const STORAGE_KEY = 'byoa-settings';
 const defaults: Settings = {
 	providers: [],
 	roleAssignments: {},
+	locale: 'en',
 	logLevel: 'info',
 	fontSize: 1.0,
 	memoryEnabled: true,
@@ -80,6 +82,7 @@ function migrateFromFlatSettings(raw: Record<string, unknown>): Settings {
 	return {
 		providers: [config],
 		roleAssignments: { main: config.id },
+		locale: (raw.locale as string) || 'en',
 		logLevel: (raw.logLevel as LogLevel) || 'info',
 		fontSize: (raw.fontSize as number) ?? 1.0,
 		memoryEnabled: (raw.memoryEnabled as boolean) ?? true,
@@ -286,6 +289,7 @@ export async function updateSettings(
 	partial: Partial<
 		Pick<
 			Settings,
+			| 'locale'
 			| 'logLevel'
 			| 'fontSize'
 			| 'memoryEnabled'
@@ -305,7 +309,9 @@ export async function updateSettings(
 ): Promise<void> {
 	const prevFontSize = settings.fontSize;
 	const prevLogLevel = settings.logLevel;
+	const prevLocale = settings.locale;
 
+	if (partial.locale !== undefined) settings.locale = partial.locale;
 	if (partial.logLevel !== undefined) settings.logLevel = partial.logLevel;
 	if (partial.fontSize !== undefined) settings.fontSize = partial.fontSize;
 	if (partial.memoryEnabled !== undefined) settings.memoryEnabled = partial.memoryEnabled;
@@ -334,6 +340,16 @@ export async function updateSettings(
 			await invoke('set_log_level', { level: partial.logLevel });
 		} catch {
 			// Rust backend may not be available in all environments
+		}
+	}
+
+	// Sync locale to i18n system
+	if (partial.locale !== undefined && partial.locale !== prevLocale) {
+		try {
+			const { setLocale } = await import('$lib/i18n');
+			await setLocale(partial.locale);
+		} catch {
+			// i18n system may fail to load locale
 		}
 	}
 }

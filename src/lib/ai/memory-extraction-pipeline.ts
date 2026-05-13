@@ -8,11 +8,11 @@ import {
 } from '$lib/stores/settings.svelte';
 import { loadMemoryExtractionPrompt, loadMemoryExtractionSystemPrompt } from '$lib/fs/prompts';
 import { type ExtractedMemories, parseMemoryExtract } from '$lib/memory/memory-extract-parser';
-import type { ExtractedInventory } from '$lib/memory/inventory-types';
 import { Memory } from '$lib/memory/memory';
 import { parseCharacterAliases } from './act-summary-parser';
 import { isAuthError, toError, withRetry } from '$lib/utils/async';
 import { log } from '$lib/logging/logger';
+import { ERR_MEMORY_PROVIDER_NOT_CONFIGURED, ERR_EMBEDDING_PROVIDER_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 
 export interface PipelineResult {
 	charactersProcessed: number;
@@ -36,12 +36,12 @@ export async function runMemoryExtractionPipeline(
 ): Promise<PipelineResult> {
 	const llmConfig = getMemoryProviderConfig();
 	if (!llmConfig) {
-		throw new Error('Memory provider not configured');
+		throw new Error(ERR_MEMORY_PROVIDER_NOT_CONFIGURED);
 	}
 
 	const embeddingConfig = getEmbeddingProviderConfig();
 	if (!embeddingConfig) {
-		throw new Error('Embedding provider not configured');
+		throw new Error(ERR_EMBEDDING_PROVIDER_NOT_CONFIGURED);
 	}
 
 	// Step 1: Generate memories via LLM

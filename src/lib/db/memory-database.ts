@@ -1,4 +1,5 @@
 import Database from '@tauri-apps/plugin-sql';
+import { ERR_MEMORY_DB_NOT_INITIALIZED } from '$lib/definitions/error-messages';
 
 let memoryDb: Database | null = null;
 
@@ -11,7 +12,7 @@ export async function initMemoryDatabase(): Promise<Database> {
 
 export function getMemoryDatabase(): Database {
 	if (!memoryDb) {
-		throw new Error('Memory database not initialized. Call initMemoryDatabase() first.');
+		throw new Error(ERR_MEMORY_DB_NOT_INITIALIZED);
 	}
 	return memoryDb;
 }

@@ -4,6 +4,8 @@ import { createModel } from './provider';
 import { loadActPlotInterviewSystemPrompt, loadGeneralInstructions, loadActPlotInterviewTurnOfEventsPrompt } from '$lib/fs/prompts';
 import { log } from '$lib/logging/logger';
 import type { WorldBuilderMessage } from './world-builder.svelte';
+import { TOE_SECTION, PLAYER_LABEL, INTERVIEWER_LABEL } from '$lib/definitions/llm-context-labels';
+import { ERR_NO_MAIN_PROVIDER, ERR_EMPTY_TURN_OF_EVENTS } from '$lib/definitions/error-messages';
 
 const LOG_TAG = 'turn-of-events-generator';
 
@@ -25,18 +27,18 @@ function buildContext(
 	const parts: string[] = [];
 
 	if (actSummary) {
-		parts.push(`### Act Summary\n\n${actSummary}`);
+		parts.push(`${TOE_SECTION.ACT_SUMMARY}\n\n${actSummary}`);
 	}
 
-	parts.push(`### Current Scene\n\nScene ${sceneNumber}: ${sceneTitle}\n\n${narrativeBody}`);
+	parts.push(`${TOE_SECTION.CURRENT_SCENE}\n\nScene ${sceneNumber}: ${sceneTitle}\n\n${narrativeBody}`);
 
 	if (interviewMessages.length > 0) {
 		const transcript = interviewMessages
 			.filter((m) => m.role === 'user' || m.role === 'assistant')
-			.map((m) => `**${m.role === 'user' ? 'Player' : 'Interviewer'}**: ${m.content}`)
+			.map((m) => `**${m.role === 'user' ? PLAYER_LABEL : INTERVIEWER_LABEL}**: ${m.content}`)
 			.join('\n\n');
 		if (transcript) {
-			parts.push(`### Interview Transcript\n\n${transcript}`);
+			parts.push(`${TOE_SECTION.INTERVIEW_TRANSCRIPT}\n\n${transcript}`);
 		}
 	}
 
@@ -47,7 +49,7 @@ export async function generateTurnOfEvents(params: GenerateTurnOfEventsParams): 
 	const { actSummary, narrativeBody, sceneNumber, sceneTitle, interviewMessages } = params;
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) {
-		throw new Error('No main provider configured. Please set one in Settings.');
+		throw new Error(ERR_NO_MAIN_PROVIDER);
 	}
 
 	const [generalInstructions, systemPrompt, promptTemplate] = await Promise.all([
@@ -72,7 +74,7 @@ export async function generateTurnOfEvents(params: GenerateTurnOfEventsParams): 
 
 	const text = result.text.trim();
 	if (!text) {
-		throw new Error('Turn of events generation returned an empty response.');
+		throw new Error(ERR_EMPTY_TURN_OF_EVENTS);
 	}
 
 	await log.info(LOG_TAG, `Turn of events complete. Tokens: ${result.usage.totalTokens}, Length: ${text.length} chars`);

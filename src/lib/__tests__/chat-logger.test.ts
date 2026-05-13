@@ -51,6 +51,7 @@ function defaultSettings() {
 	return {
 		providers: [],
 		roleAssignments: {},
+		locale: 'en',
 		logLevel: 'debug' as const,
 		fontSize: 1.0,
 		memoryEnabled: true,

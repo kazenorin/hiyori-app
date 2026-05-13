@@ -15,6 +15,17 @@ export const SECTION = {
 	TURN_OF_EVENTS: '\n## Turn Of Events\n',
 } as const;
 
+/** Section headings for act-plot generation phases (used by act-plot-generator). */
+export const ACT_PLOT_SECTION = {
+	WORLD_CONTENT: '## World Content\n\n',
+	PREVIOUS_ACT_SUMMARY: '## Previous Act Summary\n\n',
+	TURN_OF_EVENTS: '## Turn Of Events\n\n',
+	INTERVIEW_TRANSCRIPT: '## Interview Transcript\n\nThe following is an interview exchange about the story and premises.',
+	WRITER_OUTPUT: '## Writer Output\n\n',
+	REVIEWER_FEEDBACK: '## Reviewer Feedback\n\n',
+	TEMPLATE: '## Template\n\n',
+} as const;
+
 /** Format the previous narrative body as a user message section. Returns empty array if no body. */
 export function formatPreviousNarrativeBody(previousNarrativeBody: string | null | undefined, completedScenes: number): string[] {
 	if (!previousNarrativeBody || previousNarrativeBody.trim().length === 0) return [];

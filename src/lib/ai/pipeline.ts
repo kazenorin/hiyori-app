@@ -28,6 +28,7 @@ import { extractImportantPhrases } from './important-phrases-extractor';
 import { isPhraseHighlightingEnabled } from '$lib/stores/settings.svelte';
 import { filterToolsForPhase } from '$lib/ai/tools/tools';
 import { log } from '$lib/logging/logger';
+import { ERR_NO_PROVIDER_FOR_PHASE } from '$lib/definitions/error-messages';
 import {
 	actSummaryIncrementalTemplateLoader,
 	actSummaryTemplateLoader,
@@ -260,7 +261,7 @@ async function runStreamingPhase(
 	descriptors: OutputDescriptor[]
 ): Promise<{ state: StreamState; metadata: StreamResultMetadata; retriesConsumed: number }> {
 	if (!providerConfig) {
-		throw new Error(`No provider configured for ${phaseName}. Please set one in Settings.`);
+		throw new Error(ERR_NO_PROVIDER_FOR_PHASE(phaseName));
 	}
 
 	let retriesConsumed = 0;
@@ -302,7 +303,7 @@ async function runNonStreamingPhase(
 	maxSteps: number = 10
 ): Promise<{ text: string; metadata: StreamResultMetadata }> {
 	if (!providerConfig) {
-		throw new Error(`No provider configured for ${phaseName}. Please set one in Settings.`);
+		throw new Error(ERR_NO_PROVIDER_FOR_PHASE(phaseName));
 	}
 
 	const model = createModel(providerConfig);

@@ -1,8 +1,15 @@
 // Transcript parsers for multiple JSON formats
 
-import type { GameDataFields } from "$lib/ai/narrative-types";
+import type { GameDataFields } from '$lib/ai/narrative-types';
 import type { TranscriptFormat, ParsedTranscript, ParsedMessage, OpenWebUIExport, OpenWebUIMessage } from './types';
 import { validateFileSize } from '$lib/utils/async';
+import {
+	ERR_INVALID_APP_EXPORT,
+	ERR_INVALID_OPENAI_FORMAT,
+	ERR_INVALID_OPENWEBUI_FORMAT,
+	ERR_OPENWEBUI_EMPTY,
+	ERR_UNABLE_TO_DETECT_FORMAT,
+} from '$lib/definitions/error-messages';
 
 // === Format Detection ===
 
@@ -63,7 +70,7 @@ export interface AppExportMessage {
 
 export function parseAppExportFormat(json: unknown, skipOptionalMalformed: boolean): ParsedTranscript {
 	if (!isAppExportFormat(json)) {
-		throw new Error('Invalid App Export format');
+		throw new Error(ERR_INVALID_APP_EXPORT);
 	}
 
 	const { messages } = json as AppExportFormat;
@@ -131,7 +138,7 @@ export interface SimpleOpenAIMessage {
 
 export function parseSimpleOpenAIFormat(json: unknown): ParsedTranscript {
 	if (!isSimpleOpenAIFormat(json)) {
-		throw new Error('Invalid Simple OpenAI API format');
+		throw new Error(ERR_INVALID_OPENAI_FORMAT);
 	}
 
 	const { messages } = json as SimpleOpenAIFormat;
@@ -180,12 +187,12 @@ function isSimpleOpenAIFormat(json: unknown): boolean {
 
 export function parseOpenWebUIFormat(json: unknown, _skipOptionalMalformed: boolean): ParsedTranscript {
 	if (!isOpenWebUIFormat(json)) {
-		throw new Error('Invalid Open WebUI format');
+		throw new Error(ERR_INVALID_OPENWEBUI_FORMAT);
 	}
 
 	const exports = json as OpenWebUIExport[];
 	if (exports.length === 0) {
-		throw new Error('Open WebUI export is empty');
+		throw new Error(ERR_OPENWEBUI_EMPTY);
 	}
 
 	// Use first item only per spec
@@ -326,7 +333,12 @@ function parseGameData(raw: string, skipOptionalMalformed: boolean): GameDataFie
 		) {
 			return {
 				activePlotThreads: Array.isArray(parsed.activePlotThreads) ? parsed.activePlotThreads : [],
-				decisionContext: typeof parsed.decisionContext === 'string' ? parsed.decisionContext : (typeof parsed.worldState === 'string' ? parsed.worldState : null),
+				decisionContext:
+					typeof parsed.decisionContext === 'string'
+						? parsed.decisionContext
+						: typeof parsed.worldState === 'string'
+							? parsed.worldState
+							: null,
 				decisions: parsed.decisions,
 			};
 		}
@@ -364,6 +376,6 @@ export async function parseTranscriptFile(file: File, skipOptionalMalformed: boo
 			return parseOpenWebUIFormat(json, skipOptionalMalformed);
 		case 'unknown':
 		default:
-			throw new Error('Unable to detect transcript format');
+			throw new Error(ERR_UNABLE_TO_DETECT_FORMAT);
 	}
 }

@@ -1,4 +1,5 @@
 import Database from '@tauri-apps/plugin-sql';
+import { ERR_DB_NOT_INITIALIZED } from '$lib/definitions/error-messages';
 
 let db: Database | null = null;
 
@@ -11,7 +12,7 @@ export async function initDatabase(): Promise<Database> {
 
 export function getDatabase(): Database {
 	if (!db) {
-		throw new Error('Database not initialized. Call initDatabase() first.');
+		throw new Error(ERR_DB_NOT_INITIALIZED);
 	}
 	return db;
 }
