@@ -4,7 +4,7 @@ import {
 	_computeCardFilenameForTest as computeCardFilename,
 	toCharacterEntries,
 	type CharacterSummary,
-} from '$lib/ai/character-card-generator';
+} from '$lib/features/character-card-generator';
 
 describe('parseCharacterJson', () => {
 	it('parses simple JSON array', () => {

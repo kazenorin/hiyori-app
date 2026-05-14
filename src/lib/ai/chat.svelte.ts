@@ -20,7 +20,7 @@ import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from
 import * as dbActLines from '$lib/db/act-lines';
 import { logMainChat } from '$lib/logging/chat-logger';
 import { buildMetadata, toPhaseMetadata, type MessageMetadata, type PhaseMetadata } from './chat-stream';
-import { Memory } from '$lib/memory/memory';
+import { Memory } from '$lib/features/memory';
 import { log } from '$lib/logging/logger';
 import { buildTools } from '$lib/ai/tools/tools';
 import type { StreamResultMetadata } from '$lib/ai/streaming';

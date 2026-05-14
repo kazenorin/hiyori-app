@@ -1,8 +1,8 @@
-import { Memory } from '$lib/memory/memory';
+import { Memory } from '$lib/features/memory';
 import { getEmbeddingProviderConfig } from '$lib/stores/settings.svelte';
 import { getActiveStoryId, getActiveActLineId } from './stories.svelte';
 import { getMessagesForLine } from '$lib/db/act-lines';
-import { runMemoryExtractionPipeline } from '$lib/ai/memory-extraction-pipeline';
+import { runMemoryExtractionPipeline } from '$lib/features/memory/memory-extraction-pipeline';
 import { log } from '$lib/logging/logger';
 import { ERR_EMBEDDING_PROVIDER_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 

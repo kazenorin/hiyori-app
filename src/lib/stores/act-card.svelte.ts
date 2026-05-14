@@ -1,4 +1,4 @@
-import { generateActCard } from '$lib/ai/act-card-generator';
+import { generateActCard } from '$lib/features/act-card-generator';
 import { getActiveActLineId } from './stories.svelte';
 import { log } from '$lib/logging/logger';
 

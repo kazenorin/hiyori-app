@@ -7,8 +7,8 @@ import type {
 	ImportProgressUpdate,
 	ValidationResult,
 	ImportPhase,
-} from '$lib/import-world/types';
-import { validateImportForm } from '$lib/import-world/validators';
+} from '../../lib/features/import-world/types';
+import { validateImportForm } from '../../lib/features/import-world/validators';
 
 // === Form State ===
 

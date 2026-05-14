@@ -12,6 +12,7 @@ import {
 	worldCardLabel,
 	actCardLabel,
 	characterCardLabel,
+	characterNamePlaceholder,
 	actGenerationInstruction,
 	sceneExtractionFirstPrompt,
 	sceneExtractionContinuationPrompt,
@@ -66,7 +67,7 @@ function buildGenerationMessages(
 
 	// Character cards
 	for (const card of characterCards) {
-		const name = card.name || 'a character in the story';
+		const name = card.name || characterNamePlaceholder();
 		messages.push({ role: 'user', content: characterCardLabel(name) }, { role: 'user', content: card.content });
 	}
 

@@ -1,5 +1,5 @@
 import { generateText } from 'ai';
-import { createModel } from './provider';
+import { createModel } from '$lib/ai/provider';
 import {
 	type EmbeddingProviderConfig,
 	getEmbeddingProviderConfig,
@@ -7,9 +7,9 @@ import {
 	type MemoryProviderConfig,
 } from '$lib/stores/settings.svelte';
 import { loadMemoryExtractionPrompt, loadMemoryExtractionSystemPrompt } from '$lib/fs/prompts';
-import { type ExtractedMemories, parseMemoryExtract } from '$lib/memory/memory-extract-parser';
-import { Memory } from '$lib/memory/memory';
-import { parseCharacterAliases } from './act-summary-parser';
+import { type ExtractedMemories, parseMemoryExtract } from '$lib/features/memory/memory-extract-parser';
+import { Memory } from '$lib/features/memory';
+import { parseCharacterAliases } from '$lib/ai/act-summary-parser';
 import { isAuthError, toError, withRetry } from '$lib/utils/async';
 import { log } from '$lib/logging/logger';
 import { ERR_MEMORY_PROVIDER_NOT_CONFIGURED, ERR_EMBEDDING_PROVIDER_NOT_CONFIGURED } from '$lib/definitions/error-messages';

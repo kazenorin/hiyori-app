@@ -27,7 +27,7 @@
 		renameActLine,
 	} from '$lib/stores/stories.svelte';
 	import { loadActLineMessages, clearMessages } from '$lib/ai/chat.svelte';
-	import { enterWorldBuilderMode, exitWorldBuilderMode, getIsActive as getIsWorldBuilderActive } from '$lib/ai/world-builder.svelte';
+	import { enterWorldBuilderMode, exitWorldBuilderMode, getIsActive as getIsWorldBuilderActive } from '$lib/features/world-builder/world-builder.svelte';
 	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
 	import { t } from '$lib/i18n';
 

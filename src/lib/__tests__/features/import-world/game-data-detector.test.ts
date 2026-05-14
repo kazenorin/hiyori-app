@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractGameDataTraditional } from '$lib/import-world/game-data-detector';
+import { extractGameDataTraditional } from '../../../features/import-world/game-data-detector';
 
 describe('extractGameDataTraditional', () => {
 	it('extracts decisions from "## Decisions" header with list items', () => {

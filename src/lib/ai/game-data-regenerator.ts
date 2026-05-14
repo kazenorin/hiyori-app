@@ -9,7 +9,7 @@ import { variablesToMarkdown } from './template-renderer';
 import { GAME_MASTER_DESCRIPTORS } from './descriptors';
 import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
 import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection } from '$lib/definitions/section-constants';
-import { gameMasterExtractionPrompt } from '$lib/definitions/static-prompts';
+import { gameMasterExtractionPrompt } from '$lib/definitions/pipeline-prompts';
 
 export interface GameDataRegenerationContext {
 	worldContent: string;

@@ -37,7 +37,7 @@
 		sendWorldBuilderMessage,
 		stopStreaming as stopWorldBuilderStreaming,
 		type WorldBuilderMessage,
-	} from '$lib/ai/world-builder.svelte';
+	} from '$lib/features/world-builder/world-builder.svelte';
 	import {
 		createStoryFromWorldBuilder,
 		forkActLine,
@@ -61,7 +61,7 @@
 	import {generateActPlot} from '$lib/ai/act-plot-generator';
 	import {getActLine, getMessagesForLine} from '$lib/db/act-lines';
 	import {log} from '$lib/logging/logger';
-	import {generateTurnOfEvents} from '$lib/ai/turn-of-events-generator';
+	import {generateTurnOfEvents} from '$lib/features/turn-of-events-generator';
 	import {type Message, updateMessageFields} from '$lib/db/messages';
 	import {type GameDataRegenerationContext, regenerateGameData} from '$lib/ai/game-data-regenerator';
 	import type {Story} from "$lib/db/stories";

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createQueryInventoryTool } from '$lib/ai/tools/query-inventory';
-import type { Memory } from '$lib/memory/memory';
-import type { InventoryItem, InventoryChange } from '$lib/memory/inventory-types';
+import type { Memory } from '$lib/features/memory';
+import type { InventoryItem, InventoryChange } from '$lib/features/memory/inventory-types';
 
 interface InventoryResult {
 	name: string;

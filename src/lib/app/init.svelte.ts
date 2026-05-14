@@ -15,7 +15,8 @@ import {
 import { initLogging, log } from '$lib/logging/logger';
 import { getSettings } from '$lib/stores/settings.svelte';
 import { loadLocale } from '$lib/i18n';
-import { loadLocaleStrings, ensureAllLocaleStringConfigs } from '$lib/definitions/locale-strings';
+import { loadLocaleStrings } from '$lib/definitions/locale-strings';
+import { ensureAllLocaleStringConfigs } from '$lib/fs/locale-string-loader';
 
 let initialized = false;
 let initializing = false;

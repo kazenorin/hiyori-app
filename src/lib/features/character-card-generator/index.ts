@@ -1,6 +1,6 @@
 import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { createModel } from './provider';
+import { createModel } from '$lib/ai/provider';
 import {
 	loadCharacterCardTemplate,
 	loadCharacterCardExtractionPrompt,
@@ -8,7 +8,7 @@ import {
 	loadSummarizeCharactersInAct,
 	loadStorySystemPrompt,
 } from '$lib/fs/prompts';
-import { exportActLine } from './act-line-export';
+import { exportActLine } from '$lib/ai/act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
@@ -17,16 +17,15 @@ import { mkdir, writeTextFile, readTextFile, exists, BaseDirectory } from '@taur
 import { kebabCase } from 'lodash-es';
 import { log } from '$lib/logging/logger';
 import { logCharacterCardActivity } from '$lib/logging/chat-logger';
-import { getLineDir } from './card-output-path';
+import { getLineDir } from '$lib/ai/card-output-path';
+import { actCardLabel, characterCardLabel } from './extraction-prompts';
 import {
 	transcriptStart,
 	transcriptEnd,
-	actCardLabel,
-	characterCardLabel,
 	characterExtractionPrefix,
 	characterExtractionInstruction,
 	characterCardGenerationInstruction,
-} from '$lib/definitions/llm-context-labels';
+} from './extraction-prompts';
 import { ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT, ERR_NO_CHARACTERS_SELECTED } from '$lib/definitions/error-messages';
 
 // === Types ===

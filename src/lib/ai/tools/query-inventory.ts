@@ -1,8 +1,8 @@
 import { ls } from '$lib/definitions/locale-strings';
 import { tool } from 'ai';
 import { z } from 'zod';
-import { Memory } from '$lib/memory/memory';
-import type { InventoryCategory } from '$lib/memory/inventory-types';
+import { Memory } from '$lib/features/memory';
+import type { InventoryCategory } from '$lib/features/memory/inventory-types';
 import { getEmbeddingProviderConfig, settings } from '$lib/stores/settings.svelte';
 import type { ToolSet } from 'ai';
 

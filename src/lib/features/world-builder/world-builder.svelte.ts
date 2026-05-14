@@ -1,5 +1,5 @@
 import { getMainProviderConfig, type ProviderConfig } from '$lib/stores/settings.svelte';
-import { worldBuilderSeed, resumeStoryActPrefix, resumeStoryActSuffix } from '$lib/definitions/llm-context-labels';
+import { worldBuilderSeed, resumeStoryActPrefix, resumeStoryActSuffix } from '$lib/features/world-builder/prompts';
 import {
 	loadWorldBuilderSystemPrompt,
 	loadWorldTemplate,
@@ -10,7 +10,7 @@ import {
 import { generateWorldBuilderLogFilename, logWorldBuilderChat } from '$lib/logging/chat-logger';
 import { log } from '$lib/logging/logger';
 import { type StreamAccumulator, type StreamState } from '$lib/ai/chat-callbacks';
-import { streamChatResponse } from './chat-stream';
+import { streamChatResponse } from '$lib/ai/chat-stream';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
 import type { MessageBase } from '$lib/db/messages';

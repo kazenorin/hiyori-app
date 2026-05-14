@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { getImportWorldStore } from './import-state.svelte';
-	import { executeImport } from '$lib/import-world/import-orchestrator';
+	import { executeImport } from '$lib/features/import-world/import-orchestrator';
 	import { t } from '$lib/i18n';
 
 	const store = getImportWorldStore();

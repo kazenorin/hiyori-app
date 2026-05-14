@@ -5,7 +5,7 @@ import {
 	type CharacterEntry,
 	type CharacterCardResult,
 	type GenerateProgress,
-} from '$lib/ai/character-card-generator';
+} from '$lib/features/character-card-generator';
 import { log } from '$lib/logging/logger';
 
 let characters = $state<CharacterEntry[]>([]);

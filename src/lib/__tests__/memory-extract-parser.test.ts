@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseMemoryExtract } from '$lib/memory/memory-extract-parser';
+import { parseMemoryExtract } from '$lib/features/memory/memory-extract-parser';
 
 describe('parseMemoryExtract', () => {
 	it('parses valid markdown with characters, locations, and memories', () => {

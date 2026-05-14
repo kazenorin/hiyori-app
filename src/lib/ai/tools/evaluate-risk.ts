@@ -3,8 +3,8 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import type { ToolSet } from 'ai';
 import type { ToolContext } from './tools';
-import { evaluateRisk } from '$lib/ai/risk-model';
-import type { RiskOutcome } from '$lib/ai/risk-model';
+import { evaluateRisk } from '$lib/utils/risk-model';
+import type { RiskOutcome } from '$lib/utils/risk-model';
 import { fileLog, log } from '$lib/logging/logger';
 
 const OUTCOME_MESSAGES: Record<RiskOutcome, string> = {

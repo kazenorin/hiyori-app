@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { validateImportForm, hasRequiredActContent } from '$lib/import-world/validators';
-import type { ImportFormData, ImportActInput, ImportCharacterInput } from '$lib/import-world/types';
+import { validateImportForm, hasRequiredActContent } from '../../../features/import-world/validators';
+import type { ImportFormData, ImportActInput, ImportCharacterInput } from '../../../features/import-world/types';
 
 function createFile(name: string): File {
 	return new File(['content'], name, { type: 'text/plain' });

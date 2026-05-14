@@ -2,7 +2,7 @@ import { ls } from '$lib/definitions/locale-strings';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { sampleSize } from 'lodash-es';
-import { Memory, type MemoryItem } from '$lib/memory/memory';
+import { Memory, type MemoryItem } from '$lib/features/memory';
 import { batchResolveActLineInfo } from '$lib/db/act-lines';
 import { fileLog } from '$lib/logging/logger';
 import { getEmbeddingProviderConfig, settings } from '$lib/stores/settings.svelte';

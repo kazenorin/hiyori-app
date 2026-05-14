@@ -1,19 +1,19 @@
 import type { MessageBase } from '$lib/db/messages';
 import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { createModel } from './provider';
+import { createModel } from '$lib/ai/provider';
 import { loadActCardTemplate, loadActExtractionPrompt, loadStorySystemPrompt } from '$lib/fs/prompts';
-import { exportActLine } from './act-line-export';
+import { exportActLine } from '$lib/ai/act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
 import { loadStoryWorldContent, resolveStoryFolder } from '$lib/fs/story-folders';
 import { getActiveStoryId, getActiveActId, getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
 import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
-import { getLineDir } from './card-output-path';
+import { getLineDir } from '$lib/ai/card-output-path';
 import { logActCardActivity } from '$lib/logging/chat-logger';
-import { streamWithRetry, type RetryConfig } from './chat-stream';
-import type { StreamState } from './chat-callbacks';
-import { worldContextLabel, transcriptStart, actCardTranscriptEnd } from '$lib/definitions/llm-context-labels';
+import { streamWithRetry, type RetryConfig } from '$lib/ai/chat-stream';
+import type { StreamState } from '$lib/ai/chat-callbacks';
+import { worldContextLabel, actCardTranscriptStart, actCardTranscriptEnd } from './prompts';
 import {
 	ERR_NO_MAIN_PROVIDER,
 	ERR_NO_ACT_LINE_SELECTED,
@@ -28,7 +28,7 @@ export interface GenerateActCardResult {
 
 function buildUserMessages(contents: string[], template: string, extractionPrompt: string, world: string | null): string[] {
 	const worldPrompt = world ? [worldContextLabel(), world] : [];
-	return [...worldPrompt, transcriptStart(), ...contents, actCardTranscriptEnd(), template, extractionPrompt];
+	return [...worldPrompt, actCardTranscriptStart(), ...contents, actCardTranscriptEnd(), template, extractionPrompt];
 }
 
 interface ActCardContext {

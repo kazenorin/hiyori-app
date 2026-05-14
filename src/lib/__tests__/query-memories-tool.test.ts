@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { MemoryItem } from '$lib/memory/memory';
+import type { MemoryItem } from '$lib/features/memory';
 
 // Mock the database module for act-lines batchResolveActLineInfo
 const mockDb = {

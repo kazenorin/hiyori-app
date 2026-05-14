@@ -54,5 +54,3 @@ export function ls(key: string, params?: Record<string, string | number>): strin
 		return value !== undefined ? String(value) : match;
 	});
 }
-
-export { ensureAllLocaleStringConfigs } from '$lib/fs/locale-string-loader';

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateRisk } from '$lib/ai/risk-model';
+import { evaluateRisk } from '$lib/utils/risk-model';
 
 describe('evaluateRisk', () => {
 	it('at riskLevel 1, p_bad = 0.10, p_neutral = 0.20', () => {

@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Memory, type MemoryItem, type LocationItem } from '$lib/memory/memory';
-	import type { InventoryItem } from '$lib/memory/inventory-types';
+	import { Memory, type MemoryItem, type LocationItem } from '$lib/features/memory';
+	import type { InventoryItem } from '$lib/features/memory/inventory-types';
 	import { getEmbeddingProviderConfig, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 	import { t } from '$lib/i18n';
 	import {
@@ -18,7 +18,7 @@
 		getRegenError,
 		getLastRegenResult,
 	} from '$lib/stores/memory-regeneration.svelte';
-	import { streamActCard } from '$lib/ai/act-card-generator';
+	import { streamActCard } from '$lib/features/act-card-generator';
 	import { log } from '$lib/logging/logger';
 
 	let memories = $state<MemoryItem[]>([]);

@@ -1,13 +1,26 @@
 import { generateText } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { createModel } from './provider';
+import { createModel } from '$lib/ai/provider';
 import { loadActPlotInterviewSystemPrompt, loadGeneralInstructions, loadActPlotInterviewTurnOfEventsPrompt } from '$lib/fs/prompts';
 import { log } from '$lib/logging/logger';
-import type { WorldBuilderMessage } from './world-builder.svelte';
-import { TOE_SECTION, playerLabel, interviewerLabel } from '$lib/definitions/llm-context-labels';
+import type { WorldBuilderMessage } from '$lib/features/world-builder/world-builder.svelte';
+import { playerLabel, interviewerLabel, sceneWithNumberLabel } from '$lib/definitions/common-labels';
+import { actSummaryHeader, currentSceneHeader, interviewTranscriptHeader, sectionFormat } from '$lib/definitions/common-headers';
 import { ERR_NO_MAIN_PROVIDER, ERR_EMPTY_TURN_OF_EVENTS } from '$lib/definitions/error-messages';
 
 const LOG_TAG = 'turn-of-events-generator';
+
+const sectionHeaders = {
+	get actSummary() {
+		return sectionFormat(actSummaryHeader(), 3);
+	},
+	get currentScene() {
+		return sectionFormat(currentSceneHeader(), 3);
+	},
+	get interviewTranscript() {
+		return sectionFormat(interviewTranscriptHeader(), 3);
+	},
+};
 
 export interface GenerateTurnOfEventsParams {
 	actSummary: string;
@@ -27,10 +40,10 @@ function buildContext(
 	const parts: string[] = [];
 
 	if (actSummary) {
-		parts.push(`${TOE_SECTION.ACT_SUMMARY}\n\n${actSummary}`);
+		parts.push(`${sectionHeaders.actSummary}${actSummary}`);
 	}
 
-	parts.push(`${TOE_SECTION.CURRENT_SCENE}\n\nScene ${sceneNumber}: ${sceneTitle}\n\n${narrativeBody}`);
+	parts.push(`${sectionHeaders.currentScene}${sceneWithNumberLabel(sceneNumber)}: ${sceneTitle}\n\n${narrativeBody}`);
 
 	if (interviewMessages.length > 0) {
 		const transcript = interviewMessages
@@ -38,7 +51,7 @@ function buildContext(
 			.map((m) => `**${m.role === 'user' ? playerLabel() : interviewerLabel()}**: ${m.content}`)
 			.join('\n\n');
 		if (transcript) {
-			parts.push(`${TOE_SECTION.INTERVIEW_TRANSCRIPT}\n\n${transcript}`);
+			parts.push(`${sectionHeaders.interviewTranscript}${transcript}`);
 		}
 	}
 

@@ -6,6 +6,7 @@ import { DEFAULT_RETRY_CONFIG, type RetryConfig, type PhaseMetadata, toPhaseMeta
 import { createModel } from './provider';
 import type { GameDataFields, NarrativeVariables, PhaseName } from './narrative-types';
 import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection } from '$lib/definitions/section-constants';
+import { actSummaryForScenesHeader, sectionFormat } from '$lib/definitions/common-headers';
 import {
 	gameMasterExtractionPrompt,
 	editorExtractionPrompt,
@@ -17,13 +18,13 @@ import {
 	templateFitterSystemPrompt,
 	editorTemplateFitterExtractionPrompt,
 	gmTemplateFitterExtractionPrompt,
-} from '$lib/definitions/static-prompts';
+} from '$lib/definitions/pipeline-prompts';
 import type { AsyncPhaseResults, PipelineCallbacks, PipelineState } from './pipeline-types';
 import type { StreamState } from './chat-callbacks';
 import { type StreamResultMetadata, extractCacheTokens } from './streaming';
 import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
 import { variablesToMarkdown, hasTemplateMetadata } from './template-renderer';
-import { runMemoryExtractionPipeline } from './memory-extraction-pipeline';
+import { runMemoryExtractionPipeline } from '$lib/features/memory/memory-extraction-pipeline';
 import { extractImportantPhrases } from './important-phrases-extractor';
 import { isPhraseHighlightingEnabled } from '$lib/stores/settings.svelte';
 import { filterToolsForPhase } from '$lib/ai/tools/tools';
@@ -363,10 +364,7 @@ function playerResponseSection(playerContext: PlayerContext | undefined) {
 function buildSummarizerMessages(input: PipelineInput) {
 	const { previousNarrativeVariables, actSummary, completedScenes } = input;
 	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
-	const actSummaryHeading = SECTION.PREVIOUS_ACT_SUMMARY.replaceAll(
-		'{summarizedScenes}',
-		completedScenes <= 1 ? '' : `(up to Scene ${completedScenes - 1})`
-	);
+	const actSummaryHeading = sectionFormat(actSummaryForScenesHeader(completedScenes <= 1 ? '' : `(up to Scene ${completedScenes - 1})`));
 
 	if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
 		return toUserMessages([

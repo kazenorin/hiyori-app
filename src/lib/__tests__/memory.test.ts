@@ -78,7 +78,7 @@ function setupMocksForVecInsertRowid(rowid: number) {
 }
 
 describe('Memory', () => {
-	let Memory: typeof import('$lib/memory/memory').Memory;
+	let Memory: typeof import('$lib/features/memory').Memory;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
@@ -110,7 +110,7 @@ describe('Memory', () => {
 			randomUUID: () => `test-uuid-${++uuidCounter}`,
 		});
 
-		const mod = await import('$lib/memory/memory');
+		const mod = await import('$lib/features/memory');
 		Memory = mod.Memory;
 	});
 
@@ -389,7 +389,7 @@ describe('Memory', () => {
 				{ character_canonical_name: 'elena-thornwood' }, // duplicate
 			]);
 
-			const mod = await import('$lib/memory/memory');
+			const mod = await import('$lib/features/memory');
 			const names = await mod.knownCharacterNameList();
 
 			// SELECT DISTINCT should be in the query
@@ -401,7 +401,7 @@ describe('Memory', () => {
 		it('returns empty array on error', async () => {
 			mockDb.select.mockRejectedValueOnce(new Error('table not found'));
 
-			const mod = await import('$lib/memory/memory');
+			const mod = await import('$lib/features/memory');
 			const names = await mod.knownCharacterNameList();
 
 			expect(names).toEqual([]);

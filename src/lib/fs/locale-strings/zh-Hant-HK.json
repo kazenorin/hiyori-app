@@ -1,34 +1,16 @@
 {
-  "llmContextLabels": {
+  "common": {
     "labels": {
-      "transcriptStart": "The following messages will contain the transcript of the current act:",
-      "transcriptEnd": "The previous message was the end of the transcript of the current act.",
-      "actCardTranscriptEnd": "The previous message was the end of the transcript of the current act. The following message will contain the Act Card template:",
-      "worldContext": "The world setting is based on the following:",
-      "actCard": "The following message contains the Act Card from Act {actNumber}",
-      "characterCard": "The following message contains the previous Character Card of {characterName} from Act {actNumber}",
       "player": "Player",
-      "interviewer": "Interviewer"
+      "interviewer": "Interviewer",
+      "sceneWithNumber": "Scene {sceneNumber}"
     },
-    "instructions": {
-      "characterExtractionPrefix": "I need your help to extract all the characters from the current act.\n{transcriptStart}",
-      "characterExtraction": "Extract all the characters from the current act according to the following rules: {rules}",
-      "characterCardGeneration": "Based on the information from the chat history, generate a new Character Card according to the following rules:\n{extractionPrompt}\n---\n{template}",
-      "worldBuilderSeed": "I want to create a new story. Please help me build a world.",
-      "resumeStoryActPrefix": "Continue the pre-game interview based on the latest story context below.\n\nThe content represents what already happened. Use it only as context to understand the player's direction and preferences.\n\nDo NOT continue the story, narrate scenes, or generate plot content. Stay strictly in interview mode.\n\n---",
-      "resumeStoryActSuffix": "\n\n---\n\nResume the interview conversation naturally from here, helping the player refine what they want next."
-    },
-    "headers": {
-      "toeActSummary": "Act Summary",
-      "toeCurrentScene": "Current Scene",
-      "toeInterviewTranscript": "Interview Transcript"
-    }
-  },
-  "sectionConstants": {
     "headers": {
       "worldContent": "World Content",
       "actPlot": "Act Plot",
       "actSummary": "Act Summary",
+      "currentScene": "Current Scene",
+      "interviewTranscript": "Interview Transcript",
       "playerResponse": "Player Response",
       "scenePlot": "Scene Plot",
       "writerOutputTemplate": "Writer Output Template",
@@ -36,18 +18,10 @@
       "reviewerOutput": "Reviewer Output",
       "editorOutput": "Editor Output",
       "gameMasterOutput": "Game Master Output",
-      "previousActSummary": "Act Summary {summarizedScenes}",
-      "previousNarrativeBody": "Narrative Body for Scene {completedScenes}",
-      "turnOfEvents": "Turn Of Events"
-    }
-  },
-  "actPlotSection": {
-    "headers": {
-      "worldContent": "World Content",
       "previousActSummary": "Previous Act Summary",
+      "actSummaryForScenes": "Act Summary {summarizedScenes}",
+      "previousNarrativeBody": "Narrative Body for Scene {completedScenes}",
       "turnOfEvents": "Turn Of Events",
-      "interviewTranscript": "Interview Transcript",
-      "writerOutput": "Writer Output",
       "reviewerFeedback": "Reviewer Feedback",
       "template": "Template"
     },
@@ -71,16 +45,38 @@
       "templateFitter": "You are a template-fitting assistant. Your sole task is to restructure provided content into a specific markdown template format without altering any of the original content. Preserve every word — only add the required section headers."
     }
   },
-  "importWorld": {
-    "labels": {
-      "worldCard": "The following message is a world building settings card.",
-      "actCard": "The following message is an act card describing the events of the act.",
-      "characterCard": "The following message is a character card for {name}."
+  "features": {
+    "characterCardGenerator": {
+      "characterExtractionPrefix": "I need your help to extract all the characters from the current act.\n{transcriptStart}",
+      "characterExtraction": "Extract all the characters from the current act according to the following rules: {rules}",
+      "characterCardGeneration": "Based on the information from the chat history, generate a new Character Card according to the following rules:\n{extractionPrompt}\n---\n{template}",
+      "transcriptStart": "The following messages will contain the transcript of the current act:",
+      "transcriptEnd": "The previous message was the end of the transcript of the current act.",
+      "actCard": "The following message contains the Act Card from Act {actNumber}",
+      "characterCard": "The following message contains the previous Character Card of {characterName} from Act {actNumber}"
     },
-    "instructions": {
-      "actGeneration": "Generate a story based strictly on the settings and information provided above.  \nYour top priorities are: (1) accuracy to source material, (2) consistency in character portrayal and tone, and (3) clear scene-based structure.\n\nEnsure all characters act and speak consistently with their established personalities, motivations, and relationships.  \nMaintain the specified tone (e.g., gritty realism, whimsical fantasy, etc.) throughout the story.  \nPresent the story in prose format divided into clear scenes, not as a screenplay or dialogue script.\n\nYou may introduce small original details only when necessary for flow or realism, and only if they support rather than alter the existing lore or character logic.\n\nEach scene should focus on one significant narrative event or emotional turning point.  \nScenes should be comparable in length and detail (roughly 300–500 words each), detailed enough to cover the event fully before moving on.  \nBegin each scene with a short transition (except Scene 1) to connect it logically to the previous moment.  \nEnd each scene with a sense of resolution or a hook leading into the next.\n\nIMPORTANT: Structure your response using markdown headers to separate distinct scenes.  \nUse ## Scene, ### Scene X, or similar header levels to mark the beginning of each new scene.\n\nExample format:\n## Scene 1: [Scene Title]  \n[Story content...]\n\n## Scene 2: [Scene Title]  \n[Story content...]\n\n## Scene 3: [Scene Title]  \n[Story content...]\n\nEach scene should be a self-contained segment with a clear beginning and end.",
-      "sceneExtractionFirst": "You will rewrite the following scene using the narration template provided below.  \nYour primary goal is to **fit the scene into the given narration template and style**, preserving all essential content and character actions from the original scene.\n\nApply the same narrative style, structure, and formatting conventions as shown in the template.  \nInclude vivid sensory descriptions, character dialogue, internal thoughts, and environment updates where appropriate for flow and immersion.  \nDo not omit key story details or add new plot elements beyond what is needed for smooth narrative transitions and natural pacing.\n\nPresent only the rewritten scene — do not include explanations, notes, or commentary outside the story output.\n\n---NARRATION TEMPLATE---\n{narrationTemplate}\n\n---SCENE CONTENT---\n{sceneContent}",
-      "sceneExtractionContinuation": "Below are the previous scenes from this act for context:\n---PREVIOUS SCENES---\n{previousScenes}\n\nYou will rewrite the next scene using the narration template provided below.  \nYour primary goal is to **apply the narration template faithfully while maintaining full consistency with the previous scenes** in tone, pacing, and style.  \n\nContinue the story smoothly from where the previous scenes left off, ensuring logical continuity in plot, character actions, and emotional flow.  \nPreserve all key content from the original scene; add only minor descriptive or connective details when necessary for realism or narrative cohesion.\n\nApply the same narrative style, structure, and formatting conventions as the template.  \nDo not restate previous scenes or summarize them — focus only on rewriting the current scene as part of the ongoing narrative.\n\nPresent only the rewritten scene — do not include explanations, notes, or commentary outside the story output.\n\n---NARRATION TEMPLATE---\n{narrationTemplate}\n\n---SCENE CONTENT---\n{sceneContent}"
+    "actCardGenerator": {
+      "transcriptStart": "The following messages will contain the transcript of the current act:",
+      "transcriptEnd": "The previous message was the end of the transcript of the current act. The following message will contain the Act Card template:",
+      "worldContext": "The world setting is based on the following:"
+    },
+    "worldBuilder": {
+      "worldBuilderSeed": "I want to create a new story. Please help me build a world.",
+      "resumeStoryActPrefix": "Continue the pre-game interview based on the latest story context below.\n\nThe content represents what already happened. Use it only as context to understand the player's direction and preferences.\n\nDo NOT continue the story, narrate scenes, or generate plot content. Stay strictly in interview mode.\n\n---",
+      "resumeStoryActSuffix": "\n\n---\n\nResume the interview conversation naturally from here, helping the player refine what they want next."
+    },
+    "importWorld": {
+      "labels": {
+        "worldCard": "The following message is a world building settings card.",
+        "actCard": "The following message is an act card describing the events of the act.",
+        "characterCard": "The following message is a character card for {name}.",
+        "characterNamePlaceholder": "a character in the story"
+      },
+      "instructions": {
+        "actGeneration": "Generate a story based strictly on the settings and information provided above.  \nYour top priorities are: (1) accuracy to source material, (2) consistency in character portrayal and tone, and (3) clear scene-based structure.\n\nEnsure all characters act and speak consistently with their established personalities, motivations, and relationships.  \nMaintain the specified tone (e.g., gritty realism, whimsical fantasy, etc.) throughout the story.  \nPresent the story in prose format divided into clear scenes, not as a screenplay or dialogue script.\n\nYou may introduce small original details only when necessary for flow or realism, and only if they support rather than alter the existing lore or character logic.\n\nEach scene should focus on one significant narrative event or emotional turning point.  \nScenes should be comparable in length and detail (roughly 300–500 words each), detailed enough to cover the event fully before moving on.  \nBegin each scene with a short transition (except Scene 1) to connect it logically to the previous moment.  \nEnd each scene with a sense of resolution or a hook leading into the next.\n\nIMPORTANT: Structure your response using markdown headers to separate distinct scenes.  \nUse ## Scene, ### Scene X, or similar header levels to mark the beginning of each new scene.\n\nExample format:\n## Scene 1: [Scene Title]  \n[Story content...]\n\n## Scene 2: [Scene Title]  \n[Story content...]\n\n## Scene 3: [Scene Title]  \n[Story content...]\n\nEach scene should be a self-contained segment with a clear beginning and end.",
+        "sceneExtractionFirst": "You will rewrite the following scene using the narration template provided below.  \nYour primary goal is to **fit the scene into the given narration template and style**, preserving all essential content and character actions from the original scene.\n\nApply the same narrative style, structure, and formatting conventions as shown in the template.  \nInclude vivid sensory descriptions, character dialogue, internal thoughts, and environment updates where appropriate for flow and immersion.  \nDo not omit key story details or add new plot elements beyond what is needed for smooth narrative transitions and natural pacing.\n\nPresent only the rewritten scene — do not include explanations, notes, or commentary outside the story output.\n\n---NARRATION TEMPLATE---\n{narrationTemplate}\n\n---SCENE CONTENT---\n{sceneContent}",
+        "sceneExtractionContinuation": "Below are the previous scenes from this act for context:\n---PREVIOUS SCENES---\n{previousScenes}\n\nYou will rewrite the next scene using the narration template provided below.  \nYour primary goal is to **apply the narration template faithfully while maintaining full consistency with the previous scenes** in tone, pacing, and style.  \n\nContinue the story smoothly from where the previous scenes left off, ensuring logical continuity in plot, character actions, and emotional flow.  \nPreserve all key content from the original scene; add only minor descriptive or connective details when necessary for realism or narrative cohesion.\n\nApply the same narrative style, structure, and formatting conventions as the template.  \nDo not restate previous scenes or summarize them — focus only on rewriting the current scene as part of the ongoing narrative.\n\nPresent only the rewritten scene — do not include explanations, notes, or commentary outside the story output.\n\n---NARRATION TEMPLATE---\n{narrationTemplate}\n\n---SCENE CONTENT---\n{sceneContent}"
+      }
     }
   },
   "tools": {

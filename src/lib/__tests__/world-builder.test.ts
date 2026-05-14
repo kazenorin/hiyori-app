@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractCompletionData } from '../ai/world-builder.svelte';
+import { extractCompletionData } from '../features/world-builder/world-builder.svelte';
 
 describe('extractCompletionData', () => {
 	it('returns null when no marker present', () => {
