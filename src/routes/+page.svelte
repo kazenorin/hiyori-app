@@ -50,6 +50,7 @@
 		selectActLineQuiet,
 		setActiveActPlotContent,
 	} from '$lib/stores/stories.svelte';
+	import {settings} from '$lib/stores/settings.svelte';
 	import {Accordion} from '@skeletonlabs/skeleton-svelte';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import ChatControls from '$lib/components/ChatControls.svelte';
