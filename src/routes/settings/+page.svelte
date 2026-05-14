@@ -14,6 +14,7 @@
 	} from '$lib/stores/settings.svelte';
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
 	import { t } from '$lib/i18n';
+	import ThemeSelect from '$lib/components/ThemeSelect.svelte';
 
 	// Editing state
 	let editingId = $state<string | null>(null);
@@ -143,6 +144,36 @@
 	}
 
 	const mainProviderId = $derived(settings.roleAssignments['main']);
+
+	const providerItems: { label: string; value: string }[] = [
+		{ label: t('settings.providers.openai'), value: 'openai' },
+		{ label: t('settings.providers.openaiCompatible'), value: 'openai-compatible' },
+		{ label: t('settings.providers.ollama'), value: 'ollama' },
+	];
+
+	const apiTypeItems: { label: string; value: string }[] = [
+		{ label: t('settings.apiTypes.responses'), value: 'responses' },
+		{ label: t('settings.apiTypes.chatCompletions'), value: 'chat-completions' },
+	];
+
+	const localeItems: { label: string; value: string }[] = [
+		{ label: 'English', value: 'en' },
+		{ label: '繁體中文（香港）', value: 'zh-Hant-HK' },
+	];
+
+	const logLevelItems: { label: string; value: string }[] = [
+		{ label: t('settings.logLevels.error'), value: 'error' },
+		{ label: t('settings.logLevels.warn'), value: 'warn' },
+		{ label: t('settings.logLevels.info'), value: 'info' },
+		{ label: t('settings.logLevels.debug'), value: 'debug' },
+	];
+
+	function roleItems(includeMain: boolean = true): { label: string; value: string }[] {
+		const items: { label: string; value: string }[] = [];
+		if (includeMain) items.push({ label: t('settings.mainProvider'), value: 'main' });
+		for (const c of settings.providers) items.push({ label: c.name, value: c.id });
+		return items;
+	}
 </script>
 
 <div class="flex-1 overflow-y-auto p-6">
@@ -186,20 +217,13 @@
 
 								<label class="block">
 									<span class="text-sm font-medium text-surface-700-300">{t('settings.apiProvider')}</span>
-									<select class="select mt-1" onchange={() => handleProviderChange()} bind:value={formProvider}>
-										<option value="openai">{t('settings.providers.openai')}</option>
-										<option value="openai-compatible">{t('settings.providers.openaiCompatible')}</option>
-										<option value="ollama">{t('settings.providers.ollama')}</option>
-									</select>
+									<ThemeSelect items={providerItems} value={formProvider} onValueChange={(v) => { formProvider = v as Provider; handleProviderChange(); }} />
 								</label>
 
 								{#if formProvider === 'openai'}
 									<label class="block">
 										<span class="text-sm font-medium text-surface-700-300">{t('settings.apiType')}</span>
-										<select class="select mt-1" bind:value={formApiType}>
-											<option value="responses">{t('settings.apiTypes.responses')}</option>
-											<option value="chat-completions">{t('settings.apiTypes.chatCompletions')}</option>
-										</select>
+										<ThemeSelect items={apiTypeItems} value={formApiType} onValueChange={(v) => formApiType = v as ApiType} />
 										<span class="text-xs text-surface-500 mt-1 block"
 											>{t('settings.apiTypeHint')}</span
 										>
@@ -219,11 +243,7 @@
 										<label class="flex-1">
 											<span class="text-sm font-medium text-surface-700-300">{t('settings.model')}</span>
 											{#if availableModels.length > 0}
-												<select class="select mt-1" bind:value={formModel}>
-													{#each availableModels as model (model.id)}
-														<option value={model.id}>{model.id}</option>
-													{/each}
-												</select>
+												<ThemeSelect items={availableModels.map((m) => ({ label: m.id, value: m.id }))} value={formModel} onValueChange={(v) => formModel = v} />
 											{:else}
 												<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
 											{/if}
@@ -295,20 +315,13 @@
 
 							<label class="block">
 								<span class="text-sm font-medium text-surface-700-300">{t('settings.apiProvider')}</span>
-								<select class="select mt-1" onchange={() => handleProviderChange()} bind:value={formProvider}>
-									<option value="openai">{t('settings.providers.openai')}</option>
-									<option value="openai-compatible">{t('settings.providers.openaiCompatible')}</option>
-									<option value="ollama">{t('settings.providers.ollama')}</option>
-								</select>
+								<ThemeSelect items={providerItems} value={formProvider} onValueChange={(v) => { formProvider = v as Provider; handleProviderChange(); }} />
 							</label>
 
 							{#if formProvider === 'openai'}
 								<label class="block">
 									<span class="text-sm font-medium text-surface-700-300">{t('settings.apiType')}</span>
-									<select class="select mt-1" bind:value={formApiType}>
-										<option value="responses">{t('settings.apiTypes.responses')}</option>
-										<option value="chat-completions">{t('settings.apiTypes.chatCompletions')}</option>
-									</select>
+									<ThemeSelect items={apiTypeItems} value={formApiType} onValueChange={(v) => formApiType = v as ApiType} />
 									<span class="text-xs text-surface-500 mt-1 block"
 										>{t('settings.apiTypeHint')}</span
 									>
@@ -328,11 +341,7 @@
 									<label class="flex-1">
 										<span class="text-sm font-medium text-surface-700-300">{t('settings.model')}</span>
 										{#if availableModels.length > 0}
-											<select class="select mt-1" bind:value={formModel}>
-												{#each availableModels as model (model.id)}
-													<option value={model.id}>{model.id}</option>
-												{/each}
-											</select>
+											<ThemeSelect items={availableModels.map((m) => ({ label: m.id, value: m.id }))} value={formModel} onValueChange={(v) => formModel = v} />
 										{:else}
 											<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
 										{/if}
@@ -376,43 +385,14 @@
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.mainProvider')}</span>
-				<select
-					class="select mt-1"
-					onchange={(e) => {
-						const value = (e.currentTarget as HTMLSelectElement).value;
-						if (value) assignRole('main', value);
-					}}
-				>
-					{#if settings.providers.length === 0}
-						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
-					{:else}
-						{#each settings.providers as config (config.id)}
-							<option value={config.id} selected={mainProviderId === config.id}>{config.name}</option>
-						{/each}
-					{/if}
-				</select>
+				<ThemeSelect items={roleItems(false)} value={mainProviderId} onValueChange={(v) => assignRole('main', v)} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 			</label>
 
-				<label class="block">
-					<span class="text-sm font-medium text-surface-700-300">{t('settings.minorTaskAgent')}</span>
-					<select
-						class="select mt-1"
-						onchange={(e) => {
-							const value = (e.currentTarget as HTMLSelectElement).value;
-							updateSettings({ minorTaskAgentProviderRole: value });
-						}}
-					>
-						{#if settings.providers.length === 0}
-							<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
-						{:else}
-							<option value="main" selected={settings.minorTaskAgentProviderRole === 'main'}>{t('settings.mainProvider')}</option>
-							{#each settings.providers as config (config.id)}
-								<option value={config.id} selected={settings.minorTaskAgentProviderRole === config.id}>{config.name}</option>
-							{/each}
-						{/if}
-					</select>
-					<span class="text-xs text-surface-500 mt-1 block">{t('settings.minorTaskAgentDescription')}</span>
-				</label>
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.minorTaskAgent')}</span>
+				<ThemeSelect items={roleItems()} value={settings.minorTaskAgentProviderRole} onValueChange={(v) => updateSettings({ minorTaskAgentProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.minorTaskAgentDescription')}</span>
+			</label>
 
 				<label class="flex items-center gap-2">
 					<input
@@ -444,45 +424,13 @@
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.memoryProvider')}</span>
-				<select
-					class="select mt-1"
-					disabled={!settings.memoryEnabled}
-					onchange={(e) => {
-						const value = (e.currentTarget as HTMLSelectElement).value;
-						updateSettings({ memoryProviderRole: value });
-					}}
-				>
-					{#if settings.providers.length === 0}
-						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
-					{:else}
-						<option value="main" selected={settings.memoryProviderRole === 'main'}>{t('settings.mainProvider')}</option>
-						{#each settings.providers as config (config.id)}
-							<option value={config.id} selected={settings.memoryProviderRole === config.id}>{config.name}</option>
-						{/each}
-					{/if}
-				</select>
+				<ThemeSelect items={roleItems()} value={settings.memoryProviderRole} onValueChange={(v) => updateSettings({ memoryProviderRole: v })} disabled={!settings.memoryEnabled} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.memoryProviderDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.embeddingProvider')}</span>
-				<select
-					class="select mt-1"
-					disabled={!settings.memoryEnabled}
-					onchange={(e) => {
-						const value = (e.currentTarget as HTMLSelectElement).value;
-						updateSettings({ embeddingProviderRole: value });
-					}}
-				>
-					{#if settings.providers.length === 0}
-						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
-					{:else}
-						<option value="main" selected={settings.embeddingProviderRole === 'main'}>{t('settings.mainProvider')}</option>
-						{#each settings.providers as config (config.id)}
-							<option value={config.id} selected={settings.embeddingProviderRole === config.id}>{config.name}</option>
-						{/each}
-					{/if}
-				</select>
+				<ThemeSelect items={roleItems()} value={settings.embeddingProviderRole} onValueChange={(v) => updateSettings({ embeddingProviderRole: v })} disabled={!settings.memoryEnabled} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.embeddingProviderDescription')}</span>
 			</label>
 		</section>
@@ -494,127 +442,37 @@
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.plotPlanner')}</span>
-				<select
-					class="select mt-1"
-					onchange={(e) => {
-						const value = (e.currentTarget as HTMLSelectElement).value;
-						updateSettings({ plotPlannerProviderRole: value });
-					}}
-				>
-					{#if settings.providers.length === 0}
-						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
-					{:else}
-						<option value="main" selected={settings.plotPlannerProviderRole === 'main'}>{t('settings.mainProvider')}</option>
-						{#each settings.providers as config (config.id)}
-							<option value={config.id} selected={settings.plotPlannerProviderRole === config.id}>{config.name}</option>
-						{/each}
-					{/if}
-				</select>
+				<ThemeSelect items={roleItems()} value={settings.plotPlannerProviderRole} onValueChange={(v) => updateSettings({ plotPlannerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.plotPlannerDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.writer')}</span>
-				<select
-					class="select mt-1"
-					onchange={(e) => {
-						const value = (e.currentTarget as HTMLSelectElement).value;
-						updateSettings({ writerProviderRole: value });
-					}}
-				>
-					{#if settings.providers.length === 0}
-						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
-					{:else}
-						<option value="main" selected={settings.writerProviderRole === 'main'}>{t('settings.mainProvider')}</option>
-						{#each settings.providers as config (config.id)}
-							<option value={config.id} selected={settings.writerProviderRole === config.id}>{config.name}</option>
-						{/each}
-					{/if}
-				</select>
+				<ThemeSelect items={roleItems()} value={settings.writerProviderRole} onValueChange={(v) => updateSettings({ writerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.writerDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.reviewer')}</span>
-				<select
-					class="select mt-1"
-					onchange={(e) => {
-						const value = (e.currentTarget as HTMLSelectElement).value;
-						updateSettings({ reviewerProviderRole: value });
-					}}
-				>
-					{#if settings.providers.length === 0}
-						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
-					{:else}
-						<option value="main" selected={settings.reviewerProviderRole === 'main'}>{t('settings.mainProvider')}</option>
-						{#each settings.providers as config (config.id)}
-							<option value={config.id} selected={settings.reviewerProviderRole === config.id}>{config.name}</option>
-						{/each}
-					{/if}
-				</select>
+				<ThemeSelect items={roleItems()} value={settings.reviewerProviderRole} onValueChange={(v) => updateSettings({ reviewerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.reviewerDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.editor')}</span>
-				<select
-					class="select mt-1"
-					onchange={(e) => {
-						const value = (e.currentTarget as HTMLSelectElement).value;
-						updateSettings({ editorProviderRole: value });
-					}}
-				>
-					{#if settings.providers.length === 0}
-						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
-					{:else}
-						<option value="main" selected={settings.editorProviderRole === 'main'}>{t('settings.mainProvider')}</option>
-						{#each settings.providers as config (config.id)}
-							<option value={config.id} selected={settings.editorProviderRole === config.id}>{config.name}</option>
-						{/each}
-					{/if}
-				</select>
+				<ThemeSelect items={roleItems()} value={settings.editorProviderRole} onValueChange={(v) => updateSettings({ editorProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.editorDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.gameMaster')}</span>
-				<select
-					class="select mt-1"
-					onchange={(e) => {
-						const value = (e.currentTarget as HTMLSelectElement).value;
-						updateSettings({ gameMasterProviderRole: value });
-					}}
-				>
-					{#if settings.providers.length === 0}
-						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
-					{:else}
-						<option value="main" selected={settings.gameMasterProviderRole === 'main'}>{t('settings.mainProvider')}</option>
-						{#each settings.providers as config (config.id)}
-							<option value={config.id} selected={settings.gameMasterProviderRole === config.id}>{config.name}</option>
-						{/each}
-					{/if}
-				</select>
+				<ThemeSelect items={roleItems()} value={settings.gameMasterProviderRole} onValueChange={(v) => updateSettings({ gameMasterProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.gameMasterDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.summarizer')}</span>
-				<select
-					class="select mt-1"
-					onchange={(e) => {
-						const value = (e.currentTarget as HTMLSelectElement).value;
-						updateSettings({ summarizerProviderRole: value });
-					}}
-				>
-					{#if settings.providers.length === 0}
-						<option value="" disabled selected>{t('settings.noProvidersConfigured')}</option>
-					{:else}
-						<option value="main" selected={settings.summarizerProviderRole === 'main'}>{t('settings.mainProvider')}</option>
-						{#each settings.providers as config (config.id)}
-							<option value={config.id} selected={settings.summarizerProviderRole === config.id}>{config.name}</option>
-						{/each}
-					{/if}
-				</select>
+				<ThemeSelect items={roleItems()} value={settings.summarizerProviderRole} onValueChange={(v) => updateSettings({ summarizerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.summarizerDescription')}</span>
 			</label>
 		</section>
@@ -649,26 +507,13 @@
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.locale')}</span>
-				<select class="select mt-1" onchange={(e) => updateSettings({ locale: (e.currentTarget as HTMLSelectElement).value })}>
-					<option value="en" selected={settings.locale === 'en'}>English</option>
-					<option value="zh-Hant-HK" selected={settings.locale === 'zh-Hant-HK'}>繁體中文（香港）</option>
-				</select>
+				<ThemeSelect items={localeItems} value={settings.locale} onValueChange={(v) => updateSettings({ locale: v })} />
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.logLevel')}</span>
-				<select
-					class="select mt-1"
-					onchange={(e) => updateSettings({ logLevel: (e.currentTarget as HTMLSelectElement).value as LogLevel })}
-				>
-					<option value="error" selected={settings.logLevel === 'error'}>{t('settings.logLevels.error')}</option>
-					<option value="warn" selected={settings.logLevel === 'warn'}>{t('settings.logLevels.warn')}</option>
-					<option value="info" selected={settings.logLevel === 'info'}>{t('settings.logLevels.info')}</option>
-					<option value="debug" selected={settings.logLevel === 'debug'}>{t('settings.logLevels.debug')}</option>
-				</select>
-				<span class="text-xs text-surface-500 mt-1 block"
-					>{t('settings.logLevelDescription')}</span
-				>
+				<ThemeSelect items={logLevelItems} value={settings.logLevel} onValueChange={(v) => updateSettings({ logLevel: v as LogLevel })} />
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.logLevelDescription')}</span>
 			</label>
 		</section>
 	</div>
