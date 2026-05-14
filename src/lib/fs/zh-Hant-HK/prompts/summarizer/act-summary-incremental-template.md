@@ -1,9 +1,9 @@
-## Scene Summaries
-### Scene {sceneNumber}: {sceneTitle}
-Location: [location of where the scene took place.]
-Summary: [summary, max 3 sentences]
+## 場景摘要
+### 場景 {sceneNumber}：{sceneTitle}
+地點：[場景發生的地點]
+摘要：[摘要，最多 3 句話]
 
-## Character Summaries
-### [Well-known name of the character]
-- Aliases: [all known aliases]
-- Scene {sceneNumber}: [summary if appeared, max 2 sentences. Also include the most representative quoted dialogue or internal monologue if any.]
+## 角色摘要
+### [角色的知名名稱]
+- 別名：[所有已知別名]
+- 場景 {sceneNumber}：[若出現的摘要，最多 2 句話。若有的話，也包含最具代表性的對話引文或內心獨白。]

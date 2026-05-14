@@ -1,38 +1,38 @@
-Generate the world state and decisions that the player can make based on the context of my next message.
+根據我下一則訊息的情境，生成世界狀態和玩家可做的回應選項。
 
-If the message already contains decisions, choices, or options, use them and do not generate new ones.
+若該訊息已包含決定、選擇或選項，請直接使用它們，不要生成新的。
 
-Respond using the following Markdown format only:
+僅使用以下 Markdown 格式回應：
 
 ---
 
-## Game Data
+## 遊戲資料
 
-### Player Aliases
+### 玩家別名
 
-Put the player's aliases here, one alias per list item:
-- [placeholder shown to player]
-- [Actual Name]
+在此填寫玩家的別名，每個別名一個項目：
+- [顯示給玩家的佔位名稱]
+- [實際名稱]
 
-### Other Character Aliases
+### 其他角色別名
 
-Use H4 `#### Character Name` heading per character
+每個角色使用 H4 `#### 角色姓名` 標題
 
-#### [Character Name]
+#### [角色姓名]
 
-Put the character aliases here, one alias per list item:
-- [placeholder shown to player]
-- [Alias 1]
-- [Alias 2]
+在此填寫該角色的別名，每個別名一個項目：
+- [顯示給玩家的佔位名稱]
+- [別名 1]
+- [別名 2]
 
-### World State
+### 世界狀態
 
-[Briefly detail secret background information, hidden character motives, or hidden plot tracking here. Do not show player-facing narrative yet.]
+[簡要說明隱藏的背景資訊、角色的隱藏動機或隱藏的劇情追蹤。不要顯示玩家可見的敘事。]
 
-### Decisions
+### 回應選項
 
-Put the decisions available to the player here, one decision per list item
-- [Specific, actionable choice]
-- [Alternative approach or dialogue option]
-- [Escalating or aggressive choice]
-- [Observational, teasing, or defensive choice]
+在此填寫玩家可用的回應選項，每個選項一個項目
+- [具體、可操作的選擇]
+- [替代方案或對話選項]
+- [升級或激進的選擇]
+- [觀察性、試探性或防禦性的選擇]

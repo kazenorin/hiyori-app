@@ -1,213 +1,211 @@
 common:
   labels:
-    player: Player
-    interviewer: Interviewer
-    sceneWithNumber: "Scene {sceneNumber}"
+    player: 玩家
+    interviewer: 訪談者
+    sceneWithNumber: "場景 {sceneNumber}"
   headers:
-    worldContent: World Content
-    actPlot: Act Plot
-    actSummary: Act Summary
-    currentScene: Current Scene
-    interviewTranscript: Interview Transcript
-    playerResponse: Player Response
-    scenePlot: Scene Plot
-    writerOutputTemplate: Writer Output Template
-    writerOutput: Writer Output
-    reviewerOutput: Reviewer Output
-    editorOutput: Editor Output
-    gameMasterOutput: Game Master Output
-    previousActSummary: Previous Act Summary
-    actSummaryForScenes: "Act Summary {summarizedScenes}"
-    previousNarrativeBody: "Narrative Body for Scene {completedScenes}"
-    turnOfEvents: Turn Of Events
-    reviewerFeedback: Reviewer Feedback
-    template: Template
+    worldContent: 世界觀內容
+    actPlot: 章節劇情
+    actSummary: 章節摘要
+    currentScene: 目前場景
+    interviewTranscript: 訪談記錄
+    playerResponse: 玩家回應
+    scenePlot: 場景劇情
+    writerOutputTemplate: 寫手輸出範本
+    writerOutput: 寫手輸出
+    reviewerOutput: 審閱者輸出
+    editorOutput: 編輯輸出
+    gameMasterOutput: GM 輸出
+    previousActSummary: 上一章節摘要
+    actSummaryForScenes: "章節摘要 {summarizedScenes}"
+    previousNarrativeBody: "場景 {completedScenes} 的敘事正文"
+    turnOfEvents: 劇情轉折
+    reviewerFeedback: 審閱者回饋
+    template: 範本
   descriptions:
-    interviewTranscript: The following is an interview exchange about the story and premises.
+    interviewTranscript: 以下是有關此故事及設定的訪談內容。
 
 pipeline:
   extraction:
-    gameMaster: Generate the game data based on the available information in the chat history.
-    editor: Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history.
-    reviewer: "Perform a review on the writer's output for Scene {currentScene} based on the available information in the chat history."
-    writer: "Write a story prose for Scene {currentScene} based on the available information in the chat history."
-    plotPlanner: "The current scene is Scene {currentScene}. Plan a Scene Plot for the Immediate Next Scene, Near-Term Beat (Flexible), and Mid-Term Goal (Flexible) based on the available information in the chat history."
-    summarizerFallback: "Update the Act Summary for Scene {completedScenes} based on the Player Response."
-    summarizer: "Update the Act Summary adding information for the previous scene: \"Scene {completedScenes}: {sceneTitle}\""
+    gameMaster: 根據聊天記錄中的可用資訊，生成遊戲資料。
+    editor: 根據審閱者輸出的建議，修改寫手輸出。請根據聊天記錄中的可用資訊，判斷這些建議是否有必要採納。
+    reviewer: "根據聊天記錄中的可用資訊，審閱寫手對場景 {currentScene} 的輸出。"
+    writer: "根據聊天記錄中的可用資訊，撰寫場景 {currentScene} 的故事散文。"
+    plotPlanner: "目前場景為場景 {currentScene}。請根據聊天記錄中的可用資訊，為緊接的下一場景、近期的情節節奏（彈性）以及中期目標（彈性）規劃場景劇情。"
+    summarizerFallback: "根據玩家回應，更新場景 {completedScenes} 的章節摘要。"
+    summarizer: "更新章節摘要，加入上一個場景的資訊：「場景 {completedScenes}：{sceneTitle}」"
     editorTemplateFitter: >
-      The "Editor Output" does not follow the required template format. Restructure it to match the Writer Output Template
-      by inserting the appropriate section headers defined by "Writer Output Template" without changing any content.
-      If the "Scene Title" section is missing from the content, generate a short, fitting title based on the narrative.
-      If any other section is missing, add the header with no body.
+      「編輯輸出」未符合所需的範本格式。請根據「寫手輸出範本」中所定義的區段標題重新調整結構，
+      插入適當的標題而不更改任何內容。若內容缺少「場景標題」區段，請根據敘事生成一個簡短貼切的標題。
+      若缺少其他區段，請加上標題並留空內容。
     gmTemplateFitter: >
-      The "Game Master Output" does not follow the required game data format. Restructure it to match the game data
-      template by inserting the appropriate section headers defined by the "Game Data" template without changing any content.
-      If a section is missing from the content, add the header with no body.
+      「GM 輸出」未符合所需的遊戲資料格式。請根據遊戲資料範本重新調整結構，
+      插入適當的標題而不更改任何內容。若缺少某個區段，請加上標題並留空內容。
   system:
     templateFitter: >
-      You are a template-fitting assistant. Your sole task is to restructure provided content into a specific markdown
-      template format without altering any of the original content. Preserve every word — only add the required section headers.
+      你是一個範本配適助手。你唯一的任務是將提供的內容重新調整為特定的 Markdown
+      範本格式，而不改動任何原始內容。保留每一個字——只加入所需的區段標題。
 
 features:
   characterCardGenerator:
     characterExtractionPrefix: |
-      I need your help to extract all the characters from the current act.
+      我需要你協助從目前的章節中擷取所有角色。
       {transcriptStart}
-    characterExtraction: "Extract all the characters from the current act according to the following rules: {rules}"
+    characterExtraction: "根據以下規則，從目前的章節中擷取所有角色：{rules}"
     characterCardGeneration: |
-      Based on the information from the chat history, generate a new Character Card according to the following rules:
+      根據聊天記錄中的資訊，按照以下規則生成新的角色卡：
       {extractionPrompt}
       ---
       {template}
-    transcriptStart: "The following messages will contain the transcript of the current act:"
-    transcriptEnd: "The previous message was the end of the transcript of the current act."
-    actCard: "The following message contains the Act Card from Act {actNumber}"
-    characterCard: "The following message contains the previous Character Card of {characterName} from Act {actNumber}"
+    transcriptStart: "以下訊息將包含目前章節的文本記錄："
+    transcriptEnd: "上一則訊息是目前章節文本記錄的結束。"
+    actCard: "以下訊息包含第 {actNumber} 章的章節卡"
+    characterCard: "以下訊息包含 {characterName} 在第 {actNumber} 章的舊角色卡"
   actCardGenerator:
-    transcriptStart: "The following messages will contain the transcript of the current act:"
-    transcriptEnd: "The previous message was the end of the transcript of the current act. The following message will contain the Act Card template:"
-    worldContext: "The world setting is based on the following:"
+    transcriptStart: "以下訊息將包含目前章節的文本記錄："
+    transcriptEnd: "上一則訊息是目前章節文本記錄的結束。下一則訊息將包含章節卡範本："
+    worldContext: "世界觀設定基於以下內容："
   worldBuilder:
-    worldBuilderSeed: "I want to create a new story. Please help me build a world."
+    worldBuilderSeed: "我想創作一個新故事。請協助我構建世界觀。"
     resumeStoryActPrefix: |
-      Continue the pre-game interview based on the latest story context below.
+      根據以下最新的故事脈絡，繼續遊戲前的訪談。
 
-      The content represents what already happened. Use it only as context to understand the player's direction and preferences.
+      以下內容代表已經發生的事件，僅作為理解玩家方向與偏好的脈絡使用。
 
-      Do NOT continue the story, narrate scenes, or generate plot content. Stay strictly in interview mode.
+      請勿繼勿繼續故事、敘述場景或生成劇情內容。嚴格保持訪談模式。
 
       ---
     resumeStoryActSuffix: |
 
       ---
 
-      Resume the interview conversation naturally from here, helping the player refine what they want next.
+      從這裡自然地繼續訪談對話，協助玩家釐清他們接下來想要的內容。
   importWorld:
     labels:
-      worldCard: "The following message is a world building settings card."
-      actCard: "The following message is an act card describing the events of the act."
-      characterCard: "The following message is a character card for {name}."
-      characterNamePlaceholder: "a character in the story"
+      worldCard: "以下訊息是一份世界觀設定卡。"
+      actCard: "以下訊息是描述該章節事件的章節卡。"
+      characterCard: "以下訊息是 {name} 的角色卡。"
+      characterNamePlaceholder: "故事中的一個角色"
     instructions:
       actGeneration: |
-        Generate a story based strictly on the settings and information provided above.
-        Your top priorities are: (1) accuracy to source material, (2) consistency in character portrayal and tone, and (3) clear scene-based structure.
+        請嚴格根據上述設定和資訊生成故事。
+        你的首要任務是：(1) 忠於原始素材、(2) 保持角色塑造與語調的一致性、(3) 清晰的場景結構。
 
-        Ensure all characters act and speak consistently with their established personalities, motivations, and relationships.
-        Maintain the specified tone (e.g., gritty realism, whimsical fantasy, etc.) throughout the story.
-        Present the story in prose format divided into clear scenes, not as a screenplay or dialogue script.
+        確保所有角色的行為和對話都與其既定的性格、動機和關係一致。
+        在整個故事中保持指定的語調（例如寫實暗黑、奇幻輕快等）。
+        以散文格式呈現故事，分為清晰的場景，而非劇本或對話腳本。
 
-        You may introduce small original details only when necessary for flow or realism, and only if they support rather than alter the existing lore or character logic.
+        僅在流暢度或真實感必要時才可加入少量原創細節，且必須支持而非改變已有的世界觀或角色邏輯。
 
-        Each scene should focus on one significant narrative event or emotional turning point.
-        Scenes should be comparable in length and detail (roughly 300–500 words each), detailed enough to cover the event fully before moving on.
-        Begin each scene with a short transition (except Scene 1) to connect it logically to the previous moment.
-        End each scene with a sense of resolution or a hook leading into the next.
+        每個場景應聚焦於一個重要的敘事事件或情感轉折。
+        各場景的長度和細節應大致相仿（約 300–500 字），並充分描述該事件後再繼續。
+        除場景 1 外，每個場景開頭應有簡短的過渡，以邏輯地銜接上一刻。
+        每個場景的結尾應有收束感或引向下一場景的伏筆。
 
-        IMPORTANT: Structure your response using markdown headers to separate distinct scenes.
-        Use ## Scene, ### Scene X, or similar header levels to mark the beginning of each new scene.
+        重要：請使用 Markdown 標題來區分不同的場景。
+        使用 ## 場景、### 場景 X 或類似的標題層級來標記每個新場景的開始。
 
-        Example format:
-        ## Scene 1: [Scene Title]
-        [Story content...]
+        格式範例：
+        ## 場景 1：[場景標題]
+        [故事內容...]
 
-        ## Scene 2: [Scene Title]
-        [Story content...]
+        ## 場景 2：[場景標題]
+        [故事內容...]
 
-        ## Scene 3: [Scene Title]
-        [Story content...]
+        ## 場景 3：[場景標題]
+        [故事內容...]
 
-        Each scene should be a self-contained segment with a clear beginning and end.
+        每個場景應為一段完整的敘述，有明確的開頭和結尾。
       sceneExtractionFirst: |
-        You will rewrite the following scene using the narration template provided below.
-        Your primary goal is to **fit the scene into the given narration template and style**, preserving all essential content and character actions from the original scene.
+        你將使用下方提供的敘事範本來改寫以下場景。
+        你的主要目標是**將場景套入給定的敘事範本和風格**，同時保留所有重要的內容和角色行動。
 
-        Apply the same narrative style, structure, and formatting conventions as shown in the template.
-        Include vivid sensory descriptions, character dialogue, internal thoughts, and environment updates where appropriate for flow and immersion.
-        Do not omit key story details or add new plot elements beyond what is needed for smooth narrative transitions and natural pacing.
+        請套用範本中所示相同的敘事風格、結構和格式慣例。
+        適當地加入生動的感官描寫、角色對話、內心思緒和環境更新，以提升流暢度和沉浸感。
+        請勿遺漏關鍵故事細節，也不要添加超出流暢過渡和自然節奏所需的新劇情元素。
 
-        Present only the rewritten scene — do not include explanations, notes, or commentary outside the story output.
+        僅呈現改寫後的場景——不要在故事輸出之外加入解釋、備註或評論。
 
-        ---NARRATION TEMPLATE---
+        ---敘事範本---
         {narrationTemplate}
 
-        ---SCENE CONTENT---
+        ---場景內容---
         {sceneContent}
       sceneExtractionContinuation: |
-        Below are the previous scenes from this act for context:
-        ---PREVIOUS SCENES---
+        以下是本章先前場景的內容供參考：
+        ---先前場景---
         {previousScenes}
 
-        You will rewrite the next scene using the narration template provided below.
-        Your primary goal is to **apply the narration template faithfully while maintaining full consistency with the previous scenes** in tone, pacing, and style.
+        你將使用下方提供的敘事範本來改寫下一個場景。
+        你的主要目標是**忠實套用敘事範本，同時在語調、節奏和風格上與先前場景保持完全一致**。
 
-        Continue the story smoothly from where the previous scenes left off, ensuring logical continuity in plot, character actions, and emotional flow.
-        Preserve all key content from the original scene; add only minor descriptive or connective details when necessary for realism or narrative cohesion.
+        從先前場景的結尾處自然地延續故事，確保劇情、角色行動和情感流動的邏輯連貫性。
+        保留原始場景的所有關鍵內容；僅在真實感或敘事連貫性需要時才添加少量的描寫或過渡細節。
 
-        Apply the same narrative style, structure, and formatting conventions as the template.
-        Do not restate previous scenes or summarize them — focus only on rewriting the current scene as part of the ongoing narrative.
+        請套用與範本相同的敘事風格、結構和格式慣例。
+        請勿重述或摘要先前場景——僅專注於改寫當前場景，作為持續敘事的一部分。
 
-        Present only the rewritten scene — do not include explanations, notes, or commentary outside the story output.
+        僅呈現改寫後的場景——不要在故事輸出之外加入解釋、備註或評論。
 
-        ---NARRATION TEMPLATE---
+        ---敘事範本---
         {narrationTemplate}
 
-        ---SCENE CONTENT---
+        ---場景內容---
         {sceneContent}
 
 tools:
   evaluateRisk:
     description: >
-      Evaluates the outcome of taking a risk by rolling a dice. The higher the risk level, the more likely a bad outcome.
-      Use this to determine whether a risky action succeeds, has a mixed result, or fails.
+      透過擲骰來評估冒險行動的結果。風險等級越高，壞結果的機率越大。
+      用於判斷冒險行動是成功、混合結果還是失敗。
     parameters:
-      riskLevel: "Level of risk taken (1 = lowest risk, 10 = highest risk)"
+      riskLevel: "冒險程度（1 = 最低風險，10 = 最高風險）"
     messages:
-      outcomeBad: "The risk resulted in a bad outcome."
-      outcomeNeutral: "The risk resulted in a neutral outcome."
-      outcomeGood: "The risk resulted in a good outcome."
+      outcomeBad: "冒險行動導致了壞結果。"
+      outcomeNeutral: "冒險行動導致了中性結果。"
+      outcomeGood: "冒險行動導致了好結果。"
   queryMemories:
     description: >
-      Search the game's memory database to recall past events, locations visited, or character interactions.
-      You must provide a character query, a time-location query for context, or both.
-      Returns a list of recalled memories with their act number, recency, and location.
+      搜尋遊戲的記憶資料庫，以喚回過去的事件、去過的地點或角色互動。
+      你必須提供角色查詢、時間-地點查詢，或兩者兼備。
+      回傳的記憶列表將包含章節編號、新近度和地點。
     parameters:
       characterQuery: >
-        A short description of the character or topic to search memories for (e.g. "Elena", "the blacksmith").
-        If omitted, the tool will return memories based on the time-location query context parameter.
+        簡短描述要搜尋記憶的角色或主題（例如「Elena」、「鐵匠」）。
+        若省略，工具將根據時間-地點查詢參數回傳記憶。
       timeAndLocation: >
-        A short description of the location or time period (e.g., "The Tavern", "Dawn in the Forest").
-        If omitted, will return memories of the given character.
-      currentActOnly: "If true, searches only recent memories from the current act. Set to false to retrieve long-term lore or events from past acts."
+        簡短描述地點或時間（例如「酒館」、「森林的清晨」）。
+        若省略，將回傳指定角色的記憶。
+      currentActOnly: "若為 true，僅搜尋目前章節的近期記憶。設為 false 可擷取過往章節的長期設定或事件。"
   queryInventory:
     description: |
-      Check what a character currently has in their inventory. Returns items, equipment, skills, clothing, and status effects with equip status (equipped/wielded vs carried/owned).
+      查看角色目前物品欄中的內容。回傳物品、裝備、技能、服裝和狀態效果，並標示裝備狀態（已裝備/已揮舞 vs 隨身攜帶/已擁有）。
 
-      IMPORTANT: Only inventory changes that occur DURING the story are tracked. Items a character possessed before the story began will NOT appear in inventory unless they are explicitly mentioned in a scene. You should use your judgment to infer pre-existing possessions when appropriate (e.g., a knight likely has armor even if not explicitly mentioned, a wizard likely knows basic spells).
+      重要：僅追蹤故事進行中發生的物品欄變更。故事開始前角色已擁有的物品不會出現在物品欄中，除非在場景中明確提及。你應自行判斷推斷角色既有的物品（例如騎士很可能有盔甲，即使未被明確提及；法師很可能懂得基本法術）。
 
-      Use this tool before describing a character using an item or ability to ensure consistency.
+      在描述角色使用物品或能力之前，請先使用此工具以確保一致性。
 
-      Set includeHistory to true to also see the log of inventory change events (acquired, lost, equipped, unequipped, used, modified) for the character.
+      設 includeHistory 為 true 可同時查看角色的物品欄變更事件記錄（獲得、失去、裝備、卸下、使用、修改）。
     parameters:
-      characterName: "The character's name (canonical name or alias)"
-      itemCategory: "Optional filter to return only one category"
-      includeHistory: "If true, also return the inventory change event history for this character"
+      characterName: "角色名稱（正規名稱或別名）"
+      itemCategory: "選填篩選條件，僅回傳指定類別"
+      includeHistory: "若為 true，同時回傳物品欄變更事件歷史"
   readActPlot:
     description: >
-      Read the act plot document for the current act. The act plot contains the story's planned structure: premise,
-      target session count, major climactic events, possible endings, storytelling style, and presentation notes.
-      Use this to understand the planned narrative arc and guide the story accordingly.
+      閱讀目前章節的章節劇情文件。章節劇情包含故事已規劃的結構：前提、目標場景數、
+      主要高潮事件、可能的結局、敘事風格和呈現備註。
+      使用此工具來了解已規劃的敘事走向，並依此引導故事發展。
     messages:
-      noActPlot: "No act plot has been generated for this act yet."
+      noActPlot: "此章節尚未生成章節劇情。"
   readScene:
     description: >
-      Read the content of a specific scene in the current act. Returns the narrative body (assistant response) and
-      the player response for the given scene number, formatted in Markdown.
+      閱讀目前章節中特定場景的內容。回傳指定場景編號的敘事正文（AI 回應）和玩家回應，
+      以 Markdown 格式呈現。
     headers:
-      sceneBody: Scene Body
-      playerResponse: Player Response
+      sceneBody: 場景正文
+      playerResponse: 玩家回應
     messages:
-      noSceneFound: "No scene found with scene number {sceneNumber}."
-      sceneNoContent: "Scene {sceneNumber} exists but contains no readable content."
+      noSceneFound: "找不到場景編號為 {sceneNumber} 的場景。"
+      sceneNoContent: "場景 {sceneNumber} 存在但不包含可讀取的內容。"
     parameters:
-      sceneNumber: "The scene number to read (1-based)"
+      sceneNumber: "要閱讀的場景編號（從 1 開始）"

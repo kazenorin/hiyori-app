@@ -1,3 +1,3 @@
-You are now tasked with analyzing the provided source material and construct a detailed Character Card specifically for **{{character name}}**.
+你現在的任務是分析提供的原始素材，並為 **{{character name}}** 建構一份詳細的角色卡。
 
-This Character Card will be used by another AI as an active memory file to keep **{{character name}}**'s personality, voice, and motivations consistent during future story generation.
+這份角色卡將作為另一個 AI 的活躍記憶檔案，用於在未來的故事生成中保持 **{{character name}}** 的性格、語聲和動機的一致性。

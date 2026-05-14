@@ -1,97 +1,97 @@
-# Act Card
+# 章節卡
 
-## Metadata
+## 元資料
 
-- **Story Title:** [Parent story]
-- **Act Number / Name:** [Act I / Act II / Act III, etc.]
-- **Story Scope Covered:** [Which portion of the full story this act contains]
+- **故事標題：** [所屬故事]
+- **章節編號／名稱：** [第一章 / 第二章 / 第三章 等]
+- **故事涵蓋範圍：** [此章節包含完整故事的哪部分]
 
-## Act Purpose
+## 章節目的
 
-- **Act Function:** [Setup / escalation / collapse / pursuit / revelation / resolution]
-- **What This Act Must Accomplish:** [The core job of this act]
-- **Why This Act Matters:** [How it changes the story]
+- **章節功能：** [鋪墊 / 升級 / 崩潰 / 追逐 / 揭示 / 解決]
+- **此章節必須完成的事：** [此章節的核心任務]
+- **此章節的重要性：** [它如何改變故事]
 
-## Entry and Exit
+## 入口與出口
 
-- **Start Condition:** [What is true when the act begins]
-- **End Condition:** [What must be true when the act ends]
-- **Main Transition In:** [What launches this act]
-- **Main Transition Out:** [What event pushes the story into the next act]
+- **起始條件：** [章節開始時為真的事實]
+- **結束條件：** [章節結束時必須為真的事實]
+- **主要過渡入：** [什麼啟動了此章節]
+- **主要過渡出：** [什麼事件將故事推入下一章]
 
-## Act-Level Conflict
+## 章節級衝突
 
-- **Primary Objective:** [What the protagonist is trying to achieve in this act]
-- **Primary Obstacle:** [What most directly blocks them]
-- **Secondary Obstacles:** [Other pressures, complications, or constraints]
-- **Antagonistic Pressure:** [How the opposition intensifies in this act]
-- **Escalation Pattern:** [How things get worse or more costly]
+- **主要目標：** [主角在此章節中試圖達成的事]
+- **主要障礙：** [最直接阻擋他們的事物]
+- **次要障礙：** [其他壓力、複雜情況或限制]
+- **對抗壓力：** [對立力量在此章節中如何加劇]
+- **升級模式：** [情況如何變得更糟或代價更高]
 
-## Emotional Movement
+## 情感變化
 
-- **Protagonist Emotional State at Start:**
-- **Dominant Emotions in This Act:**
-- **Core Relationship Under Stress:**
-- **Internal Conflict in This Act:**
-- **Emotional State at End:**
+- **主角起始情感狀態：**
+- **此章節的支配情感：**
+- **承受壓力的核心關係：**
+- **此章節的內心衝突：**
+- **結束時的情感狀態：**
 
-## Revelations and Changes
+## 揭示與變化
 
-- **Important Discovery:** [What is learned]
-- **Misunderstanding or False Belief:** [What the characters get wrong]
-- **Power Shift:** [Who gains or loses leverage]
-- **Moral or Psychological Pressure:** [What belief or wound is challenged]
-- **Point of No Return:** [If applicable]
+- **重要發現：** [學到了什麼]
+- **誤解或錯誤信念：** [角色搞錯了什麼]
+- **權力轉移：** [誰獲得或失去了籌碼]
+- **道德或心理壓力：** [什麼信念或傷痛受到挑戰]
+- **不可逆轉點：** [若適用]
 
-## Active Cast
+## 活躍角色
 
-- **Act Lead:** [Who drives this act most strongly]
-- **Key Supporting Characters:** [Name + function in this act]
-- **Opposition Present:** [Who or what actively resists progress]
-- **Characters Absent but Influential:** [Off-page forces still affecting events]
+- **章節主角：** [誰最強烈地推動此章節]
+- **關鍵配角：** [名稱 + 此章節中的功能]
+- **在場的反對力量：** [誰或什麼主動抵抗進展]
+- **不在場但有影響力的角色：** [場外仍在影響事件的力量]
 
-## Event Breakdown
+## 事件分解
 
-### Event 1
+### 事件 1
 
-- **Title / Label:**
-- **Purpose:**
-- **Main Event:**
-- **Conflict:**
-- **Outcome:**
-- **Hook into next chapter:**
+- **標題／標籤：**
+- **目的：**
+- **主要事件：**
+- **衝突：**
+- **結果：**
+- **引入下一章的鉤子：**
 
-### Event 2
+### 事件 2
 
-- **Title / Label:**
-- **Purpose:**
-- **Main Event:**
-- **Conflict:**
-- **Outcome:**
-- **Hook into next chapter:**
+- **標題／標籤：**
+- **目的：**
+- **主要事件：**
+- **衝突：**
+- **結果：**
+- **引入下一章的鉤子：**
 
-### Event 3
+### 事件 3
 
-- **Title / Label:**
-- **Purpose:**
-- **Main Event:**
-- **Conflict:**
-- **Outcome:**
-- **Hook into next chapter:**
+- **標題／標籤：**
+- **目的：**
+- **主要事件：**
+- **衝突：**
+- **結果：**
+- **引入下一章的鉤子：**
 
-[Repeat as needed]
+[視需要重複]
 
-## Act Constraints
+## 章節約束
 
-- **Lore to Reference from World Card:** [Only what matters in this act]
-- **Facts to Reference from Story Card:** [Whole-story facts that shape this act]
-- **Things That Must Not Happen Yet:** [Reveals, deaths, confessions, twists to delay]
-- **Things That Must Happen in This Act:** [Non-negotiable beats]
+- **從世界觀卡引用的設定：** [僅限此章節中重要的內容]
+- **從故事卡引用的事實：** [影響此章節的全故事事實]
+- **尚不可發生的事：** [要延遲的揭示、死亡、告白、轉折]
+- **此章節中必須發生的事：** [不可妥協的節拍]
 
-## Scene Guidance
+## 場景指引
 
-- **Typical Scene Type:** [Investigation / confrontation / travel / court intrigue / survival, etc.]
-- **Pacing:** [Measured / tense / rapid / fragmented / escalating]
-- **Atmosphere:** [Localized mood for this act]
-- **Best Opening Pressure:** [What kind of scene should start this act]
-- **Best Closing Beat:** [What kind of note should end the act]
+- **典型場景類型：** [調查 / 對峙 / 旅行 / 宮廷陰謀 / 生存 等]
+- **節奏：** [沉穩 / 緊繃 / 快速 / 碎裂 / 升級]
+- **氛圍：** [此章節的局部情緒]
+- **最佳開場壓力：** [什麼樣的場景應該開始此章節]
+- **最佳結尾節拍：** [什麼樣的調子應該結束此章節]

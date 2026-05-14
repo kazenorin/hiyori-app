@@ -1,19 +1,19 @@
-Generate a story based on the provided context cards.
+根據提供的情境卡生成故事。
 
-## Instructions
+## 指令
 
-1. Write compelling narrative based on the world settings, act card, and character cards
-2. Include character interactions that reflect their personalities from the character cards
-3. Include decision points where the player can make meaningful choices
-4. Use the world settings to maintain consistency with established lore
+1. 根據世界觀設定、章節卡和角色卡撰寫引人入勝的敘事
+2. 包含反映角色卡中性格特質的角色互動
+3. 包含讓玩家可以做出有意義選擇的決策點
+4. 使用世界觀設定以保持與已建立的世界觀一致
 
-## Output Format
+## 輸出格式
 
-Write the act as a complete narrative with:
+以完整敘事撰寫章節，包含：
 
-- Scene descriptions with [Background: description] tags
-- Character dialogue with "Character Name:" format
-- **STATUS UPDATE** sections summarizing current events
-- **DECISION POINT** sections with numbered choices (at least 2-4 options)
+- 場景描述，使用 [Background: description] 標記
+- 角色對話，使用「角色姓名：」格式
+- **狀態更新** 區段，摘要當前事件
+- **決策點** 區段，包含編號選項（至少 2-4 個）
 
-Each decision point should offer meaningful branching paths that affect the story direction.
+每個決策點應提供影響故事走向的有意義分支路徑。

@@ -1,89 +1,89 @@
-# Act Plot
+# 章節劇情
 
-## Story Structure
+## 故事結構
 
-- **Target Scenes:** [35-50 scenes recommended]
-- **Target Word Count per Scene:** [400-500 words]
-- **Estimated Total Words:** [14,000-25,000 words]
+- **目標場景數：** [建議 35-50 個場景]
+- **每場景目標字數：** [400-500 字]
+- **預估總字數：** [14,000-25,000 字]
 
-## Premise
+## 前提
 
-### Protagonist Archetype
+### 主角原型
 
-[Description of the ideal protagonist for this story - personality traits, background hints, core motivation. Keep open enough for player customization while suggesting a fitting archetype.]
+[描述此故事的理想主角——性格特徵、背景暗示、核心動機。保持足夠開放以供玩家自訂，同時建議合適的原型。]
 
-### Core Conflict
+### 核心衝突
 
-[The central tension driving the narrative. What internal or external forces oppose the protagonist?]
+[驅動敘事的中央緊張感。什麼內部或外部力量對抗主角？]
 
-### Story Hook
+### 故事鉤子
 
-[The opening situation that draws the player in. What makes the start compelling?]
+[吸引玩家投入的開場情境。什麼讓開端引人入勝？]
 
-## Major Events
+## 主要事件
 
-### Climactic Event 1 (Target to happen at around 16 scenes after start)
+### 高潮事件 1（目標在開始後約 16 個場景發生）
 
-**Setup:** [What should be established before this event]
-**Event:** [What happens - the dramatic moment]
-**Impact:** [Emotional/narrative aftermath, how it changes the story direction]
+**鋪墊：** [此事件前應確立什麼]
+**事件：** [發生了什麼——戲劇性時刻]
+**影響：** [情感/敘事後果，如何改變故事方向]
 
-### Climactic Event 2 (Target to happen at around 16 scenes after Climactic Event 1)
+### 高潮事件 2（目標在高潮事件 1 後約 16 個場景發生）
 
-**Setup:** [What should be established before this event]
-**Event:** [What happens - the dramatic moment]
-**Impact:** [Emotional/narrative aftermath, how it changes the story direction]
+**鋪墊：** [此事件前應確立什麼]
+**事件：** [發生了什麼——戲劇性時刻]
+**影響：** [情感/敘事後果，如何改變故事方向]
 
-### Climactic Event 3 (Target to happen at around 16 scenes after Climactic Event 2)
+### 高潮事件 3（目標在高潮事件 2 後約 16 個場景發生）
 
-**Setup:** [What should be established before this event]
-**Event:** [What happens - the dramatic moment]
-**Impact:** [Emotional/narrative aftermath, how it changes the story direction]
+**鋪墊：** [此事件前應確立什麼]
+**事件：** [發生了什麼——戲劇性時刻]
+**影響：** [情感/敘事後果，如何改變故事方向]
 
-[Add or remove events as appropriate to match target scene count]
+[視需要添加或移除事件以匹配目標場景數]
 
-## Possible Endings (Target to happen at around 16 scenes after Climactic Event 3)
+## 可能的結局（目標在高潮事件 3 後約 16 個場景發生）
 
-### Ending 1: [Title] (Good)
+### 結局 1：[標題]（好結局）
 
-**Conditions:** [What choices/actions lead here]
-**Resolution:** [How the story concludes, what the protagonist achieves]
-**Emotional Tone:** [The feeling this ending should evoke]
+**條件：** [什麼選擇/行動導致此結局]
+**解決：** [故事如何結束，主角達成了什麼]
+**情感語調：** [此結局應喚起的感受]
 
-### Ending 2: [Title] (Bad)
+### 結局 2：[標題]（壞結局）
 
-**Conditions:** [What choices/actions or failures lead here]
-**Resolution:** [How the story concludes, what goes wrong]
-**Emotional Tone:** [The weight of this ending]
+**條件：** [什麼選擇/行動或失敗導致此結局]
+**解決：** [故事如何結束，出了什麼問題]
+**情感語調：** [此結局的份量]
 
-### Ending 3: [Title] (Bittersweet)
+### 結局 3：[標題]（苦樂參半）
 
-**Conditions:** [What choices/actions lead here]
-**Resolution:** [Mixed outcome - gains and losses]
-**Emotional Tone:** [Complex emotional landscape]
+**條件：** [什麼選擇/行動導致此結局]
+**解決：** [混合結果——有所得也有所失]
+**情感語調：** [複雜的情感景觀]
 
-### Ending 4: [Title] (Alternative)
+### 結局 4：[標題]（另類）
 
-**Conditions:** [What choices/actions lead here]
-**Resolution:** [Unique outcome path - neither fully good nor bad]
-**Emotional Tone:** [Distinctive feeling]
+**條件：** [什麼選擇/行動導致此結局]
+**解決：** [獨特的結果路徑——既非完全好也非完全壞]
+**情感語調：** [獨特的感受]
 
-[Ensure at least one good and one bad ending from the world's perspective]
+[確保從世界的角度至少有一個好結局和一個壞結局]
 
-## Storytelling Style
+## 敘事風格
 
-- **Narrative Voice:** [First person / Second person / Third person - recommend second person for interactive fiction]
-- **Tone:** [Gritty / Whimsical / Dark / Hopeful / Dramatic / Comedic / etc.]
-- **Pacing:** [Fast / Measured / Variable with deliberate slowdowns]
-- **Description Density:** [Minimal / Moderate / Rich and detailed]
+- **敘事視角：** [第一人稱 / 第二人稱 / 第三人稱——互動小說建議第二人稱]
+- **語調：** [寫實暗黑 / 奇幻輕快 / 黑暗 / 充滿希望 / 戲劇性 / 喜劇 等]
+- **節奏：** [快速 / 沉穩 / 變化中帶刻意放慢]
+- **描述密度：** [精簡 / 適中 / 豐富詳盡]
 
-## Presentation Notes
+## 呈現備註
 
-- **Language Complexity:** [Simple English / Standard / Literary]
-- **Dialogue Style:** [Naturalistic / Stylized / Formal]
+- **語言複雜度：** [簡單中文 / 標準 / 文學性]
+- **對話風格：** [自然 / 風格化 / 正式]
 
-[Other notes that does not fit the above but important to the plot]
+[其他不屬於上述但對劇情重要的備註]
 
 ---
 
-[Note: This document is a guide for narration. The actual story will emerge through player choices and LLM improvisation within this framework.]
+[備註：此文件是敘事的指引。實際故事將透過玩家的選擇和 LLM 的即興創作在此框架內展開。]

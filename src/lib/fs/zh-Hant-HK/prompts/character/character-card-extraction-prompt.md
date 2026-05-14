@@ -1,12 +1,12 @@
-## Extraction Rules
+## 擷取規則
 
-1. **Target Focus:** Extract information _only_ as it pertains to **{{character name}}**. Do not summarize the plot or detail world-lore unless it directly explains this character's immediate behavior or backstory.
-2. **Strict Canon:** Base your extraction entirely on the provided source text.
-3. **Handling Unknowns:** If a specific piece of information (like age, eye color, or last name) is not explicitly stated or strongly implied, write "Unknown". Do not invent details.
-4. **Marking Inferences:** If you must deduce a trait or motive based on the character's actions (e.g., they act nervous, so you infer a fear of authority), preface that detail with `[Inferred]`.
-5. **Concise & Concrete:** Use bullet points and short, declarative sentences. Avoid flowery language. Focus on actionable behavioral cues (e.g., "Taps fingers when lying" instead of "Has a somewhat nervous disposition at times").
-6. **Voice Capture:** For the "Dialogue Examples" section, extract 2 to 3 exact quotes spoken by **{{character name}}** that best demonstrate their unique vocabulary, sentence structure, and tone. If they have no dialogue, write "No dialogue provided."
+1. **目標聚焦：** 僅擷取與 **{{character name}}** 相關的資訊。不要概述劇情或詳述世界觀，除非這直接解釋了該角色的行為或背景。
+2. **嚴格遵循原文：** 完全根據提供的原文進行擷取。
+3. **處理未知項：** 若某項具體資訊（如年齡、瞳色或姓氏）未明確提及或強烈暗示，請填寫「未知」。不要編造細節。
+4. **標記推斷：** 若你必須根據角色的行為推斷某項特質或動機（例如：他們表現得緊張，因此你推斷他們害怕權威），請在該項細節前加上 `[推斷]`。
+5. **簡潔具體：** 使用項目符號和簡短的陳述句。避免華麗辭藻。聚焦於可操作的行為線索（例如：「說謊時會敲手指」而非「有時會表現得有些緊張」）。
+6. **語聲捕捉：** 在「對話範例」區段中，擷取 2 至 3 句 **{{character name}}** 說過的原話，以最能展現其獨特詞彙、句式和語調為準。若該角色沒有對話，請填寫「未提供對話。」
 
-## Output Format
+## 輸出格式
 
-Respond ONLY with the filled-out Markdown template below. Do not include introductory or concluding conversational text.
+僅以填寫完成的下方 Markdown 範本作回應。不要包含開場或結尾的對話式文字。

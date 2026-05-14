@@ -1,11 +1,11 @@
-# Act Summary
+# 章節摘要
 
-## Scene Summaries
-### Scene [N]: [Scene title]
-Location: [location of where the scene took place.]
-Summary: [summary, max 3 sentences]
+## 場景摘要
+### 場景 [N]：[場景標題]
+地點：[場景發生的地點]
+摘要：[摘要，最多 3 句話]
 
-## Character Summaries
-### [Well-known name of the character]
-- Aliases: [aliases]
-- Scene [N]: [summary if appeared, max 2 sentences. Optionally append one short, representative quote of dialogue or internal monologue.]
+## 角色摘要
+### [角色的知名名稱]
+- 別名：[別名]
+- 場景 [N]：[若出現的摘要，最多 2 句話。可選擇附加一句簡短、具代表性的對話或內心獨白引文。]

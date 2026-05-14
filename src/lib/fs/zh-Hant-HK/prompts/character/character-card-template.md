@@ -1,130 +1,130 @@
-# Character Card
+# 角色卡
 
-## Source
+## 來源
 
-- Based on: {{story title / interview / notes}}
-- Extraction mode: {{strict extraction | light inference | creative completion}}
-- Confidence note: {{high / medium / low}}
+- 基於：{{story title / interview / notes}}
+- 擷取模式：{{strict extraction | light inference | creative completion}}
+- 信心備註：{{high / medium / low}}
 
-## Core Identity
+## 核心身份
 
-- Name:
-- Aliases / nicknames:
-- Age:
-- Gender / identity:
-- Species / type:
-- Occupation / role:
-- Social status / faction:
-- Current location:
-- Era / time period:
+- 姓名：
+- 別名／暱稱：
+- 年齡：
+- 性別／身份：
+- 種族／類型：
+- 職業／角色：
+- 社會地位／所屬勢力：
+- 目前位置：
+- 時代／時期：
 
-## One-Line Summary
+## 一句話摘要
 
-A concise sentence describing who this character is and why they matter.
+一句簡潔的話描述這個角色是誰以及他們的重要性。
 
-## Role in Story
+## 故事中的角色
 
-- Narrative role: {{protagonist / antagonist / deuteragonist / supporting / side character}}
-- Function in plot:
-- What changes if this character is removed from the story?
+- 敘事角色：{{protagonist / antagonist / deuteragonist / supporting / side character}}
+- 在劇情中的功能：
+- 若這個角色從故事中移除，會有什麼改變？
 
-## Appearance
+## 外貌
 
-- Build / silhouette:
-- Face / notable features:
-- Hair:
-- Eyes:
-- Clothing style:
-- Distinguishing marks / accessories:
-- Usual posture / movement:
-- Sensory impression: {{how they seem at first glance}}
+- 體格／輪廓：
+- 面容／顯著特徵：
+- 髮型：
+- 眼睛：
+- 服裝風格：
+- 辨識標記／配件：
+- 常見姿態／動作：
+- 感官印象：{{第一眼的感覺}}
 
-## Personality
+## 性格
 
-- Core traits:
-- Social style:
-- Emotional tendencies:
-- Strengths:
-- Flaws:
-- Contradictions:
-- Habits / quirks:
-- What they avoid:
-- What they admire:
+- 核心特質：
+- 社交風格：
+- 情感傾向：
+- 優點：
+- 缺點：
+- 矛盾之處：
+- 習慣／怪癖：
+- 他們迴避的事物：
+- 他們欣賞的事物：
 
-## Motivations
+## 動機
 
-- Primary goal:
-- Secondary goal:
-- Immediate need:
-- Long-term desire:
-- Fear:
-- Internal conflict:
-- External conflict:
-- Stakes if they fail:
+- 主要目標：
+- 次要目標：
+- 當前需求：
+- 長期渴望：
+- 恐懼：
+- 內在衝突：
+- 外在衝突：
+- 失敗的代價：
 
-## Backstory
+## 背景故事
 
-### Important past events
+### 重要的過去事件
 
 1.
 2.
 3.
 
-### Formative influences
+### 成長影響
 
-- Family:
-- Culture:
-- Training / education:
-- Trauma / loss:
-- Key success or failure:
+- 家庭：
+- 文化：
+- 訓練／教育：
+- 創傷／失去：
+- 關鍵的成功或失敗：
 
-## Values and Beliefs
+## 價值觀與信念
 
-- Moral code:
-- Political / social beliefs:
-- Spiritual / philosophical beliefs:
-- What they would never do:
-- What might make them break their code:
+- 道德準則：
+- 政治／社會信念：
+- 精神／哲學信念：
+- 他們絕不會做的事：
+- 什麼可能使他們違背原則：
 
-## Competence
+## 能力
 
-- Skills:
-- Knowledge:
-- Resources:
-- Weaknesses / limitations:
-- What they are bad at:
-- Special powers / tools / talents:
+- 技能：
+- 知識：
+- 資源：
+- 弱點／限制：
+- 不擅長的事：
+- 特殊能力／工具／天賦：
 
-## Relationships
+## 關係
 
-### Important people
+### 重要人物
 
 - {{name}} — {{relationship}}, {{dynamic}}, {{tension}}
 - {{name}} — {{relationship}}, {{dynamic}}, {{tension}}
 - {{name}} — {{relationship}}, {{dynamic}}, {{tension}}
 
-### Group dynamics
+### 群體動態
 
-- Allies:
-- Rivals:
-- Dependents:
-- Authority figures:
-- Who trusts them:
-- Who misunderstands them:
+- 盟友：
+- 對手：
+- 依賴者：
+- 權威人物：
+- 信任他們的人：
+- 誤解他們的人：
 
-## Voice
+## 語聲
 
-- Speaking style:
-- Vocabulary level:
-- Tone:
-- Rhythm:
-- Favorite kinds of phrases:
-- Topics they return to:
-- What they refuse to say directly:
-- How they sound when angry:
-- How they sound when vulnerable:
+- 說話風格：
+- 詞彙水平：
+- 語調：
+- 節奏：
+- 常用的措辭類型：
+- 反覆提及的話題：
+- 拒絕直接說出的事物：
+- 憤怒時的語氣：
+- 脆弱時的語氣：
 
-## Dialogue Examples
+## 對話範例
 
 > "{{short example line 1}}"
 
@@ -132,30 +132,30 @@ A concise sentence describing who this character is and why they matter.
 
 > "{{short example line 3}}"
 
-## Behavior in Scenes
+## 場景中的行為
 
-- Under pressure, they tend to:
-- In conflict, they tend to:
-- In romance / intimacy, they tend to:
-- In groups, they tend to:
-- When alone, they tend to:
-- Typical decision-making pattern:
+- 承受壓力時，他們傾向於：
+- 面對衝突時，他們傾向於：
+- 面對浪漫／親密時，他們傾向於：
+- 在群體中，他們傾向於：
+- 獨處時，他們傾向於：
+- 典型的決策模式：
 
-## Story Constraints
+## 故事約束
 
-- Must remain true to:
-- Must not contradict:
-- Can be expanded creatively in:
-- Open questions / unknowns:
+- 必須忠於：
+- 不得違背：
+- 可以創意擴展的部分：
+- 未解之謎／未知事項：
 
-## Scene Hooks
+## 場景鉤子
 
-- Best type of scene for this character:
-- A secret that can surface later:
-- A likely turning point:
-- A likely breaking point:
+- 最適合這個角色的場景類型：
+- 日後可能浮現的秘密：
+- 可能的轉折點：
+- 可能的崩潰點：
 
-## Short Writing Cue
+## 簡短寫作提示
 
-Write this character as:
+將這個角色寫成：
 {{2-4 sentences telling the LLM how to portray them consistently}}

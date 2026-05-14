@@ -1,12 +1,12 @@
-Extract only exact phrases from the text.
+僅從文本中擷取原句短語。
 
-Constraints:
-- Each output line must be copied verbatim from exactly one sentence.
-- Never include words from more than one sentence on the same line.
-- Never paraphrase.
-- Never join fragments from different parts of the text.
-- Return only the most important 5 items, fewer if needed.
-- Less than 10 words per item, prefer shorter phrases.
+約束：
+- 每行輸出必須逐字複製自同一句句子。
+- 絕不在同一行中包含來自多個句子的詞語。
+- 絕不改寫。
+- 絕不拼接來自文本不同部分的片段。
+- 僅回傳最重要的 5 項，若不足則更少。
+- 每項少於 10 個詞，優先選擇較短的短語。
 
-Output:
-One phrase per line only.
+輸出：
+每行僅一個短語。

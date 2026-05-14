@@ -1,43 +1,43 @@
-# Act Plot Generation Instructions
+# 章節劇情生成指令
 
-You are generating an Act Plot document for an interactive story. This document serves as a roadmap for narrating the story across multiple scenes.
+你正在為一個互動故事生成章節劇情文件。此文件作為跨多個場景敘事故事的路線圖。
 
-## Your Task
+## 你的任務
 
-Read the provided world setting document and generate a structured Act Plot that guides the narrative. The Act Plot should be created **specifically for Act {actNumber}** of the story.
+閱讀提供的世界觀設定文件，並生成一個引導敘事的結構化章節劇情。此章節劇情應**專門為故事的第 {actNumber} 章**建立。
 
-## Requirements
+## 要求
 
-### Structure
+### 結構
 
-1. **Story Structure** — Define scene count (target 35-50 scenes at ~400 words each), establishing the story's scope
-2. **Premise** — Create a protagonist archetype that fits the world, define the core conflict, and craft an engaging hook
-3. **Major Events** — Plan approximately 3-4 climactic events, roughly one per 16 scenes. The final event should lead to the Act's ending
-4. **Possible Endings** — Design at least 4 endings, including at least one "good" and one "bad" outcome from the story's perspective
-5. **Storytelling Style** — Determine narrative voice, tone, and pacing
-6. **Presentation Notes** — Set language complexity, onomatopoeia usage, emoji preferences, etc.
+1. **故事結構** — 定義場景數（目標 35-50 個場景，每場景約 400 字），確立故事的範圍
+2. **前提** — 創造符合世界的角色原型，定義核心衝突，並構思引人入勝的鉤子
+3. **主要事件** — 規劃約 3-4 個高潮事件，大約每 16 個場景一個。最後一個事件應導向章節的結局
+4. **可能的結局** — 設計至少 4 個結局，包括至少一個「好」和一個「壞」的結果
+5. **敘事風格** — 確定敘事視角、語調和節奏
+6. **呈現備註** — 設定語言複雜度、擬聲詞使用、表情符號偏好等
 
-### Constraints
+### 約束
 
-- **Maximum 2000 words total** — Be concise but comprehensive
-- **Base everything on the world document** — Do not introduce elements that contradict or ignore the established world setting
-- **Leave protagonist details open** — Suggest archetypes but allow for player choice in defining the main character
-- **Design earned endings** — Endings should feel like natural consequences of player choices throughout the story
-- **Escalate naturally** — Major events should build upon each other with rising stakes
-- **Match the world's tone and themes** — If the world is dark fantasy, don't create a whimsical comedy plot
+- **最多 2000 字** — 簡潔但全面
+- **一切基於世界觀文件** — 不要引入與已建立世界觀設定矛盾或忽略它的元素
+- **保留主角細節的開放性** — 建議原型但允許玩家選擇定義主角
+- **設計應得的結局** — 結局應讓人感覺是玩家在整個故事中選擇的自然結果
+- **自然升級** — 主要事件應以不斷上升的利害關係相互建立
+- **匹配世界的語調和主題** — 若世界是暗黑奇幻，不要創造輕快喜劇的劇情
 
-### Ending Requirements
+### 結局要求
 
-- At least one **good ending** where the protagonist largely succeeds
-- At least one **bad ending** where things go significantly wrong
-- Additional endings can be bittersweet, ambiguous, or alternative paths
-- Each ending should have clear conditions (types of choices that lead to it)
+- 至少一個**好結局**，主角大體上成功
+- 至少一個**壞結局**，事情出了大問題
+- 額外的結局可以是苦樂參半、模棱兩可或替代路徑
+- 每個結局應有明確的條件（導致它的選擇類型）
 
-## Output Format
+## 輸出格式
 
-Output **only** the filled Act Plot template. Do not include:
-- Preamble or explanation
-- Meta-commentary about your process
-- Additional thoughts outside the template structure
+僅輸出填寫好的章節劇情範本。不要包含：
+- 序言或解釋
+- 關於你過程的後設評論
+- 範本結構之外的額外想法
 
-Begin directly with the `# Act Plot` heading and fill in all sections of the template provided.
+直接從 `# 章節劇情` 標題開始，填寫所提供範本的所有區段。

@@ -1,4 +1,4 @@
-The following is the world setting for the story:
+以下是故事的世界觀設定：
 
 ---
 
@@ -6,4 +6,4 @@ The following is the world setting for the story:
 
 ---
 
-Let's start the interview!
+開始訪談吧！

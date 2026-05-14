@@ -1,15 +1,15 @@
-## Scene Title
+## 場景標題
 
-[single-line short title of the scene]
+[場景的簡短標題]
 
-## Background
+## 背景
 
-[a short description to describe the visual background of the scene]
+[簡短描述場景的視覺背景]
 
-## Narrative Body
+## 敘事正文
 
-[the prose content of the narration]
+[敘事的散文內容]
 
 ## CG
 
-[a descriptive illustration depicting the moment of highest visual impact]
+[描繪最具視覺衝擊力時刻的插圖描述]

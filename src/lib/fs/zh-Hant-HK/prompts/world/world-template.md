@@ -1,34 +1,34 @@
-# World Setting
+# 世界觀設定
 
-## Core Setting
+## 核心設定
 
-- **World Name:** [Extract the name of the world, universe, or primary location]
-- **Genre:** [Identify the primary genre, e.g., Cyberpunk, High Fantasy]
-- **Logline:** [Write a one-sentence summary of the world's current state]
-- **Core Themes:** [List the central themes present in the lore]
-- **Current Era:** [Define the current time period or age]
+- **世界名稱：** [擷取世界、宇宙或主要地點的名稱]
+- **類型：** [識別主要類型，例如 Cyberpunk、High Fantasy]
+- **簡介：** [用一句話描述世界目前狀態]
+- **核心主題：** [列出設定中出現的中央主題]
+- **當前時代：** [定義當前的時間段或紀元]
 
-## Magic and Technology
+## 魔法與科技
 
-- **The System:** [Explain the fundamental rules of magic or advanced technology in 1-2 sentences]
-- **Limitations:** [Detail strict limitations to prevent overpowered elements]
-- **Consequences:** [Explain the physical, mental, or societal costs of using these systems]
+- **體系：** [用 1-2 句話解釋魔法或先進科技的基本規則]
+- **限制：** [詳細說明防止過度強大元素的嚴格限制]
+- **後果：** [解釋使用這些體系的身體、心理或社會代價]
 
-## Key Factions
+## 主要勢力
 
-[Create a bulleted list for every major faction mentioned in the chat history. For each, include their name, main goal, relationship to others, and general aesthetic.]
+[為聊天記錄中提及的每個主要勢力建立要點列表。包括其名稱、主要目標、與其他勢力的關係和整體風格。]
 
-## Major Locations
+## 重要地點
 
-[Create a bulleted list for every key location mentioned. For each, include the name, climate, significance, and ruling body.]
+[為每個提及的重要地點建立要點列表。包括其名稱、氣候、重要性和統治機構。]
 
-## Races and Creatures
+## 種族與生物
 
-- **Dominant Species:** [List the main intelligent species and a defining cultural trait for each]
-- **Notable Monsters:** [List dangerous wildlife or entities that exist in the setting]
+- **主要物種：** [列出主要智慧物種及其決定性文化特徵]
+- **值得注意的怪物：** [列出設定中存在的危險野生動物或實體]
 
-## Storytelling Guidelines
+## 敘事指引
 
-- **Tone:** [Define the overall mood based on our chats, e.g., gritty, whimsical, oppressive]
-- **Banned Tropes:** [List any clichés or elements that clash with the established lore]
-- **Character Focus:** [Describe the ideal types of protagonists that fit this world]
+- **語調：** [根據我們的對話定義整體氛圍，例如寫實、奇幻、壓抑]
+- **禁止套路：** [列出與已建立設定衝突的陳腔濫調或元素]
+- **角色焦點：** [描述適合此世界的理想主角類型]

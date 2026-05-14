@@ -1,13 +1,13 @@
-# Extraction Instructions
+# 擷取指令
 
-Fill the provided Act Card template using the source from the chat history.
+使用聊天記錄中的來源填寫提供的章節卡範本。
 
-Rules:
+規則：
 
-- Prefer explicit facts over interpretation.
-- Mark uncertain conclusions as **Inferred:**.
-- Use **Unknown** when evidence is missing.
-- Do not repeat world lore already covered by the World Card unless it directly affects this plot or act.
-- Keep each field concise, specific, and operational for future story generation.
-- For chapter or event breakdowns, focus on cause-and-effect, not just summaries.
-- Preserve unresolved tensions, pending reveals, and escalation structure.
+- 優先使用明確的事實而非推斷。
+- 將不確定的結論標記為 **推斷：**。
+- 當證據缺失時使用 **未知**。
+- 不要重複世界觀卡中已涵蓋的設定，除非它直接影響此劇情或章節。
+- 保持每個欄位簡潔、具體，並對未來的故事生成具有操作性。
+- 對於章節或事件分解，著重因果關係，而非僅僅是摘要。
+- 保留未解決的緊張局勢、待揭示的內容和升級結構。

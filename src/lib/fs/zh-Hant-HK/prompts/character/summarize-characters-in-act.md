@@ -1,30 +1,30 @@
-# Character Extraction
+# 角色擷取
 
-Analyze the provided act narrative content and identify all characters that appear or are referenced.
+分析提供的章節敘事內容，識別所有出現或被提及的角色。
 
-## Task
+## 任務
 
-Extract a JSON array of characters with their importance to this act.
+擷取一個 JSON 陣列，包含角色及其在本章節中的重要性。
 
-## Rules
+## 規則
 
-1. Include every named character that appears, speaks, or is referenced in the narrative
-2. Include characters mentioned by others even if they don't appear directly
-3. Exclude generic references (e.g., "the guard", "a soldier") unless they have a specific name
-4. The "importance" field should briefly explain what role this character plays in this specific act
+1. 包含敘事中每個具名的、出現的、說話的或被提及的角色
+2. 包含被他人提及的角色，即使他們沒有直接出現
+3. 排除泛指的引用（例如「那個守衛」、「一個士兵」），除非他們有具體名字
+4. 「重要性」欄位應簡要說明該角色在本章節中扮演什麼角色
 
-## Output Format
+## 輸出格式
 
-Return ONLY a JSON array. No introductory text, no markdown formatting, just the raw JSON.
+僅回傳 JSON 陣列。不要有引言文字，不要 markdown 格式，只需原始 JSON。
 
-Example output:
+範例輸出：
 
 ```json
 [
-	{ "character": "John Doe", "importance": "Protagonist who makes the key decision at the climax." },
-	{ "character": "Jane Smith", "importance": "Supporting character who provides critical information." },
-	{ "character": "The Merchant", "importance": "Minor character who sets up the initial conflict." }
+	{ "character": "John Doe", "importance": "主角，在高潮時做出關鍵決定。" },
+	{ "character": "Jane Smith", "importance": "配角，提供關鍵資訊。" },
+	{ "character": "The Merchant", "importance": "次要角色，引發初始衝突。" }
 ]
 ```
 
-If no characters are found, return an empty array: `[]`
+若未找到任何角色，回傳空陣列：`[]`

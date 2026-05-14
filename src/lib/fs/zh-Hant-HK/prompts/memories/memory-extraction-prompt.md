@@ -1,127 +1,127 @@
-Please analyze the provided role-play transcript and extract the memorable events for the important characters.
+請分析提供的角色扮演對話記錄，並為重要角色擷取值得記住的事件。
 
-**Step 1: Analysis**
-Before generating your final output, create a `<scratchpad>` block. Inside it:
+**步驟一：分析**
+在生成最終輸出之前，建立一個 `<scratchpad>` 區塊。在其中：
 
-- List all named characters in the text.
-- Filter out generic or one-off characters, keeping only those who are important and likely to appear again.
-- Briefly map out the timeline of events, explicitly identifying scene changes (when characters move to new locations or time skips ahead).
-- Crucially, distinguish between events happening in the present scene and past events that characters are merely recalling.
-- Identify who all pronouns refer to so you can use explicit names in your final output.
-- Note any items, equipment, skills, clothing, or status effects that characters gain, lose, use, or are explicitly described as having during the scene.
+- 列出文中所有具名角色。
+- 篩除泛指或一次性角色，僅保留重要且可能再次出現的角色。
+- 簡要梳理事件時間線，明確標識場景轉換（角色移動到新地點或時間跳躍之處）。
+- 關鍵是，區分當前場景中正在發生的事件和角色只是在回憶的過去事件。
+- 識別所有代名詞所指代的對象，以便在最終輸出中使用明確的名字。
+- 記下角色在場景中獲得、失去、使用或被明確描述擁有的任何物品、裝備、技能、服裝或狀態效果。
 
-**Step 2: Markdown Output**
-Generate the final memory extraction using exactly the following Markdown format.
+**步驟二：Markdown 輸出**
+使用以下精確的 Markdown 格式生成最終的記憶擷取。
 
-**Header Rules (Time and Location):**
+**標題規則（時間與地點）：**
 
-- Format headers consistently: Use the format `### [Time], [Specific Location]`. E.g.: `### Late Afternoon, The Royal Library` or `### Next Morning, John's Kitchen`.
-- Keep headers concise: Do not exceed 8 words for the time and location header.
-- Create new sections for scene changes: Create a new `### [Time], [Specific Location]` block whenever the character moves to a new place or a noticeable amount of time passes.
-- Resolve all pronouns to explicit names. Never use pronouns (he, she, him, her, they) to refer to characters without first referring who that person/thing is. The header must make sense when out of context. E.g., use "Early morning, Lucy's bedroom", not "Early morning, her bedroom".
+- 統一格式標題：使用格式 `### [時間], [具體地點]`。例如：`### 傍晚，皇家圖書館` 或 `### 翌日清晨，約翰的廚房`。
+- 保持標題簡潔：時間和地點標題不超過 8 個詞。
+- 場景轉換時建立新區段：每當角色移動到新地點或有明顯時間流逝時，建立新的 `### [時間], [具體地點]` 區塊。
+- 將所有代名詞解析為明確名字。絕不使用代名詞（他、她、他們）來指代角色，除非前面已經指明該人物/事物。標題在脫離上下文時也必須合理。例如：使用「清晨，露西的臥室」而非「清晨，她的臥室」。
 
-**Formatting Rules for Bullet Points:**
+**項目符號格式規則：**
 
-- Each extracted thought, action, dialog, or recalled memory must be **exactly one written sentence**.
-- Every sentence must begin with the character's name.
-- Resolve all pronouns to explicit names. Never use pronouns to refer to characters without first referring who that person/thing is. The sentence must make sense when out of context. E.g., use "John thought that Mary liked him", not "John thought that she liked him".
-- For thoughts occurring in the present scene, use the format: `[Name] thought that [thought].`
-- For dialogs, use the format: `[Name] said to [Target]: "[Quote or summary]."`
-- For present actions, use the format: `[Name] [action performed].`
-- For past events being remembered, use the format: `[Name] recalled that [past event or memory].`
+- 每條擷取的想法、行動、對話或回憶的記憶必須**恰好是一個完整的句子**。
+- 每個句子必須以角色名字開頭。
+- 將所有代名詞解析為明確名字。絕不使用代名詞來指代角色，除非前面已經指明該人物/事物。句子在脫離上下文時也必須合理。例如：使用「約翰認為瑪麗喜歡他」而非「約翰認為她喜歡他」。
+- 對於當前場景中的想法，使用格式：`[姓名] 認為 [想法]。`
+- 對於對話，使用格式：`[姓名] 對 [對象] 說：「[引文或摘要]。」`
+- 對於當前行動，使用格式：`[姓名] [執行的行動]。`
+- 對於正在被回憶的過去事件，使用格式：`[姓名] 回憶起 [過去的事件或記憶]。`
 
-**Step 3: Inventory Extraction**
-After the memories for each character, also extract their current inventory if any items are mentioned or directly implied in the scene. Inventory includes:
+**步驟三：物品欄擷取**
+在每個角色的記憶之後，若場景中提及或直接暗示了任何物品，也擷取其當前物品欄。物品欄包括：
 
-- **item**: Tangible objects the character carries (weapons, potions, keys, tools, food, etc.)
-- **equipment**: Worn or wielded items (armor, rings, cloaks, shields, etc.)
-- **skill**: Abilities the character has demonstrated or is known to possess (spellcasting, lockpicking, stealth, etc.)
-- **clothing**: What the character is wearing (robes, boots, hat, etc.)
-- **status**: Temporary conditions affecting the character (poisoned, invisible, wounded, etc.)
+- **item**：角色攜帶的有形物件（武器、藥水、鑰匙、工具、食物等）
+- **equipment**：穿戴或裝備的物品（盔甲、戒指、斗篷、盾牌等）
+- **skill**：角色已展現或已知擁有的能力（施法、開鎖、潛行等）
+- **clothing**：角色穿著的衣物（長袍、靴子、帽子等）
+- **status**：影響角色的臨時狀態（中毒、隱形、受傷等）
 
-For each character with inventory, add an `#### Inventory` subsection after their memories:
-
-```
-#### Inventory
-
-- **item**: Iron Sword - A battered but serviceable blade [carried]
-- **equipment**: Leather Armor - Worn and patched [equipped]
-- **clothing**: Travel Cloak - Dark green, weather-stained [equipped]
-- **skill**: Basic Swordsmanship - Trained but not exceptional [known]
-- **status**: Mildly Wounded - Cut on left arm [known]
-```
-
-**Inventory Rules:**
-
-- Only extract inventory **explicitly mentioned or strongly implied in the current scene**. Do not infer items from character archetypes or backstory (e.g., do not assume a knight has armor unless it is mentioned).
-- Each item line format: `**category**: Name - Description [equip_status]`
-- The `[equip_status]` tag is required for every item:
-  - `[equipped]` — worn, wielded, or actively in use
-  - `[carried]` — on the character's person but not in active use
-  - `[owned]` — possessed but not on person (stashed, in storage)
-  - `[known]` — abstract/knowledge-based (abilities, skills)
-- Multiple instances of the same item use "(xN)" notation: `**item**: Healing Potion (x2) - Restores minor wounds [carried]`
-- Only include inventory that the character currently possesses at the end of the scene. If a character lost or used an item, do not include it.
-- If no inventory is mentioned for a character, omit the `#### Inventory` section entirely.
-
-**Step 4: Inventory Change Events**
-
-For each character, also identify **explicit inventory events** that occurred during the scene. These are actions where a character gains, loses, equips, unequips, uses, or modifies an item.
-
-After the `#### Inventory` section (if present), add an `#### Inventory Changes` subsection:
+對於有物品欄的每個角色，在其記憶之後新增 `#### 物品欄` 子區段：
 
 ```
-#### Inventory Changes
+#### 物品欄
 
-- **acquired**: Iron Sword - Picked up from the fallen knight
-- **lost**: Wooden Shield - Shattered in combat
-- **equipped**: Leather Armor - Put on before the battle
-- **unequipped**: Travel Cloak - Took off to avoid detection
-- **used**: Healing Potion - Drank to heal wounds
-- **modified**: Enchanted Ring - Absorbed a new enchantment
+- **item**: 鐵劍 - 一把破舊但尚可使用的劍 [carried]
+- **equipment**: 皮甲 - 磨損且縫補過 [equipped]
+- **clothing**: 旅行斗篷 - 深綠色，飽經風霜 [equipped]
+- **skill**: 基礎劍術 - 受過訓練但不突出 [known]
+- **status**: 輕微受傷 - 左臂有切口 [known]
 ```
 
-**Change Event Rules:**
+**物品欄規則：**
 
-- Each line format: `**change_type**: Item Name - Description`
-- Valid change types:
-  - `acquired` — Character gained a new item they did not previously have
-  - `lost` — Character no longer has an item (dropped, destroyed, stolen, given away)
-  - `equipped` — Character put on, wielded, or activated an item they already possessed
-  - `unequipped` — Character took off, sheathed, or deactivated an item they still possess
-  - `used` — Character consumed or expended an item (potion drunk, scroll read, charge spent)
-  - `modified` — An existing item was altered (upgraded, enchanted, repaired, corrupted)
-- Only record **explicitly narrated** changes. Do not infer changes by comparing current inventory to previous scenes. If a sword isn't mentioned in the latest scene, that does NOT mean the character lost it.
-- The description should briefly explain how the change occurred.
-- If no inventory changes occurred for a character, omit the `#### Inventory Changes` section entirely.
+- 僅擷取**在當前場景中明確提及或強烈暗示的物品**。不要根據角色原型或背景故事推斷物品（例如：不要假設騎士有盔甲，除非文中提及）。
+- 每條物品格式：`**類別**: 名稱 - 描述 [equip_status]`
+- 每件物品都需要 `[equip_status]` 標記：
+  - `[equipped]` — 已穿戴、裝備或正在使用
+  - `[carried]` — 在角色身上但未主動使用
+  - `[owned]` — 擁有但不在身上（存放在某處、在儲存中）
+  - `[known]` — 抽象／知識性質（能力、技能）
+- 同一物品的多件使用「(xN)」標記法：`**item**: 治療藥水 (x2) - 恢復輕傷 [carried]`
+- 僅包含角色在場景結束時當前擁有的物品。若角色失去或使用了某件物品，不要包含它。
+- 若沒有提及某角色的物品欄，則完全省略 `#### 物品欄` 區段。
+
+**步驟四：物品欄變更事件**
+
+對於每個角色，還要識別場景中發生的**明確物品事件**。這些是指角色獲得、失去、裝備、卸下、使用或修改物品的行動。
+
+在 `#### 物品欄` 區段之後（若存在），新增 `#### 物品欄變更` 子區段：
+
+```
+#### 物品欄變更
+
+- **acquired**: 鐵劍 - 從倒下的騎士身上拾獲
+- **lost**: 木盾 - 在戰鬥中碎裂
+- **equipped**: 皮甲 - 戰前穿上
+- **unequipped**: 旅行斗篷 - 脫下以避免被發現
+- **used**: 治療藥水 - 飲用以治療傷勢
+- **modified**: 附魔戒指 - 吸收了新的附魔
+```
+
+**變更事件規則：**
+
+- 每行格式：`**變更類型**: 物品名稱 - 描述`
+- 有效的變更類型：
+  - `acquired` — 角色獲得了先前沒有的新物品
+  - `lost` — 角色不再擁有某物品（丟（丟棄、損毀、被偷、送出）
+  - `equipped` — 角色穿上、裝備或啟動了已擁有的物品
+  - `unequipped` — 角色脫下、收起或停用了仍然擁有的物品
+  - `used` — 角色消耗或使用了物品（喝下藥水、閱讀卷軸、消耗充能）
+  - `modified` — 現有物品被改變（升級、附魔、修復、腐化）
+- 僅記錄**明確敘述的**變更。不要通過比較當前物品欄與先前場景來推斷變更。若某把劍在最新場景中未被提及，這並不代表角色失去了它。
+- 描述應簡要說明變更如何發生。
+- 若某角色沒有物品欄變更，則完全省略 `#### 物品欄變更` 區段。
 
 <scratchpad>
-[Your internal analysis goes here, explicitly noting scene changes, and if events are current or recalled]
+[你的內部分析放在此處，明確標註場景轉換，以及事件是當前的還是回憶的]
 </scratchpad>
 
-## [Character Name]
+## [角色姓名]
 
-### [Time], [Specific Location]
+### [時間], [具體地點]
 
-- [Character Name] recalled that [describe past memory].
-- [Character Name] thought that [describe current thought].
-- [Character Name] said to [Recipient Name]: "[Quote or summary]".
-- [Character Name] [describe action].
-- [Character Name] [describe another action].
+- [角色姓名] 回憶起 [描述過去的記憶]。
+- [角色姓名] 認為 [描述當前的想法]。
+- [角色姓名] 對 [收話者姓名] 說：「[引文或摘要]」
+- [角色姓名] [描述行動]。
+- [角色姓名] [描述另一個行動]。
 
-#### Inventory
+#### 物品欄
 
-- **equipment**: Iron Sword - A battered but serviceable blade [carried]
+- **equipment**: 鐵劍 - 一把破舊但尚可使用的劍 [carried]
 
-### [Next Time], [Next Specific Location]
+### [下一個時間], [下一個具體地點]
 
-- [Character Name] [describe another action at the time and location].
+- [角色姓名] [在該時間和地點描述另一個行動]。
 
-## [Next Character Name]
+## [下一個角色姓名]
 
-### [Time], [Specific Location]
+### [時間], [具體地點]
 
-- [Character Name] [describe action].
-- [Character Name] said to [Recipient Name]: "[Quote or summary]".
+- [角色姓名] [描述行動]。
+- [角色姓名] 對 [收話者姓名] 說：「[引文或摘要]」
 
-# Transcript to analyze:
+# 待分析的對話記錄：

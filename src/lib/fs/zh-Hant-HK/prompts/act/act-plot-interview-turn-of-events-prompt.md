@@ -1,57 +1,57 @@
-Based on the interview conversation, chat history, and story context below, generate a concise instruction prompt titled "Turn of Events" for the next storytelling response.
+根據下方的訪談對話、聊天記錄和故事脈絡，生成一個簡短的指令提示，標題為「劇情轉折」，用於下一個敘事回應。
 
-Your job is NOT to continue the story.
-Your job is to write guidance that tells a future narrative model how the story should now proceed.
+你的工作不是繼續故事。
+你的工作是撰寫指引，告訴未來的敘事模型故事現在應如何發展。
 
-## Goal
+## 目標
 
-Create a prompt that redirects the narrative into the player's newly expressed interests while staying consistent with what has already happened.
+建立一個提示，將敘事重新導向至玩家新表達的興趣，同時保持與已發生事件的一致性。
 
-## What to use
+## 使用什麼
 
-Use all relevant signals from:
-- The recent chat history containing the interview conversation
-- The story context
-- The current scene and act summary
+使用以下所有相關信號：
+- 包含訪談對話的近期聊天記錄
+- 故事脈絡
+- 當前場景和章節摘要
 
-## What the prompt must do
+## 提示必須做到的事
 
-The generated "Turn of Events" prompt must:
-- Identify what the player now wants more of, less of, or changed.
-- Translate those preferences into clear narrative direction.
-- Bridge naturally from the current story state into the new direction.
-- Preserve continuity with established setting, characters, tone, stakes, and unresolved threads.
-- Give actionable guidance for future narration, not summary alone.
+生成的「劇情轉折」提示必須：
+- 識別玩家現在想多一些、少一些或改變什麼。
+- 將這些偏好轉化為清晰的敘事方向。
+- 從當前故事狀態自然地過渡到新方向。
+- 保留與已建立設定、角色、語調、利害關係和未解決線索的連貫性。
+- 提供可操作的未來敘事指引，而非僅僅是摘要。
 
-## What to avoid
+## 避免什麼
 
-Do NOT:
-- Write story prose.
-- Write dialogue.
-- Write a scene continuation.
-- Retell the Narrative Body.
-- Repeat large chunks of the provided context.
-- Be vague, generic, or thematic only.
+請勿：
+- 撰寫故事散文。
+- 撰寫對話。
+- 撰寫場景延續。
+- 重述敘事正文。
+- 重複大段提供的脈絡。
+- 模糊、泛泛或僅止於主題性。
 
-## Output format
+## 輸出格式
 
-Write only the "Turn of Events" instruction prompt in 1-3 short paragraphs.
+僅以 1-3 個短段落撰寫「劇情轉折」指令提示。
 
-The prompt should:
-- Briefly state the narrative shift.
-- Explain how future responses should steer the story.
-- Mention key constraints or elements to preserve.
-- Optionally mention what to de-emphasize if the player's new direction moves away from prior emphasis.
+提示應：
+- 簡要陳述敘事轉變。
+- 解釋未來回應應如何引導故事。
+- 提及要保留的關鍵約束或元素。
+- 若玩家新方向偏離先前著重點，可選擇提及要淡化的內容。
 
-Write in directive language aimed at another storyteller or model.
-Use phrases like:
-- "Shift the story toward..."
-- "Emphasize..."
-- "Keep continuity with..."
-- "Let the next scenes explore..."
-- "Avoid over-focusing on..."
+以指示性語言撰寫，面向另一個敘事者或模型。
+使用如下表述：
+- 「將故事轉向……」
+- 「強調……」
+- 「保持與……的連貫性」
+- 「讓接下來的場景探索……」
+- 「避免過度聚焦於……」
 
-## Context
+## 脈絡
 
 ---
 
@@ -59,6 +59,6 @@ Use phrases like:
 
 ---
 
-## Output
+## 輸出
 
-Write the "Turn of Events" instruction prompt now.
+現在撰寫「劇情轉折」指令提示。
