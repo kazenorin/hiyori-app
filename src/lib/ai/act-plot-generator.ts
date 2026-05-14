@@ -14,7 +14,7 @@ import { getLineDir } from './card-output-path';
 import { log } from '$lib/logging/logger';
 import { getLastSceneNumber, getPremisesMessages, getPreviousActSummary, getLatestTurnOfEvents } from '$lib/db/act-lines';
 import { reviewerAcceptsAsIs } from './reviewer-output-parser';
-import { ACT_PLOT_SECTION } from '$lib/definitions/section-constants';
+import { ACT_PLOT_SECTION } from '$lib/definitions/pipeline-sections';
 import { ERR_NO_MAIN_PROVIDER, ERR_EMPTY_ACT_PLOT_WRITER } from '$lib/definitions/error-messages';
 
 const LOG_TAG = 'act-plot-generator';

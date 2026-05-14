@@ -5,7 +5,7 @@ import { type ProviderConfig } from '$lib/stores/settings.svelte';
 import { DEFAULT_RETRY_CONFIG, type RetryConfig, type PhaseMetadata, toPhaseMetadata, streamWithRetry } from './chat-stream';
 import { createModel } from './provider';
 import type { GameDataFields, NarrativeVariables, PhaseName } from './narrative-types';
-import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection } from '$lib/definitions/section-constants';
+import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection } from '$lib/definitions/pipeline-sections';
 import { actSummaryForScenesHeader, sectionFormat } from '$lib/definitions/common-headers';
 import {
 	gameMasterExtractionPrompt,

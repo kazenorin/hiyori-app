@@ -29,7 +29,7 @@
       "interviewTranscript": "The following is an interview exchange about the story and premises."
     }
   },
-  "staticPrompts": {
+  "pipeline": {
     "extraction": {
       "gameMaster": "Generate the game data based on the available information in the chat history.",
       "editor": "Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history.",
