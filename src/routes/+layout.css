@@ -9,7 +9,7 @@
 @theme {
 	--font-display: "Literata", "Noto Serif HK", serif;
 	--font-body: "Source Sans 3", "Noto Sans HK", sans-serif;
-	--font-mono: "JetBrains Mono", ui-monospace, monospace;
+	--font-mono: "JetBrains Mono", "Noto Sans HK", ui-monospace, monospace;
 	--reading-width: 65ch;
 	--shadow-message: 0 2px 8px -2px oklch(0.18 0.006 25 / 0.08);
 }
