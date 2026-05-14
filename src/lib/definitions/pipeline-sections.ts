@@ -1,4 +1,4 @@
-import {ls} from "$lib/definitions/locale-strings";
+import {ls} from "$lib/localization";
 import {
 	worldContentHeader,
 	actPlotHeader,

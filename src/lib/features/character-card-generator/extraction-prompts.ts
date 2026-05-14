@@ -1,4 +1,4 @@
-import { ls } from '$lib/definitions/locale-strings';
+import { ls } from '$lib/localization';
 
 /** Marks the start of an act transcript in LLM messages. */
 export const transcriptStart = () => ls('features.characterCardGenerator.transcriptStart');

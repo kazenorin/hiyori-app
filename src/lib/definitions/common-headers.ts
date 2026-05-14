@@ -1,4 +1,4 @@
-import { ls } from './locale-strings';
+import { ls } from '$lib/localization';
 
 export const worldContentHeader = () => ls('common.headers.worldContent');
 export const actPlotHeader = () => ls('common.headers.actPlot');

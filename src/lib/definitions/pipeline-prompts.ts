@@ -1,4 +1,4 @@
-import { ls } from './locale-strings';
+import { ls } from '$lib/localization';
 
 export const gameMasterExtractionPrompt = () => ls('pipeline.extraction.gameMaster');
 

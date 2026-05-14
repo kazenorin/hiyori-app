@@ -1,4 +1,4 @@
-import { ls } from './locale-strings';
+import { ls } from '$lib/localization';
 
 /** Label for user/player role in interview transcripts. */
 export const playerLabel = () => ls('common.labels.player');

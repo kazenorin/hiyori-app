@@ -352,7 +352,7 @@ export async function updateSettings(
 			console.error('Failed to sync locale to i18n:', err);
 		}
 		try {
-			const { loadLocaleStrings } = await import('$lib/definitions/locale-strings');
+			const { loadLocaleStrings } = await import('$lib/localization');
 			await loadLocaleStrings(partial.locale);
 		} catch (err) {
 			console.error('Failed to sync locale to locale strings:', err);

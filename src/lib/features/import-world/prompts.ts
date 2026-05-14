@@ -1,4 +1,4 @@
-import { ls } from '$lib/definitions/locale-strings';
+import { ls } from '$lib/localization';
 
 /** Label preceding the world building settings card content. */
 export const worldCardLabel = () => ls('features.importWorld.labels.worldCard');

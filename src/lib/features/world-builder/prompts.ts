@@ -1,4 +1,4 @@
-import { ls } from '$lib/definitions/locale-strings';
+import { ls } from '$lib/localization';
 
 /** Seed message for the world builder interview. */
 export const worldBuilderSeed = () => ls('features.worldBuilder.worldBuilderSeed');

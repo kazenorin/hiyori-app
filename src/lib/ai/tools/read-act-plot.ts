@@ -1,4 +1,4 @@
-import { ls } from '$lib/definitions/locale-strings';
+import { ls } from '$lib/localization';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { exists, readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
