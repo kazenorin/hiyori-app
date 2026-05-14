@@ -27,6 +27,6 @@ ls('pipeline.extraction.writer', { currentScene }); // → "Write a story prose 
 
 ## Resolution order
 
-1. `<story-folder>/locale-strings/<locale>.json`
-2. `config/locale-strings/<locale>.json`
-3. Bundled default (`src/lib/fs/locale-strings/<locale>.json`)
+1. `<story-folder>/locale-strings/<locale>.yaml`
+2. `config/locale-strings/<locale>.yaml`
+3. Bundled default (`src/lib/fs/locale-strings/<locale>.yaml`)

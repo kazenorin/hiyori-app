@@ -1,7 +1,7 @@
 import { LocaleStringBundle, registerLocaleStringDefaults, flattenToPaths } from '$lib/fs/locale-string-loader';
 import { log } from '$lib/logging/logger';
-import defaultEnStrings from '$lib/fs/locale-strings/en.json?raw';
-import defaultZhHantHkStrings from '$lib/fs/locale-strings/zh-Hant-HK.json?raw';
+import defaultEnStrings from '$lib/fs/locale-strings/en.yaml?raw';
+import defaultZhHantHkStrings from '$lib/fs/locale-strings/zh-Hant-HK.yaml?raw';
 
 let cache: Record<string, string> = {};
 let currentLocale = 'en';

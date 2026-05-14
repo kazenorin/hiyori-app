@@ -1,4 +1,5 @@
 import { readTextFile, writeTextFile, mkdir, exists, BaseDirectory } from '@tauri-apps/plugin-fs';
+import yaml from 'js-yaml';
 import { log } from '$lib/logging/logger';
 import { resolveStoryFolder } from './story-folders';
 
@@ -56,7 +57,7 @@ async function ensureAndLoadBase(baseDir: string, fileName: string, defaultConte
 	await ensureBaseFileExists(baseDir, fileName, defaultContent);
 	const fullPath = `${baseDir}/${fileName}`;
 	const content = await readTextFile(fullPath, { baseDir: BaseDirectory.AppData });
-	return JSON.parse(content);
+	return yaml.load(content) as Record<string, unknown>;
 }
 
 function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {
@@ -94,10 +95,10 @@ function flattenToPaths(obj: Record<string, unknown>, prefix = ''): Record<strin
 
 async function loadLocaleStringsFile(baseDir: string, locale: string, defaultContent: string): Promise<Record<string, unknown>> {
 	try {
-		return await ensureAndLoadBase(baseDir, `${locale}.json`, defaultContent);
+		return await ensureAndLoadBase(baseDir, `${locale}.yaml`, defaultContent);
 	} catch (err) {
-		await log.warn('locale-string-loader', `Failed to load locale strings at ${baseDir}/${locale}.json: ${err}`);
-		return JSON.parse(defaultContent);
+		await log.warn('locale-string-loader', `Failed to load locale strings at ${baseDir}/${locale}.yaml: ${err}`);
+		return yaml.load(defaultContent) as Record<string, unknown>;
 	}
 }
 
@@ -107,14 +108,14 @@ async function loadLocaleStringsWithOverride(
 	locale: string,
 	defaultContent: string
 ): Promise<Record<string, unknown>> {
-	const storyPath = `${storyFolder}/locale-strings/${locale}.json`;
+	const storyPath = `${storyFolder}/locale-strings/${locale}.yaml`;
 
 	try {
 		const storyFileExists = await exists(storyPath, { baseDir: BaseDirectory.AppData });
 		if (storyFileExists) {
 			const storyContent = await readTextFile(storyPath, { baseDir: BaseDirectory.AppData });
-			const storyData = JSON.parse(storyContent);
-			const baseData = await ensureAndLoadBase(baseDir, `${locale}.json`, defaultContent);
+			const storyData = yaml.load(storyContent) as Record<string, unknown>;
+			const baseData = await ensureAndLoadBase(baseDir, `${locale}.yaml`, defaultContent);
 			return deepMerge(baseData, storyData);
 		}
 	} catch (err) {
@@ -133,7 +134,7 @@ export async function ensureAllLocaleStringConfigs(): Promise<void> {
 	const results = await Promise.allSettled(
 		defaultsRegistry.map(async (entry) => {
 			try {
-				await ensureBaseFileExists(entry.baseDir, `${entry.locale}.json`, entry.defaultContent);
+				await ensureBaseFileExists(entry.baseDir, `${entry.locale}.yaml`, entry.defaultContent);
 				return { locale: entry.locale, success: true };
 			} catch (err) {
 				await log.error('locale-string-loader', `Failed to ensure locale string config for ${entry.locale}: ${err}`);
