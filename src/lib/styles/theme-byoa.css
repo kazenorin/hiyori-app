@@ -6,7 +6,7 @@
 	/* --- Base Font (Body / UI) --- */
 	--base-font-color: var(--color-surface-950);
 	--base-font-color-dark: var(--color-surface-50);
-	--base-font-family: "Source Sans 3", "Helvetica Neue", Arial, sans-serif;
+	--base-font-family: "Source Sans 3", "Noto Sans HK", "Helvetica Neue", Arial, sans-serif;
 	--base-font-size: inherit;
 	--base-line-height: inherit;
 	--base-font-weight: normal;
@@ -16,7 +16,7 @@
 	/* --- Heading Font (Display) --- */
 	--heading-font-color: inherit;
 	--heading-font-color-dark: inherit;
-	--heading-font-family: "Literata", Georgia, "Times New Roman", serif;
+	--heading-font-family: "Literata", "Noto Serif HK", Georgia, "Times New Roman", serif;
 	--heading-font-weight: 600;
 	--heading-font-style: normal;
 	--heading-letter-spacing: inherit;
