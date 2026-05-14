@@ -53,7 +53,7 @@ describe('migrations', () => {
 		await runMigrations();
 		await runMigrations();
 		const versions = testDb._db.prepare('SELECT version FROM schema_version ORDER BY version').all();
-		expect(versions).toHaveLength(3);
+		expect(versions).toHaveLength(4);
 	});
 });
 
@@ -68,7 +68,7 @@ describe('stories CRUD', () => {
 	});
 
 	it('creates and retrieves a story', async () => {
-		const story = await stories.createStory('id-1', 'My Story');
+		const story = await stories.createStory('id-1', 'My Story', 'en');
 		expect(story.name).toBe('My Story');
 		expect(story.id).toBe('id-1');
 
@@ -82,10 +82,10 @@ describe('stories CRUD', () => {
 	});
 
 	it('returns all stories sorted by updated_at DESC', async () => {
-		await stories.createStory('id-1', 'First');
+		await stories.createStory('id-1', 'First', 'en');
 		const db = testDb._db;
 		db.prepare('UPDATE stories SET updated_at = updated_at - 1').run();
-		await stories.createStory('id-2', 'Second');
+		await stories.createStory('id-2', 'Second', 'en');
 
 		const all = await stories.getAllStories();
 		expect(all).toHaveLength(2);
@@ -93,13 +93,13 @@ describe('stories CRUD', () => {
 	});
 
 	it('updates a story name', async () => {
-		await stories.createStory('id-1', 'Original');
+		await stories.createStory('id-1', 'Original', 'en');
 		await stories.updateStory('id-1', 'Updated');
 		expect((await stories.getStory('id-1'))!.name).toBe('Updated');
 	});
 
 	it('deletes a story', async () => {
-		await stories.createStory('id-1', 'Bye');
+		await stories.createStory('id-1', 'Bye', 'en');
 		await stories.deleteStory('id-1');
 		expect(await stories.getStory('id-1')).toBeNull();
 	});
@@ -109,7 +109,7 @@ describe('acts CRUD', () => {
 	beforeEach(async () => {
 		testDb = createTestDatabase();
 		await runMigrations();
-		await stories.createStory('story-1', 'Test');
+		await stories.createStory('story-1', 'Test', 'en');
 	});
 
 	afterEach(() => {
@@ -148,7 +148,7 @@ describe('act-lines operations', () => {
 	beforeEach(async () => {
 		testDb = createTestDatabase();
 		await runMigrations();
-		await stories.createStory('story-1', 'Test');
+		await stories.createStory('story-1', 'Test', 'en');
 		await acts.createAct('act-1', 'story-1', 'Act 1', 1);
 	});
 
@@ -506,7 +506,7 @@ describe('act_line_premises operations', () => {
 	beforeEach(async () => {
 		testDb = createTestDatabase();
 		await runMigrations();
-		await stories.createStory('story-1', 'Test');
+		await stories.createStory('story-1', 'Test', 'en');
 		await acts.createAct('act-1', 'story-1', 'Act 1', 1);
 	});
 

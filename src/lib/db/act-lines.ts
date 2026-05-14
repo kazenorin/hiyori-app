@@ -172,13 +172,13 @@ export async function getActNumberForActLine(actLineId: string): Promise<number 
 
 export async function getStoryForActLine(actLineId: string): Promise<Story> {
 	const db = getDatabase();
-	const rows = await db.select<{ id: string; name: string; created_at: number; updated_at: number }[]>(
-		'SELECT s.id, s.name, s.created_at, s.updated_at FROM act_line_meta alm JOIN acts a ON a.id = alm.act_id JOIN stories s ON s.id = a.story_id WHERE alm.id = $1',
-		[actLineId]
+	const rows = await db.select<{ id: string; name: string; locale: string; created_at: number; updated_at: number }[]>(
+	'SELECT s.id, s.name, s.locale, s.created_at, s.updated_at FROM act_line_meta alm JOIN acts a ON a.id = alm.act_id JOIN stories s ON s.id = a.story_id WHERE alm.id = $1',
+	[actLineId]
 	);
 	if (rows.length > 0) {
 		const row = rows[0];
-		return { id: row.id, name: row.name, createdAt: row.created_at, updatedAt: row.updated_at };
+		return { id: row.id, name: row.name, locale: row.locale, createdAt: row.created_at, updatedAt: row.updated_at };
 	} else {
 		throw new Error('Orphaned Act Line with no Story');
 	}

@@ -233,7 +233,7 @@
 		if (!name || !worldContent) return false;
 
 		if (!storyCreated) {
-			await createStoryFromWorldBuilder(name, worldContent);
+			await createStoryFromWorldBuilder(name, worldContent, settings.locale || 'en');
 			storyCreated = true;
 		}
 		return true;

@@ -3,10 +3,26 @@ import { log } from '$lib/logging/logger';
 import { resolveStoryFolder } from './story-folders';
 
 /**
- * Base directories for template types in AppData.
+ * Active locale determines which locale-scoped config directory to read from.
+ * Set by story selection or settings locale.
  */
-const PROMPT_TEMPLATES_DIR = 'config/prompt-templates';
-const VIEW_TEMPLATES_DIR = 'config/view-templates';
+let activeLocale = 'en';
+
+export function getActiveLocale(): string {
+	return activeLocale;
+}
+
+export function setActiveLocale(locale: string): void {
+	activeLocale = locale;
+}
+
+export function getPromptTemplatesDir(): string {
+	return `config/${activeLocale}/prompt-templates`;
+}
+
+export function getViewTemplatesDir(): string {
+	return `config/${activeLocale}/view-templates`;
+}
 
 /**
  * Configuration entry for a template file.
@@ -22,16 +38,27 @@ interface TemplateConfig {
  * Provides a load() method to load the template content.
  *
  * Used for both prompt templates and view templates.
+ * baseDir is resolved dynamically so locale switches take effect.
  */
 export class Prompt {
 	readonly relativePath: string;
 	readonly defaultContent: string;
-	readonly baseDir: string;
+	private readonly _baseDirOverride?: string;
 
 	constructor(config: TemplateConfig) {
 		this.relativePath = config.relativePath;
 		this.defaultContent = config.defaultContent;
-		this.baseDir = config.baseDir ?? PROMPT_TEMPLATES_DIR;
+		this._baseDirOverride = config.baseDir;
+	}
+
+	get baseDir(): string {
+		if (!this._baseDirOverride) {
+			return getPromptTemplatesDir();
+		}
+		if (this._baseDirOverride === 'config/view-templates') {
+			return getViewTemplatesDir();
+		}
+		return this._baseDirOverride;
 	}
 
 	/**
@@ -132,14 +159,14 @@ export async function loadTemplate(baseDir: string, relativePath: string, defaul
  * Load a prompt template (backward-compatible shorthand).
  */
 export async function loadPrompt(relativePath: string, defaultContent: string): Promise<string> {
-	return loadTemplate(PROMPT_TEMPLATES_DIR, relativePath, defaultContent);
+	return loadTemplate(getPromptTemplatesDir(), relativePath, defaultContent);
 }
 
 /**
  * Load a view template.
  */
 export async function loadViewTemplate(relativePath: string, defaultContent: string): Promise<string> {
-	return loadTemplate(VIEW_TEMPLATES_DIR, relativePath, defaultContent);
+	return loadTemplate(getViewTemplatesDir(), relativePath, defaultContent);
 }
 
 /**
@@ -158,7 +185,7 @@ export async function loadPromptForStory(
 ): Promise<string> {
 	try {
 		const storyFolder = await resolveStoryFolder(storyId, storyName);
-		return await loadWithOverride(PROMPT_TEMPLATES_DIR, storyFolder, relativePath, defaultContent);
+		return await loadWithOverride(getPromptTemplatesDir(), storyFolder, relativePath, defaultContent);
 	} catch (err) {
 		await log.warn('template-loader', `Failed to load story prompt at ${relativePath}: ${err}`);
 		return defaultContent;
@@ -176,7 +203,7 @@ export async function loadViewTemplateForStory(
 ): Promise<string> {
 	try {
 		const storyFolder = await resolveStoryFolder(storyId, storyName);
-		return await loadWithOverride(VIEW_TEMPLATES_DIR, storyFolder, relativePath, defaultContent);
+		return await loadWithOverride(getViewTemplatesDir(), storyFolder, relativePath, defaultContent);
 	} catch (err) {
 		await log.warn('template-loader', `Failed to load story view template at ${relativePath}: ${err}`);
 		return defaultContent;

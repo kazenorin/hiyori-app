@@ -351,11 +351,18 @@ export async function updateSettings(
 		} catch (err) {
 			console.error('Failed to sync locale to i18n:', err);
 		}
+		// Only reload locale strings if no story is active
+		// (stories.svelte.ts handles locale string loading on story select)
 		try {
-			const { loadLocaleStrings } = await import('$lib/localization');
-			await loadLocaleStrings(partial.locale);
+			const { getActiveStoryId } = await import('$lib/stores/stories.svelte');
+			if (!getActiveStoryId()) {
+				const { setActiveLocale } = await import('$lib/fs/prompt-loader');
+				setActiveLocale(partial.locale);
+				const { loadLocaleStrings } = await import('$lib/localization');
+				await loadLocaleStrings(partial.locale);
+			}
 		} catch (err) {
-			console.error('Failed to sync locale to locale strings:', err);
+			console.error('Failed to sync locale strings:', err);
 		}
 	}
 }

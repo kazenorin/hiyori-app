@@ -3,7 +3,7 @@ import yaml from 'js-yaml';
 import { log } from '$lib/logging/logger';
 import { resolveStoryFolder } from './story-folders';
 
-const LOCALE_STRINGS_DIR = 'config/locale-strings';
+const LOCALE_STRINGS_FILENAME = 'locale-strings.yaml';
 
 export interface LocaleStringConfig {
 	locale: string;
@@ -19,15 +19,15 @@ export class LocaleStringBundle {
 	constructor(config: LocaleStringConfig) {
 		this.locale = config.locale;
 		this.defaultContent = config.defaultContent;
-		this.baseDir = config.baseDir ?? LOCALE_STRINGS_DIR;
+		this.baseDir = config.baseDir ?? `config/${config.locale}`;
 	}
 
 	async load(): Promise<Record<string, unknown>> {
-		return loadLocaleStringsFile(this.baseDir, this.locale, this.defaultContent);
+		return loadLocaleStringsFile(this.baseDir, LOCALE_STRINGS_FILENAME, this.defaultContent);
 	}
 
 	async loadForStory(storyFolder: string): Promise<Record<string, unknown>> {
-		return loadLocaleStringsWithOverride(this.baseDir, storyFolder, this.locale, this.defaultContent);
+		return loadLocaleStringsWithOverride(this.baseDir, LOCALE_STRINGS_FILENAME, storyFolder, this.defaultContent);
 	}
 }
 
@@ -93,36 +93,36 @@ function flattenToPaths(obj: Record<string, unknown>, prefix = ''): Record<strin
 	return result;
 }
 
-async function loadLocaleStringsFile(baseDir: string, locale: string, defaultContent: string): Promise<Record<string, unknown>> {
+async function loadLocaleStringsFile(baseDir: string, fileName: string, defaultContent: string): Promise<Record<string, unknown>> {
 	try {
-		return await ensureAndLoadBase(baseDir, `${locale}.yaml`, defaultContent);
+		return await ensureAndLoadBase(baseDir, fileName, defaultContent);
 	} catch (err) {
-		await log.warn('locale-string-loader', `Failed to load locale strings at ${baseDir}/${locale}.yaml: ${err}`);
+		await log.warn('locale-string-loader', `Failed to load locale strings at ${baseDir}/${fileName}: ${err}`);
 		return yaml.load(defaultContent) as Record<string, unknown>;
 	}
 }
 
 async function loadLocaleStringsWithOverride(
 	baseDir: string,
+	fileName: string,
 	storyFolder: string,
-	locale: string,
 	defaultContent: string
 ): Promise<Record<string, unknown>> {
-	const storyPath = `${storyFolder}/locale-strings/${locale}.yaml`;
+	const storyPath = `${storyFolder}/${fileName}`;
 
 	try {
 		const storyFileExists = await exists(storyPath, { baseDir: BaseDirectory.AppData });
 		if (storyFileExists) {
 			const storyContent = await readTextFile(storyPath, { baseDir: BaseDirectory.AppData });
 			const storyData = yaml.load(storyContent) as Record<string, unknown>;
-			const baseData = await ensureAndLoadBase(baseDir, `${locale}.yaml`, defaultContent);
+			const baseData = await ensureAndLoadBase(baseDir, fileName, defaultContent);
 			return deepMerge(baseData, storyData);
 		}
 	} catch (err) {
 		await log.debug('locale-string-loader', `Error checking story override at ${storyPath}: ${err}`);
 	}
 
-	return loadLocaleStringsFile(baseDir, locale, defaultContent);
+	return loadLocaleStringsFile(baseDir, fileName, defaultContent);
 }
 
 export async function ensureAllLocaleStringConfigs(): Promise<void> {
@@ -134,7 +134,7 @@ export async function ensureAllLocaleStringConfigs(): Promise<void> {
 	const results = await Promise.allSettled(
 		defaultsRegistry.map(async (entry) => {
 			try {
-				await ensureBaseFileExists(entry.baseDir, `${entry.locale}.yaml`, entry.defaultContent);
+				await ensureBaseFileExists(entry.baseDir, LOCALE_STRINGS_FILENAME, entry.defaultContent);
 				return { locale: entry.locale, success: true };
 			} catch (err) {
 				await log.error('locale-string-loader', `Failed to ensure locale string config for ${entry.locale}: ${err}`);

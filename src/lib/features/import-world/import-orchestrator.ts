@@ -57,7 +57,7 @@ export async function executeImport(formData: ImportFormData, onProgress: Progre
 		storyId = crypto.randomUUID();
 		storyName = formData.storyName.trim() || `Story-${storyId.slice(-8)}`;
 
-		await createStory(storyId, storyName);
+		await createStory(storyId, storyName, 'en');
 		createdResources.storyId = storyId;
 		log(`Story created: "${storyName}" (${storyId.slice(-8)})`);
 

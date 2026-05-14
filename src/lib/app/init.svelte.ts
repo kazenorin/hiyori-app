@@ -50,6 +50,8 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 
 		await log.info('init', 'Ensuring base configs...');
 		onStatus?.('Ensuring base configs...');
+		const { setActiveLocale } = await import('$lib/fs/prompt-loader');
+		setActiveLocale(settings.locale || 'en');
 		await ensureAllBaseConfigs();
 
 		await log.info('init', 'Ensuring locale string configs...');

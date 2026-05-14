@@ -9,6 +9,8 @@ import { Memory } from '$lib/features/memory';
 import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 import type { ModelMessage } from 'ai';
 import { loadStorySystemPrompt, loadSystemPrompt } from '$lib/fs/prompts';
+import { setActiveLocale } from '$lib/fs/prompt-loader';
+import { loadLocaleStrings } from '$lib/localization';
 import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-folders';
 import { writeTextFile, readTextFile, exists, remove, copyFile, mkdir, rename, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
@@ -175,9 +177,13 @@ export async function selectStory(storyId: string | null): Promise<void> {
 			if (story) {
 				await loadStoryContent(storyId, story.name);
 				activeStoryName = story.name;
+				setActiveLocale(story.locale || 'en');
+				await loadLocaleStrings(story.locale || 'en', story.id, story.name);
 			}
 		} else {
 			resetStoryContent();
+			setActiveLocale(settings.locale || 'en');
+			await loadLocaleStrings(settings.locale || 'en');
 		}
 	} finally {
 		isSelectingStory = false;
@@ -259,8 +265,8 @@ async function ensureActPlot(): Promise<void> {
 	}
 }
 
-export async function createStory(name: string): Promise<dbStories.Story> {
-	const story = await dbStories.createStory(crypto.randomUUID(), name);
+export async function createStory(name: string, locale: string): Promise<dbStories.Story> {
+	const story = await dbStories.createStory(crypto.randomUUID(), name, locale);
 	stories = [story, ...stories];
 	return story;
 }
@@ -535,6 +541,8 @@ export async function restoreState(): Promise<void> {
 		if (story) {
 			await loadStoryContent(story.id, story.name);
 			activeStoryName = story.name;
+			setActiveLocale(story.locale || 'en');
+			await loadLocaleStrings(story.locale || 'en', story.id, story.name);
 		}
 	}
 	if (state.activeActId) {
@@ -548,8 +556,8 @@ export async function restoreState(): Promise<void> {
 	isLoading = false;
 }
 
-export async function createStoryFromWorldBuilder(name: string, worldContent: string): Promise<void> {
-	const story = await createStory(name);
+export async function createStoryFromWorldBuilder(name: string, worldContent: string, locale: string): Promise<void> {
+	const story = await createStory(name, locale);
 	const act = await createAct(story.id, 'Act 1');
 	const actLine = await createActLine(act.id, 'main line');
 

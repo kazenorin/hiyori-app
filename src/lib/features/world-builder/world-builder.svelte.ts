@@ -153,7 +153,14 @@ export async function enterWorldBuilderMode(): Promise<void> {
 	isActive = true;
 	logFilePath = generateWorldBuilderLogFilename();
 
-	// Load and cache prompts once
+	// Set active locale to i18n locale for world builder session
+	const { settings } = await import('$lib/stores/settings.svelte');
+	const { setActiveLocale } = await import('$lib/fs/prompt-loader');
+	setActiveLocale(settings.locale || 'en');
+	const { loadLocaleStrings } = await import('$lib/localization');
+	await loadLocaleStrings(settings.locale || 'en');
+
+	// Load and cache prompts once (now uses locale-scoped dirs)
 	const [worldBuilderPrompt, worldTemplate] = await Promise.all([loadWorldBuilderSystemPrompt(), loadWorldTemplate()]);
 	cachedWorldBuilderPrompt = worldBuilderPrompt;
 	cachedWorldTemplate = worldTemplate;

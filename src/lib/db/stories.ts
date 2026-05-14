@@ -3,6 +3,7 @@ import { getDatabase } from './database';
 export interface Story {
 	id: string;
 	name: string;
+	locale: string;
 	createdAt: number;
 	updatedAt: number;
 }
@@ -10,6 +11,7 @@ export interface Story {
 interface StoryRow {
 	id: string;
 	name: string;
+	locale: string;
 	created_at: number;
 	updated_at: number;
 }
@@ -18,16 +20,17 @@ function rowToStory(row: StoryRow): Story {
 	return {
 		id: row.id,
 		name: row.name,
+		locale: row.locale,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	};
 }
 
-export async function createStory(id: string, name: string): Promise<Story> {
+export async function createStory(id: string, name: string, locale: string): Promise<Story> {
 	const db = getDatabase();
 	const now = Date.now();
-	await db.execute('INSERT INTO stories (id, name, created_at, updated_at) VALUES ($1, $2, $3, $4)', [id, name, now, now]);
-	return { id, name, createdAt: now, updatedAt: now };
+	await db.execute('INSERT INTO stories (id, name, locale, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)', [id, name, locale, now, now]);
+	return { id, name, locale, createdAt: now, updatedAt: now };
 }
 
 export async function getStory(id: string): Promise<Story | null> {
