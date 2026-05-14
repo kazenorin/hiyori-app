@@ -47,13 +47,13 @@ import {
 import { mergeActSummary, parseActSummary, parseIncrementalOutput, serializeActSummary } from './act-summary-parser';
 import { reviewerAcceptsAsIs } from './reviewer-output-parser';
 import {
-	NARRATIVE_DESCRIPTORS,
-	REVIEWER_DESCRIPTORS,
-	EDITOR_DESCRIPTORS,
-	GAME_MASTER_DESCRIPTORS,
-	PLOT_PLANNER_DESCRIPTORS,
-	EDITOR_TEMPLATE_FITTER_DESCRIPTORS,
-	GM_TEMPLATE_FITTER_DESCRIPTORS,
+	getNarrativeDescriptors,
+	getReviewerDescriptors,
+	getEditorDescriptors,
+	getGameMasterDescriptors,
+	getPlotPlannerDescriptors,
+	getEditorTemplateFitterDescriptors,
+	getGmTemplateFitterDescriptors,
 } from './descriptors';
 
 const defaultTargetWordCount = 400;
@@ -563,7 +563,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					.replaceAll('{writerOutputTemplate}', writerOutputTemplate),
 				...sharedParams,
 				tools: filterToolsForPhase(tools, 'WRITER'),
-				descriptors: NARRATIVE_DESCRIPTORS,
+				descriptors: getNarrativeDescriptors(),
 				messages: toUserMessages([
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
@@ -595,7 +595,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				systemPrompt: reviewerSystemPromptTemplate.replaceAll('{generalInstructions}', generalInstructions),
 				...sharedParams,
 				tools: filterToolsForPhase(tools, 'REVIEWER'),
-				descriptors: REVIEWER_DESCRIPTORS,
+				descriptors: getReviewerDescriptors(),
 				messages: toUserMessages([
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
@@ -640,7 +640,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 						.replaceAll('{writerOutputTemplate}', writerOutputTemplate),
 					...sharedParams,
 					tools: filterToolsForPhase(tools, 'EDITOR'),
-					descriptors: EDITOR_DESCRIPTORS,
+					descriptors: getEditorDescriptors(),
 					messages: toUserMessages([
 						SECTION.WORLD_CONTENT + worldContent,
 						SECTION.ACT_PLOT + actPlot,
@@ -677,7 +677,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				systemPrompt: templateFitterSystemPrompt(),
 				...sharedParams,
 				tools: undefined,
-				descriptors: EDITOR_TEMPLATE_FITTER_DESCRIPTORS,
+				descriptors: getEditorTemplateFitterDescriptors(),
 				messages: toUserMessages([
 					SECTION.EDITOR_OUTPUT + (state.editorOutput ?? ''),
 					SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
@@ -737,7 +737,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					systemPrompt: gameMasterSystemPrompt,
 					...sharedParams,
 					tools: filterToolsForPhase(tools, 'GAME_MASTER'),
-					descriptors: GAME_MASTER_DESCRIPTORS,
+					descriptors: getGameMasterDescriptors(),
 					messages: toUserMessages([...sharedSections, gameMasterExtractionPrompt()]),
 					providerConfig: providerConfigs.gameMaster,
 					buildStateUpdate: (ss) => ({
@@ -755,7 +755,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 						.replaceAll('{targetWordCount}', effectiveTargetWordCount),
 					...sharedParams,
 					tools: filterToolsForPhase(tools, 'PLOT_PLANNER'),
-					descriptors: PLOT_PLANNER_DESCRIPTORS,
+					descriptors: getPlotPlannerDescriptors(),
 					messages: toUserMessages([...sharedSections, plotPlannerExtractionPromptTemplate(currentScene)]),
 					providerConfig: providerConfigs.plotPlanner,
 					buildStateUpdate: (ss) => ({
@@ -783,7 +783,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				systemPrompt: templateFitterSystemPrompt(),
 				...sharedParams,
 				tools: undefined,
-				descriptors: GM_TEMPLATE_FITTER_DESCRIPTORS,
+				descriptors: getGmTemplateFitterDescriptors(),
 				messages: toUserMessages([
 					SECTION.EDITOR_OUTPUT + (state.editorOutput ?? ''),
 					SECTION.GAME_MASTER_OUTPUT + (state.gameMasterOutput ?? ''),

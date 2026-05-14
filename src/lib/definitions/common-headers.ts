@@ -1,5 +1,9 @@
 import { ls } from '$lib/localization';
 
+export const sceneTitleHeader = () => ls('common.headers.sceneTitle');
+export const backgroundHeader = () => ls('common.headers.background');
+export const narrativeBodyHeader = () => ls('common.headers.narrativeBody');
+export const cgHeader = () => ls('common.headers.cg');
 export const worldContentHeader = () => ls('common.headers.worldContent');
 export const actPlotHeader = () => ls('common.headers.actPlot');
 export const actSummaryHeader = () => ls('common.headers.actSummary');
@@ -18,6 +22,9 @@ export const actSummaryForScenesHeader = (summarizedScenes: number | string) =>
 	ls('common.headers.actSummaryForScenes', { summarizedScenes });
 export const previousNarrativeBodyHeader = (completedScenes: number | string) =>
 	ls('common.headers.previousNarrativeBody', { completedScenes });
+export const activePlotThreadsHeader = () => ls('common.headers.activePlotThreads');
+export const decisionContextHeader = () => ls('common.headers.decisionContext');
+export const decisionsHeader = () => ls('common.headers.decisions');
 export const turnOfEventsHeader = () => ls('common.headers.turnOfEvents');
 export const templateHeader = () => ls('common.headers.template');
 

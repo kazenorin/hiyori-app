@@ -3,7 +3,7 @@ import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
 import { createThinkingTagParser } from './thinking-tag-parser';
 import type { NarrativeVariables } from './narrative-types';
 import { assembleVariables } from './narrative-types';
-import { NARRATIVE_DESCRIPTORS } from './descriptors';
+import { getNarrativeDescriptors } from './descriptors';
 import type { ParserChainOutput } from './parser-chain';
 
 const THROTTLE_MS = 150;
@@ -31,7 +31,7 @@ function hasFields(vars: NarrativeVariables): boolean {
  * Each parseContent() call produces complete field values, so variables replace
  * (not merge) the previous state.
  */
-export function createNarrativeStreamParser(descriptors: OutputDescriptor[] = NARRATIVE_DESCRIPTORS) {
+export function createNarrativeStreamParser(descriptors: OutputDescriptor[] = getNarrativeDescriptors()) {
 	const thinkingParser = createThinkingTagParser();
 	let accumulatedContent = '';
 	let thinking: string | null = null;

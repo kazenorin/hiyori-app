@@ -1,3 +1,5 @@
+import { sceneTitleHeader, backgroundHeader, narrativeBodyHeader, turnOfEventsHeader, cgHeader } from '$lib/definitions/common-headers';
+
 /** Structured game data extracted from ## Game Data section */
 export interface GameDataFields {
 	activePlotThreads: string[];
@@ -31,8 +33,8 @@ export interface NarrativeVariables {
 export interface FieldDescriptor {
 	/** Property name in NarrativeVariables */
 	fieldName: keyof NarrativeVariables;
-	/** Exact casing of the markdown header as it appears in LLM output */
-	headerName: string;
+	/** Localized header name, resolved lazily via common-headers */
+	headerName: () => string;
 	/** Parent section header names, outermost to innermost. Empty for top-level ## sections. */
 	parentSections: string[];
 	/** Whether this field appears in LLM history serialization */
@@ -41,11 +43,11 @@ export interface FieldDescriptor {
 
 /** Single source of truth for all narrative variable fields (excluding gameData). */
 export const FIELD_DESCRIPTORS: readonly FieldDescriptor[] = [
-	{ fieldName: 'sceneTitle', headerName: 'Scene title', parentSections: [], includeInSerialization: true },
-	{ fieldName: 'background', headerName: 'Background', parentSections: [], includeInSerialization: true },
-	{ fieldName: 'narrativeBody', headerName: 'Narrative Body', parentSections: [], includeInSerialization: true },
-	{ fieldName: 'turnOfEvents', headerName: 'Turn Of Events', parentSections: [], includeInSerialization: true },
-	{ fieldName: 'cg', headerName: 'CG', parentSections: [], includeInSerialization: true },
+	{ fieldName: 'sceneTitle', headerName: sceneTitleHeader, parentSections: [], includeInSerialization: true },
+	{ fieldName: 'background', headerName: backgroundHeader, parentSections: [], includeInSerialization: true },
+	{ fieldName: 'narrativeBody', headerName: narrativeBodyHeader, parentSections: [], includeInSerialization: true },
+	{ fieldName: 'turnOfEvents', headerName: turnOfEventsHeader, parentSections: [], includeInSerialization: true },
+	{ fieldName: 'cg', headerName: cgHeader, parentSections: [], includeInSerialization: true },
 ];
 
 // --- Derived field lists ---

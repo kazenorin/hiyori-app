@@ -1,7 +1,7 @@
 import { createNarrativeStreamParser } from './narrative-stream-parser';
 import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
 import type { NarrativeVariables } from './narrative-types';
-import { NARRATIVE_DESCRIPTORS } from './descriptors';
+import { getNarrativeDescriptors } from './descriptors';
 
 // --- Parser chain ---
 
@@ -30,9 +30,9 @@ export interface ParserChain {
  * variables replace (not merge) the previous state.
  *
  * @param descriptors - OutputDescriptor configurations for the pipeline phase.
- *                       Defaults to NARRATIVE_DESCRIPTORS (scene + game data).
+ *                       Defaults to getNarrativeDescriptors() (scene + game data).
  */
-export function createParserChain(descriptors: OutputDescriptor[] = NARRATIVE_DESCRIPTORS): ParserChain {
+export function createParserChain(descriptors: OutputDescriptor[] = getNarrativeDescriptors()): ParserChain {
 	const parser = createNarrativeStreamParser(descriptors);
 
 	return {

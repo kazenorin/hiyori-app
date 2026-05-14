@@ -6,7 +6,7 @@ import type { GameDataFields, NarrativeVariables } from './narrative-types';
 import { emptyGameDataFields } from './narrative-types';
 import { parseContent } from '$lib/chat-stream-parser';
 import { variablesToMarkdown } from './template-renderer';
-import { GAME_MASTER_DESCRIPTORS } from './descriptors';
+import { getGameMasterDescriptors } from './descriptors';
 import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
 import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection } from '$lib/definitions/pipeline-sections';
 import { gameMasterExtractionPrompt } from '$lib/definitions/pipeline-prompts';
@@ -51,5 +51,5 @@ export async function regenerateGameData(params: GameDataRegenerationContext): P
 	const gmText = result.text.trim();
 	if (!gmText) return null;
 
-	return parseContent<GameDataFields>(gmText, GAME_MASTER_DESCRIPTORS, emptyGameDataFields());
+	return parseContent<GameDataFields>(gmText, getGameMasterDescriptors(), emptyGameDataFields());
 }

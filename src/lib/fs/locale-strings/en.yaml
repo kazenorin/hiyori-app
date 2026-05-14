@@ -19,9 +19,16 @@ common:
     previousActSummary: Previous Act Summary
     actSummaryForScenes: "Act Summary {summarizedScenes}"
     previousNarrativeBody: "Narrative Body for Scene {completedScenes}"
+    sceneTitle: Scene title
+    background: Background
+    narrativeBody: Narrative Body
     turnOfEvents: Turn Of Events
+    cg: CG
     reviewerFeedback: Reviewer Feedback
     template: Template
+    activePlotThreads: Active Plot Threads
+    decisionContext: Decision Context
+    decisions: Decisions
   descriptions:
     interviewTranscript: The following is an interview exchange about the story and premises.
 
@@ -57,7 +64,9 @@ features:
     characterCardGeneration: |
       Based on the information from the chat history, generate a new Character Card according to the following rules:
       {extractionPrompt}
+
       ---
+
       {template}
     transcriptStart: "The following messages will contain the transcript of the current act:"
     transcriptEnd: "The previous message was the end of the transcript of the current act."

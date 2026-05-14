@@ -96,7 +96,7 @@ export function variablesToMarkdown(vars: NarrativeVariables): string {
 		if (Array.isArray(value) && value.length === 0) continue;
 
 		// Emit field header and value
-		lines.push('## ' + desc.headerName);
+		lines.push('## ' + desc.headerName());
 		if (Array.isArray(value)) {
 			for (const item of value) lines.push(`- ${item}`);
 		} else {

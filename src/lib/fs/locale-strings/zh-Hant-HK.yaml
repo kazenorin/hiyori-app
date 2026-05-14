@@ -19,9 +19,16 @@ common:
     previousActSummary: 上一章節摘要
     actSummaryForScenes: "章節摘要 {summarizedScenes}"
     previousNarrativeBody: "場景 {completedScenes} 的敘事正文"
+    sceneTitle: 場景標題
+    background: 背景
+    narrativeBody: 敘事正文
     turnOfEvents: 劇情轉折
+    cg: CG
     reviewerFeedback: 審閱者回饋
     template: 範本
+    activePlotThreads: 現有劇情線索
+    decisionContext: 回應背景
+    decisions: 回應選項
   descriptions:
     interviewTranscript: 以下是有關此故事及設定的訪談內容。
 
@@ -31,7 +38,7 @@ pipeline:
     editor: 根據審閱者輸出的建議，修改寫手輸出。請根據聊天記錄中的可用資訊，判斷這些建議是否有必要採納。
     reviewer: "根據聊天記錄中的可用資訊，審閱寫手對場景 {currentScene} 的輸出。"
     writer: "根據聊天記錄中的可用資訊，撰寫場景 {currentScene} 的故事散文。"
-    plotPlanner: "目前場景為場景 {currentScene}。請根據聊天記錄中的可用資訊，為緊接的下一場景、近期的情節節奏（彈性）以及中期目標（彈性）規劃場景劇情。"
+    plotPlanner: "目前場景為場景 {currentScene}。請根據聊天記錄中的可用資訊，為緊接的下一場景、近期的情節節奏（可彈性處理）以及中期目標（可彈性處理）規劃場景劇情。"
     summarizerFallback: "根據玩家回應，更新場景 {completedScenes} 的章節摘要。"
     summarizer: "更新章節摘要，加入上一個場景的資訊：「場景 {completedScenes}：{sceneTitle}」"
     editorTemplateFitter: >
@@ -55,7 +62,9 @@ features:
     characterCardGeneration: |
       根據聊天記錄中的資訊，按照以下規則生成新的角色卡：
       {extractionPrompt}
+
       ---
+
       {template}
     transcriptStart: "以下訊息將包含目前章節的文本記錄："
     transcriptEnd: "上一則訊息是目前章節文本記錄的結束。"
@@ -72,7 +81,7 @@ features:
 
       以下內容代表已經發生的事件，僅作為理解玩家方向與偏好的脈絡使用。
 
-      請勿繼勿繼續故事、敘述場景或生成劇情內容。嚴格保持訪談模式。
+      請勿繼續撰寫故事、敘述場景或生成劇情內容。請嚴格維持訪談模式。
 
       ---
     resumeStoryActSuffix: |
@@ -85,7 +94,7 @@ features:
       worldCard: "以下訊息是一份世界觀設定卡。"
       actCard: "以下訊息是描述該章節事件的章節卡。"
       characterCard: "以下訊息是 {name} 的角色卡。"
-      characterNamePlaceholder: "故事中的一個角色"
+      characterNamePlaceholder: "故事中的某個角色"
     instructions:
       actGeneration: |
         請嚴格根據上述設定和資訊生成故事。
@@ -99,7 +108,7 @@ features:
 
         每個場景應聚焦於一個重要的敘事事件或情感轉折。
         各場景的長度和細節應大致相仿（約 300–500 字），並充分描述該事件後再繼續。
-        除場景 1 外，每個場景開頭應有簡短的過渡，以邏輯地銜接上一刻。
+        除場景 1 外，每個場景開頭應有簡短的過渡，以合邏輯地銜接上一刻。
         每個場景的結尾應有收束感或引向下一場景的伏筆。
 
         重要：請使用 Markdown 標題來區分不同的場景。
@@ -118,7 +127,7 @@ features:
         每個場景應為一段完整的敘述，有明確的開頭和結尾。
       sceneExtractionFirst: |
         你將使用下方提供的敘事範本來改寫以下場景。
-        你的主要目標是**將場景套入給定的敘事範本和風格**，同時保留所有重要的內容和角色行動。
+        你的主要目標是**以附合敘事風格的方式，將場景套入已設定的敘事範本**，同時保留所有重要的內容和角色行動。
 
         請套用範本中所示相同的敘事風格、結構和格式慣例。
         適當地加入生動的感官描寫、角色對話、內心思緒和環境更新，以提升流暢度和沉浸感。
@@ -156,14 +165,14 @@ features:
 tools:
   evaluateRisk:
     description: >
-      透過擲骰來評估冒險行動的結果。風險等級越高，壞結果的機率越大。
-      用於判斷冒險行動是成功、混合結果還是失敗。
+      透過擲骰來評估帶有風險的行動的結果。風險等級越高，壞結果的機率越大。
+      用於判斷帶有風險的行動是成功、混合結果還是失敗。
     parameters:
       riskLevel: "冒險程度（1 = 最低風險，10 = 最高風險）"
     messages:
-      outcomeBad: "冒險行動導致了壞結果。"
-      outcomeNeutral: "冒險行動導致了中性結果。"
-      outcomeGood: "冒險行動導致了好結果。"
+      outcomeBad: "行動導致了壞結果。"
+      outcomeNeutral: "行動導致了中性結果。"
+      outcomeGood: "行動導致了好結果。"
   queryMemories:
     description: >
       搜尋遊戲的記憶資料庫，以喚回過去的事件、去過的地點或角色互動。
@@ -171,7 +180,7 @@ tools:
       回傳的記憶列表將包含章節編號、新近度和地點。
     parameters:
       characterQuery: >
-        簡短描述要搜尋記憶的角色或主題（例如「Elena」、「鐵匠」）。
+        簡短描述要搜尋記憶的角色或主題（例如「莉娜」、「鐵匠」）。
         若省略，工具將根據時間-地點查詢參數回傳記憶。
       timeAndLocation: >
         簡短描述地點或時間（例如「酒館」、「森林的清晨」）。
@@ -199,7 +208,7 @@ tools:
       noActPlot: "此章節尚未生成章節劇情。"
   readScene:
     description: >
-      閱讀目前章節中特定場景的內容。回傳指定場景編號的敘事正文（AI 回應）和玩家回應，
+      閱讀目前章節中所指定的場景的內容。回傳指定場景編號的敘事正文（AI 回應）和玩家回應，
       以 Markdown 格式呈現。
     headers:
       sceneBody: 場景正文
