@@ -8,10 +8,10 @@ import {
 	loadGenerateWorldFromChatPrompt,
 	loadGenerateWorldFromChatSystemPrompt,
 	loadWorldBuilderSystemPrompt,
-	ensureAllBaseConfigs,
 	loadMemoryExtractionSystemPrompt,
 	loadMemoryExtractionPrompt,
 } from '$lib/fs/prompts';
+import { ensureAllBaseConfigs, setActiveLocale } from '$lib/fs/prompt-loader';
 import { initLogging, log } from '$lib/logging/logger';
 import { getSettings } from '$lib/stores/settings.svelte';
 import { loadLocale } from '$lib/i18n';
@@ -50,8 +50,6 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 
 		await log.info('init', 'Ensuring base configs...');
 		onStatus?.('Ensuring base configs...');
-		const { setActiveLocale } = await import('$lib/fs/prompt-loader');
-		setActiveLocale(settings.locale || 'en');
 		await ensureAllBaseConfigs();
 
 		await log.info('init', 'Ensuring locale string configs...');
@@ -62,6 +60,7 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 
 		await log.info('init', 'Loading world prompts...');
 		onStatus?.('Loading world prompts...');
+		setActiveLocale(settings.locale || 'en');
 		await loadWorldTemplate();
 		await loadGenerateWorldFromChatPrompt();
 		await loadGenerateWorldFromChatSystemPrompt();

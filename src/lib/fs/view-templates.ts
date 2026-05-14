@@ -1,22 +1,29 @@
-import { Prompt, registerDefaults, loadViewTemplate, loadViewTemplateForStory } from './prompt-loader';
-import storyMessageTemplateRaw from './view-templates/story-message-template.md?raw';
+import { LocalizedViewTemplateFile, registerDefaults } from './prompt-loader';
+import type { SupportedLocale } from './prompt-loader';
 
-export const storyMessageTemplate = storyMessageTemplateRaw;
+const viewTemplateDefaults: Record<SupportedLocale, Record<string, string>> = {
+	en: import.meta.glob('./en/view-templates/**/*.md', {
+		eager: true,
+		query: '?raw',
+		import: 'default' as const,
+	}) as Record<string, string>,
+	'zh-Hant-HK': import.meta.glob('./zh-Hant-HK/view-templates/**/*.md', {
+		eager: true,
+		query: '?raw',
+		import: 'default' as const,
+	}) as Record<string, string>,
+};
 
-const STORY_MESSAGE_TEMPLATE_PATH = 'story-message-template.md';
-
-const storyMessageTemplatePrompt = new Prompt({
-	relativePath: STORY_MESSAGE_TEMPLATE_PATH,
-	defaultContent: storyMessageTemplateRaw,
-	baseDir: 'config/view-templates',
-});
+const storyMessageTemplatePrompt = new LocalizedViewTemplateFile(viewTemplateDefaults, 'story-message-template.md');
 
 registerDefaults([storyMessageTemplatePrompt]);
 
+export const storyMessageTemplate = storyMessageTemplatePrompt.getDefaultContent('en');
+
 export function loadStoryMessageTemplate(): Promise<string> {
-	return loadViewTemplate(STORY_MESSAGE_TEMPLATE_PATH, storyMessageTemplate);
+	return storyMessageTemplatePrompt.load();
 }
 
 export function loadStoryMessageTemplateForStory(storyId: string, storyName: string): Promise<string> {
-	return loadViewTemplateForStory(storyId, storyName, STORY_MESSAGE_TEMPLATE_PATH, storyMessageTemplate);
+	return storyMessageTemplatePrompt.loadForStory(storyId, storyName);
 }

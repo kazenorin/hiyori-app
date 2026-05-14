@@ -3,10 +3,17 @@ import { log } from '$lib/logging/logger';
 import { resolveStoryFolder } from './story-folders';
 
 /**
+ * All locales that have bundled default content.
+ * Used by ensureAllBaseConfigs() to seed files for every locale on init.
+ */
+export const SUPPORTED_LOCALES = ['en', 'zh-Hant-HK'] as const;
+export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
+
+/**
  * Active locale determines which locale-scoped config directory to read from.
  * Set by story selection or settings locale.
  */
-let activeLocale = 'en';
+let activeLocale: string = 'en';
 
 export function getActiveLocale(): string {
 	return activeLocale;
@@ -16,57 +23,102 @@ export function setActiveLocale(locale: string): void {
 	activeLocale = locale;
 }
 
-export function getPromptTemplatesDir(): string {
-	return `config/${activeLocale}/prompt-templates`;
+export function getPromptTemplatesDir(locale?: string): string {
+	return `config/${locale ?? activeLocale}/prompt-templates`;
 }
 
-export function getViewTemplatesDir(): string {
-	return `config/${activeLocale}/view-templates`;
+export function getViewTemplatesDir(locale?: string): string {
+	return `config/${locale ?? activeLocale}/view-templates`;
 }
 
 /**
- * Configuration entry for a template file.
+ * Build a locale-keyed default content map from glob results.
+ * Logs a warning if the relativePath isn't found in any locale's glob output.
  */
-interface TemplateConfig {
-	relativePath: string;
-	defaultContent: string;
-	baseDir?: string;
+function buildDefaultsMap(
+	globResults: Record<string, Record<string, string>>,
+	subDir: string,
+	relativePath: string
+): Record<string, string> {
+	const result: Record<string, string> = {};
+	for (const locale of SUPPORTED_LOCALES) {
+		const key = `./${locale}/${subDir}/${relativePath}`;
+		const content = globResults[locale]?.[key];
+		if (content !== undefined) {
+			result[locale] = content;
+		}
+	}
+	if (Object.keys(result).length === 0) {
+		void log.warn('template-loader', `No bundled default found for '${relativePath}' in any locale under '${subDir}'`);
+	}
+	return result;
 }
 
 /**
- * Represents a template file with its path, base directory, and default content.
- * Provides a load() method to load the template content.
- *
- * Used for both prompt templates and view templates.
+ * Base class for locale-scoped template files with bundled defaults.
  * baseDir is resolved dynamically so locale switches take effect.
+ *
+ * Subclasses provide the subdirectory name and directory resolution function.
  */
-export class Prompt {
+export abstract class LocalizedTemplateFile {
 	readonly relativePath: string;
-	readonly defaultContent: string;
-	private readonly _baseDirOverride?: string;
+	private readonly _defaultContent: Record<string, string>;
 
-	constructor(config: TemplateConfig) {
-		this.relativePath = config.relativePath;
-		this.defaultContent = config.defaultContent;
-		this._baseDirOverride = config.baseDir;
+	protected abstract getDirForLocale(locale: string): string;
+
+	protected constructor(globResults: Record<string, Record<string, string>>, subDir: string, relativePath: string) {
+		this.relativePath = relativePath;
+		this._defaultContent = buildDefaultsMap(globResults, subDir, relativePath);
 	}
 
 	get baseDir(): string {
-		if (!this._baseDirOverride) {
-			return getPromptTemplatesDir();
-		}
-		if (this._baseDirOverride === 'config/view-templates') {
-			return getViewTemplatesDir();
-		}
-		return this._baseDirOverride;
+		return this.getDirForLocale(activeLocale);
+	}
+
+	getDefaultContent(locale: string): string {
+		return this._defaultContent[locale] ?? this._defaultContent['en'] ?? '';
+	}
+
+	getBaseDirForLocale(locale: string): string {
+		return this.getDirForLocale(locale);
 	}
 
 	/**
-	 * Load this template's content.
+	 * Load this template's content for the active locale.
 	 * Ensures the base file exists in AppData, then returns its content.
 	 */
 	async load(): Promise<string> {
-		return loadTemplate(this.baseDir, this.relativePath, this.defaultContent);
+		return loadTemplate(this.baseDir, this.relativePath, this.getDefaultContent(getActiveLocale()));
+	}
+
+	/**
+	 * Load this template with story-specific override for the active locale.
+	 *
+	 * Resolution order:
+	 * 1. Story-specific override: `<story-folder>/<templatesDir>/<relativePath>`
+	 * 2. Base file: `config/<locale>/<templatesDir>/<relativePath>`
+	 * 3. Bundled default (in-memory)
+	 */
+	async loadForStory(storyId: string, storyName: string): Promise<string> {
+		return loadWithOverride(this.baseDir, storyId, storyName, this.relativePath, this.getDefaultContent(getActiveLocale()));
+	}
+}
+
+export class LocalizedPromptFile extends LocalizedTemplateFile {
+	constructor(globResults: Record<string, Record<string, string>>, relativePath: string) {
+		super(globResults, 'prompts', relativePath);
+	}
+	protected getDirForLocale(locale: string): string {
+		return getPromptTemplatesDir(locale);
+	}
+}
+
+export class LocalizedViewTemplateFile extends LocalizedTemplateFile {
+	constructor(globResults: Record<string, Record<string, string>>, relativePath: string) {
+		super(globResults, 'view-templates', relativePath);
+	}
+	protected getDirForLocale(locale: string): string {
+		return getViewTemplatesDir(locale);
 	}
 }
 
@@ -74,12 +126,12 @@ export class Prompt {
  * Registry of all template files and their bundled defaults.
  * Populated by registerDefaults(), used by ensureAllBaseConfigs().
  */
-let defaultsRegistry: Prompt[] = [];
+let defaultsRegistry: LocalizedTemplateFile[] = [];
 
 /**
  * Register templates so ensureAllBaseConfigs() can create them on launch.
  */
-export function registerDefaults(entries: Prompt[]): void {
+export function registerDefaults(entries: LocalizedTemplateFile[]): void {
 	defaultsRegistry = defaultsRegistry.concat(entries);
 }
 
@@ -96,7 +148,6 @@ async function ensureDirForPath(baseDir: string, relativePath: string): Promise<
 /**
  * Ensure a single base template file exists in AppData.
  * Creates the file from bundled defaults if it doesn't exist.
- * Does not return the content - use ensureAndLoadBase for that.
  */
 async function ensureBaseFileExists(baseDir: string, relativePath: string, defaultContent: string): Promise<void> {
 	const fullPath = `${baseDir}/${relativePath}`;
@@ -123,20 +174,27 @@ async function ensureAndLoadBase(baseDir: string, relativePath: string, defaultC
  *
  * Resolution order:
  * 1. Story-specific override: `<story-folder>/<templatesDir>/<relativePath>`
- * 2. Base file: `config/<templatesDir>/<relativePath>`
+ * 2. Base file: `config/<locale>/<templatesDir>/<relativePath>`
  * 3. Bundled default (in-memory)
  */
-async function loadWithOverride(baseDir: string, storyFolder: string, relativePath: string, defaultContent: string): Promise<string> {
+async function loadWithOverride(
+	baseDir: string,
+	storyId: string,
+	storyName: string,
+	relativePath: string,
+	defaultContent: string
+): Promise<string> {
 	const templatesDir = baseDir.split('/').pop() ?? 'templates';
-	const storyPath = `${storyFolder}/${templatesDir}/${relativePath}`;
 
 	try {
+		const storyFolder = await resolveStoryFolder(storyId, storyName);
+		const storyPath = `${storyFolder}/${templatesDir}/${relativePath}`;
 		const storyFileExists = await exists(storyPath, { baseDir: BaseDirectory.AppData });
 		if (storyFileExists) {
 			return await readTextFile(storyPath, { baseDir: BaseDirectory.AppData });
 		}
 	} catch (err) {
-		await log.debug('template-loader', `Error checking story override at ${storyPath}: ${err}`);
+		await log.debug('template-loader', `Error checking story override at ${relativePath}: ${err}`);
 	}
 
 	return ensureAndLoadBase(baseDir, relativePath, defaultContent);
@@ -146,7 +204,7 @@ async function loadWithOverride(baseDir: string, storyFolder: string, relativePa
  * Load a global template (no story override).
  * Ensures the base file exists in AppData, then returns its content.
  */
-export async function loadTemplate(baseDir: string, relativePath: string, defaultContent: string): Promise<string> {
+async function loadTemplate(baseDir: string, relativePath: string, defaultContent: string): Promise<string> {
 	try {
 		return await ensureAndLoadBase(baseDir, relativePath, defaultContent);
 	} catch (err) {
@@ -156,67 +214,9 @@ export async function loadTemplate(baseDir: string, relativePath: string, defaul
 }
 
 /**
- * Load a prompt template (backward-compatible shorthand).
- */
-export async function loadPrompt(relativePath: string, defaultContent: string): Promise<string> {
-	return loadTemplate(getPromptTemplatesDir(), relativePath, defaultContent);
-}
-
-/**
- * Load a view template.
- */
-export async function loadViewTemplate(relativePath: string, defaultContent: string): Promise<string> {
-	return loadTemplate(getViewTemplatesDir(), relativePath, defaultContent);
-}
-
-/**
- * Load a prompt template for a specific story, with fallback to the global base file.
- *
- * @param storyId - The story ID for folder resolution
- * @param storyName - The story name for folder resolution
- * @param relativePath - Path relative to prompt-templates/ (e.g. "world/world-template.md")
- * @param defaultContent - Bundled default content
- */
-export async function loadPromptForStory(
-	storyId: string,
-	storyName: string,
-	relativePath: string,
-	defaultContent: string
-): Promise<string> {
-	try {
-		const storyFolder = await resolveStoryFolder(storyId, storyName);
-		return await loadWithOverride(getPromptTemplatesDir(), storyFolder, relativePath, defaultContent);
-	} catch (err) {
-		await log.warn('template-loader', `Failed to load story prompt at ${relativePath}: ${err}`);
-		return defaultContent;
-	}
-}
-
-/**
- * Load a view template for a specific story, with fallback to the global base file.
- */
-export async function loadViewTemplateForStory(
-	storyId: string,
-	storyName: string,
-	relativePath: string,
-	defaultContent: string
-): Promise<string> {
-	try {
-		const storyFolder = await resolveStoryFolder(storyId, storyName);
-		return await loadWithOverride(getViewTemplatesDir(), storyFolder, relativePath, defaultContent);
-	} catch (err) {
-		await log.warn('template-loader', `Failed to load story view template at ${relativePath}: ${err}`);
-		return defaultContent;
-	}
-}
-
-/**
- * Ensure all registered base config files exist in AppData.
+ * Ensure all registered base config files exist in AppData for ALL supported locales.
  * Creates files from bundled defaults if they don't exist.
  * Called during app initialization to ensure configs are available upfront.
- *
- * Individual file failures are logged but don't block other files.
- * If the registry is empty, a warning is logged.
  */
 export async function ensureAllBaseConfigs(): Promise<void> {
 	if (defaultsRegistry.length === 0) {
@@ -225,15 +225,19 @@ export async function ensureAllBaseConfigs(): Promise<void> {
 	}
 
 	const results = await Promise.allSettled(
-		defaultsRegistry.map(async (entry) => {
-			try {
-				await ensureBaseFileExists(entry.baseDir, entry.relativePath, entry.defaultContent);
-				return { relativePath: entry.relativePath, success: true };
-			} catch (err) {
-				await log.error('template-loader', `Failed to ensure base config at ${entry.relativePath}: ${err}`);
-				return { relativePath: entry.relativePath, success: false, error: err };
-			}
-		})
+		SUPPORTED_LOCALES.flatMap((locale) =>
+			defaultsRegistry.map(async (entry) => {
+				try {
+					const baseDir = entry.getBaseDirForLocale(locale);
+					const defaultContent = entry.getDefaultContent(locale);
+					await ensureBaseFileExists(baseDir, entry.relativePath, defaultContent);
+					return { relativePath: entry.relativePath, locale, success: true };
+				} catch (err) {
+					await log.error('template-loader', `Failed to ensure base config at ${entry.relativePath} for ${locale}: ${err}`);
+					return { relativePath: entry.relativePath, locale, success: false, error: err };
+				}
+			})
+		)
 	);
 
 	const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');

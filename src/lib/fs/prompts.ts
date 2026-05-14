@@ -1,248 +1,91 @@
 // Unified prompt loading module
 // Replaces: system-prompt.ts, world-prompts.ts, act-card-prompts.ts, character-card-prompts.ts
 
-import { Prompt, loadPromptForStory, registerDefaults } from './prompt-loader';
+import { LocalizedPromptFile, registerDefaults } from './prompt-loader';
+import type { SupportedLocale } from './prompt-loader';
 
-// === Bundled Default Imports ===
+// === Bundled Defaults via import.meta.glob ===
+// Each locale's prompt files are batch-imported at build time.
+// Adding a new prompt file only requires: drop the .md file + add a Prompt() constructor below.
+// Adding a new locale requires: add glob line + add to SUPPORTED_LOCALES + create directory.
 
-// System
-import defaultSystemPrompt from './prompts/system-prompt.md?raw';
-
-// General Instructions
-import defaultGeneralInstructions from './prompts/general-instructions.md?raw';
-
-// Pipeline: Plot Planner
-import defaultPlotPlannerPrompt from './prompts/plot-planner/plot-planner-prompt.md?raw';
-
-// Pipeline: Writer
-import defaultWriterPrompt from './prompts/writer/writer-prompt.md?raw';
-import defaultWriterOutputTemplate from './prompts/writer/writer-output-template.md?raw';
-
-// Pipeline: Reviewer
-import defaultReviewerPrompt from './prompts/reviewer/reviewer-prompt.md?raw';
-
-// Pipeline: Editor
-import defaultEditorPrompt from './prompts/editor/editor-prompt.md?raw';
-
-// Pipeline: Game Master
-import defaultGameMasterPrompt from './prompts/game-master/game-master-prompt.md?raw';
-
-// Pipeline: Summarizer
-import defaultSummarizerPrompt from './prompts/summarizer/summarizer-prompt.md?raw';
-import defaultActSummaryTemplate from './prompts/summarizer/act-summary-template.md?raw';
-import defaultSummarizerIncrementalPrompt from './prompts/summarizer/summarizer-incremental-prompt.md?raw';
-import defaultActSummaryIncrementalTemplate from './prompts/summarizer/act-summary-incremental-template.md?raw';
-
-// World
-import defaultWorldTemplate from './prompts/world/world-template.md?raw';
-import defaultGenerateWorldFromChatPrompt from './prompts/world/generate-world-from-chat-prompt.md?raw';
-import defaultGenerateWorldFromChatSystemPrompt from './prompts/world/generate-world-from-chat-system-prompt.md?raw';
-import defaultWorldBuilderSystemPrompt from './prompts/world/world-builder-system-prompt.md?raw';
-
-// Act
-import defaultActCardTemplate from './prompts/act/act-card-template.md?raw';
-import defaultActExtractionPrompt from './prompts/act/act-extraction-prompt.md?raw';
-import defaultActPlotTemplate from './prompts/act/act-plot-template.md?raw';
-import defaultActPlotGenerationPrompt from './prompts/act/act-plot-generation-prompt.md?raw';
-import defaultActPlotSystemPrompt from './prompts/act/act-plot-system-prompt.md?raw';
-import defaultActPlotInterviewSystemPrompt from './prompts/act/act-plot-interview-system-prompt.md?raw';
-import defaultActPlotReviewerPrompt from './prompts/act/act-plot-reviewer-prompt.md?raw';
-import defaultActPlotEditorPrompt from './prompts/act/act-plot-editor-prompt.md?raw';
-import defaultActPlotInterviewExtractionPrompt from './prompts/act/act-plot-interview-extraction-prompt.md?raw';
-import defaultActPlotInterviewTurnOfEventsPrompt from './prompts/act/act-plot-interview-turn-of-events-prompt.md?raw';
-
-// Character
-import defaultCharacterCardTemplate from './prompts/character/character-card-template.md?raw';
-import defaultCharacterCardExtractionPrompt from './prompts/character/character-card-extraction-prompt.md?raw';
-import defaultCharacterCardExtractionSystemPrompt from './prompts/character/character-card-extraction-system-prompt.md?raw';
-import defaultSummarizeCharactersInAct from './prompts/character/summarize-characters-in-act.md?raw';
-
-// Import
-import defaultActGenerationPrompt from './prompts/import/act-generation-prompt.md?raw';
-import defaultChoicesExtractionPrompt from './prompts/import/choices-extraction-prompt.md?raw';
-
-// Features
-import defaultImportantPhrasesPrompt from './prompts/features/important-phrases-prompt.md?raw';
-
-// Memories
-import defaultMemoryExtractionSystemPrompt from './prompts/memories/memory-extraction-system-prompt.md?raw';
-import defaultMemoryExtractionPrompt from './prompts/memories/memory-extraction-prompt.md?raw';
-
-// Re-export for consumers that need raw content
-export {
-	defaultSystemPrompt,
-	defaultGeneralInstructions,
-	defaultPlotPlannerPrompt,
-	defaultWriterPrompt,
-	defaultWriterOutputTemplate,
-	defaultReviewerPrompt,
-	defaultEditorPrompt,
-	defaultGameMasterPrompt,
-	defaultSummarizerPrompt,
-	defaultActSummaryTemplate,
-	defaultSummarizerIncrementalPrompt,
-	defaultActSummaryIncrementalTemplate,
-	defaultWorldTemplate,
-	defaultGenerateWorldFromChatPrompt,
-	defaultGenerateWorldFromChatSystemPrompt,
-	defaultWorldBuilderSystemPrompt,
-	defaultActCardTemplate,
-	defaultActExtractionPrompt,
-	defaultActPlotTemplate,
-	defaultActPlotGenerationPrompt,
-	defaultActPlotInterviewExtractionPrompt,
-	defaultActPlotInterviewTurnOfEventsPrompt,
-	defaultActPlotSystemPrompt,
-	defaultActPlotInterviewSystemPrompt,
-	defaultActPlotReviewerPrompt,
-	defaultActPlotEditorPrompt,
-	defaultCharacterCardTemplate,
-	defaultCharacterCardExtractionPrompt,
-	defaultCharacterCardExtractionSystemPrompt,
-	defaultSummarizeCharactersInAct,
-	defaultActGenerationPrompt,
-	defaultChoicesExtractionPrompt,
-	defaultImportantPhrasesPrompt,
-	defaultMemoryExtractionSystemPrompt,
-	defaultMemoryExtractionPrompt,
+const promptDefaults: Record<SupportedLocale, Record<string, string>> = {
+	en: import.meta.glob('./en/prompts/**/*.md', {
+		eager: true,
+		query: '?raw',
+		import: 'default' as const,
+	}) as Record<string, string>,
+	'zh-Hant-HK': import.meta.glob('./zh-Hant-HK/prompts/**/*.md', {
+		eager: true,
+		query: '?raw',
+		import: 'default' as const,
+	}) as Record<string, string>,
 };
 
 // === Prompt Config Instances ===
 
 // System
-const systemPrompt = new Prompt({ relativePath: 'system-prompt.md', defaultContent: defaultSystemPrompt });
+const systemPrompt = new LocalizedPromptFile(promptDefaults, 'system-prompt.md');
 
 // General Instructions
-const generalInstructions = new Prompt({ relativePath: 'general-instructions.md', defaultContent: defaultGeneralInstructions });
+const generalInstructions = new LocalizedPromptFile(promptDefaults, 'general-instructions.md');
 
 // Pipeline: Plot Planner
-const plotPlannerPrompt = new Prompt({ relativePath: 'plot-planner/plot-planner-prompt.md', defaultContent: defaultPlotPlannerPrompt });
+const plotPlannerPrompt = new LocalizedPromptFile(promptDefaults, 'plot-planner/plot-planner-prompt.md');
 
 // Pipeline: Writer
-const writerPrompt = new Prompt({ relativePath: 'writer/writer-prompt.md', defaultContent: defaultWriterPrompt });
-const writerOutputTemplate = new Prompt({ relativePath: 'writer/writer-output-template.md', defaultContent: defaultWriterOutputTemplate });
+const writerPrompt = new LocalizedPromptFile(promptDefaults, 'writer/writer-prompt.md');
+const writerOutputTemplate = new LocalizedPromptFile(promptDefaults, 'writer/writer-output-template.md');
 
 // Pipeline: Reviewer
-const reviewerPrompt = new Prompt({ relativePath: 'reviewer/reviewer-prompt.md', defaultContent: defaultReviewerPrompt });
+const reviewerPrompt = new LocalizedPromptFile(promptDefaults, 'reviewer/reviewer-prompt.md');
 
 // Pipeline: Editor
-const editorPrompt = new Prompt({ relativePath: 'editor/editor-prompt.md', defaultContent: defaultEditorPrompt });
+const editorPrompt = new LocalizedPromptFile(promptDefaults, 'editor/editor-prompt.md');
 
 // Pipeline: Game Master
-const gameMasterPrompt = new Prompt({ relativePath: 'game-master/game-master-prompt.md', defaultContent: defaultGameMasterPrompt });
+const gameMasterPrompt = new LocalizedPromptFile(promptDefaults, 'game-master/game-master-prompt.md');
 
 // Pipeline: Summarizer
-const summarizerPrompt = new Prompt({ relativePath: 'summarizer/summarizer-prompt.md', defaultContent: defaultSummarizerPrompt });
-const actSummaryTemplate = new Prompt({ relativePath: 'summarizer/act-summary-template.md', defaultContent: defaultActSummaryTemplate });
-const summarizerIncrementalPrompt = new Prompt({
-	relativePath: 'summarizer/summarizer-incremental-prompt.md',
-	defaultContent: defaultSummarizerIncrementalPrompt,
-});
-const actSummaryIncrementalTemplate = new Prompt({
-	relativePath: 'summarizer/act-summary-incremental-template.md',
-	defaultContent: defaultActSummaryIncrementalTemplate,
-});
+const summarizerPrompt = new LocalizedPromptFile(promptDefaults, 'summarizer/summarizer-prompt.md');
+const actSummaryTemplate = new LocalizedPromptFile(promptDefaults, 'summarizer/act-summary-template.md');
+const summarizerIncrementalPrompt = new LocalizedPromptFile(promptDefaults, 'summarizer/summarizer-incremental-prompt.md');
+const actSummaryIncrementalTemplate = new LocalizedPromptFile(promptDefaults, 'summarizer/act-summary-incremental-template.md');
 
 // World
-const worldTemplate = new Prompt({ relativePath: 'world/world-template.md', defaultContent: defaultWorldTemplate });
-const generateWorldFromChatPrompt = new Prompt({
-	relativePath: 'world/generate-world-from-chat-prompt.md',
-	defaultContent: defaultGenerateWorldFromChatPrompt,
-});
-const generateWorldFromChatSystemPrompt = new Prompt({
-	relativePath: 'world/generate-world-from-chat-system-prompt.md',
-	defaultContent: defaultGenerateWorldFromChatSystemPrompt,
-});
-const worldBuilderSystemPrompt = new Prompt({
-	relativePath: 'world/world-builder-system-prompt.md',
-	defaultContent: defaultWorldBuilderSystemPrompt,
-});
+const worldTemplate = new LocalizedPromptFile(promptDefaults, 'world/world-template.md');
+const generateWorldFromChatPrompt = new LocalizedPromptFile(promptDefaults, 'world/generate-world-from-chat-prompt.md');
+const generateWorldFromChatSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/generate-world-from-chat-system-prompt.md');
+const worldBuilderSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/world-builder-system-prompt.md');
 
 // Act
-const actCardTemplate = new Prompt({
-	relativePath: 'act/act-card-template.md',
-	defaultContent: defaultActCardTemplate,
-});
-const actExtractionPrompt = new Prompt({
-	relativePath: 'act/act-extraction-prompt.md',
-	defaultContent: defaultActExtractionPrompt,
-});
-const actPlotTemplate = new Prompt({
-	relativePath: 'act/act-plot-template.md',
-	defaultContent: defaultActPlotTemplate,
-});
-const actPlotGenerationPrompt = new Prompt({
-	relativePath: 'act/act-plot-generation-prompt.md',
-	defaultContent: defaultActPlotGenerationPrompt,
-});
-const actPlotSystemPrompt = new Prompt({
-	relativePath: 'act/act-plot-system-prompt.md',
-	defaultContent: defaultActPlotSystemPrompt,
-});
-const actPlotInterviewSystemPrompt = new Prompt({
-	relativePath: 'act/act-plot-interview-system-prompt.md',
-	defaultContent: defaultActPlotInterviewSystemPrompt,
-});
-const actPlotReviewerPrompt = new Prompt({
-	relativePath: 'act/act-plot-reviewer-prompt.md',
-	defaultContent: defaultActPlotReviewerPrompt,
-});
-const actPlotEditorPrompt = new Prompt({
-	relativePath: 'act/act-plot-editor-prompt.md',
-	defaultContent: defaultActPlotEditorPrompt,
-});
-const actPlotInterviewExtractionPrompt = new Prompt({
-	relativePath: 'act/act-plot-interview-extraction-prompt.md',
-	defaultContent: defaultActPlotInterviewExtractionPrompt,
-});
-const actPlotInterviewTurnOfEventsPrompt = new Prompt({
-	relativePath: 'act/act-plot-interview-turn-of-events-prompt.md',
-	defaultContent: defaultActPlotInterviewTurnOfEventsPrompt,
-});
+const actCardTemplate = new LocalizedPromptFile(promptDefaults, 'act/act-card-template.md');
+const actExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-extraction-prompt.md');
+const actPlotTemplate = new LocalizedPromptFile(promptDefaults, 'act/act-plot-template.md');
+const actPlotGenerationPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-generation-prompt.md');
+const actPlotSystemPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-system-prompt.md');
+const actPlotInterviewSystemPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-interview-system-prompt.md');
+const actPlotReviewerPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-reviewer-prompt.md');
+const actPlotEditorPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-editor-prompt.md');
+const actPlotInterviewExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-interview-extraction-prompt.md');
+const actPlotInterviewTurnOfEventsPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-interview-turn-of-events-prompt.md');
 
 // Character
-const characterCardTemplate = new Prompt({
-	relativePath: 'character/character-card-template.md',
-	defaultContent: defaultCharacterCardTemplate,
-});
-const characterCardExtractionPrompt = new Prompt({
-	relativePath: 'character/character-card-extraction-prompt.md',
-	defaultContent: defaultCharacterCardExtractionPrompt,
-});
-const characterCardExtractionSystemPrompt = new Prompt({
-	relativePath: 'character/character-card-extraction-system-prompt.md',
-	defaultContent: defaultCharacterCardExtractionSystemPrompt,
-});
-const summarizeCharactersInAct = new Prompt({
-	relativePath: 'character/summarize-characters-in-act.md',
-	defaultContent: defaultSummarizeCharactersInAct,
-});
+const characterCardTemplate = new LocalizedPromptFile(promptDefaults, 'character/character-card-template.md');
+const characterCardExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'character/character-card-extraction-prompt.md');
+const characterCardExtractionSystemPrompt = new LocalizedPromptFile(promptDefaults, 'character/character-card-extraction-system-prompt.md');
+const summarizeCharactersInAct = new LocalizedPromptFile(promptDefaults, 'character/summarize-characters-in-act.md');
 
 // Import
-const actGenerationPrompt = new Prompt({
-	relativePath: 'import/act-generation-prompt.md',
-	defaultContent: defaultActGenerationPrompt,
-});
-const choicesExtractionPrompt = new Prompt({
-	relativePath: 'import/choices-extraction-prompt.md',
-	defaultContent: defaultChoicesExtractionPrompt,
-});
+const actGenerationPrompt = new LocalizedPromptFile(promptDefaults, 'import/act-generation-prompt.md');
+const choicesExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'import/choices-extraction-prompt.md');
 
 // Memories
-const memoryExtractionSystemPrompt = new Prompt({
-	relativePath: 'memories/memory-extraction-system-prompt.md',
-	defaultContent: defaultMemoryExtractionSystemPrompt,
-});
-const memoryExtractionPrompt = new Prompt({
-	relativePath: 'memories/memory-extraction-prompt.md',
-	defaultContent: defaultMemoryExtractionPrompt,
-});
+const memoryExtractionSystemPrompt = new LocalizedPromptFile(promptDefaults, 'memories/memory-extraction-system-prompt.md');
+const memoryExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'memories/memory-extraction-prompt.md');
 
 // Features
-const importantPhrasesPrompt = new Prompt({
-	relativePath: 'features/important-phrases-prompt.md',
-	defaultContent: defaultImportantPhrasesPrompt,
-});
+const importantPhrasesPrompt = new LocalizedPromptFile(promptDefaults, 'features/important-phrases-prompt.md');
 
 // === Load Functions ===
 
@@ -282,56 +125,54 @@ export const loadImportantPhrasesPrompt = (): Promise<string> => importantPhrase
 export const loadMemoryExtractionSystemPrompt = (): Promise<string> => memoryExtractionSystemPrompt.load();
 export const loadMemoryExtractionPrompt = (): Promise<string> => memoryExtractionPrompt.load();
 
-export const getDefaultSystemPromptContent = () => defaultSystemPrompt;
-
 // Story-specific loaders
 export async function loadStorySystemPrompt(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, systemPrompt.relativePath, systemPrompt.defaultContent);
+	return systemPrompt.loadForStory(storyId, storyName);
 }
 
 export async function loadStoryGeneralInstructions(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, generalInstructions.relativePath, generalInstructions.defaultContent);
+	return generalInstructions.loadForStory(storyId, storyName);
 }
 
 // Story-specific pipeline prompt loaders
 export async function loadStoryPlotPlannerPrompt(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, plotPlannerPrompt.relativePath, plotPlannerPrompt.defaultContent);
+	return plotPlannerPrompt.loadForStory(storyId, storyName);
 }
 
 export async function loadStoryWriterPrompt(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, writerPrompt.relativePath, writerPrompt.defaultContent);
+	return writerPrompt.loadForStory(storyId, storyName);
 }
 
 export async function loadStoryWriterOutputTemplate(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, writerOutputTemplate.relativePath, writerOutputTemplate.defaultContent);
+	return writerOutputTemplate.loadForStory(storyId, storyName);
 }
 
 export async function loadStoryReviewerPrompt(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, reviewerPrompt.relativePath, reviewerPrompt.defaultContent);
+	return reviewerPrompt.loadForStory(storyId, storyName);
 }
 
 export async function loadStoryEditorPrompt(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, editorPrompt.relativePath, editorPrompt.defaultContent);
+	return editorPrompt.loadForStory(storyId, storyName);
 }
 
 export async function loadStoryGameMasterPrompt(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, gameMasterPrompt.relativePath, gameMasterPrompt.defaultContent);
+	return gameMasterPrompt.loadForStory(storyId, storyName);
 }
 
 export async function loadStorySummarizerPrompt(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, summarizerPrompt.relativePath, summarizerPrompt.defaultContent);
+	return summarizerPrompt.loadForStory(storyId, storyName);
 }
 
 export async function loadStoryActSummaryTemplate(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, actSummaryTemplate.relativePath, actSummaryTemplate.defaultContent);
+	return actSummaryTemplate.loadForStory(storyId, storyName);
 }
 
 export async function loadStorySummarizerIncrementalPrompt(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, summarizerIncrementalPrompt.relativePath, summarizerIncrementalPrompt.defaultContent);
+	return summarizerIncrementalPrompt.loadForStory(storyId, storyName);
 }
 
 export async function loadStoryActSummaryIncrementalTemplate(storyId: string, storyName: string): Promise<string> {
-	return loadPromptForStory(storyId, storyName, actSummaryIncrementalTemplate.relativePath, actSummaryIncrementalTemplate.defaultContent);
+	return actSummaryIncrementalTemplate.loadForStory(storyId, storyName);
 }
 
 // === Prompt loaders ===
@@ -397,8 +238,6 @@ export const actSummaryIncrementalTemplateLoader: PromptLoader = {
 };
 
 // === Ensure All Base Configs ===
-
-export { ensureAllBaseConfigs } from './prompt-loader';
 
 // Register all defaults so ensureAllBaseConfigs() can create them on launch
 registerDefaults([

@@ -1,0 +1,11 @@
+# Act Summary
+
+## Scene Summaries
+### Scene [N]: [Scene title]
+Location: [location of where the scene took place.]
+Summary: [summary, max 3 sentences]
+
+## Character Summaries
+### [Well-known name of the character]
+- Aliases: [aliases]
+- Scene [N]: [summary if appeared, max 2 sentences. Optionally append one short, representative quote of dialogue or internal monologue.]
