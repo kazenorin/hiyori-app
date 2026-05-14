@@ -343,13 +343,19 @@ export async function updateSettings(
 		}
 	}
 
-	// Sync locale to i18n system
+	// Sync locale to i18n system and locale strings
 	if (partial.locale !== undefined && partial.locale !== prevLocale) {
 		try {
 			const { setLocale } = await import('$lib/i18n');
 			await setLocale(partial.locale);
 		} catch (err) {
-			console.error("Failed to sync locale to i18n:", err);
+			console.error('Failed to sync locale to i18n:', err);
+		}
+		try {
+			const { loadLocaleStrings } = await import('$lib/definitions/locale-strings');
+			await loadLocaleStrings(partial.locale);
+		} catch (err) {
+			console.error('Failed to sync locale to locale strings:', err);
 		}
 	}
 }

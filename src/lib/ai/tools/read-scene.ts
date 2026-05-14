@@ -1,17 +1,10 @@
+import { ls } from '$lib/definitions/locale-strings';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { getDatabase } from '$lib/db/database';
 import { type ToolSet } from 'ai';
 import type { ToolContext } from './tools';
 import { fileLog, log } from '$lib/logging/logger';
-
-const SCENE_BODY_HEADER = `### Scene Body`;
-const PLAYER_RESPONSE_HEADER = `### Player Response`;
-
-const TOOL_DESCRIPTION =
-	'Read the content of a specific scene in the current act. Returns the narrative body (assistant response) and the player response for the given scene number, formatted in Markdown.';
-const NO_SCENE_FOUND = (sceneNumber: number) => `No scene found with scene number ${sceneNumber}.`;
-const SCENE_NO_CONTENT = (sceneNumber: number) => `Scene ${sceneNumber} exists but contains no readable content.`;
 
 interface SceneRow {
 	role: string;
@@ -35,11 +28,11 @@ export function createReadSceneTool(ctx: ToolContext) {
 	const { actLine } = ctx;
 
 	const inputSchema = z.object({
-		sceneNumber: z.number().int().min(1).describe('The scene number to read (1-based)'),
+		sceneNumber: z.number().int().min(1).describe(ls('tools.readScene.parameters.sceneNumber')),
 	});
 
 	return tool({
-		description: TOOL_DESCRIPTION,
+		description: ls('tools.readScene.description'),
 		inputSchema,
 		execute: async (input: z.infer<typeof inputSchema>): Promise<string> => {
 			const { sceneNumber } = input;
@@ -50,7 +43,7 @@ export function createReadSceneTool(ctx: ToolContext) {
 			const rows = await querySceneMessages(actLine.id, sceneNumber);
 
 			if (rows.length === 0) {
-				return NO_SCENE_FOUND(sceneNumber);
+				return ls('tools.readScene.messages.noSceneFound', { sceneNumber });
 			}
 
 			const assistantMsg = rows.find((r) => r.role === 'assistant');
@@ -59,15 +52,15 @@ export function createReadSceneTool(ctx: ToolContext) {
 			const parts: string[] = [];
 
 			if (assistantMsg) {
-				parts.push(`${SCENE_BODY_HEADER}\n\n${assistantMsg.content}`);
+				parts.push(`### ${ls('tools.readScene.headers.sceneBody')}\n\n${assistantMsg.content}`);
 			}
 
 			if (userMsg) {
-				parts.push(`${PLAYER_RESPONSE_HEADER}\n\n${userMsg.content}`);
+				parts.push(`### ${ls('tools.readScene.headers.playerResponse')}\n\n${userMsg.content}`);
 			}
 
 			if (parts.length === 0) {
-				return SCENE_NO_CONTENT(sceneNumber);
+				return ls('tools.readScene.messages.sceneNoContent', { sceneNumber });
 			}
 
 			const result = parts.join('\n\n');

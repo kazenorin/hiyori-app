@@ -19,13 +19,13 @@ import { log } from '$lib/logging/logger';
 import { logCharacterCardActivity } from '$lib/logging/chat-logger';
 import { getLineDir } from './card-output-path';
 import {
-	TRANSCRIPT_START,
-	TRANSCRIPT_END,
-	ACT_CARD_LABEL,
-	CHARACTER_CARD_LABEL,
-	CHARACTER_EXTRACTION_PREFIX,
-	CHARACTER_EXTRACTION_INSTRUCTION,
-	CHARACTER_CARD_GENERATION_INSTRUCTION,
+	transcriptStart,
+	transcriptEnd,
+	actCardLabel,
+	characterCardLabel,
+	characterExtractionPrefix,
+	characterExtractionInstruction,
+	characterCardGenerationInstruction,
 } from '$lib/definitions/llm-context-labels';
 import { ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT, ERR_NO_CHARACTERS_SELECTED } from '$lib/definitions/error-messages';
 
@@ -107,13 +107,13 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 	const messages: ModelMessage[] = [
 		{
 			role: 'user',
-			content: CHARACTER_EXTRACTION_PREFIX,
+			content: characterExtractionPrefix(),
 		},
 		...transcript.map(toUserModelMessage),
-		{ role: 'user', content: TRANSCRIPT_END },
+		{ role: 'user', content: transcriptEnd() },
 		{
 			role: 'user',
-			content: CHARACTER_EXTRACTION_INSTRUCTION(summarizePrompt),
+			content: characterExtractionInstruction(summarizePrompt),
 		},
 	];
 	const result = await generateText({ model, system: systemPrompt, messages });
@@ -260,7 +260,7 @@ async function loadPreviousActCards(storyFolder: string, lineage: ActLineageEntr
 
 		const actCard = await loadActCard(storyFolder, entry.actNumber, entry.isMainLine, entry.actLineId);
 		if (actCard) {
-			sections.push(ACT_CARD_LABEL(entry.actNumber));
+			sections.push(actCardLabel(entry.actNumber));
 			sections.push(actCard);
 		}
 	}
@@ -277,7 +277,7 @@ async function loadPreviousCharacterCards(
 	for (const entry of lineage) {
 		const card = await loadExistingCharacterCard(storyFolder, entry.actNumber, canonicalName, entry.isMainLine, entry.actLineId);
 		if (card) {
-			sections.push(CHARACTER_CARD_LABEL(characterName, entry.actNumber));
+			sections.push(characterCardLabel(characterName, entry.actNumber));
 			sections.push(card);
 		}
 	}
@@ -291,9 +291,9 @@ function buildGenerationMessages(
 	userPrompt: string
 ): ModelMessage[] {
 	return [
-		{ role: 'user', content: TRANSCRIPT_START },
+		{ role: 'user', content: transcriptStart() },
 		...transcript.map(toUserModelMessage),
-		{ role: 'user', content: TRANSCRIPT_END },
+		{ role: 'user', content: transcriptEnd() },
 		...previousActCards.map(toUserModelMessage),
 		...existingCards.map(toUserModelMessage),
 		{ role: 'user', content: userPrompt },
@@ -359,7 +359,7 @@ export async function generateCharacterCard(
 		loadPreviousCharacterCards(storyFolder, lineage, entry.canonicalName, entry.character),
 	]);
 
-	const userPrompt = CHARACTER_CARD_GENERATION_INSTRUCTION(namedExtractionPrompt, namedTemplate);
+	const userPrompt = characterCardGenerationInstruction(namedExtractionPrompt, namedTemplate);
 	const messages = buildGenerationMessages(transcript, previousActCards, existingCards, userPrompt);
 
 	const model = createModel(config);

@@ -371,16 +371,16 @@ function buildSummarizerMessages(input: PipelineInput) {
 	if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
 		return toUserMessages([
 			actSummaryHeading + actSummary,
-			SECTION.PREVIOUS_NARRATIVE_BODY + previousNarrativeVariables.narrativeBody,
+			...formatPreviousNarrativeBody(previousNarrativeVariables.narrativeBody, completedScenes),
 			...playerResponseSection(input.player),
 			...formatTurnOfEventsSection(previousNarrativeVariables.turnOfEvents),
-			summarizerExtractionPromptTemplate.replaceAll('{completedScenes}', String(completedScenes)).replaceAll('{sceneTitle}', sceneTitle),
+			summarizerExtractionPromptTemplate(completedScenes, sceneTitle),
 		]);
 	} else {
 		return toUserMessages([
 			actSummaryHeading + actSummary,
 			...playerResponseSection(input.player),
-			summarizerFallbackExtractionPromptTemplate.replaceAll('{completedScenes}', String(completedScenes)),
+			summarizerFallbackExtractionPromptTemplate(completedScenes),
 		]);
 	}
 }
@@ -574,7 +574,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 					...playerResponseSection(player),
 					...formatTurnOfEventsSection(previousTurnOfEvents),
-					writerExtractionPromptTemplate.replaceAll('{currentScene}', currentScene),
+					writerExtractionPromptTemplate(currentScene),
 				]),
 				providerConfig: providerConfigs.writer,
 				buildStateUpdate: (ss) => ({
@@ -607,7 +607,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					...playerResponseSection(player),
 					...formatTurnOfEventsSection(previousTurnOfEvents),
 					...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
-					reviewerExtractionPromptTemplate.replaceAll('{currentScene}', currentScene),
+					reviewerExtractionPromptTemplate(currentScene),
 				]),
 				providerConfig: providerConfigs.reviewer,
 				buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),
@@ -653,7 +653,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 						...formatTurnOfEventsSection(previousTurnOfEvents),
 						...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
 						...(state.reviewerOutput ? [SECTION.REVIEWER_OUTPUT + state.reviewerOutput] : []),
-						editorExtractionPrompt,
+						editorExtractionPrompt(),
 					]),
 					providerConfig: providerConfigs.editor,
 					buildStateUpdate: (ss) => ({
@@ -676,14 +676,14 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		const fitterResult = await executeStreamingPhase(
 			{
 				phaseName: 'TEMPLATE_FITTER',
-				systemPrompt: templateFitterSystemPrompt,
+				systemPrompt: templateFitterSystemPrompt(),
 				...sharedParams,
 				tools: undefined,
 				descriptors: EDITOR_TEMPLATE_FITTER_DESCRIPTORS,
 				messages: toUserMessages([
 					SECTION.EDITOR_OUTPUT + (state.editorOutput ?? ''),
 					SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
-					editorTemplateFitterExtractionPrompt,
+					editorTemplateFitterExtractionPrompt(),
 				]),
 				providerConfig: providerConfigs.minorTaskAgent,
 				buildStateUpdate: (ss) => {
@@ -740,7 +740,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					...sharedParams,
 					tools: filterToolsForPhase(tools, 'GAME_MASTER'),
 					descriptors: GAME_MASTER_DESCRIPTORS,
-					messages: toUserMessages([...sharedSections, gameMasterExtractionPrompt]),
+					messages: toUserMessages([...sharedSections, gameMasterExtractionPrompt()]),
 					providerConfig: providerConfigs.gameMaster,
 					buildStateUpdate: (ss) => ({
 						gameMasterOutput: ss.content,
@@ -758,7 +758,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					...sharedParams,
 					tools: filterToolsForPhase(tools, 'PLOT_PLANNER'),
 					descriptors: PLOT_PLANNER_DESCRIPTORS,
-					messages: toUserMessages([...sharedSections, plotPlannerExtractionPromptTemplate.replaceAll('{currentScene}', currentScene)]),
+					messages: toUserMessages([...sharedSections, plotPlannerExtractionPromptTemplate(currentScene)]),
 					providerConfig: providerConfigs.plotPlanner,
 					buildStateUpdate: (ss) => ({
 						scenePlot: ss.content,
@@ -782,14 +782,14 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		const gmFitterResult = await executeStreamingPhase(
 			{
 				phaseName: 'TEMPLATE_FITTER',
-				systemPrompt: templateFitterSystemPrompt,
+				systemPrompt: templateFitterSystemPrompt(),
 				...sharedParams,
 				tools: undefined,
 				descriptors: GM_TEMPLATE_FITTER_DESCRIPTORS,
 				messages: toUserMessages([
 					SECTION.EDITOR_OUTPUT + (state.editorOutput ?? ''),
 					SECTION.GAME_MASTER_OUTPUT + (state.gameMasterOutput ?? ''),
-					gmTemplateFitterExtractionPrompt,
+					gmTemplateFitterExtractionPrompt(),
 				]),
 				providerConfig: providerConfigs.minorTaskAgent,
 				buildStateUpdate: (ss) => {

@@ -4,7 +4,7 @@ import { createModel } from './provider';
 import { loadActPlotInterviewSystemPrompt, loadGeneralInstructions, loadActPlotInterviewTurnOfEventsPrompt } from '$lib/fs/prompts';
 import { log } from '$lib/logging/logger';
 import type { WorldBuilderMessage } from './world-builder.svelte';
-import { TOE_SECTION, PLAYER_LABEL, INTERVIEWER_LABEL } from '$lib/definitions/llm-context-labels';
+import { TOE_SECTION, playerLabel, interviewerLabel } from '$lib/definitions/llm-context-labels';
 import { ERR_NO_MAIN_PROVIDER, ERR_EMPTY_TURN_OF_EVENTS } from '$lib/definitions/error-messages';
 
 const LOG_TAG = 'turn-of-events-generator';
@@ -35,7 +35,7 @@ function buildContext(
 	if (interviewMessages.length > 0) {
 		const transcript = interviewMessages
 			.filter((m) => m.role === 'user' || m.role === 'assistant')
-			.map((m) => `**${m.role === 'user' ? PLAYER_LABEL : INTERVIEWER_LABEL}**: ${m.content}`)
+			.map((m) => `**${m.role === 'user' ? playerLabel() : interviewerLabel()}**: ${m.content}`)
 			.join('\n\n');
 		if (transcript) {
 			parts.push(`${TOE_SECTION.INTERVIEW_TRANSCRIPT}\n\n${transcript}`);

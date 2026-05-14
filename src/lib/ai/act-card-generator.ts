@@ -13,7 +13,7 @@ import { getLineDir } from './card-output-path';
 import { logActCardActivity } from '$lib/logging/chat-logger';
 import { streamWithRetry, type RetryConfig } from './chat-stream';
 import type { StreamState } from './chat-callbacks';
-import { WORLD_CONTEXT_LABEL, TRANSCRIPT_START, ACT_CARD_TRANSCRIPT_END } from '$lib/definitions/llm-context-labels';
+import { worldContextLabel, transcriptStart, actCardTranscriptEnd } from '$lib/definitions/llm-context-labels';
 import {
 	ERR_NO_MAIN_PROVIDER,
 	ERR_NO_ACT_LINE_SELECTED,
@@ -27,8 +27,8 @@ export interface GenerateActCardResult {
 }
 
 function buildUserMessages(contents: string[], template: string, extractionPrompt: string, world: string | null): string[] {
-	const worldPrompt = world ? [WORLD_CONTEXT_LABEL, world] : [];
-	return [...worldPrompt, TRANSCRIPT_START, ...contents, ACT_CARD_TRANSCRIPT_END, template, extractionPrompt];
+	const worldPrompt = world ? [worldContextLabel(), world] : [];
+	return [...worldPrompt, transcriptStart(), ...contents, actCardTranscriptEnd(), template, extractionPrompt];
 }
 
 interface ActCardContext {

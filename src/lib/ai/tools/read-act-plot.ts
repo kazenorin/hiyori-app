@@ -1,3 +1,4 @@
+import { ls } from '$lib/definitions/locale-strings';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { exists, readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
@@ -7,17 +8,13 @@ import { fileLog, log } from '$lib/logging/logger';
 import { type ToolSet } from 'ai';
 import type { ToolContext } from './tools';
 
-const TOOL_DESCRIPTION =
-	"Read the act plot document for the current act. The act plot contains the story's planned structure: premise, target session count, major climactic events, possible endings, storytelling style, and presentation notes. Use this to understand the planned narrative arc and guide the story accordingly.";
-const NO_ACT_PLOT = 'No act plot has been generated for this act yet.';
-
 export function createReadActPlotTool(ctx: ToolContext) {
 	const { story, actLine, act } = ctx;
 
 	const inputSchema = z.object({});
 
 	return tool({
-		description: TOOL_DESCRIPTION,
+		description: ls('tools.readActPlot.description'),
 		inputSchema,
 		execute: async (): Promise<string> => {
 			const logMessage = `read-act-plot triggered for storyId=${story.id}, actLineId=${actLine.id}`;
@@ -30,7 +27,7 @@ export function createReadActPlotTool(ctx: ToolContext) {
 
 			const fileExists = await exists(filePath, { baseDir: BaseDirectory.AppData });
 			if (!fileExists) {
-				return NO_ACT_PLOT;
+				return ls('tools.readActPlot.messages.noActPlot');
 			}
 
 			const content = await readTextFile(filePath, { baseDir: BaseDirectory.AppData });

@@ -1,3 +1,4 @@
+import { ls } from '$lib/definitions/locale-strings';
 import { tool } from 'ai';
 import { z } from 'zod';
 import type { ToolSet } from 'ai';
@@ -6,24 +7,17 @@ import { evaluateRisk } from '$lib/ai/risk-model';
 import type { RiskOutcome } from '$lib/ai/risk-model';
 import { fileLog, log } from '$lib/logging/logger';
 
-const TOOL_DESCRIPTION =
-	'Evaluates the outcome of taking a risk by rolling a dice. ' +
-	'The higher the risk level, the more likely a bad outcome. ' +
-	'Use this to determine whether a risky action succeeds, has a mixed result, or fails.';
-
-const RISK_LEVEL_DESCRIPTION = 'Level of risk taken (1 = lowest risk, 10 = highest risk)';
-
-const OUTCOME_MESSAGES = {
-	[-1]: 'The risk resulted in a bad outcome.',
-	[0]: 'The risk resulted in a neutral outcome.',
-	[1]: 'The risk resulted in a good outcome.',
-} as const satisfies Record<RiskOutcome, string>;
+const OUTCOME_MESSAGES: Record<RiskOutcome, string> = {
+	[-1]: ls('tools.evaluateRisk.messages.outcomeBad'),
+	[0]: ls('tools.evaluateRisk.messages.outcomeNeutral'),
+	[1]: ls('tools.evaluateRisk.messages.outcomeGood'),
+};
 
 export function createEvaluateRiskTool(_ctx: ToolContext) {
 	return tool({
-		description: TOOL_DESCRIPTION,
+		description: ls('tools.evaluateRisk.description'),
 		inputSchema: z.object({
-			riskLevel: z.number().int().min(1).max(10).describe(RISK_LEVEL_DESCRIPTION),
+			riskLevel: z.number().int().min(1).max(10).describe(ls('tools.evaluateRisk.parameters.riskLevel')),
 		}),
 		execute: async (input): Promise<{ result: string }> => {
 			const logMessage = `evaluate-risk triggered: riskLevel=${input.riskLevel}`;

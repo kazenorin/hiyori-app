@@ -15,6 +15,7 @@ import {
 import { initLogging, log } from '$lib/logging/logger';
 import { getSettings } from '$lib/stores/settings.svelte';
 import { loadLocale } from '$lib/i18n';
+import { loadLocaleStrings, ensureAllLocaleStringConfigs } from '$lib/definitions/locale-strings';
 
 let initialized = false;
 let initializing = false;
@@ -49,6 +50,12 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 		await log.info('init', 'Ensuring base configs...');
 		onStatus?.('Ensuring base configs...');
 		await ensureAllBaseConfigs();
+
+		await log.info('init', 'Ensuring locale string configs...');
+		await ensureAllLocaleStringConfigs();
+
+		await log.info('init', 'Loading locale strings...');
+		await loadLocaleStrings(settings.locale || 'en');
 
 		await log.info('init', 'Loading world prompts...');
 		onStatus?.('Loading world prompts...');

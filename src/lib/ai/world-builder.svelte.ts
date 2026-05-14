@@ -1,5 +1,5 @@
 import { getMainProviderConfig, type ProviderConfig } from '$lib/stores/settings.svelte';
-import { WORLD_BUILDER_SEED, RESUME_STORY_ACT_PREFIX, RESUME_STORY_ACT_SUFFIX } from '$lib/definitions/llm-context-labels';
+import { worldBuilderSeed, resumeStoryActPrefix, resumeStoryActSuffix } from '$lib/definitions/llm-context-labels';
 import {
 	loadWorldBuilderSystemPrompt,
 	loadWorldTemplate,
@@ -32,11 +32,7 @@ const COMPLETION_MARKER = '[WORLD_BUILDER_COMPLETE]';
 const SCENE_HEADER = `# Scene`;
 const CURRENT_SCENE = `Current Scene`;
 
-const seedMsg = { role: 'user' as const, content: WORLD_BUILDER_SEED };
-
-const resumeStoryActPrefix = RESUME_STORY_ACT_PREFIX;
-
-const resumeStoryActSuffix = RESUME_STORY_ACT_SUFFIX;
+const seedMsg = () => ({ role: 'user' as const, content: worldBuilderSeed() });
 
 let isActive = $state(false);
 let messages = $state<WorldBuilderMessage[]>([]);
@@ -197,7 +193,7 @@ export async function enterActPlotInterviewMode(
 		const hasSceneContext = forkContext.sceneNumber && forkContext.sceneTitle && forkContext.narrativeBody;
 
 		if (forkContext.actSummary || hasSceneContext) {
-			const sections: string[] = [resumeStoryActPrefix];
+			const sections: string[] = [resumeStoryActPrefix()];
 
 			if (forkContext.actSummary) {
 				sections.push(`\n\n${forkContext.actSummary}`);
@@ -208,7 +204,7 @@ export async function enterActPlotInterviewMode(
 				);
 			}
 
-			sections.push(resumeStoryActSuffix);
+			sections.push(resumeStoryActSuffix());
 			return await sendWorldBuilderMessage(sections.join(''));
 		}
 	}
@@ -292,7 +288,7 @@ async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<vo
 
 	try {
 		const existingMsgs = messages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
-		const history = actPlotInterview ? existingMsgs : [seedMsg, ...existingMsgs];
+		const history = actPlotInterview ? existingMsgs : [seedMsg(), ...existingMsgs];
 		await streamWorldBuilderChat(history, messageIdx, abortController.signal, providerConfig);
 		parseCompletionMarker(getCurrentMessage().content);
 

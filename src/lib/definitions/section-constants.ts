@@ -1,35 +1,82 @@
+import { ls } from './locale-strings';
+
+const sectionHeader = (text: string) => `\n## ${text}\n`;
+const actPlotHeader = (text: string) => `## ${text}\n\n`;
+
 /** Markdown section headings used in LLM message construction. */
 export const SECTION = {
-	WORLD_CONTENT: '\n## World Content\n',
-	ACT_PLOT: '\n## Act Plot\n',
-	ACT_SUMMARY: '\n## Act Summary\n',
-	PLAYER_RESPONSE: '\n## Player Response\n',
-	SCENE_PLOT: '\n## Scene Plot\n',
-	WRITER_OUTPUT_TEMPLATE: '\n## Writer Output Template\n',
-	WRITER_OUTPUT: '\n## Writer Output\n',
-	REVIEWER_OUTPUT: '\n## Reviewer Output\n',
-	EDITOR_OUTPUT: '\n## Editor Output\n',
-	GAME_MASTER_OUTPUT: '\n## Game Master Output\n',
-	PREVIOUS_ACT_SUMMARY: '\n## Act Summary {summarizedScenes}\n',
-	PREVIOUS_NARRATIVE_BODY: '\n## Narrative Body for Scene {completedScenes}\n',
-	TURN_OF_EVENTS: '\n## Turn Of Events\n',
-} as const;
+	get WORLD_CONTENT() {
+		return sectionHeader(ls('sectionConstants.headers.worldContent'));
+	},
+	get ACT_PLOT() {
+		return sectionHeader(ls('sectionConstants.headers.actPlot'));
+	},
+	get ACT_SUMMARY() {
+		return sectionHeader(ls('sectionConstants.headers.actSummary'));
+	},
+	get PLAYER_RESPONSE() {
+		return sectionHeader(ls('sectionConstants.headers.playerResponse'));
+	},
+	get SCENE_PLOT() {
+		return sectionHeader(ls('sectionConstants.headers.scenePlot'));
+	},
+	get WRITER_OUTPUT_TEMPLATE() {
+		return sectionHeader(ls('sectionConstants.headers.writerOutputTemplate'));
+	},
+	get WRITER_OUTPUT() {
+		return sectionHeader(ls('sectionConstants.headers.writerOutput'));
+	},
+	get REVIEWER_OUTPUT() {
+		return sectionHeader(ls('sectionConstants.headers.reviewerOutput'));
+	},
+	get EDITOR_OUTPUT() {
+		return sectionHeader(ls('sectionConstants.headers.editorOutput'));
+	},
+	get GAME_MASTER_OUTPUT() {
+		return sectionHeader(ls('sectionConstants.headers.gameMasterOutput'));
+	},
+	get PREVIOUS_ACT_SUMMARY() {
+		return sectionHeader(ls('sectionConstants.headers.previousActSummary', { summarizedScenes: '{summarizedScenes}' }));
+	},
+	get PREVIOUS_NARRATIVE_BODY() {
+		return sectionHeader(ls('sectionConstants.headers.previousNarrativeBody', { completedScenes: '{completedScenes}' }));
+	},
+	get TURN_OF_EVENTS() {
+		return sectionHeader(ls('sectionConstants.headers.turnOfEvents'));
+	},
+};
 
 /** Section headings for act-plot generation phases (used by act-plot-generator). */
 export const ACT_PLOT_SECTION = {
-	WORLD_CONTENT: '## World Content\n\n',
-	PREVIOUS_ACT_SUMMARY: '## Previous Act Summary\n\n',
-	TURN_OF_EVENTS: '## Turn Of Events\n\n',
-	INTERVIEW_TRANSCRIPT: '## Interview Transcript\n\nThe following is an interview exchange about the story and premises.',
-	WRITER_OUTPUT: '## Writer Output\n\n',
-	REVIEWER_FEEDBACK: '## Reviewer Feedback\n\n',
-	TEMPLATE: '## Template\n\n',
-} as const;
+	get WORLD_CONTENT() {
+		return actPlotHeader(ls('actPlotSection.headers.worldContent'));
+	},
+	get PREVIOUS_ACT_SUMMARY() {
+		return actPlotHeader(ls('actPlotSection.headers.previousActSummary'));
+	},
+	get TURN_OF_EVENTS() {
+		return actPlotHeader(ls('actPlotSection.headers.turnOfEvents'));
+	},
+	get INTERVIEW_TRANSCRIPT() {
+		return actPlotHeader(ls('actPlotSection.headers.interviewTranscript')) + ls('actPlotSection.descriptions.interviewTranscript');
+	},
+	get WRITER_OUTPUT() {
+		return actPlotHeader(ls('actPlotSection.headers.writerOutput'));
+	},
+	get REVIEWER_FEEDBACK() {
+		return actPlotHeader(ls('actPlotSection.headers.reviewerFeedback'));
+	},
+	get TEMPLATE() {
+		return actPlotHeader(ls('actPlotSection.headers.template'));
+	},
+};
 
 /** Format the previous narrative body as a user message section. Returns empty array if no body. */
 export function formatPreviousNarrativeBody(previousNarrativeBody: string | null | undefined, completedScenes: number): string[] {
 	if (!previousNarrativeBody || previousNarrativeBody.trim().length === 0) return [];
-	return [SECTION.PREVIOUS_NARRATIVE_BODY.replaceAll('{completedScenes}', String(completedScenes)) + previousNarrativeBody];
+	return [
+		ls('sectionConstants.headers.previousNarrativeBody', { completedScenes }).replace(/^/, '\n## ').concat('\n') + previousNarrativeBody,
+	];
 }
 
 /** Format the turn of events as a user message section. Returns empty array if no content. */

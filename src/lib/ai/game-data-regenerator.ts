@@ -42,7 +42,7 @@ export async function regenerateGameData(params: GameDataRegenerationContext): P
 		...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
 		...formatTurnOfEventsSection(narrativeVariables.turnOfEvents),
 		SECTION.EDITOR_OUTPUT + editorOutput,
-		gameMasterExtractionPrompt,
+		gameMasterExtractionPrompt(),
 	];
 
 	const messages: MessageBase[] = contents.map((content) => ({ role: 'user' as const, content }));

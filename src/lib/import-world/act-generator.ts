@@ -9,12 +9,12 @@ import { loadSystemPrompt, loadWriterOutputTemplate } from '$lib/fs/prompts';
 import { sleep } from '$lib/utils/async';
 import type { ParsedMessage } from './types';
 import {
-	WORLD_CARD_LABEL,
-	ACT_CARD_LABEL,
-	CHARACTER_CARD_LABEL,
-	ACT_GENERATION_INSTRUCTION,
-	SCENE_EXTRACTION_FIRST_PROMPT,
-	SCENE_EXTRACTION_CONTINUATION_PROMPT,
+	worldCardLabel,
+	actCardLabel,
+	characterCardLabel,
+	actGenerationInstruction,
+	sceneExtractionFirstPrompt,
+	sceneExtractionContinuationPrompt,
 } from './prompts';
 
 // === Act Generation ===
@@ -56,24 +56,24 @@ function buildGenerationMessages(
 
 	// World card
 	if (worldContent) {
-		messages.push({ role: 'user', content: WORLD_CARD_LABEL }, { role: 'user', content: worldContent });
+		messages.push({ role: 'user', content: worldCardLabel() }, { role: 'user', content: worldContent });
 	}
 
 	// Act card
 	if (actCardContent) {
-		messages.push({ role: 'user', content: ACT_CARD_LABEL }, { role: 'user', content: actCardContent });
+		messages.push({ role: 'user', content: actCardLabel() }, { role: 'user', content: actCardContent });
 	}
 
 	// Character cards
 	for (const card of characterCards) {
 		const name = card.name || 'a character in the story';
-		messages.push({ role: 'user', content: CHARACTER_CARD_LABEL.replace('{name}', name) }, { role: 'user', content: card.content });
+		messages.push({ role: 'user', content: characterCardLabel(name) }, { role: 'user', content: card.content });
 	}
 
 	// Generation request
 	messages.push({
 		role: 'user',
-		content: ACT_GENERATION_INSTRUCTION,
+		content: actGenerationInstruction(),
 	});
 
 	return messages;
@@ -125,16 +125,11 @@ async function processScene(
 	let extractionPrompt: string;
 	if (previousScenes.length === 0) {
 		// First scene: no prior context
-		extractionPrompt = SCENE_EXTRACTION_FIRST_PROMPT.replace('{narrationTemplate}', narrationTemplate).replace(
-			'{sceneContent}',
-			sceneContent
-		);
+		extractionPrompt = sceneExtractionFirstPrompt(narrationTemplate, sceneContent);
 	} else {
 		// Subsequent scenes: include previous scenes for continuity
 		const previousContent = previousScenes.map((s, i) => `Scene ${i + 1}:\n${s}`).join('\n\n---\n\n');
-		extractionPrompt = SCENE_EXTRACTION_CONTINUATION_PROMPT.replace('{previousScenes}', previousContent)
-			.replace('{narrationTemplate}', narrationTemplate)
-			.replace('{sceneContent}', sceneContent);
+		extractionPrompt = sceneExtractionContinuationPrompt(previousContent, narrationTemplate, sceneContent);
 	}
 
 	const messages: { role: 'user'; content: string }[] = [{ role: 'user', content: extractionPrompt }];

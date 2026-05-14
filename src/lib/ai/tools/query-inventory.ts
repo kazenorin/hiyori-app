@@ -1,3 +1,4 @@
+import { ls } from '$lib/definitions/locale-strings';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { Memory } from '$lib/memory/memory';
@@ -29,40 +30,20 @@ interface QueryInventoryOutput {
 	changes?: InventoryChangeResult[];
 }
 
-const QUERY_INVENTORY_DESCRIPTION = `Check what a character currently has in their inventory. Returns items, equipment, skills, clothing, and status effects with equip status (equipped/wielded vs carried/owned).
-
-IMPORTANT: Only inventory changes that occur DURING the story are tracked. Items a character possessed before the story began will NOT appear in inventory unless they are explicitly mentioned in a scene. You should use your judgment to infer pre-existing possessions when appropriate (e.g., a knight likely has armor even if not explicitly mentioned, a wizard likely knows basic spells).
-
-Use this tool before describing a character using an item or ability to ensure consistency.
-
-Set includeHistory to true to also see the log of inventory change events (acquired, lost, equipped, unequipped, used, modified) for the character.`;
-
-const QUERY_INVENTORY_PARAMS = {
-	characterName: {
-		description: "The character's name (canonical name or alias)",
-	},
-	itemCategory: {
-		description: 'Optional filter to return only one category',
-	},
-	includeHistory: {
-		description: 'If true, also return the inventory change event history for this character',
-	},
-} as const;
-
 export function createQueryInventoryTool(context: QueryInventoryContext) {
 	const { memory, storyId, actLineId } = context;
 
 	const inputSchema = z.object({
-		characterName: z.string().describe(QUERY_INVENTORY_PARAMS.characterName.description),
+		characterName: z.string().describe(ls('tools.queryInventory.parameters.characterName')),
 		itemCategory: z
 			.enum(['item', 'equipment', 'skill', 'clothing', 'status'])
 			.optional()
-			.describe(QUERY_INVENTORY_PARAMS.itemCategory.description),
-		includeHistory: z.boolean().optional().describe(QUERY_INVENTORY_PARAMS.includeHistory.description),
+			.describe(ls('tools.queryInventory.parameters.itemCategory')),
+		includeHistory: z.boolean().optional().describe(ls('tools.queryInventory.parameters.includeHistory')),
 	});
 
 	return tool({
-		description: QUERY_INVENTORY_DESCRIPTION,
+		description: ls('tools.queryInventory.description'),
 		inputSchema,
 		execute: async (input: z.infer<typeof inputSchema>): Promise<QueryInventoryOutput> => {
 			const { characterName, itemCategory, includeHistory } = input;

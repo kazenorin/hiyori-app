@@ -1,3 +1,4 @@
+import { ls } from '$lib/definitions/locale-strings';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { sampleSize } from 'lodash-es';
@@ -55,25 +56,17 @@ function deduplicateMemoryItems(items: MemoryItem[]): MemoryItem[] {
 		.sort((a, b) => (a.score ?? Infinity) - (b.score ?? Infinity));
 }
 
-const CHARACTER_QUERY_DESC =
-	'A short description of the character or topic to search memories for (e.g. "Elena", "the blacksmith"). If omitted, the tool will return memories based on the time-location query context parameter.';
-const TIME_AND_LOCATION_DESC =
-	'A short description of the location or time period (e.g., "The Tavern", "Dawn in the Forest"). If omitted, will return memories of the given character.';
-const CURRENT_ACT_ONLY_DESC =
-	'If true, searches only recent memories from the current act. Set to false to retrieve long-term lore or events from past acts.';
-const TOOL_DESCRIPTION = `Search the game's memory database to recall past events, locations visited, or character interactions. You must provide a character query, a time-location query for context, or both. Returns a list of recalled memories with their act number, recency, and location.`;
-
 export function createQueryMemoriesTool(context: QueryMemoriesContext) {
 	const { memory, storyId, actLineId } = context;
 
 	const inputSchema = z.object({
-		characterQuery: z.string().optional().describe(CHARACTER_QUERY_DESC),
-		timeAndLocation: z.string().optional().describe(TIME_AND_LOCATION_DESC),
-		currentActOnly: z.boolean().optional().default(true).describe(CURRENT_ACT_ONLY_DESC),
+		characterQuery: z.string().optional().describe(ls('tools.queryMemories.parameters.characterQuery')),
+		timeAndLocation: z.string().optional().describe(ls('tools.queryMemories.parameters.timeAndLocation')),
+		currentActOnly: z.boolean().optional().default(true).describe(ls('tools.queryMemories.parameters.currentActOnly')),
 	});
 
 	return tool({
-		description: TOOL_DESCRIPTION,
+		description: ls('tools.queryMemories.description'),
 		inputSchema,
 		execute: async (input: z.infer<typeof inputSchema>): Promise<MemoryResult[]> => {
 			const { characterQuery, timeAndLocation, currentActOnly } = input;
