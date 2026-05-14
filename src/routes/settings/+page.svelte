@@ -14,7 +14,7 @@
 	} from '$lib/stores/settings.svelte';
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
 	import { t } from '$lib/i18n';
-	import ThemeSelect from '$lib/components/ThemeSelect.svelte';
+	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
 
 	// Editing state
 	let editingId = $state<string | null>(null);
@@ -217,13 +217,13 @@
 
 								<label class="block">
 									<span class="text-sm font-medium text-surface-700-300">{t('settings.apiProvider')}</span>
-									<ThemeSelect items={providerItems} value={formProvider} onValueChange={(v) => { formProvider = v as Provider; handleProviderChange(); }} />
+									<ThemedSelect items={providerItems} value={formProvider} onValueChange={(v) => { formProvider = v as Provider; handleProviderChange(); }} />
 								</label>
 
 								{#if formProvider === 'openai'}
 									<label class="block">
 										<span class="text-sm font-medium text-surface-700-300">{t('settings.apiType')}</span>
-										<ThemeSelect items={apiTypeItems} value={formApiType} onValueChange={(v) => formApiType = v as ApiType} />
+										<ThemedSelect items={apiTypeItems} value={formApiType} onValueChange={(v) => formApiType = v as ApiType} />
 										<span class="text-xs text-surface-500 mt-1 block"
 											>{t('settings.apiTypeHint')}</span
 										>
@@ -243,7 +243,7 @@
 										<label class="flex-1">
 											<span class="text-sm font-medium text-surface-700-300">{t('settings.model')}</span>
 											{#if availableModels.length > 0}
-												<ThemeSelect items={availableModels.map((m) => ({ label: m.id, value: m.id }))} value={formModel} onValueChange={(v) => formModel = v} />
+												<ThemedSelect items={availableModels.map((m) => ({ label: m.id, value: m.id }))} value={formModel} onValueChange={(v) => formModel = v} />
 											{:else}
 												<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
 											{/if}
@@ -315,13 +315,13 @@
 
 							<label class="block">
 								<span class="text-sm font-medium text-surface-700-300">{t('settings.apiProvider')}</span>
-								<ThemeSelect items={providerItems} value={formProvider} onValueChange={(v) => { formProvider = v as Provider; handleProviderChange(); }} />
+								<ThemedSelect items={providerItems} value={formProvider} onValueChange={(v) => { formProvider = v as Provider; handleProviderChange(); }} />
 							</label>
 
 							{#if formProvider === 'openai'}
 								<label class="block">
 									<span class="text-sm font-medium text-surface-700-300">{t('settings.apiType')}</span>
-									<ThemeSelect items={apiTypeItems} value={formApiType} onValueChange={(v) => formApiType = v as ApiType} />
+									<ThemedSelect items={apiTypeItems} value={formApiType} onValueChange={(v) => formApiType = v as ApiType} />
 									<span class="text-xs text-surface-500 mt-1 block"
 										>{t('settings.apiTypeHint')}</span
 									>
@@ -341,7 +341,7 @@
 									<label class="flex-1">
 										<span class="text-sm font-medium text-surface-700-300">{t('settings.model')}</span>
 										{#if availableModels.length > 0}
-											<ThemeSelect items={availableModels.map((m) => ({ label: m.id, value: m.id }))} value={formModel} onValueChange={(v) => formModel = v} />
+											<ThemedSelect items={availableModels.map((m) => ({ label: m.id, value: m.id }))} value={formModel} onValueChange={(v) => formModel = v} />
 										{:else}
 											<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
 										{/if}
@@ -385,12 +385,12 @@
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.mainProvider')}</span>
-				<ThemeSelect items={roleItems(false)} value={mainProviderId} onValueChange={(v) => assignRole('main', v)} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect items={roleItems(false)} value={mainProviderId} onValueChange={(v) => assignRole('main', v)} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.minorTaskAgent')}</span>
-				<ThemeSelect items={roleItems()} value={settings.minorTaskAgentProviderRole} onValueChange={(v) => updateSettings({ minorTaskAgentProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect items={roleItems()} value={settings.minorTaskAgentProviderRole} onValueChange={(v) => updateSettings({ minorTaskAgentProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.minorTaskAgentDescription')}</span>
 			</label>
 
@@ -424,13 +424,13 @@
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.memoryProvider')}</span>
-				<ThemeSelect items={roleItems()} value={settings.memoryProviderRole} onValueChange={(v) => updateSettings({ memoryProviderRole: v })} disabled={!settings.memoryEnabled} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect items={roleItems()} value={settings.memoryProviderRole} onValueChange={(v) => updateSettings({ memoryProviderRole: v })} disabled={!settings.memoryEnabled} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.memoryProviderDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.embeddingProvider')}</span>
-				<ThemeSelect items={roleItems()} value={settings.embeddingProviderRole} onValueChange={(v) => updateSettings({ embeddingProviderRole: v })} disabled={!settings.memoryEnabled} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect items={roleItems()} value={settings.embeddingProviderRole} onValueChange={(v) => updateSettings({ embeddingProviderRole: v })} disabled={!settings.memoryEnabled} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.embeddingProviderDescription')}</span>
 			</label>
 		</section>
@@ -442,37 +442,37 @@
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.plotPlanner')}</span>
-				<ThemeSelect items={roleItems()} value={settings.plotPlannerProviderRole} onValueChange={(v) => updateSettings({ plotPlannerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect items={roleItems()} value={settings.plotPlannerProviderRole} onValueChange={(v) => updateSettings({ plotPlannerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.plotPlannerDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.writer')}</span>
-				<ThemeSelect items={roleItems()} value={settings.writerProviderRole} onValueChange={(v) => updateSettings({ writerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect items={roleItems()} value={settings.writerProviderRole} onValueChange={(v) => updateSettings({ writerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.writerDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.reviewer')}</span>
-				<ThemeSelect items={roleItems()} value={settings.reviewerProviderRole} onValueChange={(v) => updateSettings({ reviewerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect items={roleItems()} value={settings.reviewerProviderRole} onValueChange={(v) => updateSettings({ reviewerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.reviewerDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.editor')}</span>
-				<ThemeSelect items={roleItems()} value={settings.editorProviderRole} onValueChange={(v) => updateSettings({ editorProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect items={roleItems()} value={settings.editorProviderRole} onValueChange={(v) => updateSettings({ editorProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.editorDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.gameMaster')}</span>
-				<ThemeSelect items={roleItems()} value={settings.gameMasterProviderRole} onValueChange={(v) => updateSettings({ gameMasterProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect items={roleItems()} value={settings.gameMasterProviderRole} onValueChange={(v) => updateSettings({ gameMasterProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.gameMasterDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.summarizer')}</span>
-				<ThemeSelect items={roleItems()} value={settings.summarizerProviderRole} onValueChange={(v) => updateSettings({ summarizerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect items={roleItems()} value={settings.summarizerProviderRole} onValueChange={(v) => updateSettings({ summarizerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.summarizerDescription')}</span>
 			</label>
 		</section>
@@ -507,12 +507,12 @@
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.locale')}</span>
-				<ThemeSelect items={localeItems} value={settings.locale} onValueChange={(v) => updateSettings({ locale: v })} />
+				<ThemedSelect items={localeItems} value={settings.locale} onValueChange={(v) => updateSettings({ locale: v })} />
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.logLevel')}</span>
-				<ThemeSelect items={logLevelItems} value={settings.logLevel} onValueChange={(v) => updateSettings({ logLevel: v as LogLevel })} />
+				<ThemedSelect items={logLevelItems} value={settings.logLevel} onValueChange={(v) => updateSettings({ logLevel: v as LogLevel })} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.logLevelDescription')}</span>
 			</label>
 		</section>
