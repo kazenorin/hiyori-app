@@ -26,6 +26,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Dark mode**: Skeleton handles automatic dark mode via `data-theme`; don't write custom dark mode selectors
 - **Custom CSS**: Only use `+layout.css` for global resets or Skeleton theme customizations; component styles should use Tailwind classes
 
+## Localization Architecture
+
+Three separate systems: **i18n** (`t()`) for UI, **locale-strings** (`ls()`) for LLM-facing strings, and **localized prompts/templates** for LLM I/O. Each uses a different locale source (settings vs story) and resolution strategy. See [`src/lib/localization/README.md`](src/lib/localization/README.md) for full details.
+
 ## Reference Material
 
 Check `local-references/*` for local reference files (if any).
@@ -58,15 +62,7 @@ Multi-provider setup with role-based assignment. Each provider has an `id`, `pro
 
 ## Prompt Loading System
 
-`Prompt` class (`src/lib/fs/prompt-loader.ts`) holds a `relativePath` and `defaultContent`, with a `load()` method. `src/lib/fs/prompts.ts` declares all prompts as `Prompt` instances and exports wrapper functions. Bundled defaults are in `src/lib/fs/prompts/` organized by category.
-
-### Resolution Order
-
-1. Story-specific: `<story-folder>/prompt-templates/<relativePath>`
-2. Base file: `config/prompt-templates/<relativePath>`
-3. Bundled default (in-memory fallback)
-
-`ensureAllBaseConfigs()` creates all registered prompt files on app startup.
+`LocalizedTemplateFile` base class with `LocalizedPromptFile`/`LocalizedViewTemplateFile` subclasses. Each holds a `relativePath` and locale-keyed bundled defaults. `src/lib/fs/prompts.ts` declares all instances. See [`src/lib/localization/README.md`](src/lib/localization/README.md) for locale resolution, directory structure, and `activeLocale` semantics.
 
 ## Story Folders
 
