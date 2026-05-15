@@ -39,7 +39,7 @@ Produce your review using the following template:
 
 [Repeat for each violation found]
 
-## Summary
+## {summary}
 - Total violations: [count]
 - Severity: [low/medium/high]
 - Recommendation: [accept as-is / minor edits needed / major revision needed]
@@ -53,7 +53,7 @@ If no violations are found, output:
 ## Violations
 None.
 
-## Summary
+## {summary}
 - Total violations: 0
 - Severity: none
 - Recommendation: {acceptAsIs}

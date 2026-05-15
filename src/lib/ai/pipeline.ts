@@ -6,7 +6,7 @@ import { DEFAULT_RETRY_CONFIG, type RetryConfig, type PhaseMetadata, toPhaseMeta
 import { createModel } from './provider';
 import type { GameDataFields, NarrativeVariables, PhaseName } from './narrative-types';
 import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection } from '$lib/definitions/pipeline-sections';
-import { actSummaryForScenesHeader, sectionFormat } from '$lib/definitions/common-headers';
+import { actSummaryForScenesHeader, sectionFormat, summaryHeader } from '$lib/definitions/common-headers';
 import {
 	gameMasterExtractionPrompt,
 	editorExtractionPrompt,
@@ -595,7 +595,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				phaseName: 'REVIEWER',
 				systemPrompt: reviewerSystemPromptTemplate
 					.replaceAll('{generalInstructions}', generalInstructions)
-					.replaceAll('{acceptAsIs}', acceptAsIsLabel()),
+					.replaceAll('{acceptAsIs}', acceptAsIsLabel())
+					.replaceAll('{summary}', summaryHeader()),
 				...sharedParams,
 				tools: filterToolsForPhase(tools, 'REVIEWER'),
 				descriptors: getReviewerDescriptors(),

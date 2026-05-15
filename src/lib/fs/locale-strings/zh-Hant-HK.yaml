@@ -29,6 +29,7 @@ common:
     activePlotThreads: 現有劇情線索
     decisionContext: 回應背景
     decisions: 回應選項
+    summary: 摘要
   descriptions:
     interviewTranscript: 以下是有關此故事及設定的訪談內容。
 
