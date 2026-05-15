@@ -1,7 +1,39 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+
+const mockTotalViolationsLabel = vi.fn(() => 'Total violations');
+const mockRecommendationLabel = vi.fn(() => 'Recommendation');
+const mockAcceptAsIsLabel = vi.fn(() => 'accept as-is');
+const mockSummaryHeader = vi.fn(() => 'Summary');
+
+vi.mock('$lib/definitions/pipeline-prompts', () => ({
+	totalViolationsLabel: () => mockTotalViolationsLabel(),
+	recommendationLabel: () => mockRecommendationLabel(),
+	acceptAsIsLabel: () => mockAcceptAsIsLabel(),
+}));
+
+vi.mock('$lib/definitions/common-headers', () => ({
+	summaryHeader: () => mockSummaryHeader(),
+}));
+
+vi.mock('$lib/logging/logger', () => ({
+	log: {
+		info: vi.fn(async () => {}),
+		error: vi.fn(async () => {}),
+		warn: vi.fn(async () => {}),
+		debug: vi.fn(async () => {}),
+	},
+}));
+
 import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';
 
 describe('reviewerAcceptsAsIs', () => {
+	afterEach(() => {
+		mockTotalViolationsLabel.mockReturnValue('Total violations');
+		mockRecommendationLabel.mockReturnValue('Recommendation');
+		mockAcceptAsIsLabel.mockReturnValue('accept as-is');
+		mockSummaryHeader.mockReturnValue('Summary');
+	});
+
 	it('returns true for valid accept-as-is output', () => {
 		const output = `# Review Output
 
@@ -80,11 +112,21 @@ The reviewer should not accept as-is because there are issues.
 		expect(reviewerAcceptsAsIs(output)).toBe(false);
 	});
 
-	it('handles Summary items in paragraph form', () => {
-		const output = `# Review Output
+	it('returns true for Chinese locale output', () => {
+		mockTotalViolationsLabel.mockReturnValue('違規總數');
+		mockRecommendationLabel.mockReturnValue('建議');
+		mockAcceptAsIsLabel.mockReturnValue('不需修改');
+		mockSummaryHeader.mockReturnValue('摘要');
 
-## Summary
-Total violations: 0. Recommendation: accept as-is.`;
+		const output = `# 審查結果
+
+## 違規
+無。
+
+## 摘要
+- 違規總數: 0
+- 嚴重程度: 無
+- 建議: 不需修改`;
 
 		expect(reviewerAcceptsAsIs(output)).toBe(true);
 	});
