@@ -22,3 +22,5 @@ export const templateFitterSystemPrompt = () => ls('pipeline.system.templateFitt
 export const editorTemplateFitterExtractionPrompt = () => ls('pipeline.extraction.editorTemplateFitter');
 
 export const gmTemplateFitterExtractionPrompt = () => ls('pipeline.extraction.gmTemplateFitter');
+
+export const acceptAsIsLabel = () => ls('pipeline.labels.acceptAsIs');

@@ -56,5 +56,5 @@ None.
 ## Summary
 - Total violations: 0
 - Severity: none
-- Recommendation: accept as-is
+- Recommendation: {acceptAsIs}
 ```

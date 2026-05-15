@@ -18,6 +18,7 @@ import {
 	templateFitterSystemPrompt,
 	editorTemplateFitterExtractionPrompt,
 	gmTemplateFitterExtractionPrompt,
+	acceptAsIsLabel,
 } from '$lib/definitions/pipeline-prompts';
 import type { AsyncPhaseResults, PipelineCallbacks, PipelineState } from './pipeline-types';
 import type { StreamState } from './chat-callbacks';
@@ -592,7 +593,9 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		const result = await executeStreamingPhase(
 			{
 				phaseName: 'REVIEWER',
-				systemPrompt: reviewerSystemPromptTemplate.replaceAll('{generalInstructions}', generalInstructions),
+				systemPrompt: reviewerSystemPromptTemplate
+					.replaceAll('{generalInstructions}', generalInstructions)
+					.replaceAll('{acceptAsIs}', acceptAsIsLabel()),
 				...sharedParams,
 				tools: filterToolsForPhase(tools, 'REVIEWER'),
 				descriptors: getReviewerDescriptors(),
