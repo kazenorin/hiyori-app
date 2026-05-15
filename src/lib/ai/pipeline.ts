@@ -19,6 +19,8 @@ import {
 	editorTemplateFitterExtractionPrompt,
 	gmTemplateFitterExtractionPrompt,
 	acceptAsIsLabel,
+	totalViolationsLabel,
+	recommendationLabel,
 } from '$lib/definitions/pipeline-prompts';
 import type { AsyncPhaseResults, PipelineCallbacks, PipelineState } from './pipeline-types';
 import type { StreamState } from './chat-callbacks';
@@ -596,7 +598,9 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				systemPrompt: reviewerSystemPromptTemplate
 					.replaceAll('{generalInstructions}', generalInstructions)
 					.replaceAll('{acceptAsIs}', acceptAsIsLabel())
-					.replaceAll('{summary}', summaryHeader()),
+					.replaceAll('{summary}', summaryHeader())
+					.replaceAll('{totalViolations}', totalViolationsLabel())
+					.replaceAll('{recommendation}', recommendationLabel()),
 				...sharedParams,
 				tools: filterToolsForPhase(tools, 'REVIEWER'),
 				descriptors: getReviewerDescriptors(),

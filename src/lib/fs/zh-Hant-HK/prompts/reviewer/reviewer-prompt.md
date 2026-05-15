@@ -40,9 +40,9 @@
 [為每個發現的違規重複]
 
 ## {summary}
-- 違規總數: [數量]
+- {totalViolations}: [數量]
 - 嚴重程度: [低/中/高]
-- 建議: [不需修改 / 需要小幅修改 / 需要大幅修訂]
+- {recommendation}: [不需修改 / 需要小幅修改 / 需要大幅修訂]
 ```
 
 若未發現違規，輸出: 
@@ -54,7 +54,7 @@
 沒有
 
 ## {summary}
-- 違規總數: 0
+- {totalViolations}: 0
 - 嚴重程度: 無
-- 建議: {acceptAsIs}
+- {recommendation}: {acceptAsIs}
 ```

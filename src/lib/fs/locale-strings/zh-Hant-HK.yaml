@@ -55,6 +55,8 @@ pipeline:
       範本格式，而不改動任何原始內容。保留每一個字——只加入所需的區段標題。
   labels:
     acceptAsIs: 不需修改
+    totalViolations: 違規總數
+    recommendation: 建議
 
 features:
   characterCardGenerator:

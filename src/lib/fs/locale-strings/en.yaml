@@ -57,6 +57,8 @@ pipeline:
       template format without altering any of the original content. Preserve every word — only add the required section headers.
   labels:
     acceptAsIs: accept as-is
+    totalViolations: Total violations
+    recommendation: Recommendation
 
 features:
   characterCardGenerator:
