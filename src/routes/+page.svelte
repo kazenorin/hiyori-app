@@ -259,11 +259,11 @@
 		isCreatingStory = true;
 		createStoryError = null;
 
-		const refs = getActLineAndStory();
-		const worldContent = getWorldBuilderContent();
 		const storyCreated = await ensureStoryCreated();
+		const worldContent = getWorldBuilderContent();
+		const refs = getActLineAndStory();
 
-		if (!refs || !worldContent || !storyCreated) {
+		if (!storyCreated || !worldContent || !refs) {
 			createStoryError = t('errors.missingRequiredContents');
 			isCreatingStory = false;
 			return;
