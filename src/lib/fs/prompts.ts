@@ -48,7 +48,6 @@ const gameMasterPrompt = new LocalizedPromptFile(promptDefaults, 'game-master/ga
 
 // Pipeline: Summarizer
 const summarizerPrompt = new LocalizedPromptFile(promptDefaults, 'summarizer/summarizer-prompt.md');
-const actSummaryTemplate = new LocalizedPromptFile(promptDefaults, 'summarizer/act-summary-template.md');
 const summarizerIncrementalPrompt = new LocalizedPromptFile(promptDefaults, 'summarizer/summarizer-incremental-prompt.md');
 const actSummaryIncrementalTemplate = new LocalizedPromptFile(promptDefaults, 'summarizer/act-summary-incremental-template.md');
 
@@ -98,7 +97,6 @@ export const loadReviewerPrompt = (): Promise<string> => reviewerPrompt.load();
 export const loadEditorPrompt = (): Promise<string> => editorPrompt.load();
 export const loadGameMasterPrompt = (): Promise<string> => gameMasterPrompt.load();
 export const loadSummarizerPrompt = (): Promise<string> => summarizerPrompt.load();
-export const loadActSummaryTemplate = (): Promise<string> => actSummaryTemplate.load();
 export const loadSummarizerIncrementalPrompt = (): Promise<string> => summarizerIncrementalPrompt.load();
 export const loadActSummaryIncrementalTemplate = (): Promise<string> => actSummaryIncrementalTemplate.load();
 export const loadWorldTemplate = (): Promise<string> => worldTemplate.load();
@@ -163,10 +161,6 @@ export async function loadStorySummarizerPrompt(storyId: string, storyName: stri
 	return summarizerPrompt.loadForStory(storyId, storyName);
 }
 
-export async function loadStoryActSummaryTemplate(storyId: string, storyName: string): Promise<string> {
-	return actSummaryTemplate.loadForStory(storyId, storyName);
-}
-
 export async function loadStorySummarizerIncrementalPrompt(storyId: string, storyName: string): Promise<string> {
 	return summarizerIncrementalPrompt.loadForStory(storyId, storyName);
 }
@@ -222,11 +216,6 @@ export const summarizerPromptLoader: PromptLoader = {
 	loadDefault: loadSummarizerPrompt,
 };
 
-export const actSummaryTemplateLoader: PromptLoader = {
-	loadByStory: loadStoryActSummaryTemplate,
-	loadDefault: loadActSummaryTemplate,
-};
-
 export const summarizerIncrementalPromptLoader: PromptLoader = {
 	loadByStory: loadStorySummarizerIncrementalPrompt,
 	loadDefault: loadSummarizerIncrementalPrompt,
@@ -250,7 +239,6 @@ registerDefaults([
 	editorPrompt,
 	gameMasterPrompt,
 	summarizerPrompt,
-	actSummaryTemplate,
 	summarizerIncrementalPrompt,
 	actSummaryIncrementalTemplate,
 	worldTemplate,

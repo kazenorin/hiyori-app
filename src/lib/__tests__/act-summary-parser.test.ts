@@ -1,4 +1,41 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+const mockActSummaryHeader = vi.fn(() => 'Act Summary');
+const mockTurnOfEventsHeader = vi.fn(() => 'Turn Of Events');
+const mockSummaryHeader = vi.fn(() => 'Summary');
+const mockLocationLabel = vi.fn(() => 'Location');
+const mockAliasesLabel = vi.fn(() => 'Aliases');
+const mockSceneWithNumberLabel = vi.fn((n: number | string) => `Scene ${n}`);
+const mockSceneSummariesHeader = vi.fn(() => 'Scene Summaries');
+const mockCharacterSummariesHeader = vi.fn(() => 'Character Summaries');
+
+vi.mock('$lib/definitions/common-headers', () => ({
+	actSummaryHeader: () => mockActSummaryHeader(),
+	turnOfEventsHeader: () => mockTurnOfEventsHeader(),
+	summaryHeader: () => mockSummaryHeader(),
+	sectionFormat: (text: string, headerLevel: number = 2) => '#'.repeat(headerLevel) + ' ' + text + '\n\n',
+}));
+
+vi.mock('$lib/definitions/common-labels', () => ({
+	sceneWithNumberLabel: (n: number | string) => mockSceneWithNumberLabel(n),
+	locationLabel: () => mockLocationLabel(),
+	aliasesLabel: () => mockAliasesLabel(),
+}));
+
+vi.mock('$lib/definitions/pipeline-prompts', () => ({
+	sceneSummariesHeader: () => mockSceneSummariesHeader(),
+	characterSummariesHeader: () => mockCharacterSummariesHeader(),
+}));
+
+vi.mock('$lib/logging/logger', () => ({
+	log: {
+		info: vi.fn(async () => {}),
+		error: vi.fn(async () => {}),
+		warn: vi.fn(async () => {}),
+		debug: vi.fn(async () => {}),
+	},
+}));
+
 import {
 	parseActSummary,
 	serializeActSummary,
@@ -8,12 +45,7 @@ import {
 	type IncrementalUpdate,
 } from '../ai/act-summary-parser';
 
-const SAMPLE_ACT_SUMMARY = `# Act Summary
-
-## Progress
-- Completed scenes: 2
-
-## Scene Summaries
+const SAMPLE_ACT_SUMMARY = `## Scene Summaries
 ### Scene 1: The Arrival
 Location: A coastal village
 Summary: The hero arrives at a coastal village seeking answers about their past.
@@ -36,7 +68,7 @@ describe('parseActSummary', () => {
 	it('parses a complete act summary with all sections', () => {
 		const result = parseActSummary(SAMPLE_ACT_SUMMARY);
 
-		expect(result.completedScenes).toBe(2);
+		expect(result.completedScenes).toBe(0);
 		expect(result.scenes).toHaveLength(2);
 
 		expect(result.scenes[0]).toEqual({
@@ -76,49 +108,26 @@ describe('parseActSummary', () => {
 		expect(result.characters).toHaveLength(0);
 	});
 
-	it('parses act summary with missing progress section', () => {
-		const markdown = `## Scene Summaries
-### Scene 1: Test
-Location: Somewhere
-Summary: Something happened.
-
-## Character Summaries
-### Bob
-- Aliases: [Bobby]
-- Scene 1: Bob did a thing.`;
-
-		const result = parseActSummary(markdown);
-		expect(result.completedScenes).toBe(0);
-		expect(result.scenes).toHaveLength(1);
-		expect(result.characters).toHaveLength(1);
-	});
-
 	it('parses act summary with missing scene summaries section', () => {
-		const markdown = `## Progress
-- Completed scenes: 1
-
-## Character Summaries
+		const markdown = `## Character Summaries
 ### Alice
 - Aliases: [Ali]
 - Scene 1: Alice appeared.`;
 
 		const result = parseActSummary(markdown);
-		expect(result.completedScenes).toBe(1);
+		expect(result.completedScenes).toBe(0);
 		expect(result.scenes).toHaveLength(0);
 		expect(result.characters).toHaveLength(1);
 	});
 
 	it('parses act summary with missing character summaries section', () => {
-		const markdown = `## Progress
-- Completed scenes: 3
-
-## Scene Summaries
+		const markdown = `## Scene Summaries
 ### Scene 1: Beginning
 Location: Start
 Summary: The start.`;
 
 		const result = parseActSummary(markdown);
-		expect(result.completedScenes).toBe(3);
+		expect(result.completedScenes).toBe(0);
 		expect(result.scenes).toHaveLength(1);
 		expect(result.characters).toHaveLength(0);
 	});
@@ -175,8 +184,6 @@ describe('serializeActSummary', () => {
 		const result = serializeActSummary(data);
 
 		expect(result).toContain('# Act Summary');
-		expect(result).toContain('## Progress');
-		expect(result).toContain('- Completed scenes: 2');
 		expect(result).toContain('## Scene Summaries');
 		expect(result).toContain('### Scene 1: The Arrival');
 		expect(result).toContain('Location: A coastal village');
@@ -200,7 +207,6 @@ describe('serializeActSummary', () => {
 
 		const result = serializeActSummary(data);
 		expect(result).toContain('# Act Summary');
-		expect(result).toContain('- Completed scenes: 0');
 		expect(result).toContain('## Scene Summaries');
 		expect(result).toContain('## Character Summaries');
 	});
@@ -210,7 +216,7 @@ describe('serializeActSummary', () => {
 		const serialized = serializeActSummary(original);
 		const reparsed = parseActSummary(serialized);
 
-		expect(reparsed.completedScenes).toBe(original.completedScenes);
+		expect(reparsed.completedScenes).toBe(0);
 		expect(reparsed.scenes).toHaveLength(original.scenes.length);
 		expect(reparsed.characters).toHaveLength(original.characters.length);
 
@@ -230,8 +236,8 @@ describe('serializeActSummary', () => {
 				expect(reparsed.characters[i].sceneEntries[j].summary).toBe(original.characters[i].sceneEntries[j].summary);
 			}
 		}
-		});
-		it('serializes turnOfEvents section when present', () => {
+	});
+	it('serializes turnOfEvents section when present', () => {
 		const data: ActSummary = {
 			completedScenes: 2,
 			scenes: [],
@@ -259,14 +265,13 @@ describe('serializeActSummary', () => {
 		const charIdx = result.indexOf('## Character Summaries');
 		expect(toeIdx).toBeGreaterThan(charIdx);
 	});
-
 });
 
 describe('code fence stripping', () => {
 	it('parses act summary wrapped in bare code fence', () => {
 		const wrapped = '```\n' + SAMPLE_ACT_SUMMARY + '\n```';
 		const result = parseActSummary(wrapped);
-		expect(result.completedScenes).toBe(2);
+		expect(result.completedScenes).toBe(0);
 		expect(result.scenes).toHaveLength(2);
 		expect(result.characters).toHaveLength(2);
 	});
@@ -274,15 +279,12 @@ describe('code fence stripping', () => {
 	it('parses act summary wrapped in code fence with language tag', () => {
 		const wrapped = '```markdown\n' + SAMPLE_ACT_SUMMARY + '\n```';
 		const result = parseActSummary(wrapped);
-		expect(result.completedScenes).toBe(2);
+		expect(result.completedScenes).toBe(0);
 		expect(result.scenes).toHaveLength(2);
 	});
 
 	it('parses incremental output wrapped in code fence', () => {
 		const incremental = `\`\`\`markdown
-## Progress
-- Completed scenes: 3
-
 ## Scene Summaries
 ### Scene 3: The Forest
 Location: An ancient forest
@@ -295,24 +297,21 @@ Summary: The hero discovers a hidden path.
 \`\`\``;
 
 		const result = parseIncrementalOutput(incremental);
-		expect(result.completedScenes).toBe(3);
+		expect(result.completedScenes).toBeUndefined();
 		expect(result.newScene?.title).toBe('The Forest');
 		expect(result.characterUpdates).toHaveLength(1);
 	});
 
 	it('leaves plain markdown unchanged', () => {
 		const result = parseActSummary(SAMPLE_ACT_SUMMARY);
-		expect(result.completedScenes).toBe(2);
+		expect(result.completedScenes).toBe(0);
 		expect(result.scenes).toHaveLength(2);
 	});
 });
 
 describe('parseIncrementalOutput', () => {
 	it('parses an incremental update with a new scene and character updates', () => {
-		const markdown = `## Progress
-- Completed scenes: 3
-
-## Scene Summaries
+		const markdown = `## Scene Summaries
 ### Scene 3: The Forest
 Location: An ancient forest
 Summary: The hero discovers a hidden path through the woods.
@@ -328,7 +327,7 @@ Summary: The hero discovers a hidden path through the woods.
 
 		const result = parseIncrementalOutput(markdown);
 
-		expect(result.completedScenes).toBe(3);
+		expect(result.completedScenes).toBeUndefined();
 		expect(result.newScene).toEqual({
 			sceneNumber: 3,
 			title: 'The Forest',
@@ -466,10 +465,7 @@ describe('mergeActSummary', () => {
 	it('integrates: parse + parse incremental + merge + serialize', () => {
 		const existing = parseActSummary(SAMPLE_ACT_SUMMARY);
 
-		const incrementalMarkdown = `## Progress
-- Completed scenes: 3
-
-## Scene Summaries
+		const incrementalMarkdown = `## Scene Summaries
 ### Scene 3: The Forest
 Location: An ancient forest
 Summary: The hero discovers a hidden path.
@@ -487,7 +483,7 @@ Summary: The hero discovers a hidden path.
 		const merged = mergeActSummary(existing, incremental);
 		const serialized = serializeActSummary(merged);
 
-		expect(merged.completedScenes).toBe(3);
+		expect(merged.completedScenes).toBe(0);
 		expect(merged.scenes).toHaveLength(3);
 		expect(merged.scenes[2].title).toBe('The Forest');
 		expect(merged.characters).toHaveLength(3);
@@ -500,28 +496,28 @@ Summary: The hero discovers a hidden path.
 
 		// Verify the serialized output can be re-parsed
 		const reparsed = parseActSummary(serialized);
-		expect(reparsed.completedScenes).toBe(3);
+		expect(reparsed.completedScenes).toBe(0);
 		expect(reparsed.scenes).toHaveLength(3);
 		expect(reparsed.characters).toHaveLength(3);
 	});
 
-		it('preserves existing turnOfEvents during merge', () => {
-			const existing: ActSummary = {
-				completedScenes: 2,
-				scenes: [],
-				characters: [],
-				turnOfEvents: 'A sudden betrayal changes everything.',
-				turnOfEventsSceneNumber: 2,
-				turnOfEventsSceneTitle: 'Betrayal',
-			};
-			const incremental: IncrementalUpdate = {
-				completedScenes: 3,
-				newScene: { sceneNumber: 3, title: 'Aftermath', location: 'Castle', summary: 'Fallout from the betrayal.' },
-				characterUpdates: [],
-			};
-			const merged = mergeActSummary(existing, incremental);
-			expect(merged.turnOfEvents).toBe('A sudden betrayal changes everything.');
-			expect(merged.turnOfEventsSceneNumber).toBe(2);
-			expect(merged.turnOfEventsSceneTitle).toBe('Betrayal');
-		});
+	it('preserves existing turnOfEvents during merge', () => {
+		const existing: ActSummary = {
+			completedScenes: 2,
+			scenes: [],
+			characters: [],
+			turnOfEvents: 'A sudden betrayal changes everything.',
+			turnOfEventsSceneNumber: 2,
+			turnOfEventsSceneTitle: 'Betrayal',
+		};
+		const incremental: IncrementalUpdate = {
+			completedScenes: 3,
+			newScene: { sceneNumber: 3, title: 'Aftermath', location: 'Castle', summary: 'Fallout from the betrayal.' },
+			characterUpdates: [],
+		};
+		const merged = mergeActSummary(existing, incremental);
+		expect(merged.turnOfEvents).toBe('A sudden betrayal changes everything.');
+		expect(merged.turnOfEventsSceneNumber).toBe(2);
+		expect(merged.turnOfEventsSceneTitle).toBe('Betrayal');
+	});
 });

@@ -3,6 +3,8 @@ common:
     player: 玩家
     interviewer: 訪談者
     sceneWithNumber: "場景 {sceneNumber}"
+    location: 地點
+    aliases: 別名
   headers:
     worldContent: 世界觀內容
     actPlot: 章節劇情
@@ -34,6 +36,9 @@ common:
     interviewTranscript: 以下是有關此故事及設定的訪談內容。
 
 pipeline:
+  headers:
+    sceneSummaries: 場景摘要
+    characterSummaries: 角色摘要
   extraction:
     gameMaster: 根據聊天記錄中的可用資訊，生成遊戲資料。
     editor: 根據審閱者輸出的建議，修改寫手輸出。請根據聊天記錄中的可用資訊，判斷這些建議是否有必要採納。

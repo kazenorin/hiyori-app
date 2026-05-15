@@ -6,7 +6,9 @@ import { DEFAULT_RETRY_CONFIG, type RetryConfig, type PhaseMetadata, toPhaseMeta
 import { createModel } from './provider';
 import type { GameDataFields, NarrativeVariables, PhaseName } from './narrative-types';
 import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection } from '$lib/definitions/pipeline-sections';
-import { actSummaryForScenesHeader, sectionFormat, summaryHeader } from '$lib/definitions/common-headers';
+import { actSummaryForScenesHeader, actSummaryHeader, sectionFormat, summaryHeader } from '$lib/definitions/common-headers';
+import { sceneWithNumberLabel, locationLabel, aliasesLabel } from '$lib/definitions/common-labels';
+import { characterSummariesHeader, sceneSummariesHeader } from '$lib/definitions/pipeline-prompts';
 import {
 	gameMasterExtractionPrompt,
 	editorExtractionPrompt,
@@ -35,7 +37,6 @@ import { log } from '$lib/logging/logger';
 import { ERR_NO_PROVIDER_FOR_PHASE } from '$lib/definitions/error-messages';
 import {
 	actSummaryIncrementalTemplateLoader,
-	actSummaryTemplateLoader,
 	editorSystemPromptLoader,
 	gameMasterSystemPromptLoader,
 	generalInstructionsLoader,
@@ -61,6 +62,21 @@ import {
 
 const defaultTargetWordCount = 400;
 
+function buildActSummaryTemplate(): string {
+	const sceneLabel = sceneWithNumberLabel('{N}');
+	return [
+		sectionFormat(actSummaryHeader(), 1),
+		sectionFormat(sceneSummariesHeader()),
+		sectionFormat(`${sceneLabel}: [Scene title]`, 3),
+		`${locationLabel()}: [location of where the scene took place.]`,
+		`${summaryHeader()}: [summary, max 3 sentences]\n`,
+		sectionFormat(characterSummariesHeader()),
+		'### [Well-known name of the character]',
+		`- ${aliasesLabel()}: [aliases]`,
+		`- ${sceneLabel}: [summary if appeared, max 2 sentences. Optionally append one short, representative quote of dialogue or internal monologue.]`,
+	].join('\n');
+}
+
 // Dynamic prompts
 const promptLoaderDefinitions = {
 	generalInstructions: generalInstructionsLoader,
@@ -71,7 +87,6 @@ const promptLoaderDefinitions = {
 	editorSystemPrompt: editorSystemPromptLoader,
 	gameMasterSystemPrompt: gameMasterSystemPromptLoader,
 	summarizerPrompt: summarizerPromptLoader,
-	actSummaryTemplate: actSummaryTemplateLoader,
 	summarizerIncrementalPrompt: summarizerIncrementalPromptLoader,
 	actSummaryIncrementalTemplate: actSummaryIncrementalTemplateLoader,
 } satisfies Record<string, PromptLoader>;
@@ -390,11 +405,12 @@ async function generateFullSummary(
 	input: PipelineInput,
 	loadedPrompts: LoadedPrompts
 ): Promise<{ actSummary: string; metadata: StreamResultMetadata }> {
-	const { summarizerPrompt, actSummaryTemplate } = loadedPrompts;
+	const { summarizerPrompt } = loadedPrompts;
 	const { execution } = input;
 	const { providerConfigs, abortSignal } = execution;
 
 	// === FIRST SUMMARY: Full generation (existing behavior) ===
+	const actSummaryTemplate = buildActSummaryTemplate();
 	const summarizerSystemPrompt = summarizerPrompt.replaceAll('{actSummaryTemplate}', actSummaryTemplate);
 
 	const summarizerMessages = buildSummarizerMessages(input);
@@ -433,6 +449,12 @@ async function generateIncrementalSummary(
 	const sceneNumber = String(completedScenes);
 	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
 	const processedTemplate = actSummaryIncrementalTemplate
+		.replace(/{sceneSummariesHeader}/g, sceneSummariesHeader())
+		.replace(/{characterSummariesHeader}/g, characterSummariesHeader())
+		.replace(/{sceneWithNumber}/g, sceneWithNumberLabel('{sceneNumber}'))
+		.replace(/{locationLabel}/g, locationLabel())
+		.replace(/{summaryHeader}/g, summaryHeader())
+		.replace(/{aliasesLabel}/g, aliasesLabel())
 		.replaceAll('{completedScenes}', sceneNumber)
 		.replaceAll('{sceneNumber}', sceneNumber)
 		.replaceAll('{sceneTitle}', sceneTitle);

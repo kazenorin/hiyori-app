@@ -3,6 +3,8 @@ common:
     player: Player
     interviewer: Interviewer
     sceneWithNumber: "Scene {sceneNumber}"
+    location: Location
+    aliases: Aliases
   headers:
     worldContent: World Content
     actPlot: Act Plot
@@ -34,6 +36,9 @@ common:
     interviewTranscript: The following is an interview exchange about the story and premises.
 
 pipeline:
+  headers:
+    sceneSummaries: Scene Summaries
+    characterSummaries: Character Summaries
   extraction:
     gameMaster: Generate the game data based on the available information in the chat history.
     editor: Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history.

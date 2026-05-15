@@ -7,3 +7,6 @@ export const playerLabel = () => ls('common.labels.player');
 export const interviewerLabel = () => ls('common.labels.interviewer');
 
 export const sceneWithNumberLabel = (sceneNumber: number | string) => ls('common.labels.sceneWithNumber', { sceneNumber });
+
+export const locationLabel = () => ls('common.labels.location');
+export const aliasesLabel = () => ls('common.labels.aliases');

@@ -1,5 +1,9 @@
 import { ls } from '$lib/localization';
 
+// Headers
+export const sceneSummariesHeader = () => ls('pipeline.headers.sceneSummaries');
+export const characterSummariesHeader = () => ls('pipeline.headers.characterSummaries');
+
 // Labels
 export const acceptAsIsLabel = () => ls('pipeline.labels.acceptAsIs');
 export const totalViolationsLabel = () => ls('pipeline.labels.totalViolations');
