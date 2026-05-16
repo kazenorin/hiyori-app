@@ -442,7 +442,7 @@
 			<h2 class="h4">{t('settings.pipelineRoles')}</h2>
 			<span class="text-xs text-surface-500">{t('settings.pipelineRolesDescription')}</span>
 
-			<label class="block">
+			<div class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.plotPlanner')}</span>
 				<div class="flex items-center gap-2 mt-1">
 					<Switch checked={settings.plotPlannerEnabled} onCheckedChange={(details) => updateSettings({ plotPlannerEnabled: details.checked })} disabled={!getPlotPlannerProviderConfig()}>
@@ -456,7 +456,7 @@
 				</div>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.plotPlannerDescription')}</span>
 				<span class="text-xs text-surface-500 block">{t('settings.enablePlotPlannerDescription')}</span>
-			</label>
+			</div>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.writer')}</span>
