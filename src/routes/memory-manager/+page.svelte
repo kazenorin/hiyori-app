@@ -231,16 +231,18 @@
 
 	async function doReset() {
 		isLoading = true;
+		memories = [];
+		inventoryItems = [];
+		locations = [];
+		searchResults = [];
+		locationSearchResults = [];
+		locationQueryResults = [];
 		try {
-			const memory = new Memory(embeddingConfig);
-			await memory.reset();
-			memories = [];
-			inventoryItems = [];
-			locations = [];
-			searchResults = [];
-			locationSearchResults = [];
-			locationQueryResults = [];
-			status = t('memoryManager.allMemoriesDeleted');
+			if (embeddingConfig) {
+				const memory = new Memory(embeddingConfig);
+				await memory.reset();
+				status = t('memoryManager.allMemoriesDeleted');
+			}
 		} catch (err) {
 			status = err instanceof Error ? err.message : t('memoryManager.resetFailed');
 		} finally {
