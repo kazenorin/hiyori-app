@@ -161,9 +161,11 @@ function getLatestActSummary(): string {
 	return '';
 }
 
-function getLatestScenePlot(): string {
+function getScenePlotForScene(sceneNumber: number): string {
 	for (let i = messages.length - 1; i >= 0; i--) {
-		if (messages[i].scenePlot) return messages[i].scenePlot!;
+		if (messages[i].sceneNumber === sceneNumber && messages[i].scenePlot) {
+			return messages[i].scenePlot!;
+		}
 	}
 	return '';
 }
@@ -357,7 +359,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		const worldContent = getActiveWorldContent() ?? '';
 		const actPlot = getActiveActPlotContent() ?? '';
 		const actSummary = getLatestActSummary();
-		const previousScenePlot = getLatestScenePlot();
+		const previousScenePlot = getScenePlotForScene(previousSceneNumber);
 		const templateReplacements = { sceneNumber: String(nextSceneNumber) };
 
 		// Pipeline callback helpers

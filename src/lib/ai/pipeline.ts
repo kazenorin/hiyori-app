@@ -31,7 +31,7 @@ import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
 import { variablesToMarkdown, hasTemplateMetadata } from './template-renderer';
 import { runMemoryExtractionPipeline } from '$lib/features/memory/memory-extraction-pipeline';
 import { extractImportantPhrases } from './important-phrases-extractor';
-import { isPhraseHighlightingEnabled } from '$lib/stores/settings.svelte';
+import { isPhraseHighlightingEnabled, isPlotPlannerEnabled } from '$lib/stores/settings.svelte';
 import { filterToolsForPhase } from '$lib/ai/tools/tools';
 import { log } from '$lib/logging/logger';
 import { ERR_NO_PROVIDER_FOR_PHASE } from '$lib/definitions/error-messages';
@@ -745,7 +745,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		}
 	}
 
-	// --- Phase 4: Game Master + Plot Planner (concurrent) ---
+	// --- Phase 4: Game Master + Plot Planner (concurrent, or Game Master only) ---
 	{
 		const editorOutput = state.editorOutput ?? '';
 		const sharedSections = [
@@ -760,8 +760,51 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 			...(editorOutput ? [SECTION.EDITOR_OUTPUT + editorOutput] : []),
 		];
 
-		const [gmResult, plotResult] = await Promise.all([
-			executeStreamingPhase(
+		if (isPlotPlannerEnabled()) {
+			const [gmResult, plotResult] = await Promise.all([
+				executeStreamingPhase(
+					{
+						phaseName: 'GAME_MASTER',
+						systemPrompt: gameMasterSystemPrompt,
+						...sharedParams,
+						tools: filterToolsForPhase(tools, 'GAME_MASTER'),
+						descriptors: getGameMasterDescriptors(),
+						messages: toUserMessages([...sharedSections, gameMasterExtractionPrompt()]),
+						providerConfig: providerConfigs.gameMaster,
+						buildStateUpdate: (ss) => ({
+							gameMasterOutput: ss.content,
+							gameData: ss.variables?.gameData ?? null,
+						}),
+					},
+					state
+				),
+				executeStreamingPhase(
+					{
+						phaseName: 'PLOT_PLANNER',
+						systemPrompt: plotPlannerSystemPrompt
+							.replaceAll('{generalInstructions}', generalInstructions)
+							.replaceAll('{targetWordCount}', effectiveTargetWordCount),
+						...sharedParams,
+						tools: filterToolsForPhase(tools, 'PLOT_PLANNER'),
+						descriptors: getPlotPlannerDescriptors(),
+						messages: toUserMessages([...sharedSections, plotPlannerExtractionPromptTemplate(currentScene)]),
+						providerConfig: providerConfigs.plotPlanner,
+						buildStateUpdate: (ss) => ({
+							scenePlot: ss.content,
+						}),
+					},
+					state
+				),
+			]);
+
+			state = gmResult.state;
+			state = updateState(state, { scenePlot: plotResult.state.scenePlot });
+			aggregatedMetadata = aggregateMetadata(aggregatedMetadata, gmResult.metadata, providerConfigs.gameMaster?.model);
+			phaseEntries.push(toPhaseMetadata('GAME_MASTER', gmResult.metadata, providerConfigs.gameMaster?.model));
+			aggregatedMetadata = aggregateMetadata(aggregatedMetadata, plotResult.metadata, providerConfigs.plotPlanner?.model);
+			phaseEntries.push(toPhaseMetadata('PLOT_PLANNER', plotResult.metadata, providerConfigs.plotPlanner?.model));
+		} else {
+			const gmResult = await executeStreamingPhase(
 				{
 					phaseName: 'GAME_MASTER',
 					systemPrompt: gameMasterSystemPrompt,
@@ -776,32 +819,12 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					}),
 				},
 				state
-			),
-			executeStreamingPhase(
-				{
-					phaseName: 'PLOT_PLANNER',
-					systemPrompt: plotPlannerSystemPrompt
-						.replaceAll('{generalInstructions}', generalInstructions)
-						.replaceAll('{targetWordCount}', effectiveTargetWordCount),
-					...sharedParams,
-					tools: filterToolsForPhase(tools, 'PLOT_PLANNER'),
-					descriptors: getPlotPlannerDescriptors(),
-					messages: toUserMessages([...sharedSections, plotPlannerExtractionPromptTemplate(currentScene)]),
-					providerConfig: providerConfigs.plotPlanner,
-					buildStateUpdate: (ss) => ({
-						scenePlot: ss.content,
-					}),
-				},
-				state
-			),
-		]);
+			);
 
-		state = gmResult.state;
-		state = updateState(state, { scenePlot: plotResult.state.scenePlot });
-		aggregatedMetadata = aggregateMetadata(aggregatedMetadata, gmResult.metadata, providerConfigs.gameMaster?.model);
-		phaseEntries.push(toPhaseMetadata('GAME_MASTER', gmResult.metadata, providerConfigs.gameMaster?.model));
-		aggregatedMetadata = aggregateMetadata(aggregatedMetadata, plotResult.metadata, providerConfigs.plotPlanner?.model);
-		phaseEntries.push(toPhaseMetadata('PLOT_PLANNER', plotResult.metadata, providerConfigs.plotPlanner?.model));
+			state = gmResult.state;
+			aggregatedMetadata = aggregateMetadata(aggregatedMetadata, gmResult.metadata, providerConfigs.gameMaster?.model);
+			phaseEntries.push(toPhaseMetadata('GAME_MASTER', gmResult.metadata, providerConfigs.gameMaster?.model));
+		}
 	}
 
 	// --- Template fitting for GM (if gameData lacks required structure) ---

@@ -58,6 +58,7 @@ function defaultSettings() {
 		memoryProviderRole: 'main',
 		embeddingProviderRole: 'main',
 		plotPlannerProviderRole: 'main',
+		plotPlannerEnabled: true,
 		writerProviderRole: 'main',
 		editorProviderRole: 'main',
 		gameMasterProviderRole: 'main',

@@ -32,6 +32,7 @@ export interface Settings {
 	memoryProviderRole: string;
 	embeddingProviderRole: string;
 	plotPlannerProviderRole: string;
+	plotPlannerEnabled: boolean;
 	writerProviderRole: string;
 	reviewerProviderRole: string;
 	editorProviderRole: string;
@@ -54,6 +55,7 @@ const defaults: Settings = {
 	memoryProviderRole: 'main',
 	embeddingProviderRole: 'main',
 	plotPlannerProviderRole: 'main',
+	plotPlannerEnabled: true,
 	writerProviderRole: 'main',
 	reviewerProviderRole: 'main',
 	editorProviderRole: 'main',
@@ -89,6 +91,7 @@ function migrateFromFlatSettings(raw: Record<string, unknown>): Settings {
 		memoryProviderRole: (raw.memoryProviderRole as string) || 'main',
 		embeddingProviderRole: (raw.embeddingProviderRole as string) || 'main',
 		plotPlannerProviderRole: (raw.plotPlannerProviderRole as string) || 'main',
+		plotPlannerEnabled: (raw.plotPlannerEnabled as boolean) ?? true,
 		writerProviderRole: (raw.writerProviderRole as string) || 'main',
 		reviewerProviderRole: (raw.reviewerProviderRole as string) || 'main',
 		editorProviderRole: (raw.editorProviderRole as string) || 'main',
@@ -253,6 +256,10 @@ export function isPhraseHighlightingEnabled(): boolean {
 	return settings.importantPhraseHighlighting && !!getMinorTaskAgentProviderConfig();
 }
 
+export function isPlotPlannerEnabled(): boolean {
+	return settings.plotPlannerEnabled && !!getPlotPlannerProviderConfig();
+}
+
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
 	const id = settings.roleAssignments[role];
 	if (!id) return undefined;
@@ -296,6 +303,7 @@ export async function updateSettings(
 			| 'memoryProviderRole'
 			| 'embeddingProviderRole'
 			| 'plotPlannerProviderRole'
+			| 'plotPlannerEnabled'
 			| 'writerProviderRole'
 			| 'reviewerProviderRole'
 			| 'editorProviderRole'
@@ -318,6 +326,7 @@ export async function updateSettings(
 	if (partial.memoryProviderRole !== undefined) settings.memoryProviderRole = partial.memoryProviderRole;
 	if (partial.embeddingProviderRole !== undefined) settings.embeddingProviderRole = partial.embeddingProviderRole;
 	if (partial.plotPlannerProviderRole !== undefined) settings.plotPlannerProviderRole = partial.plotPlannerProviderRole;
+	if (partial.plotPlannerEnabled !== undefined) settings.plotPlannerEnabled = partial.plotPlannerEnabled;
 	if (partial.writerProviderRole !== undefined) settings.writerProviderRole = partial.writerProviderRole;
 	if (partial.reviewerProviderRole !== undefined) settings.reviewerProviderRole = partial.reviewerProviderRole;
 	if (partial.editorProviderRole !== undefined) settings.editorProviderRole = partial.editorProviderRole;

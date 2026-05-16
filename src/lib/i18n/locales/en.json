@@ -62,6 +62,8 @@
 		"pipelineRolesDescription": "Assign providers to each pipeline phase. All default to the main provider.",
 		"plotPlanner": "Plot Planner",
 		"plotPlannerDescription": "Plans the scene plot and pacing before writing.",
+		"enablePlotPlanner": "Plot Planner",
+		"enablePlotPlannerDescription": "When enabled, a scene plot is generated for each scene, which enhances pacing and narrative direction for future scenes.",
 		"writer": "Writer",
 		"writerDescription": "Writes the narrative prose from the scene plot.",
 		"reviewer": "Reviewer",

@@ -62,6 +62,8 @@
 		"pipelineRolesDescription": "將提供者分配給各流程階段。所有角色皆預設使用「主要提供者」。",
 		"plotPlanner": "編劇",
 		"plotPlannerDescription": "在撰寫前規劃場景劇情和節奏。",
+		"enablePlotPlanner": "編劇",
+		"enablePlotPlannerDescription": "啟用時，會為每個場景生成劇情大綱，從而提升後續場景的節奏與敘事方向。",
 		"writer": "寫手",
 		"writerDescription": "根據場景劇情撰寫敘事散文。",
 		"reviewer": "審閱者",
