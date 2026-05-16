@@ -32,7 +32,6 @@ let activeSystemPrompt = $state<string | null>(null);
 let activeWorldContent = $state<string | null>(null);
 let activeInterviewTranscript = $state<ModelMessage[]>([]);
 let activeActPlotContent = $state<string>('');
-let actPlotGenerationActive = $state(false);
 let actPlotGenerationPhase = $state<ActPlotPhase | null>(null);
 
 export function getStories(): dbStories.Story[] {
@@ -80,14 +79,8 @@ export function setActiveActPlotContent(content: string): void {
 		activeActPlotContent = content;
 	}
 }
-export function getActPlotGenerationActive(): boolean {
-	return actPlotGenerationActive;
-}
 export function getActPlotGenerationPhase(): ActPlotPhase | null {
 	return actPlotGenerationPhase;
-}
-export function setActPlotGenerationActive(value: boolean): void {
-	actPlotGenerationActive = value;
 }
 export function setActPlotGenerationPhase(phase: ActPlotPhase | null): void {
 	actPlotGenerationPhase = phase;
@@ -248,7 +241,6 @@ async function ensureActPlot(): Promise<void> {
 				activeActPlotContent = await readTextFile(plotPath, { baseDir: BaseDirectory.AppData });
 			} else {
 				// Generate act plot if it doesn't exist yet
-				actPlotGenerationActive = true;
 				const result = await generateActPlot({
 					storyId: activeStoryId,
 					storyName: activeStoryName,
@@ -261,12 +253,10 @@ async function ensureActPlot(): Promise<void> {
 					},
 				});
 				activeActPlotContent = result.content;
-				actPlotGenerationActive = false;
 				actPlotGenerationPhase = null;
 			}
 		}
 	} catch {
-		actPlotGenerationActive = false;
 		actPlotGenerationPhase = null;
 	}
 }

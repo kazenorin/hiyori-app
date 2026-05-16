@@ -48,7 +48,6 @@
 		getActiveWorldContent,
 		getIsSelectingStory,
 		selectActLineQuiet,
-		setActPlotGenerationActive,
 		setActPlotGenerationPhase,
 		setActiveActPlotContent,
 	} from '$lib/stores/stories.svelte';
@@ -274,7 +273,6 @@
 		try {
 			const actLine = await getActLine(refs.actLineId);
 			const isMainLine = actLine?.isMainLine ?? true;
-			setActPlotGenerationActive(true);
 			const actPlot = await generateActPlot({
 				storyId: refs.story.id,
 				storyName: refs.story.name,
@@ -289,7 +287,6 @@
 		} catch (err) {
 			createStoryError = err instanceof Error ? err.message : t('errors.failedToCreateStory');
 		} finally {
-			setActPlotGenerationActive(false);
 			setActPlotGenerationPhase(null);
 			isCreatingStory = false;
 		}
@@ -346,16 +343,15 @@
 				const actLine = await getActLine(refs.actLineId);
 				const isMainLine = actLine?.isMainLine ?? true;
 
-				setActPlotGenerationActive(true);
 				const actPlotResult = await generateActPlot({
-					storyId: refs.story.id,
-					storyName: refs.story.name,
-					worldContent,
-					actLineId: refs.actLineId,
-					isMainLine,
-					actNumber: 1,
-					isResumeGame: isGameResumeMode,
-					onPhaseChange: (phase) => setActPlotGenerationPhase(phase)
+				storyId: refs.story.id,
+				storyName: refs.story.name,
+				worldContent,
+				actLineId: refs.actLineId,
+				isMainLine,
+				actNumber: 1,
+				isResumeGame: isGameResumeMode,
+				onPhaseChange: (phase) => setActPlotGenerationPhase(phase)
 				});
 				setActiveActPlotContent(actPlotResult.content);
 
@@ -384,7 +380,6 @@
 		} catch (err) {
 			createStoryError = err instanceof Error ? err.message : t('errors.failedToStartGame');
 		} finally {
-			setActPlotGenerationActive(false);
 			setActPlotGenerationPhase(null);
 			isCreatingStory = false;
 		}
