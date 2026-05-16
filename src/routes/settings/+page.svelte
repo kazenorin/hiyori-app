@@ -441,22 +441,23 @@
 			<h2 class="h4">{t('settings.pipelineRoles')}</h2>
 			<span class="text-xs text-surface-500">{t('settings.pipelineRolesDescription')}</span>
 
-			<label class="flex items-center gap-2">
-				<input
-					type="checkbox"
-					class="checkbox"
-					checked={settings.plotPlannerEnabled}
-					disabled={!getPlotPlannerProviderConfig()}
-					onchange={(e) => updateSettings({ plotPlannerEnabled: (e.currentTarget as HTMLInputElement).checked })}
-				/>
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.enablePlotPlanner')}</span>
-			</label>
-			<span class="text-xs text-surface-500">{t('settings.enablePlotPlannerDescription')}</span>
-
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.plotPlanner')}</span>
-				<ThemedSelect items={roleItems()} value={settings.plotPlannerProviderRole} onValueChange={(v) => updateSettings({ plotPlannerProviderRole: v })} disabled={settings.providers.length === 0 || !settings.plotPlannerEnabled} placeholder={t('settings.noProvidersConfigured')} />
+				<div class="flex items-center gap-2 mt-1">
+					<label class="flex items-center gap-1">
+						<input
+							type="checkbox"
+							class="checkbox"
+							checked={settings.plotPlannerEnabled}
+							disabled={!getPlotPlannerProviderConfig()}
+							onchange={(e) => updateSettings({ plotPlannerEnabled: (e.currentTarget as HTMLInputElement).checked })}
+						/>
+						<span class="text-xs text-surface-500">{t('settings.enabled')}</span>
+					</label>
+					<ThemedSelect items={roleItems()} value={settings.plotPlannerProviderRole} onValueChange={(v) => updateSettings({ plotPlannerProviderRole: v })} disabled={settings.providers.length === 0 || !settings.plotPlannerEnabled} placeholder={t('settings.noProvidersConfigured')} />
+				</div>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.plotPlannerDescription')}</span>
+				<span class="text-xs text-surface-500 block">{t('settings.enablePlotPlannerDescription')}</span>
 			</label>
 
 			<label class="block">
