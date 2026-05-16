@@ -466,23 +466,30 @@
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.writerDescription')}</span>
 			</label>
 
-			<label class="flex items-center gap-2">
-				<input type="checkbox" class="checkbox" checked={settings.reviewerEnabled} onchange={(e) => updateSettings({ reviewerEnabled: (e.currentTarget as HTMLInputElement).checked })} />
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.reviewerEnabled')}</span>
-			</label>
-			<span class="text-xs text-surface-500">{t('settings.reviewerEnabledDescription')}</span>
+				<div class="block">
+					<span class="text-sm font-medium text-surface-700-300">{t('settings.reviewer')}</span>
+					<div class="flex items-center gap-2 mt-1">
+						<label class="flex items-center gap-1">
+							<input
+								type="checkbox"
+								class="checkbox"
+								checked={settings.reviewerEnabled}
+								disabled={settings.providers.length === 0}
+								onchange={(e) => updateSettings({ reviewerEnabled: (e.currentTarget as HTMLInputElement).checked })}
+							/>
+							<span class="text-xs text-surface-500">{t('settings.enabled')}</span>
+						</label>
+						<ThemedSelect items={roleItems()} value={settings.reviewerProviderRole} onValueChange={(v) => updateSettings({ reviewerProviderRole: v })} disabled={settings.providers.length === 0 || !settings.reviewerEnabled} placeholder={t('settings.noProvidersConfigured')} />
+					</div>
+					<span class="text-xs text-surface-500 mt-1 block">{t('settings.reviewerDescription')}</span>
+					<span class="text-xs text-surface-500 block">{t('settings.enableReviewerDescription')}</span>
+				</div>
 
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.reviewer')}</span>
-				<ThemedSelect items={roleItems()} value={settings.reviewerProviderRole} onValueChange={(v) => updateSettings({ reviewerProviderRole: v })} disabled={!settings.reviewerEnabled || settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.reviewerDescription')}</span>
-			</label>
-
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.editor')}</span>
-				<ThemedSelect items={roleItems()} value={settings.editorProviderRole} onValueChange={(v) => updateSettings({ editorProviderRole: v })} disabled={!settings.reviewerEnabled || settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.editorDescription')}</span>
-			</label>
+				<label class="block">
+					<span class="text-sm font-medium text-surface-700-300">{t('settings.editor')}</span>
+					<ThemedSelect items={roleItems()} value={settings.editorProviderRole} onValueChange={(v) => updateSettings({ editorProviderRole: v })} disabled={!settings.reviewerEnabled || settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+					<span class="text-xs text-surface-500 mt-1 block">{t('settings.editorDescription')}</span>
+				</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.gameMaster')}</span>
