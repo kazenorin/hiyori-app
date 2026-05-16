@@ -616,10 +616,13 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		// --- Sequential Phase 2+3: Reviewer → Editor (skipped when reviewer disabled) ---
 		if (!isReviewerEnabled()) {
 			state = updateState(state, {
+				currentPhase: 'EDITOR',
 				editorOutput: state.writerOutput,
 				editorVariables: state.writerVariables ?? null,
 				editorReasoning: null,
 			});
+			callbacks.onPhaseStart('EDITOR');
+			callbacks.onPhaseComplete('EDITOR', state);
 		} else {
 			{
 				const result = await executeStreamingPhase(
