@@ -136,14 +136,6 @@ Async chain (starts concurrently with sequential):
 
 **`src/lib/ai/descriptors.ts`** — defines which fields each phase extracts. The stream parser (`src/lib/chat-stream-parser/`) uses these to route structured sections into `NarrativeVariables` or `GameDataFields`:
 
-| Descriptor Set             | Used By                                | Extracts                                      |
-|----------------------------|----------------------------------------|-----------------------------------------------|
-| `SCENE_DESCRIPTORS`        | Writer, Editor, Editor Template Fitter | sceneTitle, background, narrativeBody, cg     |
-| `GAME_DATA_DESCRIPTORS`    | GM, GM Template Fitter                 | activePlotThreads, decisionContext, decisions |
-| `NARRATIVE_DESCRIPTORS`    | Writer                                 | scene + game data (combined)                  |
-| `REVIEWER_DESCRIPTORS`     | Reviewer                               | (none — raw text)                             |
-| `PLOT_PLANNER_DESCRIPTORS` | Plot Planner                           | (none — raw text)                             |
-
 ## Chat State Management
 
 **`src/lib/ai/chat.svelte.ts`** — Svelte 5 runes managing the main chat UI.
@@ -156,18 +148,6 @@ Async chain (starts concurrently with sequential):
 - `persistMessage(actLineId, message)` — writes to DB + junction table
 - `loadActLineMessages(actLineId)` — loads and maps to UIMessages, triggers backfill for missing phrases
 - `sendMessage(actLineId, message)` — full pipeline orchestration: builds provider configs (7 roles, falls back to `main`), builds callbacks, calls `runPipeline()`, handles errors
-
-## Dialogue Preprocessor
-
-**`src/lib/utils/dialogue-preprocessor.ts`** — `preprocessDialogue(content, characterNames?, importantPhrases?)` applies highlighting with strict precedence:
-
-**dialogue > highlighted-phrase > character-name**
-
-Each layer masks its regions so subsequent passes can't match inside them.
-
-## Important Phrase Highlighting
-
-Background LLM extraction + UI highlighting. After Editor phase, `extractImportantPhrases()` runs via MinorTaskAgent (fire-and-forget). On `sendMessage()` completion, the promise is resolved and phrases are persisted. On `loadActLineMessages()`, missing phrases are backfilled sequentially. `MarkdownContent.svelte` passes phrases to `preprocessDialogue()`.
 
 ## Template Rendering
 
@@ -183,15 +163,7 @@ Background LLM extraction + UI highlighting. After Editor phase, `extractImporta
 
 ## AI Tools
 
-**`src/lib/ai/tools/tools.ts`** — `buildTools(storyId, actLineId)` combines all tool sets:
-
-| Tool              | File                 | Purpose                                               |
-|-------------------|----------------------|-------------------------------------------------------|
-| `query-memories`  | `query-memories.ts`  | Semantic search over character memories and locations |
-| `query-inventory` | `query-inventory.ts` | Search and modify inventory items                     |
-| `evaluate-risk`   | `evaluate-risk.ts`   | Dice-roll risk evaluation (-1/0/1 outcome)            |
-| `read-act-plot`   | `read-act-plot.ts`   | Read the current act plot file                        |
-| `read-scene`      | `read-scene.ts`      | Read messages for a specific scene number             |
+**`src/lib/ai/tools/tools.ts`** — `buildTools(storyId, actLineId)` combines all tool sets.
 
 ## Memory System
 
@@ -230,43 +202,3 @@ executeStream (streaming.ts)
 - **Act Cards** (`src/lib/ai/act-card-generator.ts`): Generates summary documents for entire acts.
 
 Both use `Prompt` class instances, support parallel generation, and write to story folder under `act-N/characters/`.
-
-## Vector Data Types (sqlite-vec)
-
-The `sqlite-vec` extension is available in all SQLite connections (registered process-globally via `main.rs`). All sqlite-vec SQL functions and the `vec0` virtual table module are available from JavaScript SQL queries.
-
-### Constraints
-
-- **vec0 schema requires explicit dimension**: `float[N]` (e.g., `float[768]`), not bare `float`.
-- **Vectors as JSON strings**: `tauri-plugin-sql` IPC cannot bind binary BLOBs from JavaScript. Pass vectors as JSON strings — sqlite-vec parses them natively.
-- **Integer primary keys only**: Use `last_insert_rowid()` in SQL instead of passing rowids from JavaScript (JS `number` binds as REAL through IPC).
-- **KNN queries require LIMIT on vec0 scan**: When JOINing with other tables, use a subquery pattern so the `LIMIT` is directly on the vec0 virtual table scan.
-
-### Example Usage (JavaScript)
-
-```sql
--- Create a vector table
-CREATE VIRTUAL TABLE vec_items USING vec0(embedding float[768]);
-
--- Insert (vector as JSON string)
-INSERT INTO vec_items(rowid, embedding) VALUES (1, '[0.1, 0.2, ...]');
-
--- Search (top 5 closest by cosine distance)
-SELECT rowid, distance
-FROM vec_items
-WHERE embedding MATCH '[0.3, 0.1, ...]'
-ORDER BY distance
-LIMIT 5;
-```
-
-## IntelliJ MCP Usage
-
-When using IntelliJ MCP tools, first check whether the current shell is WSL2 by running `which wslpath`.
-
-If `wslpath` is available, convert the project path to a Windows path before passing it to IntelliJ MCP:
-
-```bash
-$(wslpath -w "$ProjectPath")
-```
-
-where `$ProjectPath` is the current project directory.

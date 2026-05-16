@@ -135,6 +135,48 @@ svelte.config.js          # adapter-static (SPA fallback)
 vite.config.ts            # Vite dev server on port 1420
 ```
 
+## Features
+
+### Dialogue Preprocessor
+
+**`src/lib/utils/dialogue-preprocessor.ts`** — `preprocessDialogue(content, characterNames?, importantPhrases?)` applies highlighting with strict precedence:
+
+**dialogue > highlighted-phrase > character-name**
+
+Each layer masks its regions so subsequent passes can't match inside them.
+
+### Important Phrase Highlighting
+
+Background LLM extraction + UI highlighting. After Editor phase, `extractImportantPhrases()` runs via MinorTaskAgent (fire-and-forget). On `sendMessage()` completion, the promise is resolved and phrases are persisted. On `loadActLineMessages()`, missing phrases are backfilled sequentially. `MarkdownContent.svelte` passes phrases to `preprocessDialogue()`.
+
+### Vector Data Types (sqlite-vec)
+
+The `sqlite-vec` extension is available in all SQLite connections (registered process-globally via `main.rs`). All sqlite-vec SQL functions and the `vec0` virtual table module are available from JavaScript SQL queries.
+
+#### Constraints
+
+- **vec0 schema requires explicit dimension**: `float[N]` (e.g., `float[768]`), not bare `float`.
+- **Vectors as JSON strings**: `tauri-plugin-sql` IPC cannot bind binary BLOBs from JavaScript. Pass vectors as JSON strings — sqlite-vec parses them natively.
+- **Integer primary keys only**: Use `last_insert_rowid()` in SQL instead of passing rowids from JavaScript (JS `number` binds as REAL through IPC).
+- **KNN queries require LIMIT on vec0 scan**: When JOINing with other tables, use a subquery pattern so the `LIMIT` is directly on the vec0 virtual table scan.
+
+#### Example Usage (JavaScript)
+
+```sql
+-- Create a vector table
+CREATE VIRTUAL TABLE vec_items USING vec0(embedding float[768]);
+
+-- Insert (vector as JSON string)
+INSERT INTO vec_items(rowid, embedding) VALUES (1, '[0.1, 0.2, ...]');
+
+-- Search (top 5 closest by cosine distance)
+SELECT rowid, distance
+FROM vec_items
+WHERE embedding MATCH '[0.3, 0.1, ...]'
+ORDER BY distance
+LIMIT 5;
+```
+
 ## License
 
 ISC
