@@ -13,6 +13,7 @@ import {
 	gameMasterExtractionPrompt,
 	editorExtractionPrompt,
 	reviewerExtractionPromptTemplate,
+	quickReviewerExtractionPromptTemplate,
 	writerExtractionPromptTemplate,
 	plotPlannerExtractionPromptTemplate,
 	summarizerFallbackExtractionPromptTemplate,
@@ -31,7 +32,7 @@ import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
 import { variablesToMarkdown, hasTemplateMetadata } from './template-renderer';
 import { runMemoryExtractionPipeline } from '$lib/features/memory/memory-extraction-pipeline';
 import { extractImportantPhrases } from './important-phrases-extractor';
-import { isPhraseHighlightingEnabled, isPlotPlannerEnabled } from '$lib/stores/settings.svelte';
+import { isPhraseHighlightingEnabled, isPlotPlannerEnabled, isReviewerEnabled, getSettings } from '$lib/stores/settings.svelte';
 import { filterToolsForPhase } from '$lib/ai/tools/tools';
 import { log } from '$lib/logging/logger';
 import { ERR_NO_PROVIDER_FOR_PHASE } from '$lib/definitions/error-messages';
@@ -43,6 +44,7 @@ import {
 	plotPlannerSystemPromptLoader,
 	type PromptLoader,
 	reviewerSystemPromptTemplateLoader,
+	quickReviewerSystemPromptTemplateLoader,
 	summarizerIncrementalPromptLoader,
 	summarizerPromptLoader,
 	writerOutputTemplateLoader,
@@ -50,7 +52,6 @@ import {
 } from '$lib/fs/prompts';
 import { mergeActSummary, parseActSummary, parseIncrementalOutput, serializeActSummary } from './act-summary-parser';
 import { reviewerAcceptsAsIs } from './reviewer-output-parser';
-import { isReviewerEnabled } from '$lib/stores/settings.svelte';
 import {
 	getNarrativeDescriptors,
 	getReviewerDescriptors,
@@ -85,6 +86,7 @@ const promptLoaderDefinitions = {
 	writerSystemPrompt: writerSystemPromptLoader,
 	writerOutputTemplate: writerOutputTemplateLoader,
 	reviewerSystemPromptTemplate: reviewerSystemPromptTemplateLoader,
+	quickReviewerSystemPromptTemplate: quickReviewerSystemPromptTemplateLoader,
 	editorSystemPrompt: editorSystemPromptLoader,
 	gameMasterSystemPrompt: gameMasterSystemPromptLoader,
 	summarizerPrompt: summarizerPromptLoader,
@@ -553,10 +555,13 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		writerSystemPrompt,
 		writerOutputTemplate,
 		reviewerSystemPromptTemplate,
+		quickReviewerSystemPromptTemplate,
 		editorSystemPrompt,
 		gameMasterSystemPrompt,
 		plotPlannerSystemPrompt,
 	} = loadedPrompts;
+
+	const reviewerPrompt = getSettings().reviewerMode === 'quick' ? quickReviewerSystemPromptTemplate : reviewerSystemPromptTemplate;
 
 	// --- Async phases (Summarizer, then Memory) ---
 	const asyncPhases = (async (): Promise<AsyncPhaseResults> => {
@@ -634,7 +639,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 			const result = await executeStreamingPhase(
 				{
 					phaseName: 'REVIEWER',
-					systemPrompt: reviewerSystemPromptTemplate
+					systemPrompt: reviewerPrompt
 						.replaceAll('{generalInstructions}', generalInstructions)
 						.replaceAll('{acceptAsIs}', acceptAsIsLabel())
 						.replaceAll('{summary}', summaryHeader())
@@ -652,7 +657,9 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 						...playerResponseSection(player),
 						...formatTurnOfEventsSection(previousTurnOfEvents),
 						...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
-						reviewerExtractionPromptTemplate(currentScene),
+						getSettings().reviewerMode === 'quick'
+							? quickReviewerExtractionPromptTemplate(currentScene)
+							: reviewerExtractionPromptTemplate(currentScene),
 					]),
 					providerConfig: providerConfigs.reviewer,
 					buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),

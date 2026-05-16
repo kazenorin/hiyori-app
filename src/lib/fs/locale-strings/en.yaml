@@ -43,6 +43,7 @@ pipeline:
     gameMaster: Generate the game data based on the available information in the chat history.
     editor: Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history.
     reviewer: "Perform a review on the writer's output for Scene {currentScene} based on the available information in the chat history."
+    reviewerQuick: "Quick-review the writer's output for Scene {currentScene}. Skim for glaring errors only — output the review template immediately with no reasoning."
     writer: "Write a story prose for Scene {currentScene} based on the available information in the chat history."
     plotPlanner: "The current scene is Scene {currentScene}. Plan a Scene Plot for the Immediate Next Scene, Near-Term Beat (Flexible), and Mid-Term Goal (Flexible) based on the available information in the chat history."
     summarizerFallback: "Update the Act Summary for Scene {completedScenes} based on the Player Response."

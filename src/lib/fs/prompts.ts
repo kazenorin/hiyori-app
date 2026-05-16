@@ -39,6 +39,7 @@ const writerOutputTemplate = new LocalizedPromptFile(promptDefaults, 'writer/wri
 
 // Pipeline: Reviewer
 const reviewerPrompt = new LocalizedPromptFile(promptDefaults, 'reviewer/reviewer-prompt.md');
+const quickReviewerPrompt = new LocalizedPromptFile(promptDefaults, 'reviewer/quick-reviewer-prompt.md');
 
 // Pipeline: Editor
 const editorPrompt = new LocalizedPromptFile(promptDefaults, 'editor/editor-prompt.md');
@@ -94,6 +95,7 @@ export const loadPlotPlannerPrompt = (): Promise<string> => plotPlannerPrompt.lo
 export const loadWriterPrompt = (): Promise<string> => writerPrompt.load();
 export const loadWriterOutputTemplate = (): Promise<string> => writerOutputTemplate.load();
 export const loadReviewerPrompt = (): Promise<string> => reviewerPrompt.load();
+export const loadQuickReviewerPrompt = (): Promise<string> => quickReviewerPrompt.load();
 export const loadEditorPrompt = (): Promise<string> => editorPrompt.load();
 export const loadGameMasterPrompt = (): Promise<string> => gameMasterPrompt.load();
 export const loadSummarizerPrompt = (): Promise<string> => summarizerPrompt.load();
@@ -149,6 +151,10 @@ export async function loadStoryReviewerPrompt(storyId: string, storyName: string
 	return reviewerPrompt.loadForStory(storyId, storyName);
 }
 
+export async function loadStoryQuickReviewerPrompt(storyId: string, storyName: string): Promise<string> {
+	return quickReviewerPrompt.loadForStory(storyId, storyName);
+}
+
 export async function loadStoryEditorPrompt(storyId: string, storyName: string): Promise<string> {
 	return editorPrompt.loadForStory(storyId, storyName);
 }
@@ -201,6 +207,11 @@ export const reviewerSystemPromptTemplateLoader: PromptLoader = {
 	loadDefault: loadReviewerPrompt,
 };
 
+export const quickReviewerSystemPromptTemplateLoader: PromptLoader = {
+	loadByStory: loadStoryQuickReviewerPrompt,
+	loadDefault: loadQuickReviewerPrompt,
+};
+
 export const editorSystemPromptLoader: PromptLoader = {
 	loadByStory: loadStoryEditorPrompt,
 	loadDefault: loadEditorPrompt,
@@ -236,6 +247,7 @@ registerDefaults([
 	writerPrompt,
 	writerOutputTemplate,
 	reviewerPrompt,
+	quickReviewerPrompt,
 	editorPrompt,
 	gameMasterPrompt,
 	summarizerPrompt,

@@ -43,6 +43,7 @@ pipeline:
     gameMaster: 根據聊天記錄中的可用資訊，生成遊戲資料。
     editor: 根據審閱者輸出的建議，修改寫手輸出。請根據聊天記錄中的可用資訊，判斷這些建議是否有必要採納。
     reviewer: "根據聊天記錄中的可用資訊，審閱寫手對場景 {currentScene} 的輸出。"
+    reviewerQuick: "快速審閱寫手對場景 {currentScene} 的輸出。僅略讀明顯錯誤——立即輸出審閱範本，不附帶推理過程。"
     writer: "根據聊天記錄中的可用資訊，撰寫場景 {currentScene} 的故事散文。"
     plotPlanner: "目前場景為場景 {currentScene}。請根據聊天記錄中的可用資訊，為緊接的下一場景、近期的情節節奏 (可彈性處理) 以及中期目標 (可彈性處理) 規劃場景劇情。"
     summarizerFallback: "根據玩家回應，更新場景 {completedScenes} 的章節摘要。"

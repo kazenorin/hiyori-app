@@ -32,9 +32,11 @@ export interface Settings {
 	memoryProviderRole: string;
 	embeddingProviderRole: string;
 	plotPlannerProviderRole: string;
+	plotPlannerEnabled: boolean;
 	writerProviderRole: string;
-	reviewerEnabled: boolean;
 	reviewerProviderRole: string;
+	reviewerEnabled: boolean;
+	reviewerMode: 'detailed' | 'quick';
 	editorProviderRole: string;
 	gameMasterProviderRole: string;
 	summarizerProviderRole: string;
@@ -55,9 +57,11 @@ const defaults: Settings = {
 	memoryProviderRole: 'main',
 	embeddingProviderRole: 'main',
 	plotPlannerProviderRole: 'main',
+	plotPlannerEnabled: true,
 	writerProviderRole: 'main',
-	reviewerEnabled: true,
 	reviewerProviderRole: 'main',
+	reviewerEnabled: true,
+	reviewerMode: 'detailed',
 	editorProviderRole: 'main',
 	gameMasterProviderRole: 'main',
 	summarizerProviderRole: 'main',
@@ -65,47 +69,6 @@ const defaults: Settings = {
 	importantPhraseHighlighting: false,
 	targetWordCount: 400,
 };
-
-/**
- * Migrate from the old flat settings shape to the new multi-provider shape.
- * Detects old shape by presence of `provider` as a string without `providers` array.
- */
-function migrateFromFlatSettings(raw: Record<string, unknown>): Settings {
-	const config: ProviderConfig = {
-		id: uuidv4(),
-		name: 'Default Provider',
-		provider: (raw.provider as Provider) || 'openai',
-		apiType: (raw.apiType as ApiType) || 'responses',
-		baseURL: (raw.baseURL as string) || 'https://api.openai.com/v1',
-		model: (raw.model as string) || 'gpt-4o',
-		apiKey: (raw.apiKey as string) || '',
-	};
-
-	return {
-		providers: [config],
-		roleAssignments: { main: config.id },
-		locale: (raw.locale as string) || 'en',
-		logLevel: (raw.logLevel as LogLevel) || 'info',
-		fontSize: (raw.fontSize as number) ?? 1.0,
-		memoryEnabled: (raw.memoryEnabled as boolean) ?? true,
-		memoryProviderRole: (raw.memoryProviderRole as string) || 'main',
-		embeddingProviderRole: (raw.embeddingProviderRole as string) || 'main',
-		plotPlannerProviderRole: (raw.plotPlannerProviderRole as string) || 'main',
-		writerProviderRole: (raw.writerProviderRole as string) || 'main',
-		reviewerEnabled: true,
-		reviewerProviderRole: (raw.reviewerProviderRole as string) || 'main',
-		editorProviderRole: (raw.editorProviderRole as string) || 'main',
-		gameMasterProviderRole: (raw.gameMasterProviderRole as string) || 'main',
-		summarizerProviderRole: (raw.summarizerProviderRole as string) || 'main',
-		minorTaskAgentProviderRole: 'main',
-		importantPhraseHighlighting: false,
-		targetWordCount: (raw.targetWordCount as number) ?? 400,
-	};
-}
-
-function isFlatSettings(raw: Record<string, unknown>): boolean {
-	return typeof raw.provider === 'string' && !Array.isArray(raw.providers);
-}
 
 /**
  * Apply font size preference by setting the --text-scaling CSS variable.
@@ -121,9 +84,6 @@ function loadSettings(): Settings {
 		const stored = localStorage.getItem(STORAGE_KEY);
 		if (stored) {
 			const raw = JSON.parse(stored);
-			if (isFlatSettings(raw)) {
-				return migrateFromFlatSettings(raw);
-			}
 			return { ...defaults, ...raw };
 		}
 	} catch {
@@ -256,6 +216,10 @@ export function isPhraseHighlightingEnabled(): boolean {
 	return settings.importantPhraseHighlighting && !!getMinorTaskAgentProviderConfig();
 }
 
+export function isPlotPlannerEnabled(): boolean {
+	return settings.plotPlannerEnabled && !!getPlotPlannerProviderConfig();
+}
+
 export function isReviewerEnabled(): boolean {
 	return settings.reviewerEnabled;
 }
@@ -303,8 +267,10 @@ export async function updateSettings(
 			| 'memoryProviderRole'
 			| 'embeddingProviderRole'
 			| 'plotPlannerProviderRole'
+			| 'plotPlannerEnabled'
 			| 'writerProviderRole'
 			| 'reviewerEnabled'
+			| 'reviewerMode'
 			| 'reviewerProviderRole'
 			| 'editorProviderRole'
 			| 'gameMasterProviderRole'
@@ -326,9 +292,11 @@ export async function updateSettings(
 	if (partial.memoryProviderRole !== undefined) settings.memoryProviderRole = partial.memoryProviderRole;
 	if (partial.embeddingProviderRole !== undefined) settings.embeddingProviderRole = partial.embeddingProviderRole;
 	if (partial.plotPlannerProviderRole !== undefined) settings.plotPlannerProviderRole = partial.plotPlannerProviderRole;
+	if (partial.plotPlannerEnabled !== undefined) settings.plotPlannerEnabled = partial.plotPlannerEnabled;
 	if (partial.writerProviderRole !== undefined) settings.writerProviderRole = partial.writerProviderRole;
-	if (partial.reviewerEnabled !== undefined) settings.reviewerEnabled = partial.reviewerEnabled;
 	if (partial.reviewerProviderRole !== undefined) settings.reviewerProviderRole = partial.reviewerProviderRole;
+	if (partial.reviewerEnabled !== undefined) settings.reviewerEnabled = partial.reviewerEnabled;
+	if (partial.reviewerMode !== undefined) settings.reviewerMode = partial.reviewerMode;
 	if (partial.editorProviderRole !== undefined) settings.editorProviderRole = partial.editorProviderRole;
 	if (partial.gameMasterProviderRole !== undefined) settings.gameMasterProviderRole = partial.gameMasterProviderRole;
 	if (partial.summarizerProviderRole !== undefined) settings.summarizerProviderRole = partial.summarizerProviderRole;

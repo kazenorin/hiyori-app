@@ -169,6 +169,11 @@
 		{ label: t('settings.logLevels.debug'), value: 'debug' },
 	];
 
+	const reviewerModeItems: { label: string; value: string }[] = [
+		{ label: t('settings.reviewerModeDetailed'), value: 'detailed' },
+		{ label: t('settings.reviewerModeQuick'), value: 'quick' },
+	];
+
 	function roleItems(includeMain: boolean = true): { label: string; value: string }[] {
 		const items: { label: string; value: string }[] = [];
 		if (includeMain) items.push({ label: t('settings.mainProvider'), value: 'main' });
@@ -483,6 +488,11 @@
 					</div>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.reviewerDescription')}</span>
 					<span class="text-xs text-surface-500 block">{t('settings.enableReviewerDescription')}</span>
+					<div class="mt-2">
+						<span class="text-xs font-medium text-surface-500">{t('settings.reviewerMode')}</span>
+						<ThemedSelect items={reviewerModeItems} value={settings.reviewerMode} onValueChange={(v) => updateSettings({ reviewerMode: v as 'detailed' | 'quick' })} disabled={!settings.reviewerEnabled} class="mt-1" />
+						<span class="text-xs text-surface-500 block mt-1">{settings.reviewerMode === 'detailed' ? t('settings.reviewerModeDetailedDescription') : t('settings.reviewerModeQuickDescription')}</span>
+					</div>
 				</div>
 
 				<label class="block">
