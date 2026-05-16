@@ -32,8 +32,8 @@ export interface Settings {
 	memoryProviderRole: string;
 	embeddingProviderRole: string;
 	plotPlannerProviderRole: string;
-	plotPlannerEnabled: boolean;
 	writerProviderRole: string;
+	reviewerEnabled: boolean;
 	reviewerProviderRole: string;
 	editorProviderRole: string;
 	gameMasterProviderRole: string;
@@ -55,8 +55,8 @@ const defaults: Settings = {
 	memoryProviderRole: 'main',
 	embeddingProviderRole: 'main',
 	plotPlannerProviderRole: 'main',
-	plotPlannerEnabled: true,
 	writerProviderRole: 'main',
+	reviewerEnabled: true,
 	reviewerProviderRole: 'main',
 	editorProviderRole: 'main',
 	gameMasterProviderRole: 'main',
@@ -91,8 +91,8 @@ function migrateFromFlatSettings(raw: Record<string, unknown>): Settings {
 		memoryProviderRole: (raw.memoryProviderRole as string) || 'main',
 		embeddingProviderRole: (raw.embeddingProviderRole as string) || 'main',
 		plotPlannerProviderRole: (raw.plotPlannerProviderRole as string) || 'main',
-		plotPlannerEnabled: (raw.plotPlannerEnabled as boolean) ?? true,
 		writerProviderRole: (raw.writerProviderRole as string) || 'main',
+		reviewerEnabled: true,
 		reviewerProviderRole: (raw.reviewerProviderRole as string) || 'main',
 		editorProviderRole: (raw.editorProviderRole as string) || 'main',
 		gameMasterProviderRole: (raw.gameMasterProviderRole as string) || 'main',
@@ -256,8 +256,8 @@ export function isPhraseHighlightingEnabled(): boolean {
 	return settings.importantPhraseHighlighting && !!getMinorTaskAgentProviderConfig();
 }
 
-export function isPlotPlannerEnabled(): boolean {
-	return settings.plotPlannerEnabled && !!getPlotPlannerProviderConfig();
+export function isReviewerEnabled(): boolean {
+	return settings.reviewerEnabled;
 }
 
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
@@ -303,8 +303,8 @@ export async function updateSettings(
 			| 'memoryProviderRole'
 			| 'embeddingProviderRole'
 			| 'plotPlannerProviderRole'
-			| 'plotPlannerEnabled'
 			| 'writerProviderRole'
+			| 'reviewerEnabled'
 			| 'reviewerProviderRole'
 			| 'editorProviderRole'
 			| 'gameMasterProviderRole'
@@ -326,8 +326,8 @@ export async function updateSettings(
 	if (partial.memoryProviderRole !== undefined) settings.memoryProviderRole = partial.memoryProviderRole;
 	if (partial.embeddingProviderRole !== undefined) settings.embeddingProviderRole = partial.embeddingProviderRole;
 	if (partial.plotPlannerProviderRole !== undefined) settings.plotPlannerProviderRole = partial.plotPlannerProviderRole;
-	if (partial.plotPlannerEnabled !== undefined) settings.plotPlannerEnabled = partial.plotPlannerEnabled;
 	if (partial.writerProviderRole !== undefined) settings.writerProviderRole = partial.writerProviderRole;
+	if (partial.reviewerEnabled !== undefined) settings.reviewerEnabled = partial.reviewerEnabled;
 	if (partial.reviewerProviderRole !== undefined) settings.reviewerProviderRole = partial.reviewerProviderRole;
 	if (partial.editorProviderRole !== undefined) settings.editorProviderRole = partial.editorProviderRole;
 	if (partial.gameMasterProviderRole !== undefined) settings.gameMasterProviderRole = partial.gameMasterProviderRole;

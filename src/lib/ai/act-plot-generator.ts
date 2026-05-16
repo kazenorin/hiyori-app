@@ -1,5 +1,5 @@
 import { generateText, type ModelMessage } from 'ai';
-import { getMainProviderConfig } from '$lib/stores/settings.svelte';
+import { getMainProviderConfig, isReviewerEnabled } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
 import {
 	loadActPlotTemplate,
@@ -196,46 +196,51 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<Ge
 
 	await log.info(LOG_TAG, `Writer complete. Tokens: ${writerResult.usage.totalTokens}, Length: ${writerText.length} chars`);
 
-	// Phases 2+3: REVIEWER → EDITOR (with fallback to writer output on failure)
+	// Phases 2+3: REVIEWER → EDITOR (skipped when reviewer disabled)
 	let finalText: string;
 
-	try {
-		// Phase 2: REVIEWER
-		onPhaseChange?.('reviewing');
-		await log.info(LOG_TAG, 'Phase 2: REVIEWER');
+	if (!isReviewerEnabled()) {
+		await log.info(LOG_TAG, 'Reviewer disabled — skipping review/edit phases');
+		finalText = writerText;
+	} else {
+		try {
+			// Phase 2: REVIEWER
+			onPhaseChange?.('reviewing');
+			await log.info(LOG_TAG, 'Phase 2: REVIEWER');
 
-		const reviewerMessages = buildReviewerMessages(worldContent, previousActSummary, turnOfEvents, writerText, reviewerPrompt);
-		const reviewerResult = await generateText({ model, system: systemPrompt, messages: reviewerMessages });
-		const reviewerText = reviewerResult.text.trim();
+			const reviewerMessages = buildReviewerMessages(worldContent, previousActSummary, turnOfEvents, writerText, reviewerPrompt);
+			const reviewerResult = await generateText({ model, system: systemPrompt, messages: reviewerMessages });
+			const reviewerText = reviewerResult.text.trim();
 
-		await log.info(
-			LOG_TAG,
-			`Reviewer complete. Tokens: ${reviewerResult.usage.totalTokens}, Accepts-as-is: ${reviewerAcceptsAsIs(reviewerText)}`
-		);
+			await log.info(
+				LOG_TAG,
+				`Reviewer complete. Tokens: ${reviewerResult.usage.totalTokens}, Accepts-as-is: ${reviewerAcceptsAsIs(reviewerText)}`
+			);
 
-		if (reviewerAcceptsAsIs(reviewerText)) {
-			await log.info(LOG_TAG, 'Editor phase skipped — reviewer accepted as-is');
-			finalText = writerText;
-		} else {
-			// Phase 3: EDITOR
-			onPhaseChange?.('editing');
-			await log.info(LOG_TAG, 'Phase 3: EDITOR');
-
-			const editorMessages = buildEditorMessages(worldContent, previousActSummary, turnOfEvents, writerText, reviewerText, editorPrompt);
-			const editorResult = await generateText({ model, system: systemPrompt, messages: editorMessages });
-			const editorText = editorResult.text.trim();
-
-			if (!editorText) {
-				await log.warn(LOG_TAG, 'Editor returned empty response, falling back to writer output');
+			if (reviewerAcceptsAsIs(reviewerText)) {
+				await log.info(LOG_TAG, 'Editor phase skipped — reviewer accepted as-is');
 				finalText = writerText;
 			} else {
-				finalText = editorText;
-				await log.info(LOG_TAG, `Editor complete. Tokens: ${editorResult.usage.totalTokens}, Length: ${editorText.length} chars`);
+				// Phase 3: EDITOR
+				onPhaseChange?.('editing');
+				await log.info(LOG_TAG, 'Phase 3: EDITOR');
+
+				const editorMessages = buildEditorMessages(worldContent, previousActSummary, turnOfEvents, writerText, reviewerText, editorPrompt);
+				const editorResult = await generateText({ model, system: systemPrompt, messages: editorMessages });
+				const editorText = editorResult.text.trim();
+
+				if (!editorText) {
+					await log.warn(LOG_TAG, 'Editor returned empty response, falling back to writer output');
+					finalText = writerText;
+				} else {
+					finalText = editorText;
+					await log.info(LOG_TAG, `Editor complete. Tokens: ${editorResult.usage.totalTokens}, Length: ${editorText.length} chars`);
+				}
 			}
+		} catch (err) {
+			await log.warn(LOG_TAG, `Review/edit phase failed, falling back to writer output: ${err instanceof Error ? err.message : String(err)}`);
+			finalText = writerText;
 		}
-	} catch (err) {
-		await log.warn(LOG_TAG, `Review/edit phase failed, falling back to writer output: ${err instanceof Error ? err.message : String(err)}`);
-		finalText = writerText;
 	}
 
 	// Append resume-game note if applicable

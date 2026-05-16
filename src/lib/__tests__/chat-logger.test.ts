@@ -63,6 +63,7 @@ function defaultSettings() {
 		editorProviderRole: 'main',
 		gameMasterProviderRole: 'main',
 		summarizerProviderRole: 'main',
+		reviewerEnabled: true,
 		reviewerProviderRole: 'main',
 		minorTaskAgentProviderRole: 'main',
 		importantPhraseHighlighting: false,

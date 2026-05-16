@@ -16,7 +16,6 @@
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
 	import { t } from '$lib/i18n';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
-	import { Switch } from '@skeletonlabs/skeleton-svelte';
 
 	// Editing state
 	let editingId = $state<string | null>(null);
@@ -445,13 +444,16 @@
 			<div class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.plotPlanner')}</span>
 				<div class="flex items-center gap-2 mt-1">
-					<Switch checked={settings.plotPlannerEnabled} onCheckedChange={(details) => updateSettings({ plotPlannerEnabled: details.checked })} disabled={!getPlotPlannerProviderConfig()}>
-						<Switch.Control>
-							<Switch.Thumb />
-						</Switch.Control>
-						<Switch.Label>{t('settings.enabled')}</Switch.Label>
-						<Switch.HiddenInput />
-					</Switch>
+					<label class="flex items-center gap-1">
+						<input
+							type="checkbox"
+							class="checkbox"
+							checked={settings.plotPlannerEnabled}
+							disabled={settings.providers.length === 0}
+							onchange={(e) => updateSettings({ plotPlannerEnabled: (e.currentTarget as HTMLInputElement).checked })}
+						/>
+						<span class="text-xs text-surface-500">{t('settings.enabled')}</span>
+					</label>
 					<ThemedSelect items={roleItems()} value={settings.plotPlannerProviderRole} onValueChange={(v) => updateSettings({ plotPlannerProviderRole: v })} disabled={settings.providers.length === 0 || !settings.plotPlannerEnabled} placeholder={t('settings.noProvidersConfigured')} />
 				</div>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.plotPlannerDescription')}</span>
@@ -464,15 +466,21 @@
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.writerDescription')}</span>
 			</label>
 
+			<label class="flex items-center gap-2">
+				<input type="checkbox" class="checkbox" checked={settings.reviewerEnabled} onchange={(e) => updateSettings({ reviewerEnabled: (e.currentTarget as HTMLInputElement).checked })} />
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.reviewerEnabled')}</span>
+			</label>
+			<span class="text-xs text-surface-500">{t('settings.reviewerEnabledDescription')}</span>
+
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.reviewer')}</span>
-				<ThemedSelect items={roleItems()} value={settings.reviewerProviderRole} onValueChange={(v) => updateSettings({ reviewerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect items={roleItems()} value={settings.reviewerProviderRole} onValueChange={(v) => updateSettings({ reviewerProviderRole: v })} disabled={!settings.reviewerEnabled || settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.reviewerDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.editor')}</span>
-				<ThemedSelect items={roleItems()} value={settings.editorProviderRole} onValueChange={(v) => updateSettings({ editorProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect items={roleItems()} value={settings.editorProviderRole} onValueChange={(v) => updateSettings({ editorProviderRole: v })} disabled={!settings.reviewerEnabled || settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.editorDescription')}</span>
 			</label>
 

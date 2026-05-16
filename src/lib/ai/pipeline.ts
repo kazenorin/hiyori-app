@@ -50,6 +50,7 @@ import {
 } from '$lib/fs/prompts';
 import { mergeActSummary, parseActSummary, parseIncrementalOutput, serializeActSummary } from './act-summary-parser';
 import { reviewerAcceptsAsIs } from './reviewer-output-parser';
+import { isReviewerEnabled } from '$lib/stores/settings.svelte';
 import {
 	getNarrativeDescriptors,
 	getReviewerDescriptors,
@@ -612,92 +613,99 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		phaseEntries.push(toPhaseMetadata('WRITER', result.metadata, providerConfigs.writer?.model));
 	}
 
-	// --- Sequential Phase 2: Reviewer ---
-	{
-		const result = await executeStreamingPhase(
-			{
-				phaseName: 'REVIEWER',
-				systemPrompt: reviewerSystemPromptTemplate
-					.replaceAll('{generalInstructions}', generalInstructions)
-					.replaceAll('{acceptAsIs}', acceptAsIsLabel())
-					.replaceAll('{summary}', summaryHeader())
-					.replaceAll('{totalViolations}', totalViolationsLabel())
-					.replaceAll('{recommendation}', recommendationLabel()),
-				...sharedParams,
-				tools: filterToolsForPhase(tools, 'REVIEWER'),
-				descriptors: getReviewerDescriptors(),
-				messages: toUserMessages([
-					SECTION.WORLD_CONTENT + worldContent,
-					SECTION.ACT_PLOT + actPlot,
-					SECTION.ACT_SUMMARY + actSummary,
-					...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
-					...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
-					...playerResponseSection(player),
-					...formatTurnOfEventsSection(previousTurnOfEvents),
-					...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
-					reviewerExtractionPromptTemplate(currentScene),
-				]),
-				providerConfig: providerConfigs.reviewer,
-				buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),
-			},
-			state
-		);
-		state = result.state;
-		aggregatedMetadata = aggregateMetadata(aggregatedMetadata, result.metadata, providerConfigs.reviewer?.model);
-		phaseEntries.push(toPhaseMetadata('REVIEWER', result.metadata, providerConfigs.reviewer?.model));
-	}
-
-	// --- Sequential Phase 3: Editor (skip LLM if reviewer accepts as-is) ---
-	{
-		const editorSkip = reviewerAcceptsAsIs(state.reviewerOutput);
-
-		if (editorSkip) {
+		// --- Sequential Phase 2+3: Reviewer → Editor (skipped when reviewer disabled) ---
+		if (!isReviewerEnabled()) {
 			state = updateState(state, {
-				currentPhase: 'EDITOR',
 				editorOutput: state.writerOutput,
 				editorVariables: state.writerVariables ?? null,
 				editorReasoning: null,
 			});
-			callbacks.onPhaseStart('EDITOR');
-			callbacks.onPhaseComplete('EDITOR', state);
 		} else {
-			const result = await executeStreamingPhase(
-				{
-					phaseName: 'EDITOR',
-					systemPrompt: editorSystemPrompt
-						.replaceAll('{generalInstructions}', generalInstructions)
-						.replaceAll('{targetWordCount}', effectiveTargetWordCount)
-						.replaceAll('{writerOutputTemplate}', writerOutputTemplate),
-					...sharedParams,
-					tools: filterToolsForPhase(tools, 'EDITOR'),
-					descriptors: getEditorDescriptors(),
-					messages: toUserMessages([
-						SECTION.WORLD_CONTENT + worldContent,
-						SECTION.ACT_PLOT + actPlot,
-						SECTION.ACT_SUMMARY + actSummary,
-						...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
-						...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
-						...playerResponseSection(player),
-						...formatTurnOfEventsSection(previousTurnOfEvents),
-						...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
-						...(state.reviewerOutput ? [SECTION.REVIEWER_OUTPUT + state.reviewerOutput] : []),
-						editorExtractionPrompt(),
-					]),
-					providerConfig: providerConfigs.editor,
-					buildStateUpdate: (ss) => ({
-						editorOutput: fullOutput(ss),
-						editorVariables: ss.variables,
-						editorReasoning: ss.reasoning,
-					}),
-				},
-				state
-			);
-			state = result.state;
-			aggregatedMetadata = aggregateMetadata(aggregatedMetadata, result.metadata, providerConfigs.editor?.model);
-			phaseEntries.push(toPhaseMetadata('EDITOR', result.metadata, providerConfigs.editor?.model));
-		}
-	}
+			{
+				const result = await executeStreamingPhase(
+					{
+						phaseName: 'REVIEWER',
+						systemPrompt: reviewerSystemPromptTemplate
+							.replaceAll('{generalInstructions}', generalInstructions)
+							.replaceAll('{acceptAsIs}', acceptAsIsLabel())
+							.replaceAll('{summary}', summaryHeader())
+							.replaceAll('{totalViolations}', totalViolationsLabel())
+							.replaceAll('{recommendation}', recommendationLabel()),
+						...sharedParams,
+						tools: filterToolsForPhase(tools, 'REVIEWER'),
+						descriptors: getReviewerDescriptors(),
+						messages: toUserMessages([
+							SECTION.WORLD_CONTENT + worldContent,
+							SECTION.ACT_PLOT + actPlot,
+							SECTION.ACT_SUMMARY + actSummary,
+							...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
+							...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
+							...playerResponseSection(player),
+							...formatTurnOfEventsSection(previousTurnOfEvents),
+							...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
+							reviewerExtractionPromptTemplate(currentScene),
+						]),
+						providerConfig: providerConfigs.reviewer,
+						buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),
+					},
+					state
+				);
+				state = result.state;
+				aggregatedMetadata = aggregateMetadata(aggregatedMetadata, result.metadata, providerConfigs.reviewer?.model);
+				phaseEntries.push(toPhaseMetadata('REVIEWER', result.metadata, providerConfigs.reviewer?.model));
+			}
 
+			// Phase 3: Editor (skip LLM if reviewer accepts as-is)
+			{
+				const editorSkip = reviewerAcceptsAsIs(state.reviewerOutput);
+
+				if (editorSkip) {
+					state = updateState(state, {
+						currentPhase: 'EDITOR',
+						editorOutput: state.writerOutput,
+						editorVariables: state.writerVariables ?? null,
+						editorReasoning: null,
+					});
+					callbacks.onPhaseStart('EDITOR');
+					callbacks.onPhaseComplete('EDITOR', state);
+				} else {
+					const result = await executeStreamingPhase(
+						{
+							phaseName: 'EDITOR',
+							systemPrompt: editorSystemPrompt
+								.replaceAll('{generalInstructions}', generalInstructions)
+								.replaceAll('{targetWordCount}', effectiveTargetWordCount)
+								.replaceAll('{writerOutputTemplate}', writerOutputTemplate),
+							...sharedParams,
+							tools: filterToolsForPhase(tools, 'EDITOR'),
+							descriptors: getEditorDescriptors(),
+							messages: toUserMessages([
+								SECTION.WORLD_CONTENT + worldContent,
+								SECTION.ACT_PLOT + actPlot,
+								SECTION.ACT_SUMMARY + actSummary,
+								...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
+								...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
+								...playerResponseSection(player),
+								...formatTurnOfEventsSection(previousTurnOfEvents),
+								...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
+								...(state.reviewerOutput ? [SECTION.REVIEWER_OUTPUT + state.reviewerOutput] : []),
+								editorExtractionPrompt(),
+							]),
+							providerConfig: providerConfigs.editor,
+							buildStateUpdate: (ss) => ({
+								editorOutput: fullOutput(ss),
+								editorVariables: ss.variables,
+								editorReasoning: ss.reasoning,
+							}),
+						},
+						state
+					);
+					state = result.state;
+					aggregatedMetadata = aggregateMetadata(aggregatedMetadata, result.metadata, providerConfigs.editor?.model);
+					phaseEntries.push(toPhaseMetadata('EDITOR', result.metadata, providerConfigs.editor?.model));
+				}
+			}
+		}
 	// --- Template fitting for Editor (if variables lack template metadata) ---
 	if (!hasTemplateMetadata(state.editorVariables) && state.editorOutput) {
 		const originalEditorVars = state.editorVariables ?? null;

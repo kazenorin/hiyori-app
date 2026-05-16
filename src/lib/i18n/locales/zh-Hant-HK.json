@@ -68,6 +68,8 @@
 		"writerDescription": "根據場景劇情撰寫敘事散文。",
 		"reviewer": "審閱者",
 		"reviewerDescription": "審閱寫手輸出是否違反寫作規則。",
+		"reviewerEnabled": "啟用審閱者",
+		"reviewerEnabledDescription": "啟用審閱者。審閱者會檢查寫手輸出是否有規則違規。可提升文章品質，但會消耗大量時間與 token。",
 		"editor": "編輯",
 		"editorDescription": "根據審閱者回饋修訂寫手輸出。",
 		"gameMaster": "GM",
