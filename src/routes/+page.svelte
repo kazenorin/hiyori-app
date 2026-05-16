@@ -727,8 +727,8 @@
 									{/each}
 								{/if}
 
-								<!-- Editor reasoning (for non-pipeline messages or loaded from DB) -->
-								{#if message.reasoning && (!message.phases || message.phases.length === 0)}
+								<!-- Editor reasoning -->
+								{#if message.reasoning}
 									<div class="mb-3">
 										<Accordion collapsible>
 											<Accordion.Item value="reasoning">

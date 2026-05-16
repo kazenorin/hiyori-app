@@ -12,6 +12,7 @@ import {
 	getWriterProviderConfig,
 	isPhraseHighlightingEnabled,
 	settings,
+	isReviewerEnabled,
 } from '$lib/stores/settings.svelte';
 import { getActiveActPlotContent, getActiveStoryId, getActiveWorldContent } from '$lib/stores/stories.svelte';
 import * as dbMessages from '$lib/db/messages';
@@ -353,6 +354,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 	const story = await storyPromise;
 	const storyId = story.id;
 	const tools = await buildTools(storyId, actLineId);
+	const phasesOfMainChat: PhaseName[] = isReviewerEnabled() ? ['EDITOR'] : ['EDITOR', 'WRITER'];
 
 	try {
 		// Load pipeline context
@@ -392,13 +394,13 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		const pipelineCallbacks: PipelineCallbacks = {
 			onPhaseStart: (phase: PhaseName) => {
 				// Editor is shown as main content, not a phase accordion
-				if (phase === 'EDITOR') return;
+				if (phasesOfMainChat.includes(phase)) return;
 				const current = getCurrentMessage();
 				const phases = [...(current.phases ?? []), { phaseName: phase, content: '' }];
 				setCurrentMessage({ ...current, phases });
 			},
 			onPhaseStream: (phase: PhaseName, streamState: PhaseStreamState) => {
-				if (phase === 'EDITOR') {
+				if (phasesOfMainChat.includes(phase)) {
 					updateEditorMessage(renderContent(streamState.variables, streamState.content), streamState.reasoning, streamState.variables);
 					return;
 				}
@@ -409,7 +411,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 				updatePhaseInList(phase, { content: `Retrying (attempt ${attempt}/${maxAttempts})...` });
 			},
 			onPhaseComplete: (phase: PhaseName, pipelineState: PipelineState) => {
-				if (phase === 'EDITOR') {
+				if (phasesOfMainChat.includes(phase)) {
 					updateEditorMessage(
 						renderContent(pipelineState.editorVariables, pipelineState.editorOutput ?? getCurrentMessage().content),
 						pipelineState.editorReasoning,
