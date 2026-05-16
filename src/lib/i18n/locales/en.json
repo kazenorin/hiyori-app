@@ -151,7 +151,8 @@
 		"actPlotWriting": "Writing act plot...",
 		"actPlotReviewing": "Reviewing act plot...",
 		"actPlotEditing": "Editing act plot...",
-		"actPlotGenerating": "Generating act plot..."
+		"actPlotGenerating": "Generating act plot...",
+		"worldBuilderActive": "World builder in progress..."
 	},
 	"components": {
 		"chatControls": {

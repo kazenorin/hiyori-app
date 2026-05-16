@@ -86,6 +86,12 @@ export function getActPlotGenerationActive(): boolean {
 export function getActPlotGenerationPhase(): ActPlotPhase | null {
 	return actPlotGenerationPhase;
 }
+export function setActPlotGenerationActive(value: boolean): void {
+	actPlotGenerationActive = value;
+}
+export function setActPlotGenerationPhase(phase: ActPlotPhase | null): void {
+	actPlotGenerationPhase = phase;
+}
 /**
  * Combined narration context as message array.
  * This is what gets prepended as hidden messages on every AI call.

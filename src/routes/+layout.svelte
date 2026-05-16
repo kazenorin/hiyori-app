@@ -35,6 +35,7 @@
 	let appError = $state<string | null>(null);
 	let initStatus = $state('Starting...');
 	let appReady = $state(false);
+	let sidebarBlocked = $derived(!appReady || getIsWorldBuilderActive());
 	let newActName = $state('');
 	let newActLineName = $state('');
 	let showNewAct = $state(false);
@@ -235,434 +236,451 @@
 	});
 </script>
 
-{#if !appReady}
-	<div class="flex h-screen items-center justify-center bg-surface-50-950">
-		{#if appError}
-			<div class="text-center space-y-3">
-				<p class="text-error-500">{appError}</p>
-			</div>
-		{:else}
-			<div class="text-center space-y-2">
-				<div class="text-surface-500 animate-pulse">{t('sidebar.loading')}</div>
-				<div class="text-xs text-surface-600">{initStatus}</div>
-			</div>
-		{/if}
-	</div>
-{:else}
-	<div class="flex h-screen overflow-hidden bg-surface-50-950">
-		<!-- Sidebar -->
-		<aside class="w-72 border-r border-surface-200-800 flex flex-col">
-			<nav class="flex-1 overflow-y-auto p-2 pt-4 space-y-1">
-				{#each getStories() as story (story.id)}
-					<div class="space-y-0.5">
-						<!-- Story header -->
-						<div
-							class="group flex items-center justify-between p-3 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer {getActiveStoryId() ===
-							story.id
-								? 'bg-surface-200-800'
-								: 'hover:bg-surface-200-800'}"
-							onclick={() => handleSelectStory(story.id)}
-						>
-							{#if editingId === story.id && editingType === 'story'}
-								<input
-									autofocus
-									maxlength="200"
-									class="input text-sm flex-1"
-									bind:value={editingName}
-									onkeydown={(e) => {
-										if (e.key === 'Enter') {
-											e.preventDefault();
-											submitRename();
-										}
-										if (e.key === 'Escape') cancelRename();
-									}}
-									onblur={() => {
-										if (!renameSubmitting) submitRename();
-									}}
-									onclick={(e) => e.stopPropagation()}
-									type="text"
-								/>
-							{:else}
-								<span class="text-sm font-medium truncate flex-1">{story.name}</span>
-								<button
-									class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
-									type="button"
-									onclick={(e) => {
-										e.stopPropagation();
-										startRename('story', story.id, story.name);
-									}}
-									title={t('sidebar.renameStory')}>&#9998;</button
-								>
-							{/if}
+
+<div class="flex h-screen overflow-hidden bg-surface-50-950">
+	<!-- Sidebar -->
+	<aside class="w-72 border-r border-surface-200-800 flex flex-col">
+		<nav class="flex-1 overflow-y-auto p-2 pt-4 space-y-1 relative">
+			{#each getStories() as story (story.id)}
+				<div class="space-y-0.5">
+					<!-- Story header -->
+					<div
+						class="group flex items-center justify-between p-3 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer {getActiveStoryId() ===
+						story.id
+							? 'bg-surface-200-800'
+							: 'hover:bg-surface-200-800'}"
+						onclick={() => handleSelectStory(story.id)}
+					>
+						{#if editingId === story.id && editingType === 'story'}
+							<input
+								autofocus
+								maxlength="200"
+								class="input text-sm flex-1"
+								bind:value={editingName}
+								onkeydown={(e) => {
+									if (e.key === 'Enter') {
+										e.preventDefault();
+										submitRename();
+									}
+									if (e.key === 'Escape') cancelRename();
+								}}
+								onblur={() => {
+									if (!renameSubmitting) submitRename();
+								}}
+								onclick={(e) => e.stopPropagation()}
+								type="text"
+							/>
+						{:else}
+							<span class="text-sm font-medium truncate flex-1">{story.name}</span>
 							<button
-								class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+								class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 								type="button"
 								onclick={(e) => {
 									e.stopPropagation();
-									requestDeleteStory(story.id, story.name);
+									startRename('story', story.id, story.name);
 								}}
-								title={t('sidebar.deleteStory')}>&times;</button
+								title={t('sidebar.renameStory')}>&#9998;</button
 							>
-						</div>
+						{/if}
+						<button
+							class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+							type="button"
+							onclick={(e) => {
+								e.stopPropagation();
+								requestDeleteStory(story.id, story.name);
+							}}
+							title={t('sidebar.deleteStory')}>&times;</button
+						>
+					</div>
 
-						<!-- Acts (only show for active story) -->
-						{#if getActiveStoryId() === story.id}
-							{#each getActs() as act (act.id)}
-								<div class="ml-3 space-y-0.5">
-									<div
-										class="group flex items-center justify-between p-2 pl-4 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-sm {getActiveActId() ===
-										act.id
-											? 'bg-surface-200-800'
-											: 'hover:bg-surface-200-800'}"
-										onclick={() => handleSelectAct(act.id)}
-									>
-										{#if editingId === act.id && editingType === 'act'}
-											<input
-												autofocus
-												maxlength="200"
-												class="input text-xs flex-1"
-												bind:value={editingName}
-												onkeydown={(e) => {
-													if (e.key === 'Enter') {
-														e.preventDefault();
-														submitRename();
-													}
-													if (e.key === 'Escape') cancelRename();
-												}}
-												onblur={() => {
-													if (!renameSubmitting) submitRename();
-												}}
-												onclick={(e) => e.stopPropagation()}
-												type="text"
-											/>
-										{:else}
-											<span class="truncate flex-1 text-surface-700-300">{t('sidebar.actLabel', { n: act.actNumber })}: {act.name}</span>
-											<button
-												class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
-												type="button"
-												onclick={(e) => {
-													e.stopPropagation();
-													startRename('act', act.id, act.name);
-												}}
-												title={t('sidebar.renameAct')}>&#9998;</button
-											>
-										{/if}
+					<!-- Acts (only show for active story) -->
+					{#if getActiveStoryId() === story.id}
+						{#each getActs() as act (act.id)}
+							<div class="ml-3 space-y-0.5">
+								<div
+									class="group flex items-center justify-between p-2 pl-4 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-sm {getActiveActId() ===
+									act.id
+										? 'bg-surface-200-800'
+										: 'hover:bg-surface-200-800'}"
+									onclick={() => handleSelectAct(act.id)}
+								>
+									{#if editingId === act.id && editingType === 'act'}
+										<input
+											autofocus
+											maxlength="200"
+											class="input text-xs flex-1"
+											bind:value={editingName}
+											onkeydown={(e) => {
+												if (e.key === 'Enter') {
+													e.preventDefault();
+													submitRename();
+												}
+												if (e.key === 'Escape') cancelRename();
+											}}
+											onblur={() => {
+												if (!renameSubmitting) submitRename();
+											}}
+											onclick={(e) => e.stopPropagation()}
+											type="text"
+										/>
+									{:else}
+										<span class="truncate flex-1 text-surface-700-300">{t('sidebar.actLabel', { n: act.actNumber })}: {act.name}</span>
 										<button
-											class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+											class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 											type="button"
 											onclick={(e) => {
 												e.stopPropagation();
-												requestDeleteAct(act.id, act.name);
+												startRename('act', act.id, act.name);
 											}}
-											title={t('sidebar.deleteAct')}>&times;</button
+											title={t('sidebar.renameAct')}>&#9998;</button
 										>
-									</div>
+									{/if}
+									<button
+										class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+										type="button"
+										onclick={(e) => {
+											e.stopPropagation();
+											requestDeleteAct(act.id, act.name);
+										}}
+										title={t('sidebar.deleteAct')}>&times;</button
+									>
+								</div>
 
-									<!-- Act Lines -->
-									{#if getActiveActId() === act.id}
-										{#each getActLines() as line (line.id)}
-											<div
-												class="group flex items-center justify-between p-2 pl-8 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-xs {getActiveActLineId() ===
-												line.id
-													? 'bg-primary-100-900 text-primary-700-300'
-													: 'hover:bg-surface-200-800 text-surface-500'}"
-												onclick={() => handleSelectActLine(line.id)}
-											>
-												{#if editingId === line.id && editingType === 'line'}
-													<input
-														autofocus
-														maxlength="200"
-														class="input text-xs flex-1"
-														bind:value={editingName}
-														onkeydown={(e) => {
-															if (e.key === 'Enter') {
-																e.preventDefault();
-																submitRename();
-															}
-															if (e.key === 'Escape') cancelRename();
-														}}
-														onblur={() => {
-															if (!renameSubmitting) submitRename();
-														}}
-														onclick={(e) => e.stopPropagation()}
-														type="text"
-													/>
-												{:else}
-													<span class="truncate flex-1">{line.name}</span>
-													<button
-														class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
-														type="button"
-														onclick={(e) => {
-															e.stopPropagation();
-															startRename('line', line.id, line.name);
-														}}
-														title={t('sidebar.renameLine')}>&#9998;</button
-													>
-												{/if}
+								<!-- Act Lines -->
+								{#if getActiveActId() === act.id}
+									{#each getActLines() as line (line.id)}
+										<div
+											class="group flex items-center justify-between p-2 pl-8 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-xs {getActiveActLineId() ===
+											line.id
+												? 'bg-primary-100-900 text-primary-700-300'
+												: 'hover:bg-surface-200-800 text-surface-500'}"
+											onclick={() => handleSelectActLine(line.id)}
+										>
+											{#if editingId === line.id && editingType === 'line'}
+												<input
+													autofocus
+													maxlength="200"
+													class="input text-xs flex-1"
+													bind:value={editingName}
+													onkeydown={(e) => {
+														if (e.key === 'Enter') {
+															e.preventDefault();
+															submitRename();
+														}
+														if (e.key === 'Escape') cancelRename();
+													}}
+													onblur={() => {
+														if (!renameSubmitting) submitRename();
+													}}
+													onclick={(e) => e.stopPropagation()}
+													type="text"
+												/>
+											{:else}
+												<span class="truncate flex-1">{line.name}</span>
 												<button
-													class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+													class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 													type="button"
 													onclick={(e) => {
 														e.stopPropagation();
-														requestDeleteActLine(line.id, line.name);
+														startRename('line', line.id, line.name);
 													}}
-													title={t('sidebar.deleteLine')}>&times;</button
+													title={t('sidebar.renameLine')}>&#9998;</button
 												>
-											</div>
-										{/each}
-
-										<!-- Add act line button -->
-										{#if showNewActLine}
-											<div class="pl-8 p-1">
-												<div class="flex gap-1">
-													<input
-														class="input text-xs flex-1"
-														placeholder={t('sidebar.lineNamePlaceholder')}
-														bind:value={newActLineName}
-														onkeydown={(e) => e.key === 'Enter' && handleCreateActLine()}
-													/>
-													<button class="text-xs text-primary-500" type="button" onclick={handleCreateActLine}>+</button>
-												</div>
-											</div>
-										{:else}
+											{/if}
 											<button
-												class="p-2 pl-8 text-xs text-surface-500 hover:text-surface-700-300 transition-colors"
+												class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 												type="button"
-												onclick={() => (showNewActLine = true)}
+												onclick={(e) => {
+													e.stopPropagation();
+													requestDeleteActLine(line.id, line.name);
+												}}
+												title={t('sidebar.deleteLine')}>&times;</button
 											>
-												{t('sidebar.newLine')}
-											</button>
-										{/if}
+										</div>
+									{/each}
+
+									<!-- Add act line button -->
+									{#if showNewActLine}
+										<div class="pl-8 p-1">
+											<div class="flex gap-1">
+												<input
+													class="input text-xs flex-1"
+													placeholder={t('sidebar.lineNamePlaceholder')}
+													bind:value={newActLineName}
+													onkeydown={(e) => e.key === 'Enter' && handleCreateActLine()}
+												/>
+												<button class="text-xs text-primary-500" type="button" onclick={handleCreateActLine}>+</button>
+											</div>
+										</div>
+									{:else}
+										<button
+											class="p-2 pl-8 text-xs text-surface-500 hover:text-surface-700-300 transition-colors"
+											type="button"
+											onclick={() => (showNewActLine = true)}
+										>
+											{t('sidebar.newLine')}
+										</button>
 									{/if}
-								</div>
-							{/each}
+								{/if}
+							</div>
+						{/each}
 
-							<!-- Add act button -->
-							{#if showNewAct}
-								<div class="ml-3 p-1">
-									<div class="flex gap-1">
-										<input
-											class="input text-xs flex-1"
-											placeholder={t('sidebar.actNamePlaceholder')}
-											bind:value={newActName}
-											onkeydown={(e) => e.key === 'Enter' && handleCreateAct()}
-										/>
-										<button class="text-xs text-primary-500" type="button" onclick={handleCreateAct}>+</button>
-									</div>
+						<!-- Add act button -->
+						{#if showNewAct}
+							<div class="ml-3 p-1">
+								<div class="flex gap-1">
+									<input
+										class="input text-xs flex-1"
+										placeholder={t('sidebar.actNamePlaceholder')}
+										bind:value={newActName}
+										onkeydown={(e) => e.key === 'Enter' && handleCreateAct()}
+									/>
+									<button class="text-xs text-primary-500" type="button" onclick={handleCreateAct}>+</button>
 								</div>
-							{:else}
-								<button
-									class="ml-3 p-2 pl-4 text-xs text-surface-500 hover:text-surface-700-300 transition-colors"
-									type="button"
-									onclick={() => (showNewAct = true)}
-								>
-									{t('sidebar.newAct')}
-								</button>
-							{/if}
+							</div>
+						{:else}
+							<button
+								class="ml-3 p-2 pl-4 text-xs text-surface-500 hover:text-surface-700-300 transition-colors"
+								type="button"
+								onclick={() => (showNewAct = true)}
+							>
+								{t('sidebar.newAct')}
+							</button>
 						{/if}
-					</div>
-				{/each}
-
-				<!-- Add story button -->
-				<button
-					class="w-full p-3 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
-					type="button"
-					onclick={handleNewStory}
-				>
-					{t('sidebar.newStory')}
-				</button>
-			</nav>
-
-			<!-- Sidebar footer -->
-			<div class="p-3 border-t border-surface-200-800 flex flex-col gap-1">
-				<label class="flex items-center gap-2 px-2 py-1 text-xs text-surface-500">
-					<span class="shrink-0 font-medium" style="font-size: 0.65rem;">Aa</span>
-					<input
-						class="flex-1 cursor-pointer"
-						type="range"
-						min="0.7"
-						max="1.5"
-						step="0.05"
-						value={fontSizeSlider}
-						oninput={handleFontSizeChange}
-					/>
-					<span class="shrink-0 w-8 text-right tabular-nums">{(fontSizeSlider * 100).toFixed(0)}%</span>
-				</label>
-				<a
-					href="/"
-					class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
-				>
-					{t('sidebar.chat')}
-				</a>
-				<a
-					href="/settings"
-					class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
-				>
-					{t('sidebar.settings')}
-				</a>
-				<a
-					href="/memory-manager"
-					class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
-				>
-					{t('sidebar.memoryManager')}
-				</a>
-			</div>
-		</aside>
-
-		<!-- Main content -->
-		<main class="flex-1 flex flex-col min-w-0">
-			{@render children()}
-		</main>
-	</div>
-
-	<!-- Delete Confirmation Modal -->
-	{#if confirmDelete}
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby="delete-dialog-title"
-			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-			onclick={cancelDelete}
-			onkeydown={(e) => e.key === 'Escape' && cancelDelete()}
-		>
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4"
-				onclick={(e) => e.stopPropagation()}
-				onkeydown={(e) => e.stopPropagation()}
-			>
-				<h3 id="delete-dialog-title" class="text-lg font-semibold text-surface-900-100 mb-2">
-					{t('sidebar.deleteConfirmTitle', { type: confirmDelete.type })}
-				</h3>
-				<p class="text-sm text-surface-600-400 mb-5">
-					{#if confirmDelete.type === 'story'}
-						{t('sidebar.deleteStoryConfirm', { name: confirmDelete.name })}
-					{:else if confirmDelete.type === 'act'}
-						{t('sidebar.deleteActConfirm', { name: confirmDelete.name })}
-					{:else if confirmDelete.type === 'line'}
-						{t('sidebar.deleteLineConfirm', { name: confirmDelete.name })}
-					{:else}
-						{t('sidebar.deleteGenericConfirm', { name: confirmDelete.name })}
 					{/if}
-				</p>
-				{#if confirmDelete.type === 'story' || confirmDelete.type === 'line'}
-					<div class="flex flex-col gap-2">
-						<button
-							class="w-full px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
-							type="button"
-							onclick={() => confirmDeleteAction(false)}
-						>
-							{t('sidebar.deleteKeepFolder')}
-						</button>
-						<button
-							class="w-full px-4 py-2 rounded-lg bg-error-700 hover:bg-error-800 text-white text-sm font-medium transition-colors"
-							type="button"
-							onclick={() => confirmDeleteAction(true)}
-						>
-							{t('sidebar.deleteWithFolder')}
-						</button>
-						<button
-							bind:this={cancelButton}
-							class="w-full px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
-							type="button"
-							onclick={cancelDelete}
-						>
-							{t('sidebar.cancel')}
-						</button>
+				</div>
+			{/each}
+
+			<!-- Add story button -->
+			<button
+				class="w-full p-3 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+				type="button"
+				onclick={handleNewStory}
+			>
+				{t('sidebar.newStory')}
+			</button>
+
+			<!-- Sidebar blocking overlay (covers nav only, not footer) -->
+			{#if sidebarBlocked}
+				<div
+					class="absolute inset-0 z-10 bg-surface-50-950/60 backdrop-blur-sm flex items-center justify-center cursor-not-allowed"
+					role="alert"
+					aria-live="polite"
+					aria-busy="true"
+				>
+					<div class="text-center space-y-2">
+						<div class="inline-block w-8 h-8 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+						<p class="text-xs text-surface-500">{!appReady ? initStatus : t('sidebar.worldBuilderActive')}</p>
+					</div>
+				</div>
+			{/if}
+		</nav>
+
+		<!-- Sidebar footer -->
+		<div class="p-3 border-t border-surface-200-800 flex flex-col gap-1">
+			<label class="flex items-center gap-2 px-2 py-1 text-xs text-surface-500">
+				<span class="shrink-0 font-medium" style="font-size: 0.65rem;">Aa</span>
+				<input
+					class="flex-1 cursor-pointer"
+					type="range"
+					min="0.7"
+					max="1.5"
+					step="0.05"
+					value={fontSizeSlider}
+					oninput={handleFontSizeChange}
+				/>
+				<span class="shrink-0 w-8 text-right tabular-nums">{(fontSizeSlider * 100).toFixed(0)}%</span>
+			</label>
+			<a
+				href="/"
+				class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+			>
+				{t('sidebar.chat')}
+			</a>
+			<a
+				href="/settings"
+				class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+			>
+				{t('sidebar.settings')}
+			</a>
+			<a
+				href="/memory-manager"
+				class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+			>
+				{t('sidebar.memoryManager')}
+			</a>
+		</div>
+	</aside>
+
+	<!-- Main content -->
+	<main class="flex-1 flex flex-col min-w-0">
+		{#if !appReady}
+			<!-- Init loading in main area -->
+			<div class="flex-1 flex items-center justify-center">
+				{#if appError}
+					<div class="text-center space-y-3">
+						<p class="text-error-500">{appError}</p>
 					</div>
 				{:else}
-					<div class="flex gap-2">
-						<button
-							bind:this={cancelButton}
-							class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
-							type="button"
-							onclick={cancelDelete}
-						>
-							{t('sidebar.cancel')}
-						</button>
-						<button
-							class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
-							type="button"
-							onclick={() => confirmDeleteAction()}
-						>
-							{t('sidebar.deleteLabel')}
-						</button>
+					<div class="text-center space-y-2">
+						<div class="text-surface-500 animate-pulse">{t('sidebar.loading')}</div>
+						<div class="text-xs text-surface-600">{initStatus}</div>
 					</div>
 				{/if}
 			</div>
-		</div>
-	{/if}
+		{:else}
+			{@render children()}
+		{/if}
+	</main>
+</div>
 
-	<!-- New Story Modal -->
-	{#if showNewStoryModal}
+<!-- Delete Confirmation Modal -->
+{#if confirmDelete}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="delete-dialog-title"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+		onclick={cancelDelete}
+		onkeydown={(e) => e.key === 'Escape' && cancelDelete()}
+	>
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
-			role="dialog"
-			aria-modal="true"
-			aria-labelledby="new-story-dialog-title"
-			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-			onclick={cancelNewStory}
-			onkeydown={(e) => e.key === 'Escape' && cancelNewStory()}
+			class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
 		>
-			<!-- svelte-ignore a11y_no_static_element_interactions -->
-			<div
-				class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4"
-				onclick={(e) => e.stopPropagation()}
-				onkeydown={(e) => e.stopPropagation()}
-			>
-				<h3 id="new-story-dialog-title" class="text-lg font-semibold text-surface-900-100 mb-4">{t('sidebar.createNewStory')}</h3>
-				<div class="flex flex-col gap-3">
+			<h3 id="delete-dialog-title" class="text-lg font-semibold text-surface-900-100 mb-2">
+				{t('sidebar.deleteConfirmTitle', { type: confirmDelete.type })}
+			</h3>
+			<p class="text-sm text-surface-600-400 mb-5">
+				{#if confirmDelete.type === 'story'}
+					{t('sidebar.deleteStoryConfirm', { name: confirmDelete.name })}
+				{:else if confirmDelete.type === 'act'}
+					{t('sidebar.deleteActConfirm', { name: confirmDelete.name })}
+				{:else if confirmDelete.type === 'line'}
+					{t('sidebar.deleteLineConfirm', { name: confirmDelete.name })}
+				{:else}
+					{t('sidebar.deleteGenericConfirm', { name: confirmDelete.name })}
+				{/if}
+			</p>
+			{#if confirmDelete.type === 'story' || confirmDelete.type === 'line'}
+				<div class="flex flex-col gap-2">
 					<button
-						class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
+						class="w-full px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
 						type="button"
-						onclick={handleStartWorldBuilder}
+						onclick={() => confirmDeleteAction(false)}
 					>
-						<div class="font-medium text-surface-900-100 mb-1">{t('sidebar.worldBuilder')}</div>
-						<div class="text-sm text-surface-600-400">{t('sidebar.worldBuilderDescription')}</div>
+						{t('sidebar.deleteKeepFolder')}
 					</button>
 					<button
-						class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
+						class="w-full px-4 py-2 rounded-lg bg-error-700 hover:bg-error-800 text-white text-sm font-medium transition-colors"
 						type="button"
-						onclick={handleStartImportWorld}
+						onclick={() => confirmDeleteAction(true)}
 					>
-						<div class="font-medium text-surface-900-100 mb-1">{t('sidebar.importWorld')}</div>
-						<div class="text-sm text-surface-600-400">{t('sidebar.importWorldDescription')}</div>
+						{t('sidebar.deleteWithFolder')}
+					</button>
+					<button
+						bind:this={cancelButton}
+						class="w-full px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+						type="button"
+						onclick={cancelDelete}
+					>
+						{t('sidebar.cancel')}
 					</button>
 				</div>
+			{:else}
+				<div class="flex gap-2">
+					<button
+						bind:this={cancelButton}
+						class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+						type="button"
+						onclick={cancelDelete}
+					>
+						{t('sidebar.cancel')}
+					</button>
+					<button
+						class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
+						type="button"
+						onclick={() => confirmDeleteAction()}
+					>
+						{t('sidebar.deleteLabel')}
+					</button>
+				</div>
+			{/if}
+		</div>
+	</div>
+{/if}
+
+<!-- New Story Modal -->
+{#if showNewStoryModal}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="new-story-dialog-title"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+		onclick={cancelNewStory}
+		onkeydown={(e) => e.key === 'Escape' && cancelNewStory()}
+	>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+		>
+			<h3 id="new-story-dialog-title" class="text-lg font-semibold text-surface-900-100 mb-4">{t('sidebar.createNewStory')}</h3>
+			<div class="flex flex-col gap-3">
 				<button
-					class="w-full mt-4 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+					class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
 					type="button"
-					onclick={cancelNewStory}
+					onclick={handleStartWorldBuilder}
 				>
-					{t('sidebar.cancel')}
+					<div class="font-medium text-surface-900-100 mb-1">{t('sidebar.worldBuilder')}</div>
+					<div class="text-sm text-surface-600-400">{t('sidebar.worldBuilderDescription')}</div>
+				</button>
+				<button
+					class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
+					type="button"
+					onclick={handleStartImportWorld}
+				>
+					<div class="font-medium text-surface-900-100 mb-1">{t('sidebar.importWorld')}</div>
+					<div class="text-sm text-surface-600-400">{t('sidebar.importWorldDescription')}</div>
 				</button>
 			</div>
+			<button
+				class="w-full mt-4 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+				type="button"
+				onclick={cancelNewStory}
+			>
+				{t('sidebar.cancel')}
+			</button>
 		</div>
-	{/if}
+	</div>
+{/if}
 
-	<!-- Act Plot Generation Overlay -->
-	{#if getActPlotGenerationActive()}
-		<div
-			class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-			role="alert"
-			aria-live="polite"
-			aria-busy="true"
-		>
-			<div class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-8 text-center">
-				<div class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
-				<p class="mt-4 text-surface-950-50">
-					{#if getActPlotGenerationPhase() === 'writing'}
-						{t('sidebar.actPlotWriting')}
-					{:else if getActPlotGenerationPhase() === 'reviewing'}
-						{t('sidebar.actPlotReviewing')}
-					{:else if getActPlotGenerationPhase() === 'editing'}
-						{t('sidebar.actPlotEditing')}
-					{:else}
-						{t('sidebar.actPlotGenerating')}
-					{/if}
-				</p>
-			</div>
+<!-- Act Plot Generation Overlay -->
+{#if getActPlotGenerationActive()}
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+		role="alert"
+		aria-live="polite"
+		aria-busy="true"
+	>
+		<div class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-8 text-center">
+			<div class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+			<p class="mt-4 text-surface-950-50">
+				{#if getActPlotGenerationPhase() === 'writing'}
+					{t('sidebar.actPlotWriting')}
+				{:else if getActPlotGenerationPhase() === 'reviewing'}
+					{t('sidebar.actPlotReviewing')}
+				{:else if getActPlotGenerationPhase() === 'editing'}
+					{t('sidebar.actPlotEditing')}
+				{:else}
+					{t('sidebar.actPlotGenerating')}
+				{/if}
+			</p>
 		</div>
-	{/if}
+	</div>
 {/if}

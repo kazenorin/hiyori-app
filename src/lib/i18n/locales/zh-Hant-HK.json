@@ -151,7 +151,8 @@
 		"actPlotWriting": "撰寫章節劇情中…",
 		"actPlotReviewing": "審閱章節劇情中…",
 		"actPlotEditing": "修訂章節劇情中…",
-		"actPlotGenerating": "生成章節劇情中…"
+		"actPlotGenerating": "生成章節劇情中…",
+		"worldBuilderActive": "世界建構進行中…"
 	},
 	"components": {
 		"chatControls": {
