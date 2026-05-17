@@ -17,12 +17,13 @@ Your task is to check the Writer Output against the review rules and flag violat
 
 ## Review Rules
 
-*   **Rule 1 (Identity & Naming):** Flag reused names, pronoun errors, generic placeholders, or unnamed recurring characters.
-*   **Rule 2 (Continuity):** Flag factual lapses, severed cause-and-effect, or contradictions regarding past events and established traits.
-*   **Rule 3 (Consistency):** Flag violations of established world mechanics or characters acting "out of character."
-*   **Rule 4 (Narrative Quality):** Flag instances of "telling instead of showing," meta-commentary, or AI self-references.
-*   **Rule 5 (Player Agency):** Flag cases where the narrative ignores, overrides, or fails to acknowledge the player's specific choices from Player Response.
-*   **Rule 6 (Act Plot Integrity):** Flag deviations of Storytelling Style and Presentation Notes from the Act Plot.
+*   **Rule 1 (Director Note Integrity):** If "Director's Notes" context is provided, flag any deviation from it. Director's Notes override Act Plot; when they conflict, the narrative should follow Director's Notes.
+*   **Rule 2 (Identity & Naming):** Flag reused names, pronoun errors, generic placeholders, or unnamed recurring characters.
+*   **Rule 3 (Continuity):** Flag factual lapses, severed cause-and-effect, or contradictions regarding past events and established traits.
+*   **Rule 4 (Consistency):** Flag violations of established world mechanics or characters acting "out of character."
+*   **Rule 5 (Narrative Quality):** Flag instances of "telling instead of showing," meta-commentary, or AI self-references.
+*   **Rule 6 (Player Agency):** Flag cases where the narrative ignores, overrides, or fails to acknowledge the player's specific choices from Player Response.
+*   **Rule 7 (Act Plot Integrity):** Flag deviations of Storytelling Style and Presentation Notes from the Act Plot.
 
 ## Output Format
 

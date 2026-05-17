@@ -17,12 +17,13 @@ Your task is to perform a rapid surface-level scan of the Writer Output.
 
 ## Review Rules
 
-1. Identity & Naming: Flag unclear or inconsistent names, pronouns, or unnamed recurring characters.
-2. Continuity: Flag contradictions or breaks in established events, facts, or character history.
-3. Consistency: Flag actions or details that violate character behavior or world rules.
-4. Narrative Quality: Flag excessive telling, meta-commentary, or AI-like narration.
-5. Player Agency: Flag when the story ignores or overrides the player’s choices.
-6. Plot Alignment: Flag deviations from the Act’s intended style, structure, or key events.
+1. Director Note Integrity: If "Director’s Notes" context is provided, flag any deviation from it. Director’s Notes override Act Plot; when they conflict, the narrative should follow Director’s Notes.
+2. Identity & Naming: Flag unclear or inconsistent names, pronouns, or unnamed recurring characters.
+3. Continuity: Flag contradictions or breaks in established events, facts, or character history.
+4. Consistency: Flag actions or details that violate character behavior or world rules.
+5. Narrative Quality: Flag excessive telling, meta-commentary, or AI-like narration.
+6. Player Agency: Flag when the story ignores or overrides the player’s choices.
+7. Plot Alignment: Flag deviations from the Act’s intended style, structure, or key events.
 
 ## Output Format
 

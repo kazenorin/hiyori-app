@@ -2,6 +2,7 @@ import * as dbStories from '$lib/db/stories';
 import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import * as dbAppState from '$lib/db/app-state';
+import * as dbDirectorNotes from '$lib/db/director-notes';
 import { log } from '$lib/logging/logger';
 import { moveWorldBuilderLog } from '$lib/logging/chat-logger';
 import { getLogFilePath } from '$lib/features/world-builder/world-builder.svelte';
@@ -33,6 +34,7 @@ let activeWorldContent = $state<string | null>(null);
 let activeInterviewTranscript = $state<ModelMessage[]>([]);
 let activeActPlotContent = $state<string>('');
 let actPlotGenerationPhase = $state<ActPlotPhase | null>(null);
+let activeDirectorNotes = $state<dbDirectorNotes.DirectorNote[]>([]);
 
 export function getStories(): dbStories.Story[] {
 	return stories;
@@ -84,6 +86,19 @@ export function getActPlotGenerationPhase(): ActPlotPhase | null {
 }
 export function setActPlotGenerationPhase(phase: ActPlotPhase | null): void {
 	actPlotGenerationPhase = phase;
+}
+export function getActiveDirectorNotes(): dbDirectorNotes.DirectorNote[] {
+	return activeDirectorNotes;
+}
+export function getActiveDirectorNotesText(currentScene: number): string {
+	const active = activeDirectorNotes.filter((n) => {
+		if (!n.isActive) return false;
+		if (n.effectiveFromScene !== null && currentScene < n.effectiveFromScene) return false;
+		if (n.effectiveToScene !== null && currentScene > n.effectiveToScene) return false;
+		return true;
+	});
+	if (active.length === 0) return '';
+	return active.map((n, i) => `${i + 1}. ${n.text}`).join('\n');
 }
 /**
  * Combined narration context as message array.
@@ -157,6 +172,7 @@ function resetStoryContent(): void {
 	activeWorldContent = null;
 	activeInterviewTranscript = [];
 	activeActPlotContent = '';
+	activeDirectorNotes = [];
 }
 
 export async function selectStory(storyId: string | null): Promise<void> {
@@ -214,9 +230,11 @@ export async function selectActLine(actLineId: string | null): Promise<void> {
 			activeInterviewTranscript = [];
 		}
 		await ensureActPlot();
+		activeDirectorNotes = await dbDirectorNotes.getDirectorNotes(actLineId);
 	} else {
 		activeInterviewTranscript = [];
 		activeActPlotContent = '';
+		activeDirectorNotes = [];
 	}
 }
 
@@ -370,6 +388,7 @@ export async function deleteActLine(id: string, removeFolder: boolean = false): 
 
 	// Perform full DB cleanup (act_line_meta + junctions + orphaned messages)
 	await dbActLines.deleteActLine(id);
+	await dbDirectorNotes.deleteDirectorNotesForActLine(id);
 
 	// Remove folder if requested
 	if (removeFolder && line && act && storyId && storyName) {
@@ -389,6 +408,26 @@ export async function deleteActLine(id: string, removeFolder: boolean = false): 
 	}
 }
 
+export async function addDirectorNote(text: string, effectiveFromScene?: number | null, effectiveToScene?: number | null): Promise<void> {
+	if (!activeActLineId) return;
+	const id = crypto.randomUUID();
+	await dbDirectorNotes.createDirectorNote(id, activeActLineId, text, effectiveFromScene, effectiveToScene);
+	activeDirectorNotes = [
+		...activeDirectorNotes,
+		{ id, actLineId: activeActLineId, text, isActive: true, effectiveFromScene: effectiveFromScene ?? null, effectiveToScene: effectiveToScene ?? null, createdAt: Date.now() },
+	];
+}
+
+export async function updateDirectorNote(id: string, fields: { text?: string; isActive?: boolean; effectiveFromScene?: number | null; effectiveToScene?: number | null }): Promise<void> {
+	await dbDirectorNotes.updateDirectorNote(id, fields);
+	activeDirectorNotes = activeDirectorNotes.map((n) => (n.id === id ? { ...n, ...fields } : n));
+}
+
+export async function deleteDirectorNote(id: string): Promise<void> {
+	await dbDirectorNotes.deleteDirectorNote(id);
+	activeDirectorNotes = activeDirectorNotes.filter((n) => n.id !== id);
+}
+
 export async function forkActLine(fromLineId: string, fromSequence: number, actId: string, name: string): Promise<dbActLines.ActLineMeta> {
 	const newLineId = crypto.randomUUID();
 	const { lineMeta, remappedMessageIds } = await dbActLines.branchFromLine(newLineId, fromLineId, fromSequence, actId, name);
@@ -396,6 +435,7 @@ export async function forkActLine(fromLineId: string, fromSequence: number, actI
 
 	// Copy act-plot file from source to forked line before selectActLine triggers ensureActPlot
 	await copyActPlotForFork(fromLineId, lineMeta.id);
+	await dbDirectorNotes.cloneDirectorNotes(fromLineId, lineMeta.id);
 
 	await selectActLine(lineMeta.id);
 
@@ -468,6 +508,7 @@ export async function forkActLineForInterview(
 	// Do NOT call selectActLine — it would trigger ensureActPlot
 
 	await copyMemoriesForFork(fromLineId, lineMeta.id, fromSequence, remappedMessageIds);
+	await dbDirectorNotes.cloneDirectorNotes(fromLineId, lineMeta.id);
 
 	return lineMeta;
 }

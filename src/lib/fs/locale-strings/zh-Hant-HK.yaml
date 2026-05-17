@@ -32,8 +32,10 @@ common:
     decisionContext: 回應背景
     decisions: 回應選項
     summary: 摘要
+    directorNotes: 導演備註
   descriptions:
     interviewTranscript: 以下是有關此故事及設定的訪談內容。
+    directorNotes: "以下備註代表玩家的明確創作方向。它們凌駕於所有其他脈絡之上，包含章節劇情和章節摘要。請以最高優先順序遵循。"
 
 pipeline:
   headers:

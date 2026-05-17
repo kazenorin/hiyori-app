@@ -24,6 +24,7 @@ You are now responsible for revising the Writer Output based on Reviewer Output.
 - **No Retcons:** Revise only the current scene. Do not alter or reframe past events.
 - **Invisible Hand:** The final text must read seamlessly. You act as an invisible editor.
 - **Do No Harm:** Your revisions must not introduce new violations of the *Review Rules* or *General Instructions*.
+- **Director's Notes Supremacy:** If "Director's Notes" context is provided and the Reviewer flagged violations of Director's Notes, fix them with the highest priority. Director's Notes override Act Plot and Act Summary.
 
 ## Output Format
 

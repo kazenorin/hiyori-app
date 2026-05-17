@@ -59,6 +59,8 @@
 		"embeddingProviderDescription": "用於產生 Embedding 以進行記憶搜尋的提供者。",
 		"phraseHighlighting": "標示重點",
 		"phraseHighlightingDescription": "自動擷取並標示敘事文字中的重點。會使用「小型作業用 Agent」。",
+		"directorMode": "導演模式",
+		"directorModeDescription": "新增持續性備註，凌駕於故事的既有劇情之上。",
 		"pipelineRoles": "流程提供者角色",
 		"pipelineRolesDescription": "將提供者分配給各流程階段。所有角色皆預設使用「主要提供者」。",
 		"plotPlanner": "編劇",
@@ -121,7 +123,15 @@
 		"loadingStory": "載入故事中…",
 		"cancel": "取消",
 		"worldBuilderPlaceholder": "描述你的世界觀…\n\n按 Enter 傳送，Shift+Enter 換行。",
-		"chatPlaceholder": "輸入你的訊息…\n\n按 Enter 傳送，Shift+Enter 換行。"
+		"chatPlaceholder": "輸入你的訊息…\n\n按 Enter 傳送，Shift+Enter 換行。",
+		"directorNotes": "導演備註",
+		"directorNotesEmpty": "尚無備註",
+		"directorNotesPlaceholder": "新增導演備註…",
+		"addNote": "新增",
+		"activeCount": "{count} 個生效中",
+		"effectiveFrom": "起始場景",
+		"effectiveTo": "結束場景",
+		"sceneRangeUnset": "所有場景"
 	},
 	"sidebar": {
 		"loading": "載入中…",

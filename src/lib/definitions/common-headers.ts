@@ -28,6 +28,7 @@ export const decisionsHeader = () => ls('common.headers.decisions');
 export const turnOfEventsHeader = () => ls('common.headers.turnOfEvents');
 export const summaryHeader = () => ls('common.headers.summary');
 export const templateHeader = () => ls('common.headers.template');
+export const directorNotesHeader = () => ls('common.headers.directorNotes');
 
 export function sectionFormat(text: string, headerLevel: number = 2): string {
 	return `${'#'.repeat(headerLevel)} ${text}\n\n`;

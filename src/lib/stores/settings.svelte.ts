@@ -43,6 +43,7 @@ export interface Settings {
 	minorTaskAgentProviderRole: string;
 	importantPhraseHighlighting: boolean;
 	targetWordCount: number;
+	directorModeEnabled: boolean;
 }
 
 const STORAGE_KEY = 'byoa-settings';
@@ -68,6 +69,7 @@ const defaults: Settings = {
 	minorTaskAgentProviderRole: 'main',
 	importantPhraseHighlighting: false,
 	targetWordCount: 400,
+	directorModeEnabled: false,
 };
 
 /**
@@ -224,6 +226,10 @@ export function isReviewerEnabled(): boolean {
 	return settings.reviewerEnabled;
 }
 
+export function isDirectorModeEnabled(): boolean {
+	return settings.directorModeEnabled;
+}
+
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
 	const id = settings.roleAssignments[role];
 	if (!id) return undefined;
@@ -278,6 +284,7 @@ export async function updateSettings(
 			| 'minorTaskAgentProviderRole'
 			| 'importantPhraseHighlighting'
 			| 'targetWordCount'
+			| 'directorModeEnabled'
 		>
 	>
 ): Promise<void> {
@@ -303,6 +310,7 @@ export async function updateSettings(
 	if (partial.minorTaskAgentProviderRole !== undefined) settings.minorTaskAgentProviderRole = partial.minorTaskAgentProviderRole;
 	if (partial.importantPhraseHighlighting !== undefined) settings.importantPhraseHighlighting = partial.importantPhraseHighlighting;
 	if (partial.targetWordCount !== undefined) settings.targetWordCount = partial.targetWordCount;
+	if (partial.directorModeEnabled !== undefined) settings.directorModeEnabled = partial.directorModeEnabled;
 	persist();
 
 	// Apply font size preference when fontSize changes

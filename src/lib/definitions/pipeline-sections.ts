@@ -16,6 +16,7 @@ import {
 	previousNarrativeBodyHeader,
 	turnOfEventsHeader,
 	templateHeader,
+	directorNotesHeader,
 	sectionFormat,
 } from './common-headers';
 
@@ -56,6 +57,9 @@ export const SECTION = {
 	get TURN_OF_EVENTS() {
 		return sectionFormat(turnOfEventsHeader());
 	},
+	get DIRECTOR_NOTES() {
+		return sectionFormat(directorNotesHeader()) + ls('common.descriptions.directorNotes') + '\n\n';
+	},
 };
 
 /** Section headings for act-plot generation phases (used by act-plot-generator). */
@@ -93,4 +97,10 @@ export function formatPreviousNarrativeBody(previousNarrativeBody: string | null
 export function formatTurnOfEventsSection(turnOfEvents: string | null | undefined): string[] {
 	if (!turnOfEvents || turnOfEvents.trim().length === 0) return [];
 	return [SECTION.TURN_OF_EVENTS + turnOfEvents];
+}
+
+/** Format director's notes as a user message section. Returns empty array if no content. */
+export function formatDirectorNotesSection(directorNotes: string | null | undefined): string[] {
+	if (!directorNotes || directorNotes.trim().length === 0) return [];
+	return [SECTION.DIRECTOR_NOTES + directorNotes];
 }

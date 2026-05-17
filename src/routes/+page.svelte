@@ -46,15 +46,17 @@
 		getActiveActLineId,
 		getActiveStory,
 		getActiveWorldContent,
+		getActiveDirectorNotesText,
 		getIsSelectingStory,
 		selectActLineQuiet,
 		setActPlotGenerationPhase,
 		setActiveActPlotContent,
 	} from '$lib/stores/stories.svelte';
-	import {settings} from '$lib/stores/settings.svelte';
+	import {settings, isDirectorModeEnabled} from '$lib/stores/settings.svelte';
 	import {Accordion} from '@skeletonlabs/skeleton-svelte';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import ChatControls from '$lib/components/ChatControls.svelte';
+	import DirectorNotesPanel from '$lib/components/DirectorNotesPanel.svelte';
 	import WorldBuilderControls from '$lib/components/WorldBuilderControls.svelte';
 	import {hasTemplateMetadata, renderTemplate} from '$lib/ai/template-renderer';
 	import {emptyVariables, type NarrativeVariables} from '$lib/ai/narrative-types';
@@ -360,6 +362,7 @@
 						worldContent,
 						actPlot: actPlotResult.content,
 						actSummary: forkedMessage.actSummary ?? '',
+						directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(forkedMessage.sceneNumber ?? 1) : '',
 						sceneNumber: forkedMessage.sceneNumber ?? 1,
 						narrativeVariables: forkedMessage.variables ?? emptyVariables(),
 						playerResponse: null,
@@ -843,6 +846,9 @@
 
 		<!-- Right-side input panel -->
 		<aside class="w-80 border-l border-surface-200-800 flex flex-col p-4 bg-surface-50-950">
+			{#if isDirectorModeEnabled()}
+				<DirectorNotesPanel />
+			{/if}
 			<div class="flex items-center justify-between mb-3">
 				<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('chat.message')}</span>
 			</div>

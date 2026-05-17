@@ -13,8 +13,9 @@ import {
 	isPhraseHighlightingEnabled,
 	settings,
 	isReviewerEnabled,
+	isDirectorModeEnabled,
 } from '$lib/stores/settings.svelte';
-import { getActiveActPlotContent, getActiveStoryId, getActiveWorldContent } from '$lib/stores/stories.svelte';
+import { getActiveActPlotContent, getActiveStoryId, getActiveWorldContent, getActiveDirectorNotesText } from '$lib/stores/stories.svelte';
 import * as dbMessages from '$lib/db/messages';
 import { parseImportantPhrases, serializeImportantPhrases } from '$lib/db/messages';
 import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from './narrative-types';
@@ -495,6 +496,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 			player: playerContext,
 			story: { storyId: story.id, storyName: story.name, actLineId },
 			completedScenes: previousSceneNumber, // previous scene was just completed by the Player Response
+			directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(previousSceneNumber + 1) : '',
 			targetWordCount,
 		});
 

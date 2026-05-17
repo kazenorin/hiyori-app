@@ -59,6 +59,8 @@
 		"embeddingProviderDescription": "The provider used to generate embeddings for memory search.",
 		"phraseHighlighting": "Important phrase highlighting",
 		"phraseHighlightingDescription": "Automatically extract and highlight key phrases in narrative text. Requires Minor Task Agent.",
+		"directorMode": "Director Mode",
+		"directorModeDescription": "Add persistent notes that override the story's planned plot.",
 		"pipelineRoles": "Pipeline Roles",
 		"pipelineRolesDescription": "Assign providers to each pipeline phase. All default to the main provider.",
 		"plotPlanner": "Plot Planner",
@@ -121,7 +123,15 @@
 		"loadingStory": "Loading story...",
 		"cancel": "Cancel",
 		"worldBuilderPlaceholder": "Describe your world...\n\nEnter to send, Shift+Enter for new line.",
-		"chatPlaceholder": "Type your message...\n\nEnter to send, Shift+Enter for new line."
+		"chatPlaceholder": "Type your message...\n\nEnter to send, Shift+Enter for new line.",
+		"directorNotes": "Director's Notes",
+		"directorNotesEmpty": "No notes yet",
+		"directorNotesPlaceholder": "Add a director's note...",
+		"addNote": "Add",
+		"activeCount": "{count} active",
+		"effectiveFrom": "From scene",
+		"effectiveTo": "To scene",
+		"sceneRangeUnset": "All scenes"
 	},
 	"sidebar": {
 		"loading": "Loading...",

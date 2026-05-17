@@ -8,13 +8,14 @@ import { parseContent } from '$lib/chat-stream-parser';
 import { variablesToMarkdown } from './template-renderer';
 import { getGameMasterDescriptors } from './descriptors';
 import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
-import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection } from '$lib/definitions/pipeline-sections';
+import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection, formatDirectorNotesSection } from '$lib/definitions/pipeline-sections';
 import { gameMasterExtractionPrompt } from '$lib/definitions/pipeline-prompts';
 
 export interface GameDataRegenerationContext {
 	worldContent: string;
 	actPlot: string;
 	actSummary: string;
+	directorNotes: string;
 	sceneNumber: number;
 	narrativeVariables: NarrativeVariables;
 	playerResponse: string | null;
@@ -25,7 +26,7 @@ export interface GameDataRegenerationContext {
  * Used when enriching a forked message with turnOfEvents.
  */
 export async function regenerateGameData(params: GameDataRegenerationContext): Promise<GameDataFields | null> {
-	const { worldContent, actPlot, actSummary, narrativeVariables, playerResponse, sceneNumber } = params;
+	const { worldContent, actPlot, actSummary, directorNotes, narrativeVariables, playerResponse, sceneNumber } = params;
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) return null;
 
@@ -42,6 +43,7 @@ export async function regenerateGameData(params: GameDataRegenerationContext): P
 		...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
 		...formatTurnOfEventsSection(narrativeVariables.turnOfEvents),
 		SECTION.EDITOR_OUTPUT + editorOutput,
+		...formatDirectorNotesSection(directorNotes),
 		gameMasterExtractionPrompt(),
 	];
 

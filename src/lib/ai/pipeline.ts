@@ -5,7 +5,7 @@ import { type ProviderConfig } from '$lib/stores/settings.svelte';
 import { DEFAULT_RETRY_CONFIG, type RetryConfig, type PhaseMetadata, toPhaseMetadata, streamWithRetry } from './chat-stream';
 import { createModel } from './provider';
 import type { GameDataFields, NarrativeVariables, PhaseName } from './narrative-types';
-import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection } from '$lib/definitions/pipeline-sections';
+import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection, formatDirectorNotesSection } from '$lib/definitions/pipeline-sections';
 import { actSummaryForScenesHeader, actSummaryHeader, sectionFormat, summaryHeader } from '$lib/definitions/common-headers';
 import { sceneWithNumberLabel, locationLabel, aliasesLabel } from '$lib/definitions/common-labels';
 import { characterSummariesHeader, sceneSummariesHeader } from '$lib/definitions/pipeline-prompts';
@@ -174,6 +174,7 @@ export interface PipelineInput {
 	worldContent: string;
 	actPlot: string;
 	actSummary: string;
+	directorNotes: string;
 	previousNarrativeVariables: NarrativeVariables | undefined;
 	previousScenePlot?: string;
 	player?: PlayerContext;
@@ -516,6 +517,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		worldContent,
 		actPlot,
 		actSummary,
+		directorNotes,
 		previousNarrativeVariables,
 		previousScenePlot,
 		player,
@@ -603,6 +605,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 					...playerResponseSection(player),
 					...formatTurnOfEventsSection(previousTurnOfEvents),
+					...formatDirectorNotesSection(directorNotes),
 					writerExtractionPromptTemplate(currentScene),
 				]),
 				providerConfig: providerConfigs.writer,
@@ -656,6 +659,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 						...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 						...playerResponseSection(player),
 						...formatTurnOfEventsSection(previousTurnOfEvents),
+						...formatDirectorNotesSection(directorNotes),
 						...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
 						getSettings().reviewerMode === 'quick'
 							? quickReviewerExtractionPromptTemplate(currentScene)
@@ -703,6 +707,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 							...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 							...playerResponseSection(player),
 							...formatTurnOfEventsSection(previousTurnOfEvents),
+							...formatDirectorNotesSection(directorNotes),
 							...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
 							...(state.reviewerOutput ? [SECTION.REVIEWER_OUTPUT + state.reviewerOutput] : []),
 							editorExtractionPrompt(),
@@ -782,6 +787,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 			// editorOutput (from variablesToMarkdown) may include a turnOfEvents section for the current scene,
 			// which is distinct from previousTurnOfEvents above (the previous scene's).
 			...(editorOutput ? [SECTION.EDITOR_OUTPUT + editorOutput] : []),
+		...formatDirectorNotesSection(directorNotes),
 		];
 
 		if (isPlotPlannerEnabled()) {

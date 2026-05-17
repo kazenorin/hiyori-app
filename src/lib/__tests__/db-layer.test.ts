@@ -53,7 +53,7 @@ describe('migrations', () => {
 		await runMigrations();
 		await runMigrations();
 		const versions = testDb._db.prepare('SELECT version FROM schema_version ORDER BY version').all();
-		expect(versions).toHaveLength(4);
+		expect(versions).toHaveLength(5);
 	});
 });
 

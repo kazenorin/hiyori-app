@@ -71,7 +71,19 @@ const migrationStatements: string[][] = [
 	],
 	[`ALTER TABLE messages ADD COLUMN scene_plot TEXT`],
 	[`ALTER TABLE messages ADD COLUMN important_phrases TEXT`],
-	[`ALTER TABLE stories ADD COLUMN locale TEXT NOT NULL DEFAULT 'en'`]
+	[`ALTER TABLE stories ADD COLUMN locale TEXT NOT NULL DEFAULT 'en'`],
+	[
+		`CREATE TABLE IF NOT EXISTS director_notes (
+			id TEXT PRIMARY KEY,
+			act_line_id TEXT NOT NULL,
+			text TEXT NOT NULL,
+			is_active INTEGER NOT NULL DEFAULT 1,
+			effective_from_scene INTEGER,
+			effective_to_scene INTEGER,
+			created_at INTEGER NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_director_notes_line ON director_notes(act_line_id)`
+	]
 ];
 
 export async function runMigrations(): Promise<void> {
