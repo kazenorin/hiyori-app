@@ -1,5 +1,5 @@
-import { generateText, stepCountIs, type ToolSet } from 'ai';
-import type { MessageBase } from '$lib/db/messages';
+import {generateText, stepCountIs, type ToolSet} from 'ai';
+import type {MessageBase} from '$lib/db/messages';
 import {
 	getSettings,
 	isPhraseHighlightingEnabled,
@@ -7,25 +7,18 @@ import {
 	isReviewerEnabled,
 	type ProviderConfig,
 } from '$lib/stores/settings.svelte';
-import { DEFAULT_RETRY_CONFIG, type PhaseMetadata, type RetryConfig, streamWithRetry, toPhaseMetadata } from './chat-stream';
-import { createModel } from './provider';
-import type { GameDataFields, NarrativeVariables, PhaseName } from './narrative-types';
+import {DEFAULT_RETRY_CONFIG, type PhaseMetadata, type RetryConfig, streamWithRetry, toPhaseMetadata} from './chat-stream';
+import {createModel} from './provider';
+import type {GameDataFields, NarrativeVariables, PhaseName} from './narrative-types';
 import {
 	formatDirectorNotesSection,
 	formatPreviousNarrativeBody,
 	formatTurnOfEventsSection,
 	SECTION,
 } from '$lib/definitions/pipeline-sections';
-import { actSummaryForScenesHeader, actSummaryHeader, sectionFormat, summaryHeader } from '$lib/definitions/common-headers';
-import {
-	aliasesLabel,
-	goalLabel,
-	locationLabel,
-	relationshipsLabel,
-	sceneWithNumberLabel,
-	stateLabel,
-	voiceLabel,
-} from '$lib/definitions/common-labels';
+import {actSummaryForScenesHeader, actSummaryHeader, sectionFormat, summaryHeader} from '$lib/definitions/common-headers';
+import {aliasesLabel, locationLabel, sceneWithNumberLabel,} from '$lib/definitions/common-labels';
+import {goalLabel, relationshipsLabel, stateLabel, upToLabel, voiceLabel,} from '$lib/definitions/character-profile-labels';
 import {
 	acceptAsIsLabel,
 	characterProfilesHeader,
@@ -45,16 +38,16 @@ import {
 	totalViolationsLabel,
 	writerExtractionPromptTemplate,
 } from '$lib/definitions/pipeline-prompts';
-import type { AsyncPhaseResults, CompressorResult, PipelineCallbacks, PipelineState } from './pipeline-types';
-import type { StreamState } from './chat-callbacks';
-import { extractCacheTokens, type StreamResultMetadata } from './streaming';
-import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
-import { hasTemplateMetadata, variablesToMarkdown } from './template-renderer';
-import { runMemoryExtractionPipeline } from '$lib/features/memory/memory-extraction-pipeline';
-import { extractImportantPhrases } from './important-phrases-extractor';
-import { filterToolsForPhase } from '$lib/ai/tools/tools';
-import { log } from '$lib/logging/logger';
-import { ERR_NO_PROVIDER_FOR_PHASE } from '$lib/definitions/error-messages';
+import type {AsyncPhaseResults, CompressorResult, PipelineCallbacks, PipelineState, SummarizerResult} from './pipeline-types';
+import type {StreamState} from './chat-callbacks';
+import {extractCacheTokens, type StreamResultMetadata} from './streaming';
+import type {OutputDescriptor} from '$lib/chat-stream-parser/types';
+import {hasTemplateMetadata, variablesToMarkdown} from './template-renderer';
+import {runMemoryExtractionPipeline} from '$lib/features/memory/memory-extraction-pipeline';
+import {extractImportantPhrases} from './important-phrases-extractor';
+import {filterToolsForPhase} from '$lib/ai/tools/tools';
+import {log} from '$lib/logging/logger';
+import {ERR_NO_PROVIDER_FOR_PHASE} from '$lib/definitions/error-messages';
 import {
 	actSummaryIncrementalTemplateLoader,
 	characterProfileCompressorPromptLoader,
@@ -71,14 +64,15 @@ import {
 	writerSystemPromptLoader,
 } from '$lib/fs/prompts';
 import {
+	type ActSummary,
 	mergeActSummary,
 	parseActSummary,
 	parseIncrementalOutput,
 	parseProfilesBody,
+	pruneCharacterScenes,
 	serializeActSummary,
-	serializeCompressedActSummary,
 } from './act-summary-parser';
-import { reviewerAcceptsAsIs } from './reviewer-output-parser';
+import {reviewerAcceptsAsIs} from './reviewer-output-parser';
 import {
 	getEditorDescriptors,
 	getEditorTemplateFitterDescriptors,
@@ -227,7 +221,7 @@ interface StreamingPhaseParams {
 }
 
 function updateState(prev: PipelineState, patch: Partial<PipelineState>): PipelineState {
-	return { ...prev, ...patch };
+	return {...prev, ...patch};
 }
 
 function aggregateMetadata(
@@ -236,7 +230,7 @@ function aggregateMetadata(
 	modelId: string | null | undefined
 ): StreamResultMetadata {
 	if (!acc) {
-		return { ...phase, models: new Set(modelId ? [modelId] : []) };
+		return {...phase, models: new Set(modelId ? [modelId] : [])};
 	}
 	return {
 		finishReason: phase.finishReason,
@@ -262,14 +256,14 @@ async function executeStreamingPhase(
 	params: StreamingPhaseParams,
 	state: PipelineState
 ): Promise<{ state: PipelineState; streamState: StreamState; metadata: StreamResultMetadata }> {
-	const { phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig, descriptors, buildStateUpdate } =
+	const {phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig, descriptors, buildStateUpdate} =
 		params;
 	let remainingRetries = retryConfig.retryCount;
 	let lastError: unknown;
 
 	while (remainingRetries >= 0) {
 		if (abortSignal?.aborted) throw new DOMException('Aborted', 'AbortError');
-		state = updateState(state, { currentPhase: phaseName });
+		state = updateState(state, {currentPhase: phaseName});
 		callbacks.onPhaseStart(phaseName);
 		let streamResult: Awaited<ReturnType<typeof runStreamingPhase>> | undefined;
 		try {
@@ -281,12 +275,12 @@ async function executeStreamingPhase(
 				abortSignal,
 				tools,
 				callbacks,
-				{ retryCount: remainingRetries, backoffIntervalSeconds: retryConfig.backoffIntervalSeconds },
+				{retryCount: remainingRetries, backoffIntervalSeconds: retryConfig.backoffIntervalSeconds},
 				descriptors
 			);
 			state = updateState(state, buildStateUpdate(streamResult.state));
 			callbacks.onPhaseComplete(phaseName, state);
-			return { state, streamState: streamResult.state, metadata: streamResult.metadata };
+			return {state, streamState: streamResult.state, metadata: streamResult.metadata};
 		} catch (err: unknown) {
 			lastError = err;
 			remainingRetries -= streamResult?.retriesConsumed ?? remainingRetries;
@@ -331,14 +325,14 @@ async function runStreamingPhase(
 		descriptors,
 		onRetry: callbacks.onPhaseRetry
 			? (attempt: number, maxAttempts: number) => {
-					callbacks.onPhaseRetry!(phaseName, attempt, maxAttempts);
-					retriesConsumed++;
-				}
+				callbacks.onPhaseRetry!(phaseName, attempt, maxAttempts);
+				retriesConsumed++;
+			}
 			: undefined,
 	});
 
 	const metadata = await accumulator.resultMetadata;
-	return { state: accumulator.state, metadata, retriesConsumed };
+	return {state: accumulator.state, metadata, retriesConsumed};
 }
 
 /**
@@ -364,7 +358,7 @@ async function runNonStreamingPhase(
 		messages,
 		system: systemPrompt,
 		abortSignal,
-		...(tools && Object.keys(tools).length > 0 ? { tools } : {}),
+		...(tools && Object.keys(tools).length > 0 ? {tools} : {}),
 		stopWhen: stepCountIs(maxSteps),
 	});
 
@@ -390,7 +384,7 @@ async function runNonStreamingPhase(
  * Convert an array of content strings into user messages.
  */
 function toUserMessages(contents: string[]): MessageBase[] {
-	return contents.map((content) => ({ role: 'user' as const, content }));
+	return contents.map((content) => ({role: 'user' as const, content}));
 }
 
 async function loadPrompts(storyId: string | undefined, storyName: string | undefined): Promise<LoadedPrompts> {
@@ -411,14 +405,42 @@ function playerResponseSection(playerContext: PlayerContext | undefined) {
 	return playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : [];
 }
 
-function buildSummarizerMessages(input: PipelineInput) {
-	const { previousNarrativeVariables, actSummary, completedScenes } = input;
-	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
-	const actSummaryHeading = sectionFormat(actSummaryForScenesHeader(completedScenes <= 1 ? '' : `(up to Scene ${completedScenes - 1})`));
+function formattedActSummaryForPhases(input: PipelineInput): string[] {
+	const existingParsed = parseActSummary(input.actSummary);
+	const serializedActSummary = serializeActSummary(pruneCharacterScenes(existingParsed));
+	return [SECTION.ACT_SUMMARY + serializedActSummary]
+}
 
+/**
+ *
+ * @param completedScenes input.completedScenes
+ * @param newActSummary Act summary generated by current Summarizer pipeline
+ */
+function formatActSummaryForCompressor(completedScenes: number, newActSummary: ActSummary): string[] {
+	const actSummaryHeading = sectionFormat(`(${upToLabel()} ${sceneWithNumberLabel(completedScenes)})`);
+	const summarizerActSummary = serializeActSummary({...newActSummary, characterProfiles: [], characterProfileLastScene: null});
+	return summarizerActSummary ? [actSummaryHeading + summarizerActSummary] : [];
+}
+
+/**
+ *
+ * @param completedScenes `input.completedScenes`
+ * @param actSummary `input.actSummary` or its preprocessed derivatives
+ */
+function formatActSummaryForSummarizer(completedScenes: number, actSummary: ActSummary): string[] {
+	const actSummaryHeading = sectionFormat(actSummaryForScenesHeader(completedScenes <= 1 ? '' : `(${upToLabel()} ${sceneWithNumberLabel(completedScenes - 1)})`));
+	const summarizerActSummary = serializeActSummary({...actSummary, characterProfiles: [], characterProfileLastScene: null});
+	return summarizerActSummary ? [actSummaryHeading + summarizerActSummary] : [];
+}
+
+function buildSummarizerMessages(input: PipelineInput, parsedActSummary?: ActSummary) {
+	const {previousNarrativeVariables, actSummary, completedScenes} = input;
+	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
+
+	const effectiveSummary = parsedActSummary ?? parseActSummary(actSummary);
 	if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
 		return toUserMessages([
-			actSummaryHeading + actSummary,
+			...formatActSummaryForSummarizer(completedScenes, effectiveSummary),
 			...formatPreviousNarrativeBody(previousNarrativeVariables.narrativeBody, completedScenes),
 			...playerResponseSection(input.player),
 			...formatTurnOfEventsSection(previousNarrativeVariables.turnOfEvents),
@@ -426,7 +448,7 @@ function buildSummarizerMessages(input: PipelineInput) {
 		]);
 	} else {
 		return toUserMessages([
-			actSummaryHeading + actSummary,
+			...formatActSummaryForSummarizer(completedScenes, effectiveSummary),
 			...playerResponseSection(input.player),
 			summarizerFallbackExtractionPromptTemplate(completedScenes),
 		]);
@@ -436,10 +458,10 @@ function buildSummarizerMessages(input: PipelineInput) {
 async function generateFullSummary(
 	input: PipelineInput,
 	loadedPrompts: LoadedPrompts
-): Promise<{ actSummary: string; metadata: StreamResultMetadata }> {
-	const { summarizerPrompt } = loadedPrompts;
-	const { execution } = input;
-	const { providerConfigs, abortSignal } = execution;
+): Promise<SummarizerResult> {
+	const {summarizerPrompt} = loadedPrompts;
+	const {execution} = input;
+	const {providerConfigs, abortSignal} = execution;
 
 	// === FIRST SUMMARY: Full generation (existing behavior) ===
 	const actSummaryTemplate = buildActSummaryTemplate();
@@ -447,14 +469,14 @@ async function generateFullSummary(
 
 	const summarizerMessages = buildSummarizerMessages(input);
 
-	const { text: rawSummary, metadata } = await runNonStreamingPhase(
+	const {text: rawSummary, metadata} = await runNonStreamingPhase(
 		'SUMMARIZER',
 		summarizerSystemPrompt,
 		summarizerMessages,
 		providerConfigs.summarizer,
 		abortSignal
 	);
-	const { completedScenes, previousNarrativeVariables } = input;
+	const {completedScenes, previousNarrativeVariables} = input;
 	try {
 		const parsed = parseActSummary(rawSummary);
 		parsed.completedScenes = completedScenes;
@@ -463,19 +485,22 @@ async function generateFullSummary(
 			parsed.turnOfEventsSceneNumber = completedScenes;
 			parsed.turnOfEventsSceneTitle = previousNarrativeVariables.sceneTitle ?? '';
 		}
-		return { actSummary: serializeActSummary(parsed), metadata };
+		const serializedSummary = serializeActSummary(parsed);
+		return {actSummary: parsed, serializedSummary, metadata};
 	} catch {
-		return { actSummary: rawSummary, metadata };
+		return {serializedSummary: rawSummary, metadata};
 	}
 }
 
 async function generateIncrementalSummary(
 	input: PipelineInput,
 	loadedPrompts: LoadedPrompts
-): Promise<{ actSummary: string; metadata: StreamResultMetadata }> {
-	const { actSummaryIncrementalTemplate, summarizerIncrementalPrompt } = loadedPrompts;
-	const { actSummary, completedScenes, previousNarrativeVariables, execution } = input;
-	const { providerConfigs, abortSignal } = execution;
+): Promise<SummarizerResult> {
+	const {actSummaryIncrementalTemplate, summarizerIncrementalPrompt} = loadedPrompts;
+	const {actSummary, completedScenes, previousNarrativeVariables, execution} = input;
+	const {providerConfigs, abortSignal} = execution;
+
+	const existingParsed = parseActSummary(actSummary);
 
 	// === INCREMENTAL UPDATE: Parse, merge, serialize ===
 	const sceneNumber = String(completedScenes);
@@ -493,8 +518,8 @@ async function generateIncrementalSummary(
 
 	const incrementalSystemPrompt = summarizerIncrementalPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
 
-	const incrementalMessages = buildSummarizerMessages(input);
-	const { text: incrementalRaw, metadata } = await runNonStreamingPhase(
+	const incrementalMessages = buildSummarizerMessages(input, existingParsed);
+	const {text: incrementalRaw, metadata} = await runNonStreamingPhase(
 		'SUMMARIZER',
 		incrementalSystemPrompt,
 		incrementalMessages,
@@ -503,7 +528,6 @@ async function generateIncrementalSummary(
 	);
 
 	try {
-		const existingParsed = parseActSummary(actSummary);
 		const incrementalParsed = parseIncrementalOutput(incrementalRaw);
 		const merged = mergeActSummary(existingParsed, incrementalParsed);
 		// Override completedScenes with the programmatic value (more reliable than LLM-parsed)
@@ -514,7 +538,8 @@ async function generateIncrementalSummary(
 			merged.turnOfEventsSceneNumber = completedScenes;
 			merged.turnOfEventsSceneTitle = previousNarrativeVariables.sceneTitle ?? '';
 		}
-		return { actSummary: serializeActSummary(merged), metadata };
+		const serializedSummary = serializeActSummary(merged);
+		return {actSummary: merged, serializedSummary, metadata};
 	} catch (err) {
 		await log.warn('pipeline', `Incremental act summary parse/merge failed, falling back to full summary: ${err}`);
 		return generateFullSummary(input, loadedPrompts);
@@ -522,27 +547,25 @@ async function generateIncrementalSummary(
 }
 
 async function generateCharacterProfiles(
-	actSummary: string,
+	newActSummary: ActSummary,
 	input: PipelineInput,
 	loadedPrompts: LoadedPrompts
 ): Promise<CompressorResult | null> {
-	const { characterProfileCompressorPrompt } = loadedPrompts;
-	const { completedScenes, execution } = input;
-	const { providerConfigs, abortSignal } = execution;
+	const {characterProfileCompressorPrompt} = loadedPrompts;
+	const {completedScenes, execution} = input;
+	const {providerConfigs, abortSignal} = execution;
 
 	const settings = getSettings();
 	const interval = settings.characterProfileCompressorInterval;
 	if (interval <= 0) return null;
 
-	// Check interval against the ORIGINAL act summary from DB (preserves characterProfileLastScene)
-	const originalParsed = parseActSummary(input.actSummary);
-	const lastScene = originalParsed.characterProfileLastScene ?? 0;
+	// Check interval against the EXISTING act summary from DB
+	const existingActSummary = parseActSummary(input.actSummary);
+	const lastScene = existingActSummary.characterProfileLastScene ?? 0;
 
 	if (completedScenes - lastScene < interval) return null;
 
 	// Parse the LATEST act summary (post-Summarizer) for the compressor prompt
-	const parsed = parseActSummary(actSummary);
-
 	// Build compressor system prompt with locale placeholders
 	const compressorSystemPrompt = characterProfileCompressorPrompt
 		.replaceAll('{actSummaryHeader}', actSummaryHeader())
@@ -553,13 +576,9 @@ async function generateCharacterProfiles(
 		.replaceAll('{voiceLabel}', voiceLabel());
 
 	// Build messages: full act summary WITHOUT the Character Profiles section
-	const parsedWithoutProfiles = { ...parsed, characterProfiles: [], characterProfileLastScene: null };
-	const fullSummaryForCompressor = serializeActSummary(parsedWithoutProfiles);
-	const actSummaryHeading = sectionFormat(actSummaryForScenesHeader(`(up to Scene ${completedScenes})`));
+	const messages = toUserMessages(formatActSummaryForCompressor(input.completedScenes, newActSummary));
 
-	const messages = toUserMessages([actSummaryHeading + fullSummaryForCompressor]);
-
-	const { text: rawProfiles, metadata } = await runNonStreamingPhase(
+	const {text: rawProfiles, metadata} = await runNonStreamingPhase(
 		'CHARACTER_PROFILE_COMPRESSOR',
 		compressorSystemPrompt,
 		messages,
@@ -571,12 +590,13 @@ async function generateCharacterProfiles(
 		// The compressor output contains the Character Profiles section body
 		const profilesResult = parseProfilesBody(rawProfiles);
 		if (profilesResult.profiles.length === 0) return null;
-		const updatedParsed = { ...parsed, characterProfiles: profilesResult.profiles, characterProfileLastScene: completedScenes };
+		const updatedFullSummary = {...newActSummary, characterProfiles: profilesResult.profiles, characterProfileLastScene: completedScenes};
 		return {
 			characterProfiles: profilesResult.profiles,
 			characterProfileLastScene: completedScenes,
 			metadata,
-			actSummary: serializeActSummary(updatedParsed),
+			actSummary: updatedFullSummary,
+			serializedSummary: serializeActSummary(updatedFullSummary)
 		};
 	} catch (err) {
 		await log.warn('pipeline', `Character profile compressor parse failed: ${err}`);
@@ -593,6 +613,14 @@ export interface PipelineResult {
 
 /**
  * Run the full narrative generation pipeline.
+ * Scene counting definitions:
+ *   Completed scenes := scenes that have an assistant message followed by a player response
+ *   Current scene := the scene the writer writes during the pipeline run (Scene number = completedScene + 1)
+ *   Previous scene := the scene available as the narrative body, that does not have a summary covered yet (Scene number = completedScene)
+ * 	 Player's response := user message that "completes" the previous scene (Scene number = completedScene)
+ * 	 Summary generated by this run := The summary for the previous scene (Scene number = completedScene)
+ * 	 Summary provided to writer/review/editor := input.actSummary, i.e. the summary generated for (Scene number = completedScene - 1)
+ * 	 Summary provided to compressor := Summary provided to writer/review/editor (Scene number = completedScene)
  *
  * Sequential phases: Writer → Reviewer → Editor → [Game Master ‖ Plot Planner].
  * Game Master and Plot Planner run concurrently after Editor completes,
@@ -617,32 +645,19 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		targetWordCount,
 	} = input;
 
-	const { providerConfigs, abortSignal, tools, callbacks } = execution;
+	const {providerConfigs, abortSignal, tools, callbacks} = execution;
 
 	const storyId = story?.storyId;
 	const storyName = story?.storyName;
 	const actLineId = story?.actLineId;
 
 	const effectiveTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
-	const currentScene = completedScenes > 0 ? String(completedScenes + 1) : '1';
+	const currentScene = completedScenes > 0 ? String(completedScenes + 1) : '1'; // current = the scene the writer is going to write
 
 	const previousNarrativeBody = previousNarrativeVariables?.narrativeBody;
 	const previousTurnOfEvents = previousNarrativeVariables?.turnOfEvents;
 
 	const retryConfig = input.retryConfig ?? DEFAULT_RETRY_CONFIG;
-
-	// --- Compressed act summary routing ---
-	// DB stores full act summary; compute compressed/summarizer variants at pipeline runtime
-	let compressedActSummary = actSummary;
-	let summarizerActSummary = actSummary;
-	if (actSummary) {
-		const parsed = parseActSummary(actSummary);
-		if (parsed.characterProfiles.length > 0) {
-			compressedActSummary = serializeCompressedActSummary(parsed);
-			const parsedWithoutProfiles = { ...parsed, characterProfiles: [], characterProfileLastScene: null };
-			summarizerActSummary = serializeActSummary(parsedWithoutProfiles);
-		}
-	}
 
 	const sharedParams = {
 		abortSignal,
@@ -650,7 +665,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		retryConfig,
 	};
 
-	let state: PipelineState = { currentPhase: null };
+	let state: PipelineState = {currentPhase: null};
 	let aggregatedMetadata: StreamResultMetadata | null = null;
 	const phaseEntries: PhaseMetadata[] = [];
 
@@ -673,41 +688,42 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	const asyncPhases = (async (): Promise<AsyncPhaseResults> => {
 		if (player?.playerResponse && completedScenes > 0) {
 			// Summarizer receives full summary without Character Profiles section
-			const summarizerInput = { ...input, actSummary: summarizerActSummary };
-			const result = summarizerActSummary
-				? await generateIncrementalSummary(summarizerInput, loadedPrompts)
-				: await generateFullSummary(summarizerInput, loadedPrompts);
+			const result = actSummary
+				? await generateIncrementalSummary(input, loadedPrompts)
+				: await generateFullSummary(input, loadedPrompts);
 
 			// Character Profile Compressor runs after Summarizer, using the latest summary
 			let compressorResult: CompressorResult | null = null;
 			try {
-				compressorResult = await generateCharacterProfiles(result.actSummary, input, loadedPrompts);
+				if (result.actSummary) {
+					compressorResult = await generateCharacterProfiles(result.actSummary, input, loadedPrompts);
+				}
 			} catch (err) {
 				await log.warn('pipeline', `Character profile compressor failed: ${err}`);
 			}
 
 			// If compressor produced profiles, use its re-serialized actSummary (with profiles merged in)
-			const finalActSummary = compressorResult?.actSummary ?? result.actSummary;
+			const serializedSummary = compressorResult?.serializedSummary ?? result?.serializedSummary;
 
 			// Memory extraction depends on Summarizer result
 			const playerMessageId = player.playerMessageId;
 			if (previousNarrativeBody && actLineId && playerMessageId && storyId) {
 				try {
-					await runMemoryExtractionPipeline(previousNarrativeBody, storyId, actLineId, playerMessageId, finalActSummary);
+					await runMemoryExtractionPipeline(previousNarrativeBody, storyId, actLineId, playerMessageId, serializedSummary);
 				} catch (err) {
 					await log.error('memory-pipeline', 'Memory extraction failed', err);
 				}
 			}
 
 			return {
-				actSummary: finalActSummary,
+				actSummary: serializedSummary,
 				summarizerMetadata: result.metadata,
 				...(compressorResult
 					? {
-							characterProfiles: compressorResult.characterProfiles,
-							characterProfileLastScene: compressorResult.characterProfileLastScene,
-							compressorMetadata: compressorResult.metadata,
-						}
+						characterProfiles: compressorResult.characterProfiles,
+						characterProfileLastScene: compressorResult.characterProfileLastScene,
+						compressorMetadata: compressorResult.metadata,
+					}
 					: {}),
 			};
 		}
@@ -729,7 +745,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				messages: toUserMessages([
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
-					SECTION.ACT_SUMMARY + compressedActSummary,
+					...formattedActSummaryForPhases(input),
 					...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
 					...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 					...playerResponseSection(player),
@@ -742,7 +758,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					const writerOutput = fullOutput(ss);
 					const writerVariables = ss.variables;
 					if (isReviewerEnabled()) {
-						return { writerOutput, writerVariables };
+						return {writerOutput, writerVariables};
 					} else {
 						return {
 							writerOutput,
@@ -764,7 +780,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	// --- Sequential Phase 2+3: Reviewer → Editor (skipped when reviewer disabled) ---
 	if (!isReviewerEnabled()) {
 		callbacks.onPhaseStart('EDITOR');
-		state = updateState(state, { currentPhase: 'EDITOR' });
+		state = updateState(state, {currentPhase: 'EDITOR'});
 		callbacks.onPhaseComplete('EDITOR', state);
 	} else {
 		{
@@ -783,7 +799,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					messages: toUserMessages([
 						SECTION.WORLD_CONTENT + worldContent,
 						SECTION.ACT_PLOT + actPlot,
-						SECTION.ACT_SUMMARY + compressedActSummary,
+						...formattedActSummaryForPhases(input),
 						...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
 						...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 						...playerResponseSection(player),
@@ -795,7 +811,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 							: reviewerExtractionPromptTemplate(currentScene),
 					]),
 					providerConfig: providerConfigs.reviewer,
-					buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),
+					buildStateUpdate: (ss) => ({reviewerOutput: ss.content}),
 				},
 				state
 			);
@@ -831,7 +847,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 						messages: toUserMessages([
 							SECTION.WORLD_CONTENT + worldContent,
 							SECTION.ACT_PLOT + actPlot,
-							SECTION.ACT_SUMMARY + compressedActSummary,
+							...formattedActSummaryForPhases(input),
 							...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
 							...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 							...playerResponseSection(player),
@@ -908,7 +924,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		const editorOutput = state.editorOutput ?? '';
 		const sharedSections = [
 			SECTION.ACT_PLOT + actPlot,
-			SECTION.ACT_SUMMARY + compressedActSummary,
+			...formattedActSummaryForPhases(input),
 			...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
 			...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 			...playerResponseSection(player),
@@ -957,7 +973,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 			]);
 
 			state = gmResult.state;
-			state = updateState(state, { scenePlot: plotResult.state.scenePlot });
+			state = updateState(state, {scenePlot: plotResult.state.scenePlot});
 			aggregatedMetadata = aggregateMetadata(aggregatedMetadata, gmResult.metadata, providerConfigs.gameMaster?.model);
 			phaseEntries.push(toPhaseMetadata('GAME_MASTER', gmResult.metadata, providerConfigs.gameMaster?.model));
 			aggregatedMetadata = aggregateMetadata(aggregatedMetadata, plotResult.metadata, providerConfigs.plotPlanner?.model);
@@ -1004,7 +1020,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				providerConfig: providerConfigs.minorTaskAgent,
 				buildStateUpdate: (ss) => {
 					const merged = mergeGameData(originalGameData, ss.variables?.gameData ?? null);
-					return { gameData: merged };
+					return {gameData: merged};
 				},
 			},
 			state
@@ -1014,7 +1030,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		phaseEntries.push(toPhaseMetadata('GM_TEMPLATE_FITTER', gmFitterResult.metadata, providerConfigs.minorTaskAgent?.model));
 	}
 
-	state = updateState(state, { currentPhase: null });
+	state = updateState(state, {currentPhase: null});
 	callbacks.onAllComplete(state);
 	return {
 		state,

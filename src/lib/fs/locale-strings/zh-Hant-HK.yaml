@@ -64,6 +64,7 @@ pipeline:
       你是一個範本配適助手。你唯一的任務是將提供的內容重新調整為特定的 Markdown
       範本格式，而不改動任何原始內容。保留每一個字——只加入所需的區段標題。
   labels:
+    upTo: 至
     acceptAsIs: 不需修改
     totalViolations: 違規總數
     recommendation: 建議

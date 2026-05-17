@@ -1,6 +1,22 @@
-import { actSummaryHeader, turnOfEventsHeader, summaryHeader, sectionFormat } from '$lib/definitions/common-headers';
-import { sceneWithNumberLabel, locationLabel, aliasesLabel, lastUpdateLabel, stateLabel, goalLabel, relationshipsLabel, voiceLabel } from '$lib/definitions/common-labels';
-import { sceneSummariesHeader, characterSummariesHeader, characterProfilesHeader, characterSummariesSinceSceneLabel } from '$lib/definitions/pipeline-prompts';
+import {actSummaryHeader, turnOfEventsHeader, summaryHeader, sectionFormat} from '$lib/definitions/common-headers';
+import {
+	sceneWithNumberLabel,
+	locationLabel,
+	aliasesLabel,
+	lastUpdateLabel
+} from '$lib/definitions/common-labels';
+import {
+	stateLabel,
+	goalLabel,
+	relationshipsLabel,
+	voiceLabel
+} from '$lib/definitions/character-profile-labels';
+import {
+	sceneSummariesHeader,
+	characterSummariesHeader,
+	characterProfilesHeader,
+	characterSummariesSinceSceneLabel
+} from '$lib/definitions/pipeline-prompts';
 
 // === Types ===
 
@@ -58,7 +74,7 @@ function escapeRegex(str: string): string {
 	return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-import { stripCodeFences } from '$lib/utils/strings';
+import {stripCodeFences} from '$lib/utils/strings';
 
 function stripListMarker(text: string): string {
 	return text.replace(/^[-*]\s+/, '');
@@ -122,8 +138,8 @@ function parseScenesBody(body: string): SceneSummary[] {
 			const headerText = h3Match[1];
 			const sceneMatch = headerText.match(sceneHeaderRegex);
 			currentScene = sceneMatch
-				? { sceneNumber: parseInt(sceneMatch[1], 10), title: sceneMatch[2].trim(), location: '', summary: '' }
-				: { sceneNumber: 0, title: headerText.trim(), location: '', summary: '' };
+				? {sceneNumber: parseInt(sceneMatch[1], 10), title: sceneMatch[2].trim(), location: '', summary: ''}
+				: {sceneNumber: 0, title: headerText.trim(), location: '', summary: ''};
 			continue;
 		}
 
@@ -166,7 +182,7 @@ function parseCharactersBody(body: string): CharacterSummary[] {
 		const h3Match = trimmed.match(/^###\s+(.+)$/);
 		if (h3Match) {
 			if (currentCharacter) characters.push(currentCharacter);
-			currentCharacter = { characterName: h3Match[1].trim(), aliases: [], sceneEntries: [] };
+			currentCharacter = {characterName: h3Match[1].trim(), aliases: [], sceneEntries: []};
 			continue;
 		}
 
@@ -189,7 +205,7 @@ function parseCharactersBody(body: string): CharacterSummary[] {
 		if (sceneMatch) {
 			currentCharacter.sceneEntries = [
 				...currentCharacter.sceneEntries,
-				{ sceneNumber: parseInt(sceneMatch[1], 10), summary: sceneMatch[2].trim() },
+				{sceneNumber: parseInt(sceneMatch[1], 10), summary: sceneMatch[2].trim()},
 			];
 		}
 	}
@@ -245,7 +261,7 @@ export function parseProfilesBody(rawBody: string): { profiles: CharacterProfile
 		const h3Match = trimmed.match(/^###\s+(.+)$/);
 		if (h3Match) {
 			if (currentProfile) profiles.push(currentProfile);
-			currentProfile = { characterName: h3Match[1].trim(), state: '', goal: '', relationships: '', voice: '' };
+			currentProfile = {characterName: h3Match[1].trim(), state: '', goal: '', relationships: '', voice: ''};
 			continue;
 		}
 
@@ -264,20 +280,32 @@ export function parseProfilesBody(rawBody: string): { profiles: CharacterProfile
 		if (!text) continue;
 
 		const state = extractLabeledValue(text, stateLabel());
-		if (state !== null) { currentProfile.state = state; continue; }
+		if (state !== null) {
+			currentProfile.state = state;
+			continue;
+		}
 
 		const goal = extractLabeledValue(text, goalLabel());
-		if (goal !== null) { currentProfile.goal = goal; continue; }
+		if (goal !== null) {
+			currentProfile.goal = goal;
+			continue;
+		}
 
 		const relationships = extractLabeledValue(text, relationshipsLabel());
-		if (relationships !== null) { currentProfile.relationships = relationships; continue; }
+		if (relationships !== null) {
+			currentProfile.relationships = relationships;
+			continue;
+		}
 
 		const voice = extractLabeledValue(text, voiceLabel());
-		if (voice !== null) { currentProfile.voice = voice; continue; }
+		if (voice !== null) {
+			currentProfile.voice = voice;
+			continue;
+		}
 	}
 
 	if (currentProfile) profiles.push(currentProfile);
-	return { profiles, lastScene };
+	return {profiles, lastScene};
 }
 
 // === Public API ===
@@ -292,7 +320,7 @@ export function parseCharacterAliases(actSummaryMarkdown: string): CharacterAlia
 		const headerMatch = line.match(/^###\s+(.+)$/);
 		if (headerMatch) {
 			if (currentName !== null) {
-				entries.push({ characterName: currentName, aliases: currentAliases });
+				entries.push({characterName: currentName, aliases: currentAliases});
 			}
 			currentName = headerMatch[1].trim();
 			currentAliases = [];
@@ -312,7 +340,7 @@ export function parseCharacterAliases(actSummaryMarkdown: string): CharacterAlia
 	}
 
 	if (currentName !== null) {
-		entries.push({ characterName: currentName, aliases: currentAliases });
+		entries.push({characterName: currentName, aliases: currentAliases});
 	}
 
 	return entries;
@@ -331,14 +359,14 @@ export function parseActSummary(markdown: string): ActSummary {
 	const characters = charactersBody ? parseCharactersBody(charactersBody) : [];
 	const profilesResult = profilesBody
 		? parseProfilesBody(profilesBody)
-		: { profiles: [] as CharacterProfile[], lastScene: null as number | null };
+		: {profiles: [] as CharacterProfile[], lastScene: null as number | null};
 	const toeResult = turnOfEventsBody
 		? parseTurnOfEventsBody(turnOfEventsBody)
 		: {
-				turnOfEvents: null as string | null,
-				turnOfEventsSceneNumber: null as number | null,
-				turnOfEventsSceneTitle: null as string | null,
-			};
+			turnOfEvents: null as string | null,
+			turnOfEventsSceneNumber: null as number | null,
+			turnOfEventsSceneTitle: null as string | null,
+		};
 
 	return {
 		completedScenes: 0,
@@ -353,22 +381,13 @@ export function parseActSummary(markdown: string): ActSummary {
 }
 
 export function serializeActSummary(data: ActSummary): string {
-	return serializeActSummaryInternal(data, false);
-}
-
-export function serializeCompressedActSummary(data: ActSummary): string {
-	const pruned = pruneCharacterScenes(data);
-	return serializeActSummaryInternal(pruned, true);
-}
-
-function serializeActSummaryInternal(data: ActSummary, compressed: boolean): string {
 	const lines: string[] = [];
 
 	lines.push(sectionFormat(actSummaryHeader(), 1).trimEnd());
 	lines.push('');
 	lines.push(sectionFormat(sceneSummariesHeader()).trimEnd());
 
-	if (compressed && data.characterProfiles.length > 0) {
+	if (data.completedScenes > 0) {
 		lines.push(`${lastUpdateLabel()}: ${sceneWithNumberLabel(data.completedScenes)}`);
 	}
 
@@ -400,8 +419,8 @@ function serializeActSummaryInternal(data: ActSummary, compressed: boolean): str
 
 	lines.push(sectionFormat(characterSummariesHeader()).trimEnd());
 
-	if (compressed && data.characterProfileLastScene != null) {
-		lines.push(characterSummariesSinceSceneLabel(data.characterProfileLastScene + 1));
+	if (data.characterProfileLastScene != null) {
+		lines.push(characterSummariesSinceSceneLabel(data.characterProfileLastScene));
 	}
 
 	for (const character of data.characters) {
@@ -461,8 +480,8 @@ export function mergeActSummary(existing: ActSummary, incremental: IncrementalUp
 	const result: ActSummary = {
 		completedScenes: incremental.completedScenes ?? existing.completedScenes,
 		scenes: incremental.newScene ? [...existing.scenes, incremental.newScene] : [...existing.scenes],
-		characters: [...existing.characters.map((c) => ({ ...c, aliases: [...c.aliases], sceneEntries: [...c.sceneEntries] }))],
-		characterProfiles: [...existing.characterProfiles.map((p) => ({ ...p }))],
+		characters: [...existing.characters.map((c) => ({...c, aliases: [...c.aliases], sceneEntries: [...c.sceneEntries]}))],
+		characterProfiles: [...existing.characterProfiles.map((p) => ({...p}))],
 		characterProfileLastScene: existing.characterProfileLastScene,
 		turnOfEvents: existing.turnOfEvents,
 		turnOfEventsSceneNumber: existing.turnOfEventsSceneNumber,
@@ -486,7 +505,7 @@ export function mergeActSummary(existing: ActSummary, incremental: IncrementalUp
 				sceneEntries: [...existingChar.sceneEntries, ...update.sceneEntries],
 			};
 		} else {
-			result.characters = [...result.characters, { ...update, aliases: [...update.aliases], sceneEntries: [...update.sceneEntries] }];
+			result.characters = [...result.characters, {...update, aliases: [...update.aliases], sceneEntries: [...update.sceneEntries]}];
 		}
 	}
 

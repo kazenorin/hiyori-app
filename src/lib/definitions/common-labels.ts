@@ -11,7 +11,3 @@ export const sceneWithNumberLabel = (sceneNumber: number | string) => ls('common
 export const locationLabel = () => ls('common.labels.location');
 export const aliasesLabel = () => ls('common.labels.aliases');
 export const lastUpdateLabel = () => ls('common.labels.lastUpdate');
-export const stateLabel = () => ls('pipeline.labels.state');
-export const goalLabel = () => ls('pipeline.labels.goal');
-export const relationshipsLabel = () => ls('pipeline.labels.relationships');
-export const voiceLabel = () => ls('pipeline.labels.voice');

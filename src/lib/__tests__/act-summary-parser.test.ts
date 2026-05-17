@@ -15,7 +15,6 @@ const mockGoalLabel = vi.fn(() => 'Goal');
 const mockRelationshipsLabel = vi.fn(() => 'Relationships');
 const mockVoiceLabel = vi.fn(() => 'Voice');
 const mockCharacterSummariesSinceSceneLabel = vi.fn((n: number) => `Summaries of each character for recent Scenes since Scene ${n}.`);
-
 vi.mock('$lib/definitions/common-headers', () => ({
 	actSummaryHeader: () => mockActSummaryHeader(),
 	turnOfEventsHeader: () => mockTurnOfEventsHeader(),
@@ -28,6 +27,9 @@ vi.mock('$lib/definitions/common-labels', () => ({
 	locationLabel: () => mockLocationLabel(),
 	aliasesLabel: () => mockAliasesLabel(),
 	lastUpdateLabel: () => mockLastUpdateLabel(),
+}));
+
+vi.mock('$lib/definitions/character-profile-labels', () => ({
 	stateLabel: () => mockStateLabel(),
 	goalLabel: () => mockGoalLabel(),
 	relationshipsLabel: () => mockRelationshipsLabel(),
@@ -52,12 +54,11 @@ vi.mock('$lib/logging/logger', () => ({
 
 import {
 	parseActSummary,
-	serializeActSummary,
-	serializeCompressedActSummary,
 	parseIncrementalOutput,
 	parseProfilesBody,
 	pruneCharacterScenes,
 	mergeActSummary,
+	serializeActSummary,
 	type ActSummary,
 	type IncrementalUpdate,
 } from '../ai/act-summary-parser';
@@ -722,7 +723,7 @@ describe('pruneCharacterScenes', () => {
 	});
 });
 
-describe('serializeCompressedActSummary', () => {
+describe('compressed act summary (caller-side assembly)', () => {
 	const dataWithProfiles: ActSummary = {
 		completedScenes: 8,
 		scenes: [
@@ -762,24 +763,9 @@ describe('serializeCompressedActSummary', () => {
 		turnOfEventsSceneTitle: null,
 	};
 
-	it('includes Last update sub-headers for Scene Summaries and Character Profiles', () => {
-		const result = serializeCompressedActSummary(dataWithProfiles);
-
-		expect(result).toContain('Last update: Scene 8');
-		expect(result).toContain('Last update: Scene 5');
-	});
-
-	it('includes Character Profiles section with profiles', () => {
-		const result = serializeCompressedActSummary(dataWithProfiles);
-
-		expect(result).toContain('## Character Profiles');
-		expect(result).toContain('### Elena');
-		expect(result).toContain('- State: Determined');
-		expect(result).toContain('- Goal: Escape');
-	});
-
 	it('prunes character scene entries at or before characterProfileLastScene', () => {
-		const result = serializeCompressedActSummary(dataWithProfiles);
+		const pruned = pruneCharacterScenes(dataWithProfiles);
+		const result = serializeActSummary(pruned);
 
 		// Elena: entries at 1, 3, 5 are pruned; 6 and 8 remain
 		expect(result).not.toContain('Scene 1: Elena watches.');
@@ -794,55 +780,44 @@ describe('serializeCompressedActSummary', () => {
 		expect(result).toContain('Scene 8: Voss surrenders.');
 	});
 
-	it('includes characterSummariesSinceSceneLabel sub-header', () => {
-		const result = serializeCompressedActSummary(dataWithProfiles);
-
-		expect(result).toContain('Summaries of each character for recent Scenes since Scene 6.');
-	});
-
 	it('keeps all scene summaries unpruned', () => {
-		const result = serializeCompressedActSummary(dataWithProfiles);
+		const pruned = pruneCharacterScenes(dataWithProfiles);
+		const result = serializeActSummary(pruned);
 
 		expect(result).toContain('### Scene 1: The Arrival');
 		expect(result).toContain('### Scene 5: The Forest');
 		expect(result).toContain('### Scene 8: The Castle');
 	});
 
-	it('roundtrips compressed output through parseActSummary', () => {
-		const compressed = serializeCompressedActSummary(dataWithProfiles);
-		const reparsed = parseActSummary(compressed);
+	it('includes Character Profiles section and compress-specific sub-headers', () => {
+		const pruned = pruneCharacterScenes(dataWithProfiles);
+		const result = serializeActSummary(pruned);
+
+		expect(result).toContain('## Character Profiles');
+		expect(result).toContain('Last update: Scene 8');
+		expect(result).toContain('Last update: Scene 5');
+		expect(result).toContain('Summaries of each character for recent Scenes since Scene 5.');
+	});
+
+	it('serializes without profiles when caller clears them', () => {
+		const withoutProfiles = { ...dataWithProfiles, characterProfiles: [], characterProfileLastScene: null };
+		const result = serializeActSummary(withoutProfiles);
+
+		// No pruning happened (lastScene is null), so all entries remain
+		expect(result).toContain('Scene 1: Elena watches.');
+		expect(result).toContain('Scene 5: Elena guides the hero.');
+		expect(result).not.toContain('Character Profiles');
+	});
+
+	it('roundtrips pruned output through parseActSummary', () => {
+		const pruned = pruneCharacterScenes(dataWithProfiles);
+		const serialized = serializeActSummary(pruned);
+		const reparsed = parseActSummary(serialized);
 
 		expect(reparsed.scenes).toHaveLength(3);
-		expect(reparsed.characterProfiles).toHaveLength(2);
-		expect(reparsed.characterProfileLastScene).toBe(5);
 		// Characters should only have pruned entries
 		const elena = reparsed.characters.find((c) => c.characterName === 'Elena');
 		expect(elena).toBeDefined();
 		expect(elena!.sceneEntries).toHaveLength(2);
-	});
-
-	it('falls back to regular serialization when no profiles exist', () => {
-		const dataWithoutProfiles: ActSummary = {
-			completedScenes: 3,
-			scenes: [{ sceneNumber: 1, title: 'Start', location: 'Town', summary: 'Beginning.' }],
-			characters: [
-				{
-					characterName: 'Elena',
-					aliases: ['Elena'],
-					sceneEntries: [{ sceneNumber: 1, summary: 'Elena appears.' }],
-				},
-			],
-			characterProfiles: [],
-			characterProfileLastScene: null,
-			turnOfEvents: null,
-			turnOfEventsSceneNumber: null,
-			turnOfEventsSceneTitle: null,
-		};
-
-		const result = serializeCompressedActSummary(dataWithoutProfiles);
-
-		expect(result).not.toContain('Last update:');
-		expect(result).not.toContain('## Character Profiles');
-		expect(result).toContain('Scene 1: Elena appears.');
 	});
 });

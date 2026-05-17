@@ -66,6 +66,7 @@ pipeline:
       You are a template-fitting assistant. Your sole task is to restructure provided content into a specific markdown
       template format without altering any of the original content. Preserve every word — only add the required section headers.
   labels:
+    upTo: up to
     acceptAsIs: accept as-is
     totalViolations: Total violations
     recommendation: Recommendation
