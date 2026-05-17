@@ -4,8 +4,8 @@ import { buildActPlotTools } from '$lib/ai/tools/read-act-plot';
 import { buildSceneTools } from '$lib/ai/tools/read-scene';
 import { buildRiskTools } from '$lib/ai/tools/evaluate-risk';
 import { getStory, type Story } from '$lib/db/stories';
-import { getActLine, type ActLineMeta } from '$lib/db/act-lines';
-import { getAct, type Act } from '$lib/db/acts';
+import { type ActLineMeta, getActLine } from '$lib/db/act-lines';
+import { type Act, getAct } from '$lib/db/acts';
 import { type ToolSet } from 'ai';
 import type { PhaseName } from '$lib/ai/narrative-types';
 
@@ -24,6 +24,7 @@ export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 	EDITOR: [],
 	TEMPLATE_FITTER: [],
 	GAME_MASTER: ['read-scene', 'query-memories', 'query-inventory'],
+	CHARACTER_PROFILE_COMPRESSOR: [],
 };
 
 /** Filter a full ToolSet down to only the tools allowed for a given phase. */

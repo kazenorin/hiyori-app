@@ -8,7 +8,7 @@ export interface GameDataFields {
 }
 
 /** Phase names for multi-phase narrative generation. EDITOR is excluded from the `phases: UIScenePhase[]` array on UIMessage — its output is stored in top-level UIMessage fields instead. */
-export type PhaseName = 'PLOT_PLANNER' | 'WRITER' | 'REVIEWER' | 'EDITOR' | 'TEMPLATE_FITTER' | 'GAME_MASTER' | 'SUMMARIZER';
+export type PhaseName = 'PLOT_PLANNER' | 'WRITER' | 'REVIEWER' | 'EDITOR' | 'TEMPLATE_FITTER' | 'GAME_MASTER' | 'SUMMARIZER' | 'CHARACTER_PROFILE_COMPRESSOR';
 
 /** A single phase within a UI scene, produced during streaming */
 export interface UIScenePhase {

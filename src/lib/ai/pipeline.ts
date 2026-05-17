@@ -1,65 +1,92 @@
-import { stepCountIs, type ToolSet } from 'ai';
-import { generateText } from 'ai';
+import { generateText, stepCountIs, type ToolSet } from 'ai';
 import type { MessageBase } from '$lib/db/messages';
-import { type ProviderConfig } from '$lib/stores/settings.svelte';
-import { DEFAULT_RETRY_CONFIG, type RetryConfig, type PhaseMetadata, toPhaseMetadata, streamWithRetry } from './chat-stream';
+import {
+	getSettings,
+	isPhraseHighlightingEnabled,
+	isPlotPlannerEnabled,
+	isReviewerEnabled,
+	type ProviderConfig,
+} from '$lib/stores/settings.svelte';
+import { DEFAULT_RETRY_CONFIG, type PhaseMetadata, type RetryConfig, streamWithRetry, toPhaseMetadata } from './chat-stream';
 import { createModel } from './provider';
 import type { GameDataFields, NarrativeVariables, PhaseName } from './narrative-types';
-import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection, formatDirectorNotesSection } from '$lib/definitions/pipeline-sections';
-import { actSummaryForScenesHeader, actSummaryHeader, sectionFormat, summaryHeader } from '$lib/definitions/common-headers';
-import { sceneWithNumberLabel, locationLabel, aliasesLabel } from '$lib/definitions/common-labels';
-import { characterSummariesHeader, sceneSummariesHeader } from '$lib/definitions/pipeline-prompts';
 import {
-	gameMasterExtractionPrompt,
-	editorExtractionPrompt,
-	reviewerExtractionPromptTemplate,
-	quickReviewerExtractionPromptTemplate,
-	writerExtractionPromptTemplate,
-	plotPlannerExtractionPromptTemplate,
-	summarizerFallbackExtractionPromptTemplate,
-	summarizerExtractionPromptTemplate,
-	templateFitterSystemPrompt,
-	editorTemplateFitterExtractionPrompt,
-	gmTemplateFitterExtractionPrompt,
+	formatDirectorNotesSection,
+	formatPreviousNarrativeBody,
+	formatTurnOfEventsSection,
+	SECTION,
+} from '$lib/definitions/pipeline-sections';
+import { actSummaryForScenesHeader, actSummaryHeader, sectionFormat, summaryHeader } from '$lib/definitions/common-headers';
+import {
+	aliasesLabel,
+	goalLabel,
+	locationLabel,
+	relationshipsLabel,
+	sceneWithNumberLabel,
+	stateLabel,
+	voiceLabel,
+} from '$lib/definitions/common-labels';
+import {
 	acceptAsIsLabel,
-	totalViolationsLabel,
+	characterProfilesHeader,
+	characterSummariesHeader,
+	editorExtractionPrompt,
+	editorTemplateFitterExtractionPrompt,
+	gameMasterExtractionPrompt,
+	gmTemplateFitterExtractionPrompt,
+	plotPlannerExtractionPromptTemplate,
+	quickReviewerExtractionPromptTemplate,
 	recommendationLabel,
+	reviewerExtractionPromptTemplate,
+	sceneSummariesHeader,
+	summarizerExtractionPromptTemplate,
+	summarizerFallbackExtractionPromptTemplate,
+	templateFitterSystemPrompt,
+	totalViolationsLabel,
+	writerExtractionPromptTemplate,
 } from '$lib/definitions/pipeline-prompts';
-import type { AsyncPhaseResults, PipelineCallbacks, PipelineState } from './pipeline-types';
+import type { AsyncPhaseResults, CompressorResult, PipelineCallbacks, PipelineState } from './pipeline-types';
 import type { StreamState } from './chat-callbacks';
-import { type StreamResultMetadata, extractCacheTokens } from './streaming';
+import { extractCacheTokens, type StreamResultMetadata } from './streaming';
 import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
-import { variablesToMarkdown, hasTemplateMetadata } from './template-renderer';
+import { hasTemplateMetadata, variablesToMarkdown } from './template-renderer';
 import { runMemoryExtractionPipeline } from '$lib/features/memory/memory-extraction-pipeline';
 import { extractImportantPhrases } from './important-phrases-extractor';
-import { isPhraseHighlightingEnabled, isPlotPlannerEnabled, isReviewerEnabled, getSettings } from '$lib/stores/settings.svelte';
 import { filterToolsForPhase } from '$lib/ai/tools/tools';
 import { log } from '$lib/logging/logger';
 import { ERR_NO_PROVIDER_FOR_PHASE } from '$lib/definitions/error-messages';
 import {
 	actSummaryIncrementalTemplateLoader,
+	characterProfileCompressorPromptLoader,
 	editorSystemPromptLoader,
 	gameMasterSystemPromptLoader,
 	generalInstructionsLoader,
 	plotPlannerSystemPromptLoader,
 	type PromptLoader,
-	reviewerSystemPromptTemplateLoader,
 	quickReviewerSystemPromptTemplateLoader,
+	reviewerSystemPromptTemplateLoader,
 	summarizerIncrementalPromptLoader,
 	summarizerPromptLoader,
 	writerOutputTemplateLoader,
 	writerSystemPromptLoader,
 } from '$lib/fs/prompts';
-import { mergeActSummary, parseActSummary, parseIncrementalOutput, serializeActSummary } from './act-summary-parser';
+import {
+	mergeActSummary,
+	parseActSummary,
+	parseIncrementalOutput,
+	parseProfilesBody,
+	serializeActSummary,
+	serializeCompressedActSummary,
+} from './act-summary-parser';
 import { reviewerAcceptsAsIs } from './reviewer-output-parser';
 import {
-	getNarrativeDescriptors,
-	getReviewerDescriptors,
 	getEditorDescriptors,
-	getGameMasterDescriptors,
-	getPlotPlannerDescriptors,
 	getEditorTemplateFitterDescriptors,
+	getGameMasterDescriptors,
 	getGmTemplateFitterDescriptors,
+	getNarrativeDescriptors,
+	getPlotPlannerDescriptors,
+	getReviewerDescriptors,
 } from './descriptors';
 
 const defaultTargetWordCount = 400;
@@ -92,6 +119,7 @@ const promptLoaderDefinitions = {
 	summarizerPrompt: summarizerPromptLoader,
 	summarizerIncrementalPrompt: summarizerIncrementalPromptLoader,
 	actSummaryIncrementalTemplate: actSummaryIncrementalTemplateLoader,
+	characterProfileCompressorPrompt: characterProfileCompressorPromptLoader,
 } satisfies Record<string, PromptLoader>;
 
 type LoadedPrompts = Record<keyof typeof promptLoaderDefinitions, string>;
@@ -493,6 +521,69 @@ async function generateIncrementalSummary(
 	}
 }
 
+async function generateCharacterProfiles(
+	actSummary: string,
+	input: PipelineInput,
+	loadedPrompts: LoadedPrompts
+): Promise<CompressorResult | null> {
+	const { characterProfileCompressorPrompt } = loadedPrompts;
+	const { completedScenes, execution } = input;
+	const { providerConfigs, abortSignal } = execution;
+
+	const settings = getSettings();
+	const interval = settings.characterProfileCompressorInterval;
+	if (interval <= 0) return null;
+
+	// Check interval against the ORIGINAL act summary from DB (preserves characterProfileLastScene)
+	const originalParsed = parseActSummary(input.actSummary);
+	const lastScene = originalParsed.characterProfileLastScene ?? 0;
+
+	if (completedScenes - lastScene < interval) return null;
+
+	// Parse the LATEST act summary (post-Summarizer) for the compressor prompt
+	const parsed = parseActSummary(actSummary);
+
+	// Build compressor system prompt with locale placeholders
+	const compressorSystemPrompt = characterProfileCompressorPrompt
+		.replaceAll('{actSummaryHeader}', actSummaryHeader())
+		.replaceAll('{characterProfilesHeader}', characterProfilesHeader())
+		.replaceAll('{stateLabel}', stateLabel())
+		.replaceAll('{goalLabel}', goalLabel())
+		.replaceAll('{relationshipsLabel}', relationshipsLabel())
+		.replaceAll('{voiceLabel}', voiceLabel());
+
+	// Build messages: full act summary WITHOUT the Character Profiles section
+	const parsedWithoutProfiles = { ...parsed, characterProfiles: [], characterProfileLastScene: null };
+	const fullSummaryForCompressor = serializeActSummary(parsedWithoutProfiles);
+	const actSummaryHeading = sectionFormat(actSummaryForScenesHeader(`(up to Scene ${completedScenes})`));
+
+	const messages = toUserMessages([actSummaryHeading + fullSummaryForCompressor]);
+
+	const { text: rawProfiles, metadata } = await runNonStreamingPhase(
+		'CHARACTER_PROFILE_COMPRESSOR',
+		compressorSystemPrompt,
+		messages,
+		providerConfigs.summarizer,
+		abortSignal
+	);
+
+	try {
+		// The compressor output contains the Character Profiles section body
+		const profilesResult = parseProfilesBody(rawProfiles);
+		if (profilesResult.profiles.length === 0) return null;
+		const updatedParsed = { ...parsed, characterProfiles: profilesResult.profiles, characterProfileLastScene: completedScenes };
+		return {
+			characterProfiles: profilesResult.profiles,
+			characterProfileLastScene: completedScenes,
+			metadata,
+			actSummary: serializeActSummary(updatedParsed),
+		};
+	} catch (err) {
+		await log.warn('pipeline', `Character profile compressor parse failed: ${err}`);
+		return null;
+	}
+}
+
 export interface PipelineResult {
 	state: PipelineState;
 	aggregatedMetadata?: StreamResultMetadata;
@@ -540,6 +631,19 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 	const retryConfig = input.retryConfig ?? DEFAULT_RETRY_CONFIG;
 
+	// --- Compressed act summary routing ---
+	// DB stores full act summary; compute compressed/summarizer variants at pipeline runtime
+	let compressedActSummary = actSummary;
+	let summarizerActSummary = actSummary;
+	if (actSummary) {
+		const parsed = parseActSummary(actSummary);
+		if (parsed.characterProfiles.length > 0) {
+			compressedActSummary = serializeCompressedActSummary(parsed);
+			const parsedWithoutProfiles = { ...parsed, characterProfiles: [], characterProfileLastScene: null };
+			summarizerActSummary = serializeActSummary(parsedWithoutProfiles);
+		}
+	}
+
 	const sharedParams = {
 		abortSignal,
 		callbacks,
@@ -565,22 +669,47 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 	const reviewerPrompt = getSettings().reviewerMode === 'quick' ? quickReviewerSystemPromptTemplate : reviewerSystemPromptTemplate;
 
-	// --- Async phases (Summarizer, then Memory) ---
+	// --- Async phases (Summarizer → Character Profile Compressor → Memory) ---
 	const asyncPhases = (async (): Promise<AsyncPhaseResults> => {
 		if (player?.playerResponse && completedScenes > 0) {
-			const result = actSummary ? await generateIncrementalSummary(input, loadedPrompts) : await generateFullSummary(input, loadedPrompts);
+			// Summarizer receives full summary without Character Profiles section
+			const summarizerInput = { ...input, actSummary: summarizerActSummary };
+			const result = summarizerActSummary
+				? await generateIncrementalSummary(summarizerInput, loadedPrompts)
+				: await generateFullSummary(summarizerInput, loadedPrompts);
+
+			// Character Profile Compressor runs after Summarizer, using the latest summary
+			let compressorResult: CompressorResult | null = null;
+			try {
+				compressorResult = await generateCharacterProfiles(result.actSummary, input, loadedPrompts);
+			} catch (err) {
+				await log.warn('pipeline', `Character profile compressor failed: ${err}`);
+			}
+
+			// If compressor produced profiles, use its re-serialized actSummary (with profiles merged in)
+			const finalActSummary = compressorResult?.actSummary ?? result.actSummary;
 
 			// Memory extraction depends on Summarizer result
 			const playerMessageId = player.playerMessageId;
 			if (previousNarrativeBody && actLineId && playerMessageId && storyId) {
 				try {
-					await runMemoryExtractionPipeline(previousNarrativeBody, storyId, actLineId, playerMessageId, result.actSummary);
+					await runMemoryExtractionPipeline(previousNarrativeBody, storyId, actLineId, playerMessageId, finalActSummary);
 				} catch (err) {
 					await log.error('memory-pipeline', 'Memory extraction failed', err);
 				}
 			}
 
-			return { actSummary: result.actSummary, summarizerMetadata: result.metadata };
+			return {
+				actSummary: finalActSummary,
+				summarizerMetadata: result.metadata,
+				...(compressorResult
+					? {
+							characterProfiles: compressorResult.characterProfiles,
+							characterProfileLastScene: compressorResult.characterProfileLastScene,
+							compressorMetadata: compressorResult.metadata,
+						}
+					: {}),
+			};
 		}
 		return {};
 	})();
@@ -600,7 +729,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 				messages: toUserMessages([
 					SECTION.WORLD_CONTENT + worldContent,
 					SECTION.ACT_PLOT + actPlot,
-					SECTION.ACT_SUMMARY + actSummary,
+					SECTION.ACT_SUMMARY + compressedActSummary,
 					...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
 					...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 					...playerResponseSection(player),
@@ -654,7 +783,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 					messages: toUserMessages([
 						SECTION.WORLD_CONTENT + worldContent,
 						SECTION.ACT_PLOT + actPlot,
-						SECTION.ACT_SUMMARY + actSummary,
+						SECTION.ACT_SUMMARY + compressedActSummary,
 						...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
 						...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 						...playerResponseSection(player),
@@ -702,7 +831,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 						messages: toUserMessages([
 							SECTION.WORLD_CONTENT + worldContent,
 							SECTION.ACT_PLOT + actPlot,
-							SECTION.ACT_SUMMARY + actSummary,
+							SECTION.ACT_SUMMARY + compressedActSummary,
 							...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
 							...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 							...playerResponseSection(player),
@@ -779,7 +908,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		const editorOutput = state.editorOutput ?? '';
 		const sharedSections = [
 			SECTION.ACT_PLOT + actPlot,
-			SECTION.ACT_SUMMARY + actSummary,
+			SECTION.ACT_SUMMARY + compressedActSummary,
 			...(previousScenePlot ? [SECTION.SCENE_PLOT + previousScenePlot] : []),
 			...formatPreviousNarrativeBody(previousNarrativeBody, completedScenes),
 			...playerResponseSection(player),

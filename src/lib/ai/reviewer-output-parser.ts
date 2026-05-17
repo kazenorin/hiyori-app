@@ -2,14 +2,11 @@ import { parseContent } from '$lib/chat-stream-parser/parser';
 import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
 import { summaryHeader } from '$lib/definitions/common-headers';
 import { totalViolationsLabel, recommendationLabel, acceptAsIsLabel } from '$lib/definitions/pipeline-prompts';
+import { stripCodeFences } from '$lib/utils/strings';
 
 interface ReviewerOutputSummary {
 	totalViolations: string | undefined;
 	recommendation: string | undefined;
-}
-
-function stripCodeFences(text: string): string {
-	return text.replace(/^```[^\n]*\n/, '').replace(/\n```[\s]*$/, '');
 }
 
 function getReviewerDescriptors(): OutputDescriptor[] {

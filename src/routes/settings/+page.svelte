@@ -551,6 +551,25 @@
 					>{t('settings.targetWordCountDescription')}</span
 				>
 			</label>
+
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.compressorInterval')}</span>
+				<input
+					type="number"
+					class="input mt-1 w-32"
+					min="0"
+					max="50"
+					step="1"
+					value={settings.characterProfileCompressorInterval}
+					onchange={(e) => {
+						const val = parseInt((e.currentTarget as HTMLInputElement).value, 10);
+						if (!isNaN(val) && val >= 0 && val <= 50) updateSettings({ characterProfileCompressorInterval: val });
+					}}
+				/>
+				<span class="text-xs text-surface-500 mt-1 block"
+					>{t('settings.compressorIntervalDescription')}</span
+				>
+			</label>
 		</section>
 
 		<!-- Developer -->

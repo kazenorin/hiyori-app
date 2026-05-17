@@ -85,6 +85,8 @@
 		"narrative": "Narrative",
 		"targetWordCount": "Target Word Count",
 		"targetWordCountDescription": "Target word count per scene for the Writer phase. Default: 400.",
+		"compressorInterval": "Compressor Interval",
+		"compressorIntervalDescription": "Scenes between character profile compression runs. Set to 0 to disable. Default: 5.",
 		"developer": "Developer",
 		"locale": "Locale",
 		"logLevel": "Log Level",

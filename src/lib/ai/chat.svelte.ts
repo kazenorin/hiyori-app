@@ -5,23 +5,23 @@ import {
 	getGameMasterProviderConfig,
 	getMainProviderConfig,
 	getMemoryProviderConfig,
+	getMinorTaskAgentProviderConfig,
 	getPlotPlannerProviderConfig,
 	getReviewerProviderConfig,
 	getSummarizerProviderConfig,
-	getMinorTaskAgentProviderConfig,
 	getWriterProviderConfig,
-	isPhraseHighlightingEnabled,
-	settings,
-	isReviewerEnabled,
 	isDirectorModeEnabled,
+	isPhraseHighlightingEnabled,
+	isReviewerEnabled,
+	settings,
 } from '$lib/stores/settings.svelte';
-import { getActiveActPlotContent, getActiveStoryId, getActiveWorldContent, getActiveDirectorNotesText } from '$lib/stores/stories.svelte';
+import { getActiveActPlotContent, getActiveDirectorNotesText, getActiveStoryId, getActiveWorldContent } from '$lib/stores/stories.svelte';
 import * as dbMessages from '$lib/db/messages';
 import { parseImportantPhrases, serializeImportantPhrases } from '$lib/db/messages';
 import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from './narrative-types';
 import * as dbActLines from '$lib/db/act-lines';
 import { logMainChat } from '$lib/logging/chat-logger';
-import { buildMetadata, toPhaseMetadata, type MessageMetadata, type PhaseMetadata } from './chat-stream';
+import { buildMetadata, type MessageMetadata, type PhaseMetadata, toPhaseMetadata } from './chat-stream';
 import { Memory } from '$lib/features/memory';
 import { log } from '$lib/logging/logger';
 import { buildTools } from '$lib/ai/tools/tools';
@@ -529,14 +529,14 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 							metadataUpdates.actSummary = asyncResults.actSummary;
 						}
 
+						let baseMetadata: MessageMetadata | undefined;
 						if (asyncResults.summarizerMetadata) {
 							const sm = asyncResults.summarizerMetadata;
 							const summarizerModel = getSummarizerProviderConfig()?.model ?? getMainProviderConfig()?.model ?? 'unknown';
 							const phaseEntry = toPhaseMetadata('SUMMARIZER', sm, summarizerModel);
-
 							const existingMeta = existing.metadata;
 							const mergedPhases = [...(existingMeta?.phases ?? []), phaseEntry];
-							const merged: MessageMetadata = {
+							baseMetadata = {
 								model: existingMeta?.model ?? summarizerModel,
 								finishReason: existingMeta?.finishReason ?? sm.finishReason,
 								inputTokens: (existingMeta?.inputTokens ?? 0) + sm.usage.inputTokens,
@@ -547,21 +547,27 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 								durationMs: (existingMeta?.durationMs ?? 0) + sm.durationMs,
 								phases: mergedPhases,
 							};
-							metadataUpdates.metadata = JSON.stringify(merged);
-
-							messages[targetMessageIdx] = {
-								...existing,
-								actSummary: asyncResults.actSummary ?? existing.actSummary,
-								phases: updatedPhases,
-								metadata: merged,
-							};
-						} else {
-							messages[targetMessageIdx] = {
-								...existing,
-								actSummary: asyncResults.actSummary ?? existing.actSummary,
-								phases: updatedPhases,
-							};
+							metadataUpdates.metadata = JSON.stringify(baseMetadata);
 						}
+
+						// Character Profile Compressor phase (runs after summarizer or independently)
+						if (asyncResults.characterProfiles) {
+							updatedPhases.push({
+								phaseName: 'CHARACTER_PROFILE_COMPRESSOR' as PhaseName,
+								content: asyncResults.characterProfiles.map((p: { characterName: string }) => p.characterName).join(', '),
+							});
+						}
+						const finalMetadata = mergeCompressorIntoMetadata(baseMetadata, asyncResults, existing.metadata);
+						if (finalMetadata !== baseMetadata) {
+							metadataUpdates.metadata = JSON.stringify(finalMetadata);
+						}
+
+						messages[targetMessageIdx] = {
+							...existing,
+							actSummary: asyncResults.actSummary ?? existing.actSummary,
+							phases: updatedPhases,
+							...(finalMetadata && { metadata: finalMetadata }),
+						};
 
 						if (Object.keys(metadataUpdates).length > 0) {
 							await dbMessages.updateMessageFields(assistantMessageId, metadataUpdates);
@@ -584,6 +590,46 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 	}
 }
 
+/** Merge compressor metadata into base metadata; returns base unchanged if no compressor metadata */
+function mergeCompressorIntoMetadata(
+	base: MessageMetadata | undefined,
+	asyncResults: { compressorMetadata?: StreamResultMetadata },
+	existingMetadata?: MessageMetadata
+): MessageMetadata | undefined {
+	if (!asyncResults.compressorMetadata) return base;
+
+	const cm = asyncResults.compressorMetadata;
+	const compressorModel = getSummarizerProviderConfig()?.model ?? getMainProviderConfig()?.model ?? 'unknown';
+	const compressorPhaseEntry = toPhaseMetadata('CHARACTER_PROFILE_COMPRESSOR', cm, compressorModel);
+
+	if (base) {
+		const updatedPhases = [...(base.phases ?? []), compressorPhaseEntry];
+		return {
+			...base,
+			inputTokens: (base.inputTokens ?? 0) + cm.usage.inputTokens,
+			outputTokens: (base.outputTokens ?? 0) + cm.usage.outputTokens,
+			totalTokens: (base.totalTokens ?? 0) + cm.usage.totalTokens,
+			cacheReadTokens: (base.cacheReadTokens ?? 0) + (cm.usage.cacheReadTokens ?? 0) || undefined,
+			cacheWriteTokens: (base.cacheWriteTokens ?? 0) + (cm.usage.cacheWriteTokens ?? 0) || undefined,
+			durationMs: (base.durationMs ?? 0) + cm.durationMs,
+			phases: updatedPhases,
+		};
+	}
+
+	const existingPhases = [...(existingMetadata?.phases ?? []), compressorPhaseEntry];
+	return {
+		model: existingMetadata?.model ?? compressorModel,
+		finishReason: existingMetadata?.finishReason ?? cm.finishReason,
+		inputTokens: (existingMetadata?.inputTokens ?? 0) + cm.usage.inputTokens,
+		outputTokens: (existingMetadata?.outputTokens ?? 0) + cm.usage.outputTokens,
+		totalTokens: (existingMetadata?.totalTokens ?? 0) + cm.usage.totalTokens,
+		cacheReadTokens: (existingMetadata?.cacheReadTokens ?? 0) + (cm.usage.cacheReadTokens ?? 0) || undefined,
+		cacheWriteTokens: (existingMetadata?.cacheWriteTokens ?? 0) + (cm.usage.cacheWriteTokens ?? 0) || undefined,
+		durationMs: (existingMetadata?.durationMs ?? 0) + cm.durationMs,
+		phases: existingPhases,
+	};
+}
+
 /** Get the final content string for a completed phase from PipelineState */
 function getPhaseContent(phase: PhaseName, state: PipelineState): string {
 	switch (phase) {
@@ -600,6 +646,8 @@ function getPhaseContent(phase: PhaseName, state: PipelineState): string {
 		case 'SUMMARIZER':
 			return state.actSummary ?? '';
 		case 'TEMPLATE_FITTER':
+			return '';
+		case 'CHARACTER_PROFILE_COMPRESSOR':
 			return '';
 	}
 }

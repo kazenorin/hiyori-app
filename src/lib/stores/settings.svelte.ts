@@ -44,6 +44,7 @@ export interface Settings {
 	importantPhraseHighlighting: boolean;
 	targetWordCount: number;
 	directorModeEnabled: boolean;
+	characterProfileCompressorInterval: number;
 }
 
 const STORAGE_KEY = 'byoa-settings';
@@ -70,6 +71,7 @@ const defaults: Settings = {
 	importantPhraseHighlighting: false,
 	targetWordCount: 400,
 	directorModeEnabled: false,
+	characterProfileCompressorInterval: 5, // scenes between compressor runs; 0 = disabled
 };
 
 /**
@@ -285,6 +287,7 @@ export async function updateSettings(
 			| 'importantPhraseHighlighting'
 			| 'targetWordCount'
 			| 'directorModeEnabled'
+			| 'characterProfileCompressorInterval'
 		>
 	>
 ): Promise<void> {
@@ -311,6 +314,8 @@ export async function updateSettings(
 	if (partial.importantPhraseHighlighting !== undefined) settings.importantPhraseHighlighting = partial.importantPhraseHighlighting;
 	if (partial.targetWordCount !== undefined) settings.targetWordCount = partial.targetWordCount;
 	if (partial.directorModeEnabled !== undefined) settings.directorModeEnabled = partial.directorModeEnabled;
+	if (partial.characterProfileCompressorInterval !== undefined)
+		settings.characterProfileCompressorInterval = partial.characterProfileCompressorInterval;
 	persist();
 
 	// Apply font size preference when fontSize changes

@@ -3,11 +3,14 @@ import { ls } from '$lib/localization';
 // Headers
 export const sceneSummariesHeader = () => ls('pipeline.headers.sceneSummaries');
 export const characterSummariesHeader = () => ls('pipeline.headers.characterSummaries');
+export const characterProfilesHeader = () => ls('pipeline.headers.characterProfiles');
 
 // Labels
 export const acceptAsIsLabel = () => ls('pipeline.labels.acceptAsIs');
 export const totalViolationsLabel = () => ls('pipeline.labels.totalViolations');
 export const recommendationLabel = () => ls('pipeline.labels.recommendation');
+export const characterSummariesSinceSceneLabel = (sceneNumber: number) =>
+	ls('pipeline.labels.characterSummaries', { sceneNumber });
 
 // System prompts
 export const templateFitterSystemPrompt = () => ls('pipeline.system.templateFitter');

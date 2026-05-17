@@ -42,6 +42,7 @@ import { logMainChat, logWorldBuilderChat } from '$lib/logging/chat-logger';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { getSettings } from '$lib/stores/settings.svelte';
 import { getActiveStory } from '$lib/stores/stories.svelte';
+import type { Story } from '$lib/db/stories';
 
 const mockWriteTextFile = vi.mocked(writeTextFile);
 const mockGetSettings = vi.mocked(getSettings);
@@ -70,6 +71,7 @@ function defaultSettings() {
 		importantPhraseHighlighting: false,
 		directorModeEnabled: false,
 		targetWordCount: 400,
+			characterProfileCompressorInterval: 5,
 	};
 }
 
@@ -77,7 +79,7 @@ describe('chat-logger', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockGetSettings.mockReturnValue(defaultSettings());
-		mockGetActiveStory.mockReturnValue({ id: 'story-1', name: 'Test Story' } as any);
+		mockGetActiveStory.mockReturnValue({ id: 'story-1', name: 'Test Story' } as Story);
 	});
 
 	describe('logMainChat', () => {

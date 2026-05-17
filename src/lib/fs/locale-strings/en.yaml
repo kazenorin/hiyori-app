@@ -5,6 +5,7 @@ common:
     sceneWithNumber: "Scene {sceneNumber}"
     location: Location
     aliases: Aliases
+    lastUpdate: Last update
   headers:
     worldContent: World Content
     actPlot: Act Plot
@@ -41,6 +42,7 @@ pipeline:
   headers:
     sceneSummaries: Scene Summaries
     characterSummaries: Character Summaries
+    characterProfiles: Character Profiles
   extraction:
     gameMaster: Generate the game data based on the available information in the chat history.
     editor: Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history.
@@ -67,6 +69,11 @@ pipeline:
     acceptAsIs: accept as-is
     totalViolations: Total violations
     recommendation: Recommendation
+    state: State
+    goal: Goal
+    relationships: Relationships
+    voice: Voice
+    characterSummaries: "Summaries of each character for recent Scenes since Scene {sceneNumber}."
 
 features:
   characterCardGenerator:

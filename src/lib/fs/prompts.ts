@@ -52,6 +52,9 @@ const summarizerPrompt = new LocalizedPromptFile(promptDefaults, 'summarizer/sum
 const summarizerIncrementalPrompt = new LocalizedPromptFile(promptDefaults, 'summarizer/summarizer-incremental-prompt.md');
 const actSummaryIncrementalTemplate = new LocalizedPromptFile(promptDefaults, 'summarizer/act-summary-incremental-template.md');
 
+// Pipeline: Character Profile Compressor
+const characterProfileCompressorPrompt = new LocalizedPromptFile(promptDefaults, 'summarizer/character-profile-compressor.md');
+
 // World
 const worldTemplate = new LocalizedPromptFile(promptDefaults, 'world/world-template.md');
 const generateWorldFromChatPrompt = new LocalizedPromptFile(promptDefaults, 'world/generate-world-from-chat-prompt.md');
@@ -101,6 +104,7 @@ export const loadGameMasterPrompt = (): Promise<string> => gameMasterPrompt.load
 export const loadSummarizerPrompt = (): Promise<string> => summarizerPrompt.load();
 export const loadSummarizerIncrementalPrompt = (): Promise<string> => summarizerIncrementalPrompt.load();
 export const loadActSummaryIncrementalTemplate = (): Promise<string> => actSummaryIncrementalTemplate.load();
+export const loadCharacterProfileCompressorPrompt = (): Promise<string> => characterProfileCompressorPrompt.load();
 export const loadWorldTemplate = (): Promise<string> => worldTemplate.load();
 export const loadGenerateWorldFromChatPrompt = (): Promise<string> => generateWorldFromChatPrompt.load();
 export const loadGenerateWorldFromChatSystemPrompt = (): Promise<string> => generateWorldFromChatSystemPrompt.load();
@@ -175,6 +179,10 @@ export async function loadStoryActSummaryIncrementalTemplate(storyId: string, st
 	return actSummaryIncrementalTemplate.loadForStory(storyId, storyName);
 }
 
+export async function loadStoryCharacterProfileCompressorPrompt(storyId: string, storyName: string): Promise<string> {
+	return characterProfileCompressorPrompt.loadForStory(storyId, storyName);
+}
+
 // === Prompt loaders ===
 
 export interface PromptLoader {
@@ -237,6 +245,11 @@ export const actSummaryIncrementalTemplateLoader: PromptLoader = {
 	loadDefault: loadActSummaryIncrementalTemplate,
 };
 
+export const characterProfileCompressorPromptLoader: PromptLoader = {
+	loadByStory: loadStoryCharacterProfileCompressorPrompt,
+	loadDefault: loadCharacterProfileCompressorPrompt,
+};
+
 // === Ensure All Base Configs ===
 
 // Register all defaults so ensureAllBaseConfigs() can create them on launch
@@ -253,6 +266,7 @@ registerDefaults([
 	summarizerPrompt,
 	summarizerIncrementalPrompt,
 	actSummaryIncrementalTemplate,
+	characterProfileCompressorPrompt,
 	worldTemplate,
 	generateWorldFromChatPrompt,
 	generateWorldFromChatSystemPrompt,

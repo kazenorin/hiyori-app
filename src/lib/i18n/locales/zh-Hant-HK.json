@@ -85,6 +85,8 @@
 		"narrative": "敘事",
 		"targetWordCount": "目標字數",
 		"targetWordCountDescription": "「寫手階段」每場景的目標字數。預設：400字",
+		"compressorInterval": "檔案壓縮間隔",
+		"compressorIntervalDescription": "每次角色檔案壓縮之間的場景數。設為0即停用。預設：5。",
 		"developer": "Developer",
 		"locale": "語言地區",
 		"logLevel": "Log Level",

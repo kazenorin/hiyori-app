@@ -1,6 +1,7 @@
 import type { PhaseName, UIScenePhase } from './narrative-types';
 import type { NarrativeVariables, GameDataFields } from './narrative-types';
 import type { StreamResultMetadata } from './streaming';
+import type { CharacterProfile } from './act-summary-parser';
 
 // Re-export for consumers that import from pipeline-types
 export type { PhaseName, UIScenePhase };
@@ -36,7 +37,17 @@ export interface PipelineCallbacks {
 	onAllComplete: (state: PipelineState) => void;
 }
 
+export interface CompressorResult {
+	actSummary: string;
+	metadata: StreamResultMetadata;
+	characterProfiles: CharacterProfile[];
+	characterProfileLastScene: number;
+}
+
 export interface AsyncPhaseResults {
 	actSummary?: string;
 	summarizerMetadata?: StreamResultMetadata;
+	compressorMetadata?: StreamResultMetadata;
+	characterProfiles?: CharacterProfile[];
+	characterProfileLastScene?: number;
 }
