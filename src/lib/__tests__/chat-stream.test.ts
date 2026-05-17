@@ -3,6 +3,22 @@ import { streamWithRetry, DEFAULT_RETRY_CONFIG } from '../ai/chat-stream';
 import type { StreamResultMetadata } from '../ai/streaming';
 import type { ProviderConfig } from '../stores/settings.svelte';
 
+// Mock Tauri invoke (not available in test environment)
+vi.mock('@tauri-apps/api/core', () => ({
+	invoke: vi.fn(async () => {}),
+}));
+
+// Mock logger (depends on Tauri)
+vi.mock('$lib/logging/logger', () => ({
+	log: {
+		info: vi.fn(async () => {}),
+		error: vi.fn(async () => {}),
+		warn: vi.fn(async () => {}),
+		debug: vi.fn(async () => {}),
+	},
+	fileLog: vi.fn(async () => {}),
+}));
+
 // Mock executeStream so streamChatResponse works without a real LLM
 vi.mock('../ai/streaming', () => ({
 	executeStream: vi.fn(),

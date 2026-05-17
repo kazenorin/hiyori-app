@@ -1,6 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { MemoryItem } from '$lib/features/memory';
 
+// Mock Tauri invoke (not available in test environment)
+vi.mock('@tauri-apps/api/core', () => ({
+	invoke: vi.fn(async () => {}),
+}));
+
+// Mock logger (depends on Tauri)
+vi.mock('$lib/logging/logger', () => ({
+	log: {
+		info: vi.fn(async () => {}),
+		error: vi.fn(async () => {}),
+		warn: vi.fn(async () => {}),
+		debug: vi.fn(async () => {}),
+	},
+	fileLog: vi.fn(async () => {}),
+}));
+
 // Mock the database module for act-lines batchResolveActLineInfo
 const mockDb = {
 	execute: vi.fn(async () => ({ rows: [] })),
@@ -60,6 +76,18 @@ describe('createQueryMemoriesTool', () => {
 		vi.clearAllMocks();
 		vi.resetModules();
 
+		vi.doMock('@tauri-apps/api/core', () => ({
+			invoke: vi.fn(async () => {}),
+		}));
+		vi.doMock('$lib/logging/logger', () => ({
+			log: {
+				info: vi.fn(async () => {}),
+				error: vi.fn(async () => {}),
+				warn: vi.fn(async () => {}),
+				debug: vi.fn(async () => {}),
+			},
+			fileLog: vi.fn(async () => {}),
+		}));
 		vi.doMock('$lib/db/database', () => ({ getDatabase: () => mockDb }));
 		vi.doMock('$lib/db/memory-database', () => ({
 			getMemoryDatabase: () => ({

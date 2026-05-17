@@ -1,4 +1,21 @@
 import { describe, it, expect, vi } from 'vitest';
+
+// Mock Tauri invoke (not available in test environment)
+vi.mock('@tauri-apps/api/core', () => ({
+	invoke: vi.fn(async () => {}),
+}));
+
+// Mock logger (depends on Tauri)
+vi.mock('$lib/logging/logger', () => ({
+	log: {
+		info: vi.fn(async () => {}),
+		error: vi.fn(async () => {}),
+		warn: vi.fn(async () => {}),
+		debug: vi.fn(async () => {}),
+	},
+	fileLog: vi.fn(async () => {}),
+}));
+
 import { createQueryInventoryTool } from '$lib/ai/tools/query-inventory';
 import type { Memory } from '$lib/features/memory';
 import type { InventoryItem, InventoryChange } from '$lib/features/memory/inventory-types';
