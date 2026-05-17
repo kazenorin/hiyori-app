@@ -60,7 +60,7 @@
 		"phraseHighlighting": "Important phrase highlighting",
 		"phraseHighlightingDescription": "Automatically extract and highlight key phrases in narrative text. Requires Minor Task Agent.",
 		"directorMode": "Director Mode",
-		"directorModeDescription": "Add persistent notes that override the story's planned plot.",
+		"directorModeDescription": "Add persistent notes that can override the story’s planned direction. Director Notes strongly influence the plot and may trigger cascading cause-and-effect changes depending on their content. Use them carefully.",
 		"pipelineRoles": "Pipeline Roles",
 		"pipelineRolesDescription": "Assign providers to each pipeline phase. All default to the main provider.",
 		"plotPlanner": "Plot Planner",

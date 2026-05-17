@@ -60,7 +60,7 @@
 		"phraseHighlighting": "標示重點",
 		"phraseHighlightingDescription": "自動擷取並標示敘事文字中的重點。會使用「小型作業用 Agent」。",
 		"directorMode": "導演模式",
-		"directorModeDescription": "新增持續性備註，凌駕於故事的既有劇情之上。",
+		"directorModeDescription": "新增可改寫故事原定走向的常駐備註。「導演備註」會對劇情產生重大影響，並可能視乎內容觸發連鎖的因果效應。請謹慎使用。",
 		"pipelineRoles": "流程提供者角色",
 		"pipelineRolesDescription": "將提供者分配給各流程階段。所有角色皆預設使用「主要提供者」。",
 		"plotPlanner": "編劇",
