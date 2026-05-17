@@ -1,4 +1,17 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('$lib/definitions/common-headers', () => ({
+	sceneTitleHeader: () => 'Scene title',
+	backgroundHeader: () => 'Background',
+	narrativeBodyHeader: () => 'Narrative Body',
+	cgHeader: () => 'CG',
+	activePlotThreadsHeader: () => 'Active Plot Threads',
+	decisionContextHeader: () => 'Decision Context',
+	decisionsHeader: () => 'Decisions',
+	turnOfEventsHeader: () => 'Turn Of Events',
+	sectionFormat: (text: string, headerLevel: number = 2) => '#'.repeat(headerLevel) + ' ' + text + '\n\n',
+}));
+
 import { createStreamAccumulator, type StreamState } from '../ai/chat-callbacks';
 import type { GameDataFields } from '../ai/narrative-types';
 

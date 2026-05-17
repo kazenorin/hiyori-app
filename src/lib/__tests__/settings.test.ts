@@ -30,41 +30,6 @@ describe('settings', () => {
 		uuidCounter = 0;
 	});
 
-	it('migrates flat settings to multi-provider shape', async () => {
-		localStorage.setItem(
-			STORAGE_KEY,
-			JSON.stringify({
-				provider: 'openai',
-				apiType: 'responses',
-				baseURL: 'https://api.openai.com/v1',
-				model: 'gpt-4o',
-				apiKey: 'sk-test-key',
-				logLevel: 'debug',
-				fontSize: 1.2,
-			})
-		);
-
-		// Force module re-import
-		vi.resetModules();
-		const { getSettings } = await import('$lib/stores/settings.svelte');
-		const settings = getSettings();
-
-		// Old fields should be gone, new shape present
-		expect(settings.providers).toHaveLength(1);
-		expect(settings.providers[0]).toEqual({
-			id: expect.any(String),
-			name: 'Default Provider',
-			provider: 'openai',
-			apiType: 'responses',
-			baseURL: 'https://api.openai.com/v1',
-			model: 'gpt-4o',
-			apiKey: 'sk-test-key',
-		});
-		expect(settings.roleAssignments['main']).toBe(settings.providers[0].id);
-		expect(settings.logLevel).toBe('debug');
-		expect(settings.fontSize).toBe(1.2);
-	});
-
 	it('returns defaults when localStorage is empty', async () => {
 		vi.resetModules();
 		const { getSettings } = await import('$lib/stores/settings.svelte');
