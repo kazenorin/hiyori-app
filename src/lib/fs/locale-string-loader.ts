@@ -1,7 +1,6 @@
 import { readTextFile, writeTextFile, mkdir, exists, BaseDirectory } from '@tauri-apps/plugin-fs';
 import yaml from 'js-yaml';
 import { log } from '$lib/logging/logger';
-import { resolveStoryFolder } from './story-folders';
 
 const LOCALE_STRINGS_FILENAME = 'locale-strings.yaml';
 

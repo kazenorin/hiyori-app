@@ -787,7 +787,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 			// editorOutput (from variablesToMarkdown) may include a turnOfEvents section for the current scene,
 			// which is distinct from previousTurnOfEvents above (the previous scene's).
 			...(editorOutput ? [SECTION.EDITOR_OUTPUT + editorOutput] : []),
-		...formatDirectorNotesSection(directorNotes),
+			...formatDirectorNotesSection(directorNotes),
 		];
 
 		if (isPlotPlannerEnabled()) {

@@ -9,7 +9,7 @@
 	import { t } from '$lib/i18n';
 	import type { DirectorNote } from '$lib/db/director-notes';
 
-	let isExpanded = $state(true);
+	let isExpanded = $state(false);
 	let newText = $state('');
 	let newFromScene = $state<string>('');
 	let newToScene = $state<string>('');
@@ -22,7 +22,7 @@
 		if (!text) return;
 		const from = newFromScene ? parseInt(newFromScene, 10) : null;
 		const to = newToScene ? parseInt(newToScene, 10) : null;
-		addDirectorNote(text, from, to);
+		addDirectorNote(text, Number.isNaN(from) ? null : from, Number.isNaN(to) ? null : to);
 		newText = '';
 		newFromScene = '';
 		newToScene = '';
@@ -132,6 +132,7 @@
 						class="input text-xs w-20"
 						type="number"
 						min="1"
+						max="999"
 						placeholder={t('chat.effectiveFrom')}
 						bind:value={newFromScene}
 					/>
@@ -140,6 +141,7 @@
 						class="input text-xs w-20"
 						type="number"
 						min="1"
+						max="999"
 						placeholder={t('chat.effectiveTo')}
 						bind:value={newToScene}
 					/>

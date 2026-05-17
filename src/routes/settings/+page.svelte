@@ -7,7 +7,6 @@
 		assignRole,
 		updateSettings,
 		getMinorTaskAgentProviderConfig,
-		getPlotPlannerProviderConfig,
 		type ProviderConfig,
 		type Provider,
 		type ApiType,
@@ -441,23 +440,23 @@
 			</label>
 		</section>
 
-			<!-- Director Mode -->
-			<section class="card p-6 space-y-4">
-				<h2 class="h4">{t('settings.directorMode')}</h2>
-				<span class="text-xs text-surface-500">{t('settings.directorModeDescription')}</span>
+		<!-- Director Mode -->
+		<section class="card p-6 space-y-4">
+			<h2 class="h4">{t('settings.directorMode')}</h2>
+			<span class="text-xs text-surface-500">{t('settings.directorModeDescription')}</span>
 
-				<label class="flex items-center gap-2">
-					<input
-						type="checkbox"
-						class="checkbox"
-						checked={settings.directorModeEnabled}
-						onchange={(e) => updateSettings({ directorModeEnabled: (e.currentTarget as HTMLInputElement).checked })}
-					/>
-					<span class="text-sm font-medium text-surface-700-300">{t('settings.enabled')}</span>
-				</label>
-			</section>
+			<label class="flex items-center gap-2">
+				<input
+					type="checkbox"
+					class="checkbox"
+					checked={settings.directorModeEnabled}
+					onchange={(e) => updateSettings({ directorModeEnabled: (e.currentTarget as HTMLInputElement).checked })}
+				/>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.enabled')}</span>
+			</label>
+		</section>
 
-			<!-- Pipeline Roles -->
+		<!-- Pipeline Roles -->
 		<section class="card p-6 space-y-4">
 			<h2 class="h4">{t('settings.pipelineRoles')}</h2>
 			<span class="text-xs text-surface-500">{t('settings.pipelineRolesDescription')}</span>

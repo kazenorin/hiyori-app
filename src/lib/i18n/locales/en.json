@@ -128,7 +128,6 @@
 		"directorNotesEmpty": "No notes yet",
 		"directorNotesPlaceholder": "Add a director's note...",
 		"addNote": "Add",
-		"activeCount": "{count} active",
 		"effectiveFrom": "From scene",
 		"effectiveTo": "To scene",
 		"sceneRangeUnset": "All scenes"

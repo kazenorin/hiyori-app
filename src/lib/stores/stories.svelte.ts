@@ -411,21 +411,42 @@ export async function deleteActLine(id: string, removeFolder: boolean = false): 
 export async function addDirectorNote(text: string, effectiveFromScene?: number | null, effectiveToScene?: number | null): Promise<void> {
 	if (!activeActLineId) return;
 	const id = crypto.randomUUID();
-	await dbDirectorNotes.createDirectorNote(id, activeActLineId, text, effectiveFromScene, effectiveToScene);
-	activeDirectorNotes = [
-		...activeDirectorNotes,
-		{ id, actLineId: activeActLineId, text, isActive: true, effectiveFromScene: effectiveFromScene ?? null, effectiveToScene: effectiveToScene ?? null, createdAt: Date.now() },
-	];
+	const note: dbDirectorNotes.DirectorNote = {
+		id, actLineId: activeActLineId, text, isActive: true,
+		effectiveFromScene: effectiveFromScene ?? null,
+		effectiveToScene: effectiveToScene ?? null,
+		createdAt: Date.now(),
+	};
+	try {
+		await dbDirectorNotes.createDirectorNote(id, activeActLineId, text, effectiveFromScene, effectiveToScene);
+		activeDirectorNotes = [...activeDirectorNotes, note];
+	} catch {
+		activeDirectorNotes = activeDirectorNotes.filter((n) => n.id !== id);
+		throw new Error('Failed to add director note.');
+	}
 }
 
 export async function updateDirectorNote(id: string, fields: { text?: string; isActive?: boolean; effectiveFromScene?: number | null; effectiveToScene?: number | null }): Promise<void> {
-	await dbDirectorNotes.updateDirectorNote(id, fields);
-	activeDirectorNotes = activeDirectorNotes.map((n) => (n.id === id ? { ...n, ...fields } : n));
+	const prev = activeDirectorNotes;
+	const sanitized = { ...fields, ...(fields.isActive !== undefined ? { isActive: fields.isActive } : {}) };
+	activeDirectorNotes = activeDirectorNotes.map((n) => (n.id === id ? { ...n, ...sanitized } : n));
+	try {
+		await dbDirectorNotes.updateDirectorNote(id, fields);
+	} catch {
+		activeDirectorNotes = prev;
+		throw new Error('Failed to update director note.');
+	}
 }
 
 export async function deleteDirectorNote(id: string): Promise<void> {
-	await dbDirectorNotes.deleteDirectorNote(id);
+	const prev = activeDirectorNotes;
 	activeDirectorNotes = activeDirectorNotes.filter((n) => n.id !== id);
+	try {
+		await dbDirectorNotes.deleteDirectorNote(id);
+	} catch {
+		activeDirectorNotes = prev;
+		throw new Error('Failed to delete director note.');
+	}
 }
 
 export async function forkActLine(fromLineId: string, fromSequence: number, actId: string, name: string): Promise<dbActLines.ActLineMeta> {

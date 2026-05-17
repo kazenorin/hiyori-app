@@ -4,15 +4,12 @@ import defaultEnStrings from '$lib/fs/locale-strings/en.yaml?raw';
 import defaultZhHantHkStrings from '$lib/fs/locale-strings/zh-Hant-HK.yaml?raw';
 
 let cache: Record<string, string> = {};
-let currentLocale = 'en';
-
 const enBundle = new LocaleStringBundle({ locale: 'en', defaultContent: defaultEnStrings });
 const zhHantHkBundle = new LocaleStringBundle({ locale: 'zh-Hant-HK', defaultContent: defaultZhHantHkStrings });
 
 registerLocaleStringDefaults([enBundle, zhHantHkBundle]);
 
 export async function loadLocaleStrings(locale: string, storyId?: string, storyName?: string): Promise<void> {
-	currentLocale = locale;
 	let data: Record<string, unknown>;
 
 	if (storyId && storyName) {

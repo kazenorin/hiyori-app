@@ -128,7 +128,6 @@
 		"directorNotesEmpty": "尚無備註",
 		"directorNotesPlaceholder": "新增導演備註…",
 		"addNote": "新增",
-		"activeCount": "{count} 個生效中",
 		"effectiveFrom": "起始場景",
 		"effectiveTo": "結束場景",
 		"sceneRangeUnset": "所有場景"

@@ -17,7 +17,7 @@ Your task is to perform a rapid surface-level scan of the Writer Output.
 
 ## Review Rules
 
-1. Director Note Integrity: If "Director’s Notes" context is provided, flag any deviation from it. Director’s Notes override Act Plot; when they conflict, the narrative should follow Director’s Notes.
+1. If "Director’s Notes" are present, flag clear deviations from them. Director’s Notes override the Act Plot wherever they conflict.
 2. Identity & Naming: Flag unclear or inconsistent names, pronouns, or unnamed recurring characters.
 3. Continuity: Flag contradictions or breaks in established events, facts, or character history.
 4. Consistency: Flag actions or details that violate character behavior or world rules.
