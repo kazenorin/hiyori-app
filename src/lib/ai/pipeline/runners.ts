@@ -111,19 +111,23 @@ function buildGmFitterStateUpdate(originalGameData: GameDataFields | null) {
 
 // --- Phase runner context ---
 
-export interface PipelineRunContext {
-	sharedParams: {abortSignal: AbortSignal; callbacks: PipelineCallbacks; retryConfig: {retryCount: number; backoffIntervalSeconds: number}};
-	providerConfigs: PipelineProviderConfigs;
-	preEditorCtx: PreEditorContext;
+export interface PipelinePrompts {
 	generalInstructions: string;
-	effectiveTargetWordCount: string;
-	currentScene: string;
 	writerOutputTemplate: string;
 	reviewerPrompt: string;
 	writerSystemPrompt: string;
 	editorSystemPrompt: string;
 	gameMasterSystemPrompt: string;
 	plotPlannerSystemPrompt: string;
+}
+
+export interface PipelineRunContext {
+	sharedParams: {abortSignal: AbortSignal; callbacks: PipelineCallbacks; retryConfig: {retryCount: number; backoffIntervalSeconds: number}};
+	providerConfigs: PipelineProviderConfigs;
+	preEditorCtx: PreEditorContext;
+	prompts: PipelinePrompts;
+	effectiveTargetWordCount: string;
+	currentScene: string;
 	tools?: ToolSet;
 }
 
@@ -134,10 +138,10 @@ export type TrackPhase = (phaseName: string, result: {state: PipelineState; meta
 export async function runWriterPhase(ctx: PipelineRunContext, state: PipelineState, trackPhase: TrackPhase): Promise<PipelineState> {
 	const result = await executeStreamingPhase({
 		phaseName: 'WRITER',
-		systemPrompt: ctx.writerSystemPrompt
-			.replaceAll('{generalInstructions}', ctx.generalInstructions)
+		systemPrompt: ctx.prompts.writerSystemPrompt
+			.replaceAll('{generalInstructions}', ctx.prompts.generalInstructions)
 			.replaceAll('{targetWordCount}', ctx.effectiveTargetWordCount)
-			.replaceAll('{writerOutputTemplate}', ctx.writerOutputTemplate),
+			.replaceAll('{writerOutputTemplate}', ctx.prompts.writerOutputTemplate),
 		...ctx.sharedParams,
 		tools: filterToolsForPhase(ctx.tools, 'WRITER'),
 		descriptors: getNarrativeDescriptors(),
@@ -158,8 +162,8 @@ export async function runReviewerEditorPhases(ctx: PipelineRunContext, state: Pi
 
 	const reviewerResult = await executeStreamingPhase({
 		phaseName: 'REVIEWER',
-		systemPrompt: ctx.reviewerPrompt
-			.replaceAll('{generalInstructions}', ctx.generalInstructions)
+		systemPrompt: ctx.prompts.reviewerPrompt
+			.replaceAll('{generalInstructions}', ctx.prompts.generalInstructions)
 			.replaceAll('{acceptAsIs}', acceptAsIsLabel())
 			.replaceAll('{summary}', summaryHeader())
 			.replaceAll('{totalViolations}', totalViolationsLabel())
@@ -191,10 +195,10 @@ export async function runReviewerEditorPhases(ctx: PipelineRunContext, state: Pi
 	} else {
 		const editorResult = await executeStreamingPhase({
 			phaseName: 'EDITOR',
-			systemPrompt: ctx.editorSystemPrompt
-				.replaceAll('{generalInstructions}', ctx.generalInstructions)
+			systemPrompt: ctx.prompts.editorSystemPrompt
+				.replaceAll('{generalInstructions}', ctx.prompts.generalInstructions)
 				.replaceAll('{targetWordCount}', ctx.effectiveTargetWordCount)
-				.replaceAll('{writerOutputTemplate}', ctx.writerOutputTemplate),
+				.replaceAll('{writerOutputTemplate}', ctx.prompts.writerOutputTemplate),
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'EDITOR'),
 			descriptors: getEditorDescriptors(),
@@ -224,7 +228,7 @@ export async function runEditorTemplateFitter(ctx: PipelineRunContext, state: Pi
 		descriptors: getEditorTemplateFitterDescriptors(),
 		messages: buildEditorFitterMessages(
 			state.editorOutput ?? '',
-			ctx.writerOutputTemplate,
+			ctx.prompts.writerOutputTemplate,
 			editorTemplateFitterExtractionPrompt(),
 		),
 		providerConfig: ctx.providerConfigs.minorTaskAgent,
@@ -259,7 +263,7 @@ export async function runGamePhases(
 		const [gmResult, plotResult] = await Promise.all([
 			executeStreamingPhase({
 				phaseName: 'GAME_MASTER',
-				systemPrompt: ctx.gameMasterSystemPrompt,
+				systemPrompt: ctx.prompts.gameMasterSystemPrompt,
 				...ctx.sharedParams,
 				tools: filterToolsForPhase(ctx.tools, 'GAME_MASTER'),
 				descriptors: getGameMasterDescriptors(),
@@ -269,8 +273,8 @@ export async function runGamePhases(
 			}, state),
 			executeStreamingPhase({
 				phaseName: 'PLOT_PLANNER',
-				systemPrompt: ctx.plotPlannerSystemPrompt
-					.replaceAll('{generalInstructions}', ctx.generalInstructions)
+				systemPrompt: ctx.prompts.plotPlannerSystemPrompt
+					.replaceAll('{generalInstructions}', ctx.prompts.generalInstructions)
 					.replaceAll('{targetWordCount}', ctx.effectiveTargetWordCount),
 				...ctx.sharedParams,
 				tools: filterToolsForPhase(ctx.tools, 'PLOT_PLANNER'),
@@ -289,7 +293,7 @@ export async function runGamePhases(
 
 	const gmResult = await executeStreamingPhase({
 		phaseName: 'GAME_MASTER',
-		systemPrompt: ctx.gameMasterSystemPrompt,
+		systemPrompt: ctx.prompts.gameMasterSystemPrompt,
 		...ctx.sharedParams,
 		tools: filterToolsForPhase(ctx.tools, 'GAME_MASTER'),
 		descriptors: getGameMasterDescriptors(),

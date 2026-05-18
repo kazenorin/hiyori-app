@@ -56,18 +56,22 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	const phaseEntries: PhaseMetadata[] = [];
 
 	const loadedPrompts = await loadPrompts(storyId, storyName);
-	const {
-		generalInstructions, writerSystemPrompt, writerOutputTemplate,
-		reviewerSystemPromptTemplate, quickReviewerSystemPromptTemplate,
-		editorSystemPrompt, gameMasterSystemPrompt, plotPlannerSystemPrompt,
-	} = loadedPrompts;
-	const reviewerPrompt = getSettings().reviewerMode === 'quick' ? quickReviewerSystemPromptTemplate : reviewerSystemPromptTemplate;
+	const reviewerPrompt = getSettings().reviewerMode === 'quick'
+		? loadedPrompts.quickReviewerSystemPromptTemplate
+		: loadedPrompts.reviewerSystemPromptTemplate;
 
 	const ctx: PipelineRunContext = {
 		sharedParams, providerConfigs, preEditorCtx,
-		generalInstructions, effectiveTargetWordCount, currentScene, writerOutputTemplate,
-		reviewerPrompt, writerSystemPrompt, editorSystemPrompt,
-		gameMasterSystemPrompt, plotPlannerSystemPrompt, tools,
+		prompts: {
+			generalInstructions: loadedPrompts.generalInstructions,
+			writerOutputTemplate: loadedPrompts.writerOutputTemplate,
+			reviewerPrompt,
+			writerSystemPrompt: loadedPrompts.writerSystemPrompt,
+			editorSystemPrompt: loadedPrompts.editorSystemPrompt,
+			gameMasterSystemPrompt: loadedPrompts.gameMasterSystemPrompt,
+			plotPlannerSystemPrompt: loadedPrompts.plotPlannerSystemPrompt,
+		},
+		effectiveTargetWordCount, currentScene, tools,
 	};
 
 	const trackPhase: TrackPhase = (phaseName, result, model) => {
