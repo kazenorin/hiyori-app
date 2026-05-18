@@ -30,8 +30,8 @@ import { getErrorMessage } from '$lib/utils/error-handling';
 import { ERR_INVALID_MESSAGE_ROLE, ERR_MESSAGE_SEQUENCE_NOT_FOUND } from '$lib/definitions/error-messages';
 import { renderFromVariables } from './template-renderer';
 import { storyMessageTemplate } from '$lib/fs/view-templates';
-import { type PipelineProviderConfigs, type PlayerContext, runPipeline } from './pipeline';
-import type { AsyncPhaseResults, PhaseStreamState, PipelineCallbacks, PipelineState } from './pipeline-types';
+import { runPipeline } from './pipeline';
+import type { AsyncPhaseResults, PhaseStreamState, PipelineCallbacks, PipelineProviderConfigs, PipelineState, PlayerContext } from './pipeline/types';
 
 export interface UIMessage {
 	id: string;
