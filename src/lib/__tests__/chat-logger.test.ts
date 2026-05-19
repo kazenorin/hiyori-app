@@ -72,7 +72,7 @@ function defaultSettings() {
 		directorModeEnabled: false,
 		targetWordCount: 400,
 		characterProfileCompressorInterval: 5,
-		defaultPlotMode: 'guidance' as const,
+		defaultPlotMode: 'phaseEvent' as const,
 		reevaluationFrequency: 10,
 	};
 }

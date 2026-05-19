@@ -3,6 +3,7 @@
 import { createStory, deleteStory } from '$lib/db/stories';
 import { createAct, deleteAct } from '$lib/db/acts';
 import { addMessageToLine, createActLine, deleteActLine, deleteLineEntries } from '$lib/db/act-lines';
+import { getDefaultPlotMode } from '$lib/stores/settings.svelte';
 import { createMessage, deleteMessage } from '$lib/db/messages';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { deleteStoryFolder } from '$lib/db/story-folders';
@@ -236,7 +237,7 @@ async function createActAndLine(
 
 	// Create main act line
 	const actLineId = crypto.randomUUID();
-	await createActLine(actLineId, actId, 'Main Line', true);
+	await createActLine(actLineId, actId, 'Main Line', true, getDefaultPlotMode());
 	createdResources.actLineIds.push(actLineId);
 
 	return { actId, actLineId };

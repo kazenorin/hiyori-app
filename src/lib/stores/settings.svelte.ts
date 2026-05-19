@@ -74,7 +74,7 @@ const defaults: Settings = {
 	targetWordCount: 400,
 	directorModeEnabled: false,
 	characterProfileCompressorInterval: 5, // scenes between compressor runs; 0 = disabled
-	defaultPlotMode: 'guidance',
+	defaultPlotMode: 'phaseEvent',
 	reevaluationFrequency: 10,
 };
 
