@@ -6,6 +6,16 @@
 - **Target Word Count per Scene:** [400-500 words]
 - **Estimated Total Words:** [14,000-25,000 words]
 
+### Act Phases
+
+The story progresses from introducing the world and conflict, through rising tensions and escalating challenges, to a decisive climax, followed by the consequences of that climax in the falling action, and finally a sense of closure in the resolution.
+
+1. **Introduction phase:** Establish the setting, main characters, and the central conflict while hinting at what is at stake.
+2. **Rising-action phase:** Introduce escalating challenges, deepen tensions, and reveal complications that push the characters toward a major turning point.
+3. **Climax phase:** Present the story’s most intense moment, where the main conflict reaches a decisive confrontation or critical choice.
+4. **Falling-action phase:** Show the immediate consequences of the climax as tension begins to settle and the aftermath unfolds.
+5. **Resolution phase:** Tie up remaining loose ends, clarify the final state of the world and characters, and provide a sense of closure.
+
 ## Premise
 
 ### The Protagonist
