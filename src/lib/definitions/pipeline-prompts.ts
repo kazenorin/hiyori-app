@@ -1,4 +1,5 @@
 import { ls } from '$lib/localization';
+import type { PlotMode, ActPhase } from '$lib/ai/narrative-types';
 
 // Headers
 export const sceneSummariesHeader = () => ls('pipeline.headers.sceneSummaries');
@@ -9,8 +10,7 @@ export const characterProfilesHeader = () => ls('pipeline.headers.characterProfi
 export const acceptAsIsLabel = () => ls('pipeline.labels.acceptAsIs');
 export const totalViolationsLabel = () => ls('pipeline.labels.totalViolations');
 export const recommendationLabel = () => ls('pipeline.labels.recommendation');
-export const characterSummariesSinceSceneLabel = (sceneNumber: number) =>
-	ls('pipeline.labels.characterSummaries', { sceneNumber });
+export const characterSummariesSinceSceneLabel = (sceneNumber: number) => ls('pipeline.labels.characterSummaries', { sceneNumber });
 
 // System prompts
 export const templateFitterSystemPrompt = () => ls('pipeline.system.templateFitter');
@@ -25,8 +25,14 @@ export const reviewerExtractionPromptTemplate = (currentScene: number | string) 
 export const quickReviewerExtractionPromptTemplate = (currentScene: number | string) =>
 	ls('pipeline.extraction.reviewerQuick', { currentScene });
 export const writerExtractionPromptTemplate = (currentScene: number | string) => ls('pipeline.extraction.writer', { currentScene });
-export const plotPlannerExtractionPromptTemplate = (currentScene: number | string) =>
-	ls('pipeline.extraction.plotPlanner', { currentScene });
+export const guidancePlotPlannerExtractionPromptTemplate = (currentScene: number | string) =>
+	ls('pipeline.extraction.plotPlanner.guidance', { currentScene });
+export const phaseEventPlotPlannerExtractionPromptTemplate = (actPhase: ActPhase) =>
+	ls('pipeline.extraction.plotPlanner.phaseEvent', { currentActPhase: actPhase });
+export const plotPlannerExtractionPrompt = (plotMode: PlotMode, currentScene: number | string, actPhase?: ActPhase | null) =>
+	plotMode === 'phaseEvent'
+		? phaseEventPlotPlannerExtractionPromptTemplate(actPhase ?? 'introduction')
+		: guidancePlotPlannerExtractionPromptTemplate(currentScene);
 export const summarizerFallbackExtractionPromptTemplate = (completedScenes: number | string) =>
 	ls('pipeline.extraction.summarizerFallback', { completedScenes });
 export const summarizerExtractionPromptTemplate = (completedScenes: number | string, sceneTitle: string) =>

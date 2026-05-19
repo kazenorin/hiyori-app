@@ -50,7 +50,9 @@ pipeline:
     reviewer: "根據聊天記錄中的可用資訊，審閱寫手對場景 {currentScene} 的輸出。"
     reviewerQuick: "快速審閱寫手對場景 {currentScene} 的輸出。僅略讀明顯錯誤——立即輸出審閱範本，不附帶推理過程。"
     writer: "根據聊天記錄中的可用資訊，撰寫場景 {currentScene} 的故事散文。"
-    plotPlanner: "目前場景為場景 {currentScene}。請根據聊天記錄中的可用資訊，為緊接的下一場景、近期的情節節奏 (可彈性處理) 以及中期目標 (可彈性處理) 規劃場景劇情。"
+    plotPlanner:
+      guidance: "目前場景為場景 {currentScene}。請根據聊天記錄中的可用資訊，為緊接的下一場景、近期的情節節奏 (可彈性處理) 以及中期目標 (可彈性處理) 規劃場景劇情。"
+      phaseEvent: "目前章節的故事階段為 {currentActPhase}。請根據聊天記錄中的可用資訊，規劃「階段事件」。"
     summarizerFallback: "根據玩家回應，更新場景 {completedScenes} 的章節摘要。"
     summarizer: "更新章節摘要，加入上一個場景的資訊: 「場景 {completedScenes}: {sceneTitle}」"
     editorTemplateFitter: >
