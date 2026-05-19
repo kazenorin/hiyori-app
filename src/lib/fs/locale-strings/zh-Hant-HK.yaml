@@ -76,6 +76,12 @@ pipeline:
     relationships: 關係
     voice: 語氣
     characterSummaries: "自場景 {sceneNumber} 以來每個角色的近期摘要。"
+    actPhases:
+      introduction: 鋪陳
+      risingAction: 發展
+      climax: 高潮
+      fallingAction: 收束
+      resolution: 結局
 
 features:
   characterCardGenerator:
@@ -232,7 +238,7 @@ tools:
       noActPlot: "此章節尚未生成章節劇情。"
   advancePhase:
     description: >
-      將故事推進至下一個敘事階段 (例如: 鋪陳 → 發展 → 高潮 → 收束 → 結局) 。
+      將故事推進至下一個敘事階段 (例如: {introduction} → {risingAction} → {climax} → {fallingAction} → {resolution}) 。
       此動作標誌著故事弧線的重大轉折，將於下一回合生效。
       每個場景只能使用一次。故事已達結局階段後無法再使用。
     messages:

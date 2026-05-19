@@ -78,6 +78,12 @@ pipeline:
     relationships: Relationships
     voice: Voice
     characterSummaries: "Summaries of each character for recent Scenes since Scene {sceneNumber}."
+    actPhases:
+      introduction: Introduction
+      risingAction: Rising Action
+      climax: Climax
+      fallingAction: Falling Action
+      resolution: Resolution
 
 features:
   characterCardGenerator:
@@ -234,7 +240,7 @@ tools:
       noActPlot: "No act plot has been generated for this act yet."
   advancePhase:
     description: >
-      Advance the story to the next narrative phase (e.g., introduction → rising-action → climax → falling-action → resolution).
+      Advance the story to the next narrative phase (e.g., {introduction} → {risingAction} → {climax} → {fallingAction} → {resolution}).
       This signals a major shift in the story's arc. Takes effect starting next turn.
       Can only be used once per scene. Cannot be used once the story has reached the resolution phase.
     messages:

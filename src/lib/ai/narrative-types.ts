@@ -127,6 +127,15 @@ export type ActPhase = 'introduction' | 'rising-action' | 'climax' | 'falling-ac
 /** Ordered phases for forward-only advancement. */
 export const ACT_PHASE_ORDER: readonly ActPhase[] = ['introduction', 'rising-action', 'climax', 'falling-action', 'resolution'];
 
+/** Maps DB act phase values to camelCase locale keys for ls() lookup. */
+export const ACT_PHASE_LOCALE_KEYS: Record<ActPhase, string> = {
+	'introduction': 'introduction',
+	'rising-action': 'risingAction',
+	'climax': 'climax',
+	'falling-action': 'fallingAction',
+	'resolution': 'resolution',
+};
+
 /** Index of a phase in ACT_PHASE_ORDER, or -1 if invalid. */
 export function getActPhaseIndex(phase: string): number {
 	return ACT_PHASE_ORDER.indexOf(phase as ActPhase);

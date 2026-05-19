@@ -5,6 +5,7 @@ import type { ToolSet } from 'ai';
 import type { ActLineMeta } from '$lib/db/act-lines';
 import { advanceActPhase } from '$lib/db/act-lines';
 import { getNextActPhase } from '$lib/ai/narrative-types';
+import { getLocalizedActPhase } from '$lib/definitions/pipeline-prompts';
 
 interface AdvanceGuard {
 	hasAdvanced: boolean;
@@ -12,7 +13,13 @@ interface AdvanceGuard {
 
 export function createAdvancePhaseTool(actLine: ActLineMeta, advanceGuard: AdvanceGuard) {
 	return tool({
-		description: ls('tools.advancePhase.description'),
+		description: ls('tools.advancePhase.description', {
+			introduction: getLocalizedActPhase('introduction'),
+			risingAction: getLocalizedActPhase('rising-action'),
+			climax: getLocalizedActPhase('climax'),
+			fallingAction: getLocalizedActPhase('falling-action'),
+			resolution: getLocalizedActPhase('resolution'),
+		}),
 		inputSchema: z.object({}),
 		execute: async (): Promise<{ result: string }> => {
 			if (advanceGuard.hasAdvanced) {
@@ -34,8 +41,8 @@ export function createAdvancePhaseTool(actLine: ActLineMeta, advanceGuard: Advan
 
 			return {
 				result: ls('tools.advancePhase.success', {
-					current: currentPhase,
-					next: nextPhase,
+					current: getLocalizedActPhase(currentPhase),
+					next: getLocalizedActPhase(nextPhase),
 				}),
 			};
 		},

@@ -1,5 +1,5 @@
 import { ls } from '$lib/localization';
-import type { PlotMode, ActPhase } from '$lib/ai/narrative-types';
+import { ACT_PHASE_LOCALE_KEYS, type PlotMode, type ActPhase } from '$lib/ai/narrative-types';
 
 // Headers
 export const sceneSummariesHeader = () => ls('pipeline.headers.sceneSummaries');
@@ -11,6 +11,10 @@ export const acceptAsIsLabel = () => ls('pipeline.labels.acceptAsIs');
 export const totalViolationsLabel = () => ls('pipeline.labels.totalViolations');
 export const recommendationLabel = () => ls('pipeline.labels.recommendation');
 export const characterSummariesSinceSceneLabel = (sceneNumber: number) => ls('pipeline.labels.characterSummaries', { sceneNumber });
+
+/** Localized display name for an act phase (e.g., 'rising-action' → 'Rising Action'). */
+export const getLocalizedActPhase = (phase: ActPhase): string =>
+	ls(`pipeline.labels.actPhases.${ACT_PHASE_LOCALE_KEYS[phase]}`);
 
 // System prompts
 export const templateFitterSystemPrompt = () => ls('pipeline.system.templateFitter');
@@ -28,7 +32,7 @@ export const writerExtractionPromptTemplate = (currentScene: number | string) =>
 export const guidancePlotPlannerExtractionPromptTemplate = (currentScene: number | string) =>
 	ls('pipeline.extraction.plotPlanner.guidance', { currentScene });
 export const phaseEventPlotPlannerExtractionPromptTemplate = (actPhase: ActPhase) =>
-	ls('pipeline.extraction.plotPlanner.phaseEvent', { currentActPhase: actPhase });
+	ls('pipeline.extraction.plotPlanner.phaseEvent', { currentActPhase: getLocalizedActPhase(actPhase) });
 export const plotPlannerExtractionPrompt = (plotMode: PlotMode, currentScene: number | string, actPhase?: ActPhase | null) =>
 	plotMode === 'phaseEvent'
 		? phaseEventPlotPlannerExtractionPromptTemplate(actPhase ?? 'introduction')

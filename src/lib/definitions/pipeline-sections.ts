@@ -21,6 +21,7 @@ import {
 	directorNotesHeader,
 	sectionFormat,
 } from './common-headers';
+import {getLocalizedActPhase} from './pipeline-prompts';
 
 export const interviewTranscriptDescription = () => ls('common.descriptions.interviewTranscript');
 
@@ -113,5 +114,5 @@ export function formatDirectorNotesSection(directorNotes: string | null | undefi
 /** Format act phase as a user message section. Returns empty array if no content. */
 export function formatActPhaseSection(actPhase: ActPhase | null | undefined): string[] {
 	if (!actPhase || actPhase.trim().length === 0) return [];
-	return [SECTION.ACT_PHASE + actPhase];
+	return [SECTION.ACT_PHASE + getLocalizedActPhase(actPhase)];
 }
