@@ -3,6 +3,8 @@ import { getDatabase } from './database';
 import type { Message } from './messages';
 import { type MessageRow, mapRowToMessage, cloneMessage } from './messages';
 import type { Story } from './stories';
+import type { PlotMode, ActPhase } from '$lib/ai/narrative-types';
+import { getActPhaseIndex } from '$lib/ai/narrative-types';
 
 export interface ActLineMeta {
 	id: string;
@@ -10,6 +12,9 @@ export interface ActLineMeta {
 	name: string;
 	isMainLine: boolean;
 	createdAt: number;
+	plotMode: PlotMode;
+	lastPlotGeneration: number | null;
+	actPhase: ActPhase | null;
 }
 
 interface ActLineMetaRow {
@@ -18,6 +23,9 @@ interface ActLineMetaRow {
 	name: string;
 	is_main_line: number;
 	created_at: number;
+	plot_mode: string;
+	last_plot_generation: number | null;
+	act_phase: string | null;
 }
 
 interface ActLineEntryRow {
@@ -33,22 +41,23 @@ function rowToActLineMeta(row: ActLineMetaRow): ActLineMeta {
 		name: row.name,
 		isMainLine: row.is_main_line === 1,
 		createdAt: row.created_at,
+		plotMode: (row.plot_mode as PlotMode) ?? 'guidance',
+		lastPlotGeneration: row.last_plot_generation,
+		actPhase: row.act_phase as ActPhase | null,
 	};
 }
 
 // === act_line_meta operations ===
 
-export async function createActLine(id: string, actId: string, name: string, isMainLine: boolean = false): Promise<ActLineMeta> {
+export async function createActLine(id: string, actId: string, name: string, isMainLine: boolean = false, plotMode: PlotMode = 'guidance'): Promise<ActLineMeta> {
 	const db = getDatabase();
 	const now = Date.now();
-	await db.execute('INSERT INTO act_line_meta (id, act_id, name, is_main_line, created_at) VALUES ($1, $2, $3, $4, $5)', [
-		id,
-		actId,
-		name,
-		isMainLine ? 1 : 0,
-		now,
-	]);
-	return { id, actId, name, isMainLine, createdAt: now };
+	const actPhase: ActPhase | null = plotMode === 'phaseEvent' ? 'introduction' : null;
+	await db.execute(
+		'INSERT INTO act_line_meta (id, act_id, name, is_main_line, created_at, plot_mode, last_plot_generation, act_phase) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
+		[id, actId, name, isMainLine ? 1 : 0, now, plotMode, null, actPhase]
+	);
+	return { id, actId, name, isMainLine, createdAt: now, plotMode, lastPlotGeneration: null, actPhase };
 }
 
 export async function getActLine(id: string): Promise<ActLineMeta | null> {
@@ -271,12 +280,17 @@ export async function branchFromLine(
 	fromLineId: string,
 	fromSequence: number,
 	actId: string,
-	name: string
+	name: string,
+	plotModeOverride?: PlotMode
 ): Promise<BranchResult> {
 	const db = getDatabase();
 
+	// Resolve mode: override takes precedence, otherwise inherit from source
+	const sourceLine = await getActLine(fromLineId);
+	const resolvedMode = plotModeOverride ?? sourceLine?.plotMode ?? 'guidance';
+
 	// Create new act line meta (branches are never main lines)
-	const lineMeta = await createActLine(newLineId, actId, name, false);
+	const lineMeta = await createActLine(newLineId, actId, name, false, resolvedMode);
 
 	// Copy entries up to fromSequence
 	const entries = await db.select<ActLineEntryRow[]>(
@@ -424,4 +438,45 @@ async function removeOrphanedMessages(db: Database, messageIds: string[]): Promi
 		}
 	}
 	return deleted;
+}
+
+// === plot mode / act phase operations ===
+
+export async function updateActLineMetaFields(
+	id: string,
+	fields: { actPhase?: ActPhase | null; lastPlotGeneration?: number | null; plotMode?: PlotMode }
+): Promise<void> {
+	const db = getDatabase();
+	const setClauses: string[] = [];
+	const params: unknown[] = [];
+	let paramIdx = 1;
+
+	if (fields.actPhase !== undefined) {
+		setClauses.push(`act_phase = $${paramIdx++}`);
+		params.push(fields.actPhase);
+	}
+	if (fields.lastPlotGeneration !== undefined) {
+		setClauses.push(`last_plot_generation = $${paramIdx++}`);
+		params.push(fields.lastPlotGeneration);
+	}
+	if (fields.plotMode !== undefined) {
+		setClauses.push(`plot_mode = $${paramIdx++}`);
+		params.push(fields.plotMode);
+	}
+	if (setClauses.length === 0) return;
+
+	params.push(id);
+	await db.execute(`UPDATE act_line_meta SET ${setClauses.join(', ')} WHERE id = $${paramIdx}`, params);
+}
+
+export async function advanceActPhase(id: string, newPhase: ActPhase): Promise<void> {
+	const current = await getActLine(id);
+	if (!current) throw new Error(`Act line ${id} not found`);
+	const currentIdx = getActPhaseIndex(current.actPhase ?? '');
+	const newIdx = getActPhaseIndex(newPhase);
+	if (currentIdx >= 0 && newIdx <= currentIdx) {
+		throw new Error(`Invalid phase transition: ${current.actPhase} → ${newPhase}. Phases must advance forward.`);
+	}
+	if (newIdx < 0) throw new Error(`Invalid act phase: ${newPhase}`);
+	await updateActLineMetaFields(id, { actPhase: newPhase, lastPlotGeneration: null });
 }

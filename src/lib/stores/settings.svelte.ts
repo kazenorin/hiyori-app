@@ -45,6 +45,8 @@ export interface Settings {
 	targetWordCount: number;
 	directorModeEnabled: boolean;
 	characterProfileCompressorInterval: number;
+	defaultPlotMode: 'guidance' | 'phaseEvent';
+	reevaluationFrequency: number;
 }
 
 const STORAGE_KEY = 'byoa-settings';
@@ -72,6 +74,8 @@ const defaults: Settings = {
 	targetWordCount: 400,
 	directorModeEnabled: false,
 	characterProfileCompressorInterval: 5, // scenes between compressor runs; 0 = disabled
+	defaultPlotMode: 'guidance',
+	reevaluationFrequency: 1,
 };
 
 /**
@@ -232,6 +236,14 @@ export function isDirectorModeEnabled(): boolean {
 	return settings.directorModeEnabled;
 }
 
+export function getDefaultPlotMode(): 'guidance' | 'phaseEvent' {
+	return settings.defaultPlotMode;
+}
+
+export function getReevaluationFrequency(): number {
+	return settings.reevaluationFrequency;
+}
+
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
 	const id = settings.roleAssignments[role];
 	if (!id) return undefined;
@@ -288,6 +300,8 @@ export async function updateSettings(
 			| 'targetWordCount'
 			| 'directorModeEnabled'
 			| 'characterProfileCompressorInterval'
+			| 'defaultPlotMode'
+			| 'reevaluationFrequency'
 		>
 	>
 ): Promise<void> {
@@ -316,6 +330,8 @@ export async function updateSettings(
 	if (partial.directorModeEnabled !== undefined) settings.directorModeEnabled = partial.directorModeEnabled;
 	if (partial.characterProfileCompressorInterval !== undefined)
 		settings.characterProfileCompressorInterval = partial.characterProfileCompressorInterval;
+	if (partial.defaultPlotMode !== undefined) settings.defaultPlotMode = partial.defaultPlotMode;
+	if (partial.reevaluationFrequency !== undefined) settings.reevaluationFrequency = partial.reevaluationFrequency;
 	persist();
 
 	// Apply font size preference when fontSize changes

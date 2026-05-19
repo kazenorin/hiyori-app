@@ -13,6 +13,8 @@ import {
 	isDirectorModeEnabled,
 	isPhraseHighlightingEnabled,
 	isReviewerEnabled,
+	getDefaultPlotMode,
+	getReevaluationFrequency,
 	settings,
 } from '$lib/stores/settings.svelte';
 import { getActiveActPlotContent, getActiveDirectorNotesText, getActiveStoryId, getActiveWorldContent } from '$lib/stores/stories.svelte';
@@ -354,6 +356,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 	abortController = new AbortController();
 	const story = await storyPromise;
 	const storyId = story.id;
+	const actLine = await dbActLines.getActLine(actLineId);
 	const tools = await buildTools(storyId, actLineId);
 	const phasesOfMainChat: PhaseName[] = isReviewerEnabled() ? ['EDITOR'] : ['EDITOR', 'WRITER'];
 
@@ -498,6 +501,10 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 			completedScenes: previousSceneNumber, // previous scene was just completed by the Player Response
 			directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(previousSceneNumber + 1) : '',
 			targetWordCount,
+			plotMode: actLine?.plotMode ?? getDefaultPlotMode(),
+			actPhase: actLine?.actPhase ?? undefined,
+			lastPlotGeneration: actLine?.lastPlotGeneration ?? undefined,
+			reevaluationFrequency: getReevaluationFrequency(),
 		});
 
 		// Update metadata from pipeline phases
@@ -512,6 +519,11 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 
 		// Persist with accumulated content
 		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({ newMessages: messages.slice(-newMessagesCount) })]);
+
+		// Update lastPlotGeneration if Plot Planner ran this turn
+		if (result.phases?.some(p => p.phaseName === 'PLOT_PLANNER') && actLine) {
+			await dbActLines.updateActLineMetaFields(actLineId, { lastPlotGeneration: nextSceneNumber });
+		}
 
 		// Store async phases
 		const assistantMessageId = getCurrentMessage().id;

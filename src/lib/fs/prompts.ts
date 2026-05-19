@@ -31,7 +31,8 @@ const systemPrompt = new LocalizedPromptFile(promptDefaults, 'system-prompt.md')
 const generalInstructions = new LocalizedPromptFile(promptDefaults, 'general-instructions.md');
 
 // Pipeline: Plot Planner
-const plotPlannerPrompt = new LocalizedPromptFile(promptDefaults, 'plot-planner/plot-planner-prompt.md');
+const guidancePlotPlannerPrompt = new LocalizedPromptFile(promptDefaults, 'plot-planner/guidance-plot-planner-prompt.md');
+const phaseEventPlotPlannerPrompt = new LocalizedPromptFile(promptDefaults, 'plot-planner/phase-event-plot-planner-prompt.md');
 
 // Pipeline: Writer
 const writerPrompt = new LocalizedPromptFile(promptDefaults, 'writer/writer-prompt.md');
@@ -64,7 +65,8 @@ const worldBuilderSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/
 // Act
 const actCardTemplate = new LocalizedPromptFile(promptDefaults, 'act/act-card-template.md');
 const actExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-extraction-prompt.md');
-const actPlotTemplate = new LocalizedPromptFile(promptDefaults, 'act/act-plot-template.md');
+const actPlotTemplate = new LocalizedPromptFile(promptDefaults, 'act/guidance-act-plot-template.md');
+const phaseEventActPlotTemplate = new LocalizedPromptFile(promptDefaults, 'act/phase-event-act-plot-template.md');
 const actPlotGenerationPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-generation-prompt.md');
 const actPlotSystemPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-system-prompt.md');
 const actPlotInterviewSystemPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-interview-system-prompt.md');
@@ -94,7 +96,11 @@ const importantPhrasesPrompt = new LocalizedPromptFile(promptDefaults, 'features
 
 export const loadSystemPrompt = (): Promise<string> => systemPrompt.load();
 export const loadGeneralInstructions = (): Promise<string> => generalInstructions.load();
-export const loadPlotPlannerPrompt = (): Promise<string> => plotPlannerPrompt.load();
+export const loadPlotPlannerPrompt = (): Promise<string> => guidancePlotPlannerPrompt.load();
+export const loadGuidancePlotPlannerPrompt = (): Promise<string> => guidancePlotPlannerPrompt.load();
+export const loadPhaseEventPlotPlannerPrompt = (): Promise<string> => phaseEventPlotPlannerPrompt.load();
+export const loadPlotPlannerPromptForMode = (mode: 'guidance' | 'phaseEvent'): Promise<string> =>
+	mode === 'phaseEvent' ? phaseEventPlotPlannerPrompt.load() : guidancePlotPlannerPrompt.load();
 export const loadWriterPrompt = (): Promise<string> => writerPrompt.load();
 export const loadWriterOutputTemplate = (): Promise<string> => writerOutputTemplate.load();
 export const loadReviewerPrompt = (): Promise<string> => reviewerPrompt.load();
@@ -112,6 +118,10 @@ export const loadWorldBuilderSystemPrompt = (): Promise<string> => worldBuilderS
 export const loadActCardTemplate = (): Promise<string> => actCardTemplate.load();
 export const loadActExtractionPrompt = (): Promise<string> => actExtractionPrompt.load();
 export const loadActPlotTemplate = (): Promise<string> => actPlotTemplate.load();
+export const loadGuidanceActPlotTemplate = (): Promise<string> => actPlotTemplate.load();
+export const loadPhaseEventActPlotTemplate = (): Promise<string> => phaseEventActPlotTemplate.load();
+export const loadActPlotTemplateForMode = (mode: 'guidance' | 'phaseEvent'): Promise<string> =>
+	mode === 'phaseEvent' ? phaseEventActPlotTemplate.load() : actPlotTemplate.load();
 export const loadActPlotGenerationPrompt = (): Promise<string> => actPlotGenerationPrompt.load();
 export const loadActPlotSystemPrompt = (): Promise<string> => actPlotSystemPrompt.load();
 export const loadActPlotInterviewSystemPrompt = (): Promise<string> => actPlotInterviewSystemPrompt.load();
@@ -140,7 +150,17 @@ export async function loadStoryGeneralInstructions(storyId: string, storyName: s
 
 // Story-specific pipeline prompt loaders
 export async function loadStoryPlotPlannerPrompt(storyId: string, storyName: string): Promise<string> {
-	return plotPlannerPrompt.loadForStory(storyId, storyName);
+	return guidancePlotPlannerPrompt.loadForStory(storyId, storyName);
+}
+
+export async function loadStoryPhaseEventPlotPlannerPrompt(storyId: string, storyName: string): Promise<string> {
+	return phaseEventPlotPlannerPrompt.loadForStory(storyId, storyName);
+}
+
+export function loadStoryPlotPlannerPromptForMode(storyId: string, storyName: string, mode: 'guidance' | 'phaseEvent'): Promise<string> {
+	return mode === 'phaseEvent'
+		? loadStoryPhaseEventPlotPlannerPrompt(storyId, storyName)
+		: loadStoryPlotPlannerPrompt(storyId, storyName);
 }
 
 export async function loadStoryWriterPrompt(storyId: string, storyName: string): Promise<string> {
@@ -200,6 +220,11 @@ export const plotPlannerSystemPromptLoader: PromptLoader = {
 	loadDefault: loadPlotPlannerPrompt,
 };
 
+export const phaseEventPlotPlannerSystemPromptLoader: PromptLoader = {
+	loadByStory: loadStoryPhaseEventPlotPlannerPrompt,
+	loadDefault: loadPhaseEventPlotPlannerPrompt,
+};
+
 export const writerSystemPromptLoader: PromptLoader = {
 	loadByStory: loadStoryWriterPrompt,
 	loadDefault: loadWriterPrompt,
@@ -256,7 +281,8 @@ export const characterProfileCompressorPromptLoader: PromptLoader = {
 registerDefaults([
 	systemPrompt,
 	generalInstructions,
-	plotPlannerPrompt,
+	guidancePlotPlannerPrompt,
+	phaseEventPlotPlannerPrompt,
 	writerPrompt,
 	writerOutputTemplate,
 	reviewerPrompt,
@@ -274,6 +300,7 @@ registerDefaults([
 	actCardTemplate,
 	actExtractionPrompt,
 	actPlotTemplate,
+	phaseEventActPlotTemplate,
 	actPlotGenerationPrompt,
 	actPlotSystemPrompt,
 	actPlotInterviewSystemPrompt,

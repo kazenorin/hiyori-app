@@ -34,6 +34,7 @@ common:
     decisions: Decisions
     summary: Summary
     directorNotes: Director's Notes
+    actPhase: Act Phase
   descriptions:
     interviewTranscript: The following is an interview exchange about the story and premises.
     directorNotes: "The following notes represent the player's explicit creative direction. They override all other context including Act Plot and Act Summary. Honor them with the highest priority."
@@ -229,6 +230,15 @@ tools:
       Use this to understand the planned narrative arc and guide the story accordingly.
     messages:
       noActPlot: "No act plot has been generated for this act yet."
+  advancePhase:
+    description: >
+      Advance the story to the next narrative phase (e.g., introduction → rising-action → climax → falling-action → resolution).
+      This signals a major shift in the story's arc. Takes effect starting next turn.
+      Can only be used once per scene. Cannot be used once the story has reached the resolution phase.
+    messages:
+      alreadyAdvanced: "Phase has already been advanced this scene. It will take effect next turn."
+      success: "Phase advanced from {current} to {next}. Takes effect next turn."
+      terminalPhase: "Cannot advance further — the story is already at the resolution phase."
   readScene:
     description: >
       Read the content of a specific scene in the current act. Returns the narrative body (assistant response) and

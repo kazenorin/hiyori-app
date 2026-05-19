@@ -87,6 +87,12 @@
 		"targetWordCountDescription": "Target word count per scene for the Writer phase. Default: 400.",
 		"compressorInterval": "Compressor Interval",
 		"compressorIntervalDescription": "Scenes between character profile compression runs. Set to 0 to disable. Default: 5.",
+		"plotMode": "Plot Mode",
+		"plotModeGuidance": "Guidance-based",
+		"plotModePhaseEvent": "Event-based",
+		"plotModeDescription": "Guidance-based runs the Plot Planner every turn. Event-based structures the story through narrative phases and runs the Plot Planner at a configurable frequency.",
+		"reevaluationFrequency": "Re-evaluation Frequency",
+		"reevaluationFrequencyDescription": "Scenes between Plot Planner runs in Event-based mode. Lower values give tighter pacing control. Default: 10.",
 		"developer": "Developer",
 		"locale": "Locale",
 		"logLevel": "Log Level",
@@ -132,7 +138,11 @@
 		"addNote": "Add",
 		"effectiveFrom": "From scene",
 		"effectiveTo": "To scene",
-		"sceneRangeUnset": "All scenes"
+		"sceneRangeUnset": "All scenes",
+		"plotMode": "Plot Mode",
+		"keepCurrentMode": "Keep Current Mode",
+		"switchToGuidance": "Guidance-based",
+		"switchToPhaseEvent": "Event-based"
 	},
 	"sidebar": {
 		"loading": "Loading...",

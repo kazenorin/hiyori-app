@@ -115,3 +115,26 @@ export function emptyVariables(): NarrativeVariables {
 export function formatPhaseName(name: PhaseName): string {
 	return name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
+
+// --- Plot Mode and Act Phase ---
+
+/** How the plot planner generates scene plots. */
+export type PlotMode = 'guidance' | 'phaseEvent';
+
+/** Narrative phases for event-based plot mode. */
+export type ActPhase = 'introduction' | 'rising-action' | 'climax' | 'falling-action' | 'resolution';
+
+/** Ordered phases for forward-only advancement. */
+export const ACT_PHASE_ORDER: readonly ActPhase[] = ['introduction', 'rising-action', 'climax', 'falling-action', 'resolution'];
+
+/** Index of a phase in ACT_PHASE_ORDER, or -1 if invalid. */
+export function getActPhaseIndex(phase: string): number {
+	return ACT_PHASE_ORDER.indexOf(phase as ActPhase);
+}
+
+/** Next phase after the current one, or null if at resolution. */
+export function getNextActPhase(current: ActPhase): ActPhase | null {
+	const idx = getActPhaseIndex(current);
+	if (idx < 0 || idx >= ACT_PHASE_ORDER.length - 1) return null;
+	return ACT_PHASE_ORDER[idx + 1];
+}

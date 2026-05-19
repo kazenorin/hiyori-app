@@ -19,7 +19,7 @@ import {
 	isPlotPlannerEnabled,
 	isReviewerEnabled,
 } from '$lib/stores/settings.svelte';
-import type {GameDataFields, NarrativeVariables} from '../narrative-types';
+import type {GameDataFields, NarrativeVariables, PlotMode} from '../narrative-types';
 import {summaryHeader} from '$lib/definitions/common-headers';
 import {
 	acceptAsIsLabel,
@@ -119,6 +119,7 @@ export interface PipelinePrompts {
 	editorSystemPrompt: string;
 	gameMasterSystemPrompt: string;
 	plotPlannerSystemPrompt: string;
+	phaseEventPlotPlannerSystemPrompt: string;
 }
 
 export interface PipelineRunContext {
@@ -129,6 +130,10 @@ export interface PipelineRunContext {
 	effectiveTargetWordCount: string;
 	currentScene: string;
 	tools?: ToolSet;
+	plotMode: PlotMode;
+	actPhase?: string | null;
+	lastPlotGeneration?: number | null;
+	reevaluationFrequency: number;
 }
 
 export type TrackPhase = (phaseName: string, result: {state: PipelineState; metadata: StreamResultMetadata}, model?: string) => PipelineState;
@@ -260,34 +265,59 @@ export async function runGamePhases(
 	trackPhase: TrackPhase,
 ): Promise<PipelineState> {
 	if (isPlotPlannerEnabled()) {
-		const [gmResult, plotResult] = await Promise.all([
-			executeStreamingPhase({
-				phaseName: 'GAME_MASTER',
-				systemPrompt: ctx.prompts.gameMasterSystemPrompt,
-				...ctx.sharedParams,
-				tools: filterToolsForPhase(ctx.tools, 'GAME_MASTER'),
-				descriptors: getGameMasterDescriptors(),
-				messages: buildGamePhaseMessages(postEditorCtx, gameMasterExtractionPrompt()),
-				providerConfig: ctx.providerConfigs.gameMaster,
-				buildStateUpdate: buildGmStateUpdate,
-			}, state),
-			executeStreamingPhase({
-				phaseName: 'PLOT_PLANNER',
-				systemPrompt: ctx.prompts.plotPlannerSystemPrompt
-					.replaceAll('{generalInstructions}', ctx.prompts.generalInstructions)
-					.replaceAll('{targetWordCount}', ctx.effectiveTargetWordCount),
-				...ctx.sharedParams,
-				tools: filterToolsForPhase(ctx.tools, 'PLOT_PLANNER'),
-				descriptors: getPlotPlannerDescriptors(),
-				messages: buildGamePhaseMessages(postEditorCtx, plotPlannerExtractionPromptTemplate(ctx.currentScene)),
-				providerConfig: ctx.providerConfigs.plotPlanner,
-				buildStateUpdate: buildPlotPlannerStateUpdate,
-			}, state),
-		]);
+		const shouldRunPlotPlanner = ctx.plotMode === 'guidance'
+			|| ctx.lastPlotGeneration == null
+			|| (postEditorCtx.completedScenes - ctx.lastPlotGeneration) >= ctx.reevaluationFrequency;
 
+		if (shouldRunPlotPlanner) {
+			const plotPlannerPrompt = ctx.plotMode === 'phaseEvent'
+				? ctx.prompts.phaseEventPlotPlannerSystemPrompt
+				: ctx.prompts.plotPlannerSystemPrompt;
+
+			const [gmResult, plotResult] = await Promise.all([
+				executeStreamingPhase({
+					phaseName: 'GAME_MASTER',
+					systemPrompt: ctx.prompts.gameMasterSystemPrompt,
+					...ctx.sharedParams,
+					tools: filterToolsForPhase(ctx.tools, 'GAME_MASTER'),
+					descriptors: getGameMasterDescriptors(),
+					messages: buildGamePhaseMessages(postEditorCtx, gameMasterExtractionPrompt()),
+					providerConfig: ctx.providerConfigs.gameMaster,
+					buildStateUpdate: buildGmStateUpdate,
+				}, state),
+				executeStreamingPhase({
+					phaseName: 'PLOT_PLANNER',
+					systemPrompt: plotPlannerPrompt
+						.replaceAll('{generalInstructions}', ctx.prompts.generalInstructions)
+						.replaceAll('{targetWordCount}', ctx.effectiveTargetWordCount),
+					...ctx.sharedParams,
+					tools: filterToolsForPhase(ctx.tools, 'PLOT_PLANNER'),
+					descriptors: getPlotPlannerDescriptors(),
+					messages: buildGamePhaseMessages(postEditorCtx, plotPlannerExtractionPromptTemplate(ctx.currentScene)),
+					providerConfig: ctx.providerConfigs.plotPlanner,
+					buildStateUpdate: buildPlotPlannerStateUpdate,
+				}, state),
+			]);
+
+			state = trackPhase('GAME_MASTER', gmResult, ctx.providerConfigs.gameMaster?.model);
+			state = updateState(state, {scenePlot: plotResult.state.scenePlot});
+			trackPhase('PLOT_PLANNER', plotResult, ctx.providerConfigs.plotPlanner?.model);
+			return state;
+		}
+
+		// GM only, carry forward previous scene plot
+		const gmResult = await executeStreamingPhase({
+			phaseName: 'GAME_MASTER',
+			systemPrompt: ctx.prompts.gameMasterSystemPrompt,
+			...ctx.sharedParams,
+			tools: filterToolsForPhase(ctx.tools, 'GAME_MASTER'),
+			descriptors: getGameMasterDescriptors(),
+			messages: buildGamePhaseMessages(postEditorCtx, gameMasterExtractionPrompt()),
+			providerConfig: ctx.providerConfigs.gameMaster,
+			buildStateUpdate: buildGmStateUpdate,
+		}, state);
 		state = trackPhase('GAME_MASTER', gmResult, ctx.providerConfigs.gameMaster?.model);
-		state = updateState(state, {scenePlot: plotResult.state.scenePlot});
-		trackPhase('PLOT_PLANNER', plotResult, ctx.providerConfigs.plotPlanner?.model);
+		state = updateState(state, {scenePlot: postEditorCtx.previousScenePlot ?? ''});
 		return state;
 	}
 

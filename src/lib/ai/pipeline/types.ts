@@ -1,5 +1,5 @@
 import type { PhaseName } from '../narrative-types';
-import type { NarrativeVariables, GameDataFields } from '../narrative-types';
+import type { NarrativeVariables, GameDataFields, PlotMode } from '../narrative-types';
 import type { StreamResultMetadata } from '../streaming';
 import type {ActSummary, CharacterProfile} from '../act-summary-parser';
 import type {ToolSet} from 'ai';
@@ -93,6 +93,7 @@ export interface PipelineInput {
 	execution: PipelineExecution;
 	worldContent: string;
 	actPlot: string;
+	actPhase?: string | null;
 	actSummary: string;
 	directorNotes: string;
 	previousNarrativeVariables: NarrativeVariables | undefined;
@@ -102,6 +103,9 @@ export interface PipelineInput {
 	completedScenes: number;
 	targetWordCount?: number;
 	retryConfig?: RetryConfig;
+	plotMode?: PlotMode;
+	lastPlotGeneration?: number | null;
+	reevaluationFrequency?: number;
 }
 
 export interface PipelineResult {

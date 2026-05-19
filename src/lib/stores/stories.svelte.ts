@@ -7,7 +7,7 @@ import { log } from '$lib/logging/logger';
 import { moveWorldBuilderLog } from '$lib/logging/chat-logger';
 import { getLogFilePath } from '$lib/features/world-builder/world-builder.svelte';
 import { Memory } from '$lib/features/memory';
-import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
+import { getDefaultPlotMode, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 import type { ModelMessage } from 'ai';
 import { loadStorySystemPrompt, loadSystemPrompt } from '$lib/fs/prompts';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
@@ -17,6 +17,7 @@ import { writeTextFile, readTextFile, exists, remove, copyFile, mkdir, rename, B
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, getLineDir, resolveLineSubdir } from '$lib/ai/card-output-path';
 import { generateActPlot, type ActPlotPhase } from '$lib/ai/act-plot-generator';
+import type { PlotMode } from '$lib/ai/narrative-types';
 
 export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
 
@@ -266,6 +267,7 @@ async function ensureActPlot(): Promise<void> {
 					actLineId: activeActLineId,
 					isMainLine: actLine.isMainLine,
 					actNumber: act.actNumber,
+					plotMode: actLine.plotMode,
 					onPhaseChange: (phase) => {
 						actPlotGenerationPhase = phase;
 					},
@@ -294,7 +296,7 @@ export async function createAct(storyId: string, name: string, continuesFromActL
 
 export async function createActLine(actId: string, name: string): Promise<dbActLines.ActLineMeta> {
 	const isFirst = actLines.length === 0;
-	const line = await dbActLines.createActLine(crypto.randomUUID(), actId, name, isFirst);
+	const line = await dbActLines.createActLine(crypto.randomUUID(), actId, name, isFirst, getDefaultPlotMode());
 	actLines = [...actLines, line];
 	return line;
 }
@@ -507,11 +509,19 @@ export async function forkActLineForInterview(
 	fromLineId: string,
 	fromSequence: number,
 	actId: string,
-	name: string
+	name: string,
+	plotModeOverride?: PlotMode
 ): Promise<dbActLines.ActLineMeta> {
 	const newLineId = crypto.randomUUID();
-	const { lineMeta, remappedMessageIds } = await dbActLines.branchFromLine(newLineId, fromLineId, fromSequence, actId, name);
+	const { lineMeta, remappedMessageIds } = await dbActLines.branchFromLine(newLineId, fromLineId, fromSequence, actId, name, plotModeOverride);
 	actLines = [...actLines, lineMeta];
+
+	// Set actPhase when switching to phaseEvent mode
+	if (plotModeOverride === 'phaseEvent') {
+		await dbActLines.updateActLineMetaFields(lineMeta.id, { actPhase: 'introduction' });
+	} else if (plotModeOverride === 'guidance') {
+		await dbActLines.updateActLineMetaFields(lineMeta.id, { actPhase: null });
+	}
 
 	// Create the line directory with proper naming at fork time
 	const storyId = activeStoryId;

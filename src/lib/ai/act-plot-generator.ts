@@ -1,8 +1,9 @@
 import { generateText, type ModelMessage } from 'ai';
+import type { PlotMode } from './narrative-types';
 import { getMainProviderConfig, isReviewerEnabled } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
 import {
-	loadActPlotTemplate,
+	loadActPlotTemplateForMode,
 	loadActPlotGenerationPrompt,
 	loadActPlotSystemPrompt,
 	loadActPlotReviewerPrompt,
@@ -136,6 +137,7 @@ export interface GenerateActPlotParams {
 	actLineId: string;
 	isMainLine: boolean;
 	actNumber: number;
+	plotMode?: PlotMode;
 	isResumeGame?: boolean;
 	onPhaseChange?: (phase: ActPlotPhase) => void;
 }
@@ -149,7 +151,7 @@ export interface GenerateActPlotParams {
  * If the reviewer or editor phase fails, falls back to writer output.
  */
 export async function generateActPlot(params: GenerateActPlotParams): Promise<GenerateActPlotResult> {
-	const { storyId, storyName, worldContent, actLineId, isMainLine, actNumber, isResumeGame = false, onPhaseChange } = params;
+	const { storyId, storyName, worldContent, actLineId, isMainLine, actNumber, plotMode, isResumeGame = false, onPhaseChange } = params;
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) {
 		throw new Error(ERR_NO_MAIN_PROVIDER);
@@ -158,7 +160,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<Ge
 	// Load prompts and context in parallel
 	const [template, generationPrompt, systemPrompt, reviewerPrompt, editorPrompt, interviewTranscript, previousActSummary, turnOfEvents] =
 		await Promise.all([
-			loadActPlotTemplate(),
+			loadActPlotTemplateForMode(plotMode ?? 'guidance'),
 			loadActPlotGenerationPrompt().then((p) => p.replace('{actNumber}', actNumber.toString())),
 			loadActPlotSystemPrompt(),
 			loadActPlotReviewerPrompt(),

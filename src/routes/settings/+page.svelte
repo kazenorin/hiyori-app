@@ -478,6 +478,35 @@
 				</div>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.plotPlannerDescription')}</span>
 				<span class="text-xs text-surface-500 block">{t('settings.enablePlotPlannerDescription')}</span>
+				<div class="flex items-center gap-2 mt-2">
+					<span class="text-xs text-surface-500">{t('settings.plotMode')}</span>
+					<ThemedSelect
+						items={[
+							{ label: t('settings.plotModeGuidance'), value: 'guidance' },
+							{ label: t('settings.plotModePhaseEvent'), value: 'phaseEvent' },
+						]}
+						value={settings.defaultPlotMode}
+						onValueChange={(v) => updateSettings({ defaultPlotMode: v as 'guidance' | 'phaseEvent' })}
+						disabled={!settings.plotPlannerEnabled}
+					/>
+				</div>
+				<span class="text-xs text-surface-500 block">{t('settings.plotModeDescription')}</span>
+				<div class="flex items-center gap-2 mt-2">
+					<span class="text-xs text-surface-500">{t('settings.reevaluationFrequency')}</span>
+					<input
+						type="number"
+						class="input text-xs w-16"
+						min="1"
+						max="20"
+						value={settings.reevaluationFrequency}
+						disabled={!settings.plotPlannerEnabled}
+						onchange={(e) => {
+							const val = parseInt((e.currentTarget as HTMLInputElement).value, 10);
+							if (!isNaN(val) && val >= 1 && val <= 20) updateSettings({ reevaluationFrequency: val });
+						}}
+					/>
+				</div>
+				<span class="text-xs text-surface-500 block">{t('settings.reevaluationFrequencyDescription')}</span>
 			</div>
 
 			<label class="block">

@@ -71,7 +71,9 @@ function defaultSettings() {
 		importantPhraseHighlighting: false,
 		directorModeEnabled: false,
 		targetWordCount: 400,
-			characterProfileCompressorInterval: 5,
+		characterProfileCompressorInterval: 5,
+		defaultPlotMode: 'guidance' as const,
+		reevaluationFrequency: 10,
 	};
 }
 

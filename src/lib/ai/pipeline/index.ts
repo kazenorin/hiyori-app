@@ -31,6 +31,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	const {
 		execution, worldContent, actPlot, actSummary, directorNotes,
 		previousNarrativeVariables, previousScenePlot, player, story, completedScenes, targetWordCount,
+		actPhase, plotMode, lastPlotGeneration, reevaluationFrequency,
 	} = input;
 	const {providerConfigs, abortSignal, tools, callbacks} = execution;
 	const storyId = story?.storyId;
@@ -44,7 +45,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	const sharedParams = {abortSignal, callbacks, retryConfig};
 
 	const preEditorCtx: PreEditorContext = {
-		worldContent, actPlot, actSummary, previousScenePlot,
+		worldContent, actPlot, actPhase, actSummary, previousScenePlot,
 		previousNarrativeBody: previousNarrativeBody ?? undefined,
 		completedScenes, player,
 		previousTurnOfEvents: previousTurnOfEvents ?? undefined,
@@ -70,8 +71,13 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 			editorSystemPrompt: loadedPrompts.editorSystemPrompt,
 			gameMasterSystemPrompt: loadedPrompts.gameMasterSystemPrompt,
 			plotPlannerSystemPrompt: loadedPrompts.plotPlannerSystemPrompt,
+			phaseEventPlotPlannerSystemPrompt: loadedPrompts.phaseEventPlotPlannerSystemPrompt,
 		},
 		effectiveTargetWordCount, currentScene, tools,
+		plotMode: plotMode ?? 'guidance',
+		actPhase,
+		lastPlotGeneration,
+		reevaluationFrequency: reevaluationFrequency ?? 1,
 	};
 
 	const trackPhase: TrackPhase = (phaseName, result, model) => {
@@ -94,7 +100,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	maybeExtractImportantPhrases(state, callbacks);
 
 	const postEditorCtx: PostEditorContext = {
-		actPlot, actSummary, previousScenePlot,
+		actPlot, actPhase, actSummary, previousScenePlot,
 		previousNarrativeBody: previousNarrativeBody ?? undefined,
 		completedScenes, player,
 		previousTurnOfEvents: previousTurnOfEvents ?? undefined,

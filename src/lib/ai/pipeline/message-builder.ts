@@ -3,6 +3,7 @@ import type {GameDataFields, NarrativeVariables} from '../narrative-types';
 import type {PlayerContext} from './types';
 import type {StreamState} from '../chat-callbacks';
 import {
+	formatActPhaseSection,
 	formatDirectorNotesSection,
 	formatPreviousNarrativeBody,
 	formatTurnOfEventsSection,
@@ -136,6 +137,7 @@ export function formatActSummaryForSummarizer(completedScenes: number, actSummar
 export interface PreEditorContext {
 	worldContent: string;
 	actPlot: string;
+	actPhase?: string | null;
 	actSummary: string;
 	previousScenePlot: string | undefined;
 	previousNarrativeBody: string | undefined;
@@ -148,6 +150,7 @@ export interface PreEditorContext {
 /** Context shared by Game Master and Plot Planner phases. */
 export interface PostEditorContext {
 	actPlot: string;
+	actPhase?: string | null;
 	actSummary: string;
 	previousScenePlot: string | undefined;
 	previousNarrativeBody: string | undefined;
@@ -163,6 +166,7 @@ function buildPreEditorSections(ctx: PreEditorContext): string[] {
 	return [
 		SECTION.WORLD_CONTENT + ctx.worldContent,
 		SECTION.ACT_PLOT + ctx.actPlot,
+		...formatActPhaseSection(ctx.actPhase),
 		...formattedActSummaryForPhases(ctx.actSummary),
 		...(ctx.previousScenePlot ? [SECTION.SCENE_PLOT + ctx.previousScenePlot] : []),
 		...formatPreviousNarrativeBody(ctx.previousNarrativeBody, ctx.completedScenes),
@@ -176,6 +180,7 @@ function buildPreEditorSections(ctx: PreEditorContext): string[] {
 function buildPostEditorSections(ctx: PostEditorContext): string[] {
 	return [
 		SECTION.ACT_PLOT + ctx.actPlot,
+		...formatActPhaseSection(ctx.actPhase),
 		...formattedActSummaryForPhases(ctx.actSummary),
 		...(ctx.previousScenePlot ? [SECTION.SCENE_PLOT + ctx.previousScenePlot] : []),
 		...formatPreviousNarrativeBody(ctx.previousNarrativeBody, ctx.completedScenes),

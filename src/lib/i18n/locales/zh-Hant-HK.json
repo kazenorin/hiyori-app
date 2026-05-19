@@ -87,6 +87,12 @@
 		"targetWordCountDescription": "「寫手階段」每場景的目標字數。預設：400字",
 		"compressorInterval": "檔案壓縮間隔",
 		"compressorIntervalDescription": "每次角色檔案壓縮之間的場景數。設為0即停用。預設：5。",
+		"plotMode": "劇情模式",
+		"plotModeGuidance": "引導式",
+		"plotModePhaseEvent": "事件式",
+		"plotModeDescription": "「引導式」每回合皆執行編劇。「事件式」透過敘事階段結構化故事進展，並按可設定的頻率執行編劇。",
+		"reevaluationFrequency": "重新評估頻率",
+		"reevaluationFrequencyDescription": "「事件式」模式下每次編劇執行之間的場景數。數值越低，節奏控制越緊密。預設：10。",
 		"developer": "Developer",
 		"locale": "語言地區",
 		"logLevel": "Log Level",
@@ -132,7 +138,11 @@
 		"addNote": "新增",
 		"effectiveFrom": "起始場景",
 		"effectiveTo": "結束場景",
-		"sceneRangeUnset": "所有場景"
+		"sceneRangeUnset": "所有場景",
+		"plotMode": "劇情模式",
+		"keepCurrentMode": "維持目前模式",
+		"switchToGuidance": "引導式",
+		"switchToPhaseEvent": "事件式"
 	},
 	"sidebar": {
 		"loading": "載入中…",

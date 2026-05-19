@@ -3,6 +3,7 @@ import {
 	worldContentHeader,
 	actPlotHeader,
 	actSummaryHeader,
+	actPhaseHeader,
 	interviewTranscriptHeader,
 	playerResponseHeader,
 	scenePlotHeader,
@@ -60,6 +61,9 @@ export const SECTION = {
 	get DIRECTOR_NOTES() {
 		return sectionFormat(directorNotesHeader()) + ls('common.descriptions.directorNotes') + '\n\n';
 	},
+	get ACT_PHASE() {
+		return sectionFormat(actPhaseHeader());
+	},
 };
 
 /** Section headings for act-plot generation phases (used by act-plot-generator). */
@@ -103,4 +107,10 @@ export function formatTurnOfEventsSection(turnOfEvents: string | null | undefine
 export function formatDirectorNotesSection(directorNotes: string | null | undefined): string[] {
 	if (!directorNotes || directorNotes.trim().length === 0) return [];
 	return [SECTION.DIRECTOR_NOTES + directorNotes];
+}
+
+/** Format act phase as a user message section. Returns empty array if no content. */
+export function formatActPhaseSection(actPhase: string | null | undefined): string[] {
+	if (!actPhase || actPhase.trim().length === 0) return [];
+	return [SECTION.ACT_PHASE + actPhase];
 }

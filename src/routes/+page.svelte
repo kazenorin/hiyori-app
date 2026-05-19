@@ -97,6 +97,7 @@
 	let createStoryError = $state<string | null>(null);
 	let isForking = $state(false);
 	let forkChoiceIndex = $state<number | null>(null);
+	let forkPlotMode = $state<'guidance' | 'phaseEvent' | null>(null);
 
 	// Reset fork choice when navigating to a different act line
 	$effect(() => {
@@ -174,7 +175,8 @@
 		forkChoiceIndex = null;
 		try {
 			const { branchSeq, name } = await getForkSequence(actLineId, messageIndex);
-			const line = await forkActLineForInterview(actLineId, branchSeq, act.id, name);
+			const plotModeOverride = forkPlotMode ?? undefined;
+			const line = await forkActLineForInterview(actLineId, branchSeq, act.id, name, plotModeOverride);
 			await selectActLineQuiet(line.id);
 
 			const forkedMessage = (getMessages())[messageIndex];
@@ -194,6 +196,7 @@
 
 	function cancelForkChoice() {
 		forkChoiceIndex = null;
+		forkPlotMode = null;
 	}
 
 	function handleSubmit() {
@@ -804,6 +807,24 @@
 													onclick={cancelForkChoice}
 												>{t('chat.cancel')}</button
 												>
+											</div>
+											<div class="flex gap-2 items-center mt-1">
+													<span class="text-xs text-surface-400-500">{t('chat.plotMode')}:</span>
+													<button
+														class="text-xs {forkPlotMode === null ? 'bg-primary-500 text-white' : 'bg-surface-100-800 text-surface-700-300 hover:bg-surface-200-700'} px-2 py-0.5 rounded transition-colors"
+														onclick={() => forkPlotMode = null}
+													>{t('chat.keepCurrentMode')}</button
+													>
+													<button
+														class="text-xs {forkPlotMode === 'guidance' ? 'bg-primary-500 text-white' : 'bg-surface-100-800 text-surface-700-300 hover:bg-surface-200-700'} px-2 py-0.5 rounded transition-colors"
+														onclick={() => forkPlotMode = 'guidance'}
+													>{t('chat.switchToGuidance')}</button
+													>
+													<button
+														class="text-xs {forkPlotMode === 'phaseEvent' ? 'bg-primary-500 text-white' : 'bg-surface-100-800 text-surface-700-300 hover:bg-surface-200-700'} px-2 py-0.5 rounded transition-colors"
+														onclick={() => forkPlotMode = 'phaseEvent'}
+													>{t('chat.switchToPhaseEvent')}</button
+													>
 											</div>
 										{:else}
 											<button

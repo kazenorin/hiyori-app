@@ -34,6 +34,7 @@ common:
     decisions: 回應選項
     summary: 摘要
     directorNotes: 導演備註
+    actPhase: 章節階段
   descriptions:
     interviewTranscript: 以下是有關此故事及設定的訪談內容。
     directorNotes: "以下備註代表玩家的明確創作方向。它們凌駕於所有其他脈絡之上，包含章節劇情和章節摘要。請以最高優先順序遵循。"
@@ -227,6 +228,15 @@ tools:
       使用此工具來了解已規劃的敘事走向，並依此引導故事發展。
     messages:
       noActPlot: "此章節尚未生成章節劇情。"
+  advancePhase:
+    description: >
+      將故事推進至下一個敘事階段 (例如: 鋪陳 → 發展 → 高潮 → 收束 → 結局) 。
+      此動作標誌著故事弧線的重大轉折，將於下一回合生效。
+      每個場景只能使用一次。故事已達結局階段後無法再使用。
+    messages:
+      alreadyAdvanced: "此場景已推進過階段，將於下一回合生效。"
+      success: "階段已從 {current} 推進至 {next}，將於下一回合生效。"
+      terminalPhase: "無法再推進——故事已達結局階段。"
   readScene:
     description: >
       閱讀目前章節中所指定的場景的內容。回傳指定場景編號的敘事正文 (AI 回應) 和玩家回應，

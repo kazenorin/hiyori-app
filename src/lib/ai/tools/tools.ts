@@ -3,6 +3,7 @@ import { buildInventoryTools } from '$lib/ai/tools/query-inventory';
 import { buildActPlotTools } from '$lib/ai/tools/read-act-plot';
 import { buildSceneTools } from '$lib/ai/tools/read-scene';
 import { buildRiskTools } from '$lib/ai/tools/evaluate-risk';
+import { buildAdvancePhaseTools } from '$lib/ai/tools/advance-phase';
 import { getStory, type Story } from '$lib/db/stories';
 import { type ActLineMeta, getActLine } from '$lib/db/act-lines';
 import { type Act, getAct } from '$lib/db/acts';
@@ -19,11 +20,11 @@ export interface ToolContext {
 export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 	SUMMARIZER: [],
 	PLOT_PLANNER: ['read-scene', 'query-memories', 'query-inventory'],
-	WRITER: ['read-scene', 'query-memories', 'query-inventory', 'evaluate-risk'],
+	WRITER: ['read-scene', 'query-memories', 'query-inventory', 'evaluate-risk', 'advance-phase'],
 	REVIEWER: ['read-scene', 'query-memories', 'query-inventory'],
-	EDITOR: [],
+	EDITOR: ['advance-phase'],
 	TEMPLATE_FITTER: [],
-	GAME_MASTER: ['read-scene', 'query-memories', 'query-inventory'],
+	GAME_MASTER: ['read-scene', 'query-memories', 'query-inventory', 'advance-phase'],
 	CHARACTER_PROFILE_COMPRESSOR: [],
 };
 
@@ -50,6 +51,8 @@ export async function buildTools(storyId: string, actLineId: string): Promise<To
 
 	const ctx: ToolContext = { story, actLine, act };
 
+	const advanceGuard = { hasAdvanced: false };
+
 	const tools: ToolSet = {
 		...buildMemoryTools(storyId, actLineId),
 		...buildInventoryTools(storyId, actLineId),
@@ -57,6 +60,10 @@ export async function buildTools(storyId: string, actLineId: string): Promise<To
 		...buildSceneTools(ctx),
 		...buildRiskTools(ctx),
 	};
+
+	if (actLine.plotMode === 'phaseEvent' && actLine.actPhase !== 'resolution') {
+		Object.assign(tools, buildAdvancePhaseTools(actLine, advanceGuard));
+	}
 
 	return Object.keys(tools).length > 0 ? tools : undefined;
 }

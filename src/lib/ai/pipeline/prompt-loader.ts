@@ -4,6 +4,7 @@ import {
 	editorSystemPromptLoader,
 	gameMasterSystemPromptLoader,
 	generalInstructionsLoader,
+	phaseEventPlotPlannerSystemPromptLoader,
 	plotPlannerSystemPromptLoader,
 	type PromptLoader,
 	quickReviewerSystemPromptTemplateLoader,
@@ -17,6 +18,7 @@ import {
 const promptLoaderDefinitions = {
 	generalInstructions: generalInstructionsLoader,
 	plotPlannerSystemPrompt: plotPlannerSystemPromptLoader,
+	phaseEventPlotPlannerSystemPrompt: phaseEventPlotPlannerSystemPromptLoader,
 	writerSystemPrompt: writerSystemPromptLoader,
 	writerOutputTemplate: writerOutputTemplateLoader,
 	reviewerSystemPromptTemplate: reviewerSystemPromptTemplateLoader,
