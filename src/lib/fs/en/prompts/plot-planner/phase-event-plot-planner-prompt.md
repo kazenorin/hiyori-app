@@ -24,14 +24,6 @@ Produce your Scene Plot using the following template:
 ```markdown
 # Phase Events
 
-## Current Progress to each Ending
-
-[Analyze the {actPlotHeader} and the {sceneSummariesHeader} to fill in the following three points. Keep descriptions concise.]
-
-- **Current Dominant Trajectory:** [State which of the four endings (Good, Bad, Alternative, Bittersweet) the players are naturally heading toward based on their past actions. Provide a 1-sentence justification.]
-- **Endings at Risk:** [Identify which specific ending(s) could become permanently locked out during this phase. Explain exactly what player failure, action, or omission will cause this.]
-- **Phase Pivot Point:** [Define the major dilemma, core encounter, or central realization of this phase that serves as the cue to advance to the next phase or towards the ending.]
-
 ## Standalone Events
 [Generate 3 to 6 independent events that can occur in any order during this phase. Each event must serve to direct the story toward one of the four endings.]
 

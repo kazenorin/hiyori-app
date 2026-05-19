@@ -284,6 +284,7 @@
 				worldContent,
 				actLineId: refs.actLineId,
 				isMainLine,
+				plotMode: actLine?.plotMode,
 				actNumber: 1,
 				isResumeGame: false,
 				onPhaseChange: (phase) => setActPlotGenerationPhase(phase)
@@ -354,6 +355,7 @@
 				worldContent,
 				actLineId: refs.actLineId,
 				isMainLine,
+				plotMode: actLine?.plotMode,
 				actNumber: 1,
 				isResumeGame: isGameResumeMode,
 				onPhaseChange: (phase) => setActPlotGenerationPhase(phase)
