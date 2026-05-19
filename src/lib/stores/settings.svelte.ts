@@ -75,7 +75,7 @@ const defaults: Settings = {
 	directorModeEnabled: false,
 	characterProfileCompressorInterval: 5, // scenes between compressor runs; 0 = disabled
 	defaultPlotMode: 'guidance',
-	reevaluationFrequency: 1,
+	reevaluationFrequency: 10,
 };
 
 /**

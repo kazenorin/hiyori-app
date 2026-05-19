@@ -4,7 +4,7 @@ import type { Message } from './messages';
 import { type MessageRow, mapRowToMessage, cloneMessage } from './messages';
 import type { Story } from './stories';
 import type { PlotMode, ActPhase } from '$lib/ai/narrative-types';
-import { getActPhaseIndex } from '$lib/ai/narrative-types';
+import { getActPhaseIndex, isValidPlotMode } from '$lib/ai/narrative-types';
 
 export interface ActLineMeta {
 	id: string;
@@ -35,24 +35,34 @@ interface ActLineEntryRow {
 }
 
 function rowToActLineMeta(row: ActLineMetaRow): ActLineMeta {
+	const plotMode: PlotMode = isValidPlotMode(row.plot_mode) ? row.plot_mode : 'guidance';
+	const actPhase: ActPhase | null = row.act_phase && getActPhaseIndex(row.act_phase) >= 0 ? (row.act_phase as ActPhase) : null;
 	return {
 		id: row.id,
 		actId: row.act_id,
 		name: row.name,
 		isMainLine: row.is_main_line === 1,
 		createdAt: row.created_at,
-		plotMode: (row.plot_mode as PlotMode) ?? 'guidance',
+		plotMode,
 		lastPlotGeneration: row.last_plot_generation,
-		actPhase: row.act_phase as ActPhase | null,
+		actPhase,
 	};
 }
 
 // === act_line_meta operations ===
 
-export async function createActLine(id: string, actId: string, name: string, isMainLine: boolean = false, plotMode: PlotMode = 'guidance'): Promise<ActLineMeta> {
+/** Create a new act line. initialActPhase: undefined = auto-set based on plotMode; null = explicitly no phase. */
+export async function createActLine(
+	id: string,
+	actId: string,
+	name: string,
+	isMainLine: boolean = false,
+	plotMode: PlotMode = 'guidance',
+	initialActPhase?: ActPhase | null
+): Promise<ActLineMeta> {
 	const db = getDatabase();
 	const now = Date.now();
-	const actPhase: ActPhase | null = plotMode === 'phaseEvent' ? 'introduction' : null;
+	const actPhase: ActPhase | null = initialActPhase !== undefined ? initialActPhase : plotMode === 'phaseEvent' ? 'introduction' : null;
 	await db.execute(
 		'INSERT INTO act_line_meta (id, act_id, name, is_main_line, created_at, plot_mode, last_plot_generation, act_phase) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
 		[id, actId, name, isMainLine ? 1 : 0, now, plotMode, null, actPhase]
@@ -182,8 +192,8 @@ export async function getActNumberForActLine(actLineId: string): Promise<number 
 export async function getStoryForActLine(actLineId: string): Promise<Story> {
 	const db = getDatabase();
 	const rows = await db.select<{ id: string; name: string; locale: string; created_at: number; updated_at: number }[]>(
-	'SELECT s.id, s.name, s.locale, s.created_at, s.updated_at FROM act_line_meta alm JOIN acts a ON a.id = alm.act_id JOIN stories s ON s.id = a.story_id WHERE alm.id = $1',
-	[actLineId]
+		'SELECT s.id, s.name, s.locale, s.created_at, s.updated_at FROM act_line_meta alm JOIN acts a ON a.id = alm.act_id JOIN stories s ON s.id = a.story_id WHERE alm.id = $1',
+		[actLineId]
 	);
 	if (rows.length > 0) {
 		const row = rows[0];
@@ -288,9 +298,11 @@ export async function branchFromLine(
 	// Resolve mode: override takes precedence, otherwise inherit from source
 	const sourceLine = await getActLine(fromLineId);
 	const resolvedMode = plotModeOverride ?? sourceLine?.plotMode ?? 'guidance';
+	// When no mode override, inherit source line's actPhase; switching modes resets it
+	const initialActPhase = plotModeOverride === undefined ? sourceLine?.actPhase : undefined;
 
 	// Create new act line meta (branches are never main lines)
-	const lineMeta = await createActLine(newLineId, actId, name, false, resolvedMode);
+	const lineMeta = await createActLine(newLineId, actId, name, false, resolvedMode, initialActPhase);
 
 	// Copy entries up to fromSequence
 	const entries = await db.select<ActLineEntryRow[]>(
@@ -472,11 +484,14 @@ export async function updateActLineMetaFields(
 export async function advanceActPhase(id: string, newPhase: ActPhase): Promise<void> {
 	const current = await getActLine(id);
 	if (!current) throw new Error(`Act line ${id} not found`);
-	const currentIdx = getActPhaseIndex(current.actPhase ?? '');
+	if (!current.actPhase) throw new Error(`Cannot advance phase: act line ${id} has no current phase`);
+	const currentIdx = getActPhaseIndex(current.actPhase);
 	const newIdx = getActPhaseIndex(newPhase);
-	if (currentIdx >= 0 && newIdx <= currentIdx) {
+	if (newIdx <= currentIdx) {
 		throw new Error(`Invalid phase transition: ${current.actPhase} → ${newPhase}. Phases must advance forward.`);
 	}
 	if (newIdx < 0) throw new Error(`Invalid act phase: ${newPhase}`);
+	// Reset lastPlotGeneration: the Plot Planner must re-evaluate
+	// on the first scene of the new phase so it can adjust to the phase change.
 	await updateActLineMetaFields(id, { actPhase: newPhase, lastPlotGeneration: null });
 }

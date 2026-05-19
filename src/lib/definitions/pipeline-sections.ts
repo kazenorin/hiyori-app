@@ -1,4 +1,5 @@
 import {ls} from "$lib/localization";
+import type {ActPhase} from '$lib/ai/narrative-types';
 import {
 	worldContentHeader,
 	actPlotHeader,
@@ -110,7 +111,7 @@ export function formatDirectorNotesSection(directorNotes: string | null | undefi
 }
 
 /** Format act phase as a user message section. Returns empty array if no content. */
-export function formatActPhaseSection(actPhase: string | null | undefined): string[] {
+export function formatActPhaseSection(actPhase: ActPhase | null | undefined): string[] {
 	if (!actPhase || actPhase.trim().length === 0) return [];
 	return [SECTION.ACT_PHASE + actPhase];
 }

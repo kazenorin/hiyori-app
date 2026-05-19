@@ -19,7 +19,7 @@ import {
 	isPlotPlannerEnabled,
 	isReviewerEnabled,
 } from '$lib/stores/settings.svelte';
-import type {GameDataFields, NarrativeVariables, PlotMode} from '../narrative-types';
+import type {ActPhase, GameDataFields, NarrativeVariables, PlotMode} from '../narrative-types';
 import {summaryHeader} from '$lib/definitions/common-headers';
 import {
 	acceptAsIsLabel,
@@ -131,7 +131,7 @@ export interface PipelineRunContext {
 	currentScene: string;
 	tools?: ToolSet;
 	plotMode: PlotMode;
-	actPhase?: string | null;
+	actPhase?: ActPhase | null;
 	lastPlotGeneration?: number | null;
 	reevaluationFrequency: number;
 }

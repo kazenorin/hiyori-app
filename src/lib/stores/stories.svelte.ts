@@ -516,13 +516,6 @@ export async function forkActLineForInterview(
 	const { lineMeta, remappedMessageIds } = await dbActLines.branchFromLine(newLineId, fromLineId, fromSequence, actId, name, plotModeOverride);
 	actLines = [...actLines, lineMeta];
 
-	// Set actPhase when switching to phaseEvent mode
-	if (plotModeOverride === 'phaseEvent') {
-		await dbActLines.updateActLineMetaFields(lineMeta.id, { actPhase: 'introduction' });
-	} else if (plotModeOverride === 'guidance') {
-		await dbActLines.updateActLineMetaFields(lineMeta.id, { actPhase: null });
-	}
-
 	// Create the line directory with proper naming at fork time
 	const storyId = activeStoryId;
 	const storyName = activeStoryName;

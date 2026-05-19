@@ -132,6 +132,13 @@ export function getActPhaseIndex(phase: string): number {
 	return ACT_PHASE_ORDER.indexOf(phase as ActPhase);
 }
 
+const VALID_PLOT_MODES: readonly PlotMode[] = ['guidance', 'phaseEvent'];
+
+/** Whether a value is a valid PlotMode. */
+export function isValidPlotMode(value: string): value is PlotMode {
+	return (VALID_PLOT_MODES as readonly string[]).includes(value);
+}
+
 /** Next phase after the current one, or null if at resolution. */
 export function getNextActPhase(current: ActPhase): ActPhase | null {
 	const idx = getActPhaseIndex(current);

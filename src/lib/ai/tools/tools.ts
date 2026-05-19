@@ -5,7 +5,7 @@ import { buildSceneTools } from '$lib/ai/tools/read-scene';
 import { buildRiskTools } from '$lib/ai/tools/evaluate-risk';
 import { buildAdvancePhaseTools } from '$lib/ai/tools/advance-phase';
 import { getStory, type Story } from '$lib/db/stories';
-import { type ActLineMeta, getActLine } from '$lib/db/act-lines';
+import { type ActLineMeta } from '$lib/db/act-lines';
 import { type Act, getAct } from '$lib/db/acts';
 import { type ToolSet } from 'ai';
 import type { PhaseName } from '$lib/ai/narrative-types';
@@ -41,10 +41,10 @@ export function filterToolsForPhase(allTools: ToolSet | undefined, phase: PhaseN
 	return Object.keys(filtered).length > 0 ? filtered : undefined;
 }
 
-export async function buildTools(storyId: string, actLineId: string): Promise<ToolSet | undefined> {
-	const [story, actLine] = await Promise.all([getStory(storyId), getActLine(actLineId)]);
+export async function buildTools(storyId: string, actLine: ActLineMeta): Promise<ToolSet | undefined> {
+	const story = await getStory(storyId);
 
-	if (!story || !actLine) return undefined;
+	if (!story) return undefined;
 
 	const act = await getAct(actLine.actId);
 	if (!act) return undefined;
@@ -54,8 +54,8 @@ export async function buildTools(storyId: string, actLineId: string): Promise<To
 	const advanceGuard = { hasAdvanced: false };
 
 	const tools: ToolSet = {
-		...buildMemoryTools(storyId, actLineId),
-		...buildInventoryTools(storyId, actLineId),
+		...buildMemoryTools(storyId, actLine.id),
+		...buildInventoryTools(storyId, actLine.id),
 		...buildActPlotTools(ctx),
 		...buildSceneTools(ctx),
 		...buildRiskTools(ctx),

@@ -1,5 +1,5 @@
 import type {MessageBase} from '$lib/db/messages';
-import type {GameDataFields, NarrativeVariables} from '../narrative-types';
+import type {ActPhase, GameDataFields, NarrativeVariables} from '../narrative-types';
 import type {PlayerContext} from './types';
 import type {StreamState} from '../chat-callbacks';
 import {
@@ -137,7 +137,7 @@ export function formatActSummaryForSummarizer(completedScenes: number, actSummar
 export interface PreEditorContext {
 	worldContent: string;
 	actPlot: string;
-	actPhase?: string | null;
+	actPhase?: ActPhase | null;
 	actSummary: string;
 	previousScenePlot: string | undefined;
 	previousNarrativeBody: string | undefined;
@@ -150,7 +150,7 @@ export interface PreEditorContext {
 /** Context shared by Game Master and Plot Planner phases. */
 export interface PostEditorContext {
 	actPlot: string;
-	actPhase?: string | null;
+	actPhase?: ActPhase | null;
 	actSummary: string;
 	previousScenePlot: string | undefined;
 	previousNarrativeBody: string | undefined;

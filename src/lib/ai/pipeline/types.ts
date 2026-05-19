@@ -1,4 +1,4 @@
-import type { PhaseName } from '../narrative-types';
+import type { ActPhase, PhaseName } from '../narrative-types';
 import type { NarrativeVariables, GameDataFields, PlotMode } from '../narrative-types';
 import type { StreamResultMetadata } from '../streaming';
 import type {ActSummary, CharacterProfile} from '../act-summary-parser';
@@ -93,7 +93,7 @@ export interface PipelineInput {
 	execution: PipelineExecution;
 	worldContent: string;
 	actPlot: string;
-	actPhase?: string | null;
+	actPhase?: ActPhase | null;
 	actSummary: string;
 	directorNotes: string;
 	previousNarrativeVariables: NarrativeVariables | undefined;

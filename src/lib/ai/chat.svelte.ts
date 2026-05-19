@@ -357,7 +357,12 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 	const story = await storyPromise;
 	const storyId = story.id;
 	const actLine = await dbActLines.getActLine(actLineId);
-	const tools = await buildTools(storyId, actLineId);
+	if (!actLine) {
+		error = 'Selected act line no longer exists';
+		isStreaming = false;
+		return;
+	}
+	const tools = await buildTools(storyId, actLine);
 	const phasesOfMainChat: PhaseName[] = isReviewerEnabled() ? ['EDITOR'] : ['EDITOR', 'WRITER'];
 
 	try {
@@ -501,9 +506,9 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 			completedScenes: previousSceneNumber, // previous scene was just completed by the Player Response
 			directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(previousSceneNumber + 1) : '',
 			targetWordCount,
-			plotMode: actLine?.plotMode ?? getDefaultPlotMode(),
-			actPhase: actLine?.actPhase ?? undefined,
-			lastPlotGeneration: actLine?.lastPlotGeneration ?? undefined,
+			plotMode: actLine.plotMode ?? getDefaultPlotMode(),
+			actPhase: actLine.actPhase ?? undefined,
+			lastPlotGeneration: actLine.lastPlotGeneration ?? undefined,
 			reevaluationFrequency: getReevaluationFrequency(),
 		});
 
@@ -520,9 +525,11 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		// Persist with accumulated content
 		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({ newMessages: messages.slice(-newMessagesCount) })]);
 
-		// Update lastPlotGeneration if Plot Planner ran this turn
+		// Update lastPlotGeneration if Plot Planner ran this turn.
+		// Save completedScenes (previousSceneNumber) so the frequency formula
+		// (completedScenes - lastPlotGeneration) >= frequency counts correctly.
 		if (result.phases?.some(p => p.phaseName === 'PLOT_PLANNER') && actLine) {
-			await dbActLines.updateActLineMetaFields(actLineId, { lastPlotGeneration: nextSceneNumber });
+			await dbActLines.updateActLineMetaFields(actLineId, { lastPlotGeneration: previousSceneNumber });
 		}
 
 		// Store async phases
