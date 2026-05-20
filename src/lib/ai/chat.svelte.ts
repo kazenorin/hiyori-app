@@ -20,7 +20,7 @@ import {
 import { getActiveActPlotContent, getActiveDirectorNotesText, getActiveStoryId, getActiveWorldContent } from '$lib/stores/stories.svelte';
 import * as dbMessages from '$lib/db/messages';
 import { parseImportantPhrases, serializeImportantPhrases } from '$lib/db/messages';
-import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from './narrative-types';
+import type { GameDataFields, NarrativeVariables, PhaseName, PlotMode, UIScenePhase } from './narrative-types';
 import * as dbActLines from '$lib/db/act-lines';
 import { logMainChat } from '$lib/logging/chat-logger';
 import { buildMetadata, type MessageMetadata, type PhaseMetadata, toPhaseMetadata } from './chat-stream';
@@ -33,7 +33,14 @@ import { ERR_INVALID_MESSAGE_ROLE, ERR_MESSAGE_SEQUENCE_NOT_FOUND } from '$lib/d
 import { renderFromVariables } from './template-renderer';
 import { storyMessageTemplate } from '$lib/fs/view-templates';
 import { runPipeline } from './pipeline';
-import type { AsyncPhaseResults, PhaseStreamState, PipelineCallbacks, PipelineProviderConfigs, PipelineState, PlayerContext } from './pipeline/types';
+import type {
+	AsyncPhaseResults,
+	PhaseStreamState,
+	PipelineCallbacks,
+	PipelineProviderConfigs,
+	PipelineState,
+	PlayerContext,
+} from './pipeline/types';
 
 export interface UIMessage {
 	id: string;
@@ -165,12 +172,20 @@ function getLatestActSummary(): string {
 	return '';
 }
 
-function getScenePlotForScene(sceneNumber: number): string {
-	for (let i = messages.length - 1; i >= 0; i--) {
-		if (messages[i].sceneNumber === sceneNumber && messages[i].scenePlot) {
-			return messages[i].scenePlot!;
+function getScenePlotForScene(sceneNumber: number, plotMode: PlotMode): string {
+	if (plotMode === 'guidance') {
+		for (let i = messages.length - 1; i >= 0; i--) {
+			if (messages[i].sceneNumber === sceneNumber && messages[i].scenePlot) {
+				return messages[i].scenePlot!;
+			}
+		}
+	} else if (plotMode === 'phaseEvent') {
+		for (let i = messages.length - 1; i >= 0; i--) {
+			const scenePlot = messages[i].scenePlot;
+			if (scenePlot) return scenePlot;
 		}
 	}
+
 	return '';
 }
 
@@ -362,6 +377,8 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		isStreaming = false;
 		return;
 	}
+	const plotMode = actLine.plotMode ?? getDefaultPlotMode();
+
 	const tools = await buildTools(storyId, actLine);
 	const phasesOfMainChat: PhaseName[] = isReviewerEnabled() ? ['EDITOR'] : ['EDITOR', 'WRITER'];
 
@@ -370,7 +387,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		const worldContent = getActiveWorldContent() ?? '';
 		const actPlot = getActiveActPlotContent() ?? '';
 		const actSummary = getLatestActSummary();
-		const previousScenePlot = getScenePlotForScene(previousSceneNumber);
+		const previousScenePlot = getScenePlotForScene(previousSceneNumber, plotMode);
 		const templateReplacements = { sceneNumber: String(nextSceneNumber) };
 
 		// Pipeline callback helpers
@@ -506,7 +523,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 			completedScenes: previousSceneNumber, // previous scene was just completed by the Player Response
 			directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(previousSceneNumber + 1) : '',
 			targetWordCount,
-			plotMode: actLine.plotMode ?? getDefaultPlotMode(),
+			plotMode: plotMode,
 			actPhase: actLine.actPhase ?? undefined,
 			lastPlotGeneration: actLine.lastPlotGeneration ?? undefined,
 			reevaluationFrequency: getReevaluationFrequency(),
@@ -528,7 +545,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		// Update lastPlotGeneration if Plot Planner ran this turn.
 		// Save completedScenes (previousSceneNumber) so the frequency formula
 		// (completedScenes - lastPlotGeneration) >= frequency counts correctly.
-		if (result.phases?.some(p => p.phaseName === 'PLOT_PLANNER') && actLine) {
+		if (result.phases?.some((p) => p.phaseName === 'PLOT_PLANNER') && actLine) {
 			await dbActLines.updateActLineMetaFields(actLineId, { lastPlotGeneration: previousSceneNumber });
 		}
 

@@ -16,6 +16,7 @@ Extract the mechanical and tracking information needed for gameplay.
 - **Decision Context:** Provide a brief, 1-2 sentence framing of the exact moment the player must act.
 - **Actionable Choices:** Generate 3-4 specific choices. Keep each choice short, direct, and strictly action-oriented (e.g., under 15 words). Do not over-describe the action or explain the potential outcome.
 - **Choice Variety:** Ensure the generated choices include at least one escalating/aggressive option and one observational/defensive option.
+{gmPhaseEventPhaseAdvancementTrigger}
 
 ## Output Format
 

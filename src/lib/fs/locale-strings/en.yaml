@@ -46,10 +46,15 @@ pipeline:
     characterProfiles: Character Profiles
   extraction:
     gameMaster: Generate the game data based on the available information in the chat history.
+    gmPhaseEventPhaseAdvancementTrigger: "- **Determine Act Phase**: If you believe the story have completed the {actPhase} Phase, use the `advance-phase` tool exactly once to move the story forward."
     editor: Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history.
     reviewer: "Perform a review on the writer's output for Scene {currentScene} based on the available information in the chat history."
     reviewerQuick: "Quick-review the writer's output for Scene {currentScene}. Skim for glaring errors only — output the review template immediately with no reasoning."
-    writer: "Write a story prose for Scene {currentScene} based on the available information in the chat history."
+    writer:
+      providedTurnOfEvents: "\n- the Turn Of Events instructions"
+      turnOfEventsReinforcementPhrase: "\nYou must also consider the Turn Of Events that may drive the story to a different direction."
+      providedDirectorNotes: "\n- the Director's Notes"
+      directorNotesReinforcementPhrase: "**Important**: The Director has given directions for the upcoming scene. Uou **MUST** consider it when writing, and follow the directions or instructions given."
     plotPlanner:
       guidance: "The current scene is Scene {currentScene}. Plan a Scene Plot for the Immediate Next Scene, Near-Term Beat (Flexible), and Mid-Term Goal (Flexible) based on the available information in the chat history."
       phaseEvent: "The current story phase of the act is {currentActPhase}. Plan the \"Phase Events\" based on the available information in the chat history."

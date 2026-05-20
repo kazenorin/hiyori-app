@@ -1,7 +1,7 @@
-import type {MessageBase} from '$lib/db/messages';
-import type {ActPhase, GameDataFields, NarrativeVariables} from '../narrative-types';
-import type {PlayerContext} from './types';
-import type {StreamState} from '../chat-callbacks';
+import type { MessageBase } from '$lib/db/messages';
+import type { ActPhase, GameDataFields, NarrativeVariables } from '../narrative-types';
+import type { PlayerContext } from './types';
+import type { StreamState } from '../chat-callbacks';
 import {
 	formatActPhaseSection,
 	formatDirectorNotesSection,
@@ -9,22 +9,12 @@ import {
 	formatTurnOfEventsSection,
 	SECTION,
 } from '$lib/definitions/pipeline-sections';
-import {actSummaryForScenesHeader, actSummaryHeader, sectionFormat, summaryHeader} from '$lib/definitions/common-headers';
-import {aliasesLabel, locationLabel, sceneWithNumberLabel} from '$lib/definitions/common-labels';
-import {hasTemplateMetadata, variablesToMarkdown} from '../template-renderer';
-import {
-	type ActSummary,
-	parseActSummary,
-	pruneCharacterScenes,
-	serializeActSummary,
-} from '../act-summary-parser';
-import {
-	upToLabel,
-} from '$lib/definitions/character-profile-labels';
-import {
-	characterSummariesHeader,
-	sceneSummariesHeader,
-} from '$lib/definitions/pipeline-prompts';
+import { actSummaryForScenesHeader, actSummaryHeader, sectionFormat, summaryHeader } from '$lib/definitions/common-headers';
+import { aliasesLabel, locationLabel, sceneWithNumberLabel } from '$lib/definitions/common-labels';
+import { hasTemplateMetadata, variablesToMarkdown } from '../template-renderer';
+import { type ActSummary, parseActSummary, pruneCharacterScenes, serializeActSummary } from '../act-summary-parser';
+import { upToLabel } from '$lib/definitions/character-profile-labels';
+import { characterSummariesHeader, sceneSummariesHeader } from '$lib/definitions/pipeline-prompts';
 
 // --- Utility functions ---
 
@@ -80,7 +70,7 @@ export function editorHasTemplateMetadata(variables: NarrativeVariables | null |
  * Convert an array of content strings into user messages.
  */
 export function toUserMessages(contents: string[]): MessageBase[] {
-	return contents.map((content) => ({role: 'user' as const, content}));
+	return contents.map((content) => ({ role: 'user' as const, content }));
 }
 
 // --- Act summary template ---
@@ -107,7 +97,7 @@ function playerResponseSection(playerContext: PlayerContext | undefined): string
 	return playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : [];
 }
 
-export function formattedActSummaryForPhases(actSummary: string): string[] {
+export function formattedActSummary(actSummary: string): string[] {
 	const existingParsed = parseActSummary(actSummary);
 	const serializedActSummary = serializeActSummary(pruneCharacterScenes(existingParsed));
 	return [SECTION.ACT_SUMMARY + serializedActSummary];
@@ -118,7 +108,7 @@ export function formattedActSummaryForPhases(actSummary: string): string[] {
  */
 export function formatActSummaryForCompressor(completedScenes: number, newActSummary: ActSummary): string[] {
 	const actSummaryHeading = sectionFormat(`(${upToLabel()} ${sceneWithNumberLabel(completedScenes)})`);
-	const summarizerActSummary = serializeActSummary({...newActSummary, characterProfiles: [], characterProfileLastScene: null});
+	const summarizerActSummary = serializeActSummary({ ...newActSummary, characterProfiles: [], characterProfileLastScene: null });
 	return summarizerActSummary ? [actSummaryHeading + summarizerActSummary] : [];
 }
 
@@ -126,8 +116,10 @@ export function formatActSummaryForCompressor(completedScenes: number, newActSum
  * Format act summary for summarizer input — uses the EXISTING act summary.
  */
 export function formatActSummaryForSummarizer(completedScenes: number, actSummary: ActSummary): string[] {
-	const actSummaryHeading = sectionFormat(actSummaryForScenesHeader(completedScenes <= 1 ? '' : `(${upToLabel()} ${sceneWithNumberLabel(completedScenes - 1)})`));
-	const summarizerActSummary = serializeActSummary({...actSummary, characterProfiles: [], characterProfileLastScene: null});
+	const actSummaryHeading = sectionFormat(
+		actSummaryForScenesHeader(completedScenes <= 1 ? '' : `(${upToLabel()} ${sceneWithNumberLabel(completedScenes - 1)})`)
+	);
+	const summarizerActSummary = serializeActSummary({ ...actSummary, characterProfiles: [], characterProfileLastScene: null });
 	return summarizerActSummary ? [actSummaryHeading + summarizerActSummary] : [];
 }
 
@@ -167,7 +159,7 @@ function buildPreEditorSections(ctx: PreEditorContext): string[] {
 		SECTION.WORLD_CONTENT + ctx.worldContent,
 		SECTION.ACT_PLOT + ctx.actPlot,
 		...formatActPhaseSection(ctx.actPhase),
-		...formattedActSummaryForPhases(ctx.actSummary),
+		...formattedActSummary(ctx.actSummary),
 		...(ctx.previousScenePlot ? [SECTION.SCENE_PLOT + ctx.previousScenePlot] : []),
 		...formatPreviousNarrativeBody(ctx.previousNarrativeBody, ctx.completedScenes),
 		...playerResponseSection(ctx.player),
@@ -181,7 +173,7 @@ function buildPostEditorSections(ctx: PostEditorContext): string[] {
 	return [
 		SECTION.ACT_PLOT + ctx.actPlot,
 		...formatActPhaseSection(ctx.actPhase),
-		...formattedActSummaryForPhases(ctx.actSummary),
+		...formattedActSummary(ctx.actSummary),
 		...(ctx.previousScenePlot ? [SECTION.SCENE_PLOT + ctx.previousScenePlot] : []),
 		...formatPreviousNarrativeBody(ctx.previousNarrativeBody, ctx.completedScenes),
 		...playerResponseSection(ctx.player),
@@ -193,21 +185,11 @@ function buildPostEditorSections(ctx: PostEditorContext): string[] {
 
 // --- Per-phase message builders ---
 
-export function buildWriterMessages(
-	ctx: PreEditorContext,
-	extractionPrompt: string,
-): MessageBase[] {
-	return toUserMessages([
-		...buildPreEditorSections(ctx),
-		extractionPrompt,
-	]);
+export function buildWriterMessages(ctx: PreEditorContext, extractionPrompt: string): MessageBase[] {
+	return toUserMessages([...buildPreEditorSections(ctx), extractionPrompt]);
 }
 
-export function buildReviewerMessages(
-	ctx: PreEditorContext,
-	writerOutput: string | undefined,
-	extractionPrompt: string,
-): MessageBase[] {
+export function buildReviewerMessages(ctx: PreEditorContext, writerOutput: string | undefined, extractionPrompt: string): MessageBase[] {
 	return toUserMessages([
 		...buildPreEditorSections(ctx),
 		...(writerOutput ? [SECTION.WRITER_OUTPUT + writerOutput] : []),
@@ -219,7 +201,7 @@ export function buildEditorMessages(
 	ctx: PreEditorContext,
 	writerOutput: string | undefined,
 	reviewerOutput: string | undefined,
-	extractionPrompt: string,
+	extractionPrompt: string
 ): MessageBase[] {
 	return toUserMessages([
 		...buildPreEditorSections(ctx),
@@ -229,38 +211,16 @@ export function buildEditorMessages(
 	]);
 }
 
-export function buildEditorFitterMessages(
-	editorOutput: string,
-	writerOutputTemplate: string,
-	extractionPrompt: string,
-): MessageBase[] {
-	return toUserMessages([
-		SECTION.EDITOR_OUTPUT + editorOutput,
-		SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate,
-		extractionPrompt,
-	]);
+export function buildEditorFitterMessages(editorOutput: string, writerOutputTemplate: string, extractionPrompt: string): MessageBase[] {
+	return toUserMessages([SECTION.EDITOR_OUTPUT + editorOutput, SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate, extractionPrompt]);
 }
 
-export function buildGamePhaseMessages(
-	ctx: PostEditorContext,
-	extractionPrompt: string,
-): MessageBase[] {
-	return toUserMessages([
-		...buildPostEditorSections(ctx),
-		extractionPrompt,
-	]);
+export function buildGamePhaseMessages(ctx: PostEditorContext, extractionPrompt: string): MessageBase[] {
+	return toUserMessages([...buildPostEditorSections(ctx), extractionPrompt]);
 }
 
-export function buildGmFitterMessages(
-	editorOutput: string,
-	gmOutput: string,
-	extractionPrompt: string,
-): MessageBase[] {
-	return toUserMessages([
-		SECTION.EDITOR_OUTPUT + editorOutput,
-		SECTION.GAME_MASTER_OUTPUT + gmOutput,
-		extractionPrompt,
-	]);
+export function buildGmFitterMessages(editorOutput: string, gmOutput: string, extractionPrompt: string): MessageBase[] {
+	return toUserMessages([SECTION.EDITOR_OUTPUT + editorOutput, SECTION.GAME_MASTER_OUTPUT + gmOutput, extractionPrompt]);
 }
 
 // --- Summarizer message builder ---
@@ -272,7 +232,7 @@ export function buildSummarizerMessages(
 	player: PlayerContext | undefined,
 	parsedActSummary: ActSummary | undefined,
 	extractionPromptTemplate: (completedScenes: number, sceneTitle: string) => string,
-	fallbackExtractionPromptTemplate: (completedScenes: number) => string,
+	fallbackExtractionPromptTemplate: (completedScenes: number) => string
 ): MessageBase[] {
 	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
 
