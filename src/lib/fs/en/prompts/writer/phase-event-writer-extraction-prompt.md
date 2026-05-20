@@ -2,8 +2,7 @@ You are now responsible for writing the story prose for Scene {currentScene}, th
 
 - the World Setting
 - the Act Plot
-- the current Act Phase ({currentActPhase}) and the Phase Events
-- the summary of events up to Scene {summarizedScenes}
+- the current Act Phase ({currentActPhase}) and the Phase Events {providedSummary}
 - the full narrative body of the most recent scene, Scene {previousScene}
 - the player's response to the most recent scene {providedTurnOfEvents}{providedDirectorNotes}
 

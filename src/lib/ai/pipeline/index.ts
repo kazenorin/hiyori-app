@@ -72,6 +72,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 			gameMasterSystemPrompt: loadedPrompts.gameMasterSystemPrompt,
 			plotPlannerSystemPrompt: loadedPrompts.plotPlannerSystemPrompt,
 			phaseEventPlotPlannerSystemPrompt: loadedPrompts.phaseEventPlotPlannerSystemPrompt,
+			guidanceWriterExtractionPrompt: loadedPrompts.guidanceWriterExtractionPrompt,
+			phaseEventWriterExtractionPrompt: loadedPrompts.phaseEventWriterExtractionPrompt,
 		},
 		effectiveTargetWordCount, currentScene, tools,
 		plotMode: plotMode ?? 'guidance',

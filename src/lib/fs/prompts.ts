@@ -37,6 +37,8 @@ const phaseEventPlotPlannerPrompt = new LocalizedPromptFile(promptDefaults, 'plo
 // Pipeline: Writer
 const writerPrompt = new LocalizedPromptFile(promptDefaults, 'writer/writer-prompt.md');
 const writerOutputTemplate = new LocalizedPromptFile(promptDefaults, 'writer/writer-output-template.md');
+const guidanceWriterExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'writer/guidance-writer-extraction-prompt.md');
+const phaseEventWriterExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'writer/phase-event-writer-extraction-prompt.md');
 
 // Pipeline: Reviewer
 const reviewerPrompt = new LocalizedPromptFile(promptDefaults, 'reviewer/reviewer-prompt.md');
@@ -103,6 +105,10 @@ export const loadPlotPlannerPromptForMode = (mode: 'guidance' | 'phaseEvent'): P
 	mode === 'phaseEvent' ? phaseEventPlotPlannerPrompt.load() : guidancePlotPlannerPrompt.load();
 export const loadWriterPrompt = (): Promise<string> => writerPrompt.load();
 export const loadWriterOutputTemplate = (): Promise<string> => writerOutputTemplate.load();
+export const loadGuidanceWriterExtractionPrompt = (): Promise<string> => guidanceWriterExtractionPrompt.load();
+export const loadPhaseEventWriterExtractionPrompt = (): Promise<string> => phaseEventWriterExtractionPrompt.load();
+export const loadWriterExtractionPromptForMode = (mode: 'guidance' | 'phaseEvent'): Promise<string> =>
+	mode === 'phaseEvent' ? phaseEventWriterExtractionPrompt.load() : guidanceWriterExtractionPrompt.load();
 export const loadReviewerPrompt = (): Promise<string> => reviewerPrompt.load();
 export const loadQuickReviewerPrompt = (): Promise<string> => quickReviewerPrompt.load();
 export const loadEditorPrompt = (): Promise<string> => editorPrompt.load();
@@ -171,6 +177,20 @@ export async function loadStoryWriterOutputTemplate(storyId: string, storyName: 
 	return writerOutputTemplate.loadForStory(storyId, storyName);
 }
 
+export async function loadStoryGuidanceWriterExtractionPrompt(storyId: string, storyName: string): Promise<string> {
+	return guidanceWriterExtractionPrompt.loadForStory(storyId, storyName);
+}
+
+export async function loadStoryPhaseEventWriterExtractionPrompt(storyId: string, storyName: string): Promise<string> {
+	return phaseEventWriterExtractionPrompt.loadForStory(storyId, storyName);
+}
+
+export function loadStoryWriterExtractionPromptForMode(storyId: string, storyName: string, mode: 'guidance' | 'phaseEvent'): Promise<string> {
+	return mode === 'phaseEvent'
+		? loadStoryPhaseEventWriterExtractionPrompt(storyId, storyName)
+		: loadStoryGuidanceWriterExtractionPrompt(storyId, storyName);
+}
+
 export async function loadStoryReviewerPrompt(storyId: string, storyName: string): Promise<string> {
 	return reviewerPrompt.loadForStory(storyId, storyName);
 }
@@ -235,6 +255,16 @@ export const writerOutputTemplateLoader: PromptLoader = {
 	loadDefault: loadWriterOutputTemplate,
 };
 
+export const guidanceWriterExtractionPromptLoader: PromptLoader = {
+	loadByStory: loadStoryGuidanceWriterExtractionPrompt,
+	loadDefault: loadGuidanceWriterExtractionPrompt,
+};
+
+export const phaseEventWriterExtractionPromptLoader: PromptLoader = {
+	loadByStory: loadStoryPhaseEventWriterExtractionPrompt,
+	loadDefault: loadPhaseEventWriterExtractionPrompt,
+};
+
 export const reviewerSystemPromptTemplateLoader: PromptLoader = {
 	loadByStory: loadStoryReviewerPrompt,
 	loadDefault: loadReviewerPrompt,
@@ -285,6 +315,8 @@ registerDefaults([
 	phaseEventPlotPlannerPrompt,
 	writerPrompt,
 	writerOutputTemplate,
+	guidanceWriterExtractionPrompt,
+	phaseEventWriterExtractionPrompt,
 	reviewerPrompt,
 	quickReviewerPrompt,
 	editorPrompt,

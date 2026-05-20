@@ -28,7 +28,6 @@ export const gmTemplateFitterExtractionPrompt = () => ls('pipeline.extraction.gm
 export const reviewerExtractionPromptTemplate = (currentScene: number | string) => ls('pipeline.extraction.reviewer', { currentScene });
 export const quickReviewerExtractionPromptTemplate = (currentScene: number | string) =>
 	ls('pipeline.extraction.reviewerQuick', { currentScene });
-export const writerExtractionPromptTemplate = (currentScene: number | string) => ls('pipeline.extraction.writer', { currentScene });
 export const guidancePlotPlannerExtractionPromptTemplate = (currentScene: number | string) =>
 	ls('pipeline.extraction.plotPlanner.guidance', { currentScene });
 export const phaseEventPlotPlannerExtractionPromptTemplate = (actPhase: ActPhase) =>
