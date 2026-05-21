@@ -107,8 +107,6 @@ export const loadWriterPrompt = (): Promise<string> => writerPrompt.load();
 export const loadWriterOutputTemplate = (): Promise<string> => writerOutputTemplate.load();
 export const loadGuidanceWriterExtractionPrompt = (): Promise<string> => guidanceWriterExtractionPrompt.load();
 export const loadPhaseEventWriterExtractionPrompt = (): Promise<string> => phaseEventWriterExtractionPrompt.load();
-export const loadWriterExtractionPromptForMode = (mode: 'guidance' | 'phaseEvent'): Promise<string> =>
-	mode === 'phaseEvent' ? phaseEventWriterExtractionPrompt.load() : guidanceWriterExtractionPrompt.load();
 export const loadReviewerPrompt = (): Promise<string> => reviewerPrompt.load();
 export const loadQuickReviewerPrompt = (): Promise<string> => quickReviewerPrompt.load();
 export const loadEditorPrompt = (): Promise<string> => editorPrompt.load();
@@ -183,12 +181,6 @@ export async function loadStoryGuidanceWriterExtractionPrompt(storyId: string, s
 
 export async function loadStoryPhaseEventWriterExtractionPrompt(storyId: string, storyName: string): Promise<string> {
 	return phaseEventWriterExtractionPrompt.loadForStory(storyId, storyName);
-}
-
-export function loadStoryWriterExtractionPromptForMode(storyId: string, storyName: string, mode: 'guidance' | 'phaseEvent'): Promise<string> {
-	return mode === 'phaseEvent'
-		? loadStoryPhaseEventWriterExtractionPrompt(storyId, storyName)
-		: loadStoryGuidanceWriterExtractionPrompt(storyId, storyName);
 }
 
 export async function loadStoryReviewerPrompt(storyId: string, storyName: string): Promise<string> {
