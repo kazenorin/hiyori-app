@@ -3,34 +3,34 @@ import { extractImportantPhrases } from './important-phrases-extractor';
 import {
 	findLastNonNullSceneNumber,
 	getLatestActSummary,
-	getScenePlotForScene,
-	getPreviousNarrativeMessage,
 	getPlayerContext,
+	getPreviousNarrativeMessage,
+	getScenePlotForScene,
 } from './chat/message-queries';
 import {
+	backfillImportantPhrases,
+	handleStreamError,
+	loadActLineMessagesFromDB,
 	persistMessage,
 	persistUserMessage,
-	loadActLineMessagesFromDB,
-	backfillImportantPhrases,
 	removeMessagesById,
 	removeMessagesFromIndex,
-	handleStreamError,
 } from './chat/persistence';
-import { updateMetaData, resolveAsyncPhaseMetadata } from './chat/metadata';
+import { resolveAsyncPhaseMetadata, updateMetaData } from './chat/metadata';
 import { createPipelineCallbacks } from './chat/pipeline-callbacks';
 import {
+	getDefaultPlotMode,
 	getEditorProviderConfig,
 	getGameMasterProviderConfig,
 	getMainProviderConfig,
 	getMinorTaskAgentProviderConfig,
 	getPlotPlannerProviderConfig,
+	getReevaluationFrequency,
 	getReviewerProviderConfig,
 	getSummarizerProviderConfig,
 	getWriterProviderConfig,
 	isDirectorModeEnabled,
 	isPhraseHighlightingEnabled,
-	getDefaultPlotMode,
-	getReevaluationFrequency,
 	settings,
 } from '$lib/stores/settings.svelte';
 import { getActiveActPlotContent, getActiveDirectorNotesText, getActiveWorldContent } from '$lib/stores/stories.svelte';
@@ -171,9 +171,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		return;
 	}
 
-		await awaitPendingAsyncPhases('send-message', true);
-	const targetWordCount = settings.targetWordCount;
-	const storyPromise = dbActLines.getStoryForActLine(actLineId);
+	await awaitPendingAsyncPhases('send-message', true);
 
 	const mainConfig = getMainProviderConfig();
 	if (!mainConfig?.apiKey) {
@@ -182,6 +180,12 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 	}
 	if (!mainConfig?.model) {
 		error = 'Please configure a model name in Settings.';
+		return;
+	}
+	const story = await dbActLines.getStoryForActLine(actLineId);
+	const actLine = await dbActLines.getActLine(actLineId);
+	if (!actLine) {
+		error = 'Selected act line no longer exists';
 		return;
 	}
 	error = null;
@@ -207,24 +211,17 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 		messages[messageIdx] = message;
 	}
 
-	const story = await storyPromise;
-	const storyId = story.id;
-	const actLine = await dbActLines.getActLine(actLineId);
-	if (!actLine) {
-		error = 'Selected act line no longer exists';
-		return;
-	}
-	const plotMode = actLine.plotMode ?? getDefaultPlotMode();
-
-	const tools = await buildTools(storyId, actLine);
+	const tools = await buildTools(story.id, actLine);
 
 	try {
 		// Load pipeline context
 		const worldContent = getActiveWorldContent() ?? '';
 		const actPlot = getActiveActPlotContent() ?? '';
 		const actSummary = getLatestActSummary(messages);
+		const plotMode = actLine.plotMode ?? getDefaultPlotMode();
 		const previousScenePlot = getScenePlotForScene(messages, previousSceneNumber, plotMode);
 		const templateReplacements = { sceneNumber: String(nextSceneNumber) };
+		const targetWordCount = settings.targetWordCount;
 
 		const pipelineCallbacks = createPipelineCallbacks({
 			getCurrentMessage,
@@ -278,7 +275,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 
 		// Store async phases
 		const assistantMessageId = getCurrentMessage().id;
-		const summarizerModel = getSummarizerProviderConfig()?.model ?? getMainProviderConfig()?.model ?? 'unknown';
+		const summarizerModel = getSummarizerProviderConfig()?.model ?? mainConfig.model;
 		pendingAsyncPhases =
 			result.asyncPhases
 				?.then(async (asyncResults) => {
