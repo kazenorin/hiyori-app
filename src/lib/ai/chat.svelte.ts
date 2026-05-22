@@ -13,7 +13,6 @@ import {
 } from '$lib/stores/settings.svelte';
 import { getActiveActPlotContent, getActiveDirectorNotesText, getActiveWorldContent } from '$lib/stores/stories.svelte';
 import { extractImportantPhrases } from './important-phrases-extractor';
-import type { MessageMetadata } from './chat-stream';
 import {
 	findLastNonNullSceneNumber,
 	getCharacterNames as _getCharacterNames,
@@ -39,23 +38,11 @@ import {
 	updateLastPlotGeneration,
 	updatePersistentMessageMetadata,
 } from './chat/persistence';
-import type { NarrativeVariables, PlotMode, UIScenePhase } from './narrative-types';
+import type { NarrativeVariables, PlotMode } from './narrative-types';
 import { runPipeline } from './pipeline';
 import type { AsyncPhaseResults, PipelineResult, PlayerContext } from './pipeline/types';
-
-export interface UIMessage {
-	id: string;
-	role: 'user' | 'assistant';
-	content: string;
-	reasoning?: string;
-	metadata?: MessageMetadata;
-	sceneNumber: number;
-	variables?: NarrativeVariables;
-	phases?: UIScenePhase[];
-	actSummary?: string;
-	scenePlot?: string;
-	importantPhrases?: string[];
-}
+import type { UIMessage } from './chat/types';
+export type { UIMessage };
 
 interface RequestContext {
 	actLineId: string;
@@ -361,7 +348,7 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 	if (isPhraseHighlightingEnabled()) {
 		await backfillImportantPhrases(messages, {
 			extract: extractImportantPhrases,
-			persist: (id, text) => updatePersistentMessageMetadata(id, { importantPhrases: text }),
+			persist: updatePersistentMessageMetadata,
 		});
 	}
 }

@@ -1,7 +1,7 @@
 import { ERR_INVALID_MESSAGE_ROLE, ERR_MESSAGE_SEQUENCE_NOT_FOUND } from '$lib/definitions/error-messages';
 import * as dbActLines from '$lib/db/act-lines';
 import { parseCharacterAliases } from '../act-summary-parser';
-import type { UIMessage } from '../chat.svelte';
+import type { UIMessage } from './types';
 import type { NarrativeVariables, PlotMode } from '../narrative-types';
 import type { PlayerContext } from '../pipeline/types';
 

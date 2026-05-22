@@ -2,11 +2,11 @@ import { storyMessageTemplate } from '$lib/fs/view-templates';
 import { log } from '$lib/logging/logger';
 import { isReviewerEnabled } from '$lib/stores/settings.svelte';
 import { getErrorMessage } from '$lib/utils/error-handling';
-import type { UIMessage } from '../chat.svelte';
+import type { UIMessage } from './types';
 import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from '../narrative-types';
 import type { PipelineCallbacks, PipelineState, PhaseStreamState } from '../pipeline/types';
 import { renderFromVariables } from '../template-renderer';
-import { persistImportantPhrases } from './persistence';
+import { serializeImportantPhrases, updatePersistentMessageMetadata } from './persistence';
 
 /** Merge Editor variables with GM game data into final NarrativeVariables */
 export function buildFinalVariables(
@@ -156,7 +156,9 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 		},
 		onPhrasesExtracted: (phrases: string[]) => {
 			const current = getCurrentMessage();
-			persistImportantPhrases(current.id, phrases);
+			updatePersistentMessageMetadata(current.id, { importantPhrases: serializeImportantPhrases(phrases) }).catch(
+				async (err) => { await log.error('phrase-persist', 'Failed to persist important phrases', err); }
+			);
 			setCurrentMessage({ ...current, importantPhrases: phrases });
 		},
 	};

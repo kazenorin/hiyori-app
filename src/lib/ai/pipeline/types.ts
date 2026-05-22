@@ -1,5 +1,4 @@
-import type { ActPhase, PhaseName } from '../narrative-types';
-import type { NarrativeVariables, GameDataFields, PlotMode } from '../narrative-types';
+import type { PhaseName, NarrativeVariables, GameDataFields } from '../narrative-types';
 import type { StreamResultMetadata } from '../streaming';
 import type { ActSummary, CharacterProfile } from '../act-summary-parser';
 import type { ToolSet } from 'ai';

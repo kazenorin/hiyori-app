@@ -1,14 +1,14 @@
 import * as dbActLines from '$lib/db/act-lines';
 import * as dbMessages from '$lib/db/messages';
 import { parseImportantPhrases, serializeImportantPhrases } from '$lib/db/messages';
+export { serializeImportantPhrases };
 import { Memory } from '$lib/features/memory';
 import { log } from '$lib/logging/logger';
 import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 import { getActiveStoryId } from '$lib/stores/stories.svelte';
 import { getErrorMessage } from '$lib/utils/error-handling';
-import type { MessageMetadata } from '../chat-stream';
-import type { UIMessage } from '../chat.svelte';
-import type { PhaseMetadata } from '../chat-stream';
+import type { MessageMetadata, PhaseMetadata } from '../chat-stream';
+import type { UIMessage } from './types';
 import type { ActLineMeta } from '$lib/db/act-lines';
 
 export function parseMetadata(raw: string | undefined | null): MessageMetadata | undefined {
@@ -87,7 +87,7 @@ export async function backfillImportantPhrases(
 	msgs: UIMessage[],
 	deps: {
 		extract: (narrativeBody: string) => Promise<string[]>;
-		persist: (messageId: string, phrasesText: string) => Promise<void>;
+		persist: (messageId: string, metadataUpdates: { importantPhrases?: string }) => Promise<void>;
 	}
 ): Promise<void> {
 	for (let i = 0; i < msgs.length; i++) {
@@ -96,7 +96,7 @@ export async function backfillImportantPhrases(
 			try {
 				const phrases = await deps.extract(msg.variables.narrativeBody);
 				if (phrases.length > 0) {
-					await deps.persist(msg.id, serializeImportantPhrases(phrases));
+					await deps.persist(msg.id, { importantPhrases: serializeImportantPhrases(phrases) });
 					msgs[i] = { ...msgs[i], importantPhrases: phrases };
 				}
 			} catch (err) {
@@ -104,12 +104,6 @@ export async function backfillImportantPhrases(
 			}
 		}
 	}
-}
-
-export function persistImportantPhrases(messageId: string, phrases: string[]): void {
-	dbMessages.updateMessageFields(messageId, { importantPhrases: serializeImportantPhrases(phrases) }).catch(async (err) => {
-		await log.error('phrase-persist', 'Failed to persist important phrases', err);
-	});
 }
 
 /** Remove messages from a given index onwards. Returns success + remaining messages. */
