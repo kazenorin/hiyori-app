@@ -1,10 +1,11 @@
 import type { ActPhase, PhaseName } from '../narrative-types';
 import type { NarrativeVariables, GameDataFields, PlotMode } from '../narrative-types';
 import type { StreamResultMetadata } from '../streaming';
-import type {ActSummary, CharacterProfile} from '../act-summary-parser';
-import type {ToolSet} from 'ai';
-import type {PhaseMetadata, RetryConfig} from '../chat-stream';
-import type {ProviderConfig} from '$lib/stores/settings.svelte';
+import type { ActSummary, CharacterProfile } from '../act-summary-parser';
+import type { ToolSet } from 'ai';
+import type { PhaseMetadata, RetryConfig } from '../chat-stream';
+import type { ProviderConfig } from '$lib/stores/settings.svelte';
+import type { ActLineMeta } from '$lib/db/act-lines';
 
 export interface PipelineState {
 	currentPhase: PhaseName | null;
@@ -79,11 +80,10 @@ export interface PipelineProviderConfigs {
 export interface StoryContext {
 	storyId: string;
 	storyName: string;
-	actLineId: string;
+	actLine: ActLineMeta;
 }
 
 export interface PipelineExecution {
-	providerConfigs: PipelineProviderConfigs;
 	abortSignal: AbortSignal;
 	tools?: ToolSet;
 	callbacks: PipelineCallbacks;
@@ -93,19 +93,15 @@ export interface PipelineInput {
 	execution: PipelineExecution;
 	worldContent: string;
 	actPlot: string;
-	actPhase?: ActPhase | null;
 	actSummary: string;
 	directorNotes: string;
 	previousNarrativeVariables: NarrativeVariables | undefined;
 	previousScenePlot?: string;
 	player?: PlayerContext;
-	story?: StoryContext;
+	story: StoryContext;
 	completedScenes: number;
 	targetWordCount?: number;
 	retryConfig?: RetryConfig;
-	plotMode?: PlotMode;
-	lastPlotGeneration?: number | null;
-	reevaluationFrequency?: number;
 }
 
 export interface PipelineResult {

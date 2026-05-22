@@ -1,4 +1,5 @@
 import { buildMetadata, toPhaseMetadata, type MessageMetadata, type PhaseMetadata } from '../chat-stream';
+import { getSummarizerProviderConfig, type ProviderConfig } from '$lib/stores/settings.svelte';
 import type { UIMessage } from '../chat.svelte';
 import type { PhaseName, UIScenePhase } from '../narrative-types';
 import type { AsyncPhaseResults } from '../pipeline/types';
@@ -54,8 +55,9 @@ export interface AsyncPhaseResolution {
 export function resolveAsyncPhaseMetadata(
 	existing: UIMessage,
 	asyncResults: AsyncPhaseResults,
-	summarizerModel: string
+	mainConfig: ProviderConfig
 ): AsyncPhaseResolution {
+	const summarizerModel = getSummarizerProviderConfig()?.model ?? mainConfig.model;
 	const updatedPhases: UIScenePhase[] = existing.phases ? [...existing.phases] : [];
 	const metadataUpdates: { actSummary?: string; metadata?: string } = {};
 

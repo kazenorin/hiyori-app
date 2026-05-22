@@ -240,10 +240,6 @@ export function getDefaultPlotMode(): 'guidance' | 'phaseEvent' {
 	return settings.defaultPlotMode;
 }
 
-export function getReevaluationFrequency(): number {
-	return settings.reevaluationFrequency;
-}
-
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
 	const id = settings.roleAssignments[role];
 	if (!id) return undefined;

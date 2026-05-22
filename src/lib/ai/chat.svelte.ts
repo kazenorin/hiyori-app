@@ -1,4 +1,3 @@
-import { buildTools } from '$lib/ai/tools/tools';
 import * as dbActLines from '$lib/db/act-lines';
 import type { ActLineMeta } from '$lib/db/act-lines';
 import * as dbMessages from '$lib/db/messages';
@@ -8,8 +7,6 @@ import { log } from '$lib/logging/logger';
 import {
 	getDefaultPlotMode,
 	getMainProviderConfig,
-	getReevaluationFrequency,
-	getSummarizerProviderConfig,
 	isDirectorModeEnabled,
 	isPhraseHighlightingEnabled,
 	settings,
@@ -31,7 +28,6 @@ import {
 	getScenePlotForScene as _getScenePlotForScene,
 } from './chat/message-queries';
 import { resolveAsyncPhaseMetadata, updateMetaData } from './chat/metadata';
-import { buildPipelineProviderConfigs } from './chat/pipeline-config';
 import { createPipelineCallbacks } from './chat/pipeline-callbacks';
 import {
 	backfillImportantPhrases,
@@ -44,7 +40,7 @@ import {
 } from './chat/persistence';
 import type { NarrativeVariables, PlotMode, UIScenePhase } from './narrative-types';
 import { runPipeline } from './pipeline';
-import type { AsyncPhaseResults, PlayerContext } from './pipeline/types';
+import type { AsyncPhaseResults, PipelineResult, PlayerContext } from './pipeline/types';
 
 export interface UIMessage {
 	id: string;
@@ -158,6 +154,12 @@ function requireMainConfig(): ProviderConfig {
 	return mainConfig;
 }
 
+function newAbortSignal() {
+	const controller = new AbortController();
+	abortController = controller;
+	return controller.signal;
+}
+
 async function requireActLine(actLineId: string): Promise<ActLineMeta> {
 	const actLine = await dbActLines.getActLine(actLineId);
 	if (!actLine) {
@@ -257,6 +259,14 @@ async function updateMessageMetadata(
 	}
 }
 
+function updateMetadataMessageByIndex(result: PipelineResult, messageIdx: number) {
+	const updatedMetadata = updateMetaData(result.aggregatedMetadata, result.phases);
+	setMessageByIndex(messageIdx, {
+		...getMessageByIndex(messageIdx),
+		...(updatedMetadata && { metadata: updatedMetadata }),
+	});
+}
+
 async function executeNarrativeRequest(requestContext: RequestContext): Promise<void> {
 	await awaitPendingAsyncPhases('send-message', true);
 
@@ -268,9 +278,9 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 	const previousNarrativeVariables = requestContext.previousNarrativeVariables;
 	const previousSceneNumber = requestContext.previousSceneNumber;
 	const nextSceneNumber = previousSceneNumber + 1;
-	const newMessagesCount = await prepareNewMessages(actLineId, previousSceneNumber, nextSceneNumber, requestContext.message);
 	const playerContext = requestContext.playerContext;
 
+	const newMessagesCount = await prepareNewMessages(actLineId, previousSceneNumber, nextSceneNumber, requestContext.message);
 	const messageIdx = getLatestMessageIndex();
 
 	function getCurrentMessage(): UIMessage {
@@ -280,8 +290,6 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 	function setCurrentMessage(message: UIMessage) {
 		setMessageByIndex(messageIdx, message);
 	}
-
-	const tools = await buildTools(story.id, actLine);
 
 	try {
 		const worldContent = getActiveWorldContent() ?? '';
@@ -302,12 +310,9 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 		});
 
 		isStreaming = true;
-		abortController = new AbortController();
 		const result = await runPipeline({
 			execution: {
-				providerConfigs: buildPipelineProviderConfigs(),
-				abortSignal: abortController!.signal,
-				tools,
+				abortSignal: newAbortSignal(),
 				callbacks: pipelineCallbacks,
 			},
 			worldContent,
@@ -316,21 +321,12 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 			previousNarrativeVariables,
 			previousScenePlot,
 			player: playerContext,
-			story: { storyId: story.id, storyName: story.name, actLineId },
+			story: { storyId: story.id, storyName: story.name, actLine },
 			completedScenes: previousSceneNumber,
 			directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(previousSceneNumber + 1) : '',
 			targetWordCount,
-			plotMode: plotMode,
-			actPhase: actLine.actPhase ?? undefined,
-			lastPlotGeneration: actLine.lastPlotGeneration ?? undefined,
-			reevaluationFrequency: getReevaluationFrequency(),
 		});
-
-		const updatedMetadata = updateMetaData(result.aggregatedMetadata, result.phases);
-		setMessageByIndex(messageIdx, {
-			...getMessageByIndex(messageIdx),
-			...(updatedMetadata && { metadata: updatedMetadata }),
-		});
+		updateMetadataMessageByIndex(result, messageIdx);
 
 		await Promise.all([
 			persistMessage(actLineId, getCurrentMessage()),
@@ -342,18 +338,17 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 		}
 
 		const assistantMessageId = getCurrentMessage().id;
-		const summarizerModel = getSummarizerProviderConfig()?.model ?? mainConfig.model;
 		pendingAsyncPhases =
 			result.asyncPhases
 				?.then(async (asyncResults) => {
-					const targetMessageIdx = getLastMessageIndexOf(assistantMessageId);
-					if (targetMessageIdx >= 0) {
+					const assistantMessageIndex = getLastMessageIndexOf(assistantMessageId);
+					if (assistantMessageIndex >= 0) {
 						const { updatedMessage, metadataUpdates } = resolveAsyncPhaseMetadata(
-							getMessageByIndex(targetMessageIdx),
+							getMessageByIndex(assistantMessageIndex),
 							asyncResults,
-							summarizerModel
+							mainConfig
 						);
-						setMessageByIndex(targetMessageIdx, updatedMessage);
+						setMessageByIndex(assistantMessageIndex, updatedMessage);
 						await updateMessageMetadata(assistantMessageId, metadataUpdates);
 					}
 					return asyncResults;
