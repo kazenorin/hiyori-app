@@ -1,6 +1,5 @@
 import * as dbActLines from '$lib/db/act-lines';
 import type { ActLineMeta } from '$lib/db/act-lines';
-import * as dbMessages from '$lib/db/messages';
 import type { Story } from '$lib/db/stories';
 import { logMainChat } from '$lib/logging/chat-logger';
 import { log } from '$lib/logging/logger';
@@ -37,6 +36,8 @@ import {
 	persistUserMessage,
 	removeMessagesById,
 	removeMessagesFromIndex,
+	updateLastPlotGeneration,
+	updatePersistentMessageMetadata,
 } from './chat/persistence';
 import type { NarrativeVariables, PlotMode, UIScenePhase } from './narrative-types';
 import { runPipeline } from './pipeline';
@@ -247,19 +248,7 @@ export async function sendInitialNarration(actLineId: string): Promise<void> {
 	return executeNarrativeRequest(requestContext);
 }
 
-async function updateMessageMetadata(
-	messageId: string,
-	metadataUpdates: {
-		actSummary?: string;
-		metadata?: string;
-	}
-) {
-	if (Object.keys(metadataUpdates).length > 0) {
-		await dbMessages.updateMessageFields(messageId, metadataUpdates);
-	}
-}
-
-function updateMetadataMessageByIndex(result: PipelineResult, messageIdx: number) {
+function updateMessageMetadataByIndex(result: PipelineResult, messageIdx: number) {
 	const updatedMetadata = updateMetaData(result.aggregatedMetadata, result.phases);
 	setMessageByIndex(messageIdx, {
 		...getMessageByIndex(messageIdx),
@@ -270,17 +259,10 @@ function updateMetadataMessageByIndex(result: PipelineResult, messageIdx: number
 async function executeNarrativeRequest(requestContext: RequestContext): Promise<void> {
 	await awaitPendingAsyncPhases('send-message', true);
 
-	const actLineId = requestContext.actLineId;
-	const mainConfig = requestContext.mainConfig;
-	const story = requestContext.story;
-	const actLine = requestContext.actLine;
-
-	const previousNarrativeVariables = requestContext.previousNarrativeVariables;
-	const previousSceneNumber = requestContext.previousSceneNumber;
+	const { actLineId, mainConfig, story, actLine, previousNarrativeVariables, previousSceneNumber, playerContext, message } = requestContext;
 	const nextSceneNumber = previousSceneNumber + 1;
-	const playerContext = requestContext.playerContext;
 
-	const newMessagesCount = await prepareNewMessages(actLineId, previousSceneNumber, nextSceneNumber, requestContext.message);
+	const newMessagesCount = await prepareNewMessages(actLineId, previousSceneNumber, nextSceneNumber, message);
 	const messageIdx = getLatestMessageIndex();
 
 	function getCurrentMessage(): UIMessage {
@@ -326,16 +308,14 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 			directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(previousSceneNumber + 1) : '',
 			targetWordCount,
 		});
-		updateMetadataMessageByIndex(result, messageIdx);
+
+		updateMessageMetadataByIndex(result, messageIdx);
 
 		await Promise.all([
 			persistMessage(actLineId, getCurrentMessage()),
+			updateLastPlotGeneration(result.phases, actLine, previousSceneNumber),
 			logMainChat({ newMessages: getMessages().slice(-newMessagesCount) }),
 		]);
-
-		if (result.phases?.some((p) => p.phaseName === 'PLOT_PLANNER') && actLine) {
-			await dbActLines.updateActLineMetaFields(actLineId, { lastPlotGeneration: previousSceneNumber });
-		}
 
 		const assistantMessageId = getCurrentMessage().id;
 		pendingAsyncPhases =
@@ -349,7 +329,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 							mainConfig
 						);
 						setMessageByIndex(assistantMessageIndex, updatedMessage);
-						await updateMessageMetadata(assistantMessageId, metadataUpdates);
+						await updatePersistentMessageMetadata(assistantMessageId, metadataUpdates);
 					}
 					return asyncResults;
 				})
@@ -381,7 +361,7 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 	if (isPhraseHighlightingEnabled()) {
 		await backfillImportantPhrases(messages, {
 			extract: extractImportantPhrases,
-			persist: (id, text) => dbMessages.updateMessageFields(id, { importantPhrases: text }),
+			persist: (id, text) => updatePersistentMessageMetadata(id, { importantPhrases: text }),
 		});
 	}
 }

@@ -8,6 +8,8 @@ import { getActiveStoryId } from '$lib/stores/stories.svelte';
 import { getErrorMessage } from '$lib/utils/error-handling';
 import type { MessageMetadata } from '../chat-stream';
 import type { UIMessage } from '../chat.svelte';
+import type { PhaseMetadata } from '../chat-stream';
+import type { ActLineMeta } from '$lib/db/act-lines';
 
 export function parseMetadata(raw: string | undefined | null): MessageMetadata | undefined {
 	if (!raw) return undefined;
@@ -174,4 +176,27 @@ export async function handleStreamError(
 	const errorMessage = getErrorMessage(err);
 	await log.error('send-message', errorMessage, err);
 	return { messages: msgs.filter((m) => m.id !== responseMsg.id), error: errorMessage };
+}
+
+export async function updateLastPlotGeneration(
+	phases: PhaseMetadata[] | undefined,
+	actLine: ActLineMeta,
+	previousSceneNumber: number
+): Promise<void> {
+	if (phases?.some((p) => p.phaseName === 'PLOT_PLANNER')) {
+		await dbActLines.updateActLineMetaFields(actLine.id, { lastPlotGeneration: previousSceneNumber });
+	}
+}
+
+export async function updatePersistentMessageMetadata(
+	messageId: string,
+	metadataUpdates: {
+		actSummary?: string;
+		metadata?: string;
+		importantPhrases?: string;
+	}
+): Promise<void> {
+	if (Object.keys(metadataUpdates).length > 0) {
+		await dbMessages.updateMessageFields(messageId, metadataUpdates);
+	}
 }
