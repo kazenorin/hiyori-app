@@ -43,7 +43,7 @@ import { log } from '$lib/logging/logger';
 import { buildTools } from '$lib/ai/tools/tools';
 import { ERR_INVALID_MESSAGE_ROLE, ERR_MESSAGE_SEQUENCE_NOT_FOUND } from '$lib/definitions/error-messages';
 import { runPipeline } from './pipeline';
-import type { AsyncPhaseResults, PipelineProviderConfigs } from './pipeline/types';
+import type { AsyncPhaseResults, PipelineProviderConfigs, PlayerContext } from './pipeline/types';
 
 export interface UIMessage {
 	id: string;
@@ -57,6 +57,14 @@ export interface UIMessage {
 	actSummary?: string;
 	scenePlot?: string;
 	importantPhrases?: string[];
+}
+
+interface RequestContext {
+	actLineId: string;
+	message?: string;
+	previousSceneNumber: number;
+	previousNarrativeVariables: NarrativeVariables | undefined;
+	playerContext: PlayerContext | undefined;
 }
 
 let messages = $state<UIMessage[]>([]);
@@ -150,12 +158,12 @@ function buildPipelineProviderConfigs(): PipelineProviderConfigs {
 
 async function prepareNewMessages(
 	actLineId: string,
-	message: string,
 	previousSceneNumber: number,
-	nextSceneNumber: number
+	nextSceneNumber: number,
+	message?: string
 ): Promise<number> {
 	const responseMessage = newMessage('assistant', nextSceneNumber);
-	if (message.trim().length > 0) {
+	if (message !== undefined) {
 		const userMessage = await persistUserMessage(message, previousSceneNumber, actLineId);
 		messages = [...messages, userMessage, responseMessage];
 		return 2;
@@ -165,13 +173,25 @@ async function prepareNewMessages(
 	}
 }
 
-export async function sendMessage(actLineId: string, message: string, isInitialMessage: boolean = false): Promise<void> {
-	if (message.trim().length === 0 && !isInitialMessage) {
-		await log.warn('send-message', 'Not initial message and called with no message body.');
+export async function sendMessage(actLineId: string, message: string): Promise<void> {
+	if (message.trim().length === 0) {
+		await log.warn('send-message', 'Called with no message body.');
 		return;
 	}
+	const requestContext: RequestContext = {
+		actLineId,
+		message,
+		previousSceneNumber: findLastNonNullSceneNumber(messages) ?? 0,
+		previousNarrativeVariables: getPreviousNarrativeMessage(messages),
+		playerContext: getPlayerContext(messages),
+	};
+	return executeNarrativeRequest(requestContext);
+}
 
+async function executeNarrativeRequest(requestContext: RequestContext): Promise<void> {
 	await awaitPendingAsyncPhases('send-message', true);
+
+	const actLineId = requestContext.actLineId;
 
 	const mainConfig = getMainProviderConfig();
 	if (!mainConfig?.apiKey) {
@@ -190,16 +210,11 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 	}
 	error = null;
 
-	// Get previous variables before creating new message
-	const previousNarrativeVariables = isInitialMessage ? undefined : getPreviousNarrativeMessage(messages);
-
-	// Scene starts with the assistant's story message, and ends with the player's response.
-	const previousSceneNumber = isInitialMessage ? 0 : (findLastNonNullSceneNumber(messages) ?? 0);
+	const previousNarrativeVariables = requestContext.previousNarrativeVariables;
+	const previousSceneNumber = requestContext.previousSceneNumber;
 	const nextSceneNumber = previousSceneNumber + 1;
-	const newMessagesCount = await prepareNewMessages(actLineId, message, previousSceneNumber, nextSceneNumber);
-
-	// Get player context after possibly adding new userMessage (Player Response)
-	const playerContext = isInitialMessage ? undefined : getPlayerContext(messages);
+	const newMessagesCount = await prepareNewMessages(actLineId, previousSceneNumber, nextSceneNumber, requestContext.message);
+	const playerContext = requestContext.playerContext;
 
 	const messageIdx = messages.length - 1;
 
@@ -214,7 +229,6 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 	const tools = await buildTools(story.id, actLine);
 
 	try {
-		// Load pipeline context
 		const worldContent = getActiveWorldContent() ?? '';
 		const actPlot = getActiveActPlotContent() ?? '';
 		const actSummary = getLatestActSummary(messages);
@@ -248,7 +262,7 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 			previousScenePlot,
 			player: playerContext,
 			story: { storyId: story.id, storyName: story.name, actLineId },
-			completedScenes: previousSceneNumber, // previous scene was just completed by the Player Response
+			completedScenes: previousSceneNumber,
 			directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(previousSceneNumber + 1) : '',
 			targetWordCount,
 			plotMode: plotMode,
@@ -263,17 +277,12 @@ export async function sendMessage(actLineId: string, message: string, isInitialM
 			...(updatedMetadata && { metadata: updatedMetadata }),
 		};
 
-		// Persist with accumulated content
 		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({ newMessages: messages.slice(-newMessagesCount) })]);
 
-		// Update lastPlotGeneration if Plot Planner ran this turn.
-		// Save completedScenes (previousSceneNumber) so the frequency formula
-		// (completedScenes - lastPlotGeneration) >= frequency counts correctly.
 		if (result.phases?.some((p) => p.phaseName === 'PLOT_PLANNER') && actLine) {
 			await dbActLines.updateActLineMetaFields(actLineId, { lastPlotGeneration: previousSceneNumber });
 		}
 
-		// Store async phases
 		const assistantMessageId = getCurrentMessage().id;
 		const summarizerModel = getSummarizerProviderConfig()?.model ?? mainConfig.model;
 		pendingAsyncPhases =
@@ -349,7 +358,13 @@ export function getLatestDecisionContext(): string | null {
  */
 export async function sendInitialNarration(actLineId: string): Promise<void> {
 	messages = [];
-	return await sendMessage(actLineId, '', true);
+	const requestContext: RequestContext = {
+		actLineId,
+		previousSceneNumber: 0,
+		previousNarrativeVariables: undefined,
+		playerContext: undefined,
+	};
+	return executeNarrativeRequest(requestContext);
 }
 
 export async function regenerateLastResponse(actLineId: string, messageId: string): Promise<void> {
