@@ -230,7 +230,7 @@ See [patterns.md](references/patterns.md) for extraction prompt templates and de
 
 ## Source
 
-- `src/lib/chat-stream-parser/parser.ts` — core parser logic
-- `src/lib/chat-stream-parser/types.ts` — type definitions
-- `src/lib/chat-stream-parser/index.ts` — barrel exports
+- `src/lib/utils/chat-stream-parser/parser.ts` — core parser logic
+- `src/lib/utils/chat-stream-parser/types.ts` — type definitions
+- `src/lib/utils/chat-stream-parser/index.ts` — barrel exports
 - `src/lib/__tests__/chat-stream-parser/parser.test.ts` — 59 test cases (TDD reference)
