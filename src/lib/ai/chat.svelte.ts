@@ -79,22 +79,6 @@ let error = $state<string | null>(null);
 let abortController: AbortController | null = null;
 let pendingAsyncPhases: Promise<AsyncPhaseResults | void> | null = null;
 
-async function awaitPendingAsyncPhases(context: string, throwOnNonAbort = false): Promise<void> {
-	if (!pendingAsyncPhases) return;
-	try {
-		await pendingAsyncPhases;
-	} catch (err) {
-		if (err instanceof DOMException && err.name === 'AbortError') {
-			await log.warn(context, 'Async phases aborted');
-		} else if (throwOnNonAbort) {
-			throw err;
-		} else {
-			await log.error(context, 'Async phases failed', err);
-		}
-	}
-	pendingAsyncPhases = null;
-}
-
 export function getMessages(): UIMessage[] {
 	return messages;
 }
@@ -105,37 +89,6 @@ export function getIsStreaming(): boolean {
 
 export function getError(): string | null {
 	return error;
-}
-
-export async function loadActLineMessages(actLineId: string): Promise<void> {
-	messages = await loadActLineMessagesFromDB(actLineId);
-	error = null;
-
-	if (isPhraseHighlightingEnabled()) {
-		await backfillImportantPhrases(messages, {
-			extract: extractImportantPhrases,
-			persist: (id, text) => dbMessages.updateMessageFields(id, { importantPhrases: text }),
-		});
-	}
-}
-
-export async function clearMessages(): Promise<void> {
-	await awaitPendingAsyncPhases('clear-messages');
-	messages = [];
-	error = null;
-	isStreaming = false;
-}
-
-export function getCharacterNames(): string[] {
-	const actSummary = getLatestActSummary(messages);
-	if (!actSummary) return [];
-	const entries = parseCharacterAliases(actSummary);
-	const names: string[] = [];
-	for (const entry of entries) {
-		names.push(entry.characterName);
-		names.push(...entry.aliases);
-	}
-	return names;
 }
 
 function newMessage(role: 'user' | 'assistant', sceneNumber: number): UIMessage {
@@ -201,6 +154,22 @@ async function prepareNewMessages(
 	}
 }
 
+async function awaitPendingAsyncPhases(context: string, throwOnNonAbort = false): Promise<void> {
+	if (!pendingAsyncPhases) return;
+	try {
+		await pendingAsyncPhases;
+	} catch (err) {
+		if (err instanceof DOMException && err.name === 'AbortError') {
+			await log.warn(context, 'Async phases aborted');
+		} else if (throwOnNonAbort) {
+			throw err;
+		} else {
+			await log.error(context, 'Async phases failed', err);
+		}
+	}
+	pendingAsyncPhases = null;
+}
+
 export async function sendMessage(actLineId: string, message: string): Promise<void> {
 	if (message.trim().length === 0) {
 		await log.warn('send-message', 'Called with no message body.');
@@ -222,6 +191,30 @@ export async function sendMessage(actLineId: string, message: string): Promise<v
 	};
 	return executeNarrativeRequest(requestContext);
 }
+
+/**
+ * Send the narration template as a hidden message.
+ * The narration message is never persisted or shown in the UI.
+ * Only the assistant's response (the opening narrative) is persisted and displayed.
+ */
+export async function sendInitialNarration(actLineId: string): Promise<void> {
+	messages = [];
+	const mainConfig = requireMainConfig();
+	const story = await dbActLines.getStoryForActLine(actLineId);
+	const actLine = await requireActLine(actLineId);
+	error = null;
+	const requestContext: RequestContext = {
+		actLineId,
+		mainConfig,
+		story,
+		actLine,
+		previousSceneNumber: 0,
+		previousNarrativeVariables: undefined,
+		playerContext: undefined,
+	};
+	return executeNarrativeRequest(requestContext);
+}
+
 async function executeNarrativeRequest(requestContext: RequestContext): Promise<void> {
 	await awaitPendingAsyncPhases('send-message', true);
 
@@ -371,27 +364,35 @@ export function getLatestDecisionContext(): string | null {
 	return null;
 }
 
-/**
- * Send the narration template as a hidden message.
- * The narration message is never persisted or shown in the UI.
- * Only the assistant's response (the opening narrative) is persisted and displayed.
- */
-export async function sendInitialNarration(actLineId: string): Promise<void> {
-	messages = [];
-	const mainConfig = requireMainConfig();
-	const story = await dbActLines.getStoryForActLine(actLineId);
-	const actLine = await requireActLine(actLineId);
+export function getCharacterNames(): string[] {
+	const actSummary = getLatestActSummary(messages);
+	if (!actSummary) return [];
+	const entries = parseCharacterAliases(actSummary);
+	const names: string[] = [];
+	for (const entry of entries) {
+		names.push(entry.characterName);
+		names.push(...entry.aliases);
+	}
+	return names;
+}
+
+export async function loadActLineMessages(actLineId: string): Promise<void> {
+	messages = await loadActLineMessagesFromDB(actLineId);
 	error = null;
-	const requestContext: RequestContext = {
-		actLineId,
-		mainConfig,
-		story,
-		actLine,
-		previousSceneNumber: 0,
-		previousNarrativeVariables: undefined,
-		playerContext: undefined,
-	};
-	return executeNarrativeRequest(requestContext);
+
+	if (isPhraseHighlightingEnabled()) {
+		await backfillImportantPhrases(messages, {
+			extract: extractImportantPhrases,
+			persist: (id, text) => dbMessages.updateMessageFields(id, { importantPhrases: text }),
+		});
+	}
+}
+
+export async function clearMessages(): Promise<void> {
+	await awaitPendingAsyncPhases('clear-messages');
+	messages = [];
+	error = null;
+	isStreaming = false;
 }
 
 export async function regenerateLastResponse(actLineId: string, messageId: string): Promise<void> {
