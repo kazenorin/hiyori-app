@@ -22,13 +22,13 @@ import {
 	findLastNonNullSceneNumber,
 	getCharacterNames as _getCharacterNames,
 	getForkSequence as _getForkSequence,
-	getLatestActSummary,
+	getLatestActSummary as _getLatestActSummary,
 	getLatestActivePlotThreads as _getLatestActivePlotThreads,
 	getLatestDecisions as _getLatestDecisions,
 	getLatestDecisionContext as _getLatestDecisionContext,
 	getPlayerContext,
 	getPreviousNarrativeMessage,
-	getScenePlotForScene,
+	getScenePlotForScene as _getScenePlotForScene,
 } from './chat/message-queries';
 import { resolveAsyncPhaseMetadata, updateMetaData } from './chat/metadata';
 import { buildPipelineProviderConfigs } from './chat/pipeline-config';
@@ -42,7 +42,7 @@ import {
 	removeMessagesById,
 	removeMessagesFromIndex,
 } from './chat/persistence';
-import type { NarrativeVariables, UIScenePhase } from './narrative-types';
+import type { NarrativeVariables, PlotMode, UIScenePhase } from './narrative-types';
 import { runPipeline } from './pipeline';
 import type { AsyncPhaseResults, PlayerContext } from './pipeline/types';
 
@@ -107,6 +107,13 @@ export async function getForkSequence(actLineId: string, assistantMessageIndex: 
 	return _getForkSequence(actLineId, messages, assistantMessageIndex);
 }
 
+function getLatestActSummary(): string {
+	return _getLatestActSummary(messages);
+}
+function getScenePlotForScene(sceneNumber: number, plotMode: PlotMode): string {
+	return _getScenePlotForScene(messages, sceneNumber, plotMode);
+}
+
 function newMessage(role: 'user' | 'assistant', sceneNumber: number): UIMessage {
 	return {
 		id: crypto.randomUUID(),
@@ -117,6 +124,15 @@ function newMessage(role: 'user' | 'assistant', sceneNumber: number): UIMessage 
 		sceneNumber,
 	};
 }
+
+function getLatestMessageIndex() {
+	return messages.length - 1;
+}
+
+function getLastMessageIndexOf(assistantMessageId: string) {
+	return messages.findLastIndex((m) => m.id === assistantMessageId);
+}
+
 function getMessageByIndex(index: number): UIMessage {
 	return messages[index];
 }
@@ -243,7 +259,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 	const newMessagesCount = await prepareNewMessages(actLineId, previousSceneNumber, nextSceneNumber, requestContext.message);
 	const playerContext = requestContext.playerContext;
 
-	const messageIdx = messages.length - 1;
+	const messageIdx = getLatestMessageIndex();
 
 	function getCurrentMessage(): UIMessage {
 		return getMessageByIndex(messageIdx);
@@ -258,9 +274,9 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 	try {
 		const worldContent = getActiveWorldContent() ?? '';
 		const actPlot = getActiveActPlotContent() ?? '';
-		const actSummary = getLatestActSummary(messages);
+		const actSummary = getLatestActSummary();
 		const plotMode = actLine.plotMode ?? getDefaultPlotMode();
-		const previousScenePlot = getScenePlotForScene(messages, previousSceneNumber, plotMode);
+		const previousScenePlot = getScenePlotForScene(previousSceneNumber, plotMode);
 		const templateReplacements = { sceneNumber: String(nextSceneNumber) };
 		const targetWordCount = settings.targetWordCount;
 
@@ -304,7 +320,10 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 			...(updatedMetadata && { metadata: updatedMetadata }),
 		});
 
-		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({ newMessages: messages.slice(-newMessagesCount) })]);
+		await Promise.all([
+			persistMessage(actLineId, getCurrentMessage()),
+			logMainChat({ newMessages: getMessages().slice(-newMessagesCount) }),
+		]);
 
 		if (result.phases?.some((p) => p.phaseName === 'PLOT_PLANNER') && actLine) {
 			await dbActLines.updateActLineMetaFields(actLineId, { lastPlotGeneration: previousSceneNumber });
@@ -315,7 +334,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 		pendingAsyncPhases =
 			result.asyncPhases
 				?.then(async (asyncResults) => {
-					const targetMessageIdx = messages.findLastIndex((m) => m.id === assistantMessageId);
+					const targetMessageIdx = getLastMessageIndexOf(assistantMessageId);
 					if (targetMessageIdx >= 0) {
 						const { updatedMessage, metadataUpdates } = resolveAsyncPhaseMetadata(
 							getMessageByIndex(targetMessageIdx),
@@ -338,8 +357,8 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 					}
 				}) ?? null;
 	} catch (err: unknown) {
-		const result = await handleStreamError(err, getCurrentMessage(), actLineId, messages);
-		messages = result.messages;
+		const result = await handleStreamError(err, getCurrentMessage(), actLineId, getMessages());
+		setMessages(result.messages);
 		if (result.error) error = result.error;
 	} finally {
 		isStreaming = false;
@@ -419,7 +438,7 @@ export async function regenerateLastResponse(actLineId: string, messageId: strin
 }
 
 export async function deleteLastExchange(actLineId: string): Promise<void> {
-	let lastUserMsgIdx = messages.length - 1;
+	let lastUserMsgIdx = getLatestMessageIndex();
 	while (lastUserMsgIdx >= 0 && messages[lastUserMsgIdx].role !== 'user') {
 		lastUserMsgIdx--;
 	}
@@ -442,7 +461,7 @@ export async function deleteOrphanedUserMessages(actLineId: string): Promise<voi
 	if (messages.length === 0) return;
 	if (messages.at(-1)?.role !== 'user') return;
 
-	let lastUserMsgIdx = messages.length - 1;
+	let lastUserMsgIdx = getLatestMessageIndex();
 	while (lastUserMsgIdx > 0 && messages[lastUserMsgIdx - 1].role === 'user') {
 		lastUserMsgIdx--;
 	}
