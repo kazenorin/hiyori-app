@@ -14,10 +14,11 @@ import type { ImportFormData, ImportProgressUpdate, ImportResult, ParsedMessage 
 import { emptyVariables } from '$lib/ai/narrative-types';
 import type { RetryConfig } from '$lib/ai/chat-stream';
 import { parseTranscriptFile } from './transcript-parsers';
-import { formatIntoScenes, generateActFromCards } from './act-generator';
 import { runGameDataDetection } from './game-data-detector';
-import type { StreamState } from '$lib/ai/chat-callbacks';
-import { loadSystemPrompt } from '$lib/fs/prompts';
+import { generateWorldFromCards } from '$lib/ai/world-generator';
+import { ls } from '$lib/localization';
+import { nameLabel } from '$lib/definitions/common-labels';
+import { parseContent, type OutputDescriptor } from '$lib/utils/chat-stream-parser';
 
 // === Progress Callback Type ===
 
@@ -95,27 +96,50 @@ export async function executeImport(formData: ImportFormData, onProgress: Progre
 			createdResources
 		);
 
+		// Generate world.md from cards if not provided
+		if (!worldContent) {
+			const lastAct = formData.acts.length > 0 ? formData.acts[formData.acts.length - 1] : null;
+			const actCardContent = lastAct?.actFile ? await lastAct.actFile.text() : null;
+
+			if (actCardContent || characterCards.length > 0) {
+				log('Generating world file from provided cards...');
+				worldContent = await generateWorldFromCards(null, actCardContent, characterCards, storyFolder);
+				log(`World file generated (${worldContent.length} chars)`);
+			}
+		}
+
 		// Refresh sidebar again to show updated names
 		await loadStories();
 
 		// Finalize
 		onProgress({
 			phase: 'complete',
-			message: 'Import complete!',
-			consoleOutput: logs.join('\n') + '\n\n✓ Import completed successfully.',
+			message: processResult.needsInterview
+				? ls('features.importWorld.messages.importCompleteWithInterview')
+				: ls('features.importWorld.messages.importComplete'),
+			consoleOutput: logs.join('\n') + '\n\n✓ ' + ls('features.importWorld.messages.importCompletedSuccessfully'),
 		});
 
-		// Return info (no navigation - stay on page)
 		const firstActId = processResult.actIds.length > 0 ? processResult.actIds[0] : undefined;
-		const firstActLineId = processResult.actLineIds.length > 0 ? processResult.actLineIds[0] : undefined;
+		const lastActId = processResult.actIds.length > 0 ? processResult.actIds[processResult.actIds.length - 1] : undefined;
+		const lastActLineId = processResult.actLineIds.length > 0 ? processResult.actLineIds[processResult.actLineIds.length - 1] : undefined;
 
 		return {
 			success: true,
 			storyId,
 			actId: firstActId,
-			actLineId: firstActLineId,
+			lastActId,
+			actLineId: lastActLineId,
 			warnings,
 			importComplete: true,
+			needsInterview: processResult.needsInterview,
+			worldContent: worldContent ?? undefined,
+			interviewContext: processResult.needsInterview
+				? {
+						actCard: processResult.interviewActCard,
+						characterCards,
+					}
+				: undefined,
 		};
 	} catch (error) {
 		const errorMsg = error instanceof Error ? error.message : String(error);
@@ -127,7 +151,7 @@ export async function executeImport(formData: ImportFormData, onProgress: Progre
 
 		onProgress({
 			phase: 'error',
-			message: 'Import failed',
+			message: ls('features.importWorld.messages.importFailed'),
 			errorMessage: errorMsg,
 			consoleOutput: logs.join('\n'),
 		});
@@ -146,6 +170,8 @@ export async function executeImport(formData: ImportFormData, onProgress: Progre
 interface ActProcessingResult {
 	actIds: string[];
 	actLineIds: string[];
+	needsInterview: boolean;
+	interviewActCard: string | null;
 }
 
 async function processActs(
@@ -161,6 +187,8 @@ async function processActs(
 	let previousActLineId: string | null = null;
 	const actIds: string[] = [];
 	const actLineIds: string[] = [];
+	let needsInterview = false;
+	let interviewActCard: string | null = null;
 
 	const retryConfig: RetryConfig = {
 		retryCount: formData.retryCount,
@@ -170,12 +198,12 @@ async function processActs(
 	for (let actIndex = 0; actIndex < formData.acts.length; actIndex++) {
 		const actInput = formData.acts[actIndex];
 		const actNumber = actIndex + 1;
+		const isLastAct = actIndex === formData.acts.length - 1;
 
 		const { actId, actLineId } = await createActAndLine(actInput, actNumber, storyId, previousActLineId, log, onProgress, createdResources);
 		actIds.push(actId);
 		actLineIds.push(actLineId);
 
-		// Process act content
 		if (actInput.transcript) {
 			await processTranscriptAct(
 				actInput,
@@ -188,27 +216,20 @@ async function processActs(
 				onProgress,
 				createdResources
 			);
-		} else if (actInput.actFile || worldContent || characterCards.length > 0) {
-			// Load global default systemPrompt, as for importing, the story systemPrompt is not supposed to be available yet
-			const systemPrompt = await loadSystemPrompt();
-			await generateActFromLLM(
-				systemPrompt,
-				actInput,
-				actLineId,
-				actNumber,
-				worldContent,
-				characterCards,
-				retryConfig,
-				log,
-				onProgress,
-				createdResources
-			);
+		} else if (isLastAct) {
+			if (actInput.actFile) {
+				const actCardContent = await actInput.actFile.text();
+				await saveActCard(storyFolder, actNumber, actCardContent);
+				log(`Act card saved: ${actInput.actFile.name}`);
+				interviewActCard = actCardContent;
+			}
+			needsInterview = true;
 		}
 
 		previousActLineId = actLineId;
 	}
 
-	return { actIds, actLineIds };
+	return { actIds, actLineIds, needsInterview, interviewActCard };
 }
 
 async function createActAndLine(
@@ -224,7 +245,7 @@ async function createActAndLine(
 
 	onProgress({
 		phase: 'processing-act',
-		message: `Processing Act ${actNumber}...`,
+		message: ls('features.importWorld.messages.processingAct', { actNumber }),
 		consoleOutput: '',
 	});
 
@@ -270,7 +291,7 @@ async function processTranscriptAct(
 	if (missingGameData > 0) {
 		onProgress({
 			phase: 'saving-messages',
-			message: `Detecting game data for ${missingGameData} messages...`,
+			message: ls('features.importWorld.messages.detectingGameData', { count: missingGameData }),
 			consoleOutput: '',
 		});
 		log(`Detecting game data for ${missingGameData} messages...`);
@@ -283,7 +304,7 @@ async function processTranscriptAct(
 				const consoleOutput = state.content ? state.content : state.reasoning;
 				onProgress({
 					phase: 'generating-game-data',
-					message: `Generating GameData[${msgIndex}]...`,
+					message: ls('features.importWorld.messages.generatingGameData', { index: msgIndex }),
 					consoleOutput: consoleOutput ?? '',
 				});
 			},
@@ -291,7 +312,7 @@ async function processTranscriptAct(
 				const errorContent = `[generating-game-data] attempt ${attempt + 1} failed: ${err.message}. Retrying...`;
 				onProgress({
 					phase: 'generating-game-data',
-					message: `Generating GameData[${msgIndex}]...`,
+					message: ls('features.importWorld.messages.generatingGameData', { index: msgIndex }),
 					consoleOutput: '[ERROR]' + errorContent,
 				});
 			}
@@ -332,81 +353,6 @@ async function processTranscriptAct(
 	}
 }
 
-async function generateActFromLLM(
-	systemPrompt: string,
-	actInput: { id: string; name: string; actFile: File | null; transcript: File | null },
-	actLineId: string,
-	actNumber: number,
-	worldContent: string | null,
-	characterCards: { name: string; content: string }[],
-	retryConfig: RetryConfig,
-	log: (msg: string) => void,
-	onProgress: ProgressCallback,
-	createdResources: CreatedResources
-): Promise<void> {
-	const actCardContent = actInput.actFile ? await actInput.actFile.text() : null;
-
-	onProgress({
-		phase: 'generating-act',
-		message: `Generating Act ${actNumber} via LLM...`,
-		consoleOutput: '',
-	});
-
-	// Generate act content with streaming
-	const acc = await generateActFromCards(
-		systemPrompt,
-		worldContent,
-		actCardContent,
-		characterCards,
-		retryConfig,
-		(state: StreamState) => {
-			const consoleOutput = state.content ? state.content : state.reasoning;
-			onProgress({
-				phase: 'generating-act',
-				message: `Generating Act ${actNumber}...`,
-				consoleOutput: consoleOutput ?? '',
-			});
-		},
-		(err, attempt) => {
-			const errorContent = `[generateActFromCards] attempt ${attempt + 1} failed: ${err.message}. Retrying...`;
-			onProgress({
-				phase: 'generating-act',
-				message: `Generating Act ${actNumber}...`,
-				consoleOutput: '[ERROR]' + errorContent,
-			});
-		}
-	);
-
-	const generation = acc.state.content;
-
-	log(`Act ${actNumber} generation complete (${generation.length} chars)`);
-
-	// Format into scenes (returns array of processed scenes)
-	onProgress({
-		phase: 'formatting-act',
-		message: `Formatting Act ${actNumber} into scenes...`,
-		consoleOutput: '',
-	});
-
-	const { scenes: processedScenes } = await formatIntoScenes(generation, actNumber, retryConfig, log, (text) => {
-		onProgress({
-			phase: 'formatting-act',
-			message: `Formatting Act ${actNumber}...`,
-			consoleOutput: '\n' + text,
-		});
-	});
-
-	// Create messages from processed scenes (each scene is a separate message)
-	const genMessageIds = await createMessagesFromParsed(processedScenes, actLineId, log, (msg) => {
-		onProgress({
-			phase: 'saving-messages',
-			message: msg,
-			consoleOutput: '',
-		});
-	});
-	createdResources.messageIds.push(...genMessageIds);
-}
-
 // === Helper Functions ===
 
 async function loadCharacterCards(
@@ -417,7 +363,7 @@ async function loadCharacterCards(
 	for (const char of characters) {
 		if (char.cardFile) {
 			const content = await char.cardFile.text();
-			const name = char.name.trim() || extractCharacterName(content) || 'a character in the story';
+			const name = char.name.trim() || extractCharacterName(content) || ls('features.importWorld.description.unnamedCharacter');
 			characterCards.push({ name, content });
 			log(`Character loaded: ${name}`);
 		}
@@ -515,25 +461,18 @@ async function saveActCard(storyFolder: string, actNumber: number, content: stri
 }
 
 function extractCharacterName(content: string): string | null {
-	// Common non-name headers to skip
-	const nonNameHeaders = ['character card', 'character profile', 'character sheet', 'character details', 'character info'];
+	const coreIdentityHeader = ls('features.characterCardGenerator.coreIdentity');
 
-	// Try to extract character name from card content
-	// Look for patterns like "# Character Name" or "Name: ..."
-	const headerMatch = content.match(/^#\s*(.+)$/m);
-	if (headerMatch) {
-		const candidate = headerMatch[1].trim();
-		if (!nonNameHeaders.includes(candidate.toLowerCase())) {
-			return candidate;
-		}
-	}
+	const descriptors: OutputDescriptor[] = [
+		{
+			outputPath: 'name',
+			match: { type: 'list_labeled_item', content: nameLabel(), parent: { type: 'header', content: coreIdentityHeader } },
+			bodyOnly: true,
+		},
+	];
 
-	const nameFieldMatch = content.match(/^Name:\s*(.+)$/m);
-	if (nameFieldMatch) {
-		return nameFieldMatch[1].trim();
-	}
-
-	return null;
+	const result = parseContent<{ name: string | null }>(content, descriptors);
+	return result.name;
 }
 
 interface CreatedResources {

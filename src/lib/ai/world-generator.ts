@@ -3,11 +3,23 @@ import { streamText } from 'ai';
 import { maxBy } from 'lodash-es';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
-import { loadWorldTemplate, loadGenerateWorldFromChatPrompt, loadGenerateWorldFromChatSystemPrompt } from '$lib/fs/prompts';
+import {
+	loadWorldTemplate,
+	loadGenerateWorldFromChatPrompt,
+	loadGenerateWorldFromChatSystemPrompt,
+	loadGenerateWorldFromCardsPrompt,
+	loadGenerateWorldFromCardsSystemPrompt,
+} from '$lib/fs/prompts';
 import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
-import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED, ERR_NO_MESSAGES_FOR_WORLD } from '$lib/definitions/error-messages';
+import { worldContentHeader, actDescriptionHeader, characterHeader } from '$lib/definitions/common-headers';
+import { ls } from '$lib/localization';
+import {
+	ERR_API_KEY_AND_MODEL_NOT_CONFIGURED,
+	ERR_NO_AT_LEAST_ONE_CONTENT,
+	ERR_NO_MESSAGES_FOR_WORLD,
+} from '$lib/definitions/error-messages';
 
 /**
  * Trace back through the act line chain to collect the full message history.
@@ -99,4 +111,73 @@ export async function generateWorld(storyId: string, folderName: string, abortSi
 	await writeTextFile(worldPath, worldContent, { baseDir: BaseDirectory.AppData });
 
 	return worldContent;
+}
+
+export interface CardInput {
+	name: string;
+	content: string;
+}
+
+export async function generateWorldFromCards(
+	worldContent: string | null,
+	actCardContent: string | null,
+	characterCards: CardInput[],
+	folderName: string,
+	abortSignal?: AbortSignal
+): Promise<string> {
+	const config = getMainProviderConfig();
+
+	if (!config?.apiKey || !config?.model) {
+		throw new Error(ERR_API_KEY_AND_MODEL_NOT_CONFIGURED);
+	}
+
+	const [systemPrompt, generatePrompt, worldTemplate] = await Promise.all([
+		loadGenerateWorldFromCardsSystemPrompt(),
+		loadGenerateWorldFromCardsPrompt(),
+		loadWorldTemplate(),
+	]);
+
+	const userInstruction = generatePrompt + '\n\n' + worldTemplate;
+
+	const messages: MessageBase[] = [];
+
+	if (worldContent) {
+		messages.push({ role: 'user', content: `## ${worldContentHeader()}\n\n${worldContent}` });
+	}
+	if (actCardContent) {
+		messages.push({ role: 'user', content: `## ${actDescriptionHeader()}\n\n${actCardContent}` });
+	}
+	for (const card of characterCards) {
+		const name = card.name || ls('features.importWorld.description.unnamedCharacter');
+		messages.push({ role: 'user', content: `## ${characterHeader()}: ${name}\n\n${card.content}` });
+	}
+
+	if (messages.length === 0) {
+		throw new Error(ERR_NO_AT_LEAST_ONE_CONTENT);
+	}
+
+	messages.push({ role: 'user', content: userInstruction });
+
+	const model = createModel(config!);
+
+	const result = streamText({
+		model,
+		messages,
+		system: systemPrompt,
+		abortSignal,
+	});
+
+	const contentParts: string[] = [];
+	for await (const part of result.fullStream) {
+		if (part.type === 'text-delta') {
+			contentParts.push(part.text);
+		}
+	}
+
+	const generatedContent = contentParts.join('');
+
+	const worldPath = `${folderName}/world.md`;
+	await writeTextFile(worldPath, generatedContent, { baseDir: BaseDirectory.AppData });
+
+	return generatedContent;
 }

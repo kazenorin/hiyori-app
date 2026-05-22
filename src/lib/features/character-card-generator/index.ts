@@ -7,6 +7,7 @@ import {
 	loadCharacterCardExtractionSystemPrompt,
 	loadSummarizeCharactersInAct,
 	loadStorySystemPrompt,
+	loadGeneralInstructions,
 } from '$lib/fs/prompts';
 import { exportActLine } from '$lib/ai/act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
@@ -27,6 +28,8 @@ import {
 	characterCardGenerationInstruction,
 } from './extraction-prompts';
 import { ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT, ERR_NO_CHARACTERS_SELECTED } from '$lib/definitions/error-messages';
+import { nameLabel } from '$lib/definitions/common-labels';
+import { ls } from '$lib/localization';
 
 // === Types ===
 
@@ -328,16 +331,19 @@ export async function generateCharacterCard(
 	}
 
 	// Load prompts
-	const [template, extractionPrompt, extractionSystemPrompt, systemPrompt] = await Promise.all([
+	const [template, extractionPrompt, extractionSystemPrompt, generalInstructions] = await Promise.all([
 		loadCharacterCardTemplate(),
 		loadCharacterCardExtractionPrompt(),
 		loadCharacterCardExtractionSystemPrompt(),
-		loadStorySystemPrompt(story.id, story.name),
+		loadGeneralInstructions(),
 	]);
 
-	const combinedSystem = `${systemPrompt}\n\n---\n\n${extractionSystemPrompt}`;
+	const combinedSystem = `${extractionSystemPrompt}\n\n---\n\n${generalInstructions}`.replaceAll('{{character name}}', entry.character);
 	const namedExtractionPrompt = extractionPrompt.replaceAll('{{character name}}', entry.character);
-	const namedTemplate = template.replaceAll('{{character name}}', entry.character);
+	const namedTemplate = template
+		.replaceAll('{{coreIdentity}}', ls('features.characterCardGenerator.coreIdentity'))
+		.replaceAll('{{name}}', nameLabel())
+		.replaceAll('{{character name}}', entry.character);
 
 	// Load transcript and context
 	const allMessages = await getMessagesForLine(actLineId);

@@ -62,6 +62,8 @@ const characterProfileCompressorPrompt = new LocalizedPromptFile(promptDefaults,
 const worldTemplate = new LocalizedPromptFile(promptDefaults, 'world/world-template.md');
 const generateWorldFromChatPrompt = new LocalizedPromptFile(promptDefaults, 'world/generate-world-from-chat-prompt.md');
 const generateWorldFromChatSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/generate-world-from-chat-system-prompt.md');
+const generateWorldFromCardsPrompt = new LocalizedPromptFile(promptDefaults, 'world/generate-world-from-cards-prompt.md');
+const generateWorldFromCardsSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/generate-world-from-cards-system-prompt.md');
 const worldBuilderSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/world-builder-system-prompt.md');
 
 // Act
@@ -84,7 +86,6 @@ const characterCardExtractionSystemPrompt = new LocalizedPromptFile(promptDefaul
 const summarizeCharactersInAct = new LocalizedPromptFile(promptDefaults, 'character/summarize-characters-in-act.md');
 
 // Import
-const actGenerationPrompt = new LocalizedPromptFile(promptDefaults, 'import/act-generation-prompt.md');
 const choicesExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'import/choices-extraction-prompt.md');
 
 // Memories
@@ -118,6 +119,8 @@ export const loadCharacterProfileCompressorPrompt = (): Promise<string> => chara
 export const loadWorldTemplate = (): Promise<string> => worldTemplate.load();
 export const loadGenerateWorldFromChatPrompt = (): Promise<string> => generateWorldFromChatPrompt.load();
 export const loadGenerateWorldFromChatSystemPrompt = (): Promise<string> => generateWorldFromChatSystemPrompt.load();
+export const loadGenerateWorldFromCardsPrompt = (): Promise<string> => generateWorldFromCardsPrompt.load();
+export const loadGenerateWorldFromCardsSystemPrompt = (): Promise<string> => generateWorldFromCardsSystemPrompt.load();
 export const loadWorldBuilderSystemPrompt = (): Promise<string> => worldBuilderSystemPrompt.load();
 export const loadActCardTemplate = (): Promise<string> => actCardTemplate.load();
 export const loadActExtractionPrompt = (): Promise<string> => actExtractionPrompt.load();
@@ -137,7 +140,6 @@ export const loadCharacterCardTemplate = (): Promise<string> => characterCardTem
 export const loadCharacterCardExtractionPrompt = (): Promise<string> => characterCardExtractionPrompt.load();
 export const loadCharacterCardExtractionSystemPrompt = (): Promise<string> => characterCardExtractionSystemPrompt.load();
 export const loadSummarizeCharactersInAct = (): Promise<string> => summarizeCharactersInAct.load();
-export const loadActGenerationPrompt = (): Promise<string> => actGenerationPrompt.load();
 export const loadChoicesExtractionPrompt = (): Promise<string> => choicesExtractionPrompt.load();
 export const loadImportantPhrasesPrompt = (): Promise<string> => importantPhrasesPrompt.load();
 export const loadMemoryExtractionSystemPrompt = (): Promise<string> => memoryExtractionSystemPrompt.load();
@@ -162,9 +164,7 @@ export async function loadStoryPhaseEventPlotPlannerPrompt(storyId: string, stor
 }
 
 export function loadStoryPlotPlannerPromptForMode(storyId: string, storyName: string, mode: 'guidance' | 'phaseEvent'): Promise<string> {
-	return mode === 'phaseEvent'
-		? loadStoryPhaseEventPlotPlannerPrompt(storyId, storyName)
-		: loadStoryPlotPlannerPrompt(storyId, storyName);
+	return mode === 'phaseEvent' ? loadStoryPhaseEventPlotPlannerPrompt(storyId, storyName) : loadStoryPlotPlannerPrompt(storyId, storyName);
 }
 
 export async function loadStoryWriterPrompt(storyId: string, storyName: string): Promise<string> {
@@ -336,8 +336,9 @@ registerDefaults([
 	characterCardExtractionPrompt,
 	characterCardExtractionSystemPrompt,
 	summarizeCharactersInAct,
-	actGenerationPrompt,
 	choicesExtractionPrompt,
+	generateWorldFromCardsPrompt,
+	generateWorldFromCardsSystemPrompt,
 	importantPhrasesPrompt,
 	memoryExtractionSystemPrompt,
 	memoryExtractionPrompt,

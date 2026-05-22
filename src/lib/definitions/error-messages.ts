@@ -43,3 +43,4 @@ export const ERR_UNABLE_TO_DETECT_FORMAT = 'Unable to detect transcript format';
 // === World generator errors (user-facing) ===
 
 export const ERR_NO_MESSAGES_FOR_WORLD = 'No messages found in story to generate world from.';
+export const ERR_NO_AT_LEAST_ONE_CONTENT = 'At least one piece of content (world, act, or character) must be provided.';

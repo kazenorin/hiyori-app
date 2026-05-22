@@ -2,6 +2,7 @@
 
 import type { ImportFormData, ImportActInput, ValidationResult, ValidationError, ValidationWarning } from './types';
 import { MAX_FILE_SIZE } from '$lib/utils/async';
+import { ls } from '$lib/localization';
 
 export function validateImportForm(formData: ImportFormData): ValidationResult {
 	const errors: ValidationError[] = [];
@@ -11,7 +12,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	if (!formData.storyName.trim()) {
 		warnings.push({
 			field: 'storyName',
-			message: 'Story name is empty — a placeholder name will be auto-generated.',
+			message: ls('features.importWorld.validations.storyNameEmpty'),
 		});
 	}
 
@@ -19,17 +20,27 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	const hasWorldFile = formData.worldFile !== null;
 	const hasMultipleActs = formData.acts.length > 1;
 
-	// If no world file OR more than one act, every act must have file or transcript
-	if (!hasWorldFile || hasMultipleActs) {
-		for (const act of formData.acts) {
-			if (!act.actFile && !act.transcript) {
-				errors.push({
-					field: `act-${act.id}`,
-					message: hasMultipleActs
-						? 'Each act must have either an act/chapter file or a transcript when there are multiple acts.'
-						: 'Each act must have either an act/chapter file or a transcript when no world building file is provided.',
-				});
-			}
+	// All acts except the last must have a transcript
+	for (let i = 0; i < formData.acts.length - 1; i++) {
+		const act = formData.acts[i];
+		if (!act.transcript) {
+			errors.push({
+				field: `act-${act.id}`,
+				message: hasMultipleActs
+					? ls('features.importWorld.validations.actTranscriptRequired', { actNumber: i + 1 })
+					: ls('features.importWorld.validations.actTranscriptRequiredSingle'),
+			});
+		}
+	}
+
+	// The last act must have either a transcript or an act file (for the interview path)
+	if (formData.acts.length > 0) {
+		const lastAct = formData.acts[formData.acts.length - 1];
+		if (!lastAct.transcript && !lastAct.actFile && !hasWorldFile && formData.characters.every((c) => !c.cardFile)) {
+			errors.push({
+				field: `act-${lastAct.id}`,
+				message: ls('features.importWorld.validations.lastActRequiresContent'),
+			});
 		}
 	}
 
@@ -38,7 +49,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (!act.name.trim()) {
 			warnings.push({
 				field: `act-${act.id}-name`,
-				message: `Act ${formData.acts.indexOf(act) + 1} name is empty — a placeholder name will be auto-generated.`,
+				message: ls('features.importWorld.validations.actNameEmpty', { actNumber: formData.acts.indexOf(act) + 1 }),
 			});
 		}
 	}
@@ -48,7 +59,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (!character.cardFile) {
 			warnings.push({
 				field: `character-${character.id}`,
-				message: 'Character card file is missing — character will be skipped during import.',
+				message: ls('features.importWorld.validations.characterCardMissing'),
 			});
 		}
 	}
@@ -58,7 +69,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (character.cardFile && !character.name.trim()) {
 			warnings.push({
 				field: `character-${character.id}-name`,
-				message: 'Character name is empty — a name will be derived from the card content.',
+				message: ls('features.importWorld.validations.characterNameEmpty'),
 			});
 		}
 	}
@@ -67,20 +78,32 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	if (formData.worldFile && formData.worldFile.size > MAX_FILE_SIZE) {
 		errors.push({
 			field: 'worldFile',
-			message: `World file too large (${(formData.worldFile.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
+			message: ls('features.importWorld.validations.fileTooLarge', {
+				field: 'World file',
+				size: (formData.worldFile.size / 1024 / 1024).toFixed(1),
+				max: MAX_FILE_SIZE / 1024 / 1024,
+			}),
 		});
 	}
 	for (const act of formData.acts) {
 		if (act.actFile && act.actFile.size > MAX_FILE_SIZE) {
 			errors.push({
 				field: `act-${act.id}-file`,
-				message: `Act file too large (${(act.actFile.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
+				message: ls('features.importWorld.validations.fileTooLarge', {
+					field: 'Act file',
+					size: (act.actFile.size / 1024 / 1024).toFixed(1),
+					max: MAX_FILE_SIZE / 1024 / 1024,
+				}),
 			});
 		}
 		if (act.transcript && act.transcript.size > MAX_FILE_SIZE) {
 			errors.push({
 				field: `act-${act.id}-transcript`,
-				message: `Transcript file too large (${(act.transcript.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
+				message: ls('features.importWorld.validations.fileTooLarge', {
+					field: 'Transcript',
+					size: (act.transcript.size / 1024 / 1024).toFixed(1),
+					max: MAX_FILE_SIZE / 1024 / 1024,
+				}),
 			});
 		}
 	}
@@ -88,7 +111,11 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (character.cardFile && character.cardFile.size > MAX_FILE_SIZE) {
 			errors.push({
 				field: `character-${character.id}-file`,
-				message: `Character card too large (${(character.cardFile.size / 1024 / 1024).toFixed(1)}MB). Maximum is ${MAX_FILE_SIZE / 1024 / 1024}MB.`,
+				message: ls('features.importWorld.validations.fileTooLarge', {
+					field: 'Character card',
+					size: (character.cardFile.size / 1024 / 1024).toFixed(1),
+					max: MAX_FILE_SIZE / 1024 / 1024,
+				}),
 			});
 		}
 	}
@@ -97,7 +124,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	if (!hasWorldFile && formData.acts.length === 0 && formData.characters.length === 0) {
 		errors.push({
 			field: 'form',
-			message: 'At least a world building file, an act, or a character must be provided.',
+			message: ls('features.importWorld.validations.contentRequired'),
 		});
 	}
 
@@ -105,13 +132,13 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	if (formData.retryCount < 0 || formData.retryCount > 20) {
 		errors.push({
 			field: 'retryCount',
-			message: 'LLM Retry Count must be between 0 and 20.',
+			message: ls('features.importWorld.validations.retryCountRange'),
 		});
 	}
 	if (formData.backoffIntervalSeconds < 1 || formData.backoffIntervalSeconds > 60) {
 		errors.push({
 			field: 'backoffIntervalSeconds',
-			message: 'Backoff Interval must be between 1 and 60 seconds.',
+			message: ls('features.importWorld.validations.backoffIntervalRange'),
 		});
 	}
 
@@ -120,13 +147,13 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (act.actFile && !isValidTextFile(act.actFile)) {
 			errors.push({
 				field: `act-${act.id}-file`,
-				message: 'Act/chapter file must be a .md or .txt file.',
+				message: ls('features.importWorld.validations.fileMustBeMdOrTxt', { field: 'Act/chapter file' }),
 			});
 		}
 		if (act.transcript && !isValidJsonFile(act.transcript)) {
 			errors.push({
 				field: `act-${act.id}-transcript`,
-				message: 'Transcript file must be a .json file.',
+				message: ls('features.importWorld.validations.fileMustBeJson'),
 			});
 		}
 	}
@@ -136,7 +163,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (character.cardFile && !isValidTextFile(character.cardFile)) {
 			errors.push({
 				field: `character-${character.id}-file`,
-				message: 'Character card file must be a .md or .txt file.',
+				message: ls('features.importWorld.validations.fileMustBeMdOrTxt', { field: 'Character card file' }),
 			});
 		}
 	}
@@ -148,11 +175,17 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	};
 }
 
-export function hasRequiredActContent(act: ImportActInput, hasWorldFile: boolean, hasMultipleActs: boolean): boolean {
-	if (hasWorldFile && !hasMultipleActs) {
-		return true;
+export function hasRequiredActContent(
+	act: ImportActInput,
+	actIndex: number,
+	totalActs: number,
+	hasWorldFile: boolean,
+	hasCharacterCards: boolean
+): boolean {
+	if (actIndex < totalActs - 1) {
+		return act.transcript !== null;
 	}
-	return act.actFile !== null || act.transcript !== null;
+	return act.transcript !== null || act.actFile !== null || hasWorldFile || hasCharacterCards;
 }
 
 function isValidTextFile(file: File): boolean {

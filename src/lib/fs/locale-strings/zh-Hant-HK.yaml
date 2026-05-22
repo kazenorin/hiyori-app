@@ -2,15 +2,20 @@ common:
   labels:
     player: 玩家
     interviewer: 訪談者
-    sceneWithNumber: "場景 {sceneNumber}"
+    sceneWithNumber: '場景 {sceneNumber}'
     location: 地點
+    name: 姓名
     aliases: 別名
     lastUpdate: 最後更新
   headers:
     worldContent: 世界觀內容
     actPlot: 章節劇情
     actSummary: 章節摘要
+    actDescription: 章節描述
     currentScene: 目前場景
+    actInformation: 章節資訊
+    character: 角色
+    characters: 角色
     interviewTranscript: 訪談記錄
     playerResponse: 玩家回應
     scenePlot: 場景劇情
@@ -20,8 +25,8 @@ common:
     editorOutput: 編輯輸出
     gameMasterOutput: GM 輸出
     previousActSummary: 上一章節摘要
-    actSummaryForScenes: "章節摘要 {summarizedScenes}"
-    previousNarrativeBody: "場景 {completedScenes} 的敘事正文"
+    actSummaryForScenes: '章節摘要 {summarizedScenes}'
+    previousNarrativeBody: '場景 {completedScenes} 的敘事正文'
     sceneTitle: 場景標題
     background: 背景
     narrativeBody: 敘事正文
@@ -37,7 +42,7 @@ common:
     actPhase: 章節階段
   descriptions:
     interviewTranscript: 以下是有關此故事及設定的訪談內容。
-    directorNotes: "以下備註代表玩家的明確創作方向。它們凌駕於所有其他脈絡之上，包含章節劇情和章節摘要。請以最高優先順序遵循。"
+    directorNotes: '以下備註代表玩家的明確創作方向。它們凌駕於所有其他脈絡之上，包含章節劇情和章節摘要。請以最高優先順序遵循。'
 
 pipeline:
   headers:
@@ -46,21 +51,21 @@ pipeline:
     characterProfiles: 角色檔案
   extraction:
     gameMaster: 根據聊天記錄中的可用資訊，生成遊戲資料。
-    gmPhaseEventPhaseAdvancementTrigger: "- **判斷章節階段:** 若你認為故事已完成 {actPhase} 階段，請使用 `advance-phase` 工具精確一次來推進故事。"
+    gmPhaseEventPhaseAdvancementTrigger: '- **判斷章節階段:** 若你認為故事已完成 {actPhase} 階段，請使用 `advance-phase` 工具精確一次來推進故事。'
     editor: 根據審閱者輸出的建議，修改寫手輸出。請根據聊天記錄中的可用資訊，判斷這些建議是否有必要採納。
-    reviewer: "根據聊天記錄中的可用資訊，審閱寫手對場景 {currentScene} 的輸出。"
-    reviewerQuick: "快速審閱寫手對場景 {currentScene} 的輸出。僅略讀明顯錯誤——立即輸出審閱範本，不附帶推理過程。"
+    reviewer: '根據聊天記錄中的可用資訊，審閱寫手對場景 {currentScene} 的輸出。'
+    reviewerQuick: '快速審閱寫手對場景 {currentScene} 的輸出。僅略讀明顯錯誤——立即輸出審閱範本，不附帶推理過程。'
     writer:
       providedSummary: "\n- 場景 {summarizedScenes} 以前的事件摘要"
       providedTurnOfEvents: "\n- 劇情轉折指令"
       turnOfEventsReinforcementPhrase: "\n你也必須考慮可能使故事轉向不同方向的劇情轉折。"
       providedDirectorNotes: "\n- 導演備註"
-      directorNotesReinforcementPhrase: "**重要**: 導演已為即將到來的場景給出指示。你**必須**在撰寫時考慮，並遵循所給的方向或指示。"
+      directorNotesReinforcementPhrase: '**重要**: 導演已為即將到來的場景給出指示。你**必須**在撰寫時考慮，並遵循所給的方向或指示。'
     plotPlanner:
-      guidance: "目前場景為場景 {currentScene}。請根據聊天記錄中的可用資訊，為緊接的下一場景、近期的情節節奏 (可彈性處理) 以及中期目標 (可彈性處理) 規劃場景劇情。"
-      phaseEvent: "目前章節的故事階段為 {currentActPhase}。請根據聊天記錄中的可用資訊，規劃「階段事件」。"
-    summarizerFallback: "根據玩家回應，更新場景 {completedScenes} 的章節摘要。"
-    summarizer: "更新章節摘要，加入上一個場景的資訊: 「場景 {completedScenes}: {sceneTitle}」"
+      guidance: '目前場景為場景 {currentScene}。請根據聊天記錄中的可用資訊，為緊接的下一場景、近期的情節節奏 (可彈性處理) 以及中期目標 (可彈性處理) 規劃場景劇情。'
+      phaseEvent: '目前章節的故事階段為 {currentActPhase}。請根據聊天記錄中的可用資訊，規劃「階段事件」。'
+    summarizerFallback: '根據玩家回應，更新場景 {completedScenes} 的章節摘要。'
+    summarizer: '更新章節摘要，加入上一個場景的資訊: 「場景 {completedScenes}: {sceneTitle}」'
     editorTemplateFitter: >
       「編輯輸出」未符合所需的範本格式。請根據「寫手輸出範本」中所定義的區段標題重新調整結構，
       插入適當的標題而不更改任何內容。若內容缺少「場景標題」區段，請根據敘事生成一個簡短貼切的標題。
@@ -81,7 +86,7 @@ pipeline:
     goal: 目標
     relationships: 關係
     voice: 語氣
-    characterSummaries: "自場景 {sceneNumber} 以來每個角色的近期摘要。"
+    characterSummaries: '自場景 {sceneNumber} 以來每個角色的近期摘要。'
     actPhases:
       introduction: 鋪陳
       risingAction: 發展
@@ -91,10 +96,11 @@ pipeline:
 
 features:
   characterCardGenerator:
+    coreIdentity: 核心身份
     characterExtractionPrefix: |
       我需要你協助從目前的章節中擷取所有角色。
       {transcriptStart}
-    characterExtraction: "根據以下規則，從目前的章節中擷取所有角色: {rules}"
+    characterExtraction: '根據以下規則，從目前的章節中擷取所有角色: {rules}'
     characterCardGeneration: |
       根據聊天記錄中的資訊，按照以下規則生成新的角色卡:
       {extractionPrompt}
@@ -102,16 +108,16 @@ features:
       ---
 
       {template}
-    transcriptStart: "以下訊息將包含目前章節的文本記錄: "
-    transcriptEnd: "上一則訊息是目前章節文本記錄的結束。"
-    actCard: "以下訊息包含第 {actNumber} 章的章節卡"
-    characterCard: "以下訊息包含 {characterName} 在第 {actNumber} 章的舊角色卡"
+    transcriptStart: '以下訊息將包含目前章節的文本記錄: '
+    transcriptEnd: '上一則訊息是目前章節文本記錄的結束。'
+    actCard: '以下訊息包含第 {actNumber} 章的章節卡'
+    characterCard: '以下訊息包含 {characterName} 在第 {actNumber} 章的舊角色卡'
   actCardGenerator:
-    transcriptStart: "以下訊息將包含目前章節的文本記錄: "
-    transcriptEnd: "上一則訊息是目前章節文本記錄的結束。下一則訊息將包含章節卡範本: "
-    worldContext: "世界觀設定基於以下內容: "
+    transcriptStart: '以下訊息將包含目前章節的文本記錄: '
+    transcriptEnd: '上一則訊息是目前章節文本記錄的結束。下一則訊息將包含章節卡範本: '
+    worldContext: '世界觀設定基於以下內容: '
   worldBuilder:
-    worldBuilderSeed: "我想創作一個新故事。請協助我構建世界觀。"
+    worldBuilderSeed: '我想創作一個新故事。請協助我構建世界觀。'
     resumeStoryActPrefix: |
       根據以下最新的故事脈絡，繼續遊戲前的訪談。
 
@@ -126,77 +132,30 @@ features:
 
       從這裡自然地繼續訪談對話，協助玩家釐清他們接下來想要的內容。
   importWorld:
-    labels:
-      worldCard: "以下訊息是一份世界觀設定卡。"
-      actCard: "以下訊息是描述該章節事件的章節卡。"
-      characterCard: "以下訊息是 {name} 的角色卡。"
-      characterNamePlaceholder: "故事中的某個角色"
-    instructions:
-      actGeneration: |
-        請嚴格根據上述設定和資訊生成故事。
-        你的首要任務是: (1) 忠於原始素材、(2) 保持角色塑造與語調的一致性、(3) 清晰的場景結構。
-
-        確保所有角色的行為和對話都與其既定的性格、動機和關係一致。
-        在整個故事中保持指定的語調 (例如寫實暗黑、奇幻輕快等) 。
-        以散文格式呈現故事，分為清晰的場景，而非劇本或對話腳本。
-
-        僅在流暢度或真實感必要時才可加入少量原創細節，且必須支持而非改變已有的世界觀或角色邏輯。
-
-        每個場景應聚焦於一個重要的敘事事件或情感轉折。
-        各場景的長度和細節應大致相仿 (約 300–500 字) ，並充分描述該事件後再繼續。
-        除場景 1 外，每個場景開頭應有簡短的過渡，以合邏輯地銜接上一刻。
-        每個場景的結尾應有收束感或引向下一場景的伏筆。
-
-        重要: 請使用 Markdown 標題來區分不同的場景。
-        使用 ## 場景、### 場景 X 或類似的標題層級來標記每個新場景的開始。
-
-        格式範例:
-        ## 場景 1: [場景標題]
-        [故事內容...]
-
-        ## 場景 2: [場景標題]
-        [故事內容...]
-
-        ## 場景 3: [場景標題]
-        [故事內容...]
-
-        每個場景應為一段完整的敘述，有明確的開頭和結尾。
-      sceneExtractionFirst: |
-        你將使用下方提供的敘事範本來改寫以下場景。
-        你的主要目標是**以附合敘事風格的方式，將場景套入已設定的敘事範本**，同時保留所有重要的內容和角色行動。
-
-        請套用範本中所示相同的敘事風格、結構和格式慣例。
-        適當地加入生動的感官描寫、角色對話、內心思緒和環境更新，以提升流暢度和沉浸感。
-        請勿遺漏關鍵故事細節，也不要添加超出流暢過渡和自然節奏所需的新劇情元素。
-
-        僅呈現改寫後的場景——不要在故事輸出之外加入解釋、備註或評論。
-
-        ---敘事範本---
-        {narrationTemplate}
-
-        ---場景內容---
-        {sceneContent}
-      sceneExtractionContinuation: |
-        以下是本章先前場景的內容供參考:
-        ---先前場景---
-        {previousScenes}
-
-        你將使用下方提供的敘事範本來改寫下一個場景。
-        你的主要目標是**忠實套用敘事範本，同時在語調、節奏和風格上與先前場景保持完全一致**。
-
-        從先前場景的結尾處自然地延續故事，確保劇情、角色行動和情感流動的邏輯連貫性。
-        保留原始場景的所有關鍵內容; 僅在真實感或敘事連貫性需要時才添加少量的描寫或過渡細節。
-
-        請套用與範本相同的敘事風格、結構和格式慣例。
-        請勿重述或摘要先前場景——僅專注於改寫當前場景，作為持續敘事的一部分。
-
-        僅呈現改寫後的場景——不要在故事輸出之外加入解釋、備註或評論。
-
-        ---敘事範本---
-        {narrationTemplate}
-
-        ---場景內容---
-        {sceneContent}
+    messages:
+      importCompleteWithInterview: '匯入完成！正在啟動訪談...'
+      importComplete: '匯入完成！'
+      importCompletedSuccessfully: '匯入已成功完成。'
+      importFailed: '匯入失敗'
+      processingAct: '正在處理章節 {actNumber}...'
+      detectingGameData: '正在偵測 {count} 則訊息的遊戲資料...'
+      generatingGameData: '正在生成遊戲資料[{index}]...'
+    validations:
+      actTranscriptRequired: '章節 {actNumber} 必須提供對話記錄。僅最後一個章節可以不提供。'
+      actTranscriptRequiredSingle: '除最後一個章節外，每個章節都必須提供對話記錄。'
+      lastActRequiresContent: '沒有對話記錄的最後一個章節，至少需要世界觀文件、章節文件或角色卡才能繼續。'
+      fileTooLarge: '{field} 檔案過大 ({size}MB)。上限為 {max}MB。'
+      contentRequired: '至少需要提供世界觀文件、一個章節或一個角色。'
+      retryCountRange: 'LLM 重試次數必須介於 0 到 20 之間。'
+      backoffIntervalRange: '退避間隔必須介於 1 到 60 秒之間。'
+      fileMustBeMdOrTxt: '{field} 必須是 .md 或 .txt 檔案。'
+      fileMustBeJson: '對話記錄檔案必須是 .json 檔案。'
+      storyNameEmpty: '故事名稱為空——將自動生成佔位名稱。'
+      actNameEmpty: '章節 {actNumber} 名稱為空——將自動生成佔位名稱。'
+      characterCardMissing: '角色卡檔案缺失——角色將在匯入時被跳過。'
+      characterNameEmpty: '角色名稱為空——將從卡片內容推導名稱。'
+    description:
+      unnamedCharacter: '故事中的某個角色'
 
 tools:
   evaluateRisk:
@@ -204,11 +163,11 @@ tools:
       透過擲骰來評估帶有風險的行動的結果。風險等級越高，壞結果的機率越大。
       用於判斷帶有風險的行動是成功、混合結果還是失敗。
     parameters:
-      riskLevel: "冒險程度 (1 = 最低風險，10 = 最高風險) "
+      riskLevel: '冒險程度 (1 = 最低風險，10 = 最高風險) '
     messages:
-      outcomeBad: "行動導致了壞結果。"
-      outcomeNeutral: "行動導致了中性結果。"
-      outcomeGood: "行動導致了好結果。"
+      outcomeBad: '行動導致了壞結果。'
+      outcomeNeutral: '行動導致了中性結果。'
+      outcomeGood: '行動導致了好結果。'
   queryMemories:
     description: >
       搜尋遊戲的記憶資料庫，以喚回過去的事件、去過的地點或角色互動。
@@ -221,7 +180,7 @@ tools:
       timeAndLocation: >
         簡短描述地點或時間 (例如「酒館」、「森林的清晨」) 。
         若省略，將回傳指定角色的記憶。
-      currentActOnly: "若為 true，僅搜尋目前章節的近期記憶。設為 false 可擷取過往章節的長期設定或事件。"
+      currentActOnly: '若為 true，僅搜尋目前章節的近期記憶。設為 false 可擷取過往章節的長期設定或事件。'
   queryInventory:
     description: |
       查看角色目前物品欄中的內容。回傳物品、裝備、技能、服裝和狀態效果，並標示裝備狀態 (已裝備/已揮舞 vs 隨身攜帶/已擁有) 。
@@ -232,25 +191,25 @@ tools:
 
       設 includeHistory 為 true 可同時查看角色的物品欄變更事件記錄 (獲得、失去、裝備、卸下、使用、修改) 。
     parameters:
-      characterName: "角色名稱 (正規名稱或別名) "
-      itemCategory: "選填篩選條件，僅回傳指定類別"
-      includeHistory: "若為 true，同時回傳物品欄變更事件歷史"
+      characterName: '角色名稱 (正規名稱或別名) '
+      itemCategory: '選填篩選條件，僅回傳指定類別'
+      includeHistory: '若為 true，同時回傳物品欄變更事件歷史'
   readActPlot:
     description: >
       閱讀目前章節的章節劇情文件。章節劇情包含故事已規劃的結構: 前提、目標場景數、
       主要高潮事件、可能的結局、敘事風格和呈現備註。
       使用此工具來了解已規劃的敘事走向，並依此引導故事發展。
     messages:
-      noActPlot: "此章節尚未生成章節劇情。"
+      noActPlot: '此章節尚未生成章節劇情。'
   advancePhase:
     description: >
       將故事推進至下一個敘事階段 (例如: {introduction} → {risingAction} → {climax} → {fallingAction} → {resolution}) 。
       此動作標誌著故事弧線的重大轉折，將於下一回合生效。
       每個場景只能使用一次。故事已達結局階段後無法再使用。
     messages:
-      alreadyAdvanced: "此場景已推進過階段，將於下一回合生效。"
-      success: "階段已從 {current} 推進至 {next}，將於下一回合生效。"
-      terminalPhase: "無法再推進——故事已達結局階段。"
+      alreadyAdvanced: '此場景已推進過階段，將於下一回合生效。'
+      success: '階段已從 {current} 推進至 {next}，將於下一回合生效。'
+      terminalPhase: '無法再推進——故事已達結局階段。'
   readScene:
     description: >
       閱讀目前章節中所指定的場景的內容。回傳指定場景編號的敘事正文 (AI 回應) 和玩家回應，
@@ -259,7 +218,7 @@ tools:
       sceneBody: 場景正文
       playerResponse: 玩家回應
     messages:
-      noSceneFound: "找不到場景編號為 {sceneNumber} 的場景。"
-      sceneNoContent: "場景 {sceneNumber} 存在但不包含可讀取的內容。"
+      noSceneFound: '找不到場景編號為 {sceneNumber} 的場景。'
+      sceneNoContent: '場景 {sceneNumber} 存在但不包含可讀取的內容。'
     parameters:
-      sceneNumber: "要閱讀的場景編號 (從 1 開始) "
+      sceneNumber: '要閱讀的場景編號 (從 1 開始) '

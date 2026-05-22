@@ -83,10 +83,17 @@ export interface ImportResult {
 	success: boolean;
 	storyId?: string;
 	actId?: string;
+	lastActId?: string;
 	actLineId?: string;
 	error?: string;
 	warnings: string[];
 	importComplete?: boolean;
+	needsInterview?: boolean;
+	worldContent?: string;
+	interviewContext?: {
+		actCard: string | null;
+		characterCards: { name: string; content: string }[];
+	};
 }
 
 export interface ImportProgressUpdate {
@@ -101,8 +108,7 @@ export type ImportPhase =
 	| 'validating'
 	| 'creating-story'
 	| 'processing-act'
-	| 'generating-act'
-	| 'formatting-act'
+	| 'generating-world'
 	| 'generating-game-data'
 	| 'saving-messages'
 	| 'finalizing'

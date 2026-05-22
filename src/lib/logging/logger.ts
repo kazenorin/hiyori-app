@@ -16,22 +16,28 @@ export async function initLogging(): Promise<void> {
 	}
 }
 
+function safeLog(fn: (msg: string) => Promise<void>, level: string, msg: string): Promise<void> {
+	return fn(msg).catch(() => {
+		console.log(`[${level}] ${msg}`);
+	});
+}
+
 export const log = {
 	info(context: string, message: string): Promise<void> {
-		return tauriInfo(`[${context}] ${message}`);
+		return safeLog(tauriInfo, 'info', `[${context}] ${message}`);
 	},
 
 	error(context: string, message: string, err?: unknown): Promise<void> {
 		const detail = `${message}: ${parseErrorMessage(err)}`;
-		return tauriError(`[${context}] ${detail}`);
+		return safeLog(tauriError, 'error', `[${context}] ${detail}`);
 	},
 
 	warn(context: string, message: string): Promise<void> {
-		return tauriWarn(`[${context}] ${message}`);
+		return safeLog(tauriWarn, 'warn', `[${context}] ${message}`);
 	},
 
 	debug(context: string, message: string): Promise<void> {
-		return tauriDebug(`[${context}] ${message}`);
+		return safeLog(tauriDebug, 'debug', `[${context}] ${message}`);
 	},
 };
 

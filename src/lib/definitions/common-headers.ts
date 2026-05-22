@@ -30,6 +30,10 @@ export const summaryHeader = () => ls('common.headers.summary');
 export const templateHeader = () => ls('common.headers.template');
 export const directorNotesHeader = () => ls('common.headers.directorNotes');
 export const actPhaseHeader = () => ls('common.headers.actPhase');
+export const actInformationHeader = () => ls('common.headers.actInformation');
+export const charactersHeader = () => ls('common.headers.characters');
+export const characterHeader = () => ls('common.headers.character');
+export const actDescriptionHeader = () => ls('common.headers.actDescription');
 
 export function sectionFormat(text: string, headerLevel: number = 2): string {
 	return `${'#'.repeat(headerLevel)} ${text}\n\n`;

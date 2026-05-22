@@ -82,7 +82,7 @@ describe('validateImportForm', () => {
 	});
 
 	describe('act validation', () => {
-		it('requires acts to have content when no world file', () => {
+		it('errors when single act has no content and no world file', () => {
 			const result = validateImportForm(
 				makeFormData({
 					acts: [makeAct()],
@@ -92,7 +92,17 @@ describe('validateImportForm', () => {
 			expect(result.errors.some((e) => e.field.startsWith('act-'))).toBe(true);
 		});
 
-		it('requires acts to have content when multiple acts', () => {
+		it('passes when single act has no content but world file is present', () => {
+			const result = validateImportForm(
+				makeFormData({
+					worldFile: createFile('world.md'),
+					acts: [makeAct()],
+				})
+			);
+			expect(result.isValid).toBe(true);
+		});
+
+		it('errors when earlier acts lack transcripts', () => {
 			const result = validateImportForm(
 				makeFormData({
 					worldFile: createFile('world.md'),
@@ -100,13 +110,13 @@ describe('validateImportForm', () => {
 				})
 			);
 			expect(result.isValid).toBe(false);
+			expect(result.errors.some((e) => e.message.includes('actTranscriptRequired'))).toBe(true);
 		});
 
-		it('acts are optional when world file is present and single act', () => {
+		it('passes when all acts except last have transcripts', () => {
 			const result = validateImportForm(
 				makeFormData({
-					worldFile: createFile('world.md'),
-					acts: [makeAct()],
+					acts: [makeAct({ transcript: createJsonFile('t1.json') }), makeAct({ actFile: createFile('act2.md') })],
 				})
 			);
 			expect(result.isValid).toBe(true);
@@ -120,7 +130,7 @@ describe('validateImportForm', () => {
 				})
 			);
 			expect(result.isValid).toBe(false);
-			expect(result.errors.some((e) => e.message.includes('.md or .txt'))).toBe(true);
+			expect(result.errors.some((e) => e.message.includes('fileMustBeMdOrTxt'))).toBe(true);
 		});
 
 		it('validates transcript file type', () => {
@@ -131,7 +141,7 @@ describe('validateImportForm', () => {
 				})
 			);
 			expect(result.isValid).toBe(false);
-			expect(result.errors.some((e) => e.message.includes('.json'))).toBe(true);
+			expect(result.errors.some((e) => e.message.includes('fileMustBeJson'))).toBe(true);
 		});
 
 		it('accepts valid act file types', () => {
@@ -162,7 +172,7 @@ describe('validateImportForm', () => {
 				})
 			);
 			expect(result.isValid).toBe(true);
-			expect(result.warnings.some((w) => w.message.includes('Character card file is missing'))).toBe(true);
+			expect(result.warnings.some((w) => w.message.includes('characterCardMissing'))).toBe(true);
 		});
 
 		it('passes when character card is provided', () => {
@@ -183,7 +193,7 @@ describe('validateImportForm', () => {
 				})
 			);
 			expect(result.isValid).toBe(false);
-			expect(result.errors.some((e) => e.message.includes('.md or .txt'))).toBe(true);
+			expect(result.errors.some((e) => e.message.includes('fileMustBeMdOrTxt'))).toBe(true);
 		});
 	});
 
@@ -230,23 +240,31 @@ describe('validateImportForm', () => {
 });
 
 describe('hasRequiredActContent', () => {
-	it('returns true when world file present and single act', () => {
-		expect(hasRequiredActContent(makeAct(), true, false)).toBe(true);
+	it('returns true for last act with world file present', () => {
+		expect(hasRequiredActContent(makeAct(), 0, 1, true, false)).toBe(true);
 	});
 
-	it('returns false when no world file and act has no content', () => {
-		expect(hasRequiredActContent(makeAct(), false, false)).toBe(false);
+	it('returns false for last act with no world file, no content, no characters', () => {
+		expect(hasRequiredActContent(makeAct(), 0, 1, false, false)).toBe(false);
 	});
 
-	it('returns true when act has file', () => {
-		expect(hasRequiredActContent(makeAct({ actFile: createFile('act.md') }), false, false)).toBe(true);
+	it('returns true for last act with act file', () => {
+		expect(hasRequiredActContent(makeAct({ actFile: createFile('act.md') }), 0, 1, false, false)).toBe(true);
 	});
 
-	it('returns true when act has transcript', () => {
-		expect(hasRequiredActContent(makeAct({ transcript: createJsonFile('t.json') }), false, false)).toBe(true);
+	it('returns true for last act with transcript', () => {
+		expect(hasRequiredActContent(makeAct({ transcript: createJsonFile('t.json') }), 0, 1, false, false)).toBe(true);
 	});
 
-	it('returns false when multiple acts and no content', () => {
-		expect(hasRequiredActContent(makeAct(), true, true)).toBe(false);
+	it('returns true for last act with character cards', () => {
+		expect(hasRequiredActContent(makeAct(), 0, 1, false, true)).toBe(true);
+	});
+
+	it('returns false for non-last act without transcript', () => {
+		expect(hasRequiredActContent(makeAct(), 0, 2, true, false)).toBe(false);
+	});
+
+	it('returns true for non-last act with transcript', () => {
+		expect(hasRequiredActContent(makeAct({ transcript: createJsonFile('t.json') }), 0, 2, true, false)).toBe(true);
 	});
 });

@@ -1,5 +1,7 @@
 import { getMainProviderConfig, type ProviderConfig } from '$lib/stores/settings.svelte';
 import { worldBuilderSeed, resumeStoryActPrefix, resumeStoryActSuffix } from '$lib/features/world-builder/prompts';
+import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
+import { actInformationHeader, charactersHeader, currentSceneHeader } from '$lib/definitions/common-headers';
 import {
 	loadWorldBuilderSystemPrompt,
 	loadWorldTemplate,
@@ -14,6 +16,7 @@ import { streamChatResponse } from '$lib/ai/chat-stream';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
 import type { MessageBase } from '$lib/db/messages';
+import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 
 export interface WorldBuilderMessage {
 	id: string;
@@ -29,8 +32,6 @@ export interface ForkInterviewContext {
 }
 
 const COMPLETION_MARKER = '[WORLD_BUILDER_COMPLETE]';
-const SCENE_HEADER = `# Scene`;
-const CURRENT_SCENE = `Current Scene`;
 
 const seedMsg = () => ({ role: 'user' as const, content: worldBuilderSeed() });
 
@@ -168,10 +169,16 @@ export async function enterWorldBuilderMode(): Promise<void> {
 	await streamNextResponse();
 }
 
+export interface InterviewAdditionalContext {
+	actCard?: string;
+	characterCards?: { name: string; content: string }[];
+}
+
 export async function enterActPlotInterviewMode(
 	actLineId: string,
 	worldContent: string,
-	forkContext?: ForkInterviewContext
+	forkContext?: ForkInterviewContext,
+	additionalContext?: InterviewAdditionalContext
 ): Promise<void> {
 	// Reset world builder state but keep isActive true
 	resetState();
@@ -193,6 +200,16 @@ export async function enterActPlotInterviewMode(
 	// Build hidden context (invisible to user, sent to LLM every turn)
 	interviewHiddenContext = [{ role: 'user', content: interviewPrompt.replace('{worldContent}', worldContent) }];
 
+	if (additionalContext) {
+		if (additionalContext.actCard) {
+			interviewHiddenContext.push({ role: 'user', content: `## ${actInformationHeader()}\n\n${additionalContext.actCard}` });
+		}
+		if (additionalContext.characterCards && additionalContext.characterCards.length > 0) {
+			const cardsContent = additionalContext.characterCards.map((c) => `### ${c.name}\n\n${c.content}`).join('\n\n');
+			interviewHiddenContext.push({ role: 'user', content: `## ${charactersHeader()}\n\n${cardsContent}` });
+		}
+	}
+
 	// When forking, include act summary so the interview
 	// LLM knows the story state prior to the fork point
 	if (forkContext) {
@@ -206,9 +223,8 @@ export async function enterActPlotInterviewMode(
 				sections.push(`\n\n${forkContext.actSummary}`);
 			}
 			if (hasSceneContext) {
-				sections.push(
-					`\n\n${SCENE_HEADER} ${forkContext.sceneNumber}: ${forkContext.sceneTitle} *(${CURRENT_SCENE})*\n\n${forkContext.narrativeBody}`
-				);
+				const sceneLabel = sceneWithNumberLabel(forkContext.sceneNumber);
+				sections.push(`\n\n${sceneLabel}: ${forkContext.sceneTitle} *(${currentSceneHeader()})*\n\n${forkContext.narrativeBody}`);
 			}
 
 			sections.push(resumeStoryActSuffix());
@@ -274,7 +290,7 @@ export async function deleteLastWorldBuilderExchange(): Promise<void> {
 async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<void> {
 	const providerConfig = getMainProviderConfig();
 	if (!providerConfig?.apiKey || !providerConfig?.model) {
-		error = 'Please configure your API key and model in Settings.';
+		error = ERR_API_KEY_AND_MODEL_NOT_CONFIGURED;
 		return;
 	}
 

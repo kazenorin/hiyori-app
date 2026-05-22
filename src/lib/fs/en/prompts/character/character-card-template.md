@@ -2,13 +2,13 @@
 
 ## Source
 
-- Based on: {{story title / interview / notes}}
-- Extraction mode: {{strict extraction | light inference | creative completion}}
-- Confidence note: {{high / medium / low}}
+- Based on: [ story title / interview / notes ]
+- Extraction mode: [ strict extraction | light inference | creative completion ]
+- Confidence note: [ high / medium / low ]
 
-## Core Identity
+## {{coreIdentity}}
 
-- Name:
+- {{name}}: {{character name}}
 - Aliases / nicknames:
 - Age:
 - Gender / identity:
@@ -24,7 +24,7 @@ A concise sentence describing who this character is and why they matter.
 
 ## Role in Story
 
-- Narrative role: {{protagonist / antagonist / deuteragonist / supporting / side character}}
+- Narrative role: [ protagonist / antagonist / deuteragonist / supporting / side character ]
 - Function in plot:
 - What changes if this character is removed from the story?
 
@@ -37,7 +37,7 @@ A concise sentence describing who this character is and why they matter.
 - Clothing style:
 - Distinguishing marks / accessories:
 - Usual posture / movement:
-- Sensory impression: {{how they seem at first glance}}
+- Sensory impression: [ how they seem at first glance ]
 
 ## Personality
 
@@ -99,9 +99,9 @@ A concise sentence describing who this character is and why they matter.
 
 ### Important people
 
-- {{name}} — {{relationship}}, {{dynamic}}, {{tension}}
-- {{name}} — {{relationship}}, {{dynamic}}, {{tension}}
-- {{name}} — {{relationship}}, {{dynamic}}, {{tension}}
+- [ name ] — [ relationship ], [ dynamic ], [ tension ]
+- [ name ] — [ relationship ], [ dynamic ], [ tension ]
+- [ name ] — [ relationship ], [ dynamic ], [ tension ]
 
 ### Group dynamics
 
@@ -126,11 +126,11 @@ A concise sentence describing who this character is and why they matter.
 
 ## Dialogue Examples
 
-> "{{short example line 1}}"
+> "[ short example line 1 ]"
 
-> "{{short example line 2}}"
+> "[ short example line 2 ]"
 
-> "{{short example line 3}}"
+> "[ short example line 3 ]"
 
 ## Behavior in Scenes
 
@@ -158,4 +158,4 @@ A concise sentence describing who this character is and why they matter.
 ## Short Writing Cue
 
 Write this character as:
-{{2-4 sentences telling the LLM how to portray them consistently}}
+[ 2-4 sentences telling the LLM how to portray them consistently ]

@@ -2,15 +2,20 @@ common:
   labels:
     player: Player
     interviewer: Interviewer
-    sceneWithNumber: "Scene {sceneNumber}"
+    sceneWithNumber: 'Scene {sceneNumber}'
     location: Location
+    name: Name
     aliases: Aliases
     lastUpdate: Last update
   headers:
     worldContent: World Content
     actPlot: Act Plot
     actSummary: Act Summary
+    actDescription: Act Description
     currentScene: Current Scene
+    actInformation: Act Information
+    character: Character
+    characters: Characters
     interviewTranscript: Interview Transcript
     playerResponse: Player Response
     scenePlot: Scene Plot
@@ -20,8 +25,8 @@ common:
     editorOutput: Editor Output
     gameMasterOutput: Game Master Output
     previousActSummary: Previous Act Summary
-    actSummaryForScenes: "Act Summary {summarizedScenes}"
-    previousNarrativeBody: "Narrative Body for Scene {completedScenes}"
+    actSummaryForScenes: 'Act Summary {summarizedScenes}'
+    previousNarrativeBody: 'Narrative Body for Scene {completedScenes}'
     sceneTitle: Scene title
     background: Background
     narrativeBody: Narrative Body
@@ -46,7 +51,7 @@ pipeline:
     characterProfiles: Character Profiles
   extraction:
     gameMaster: Generate the game data based on the available information in the chat history.
-    gmPhaseEventPhaseAdvancementTrigger: "- **Determine Act Phase**: If you believe the story has completed the {actPhase} Phase, use the `advance-phase` tool exactly once to move the story forward."
+    gmPhaseEventPhaseAdvancementTrigger: '- **Determine Act Phase**: If you believe the story has completed the {actPhase} Phase, use the `advance-phase` tool exactly once to move the story forward.'
     editor: Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history.
     reviewer: "Perform a review on the writer's output for Scene {currentScene} based on the available information in the chat history."
     reviewerQuick: "Quick-review the writer's output for Scene {currentScene}. Skim for glaring errors only — output the review template immediately with no reasoning."
@@ -55,12 +60,12 @@ pipeline:
       providedTurnOfEvents: "\n- the Turn Of Events instructions"
       turnOfEventsReinforcementPhrase: "\nYou must also consider the Turn Of Events that may drive the story to a different direction."
       providedDirectorNotes: "\n- the Director's Notes"
-      directorNotesReinforcementPhrase: "**Important**: The Director has given directions for the upcoming scene. You **MUST** consider it when writing, and follow the directions or instructions given."
+      directorNotesReinforcementPhrase: '**Important**: The Director has given directions for the upcoming scene. You **MUST** consider it when writing, and follow the directions or instructions given.'
     plotPlanner:
-      guidance: "The current scene is Scene {currentScene}. Plan a Scene Plot for the Immediate Next Scene, Near-Term Beat (Flexible), and Mid-Term Goal (Flexible) based on the available information in the chat history."
-      phaseEvent: "The current story phase of the act is {currentActPhase}. Plan the \"Phase Events\" based on the available information in the chat history."
-    summarizerFallback: "Update the Act Summary for Scene {completedScenes} based on the Player Response."
-    summarizer: "Update the Act Summary adding information for the previous scene: \"Scene {completedScenes}: {sceneTitle}\""
+      guidance: 'The current scene is Scene {currentScene}. Plan a Scene Plot for the Immediate Next Scene, Near-Term Beat (Flexible), and Mid-Term Goal (Flexible) based on the available information in the chat history.'
+      phaseEvent: 'The current story phase of the act is {currentActPhase}. Plan the "Phase Events" based on the available information in the chat history.'
+    summarizerFallback: 'Update the Act Summary for Scene {completedScenes} based on the Player Response.'
+    summarizer: 'Update the Act Summary adding information for the previous scene: "Scene {completedScenes}: {sceneTitle}"'
     editorTemplateFitter: >
       The "Editor Output" does not follow the required template format. Restructure it to match the Writer Output Template
       by inserting the appropriate section headers defined by "Writer Output Template" without changing any content.
@@ -83,7 +88,7 @@ pipeline:
     goal: Goal
     relationships: Relationships
     voice: Voice
-    characterSummaries: "Summaries of each character for recent Scenes since Scene {sceneNumber}."
+    characterSummaries: 'Summaries of each character for recent Scenes since Scene {sceneNumber}.'
     actPhases:
       introduction: Introduction
       risingAction: Rising Action
@@ -93,10 +98,11 @@ pipeline:
 
 features:
   characterCardGenerator:
+    coreIdentity: Core Identity
     characterExtractionPrefix: |
       I need your help to extract all the characters from the current act.
       {transcriptStart}
-    characterExtraction: "Extract all the characters from the current act according to the following rules: {rules}"
+    characterExtraction: 'Extract all the characters from the current act according to the following rules: {rules}'
     characterCardGeneration: |
       Based on the information from the chat history, generate a new Character Card according to the following rules:
       {extractionPrompt}
@@ -104,16 +110,16 @@ features:
       ---
 
       {template}
-    transcriptStart: "The following messages will contain the transcript of the current act:"
-    transcriptEnd: "The previous message was the end of the transcript of the current act."
-    actCard: "The following message contains the Act Card from Act {actNumber}"
-    characterCard: "The following message contains the previous Character Card of {characterName} from Act {actNumber}"
+    transcriptStart: 'The following messages will contain the transcript of the current act:'
+    transcriptEnd: 'The previous message was the end of the transcript of the current act.'
+    actCard: 'The following message contains the Act Card from Act {actNumber}'
+    characterCard: 'The following message contains the previous Character Card of {characterName} from Act {actNumber}'
   actCardGenerator:
-    transcriptStart: "The following messages will contain the transcript of the current act:"
-    transcriptEnd: "The previous message was the end of the transcript of the current act. The following message will contain the Act Card template:"
-    worldContext: "The world setting is based on the following:"
+    transcriptStart: 'The following messages will contain the transcript of the current act:'
+    transcriptEnd: 'The previous message was the end of the transcript of the current act. The following message will contain the Act Card template:'
+    worldContext: 'The world setting is based on the following:'
   worldBuilder:
-    worldBuilderSeed: "I want to create a new story. Please help me build a world."
+    worldBuilderSeed: 'I want to create a new story. Please help me build a world.'
     resumeStoryActPrefix: |
       Continue the pre-game interview based on the latest story context below.
 
@@ -128,77 +134,30 @@ features:
 
       Resume the interview conversation naturally from here, helping the player refine what they want next.
   importWorld:
-    labels:
-      worldCard: "The following message is a world building settings card."
-      actCard: "The following message is an act card describing the events of the act."
-      characterCard: "The following message is a character card for {name}."
-      characterNamePlaceholder: "a character in the story"
-    instructions:
-      actGeneration: |
-        Generate a story based strictly on the settings and information provided above.
-        Your top priorities are: (1) accuracy to source material, (2) consistency in character portrayal and tone, and (3) clear scene-based structure.
-
-        Ensure all characters act and speak consistently with their established personalities, motivations, and relationships.
-        Maintain the specified tone (e.g., gritty realism, whimsical fantasy, etc.) throughout the story.
-        Present the story in prose format divided into clear scenes, not as a screenplay or dialogue script.
-
-        You may introduce small original details only when necessary for flow or realism, and only if they support rather than alter the existing lore or character logic.
-
-        Each scene should focus on one significant narrative event or emotional turning point.
-        Scenes should be comparable in length and detail (roughly 300–500 words each), detailed enough to cover the event fully before moving on.
-        Begin each scene with a short transition (except Scene 1) to connect it logically to the previous moment.
-        End each scene with a sense of resolution or a hook leading into the next.
-
-        IMPORTANT: Structure your response using markdown headers to separate distinct scenes.
-        Use ## Scene, ### Scene X, or similar header levels to mark the beginning of each new scene.
-
-        Example format:
-        ## Scene 1: [Scene Title]
-        [Story content...]
-
-        ## Scene 2: [Scene Title]
-        [Story content...]
-
-        ## Scene 3: [Scene Title]
-        [Story content...]
-
-        Each scene should be a self-contained segment with a clear beginning and end.
-      sceneExtractionFirst: |
-        You will rewrite the following scene using the narration template provided below.
-        Your primary goal is to **fit the scene into the given narration template and style**, preserving all essential content and character actions from the original scene.
-
-        Apply the same narrative style, structure, and formatting conventions as shown in the template.
-        Include vivid sensory descriptions, character dialogue, internal thoughts, and environment updates where appropriate for flow and immersion.
-        Do not omit key story details or add new plot elements beyond what is needed for smooth narrative transitions and natural pacing.
-
-        Present only the rewritten scene — do not include explanations, notes, or commentary outside the story output.
-
-        ---NARRATION TEMPLATE---
-        {narrationTemplate}
-
-        ---SCENE CONTENT---
-        {sceneContent}
-      sceneExtractionContinuation: |
-        Below are the previous scenes from this act for context:
-        ---PREVIOUS SCENES---
-        {previousScenes}
-
-        You will rewrite the next scene using the narration template provided below.
-        Your primary goal is to **apply the narration template faithfully while maintaining full consistency with the previous scenes** in tone, pacing, and style.
-
-        Continue the story smoothly from where the previous scenes left off, ensuring logical continuity in plot, character actions, and emotional flow.
-        Preserve all key content from the original scene; add only minor descriptive or connective details when necessary for realism or narrative cohesion.
-
-        Apply the same narrative style, structure, and formatting conventions as the template.
-        Do not restate previous scenes or summarize them — focus only on rewriting the current scene as part of the ongoing narrative.
-
-        Present only the rewritten scene — do not include explanations, notes, or commentary outside the story output.
-
-        ---NARRATION TEMPLATE---
-        {narrationTemplate}
-
-        ---SCENE CONTENT---
-        {sceneContent}
+    messages:
+      importCompleteWithInterview: 'Import complete! Starting interview...'
+      importComplete: 'Import complete!'
+      importCompletedSuccessfully: 'Import completed successfully.'
+      importFailed: 'Import failed'
+      processingAct: 'Processing Act {actNumber}...'
+      detectingGameData: 'Detecting game data for {count} messages...'
+      generatingGameData: 'Generating GameData[{index}]...'
+    validations:
+      actTranscriptRequired: 'Act {actNumber} must have a transcript. Only the last act may be created without one.'
+      actTranscriptRequiredSingle: 'Each act must have a transcript except the last one.'
+      lastActRequiresContent: 'The last act without a transcript requires at least a world file, act file, or character card to proceed.'
+      fileTooLarge: '{field} too large ({size}MB). Maximum is {max}MB.'
+      contentRequired: 'At least a world building file, an act, or a character must be provided.'
+      retryCountRange: 'LLM Retry Count must be between 0 and 20.'
+      backoffIntervalRange: 'Backoff Interval must be between 1 and 60 seconds.'
+      fileMustBeMdOrTxt: '{field} must be a .md or .txt file.'
+      fileMustBeJson: 'Transcript file must be a .json file.'
+      storyNameEmpty: 'Story name is empty — a placeholder name will be auto-generated.'
+      actNameEmpty: 'Act {actNumber} name is empty — a placeholder name will be auto-generated.'
+      characterCardMissing: 'Character card file is missing — character will be skipped during import.'
+      characterNameEmpty: 'Character name is empty — a name will be derived from the card content.'
+    description:
+      unnamedCharacter: 'a character in the story'
 
 tools:
   evaluateRisk:
@@ -206,11 +165,11 @@ tools:
       Evaluates the outcome of taking a risk by rolling a dice. The higher the risk level, the more likely a bad outcome.
       Use this to determine whether a risky action succeeds, has a mixed result, or fails.
     parameters:
-      riskLevel: "Level of risk taken (1 = lowest risk, 10 = highest risk)"
+      riskLevel: 'Level of risk taken (1 = lowest risk, 10 = highest risk)'
     messages:
-      outcomeBad: "The risk resulted in a bad outcome."
-      outcomeNeutral: "The risk resulted in a neutral outcome."
-      outcomeGood: "The risk resulted in a good outcome."
+      outcomeBad: 'The risk resulted in a bad outcome.'
+      outcomeNeutral: 'The risk resulted in a neutral outcome.'
+      outcomeGood: 'The risk resulted in a good outcome.'
   queryMemories:
     description: >
       Search the game's memory database to recall past events, locations visited, or character interactions.
@@ -223,7 +182,7 @@ tools:
       timeAndLocation: >
         A short description of the location or time period (e.g., "The Tavern", "Dawn in the Forest").
         If omitted, will return memories of the given character.
-      currentActOnly: "If true, searches only recent memories from the current act. Set to false to retrieve long-term lore or events from past acts."
+      currentActOnly: 'If true, searches only recent memories from the current act. Set to false to retrieve long-term lore or events from past acts.'
   queryInventory:
     description: |
       Check what a character currently has in their inventory. Returns items, equipment, skills, clothing, and status effects with equip status (equipped/wielded vs carried/owned).
@@ -235,24 +194,24 @@ tools:
       Set includeHistory to true to also see the log of inventory change events (acquired, lost, equipped, unequipped, used, modified) for the character.
     parameters:
       characterName: "The character's name (canonical name or alias)"
-      itemCategory: "Optional filter to return only one category"
-      includeHistory: "If true, also return the inventory change event history for this character"
+      itemCategory: 'Optional filter to return only one category'
+      includeHistory: 'If true, also return the inventory change event history for this character'
   readActPlot:
     description: >
       Read the act plot document for the current act. The act plot contains the story's planned structure: premise,
       target session count, major climactic events, possible endings, storytelling style, and presentation notes.
       Use this to understand the planned narrative arc and guide the story accordingly.
     messages:
-      noActPlot: "No act plot has been generated for this act yet."
+      noActPlot: 'No act plot has been generated for this act yet.'
   advancePhase:
     description: >
       Advance the story to the next narrative phase (e.g., {introduction} → {risingAction} → {climax} → {fallingAction} → {resolution}).
       This signals a major shift in the story's arc. Takes effect starting next turn.
       Can only be used once per scene. Cannot be used once the story has reached the resolution phase.
     messages:
-      alreadyAdvanced: "Phase has already been advanced this scene. It will take effect next turn."
-      success: "Phase advanced from {current} to {next}. Takes effect next turn."
-      terminalPhase: "Cannot advance further — the story is already at the resolution phase."
+      alreadyAdvanced: 'Phase has already been advanced this scene. It will take effect next turn.'
+      success: 'Phase advanced from {current} to {next}. Takes effect next turn.'
+      terminalPhase: 'Cannot advance further — the story is already at the resolution phase.'
   readScene:
     description: >
       Read the content of a specific scene in the current act. Returns the narrative body (assistant response) and
@@ -261,7 +220,7 @@ tools:
       sceneBody: Scene Body
       playerResponse: Player Response
     messages:
-      noSceneFound: "No scene found with scene number {sceneNumber}."
-      sceneNoContent: "Scene {sceneNumber} exists but contains no readable content."
+      noSceneFound: 'No scene found with scene number {sceneNumber}.'
+      sceneNoContent: 'Scene {sceneNumber} exists but contains no readable content.'
     parameters:
-      sceneNumber: "The scene number to read (1-based)"
+      sceneNumber: 'The scene number to read (1-based)'
