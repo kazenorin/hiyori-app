@@ -101,6 +101,17 @@ function newMessage(role: 'user' | 'assistant', sceneNumber: number): UIMessage 
 		sceneNumber,
 	};
 }
+function getMessageByIndex(index: number): UIMessage {
+	return messages[index];
+}
+
+function setMessageByIndex(index: number, message: UIMessage) {
+	messages[index] = message;
+}
+
+function setMessages(newMessages: UIMessage[]) {
+	messages = newMessages;
+}
 
 /** Build provider configs for all 6 pipeline roles */
 function buildPipelineProviderConfigs(): PipelineProviderConfigs {
@@ -146,10 +157,10 @@ async function prepareNewMessages(
 	const responseMessage = newMessage('assistant', nextSceneNumber);
 	if (message !== undefined) {
 		const userMessage = await persistUserMessage(message, previousSceneNumber, actLineId);
-		messages = [...messages, userMessage, responseMessage];
+		setMessages([...messages, userMessage, responseMessage]);
 		return 2;
 	} else {
-		messages = [...messages, responseMessage];
+		setMessages([...messages, responseMessage]);
 		return 1;
 	}
 }
@@ -198,7 +209,7 @@ export async function sendMessage(actLineId: string, message: string): Promise<v
  * Only the assistant's response (the opening narrative) is persisted and displayed.
  */
 export async function sendInitialNarration(actLineId: string): Promise<void> {
-	messages = [];
+	setMessages([]);
 	const mainConfig = requireMainConfig();
 	const story = await dbActLines.getStoryForActLine(actLineId);
 	const actLine = await requireActLine(actLineId);
@@ -214,6 +225,7 @@ export async function sendInitialNarration(actLineId: string): Promise<void> {
 	};
 	return executeNarrativeRequest(requestContext);
 }
+
 
 async function executeNarrativeRequest(requestContext: RequestContext): Promise<void> {
 	await awaitPendingAsyncPhases('send-message', true);
@@ -232,11 +244,11 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 	const messageIdx = messages.length - 1;
 
 	function getCurrentMessage(): UIMessage {
-		return messages[messageIdx];
+		return getMessageByIndex(messageIdx);
 	}
 
 	function setCurrentMessage(message: UIMessage) {
-		messages[messageIdx] = message;
+		setMessageByIndex(messageIdx, message);
 	}
 
 	const tools = await buildTools(story.id, actLine);
@@ -285,10 +297,10 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 		});
 
 		const updatedMetadata = updateMetaData(result.aggregatedMetadata, result.phases);
-		messages[messageIdx] = {
-			...messages[messageIdx],
+		setMessageByIndex(messageIdx, {
+			...getMessageByIndex(messageIdx),
 			...(updatedMetadata && { metadata: updatedMetadata }),
-		};
+		});
 
 		await Promise.all([persistMessage(actLineId, getCurrentMessage()), logMainChat({ newMessages: messages.slice(-newMessagesCount) })]);
 
@@ -304,11 +316,11 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 					const targetMessageIdx = messages.findLastIndex((m) => m.id === assistantMessageId);
 					if (targetMessageIdx >= 0) {
 						const { updatedMessage, metadataUpdates } = resolveAsyncPhaseMetadata(
-							messages[targetMessageIdx],
+							getMessageByIndex(targetMessageIdx),
 							asyncResults,
 							summarizerModel
 						);
-						messages[targetMessageIdx] = updatedMessage;
+						setMessageByIndex(targetMessageIdx, updatedMessage);
 
 						if (Object.keys(metadataUpdates).length > 0) {
 							await dbMessages.updateMessageFields(assistantMessageId, metadataUpdates);
@@ -377,7 +389,7 @@ export function getCharacterNames(): string[] {
 }
 
 export async function loadActLineMessages(actLineId: string): Promise<void> {
-	messages = await loadActLineMessagesFromDB(actLineId);
+	setMessages(await loadActLineMessagesFromDB(actLineId));
 	error = null;
 
 	if (isPhraseHighlightingEnabled()) {
@@ -390,7 +402,7 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 
 export async function clearMessages(): Promise<void> {
 	await awaitPendingAsyncPhases('clear-messages');
-	messages = [];
+	setMessages([]);
 	error = null;
 	isStreaming = false;
 }
@@ -431,7 +443,7 @@ export async function regenerateLastResponse(actLineId: string, messageId: strin
 	const userMessageContent = currentMessages[exchangeStartIdx].content;
 
 	const { remaining } = await removeMessagesFromIndex(actLineId, messages, exchangeStartIdx);
-	messages = remaining;
+	setMessages(remaining);
 
 	// Send the new response first (safe — original data intact on failure)
 	try {
@@ -455,7 +467,7 @@ export async function deleteLastExchange(actLineId: string): Promise<void> {
 	}
 
 	const { success, remaining } = await removeMessagesFromIndex(actLineId, messages, lastUserMsgIdx);
-	if (success) messages = remaining;
+	if (success) setMessages(remaining);
 }
 
 /**
@@ -473,7 +485,7 @@ export async function deleteOrphanedUserMessages(actLineId: string): Promise<voi
 	}
 
 	const { success, remaining } = await removeMessagesFromIndex(actLineId, messages, lastUserMsgIdx);
-	if (success) messages = remaining;
+	if (success) setMessages(remaining);
 }
 
 export function isUserMessage(message: UIMessage): boolean {
@@ -481,7 +493,7 @@ export function isUserMessage(message: UIMessage): boolean {
 }
 
 export async function getForkSequence(actLineId: string, assistantMessageIndex: number): Promise<{ branchSeq: number; name: string }> {
-	const assistantMsg = messages[assistantMessageIndex];
+	const assistantMsg = getMessageByIndex(assistantMessageIndex);
 	if (!assistantMsg || assistantMsg.role !== 'assistant') {
 		throw new Error(ERR_INVALID_MESSAGE_ROLE);
 	}
