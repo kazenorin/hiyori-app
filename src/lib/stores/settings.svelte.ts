@@ -236,6 +236,14 @@ export function isDirectorModeEnabled(): boolean {
 	return settings.directorModeEnabled;
 }
 
+export function isQuickReview(): boolean {
+	return settings.reviewerMode === 'quick';
+}
+
+export function getReevaluationFrequency(): number {
+	return settings.reevaluationFrequency;
+}
+
 export function getDefaultPlotMode(): 'guidance' | 'phaseEvent' {
 	return settings.defaultPlotMode;
 }

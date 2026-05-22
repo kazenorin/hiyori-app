@@ -14,7 +14,7 @@ import {
 	type PreEditorContext,
 	type PostEditorContext,
 } from './message-builder';
-import { getSettings, isPhraseHighlightingEnabled, isPlotPlannerEnabled, isReviewerEnabled } from '$lib/stores/settings.svelte';
+import { isPhraseHighlightingEnabled, isPlotPlannerEnabled, isQuickReview, isReviewerEnabled } from '$lib/stores/settings.svelte';
 import type { ActPhase, GameDataFields, NarrativeVariables, PlotMode } from '../narrative-types';
 import { summaryHeader } from '$lib/definitions/common-headers';
 import {
@@ -226,7 +226,7 @@ export async function runReviewerEditorPhases(
 			messages: buildReviewerMessages(
 				ctx.preEditorCtx,
 				state.writerOutput,
-				getSettings().reviewerMode === 'quick'
+				isQuickReview()
 					? quickReviewerExtractionPromptTemplate(ctx.currentScene)
 					: reviewerExtractionPromptTemplate(ctx.currentScene)
 			),

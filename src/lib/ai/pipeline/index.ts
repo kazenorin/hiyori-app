@@ -1,4 +1,4 @@
-import { getDefaultPlotMode, getSettings } from '$lib/stores/settings.svelte';
+import { getDefaultPlotMode, getReevaluationFrequency, isQuickReview } from '$lib/stores/settings.svelte';
 import { DEFAULT_RETRY_CONFIG, type PhaseMetadata, toPhaseMetadata } from '../chat-stream';
 import type { PipelineInput, PipelineResult, PipelineState } from './types';
 import { aggregateMetadata, updateState } from './phase-executor';
@@ -20,13 +20,6 @@ import { runAsyncPhases } from './summarizer';
 import { buildPipelineProviderConfigs } from '$lib/ai/chat/pipeline-config';
 import { buildTools } from '$lib/ai/tools/tools';
 
-function isQuickReview() {
-	return getSettings().reviewerMode === 'quick';
-}
-
-function getReevaluationFrequency(): number {
-	return getSettings().reevaluationFrequency;
-}
 
 /**
  * Run the full narrative generation pipeline.
