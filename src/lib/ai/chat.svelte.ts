@@ -1,4 +1,23 @@
+import { buildTools } from '$lib/ai/tools/tools';
+import * as dbActLines from '$lib/db/act-lines';
+import type { ActLineMeta } from '$lib/db/act-lines';
+import * as dbMessages from '$lib/db/messages';
+import type { Story } from '$lib/db/stories';
+import { logMainChat } from '$lib/logging/chat-logger';
+import { log } from '$lib/logging/logger';
+import {
+	getDefaultPlotMode,
+	getMainProviderConfig,
+	getReevaluationFrequency,
+	getSummarizerProviderConfig,
+	isDirectorModeEnabled,
+	isPhraseHighlightingEnabled,
+	settings,
+	type ProviderConfig,
+} from '$lib/stores/settings.svelte';
+import { getActiveActPlotContent, getActiveDirectorNotesText, getActiveWorldContent } from '$lib/stores/stories.svelte';
 import { extractImportantPhrases } from './important-phrases-extractor';
+import type { MessageMetadata } from './chat-stream';
 import {
 	findLastNonNullSceneNumber,
 	getCharacterNames as _getCharacterNames,
@@ -11,6 +30,9 @@ import {
 	getPreviousNarrativeMessage,
 	getScenePlotForScene,
 } from './chat/message-queries';
+import { resolveAsyncPhaseMetadata, updateMetaData } from './chat/metadata';
+import { buildPipelineProviderConfigs } from './chat/pipeline-config';
+import { createPipelineCallbacks } from './chat/pipeline-callbacks';
 import {
 	backfillImportantPhrases,
 	handleStreamError,
@@ -20,31 +42,9 @@ import {
 	removeMessagesById,
 	removeMessagesFromIndex,
 } from './chat/persistence';
-import { resolveAsyncPhaseMetadata, updateMetaData } from './chat/metadata';
-import { buildPipelineProviderConfigs } from './chat/pipeline-config';
-import { createPipelineCallbacks } from './chat/pipeline-callbacks';
-import {
-	getDefaultPlotMode,
-	getMainProviderConfig,
-	getReevaluationFrequency,
-	getSummarizerProviderConfig,
-	isDirectorModeEnabled,
-	isPhraseHighlightingEnabled,
-	settings,
-} from '$lib/stores/settings.svelte';
-import { getActiveActPlotContent, getActiveDirectorNotesText, getActiveWorldContent } from '$lib/stores/stories.svelte';
-import * as dbMessages from '$lib/db/messages';
 import type { NarrativeVariables, UIScenePhase } from './narrative-types';
-import * as dbActLines from '$lib/db/act-lines';
-import { logMainChat } from '$lib/logging/chat-logger';
-import type { MessageMetadata } from './chat-stream';
-import { log } from '$lib/logging/logger';
-import { buildTools } from '$lib/ai/tools/tools';
 import { runPipeline } from './pipeline';
 import type { AsyncPhaseResults, PlayerContext } from './pipeline/types';
-import type { ProviderConfig } from '$lib/stores/settings.svelte';
-import type { Story } from '$lib/db/stories';
-import type { ActLineMeta } from '$lib/db/act-lines';
 
 export interface UIMessage {
 	id: string;

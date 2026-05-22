@@ -1,12 +1,12 @@
-import type { PipelineCallbacks, PipelineState, PhaseStreamState } from '../pipeline/types';
-import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from '../narrative-types';
-import type { UIMessage } from '../chat.svelte';
-import { renderFromVariables } from '../template-renderer';
 import { storyMessageTemplate } from '$lib/fs/view-templates';
-import { persistImportantPhrases } from './persistence';
-import { getErrorMessage } from '$lib/utils/error-handling';
-import { isReviewerEnabled } from '$lib/stores/settings.svelte';
 import { log } from '$lib/logging/logger';
+import { isReviewerEnabled } from '$lib/stores/settings.svelte';
+import { getErrorMessage } from '$lib/utils/error-handling';
+import type { UIMessage } from '../chat.svelte';
+import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from '../narrative-types';
+import type { PipelineCallbacks, PipelineState, PhaseStreamState } from '../pipeline/types';
+import { renderFromVariables } from '../template-renderer';
+import { persistImportantPhrases } from './persistence';
 
 /** Merge Editor variables with GM game data into final NarrativeVariables */
 export function buildFinalVariables(

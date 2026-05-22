@@ -1,8 +1,8 @@
 import { buildMetadata, toPhaseMetadata, type MessageMetadata, type PhaseMetadata } from '../chat-stream';
-import type { StreamResultMetadata } from '../streaming';
-import type { AsyncPhaseResults } from '../pipeline/types';
 import type { UIMessage } from '../chat.svelte';
 import type { PhaseName, UIScenePhase } from '../narrative-types';
+import type { AsyncPhaseResults } from '../pipeline/types';
+import type { StreamResultMetadata } from '../streaming';
 
 export function updateMetaData(
 	resultMetadata: StreamResultMetadata | null | undefined,

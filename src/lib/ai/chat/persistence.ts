@@ -1,11 +1,11 @@
+import * as dbActLines from '$lib/db/act-lines';
 import * as dbMessages from '$lib/db/messages';
 import { parseImportantPhrases, serializeImportantPhrases } from '$lib/db/messages';
-import * as dbActLines from '$lib/db/act-lines';
-import { log } from '$lib/logging/logger';
-import { getErrorMessage } from '$lib/utils/error-handling';
-import { getActiveStoryId } from '$lib/stores/stories.svelte';
-import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 import { Memory } from '$lib/features/memory';
+import { log } from '$lib/logging/logger';
+import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
+import { getActiveStoryId } from '$lib/stores/stories.svelte';
+import { getErrorMessage } from '$lib/utils/error-handling';
 import type { MessageMetadata } from '../chat-stream';
 import type { UIMessage } from '../chat.svelte';
 

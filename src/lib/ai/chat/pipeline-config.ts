@@ -1,4 +1,3 @@
-import type { PipelineProviderConfigs } from '../pipeline/types';
 import {
 	getEditorProviderConfig,
 	getGameMasterProviderConfig,
@@ -9,6 +8,7 @@ import {
 	getSummarizerProviderConfig,
 	getWriterProviderConfig,
 } from '$lib/stores/settings.svelte';
+import type { PipelineProviderConfigs } from '../pipeline/types';
 
 /** Build provider configs for all pipeline roles, falling back to main config */
 export function buildPipelineProviderConfigs(): PipelineProviderConfigs {
