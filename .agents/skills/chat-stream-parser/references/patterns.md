@@ -200,6 +200,6 @@ const descriptors: OutputDescriptor[] = [
 All patterns above are derived from test cases in `src/lib/__tests__/chat-stream-parser/parser.test.ts`. When adding new match types or options:
 
 1. Write the test first (describe → it → expect)
-2. Import from `$lib/chat-stream-parser` (not relative paths)
+2. Import from `$lib/util/chat-stream-parser` (not relative paths)
 3. Use `import type { OutputDescriptor }` for type-only imports
 4. Cover: happy path, unmatched returns (null/[]), boundary options (bodyOnly, currentLevelOnly), parent/ancestor filters, descendancy boundaries (HR, same-level, higher-level headers)
