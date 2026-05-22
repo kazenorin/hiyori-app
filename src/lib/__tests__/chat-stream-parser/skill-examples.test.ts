@@ -257,6 +257,246 @@ Some analysis text
 			const output = parseContent('- Name: Alice', descriptors);
 			expect(output.result).toBeNull();
 		});
+
+		it('unmatched multi-headers returns empty array', () => {
+			const descriptors: OutputDescriptor[] = [
+				{ outputPath: 'result', match: { type: 'multi-headers', headerLevel: 2 } },
+			];
+			const output = parseContent('# Only H1\nno H2s here', descriptors);
+			expect(output.result).toEqual([]);
+		});
+
+		it('unmatched multi-headers as parent returns empty object', () => {
+			const descriptors: OutputDescriptor[] = [
+				{
+					outputPath: 'result',
+					match: { type: 'header', content: 'Missing', parent: { type: 'multi-headers', headerLevel: 2 } },
+				},
+			];
+			const output = parseContent('# Only H1\nno H2s here', descriptors);
+			expect(output.result).toEqual({});
+		});
+	});
+
+	describe('Header selfContentOnly examples', () => {
+		it('header text only (selfContentOnly)', () => {
+			const inputContent = '## Blue\nrgb(0,0,255)';
+			const descriptors: OutputDescriptor[] = [
+				{ outputPath: 'name', match: { type: 'header', headerLevel: 2 }, selfContentOnly: true },
+			];
+			const output = parseContent(inputContent, descriptors);
+			expect(output.name).toBe('Blue');
+		});
+
+		it('match by level without content name with selfContentOnly', () => {
+			const inputContent = '# Parent\nparent body\n### Child\nchild body';
+			const descriptors: OutputDescriptor[] = [
+				{
+					outputPath: 'first',
+					match: { type: 'header', headerLevel: 3, parent: { type: 'header', content: 'Parent' } },
+					selfContentOnly: true,
+				},
+			];
+			const output = parseContent(inputContent, descriptors);
+			expect(output.first).toBe('Child');
+		});
+
+		it('selfContentOnly overrides bodyOnly', () => {
+			const inputContent = '## Blue\nrgb(0,0,255)';
+			const descriptors: OutputDescriptor[] = [
+				{ outputPath: 'name', match: { type: 'header', headerLevel: 2 }, selfContentOnly: true, bodyOnly: true },
+			];
+			const output = parseContent(inputContent, descriptors);
+			expect(output.name).toBe('Blue');
+		});
+	});
+
+	describe('Multi-Headers extraction examples', () => {
+		it('collect all H2 sections', () => {
+			const inputContent = `## Blue
+rgb(0,0,255)
+## Red
+rgb(255,0,0)`;
+			const descriptors: OutputDescriptor[] = [
+				{ outputPath: 'sections', match: { type: 'multi-headers', headerLevel: 2 } },
+			];
+			const output = parseContent(inputContent, descriptors);
+			expect(output.sections).toEqual(['## Blue\nrgb(0,0,255)', '## Red\nrgb(255,0,0)']);
+		});
+
+		it('body only for each section', () => {
+			const inputContent = `## Blue
+rgb(0,0,255)
+## Red
+rgb(255,0,0)`;
+			const descriptors: OutputDescriptor[] = [
+				{ outputPath: 'bodies', match: { type: 'multi-headers', headerLevel: 2 }, bodyOnly: true },
+			];
+			const output = parseContent(inputContent, descriptors);
+			expect(output.bodies).toEqual(['rgb(0,0,255)', 'rgb(255,0,0)']);
+		});
+
+		it('header texts only (selfContentOnly)', () => {
+			const inputContent = `## Blue
+rgb(0,0,255)
+## Red
+rgb(255,0,0)`;
+			const descriptors: OutputDescriptor[] = [
+				{ outputPath: 'names', match: { type: 'multi-headers', headerLevel: 2 }, selfContentOnly: true },
+			];
+			const output = parseContent(inputContent, descriptors);
+			expect(output.names).toEqual(['Blue', 'Red']);
+		});
+
+		it('scoped to a parent header', () => {
+			const inputContent = `# Colors
+## Blue
+rgb(0,0,255)
+## Red
+rgb(255,0,0)
+# Pets
+## Dogs
+woof`;
+			const descriptors: OutputDescriptor[] = [
+				{
+					outputPath: 'colors',
+					match: { type: 'multi-headers', headerLevel: 2, parent: { type: 'header', content: 'Colors' } },
+					selfContentOnly: true,
+				},
+			];
+			const output = parseContent(inputContent, descriptors);
+			expect(output.colors).toEqual(['Blue', 'Red']);
+		});
+
+		it('as parent — produces Record with full sections', () => {
+			const inputContent = `# Colors
+## Blue
+### Lighter blue
+- rgb(32,32,255)
+- rgb(64,64,255)
+## Red
+### Lighter red
+- rgb(255,32,32)
+- rgb(255,64,64)`;
+			const descriptors: OutputDescriptor[] = [
+				{
+					outputPath: 'colors',
+					match: {
+						type: 'header',
+						headerLevel: 3,
+						parent: { type: 'multi-headers', headerLevel: 2, parent: { type: 'header', content: 'Colors' } },
+					},
+				},
+			];
+			const output = parseContent(inputContent, descriptors);
+			expect(output.colors).toEqual({
+				Blue: '### Lighter blue\n- rgb(32,32,255)\n- rgb(64,64,255)',
+				Red: '### Lighter red\n- rgb(255,32,32)\n- rgb(255,64,64)',
+			});
+		});
+
+		it('as parent with bodyOnly', () => {
+			const inputContent = `# Colors
+## Blue
+### Lighter blue
+- rgb(32,32,255)
+- rgb(64,64,255)
+## Red
+### Lighter red
+- rgb(255,32,32)
+- rgb(255,64,64)`;
+			const descriptors: OutputDescriptor[] = [
+				{
+					outputPath: 'colors',
+					match: {
+						type: 'header',
+						headerLevel: 3,
+						parent: { type: 'multi-headers', headerLevel: 2, parent: { type: 'header', content: 'Colors' } },
+					},
+					bodyOnly: true,
+				},
+			];
+			const output = parseContent(inputContent, descriptors);
+			expect(output.colors).toEqual({
+				Blue: '- rgb(32,32,255)\n- rgb(64,64,255)',
+				Red: '- rgb(255,32,32)\n- rgb(255,64,64)',
+			});
+		});
+
+		it('as parent with selfContentOnly', () => {
+			const inputContent = `# Colors
+## Blue
+### Lighter blue
+- rgb(32,32,255)
+## Red
+### Lighter red
+- rgb(255,32,32)`;
+			const descriptors: OutputDescriptor[] = [
+				{
+					outputPath: 'colors',
+					match: {
+						type: 'header',
+						headerLevel: 3,
+						parent: { type: 'multi-headers', headerLevel: 2, parent: { type: 'header', content: 'Colors' } },
+					},
+					selfContentOnly: true,
+				},
+			];
+			const output = parseContent(inputContent, descriptors);
+			expect(output.colors).toEqual({
+				Blue: 'Lighter blue',
+				Red: 'Lighter red',
+			});
+		});
+
+		it('as parent of list', () => {
+			const inputContent = `# Colors
+## Blue
+### Lighter blue
+- rgb(32,32,255)
+- rgb(64,64,255)
+## Red
+### Lighter red
+- rgb(255,32,32)
+- rgb(255,64,64)`;
+			const descriptors: OutputDescriptor[] = [
+				{
+					outputPath: 'colors',
+					match: {
+						type: 'list',
+						parent: { type: 'multi-headers', headerLevel: 3, ancestor: { type: 'header', content: 'Colors' } },
+					},
+					bodyOnly: true,
+				},
+			];
+			const output = parseContent(inputContent, descriptors);
+			expect(output.colors).toEqual({
+				'Lighter blue': ['rgb(32,32,255)', 'rgb(64,64,255)'],
+				'Lighter red': ['rgb(255,32,32)', 'rgb(255,64,64)'],
+			});
+		});
+
+		it('as child in header children array', () => {
+			const inputContent = `# Colors
+## Red
+rgb(255,0,0)
+## Green
+rgb(0,255,0)
+## Blue
+rgb(0,0,255)`;
+			const descriptors: OutputDescriptor[] = [
+				{
+					outputPath: 'colors',
+					match: {
+						type: 'header',
+						content: 'Colors',
+						children: [{ outputPath: 'names', match: { type: 'multi-headers', headerLevel: 2 }, selfContentOnly: true }],
+					},
+				},
+			];
+			const output = parseContent(inputContent, descriptors);
+			expect(output.colors).toEqual({ names: ['Red', 'Green', 'Blue'] });
+		});
 	});
 });
 

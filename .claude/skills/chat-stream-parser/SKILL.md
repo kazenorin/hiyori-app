@@ -58,25 +58,27 @@ interface OutputDescriptor {
   match?: MatchDescriptor;  // How to locate the content; omit to assign full content
   bodyOnly?: boolean;       // Strip the markdown header/list marker, return just text
   currentLevelOnly?: boolean; // For headers: exclude sub-headers; for lists: exclude nested lists
+  selfContentOnly?: boolean;  // Return the element's own text (header name); takes precedence over bodyOnly
 }
 ```
 
 ### MatchDescriptor (union type)
 
-Four match types, each with optional `parent` and `ancestor` filters:
+Five match types, each with optional `parent` and `ancestor` filters:
 
 | Type | Key Fields | Extracts |
 |------|-----------|----------|
-| `header` | `content`, `headerLevel?` | Section under a markdown heading |
+| `header` | `content?`, `headerLevel?` | Section under a markdown heading |
+| `multi-headers` | `headerLevel?` | All headers matching level/parent/ancestor as `string[]` or `Record` |
 | `list` | `listIndex?` | All items of a markdown list |
 | `list_item` | `itemIndex`, `parent: { type: 'list' }` | Single item by position |
 | `list_labeled_item` | `content` (label), `listIndex?` | Item matching "Label: value" pattern |
 
 ## Match Types in Detail
 
-### Header — `{ type: 'header', content: 'Name', headerLevel?, parent?, ancestor?, children? }`
+### Header — `{ type: 'header', content?, headerLevel?, parent?, ancestor?, children? }`
 
-Extracts a section under a heading. Case-insensitive matching on header text.
+Extracts a section under a heading. Case-insensitive matching on header text. When `content` is omitted, matches by `headerLevel`/`parent`/`ancestor` only.
 
 ```typescript
 // Full section (header + body + sub-sections)
@@ -93,7 +95,102 @@ Extracts a section under a heading. Case-insensitive matching on header text.
 
 // Specific heading level
 { outputPath: 'h3', match: { type: 'header', content: 'Title', headerLevel: 3 } }
+
+// Header text only (selfContentOnly)
+{ outputPath: 'name', match: { type: 'header', headerLevel: 2 }, selfContentOnly: true }
+// Input: '## Blue\nrgb(0,0,255)' → 'Blue'
+
+// Match by level without content name
+{ outputPath: 'first', match: { type: 'header', headerLevel: 3, parent: { type: 'header', content: 'Parent' } }, selfContentOnly: true }
+// Returns header text of first matching H3 under Parent
 ```
+
+**`selfContentOnly`** on `header`: Returns just the header text (e.g. `'Blue'` from `## Blue`). Takes precedence over `bodyOnly`.
+
+### Multi-Headers — `{ type: 'multi-headers', headerLevel?, parent?, ancestor? }`
+
+Collects all headers matching the given criteria. Returns `string[]` when used standalone, or `Record<string, T>` when used as a parent.
+
+`headerLevel` defaults to 1 if omitted.
+
+```typescript
+// Collect all H2 sections
+{ outputPath: 'sections', match: { type: 'multi-headers', headerLevel: 2 } }
+// → ['## Blue\nrgb(0,0,255)', '## Red\nrgb(255,0,0)']
+
+// Body only for each section
+{ outputPath: 'bodies', match: { type: 'multi-headers', headerLevel: 2 }, bodyOnly: true }
+// → ['rgb(0,0,255)', 'rgb(255,0,0)']
+
+// Header texts only
+{ outputPath: 'names', match: { type: 'multi-headers', headerLevel: 2 }, selfContentOnly: true }
+// → ['Blue', 'Red']
+
+// Scoped to a parent header
+{ outputPath: 'colors', match: { type: 'multi-headers', headerLevel: 2, parent: { type: 'header', content: 'Colors' } }, selfContentOnly: true }
+// → ['Blue', 'Red']
+```
+
+**`multi-headers` as parent** — produces `Record<string, T>` where keys are header texts:
+
+```typescript
+// Each H2 becomes a key; child extraction runs within each section
+{
+  outputPath: 'colors',
+  match: {
+    type: 'header', headerLevel: 3,
+    parent: { type: 'multi-headers', headerLevel: 2, parent: { type: 'header', content: 'Colors' } }
+  }
+}
+// → { Blue: '### Lighter blue\n...', Red: '### Lighter red\n...' }
+
+// With bodyOnly on the child
+{
+  outputPath: 'colors',
+  match: {
+    type: 'header', headerLevel: 3,
+    parent: { type: 'multi-headers', headerLevel: 2, parent: { type: 'header', content: 'Colors' } }
+  },
+  bodyOnly: true
+}
+// → { Blue: '- rgb(32,32,255)\n- rgb(64,64,255)', Red: '- rgb(255,32,32)\n...' }
+
+// With selfContentOnly on the child
+{
+  outputPath: 'colors',
+  match: {
+    type: 'header', headerLevel: 3,
+    parent: { type: 'multi-headers', headerLevel: 2, parent: { type: 'header', content: 'Colors' } }
+  },
+  selfContentOnly: true
+}
+// → { Blue: 'Lighter blue', Red: 'Lighter red' }
+
+// As parent of list
+{
+  outputPath: 'colors',
+  match: { type: 'list', parent: { type: 'multi-headers', headerLevel: 3, ancestor: { type: 'header', content: 'Colors' } } },
+  bodyOnly: true
+}
+// → { 'Lighter blue': ['rgb(32,32,255)', 'rgb(64,64,255)'], 'Lighter red': [...] }
+```
+
+**`multi-headers` as child** in a header's `children` array:
+
+```typescript
+{
+  outputPath: 'colors',
+  match: {
+    type: 'header', content: 'Colors',
+    children: [
+      { outputPath: 'names', match: { type: 'multi-headers', headerLevel: 2 }, selfContentOnly: true }
+    ]
+  }
+}
+// → { colors: { names: ['Red', 'Green', 'Blue'] } }
+```
+
+**No matching sections**: `multi-headers` returns `[]` when standalone, `{}` when used as parent.
 
 **Parent filter**: Find header as direct child of another header:
 ```typescript
@@ -203,6 +300,7 @@ parseContent(content, descriptors, output);
 - List items out of bounds → `null`
 - Labeled items with no matching label → `null`
 - Lists with no matching list → `[]` (empty array)
+- Multi-headers with no matches → `[]` (empty array, or `{}` when used as parent)
 
 ### Descendancy rules
 
@@ -233,4 +331,4 @@ See [patterns.md](references/patterns.md) for extraction prompt templates and de
 - `src/lib/utils/chat-stream-parser/parser.ts` — core parser logic
 - `src/lib/utils/chat-stream-parser/types.ts` — type definitions
 - `src/lib/utils/chat-stream-parser/index.ts` — barrel exports
-- `src/lib/__tests__/chat-stream-parser/parser.test.ts` — 59 test cases (TDD reference)
+- `src/lib/__tests__/chat-stream-parser/parser.test.ts` — 74 test cases (TDD reference)

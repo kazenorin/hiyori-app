@@ -1,4 +1,4 @@
-import type { OutputDescriptor, MatchDescriptor, HeaderMatch, ListMatch, ListItemMatch, ListLabeledItemMatch } from './types';
+import type { OutputDescriptor, MatchDescriptor, HeaderMatch, MultiHeaders, ListMatch, ListItemMatch, ListLabeledItemMatch } from './types';
 import { set } from 'lodash-es';
 import { marked } from 'marked';
 
@@ -18,6 +18,7 @@ export function parseContent(
 				const value = extractValue(content, descriptor.match, {
 					bodyOnly: descriptor.bodyOnly ?? false,
 					currentLevelOnly: descriptor.currentLevelOnly ?? false,
+					selfContentOnly: descriptor.selfContentOnly ?? false,
 				});
 				set(target, descriptor.outputPath, value);
 			} else {
@@ -34,6 +35,7 @@ export function parseContent(
 interface ExtractionOptions {
 	bodyOnly: boolean;
 	currentLevelOnly: boolean;
+	selfContentOnly: boolean;
 }
 
 interface ListItemToken {
@@ -43,6 +45,10 @@ interface ListItemToken {
 }
 
 function extractValue(content: string, match: MatchDescriptor, options: ExtractionOptions): unknown {
+	if (match.parent?.type === 'multi-headers') {
+		return extractWithMultiHeadersParent(content, match, options);
+	}
+
 	switch (match.type) {
 		case 'list':
 			return extractList(content, match, options);
@@ -52,6 +58,8 @@ function extractValue(content: string, match: MatchDescriptor, options: Extracti
 			return extractLabeledListItem(content, match, options);
 		case 'header':
 			return extractHeader(content, match, options);
+		case 'multi-headers':
+			return extractMultiHeaders(content, match, options);
 	}
 }
 
@@ -146,6 +154,8 @@ function extractHeader(content: string, match: HeaderMatch, options: ExtractionO
 
 	if (!matched) return null;
 
+	if (options.selfContentOnly) return matched.header;
+
 	let sectionContent: string;
 	let sectionBody: string;
 
@@ -168,13 +178,48 @@ function extractHeader(content: string, match: HeaderMatch, options: ExtractionO
 	return sectionContent;
 }
 
+function extractMultiHeaders(content: string, match: MultiHeaders, options: ExtractionOptions): string[] {
+	const sections = splitByHeaders(content);
+	const matched = findSections(sections, match);
+
+	return matched.map((section) => {
+		if (options.selfContentOnly) return section.header;
+		const raw = content.slice(section.rawStart, section.rawEnd).trim();
+		if (options.bodyOnly) {
+			const headerEnd = raw.indexOf('\n');
+			return headerEnd >= 0 ? raw.slice(headerEnd + 1).trim() : '';
+		}
+		return raw;
+	});
+}
+
+function extractWithMultiHeadersParent(content: string, match: MatchDescriptor, options: ExtractionOptions): Record<string, unknown> {
+	const multiHeadersParent = match.parent as MultiHeaders;
+	const sections = splitByHeaders(content);
+	const matchedSections = findSections(sections, multiHeadersParent);
+
+	const result: Record<string, unknown> = {};
+
+	const childMatch: MatchDescriptor = { ...match, parent: undefined } as MatchDescriptor;
+
+	for (const section of matchedSections) {
+		const sectionContent = content.slice(section.rawStart, section.rawEnd);
+		const childValue = extractValue(sectionContent, childMatch, options);
+		result[section.header] = childValue;
+	}
+
+	return result;
+}
+
 function findOwnContentEnd(sections: MarkdownSection[], section: MarkdownSection, content: string): number {
 	const next = sections.filter((s) => s.rawStart > section.rawStart).sort((a, b) => a.rawStart - b.rawStart)[0];
 	return next ? next.rawStart : content.length;
 }
 
 function findSection(sections: MarkdownSection[], match: HeaderMatch): MarkdownSection | undefined {
-	let candidates = sections.filter((s) => s.header.toLowerCase() === match.content?.toLowerCase()).sort((a, b) => a.rawStart - b.rawStart);
+	let candidates = match.content
+		? sections.filter((s) => s.header.toLowerCase() === match.content?.toLowerCase()).sort((a, b) => a.rawStart - b.rawStart)
+		: [...sections].sort((a, b) => a.rawStart - b.rawStart);
 
 	if (match.headerLevel !== undefined) {
 		candidates = candidates.filter((s) => s.depth === match.headerLevel);
@@ -201,6 +246,37 @@ function findSection(sections: MarkdownSection[], match: HeaderMatch): MarkdownS
 	}
 
 	return candidates[0];
+}
+
+function findSections(sections: MarkdownSection[], match: MultiHeaders): MarkdownSection[] {
+	const targetLevel = match.headerLevel ?? 1;
+	const candidates = sections.filter((s) => s.depth === targetLevel).sort((a, b) => a.rawStart - b.rawStart);
+
+	if (match.parent && match.parent.type === 'header') {
+		const parentRef = match.parent;
+		const parentSections = sections.filter((s) => s.header.toLowerCase() === parentRef.content?.toLowerCase());
+		const result: MarkdownSection[] = [];
+		for (const parent of parentSections) {
+			const children = candidates.filter((c) => c.startIndex > parent.startIndex && c.depth > parent.depth && c.rawStart < parent.rawEnd);
+			result.push(...children);
+		}
+		return result;
+	}
+
+	if (match.ancestor && match.ancestor.type === 'header') {
+		const ancestorRef = match.ancestor;
+		const ancestorSections = sections.filter((s) => s.header.toLowerCase() === ancestorRef.content?.toLowerCase());
+		const result: MarkdownSection[] = [];
+		for (const ancestor of ancestorSections) {
+			const children = candidates.filter(
+				(c) => c.startIndex > ancestor.startIndex && c.depth > ancestor.depth && c.group === ancestor.group
+			);
+			result.push(...children);
+		}
+		return result;
+	}
+
+	return candidates;
 }
 
 interface MarkdownSection {
