@@ -1,8 +1,12 @@
-import { parseCharacterAliases } from '$lib/ai/act-summary-parser';
 import { extractImportantPhrases } from './important-phrases-extractor';
 import {
 	findLastNonNullSceneNumber,
+	getCharacterNames as _getCharacterNames,
+	getForkSequence as _getForkSequence,
 	getLatestActSummary,
+	getLatestActivePlotThreads as _getLatestActivePlotThreads,
+	getLatestDecisions as _getLatestDecisions,
+	getLatestDecisionContext as _getLatestDecisionContext,
 	getPlayerContext,
 	getPreviousNarrativeMessage,
 	getScenePlotForScene,
@@ -17,18 +21,13 @@ import {
 	removeMessagesFromIndex,
 } from './chat/persistence';
 import { resolveAsyncPhaseMetadata, updateMetaData } from './chat/metadata';
+import { buildPipelineProviderConfigs } from './chat/pipeline-config';
 import { createPipelineCallbacks } from './chat/pipeline-callbacks';
 import {
 	getDefaultPlotMode,
-	getEditorProviderConfig,
-	getGameMasterProviderConfig,
 	getMainProviderConfig,
-	getMinorTaskAgentProviderConfig,
-	getPlotPlannerProviderConfig,
 	getReevaluationFrequency,
-	getReviewerProviderConfig,
 	getSummarizerProviderConfig,
-	getWriterProviderConfig,
 	isDirectorModeEnabled,
 	isPhraseHighlightingEnabled,
 	settings,
@@ -41,9 +40,8 @@ import { logMainChat } from '$lib/logging/chat-logger';
 import type { MessageMetadata } from './chat-stream';
 import { log } from '$lib/logging/logger';
 import { buildTools } from '$lib/ai/tools/tools';
-import { ERR_INVALID_MESSAGE_ROLE, ERR_MESSAGE_SEQUENCE_NOT_FOUND } from '$lib/definitions/error-messages';
 import { runPipeline } from './pipeline';
-import type { AsyncPhaseResults, PipelineProviderConfigs, PlayerContext } from './pipeline/types';
+import type { AsyncPhaseResults, PlayerContext } from './pipeline/types';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
 import type { Story } from '$lib/db/stories';
 import type { ActLineMeta } from '$lib/db/act-lines';
@@ -91,6 +89,24 @@ export function getError(): string | null {
 	return error;
 }
 
+// Re-exported query functions (delegate to message-queries with module messages)
+export { isUserMessage } from './chat/message-queries';
+export function getLatestDecisions(): string[] {
+	return _getLatestDecisions(messages);
+}
+export function getLatestActivePlotThreads(): string[] {
+	return _getLatestActivePlotThreads(messages);
+}
+export function getLatestDecisionContext(): string | null {
+	return _getLatestDecisionContext(messages);
+}
+export function getCharacterNames(): string[] {
+	return _getCharacterNames(messages);
+}
+export async function getForkSequence(actLineId: string, assistantMessageIndex: number): Promise<{ branchSeq: number; name: string }> {
+	return _getForkSequence(actLineId, messages, assistantMessageIndex);
+}
+
 function newMessage(role: 'user' | 'assistant', sceneNumber: number): UIMessage {
 	return {
 		id: crypto.randomUUID(),
@@ -111,19 +127,6 @@ function setMessageByIndex(index: number, message: UIMessage) {
 
 function setMessages(newMessages: UIMessage[]) {
 	messages = newMessages;
-}
-
-/** Build provider configs for all 6 pipeline roles */
-function buildPipelineProviderConfigs(): PipelineProviderConfigs {
-	return {
-		plotPlanner: getPlotPlannerProviderConfig() ?? getMainProviderConfig(),
-		writer: getWriterProviderConfig() ?? getMainProviderConfig(),
-		reviewer: getReviewerProviderConfig() ?? getMainProviderConfig(),
-		editor: getEditorProviderConfig() ?? getMainProviderConfig(),
-		gameMaster: getGameMasterProviderConfig() ?? getMainProviderConfig(),
-		summarizer: getSummarizerProviderConfig() ?? getMainProviderConfig(),
-		minorTaskAgent: getMinorTaskAgentProviderConfig() ?? getMainProviderConfig(),
-	};
 }
 
 function requireMainConfig(): ProviderConfig {
@@ -225,7 +228,6 @@ export async function sendInitialNarration(actLineId: string): Promise<void> {
 	};
 	return executeNarrativeRequest(requestContext);
 }
-
 
 async function executeNarrativeRequest(requestContext: RequestContext): Promise<void> {
 	await awaitPendingAsyncPhases('send-message', true);
@@ -349,45 +351,6 @@ export function stopStreaming(): void {
 	abortController?.abort();
 }
 
-export function getLatestDecisions(): string[] {
-	for (let i = messages.length - 1; i >= 0; i--) {
-		if (messages[i].role === 'assistant' && messages[i].variables?.gameData?.decisions?.length) {
-			return messages[i].variables!.gameData!.decisions;
-		}
-	}
-	return [];
-}
-
-export function getLatestActivePlotThreads(): string[] {
-	for (let i = messages.length - 1; i >= 0; i--) {
-		if (messages[i].role === 'assistant' && messages[i].variables?.gameData?.activePlotThreads?.length) {
-			return messages[i].variables!.gameData!.activePlotThreads;
-		}
-	}
-	return [];
-}
-
-export function getLatestDecisionContext(): string | null {
-	for (let i = messages.length - 1; i >= 0; i--) {
-		if (messages[i].role === 'assistant' && messages[i].variables?.gameData?.decisionContext) {
-			return messages[i].variables!.gameData!.decisionContext;
-		}
-	}
-	return null;
-}
-
-export function getCharacterNames(): string[] {
-	const actSummary = getLatestActSummary(messages);
-	if (!actSummary) return [];
-	const entries = parseCharacterAliases(actSummary);
-	const names: string[] = [];
-	for (const entry of entries) {
-		names.push(entry.characterName);
-		names.push(...entry.aliases);
-	}
-	return names;
-}
-
 export async function loadActLineMessages(actLineId: string): Promise<void> {
 	setMessages(await loadActLineMessagesFromDB(actLineId));
 	error = null;
@@ -486,26 +449,4 @@ export async function deleteOrphanedUserMessages(actLineId: string): Promise<voi
 
 	const { success, remaining } = await removeMessagesFromIndex(actLineId, messages, lastUserMsgIdx);
 	if (success) setMessages(remaining);
-}
-
-export function isUserMessage(message: UIMessage): boolean {
-	return message.role === 'user';
-}
-
-export async function getForkSequence(actLineId: string, assistantMessageIndex: number): Promise<{ branchSeq: number; name: string }> {
-	const assistantMsg = getMessageByIndex(assistantMessageIndex);
-	if (!assistantMsg || assistantMsg.role !== 'assistant') {
-		throw new Error(ERR_INVALID_MESSAGE_ROLE);
-	}
-
-	const assistantSeq = await dbActLines.getMessageSequence(actLineId, assistantMsg.id);
-	if (assistantSeq === null) throw new Error(ERR_MESSAGE_SEQUENCE_NOT_FOUND);
-
-	const sceneTitle = assistantMsg.variables?.sceneTitle;
-	const sceneLabel = sceneTitle ? `Scene ${assistantMsg.sceneNumber}: ${sceneTitle}` : `Scene ${assistantMsg.sceneNumber}`;
-
-	return {
-		branchSeq: assistantSeq,
-		name: `Fork from "${sceneLabel}"`,
-	};
 }
