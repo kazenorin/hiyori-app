@@ -44,6 +44,9 @@ import { buildTools } from '$lib/ai/tools/tools';
 import { ERR_INVALID_MESSAGE_ROLE, ERR_MESSAGE_SEQUENCE_NOT_FOUND } from '$lib/definitions/error-messages';
 import { runPipeline } from './pipeline';
 import type { AsyncPhaseResults, PipelineProviderConfigs, PlayerContext } from './pipeline/types';
+import type { ProviderConfig } from '$lib/stores/settings.svelte';
+import type { Story } from '$lib/db/stories';
+import type { ActLineMeta } from '$lib/db/act-lines';
 
 export interface UIMessage {
 	id: string;
@@ -62,6 +65,9 @@ export interface UIMessage {
 interface RequestContext {
 	actLineId: string;
 	message?: string;
+	mainConfig: ProviderConfig;
+	story: Story;
+	actLine: ActLineMeta;
 	previousSceneNumber: number;
 	previousNarrativeVariables: NarrativeVariables | undefined;
 	playerContext: PlayerContext | undefined;
@@ -156,6 +162,28 @@ function buildPipelineProviderConfigs(): PipelineProviderConfigs {
 	};
 }
 
+function requireMainConfig(): ProviderConfig {
+	const mainConfig = getMainProviderConfig();
+	if (!mainConfig?.apiKey) {
+		error = 'Please configure your API key in Settings.';
+		throw new Error(error);
+	}
+	if (!mainConfig?.model) {
+		error = 'Please configure a model name in Settings.';
+		throw new Error(error);
+	}
+	return mainConfig;
+}
+
+async function requireActLine(actLineId: string): Promise<ActLineMeta> {
+	const actLine = await dbActLines.getActLine(actLineId);
+	if (!actLine) {
+		error = 'Selected act line no longer exists';
+		throw new Error(error);
+	}
+	return actLine;
+}
+
 async function prepareNewMessages(
 	actLineId: string,
 	previousSceneNumber: number,
@@ -178,37 +206,29 @@ export async function sendMessage(actLineId: string, message: string): Promise<v
 		await log.warn('send-message', 'Called with no message body.');
 		return;
 	}
+	const mainConfig = requireMainConfig();
+	const story = await dbActLines.getStoryForActLine(actLineId);
+	const actLine = await requireActLine(actLineId);
+	error = null;
 	const requestContext: RequestContext = {
 		actLineId,
 		message,
+		mainConfig,
+		story,
+		actLine,
 		previousSceneNumber: findLastNonNullSceneNumber(messages) ?? 0,
 		previousNarrativeVariables: getPreviousNarrativeMessage(messages),
 		playerContext: getPlayerContext(messages),
 	};
 	return executeNarrativeRequest(requestContext);
 }
-
 async function executeNarrativeRequest(requestContext: RequestContext): Promise<void> {
 	await awaitPendingAsyncPhases('send-message', true);
 
 	const actLineId = requestContext.actLineId;
-
-	const mainConfig = getMainProviderConfig();
-	if (!mainConfig?.apiKey) {
-		error = 'Please configure your API key in Settings.';
-		return;
-	}
-	if (!mainConfig?.model) {
-		error = 'Please configure a model name in Settings.';
-		return;
-	}
-	const story = await dbActLines.getStoryForActLine(actLineId);
-	const actLine = await dbActLines.getActLine(actLineId);
-	if (!actLine) {
-		error = 'Selected act line no longer exists';
-		return;
-	}
-	error = null;
+	const mainConfig = requestContext.mainConfig;
+	const story = requestContext.story;
+	const actLine = requestContext.actLine;
 
 	const previousNarrativeVariables = requestContext.previousNarrativeVariables;
 	const previousSceneNumber = requestContext.previousSceneNumber;
@@ -358,8 +378,15 @@ export function getLatestDecisionContext(): string | null {
  */
 export async function sendInitialNarration(actLineId: string): Promise<void> {
 	messages = [];
+	const mainConfig = requireMainConfig();
+	const story = await dbActLines.getStoryForActLine(actLineId);
+	const actLine = await requireActLine(actLineId);
+	error = null;
 	const requestContext: RequestContext = {
 		actLineId,
+		mainConfig,
+		story,
+		actLine,
 		previousSceneNumber: 0,
 		previousNarrativeVariables: undefined,
 		playerContext: undefined,
