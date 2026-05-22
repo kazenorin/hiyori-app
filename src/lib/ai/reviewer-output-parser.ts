@@ -1,5 +1,5 @@
-import { parseContent } from '$lib/chat-stream-parser/parser';
-import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
+import { parseContent } from '$lib/utils/chat-stream-parser/parser';
+import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
 import { summaryHeader } from '$lib/definitions/common-headers';
 import { totalViolationsLabel, recommendationLabel, acceptAsIsLabel } from '$lib/definitions/pipeline-prompts';
 import { stripCodeFences } from '$lib/utils/strings';

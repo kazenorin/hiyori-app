@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseContent } from '$lib/chat-stream-parser';
-import type { OutputDescriptor } from '$lib/chat-stream-parser';
+import { parseContent } from '$lib/utils/chat-stream-parser';
+import type { OutputDescriptor } from '$lib/utils/chat-stream-parser';
 
 describe('parseContent', () => {
 	describe('default behavior', () => {

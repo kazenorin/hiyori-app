@@ -1,5 +1,5 @@
-import { parseContent } from '$lib/chat-stream-parser';
-import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
+import { parseContent } from '$lib/utils/chat-stream-parser';
+import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
 import { createThinkingTagParser } from './thinking-tag-parser';
 import type { NarrativeVariables } from './narrative-types';
 import { assembleVariables } from './narrative-types';

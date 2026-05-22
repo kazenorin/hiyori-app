@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseContent } from '../chat-stream-parser/parser';
-import type { OutputDescriptor } from '../chat-stream-parser/types';
+import { parseContent } from '$lib/utils/chat-stream-parser/parser';
+import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
 
 const NARRATIVE_BODY_DESCRIPTOR: OutputDescriptor = {
 	outputPath: 'narrativeBody',

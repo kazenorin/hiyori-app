@@ -1,5 +1,5 @@
 import { createNarrativeStreamParser } from './narrative-stream-parser';
-import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
+import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
 import type { NarrativeVariables } from './narrative-types';
 import { getNarrativeDescriptors } from './descriptors';
 

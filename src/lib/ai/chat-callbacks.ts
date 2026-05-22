@@ -1,6 +1,6 @@
 import type { StreamCallbacks, StreamResultMetadata } from './streaming';
 import type { NarrativeVariables } from './narrative-types';
-import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
+import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
 import { createParserChain, hasContent } from './parser-chain';
 import { applyParserOutput, applyReasoningDelta } from './message-updater';
 import { getNarrativeDescriptors } from './descriptors';

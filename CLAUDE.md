@@ -134,7 +134,7 @@ Async chain (starts concurrently with sequential):
 
 ### Descriptors System
 
-**`src/lib/ai/descriptors.ts`** — defines which fields each phase extracts. The stream parser (`src/lib/chat-stream-parser/`) uses these to route structured sections into `NarrativeVariables` or `GameDataFields`:
+**`src/lib/ai/descriptors.ts`** — defines which fields each phase extracts. The stream parser (`src/lib/utils/chat-stream-parser/`) uses these to route structured sections into `NarrativeVariables` or `GameDataFields`:
 
 ## Chat State Management
 

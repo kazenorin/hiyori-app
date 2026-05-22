@@ -4,7 +4,7 @@ import { executeStream, type StreamResultMetadata } from './streaming';
 import { getMainProviderConfig, type ProviderConfig } from '../stores/settings.svelte';
 import { createStreamAccumulator, type StreamAccumulator, type StreamState } from './chat-callbacks';
 import { ERR_NO_MAIN_PROVIDER, ERR_AUTH_FAILED } from '$lib/definitions/error-messages';
-import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
+import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
 import { createModel } from './provider';
 import { isAbortError, isAuthError, sleepOrAbort } from '$lib/utils/async';
 

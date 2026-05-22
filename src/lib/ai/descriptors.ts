@@ -1,4 +1,4 @@
-import type { OutputDescriptor } from '$lib/chat-stream-parser/types';
+import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
 import {
 	sceneTitleHeader,
 	backgroundHeader,

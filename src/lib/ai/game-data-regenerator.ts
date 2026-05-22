@@ -4,7 +4,7 @@ import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from './provider';
 import type { GameDataFields, NarrativeVariables } from './narrative-types';
 import { emptyGameDataFields } from './narrative-types';
-import { parseContent } from '$lib/chat-stream-parser';
+import { parseContent } from '$lib/utils/chat-stream-parser';
 import { variablesToMarkdown } from './template-renderer';
 import { getGameMasterDescriptors } from './descriptors';
 import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';

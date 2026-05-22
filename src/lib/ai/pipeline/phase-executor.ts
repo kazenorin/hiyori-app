@@ -7,7 +7,7 @@ import type {PhaseName} from '../narrative-types';
 import type {PipelineCallbacks, PipelineState} from './types';
 import type {StreamState} from '../chat-callbacks';
 import {extractCacheTokens, type StreamResultMetadata} from '../streaming';
-import type {OutputDescriptor} from '$lib/chat-stream-parser/types';
+import type {OutputDescriptor} from '$lib/utils/chat-stream-parser/types';
 import {ERR_NO_PROVIDER_FOR_PHASE} from '$lib/definitions/error-messages';
 
 export interface StreamingPhaseParams {
