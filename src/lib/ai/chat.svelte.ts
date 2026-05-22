@@ -245,6 +245,18 @@ export async function sendInitialNarration(actLineId: string): Promise<void> {
 	return executeNarrativeRequest(requestContext);
 }
 
+async function updateMessageMetadata(
+	messageId: string,
+	metadataUpdates: {
+		actSummary?: string;
+		metadata?: string;
+	}
+) {
+	if (Object.keys(metadataUpdates).length > 0) {
+		await dbMessages.updateMessageFields(messageId, metadataUpdates);
+	}
+}
+
 async function executeNarrativeRequest(requestContext: RequestContext): Promise<void> {
 	await awaitPendingAsyncPhases('send-message', true);
 
@@ -342,10 +354,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 							summarizerModel
 						);
 						setMessageByIndex(targetMessageIdx, updatedMessage);
-
-						if (Object.keys(metadataUpdates).length > 0) {
-							await dbMessages.updateMessageFields(assistantMessageId, metadataUpdates);
-						}
+						await updateMessageMetadata(assistantMessageId, metadataUpdates);
 					}
 					return asyncResults;
 				})
