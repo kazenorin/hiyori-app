@@ -1,6 +1,6 @@
 // Core types for Import World feature
 
-import type { GameDataFields, NarrativeVariables } from '$lib/ai/narrative-types';
+import type { NarrativeVariables } from '$lib/ai/narrative-types';
 
 // === Transcript Format Detection ===
 
@@ -135,28 +135,10 @@ export interface ValidationWarning {
 
 // === Game Data Detection Types ===
 
-export interface GameDataExtractionResult {
-	messageIndex: number;
-	gameData: GameDataFields | null;
-	source: 'traditional' | 'llm' | 'none';
-	metadata?: string;
-}
-
-export interface GameDataDetectionResult {
-	results: GameDataExtractionResult[];
-	llmCallsMade: number;
-}
-
 export interface NarrativeExtractionResult {
 	messageIndex: number;
 	variables: NarrativeVariables | null;
 	source: 'template-fitter' | 'none';
-}
-
-export interface GameDataImportContext {
-	worldContent: string | null;
-	characterCards: { name: string; content: string }[];
-	actCard: { actNumber: number; content: string };
 }
 
 // === Import Context ===
