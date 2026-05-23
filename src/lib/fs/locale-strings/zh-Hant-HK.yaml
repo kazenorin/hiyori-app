@@ -87,6 +87,7 @@ pipeline:
       phaseEvent: '目前章節的故事階段為 {currentActPhase}。請根據聊天記錄中的可用資訊，規劃「階段事件」。'
     summarizerTranscriptStart: '以下訊息將包含故事章節的文本記錄: '
     summarizerTranscriptEnd: '上一則訊息是故事章節文本記錄的結束。'
+    summarizerFull: '根據文本記錄中的所有場景，生成完整的章節摘要。'
     summarizerFallback: '根據玩家回應，更新場景 {completedScenes} 的章節摘要。'
     summarizer: '更新章節摘要，加入上一個場景的資訊: 「場景 {completedScenes}: {sceneTitle}」'
     editorTemplateFitter: >

@@ -1,5 +1,6 @@
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
 import { getSettings } from '$lib/stores/settings.svelte';
+import type { MessageBase } from '$lib/db/messages';
 import type { NarrativeVariables } from '../narrative-types';
 import type { AsyncPhaseResults, CompressorResult, PipelineProviderConfigs, PlayerContext, SummarizerResult } from './types';
 import { runNonStreamingPhase } from './phase-executor';
@@ -66,16 +67,10 @@ export async function generateFullSummary(input: SummarizerInput, prompts: Summa
 	const actSummaryTemplate = buildActSummaryTemplate();
 	const summarizerSystemPrompt = prompts.summarizerPrompt.replaceAll('{actSummaryTemplate}', actSummaryTemplate);
 
-	let summarizerMessages: import('$lib/db/messages').MessageBase[];
+	let summarizerMessages: MessageBase[];
 
 	if (input.transcript && input.transcript.length > 0) {
-		const sceneTitle = input.previousNarrativeVariables?.sceneTitle ?? '';
-		summarizerMessages = buildTranscriptSummarizerMessages(
-			input.transcript,
-			input.completedScenes,
-			sceneTitle,
-			summarizerExtractionPromptTemplate
-		);
+		summarizerMessages = buildTranscriptSummarizerMessages(input.transcript);
 	} else {
 		summarizerMessages = buildSummarizerMessages(
 			input.actSummary,

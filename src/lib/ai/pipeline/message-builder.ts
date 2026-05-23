@@ -17,6 +17,7 @@ import { upToLabel } from '$lib/definitions/character-profile-labels';
 import {
 	characterSummariesHeader,
 	sceneSummariesHeader,
+	summarizerFullExtractionPromptTemplate,
 	summarizerTranscriptStart,
 	summarizerTranscriptEnd,
 } from '$lib/definitions/pipeline-prompts';
@@ -260,16 +261,11 @@ export function buildSummarizerMessages(
 	}
 }
 
-export function buildTranscriptSummarizerMessages(
-	transcript: { role: 'user' | 'assistant'; content: string }[],
-	completedScenes: number,
-	sceneTitle: string,
-	extractionPromptTemplate: (completedScenes: number, sceneTitle: string) => string
-): MessageBase[] {
+export function buildTranscriptSummarizerMessages(transcript: { role: 'user' | 'assistant'; content: string }[]): MessageBase[] {
 	return [
 		{ role: 'user', content: summarizerTranscriptStart() },
 		...transcript,
 		{ role: 'user', content: summarizerTranscriptEnd() },
-		...toUserMessages([extractionPromptTemplate(completedScenes, sceneTitle)]),
+		{ role: 'user', content: summarizerFullExtractionPromptTemplate() },
 	];
 }

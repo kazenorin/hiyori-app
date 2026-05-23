@@ -37,6 +37,7 @@ export const plotPlannerExtractionPrompt = (plotMode: PlotMode, currentScene: nu
 		: guidancePlotPlannerExtractionPromptTemplate(currentScene);
 export const summarizerFallbackExtractionPromptTemplate = (completedScenes: number | string) =>
 	ls('pipeline.extraction.summarizerFallback', { completedScenes });
+export const summarizerFullExtractionPromptTemplate = () => ls('pipeline.extraction.summarizerFull');
 export const summarizerExtractionPromptTemplate = (completedScenes: number | string, sceneTitle: string) =>
 	ls('pipeline.extraction.summarizer', { completedScenes, sceneTitle });
 

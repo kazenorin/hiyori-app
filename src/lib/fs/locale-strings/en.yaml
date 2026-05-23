@@ -95,6 +95,7 @@ pipeline:
       phaseEvent: 'The current story phase of the act is {currentActPhase}. Plan the "Phase Events" based on the available information in the chat history.'
     summarizerTranscriptStart: 'The following messages will contain the transcript of the story act:'
     summarizerTranscriptEnd: 'The previous message was the end of the transcript of the story act.'
+    summarizerFull: 'Generate a complete Act Summary covering all scenes in the transcript.'
     summarizerFallback: 'Update the Act Summary for Scene {completedScenes} based on the Player Response.'
     summarizer: 'Update the Act Summary adding information for the previous scene: "Scene {completedScenes}: {sceneTitle}"'
     editorTemplateFitter: >

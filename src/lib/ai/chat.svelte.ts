@@ -52,6 +52,7 @@ import { loadPrompts } from './pipeline/prompt-loader';
 import { buildImportRunContext } from '$lib/features/import-world/pipeline-context';
 import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
 import type { PostEditorContext } from './pipeline/message-builder';
+import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { loadLocaleStrings } from '$lib/localization';
 
@@ -555,7 +556,8 @@ function buildTranscriptFromMessages(messages: UIMessage[]): { role: 'user' | 'a
 		if (msg.role === 'assistant') {
 			const body = msg.variables?.narrativeBody?.trim();
 			const content = body && body.length > 0 ? body : msg.content;
-			transcript.push({ role: 'assistant' as const, content });
+			const prefix = msg.sceneNumber ? sceneWithNumberLabel(msg.sceneNumber) + '\n' : '';
+			transcript.push({ role: 'assistant' as const, content: prefix + content });
 		} else if (msg.role === 'user') {
 			transcript.push({ role: 'user' as const, content: msg.content });
 		}
