@@ -6,6 +6,7 @@ import { log } from '$lib/logging/logger';
 import {
 	getDefaultPlotMode,
 	getMainProviderConfig,
+	getSummarizerProviderConfig,
 	isDirectorModeEnabled,
 	isPhraseHighlightingEnabled,
 	settings,
@@ -38,11 +39,21 @@ import {
 	updateLastPlotGeneration,
 	updatePersistentMessageMetadata,
 } from './chat/persistence';
+import { updateMessageFields } from '$lib/db/messages';
 import type { NarrativeVariables, PlotMode } from './narrative-types';
+import { emptyVariables } from './narrative-types';
 import { runEpiloguePipeline, runPipeline } from './pipeline';
 import type { AsyncPhaseResults, PipelineResult } from './pipeline/types';
 import type { UIMessage } from './chat/types';
 export type { UIMessage };
+import { generateSummarizerResult, type SummarizerInput, type SummarizerPrompts } from './pipeline/summarizer';
+import { executeGmPhase, runGmTemplateFitter, type PipelineRunContext, type TrackPhase } from './pipeline/runners';
+import { buildPipelineProviderConfigs } from './chat/pipeline-config';
+import { loadPrompts } from './pipeline/prompt-loader';
+import { buildImportRunContext } from '$lib/features/import-world/pipeline-context';
+import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
+import type { PostEditorContext } from './pipeline/message-builder';
+import type { PipelineCallbacks as PipelineCallbacksType, PipelineState } from './pipeline/types';
 
 interface RequestContext {
 	actLineId: string;
@@ -445,6 +456,138 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 		await backfillImportantPhrases(messages, {
 			extract: extractImportantPhrases,
 			persist: updatePersistentMessageMetadata,
+		});
+	}
+
+	await regenerateMissingMetadata(actLineId);
+}
+
+async function regenerateMissingMetadata(actLineId: string): Promise<void> {
+	const lastAssistantIdx = messages.findLastIndex((m) => m.role === 'assistant');
+	if (lastAssistantIdx === -1) return;
+
+	const lastAssistant = messages[lastAssistantIdx];
+	const needsSummary = !lastAssistant.actSummary;
+	const needsGameData = !lastAssistant.variables?.gameData;
+
+	if (!needsSummary && !needsGameData) return;
+
+	const story = await dbActLines.getStoryForActLine(actLineId);
+	if (!story) return;
+
+	isStreaming = true;
+
+	try {
+		if (needsSummary) {
+			await regenerateActSummary(actLineId, story.id, story.name, lastAssistantIdx);
+		}
+
+		if (needsGameData) {
+			await regenerateGameData(actLineId, story.id, story.name, lastAssistantIdx);
+		}
+	} catch (err) {
+		await log.error('regenerate-metadata', 'Failed to regenerate missing metadata', err);
+	} finally {
+		isStreaming = false;
+	}
+}
+
+async function regenerateActSummary(actLineId: string, storyId: string, storyName: string, assistantIdx: number): Promise<void> {
+	const assistantMsg = messages[assistantIdx];
+	const providerConfig = getSummarizerProviderConfig();
+	if (!providerConfig?.apiKey) {
+		await log.warn('regenerate-metadata', 'No summarizer provider configured, skipping act summary regeneration');
+		return;
+	}
+
+	const playerIdx = messages.findLastIndex((m, i) => i < assistantIdx && m.role === 'user');
+	const player = playerIdx >= 0 ? { playerResponse: messages[playerIdx].content, playerMessageId: messages[playerIdx].id } : undefined;
+
+	const previousSummary = _getLatestActSummary(messages.slice(0, assistantIdx));
+	const completedScenes = assistantMsg.sceneNumber ?? findLastNonNullSceneNumber(messages.slice(0, assistantIdx + 1)) ?? 1;
+
+	const summarizerInput: SummarizerInput = {
+		actSummary: previousSummary,
+		completedScenes,
+		previousNarrativeVariables: assistantMsg.variables,
+		player,
+		providerConfig,
+		abortSignal: new AbortController().signal,
+	};
+
+	const loadedPrompts = await loadPrompts(storyId, storyName);
+	const summarizerPrompts: SummarizerPrompts = {
+		summarizerPrompt: loadedPrompts.summarizerPrompt,
+		summarizerIncrementalPrompt: loadedPrompts.summarizerIncrementalPrompt,
+		actSummaryIncrementalTemplate: loadedPrompts.actSummaryIncrementalTemplate,
+		characterProfileCompressorPrompt: loadedPrompts.characterProfileCompressorPrompt,
+	};
+
+	const result = await generateSummarizerResult(summarizerInput, summarizerPrompts);
+
+	if (result.serializedSummary) {
+		const updated = { ...assistantMsg, actSummary: result.serializedSummary };
+		messages[assistantIdx] = updated;
+		setMessages([...messages]);
+		await updatePersistentMessageMetadata(assistantMsg.id, { actSummary: result.serializedSummary });
+	}
+}
+
+async function regenerateGameData(actLineId: string, storyId: string, storyName: string, assistantIdx: number): Promise<void> {
+	const assistantMsg = messages[assistantIdx];
+	const providerConfigs = buildPipelineProviderConfigs();
+	if (!providerConfigs.gameMaster?.apiKey) {
+		await log.warn('regenerate-metadata', 'No GM provider configured, skipping game data regeneration');
+		return;
+	}
+
+	const gmSystemPrompt = await gameMasterSystemPromptLoader.loadDefault();
+	const abortController = new AbortController();
+
+	const callbacks: PipelineCallbacksType = {
+		onPhaseStart: () => {},
+		onPhaseStream: () => {},
+		onPhaseRetry: () => {},
+		onPhaseComplete: () => {},
+		onError: (_phase, err) => {
+			log.error('regenerate-metadata', 'GM phase error', err);
+		},
+		onAllComplete: () => {},
+	};
+
+	const ctx: PipelineRunContext = buildImportRunContext({ retryCount: 3, backoffIntervalSeconds: 5 }, abortController.signal, callbacks, {
+		gameMasterSystemPrompt: gmSystemPrompt,
+	});
+
+	const postEditorCtx: PostEditorContext = {
+		actPlot: getActiveActPlotContent() ?? '',
+		actPhase: undefined,
+		actSummary: _getLatestActSummary(messages.slice(0, assistantIdx + 1)),
+		previousScenePlot: undefined,
+		previousNarrativeBody: assistantMsg.variables?.narrativeBody ?? undefined,
+		completedScenes: assistantMsg.sceneNumber ?? 0,
+		player: undefined,
+		previousTurnOfEvents: assistantMsg.variables?.turnOfEvents ?? undefined,
+		editorOutput: assistantMsg.content,
+		directorNotes: '',
+	};
+
+	const trackPhase: TrackPhase = (_phaseName, result) => result.state;
+	let state: PipelineState = { currentPhase: null };
+
+	const gmResult = await executeGmPhase(ctx, state, postEditorCtx);
+	state = trackPhase('GAME_MASTER', gmResult, providerConfigs.gameMaster?.model);
+
+	state = await runGmTemplateFitter(ctx, state, trackPhase);
+
+	if (state.gameData) {
+		const existingVars = assistantMsg.variables ?? emptyVariables();
+		const updatedVars: NarrativeVariables = { ...existingVars, gameData: state.gameData };
+		const updated = { ...assistantMsg, variables: updatedVars };
+		messages[assistantIdx] = updated;
+		setMessages([...messages]);
+		await updateMessageFields(assistantMsg.id, {
+			variables: JSON.stringify(updatedVars),
 		});
 	}
 }
