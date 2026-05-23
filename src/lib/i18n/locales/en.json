@@ -181,7 +181,8 @@
 		"actPlotReviewing": "Reviewing act plot...",
 		"actPlotEditing": "Editing act plot...",
 		"actPlotGenerating": "Generating act plot...",
-		"worldBuilderActive": "World builder in progress..."
+		"worldBuilderActive": "World builder in progress...",
+		"actConcluded": "Act Concluded"
 	},
 	"components": {
 		"chatControls": {
@@ -192,7 +193,11 @@
 			"decision_one": "{count} Decision",
 			"decision_other": "{count} Decisions",
 			"thread_one": "{count} Thread",
-			"thread_other": "{count} Threads"
+			"thread_other": "{count} Threads",
+			"actEndDecisionContext": "The act has concluded. What would you like to do next?",
+			"continueToNextAct": "Continue to the next act",
+			"endTheStory": "End the story here",
+			"storyConcluded": "Story Concluded"
 		},
 		"worldBuilderControls": {
 			"controls": "Controls",

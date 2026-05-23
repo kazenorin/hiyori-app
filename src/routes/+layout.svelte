@@ -33,7 +33,6 @@
 	} from '$lib/features/world-builder/world-builder.svelte';
 	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
 	import { t } from '$lib/i18n';
-	import { ls } from '$lib/localization';
 
 	let { children } = $props();
 	let appError = $state<string | null>(null);
@@ -381,7 +380,7 @@
 											{:else}
 												<span class="truncate flex-1">{line.name}</span>
 												{#if line.endedAt !== null}
-													<span class="text-[10px] font-medium text-surface-400-600 ml-1 shrink-0">{ls('pipeline.ui.actConcluded')}</span>
+													<span class="text-[10px] font-medium text-surface-400-600 ml-1 shrink-0">{t('sidebar.actConcluded')}</span>
 												{/if}
 												<button
 													class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"

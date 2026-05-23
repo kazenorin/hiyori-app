@@ -15,7 +15,7 @@ import {
 	type PostEditorContext,
 } from './message-builder';
 import { isPhraseHighlightingEnabled, isPlotPlannerEnabled, isQuickReview, isReviewerEnabled } from '$lib/stores/settings.svelte';
-import type { ActPhase, GameDataFields, NarrativeVariables, PlotMode } from '../narrative-types';
+import type { ActPhase, EndingType, GameDataFields, NarrativeVariables, PlotMode } from '../narrative-types';
 import { getActPhaseIndex } from '../narrative-types';
 import { summaryHeader } from '$lib/definitions/common-headers';
 import {
@@ -64,7 +64,9 @@ function resolveGmSystemPrompt(ctx: PipelineRunContext): string {
 	if (phaseAdvancementTrigger) additionalRules.push(phaseAdvancementTrigger);
 	if (gmActEndTrigger) additionalRules.push(gmActEndTrigger);
 
-	return ctx.prompts.gameMasterSystemPrompt.replaceAll('{additionalRules}', additionalRules.join('\n'));
+	const additionalRulesText = additionalRules.length > 0 ? '\n' + additionalRules.join('\n') : '';
+
+	return ctx.prompts.gameMasterSystemPrompt.replaceAll('{additionalRules}', additionalRulesText);
 }
 
 function resolveGmActEndTrigger(ctx: PipelineRunContext): string | null {
@@ -247,13 +249,20 @@ export async function runWriterPhase(ctx: PipelineRunContext, state: PipelineSta
 	return trackPhase('WRITER', result, ctx.providerConfigs.writer?.model);
 }
 
+const ENDING_LABELS: Record<EndingType, string> = {
+	good: ls('tools.endAct.endingGood'),
+	bad: ls('tools.endAct.endingBad'),
+	bittersweet: ls('tools.endAct.endingBittersweet'),
+	alternative: ls('tools.endAct.endingAlternative'),
+};
+
 export async function runEpilogueWriterPhase(
 	ctx: PipelineRunContext,
 	state: PipelineState,
 	trackPhase: TrackPhase,
-	endingType: string
+	endingType: EndingType
 ): Promise<PipelineState> {
-	const epilogueExtractionPrompt = ls('pipeline.extraction.writer.epilogue', { endingType });
+	const epilogueExtractionPrompt = ls('pipeline.extraction.writer.epilogue', { endingType: ENDING_LABELS[endingType] });
 
 	const result = await executeStreamingPhase(
 		{

@@ -2,7 +2,6 @@
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import { slide } from 'svelte/transition';
 	import { t } from '$lib/i18n';
-	import { ls } from '$lib/localization';
 
 	interface Props {
 		decisions: string[];
@@ -173,20 +172,20 @@
 				<div class="space-y-2 px-8 pb-3">
 					{#if storyConcluded}
 						<div class="text-center py-2">
-							<span class="text-sm font-medium text-surface-400-600">{ls('pipeline.ui.storyConcluded')}</span>
+							<span class="text-sm font-medium text-surface-400-600">{t('components.chatControls.storyConcluded')}</span>
 						</div>
 					{:else if actEnded}
 						<div class="mb-1">
 							<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('components.chatControls.decisionPoint')}</span
 							>
-							<div class="text-surface-950-50"><MarkdownContent content={ls('pipeline.actEnd.decisionContext')} /></div>
+							<div class="text-surface-950-50"><MarkdownContent content={t('components.chatControls.actEndDecisionContext')} /></div>
 						</div>
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
 							<button class="btn preset-filled-primary-500 w-full text-left" type="button" onclick={() => onContinueToNextAct?.()}>
-								{ls('pipeline.actEnd.continueToNextAct')}
+								{t('components.chatControls.continueToNextAct')}
 							</button>
 							<button class="btn preset-tonal w-full text-left" type="button" onclick={() => onEndStory?.()}>
-								{ls('pipeline.actEnd.endTheStory')}
+								{t('components.chatControls.endTheStory')}
 							</button>
 						</div>
 					{:else}

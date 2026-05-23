@@ -31,6 +31,7 @@
 		getActPlotInterview,
 		getError as getWorldBuilderError,
 		getGameResumeInterview,
+		getHasInterviewMessages,
 		getIsActive as getIsWorldBuilderActive,
 		getIsComplete as getIsWorldBuilderComplete,
 		getIsStreaming as getIsWorldBuilderStreaming,

@@ -355,6 +355,7 @@ export function stopStreaming(): void {
 }
 
 export async function runEpilogueFlow(actLineId: string): Promise<void> {
+	await awaitPendingAsyncPhases('epilogue', true);
 	requireMainConfig();
 	const story = await dbActLines.getStoryForActLine(actLineId);
 	const actLine = await requireActLine(actLineId);
@@ -437,8 +438,8 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 	error = null;
 
 	const actLine = await dbActLines.getActLine(actLineId);
-	actEnded = actLine?.endedAt !== null && actLine?.endedAt !== undefined;
-	storyConcluded = actLine?.epilogueWrittenAt !== null && actLine?.epilogueWrittenAt !== undefined;
+	actEnded = actLine?.endedAt != null;
+	storyConcluded = actLine?.epilogueWrittenAt != null;
 
 	if (isPhraseHighlightingEnabled()) {
 		await backfillImportantPhrases(messages, {

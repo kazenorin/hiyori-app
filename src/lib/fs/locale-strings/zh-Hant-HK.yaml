@@ -152,10 +152,6 @@ features:
       ---
 
       從這裡自然地繼續訪談對話，協助玩家釐清他們接下來想要的內容。
-  actEnd:
-    decisionContext: '章節已結束。接下來你想怎麼做？'
-    continueToNextAct: '繼續下一章節'
-    endTheStory: '在此結束故事'
   interview:
     systemRole:
       preGame: |
@@ -169,11 +165,6 @@ features:
       玩家已選擇繼續故事至新的章節。
     previousActPlotReference: |
       ## 上一章節劇情 (供參考)
-  ui:
-    actConcluded: '章節已結束'
-    storyConcluded: '故事已完結'
-    interviewForNextAct: '告訴我關於下一章節的內容'
-    skipInterview: '以自動規劃繼續'
   importWorld:
     messages:
       importCompleteWithInterview: '匯入完成！正在啟動訪談...'

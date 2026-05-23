@@ -181,7 +181,8 @@
 		"actPlotReviewing": "審閱章節劇情中…",
 		"actPlotEditing": "修訂章節劇情中…",
 		"actPlotGenerating": "生成章節劇情中…",
-		"worldBuilderActive": "世界建構進行中…"
+		"worldBuilderActive": "世界建構進行中…",
+		"actConcluded": "章節已結束"
 	},
 	"components": {
 		"chatControls": {
@@ -192,7 +193,11 @@
 			"decision_one": "{count} 個回應選項",
 			"decision_other": "共 {count} 個回應選項",
 			"thread_one": "{count} 條線索",
-			"thread_other": "共 {count} 條線索"
+			"thread_other": "共 {count} 條線索",
+			"actEndDecisionContext": "章節已結束。接下來你想怎麼做？",
+			"continueToNextAct": "繼續下一章節",
+			"endTheStory": "在此結束故事",
+			"storyConcluded": "故事已完結"
 		},
 		"worldBuilderControls": {
 			"controls": "控制台",

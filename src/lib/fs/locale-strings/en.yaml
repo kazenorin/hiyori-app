@@ -162,10 +162,6 @@ features:
       ---
 
       Resume the interview conversation naturally from here, helping the player refine what they want next.
-  actEnd:
-    decisionContext: 'The act has concluded. What would you like to do next?'
-    continueToNextAct: 'Continue to the next act'
-    endTheStory: 'End the story here'
   interview:
     systemRole:
       preGame: |
@@ -179,11 +175,6 @@ features:
       The player has chosen to continue the story into a new act.
     previousActPlotReference: |
       ## Previous Act Plot (for reference)
-  ui:
-    actConcluded: 'Act Concluded'
-    storyConcluded: 'Story Concluded'
-    interviewForNextAct: 'Tell me about the next act'
-    skipInterview: 'Continue with automatic planning'
   importWorld:
     messages:
       importCompleteWithInterview: 'Import complete! Starting interview...'

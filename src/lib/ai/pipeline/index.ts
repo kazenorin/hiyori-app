@@ -1,5 +1,6 @@
 import { getDefaultPlotMode, getReevaluationFrequency, isQuickReview } from '$lib/stores/settings.svelte';
 import type { NarrativeVariables } from '../narrative-types';
+import type { EndingType } from '../narrative-types';
 import { DEFAULT_RETRY_CONFIG, type PhaseMetadata, type RetryConfig, toPhaseMetadata } from '../chat-stream';
 import type { PipelineExecution, PipelineInput, PipelineResult, PipelineState, StoryContext } from './types';
 import { aggregateMetadata, updateState } from './phase-executor';
@@ -163,7 +164,7 @@ export interface EpiloguePipelineInput {
 	actPlot: string;
 	actSummary: string;
 	previousNarrativeVariables: NarrativeVariables | undefined;
-	endingType: string;
+	endingType: EndingType;
 	story: StoryContext;
 	completedScenes: number;
 	targetWordCount?: number;
