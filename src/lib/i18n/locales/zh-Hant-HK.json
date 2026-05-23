@@ -283,7 +283,22 @@
 		"cancel": "取消",
 		"warnings": "有 {count} 項警告",
 		"act": "第 {n} 章",
-		"addCharacter": "新增角色"
+		"addCharacter": "新增角色",
+		"reviewMessages": "檢閱匯入的訊息",
+		"reviewDescription": "檢閱以下匯入的訊息。移除不想匯入的項目。",
+		"confirmImport": "確認匯入",
+		"cancelImport": "取消匯入",
+		"showMore": "展開",
+		"showLess": "收起",
+		"removeMessage": "移除",
+		"restoreMessage": "還原",
+		"sceneNumber": "場景",
+		"sceneTitle": "場景標題",
+		"excerpt": "摘要",
+		"role": "角色",
+		"assistant": "助手",
+		"user": "玩家",
+		"messages": "{count} 則訊息"
 	},
 	"memoryManager": {
 		"heading": "記憶管理員",

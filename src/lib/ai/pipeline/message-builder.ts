@@ -98,6 +98,7 @@ function playerResponseSection(playerContext: PlayerContext | undefined): string
 }
 
 export function formattedActSummary(actSummary: string): string[] {
+	if (actSummary.trim().length == 0) return [];
 	const existingParsed = parseActSummary(actSummary);
 	const serializedActSummary = serializeActSummary(pruneCharacterScenes(existingParsed));
 	return [SECTION.ACT_SUMMARY + serializedActSummary];

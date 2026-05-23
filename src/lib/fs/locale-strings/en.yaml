@@ -142,6 +142,8 @@ features:
       processingAct: 'Processing Act {actNumber}...'
       detectingGameData: 'Detecting game data for {count} messages...'
       generatingGameData: 'Generating GameData[{index}]...'
+      fillingNarrativeVariables: 'Filling narrative variables for {count} messages...'
+      fillingNarrativeVariable: 'Filling narrative variables[{index}]...'
     validations:
       actTranscriptRequired: 'Act {actNumber} must have a transcript. Only the last act may be created without one.'
       actTranscriptRequiredSingle: 'Each act must have a transcript except the last one.'

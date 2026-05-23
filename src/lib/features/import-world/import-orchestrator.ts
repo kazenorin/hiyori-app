@@ -10,24 +10,25 @@ import { deleteStoryFolder } from '$lib/db/story-folders';
 import { BaseDirectory, mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { loadStories } from '$lib/stores/stories.svelte';
 import { kebabCase } from 'lodash-es';
-import type { ImportFormData, ImportProgressUpdate, ImportResult, ParsedMessage } from './types';
+import type { GameDataImportContext, ImportContext, ImportFormData, ImportPreviewAct, ImportPreviewData, ImportPreviewMessage, ImportProgressUpdate, ImportResult, ParsedMessage } from './types';
+import type { CreatedResources } from './types';
 import { emptyVariables } from '$lib/ai/narrative-types';
 import type { RetryConfig } from '$lib/ai/chat-stream';
 import { parseTranscriptFile } from './transcript-parsers';
 import { runGameDataDetection } from './game-data-detector';
+import { runNarrativeFilling } from './narrative-filler';
 import { generateWorldFromCards } from '$lib/ai/world-generator';
 import { ls } from '$lib/localization';
 import { nameLabel } from '$lib/definitions/common-labels';
-import { parseContent, type OutputDescriptor } from '$lib/utils/chat-stream-parser';
+import { type OutputDescriptor, parseContent } from '$lib/utils/chat-stream-parser';
 
 // === Progress Callback Type ===
 
 export type ProgressCallback = (update: ImportProgressUpdate) => void;
 
-// === Main Import Function ===
+// === Phase 1: Prepare Import ===
 
-export async function executeImport(formData: ImportFormData, onProgress: ProgressCallback): Promise<ImportResult> {
-	const warnings: string[] = [];
+export async function prepareImport(formData: ImportFormData, onProgress: ProgressCallback): Promise<ImportPreviewData | null> {
 	const logs: string[] = [];
 
 	function log(message: string): void {
@@ -39,13 +40,12 @@ export async function executeImport(formData: ImportFormData, onProgress: Progre
 		});
 	}
 
-	// Track created resources for cleanup on failure
-	const createdResources = {
-		storyId: null as string | null,
-		storyFolder: null as string | null,
-		actIds: [] as string[],
-		actLineIds: [] as string[],
-		messageIds: [] as string[],
+	const createdResources: CreatedResources = {
+		storyId: null,
+		storyFolder: null,
+		actIds: [],
+		actLineIds: [],
+		messageIds: [],
 	};
 
 	let worldContent: string | null = null;
@@ -54,7 +54,6 @@ export async function executeImport(formData: ImportFormData, onProgress: Progre
 	let storyName = '';
 
 	try {
-		// Phase: Creating Story
 		log('Creating story...');
 		storyId = crypto.randomUUID();
 		storyName = formData.storyName.trim() || `Story-${storyId.slice(-8)}`;
@@ -63,14 +62,11 @@ export async function executeImport(formData: ImportFormData, onProgress: Progre
 		createdResources.storyId = storyId;
 		log(`Story created: "${storyName}" (${storyId.slice(-8)})`);
 
-		// Refresh sidebar to show new story
 		await loadStories();
 
-		// Resolve story folder
 		storyFolder = await resolveStoryFolder(storyId, storyName);
 		createdResources.storyFolder = storyFolder;
 
-		// Save world file if provided
 		if (formData.worldFile) {
 			worldContent = await formData.worldFile.text();
 			const worldPath = `${storyFolder}/world.md`;
@@ -78,76 +74,117 @@ export async function executeImport(formData: ImportFormData, onProgress: Progre
 			log(`World file saved: ${formData.worldFile.name}`);
 		}
 
-		// Load character cards
 		const characterCards = await loadCharacterCards(formData.characters, log);
-
-		// Save character cards to disk
 		await saveCharacterCards(storyFolder, characterCards, log);
 
-		// Process acts
-		const processResult = await processActs(
-			formData,
-			storyId,
-			storyFolder,
-			worldContent,
-			characterCards,
-			log,
-			onProgress,
-			createdResources
-		);
+		const actCards = await readAndSaveActCards(storyFolder, formData, log);
 
-		// Generate world.md from cards if not provided
+		const interviewActCard = actCards.length > 0 ? actCards[actCards.length - 1] : null;
 		if (!worldContent) {
-			const lastAct = formData.acts.length > 0 ? formData.acts[formData.acts.length - 1] : null;
-			const actCardContent = lastAct?.actFile ? await lastAct.actFile.text() : null;
-
-			if (actCardContent || characterCards.length > 0) {
-				log('Generating world file from provided cards...');
-				worldContent = await generateWorldFromCards(null, actCardContent, characterCards, storyFolder);
-				log(`World file generated (${worldContent.length} chars)`);
-			}
+			worldContent = await regenerateWorldFromCards(storyFolder, interviewActCard, characterCards, log);
 		}
 
-		// Refresh sidebar again to show updated names
+		const importCtx: ImportContext = { worldContent, characterCards, actCards };
+
+		const previewActs = await prepareActs(formData, storyId, importCtx, createdResources, onProgress, log);
+
+		return {
+			storyId,
+			storyFolder,
+			storyName,
+			worldContent,
+			acts: previewActs,
+			characterCards,
+			actCards,
+			interviewActCard,
+			createdResources,
+		};
+	} catch (error) {
+		const errorMsg = error instanceof Error ? error.message : String(error);
+		logs.push(`\n✗ Import preparation failed: ${errorMsg}`);
+		logs.push('Cleaning up partially created data...');
+		await cleanupImport(createdResources, logs);
+
+		onProgress({
+			phase: 'error',
+			message: ls('features.importWorld.messages.importFailed'),
+			errorMessage: errorMsg,
+			consoleOutput: logs.join('\n'),
+		});
+
+		return null;
+	}
+}
+
+// === Phase 2: Confirm Import ===
+
+export async function confirmImport(preview: ImportPreviewData, onProgress: ProgressCallback): Promise<ImportResult> {
+	const logs: string[] = [];
+
+	function log(message: string): void {
+		logs.push(message);
+		onProgress({
+			phase: 'saving-messages',
+			message,
+			consoleOutput: logs.join('\n'),
+		});
+	}
+
+	try {
+		for (const act of preview.acts) {
+			const selectedMessages: ParsedMessage[] = act.messages
+				.filter((m) => !m.removed && m.role !== 'system')
+				.map(({ id: _id, removed: _removed, ...rest }) => rest);
+
+			const messageIds = await createMessagesFromParsed(selectedMessages, act.actLineId, log, (msg) => {
+				onProgress({
+					phase: 'saving-messages',
+					message: msg,
+					consoleOutput: '',
+				});
+			});
+			preview.createdResources.messageIds.push(...messageIds);
+		}
+
 		await loadStories();
 
-		// Finalize
+		const needsInterview = preview.acts.length > 0 &&
+			preview.acts[preview.acts.length - 1].messages.filter((m) => !m.removed && m.role !== 'system').length === 0;
+
 		onProgress({
 			phase: 'complete',
-			message: processResult.needsInterview
+			message: needsInterview
 				? ls('features.importWorld.messages.importCompleteWithInterview')
 				: ls('features.importWorld.messages.importComplete'),
 			consoleOutput: logs.join('\n') + '\n\n✓ ' + ls('features.importWorld.messages.importCompletedSuccessfully'),
 		});
 
-		const firstActId = processResult.actIds.length > 0 ? processResult.actIds[0] : undefined;
-		const lastActId = processResult.actIds.length > 0 ? processResult.actIds[processResult.actIds.length - 1] : undefined;
-		const lastActLineId = processResult.actLineIds.length > 0 ? processResult.actLineIds[processResult.actLineIds.length - 1] : undefined;
+		const firstActId = preview.acts.length > 0 ? preview.acts[0].actId : undefined;
+		const lastActId = preview.acts.length > 0 ? preview.acts[preview.acts.length - 1].actId : undefined;
+		const lastActLineId = preview.acts.length > 0 ? preview.acts[preview.acts.length - 1].actLineId : undefined;
 
 		return {
 			success: true,
-			storyId,
+			storyId: preview.storyId,
 			actId: firstActId,
 			lastActId,
 			actLineId: lastActLineId,
-			warnings,
+			warnings: [],
 			importComplete: true,
-			needsInterview: processResult.needsInterview,
-			worldContent: worldContent ?? undefined,
-			interviewContext: processResult.needsInterview
+			needsInterview,
+			worldContent: preview.worldContent ?? undefined,
+			interviewContext: needsInterview
 				? {
-						actCard: processResult.interviewActCard,
-						characterCards,
+						actCard: preview.interviewActCard,
+						characterCards: preview.characterCards,
 					}
 				: undefined,
 		};
 	} catch (error) {
 		const errorMsg = error instanceof Error ? error.message : String(error);
 		logs.push(`\n✗ Import failed: ${errorMsg}`);
-
-		// Cleanup created resources on failure
-		logs.push('Cleaning up partially imported data...');
-		await cleanupImport(createdResources, logs);
+		logs.push('Cleaning up...');
+		await cleanupImport(preview.createdResources, logs);
 
 		onProgress({
 			phase: 'error',
@@ -159,36 +196,30 @@ export async function executeImport(formData: ImportFormData, onProgress: Progre
 		return {
 			success: false,
 			error: errorMsg,
-			warnings,
+			warnings: [],
 			importComplete: false,
 		};
 	}
 }
 
-// === Act Processing ===
+// === Cancel Import ===
 
-interface ActProcessingResult {
-	actIds: string[];
-	actLineIds: string[];
-	needsInterview: boolean;
-	interviewActCard: string | null;
+export async function cancelImport(preview: ImportPreviewData): Promise<void> {
+	await cleanupImport(preview.createdResources, []);
 }
 
-async function processActs(
+// === Act Preparation ===
+
+async function prepareActs(
 	formData: ImportFormData,
 	storyId: string,
-	storyFolder: string,
-	worldContent: string | null,
-	characterCards: { name: string; content: string }[],
-	log: (msg: string) => void,
+	importCtx: ImportContext,
+	createdResources: CreatedResources,
 	onProgress: ProgressCallback,
-	createdResources: CreatedResources
-): Promise<ActProcessingResult> {
+	log: (msg: string) => void
+): Promise<ImportPreviewAct[]> {
 	let previousActLineId: string | null = null;
-	const actIds: string[] = [];
-	const actLineIds: string[] = [];
-	let needsInterview = false;
-	let interviewActCard: string | null = null;
+	const previewActs: ImportPreviewAct[] = [];
 
 	const retryConfig: RetryConfig = {
 		retryCount: formData.retryCount,
@@ -198,38 +229,35 @@ async function processActs(
 	for (let actIndex = 0; actIndex < formData.acts.length; actIndex++) {
 		const actInput = formData.acts[actIndex];
 		const actNumber = actIndex + 1;
-		const isLastAct = actIndex === formData.acts.length - 1;
 
 		const { actId, actLineId } = await createActAndLine(actInput, actNumber, storyId, previousActLineId, log, onProgress, createdResources);
-		actIds.push(actId);
-		actLineIds.push(actLineId);
 
+		let messages: ImportPreviewMessage[] = [];
 		if (actInput.transcript) {
-			await processTranscriptAct(
+			const parsed = await enrichTranscriptAct(
 				actInput,
-				actLineId,
-				storyFolder,
 				actNumber,
 				formData.skipOptionalMalformed,
 				retryConfig,
+				importCtx,
 				log,
-				onProgress,
-				createdResources
+				onProgress
 			);
-		} else if (isLastAct) {
-			if (actInput.actFile) {
-				const actCardContent = await actInput.actFile.text();
-				await saveActCard(storyFolder, actNumber, actCardContent);
-				log(`Act card saved: ${actInput.actFile.name}`);
-				interviewActCard = actCardContent;
-			}
-			needsInterview = true;
+			messages = toPreviewMessages(parsed);
 		}
+
+		previewActs.push({
+			actId,
+			actLineId,
+			actName: actInput.name.trim() || `Act-${actId.slice(-8)}`,
+			actNumber,
+			messages,
+		});
 
 		previousActLineId = actLineId;
 	}
 
-	return { actIds, actLineIds, needsInterview, interviewActCard };
+	return previewActs;
 }
 
 async function createActAndLine(
@@ -249,14 +277,12 @@ async function createActAndLine(
 		consoleOutput: '',
 	});
 
-	// Create act with placeholder name if needed
 	const actId = crypto.randomUUID();
 	const placeholderName = isPlaceholderName ? `Act-${actId.slice(-8)}` : actInput.name.trim();
 	await createAct(actId, storyId, placeholderName, actNumber, previousActLineId);
 	createdResources.actIds.push(actId);
 	log(`Act ${actNumber} created: "${placeholderName}"`);
 
-	// Create main act line
 	const actLineId = crypto.randomUUID();
 	await createActLine(actLineId, actId, 'Main Line', true, getDefaultPlotMode());
 	createdResources.actLineIds.push(actLineId);
@@ -264,29 +290,69 @@ async function createActAndLine(
 	return { actId, actLineId };
 }
 
-async function processTranscriptAct(
+async function enrichTranscriptAct(
 	actInput: { id: string; name: string; actFile: File | null; transcript: File | null },
-	actLineId: string,
-	storyFolder: string,
 	actNumber: number,
 	skipOptionalMalformed: boolean,
 	retryConfig: RetryConfig,
+	importCtx: ImportContext,
 	log: (msg: string) => void,
-	onProgress: ProgressCallback,
-	createdResources: CreatedResources
-): Promise<void> {
-	// Parse transcript
+	onProgress: ProgressCallback
+): Promise<ParsedMessage[]> {
 	const transcriptName = actInput.transcript!.name;
 	log(`Parsing transcript: ${transcriptName}`);
 
 	const parsedTranscript = await parseTranscriptFile(actInput.transcript!, skipOptionalMalformed);
-
 	const parsedMessages = [...parsedTranscript.messages];
 
 	log(`Parsed ${parsedMessages.length} messages (${parsedTranscript.format} format)`);
 
-	// Run game data detection on assistant messages lacking game data
-	const missingGameData = parsedTranscript.messages.filter((m) => m.role === 'assistant' && !m.gameData).length;
+	const missingNarrative = parsedMessages.filter((m) => m.role === 'assistant' && !m.variables?.sceneTitle).length;
+
+	if (missingNarrative > 0) {
+		onProgress({
+			phase: 'processing-act',
+			message: ls('features.importWorld.messages.fillingNarrativeVariables', { count: missingNarrative }),
+			consoleOutput: '',
+		});
+		log(`Filling narrative variables for ${missingNarrative} messages...`);
+
+		const narrativeResults = await runNarrativeFilling(
+			parsedMessages,
+			retryConfig,
+			log,
+			(msgIndex, state) => {
+				onProgress({
+					phase: 'processing-act',
+				message: ls('features.importWorld.messages.fillingNarrativeVariable', { index: msgIndex }),
+				consoleOutput: state.content ?? state.reasoning ?? '',
+			});
+		},
+		(msgIndex, err, attempt) => {
+			const errorContent = `[filling-narrative-variables] attempt ${attempt + 1} failed: ${err.message}. Retrying...`;
+			onProgress({
+				phase: 'processing-act',
+				message: ls('features.importWorld.messages.fillingNarrativeVariable', { index: msgIndex }),
+					consoleOutput: '[ERROR]' + errorContent,
+				});
+			}
+		);
+
+		for (const result of narrativeResults) {
+			if (result.variables) {
+				const existing = parsedMessages[result.messageIndex].variables ?? emptyVariables();
+				parsedMessages[result.messageIndex] = {
+					...parsedMessages[result.messageIndex],
+					variables: { ...existing, ...result.variables },
+				};
+			}
+		}
+
+		const filled = narrativeResults.filter((r) => r.variables).length;
+		log(`Narrative filling: ${filled}/${missingNarrative} messages processed`);
+	}
+
+	const missingGameData = parsedMessages.filter((m) => m.role === 'assistant' && !m.variables?.gameData).length;
 
 	if (missingGameData > 0) {
 		onProgress({
@@ -295,6 +361,12 @@ async function processTranscriptAct(
 			consoleOutput: '',
 		});
 		log(`Detecting game data for ${missingGameData} messages...`);
+
+		const gameDataImportContext: GameDataImportContext = {
+			worldContent: importCtx.worldContent,
+			characterCards: importCtx.characterCards,
+			actCard: importCtx.actCards.find((card) => card.actNumber === actNumber) || { actNumber, content: '' },
+		};
 
 		const detectionResult = await runGameDataDetection(
 			parsedMessages,
@@ -315,16 +387,17 @@ async function processTranscriptAct(
 					message: ls('features.importWorld.messages.generatingGameData', { index: msgIndex }),
 					consoleOutput: '[ERROR]' + errorContent,
 				});
-			}
+			},
+			gameDataImportContext
 		);
 
-		// Use the updated messages with detected game data
 		for (const result of detectionResult.results) {
 			if (result.gameData) {
 				const originalParsedMessage = parsedMessages[result.messageIndex];
+				const existing = originalParsedMessage.variables ?? emptyVariables();
 				parsedMessages[result.messageIndex] = {
 					...originalParsedMessage,
-					gameData: result.gameData,
+					variables: { ...existing, gameData: result.gameData },
 					metadata: result.metadata ?? originalParsedMessage.metadata,
 				};
 			}
@@ -335,25 +408,60 @@ async function processTranscriptAct(
 		log(`Game data detection: ${detected}/${missingGameData} messages processed (${llmCalls} LLM calls)`);
 	}
 
-	// Create messages and add to act line
-	const messageIds = await createMessagesFromParsed(parsedMessages, actLineId, log, (msg) => {
-		onProgress({
-			phase: 'saving-messages',
-			message: msg,
-			consoleOutput: '',
-		});
-	});
-	createdResources.messageIds.push(...messageIds);
+	return parsedMessages;
+}
 
-	// Save provided act card if exists (for transcript imports)
-	if (actInput.actFile) {
-		const actCardContent = await actInput.actFile.text();
-		await saveActCard(storyFolder, actNumber, actCardContent);
-		log(`Act card saved: ${actInput.actFile.name}`);
-	}
+function toPreviewMessages(messages: ParsedMessage[]): ImportPreviewMessage[] {
+	return messages.map((m) => ({
+		id: crypto.randomUUID(),
+		role: m.role,
+		content: m.content,
+		reasoning: m.reasoning,
+		metadata: m.metadata,
+		variables: m.variables,
+		removed: false,
+	}));
 }
 
 // === Helper Functions ===
+
+async function regenerateWorldFromCards(
+	storyFolder: string,
+	interviewActCard: { actNumber: number; content: string } | null,
+	characterCards: { name: string; content: string }[],
+	log: (message: string) => void
+) {
+	let result: string | null = null;
+	const lastActCardContent = interviewActCard?.content ?? null;
+	if (lastActCardContent || characterCards.length > 0) {
+		log('Generating world file from provided cards...');
+		result = await generateWorldFromCards(null, lastActCardContent, characterCards, storyFolder);
+		log(`World file generated (${result.length} chars)`);
+	}
+	return result;
+}
+
+async function readAndSaveActCards(
+	storyFolder: string,
+	formData: ImportFormData,
+	log: (message: string) => void
+): Promise<{ actNumber: number; content: string }[]> {
+	const actCards: { actNumber: number; content: string }[] = [];
+
+	for (const [index, act] of formData.acts.entries()) {
+		if (!act.actFile) continue;
+		const content = await act.actFile.text();
+		if (!content) continue;
+
+		const actNumber = index + 1;
+		const actCard = { actNumber: actNumber, content };
+		actCards.push(actCard);
+		await saveActCard(storyFolder, actNumber, content);
+		log(`Act card saved: ${act.actFile.name}`);
+	}
+
+	return actCards;
+}
 
 async function loadCharacterCards(
 	characters: { id: string; name: string; cardFile: File | null }[],
@@ -377,13 +485,15 @@ async function createMessagesFromParsed(
 	log: (msg: string) => void,
 	onProgress?: (message: string) => void
 ): Promise<string[]> {
+	const sceneNumbers = assignSceneNumbers(parsedMessages);
 	let sequence = 1;
 	const messageIds: string[] = [];
 	const total = parsedMessages.length;
-	const reportInterval = Math.max(1, Math.floor(total / 5)); // Report every 20%
+	const reportInterval = Math.max(1, Math.floor(total / 5));
 
-	for (const msg of parsedMessages) {
-		// Skip non-supported roles
+	for (let i = 0; i < parsedMessages.length; i++) {
+		const msg = parsedMessages[i];
+
 		if (msg.role === 'system') {
 			continue;
 		}
@@ -397,7 +507,8 @@ async function createMessagesFromParsed(
 				content: msg.content,
 				reasoning: msg.reasoning,
 				metadata: msg.metadata,
-				variables: msg.gameData ? { ...emptyVariables(), gameData: msg.gameData } : undefined,
+				variables: msg.variables ?? undefined,
+				sceneNumber: sceneNumbers.get(i),
 			});
 
 			await addMessageToLine(actLineId, messageId, sequence++);
@@ -405,10 +516,9 @@ async function createMessagesFromParsed(
 		} catch (e) {
 			const errorMsg = e instanceof Error ? e.message : String(e);
 			log(`Failed to save message ${sequence}: ${errorMsg}`);
-			throw e; // Re-throw to trigger cleanup
+			throw e;
 		}
 
-		// Report progress periodically for large batches
 		if (onProgress && sequence % reportInterval === 0) {
 			onProgress(`Saving messages: ${sequence}/${total}`);
 		}
@@ -416,6 +526,27 @@ async function createMessagesFromParsed(
 
 	log(`Saved ${sequence - 1} messages to act line`);
 	return messageIds;
+}
+
+export function assignSceneNumbers(messages: { role: string; removed?: boolean }[]): Map<number, number> {
+	const result = new Map<number, number>();
+	let currentScene = 1;
+
+	for (let i = 0; i < messages.length; i++) {
+		const msg = messages[i];
+		if (msg.role === 'system' || msg.removed) continue;
+
+		result.set(i, currentScene);
+
+		if (msg.role === 'user') {
+			const nextAssistant = messages.findIndex((m, j) => j > i && m.role === 'assistant' && !m.removed);
+			if (nextAssistant !== -1) {
+				currentScene++;
+			}
+		}
+	}
+
+	return result;
 }
 
 async function saveCharacterCards(
@@ -430,13 +561,11 @@ async function saveCharacterCards(
 
 	const usedNames = new Set<string>();
 	for (const card of characterCards) {
-		// Use canonical kebab-case naming like character-card-generator
 		let canonicalName = kebabCase(card.name);
 		if (!canonicalName) {
 			canonicalName = 'unnamed-character';
 		}
 
-		// Handle collisions by appending counter
 		if (usedNames.has(canonicalName)) {
 			let counter = 1;
 			while (usedNames.has(`${canonicalName}-${counter}`)) {
@@ -475,16 +604,7 @@ function extractCharacterName(content: string): string | null {
 	return result.name;
 }
 
-interface CreatedResources {
-	storyId: string | null;
-	storyFolder: string | null;
-	actIds: string[];
-	actLineIds: string[];
-	messageIds: string[];
-}
-
 async function cleanupImport(resources: CreatedResources, logs: string[]): Promise<void> {
-	// Helper to safely delete and log failures
 	const safeDelete = async (fn: () => Promise<void>, label: string) => {
 		try {
 			await fn();
@@ -494,29 +614,24 @@ async function cleanupImport(resources: CreatedResources, logs: string[]): Promi
 		}
 	};
 
-	// Delete messages (reverse order - no dependencies)
 	for (const msgId of resources.messageIds) {
 		await safeDelete(() => deleteMessage(msgId), `message ${msgId.slice(-8)}`);
 	}
 
-	// Delete act lines and their entries
 	for (const lineId of resources.actLineIds) {
 		await safeDelete(() => deleteLineEntries(lineId), `line entries for ${lineId.slice(-8)}`);
 		await safeDelete(() => deleteActLine(lineId), `act line ${lineId.slice(-8)}`);
 	}
 
-	// Delete acts
 	for (const actId of resources.actIds) {
 		await safeDelete(() => deleteAct(actId), `act ${actId.slice(-8)}`);
 	}
 
-	// Delete story folder (files)
 	if (resources.storyFolder && resources.storyId) {
 		const storyId = resources.storyId;
 		await safeDelete(() => deleteStoryFolder(storyId), `story folder`);
 	}
 
-	// Delete story (must be last - it's the root)
 	if (resources.storyId) {
 		const storyId = resources.storyId;
 		await safeDelete(() => deleteStory(storyId), `story ${storyId.slice(-8)}`);

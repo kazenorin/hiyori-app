@@ -140,6 +140,8 @@ features:
       processingAct: '正在處理章節 {actNumber}...'
       detectingGameData: '正在偵測 {count} 則訊息的遊戲資料...'
       generatingGameData: '正在生成遊戲資料[{index}]...'
+      fillingNarrativeVariables: '正在填入 {count} 則訊息的敘事變數...'
+      fillingNarrativeVariable: '正在填入敘事變數[{index}]...'
     validations:
       actTranscriptRequired: '章節 {actNumber} 必須提供對話記錄。僅最後一個章節可以不提供。'
       actTranscriptRequiredSingle: '除最後一個章節外，每個章節都必須提供對話記錄。'

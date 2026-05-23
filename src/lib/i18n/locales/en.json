@@ -283,7 +283,22 @@
 		"cancel": "Cancel",
 		"warnings": "Warnings ({count})",
 		"act": "Act {n}",
-		"addCharacter": "Add Character"
+		"addCharacter": "Add Character",
+		"reviewMessages": "Review Imported Messages",
+		"reviewDescription": "Review the imported messages below. Remove any you don't want to import.",
+		"confirmImport": "Confirm Import",
+		"cancelImport": "Cancel Import",
+		"showMore": "Show more",
+		"showLess": "Show less",
+		"removeMessage": "Remove",
+		"restoreMessage": "Restore",
+		"sceneNumber": "Scene",
+		"sceneTitle": "Scene Title",
+		"excerpt": "Excerpt",
+		"role": "Role",
+		"assistant": "Assistant",
+		"user": "User",
+		"messages": "{count} messages"
 	},
 	"memoryManager": {
 		"heading": "Memory Manager",

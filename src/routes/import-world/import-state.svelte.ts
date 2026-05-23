@@ -4,6 +4,7 @@ import type {
 	ImportFormData,
 	ImportActInput,
 	ImportCharacterInput,
+	ImportPreviewData,
 	ImportProgressUpdate,
 	ValidationResult,
 	ImportPhase,
@@ -31,6 +32,8 @@ let consoleOutput = $state('');
 const MAX_CONSOLE_LINES = 50;
 let importError = $state<string | null>(null);
 let showValidationWarnings = $state(false);
+let previewData = $state<ImportPreviewData | null>(null);
+let importPhase = $state<'form' | 'parsing' | 'preview' | 'saving'>('form');
 
 // === Derived ===
 
@@ -166,6 +169,21 @@ function setImportComplete(): void {
 	isImporting = false;
 }
 
+function toggleMessageRemoved(actIndex: number, messageIndex: number): void {
+	if (!previewData) return;
+	const msg = previewData.acts[actIndex].messages[messageIndex];
+	msg.removed = !msg.removed;
+}
+
+function setPreviewData(data: ImportPreviewData): void {
+	previewData = data;
+}
+
+function clearPreviewData(): void {
+	previewData = null;
+	importPhase = 'form';
+}
+
 // === Exports ===
 
 export function getImportWorldStore() {
@@ -219,6 +237,15 @@ export function getImportWorldStore() {
 		get canSubmit() {
 			return canSubmit;
 		},
+		get previewData() {
+			return previewData;
+		},
+		get importPhase() {
+			return importPhase;
+		},
+		set importPhase(v: 'form' | 'parsing' | 'preview' | 'saving') {
+			importPhase = v;
+		},
 
 		// Setters
 		set importComplete(v: boolean) {
@@ -256,5 +283,8 @@ export function getImportWorldStore() {
 		resetForm,
 		setImporting,
 		setImportComplete,
+		toggleMessageRemoved,
+		setPreviewData,
+		clearPreviewData,
 	};
 }

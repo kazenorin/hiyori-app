@@ -1,23 +1,47 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { getImportWorldStore } from './import-state.svelte';
-	import { executeImport } from '$lib/features/import-world/import-orchestrator';
+	import { prepareImport, confirmImport, cancelImport } from '$lib/features/import-world/import-orchestrator';
 	import { enterActPlotInterviewMode } from '$lib/features/world-builder/world-builder.svelte';
 	import { selectStory, selectAct, selectActLineQuiet } from '$lib/stores/stories.svelte';
+	import { settings } from '$lib/stores/settings.svelte';
+	import { setActiveLocale } from '$lib/fs/prompt-loader';
 	import { t } from '$lib/i18n';
+	import ImportPreviewTable from './ImportPreviewTable.svelte';
 
 	const store = getImportWorldStore();
+	setActiveLocale(settings.locale || 'en');
 
 	async function handleImport() {
-		// Scroll to top when import starts
 		window.scrollTo(0, 0);
 
 		const result = store.validate();
 		if (!result.isValid) return;
 
 		store.setImporting(true);
+		store.importPhase = 'parsing';
 
-		const importResult = await executeImport(store.getFormData(), (update) => {
+		const preview = await prepareImport(store.getFormData(), (update) => {
+			store.addProgressUpdate(update);
+		});
+
+		if (preview) {
+			store.setPreviewData(preview);
+			store.importPhase = 'preview';
+			store.setImporting(false);
+		} else {
+			store.setImporting(false);
+			store.importPhase = 'form';
+		}
+	}
+
+	async function handleConfirmImport() {
+		if (!store.previewData) return;
+
+		store.setImporting(true);
+		store.importPhase = 'saving';
+
+		const importResult = await confirmImport(store.previewData, (update) => {
 			store.addProgressUpdate(update);
 		});
 
@@ -34,7 +58,7 @@
 					undefined,
 					importResult.interviewContext
 						? {
-								actCard: importResult.interviewContext.actCard ?? undefined,
+								actCard: importResult.interviewContext.actCard?.content ?? undefined,
 								characterCards: importResult.interviewContext.characterCards,
 							}
 						: undefined
@@ -43,6 +67,14 @@
 			}
 		} else {
 			store.setImporting(false);
+			store.importPhase = 'form';
+		}
+	}
+
+	async function handleCancelImport() {
+		if (store.previewData) {
+			await cancelImport(store.previewData);
+			store.clearPreviewData();
 		}
 	}
 
@@ -71,7 +103,6 @@
 					{/if}
 				</h2>
 
-				<!-- Current status -->
 				{#if store.isImporting}
 					<div class="flex items-center gap-2">
 						<div class="animate-spin h-4 w-4 border-2 border-primary-500 border-t-transparent rounded-full"></div>
@@ -81,7 +112,6 @@
 					</div>
 				{/if}
 
-				<!-- Completion indicator -->
 				{#if store.importComplete}
 					<div class="flex items-center gap-2 text-success-600">
 						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -91,14 +121,12 @@
 					</div>
 				{/if}
 
-				<!-- Console output -->
 				{#if store.consoleOutput}
 					<div class="bg-surface-900-100 text-surface-100-900 rounded-lg p-4 font-mono text-xs max-h-96 overflow-y-auto">
 						<pre class="whitespace-pre-wrap break-words">{store.consoleOutput}</pre>
 					</div>
 				{/if}
 
-				<!-- Error display -->
 				{#if store.importError}
 					<div class="card p-4 border border-error-500">
 						<h3 class="text-sm font-semibold text-error-600">{t('importWorld.importFailed')}</h3>
@@ -106,7 +134,6 @@
 					</div>
 				{/if}
 
-				<!-- Progress log -->
 				<details>
 					<summary class="text-sm font-medium cursor-pointer text-surface-500">{t('importWorld.fullLog')}</summary>
 					<div class="mt-2 space-y-1 max-h-64 overflow-y-auto">
@@ -124,8 +151,20 @@
 			</section>
 		{/if}
 
-		<!-- Form Sections - Hidden During Import -->
-		{#if !store.isImporting}
+		<!-- Preview: Review imported messages -->
+		{#if store.importPhase === 'preview' && store.previewData}
+			<section class="card p-6 space-y-4">
+				<h2 class="h4">{t('importWorld.reviewMessages')}</h2>
+				<p class="text-sm text-surface-500">{t('importWorld.reviewDescription')}</p>
+				<ImportPreviewTable
+					acts={store.previewData.acts}
+					onToggleRemoved={store.toggleMessageRemoved}
+				/>
+			</section>
+		{/if}
+
+		<!-- Form Sections - Hidden During Import and Preview -->
+		{#if store.importPhase === 'form'}
 			{#if store.validationResult && store.validationResult.errors.length > 0}
 				<div class="card p-4 border border-error-500 bg-error-50 dark:bg-error-950 space-y-2">
 					<h3 class="text-sm font-semibold text-error-700 dark:text-error-400">{t('importWorld.validationErrors')}</h3>
@@ -135,7 +174,6 @@
 				</div>
 			{/if}
 
-			<!-- Validation Warnings -->
 			{#if store.showValidationWarnings && store.validationResult?.warnings}
 				<details class="card p-4 border border-warning-500 bg-warning-50 dark:bg-warning-950">
 					<summary class="text-sm font-semibold text-warning-700 dark:text-warning-400 cursor-pointer">
@@ -368,6 +406,13 @@
 		<div class="flex justify-end gap-3 pb-8">
 			{#if store.importComplete}
 				<button class="btn variant-filled" type="button" onclick={handleBack}> {t('importWorld.backToChat')} </button>
+			{:else if store.importPhase === 'preview'}
+				<button class="btn variant-ghost" type="button" onclick={handleCancelImport}>
+					{t('importWorld.cancelImport')}
+				</button>
+				<button class="btn variant-filled" type="button" onclick={handleConfirmImport}>
+					{t('importWorld.confirmImport')}
+				</button>
 			{:else}
 				<button class="btn variant-ghost" type="button" onclick={handleBack} disabled={store.isImporting}>
 					{t('importWorld.cancel')}

@@ -369,7 +369,7 @@ export async function runGmTemplateFitter(ctx: PipelineRunContext, state: Pipeli
 	return trackPhase('GM_TEMPLATE_FITTER', result, ctx.providerConfigs.minorTaskAgent?.model);
 }
 
-function executeGmPhase(ctx: PipelineRunContext, state: PipelineState, postEditorCtx: PostEditorContext) {
+export function executeGmPhase(ctx: PipelineRunContext, state: PipelineState, postEditorCtx: PostEditorContext) {
 	return executeStreamingPhase(
 		{
 			phaseName: 'GAME_MASTER',

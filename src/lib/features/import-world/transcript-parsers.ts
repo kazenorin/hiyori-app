@@ -1,6 +1,6 @@
 // Transcript parsers for multiple JSON formats
 
-import type { GameDataFields } from '$lib/ai/narrative-types';
+import { emptyVariables, type GameDataFields } from '$lib/ai/narrative-types';
 import type { TranscriptFormat, ParsedTranscript, ParsedMessage, OpenWebUIExport, OpenWebUIMessage } from './types';
 import { validateFileSize } from '$lib/utils/async';
 import {
@@ -98,7 +98,7 @@ export function parseAppExportFormat(json: unknown, skipOptionalMalformed: boole
 		if (msg.game_data) {
 			const gameData = parseGameData(msg.game_data, skipOptionalMalformed);
 			if (gameData !== null) {
-				parsedMsg.gameData = gameData;
+				parsedMsg.variables = { ...emptyVariables(), gameData };
 			}
 		}
 

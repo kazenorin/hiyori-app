@@ -1,6 +1,6 @@
 // Core types for Import World feature
 
-import type { GameDataFields } from '$lib/ai/narrative-types';
+import type { GameDataFields, NarrativeVariables } from '$lib/ai/narrative-types';
 
 // === Transcript Format Detection ===
 
@@ -43,7 +43,7 @@ export interface ParsedMessage {
 	content: string;
 	reasoning?: string;
 	metadata?: string;
-	gameData?: GameDataFields;
+	variables?: NarrativeVariables;
 }
 
 // === Open WebUI Specific Types ===
@@ -91,7 +91,7 @@ export interface ImportResult {
 	needsInterview?: boolean;
 	worldContent?: string;
 	interviewContext?: {
-		actCard: string | null;
+		actCard: { actNumber: number; content: string } | null;
 		characterCards: { name: string; content: string }[];
 	};
 }
@@ -145,6 +145,66 @@ export interface GameDataExtractionResult {
 export interface GameDataDetectionResult {
 	results: GameDataExtractionResult[];
 	llmCallsMade: number;
+}
+
+export interface NarrativeExtractionResult {
+	messageIndex: number;
+	variables: NarrativeVariables | null;
+	source: 'template-fitter' | 'none';
+}
+
+export interface GameDataImportContext {
+	worldContent: string | null;
+	characterCards: { name: string; content: string }[];
+	actCard: { actNumber: number; content: string };
+}
+
+// === Import Context ===
+
+export interface ImportContext {
+	worldContent: string | null;
+	characterCards: { name: string; content: string }[];
+	actCards: { actNumber: number; content: string }[];
+}
+
+// === Import Preview Types ===
+
+export interface ImportPreviewMessage {
+	id: string;
+	role: 'user' | 'assistant' | 'system';
+	content: string;
+	reasoning?: string;
+	metadata?: string;
+	variables?: NarrativeVariables;
+	removed: boolean;
+}
+
+export interface ImportPreviewAct {
+	actId: string;
+	actLineId: string;
+	actName: string;
+	actNumber: number;
+	messages: ImportPreviewMessage[];
+}
+
+export interface ImportPreviewData {
+	storyId: string;
+	storyFolder: string;
+	storyName: string;
+	worldContent: string | null;
+	acts: ImportPreviewAct[];
+	characterCards: { name: string; content: string }[];
+	actCards: { actNumber: number; content: string }[];
+	interviewActCard: { actNumber: number; content: string } | null;
+	createdResources: CreatedResources;
+}
+
+export interface CreatedResources {
+	storyId: string | null;
+	storyFolder: string | null;
+	actIds: string[];
+	actLineIds: string[];
+	messageIds: string[];
 }
 
 // === Import Story Structure ===

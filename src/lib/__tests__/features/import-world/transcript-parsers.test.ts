@@ -103,7 +103,7 @@ describe('parseAppExportFormat', () => {
 			],
 		};
 		const result = parseAppExportFormat(json, false);
-		expect(result.messages[0].gameData).toEqual({
+		expect(result.messages[0].variables?.gameData).toEqual({
 			activePlotThreads: [],
 			decisionContext: 'test',
 			decisions: ['a', 'b'],
@@ -144,7 +144,7 @@ describe('parseAppExportFormat', () => {
 			],
 		};
 		const result = parseAppExportFormat(json, true);
-		expect(result.messages[0].gameData).toBeUndefined();
+		expect(result.messages[0].variables?.gameData).toBeUndefined();
 	});
 
 	it('throws on malformed game_data with skipOptionalMalformed=false', () => {

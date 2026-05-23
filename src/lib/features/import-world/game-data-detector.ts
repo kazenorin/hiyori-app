@@ -1,15 +1,18 @@
 // Two-pass game data detection pipeline
 // Pass 1: Traditional extraction from markdown headers/keywords
-// Pass 2: LLM-based extraction for remaining messages
+// Pass 2: LLM-based extraction using pipeline GM phase + template fitter
 
 import type { GameDataFields } from '$lib/ai/narrative-types';
-import type { GameDataDetectionResult, GameDataExtractionResult, ParsedMessage } from './types';
-import { buildMetadata, type RetryConfig, streamWithRetry } from '$lib/ai/chat-stream';
-import { loadChoicesExtractionPrompt } from '$lib/fs/prompts';
+import type { GameDataDetectionResult, GameDataExtractionResult, GameDataImportContext, ParsedMessage } from './types';
+import { buildMetadata, type RetryConfig } from '$lib/ai/chat-stream';
 import { sleep } from '$lib/utils/async';
 import type { StreamState } from '$lib/ai/chat-callbacks';
-import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { getActiveSystemPromptOrDefault } from '$lib/stores/stories.svelte';
+import { executeGmPhase, runGmTemplateFitter, type PipelineRunContext, type TrackPhase } from '$lib/ai/pipeline/runners';
+import type { PostEditorContext } from '$lib/ai/pipeline/message-builder';
+import type { PipelineCallbacks, PipelineState } from '$lib/ai/pipeline/types';
+import { buildPipelineProviderConfigs } from '$lib/ai/chat/pipeline-config';
+import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
+import { buildImportRunContext } from './pipeline-context';
 
 // === Pass 1: Traditional Extraction (Synchronous) ===
 
@@ -156,22 +159,69 @@ function cleanMarkdownFormatting(text: string): string {
 	return cleaned.trim();
 }
 
-// === Pass 2: LLM Extraction (Asynchronous) ===
+// === Pass 2: LLM Extraction via Pipeline GM Phase ===
+
+function buildImportPipelineCallbacks(
+	msgIndex: number,
+	onProgress: (msgIndex: number, state: StreamState) => void,
+	onError: (msgIndex: number, err: Error, attempt: number) => void
+): PipelineCallbacks {
+	return {
+		onPhaseStart: () => {},
+		onPhaseStream: (_phase, streamState) => {
+			onProgress(msgIndex, streamState);
+		},
+		onPhaseRetry: (_phase, attempt, maxAttempts) => {
+			onError(msgIndex, new Error(`GM phase retry ${attempt}/${maxAttempts}`), attempt);
+		},
+		onPhaseComplete: () => {},
+		onError: (_phase, error) => {
+			const err = error instanceof Error ? error : new Error(String(error));
+			onError(msgIndex, err, 0);
+		},
+		onAllComplete: () => {},
+	};
+}
+
+function buildImportPipelineRunContext(
+	retryConfig: RetryConfig,
+	abortSignal: AbortSignal,
+	callbacks: PipelineCallbacks,
+	gmSystemPrompt: string
+): PipelineRunContext {
+	return buildImportRunContext(retryConfig, abortSignal, callbacks, { gameMasterSystemPrompt: gmSystemPrompt });
+}
+
+function buildImportPostEditorContext(msgContent: string, importCtx: GameDataImportContext): PostEditorContext {
+	return {
+		actPlot: importCtx.actCard.content, // strictly speaking act cards are act summaries, but actSummary is optional, while act plots are not
+		actPhase: undefined,
+		actSummary: '',
+		previousScenePlot: undefined,
+		previousNarrativeBody: undefined,
+		completedScenes: 0,
+		player: undefined,
+		previousTurnOfEvents: undefined,
+		editorOutput: msgContent,
+		directorNotes: '',
+	};
+}
 
 /**
- * Use LLM to extract game data for messages that lack it after Pass 1.
- * Returns extraction results only for messages where game_data was extracted.
+ * Use pipeline GM phase + template fitter to extract game data for messages
+ * that lack it after Pass 1. Uses the same production-grade extraction logic
+ * as the live narrative pipeline.
  */
 export async function extractGameDataWithLLM(
 	messages: ParsedMessage[],
 	indicesNeedingExtraction: number[],
 	retryConfig: RetryConfig,
 	onProgress: (msgIndex: number, state: StreamState) => void,
-	onError: (msgIndex: number, err: Error, attempt: number) => void
+	onError: (msgIndex: number, err: Error, attempt: number) => void,
+	importCtx: GameDataImportContext
 ): Promise<GameDataExtractionResult[]> {
-	const providerConfig = getMainProviderConfig();
-	const systemPrompt = await getActiveSystemPromptOrDefault();
-	const choicesExtractionPrompt = await loadChoicesExtractionPrompt();
+	const providerConfigs = buildPipelineProviderConfigs();
+	const gmSystemPrompt = await gameMasterSystemPromptLoader.loadDefault();
 	const results: GameDataExtractionResult[] = [];
 
 	for (let i = 0; i < indicesNeedingExtraction.length; i++) {
@@ -179,35 +229,29 @@ export async function extractGameDataWithLLM(
 		const msg = messages[msgIndex];
 		if (!msg || msg.role !== 'assistant') continue;
 
-		const acc = await streamWithRetry(
-			systemPrompt,
-			[
-				{ role: 'user', content: choicesExtractionPrompt },
-				{ role: 'user', content: msg.content },
-			],
-			{
-				retryConfig,
-				onProgress: (state) => {
-					onProgress(msgIndex, state);
-				},
-				onError: (err, attempt) => {
-					onError(msgIndex, err, attempt);
-				},
-				providerConfig,
-			}
-		);
+		const abortController = new AbortController();
+		const callbacks = buildImportPipelineCallbacks(msgIndex, onProgress, onError);
+		const ctx = buildImportPipelineRunContext(retryConfig, abortController.signal, callbacks, gmSystemPrompt);
 
-		const gameData = acc.state.variables?.gameData ?? null;
-		const metadata = await acc.resultMetadata;
+		const postEditorCtx = buildImportPostEditorContext(msg.content, importCtx);
+
+		const trackPhase: TrackPhase = (_phaseName, result) => result.state;
+		let state: PipelineState = { currentPhase: null };
+
+		const gmResult = await executeGmPhase(ctx, state, postEditorCtx);
+		state = trackPhase('GAME_MASTER', gmResult, providerConfigs.gameMaster?.model);
+
+		state = await runGmTemplateFitter(ctx, state, trackPhase);
+
+		const gameData = state.gameData ?? null;
 
 		results.push({
 			messageIndex: msgIndex,
 			gameData,
 			source: gameData ? 'llm' : 'none',
-			metadata: JSON.stringify(buildMetadata(metadata, providerConfig?.model), null, 2),
+			metadata: JSON.stringify(buildMetadata(gmResult.metadata, providerConfigs.gameMaster?.model), null, 2),
 		});
 
-		// Rate limit: small delay between LLM calls to avoid hitting API rate limits
 		if (i < indicesNeedingExtraction.length - 1) {
 			await sleep(100);
 		}
@@ -229,7 +273,8 @@ export async function runGameDataDetection(
 	retryConfig: RetryConfig,
 	log: (msg: string) => void,
 	onProgress: (msgIndex: number, state: StreamState) => void,
-	onError: (msgIndex: number, err: Error, attempt: number) => void
+	onError: (msgIndex: number, err: Error, attempt: number) => void,
+	importCtx: GameDataImportContext
 ): Promise<GameDataDetectionResult> {
 	const results: GameDataExtractionResult[] = [];
 	const indicesNeedingLLM: number[] = [];
@@ -239,11 +284,11 @@ export async function runGameDataDetection(
 		const message = messages[i];
 
 		// Skip non-assistant messages and messages that already have game_data
-		if (message.role !== 'assistant' || message.gameData) {
-			if (message.gameData) {
+		if (message.role !== 'assistant' || message.variables?.gameData) {
+			if (message.variables?.gameData) {
 				results.push({
 					messageIndex: i,
-					gameData: message.gameData,
+					gameData: message.variables.gameData,
 					source: 'traditional',
 				});
 			}
@@ -266,7 +311,7 @@ export async function runGameDataDetection(
 	// Pass 2: LLM extraction for messages still missing game_data
 	let llmCallsMade = 0;
 	if (indicesNeedingLLM.length > 0) {
-		const llmResults = await extractGameDataWithLLM(messages, indicesNeedingLLM, retryConfig, onProgress, onError);
+		const llmResults = await extractGameDataWithLLM(messages, indicesNeedingLLM, retryConfig, onProgress, onError, importCtx);
 
 		results.push(...llmResults);
 		llmCallsMade = llmResults.filter((r) => r.source === 'llm').length;
