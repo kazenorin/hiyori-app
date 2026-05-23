@@ -40,7 +40,7 @@ import {
 	updatePersistentMessageMetadata,
 } from './chat/persistence';
 import { updateMessageFields } from '$lib/db/messages';
-import type { NarrativeVariables, PlotMode } from './narrative-types';
+import type { NarrativeVariables, PhaseName, PlotMode } from './narrative-types';
 import { emptyVariables } from './narrative-types';
 import { runEpiloguePipeline, runPipeline } from './pipeline';
 import type { AsyncPhaseResults, PipelineResult, PipelineState } from './pipeline/types';
@@ -52,7 +52,10 @@ import { loadPrompts } from './pipeline/prompt-loader';
 import { buildImportRunContext } from '$lib/features/import-world/pipeline-context';
 import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
 import type { PostEditorContext } from './pipeline/message-builder';
+import { setActiveLocale } from '$lib/fs/prompt-loader';
+import { loadLocaleStrings } from '$lib/localization';
 
+// Re-exported for `+page.svelte` only
 export type { UIMessage };
 
 interface RequestContext {
@@ -262,9 +265,11 @@ function updateMessageMetadataByIndex(result: PipelineResult, messageIdx: number
 }
 
 async function executeNarrativeRequest(requestContext: RequestContext): Promise<void> {
-	await awaitPendingAsyncPhases('send-message', true);
-
 	const { actLineId, mainConfig, story, actLine, previousNarrativeVariables, previousSceneNumber, message } = requestContext;
+
+	await Promise.all([awaitPendingAsyncPhases('send-message', true), loadLocaleStrings(story.locale)]);
+	setActiveLocale(story.locale);
+
 	const nextSceneNumber = previousSceneNumber + 1;
 
 	const newMessagesCount = await prepareNewMessages(actLineId, previousSceneNumber, nextSceneNumber, message);
@@ -366,10 +371,17 @@ export function stopStreaming(): void {
 }
 
 export async function runEpilogueFlow(actLineId: string): Promise<void> {
-	await awaitPendingAsyncPhases('epilogue', true);
 	requireMainConfig();
-	const story = await dbActLines.getStoryForActLine(actLineId);
-	const actLine = await requireActLine(actLineId);
+
+	const [story, actLine] = await Promise.all([
+		dbActLines.getStoryForActLine(actLineId),
+		requireActLine(actLineId),
+		awaitPendingAsyncPhases('epilogue', true),
+	]);
+
+	setActiveLocale(story.locale);
+	await loadLocaleStrings(story.locale);
+
 	if (!actLine.endingType) {
 		error = 'Cannot run epilogue: no ending type set.';
 		return;
@@ -545,7 +557,7 @@ function buildTranscriptFromMessages(messages: UIMessage[]): { role: 'user' | 'a
 			const content = body && body.length > 0 ? body : msg.content;
 			transcript.push({ role: 'assistant' as const, content });
 		} else if (msg.role === 'user') {
-			transcript.push(msg);
+			transcript.push({ role: 'user' as const, content: msg.content });
 		}
 	}
 	return transcript;
@@ -570,7 +582,7 @@ async function regenerateGameData(
 		{ retryCount: 3, backoffIntervalSeconds: 5 },
 		abortController.signal,
 		createOptionalCallbacks({
-			onError: (_phase, err) => {
+			onError: (_phase: PhaseName, err: unknown) => {
 				log.error('regenerate-metadata', 'GM phase error', err);
 			},
 		}),

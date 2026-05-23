@@ -31,6 +31,7 @@ function getBundle(locale: string): LocaleStringBundle {
 
 async function resolveStoryFolder(_storyId: string, _storyName: string): Promise<string> {
 	try {
+		// To avoid circular dependencies, if `story-folders` needs localization too.
 		const { resolveStoryFolder: resolve } = await import('$lib/fs/story-folders');
 		return await resolve(_storyId, _storyName);
 	} catch {

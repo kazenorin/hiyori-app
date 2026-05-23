@@ -4,13 +4,10 @@
 	import { prepareImport, confirmImport, cancelImport } from '$lib/features/import-world/import-orchestrator';
 	import { enterActPlotInterviewMode } from '$lib/features/world-builder/world-builder.svelte';
 	import { selectStory, selectAct, selectActLineQuiet } from '$lib/stores/stories.svelte';
-	import { settings } from '$lib/stores/settings.svelte';
-	import { setActiveLocale } from '$lib/fs/prompt-loader';
 	import { t } from '$lib/i18n';
 	import ImportPreviewTable from './ImportPreviewTable.svelte';
 
 	const store = getImportWorldStore();
-	setActiveLocale(settings.locale || 'en');
 
 	async function handleImport() {
 		window.scrollTo(0, 0);

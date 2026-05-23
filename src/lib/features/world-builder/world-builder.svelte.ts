@@ -1,22 +1,23 @@
-import { getMainProviderConfig, type ProviderConfig } from '$lib/stores/settings.svelte';
-import { worldBuilderSeed, resumeStoryActPrefix, resumeStoryActSuffix } from '$lib/features/world-builder/prompts';
+import { getMainProviderConfig, type ProviderConfig, settings } from '$lib/stores/settings.svelte';
+import { resumeStoryActPrefix, resumeStoryActSuffix, worldBuilderSeed } from '$lib/features/world-builder/prompts';
 import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
 import { actInformationHeader, charactersHeader, currentSceneHeader } from '$lib/definitions/common-headers';
-import { ls } from '$lib/localization';
+import { loadLocaleStrings, ls } from '$lib/localization';
 import {
+	loadActPlotInterviewExtractionPrompt,
+	loadActPlotInterviewSystemPrompt,
+	loadGeneralInstructions,
 	loadWorldBuilderSystemPrompt,
 	loadWorldTemplate,
-	loadActPlotInterviewExtractionPrompt,
-	loadGeneralInstructions,
-	loadActPlotInterviewSystemPrompt,
 } from '$lib/fs/prompts';
+import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { generateWorldBuilderLogFilename, logWorldBuilderChat } from '$lib/logging/chat-logger';
 import { log } from '$lib/logging/logger';
 import { type StreamAccumulator, type StreamState } from '$lib/ai/chat-callbacks';
 import { streamChatResponse } from '$lib/ai/chat-stream';
+import type { MessageBase } from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
-import type { MessageBase } from '$lib/db/messages';
 import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 
 export interface WorldBuilderMessage {
@@ -103,6 +104,12 @@ export function getInterviewActLineId(): string | null {
 	return interviewActLineId;
 }
 
+async function loadActiveLocales() {
+	// Set active locale to i18n locale for world builder session
+	setActiveLocale(settings.locale || 'en');
+	await loadLocaleStrings(settings.locale || 'en');
+}
+
 function resetState(): void {
 	isActive = false;
 	messages = [];
@@ -165,13 +172,6 @@ export async function enterWorldBuilderMode(): Promise<void> {
 	exitWorldBuilderMode();
 	isActive = true;
 	logFilePath = generateWorldBuilderLogFilename();
-
-	// Set active locale to i18n locale for world builder session
-	const { settings } = await import('$lib/stores/settings.svelte');
-	const { setActiveLocale } = await import('$lib/fs/prompt-loader');
-	setActiveLocale(settings.locale || 'en');
-	const { loadLocaleStrings } = await import('$lib/localization');
-	await loadLocaleStrings(settings.locale || 'en');
 
 	// Load and cache prompts once (now uses locale-scoped dirs)
 	const [worldBuilderPrompt, worldTemplate] = await Promise.all([loadWorldBuilderSystemPrompt(), loadWorldTemplate()]);
@@ -319,6 +319,8 @@ async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<vo
 		error = ERR_API_KEY_AND_MODEL_NOT_CONFIGURED;
 		return;
 	}
+
+	await loadActiveLocales();
 
 	const responseMessage: WorldBuilderMessage = { id: crypto.randomUUID(), role: 'assistant', content: '' };
 	if (userMessage) {

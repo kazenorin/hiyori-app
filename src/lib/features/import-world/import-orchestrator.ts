@@ -11,6 +11,7 @@ import { BaseDirectory, mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { loadStories } from '$lib/stores/stories.svelte';
 import { kebabCase } from 'lodash-es';
 import type {
+	CreatedResources,
 	ImportFormData,
 	ImportPreviewAct,
 	ImportPreviewData,
@@ -19,15 +20,15 @@ import type {
 	ImportResult,
 	ParsedMessage,
 } from './types';
-import type { CreatedResources } from './types';
 import { emptyVariables } from '$lib/ai/narrative-types';
 import type { RetryConfig } from '$lib/ai/chat-stream';
 import { parseTranscriptFile } from './transcript-parsers';
 import { runNarrativeFilling } from './narrative-filler';
 import { generateWorldFromCards } from '$lib/ai/world-generator';
-import { ls } from '$lib/localization';
+import { loadLocaleStrings, ls } from '$lib/localization';
 import { nameLabel } from '$lib/definitions/common-labels';
 import { type OutputDescriptor, parseContent } from '$lib/utils/chat-stream-parser';
+import { setActiveLocale } from '$lib/fs/prompt-loader';
 
 // === Progress Callback Type ===
 
@@ -36,6 +37,9 @@ export type ProgressCallback = (update: ImportProgressUpdate) => void;
 // === Phase 1: Prepare Import ===
 
 export async function prepareImport(formData: ImportFormData, onProgress: ProgressCallback): Promise<ImportPreviewData | null> {
+	setActiveLocale(settings.locale || 'en');
+	await loadLocaleStrings(settings.locale || 'en');
+
 	const logs: string[] = [];
 
 	function log(message: string): void {
