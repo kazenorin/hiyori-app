@@ -40,7 +40,7 @@ import {
 } from './chat/persistence';
 import type { NarrativeVariables, PlotMode } from './narrative-types';
 import { runPipeline } from './pipeline';
-import type { AsyncPhaseResults, PipelineResult, PlayerContext } from './pipeline/types';
+import type { AsyncPhaseResults, PipelineResult } from './pipeline/types';
 import type { UIMessage } from './chat/types';
 export type { UIMessage };
 
@@ -52,7 +52,6 @@ interface RequestContext {
 	actLine: ActLineMeta;
 	previousSceneNumber: number;
 	previousNarrativeVariables: NarrativeVariables | undefined;
-	playerContext: PlayerContext | undefined;
 }
 
 let messages = $state<UIMessage[]>([]);
@@ -207,7 +206,6 @@ export async function sendMessage(actLineId: string, message: string): Promise<v
 		actLine,
 		previousSceneNumber: findLastNonNullSceneNumber(messages) ?? 0,
 		previousNarrativeVariables: getPreviousNarrativeMessage(messages),
-		playerContext: getPlayerContext(messages),
 	};
 	return executeNarrativeRequest(requestContext);
 }
@@ -230,7 +228,6 @@ export async function sendInitialNarration(actLineId: string): Promise<void> {
 		actLine,
 		previousSceneNumber: 0,
 		previousNarrativeVariables: undefined,
-		playerContext: undefined,
 	};
 	return executeNarrativeRequest(requestContext);
 }
@@ -246,10 +243,11 @@ function updateMessageMetadataByIndex(result: PipelineResult, messageIdx: number
 async function executeNarrativeRequest(requestContext: RequestContext): Promise<void> {
 	await awaitPendingAsyncPhases('send-message', true);
 
-	const { actLineId, mainConfig, story, actLine, previousNarrativeVariables, previousSceneNumber, playerContext, message } = requestContext;
+	const { actLineId, mainConfig, story, actLine, previousNarrativeVariables, previousSceneNumber, message } = requestContext;
 	const nextSceneNumber = previousSceneNumber + 1;
 
 	const newMessagesCount = await prepareNewMessages(actLineId, previousSceneNumber, nextSceneNumber, message);
+	const playerContext = getPlayerContext(getMessages());
 	const messageIdx = getLatestMessageIndex();
 
 	function getCurrentMessage(): UIMessage {
