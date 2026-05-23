@@ -3,7 +3,7 @@
 import { createStory, deleteStory } from '$lib/db/stories';
 import { createAct, deleteAct } from '$lib/db/acts';
 import { addMessageToLine, createActLine, deleteActLine, deleteLineEntries } from '$lib/db/act-lines';
-import { getDefaultPlotMode } from '$lib/stores/settings.svelte';
+import { getDefaultPlotMode, settings } from '$lib/stores/settings.svelte';
 import { createMessage, deleteMessage } from '$lib/db/messages';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { deleteStoryFolder } from '$lib/db/story-folders';
@@ -59,7 +59,7 @@ export async function executeImport(formData: ImportFormData, onProgress: Progre
 		storyId = crypto.randomUUID();
 		storyName = formData.storyName.trim() || `Story-${storyId.slice(-8)}`;
 
-		await createStory(storyId, storyName, 'en');
+		await createStory(storyId, storyName, settings.locale);
 		createdResources.storyId = storyId;
 		log(`Story created: "${storyName}" (${storyId.slice(-8)})`);
 
