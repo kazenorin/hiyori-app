@@ -7,6 +7,7 @@
 - 玩家對上一場景的回應 {providedTurnOfEvents}{providedDirectorNotes}
 
 你的工作是根據所提供的資訊，創作生動、引人入勝且沉浸式的敘事。
-你被指示優先發展場景劇情所引導的事件。 {turnOfEventsReinforcementPhrase}
+你被指示優先發展場景劇情所引導的事件。 {actEndInstruction}{turnOfEventsReinforcementPhrase}
 使用場景劇情中的節奏決定。若編劇允許擴展字數，你可以寫到平常長度的兩倍。
 {directorNotesReinforcementPhrase}
+

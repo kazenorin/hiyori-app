@@ -8,7 +8,15 @@ export interface GameDataFields {
 }
 
 /** Phase names for multi-phase narrative generation. EDITOR is excluded from the `phases: UIScenePhase[]` array on UIMessage — its output is stored in top-level UIMessage fields instead. */
-export type PhaseName = 'PLOT_PLANNER' | 'WRITER' | 'REVIEWER' | 'EDITOR' | 'TEMPLATE_FITTER' | 'GAME_MASTER' | 'SUMMARIZER' | 'CHARACTER_PROFILE_COMPRESSOR';
+export type PhaseName =
+	| 'PLOT_PLANNER'
+	| 'WRITER'
+	| 'REVIEWER'
+	| 'EDITOR'
+	| 'TEMPLATE_FITTER'
+	| 'GAME_MASTER'
+	| 'SUMMARIZER'
+	| 'CHARACTER_PROFILE_COMPRESSOR';
 
 /** A single phase within a UI scene, produced during streaming */
 export interface UIScenePhase {
@@ -124,16 +132,26 @@ export type PlotMode = 'guidance' | 'phaseEvent';
 /** Narrative phases for event-based plot mode. */
 export type ActPhase = 'introduction' | 'rising-action' | 'climax' | 'falling-action' | 'resolution';
 
+/** The type of ending reached when an act concludes. */
+export type EndingType = 'good' | 'bad' | 'bittersweet' | 'alternative';
+
+const VALID_ENDING_TYPES: readonly EndingType[] = ['good', 'bad', 'bittersweet', 'alternative'];
+
+/** Whether a value is a valid EndingType. */
+export function isValidEndingType(value: string): value is EndingType {
+	return (VALID_ENDING_TYPES as readonly string[]).includes(value);
+}
+
 /** Ordered phases for forward-only advancement. */
 export const ACT_PHASE_ORDER: readonly ActPhase[] = ['introduction', 'rising-action', 'climax', 'falling-action', 'resolution'];
 
 /** Maps DB act phase values to camelCase locale keys for ls() lookup. */
 export const ACT_PHASE_LOCALE_KEYS: Record<ActPhase, string> = {
-	'introduction': 'introduction',
+	introduction: 'introduction',
 	'rising-action': 'risingAction',
-	'climax': 'climax',
+	climax: 'climax',
 	'falling-action': 'fallingAction',
-	'resolution': 'resolution',
+	resolution: 'resolution',
 };
 
 /** Index of a phase in ACT_PHASE_ORDER, or -1 if invalid. */

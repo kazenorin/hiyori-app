@@ -7,11 +7,8 @@ import { advanceActPhase } from '$lib/db/act-lines';
 import { getNextActPhase } from '$lib/ai/narrative-types';
 import { getLocalizedActPhase } from '$lib/definitions/pipeline-prompts';
 
-interface AdvanceGuard {
-	hasAdvanced: boolean;
-}
-
-export function createAdvancePhaseTool(actLine: ActLineMeta, advanceGuard: AdvanceGuard) {
+export function createAdvancePhaseTool(actLine: ActLineMeta) {
+	let hasAdvancedPhase = false;
 	return tool({
 		description: ls('tools.advancePhase.description', {
 			introduction: getLocalizedActPhase('introduction'),
@@ -22,7 +19,7 @@ export function createAdvancePhaseTool(actLine: ActLineMeta, advanceGuard: Advan
 		}),
 		inputSchema: z.object({}),
 		execute: async (): Promise<{ result: string }> => {
-			if (advanceGuard.hasAdvanced) {
+			if (hasAdvancedPhase) {
 				return { result: ls('tools.advancePhase.alreadyAdvanced') };
 			}
 
@@ -37,7 +34,7 @@ export function createAdvancePhaseTool(actLine: ActLineMeta, advanceGuard: Advan
 			}
 
 			await advanceActPhase(actLine.id, nextPhase);
-			advanceGuard.hasAdvanced = true;
+			hasAdvancedPhase = true;
 
 			return {
 				result: ls('tools.advancePhase.success', {
@@ -49,8 +46,12 @@ export function createAdvancePhaseTool(actLine: ActLineMeta, advanceGuard: Advan
 	});
 }
 
-export function buildAdvancePhaseTools(actLine: ActLineMeta, advanceGuard: AdvanceGuard): ToolSet {
+export function allowAdvancePhaseTools(actLine: ActLineMeta) {
+	return actLine.plotMode === 'phaseEvent' && actLine.actPhase !== 'resolution';
+}
+
+export function buildAdvancePhaseTools(actLine: ActLineMeta): ToolSet {
 	return {
-		'advance-phase': createAdvancePhaseTool(actLine, advanceGuard),
+		'advance-phase': createAdvancePhaseTool(actLine),
 	};
 }

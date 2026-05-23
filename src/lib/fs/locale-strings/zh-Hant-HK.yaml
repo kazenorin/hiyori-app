@@ -52,6 +52,10 @@ pipeline:
   extraction:
     gameMaster: 根據聊天記錄中的可用資訊，生成遊戲資料。
     gmPhaseEventPhaseAdvancementTrigger: '- **判斷章節階段:** 若你認為故事已完成 {actPhase} 階段，請使用 `advance-phase` 工具精確一次來推進故事。'
+    gmActEndTrigger: >
+      - **判斷章節結束:** 若你認為故事已達到章節劇情中定義的可能結局之一，即核心衝突已解決且敘事到達自然的停止點，
+      請使用 `end-act` 工具精確一次來標誌章節的結束。指定最符合玩家選擇的 `endingType`
+      (好結局、壞結局、苦甜結局或另類結局) 。
     editor: 根據審閱者輸出的建議，修改寫手輸出。請根據聊天記錄中的可用資訊，判斷這些建議是否有必要採納。
     reviewer: '根據聊天記錄中的可用資訊，審閱寫手對場景 {currentScene} 的輸出。'
     reviewerQuick: '快速審閱寫手對場景 {currentScene} 的輸出。僅略讀明顯錯誤——立即輸出審閱範本，不附帶推理過程。'
@@ -61,6 +65,23 @@ pipeline:
       turnOfEventsReinforcementPhrase: "\n你也必須考慮可能使故事轉向不同方向的劇情轉折。"
       providedDirectorNotes: "\n- 導演備註"
       directorNotesReinforcementPhrase: '**重要**: 導演已為即將到來的場景給出指示。你**必須**在撰寫時考慮，並遵循所給的方向或指示。'
+      actEndPhaseEvent: >
+        若你認為故事已達到與章節劇情中定義的可能結局之一相符的自然結論，請使用 `end-act` 工具**精確一次**來標誌章節的結束。
+        呼叫 `end-act` 時，指定最符合玩家選擇及敘事走向的 `endingType` (好結局、壞結局、苦甜結局或另類結局) 。
+
+        結束章節時，請撰寫一個**收尾場景**，使敘事達到與所選結局相符的令人滿意的結論，解決核心衝突，
+        反映玩家關鍵選擇的後果，並提供情感上的收束。請勿引入新的劇情線索或懸念。
+      actEndGuidance: >
+        若你認為敘事已達到章節劇情中描述的可能結局之一——即核心衝突已解決且故事到達自然的停止點——
+        請使用 `end-act` 工具**精確一次**來標誌章節的結束。呼叫 `end-act` 時，指定最符合玩家選擇及敘事走向的
+        `endingType` (好結局、壞結局、苦甜結局或另類結局) 。
+
+        結束章節時，請撰寫一個**收尾場景**，使敘事達到與所選結局相符的令人滿意的結論，解決核心衝突，
+        反映玩家關鍵選擇的後果，並提供情感上的收束。請勿引入新的劇情線索或懸念。
+      epilogue: >
+        你正在為這個故事撰寫**尾聲**。主敘事已以 {endingType} 結局作結。請使用提供的世界觀設定、章節劇情和章節摘要作為參考。
+        請撰寫最終的尾聲場景，回顧主角的旅程，展示玩家選擇的持久影響，描繪主要衝突解決後的世界，並提供完結感與收束。
+        請勿引入新的衝突、劇情線索或懸念。這是故事的終結。
     plotPlanner:
       guidance: '目前場景為場景 {currentScene}。請根據聊天記錄中的可用資訊，為緊接的下一場景、近期的情節節奏 (可彈性處理) 以及中期目標 (可彈性處理) 規劃場景劇情。'
       phaseEvent: '目前章節的故事階段為 {currentActPhase}。請根據聊天記錄中的可用資訊，規劃「階段事件」。'
@@ -131,6 +152,28 @@ features:
       ---
 
       從這裡自然地繼續訪談對話，協助玩家釐清他們接下來想要的內容。
+  actEnd:
+    decisionContext: '章節已結束。接下來你想怎麼做？'
+    continueToNextAct: '繼續下一章節'
+    endTheStory: '在此結束故事'
+  interview:
+    systemRole:
+      preGame: |
+        你是一個互動敘事遊戲的遊戲前訪談者。你唯一的目標是與玩家腦力激盪，發掘他們想玩什麼類型的故事。你收集資訊以供系統生成劇情；你**不**撰寫劇情、生成遊戲資料或自行敘述故事。
+      nextAct: |
+        你是一個互動敘事遊戲的章節間訪談者。玩家剛完成一個章節，即將開始下一個。你的目標是與玩家腦力激盪下一個章節的方向——什麼會延續、什麼會改變、故事該往哪裡走。你收集資訊以供系統生成劇情；你**不**撰寫劇情、生成遊戲資料或自行敘述故事。
+    previousActConclusion: |
+      ## 上一章節結論
+
+      上一個章節以 **{endingType}** 結局作結。
+      玩家已選擇繼續故事至新的章節。
+    previousActPlotReference: |
+      ## 上一章節劇情 (供參考)
+  ui:
+    actConcluded: '章節已結束'
+    storyConcluded: '故事已完結'
+    interviewForNextAct: '告訴我關於下一章節的內容'
+    skipInterview: '以自動規劃繼續'
   importWorld:
     messages:
       importCompleteWithInterview: '匯入完成！正在啟動訪談...'
@@ -212,6 +255,19 @@ tools:
       alreadyAdvanced: '此場景已推進過階段，將於下一回合生效。'
       success: '階段已從 {current} 推進至 {next}，將於下一回合生效。'
       terminalPhase: '無法再推進——故事已達結局階段。'
+  endAct:
+    description: >
+      結束目前章節。當敘事已達到與章節劇情中定義的可能結局之一相符的自然結論時，呼叫此工具。
+      指定故事已達到的結局: {good}、{bad}、{bittersweet} 或 {alternative}。
+    endingGood: 好結局
+    endingBad: 壞結局
+    endingBittersweet: 苦甜結局
+    endingAlternative: 另類結局
+    alreadyEnded: '目前章節已經結束。'
+    tooEarly: >
+      故事尚未到達適合結束章節的階段。
+      敘事需要進一步發展才能達到自然的結論。
+    success: '章節已以 {endingType} 結局作結。請撰寫一個使敘事達到令人滿意結論的收尾場景。'
   readScene:
     description: >
       閱讀目前章節中所指定的場景的內容。回傳指定場景編號的敘事正文 (AI 回應) 和玩家回應，

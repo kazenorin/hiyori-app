@@ -2,6 +2,7 @@ import { getMainProviderConfig, type ProviderConfig } from '$lib/stores/settings
 import { worldBuilderSeed, resumeStoryActPrefix, resumeStoryActSuffix } from '$lib/features/world-builder/prompts';
 import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
 import { actInformationHeader, charactersHeader, currentSceneHeader } from '$lib/definitions/common-headers';
+import { ls } from '$lib/localization';
 import {
 	loadWorldBuilderSystemPrompt,
 	loadWorldTemplate,
@@ -29,6 +30,12 @@ export interface ForkInterviewContext {
 	narrativeBody: string;
 	sceneNumber: number;
 	sceneTitle: string;
+}
+
+export interface NewActInterviewContext {
+	endingType: string;
+	actSummary: string;
+	actPlot: string;
 }
 
 const COMPLETION_MARKER = '[WORLD_BUILDER_COMPLETE]';
@@ -183,7 +190,8 @@ export async function enterActPlotInterviewMode(
 	actLineId: string,
 	worldContent: string,
 	forkContext?: ForkInterviewContext,
-	additionalContext?: InterviewAdditionalContext
+	additionalContext?: InterviewAdditionalContext,
+	newActContext?: NewActInterviewContext
 ): Promise<void> {
 	// Reset world builder state but keep isActive true
 	resetState();
@@ -199,8 +207,12 @@ export async function enterActPlotInterviewMode(
 		loadActPlotInterviewExtractionPrompt(),
 	]);
 
-	// Inject general instructions into the interview system prompt and cache it
-	cachedInterviewSystemPrompt = interviewSystemPrompt.replace('{generalInstructions}', generalInstructions);
+	const interviewSystemRole = newActContext ? ls('pipeline.interview.systemRole.nextAct') : ls('pipeline.interview.systemRole.preGame');
+
+	// Inject general instructions and system role into the interview system prompt and cache it
+	cachedInterviewSystemPrompt = interviewSystemPrompt
+		.replace('{generalInstructions}', generalInstructions)
+		.replace('{interviewSystemRole}', interviewSystemRole);
 
 	// Build hidden context (invisible to user, sent to LLM every turn)
 	interviewHiddenContext = [{ role: 'user', content: interviewPrompt.replace('{worldContent}', worldContent) }];
@@ -212,6 +224,15 @@ export async function enterActPlotInterviewMode(
 		if (additionalContext.characterCards && additionalContext.characterCards.length > 0) {
 			const cardsContent = additionalContext.characterCards.map((c) => `### ${c.name}\n\n${c.content}`).join('\n\n');
 			interviewHiddenContext.push({ role: 'user', content: `## ${charactersHeader()}\n\n${cardsContent}` });
+		}
+	}
+
+	if (newActContext) {
+		const conclusionSection = ls('pipeline.interview.previousActConclusion', { endingType: newActContext.endingType });
+		interviewHiddenContext.push({ role: 'user', content: `${conclusionSection}\n\n${newActContext.actSummary}` });
+		if (newActContext.actPlot) {
+			const plotReferenceSection = ls('pipeline.interview.previousActPlotReference');
+			interviewHiddenContext.push({ role: 'user', content: `${plotReferenceSection}\n\n${newActContext.actPlot}` });
 		}
 	}
 

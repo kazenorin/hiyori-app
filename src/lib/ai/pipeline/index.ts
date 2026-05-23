@@ -1,12 +1,14 @@
 import { getDefaultPlotMode, getReevaluationFrequency, isQuickReview } from '$lib/stores/settings.svelte';
-import { DEFAULT_RETRY_CONFIG, type PhaseMetadata, toPhaseMetadata } from '../chat-stream';
-import type { PipelineInput, PipelineResult, PipelineState } from './types';
+import type { NarrativeVariables } from '../narrative-types';
+import { DEFAULT_RETRY_CONFIG, type PhaseMetadata, type RetryConfig, toPhaseMetadata } from '../chat-stream';
+import type { PipelineExecution, PipelineInput, PipelineResult, PipelineState, StoryContext } from './types';
 import { aggregateMetadata, updateState } from './phase-executor';
 import { type StreamResultMetadata } from '../streaming';
 import { type PreEditorContext, type PostEditorContext } from './message-builder';
 import {
 	defaultTargetWordCount,
 	runEditorTemplateFitter,
+	runEpilogueWriterPhase,
 	runGamePhases,
 	runGmTemplateFitter,
 	runReviewerEditorPhases,
@@ -19,7 +21,6 @@ import { loadPrompts } from './prompt-loader';
 import { runAsyncPhases } from './summarizer';
 import { buildPipelineProviderConfigs } from '$lib/ai/chat/pipeline-config';
 import { buildTools } from '$lib/ai/tools/tools';
-
 
 /**
  * Run the full narrative generation pipeline.
@@ -153,5 +154,90 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		aggregatedMetadata: aggregatedMetadata ?? undefined,
 		phases: phaseEntries.length > 0 ? phaseEntries : undefined,
 		asyncPhases,
+	};
+}
+
+export interface EpiloguePipelineInput {
+	execution: PipelineExecution;
+	worldContent: string;
+	actPlot: string;
+	actSummary: string;
+	previousNarrativeVariables: NarrativeVariables | undefined;
+	endingType: string;
+	story: StoryContext;
+	completedScenes: number;
+	targetWordCount?: number;
+	retryConfig?: RetryConfig;
+}
+
+export async function runEpiloguePipeline(input: EpiloguePipelineInput): Promise<PipelineResult> {
+	const providerConfigs = buildPipelineProviderConfigs();
+	const { execution, worldContent, actPlot, actSummary, previousNarrativeVariables, endingType, story, completedScenes, targetWordCount } =
+		input;
+	const { abortSignal, callbacks } = execution;
+	const effectiveTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
+	const currentScene = String(completedScenes + 1);
+	const previousNarrativeBody = previousNarrativeVariables?.narrativeBody;
+	const retryConfig = input.retryConfig ?? DEFAULT_RETRY_CONFIG;
+	const sharedParams = { abortSignal, callbacks, retryConfig };
+
+	const preEditorCtx: PreEditorContext = {
+		worldContent,
+		actPlot,
+		actPhase: null,
+		actSummary,
+		previousScenePlot: undefined,
+		previousNarrativeBody: previousNarrativeBody ?? undefined,
+		completedScenes,
+		player: undefined,
+		previousTurnOfEvents: undefined,
+		directorNotes: '',
+	};
+
+	let state: PipelineState = { currentPhase: null };
+	let aggregatedMetadata: StreamResultMetadata | null = null;
+	const phaseEntries: PhaseMetadata[] = [];
+
+	const loadedPrompts = await loadPrompts(story.storyId, story.storyName);
+
+	const ctx: PipelineRunContext = {
+		sharedParams,
+		providerConfigs,
+		preEditorCtx,
+		prompts: {
+			generalInstructions: loadedPrompts.generalInstructions,
+			writerOutputTemplate: loadedPrompts.writerOutputTemplate,
+			reviewerPrompt: '',
+			writerSystemPrompt: loadedPrompts.writerSystemPrompt,
+			editorSystemPrompt: '',
+			gameMasterSystemPrompt: '',
+			plotPlannerSystemPrompt: '',
+			phaseEventPlotPlannerSystemPrompt: '',
+			guidanceWriterExtractionPrompt: '',
+			phaseEventWriterExtractionPrompt: '',
+		},
+		effectiveTargetWordCount,
+		currentScene,
+		tools: undefined,
+		plotMode: 'guidance',
+		actPhase: null,
+		lastPlotGeneration: null,
+		reevaluationFrequency: 0,
+	};
+
+	const trackPhase: TrackPhase = (phaseName, result, model) => {
+		aggregatedMetadata = aggregateMetadata(aggregatedMetadata, result.metadata, model);
+		phaseEntries.push(toPhaseMetadata(phaseName, result.metadata, model));
+		return result.state;
+	};
+
+	state = await runEpilogueWriterPhase(ctx, state, trackPhase, endingType);
+
+	state = updateState(state, { currentPhase: null });
+	callbacks.onAllComplete(state);
+	return {
+		state,
+		aggregatedMetadata: aggregatedMetadata ?? undefined,
+		phases: phaseEntries.length > 0 ? phaseEntries : undefined,
 	};
 }

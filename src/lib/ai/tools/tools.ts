@@ -3,7 +3,8 @@ import { buildInventoryTools } from '$lib/ai/tools/query-inventory';
 import { buildActPlotTools } from '$lib/ai/tools/read-act-plot';
 import { buildSceneTools } from '$lib/ai/tools/read-scene';
 import { buildRiskTools } from '$lib/ai/tools/evaluate-risk';
-import { buildAdvancePhaseTools } from '$lib/ai/tools/advance-phase';
+import { allowAdvancePhaseTools, buildAdvancePhaseTools } from '$lib/ai/tools/advance-phase';
+import { allowEndActTools, buildEndActTools } from '$lib/ai/tools/end-act';
 import { getStory, type Story } from '$lib/db/stories';
 import { type ActLineMeta } from '$lib/db/act-lines';
 import { type Act, getAct } from '$lib/db/acts';
@@ -20,11 +21,11 @@ export interface ToolContext {
 export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 	SUMMARIZER: [],
 	PLOT_PLANNER: ['read-scene', 'query-memories', 'query-inventory'],
-	WRITER: ['read-scene', 'query-memories', 'query-inventory', 'evaluate-risk', 'advance-phase'],
+	WRITER: ['read-scene', 'query-memories', 'query-inventory', 'evaluate-risk', 'advance-phase', 'end-act'],
 	REVIEWER: ['read-scene', 'query-memories', 'query-inventory'],
-	EDITOR: ['advance-phase'],
+	EDITOR: ['advance-phase', 'end-act'],
 	TEMPLATE_FITTER: [],
-	GAME_MASTER: ['read-scene', 'query-memories', 'query-inventory', 'advance-phase'],
+	GAME_MASTER: ['read-scene', 'query-memories', 'query-inventory', 'advance-phase', 'end-act'],
 	CHARACTER_PROFILE_COMPRESSOR: [],
 };
 
@@ -51,8 +52,6 @@ export async function buildTools(storyId: string, actLine: ActLineMeta): Promise
 
 	const ctx: ToolContext = { story, actLine, act };
 
-	const advanceGuard = { hasAdvanced: false };
-
 	const tools: ToolSet = {
 		...buildMemoryTools(storyId, actLine.id),
 		...buildInventoryTools(storyId, actLine.id),
@@ -61,8 +60,12 @@ export async function buildTools(storyId: string, actLine: ActLineMeta): Promise
 		...buildRiskTools(ctx),
 	};
 
-	if (actLine.plotMode === 'phaseEvent' && actLine.actPhase !== 'resolution') {
-		Object.assign(tools, buildAdvancePhaseTools(actLine, advanceGuard));
+	if (allowAdvancePhaseTools(actLine)) {
+		Object.assign(tools, buildAdvancePhaseTools(actLine));
+	}
+
+	if (allowEndActTools(actLine)) {
+		Object.assign(tools, buildEndActTools(actLine));
 	}
 
 	return Object.keys(tools).length > 0 ? tools : undefined;

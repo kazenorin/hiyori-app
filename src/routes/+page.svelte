@@ -1,7 +1,9 @@
 <script lang="ts">
 	import {
+		clearMessages,
 		deleteLastExchange,
 		deleteOrphanedUserMessages,
+		getActEnded,
 		getCharacterNames,
 		getError,
 		getForkSequence,
@@ -10,9 +12,12 @@
 		getLatestDecisionContext,
 		getLatestDecisions,
 		getMessages,
+		getStoryConcluded,
 		isUserMessage,
 		loadActLineMessages,
 		regenerateLastResponse,
+		resetActEnded,
+		runEpilogueFlow,
 		sendInitialNarration,
 		sendMessage,
 		stopStreaming,
@@ -26,7 +31,6 @@
 		getActPlotInterview,
 		getError as getWorldBuilderError,
 		getGameResumeInterview,
-		getHasInterviewMessages,
 		getIsActive as getIsWorldBuilderActive,
 		getIsComplete as getIsWorldBuilderComplete,
 		getIsStreaming as getIsWorldBuilderStreaming,
@@ -38,13 +42,17 @@
 		sendWorldBuilderMessage,
 		stopStreaming as stopWorldBuilderStreaming,
 		type WorldBuilderMessage,
+		type NewActInterviewContext,
 	} from '$lib/features/world-builder/world-builder.svelte';
 	import {
+		createAct,
+		createActLine,
 		createStoryFromWorldBuilder,
 		forkActLine,
 		forkActLineForInterview,
 		getActiveAct,
 		getActiveActLineId,
+		getActiveActPlotContent,
 		getActiveStory,
 		getActiveWorldContent,
 		getActiveDirectorNotesText,
@@ -451,6 +459,49 @@
 		const actLineId = getActiveActLineId();
 		if (!actLineId) return;
 		sendMessage(actLineId, decision);
+	}
+
+	async function handleContinueToNextAct() {
+		if (getIsStreaming()) return;
+		const actLineId = getActiveActLineId();
+		if (!actLineId) return;
+
+		const story = getActiveStory();
+		const actLine = await getActLine(actLineId);
+		if (!story || !actLine || !actLine.endingType) return;
+
+		const act = getActiveAct();
+		if (!act) return;
+
+		const actSummary = getMessages().findLast((m) => m.role === 'assistant')?.actSummary ?? '';
+		const actPlot = getActiveActPlotContent() ?? '';
+
+		try {
+			resetActEnded();
+			await clearMessages();
+			const newAct = await createAct(story.id, `Act ${act.actNumber + 1}`, actLineId);
+			const newLine = await createActLine(newAct.id, 'Main');
+			await selectActLineQuiet(newLine.id);
+
+			const worldContent = getActiveWorldContent() ?? '';
+
+			const newActContext: NewActInterviewContext = {
+				endingType: actLine.endingType,
+				actSummary,
+				actPlot,
+			};
+
+			await enterActPlotInterviewMode(newLine.id, worldContent, undefined, undefined, newActContext);
+		} catch (err) {
+			await log.error('continue-to-next-act', 'Failed to start next act', err);
+		}
+	}
+
+	function handleEndStory() {
+		if (getIsStreaming()) return;
+		const actLineId = getActiveActLineId();
+		if (!actLineId) return;
+		runEpilogueFlow(actLineId);
 	}
 
 	function isCursorVisible(container: HTMLDivElement | null) {
@@ -889,7 +940,11 @@
 				activePlotThreads={latestActivePlotThreads}
 				decisionContext={latestDecisionContext}
 				isStreaming={getIsStreaming()}
+				actEnded={getActEnded()}
+				storyConcluded={getStoryConcluded()}
 				onDecisionClick={handleDecisionClick}
+				onContinueToNextAct={handleContinueToNextAct}
+				onEndStory={handleEndStory}
 				{chatContainer}
 			/>
 		</div>
@@ -909,12 +964,14 @@
 				aria-label="Message input"
 				bind:value={input}
 				onkeydown={handleKeydown}
-				disabled={getIsStreaming()}
+				disabled={getIsStreaming() || getActEnded()}
 			></textarea>
 
 			<div class="mt-3">
 				{#if getIsStreaming()}
 					<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopStreaming}> {t('chat.stop')} </button>
+				{:else if getActEnded()}
+					<button class="btn preset-tonal w-full" type="button" disabled> {t('chat.send')} </button>
 				{:else}
 					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
 				{/if}

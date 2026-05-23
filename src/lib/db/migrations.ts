@@ -82,13 +82,15 @@ const migrationStatements: string[][] = [
 			effective_to_scene INTEGER,
 			created_at INTEGER NOT NULL
 		)`,
-		`CREATE INDEX IF NOT EXISTS idx_director_notes_line ON director_notes(act_line_id)`
+		`CREATE INDEX IF NOT EXISTS idx_director_notes_line ON director_notes(act_line_id)`,
 	],
 	[
 		`ALTER TABLE act_line_meta ADD COLUMN plot_mode TEXT NOT NULL DEFAULT 'guidance'`,
 		`ALTER TABLE act_line_meta ADD COLUMN last_plot_generation INTEGER`,
-		`ALTER TABLE act_line_meta ADD COLUMN act_phase TEXT`
-	]
+		`ALTER TABLE act_line_meta ADD COLUMN act_phase TEXT`,
+	],
+	[`ALTER TABLE act_line_meta ADD COLUMN ended_at INTEGER`, `ALTER TABLE act_line_meta ADD COLUMN ending_type TEXT`],
+	[`ALTER TABLE act_line_meta ADD COLUMN epilogue_written_at INTEGER`],
 ];
 
 export async function runMigrations(): Promise<void> {

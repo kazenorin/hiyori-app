@@ -10,5 +10,5 @@
 你需要評估目前的事件狀態，看看是否有階段事件可以被觸發或已經被觸發。
 對於已觸發但尚未詳細描述的事件，你被指示詳細闡述它們。
 若沒有事件被觸發，或所有已觸發的事件已有合理的闡述，請將故事推向最適合的下一個事件。
-若你認為故事的目前狀態已滿足 {currentActPhase} 階段的目標，請使用 `advance-phase` 工具**精確一次**來推進故事。 {turnOfEventsReinforcementPhrase}
+若你認為故事的目前狀態已滿足 {currentActPhase} 階段的目標，請使用 `advance-phase` 工具**精確一次**來推進故事。 {actEndInstruction}{turnOfEventsReinforcementPhrase}
 {directorNotesReinforcementPhrase}

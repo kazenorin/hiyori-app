@@ -10,5 +10,5 @@ Your job is to a craft vivid, engaging, and immersive narrative based on the pro
 You are required to evaluate the current state of events, and see if any Phase Events can be triggered or already triggered.
 For triggered events that have not been elaborated on, you are instructed elaborate on them.
 If no events are triggered, or all triggered events have reasonable elaboration, drive the story to the most suitable next event.
-If you believe the story's current state have fulfilled the goals of the {currentActPhase} Phase, use the `advance-phase` tool **exactly once** to move the story forward. {turnOfEventsReinforcementPhrase}
+If you believe the story's current state have fulfilled the goals of the {currentActPhase} Phase, use the `advance-phase` tool **exactly once** to move the story forward. {actEndInstruction}{turnOfEventsReinforcementPhrase}
 {directorNotesReinforcementPhrase}

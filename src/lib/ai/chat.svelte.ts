@@ -39,7 +39,7 @@ import {
 	updatePersistentMessageMetadata,
 } from './chat/persistence';
 import type { NarrativeVariables, PlotMode } from './narrative-types';
-import { runPipeline } from './pipeline';
+import { runEpiloguePipeline, runPipeline } from './pipeline';
 import type { AsyncPhaseResults, PipelineResult } from './pipeline/types';
 import type { UIMessage } from './chat/types';
 export type { UIMessage };
@@ -57,6 +57,8 @@ interface RequestContext {
 let messages = $state<UIMessage[]>([]);
 let isStreaming = $state(false);
 let error = $state<string | null>(null);
+let actEnded = $state(false);
+let storyConcluded = $state(false);
 let abortController: AbortController | null = null;
 let pendingAsyncPhases: Promise<AsyncPhaseResults | void> | null = null;
 
@@ -70,6 +72,14 @@ export function getIsStreaming(): boolean {
 
 export function getError(): string | null {
 	return error;
+}
+
+export function getActEnded(): boolean {
+	return actEnded;
+}
+
+export function getStoryConcluded(): boolean {
+	return storyConcluded;
 }
 
 // Re-exported query functions (delegate to message-queries with module messages)
@@ -302,6 +312,11 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 			logMainChat({ newMessages: getMessages().slice(-newMessagesCount) }),
 		]);
 
+		const updatedActLine = await requireActLine(actLineId);
+		if (updatedActLine.endedAt !== null) {
+			actEnded = true;
+		}
+
 		const assistantMessageId = getCurrentMessage().id;
 		pendingAsyncPhases =
 			result.asyncPhases
@@ -339,9 +354,91 @@ export function stopStreaming(): void {
 	abortController?.abort();
 }
 
+export async function runEpilogueFlow(actLineId: string): Promise<void> {
+	requireMainConfig();
+	const story = await dbActLines.getStoryForActLine(actLineId);
+	const actLine = await requireActLine(actLineId);
+	if (!actLine.endingType) {
+		error = 'Cannot run epilogue: no ending type set.';
+		return;
+	}
+
+	const previousSceneNumber = findLastNonNullSceneNumber(messages) ?? 0;
+	const nextSceneNumber = previousSceneNumber + 1;
+	const newMessagesCount = await prepareNewMessages(actLineId, previousSceneNumber, nextSceneNumber);
+	const messageIdx = getLatestMessageIndex();
+
+	function getCurrentMessage(): UIMessage {
+		return getMessageByIndex(messageIdx);
+	}
+
+	function setCurrentMessage(message: UIMessage) {
+		setMessageByIndex(messageIdx, message);
+	}
+
+	try {
+		const worldContent = getActiveWorldContent() ?? '';
+		const actPlot = getActiveActPlotContent() ?? '';
+		const actSummary = getLatestActSummary();
+		const previousNarrativeVariables = getPreviousNarrativeMessage(messages);
+		const targetWordCount = settings.targetWordCount;
+
+		const pipelineCallbacks = createPipelineCallbacks({
+			getCurrentMessage,
+			setCurrentMessage,
+			templateReplacements: { sceneNumber: String(nextSceneNumber) },
+			onError: (errorMessage) => {
+				error = errorMessage;
+			},
+		});
+
+		isStreaming = true;
+		const result = await runEpiloguePipeline({
+			execution: {
+				abortSignal: newAbortSignal(),
+				callbacks: pipelineCallbacks,
+			},
+			worldContent,
+			actPlot,
+			actSummary,
+			previousNarrativeVariables,
+			endingType: actLine.endingType,
+			story: { storyId: story.id, storyName: story.name, actLine },
+			completedScenes: previousSceneNumber,
+			targetWordCount,
+		});
+
+		updateMessageMetadataByIndex(result, messageIdx);
+
+		await Promise.all([
+			persistMessage(actLineId, getCurrentMessage()),
+			dbActLines.markEpilogueWritten(actLineId),
+			logMainChat({ newMessages: getMessages().slice(-newMessagesCount) }),
+		]);
+
+		storyConcluded = true;
+	} catch (err: unknown) {
+		const result = await handleStreamError(err, getCurrentMessage(), actLineId, getMessages());
+		setMessages(result.messages);
+		if (result.error) error = result.error;
+	} finally {
+		isStreaming = false;
+		abortController = null;
+	}
+}
+
+export function resetActEnded(): void {
+	actEnded = false;
+	storyConcluded = false;
+}
+
 export async function loadActLineMessages(actLineId: string): Promise<void> {
 	setMessages(await loadActLineMessagesFromDB(actLineId));
 	error = null;
+
+	const actLine = await dbActLines.getActLine(actLineId);
+	actEnded = actLine?.endedAt !== null && actLine?.endedAt !== undefined;
+	storyConcluded = actLine?.epilogueWrittenAt !== null && actLine?.epilogueWrittenAt !== undefined;
 
 	if (isPhraseHighlightingEnabled()) {
 		await backfillImportantPhrases(messages, {
@@ -356,6 +453,8 @@ export async function clearMessages(): Promise<void> {
 	setMessages([]);
 	error = null;
 	isStreaming = false;
+	actEnded = false;
+	storyConcluded = false;
 }
 
 export async function regenerateLastResponse(actLineId: string, messageId: string): Promise<void> {

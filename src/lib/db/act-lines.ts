@@ -3,8 +3,8 @@ import { getDatabase } from './database';
 import type { Message } from './messages';
 import { type MessageRow, mapRowToMessage, cloneMessage } from './messages';
 import type { Story } from './stories';
-import type { PlotMode, ActPhase } from '$lib/ai/narrative-types';
-import { getActPhaseIndex, isValidPlotMode } from '$lib/ai/narrative-types';
+import type { PlotMode, ActPhase, EndingType } from '$lib/ai/narrative-types';
+import { getActPhaseIndex, isValidPlotMode, isValidEndingType } from '$lib/ai/narrative-types';
 
 export interface ActLineMeta {
 	id: string;
@@ -15,6 +15,9 @@ export interface ActLineMeta {
 	plotMode: PlotMode;
 	lastPlotGeneration: number | null;
 	actPhase: ActPhase | null;
+	endedAt: number | null;
+	endingType: EndingType | null;
+	epilogueWrittenAt: number | null;
 }
 
 interface ActLineMetaRow {
@@ -26,6 +29,9 @@ interface ActLineMetaRow {
 	plot_mode: string;
 	last_plot_generation: number | null;
 	act_phase: string | null;
+	ended_at: number | null;
+	ending_type: string | null;
+	epilogue_written_at: number | null;
 }
 
 interface ActLineEntryRow {
@@ -37,6 +43,7 @@ interface ActLineEntryRow {
 function rowToActLineMeta(row: ActLineMetaRow): ActLineMeta {
 	const plotMode: PlotMode = isValidPlotMode(row.plot_mode) ? row.plot_mode : 'guidance';
 	const actPhase: ActPhase | null = row.act_phase && getActPhaseIndex(row.act_phase) >= 0 ? (row.act_phase as ActPhase) : null;
+	const endingType: EndingType | null = row.ending_type && isValidEndingType(row.ending_type) ? row.ending_type : null;
 	return {
 		id: row.id,
 		actId: row.act_id,
@@ -46,6 +53,9 @@ function rowToActLineMeta(row: ActLineMetaRow): ActLineMeta {
 		plotMode,
 		lastPlotGeneration: row.last_plot_generation,
 		actPhase,
+		endedAt: row.ended_at,
+		endingType,
+		epilogueWrittenAt: row.epilogue_written_at,
 	};
 }
 
@@ -64,10 +74,22 @@ export async function createActLine(
 	const now = Date.now();
 	const actPhase: ActPhase | null = initialActPhase !== undefined ? initialActPhase : plotMode === 'phaseEvent' ? 'introduction' : null;
 	await db.execute(
-		'INSERT INTO act_line_meta (id, act_id, name, is_main_line, created_at, plot_mode, last_plot_generation, act_phase) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)',
-		[id, actId, name, isMainLine ? 1 : 0, now, plotMode, null, actPhase]
+		'INSERT INTO act_line_meta (id, act_id, name, is_main_line, created_at, plot_mode, last_plot_generation, act_phase, ended_at, ending_type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
+		[id, actId, name, isMainLine ? 1 : 0, now, plotMode, null, actPhase, null, null]
 	);
-	return { id, actId, name, isMainLine, createdAt: now, plotMode, lastPlotGeneration: null, actPhase };
+	return {
+		id,
+		actId,
+		name,
+		isMainLine,
+		createdAt: now,
+		plotMode,
+		lastPlotGeneration: null,
+		actPhase,
+		endedAt: null,
+		endingType: null,
+		epilogueWrittenAt: null,
+	};
 }
 
 export async function getActLine(id: string): Promise<ActLineMeta | null> {
@@ -456,7 +478,14 @@ async function removeOrphanedMessages(db: Database, messageIds: string[]): Promi
 
 export async function updateActLineMetaFields(
 	id: string,
-	fields: { actPhase?: ActPhase | null; lastPlotGeneration?: number | null; plotMode?: PlotMode }
+	fields: {
+		actPhase?: ActPhase | null;
+		lastPlotGeneration?: number | null;
+		plotMode?: PlotMode;
+		endedAt?: number | null;
+		endingType?: EndingType | null;
+		epilogueWrittenAt?: number | null;
+	}
 ): Promise<void> {
 	const db = getDatabase();
 	const setClauses: string[] = [];
@@ -475,10 +504,36 @@ export async function updateActLineMetaFields(
 		setClauses.push(`plot_mode = $${paramIdx++}`);
 		params.push(fields.plotMode);
 	}
+	if (fields.endedAt !== undefined) {
+		setClauses.push(`ended_at = $${paramIdx++}`);
+		params.push(fields.endedAt);
+	}
+	if (fields.endingType !== undefined) {
+		setClauses.push(`ending_type = $${paramIdx++}`);
+		params.push(fields.endingType);
+	}
+	if (fields.epilogueWrittenAt !== undefined) {
+		setClauses.push(`epilogue_written_at = $${paramIdx++}`);
+		params.push(fields.epilogueWrittenAt);
+	}
 	if (setClauses.length === 0) return;
 
 	params.push(id);
 	await db.execute(`UPDATE act_line_meta SET ${setClauses.join(', ')} WHERE id = $${paramIdx}`, params);
+}
+
+export async function endActLine(id: string, endingType: EndingType): Promise<void> {
+	const current = await getActLine(id);
+	if (!current) throw new Error(`Act line ${id} not found`);
+	if (current.endedAt !== null) throw new Error(`Act line ${id} is already ended`);
+	await updateActLineMetaFields(id, {
+		endedAt: Date.now(),
+		endingType: endingType,
+	});
+}
+
+export async function markEpilogueWritten(id: string): Promise<void> {
+	await updateActLineMetaFields(id, { epilogueWrittenAt: Date.now() });
 }
 
 export async function advanceActPhase(id: string, newPhase: ActPhase): Promise<void> {

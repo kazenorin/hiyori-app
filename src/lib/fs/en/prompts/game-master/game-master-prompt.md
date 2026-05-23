@@ -15,8 +15,7 @@ Extract the mechanical and tracking information needed for gameplay.
 - **Active Plot Threads:** Identify unresolved situations and immediate goals currently visible to the player using concise bullet points. Limit to 6 points.
 - **Decision Context:** Provide a brief, 1-2 sentence framing of the exact moment the player must act.
 - **Actionable Choices:** Generate 3-4 specific choices. Keep each choice short, direct, and strictly action-oriented (e.g., under 15 words). Do not over-describe the action or explain the potential outcome.
-- **Choice Variety:** Ensure the generated choices include at least one escalating/aggressive option and one observational/defensive option.
-{gmPhaseEventPhaseAdvancementTrigger}
+- **Choice Variety:** Ensure the generated choices include at least one escalating/aggressive option and one observational/defensive option. {additionalRules}
 
 ## Output Format
 
@@ -26,13 +25,16 @@ Produce your game data using the following template:
 # Game Data
 
 ## Active Plot Threads
+
 - [unresolved situation or immediate goal]
 - [another thread]
 
 ## Decision Context
+
 [brief contextual description of the moment of choice]
 
 ## Decisions
+
 - [Specific, actionable choice]
 - [Alternative approach or dialogue option]
 - [Escalating or aggressive choice]

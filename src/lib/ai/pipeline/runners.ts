@@ -16,6 +16,7 @@ import {
 } from './message-builder';
 import { isPhraseHighlightingEnabled, isPlotPlannerEnabled, isQuickReview, isReviewerEnabled } from '$lib/stores/settings.svelte';
 import type { ActPhase, GameDataFields, NarrativeVariables, PlotMode } from '../narrative-types';
+import { getActPhaseIndex } from '../narrative-types';
 import { summaryHeader } from '$lib/definitions/common-headers';
 import {
 	acceptAsIsLabel,
@@ -56,8 +57,60 @@ function resolveGmSystemPrompt(ctx: PipelineRunContext): string {
 	const phaseAdvancementTrigger =
 		ctx.plotMode === 'phaseEvent' && ctx.actPhase
 			? ls('pipeline.extraction.gmPhaseEventPhaseAdvancementTrigger', { actPhase: getLocalizedActPhase(ctx.actPhase) })
-			: '';
-	return ctx.prompts.gameMasterSystemPrompt.replaceAll('{gmPhaseEventPhaseAdvancementTrigger}', phaseAdvancementTrigger);
+			: null;
+	const gmActEndTrigger = resolveGmActEndTrigger(ctx);
+
+	const additionalRules: string[] = [];
+	if (phaseAdvancementTrigger) additionalRules.push(phaseAdvancementTrigger);
+	if (gmActEndTrigger) additionalRules.push(gmActEndTrigger);
+
+	return ctx.prompts.gameMasterSystemPrompt.replaceAll('{additionalRules}', additionalRules.join('\n'));
+}
+
+function resolveGmActEndTrigger(ctx: PipelineRunContext): string | null {
+	if (ctx.plotMode === 'phaseEvent') {
+		if (!isActEndPhase(ctx.actPhase ?? null)) return null;
+	}
+	return ls('pipeline.extraction.gmActEndTrigger');
+}
+
+function resolveSummarizedScenes(summarizedScenes: number) {
+	return summarizedScenes > 0 ? ls('pipeline.extraction.writer.providedSummary', { summarizedScenes }) : '';
+}
+
+function resolveTurnOfEvents(previousTurnOfEvents: string | undefined) {
+	return previousTurnOfEvents ? '\n' + ls('pipeline.extraction.writer.providedTurnOfEvents').trim() : '';
+}
+
+function resolveDirectorNotes(directorNotes: string) {
+	return directorNotes ? '\n' + ls('pipeline.extraction.writer.providedDirectorNotes').trim() : '';
+}
+
+function resolveTurnOfEventsReinforcementPhrase(previousTurnOfEvents: string | undefined) {
+	return previousTurnOfEvents ? ls('pipeline.extraction.writer.turnOfEventsReinforcementPhrase') : '';
+}
+
+function resolveDirectorNotesReinforcementPhrase(directorNotes: string) {
+	return directorNotes ? ls('pipeline.extraction.writer.directorNotesReinforcementPhrase') : '';
+}
+
+function resolveCurrentActPhase(ctx: PipelineRunContext) {
+	return ctx.actPhase ? getLocalizedActPhase(ctx.actPhase) : '';
+}
+
+function resolveActEndInstruction(plotMode: PlotMode, actPhase: ActPhase | null): string {
+	if (plotMode === 'phaseEvent') {
+		if (isActEndPhase(actPhase)) return '\n' + ls('pipeline.extraction.writer.actEndPhaseEvent').trim();
+		return '';
+	} else {
+		return '\n' + ls('pipeline.extraction.writer.actEndGuidance').trim();
+	}
+}
+
+function isActEndPhase(actPhase: ActPhase | null): boolean {
+	const phaseIndex = actPhase ? getActPhaseIndex(actPhase) : -1;
+	const minIndex = getActPhaseIndex('falling-action');
+	return phaseIndex >= minIndex;
 }
 
 // --- buildStateUpdate functions ---
@@ -167,18 +220,13 @@ export async function runWriterPhase(ctx: PipelineRunContext, state: PipelineSta
 		.replaceAll('{previousScene}', String(previousSceneNumber))
 		.replaceAll('{currentScene}', ctx.currentScene)
 		.replaceAll('{summarizedScenes}', String(summarizedScenes))
-		.replaceAll('{providedSummary}', summarizedScenes > 0 ? ls('pipeline.extraction.writer.providedSummary', { summarizedScenes }) : '')
-		.replaceAll('{providedTurnOfEvents}', previousTurnOfEvents ? ls('pipeline.extraction.writer.providedTurnOfEvents') : '')
-		.replaceAll('{providedDirectorNotes}', directorNotes ? ls('pipeline.extraction.writer.providedDirectorNotes') : '')
-		.replaceAll(
-			'{turnOfEventsReinforcementPhrase}',
-			previousTurnOfEvents ? ls('pipeline.extraction.writer.turnOfEventsReinforcementPhrase') : ''
-		)
-		.replaceAll(
-			'{directorNotesReinforcementPhrase}',
-			directorNotes ? ls('pipeline.extraction.writer.directorNotesReinforcementPhrase') : ''
-		)
-		.replaceAll('{currentActPhase}', ctx.actPhase ? getLocalizedActPhase(ctx.actPhase) : '');
+		.replaceAll('{providedSummary}', resolveSummarizedScenes(summarizedScenes))
+		.replaceAll('{providedTurnOfEvents}', resolveTurnOfEvents(previousTurnOfEvents))
+		.replaceAll('{providedDirectorNotes}', resolveDirectorNotes(directorNotes))
+		.replaceAll('{turnOfEventsReinforcementPhrase}', resolveTurnOfEventsReinforcementPhrase(previousTurnOfEvents))
+		.replaceAll('{directorNotesReinforcementPhrase}', resolveDirectorNotesReinforcementPhrase(directorNotes))
+		.replaceAll('{currentActPhase}', resolveCurrentActPhase(ctx))
+		.replaceAll('{actEndInstruction}', resolveActEndInstruction(ctx.plotMode, ctx.actPhase ?? null));
 
 	const result = await executeStreamingPhase(
 		{
@@ -191,6 +239,33 @@ export async function runWriterPhase(ctx: PipelineRunContext, state: PipelineSta
 			tools: filterToolsForPhase(ctx.tools, 'WRITER'),
 			descriptors: getNarrativeDescriptors(),
 			messages: buildWriterMessages(ctx.preEditorCtx, writerExtractionPrompt),
+			providerConfig: ctx.providerConfigs.writer,
+			buildStateUpdate: buildWriterStateUpdate,
+		},
+		state
+	);
+	return trackPhase('WRITER', result, ctx.providerConfigs.writer?.model);
+}
+
+export async function runEpilogueWriterPhase(
+	ctx: PipelineRunContext,
+	state: PipelineState,
+	trackPhase: TrackPhase,
+	endingType: string
+): Promise<PipelineState> {
+	const epilogueExtractionPrompt = ls('pipeline.extraction.writer.epilogue', { endingType });
+
+	const result = await executeStreamingPhase(
+		{
+			phaseName: 'WRITER',
+			systemPrompt: ctx.prompts.writerSystemPrompt
+				.replaceAll('{generalInstructions}', ctx.prompts.generalInstructions)
+				.replaceAll('{targetWordCount}', ctx.effectiveTargetWordCount)
+				.replaceAll('{writerOutputTemplate}', ctx.prompts.writerOutputTemplate),
+			...ctx.sharedParams,
+			tools: undefined,
+			descriptors: getNarrativeDescriptors(),
+			messages: buildWriterMessages(ctx.preEditorCtx, epilogueExtractionPrompt),
 			providerConfig: ctx.providerConfigs.writer,
 			buildStateUpdate: buildWriterStateUpdate,
 		},
@@ -226,9 +301,7 @@ export async function runReviewerEditorPhases(
 			messages: buildReviewerMessages(
 				ctx.preEditorCtx,
 				state.writerOutput,
-				isQuickReview()
-					? quickReviewerExtractionPromptTemplate(ctx.currentScene)
-					: reviewerExtractionPromptTemplate(ctx.currentScene)
+				isQuickReview() ? quickReviewerExtractionPromptTemplate(ctx.currentScene) : reviewerExtractionPromptTemplate(ctx.currentScene)
 			),
 			providerConfig: ctx.providerConfigs.reviewer,
 			buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),

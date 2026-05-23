@@ -52,6 +52,11 @@ pipeline:
   extraction:
     gameMaster: Generate the game data based on the available information in the chat history.
     gmPhaseEventPhaseAdvancementTrigger: '- **Determine Act Phase**: If you believe the story has completed the {actPhase} Phase, use the `advance-phase` tool exactly once to move the story forward.'
+    gmActEndTrigger: >
+      - **Determine Act Conclusion**: If you believe the story has reached one of the Possible Endings defined in the
+      Act Plot, where the central conflict is resolved and the narrative reaches a natural stopping point, use the
+      `end-act` tool exactly once to signal the act's conclusion. Specify the `endingType` that best matches the
+      player's choices (good, bad, bittersweet, or alternative).
     editor: Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history.
     reviewer: "Perform a review on the writer's output for Scene {currentScene} based on the available information in the chat history."
     reviewerQuick: "Quick-review the writer's output for Scene {currentScene}. Skim for glaring errors only — output the review template immediately with no reasoning."
@@ -61,6 +66,30 @@ pipeline:
       turnOfEventsReinforcementPhrase: "\nYou must also consider the Turn Of Events that may drive the story to a different direction."
       providedDirectorNotes: "\n- the Director's Notes"
       directorNotesReinforcementPhrase: '**Important**: The Director has given directions for the upcoming scene. You **MUST** consider it when writing, and follow the directions or instructions given.'
+      actEndPhaseEvent: >
+        If you believe the story has reached a natural conclusion aligned with one of the Possible Endings defined
+        in the Act Plot, use the `end-act` tool **exactly once** to signal the act's conclusion. When calling
+        `end-act`, specify the `endingType` that best matches the player's choices and the narrative trajectory
+        (good, bad, bittersweet, or alternative).
+
+        When ending the act, write a **closing scene** that brings the narrative to a satisfying conclusion matching
+        the chosen ending, resolves the central conflict, reflects the consequences of the player's key choices,
+        and provides emotional closure. Do NOT introduce new plot threads or cliffhangers.
+      actEndGuidance: >
+        If you believe the narrative has reached one of the Possible Endings described in the Act Plot — where
+        the central conflict is resolved and the story reaches a natural stopping point — use the `end-act` tool
+        **exactly once** to signal the act's conclusion. When calling `end-act`, specify the `endingType` that best
+        matches the player's choices and the narrative trajectory (good, bad, bittersweet, or alternative).
+
+        When ending the act, write a **closing scene** that brings the narrative to a satisfying conclusion matching
+        the chosen ending, resolves the central conflict, reflects the consequences of the player's key choices,
+        and provides emotional closure. Do NOT introduce new plot threads or cliffhangers.
+      epilogue: >
+        You are writing the **epilogue** for this story. The main narrative has concluded with a {endingType} ending.
+        Use the World Setting, Act Plot, and Act Summary provided to you for context.
+        Write a final epilogue scene that reflects on the protagonist's journey, shows the lasting consequences of
+        the player's choices, depicts the world after the main conflict has been resolved, and provides a sense of
+        finality and closure. Do NOT introduce new conflicts, plot threads, or cliffhangers. This is the end of the story.
     plotPlanner:
       guidance: 'The current scene is Scene {currentScene}. Plan a Scene Plot for the Immediate Next Scene, Near-Term Beat (Flexible), and Mid-Term Goal (Flexible) based on the available information in the chat history.'
       phaseEvent: 'The current story phase of the act is {currentActPhase}. Plan the "Phase Events" based on the available information in the chat history.'
@@ -133,6 +162,28 @@ features:
       ---
 
       Resume the interview conversation naturally from here, helping the player refine what they want next.
+  actEnd:
+    decisionContext: 'The act has concluded. What would you like to do next?'
+    continueToNextAct: 'Continue to the next act'
+    endTheStory: 'End the story here'
+  interview:
+    systemRole:
+      preGame: |
+        You are the Pre-Game Interviewer for an interactive storytelling game. Your sole objective is to brainstorm with the player to discover what kind of story they want to play. You collect information so the system can generate a plot; you DO NOT write the plot, generate game data, or narrate the story yourself.
+      nextAct: |
+        You are the Inter-Act Interviewer for an interactive storytelling game. The player has just completed an act and is about to begin the next one. Your objective is to brainstorm with the player about the direction of the next act — what carries forward, what changes, and where the story should go. You collect information so the system can generate a plot; you DO NOT write the plot, generate game data, or narrate the story yourself.
+    previousActConclusion: |
+      ## Previous Act Conclusion
+
+      The previous act ended with a **{endingType}** ending.
+      The player has chosen to continue the story into a new act.
+    previousActPlotReference: |
+      ## Previous Act Plot (for reference)
+  ui:
+    actConcluded: 'Act Concluded'
+    storyConcluded: 'Story Concluded'
+    interviewForNextAct: 'Tell me about the next act'
+    skipInterview: 'Continue with automatic planning'
   importWorld:
     messages:
       importCompleteWithInterview: 'Import complete! Starting interview...'
@@ -214,6 +265,20 @@ tools:
       alreadyAdvanced: 'Phase has already been advanced this scene. It will take effect next turn.'
       success: 'Phase advanced from {current} to {next}. Takes effect next turn.'
       terminalPhase: 'Cannot advance further — the story is already at the resolution phase.'
+  endAct:
+    description: >
+      End the current act. Call this when the narrative has reached a natural conclusion aligned with
+      one of the Possible Endings defined in the Act Plot. Specify which ending the story has reached:
+      {good}, {bad}, {bittersweet}, or {alternative}.
+    endingGood: Good
+    endingBad: Bad
+    endingBittersweet: Bittersweet
+    endingAlternative: Alternative
+    alreadyEnded: 'The current act has already ended.'
+    tooEarly: >
+      The story has not reached a point where ending the act is appropriate.
+      The narrative needs to progress further before a natural conclusion can be reached.
+    success: 'The act has concluded with a {endingType} ending. Write a closing scene that brings the narrative to a satisfying conclusion.'
   readScene:
     description: >
       Read the content of a specific scene in the current act. Returns the narrative body (assistant response) and

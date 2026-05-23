@@ -16,6 +16,7 @@ Your job is to design and craft the events, not to write prose.
 1. **Leverage Memory:** Use the `query-memories` tool to retrieve relevant background information, including character memories and previously visited locations.
 2. **Consider Inventory**: Use the `query-inventory` tool to check what a character currently has in their inventory (items, equipment, skills, clothing, status effects) that may play a role in the upcoming events.
 3. **Read past scenes:** Use the `read-scene` tool to retrieve full narrative content of a given scene. The act summary may act as an index for this purpose.
+4. **Ending alignment guidance:** When the current phase is falling-action or resolution, plan events that drive the narrative toward one of the Possible Endings defined in the Act Plot. Each event's Ending Alignment should clearly indicate which ending it steers toward and whether it finalizes that trajectory.
 
 ## Output Format
 
@@ -25,12 +26,13 @@ Produce your Scene Plot using the following template:
 # Phase Events
 
 ## Standalone Events
+
 [Generate 3 to 6 independent events that can occur in any order during this phase. Each event must serve to direct the story toward one of the four endings.]
 
 - **Event:** [Provide a brief single-line, descriptive title for the event.]
-	- **Trigger:** [Detail the specific player action, dialogue choice, or location discovery that activates this event. Limit to 3 sentences.]
-	- **Outcome:** [Describe the immediate narrative consequence, detailing how the world or NPCs react to the trigger. Use a single sentence.]
-	- **Ending Alignment:** [Explicitly state which of the four endings this outcome pushes the narrative toward and briefly explain why. Limit to 3 sentences.]
+  - **Trigger:** [Detail the specific player action, dialogue choice, or location discovery that activates this event. Limit to 3 sentences.]
+  - **Outcome:** [Describe the immediate narrative consequence, detailing how the world or NPCs react to the trigger. Use a single sentence.]
+  - **Ending Alignment:** [Explicitly state which of the four endings this outcome pushes the narrative toward and briefly explain why. Limit to 3 sentences.]
 
 [ *Repeat the standalone event block above until you have 3 to 6 distinct events.* ]
 
@@ -39,10 +41,10 @@ Produce your Scene Plot using the following template:
 [Generate 3 to 6 dependent events that rely heavily on the "summary of past events" or a Standalone Event from this phase. These escalate the consequences of prior choices.]
 
 - **Event:** [Provide a brief single-line, descriptive title for the event]
-	- **Prerequisite:** [State the specific past event, acquired item, or past player choice that must have occurred for this event to be possible. Use a single sentence.]
-	- **Trigger:** [Detail the immediate catalyst or new player action in this current phase that sparks this escalation. Limit to 3 sentences.]
-	- **Outcome:** [Describe the severe or impactful consequence that builds upon the prerequisite. Use a single sentence.]
-	- **Ending Alignment:** [Explicitly state which of the four endings this pushes toward, noting if this event permanently locks the players into that trajectory. Limit to 3 sentences.]
+  - **Prerequisite:** [State the specific past event, acquired item, or past player choice that must have occurred for this event to be possible. Use a single sentence.]
+  - **Trigger:** [Detail the immediate catalyst or new player action in this current phase that sparks this escalation. Limit to 3 sentences.]
+  - **Outcome:** [Describe the severe or impactful consequence that builds upon the prerequisite. Use a single sentence.]
+  - **Ending Alignment:** [Explicitly state which of the four endings this pushes toward, noting if this event permanently locks the players into that trajectory. Limit to 3 sentences.]
 
 [ *Repeat the chain event block above until you have 3 to 6 distinct events. Ensure the total number of Standalone and Chain events combined equals between 5 and 10.* ]
 ```
