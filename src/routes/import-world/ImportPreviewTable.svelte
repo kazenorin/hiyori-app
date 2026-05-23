@@ -33,9 +33,7 @@
 			result.set(msg.id, currentScene);
 
 			if (msg.role === 'user') {
-				const nextAssistant = messages.findIndex(
-					(m, j) => j > i && !m.removed && m.role === 'assistant'
-				);
+				const nextAssistant = messages.findIndex((m, j) => j > i && !m.removed && m.role === 'assistant');
 				if (nextAssistant !== -1) currentScene++;
 			}
 		}
@@ -92,12 +90,16 @@
 														{sceneNum ?? '—'}
 													</td>
 													<td class="px-3 py-2">
-														<span class="text-xs px-1.5 py-0.5 rounded {msg.role === 'assistant' ? 'bg-primary-100-900 text-primary-600' : 'bg-surface-200-800 text-surface-600'}">
+														<span
+															class="text-xs px-1.5 py-0.5 rounded {msg.role === 'assistant'
+																? 'bg-primary-100-900 text-primary-600'
+																: 'bg-surface-200-800 text-surface-600'}"
+														>
 															{msg.role === 'assistant' ? t('importWorld.assistant') : t('importWorld.user')}
 														</span>
 													</td>
 													<td class="px-3 py-2 text-surface-700-300 text-xs">
-														{msg.role === 'assistant' ? (msg.variables?.sceneTitle || '—') : '—'}
+														{msg.role === 'assistant' ? msg.variables?.sceneTitle || '—' : '—'}
 													</td>
 													<td class="px-3 py-2">
 														{#if msg.role === 'assistant'}
@@ -105,22 +107,30 @@
 																<div class="max-h-64 overflow-y-auto text-xs text-surface-700-300 whitespace-pre-wrap">
 																	{getExcerpt(msg)}
 																</div>
-																<button
-																	class="text-xs text-primary-500 hover:underline mt-1"
-																	onclick={() => toggleExpand(msg.id)}
-																>
+																<button class="text-xs text-primary-500 hover:underline mt-1" onclick={() => toggleExpand(msg.id)}>
 																	{t('importWorld.showLess')}
 																</button>
 															{:else}
 																<span class="text-xs text-surface-700-300">{truncate(getExcerpt(msg))}</span>
 																{#if getExcerpt(msg).length > 120}
-																	<button
-																		class="text-xs text-primary-500 hover:underline ml-1"
-																		onclick={() => toggleExpand(msg.id)}
-																	>
+																	<button class="text-xs text-primary-500 hover:underline ml-1" onclick={() => toggleExpand(msg.id)}>
 																		{t('importWorld.showMore')}
 																	</button>
 																{/if}
+															{/if}
+														{:else if expandedIds.has(msg.id)}
+															<div class="max-h-64 overflow-y-auto text-xs text-surface-700-300 whitespace-pre-wrap">
+																{msg.content}
+															</div>
+															<button class="text-xs text-primary-500 hover:underline mt-1" onclick={() => toggleExpand(msg.id)}>
+																{t('importWorld.showLess')}
+															</button>
+														{:else}
+															<span class="text-xs text-surface-700-300">{truncate(msg.content)}</span>
+															{#if msg.content.length > 120}
+																<button class="text-xs text-primary-500 hover:underline ml-1" onclick={() => toggleExpand(msg.id)}>
+																	{t('importWorld.showMore')}
+																</button>
 															{/if}
 														{/if}
 													</td>

@@ -37,8 +37,9 @@ export type ProgressCallback = (update: ImportProgressUpdate) => void;
 // === Phase 1: Prepare Import ===
 
 export async function prepareImport(formData: ImportFormData, onProgress: ProgressCallback): Promise<ImportPreviewData | null> {
-	setActiveLocale(settings.locale || 'en');
-	await loadLocaleStrings(settings.locale || 'en');
+	const locale = settings.locale;
+	setActiveLocale(locale);
+	await loadLocaleStrings(locale);
 
 	const logs: string[] = [];
 
@@ -69,7 +70,7 @@ export async function prepareImport(formData: ImportFormData, onProgress: Progre
 		storyId = crypto.randomUUID();
 		storyName = formData.storyName.trim() || `Story-${storyId.slice(-8)}`;
 
-		await createStory(storyId, storyName, settings.locale);
+		await createStory(storyId, storyName, locale);
 		createdResources.storyId = storyId;
 		log(`Story created: "${storyName}" (${storyId.slice(-8)})`);
 

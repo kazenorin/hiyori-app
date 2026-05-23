@@ -74,7 +74,7 @@ async function fillNarrativeVariables(
 		state = await runEditorTemplateFitter(ctx, state, trackPhase);
 
 		const variables = state.editorVariables ?? null;
-		const hasNarrativeBody = !variables?.narrativeBody;
+		const hasNarrativeBody = (variables?.narrativeBody?.trim().length ?? 0) > 0;
 
 		results.push({
 			messageIndex: msgIndex,
