@@ -11,7 +11,6 @@ import { BaseDirectory, mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { loadStories } from '$lib/stores/stories.svelte';
 import { kebabCase } from 'lodash-es';
 import type {
-	ImportContext,
 	ImportFormData,
 	ImportPreviewAct,
 	ImportPreviewData,
@@ -91,10 +90,7 @@ export async function prepareImport(formData: ImportFormData, onProgress: Progre
 		if (!worldContent) {
 			worldContent = await regenerateWorldFromCards(storyFolder, interviewActCard, characterCards, log);
 		}
-
-		const importCtx: ImportContext = { worldContent, characterCards, actCards };
-
-		const previewActs = await prepareActs(formData, storyId, importCtx, createdResources, onProgress, log);
+		const previewActs = await prepareActs(formData, storyId, createdResources, onProgress, log);
 
 		return {
 			storyId,
@@ -222,7 +218,6 @@ export async function cancelImport(preview: ImportPreviewData): Promise<void> {
 async function prepareActs(
 	formData: ImportFormData,
 	storyId: string,
-	importCtx: ImportContext,
 	createdResources: CreatedResources,
 	onProgress: ProgressCallback,
 	log: (msg: string) => void
@@ -243,15 +238,7 @@ async function prepareActs(
 
 		let messages: ImportPreviewMessage[] = [];
 		if (actInput.transcript) {
-			const parsed = await enrichTranscriptAct(
-				actInput,
-				actNumber,
-				formData.skipOptionalMalformed,
-				retryConfig,
-				importCtx,
-				log,
-				onProgress
-			);
+			const parsed = await enrichTranscriptAct(actInput, formData.skipOptionalMalformed, retryConfig, log, onProgress);
 			messages = toPreviewMessages(parsed);
 		}
 
@@ -301,10 +288,8 @@ async function createActAndLine(
 
 async function enrichTranscriptAct(
 	actInput: { id: string; name: string; actFile: File | null; transcript: File | null },
-	actNumber: number,
 	skipOptionalMalformed: boolean,
 	retryConfig: RetryConfig,
-	importCtx: ImportContext,
 	log: (msg: string) => void,
 	onProgress: ProgressCallback
 ): Promise<ParsedMessage[]> {

@@ -11,6 +11,7 @@ import { editorHasTemplateMetadata } from '$lib/ai/pipeline/message-builder';
 import type { PipelineCallbacks, PipelineState } from '$lib/ai/pipeline/types';
 import { loadWriterOutputTemplate } from '$lib/fs/prompts';
 import { buildImportRunContext } from './pipeline-context';
+import { emptyVariables } from '$lib/ai/narrative-types';
 
 function buildNarrativeFillerCallbacks(
 	msgIndex: number,
@@ -73,12 +74,12 @@ async function fillNarrativeVariables(
 		state = await runEditorTemplateFitter(ctx, state, trackPhase);
 
 		const variables = state.editorVariables ?? null;
-		const hasMetadata = editorHasTemplateMetadata(variables);
+		const hasNarrativeBody = !variables?.narrativeBody;
 
 		results.push({
 			messageIndex: msgIndex,
-			variables: hasMetadata ? variables : null,
-			source: hasMetadata ? 'template-fitter' : 'none',
+			variables: hasNarrativeBody ? variables : { ...emptyVariables(), narrativeBody: msg.content },
+			source: hasNarrativeBody ? 'template-fitter' : 'none',
 		});
 
 		if (i < indicesNeedingFilling.length - 1) {

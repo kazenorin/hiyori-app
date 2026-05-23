@@ -141,14 +141,6 @@ export interface NarrativeExtractionResult {
 	source: 'template-fitter' | 'none';
 }
 
-// === Import Context ===
-
-export interface ImportContext {
-	worldContent: string | null;
-	characterCards: { name: string; content: string }[];
-	actCards: { actNumber: number; content: string }[];
-}
-
 // === Import Preview Types ===
 
 export interface ImportPreviewMessage {
