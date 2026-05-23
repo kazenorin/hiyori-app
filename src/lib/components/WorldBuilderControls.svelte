@@ -41,7 +41,7 @@
 		onCancel,
 		onDismissOptions,
 		onRetry,
-		chatContainer
+		chatContainer,
 	}: Props = $props();
 
 	const SCROLL_BOTTOM_THRESHOLD_PX = 5;
@@ -56,19 +56,21 @@
 	let isMinimized = $derived(!isPinned && (!isNearBottom || isManuallyClosed) && !isUserExpanded);
 
 	let hasContent = $derived(
-		(isComplete && !isInterviewMode) ||
-			(isInterviewMode && hasInterviewMessages && !isStreaming) ||
-			createStoryError != null ||
-			worldBuilderError != null
+		(isComplete && !isInterviewMode) || (isInterviewMode && !isStreaming) || createStoryError != null || worldBuilderError != null
 	);
 
 	let summaryText = $derived.by(() => {
 		if (createStoryError) return t('components.worldBuilderControls.errorCreatingStory');
 		if (worldBuilderError) return t('components.worldBuilderControls.worldBuilderError');
-		if (isInterviewMode && hasInterviewMessages && !isStreaming) return t('components.worldBuilderControls.readyToStartGame');
+		if (isInterviewMode && !isStreaming) {
+			if (hasInterviewMessages) return t('components.worldBuilderControls.readyToStartGame');
+			return t('components.worldBuilderControls.interviewMode');
+		}
 		if (isComplete && !isInterviewMode) {
 			if (showCreateStoryOptions) return t('components.worldBuilderControls.storyCreationOptions');
-			return storyName ? t('components.worldBuilderControls.createStoryPrompt', { name: storyName }) : t('components.worldBuilderControls.createStoryDefault');
+			return storyName
+				? t('components.worldBuilderControls.createStoryPrompt', { name: storyName })
+				: t('components.worldBuilderControls.createStoryDefault');
 		}
 		return '';
 	});
@@ -156,16 +158,14 @@
 				class="flex w-full items-center justify-center gap-2 px-4 py-2 text-sm text-surface-500 hover:bg-surface-100-900 transition-colors"
 				type="button"
 				aria-expanded="false"
-				onclick={() => { isUserExpanded = true; isManuallyClosed = false; startLayoutTransition(true); }}
+				onclick={() => {
+					isUserExpanded = true;
+					isManuallyClosed = false;
+					startLayoutTransition(true);
+				}}
 			>
 				<span class="truncate">{summaryText}</span>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					class="h-4 w-4"
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					aria-hidden="true"
-				>
+				<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
 					<path
 						fill-rule="evenodd"
 						d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
@@ -185,11 +185,15 @@
 					>
 						{#if isPinned}
 							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-								<path d="M9.854 2.354a.5.5 0 00-.708 0l-1.5 1.5a.5.5 0 000 .708L9.5 6.914l-5.354 5.354a.5.5 0 000 .708l2 2a.5.5 0 00.708 0L12.086 9.5l2.352 2.354a.5.5 0 00.708 0l1.5-1.5a.5.5 0 000-.708L14.414 7.5l2.352-2.354a.5.5 0 000-.708l-2-2a.5.5 0 00-.708 0L11.5 4.586 9.854 2.354z" />
+								<path
+									d="M9.854 2.354a.5.5 0 00-.708 0l-1.5 1.5a.5.5 0 000 .708L9.5 6.914l-5.354 5.354a.5.5 0 000 .708l2 2a.5.5 0 00.708 0L12.086 9.5l2.352 2.354a.5.5 0 00.708 0l1.5-1.5a.5.5 0 000-.708L14.414 7.5l2.352-2.354a.5.5 0 000-.708l-2-2a.5.5 0 00-.708 0L11.5 4.586 9.854 2.354z"
+								/>
 							</svg>
 						{:else}
 							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-								<path d="M10 2a.75.75 0 01.75.75v1.5h3.5a.75.75 0 010 1.5h-.444l-.5 6h.444a.75.75 0 010 1.5h-3v5.25a.75.75 0 01-1.5 0V13.25h-3a.75.75 0 010-1.5h.444l-.5-6H5.75a.75.75 0 010-1.5h3.5v-1.5A.75.75 0 0110 2z" />
+								<path
+									d="M10 2a.75.75 0 01.75.75v1.5h3.5a.75.75 0 010 1.5h-.444l-.5 6h.444a.75.75 0 010 1.5h-3v5.25a.75.75 0 01-1.5 0V13.25h-3a.75.75 0 010-1.5h.444l-.5-6H5.75a.75.75 0 010-1.5h3.5v-1.5A.75.75 0 0110 2z"
+								/>
 							</svg>
 						{/if}
 					</button>
@@ -205,8 +209,12 @@
 							<p class="text-sm text-error-700-300">{createStoryError}</p>
 						</div>
 						<div class="flex gap-3 justify-center">
-							<button class="btn preset-filled-primary-500" type="button" onclick={onRetry}> {t('components.worldBuilderControls.tryAgain')} </button>
-							<button class="btn preset-tonal" type="button" onclick={onDismissOptions}> {t('components.worldBuilderControls.cancel')} </button>
+							<button class="btn preset-filled-primary-500" type="button" onclick={onRetry}>
+								{t('components.worldBuilderControls.tryAgain')}
+							</button>
+							<button class="btn preset-tonal" type="button" onclick={onDismissOptions}>
+								{t('components.worldBuilderControls.cancel')}
+							</button>
 						</div>
 					{:else if isInterviewMode}
 						{#if isCreatingStory}
@@ -218,11 +226,9 @@
 							</div>
 						{:else}
 							<div class="flex justify-center">
-								<button
-									class="btn preset-filled-success-500"
-									type="button"
-									onclick={() => onStartGame(isGameResumeMode)}
-								> {t('components.worldBuilderControls.startGame')} </button>
+								<button class="btn preset-filled-success-500" type="button" onclick={() => onStartGame(isGameResumeMode)}>
+									{t('components.worldBuilderControls.startGame')}
+								</button>
 							</div>
 						{/if}
 					{:else if isComplete && !isInterviewMode}
@@ -241,7 +247,8 @@
 											type="button"
 											onclick={onStartImmediate}
 										>
-											<span class="font-medium text-primary-900-100 mb-1">{t('components.worldBuilderControls.startImmediately')}</span><br/>
+											<span class="font-medium text-primary-900-100 mb-1">{t('components.worldBuilderControls.startImmediately')}</span><br
+											/>
 											<span class="text-sm text-primary-700-300">{t('components.worldBuilderControls.createStoryDescription')}</span>
 										</button>
 										<button
@@ -249,21 +256,30 @@
 											type="button"
 											onclick={onStartInterview}
 										>
-											<span class="font-medium text-primary-900-100 mb-1">{t('components.worldBuilderControls.tellUsAboutStory')}</span><br/>
+											<span class="font-medium text-primary-900-100 mb-1">{t('components.worldBuilderControls.tellUsAboutStory')}</span><br
+											/>
 											<span class="text-sm text-primary-700-300">{t('components.worldBuilderControls.discussDirectionDescription')}</span>
 										</button>
 									</div>
 									<div class="flex justify-center mt-2">
-										<button class="btn preset-tonal" type="button" onclick={onDismissOptions}> {t('components.worldBuilderControls.cancel')} </button>
+										<button class="btn preset-tonal" type="button" onclick={onDismissOptions}>
+											{t('components.worldBuilderControls.cancel')}
+										</button>
 									</div>
 								{/if}
 							</div>
 						{:else}
 							<div class="rounded-(--radius-container) bg-primary-100-900 p-6 text-center space-y-4">
-								<h3 class="h3 font-display text-primary-900-100">{t('components.worldBuilderControls.createStoryPrompt', { name: storyName ?? t('components.worldBuilderControls.createStoryDefault') })}</h3>
+								<h3 class="h3 font-display text-primary-900-100">
+									{t('components.worldBuilderControls.createStoryPrompt', {
+										name: storyName ?? t('components.worldBuilderControls.createStoryDefault'),
+									})}
+								</h3>
 								<p class="text-sm text-primary-700-300">{t('components.worldBuilderControls.worldReadyPrompt')}</p>
 								<div class="flex gap-3 justify-center">
-									<button class="btn preset-filled-primary-500" type="button" onclick={onCreateStory}> {t('components.worldBuilderControls.createStory')} </button>
+									<button class="btn preset-filled-primary-500" type="button" onclick={onCreateStory}>
+										{t('components.worldBuilderControls.createStory')}
+									</button>
 									<button class="btn preset-tonal" type="button" onclick={onCancel}> {t('components.worldBuilderControls.cancel')}</button>
 								</div>
 							</div>

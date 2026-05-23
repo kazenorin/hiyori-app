@@ -26,6 +26,7 @@
 		getActPlotInterview,
 		getError as getWorldBuilderError,
 		getGameResumeInterview,
+		getHasInterviewMessages,
 		getIsActive as getIsWorldBuilderActive,
 		getIsComplete as getIsWorldBuilderComplete,
 		getIsStreaming as getIsWorldBuilderStreaming,
@@ -52,25 +53,25 @@
 		setActPlotGenerationPhase,
 		setActiveActPlotContent,
 	} from '$lib/stores/stories.svelte';
-	import {settings, isDirectorModeEnabled} from '$lib/stores/settings.svelte';
-	import {Accordion} from '@skeletonlabs/skeleton-svelte';
+	import { settings, isDirectorModeEnabled } from '$lib/stores/settings.svelte';
+	import { Accordion } from '@skeletonlabs/skeleton-svelte';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import ChatControls from '$lib/components/ChatControls.svelte';
 	import DirectorNotesPanel from '$lib/components/DirectorNotesPanel.svelte';
 	import WorldBuilderControls from '$lib/components/WorldBuilderControls.svelte';
-	import {hasTemplateMetadata, renderTemplate} from '$lib/ai/template-renderer';
-	import {emptyVariables, type NarrativeVariables} from '$lib/ai/narrative-types';
-	import {formatPhaseName} from '$lib/ai/narrative-types';
-	import {loadStoryMessageTemplate} from '$lib/fs/view-templates';
-	import {generateActPlot} from '$lib/ai/act-plot-generator';
-	import {getActLine, getMessagesForLine} from '$lib/db/act-lines';
-	import {log} from '$lib/logging/logger';
-	import {generateTurnOfEvents} from '$lib/features/turn-of-events-generator';
-	import {type Message, updateMessageFields} from '$lib/db/messages';
-	import {type GameDataRegenerationContext, regenerateGameData} from '$lib/ai/game-data-regenerator';
-	import type {Story} from "$lib/db/stories";
-	import {onMount} from 'svelte';
-	import {t} from '$lib/i18n';
+	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
+	import { emptyVariables, type NarrativeVariables } from '$lib/ai/narrative-types';
+	import { formatPhaseName } from '$lib/ai/narrative-types';
+	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
+	import { generateActPlot } from '$lib/ai/act-plot-generator';
+	import { getActLine, getMessagesForLine } from '$lib/db/act-lines';
+	import { log } from '$lib/logging/logger';
+	import { generateTurnOfEvents } from '$lib/features/turn-of-events-generator';
+	import { type Message, updateMessageFields } from '$lib/db/messages';
+	import { type GameDataRegenerationContext, regenerateGameData } from '$lib/ai/game-data-regenerator';
+	import type { Story } from '$lib/db/stories';
+	import { onMount } from 'svelte';
+	import { t } from '$lib/i18n';
 
 	let input = $state('');
 	let chatContainer = $state<HTMLDivElement | null>(null);
@@ -87,7 +88,11 @@
 
 	// Preload template on mount
 	onMount(() => {
-		loadStoryMessageTemplate().then((tmpl) => { storyMessageTemplate = tmpl; }).catch(() => {});
+		loadStoryMessageTemplate()
+			.then((tmpl) => {
+				storyMessageTemplate = tmpl;
+			})
+			.catch(() => {});
 	});
 	let lastWbMessageIdx = $derived(getWorldBuilderMessages().findLastIndex((m: WorldBuilderMessage) => m.role === 'assistant'));
 
@@ -179,7 +184,7 @@
 			const line = await forkActLineForInterview(actLineId, branchSeq, act.id, name, plotModeOverride);
 			await selectActLineQuiet(line.id);
 
-			const forkedMessage = (getMessages())[messageIndex];
+			const forkedMessage = getMessages()[messageIndex];
 			const actSummary = forkedMessage?.actSummary ?? '';
 			const narrativeBody = forkedMessage?.variables?.narrativeBody ?? '';
 			const sceneNumber = forkedMessage?.sceneNumber ?? 1;
@@ -287,7 +292,7 @@
 				plotMode: actLine?.plotMode,
 				actNumber: 1,
 				isResumeGame: false,
-				onPhaseChange: (phase) => setActPlotGenerationPhase(phase)
+				onPhaseChange: (phase) => setActPlotGenerationPhase(phase),
 			});
 			setActiveActPlotContent(actPlot.content);
 		} catch (err) {
@@ -298,8 +303,7 @@
 		}
 
 		exitWorldBuilderMode();
-		await sendInitialNarration(refs.actLineId)
-			.then(() => log.debug('story-creation', 'initial narration sent'));
+		await sendInitialNarration(refs.actLineId).then(() => log.debug('story-creation', 'initial narration sent'));
 	}
 
 	async function handleCreateActPlotInterview() {
@@ -307,7 +311,7 @@
 		createStoryError = null;
 
 		try {
-			if (!await ensureStoryCreated()) return;
+			if (!(await ensureStoryCreated())) return;
 
 			const refs = getActLineAndStory();
 			if (!refs) {
@@ -350,15 +354,15 @@
 				const isMainLine = actLine?.isMainLine ?? true;
 
 				const actPlotResult = await generateActPlot({
-				storyId: refs.story.id,
-				storyName: refs.story.name,
-				worldContent,
-				actLineId: refs.actLineId,
-				isMainLine,
-				plotMode: actLine?.plotMode,
-				actNumber: 1,
-				isResumeGame: isGameResumeMode,
-				onPhaseChange: (phase) => setActPlotGenerationPhase(phase)
+					storyId: refs.story.id,
+					storyName: refs.story.name,
+					worldContent,
+					actLineId: refs.actLineId,
+					isMainLine,
+					plotMode: actLine?.plotMode,
+					actNumber: 1,
+					isResumeGame: isGameResumeMode,
+					onPhaseChange: (phase) => setActPlotGenerationPhase(phase),
 				});
 				setActiveActPlotContent(actPlotResult.content);
 
@@ -379,8 +383,7 @@
 				if (isGameResumeMode) {
 					await loadActLineMessages(refs.actLineId);
 				} else {
-					sendInitialNarration(refs.actLineId)
-						.then(() => log.debug('story-creation', 'initial narration sent'));
+					sendInitialNarration(refs.actLineId).then(() => log.debug('story-creation', 'initial narration sent'));
 				}
 			} else {
 				createStoryError = t('errors.worldContentNotAvailable');
@@ -419,7 +422,7 @@
 		});
 		return {
 			...lastAssistant,
-			variables: enrichedVariables
+			variables: enrichedVariables,
 		};
 	}
 
@@ -542,81 +545,82 @@
 		<!-- World builder mode -->
 		<div class="flex-1 flex flex-col min-h-0 min-w-0">
 			<div bind:this={wbChatContainer} class="flex-1 overflow-y-auto p-6 min-w-0">
-			<div class="px-8 space-y-4">
-				<div class="text-center py-4">
-					<h2 class="h2 font-display text-surface-700-300 mb-2">{t('chat.worldBuilder')}</h2>
-					<p class="text-xs text-surface-500">{t('chat.worldBuilderPrompt')}</p>
-				</div>
+				<div class="px-8 space-y-4">
+					<div class="text-center py-4">
+						<h2 class="h2 font-display text-surface-700-300 mb-2">{t('chat.worldBuilder')}</h2>
+						<p class="text-xs text-surface-500">{t('chat.worldBuilderPrompt')}</p>
+					</div>
 
-				{#each getWorldBuilderMessages() as message, i (message.id)}
-					{#if message.role === 'user'}
-						<div class="flex justify-end">
-							<div class="max-w-[80%] rounded-(--radius-container) bg-primary-100-900 p-5">
-								<div class="leading-relaxed text-primary-900-100">
-									<MarkdownContent content={message.content} />
+					{#each getWorldBuilderMessages() as message, i (message.id)}
+						{#if message.role === 'user'}
+							<div class="flex justify-end">
+								<div class="max-w-[80%] rounded-(--radius-container) bg-primary-100-900 p-5">
+									<div class="leading-relaxed text-primary-900-100">
+										<MarkdownContent content={message.content} />
+									</div>
+									{#if !getIsWorldBuilderStreaming()}
+										<div class="flex gap-2 mt-3 pt-3 border-t border-primary-200-800">
+											<button
+												class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
+												title="Copy message"
+												onclick={() => handleCopy(message.id, message.content)}
+												>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
+											>
+										</div>
+									{/if}
 								</div>
-								{#if !getIsWorldBuilderStreaming()}
-									<div class="flex gap-2 mt-3 pt-3 border-t border-primary-200-800">
+							</div>
+						{:else}
+							<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
+								{#if message.content}
+									<div class="leading-relaxed text-surface-800-200">
+										<MarkdownContent content={message.content} {characterNames} />
+									</div>
+								{/if}
+								{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
+									<span
+										data-streaming-cursor
+										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"
+									></span>
+								{/if}
+								{#if !getIsWorldBuilderStreaming() && message.content}
+									<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
 										<button
-											class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
+											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 											title="Copy message"
-											onclick={() => handleCopy(message.id, message.content)}>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
+											onclick={() => handleCopy(message.id, message.content)}
+											>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
 										>
+										{#if i === lastWbMessageIdx}
+											<button
+												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+												title="Regenerate response"
+												onclick={handleWorldBuilderRegenerate}>{t('chat.regenerate')}</button
+											>
+											<button
+												class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
+												title="Delete last exchange"
+												onclick={handleWorldBuilderDelete}>{t('chat.delete')}</button
+											>
+										{/if}
 									</div>
 								{/if}
 							</div>
-						</div>
-					{:else}
-						<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
-							{#if message.content}
-								<div class="leading-relaxed text-surface-800-200">
-									<MarkdownContent content={message.content}  characterNames={characterNames} />
-								</div>
-							{/if}
-							{#if getIsWorldBuilderStreaming() && message === getWorldBuilderMessages().at(-1)}
-								<span
-									data-streaming-cursor
-									class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"
-								></span>
-							{/if}
-							{#if !getIsWorldBuilderStreaming() && message.content}
-								<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
-									<button
-										class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
-										title="Copy message"
-										onclick={() => handleCopy(message.id, message.content)}>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
-									>
-									{#if i === lastWbMessageIdx}
-										<button
-											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
-											title="Regenerate response"
-											onclick={handleWorldBuilderRegenerate}>{t('chat.regenerate')}</button
-										>
-										<button
-											class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
-											title="Delete last exchange"
-											onclick={handleWorldBuilderDelete}>{t('chat.delete')}</button
-										>
-									{/if}
-								</div>
-							{/if}
-						</div>
-					{/if}
-				{/each}
-
+						{/if}
+					{/each}
+				</div>
 			</div>
-		</div>
 
 			<WorldBuilderControls
 				isComplete={getIsWorldBuilderComplete()}
 				storyName={getWorldBuilderStoryName()}
-				showCreateStoryOptions={showCreateStoryOptions}
-				isCreatingStory={isCreatingStory}
-				createStoryError={createStoryError}
+				{showCreateStoryOptions}
+				{isCreatingStory}
+				{createStoryError}
 				worldBuilderError={getWorldBuilderError()}
 				isInterviewMode={getActPlotInterview()}
 				isGameResumeMode={getGameResumeInterview()}
-				hasInterviewMessages={getWorldBuilderMessages().some((m) => m.role === 'user')}
+				hasInterviewMessages={getHasInterviewMessages()}
 				isStreaming={getIsWorldBuilderStreaming()}
 				onCreateStory={handleCreateFromWorldBuilder}
 				onStartImmediate={handleCreateStoryImmediate}
@@ -627,7 +631,7 @@
 				onRetry={handleCreateStoryImmediate}
 				chatContainer={wbChatContainer}
 			/>
-			</div>
+		</div>
 
 		<!-- Right-side input panel -->
 		<aside class="w-80 border-l border-surface-200-800 flex flex-col p-4 bg-surface-50-950">
@@ -669,47 +673,82 @@
 			<!-- Chat messages area -->
 			<div bind:this={chatContainer} class="flex-1 overflow-y-auto p-6 min-w-0">
 				<div class="px-8 space-y-4">
-				{#if getMessages().length === 0}
-					<div class="flex flex-col items-center justify-center py-24 text-center">
-						<h2 class="h2 font-display text-surface-700-300 mb-3">{t('chat.beginAdventure')}</h2>
-						<p class="text-surface-400-500 max-w-lg">{t('chat.emptyChat')}</p>
-					</div>
-				{:else}
-					{#each getMessages() as message, i (message.id)}
-						{#if message.role === 'user'}
-							<div class="flex justify-end">
-								<div class="max-w-[80%] min-w-0 rounded-(--radius-container) bg-primary-100-900 p-5">
-									<div class="leading-relaxed text-primary-900-100 min-w-0">
-										<MarkdownContent content={message.content} />
-									</div>
-									{#if !getIsStreaming()}
-										<div class="flex gap-2 mt-3 pt-3 border-t border-primary-200-800">
-											<button
-												class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
-												title="Copy message"
-												onclick={() => handleCopy(message.id, message.content)}>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
-											>
-											{#if i === getMessages().length - 1 && isUserMessage(message)}
-												<button
-													class="text-xs text-error-500 hover:text-error-700 transition-colors"
-													title="Delete message"
-													onclick={() => handleDeleteOrphanedUserMessages()}>{t('chat.delete')}</button
-												>
-											{/if}
+					{#if getMessages().length === 0}
+						<div class="flex flex-col items-center justify-center py-24 text-center">
+							<h2 class="h2 font-display text-surface-700-300 mb-3">{t('chat.beginAdventure')}</h2>
+							<p class="text-surface-400-500 max-w-lg">{t('chat.emptyChat')}</p>
+						</div>
+					{:else}
+						{#each getMessages() as message, i (message.id)}
+							{#if message.role === 'user'}
+								<div class="flex justify-end">
+									<div class="max-w-[80%] min-w-0 rounded-(--radius-container) bg-primary-100-900 p-5">
+										<div class="leading-relaxed text-primary-900-100 min-w-0">
+											<MarkdownContent content={message.content} />
 										</div>
-									{/if}
+										{#if !getIsStreaming()}
+											<div class="flex gap-2 mt-3 pt-3 border-t border-primary-200-800">
+												<button
+													class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
+													title="Copy message"
+													onclick={() => handleCopy(message.id, message.content)}
+													>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
+												>
+												{#if i === getMessages().length - 1 && isUserMessage(message)}
+													<button
+														class="text-xs text-error-500 hover:text-error-700 transition-colors"
+														title="Delete message"
+														onclick={() => handleDeleteOrphanedUserMessages()}>{t('chat.delete')}</button
+													>
+												{/if}
+											</div>
+										{/if}
+									</div>
 								</div>
-							</div>
-						{:else}
-							<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
-								<!-- Pipeline phase accordions -->
-								{#if message.phases && message.phases.length > 0}
-									{#each message.phases as phase, pi (pi)}
+							{:else}
+								<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
+									<!-- Pipeline phase accordions -->
+									{#if message.phases && message.phases.length > 0}
+										{#each message.phases as phase, pi (pi)}
+											<div class="mb-3">
+												<Accordion collapsible>
+													<Accordion.Item value={phase.phaseName}>
+														<Accordion.ItemTrigger
+															class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1"
+														>
+															<span>{formatPhaseName(phase.phaseName)}</span>
+															<Accordion.ItemIndicator>
+																<span class="transition-transform duration-150 text-surface-500">&#9660;</span>
+															</Accordion.ItemIndicator>
+														</Accordion.ItemTrigger>
+														<Accordion.ItemContent>
+															{#snippet element(attributes)}
+																{#if !attributes.hidden}
+																	<div
+																		{...attributes}
+																		class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
+																	>
+																		{#if phase.reasoning}
+																			<div class="mb-2 italic text-surface-400">{phase.reasoning}</div>
+																		{/if}
+																		<MarkdownContent content={phase.content} />
+																	</div>
+																{/if}
+															{/snippet}
+														</Accordion.ItemContent>
+													</Accordion.Item>
+												</Accordion>
+											</div>
+										{/each}
+									{/if}
+
+									<!-- Editor reasoning -->
+									{#if message.reasoning}
 										<div class="mb-3">
 											<Accordion collapsible>
-												<Accordion.Item value={phase.phaseName}>
+												<Accordion.Item value="reasoning">
 													<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
-														<span>{formatPhaseName(phase.phaseName)}</span>
+														<span>{t('chat.reasoning')}</span>
 														<Accordion.ItemIndicator>
 															<span class="transition-transform duration-150 text-surface-500">&#9660;</span>
 														</Accordion.ItemIndicator>
@@ -721,10 +760,7 @@
 																	{...attributes}
 																	class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
 																>
-																	{#if phase.reasoning}
-																		<div class="mb-2 italic text-surface-400">{phase.reasoning}</div>
-																	{/if}
-																	<MarkdownContent content={phase.content} />
+																	{message.reasoning}
 																</div>
 															{/if}
 														{/snippet}
@@ -732,139 +768,130 @@
 												</Accordion.Item>
 											</Accordion>
 										</div>
-									{/each}
-								{/if}
+									{/if}
 
-								<!-- Editor reasoning -->
-								{#if message.reasoning}
-									<div class="mb-3">
-										<Accordion collapsible>
-											<Accordion.Item value="reasoning">
-												<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
-													<span>{t('chat.reasoning')}</span>
-													<Accordion.ItemIndicator>
-														<span class="transition-transform duration-150 text-surface-500">&#9660;</span>
-													</Accordion.ItemIndicator>
-												</Accordion.ItemTrigger>
-												<Accordion.ItemContent>
-													{#snippet element(attributes)}
-														{#if !attributes.hidden}
-															<div
-																{...attributes}
-																class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
-															>
-																{message.reasoning}
-															</div>
-														{/if}
-													{/snippet}
-												</Accordion.ItemContent>
-											</Accordion.Item>
-										</Accordion>
-									</div>
-								{/if}
+									<!-- Main content: Editor output -->
+									{#if message.variables && hasTemplateMetadata(message.variables)}
+										<div class="leading-relaxed text-surface-800-200">
+											{#if storyMessageTemplate}
+												<MarkdownContent
+													content={renderTemplate(
+														storyMessageTemplate,
+														message.variables,
+														message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined
+													)}
+													{characterNames}
+													importantPhrases={message.importantPhrases}
+												/>
+											{:else}
+												<MarkdownContent content={message.content} {characterNames} importantPhrases={message.importantPhrases} />
+											{/if}
+										</div>
+									{/if}
 
-								<!-- Main content: Editor output -->
-								{#if message.variables && hasTemplateMetadata(message.variables)}
-									<div class="leading-relaxed text-surface-800-200">
-										{#if storyMessageTemplate}
-											<MarkdownContent content={renderTemplate(storyMessageTemplate, message.variables, message.sceneNumber != null ? { sceneNumber: String(message.sceneNumber) } : undefined)}  characterNames={characterNames} importantPhrases={message.importantPhrases} />
-										{:else}
-											<MarkdownContent content={message.content}  characterNames={characterNames} importantPhrases={message.importantPhrases} />
-										{/if}
-									</div>
-								{/if}
+									{#if getIsStreaming() && message === getMessages().at(-1)}
+										<span
+											data-streaming-cursor
+											class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ||
+											hasTemplateMetadata(message.variables)
+												? 'mt-2'
+												: ''}"
+										></span>
+									{/if}
 
-								{#if getIsStreaming() && message === getMessages().at(-1)}
-									<span
-										data-streaming-cursor
-										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content || hasTemplateMetadata(message.variables) ? 'mt-2' : ''}"
-									></span>
-								{/if}
-
-								{#if message.metadata}
-									<MetadataPanel metadata={message.metadata} />
-								{/if}
-								{#if !getIsStreaming()}
-									<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
-										{#if message.content}
-											<button
-												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
-												title="Copy message"
-												onclick={() => handleCopy(message.id, message.content)}>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
-											>
-										{#if forkChoiceIndex === i}
-											<div class="flex gap-2 items-center">
-												<button
-													class="text-xs bg-surface-100-800 hover:bg-surface-200-700 text-primary-500 px-2 py-1 rounded transition-colors"
-													onclick={() => handleForkDirect(i)}
-												>{t('chat.keepCurrentPlot')}</button
-												>
-												<button
-													class="text-xs bg-surface-100-800 hover:bg-surface-200-700 text-primary-500 px-2 py-1 rounded transition-colors"
-													onclick={() => handleForkWithInterview(i)}
-												>{t('chat.tellUsWhatsDifferent')}</button
-												>
+									{#if message.metadata}
+										<MetadataPanel metadata={message.metadata} />
+									{/if}
+									{#if !getIsStreaming()}
+										<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
+											{#if message.content}
 												<button
 													class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
-													onclick={cancelForkChoice}
-												>{t('chat.cancel')}</button
+													title="Copy message"
+													onclick={() => handleCopy(message.id, message.content)}
+													>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
 												>
-											</div>
-											<div class="flex gap-2 items-center mt-1">
-													<span class="text-xs text-surface-400-500">{t('chat.plotMode')}:</span>
+												{#if forkChoiceIndex === i}
+													<div class="flex gap-2 items-center">
+														<button
+															class="text-xs bg-surface-100-800 hover:bg-surface-200-700 text-primary-500 px-2 py-1 rounded transition-colors"
+															onclick={() => handleForkDirect(i)}>{t('chat.keepCurrentPlot')}</button
+														>
+														<button
+															class="text-xs bg-surface-100-800 hover:bg-surface-200-700 text-primary-500 px-2 py-1 rounded transition-colors"
+															onclick={() => handleForkWithInterview(i)}>{t('chat.tellUsWhatsDifferent')}</button
+														>
+														<button
+															class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+															onclick={cancelForkChoice}>{t('chat.cancel')}</button
+														>
+													</div>
+													<div class="flex gap-2 items-center mt-1">
+														<span class="text-xs text-surface-400-500">{t('chat.plotMode')}:</span>
+														<button
+															class="text-xs {forkPlotMode === null
+																? 'bg-primary-500 text-white'
+																: 'bg-surface-100-800 text-surface-700-300 hover:bg-surface-200-700'} px-2 py-0.5 rounded transition-colors"
+															onclick={() => (forkPlotMode = null)}>{t('chat.keepCurrentMode')}</button
+														>
+														<button
+															class="text-xs {forkPlotMode === 'guidance'
+																? 'bg-primary-500 text-white'
+																: 'bg-surface-100-800 text-surface-700-300 hover:bg-surface-200-700'} px-2 py-0.5 rounded transition-colors"
+															onclick={() => (forkPlotMode = 'guidance')}>{t('chat.switchToGuidance')}</button
+														>
+														<button
+															class="text-xs {forkPlotMode === 'phaseEvent'
+																? 'bg-primary-500 text-white'
+																: 'bg-surface-100-800 text-surface-700-300 hover:bg-surface-200-700'} px-2 py-0.5 rounded transition-colors"
+															onclick={() => (forkPlotMode = 'phaseEvent')}>{t('chat.switchToPhaseEvent')}</button
+														>
+													</div>
+												{:else}
 													<button
-														class="text-xs {forkPlotMode === null ? 'bg-primary-500 text-white' : 'bg-surface-100-800 text-surface-700-300 hover:bg-surface-200-700'} px-2 py-0.5 rounded transition-colors"
-														onclick={() => forkPlotMode = null}
-													>{t('chat.keepCurrentMode')}</button
+														class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+														title="Fork from here"
+														disabled={isForking || getIsStreaming()}
+														onclick={() => handleFork(i)}>{isForking ? t('chat.forking') : t('chat.fork')}</button
 													>
-													<button
-														class="text-xs {forkPlotMode === 'guidance' ? 'bg-primary-500 text-white' : 'bg-surface-100-800 text-surface-700-300 hover:bg-surface-200-700'} px-2 py-0.5 rounded transition-colors"
-														onclick={() => forkPlotMode = 'guidance'}
-													>{t('chat.switchToGuidance')}</button
-													>
-													<button
-														class="text-xs {forkPlotMode === 'phaseEvent' ? 'bg-primary-500 text-white' : 'bg-surface-100-800 text-surface-700-300 hover:bg-surface-200-700'} px-2 py-0.5 rounded transition-colors"
-														onclick={() => forkPlotMode = 'phaseEvent'}
-													>{t('chat.switchToPhaseEvent')}</button
-													>
-											</div>
-										{:else}
-											<button
-												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
-												title="Fork from here"
-												disabled={isForking || getIsStreaming()}
-											onclick={() => handleFork(i)}>{isForking ? t('chat.forking') : t('chat.fork')}</button>
-										{/if}
-										{/if}
-										{#if i === lastMessageIdx}
-											<button
-												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
-												title="Regenerate response"
-												onclick={() => handleRegenerate(message.id)}>{t('chat.regenerate')}</button
-											>
-											<button
-												class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
-												title="Delete last exchange"
-												onclick={handleDelete}>{t('chat.delete')}</button
-											>
-										{/if}
-									</div>
-								{/if}
-							</div>
-						{/if}
-					{/each}
-				{/if}
+												{/if}
+											{/if}
+											{#if i === lastMessageIdx}
+												<button
+													class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+													title="Regenerate response"
+													onclick={() => handleRegenerate(message.id)}>{t('chat.regenerate')}</button
+												>
+												<button
+													class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
+													title="Delete last exchange"
+													onclick={handleDelete}>{t('chat.delete')}</button
+												>
+											{/if}
+										</div>
+									{/if}
+								</div>
+							{/if}
+						{/each}
+					{/if}
 
-				{#if getError()}
-					<div class="rounded-(--radius-container) bg-error-100-900 p-4">
-						<p class="text-sm text-error-700-300">{getError()}</p>
-					</div>
-				{/if}
+					{#if getError()}
+						<div class="rounded-(--radius-container) bg-error-100-900 p-4">
+							<p class="text-sm text-error-700-300">{getError()}</p>
+						</div>
+					{/if}
+				</div>
 			</div>
-		</div>
 
 			<!-- Pinned control section -->
-			<ChatControls decisions={latestDecisions} activePlotThreads={latestActivePlotThreads} decisionContext={latestDecisionContext} isStreaming={getIsStreaming()} onDecisionClick={handleDecisionClick} chatContainer={chatContainer} />
+			<ChatControls
+				decisions={latestDecisions}
+				activePlotThreads={latestActivePlotThreads}
+				decisionContext={latestDecisionContext}
+				isStreaming={getIsStreaming()}
+				onDecisionClick={handleDecisionClick}
+				{chatContainer}
+			/>
 		</div>
 
 		<!-- Right-side input panel -->

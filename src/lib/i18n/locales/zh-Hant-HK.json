@@ -210,6 +210,7 @@
 			"errorCreatingStory": "建立故事時發生錯誤",
 			"worldBuilderError": "世界觀生成器錯誤",
 			"readyToStartGame": "準備開始遊戲",
+			"interviewMode": "訪談模式",
 			"storyCreationOptions": "故事建立選項",
 			"createStoryPrompt": "要建立「{name}」嗎？",
 			"createStoryDefault": "要建立故事嗎？"

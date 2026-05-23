@@ -50,6 +50,8 @@ let actPlotInterview = $state(false);
 let gameResumeInterview = $state(false);
 let interviewActLineId: string | null = null;
 let interviewHiddenContext: MessageBase[] = [];
+
+const hasInterviewMessages = $derived(messages.some((m) => m.role === 'user') || interviewHiddenContext.length > 1);
 let interviewWorldContent: string | null = null;
 
 // Cached prompts loaded once on enter
@@ -83,6 +85,9 @@ export function getLogFilePath(): string | null {
 }
 export function getActPlotInterview(): boolean {
 	return actPlotInterview;
+}
+export function getHasInterviewMessages(): boolean {
+	return hasInterviewMessages;
 }
 export function getGameResumeInterview(): boolean {
 	return gameResumeInterview;

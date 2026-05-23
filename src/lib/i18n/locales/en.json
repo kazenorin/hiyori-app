@@ -210,6 +210,7 @@
 			"errorCreatingStory": "Error creating story",
 			"worldBuilderError": "World builder error",
 			"readyToStartGame": "Ready to start game",
+			"interviewMode": "Interview mode",
 			"storyCreationOptions": "Story creation options",
 			"createStoryPrompt": "Create \"{name}\"?",
 			"createStoryDefault": "Create story?"
