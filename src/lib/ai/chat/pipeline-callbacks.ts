@@ -53,6 +53,24 @@ export interface CallbackDeps {
 	onError: (errorMessage: string) => void;
 }
 
+export function createOptionalCallbacks({
+	onPhaseStart = () => {},
+	onPhaseStream = () => {},
+	onPhaseRetry = () => {},
+	onPhaseComplete = () => {},
+	onError = (_phase, _err) => {},
+	onAllComplete = () => {},
+}: Partial<PipelineCallbacks> = {}): PipelineCallbacks {
+	return {
+		onPhaseStart,
+		onPhaseStream,
+		onPhaseRetry,
+		onPhaseComplete,
+		onError,
+		onAllComplete,
+	};
+}
+
 export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 	const { getCurrentMessage, setCurrentMessage, templateReplacements, onError } = deps;
 	const renderContent = (vars: NarrativeVariables | null | undefined, fallback: string): string => {
@@ -156,9 +174,9 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 		},
 		onPhrasesExtracted: (phrases: string[]) => {
 			const current = getCurrentMessage();
-			updatePersistentMessageMetadata(current.id, { importantPhrases: serializeImportantPhrases(phrases) }).catch(
-				async (err) => { await log.error('phrase-persist', 'Failed to persist important phrases', err); }
-			);
+			updatePersistentMessageMetadata(current.id, { importantPhrases: serializeImportantPhrases(phrases) }).catch(async (err) => {
+				await log.error('phrase-persist', 'Failed to persist important phrases', err);
+			});
 			setCurrentMessage({ ...current, importantPhrases: phrases });
 		},
 	};

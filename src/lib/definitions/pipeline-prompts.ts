@@ -13,8 +13,7 @@ export const recommendationLabel = () => ls('pipeline.labels.recommendation');
 export const characterSummariesSinceSceneLabel = (sceneNumber: number) => ls('pipeline.labels.characterSummaries', { sceneNumber });
 
 /** Localized display name for an act phase (e.g., 'rising-action' → 'Rising Action'). */
-export const getLocalizedActPhase = (phase: ActPhase): string =>
-	ls(`pipeline.labels.actPhases.${ACT_PHASE_LOCALE_KEYS[phase]}`);
+export const getLocalizedActPhase = (phase: ActPhase): string => ls(`pipeline.labels.actPhases.${ACT_PHASE_LOCALE_KEYS[phase]}`);
 
 // System prompts
 export const templateFitterSystemPrompt = () => ls('pipeline.system.templateFitter');
@@ -40,3 +39,6 @@ export const summarizerFallbackExtractionPromptTemplate = (completedScenes: numb
 	ls('pipeline.extraction.summarizerFallback', { completedScenes });
 export const summarizerExtractionPromptTemplate = (completedScenes: number | string, sceneTitle: string) =>
 	ls('pipeline.extraction.summarizer', { completedScenes, sceneTitle });
+
+export const summarizerTranscriptStart = () => ls('pipeline.extraction.summarizerTranscriptStart');
+export const summarizerTranscriptEnd = () => ls('pipeline.extraction.summarizerTranscriptEnd');

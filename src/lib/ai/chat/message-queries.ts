@@ -12,9 +12,13 @@ export function findLastNonNullSceneNumber(messages: UIMessage[]): number | unde
 	return undefined;
 }
 
-export function getLatestActSummary(messages: UIMessage[]): string {
+export function getLatestActSummary(messages: UIMessage[], minSceneNumber?: number): string {
 	for (let i = messages.length - 1; i >= 0; i--) {
-		if (messages[i].actSummary) return messages[i].actSummary!;
+		if (messages[i].actSummary) {
+			if (minSceneNumber === undefined || (messages[i].sceneNumber ?? 0) >= minSceneNumber) {
+				return messages[i].actSummary!;
+			}
+		}
 	}
 	return '';
 }

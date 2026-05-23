@@ -85,6 +85,8 @@ pipeline:
     plotPlanner:
       guidance: '目前場景為場景 {currentScene}。請根據聊天記錄中的可用資訊，為緊接的下一場景、近期的情節節奏 (可彈性處理) 以及中期目標 (可彈性處理) 規劃場景劇情。'
       phaseEvent: '目前章節的故事階段為 {currentActPhase}。請根據聊天記錄中的可用資訊，規劃「階段事件」。'
+    summarizerTranscriptStart: '以下訊息將包含故事章節的文本記錄: '
+    summarizerTranscriptEnd: '上一則訊息是故事章節文本記錄的結束。'
     summarizerFallback: '根據玩家回應，更新場景 {completedScenes} 的章節摘要。'
     summarizer: '更新章節摘要，加入上一個場景的資訊: 「場景 {completedScenes}: {sceneTitle}」'
     editorTemplateFitter: >

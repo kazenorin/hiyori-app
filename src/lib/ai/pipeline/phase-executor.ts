@@ -1,14 +1,15 @@
-import {generateText, stepCountIs, type ToolSet} from 'ai';
-import type {MessageBase} from '$lib/db/messages';
-import {type RetryConfig, streamWithRetry} from '../chat-stream';
-import {createModel} from '../provider';
-import type {ProviderConfig} from '$lib/stores/settings.svelte';
-import type {PhaseName} from '../narrative-types';
-import type {PipelineCallbacks, PipelineState} from './types';
-import type {StreamState} from '../chat-callbacks';
-import {extractCacheTokens, type StreamResultMetadata} from '../streaming';
-import type {OutputDescriptor} from '$lib/utils/chat-stream-parser/types';
-import {ERR_NO_PROVIDER_FOR_PHASE} from '$lib/definitions/error-messages';
+import { generateText, stepCountIs, type ToolSet } from 'ai';
+import type { MessageBase } from '$lib/db/messages';
+import { type RetryConfig, streamWithRetry } from '../chat-stream';
+import { createModel } from '../provider';
+import type { ProviderConfig } from '$lib/stores/settings.svelte';
+import type { PhaseName } from '../narrative-types';
+import type { PipelineCallbacks, PipelineState } from './types';
+import type { StreamState } from '../chat-callbacks';
+import { extractCacheTokens, type StreamResultMetadata } from '../streaming';
+import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
+import { ERR_NO_PROVIDER_FOR_PHASE } from '$lib/definitions/error-messages';
+import { isAbortError } from '$lib/utils/async';
 
 export interface StreamingPhaseParams {
 	phaseName: PhaseName;
@@ -24,7 +25,7 @@ export interface StreamingPhaseParams {
 }
 
 export function updateState(prev: PipelineState, patch: Partial<PipelineState>): PipelineState {
-	return {...prev, ...patch};
+	return { ...prev, ...patch };
 }
 
 export function aggregateMetadata(
@@ -33,7 +34,7 @@ export function aggregateMetadata(
 	modelId: string | null | undefined
 ): StreamResultMetadata {
 	if (!acc) {
-		return {...phase, models: new Set(modelId ? [modelId] : [])};
+		return { ...phase, models: new Set(modelId ? [modelId] : []) };
 	}
 	return {
 		finishReason: phase.finishReason,
@@ -59,14 +60,14 @@ export async function executeStreamingPhase(
 	params: StreamingPhaseParams,
 	state: PipelineState
 ): Promise<{ state: PipelineState; streamState: StreamState; metadata: StreamResultMetadata }> {
-	const {phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig, descriptors, buildStateUpdate} =
+	const { phaseName, systemPrompt, messages, providerConfig, abortSignal, tools, callbacks, retryConfig, descriptors, buildStateUpdate } =
 		params;
 	let remainingRetries = retryConfig.retryCount;
-	let lastError: unknown;
+	let lastError: Error | undefined;
 
 	while (remainingRetries >= 0) {
 		if (abortSignal?.aborted) throw new DOMException('Aborted', 'AbortError');
-		state = updateState(state, {currentPhase: phaseName});
+		state = updateState(state, { currentPhase: phaseName });
 		callbacks.onPhaseStart(phaseName);
 		let streamResult: Awaited<ReturnType<typeof runStreamingPhase>> | undefined;
 		try {
@@ -78,20 +79,29 @@ export async function executeStreamingPhase(
 				abortSignal,
 				tools,
 				callbacks,
-				{retryCount: remainingRetries, backoffIntervalSeconds: retryConfig.backoffIntervalSeconds},
+				{ retryCount: remainingRetries, backoffIntervalSeconds: retryConfig.backoffIntervalSeconds },
 				descriptors
 			);
 			state = updateState(state, buildStateUpdate(streamResult.state));
 			callbacks.onPhaseComplete(phaseName, state);
-			return {state, streamState: streamResult.state, metadata: streamResult.metadata};
+			return { state, streamState: streamResult.state, metadata: streamResult.metadata };
 		} catch (err: unknown) {
-			lastError = err;
+			lastError = err instanceof Error ? err : new Error(String(err));
+			// Don't retry on user-initiated abort
+			if (isAbortError(lastError)) {
+				callbacks.onError(phaseName, lastError);
+				throw lastError;
+			}
 			remainingRetries -= streamResult?.retriesConsumed ?? remainingRetries;
 		}
 	}
 
-	callbacks.onError(phaseName, lastError);
-	throw lastError;
+	if (lastError) {
+		callbacks.onError(phaseName, lastError);
+		throw lastError;
+	} else {
+		throw new Error('Unrecognized stream state');
+	}
 }
 
 async function runStreamingPhase(
@@ -125,14 +135,14 @@ async function runStreamingPhase(
 		descriptors,
 		onRetry: callbacks.onPhaseRetry
 			? (attempt: number, maxAttempts: number) => {
-				callbacks.onPhaseRetry!(phaseName, attempt, maxAttempts);
-				retriesConsumed++;
-			}
+					callbacks.onPhaseRetry!(phaseName, attempt, maxAttempts);
+					retriesConsumed++;
+				}
 			: undefined,
 	});
 
 	const metadata = await accumulator.resultMetadata;
-	return {state: accumulator.state, metadata, retriesConsumed};
+	return { state: accumulator.state, metadata, retriesConsumed };
 }
 
 /**
@@ -158,7 +168,7 @@ export async function runNonStreamingPhase(
 		messages,
 		system: systemPrompt,
 		abortSignal,
-		...(tools && Object.keys(tools).length > 0 ? {tools} : {}),
+		...(tools && Object.keys(tools).length > 0 ? { tools } : {}),
 		stopWhen: stepCountIs(maxSteps),
 	});
 

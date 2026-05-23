@@ -14,7 +14,12 @@ import { aliasesLabel, locationLabel, sceneWithNumberLabel } from '$lib/definiti
 import { hasTemplateMetadata, variablesToMarkdown } from '../template-renderer';
 import { type ActSummary, parseActSummary, pruneCharacterScenes, serializeActSummary } from '../act-summary-parser';
 import { upToLabel } from '$lib/definitions/character-profile-labels';
-import { characterSummariesHeader, sceneSummariesHeader } from '$lib/definitions/pipeline-prompts';
+import {
+	characterSummariesHeader,
+	sceneSummariesHeader,
+	summarizerTranscriptStart,
+	summarizerTranscriptEnd,
+} from '$lib/definitions/pipeline-prompts';
 
 // --- Utility functions ---
 
@@ -253,4 +258,18 @@ export function buildSummarizerMessages(
 			fallbackExtractionPromptTemplate(completedScenes),
 		]);
 	}
+}
+
+export function buildTranscriptSummarizerMessages(
+	transcript: { role: 'user' | 'assistant'; content: string }[],
+	completedScenes: number,
+	sceneTitle: string,
+	extractionPromptTemplate: (completedScenes: number, sceneTitle: string) => string
+): MessageBase[] {
+	return [
+		{ role: 'user', content: summarizerTranscriptStart() },
+		...transcript,
+		{ role: 'user', content: summarizerTranscriptEnd() },
+		...toUserMessages([extractionPromptTemplate(completedScenes, sceneTitle)]),
+	];
 }
