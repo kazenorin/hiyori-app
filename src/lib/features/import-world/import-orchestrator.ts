@@ -10,12 +10,20 @@ import { deleteStoryFolder } from '$lib/db/story-folders';
 import { BaseDirectory, mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { loadStories } from '$lib/stores/stories.svelte';
 import { kebabCase } from 'lodash-es';
-import type { GameDataImportContext, ImportContext, ImportFormData, ImportPreviewAct, ImportPreviewData, ImportPreviewMessage, ImportProgressUpdate, ImportResult, ParsedMessage } from './types';
+import type {
+	ImportContext,
+	ImportFormData,
+	ImportPreviewAct,
+	ImportPreviewData,
+	ImportPreviewMessage,
+	ImportProgressUpdate,
+	ImportResult,
+	ParsedMessage,
+} from './types';
 import type { CreatedResources } from './types';
 import { emptyVariables } from '$lib/ai/narrative-types';
 import type { RetryConfig } from '$lib/ai/chat-stream';
 import { parseTranscriptFile } from './transcript-parsers';
-import { runGameDataDetection } from './game-data-detector';
 import { runNarrativeFilling } from './narrative-filler';
 import { generateWorldFromCards } from '$lib/ai/world-generator';
 import { ls } from '$lib/localization';
@@ -148,7 +156,8 @@ export async function confirmImport(preview: ImportPreviewData, onProgress: Prog
 
 		await loadStories();
 
-		const needsInterview = preview.acts.length > 0 &&
+		const needsInterview =
+			preview.acts.length > 0 &&
 			preview.acts[preview.acts.length - 1].messages.filter((m) => !m.removed && m.role !== 'system').length === 0;
 
 		onProgress({
@@ -324,15 +333,15 @@ async function enrichTranscriptAct(
 			(msgIndex, state) => {
 				onProgress({
 					phase: 'processing-act',
-				message: ls('features.importWorld.messages.fillingNarrativeVariable', { index: msgIndex }),
-				consoleOutput: state.content ?? state.reasoning ?? '',
-			});
-		},
-		(msgIndex, err, attempt) => {
-			const errorContent = `[filling-narrative-variables] attempt ${attempt + 1} failed: ${err.message}. Retrying...`;
-			onProgress({
-				phase: 'processing-act',
-				message: ls('features.importWorld.messages.fillingNarrativeVariable', { index: msgIndex }),
+					message: ls('features.importWorld.messages.fillingNarrativeVariable', { index: msgIndex }),
+					consoleOutput: state.content ?? state.reasoning ?? '',
+				});
+			},
+			(msgIndex, err, attempt) => {
+				const errorContent = `[filling-narrative-variables] attempt ${attempt + 1} failed: ${err.message}. Retrying...`;
+				onProgress({
+					phase: 'processing-act',
+					message: ls('features.importWorld.messages.fillingNarrativeVariable', { index: msgIndex }),
 					consoleOutput: '[ERROR]' + errorContent,
 				});
 			}
@@ -350,62 +359,6 @@ async function enrichTranscriptAct(
 
 		const filled = narrativeResults.filter((r) => r.variables).length;
 		log(`Narrative filling: ${filled}/${missingNarrative} messages processed`);
-	}
-
-	const missingGameData = parsedMessages.filter((m) => m.role === 'assistant' && !m.variables?.gameData).length;
-
-	if (missingGameData > 0) {
-		onProgress({
-			phase: 'saving-messages',
-			message: ls('features.importWorld.messages.detectingGameData', { count: missingGameData }),
-			consoleOutput: '',
-		});
-		log(`Detecting game data for ${missingGameData} messages...`);
-
-		const gameDataImportContext: GameDataImportContext = {
-			worldContent: importCtx.worldContent,
-			characterCards: importCtx.characterCards,
-			actCard: importCtx.actCards.find((card) => card.actNumber === actNumber) || { actNumber, content: '' },
-		};
-
-		const detectionResult = await runGameDataDetection(
-			parsedMessages,
-			retryConfig,
-			log,
-			(msgIndex, state) => {
-				const consoleOutput = state.content ? state.content : state.reasoning;
-				onProgress({
-					phase: 'generating-game-data',
-					message: ls('features.importWorld.messages.generatingGameData', { index: msgIndex }),
-					consoleOutput: consoleOutput ?? '',
-				});
-			},
-			(msgIndex, err, attempt) => {
-				const errorContent = `[generating-game-data] attempt ${attempt + 1} failed: ${err.message}. Retrying...`;
-				onProgress({
-					phase: 'generating-game-data',
-					message: ls('features.importWorld.messages.generatingGameData', { index: msgIndex }),
-					consoleOutput: '[ERROR]' + errorContent,
-				});
-			},
-			gameDataImportContext
-		);
-
-		for (const result of detectionResult.results) {
-			if (result.gameData) {
-				const originalParsedMessage = parsedMessages[result.messageIndex];
-				const existing = originalParsedMessage.variables ?? emptyVariables();
-				parsedMessages[result.messageIndex] = {
-					...originalParsedMessage,
-					variables: { ...existing, gameData: result.gameData },
-					metadata: result.metadata ?? originalParsedMessage.metadata,
-				};
-			}
-		}
-
-		const detected = detectionResult.results.filter((r) => r.gameData).length;
-		const llmCalls = detectionResult.llmCallsMade;
-		log(`Game data detection: ${detected}/${missingGameData} messages processed (${llmCalls} LLM calls)`);
 	}
 
 	return parsedMessages;
