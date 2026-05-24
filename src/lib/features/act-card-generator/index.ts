@@ -2,7 +2,7 @@ import type { MessageBase } from '$lib/db/messages';
 import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
-import { loadActCardTemplate, loadActExtractionPrompt, loadStorySystemPrompt } from '$lib/fs/prompts';
+import { loadActCardTemplate } from '$lib/fs/prompts';
 import { exportActLine } from '$lib/ai/act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
@@ -13,7 +13,7 @@ import { getLineDir } from '$lib/ai/card-output-path';
 import { logActCardActivity } from '$lib/logging/chat-logger';
 import { streamWithRetry, type RetryConfig } from '$lib/ai/chat-stream';
 import type { StreamState } from '$lib/ai/chat-callbacks';
-import { worldContextLabel, actCardTranscriptStart, actCardTranscriptEnd } from './prompts';
+import { worldContextLabel, actCardTranscriptStart, actCardTranscriptEnd, actCardSystemPrompt, actCardExtractionPrompt } from './prompts';
 import {
 	ERR_NO_MAIN_PROVIDER,
 	ERR_NO_ACT_LINE_SELECTED,
@@ -71,12 +71,8 @@ async function resolveActCardContext(): Promise<ActCardContext> {
 	const actLine = await getActLine(actLineId);
 	const isMainLine = actLine?.isMainLine ?? false;
 
-	const [template, extractionPrompt, systemPrompt, world] = await Promise.all([
-		loadActCardTemplate(),
-		loadActExtractionPrompt(),
-		loadStorySystemPrompt(story.id, story.name),
-		loadStoryWorldContent(story.id),
-	]);
+	const [template, world] = await Promise.all([loadActCardTemplate(), loadStoryWorldContent(story.id)]);
+	const extractionPrompt = actCardExtractionPrompt();
 
 	return {
 		storyId,
@@ -84,7 +80,7 @@ async function resolveActCardContext(): Promise<ActCardContext> {
 		isMainLine,
 		actNumber: act.actNumber,
 		storyName: story.name,
-		systemPrompt,
+		systemPrompt: actCardSystemPrompt(),
 		userMessageContents: buildUserMessages(contents, template, extractionPrompt, world),
 		world,
 	};

@@ -1,14 +1,7 @@
 import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
-import {
-	loadCharacterCardTemplate,
-	loadCharacterCardExtractionPrompt,
-	loadCharacterCardExtractionSystemPrompt,
-	loadSummarizeCharactersInAct,
-	loadStorySystemPrompt,
-	loadGeneralInstructions,
-} from '$lib/fs/prompts';
+import { loadCharacterCardTemplate, loadCharacterCardExtractionPrompt, loadGeneralInstructions } from '$lib/fs/prompts';
 import { exportActLine } from '$lib/ai/act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
@@ -24,8 +17,10 @@ import {
 	transcriptStart,
 	transcriptEnd,
 	characterExtractionPrefix,
-	characterExtractionInstruction,
+	characterExtractionPrompt,
 	characterCardGenerationInstruction,
+	characterExtractionSystemPrompt,
+	characterCardGenerationSystemPrompt,
 } from './extraction-prompts';
 import { ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT, ERR_NO_CHARACTERS_SELECTED } from '$lib/definitions/error-messages';
 import { nameLabel } from '$lib/definitions/common-labels';
@@ -94,8 +89,7 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 	const transcript: string[] = exportActLine(allMessages);
 	if (transcript.length === 0) throw new Error(ERR_NO_NARRATIVE_CONTENT);
 
-	const summarizePrompt = await loadSummarizeCharactersInAct();
-	const systemPrompt = await loadStorySystemPrompt(story.id, story.name);
+	const systemPrompt = characterExtractionSystemPrompt();
 
 	const model = createModel(config);
 
@@ -115,7 +109,7 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 		{ role: 'user', content: transcriptEnd() },
 		{
 			role: 'user',
-			content: characterExtractionInstruction(summarizePrompt),
+			content: characterExtractionPrompt(),
 		},
 	];
 	const result = await generateText({ model, system: systemPrompt, messages });
@@ -331,14 +325,13 @@ export async function generateCharacterCard(
 	}
 
 	// Load prompts
-	const [template, extractionPrompt, extractionSystemPrompt, generalInstructions] = await Promise.all([
+	const [template, extractionPrompt, generalInstructions] = await Promise.all([
 		loadCharacterCardTemplate(),
 		loadCharacterCardExtractionPrompt(),
-		loadCharacterCardExtractionSystemPrompt(),
 		loadGeneralInstructions(),
 	]);
 
-	const combinedSystem = `${extractionSystemPrompt}\n\n---\n\n${generalInstructions}`.replaceAll('{{character name}}', entry.character);
+	const combinedSystem = `${characterCardGenerationSystemPrompt(entry.character)}\n\n---\n\n${generalInstructions}`;
 	const namedExtractionPrompt = extractionPrompt.replaceAll('{{character name}}', entry.character);
 	const namedTemplate = template
 		.replaceAll('{{coreIdentity}}', ls('features.characterCardGenerator.coreIdentity'))

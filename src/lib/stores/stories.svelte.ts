@@ -8,12 +8,10 @@ import { moveWorldBuilderLog } from '$lib/logging/chat-logger';
 import { getLogFilePath } from '$lib/features/world-builder/world-builder.svelte';
 import { Memory } from '$lib/features/memory';
 import { getDefaultPlotMode, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
-import type { ModelMessage } from 'ai';
-import { loadStorySystemPrompt, loadSystemPrompt } from '$lib/fs/prompts';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { loadLocaleStrings } from '$lib/localization';
 import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-folders';
-import { writeTextFile, readTextFile, exists, remove, copyFile, mkdir, rename, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { writeTextFile, exists, remove, copyFile, mkdir, rename, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, getLineDir, resolveLineSubdir } from '$lib/ai/card-output-path';
 import { type ActPlotPhase } from '$lib/ai/act-plot';
@@ -30,9 +28,7 @@ let activeActId = $state<string | null>(null);
 let activeActLineId = $state<string | null>(null);
 let isLoading = $state(true);
 let isSelectingStory = $state(false);
-let activeSystemPrompt = $state<string | null>(null);
 let activeWorldContent = $state<string | null>(null);
-let activeInterviewTranscript = $state<ModelMessage[]>([]);
 let actPlotGenerationPhase = $state<ActPlotPhase | null>(null);
 let activeDirectorNotes = $state<dbDirectorNotes.DirectorNote[]>([]);
 
@@ -63,12 +59,6 @@ export function getIsLoading(): boolean {
 export function getIsSelectingStory(): boolean {
 	return isSelectingStory;
 }
-export function getActiveSystemPrompt(): string | null {
-	return activeSystemPrompt;
-}
-export async function getActiveSystemPromptOrDefault(): Promise<string> {
-	return activeSystemPrompt ?? (await loadSystemPrompt());
-}
 export function getActiveWorldContent(): string | null {
 	return activeWorldContent;
 }
@@ -90,38 +80,6 @@ export function getActiveDirectorNotesText(currentScene: number): string {
 	});
 	if (active.length === 0) return '';
 	return active.map((n, i) => `${i + 1}. ${n.text}`).join('\n');
-}
-/**
- * Combined narration context as message array.
- * This is what gets prepended as hidden messages on every AI call.
- */
-export function getActiveNarrationContext(): ModelMessage[] {
-	const result: ModelMessage[] = [];
-	const world = activeWorldContent;
-
-	if (world) {
-		result.push({ role: 'user', content: `The following is the world setting of the game story:\n\n---\n\n${world}` });
-	}
-
-	const interview = activeInterviewTranscript;
-	if (interview.length > 0 && interview.some((m) => m.role === 'user')) {
-		const act = acts.find((a) => a.id === activeActId);
-		const actNumber = act?.actNumber ?? 1;
-		result.push({
-			role: 'user',
-			content: `The following is an interview transcript on the premises about the current game act (Act ${actNumber}):`,
-		});
-		result.push(...interview);
-		result.push({ role: 'user', content: 'That was the end of the interview transcript.' });
-	}
-
-	if (result.length > 0) {
-		const act = acts.find((a) => a.id === activeActId);
-		const actNumber = act?.actNumber ?? 1;
-		result.push({ role: 'user', content: `Gamemaster, it is Act ${actNumber} now. Start the game.` });
-	}
-
-	return result;
 }
 
 export function getActiveStory(): dbStories.Story | null {
@@ -153,15 +111,12 @@ export async function loadActLines(actId: string): Promise<void> {
  * Shared between selectStory and restoreState to ensure consistent behavior.
  */
 async function loadStoryContent(storyId: string, storyName: string): Promise<void> {
-	activeSystemPrompt = await loadStorySystemPrompt(storyId, storyName);
 	await ensureWorldFile(storyId, storyName);
 	activeWorldContent = await loadStoryWorldContent(storyId, storyName);
 }
 
 function resetStoryContent(): void {
-	activeSystemPrompt = null;
 	activeWorldContent = null;
-	activeInterviewTranscript = [];
 	activeDirectorNotes = [];
 }
 
@@ -211,17 +166,8 @@ export async function selectActLine(actLineId: string | null): Promise<void> {
 	await dbAppState.setActiveActLine(actLineId);
 
 	if (actLineId) {
-		try {
-			const premises = await dbActLines.getPremisesMessages(actLineId);
-			activeInterviewTranscript = premises
-				.filter((m) => m.role === 'user' || m.role === 'assistant')
-				.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
-		} catch {
-			activeInterviewTranscript = [];
-		}
 		activeDirectorNotes = await dbDirectorNotes.getDirectorNotes(actLineId);
 	} else {
-		activeInterviewTranscript = [];
 		activeDirectorNotes = [];
 	}
 }

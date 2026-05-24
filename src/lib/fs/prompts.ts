@@ -24,9 +24,6 @@ const promptDefaults: Record<SupportedLocale, Record<string, string>> = {
 
 // === Prompt Config Instances ===
 
-// System
-const systemPrompt = new LocalizedPromptFile(promptDefaults, 'system-prompt.md');
-
 // General Instructions
 const generalInstructions = new LocalizedPromptFile(promptDefaults, 'general-instructions.md');
 
@@ -68,7 +65,6 @@ const worldBuilderSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/
 
 // Act
 const actCardTemplate = new LocalizedPromptFile(promptDefaults, 'act/act-card-template.md');
-const actExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-extraction-prompt.md');
 const actPlotTemplate = new LocalizedPromptFile(promptDefaults, 'act/guidance-act-plot-template.md');
 const phaseEventActPlotTemplate = new LocalizedPromptFile(promptDefaults, 'act/phase-event-act-plot-template.md');
 const actPlotGenerationPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-generation-prompt.md');
@@ -82,8 +78,6 @@ const actPlotInterviewTurnOfEventsPrompt = new LocalizedPromptFile(promptDefault
 // Character
 const characterCardTemplate = new LocalizedPromptFile(promptDefaults, 'character/character-card-template.md');
 const characterCardExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'character/character-card-extraction-prompt.md');
-const characterCardExtractionSystemPrompt = new LocalizedPromptFile(promptDefaults, 'character/character-card-extraction-system-prompt.md');
-const summarizeCharactersInAct = new LocalizedPromptFile(promptDefaults, 'character/summarize-characters-in-act.md');
 
 // Import
 const choicesExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'import/choices-extraction-prompt.md');
@@ -97,7 +91,6 @@ const importantPhrasesPrompt = new LocalizedPromptFile(promptDefaults, 'features
 
 // === Load Functions ===
 
-export const loadSystemPrompt = (): Promise<string> => systemPrompt.load();
 export const loadGeneralInstructions = (): Promise<string> => generalInstructions.load();
 export const loadPlotPlannerPrompt = (): Promise<string> => guidancePlotPlannerPrompt.load();
 export const loadGuidancePlotPlannerPrompt = (): Promise<string> => guidancePlotPlannerPrompt.load();
@@ -123,7 +116,6 @@ export const loadGenerateWorldFromCardsPrompt = (): Promise<string> => generateW
 export const loadGenerateWorldFromCardsSystemPrompt = (): Promise<string> => generateWorldFromCardsSystemPrompt.load();
 export const loadWorldBuilderSystemPrompt = (): Promise<string> => worldBuilderSystemPrompt.load();
 export const loadActCardTemplate = (): Promise<string> => actCardTemplate.load();
-export const loadActExtractionPrompt = (): Promise<string> => actExtractionPrompt.load();
 export const loadActPlotTemplate = (): Promise<string> => actPlotTemplate.load();
 export const loadGuidanceActPlotTemplate = (): Promise<string> => actPlotTemplate.load();
 export const loadPhaseEventActPlotTemplate = (): Promise<string> => phaseEventActPlotTemplate.load();
@@ -138,18 +130,12 @@ export const loadActPlotInterviewExtractionPrompt = (): Promise<string> => actPl
 export const loadActPlotInterviewTurnOfEventsPrompt = (): Promise<string> => actPlotInterviewTurnOfEventsPrompt.load();
 export const loadCharacterCardTemplate = (): Promise<string> => characterCardTemplate.load();
 export const loadCharacterCardExtractionPrompt = (): Promise<string> => characterCardExtractionPrompt.load();
-export const loadCharacterCardExtractionSystemPrompt = (): Promise<string> => characterCardExtractionSystemPrompt.load();
-export const loadSummarizeCharactersInAct = (): Promise<string> => summarizeCharactersInAct.load();
 export const loadChoicesExtractionPrompt = (): Promise<string> => choicesExtractionPrompt.load();
 export const loadImportantPhrasesPrompt = (): Promise<string> => importantPhrasesPrompt.load();
 export const loadMemoryExtractionSystemPrompt = (): Promise<string> => memoryExtractionSystemPrompt.load();
 export const loadMemoryExtractionPrompt = (): Promise<string> => memoryExtractionPrompt.load();
 
 // Story-specific loaders
-export async function loadStorySystemPrompt(storyId: string, storyName: string): Promise<string> {
-	return systemPrompt.loadForStory(storyId, storyName);
-}
-
 export async function loadStoryGeneralInstructions(storyId: string, storyName: string): Promise<string> {
 	return generalInstructions.loadForStory(storyId, storyName);
 }
@@ -301,7 +287,6 @@ export const characterProfileCompressorPromptLoader: PromptLoader = {
 
 // Register all defaults so ensureAllBaseConfigs() can create them on launch
 registerDefaults([
-	systemPrompt,
 	generalInstructions,
 	guidancePlotPlannerPrompt,
 	phaseEventPlotPlannerPrompt,
@@ -322,7 +307,6 @@ registerDefaults([
 	generateWorldFromChatSystemPrompt,
 	worldBuilderSystemPrompt,
 	actCardTemplate,
-	actExtractionPrompt,
 	actPlotTemplate,
 	phaseEventActPlotTemplate,
 	actPlotGenerationPrompt,
@@ -334,8 +318,6 @@ registerDefaults([
 	actPlotInterviewTurnOfEventsPrompt,
 	characterCardTemplate,
 	characterCardExtractionPrompt,
-	characterCardExtractionSystemPrompt,
-	summarizeCharactersInAct,
 	choicesExtractionPrompt,
 	generateWorldFromCardsPrompt,
 	generateWorldFromCardsSystemPrompt,

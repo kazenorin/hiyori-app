@@ -1,19 +1,18 @@
 import { generateText, type ModelMessage } from 'ai';
-import type { PlotMode } from '$lib/ai/narrative-types';
 import { getMainProviderConfig, isReviewerEnabled } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
 import {
-	loadActPlotTemplateForMode,
-	loadActPlotGenerationPrompt,
-	loadActPlotSystemPrompt,
-	loadActPlotReviewerPrompt,
 	loadActPlotEditorPrompt,
+	loadActPlotGenerationPrompt,
+	loadActPlotReviewerPrompt,
+	loadActPlotSystemPrompt,
+	loadActPlotTemplateForMode,
 } from '$lib/fs/prompts';
 import { log } from '$lib/logging/logger';
-import { getLastSceneNumber, getPremisesMessages, getPreviousActSummary, getLatestTurnOfEvents } from '$lib/db/act-lines';
+import { type ActLineMeta, getLastSceneNumber, getLatestTurnOfEvents, getPremisesMessages, getPreviousActSummary } from '$lib/db/act-lines';
 import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';
 import { ACT_PLOT_SECTION } from '$lib/definitions/pipeline-sections';
-import { ERR_NO_MAIN_PROVIDER, ERR_EMPTY_ACT_PLOT_WRITER } from '$lib/definitions/error-messages';
+import { ERR_EMPTY_ACT_PLOT_WRITER, ERR_NO_MAIN_PROVIDER } from '$lib/definitions/error-messages';
 
 const LOG_TAG = 'act-plot-generator';
 
@@ -100,10 +99,8 @@ export interface GenerateActPlotParams {
 	storyId: string;
 	storyName: string;
 	worldContent: string | null;
-	actLineId: string;
-	isMainLine: boolean;
+	actLine: ActLineMeta;
 	actNumber: number;
-	plotMode?: PlotMode;
 	isResumeGame?: boolean;
 	onPhaseChange?: (phase: ActPlotPhase) => void;
 	abortSignal?: AbortSignal;
@@ -118,16 +115,18 @@ export interface GenerateActPlotParams {
  * If the reviewer or editor phase fails, falls back to writer output.
  */
 export async function generateActPlot(params: GenerateActPlotParams): Promise<string> {
-	const { storyName, worldContent, actLineId, actNumber, plotMode, isResumeGame = false, onPhaseChange, abortSignal } = params;
+	const { storyName, worldContent, actLine, actNumber, isResumeGame = false, onPhaseChange, abortSignal } = params;
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) {
 		throw new Error(ERR_NO_MAIN_PROVIDER);
 	}
 
+	const actLineId = actLine.id;
+
 	// Load prompts and context in parallel
 	const [template, generationPrompt, systemPrompt, reviewerPrompt, editorPrompt, interviewTranscript, previousActSummary, turnOfEvents] =
 		await Promise.all([
-			loadActPlotTemplateForMode(plotMode ?? 'guidance'),
+			loadActPlotTemplateForMode(actLine.plotMode),
 			loadActPlotGenerationPrompt().then((p) => p.replace('{actNumber}', actNumber.toString())),
 			loadActPlotSystemPrompt(),
 			loadActPlotReviewerPrompt(),

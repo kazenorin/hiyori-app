@@ -8,3 +8,9 @@ export const actCardTranscriptEnd = () => ls('features.actCardGenerator.transcri
 
 /** Labels world content for LLM context. */
 export const worldContextLabel = () => ls('features.actCardGenerator.worldContext');
+
+/** System prompt for act card generation. */
+export const actCardSystemPrompt = () => ls('features.actCardGenerator.systemPrompt');
+
+/** Extraction instructions for act card generation. */
+export const actCardExtractionPrompt = () => ls('features.actCardGenerator.extractionPrompt');

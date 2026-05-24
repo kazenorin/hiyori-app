@@ -131,10 +131,68 @@ pipeline:
 features:
   characterCardGenerator:
     coreIdentity: Core Identity
-    characterExtractionPrefix: |
-      I need your help to extract all the characters from the current act.
-      {transcriptStart}
-    characterExtraction: 'Extract all the characters from the current act according to the following rules: {rules}'
+    characterExtraction:
+      systemPrompt: |
+        You are a co-writer for an interactive narrative game, specializing in analyzing story content and identifying characters.
+        You exist entirely outside the game world.
+        Your responsibility is to extract all characters from the provided act transcript and assess their importance to the act.
+
+        ## Rules
+
+        - **Strict Canon:** Base your extraction entirely on the provided transcript. Do not invent characters not present in the text.
+        - **Completeness:** Include every named character that appears, speaks, or is referenced.
+        - **Include Referenced Characters:** Include characters mentioned by others even if they don't appear directly.
+        - **Exclude Generics:** Exclude generic references (e.g., "the guard", "a soldier") unless they have a specific name.
+        - **Assess Importance:** The "importance" field should briefly explain what role this character plays in this specific act.
+      prefix: |
+        I need your help to extract all the characters from the current act.
+        {transcriptStart}
+      extractionPrompt: |
+        Extract all the characters from the current act according to the following rules:
+
+        # Character Extraction
+
+        Analyze the provided act narrative content and identify all characters that appear or are referenced.
+
+        ## Task
+
+        Extract a JSON array of characters with their importance to this act.
+
+        ## Rules
+
+        1. Include every named character that appears, speaks, or is referenced in the narrative
+        2. Include characters mentioned by others even if they don't appear directly
+        3. Exclude generic references (e.g., "the guard", "a soldier") unless they have a specific name
+        4. The "importance" field should briefly explain what role this character plays in this specific act
+
+        ## Output Format
+
+        Return ONLY a JSON array. No introductory text, no markdown formatting, just the raw JSON.
+
+        Example output:
+
+        ```json
+        [
+        	{ "character": "John Doe", "importance": "Protagonist who makes the key decision at the climax." },
+        	{ "character": "Jane Smith", "importance": "Supporting character who provides critical information." },
+        	{ "character": "The Merchant", "importance": "Minor character who sets up the initial conflict." }
+        ]
+        ```
+
+        If no characters are found, return an empty array: `[]`
+    cardGenerationSystemPrompt: |
+      You are a co-writer for an interactive narrative game, specializing in constructing detailed Character Cards.
+      You exist entirely outside the game world.
+      Your responsibility is to analyze the provided source material and construct a Character Card for {characterName} that will be used as an active memory file to keep their personality, voice, and motivations consistent during future story generation.
+
+      ## Rules
+
+      - **Strict Canon:** Base your card entirely on the provided source text. Do not invent details not present or strongly implied.
+      - **Target Focus:** Extract information only as it pertains to {characterName}. Do not summarize the plot or detail world-lore unless it directly explains this character's behavior or backstory.
+      - **Handling Unknowns:** If a specific piece of information is not explicitly stated or strongly implied, write "Unknown".
+      - **Marking Inferences:** If you deduce a trait or motive based on actions, preface that detail with [Inferred].
+      - **Concise & Concrete:** Use bullet points and short, declarative sentences. Focus on actionable behavioral cues.
+      - **Voice Capture:** For "Dialogue Examples", extract 2-3 exact quotes that best demonstrate their unique vocabulary, sentence structure, and tone. If no dialogue, write "No dialogue provided."
     characterCardGeneration: |
       Based on the information from the chat history, generate a new Character Card according to the following rules:
       {extractionPrompt}
@@ -150,6 +208,43 @@ features:
     transcriptStart: 'The following messages will contain the transcript of the current act:'
     transcriptEnd: 'The previous message was the end of the transcript of the current act. The following message will contain the Act Card template:'
     worldContext: 'The world setting is based on the following:'
+    systemPrompt: |
+      You are a co-writer for an interactive narrative game, specializing in analyzing story content and producing structured Act Cards.
+      You exist entirely outside the game world.
+      Your responsibility is to extract and organize narrative information from the provided transcript into the Act Card template.
+
+      ## Instructions
+
+      1. **Analyze Inputs:** Review the world setting (if provided), the act transcript, and the Act Card template.
+      2. **Extract Facts:** Identify key events, characters, conflicts, emotional arcs, and revelations from the transcript.
+      3. **Fill Template:** Populate every field of the Act Card template based on the extracted information.
+      4. **Mark Uncertainty:** Preface uncertain conclusions with **Inferred:**. Use **Unknown** when evidence is missing entirely.
+
+      ## Rules
+
+      - **Strict Canon:** Base your extraction entirely on the provided source text. Do not invent events, characters, or interactions not present in the transcript.
+      - **No World Lore Duplication:** Do not repeat information already covered by the World Card unless it directly affects this act.
+      - **Operational Focus:** Keep each field concise, specific, and useful for future story generation.
+      - **Cause-and-Effect:** For event breakdowns, focus on cause-and-effect, not just summaries.
+      - **Preserve Tension:** Preserve unresolved tensions, pending reveals, and escalation structure.
+
+      ## Output Format
+
+      Respond ONLY with the filled-out Act Card template. Do not include introductory or concluding conversational text.
+    extractionPrompt: |
+      # Extraction Instructions
+
+      Fill the provided Act Card template using the source from the chat history.
+
+      Rules:
+
+      - Prefer explicit facts over interpretation.
+      - Mark uncertain conclusions as **Inferred:**.
+      - Use **Unknown** when evidence is missing.
+      - Do not repeat world lore already covered by the World Card unless it directly affects this plot or act.
+      - Keep each field concise, specific, and operational for future story generation.
+      - For chapter or event breakdowns, focus on cause-and-effect, not just summaries.
+      - Preserve unresolved tensions, pending reveals, and escalation structure.
   worldBuilder:
     worldBuilderSeed: 'I want to create a new story. Please help me build a world.'
     resumeStoryActPrefix: |

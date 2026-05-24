@@ -1,7 +1,7 @@
-import { generateActPlot, type ActPlotPhase } from '$lib/ai/act-plot/act-plot-generator';
+import { type ActPlotPhase, generateActPlot } from '$lib/ai/act-plot/act-plot-generator';
 import { getLineDir } from '$lib/ai/card-output-path';
-import { resolveStoryFolder, loadStoryWorldContent } from '$lib/fs/story-folders';
-import { writeTextFile, readTextFile, exists, mkdir, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { loadStoryWorldContent, resolveStoryFolder } from '$lib/fs/story-folders';
+import { BaseDirectory, exists, mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import type { EnsureActPlotParams } from '$lib/ai/act-plot/types';
 import { log } from '$lib/logging/logger';
 import * as dbActs from '$lib/db/acts';
@@ -30,26 +30,20 @@ export async function ensureActPlot(params: EnsureActPlotParams): Promise<string
 	} else {
 		// Generate act plot if it doesn't exist yet
 
-		if (params.onStartGenerate) {
-			params.onStartGenerate();
-		}
+		params.onStartGenerate?.();
 
 		const result = await generateActPlot({
 			storyId: story.id,
 			storyName: story.name,
-			worldContent: worldContent,
-			actLineId: actLine.id,
-			isMainLine: actLine.isMainLine,
-			actNumber: actNumber,
-			plotMode: actLine.plotMode,
+			worldContent,
+			actLine,
+			actNumber,
 			isResumeGame: params.isResumeGame,
 			onPhaseChange: params.onPhaseChange,
 			abortSignal: params.abortSignal,
 		});
 
-		if (params.onGenerationComplete) {
-			params.onGenerationComplete();
-		}
+		params.onGenerationComplete?.();
 
 		// Write output file
 

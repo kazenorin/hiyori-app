@@ -1,6 +1,5 @@
 import type { ActLineMeta } from '$lib/db/act-lines';
 import * as dbActLines from '$lib/db/act-lines';
-import * as dbActs from '$lib/db/acts';
 import type { Story } from '$lib/db/stories';
 import { logMainChat } from '$lib/logging/chat-logger';
 import { log } from '$lib/logging/logger';
@@ -57,6 +56,7 @@ import type { PostEditorContext } from './pipeline/message-builder';
 import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { loadLocaleStrings } from '$lib/localization';
+import { loadStoryWorldContent } from '$lib/fs/story-folders';
 
 // Re-exported for `+page.svelte` only
 export type { UIMessage };
@@ -286,7 +286,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 	}
 
 	try {
-		const worldContent = getActiveWorldContent() ?? '';
+		const worldContent = (await loadStoryWorldContent(story.id, story.name)) ?? '';
 		const actPlot = await ensureActPlot({ story, actLine, worldContent, abortSignal });
 		const actSummary = getLatestActSummary(previousSceneNumber);
 		const plotMode = actLine.plotMode ?? getDefaultPlotMode();

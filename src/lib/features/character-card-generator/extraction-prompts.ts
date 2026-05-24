@@ -1,5 +1,11 @@
 import { ls } from '$lib/localization';
 
+/** System prompt for character extraction. */
+export const characterExtractionSystemPrompt = () => ls('features.characterCardGenerator.characterExtraction.systemPrompt');
+
+/** Combined extraction instruction with rules for extracting characters from an act. */
+export const characterExtractionPrompt = () => ls('features.characterCardGenerator.characterExtraction.extractionPrompt');
+
 /** Marks the start of an act transcript in LLM messages. */
 export const transcriptStart = () => ls('features.characterCardGenerator.transcriptStart');
 
@@ -15,13 +21,14 @@ export const characterCardLabel = (characterName: string, actNumber: number) =>
 
 /** Prefix for the character extraction user message. */
 export const characterExtractionPrefix = () =>
-	ls('features.characterCardGenerator.characterExtractionPrefix', {
+	ls('features.characterCardGenerator.characterExtraction.prefix', {
 		transcriptStart: transcriptStart(),
 	});
 
-/** Instruction suffix for character extraction. */
-export const characterExtractionInstruction = (rules: string) => ls('features.characterCardGenerator.characterExtraction', { rules });
-
-/** Instruction for character card generation. */
+/** Instruction suffix for character card generation. */
 export const characterCardGenerationInstruction = (extractionPrompt: string, template: string) =>
 	ls('features.characterCardGenerator.characterCardGeneration', { extractionPrompt, template });
+
+/** System prompt for character card generation (specific character). */
+export const characterCardGenerationSystemPrompt = (characterName: string) =>
+	ls('features.characterCardGenerator.cardGenerationSystemPrompt', { characterName });
