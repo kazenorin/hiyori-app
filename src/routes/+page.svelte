@@ -78,7 +78,7 @@
 	import type { Story } from '$lib/db/stories';
 	import { onMount } from 'svelte';
 	import { t } from '$lib/i18n';
-	import {loadStoryWorldContent} from "$lib/fs/story-folders";
+	import { ensureWorldFile } from '$lib/fs/story-folders';
 
 	let input = $state('');
 	let chatContainer = $state<HTMLDivElement | null>(null);
@@ -181,9 +181,7 @@
 		const act = getActiveAct();
 		if (!actLineId || !act || !story || getIsStreaming() || isForking) return;
 
-		const worldContent = await loadStoryWorldContent(story.id, story.name);
-		if (!worldContent) return;
-
+		const worldContent = await ensureWorldFile(story.id, story.name);
 		isForking = true;
 		forkChoiceIndex = null;
 		try {
@@ -473,7 +471,7 @@
 		if (!act) return;
 
 		const actSummary = getMessages().findLast((m) => m.role === 'assistant')?.actSummary ?? '';
-		const worldContent = (await loadStoryWorldContent(story.id, story.name)) ?? '';
+		const worldContent = await ensureWorldFile(story.id, story.name);
 		const actPlot = await ensureActPlot({
 			worldContent,
 			story,

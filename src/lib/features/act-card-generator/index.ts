@@ -6,7 +6,7 @@ import { loadActCardTemplate } from '$lib/fs/prompts';
 import { exportActLine } from '$lib/ai/act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
-import { loadStoryWorldContent, resolveStoryFolder } from '$lib/fs/story-folders';
+import { ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-folders';
 import { getActiveStoryId, getActiveActId, getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
 import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { getLineDir } from '$lib/ai/card-output-path';
@@ -26,8 +26,8 @@ export interface GenerateActCardResult {
 	content: string;
 }
 
-function buildUserMessages(contents: string[], template: string, extractionPrompt: string, world: string | null): string[] {
-	const worldPrompt = world ? [worldContextLabel(), world] : [];
+function buildUserMessages(contents: string[], template: string, extractionPrompt: string, world: string): string[] {
+	const worldPrompt = [worldContextLabel(), world];
 	return [...worldPrompt, actCardTranscriptStart(), ...contents, actCardTranscriptEnd(), template, extractionPrompt];
 }
 
@@ -39,7 +39,7 @@ interface ActCardContext {
 	storyName: string;
 	systemPrompt: string;
 	userMessageContents: string[];
-	world: string | null;
+	world: string;
 }
 
 async function resolveActCardContext(): Promise<ActCardContext> {
@@ -71,7 +71,7 @@ async function resolveActCardContext(): Promise<ActCardContext> {
 	const actLine = await getActLine(actLineId);
 	const isMainLine = actLine?.isMainLine ?? false;
 
-	const [template, world] = await Promise.all([loadActCardTemplate(), loadStoryWorldContent(story.id)]);
+	const [template, world] = await Promise.all([loadActCardTemplate(), ensureWorldFile(story.id)]);
 	const extractionPrompt = actCardExtractionPrompt();
 
 	return {

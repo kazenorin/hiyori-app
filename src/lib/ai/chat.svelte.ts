@@ -56,7 +56,7 @@ import type { PostEditorContext } from './pipeline/message-builder';
 import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { loadLocaleStrings } from '$lib/localization';
-import { loadStoryWorldContent } from '$lib/fs/story-folders';
+import { ensureWorldFile } from '$lib/fs/story-folders';
 
 // Re-exported for `+page.svelte` only
 export type { UIMessage };
@@ -286,7 +286,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 	}
 
 	try {
-		const worldContent = (await loadStoryWorldContent(story.id, story.name)) ?? '';
+		const worldContent = await ensureWorldFile(story.id, story.name, abortSignal);
 		const actPlot = await ensureActPlot({ story, actLine, worldContent, abortSignal });
 		const actSummary = getLatestActSummary(previousSceneNumber);
 		const plotMode = actLine.plotMode ?? getDefaultPlotMode();
@@ -402,7 +402,7 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 	}
 
 	try {
-		const worldContent = (await loadStoryWorldContent(story.id, story.name)) ?? '';
+		const worldContent = await ensureWorldFile(story.id, story.name);
 		const actPlot = await ensureActPlot({ story, actLine });
 		const actSummary = getLatestActSummary(previousSceneNumber);
 		const previousNarrativeVariables = getPreviousNarrativeMessage(messages);

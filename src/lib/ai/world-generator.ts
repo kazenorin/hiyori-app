@@ -67,7 +67,7 @@ async function traceStoryMessages(storyId: string): Promise<MessageBase[]> {
  * Generate world.md for a story by analyzing its chat history.
  * Uses generate-world-from-chat-prompt.md + world-template.md as system prompt.
  */
-export async function generateWorld(storyId: string, folderName: string, abortSignal?: AbortSignal): Promise<string> {
+export async function generateWorld(storyId: string, abortSignal?: AbortSignal): Promise<string> {
 	const config = getMainProviderConfig();
 
 	if (!config?.apiKey || !config?.model) {
@@ -104,13 +104,7 @@ export async function generateWorld(storyId: string, folderName: string, abortSi
 		}
 	}
 
-	const worldContent = contentParts.join('');
-
-	// Write to story folder
-	const worldPath = `${folderName}/world.md`;
-	await writeTextFile(worldPath, worldContent, { baseDir: BaseDirectory.AppData });
-
-	return worldContent;
+	return contentParts.join('');
 }
 
 export interface CardInput {

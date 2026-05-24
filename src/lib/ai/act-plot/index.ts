@@ -1,6 +1,6 @@
 import { type ActPlotPhase, generateActPlot } from '$lib/ai/act-plot/act-plot-generator';
 import { getLineDir } from '$lib/ai/card-output-path';
-import { loadStoryWorldContent, resolveStoryFolder } from '$lib/fs/story-folders';
+import { ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-folders';
 import { BaseDirectory, exists, mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
 import type { EnsureActPlotParams } from '$lib/ai/act-plot/types';
 import { log } from '$lib/logging/logger';
@@ -18,7 +18,7 @@ export async function ensureActPlot(params: EnsureActPlotParams): Promise<string
 	const story = params.story;
 	const actLine = params.actLine;
 	const actNumber = params.actNumber ?? (await getActNumber(actLine.actId));
-	const worldContent = params.worldContent ?? (await loadStoryWorldContent(story.id, story.name));
+	const worldContent = params.worldContent ?? (await ensureWorldFile(story.id, story.name, params.abortSignal));
 
 	// Load act plot file
 	const storyFolder = await resolveStoryFolder(story.id, story.name);

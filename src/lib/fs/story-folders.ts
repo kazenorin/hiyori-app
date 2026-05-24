@@ -1,8 +1,7 @@
-import { readTextFile, mkdir, exists, readDir, rename, BaseDirectory, type DirEntry } from '@tauri-apps/plugin-fs';
+import { BaseDirectory, type DirEntry, exists, mkdir, readDir, readTextFile, rename, writeTextFile } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import * as dbStories from '$lib/db/stories';
 import { generateWorld } from '$lib/ai/world-generator';
-import { log } from '$lib/logging/logger';
 
 /**
  * Compute the canonical folder name for a story.
@@ -112,34 +111,25 @@ export async function resolveStoryFolder(storyId: string, storyName: string): Pr
  * Ensure the story folder has a world.md file.
  * If it doesn't exist, generate it from the story's chat history.
  */
-export async function ensureWorldFile(storyId: string, storyName: string): Promise<void> {
-	const folderName = (await dbStoryFolders.getStoryFolder(storyId)) ?? (await resolveStoryFolder(storyId, storyName));
-
-	const worldPath = `${folderName}/world.md`;
-	const worldExists = await exists(worldPath, { baseDir: BaseDirectory.AppData });
-	if (worldExists) return;
-
-	try {
-		await generateWorld(storyId, folderName);
-	} catch (err) {
-		await log.error('world', 'Failed to generate world.md', err);
+export async function ensureWorldFile(storyId: string, storyName?: string, abortSignal?: AbortSignal): Promise<string> {
+	const story = await dbStories.getStory(storyId);
+	if (!story) {
+		throw new Error(`Invalid storyId: ${storyId}, not found.`);
 	}
-}
 
-/**
- * Load the world.md content for a specific story.
- * Returns null if the file doesn't exist.
- */
-export async function loadStoryWorldContent(storyId: string, storyName?: string): Promise<string | null> {
 	const folder = await dbStoryFolders.getStoryFolder(storyId);
-	const folderName = folder ?? (await resolveStoryFolder(storyId, storyName ?? (await dbStories.getStory(storyId))?.name ?? ''));
+	const folderName = folder ?? (await resolveStoryFolder(storyId, storyName ?? story.name));
 	const worldPath = `${folderName}/world.md`;
-	try {
-		const worldExists = await exists(worldPath, { baseDir: BaseDirectory.AppData });
-		if (!worldExists) return null;
+
+	const worldExists = await exists(worldPath, { baseDir: BaseDirectory.AppData });
+	if (worldExists) {
 		return await readTextFile(worldPath, { baseDir: BaseDirectory.AppData });
-	} catch {
-		return null;
+	} else {
+		const worldContent = await generateWorld(storyId, abortSignal);
+
+		await writeTextFile(worldPath, worldContent, { baseDir: BaseDirectory.AppData });
+
+		return worldContent;
 	}
 }
 
