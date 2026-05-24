@@ -90,6 +90,12 @@ pipeline:
     summarizerFull: '根據文本記錄中的所有場景，生成完整的章節摘要。'
     summarizerFallback: '根據玩家回應，更新場景 {completedScenes} 的章節摘要。'
     summarizer: '更新章節摘要，加入上一個場景的資訊: 「場景 {completedScenes}: {sceneTitle}」'
+    actPlotResumeNote: |
+      ---
+
+      ## 重要注意事項
+
+      此章節線從場景 {sceneNumber} 重新開始，在場景 {sceneNumber} 或之前發生的情節和事件可能有不同的劇情，或是從另一個視角撰寫。
     editorTemplateFitter: >
       「編輯輸出」未符合所需的範本格式。請根據「寫手輸出範本」中所定義的區段標題重新調整結構，
       插入適當的標題而不更改任何內容。若內容缺少「場景標題」區段，請根據敘事生成一個簡短貼切的標題。

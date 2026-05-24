@@ -10,17 +10,12 @@ import {
 } from '$lib/fs/prompts';
 import { log } from '$lib/logging/logger';
 import { type ActLineMeta, getLastSceneNumber, getLatestTurnOfEvents, getPremisesMessages, getLatestActSummary } from '$lib/db/act-lines';
+import { ls } from '$lib/localization';
 import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';
 import { ACT_PLOT_SECTION } from '$lib/definitions/pipeline-sections';
 import { ERR_EMPTY_ACT_PLOT_WRITER, ERR_NO_MAIN_PROVIDER } from '$lib/definitions/error-messages';
 
 const LOG_TAG = 'act-plot-generator';
-
-const ACT_PLOT_RESUME_NOTE = `---
-
-## Important Note
-
-This Act Line is restarted from Scene {sceneNumber}, plot and events that happened at or prior to Scene {sceneNumber} may be have a different plot, or written from another perspective.`;
 
 export type ActPlotPhase = 'writing' | 'reviewing' | 'editing';
 
@@ -230,7 +225,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 	// Append resume-game note if applicable
 	if (isResumeGame) {
 		const lastSceneNumber = (await getLastSceneNumber(actLineId)) ?? 1;
-		finalText = finalText + '\n\n' + ACT_PLOT_RESUME_NOTE.replaceAll('{sceneNumber}', lastSceneNumber.toString());
+		finalText = finalText + '\n\n' + ls('pipeline.extraction.actPlotResumeNote', { sceneNumber: lastSceneNumber.toString() });
 	}
 
 	return finalText;

@@ -98,6 +98,12 @@ pipeline:
     summarizerFull: 'Generate a complete Act Summary covering all scenes in the transcript.'
     summarizerFallback: 'Update the Act Summary for Scene {completedScenes} based on the Player Response.'
     summarizer: 'Update the Act Summary adding information for the previous scene: "Scene {completedScenes}: {sceneTitle}"'
+    actPlotResumeNote: |
+      ---
+
+      ## Important Note
+
+      This Act Line is restarted from Scene {sceneNumber}, plot and events that happened at or prior to Scene {sceneNumber} may be have a different plot, or written from another perspective.
     editorTemplateFitter: >
       The "Editor Output" does not follow the required template format. Restructure it to match the Writer Output Template
       by inserting the appropriate section headers defined by "Writer Output Template" without changing any content.
