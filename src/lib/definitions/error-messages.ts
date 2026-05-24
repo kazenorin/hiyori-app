@@ -14,7 +14,8 @@ export const ERR_EMBEDDING_PROVIDER_NOT_CONFIGURED = 'Embedding provider not con
 
 export const ERR_NO_NARRATIVE_CONTENT = 'No narrative content found in this act line.';
 export const ERR_NO_ACT_LINE_SELECTED = 'No active act line selected.';
-export const ERR_ACTIVE_ACT_NOT_FOUND = 'Active act not found.';
+export const ERR_ACT_NOT_FOUND = 'Act not found.';
+export const ERR_STORY_NOT_FOUND = 'Story not found.';
 export const ERR_NO_CHARACTERS_SELECTED = 'No characters selected for generation.';
 
 // === Generation empty response errors (internal) ===

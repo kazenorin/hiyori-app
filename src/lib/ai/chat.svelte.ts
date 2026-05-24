@@ -373,6 +373,7 @@ export function stopStreaming(): void {
 
 export async function runEpilogueFlow(actLineId: string): Promise<void> {
 	requireMainConfig();
+	const abortSignal = newAbortSignal();
 
 	const [story, actLine] = await Promise.all([
 		dbActLines.getStoryForActLine(actLineId),
@@ -402,7 +403,7 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 	}
 
 	try {
-		const worldContent = await ensureWorldFile(story.id, story.name);
+		const worldContent = await ensureWorldFile(story.id, story.name, abortSignal);
 		const actPlot = await ensureActPlot({ story, actLine });
 		const actSummary = getLatestActSummary(previousSceneNumber);
 		const previousNarrativeVariables = getPreviousNarrativeMessage(messages);
@@ -420,7 +421,7 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 		isStreaming = true;
 		const result = await runEpiloguePipeline({
 			execution: {
-				abortSignal: newAbortSignal(),
+				abortSignal: abortSignal,
 				callbacks: pipelineCallbacks,
 			},
 			worldContent,

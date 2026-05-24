@@ -1,30 +1,25 @@
 import type { MessageBase } from '$lib/db/messages';
-import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { createModel } from '$lib/ai/provider';
 import { loadActCardTemplate } from '$lib/fs/prompts';
 import { exportActLine } from '$lib/ai/act-line-export';
-import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
+import { getActLine, getMessagesForLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
 import { ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-folders';
-import { getActiveStoryId, getActiveActId, getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
-import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { getActiveActLineId } from '$lib/stores/stories.svelte';
+import { BaseDirectory, mkdir, writeTextFile } from '@tauri-apps/plugin-fs';
 import { getLineDir } from '$lib/ai/card-output-path';
 import { logActCardActivity } from '$lib/logging/chat-logger';
-import { streamWithRetry, type RetryConfig } from '$lib/ai/chat-stream';
+import { type RetryConfig, streamWithRetry } from '$lib/ai/chat-stream';
 import type { StreamState } from '$lib/ai/chat-callbacks';
-import { worldContextLabel, actCardTranscriptStart, actCardTranscriptEnd, actCardSystemPrompt, actCardExtractionPrompt } from './prompts';
+import { actCardExtractionPrompt, actCardSystemPrompt, actCardTranscriptEnd, actCardTranscriptStart, worldContextLabel } from './prompts';
 import {
-	ERR_NO_MAIN_PROVIDER,
+	ERR_ACT_NOT_FOUND,
 	ERR_NO_ACT_LINE_SELECTED,
+	ERR_NO_MAIN_PROVIDER,
 	ERR_NO_NARRATIVE_CONTENT,
-	ERR_ACTIVE_ACT_NOT_FOUND,
+	ERR_STORY_NOT_FOUND,
 } from '$lib/definitions/error-messages';
-
-export interface GenerateActCardResult {
-	filePath: string;
-	content: string;
-}
+import { getStory } from '$lib/db/stories';
 
 function buildUserMessages(contents: string[], template: string, extractionPrompt: string, world: string): string[] {
 	const worldPrompt = [worldContextLabel(), world];
@@ -42,19 +37,16 @@ interface ActCardContext {
 	world: string;
 }
 
-async function resolveActCardContext(): Promise<ActCardContext> {
-	const storyId = getActiveStoryId();
-	const actId = getActiveActId();
-	const actLineId = getActiveActLineId();
-	const story = getActiveStory();
-
-	if (!storyId || !actId || !actLineId || !story) {
-		throw new Error(ERR_NO_ACT_LINE_SELECTED);
-	}
-
+async function resolveActCardContext(abortSignal?: AbortSignal): Promise<ActCardContext> {
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) {
 		throw new Error(ERR_NO_MAIN_PROVIDER);
+	}
+
+	const actLineId = getActiveActLineId();
+	const actLine = actLineId ? await getActLine(actLineId) : null;
+	if (!actLineId || !actLine) {
+		throw new Error(ERR_NO_ACT_LINE_SELECTED);
 	}
 
 	const allMessages = await getMessagesForLine(actLineId);
@@ -63,19 +55,22 @@ async function resolveActCardContext(): Promise<ActCardContext> {
 		throw new Error(ERR_NO_NARRATIVE_CONTENT);
 	}
 
-	const act = await getAct(actId);
+	const act = await getAct(actLine.actId);
 	if (!act) {
-		throw new Error(ERR_ACTIVE_ACT_NOT_FOUND);
+		throw new Error(ERR_ACT_NOT_FOUND);
+	}
+	const story = await getStory(act.storyId);
+	if (!story) {
+		throw new Error(ERR_STORY_NOT_FOUND);
 	}
 
-	const actLine = await getActLine(actLineId);
-	const isMainLine = actLine?.isMainLine ?? false;
+	const isMainLine = actLine.isMainLine ?? false;
 
-	const [template, world] = await Promise.all([loadActCardTemplate(), ensureWorldFile(story.id)]);
+	const [template, world] = await Promise.all([loadActCardTemplate(), ensureWorldFile(story.id, story.name, abortSignal)]);
 	const extractionPrompt = actCardExtractionPrompt();
 
 	return {
-		storyId,
+		storyId: story.id,
 		actLineId,
 		isMainLine,
 		actNumber: act.actNumber,
@@ -97,35 +92,6 @@ async function resolveAndWrite(ctx: ActCardContext, content: string): Promise<st
 	return filePath;
 }
 
-export async function generateActCard(): Promise<GenerateActCardResult> {
-	const ctx = await resolveActCardContext();
-
-	const model = createModel(getMainProviderConfig()!);
-	const userMessages: ModelMessage[] = ctx.userMessageContents.map((content) => ({
-		role: 'user',
-		content,
-	}));
-
-	await logActCardActivity('generation-start', `Act line: ${ctx.actLineId}\n\nMessages:\n${JSON.stringify(userMessages, null, 2)}`);
-
-	const result = await generateText({
-		model,
-		system: ctx.systemPrompt,
-		messages: userMessages,
-	});
-
-	await logActCardActivity(
-		'generation-end',
-		`
-  Result: ${result.text}
-  Usage: ${JSON.stringify(result.usage, null, 4)}
-  Finish Reason: ${result.finishReason}`
-	);
-
-	const filePath = await resolveAndWrite(ctx, result.text);
-	return { filePath, content: result.text };
-}
-
 export interface StreamActCardResult {
 	filePath: string;
 	content: string;
@@ -133,9 +99,10 @@ export interface StreamActCardResult {
 
 export async function streamActCard(
 	onProgress: (state: StreamState) => void,
-	retryConfig: RetryConfig = { retryCount: 3, backoffIntervalSeconds: 2 }
+	retryConfig: RetryConfig = { retryCount: 3, backoffIntervalSeconds: 2 },
+	abortSignal?: AbortSignal
 ): Promise<StreamActCardResult> {
-	const ctx = await resolveActCardContext();
+	const ctx = await resolveActCardContext(abortSignal);
 
 	const config = getMainProviderConfig()!;
 	const userMessages: MessageBase[] = ctx.userMessageContents.map((content) => ({
@@ -156,6 +123,7 @@ export async function streamActCard(
 			});
 		},
 		providerConfig: config,
+		abortSignal,
 	});
 
 	const content = accumulator.state.content;
