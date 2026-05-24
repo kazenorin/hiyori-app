@@ -9,7 +9,7 @@ import {
 	loadActPlotTemplateForMode,
 } from '$lib/fs/prompts';
 import { log } from '$lib/logging/logger';
-import { type ActLineMeta, getLastSceneNumber, getLatestTurnOfEvents, getPremisesMessages, getPreviousActSummary } from '$lib/db/act-lines';
+import { type ActLineMeta, getLastSceneNumber, getLatestTurnOfEvents, getPremisesMessages, getLatestActSummary } from '$lib/db/act-lines';
 import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';
 import { ACT_PLOT_SECTION } from '$lib/definitions/pipeline-sections';
 import { ERR_EMPTY_ACT_PLOT_WRITER, ERR_NO_MAIN_PROVIDER } from '$lib/definitions/error-messages';
@@ -132,7 +132,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 			loadActPlotReviewerPrompt(),
 			loadActPlotEditorPrompt(),
 			loadInterviewTranscript(actLineId),
-			getPreviousActSummary(actLineId),
+			getLatestActSummary(actLineId),
 			isResumeGame ? getLatestTurnOfEvents(actLineId) : Promise.resolve(null),
 		]);
 

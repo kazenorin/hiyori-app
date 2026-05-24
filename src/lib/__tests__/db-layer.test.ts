@@ -449,7 +449,7 @@ describe('act-lines operations', () => {
 		});
 	});
 
-	describe('getPreviousActSummary', () => {
+	describe('getLatestActSummary', () => {
 		it('returns the latest actSummary from the previous act line', async () => {
 			await acts.createAct('act-prev', 'story-1', 'Previous Act', 1);
 			await actLines.createActLine('line-prev', 'act-prev', 'prev line', true);
@@ -464,7 +464,7 @@ describe('act-lines operations', () => {
 			await acts.createAct('act-2', 'story-1', 'Current Act', 2, 'line-prev');
 			await actLines.createActLine('line-cur', 'act-2', 'current line', true);
 
-			const result = await actLines.getPreviousActSummary('line-cur');
+			const result = await actLines.getLatestActSummary('line-cur');
 			expect(result).toBe('Previous act summary content');
 		});
 
@@ -479,7 +479,7 @@ describe('act-lines operations', () => {
 			await acts.createAct('act-2', 'story-1', 'Current Act', 2, 'line-prev');
 			await actLines.createActLine('line-cur', 'act-2', 'current line', true);
 
-			const result = await actLines.getPreviousActSummary('line-cur');
+			const result = await actLines.getLatestActSummary('line-cur');
 			expect(result).toBe('Newer summary');
 		});
 
@@ -492,12 +492,12 @@ describe('act-lines operations', () => {
 			await acts.createAct('act-2', 'story-1', 'Current Act', 2, 'line-prev');
 			await actLines.createActLine('line-cur', 'act-2', 'current line', true);
 
-			expect(await actLines.getPreviousActSummary('line-cur')).toBeNull();
+			expect(await actLines.getLatestActSummary('line-cur')).toBeNull();
 		});
 
 		it('returns null when the current act has no continuation', async () => {
 			await actLines.createActLine('line-cur', 'act-1', 'current line', true);
-			expect(await actLines.getPreviousActSummary('line-cur')).toBeNull();
+			expect(await actLines.getLatestActSummary('line-cur')).toBeNull();
 		});
 	});
 });
