@@ -1,5 +1,6 @@
 import type { ActLineMeta } from '$lib/db/act-lines';
 import * as dbActLines from '$lib/db/act-lines';
+import * as dbActs from '$lib/db/acts';
 import type { Story } from '$lib/db/stories';
 import { logMainChat } from '$lib/logging/chat-logger';
 import { log } from '$lib/logging/logger';
@@ -12,7 +13,8 @@ import {
 	type ProviderConfig,
 	settings,
 } from '$lib/stores/settings.svelte';
-import { getActiveActPlotContent, getActiveDirectorNotesText, getActiveWorldContent } from '$lib/stores/stories.svelte';
+import { getActiveDirectorNotesText, getActiveWorldContent } from '$lib/stores/stories.svelte';
+import { ensureActPlot } from '$lib/ai/act-plot';
 import { extractImportantPhrases } from './important-phrases-extractor';
 import {
 	findLastNonNullSceneNumber,
@@ -60,7 +62,6 @@ import { loadLocaleStrings } from '$lib/localization';
 export type { UIMessage };
 
 interface RequestContext {
-	actLineId: string;
 	message?: string;
 	mainConfig: ProviderConfig;
 	story: Story;
@@ -224,7 +225,6 @@ export async function sendMessage(actLineId: string, message: string): Promise<v
 	const actLine = await requireActLine(actLineId);
 	error = null;
 	const requestContext: RequestContext = {
-		actLineId,
 		message,
 		mainConfig,
 		story,
@@ -247,7 +247,6 @@ export async function sendInitialNarration(actLineId: string): Promise<void> {
 	const actLine = await requireActLine(actLineId);
 	error = null;
 	const requestContext: RequestContext = {
-		actLineId,
 		mainConfig,
 		story,
 		actLine,
@@ -266,14 +265,15 @@ function updateMessageMetadataByIndex(result: PipelineResult, messageIdx: number
 }
 
 async function executeNarrativeRequest(requestContext: RequestContext): Promise<void> {
-	const { actLineId, mainConfig, story, actLine, previousNarrativeVariables, previousSceneNumber, message } = requestContext;
+	const { mainConfig, story, actLine, previousNarrativeVariables, previousSceneNumber, message } = requestContext;
+	const abortSignal = newAbortSignal();
 
 	await Promise.all([awaitPendingAsyncPhases('send-message', true), loadLocaleStrings(story.locale)]);
 	setActiveLocale(story.locale);
 
 	const nextSceneNumber = previousSceneNumber + 1;
 
-	const newMessagesCount = await prepareNewMessages(actLineId, previousSceneNumber, nextSceneNumber, message);
+	const newMessagesCount = await prepareNewMessages(actLine.id, previousSceneNumber, nextSceneNumber, message);
 	const playerContext = getPlayerContext(getMessages());
 	const messageIdx = getLatestMessageIndex();
 
@@ -287,7 +287,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 
 	try {
 		const worldContent = getActiveWorldContent() ?? '';
-		const actPlot = getActiveActPlotContent() ?? '';
+		const actPlot = await ensureActPlot({ story, actLine, worldContent, abortSignal });
 		const actSummary = getLatestActSummary(previousSceneNumber);
 		const plotMode = actLine.plotMode ?? getDefaultPlotMode();
 		const previousScenePlot = getScenePlotForScene(previousSceneNumber, plotMode);
@@ -306,7 +306,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 		isStreaming = true;
 		const result = await runPipeline({
 			execution: {
-				abortSignal: newAbortSignal(),
+				abortSignal,
 				callbacks: pipelineCallbacks,
 			},
 			worldContent,
@@ -324,12 +324,12 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 		updateMessageMetadataByIndex(result, messageIdx);
 
 		await Promise.all([
-			persistMessage(actLineId, getCurrentMessage()),
+			persistMessage(actLine.id, getCurrentMessage()),
 			updateLastPlotGeneration(result.phases, actLine, previousSceneNumber),
 			logMainChat({ newMessages: getMessages().slice(-newMessagesCount) }),
 		]);
 
-		const updatedActLine = await requireActLine(actLineId);
+		const updatedActLine = await requireActLine(actLine.id);
 		if (updatedActLine.endedAt !== null) {
 			actEnded = true;
 		}
@@ -358,7 +358,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 					}
 				}) ?? null;
 	} catch (err: unknown) {
-		const result = await handleStreamError(err, getCurrentMessage(), actLineId, getMessages());
+		const result = await handleStreamError(err, getCurrentMessage(), actLine.id, getMessages());
 		setMessages(result.messages);
 		if (result.error) error = result.error;
 	} finally {
@@ -403,7 +403,7 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 
 	try {
 		const worldContent = getActiveWorldContent() ?? '';
-		const actPlot = getActiveActPlotContent() ?? '';
+		const actPlot = await ensureActPlot({ story, actLine });
 		const actSummary = getLatestActSummary(previousSceneNumber);
 		const previousNarrativeVariables = getPreviousNarrativeMessage(messages);
 		const targetWordCount = settings.targetWordCount;
@@ -490,15 +490,15 @@ async function regenerateMissingMetadata(actLine: ActLineMeta, messages: UIMessa
 	const abortController = new AbortController();
 	isStreaming = true;
 	try {
+		const story = await dbActLines.getStoryForActLine(actLine.id);
+		if (!story) return;
+
 		if (needsSummary) {
-			const story = await dbActLines.getStoryForActLine(actLine.id);
-			if (story) {
-				await regenerateActSummary(story, messages, lastAssistantIdx, abortController);
-			}
+			await regenerateActSummary(story, messages, lastAssistantIdx, abortController);
 		}
 
 		if (needsGameData) {
-			await regenerateGameData(actLine, messages, lastAssistantIdx, abortController);
+			await regenerateGameData(story, actLine, messages, lastAssistantIdx, abortController);
 		}
 	} catch (err) {
 		await log.error('regenerate-metadata', 'Failed to regenerate missing metadata', err);
@@ -534,14 +534,7 @@ async function regenerateActSummary(
 		player: undefined,
 	};
 
-	const loadedPrompts = await loadPrompts(story.id, story.name);
-	const summarizerPrompts: SummarizerPrompts = {
-		summarizerPrompt: loadedPrompts.summarizerPrompt,
-		summarizerIncrementalPrompt: loadedPrompts.summarizerIncrementalPrompt,
-		actSummaryIncrementalTemplate: loadedPrompts.actSummaryIncrementalTemplate,
-		characterProfileCompressorPrompt: loadedPrompts.characterProfileCompressorPrompt,
-	};
-
+	const summarizerPrompts: SummarizerPrompts = await loadPrompts(story.id, story.name);
 	const result = await generateFullSummary(summarizerInput, summarizerPrompts);
 
 	if (result.serializedSummary) {
@@ -566,6 +559,7 @@ function buildTranscriptFromMessages(messages: UIMessage[]): { role: 'user' | 'a
 }
 
 async function regenerateGameData(
+	story: Story,
 	actLine: ActLineMeta,
 	messages: UIMessage[],
 	assistantIdx: number,
@@ -594,9 +588,10 @@ async function regenerateGameData(
 	const plotMode = actLine.plotMode ?? getDefaultPlotMode();
 	const previousSceneNumber = assistantMsg.sceneNumber ?? 0;
 	const previousScenePlot = getScenePlotForScene(previousSceneNumber, plotMode);
+	const actPlot = await ensureActPlot({ story, actLine });
 
 	const postEditorCtx: PostEditorContext = {
-		actPlot: getActiveActPlotContent() ?? '',
+		actPlot,
 		actPhase: actLine.actPhase,
 		actSummary: _getLatestActSummary(messages),
 		previousScenePlot,

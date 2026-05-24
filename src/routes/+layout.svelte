@@ -326,7 +326,7 @@
 											type="text"
 										/>
 									{:else}
-										<span class="truncate flex-1 text-surface-700-300">{t('sidebar.actLabel', { n: act.actNumber })}: {act.name}</span>
+										<span class="truncate flex-1 text-surface-700-300">{t('common.actLabel', { n: act.actNumber })}: {act.name}</span>
 										<button
 											class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 											type="button"

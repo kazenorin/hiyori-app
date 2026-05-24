@@ -16,7 +16,7 @@ import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStory
 import { writeTextFile, readTextFile, exists, remove, copyFile, mkdir, rename, BaseDirectory } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, getLineDir, resolveLineSubdir } from '$lib/ai/card-output-path';
-import { generateActPlot, type ActPlotPhase } from '$lib/ai/act-plot-generator';
+import { type ActPlotPhase } from '$lib/ai/act-plot';
 import type { PlotMode } from '$lib/ai/narrative-types';
 
 export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
@@ -33,7 +33,6 @@ let isSelectingStory = $state(false);
 let activeSystemPrompt = $state<string | null>(null);
 let activeWorldContent = $state<string | null>(null);
 let activeInterviewTranscript = $state<ModelMessage[]>([]);
-let activeActPlotContent = $state<string>('');
 let actPlotGenerationPhase = $state<ActPlotPhase | null>(null);
 let activeDirectorNotes = $state<dbDirectorNotes.DirectorNote[]>([]);
 
@@ -72,15 +71,6 @@ export async function getActiveSystemPromptOrDefault(): Promise<string> {
 }
 export function getActiveWorldContent(): string | null {
 	return activeWorldContent;
-}
-export function getActiveActPlotContent(): string {
-	return activeActPlotContent;
-}
-/** Set the active act plot content. Only updates when an act line is currently selected. */
-export function setActiveActPlotContent(content: string): void {
-	if (activeActLineId) {
-		activeActPlotContent = content;
-	}
 }
 export function getActPlotGenerationPhase(): ActPlotPhase | null {
 	return actPlotGenerationPhase;
@@ -172,7 +162,6 @@ function resetStoryContent(): void {
 	activeSystemPrompt = null;
 	activeWorldContent = null;
 	activeInterviewTranscript = [];
-	activeActPlotContent = '';
 	activeDirectorNotes = [];
 }
 
@@ -230,54 +219,10 @@ export async function selectActLine(actLineId: string | null): Promise<void> {
 		} catch {
 			activeInterviewTranscript = [];
 		}
-		await ensureActPlot();
 		activeDirectorNotes = await dbDirectorNotes.getDirectorNotes(actLineId);
 	} else {
 		activeInterviewTranscript = [];
-		activeActPlotContent = '';
 		activeDirectorNotes = [];
-	}
-}
-
-/**
- * Ensure the act plot file exists (generating it if needed) and load its content.
- */
-async function ensureActPlot(): Promise<void> {
-	activeActPlotContent = '';
-
-	if (!activeStoryId || !activeActLineId || !activeStoryName) return;
-
-	try {
-		// Load act plot file
-		const storyFolder = await resolveStoryFolder(activeStoryId, activeStoryName);
-		const act = acts.find((a) => a.id === activeActId);
-		const actLine = actLines.find((l) => l.id === activeActLineId);
-		if (act && actLine) {
-			const lineDir = await getLineDir(storyFolder, act.actNumber, actLine.isMainLine, actLine.id);
-			const plotPath = `${lineDir}/act-plot.md`;
-			const plotExists = await exists(plotPath, { baseDir: BaseDirectory.AppData });
-			if (plotExists) {
-				activeActPlotContent = await readTextFile(plotPath, { baseDir: BaseDirectory.AppData });
-			} else {
-				// Generate act plot if it doesn't exist yet
-				const result = await generateActPlot({
-					storyId: activeStoryId,
-					storyName: activeStoryName,
-					worldContent: activeWorldContent ?? '',
-					actLineId: activeActLineId,
-					isMainLine: actLine.isMainLine,
-					actNumber: act.actNumber,
-					plotMode: actLine.plotMode,
-					onPhaseChange: (phase) => {
-						actPlotGenerationPhase = phase;
-					},
-				});
-				activeActPlotContent = result.content;
-				actPlotGenerationPhase = null;
-			}
-		}
-	} catch {
-		actPlotGenerationPhase = null;
 	}
 }
 
@@ -414,7 +359,10 @@ export async function addDirectorNote(text: string, effectiveFromScene?: number 
 	if (!activeActLineId) return;
 	const id = crypto.randomUUID();
 	const note: dbDirectorNotes.DirectorNote = {
-		id, actLineId: activeActLineId, text, isActive: true,
+		id,
+		actLineId: activeActLineId,
+		text,
+		isActive: true,
 		effectiveFromScene: effectiveFromScene ?? null,
 		effectiveToScene: effectiveToScene ?? null,
 		createdAt: Date.now(),
@@ -428,7 +376,10 @@ export async function addDirectorNote(text: string, effectiveFromScene?: number 
 	}
 }
 
-export async function updateDirectorNote(id: string, fields: { text?: string; isActive?: boolean; effectiveFromScene?: number | null; effectiveToScene?: number | null }): Promise<void> {
+export async function updateDirectorNote(
+	id: string,
+	fields: { text?: string; isActive?: boolean; effectiveFromScene?: number | null; effectiveToScene?: number | null }
+): Promise<void> {
 	const prev = activeDirectorNotes;
 	const sanitized = { ...fields, ...(fields.isActive !== undefined ? { isActive: fields.isActive } : {}) };
 	activeDirectorNotes = activeDirectorNotes.map((n) => (n.id === id ? { ...n, ...sanitized } : n));
@@ -502,8 +453,7 @@ async function copyActPlotForFork(fromLineId: string, toLineId: string): Promise
 /**
  * Fork an act line for the interview path: copies messages and premises,
  * but does NOT copy the act-plot file or select the line.
- * Call selectActLineQuiet after this to set the active line without
- * triggering act-plot generation.
+ * Call selectActLine after this to set the active line.
  */
 export async function forkActLineForInterview(
 	fromLineId: string,
@@ -513,7 +463,14 @@ export async function forkActLineForInterview(
 	plotModeOverride?: PlotMode
 ): Promise<dbActLines.ActLineMeta> {
 	const newLineId = crypto.randomUUID();
-	const { lineMeta, remappedMessageIds } = await dbActLines.branchFromLine(newLineId, fromLineId, fromSequence, actId, name, plotModeOverride);
+	const { lineMeta, remappedMessageIds } = await dbActLines.branchFromLine(
+		newLineId,
+		fromLineId,
+		fromSequence,
+		actId,
+		name,
+		plotModeOverride
+	);
 	actLines = [...actLines, lineMeta];
 
 	// Create the line directory with proper naming at fork time
@@ -535,28 +492,6 @@ export async function forkActLineForInterview(
 	await dbDirectorNotes.cloneDirectorNotes(fromLineId, lineMeta.id);
 
 	return lineMeta;
-}
-
-/**
- * Set the active act line and load premises, but skip act-plot generation.
- * Use before entering world-builder interview mode so the active line is
- * set correctly without triggering ensureActPlot.
- */
-export async function selectActLineQuiet(actLineId: string): Promise<void> {
-	activeActLineId = actLineId;
-	await dbAppState.setActiveActLine(actLineId);
-
-	try {
-		const premises = await dbActLines.getPremisesMessages(actLineId);
-		activeInterviewTranscript = premises
-			.filter((m) => m.role === 'user' || m.role === 'assistant')
-			.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
-	} catch {
-		activeInterviewTranscript = [];
-	}
-
-	// Intentionally skip ensureActPlot — act-plot will be generated after interview
-	activeActPlotContent = '';
 }
 
 async function copyMemoriesForFork(
@@ -609,10 +544,6 @@ export async function restoreState(): Promise<void> {
 	if (state.activeActId) {
 		activeActId = state.activeActId;
 		await loadActLines(state.activeActId);
-	}
-	if (state.activeActLineId) {
-		activeActLineId = state.activeActLineId;
-		await ensureActPlot();
 	}
 	isLoading = false;
 }

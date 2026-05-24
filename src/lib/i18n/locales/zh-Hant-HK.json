@@ -2,6 +2,9 @@
 	"app": {
 		"title": "BYOA — 構建你的冒險"
 	},
+	"common": {
+		"actLabel": "第 {n} 章"
+	},
 	"settings": {
 		"heading": "設定",
 		"aiProviders": "AI 提供者",
@@ -167,7 +170,6 @@
 		"newLine": "+ 新故事線",
 		"newAct": "+ 新章節",
 		"newStory": "+ 新故事",
-		"actLabel": "第 {n} 章",
 		"deleteConfirmTitle": "刪除{type}？",
 		"deleteStoryConfirm": "確定要刪除 {name} 嗎？此故事內的所有章節和故事線也將被移除。",
 		"deleteActConfirm": "確定要刪除 {name} 嗎？此章節內的所有故事線也將被移除。",

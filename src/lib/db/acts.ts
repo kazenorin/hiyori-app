@@ -63,6 +63,12 @@ export async function getAct(id: string): Promise<Act | null> {
 	return rows.length > 0 ? rowToAct(rows[0]) : null;
 }
 
+export async function getActNumber(id: string): Promise<number | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ act_number: number }[]>('SELECT act_number FROM acts WHERE id = $1', [id]);
+	return rows.length > 0 ? rows[0].act_number : null;
+}
+
 export async function getActsForStory(storyId: string): Promise<Act[]> {
 	const db = getDatabase();
 	const rows = await db.select<ActRow[]>('SELECT * FROM acts WHERE story_id = $1 ORDER BY act_number ASC', [storyId]);

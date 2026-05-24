@@ -3,7 +3,7 @@
 	import { getImportWorldStore } from './import-state.svelte';
 	import { prepareImport, confirmImport, cancelImport } from '$lib/features/import-world/import-orchestrator';
 	import { enterActPlotInterviewMode } from '$lib/features/world-builder/world-builder.svelte';
-	import { selectStory, selectAct, selectActLineQuiet } from '$lib/stores/stories.svelte';
+	import {selectStory, selectAct, selectActLine} from '$lib/stores/stories.svelte';
 	import { t } from '$lib/i18n';
 	import ImportPreviewTable from './ImportPreviewTable.svelte';
 
@@ -48,7 +48,7 @@
 			if (importResult.needsInterview && importResult.actLineId && importResult.worldContent) {
 				await selectStory(importResult.storyId!);
 				await selectAct(importResult.lastActId!);
-				await selectActLineQuiet(importResult.actLineId);
+				await selectActLine(importResult.actLineId);
 				await enterActPlotInterviewMode(
 					importResult.actLineId,
 					importResult.worldContent,

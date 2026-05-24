@@ -53,14 +53,12 @@
 		forkActLineForInterview,
 		getActiveAct,
 		getActiveActLineId,
-		getActiveActPlotContent,
 		getActiveStory,
 		getActiveWorldContent,
 		getActiveDirectorNotesText,
 		getIsSelectingStory,
-		selectActLineQuiet,
 		setActPlotGenerationPhase,
-		setActiveActPlotContent,
+		selectActLine,
 	} from '$lib/stores/stories.svelte';
 	import { settings, isDirectorModeEnabled } from '$lib/stores/settings.svelte';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
@@ -72,7 +70,7 @@
 	import { emptyVariables, type NarrativeVariables } from '$lib/ai/narrative-types';
 	import { formatPhaseName } from '$lib/ai/narrative-types';
 	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
-	import { generateActPlot } from '$lib/ai/act-plot-generator';
+	import { ensureActPlot } from '$lib/ai/act-plot';
 	import { getActLine, getMessagesForLine } from '$lib/db/act-lines';
 	import { log } from '$lib/logging/logger';
 	import { generateTurnOfEvents } from '$lib/features/turn-of-events-generator';
@@ -191,7 +189,7 @@
 			const { branchSeq, name } = await getForkSequence(actLineId, messageIndex);
 			const plotModeOverride = forkPlotMode ?? undefined;
 			const line = await forkActLineForInterview(actLineId, branchSeq, act.id, name, plotModeOverride);
-			await selectActLineQuiet(line.id);
+			await selectActLine(line.id);
 
 			const forkedMessage = getMessages()[messageIndex];
 			const actSummary = forkedMessage?.actSummary ?? '';
@@ -275,7 +273,7 @@
 		return { actLineId, story };
 	}
 
-	async function handleCreateStoryImmediate() {
+	async function handleCreateStoryImmediate(actNumber: number = 1) {
 		isCreatingStory = true;
 		createStoryError = null;
 
@@ -289,21 +287,22 @@
 			return;
 		}
 
+		const actLine = await getActLine(refs.actLineId);
+		if (!actLine) {
+			createStoryError = t('errors.storyCreationFailed');
+			return;
+		}
+
 		try {
-			const actLine = await getActLine(refs.actLineId);
-			const isMainLine = actLine?.isMainLine ?? true;
-			const actPlot = await generateActPlot({
-				storyId: refs.story.id,
-				storyName: refs.story.name,
+			await ensureActPlot({
 				worldContent,
-				actLineId: refs.actLineId,
-				isMainLine,
-				plotMode: actLine?.plotMode,
-				actNumber: 1,
+				story: refs.story,
+				actNumber,
+				actLine,
 				isResumeGame: false,
-				onPhaseChange: (phase) => setActPlotGenerationPhase(phase),
+				onPhaseChange: setActPlotGenerationPhase,
+				onGenerationComplete: () => setActPlotGenerationPhase(null),
 			});
-			setActiveActPlotContent(actPlot.content);
 		} catch (err) {
 			createStoryError = err instanceof Error ? err.message : t('errors.failedToCreateStory');
 		} finally {
@@ -342,13 +341,17 @@
 		}
 	}
 
-	async function handleStartGameAfterInterview(isGameResumeMode: boolean) {
+	async function handleStartGameAfterInterview(isGameResumeMode: boolean, actNumber: number = 1) {
 		const refs = getActLineAndStory();
 		if (!refs) return;
+		createStoryError = null;
+		const actLine = await getActLine(refs.actLineId);
+		if (!actLine) {
+			createStoryError = t('errors.storyCreationFailed');
+			return;
+		}
 
 		isCreatingStory = true;
-		createStoryError = null;
-
 		try {
 			await removeLastInterviewAssistantMessage();
 
@@ -359,26 +362,20 @@
 					forkedMessage = await enrichForkedMessageWithTurnOfEvents(refs.actLineId);
 				}
 
-				const actLine = await getActLine(refs.actLineId);
-				const isMainLine = actLine?.isMainLine ?? true;
-
-				const actPlotResult = await generateActPlot({
-					storyId: refs.story.id,
-					storyName: refs.story.name,
+				const actPlotContent = await ensureActPlot({
 					worldContent,
-					actLineId: refs.actLineId,
-					isMainLine,
-					plotMode: actLine?.plotMode,
-					actNumber: 1,
+					story: refs.story,
+					actNumber,
+					actLine,
 					isResumeGame: isGameResumeMode,
-					onPhaseChange: (phase) => setActPlotGenerationPhase(phase),
+					onPhaseChange: setActPlotGenerationPhase,
+					onGenerationComplete: () => setActPlotGenerationPhase(null),
 				});
-				setActiveActPlotContent(actPlotResult.content);
 
 				if (forkedMessage) {
 					await regenerateGameDataForForkedMessage(forkedMessage.id, {
 						worldContent,
-						actPlot: actPlotResult.content,
+						actPlot: actPlotContent,
 						actSummary: forkedMessage.actSummary ?? '',
 						directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(forkedMessage.sceneNumber ?? 1) : '',
 						sceneNumber: forkedMessage.sceneNumber ?? 1,
@@ -475,16 +472,20 @@
 		if (!act) return;
 
 		const actSummary = getMessages().findLast((m) => m.role === 'assistant')?.actSummary ?? '';
-		const actPlot = getActiveActPlotContent() ?? '';
+		const worldContent = getActiveWorldContent() ?? '';
+		const actPlot = await ensureActPlot({
+			worldContent,
+			story,
+			actNumber: act.actNumber,
+			actLine,
+		});
 
 		try {
 			resetActEnded();
 			await clearMessages();
-			const newAct = await createAct(story.id, `Act ${act.actNumber + 1}`, actLineId);
+			const newAct = await createAct(story.id, t('common.actLabel', { n: act.actNumber + 1 }), actLineId);
 			const newLine = await createActLine(newAct.id, 'Main');
-			await selectActLineQuiet(newLine.id);
-
-			const worldContent = getActiveWorldContent() ?? '';
+			await selectActLine(newLine.id);
 
 			const newActContext: NewActInterviewContext = {
 				endingType: actLine.endingType,

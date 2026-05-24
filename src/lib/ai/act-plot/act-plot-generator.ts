@@ -1,7 +1,7 @@
 import { generateText, type ModelMessage } from 'ai';
-import type { PlotMode } from './narrative-types';
+import type { PlotMode } from '$lib/ai/narrative-types';
 import { getMainProviderConfig, isReviewerEnabled } from '$lib/stores/settings.svelte';
-import { createModel } from './provider';
+import { createModel } from '$lib/ai/provider';
 import {
 	loadActPlotTemplateForMode,
 	loadActPlotGenerationPrompt,
@@ -9,12 +9,9 @@ import {
 	loadActPlotReviewerPrompt,
 	loadActPlotEditorPrompt,
 } from '$lib/fs/prompts';
-import { resolveStoryFolder } from '$lib/fs/story-folders';
-import { mkdir, writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
-import { getLineDir } from './card-output-path';
 import { log } from '$lib/logging/logger';
 import { getLastSceneNumber, getPremisesMessages, getPreviousActSummary, getLatestTurnOfEvents } from '$lib/db/act-lines';
-import { reviewerAcceptsAsIs } from './reviewer-output-parser';
+import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';
 import { ACT_PLOT_SECTION } from '$lib/definitions/pipeline-sections';
 import { ERR_NO_MAIN_PROVIDER, ERR_EMPTY_ACT_PLOT_WRITER } from '$lib/definitions/error-messages';
 
@@ -26,18 +23,13 @@ const ACT_PLOT_RESUME_NOTE = `---
 
 This Act Line is restarted from Scene {sceneNumber}, plot and events that happened at or prior to Scene {sceneNumber} may be have a different plot, or written from another perspective.`;
 
-export interface GenerateActPlotResult {
-	filePath: string;
-	content: string;
-}
-
 export type ActPlotPhase = 'writing' | 'reviewing' | 'editing';
 
 /**
  * Load interview transcript from act_line_premises for a given act line.
  * Returns an array of ModelMessage objects (role + content only).
  */
-export async function loadInterviewTranscript(actLineId: string): Promise<ModelMessage[]> {
+async function loadInterviewTranscript(actLineId: string): Promise<ModelMessage[]> {
 	try {
 		const premisesMessages = await getPremisesMessages(actLineId);
 		return premisesMessages
@@ -52,80 +44,54 @@ export async function loadInterviewTranscript(actLineId: string): Promise<ModelM
 	}
 }
 
-function buildWriterMessages(
-	worldContent: string,
-	interviewTranscript: ModelMessage[],
-	previousActSummary: string | null,
-	turnOfEvents: string | null,
-	generationPrompt: string,
-	template: string
-): ModelMessage[] {
-	const messages: ModelMessage[] = [{ role: 'user', content: ACT_PLOT_SECTION.WORLD_CONTENT + worldContent }];
-
-	if (previousActSummary) {
-		messages.push({ role: 'user', content: ACT_PLOT_SECTION.PREVIOUS_ACT_SUMMARY + previousActSummary });
-	}
-
-	const hasValidInterview = interviewTranscript.some((m) => m.role === 'user');
-	if (hasValidInterview) {
-		messages.push({ role: 'user', content: ACT_PLOT_SECTION.INTERVIEW_TRANSCRIPT });
-		messages.push(...interviewTranscript);
-	}
-
-	if (turnOfEvents) {
-		messages.push({ role: 'user', content: ACT_PLOT_SECTION.TURN_OF_EVENTS + turnOfEvents });
-	}
-
-	messages.push({ role: 'user', content: generationPrompt });
-	messages.push({ role: 'user', content: ACT_PLOT_SECTION.TEMPLATE + template });
-
-	return messages;
+interface BuildActPlotMessagesOptions {
+	prompt: string;
+	worldContent: string | null;
+	previousActSummary: string | null;
+	turnOfEvents: string | null;
+	interviewTranscript?: ModelMessage[];
+	writerOutput?: string;
+	reviewerOutput?: string;
+	template?: string;
 }
 
-function buildReviewerMessages(
-	worldContent: string,
-	previousActSummary: string | null,
-	turnOfEvents: string | null,
-	writerOutput: string,
-	reviewerPrompt: string
-): ModelMessage[] {
-	const messages: ModelMessage[] = [{ role: 'user', content: ACT_PLOT_SECTION.WORLD_CONTENT + worldContent }];
+function buildActPlotMessages(options: BuildActPlotMessagesOptions): ModelMessage[] {
+	const { worldContent, previousActSummary, turnOfEvents, interviewTranscript, writerOutput, reviewerOutput, prompt, template } = options;
+	const messages: ModelMessage[] = [];
+
+	if (worldContent) {
+		messages.push({ role: 'user', content: ACT_PLOT_SECTION.WORLD_CONTENT + worldContent });
+	}
 
 	if (previousActSummary) {
 		messages.push({ role: 'user', content: ACT_PLOT_SECTION.PREVIOUS_ACT_SUMMARY + previousActSummary });
+	}
+
+	if (interviewTranscript) {
+		const hasValidInterview = interviewTranscript.some((m) => m.role === 'user');
+		if (hasValidInterview) {
+			messages.push({ role: 'user', content: ACT_PLOT_SECTION.INTERVIEW_TRANSCRIPT });
+			messages.push(...interviewTranscript);
+		}
 	}
 
 	if (turnOfEvents) {
 		messages.push({ role: 'user', content: ACT_PLOT_SECTION.TURN_OF_EVENTS + turnOfEvents });
 	}
 
-	messages.push({ role: 'user', content: ACT_PLOT_SECTION.WRITER_OUTPUT + writerOutput });
-	messages.push({ role: 'user', content: reviewerPrompt });
-
-	return messages;
-}
-
-function buildEditorMessages(
-	worldContent: string,
-	previousActSummary: string | null,
-	turnOfEvents: string | null,
-	writerOutput: string,
-	reviewerOutput: string,
-	editorPrompt: string
-): ModelMessage[] {
-	const messages: ModelMessage[] = [{ role: 'user', content: ACT_PLOT_SECTION.WORLD_CONTENT + worldContent }];
-
-	if (previousActSummary) {
-		messages.push({ role: 'user', content: ACT_PLOT_SECTION.PREVIOUS_ACT_SUMMARY + previousActSummary });
+	if (writerOutput) {
+		messages.push({ role: 'user', content: ACT_PLOT_SECTION.WRITER_OUTPUT + writerOutput });
 	}
 
-	if (turnOfEvents) {
-		messages.push({ role: 'user', content: ACT_PLOT_SECTION.TURN_OF_EVENTS + turnOfEvents });
+	if (reviewerOutput) {
+		messages.push({ role: 'user', content: ACT_PLOT_SECTION.REVIEWER_FEEDBACK + reviewerOutput });
 	}
 
-	messages.push({ role: 'user', content: ACT_PLOT_SECTION.WRITER_OUTPUT + writerOutput });
-	messages.push({ role: 'user', content: ACT_PLOT_SECTION.REVIEWER_FEEDBACK + reviewerOutput });
-	messages.push({ role: 'user', content: editorPrompt });
+	messages.push({ role: 'user', content: prompt });
+
+	if (template) {
+		messages.push({ role: 'user', content: ACT_PLOT_SECTION.TEMPLATE + template });
+	}
 
 	return messages;
 }
@@ -133,13 +99,14 @@ function buildEditorMessages(
 export interface GenerateActPlotParams {
 	storyId: string;
 	storyName: string;
-	worldContent: string;
+	worldContent: string | null;
 	actLineId: string;
 	isMainLine: boolean;
 	actNumber: number;
 	plotMode?: PlotMode;
 	isResumeGame?: boolean;
 	onPhaseChange?: (phase: ActPlotPhase) => void;
+	abortSignal?: AbortSignal;
 }
 
 /**
@@ -150,8 +117,8 @@ export interface GenerateActPlotParams {
  *
  * If the reviewer or editor phase fails, falls back to writer output.
  */
-export async function generateActPlot(params: GenerateActPlotParams): Promise<GenerateActPlotResult> {
-	const { storyId, storyName, worldContent, actLineId, isMainLine, actNumber, plotMode, isResumeGame = false, onPhaseChange } = params;
+export async function generateActPlot(params: GenerateActPlotParams): Promise<string> {
+	const { storyName, worldContent, actLineId, actNumber, plotMode, isResumeGame = false, onPhaseChange, abortSignal } = params;
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) {
 		throw new Error(ERR_NO_MAIN_PROVIDER);
@@ -181,15 +148,15 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<Ge
 	onPhaseChange?.('writing');
 	await log.info(LOG_TAG, 'Phase 1: WRITER');
 
-	const writerMessages = buildWriterMessages(
+	const writerMessages = buildActPlotMessages({
 		worldContent,
-		interviewTranscript,
 		previousActSummary,
 		turnOfEvents,
-		generationPrompt,
-		template
-	);
-	const writerResult = await generateText({ model, system: systemPrompt, messages: writerMessages });
+		interviewTranscript,
+		prompt: generationPrompt,
+		template,
+	});
+	const writerResult = await generateText({ model, system: systemPrompt, messages: writerMessages, abortSignal });
 	const writerText = writerResult.text.trim();
 
 	if (!writerText) {
@@ -210,8 +177,14 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<Ge
 			onPhaseChange?.('reviewing');
 			await log.info(LOG_TAG, 'Phase 2: REVIEWER');
 
-			const reviewerMessages = buildReviewerMessages(worldContent, previousActSummary, turnOfEvents, writerText, reviewerPrompt);
-			const reviewerResult = await generateText({ model, system: systemPrompt, messages: reviewerMessages });
+			const reviewerMessages = buildActPlotMessages({
+				worldContent,
+				previousActSummary,
+				turnOfEvents,
+				writerOutput: writerText,
+				prompt: reviewerPrompt,
+			});
+			const reviewerResult = await generateText({ model, system: systemPrompt, messages: reviewerMessages, abortSignal });
 			const reviewerText = reviewerResult.text.trim();
 
 			await log.info(
@@ -227,8 +200,15 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<Ge
 				onPhaseChange?.('editing');
 				await log.info(LOG_TAG, 'Phase 3: EDITOR');
 
-				const editorMessages = buildEditorMessages(worldContent, previousActSummary, turnOfEvents, writerText, reviewerText, editorPrompt);
-				const editorResult = await generateText({ model, system: systemPrompt, messages: editorMessages });
+				const editorMessages = buildActPlotMessages({
+					worldContent,
+					previousActSummary,
+					turnOfEvents,
+					writerOutput: writerText,
+					reviewerOutput: reviewerText,
+					prompt: editorPrompt,
+				});
+				const editorResult = await generateText({ model, system: systemPrompt, messages: editorMessages, abortSignal });
 				const editorText = editorResult.text.trim();
 
 				if (!editorText) {
@@ -240,7 +220,10 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<Ge
 				}
 			}
 		} catch (err) {
-			await log.warn(LOG_TAG, `Review/edit phase failed, falling back to writer output: ${err instanceof Error ? err.message : String(err)}`);
+			await log.warn(
+				LOG_TAG,
+				`Review/edit phase failed, falling back to writer output: ${err instanceof Error ? err.message : String(err)}`
+			);
 			finalText = writerText;
 		}
 	}
@@ -251,14 +234,5 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<Ge
 		finalText = finalText + '\n\n' + ACT_PLOT_RESUME_NOTE.replaceAll('{sceneNumber}', lastSceneNumber.toString());
 	}
 
-	// Write output file
-	const storyFolder = await resolveStoryFolder(storyId, storyName);
-	const lineDir = await getLineDir(storyFolder, actNumber, isMainLine, actLineId);
-	const filePath = `${lineDir}/act-plot.md`;
-
-	await mkdir(lineDir, { baseDir: BaseDirectory.AppData, recursive: true });
-	await writeTextFile(filePath, finalText, { baseDir: BaseDirectory.AppData });
-
-	await log.info(LOG_TAG, `Act-plot pipeline complete for story: ${storyName}`);
-	return { filePath, content: finalText };
+	return finalText;
 }

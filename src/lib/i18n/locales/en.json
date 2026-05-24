@@ -2,6 +2,9 @@
 	"app": {
 		"title": "BYOA — Build Your Own Adventure"
 	},
+	"common": {
+		"actLabel": "Act {n}"
+	},
 	"settings": {
 		"heading": "Settings",
 		"aiProviders": "AI Providers",
@@ -167,7 +170,6 @@
 		"newLine": "+ New Line",
 		"newAct": "+ New Act",
 		"newStory": "+ New Story",
-		"actLabel": "Act {n}",
 		"deleteConfirmTitle": "Delete {type}?",
 		"deleteStoryConfirm": "Are you sure you want to delete {name}? All acts and lines within this story will also be removed.",
 		"deleteActConfirm": "Are you sure you want to delete {name}? All lines within this act will also be removed.",
