@@ -478,7 +478,6 @@
 			actNumber: act.actNumber,
 			actLine,
 		});
-
 		try {
 			resetActEnded();
 			await clearMessages();

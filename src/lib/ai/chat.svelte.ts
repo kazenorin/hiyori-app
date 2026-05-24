@@ -404,7 +404,7 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 
 	try {
 		const worldContent = await ensureWorldFile(story.id, story.name, abortSignal);
-		const actPlot = await ensureActPlot({ story, actLine });
+		const actPlot = await ensureActPlot({ story, actLine, worldContent, abortSignal });
 		const actSummary = getLatestActSummary(previousSceneNumber);
 		const previousNarrativeVariables = getPreviousNarrativeMessage(messages);
 		const targetWordCount = settings.targetWordCount;
