@@ -12,7 +12,7 @@ import {
 	type ProviderConfig,
 	settings,
 } from '$lib/stores/settings.svelte';
-import { getActiveDirectorNotesText, getActiveWorldContent } from '$lib/stores/stories.svelte';
+import { getActiveDirectorNotesText } from '$lib/stores/stories.svelte';
 import { ensureActPlot } from '$lib/ai/act-plot';
 import { extractImportantPhrases } from './important-phrases-extractor';
 import {
@@ -402,7 +402,7 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 	}
 
 	try {
-		const worldContent = getActiveWorldContent() ?? '';
+		const worldContent = (await loadStoryWorldContent(story.id, story.name)) ?? '';
 		const actPlot = await ensureActPlot({ story, actLine });
 		const actSummary = getLatestActSummary(previousSceneNumber);
 		const previousNarrativeVariables = getPreviousNarrativeMessage(messages);

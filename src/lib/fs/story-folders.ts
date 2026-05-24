@@ -1,5 +1,6 @@
 import { readTextFile, mkdir, exists, readDir, rename, BaseDirectory, type DirEntry } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
+import * as dbStories from '$lib/db/stories';
 import { generateWorld } from '$lib/ai/world-generator';
 import { log } from '$lib/logging/logger';
 
@@ -131,9 +132,7 @@ export async function ensureWorldFile(storyId: string, storyName: string): Promi
  */
 export async function loadStoryWorldContent(storyId: string, storyName?: string): Promise<string | null> {
 	const folder = await dbStoryFolders.getStoryFolder(storyId);
-	if (!folder && !storyName) return null;
-
-	const folderName = folder ?? (await resolveStoryFolder(storyId, storyName!));
+	const folderName = folder ?? (await resolveStoryFolder(storyId, storyName ?? (await dbStories.getStory(storyId))?.name ?? ''));
 	const worldPath = `${folderName}/world.md`;
 	try {
 		const worldExists = await exists(worldPath, { baseDir: BaseDirectory.AppData });

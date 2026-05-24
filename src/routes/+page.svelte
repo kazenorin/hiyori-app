@@ -54,7 +54,6 @@
 		getActiveAct,
 		getActiveActLineId,
 		getActiveStory,
-		getActiveWorldContent,
 		getActiveDirectorNotesText,
 		getIsSelectingStory,
 		setActPlotGenerationPhase,
@@ -79,6 +78,7 @@
 	import type { Story } from '$lib/db/stories';
 	import { onMount } from 'svelte';
 	import { t } from '$lib/i18n';
+	import {loadStoryWorldContent} from "$lib/fs/story-folders";
 
 	let input = $state('');
 	let chatContainer = $state<HTMLDivElement | null>(null);
@@ -176,11 +176,12 @@
 	}
 
 	async function handleForkWithInterview(messageIndex: number) {
+		const story = getActiveStory();
 		const actLineId = getActiveActLineId();
 		const act = getActiveAct();
-		if (!actLineId || !act || getIsStreaming() || isForking) return;
+		if (!actLineId || !act || !story || getIsStreaming() || isForking) return;
 
-		const worldContent = getActiveWorldContent();
+		const worldContent = await loadStoryWorldContent(story.id, story.name);
 		if (!worldContent) return;
 
 		isForking = true;
@@ -472,7 +473,7 @@
 		if (!act) return;
 
 		const actSummary = getMessages().findLast((m) => m.role === 'assistant')?.actSummary ?? '';
-		const worldContent = getActiveWorldContent() ?? '';
+		const worldContent = (await loadStoryWorldContent(story.id, story.name)) ?? '';
 		const actPlot = await ensureActPlot({
 			worldContent,
 			story,

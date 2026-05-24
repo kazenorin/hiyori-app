@@ -10,8 +10,8 @@ import { Memory } from '$lib/features/memory';
 import { getDefaultPlotMode, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { loadLocaleStrings } from '$lib/localization';
-import { loadStoryWorldContent, ensureWorldFile, resolveStoryFolder, renameStoryFolder, deriveStoryName } from '$lib/fs/story-folders';
-import { writeTextFile, exists, remove, copyFile, mkdir, rename, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { deriveStoryName, ensureWorldFile, renameStoryFolder, resolveStoryFolder } from '$lib/fs/story-folders';
+import { BaseDirectory, copyFile, exists, mkdir, remove, rename, writeTextFile } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, getLineDir, resolveLineSubdir } from '$lib/ai/card-output-path';
 import { type ActPlotPhase } from '$lib/ai/act-plot';
@@ -28,7 +28,6 @@ let activeActId = $state<string | null>(null);
 let activeActLineId = $state<string | null>(null);
 let isLoading = $state(true);
 let isSelectingStory = $state(false);
-let activeWorldContent = $state<string | null>(null);
 let actPlotGenerationPhase = $state<ActPlotPhase | null>(null);
 let activeDirectorNotes = $state<dbDirectorNotes.DirectorNote[]>([]);
 
@@ -58,9 +57,6 @@ export function getIsLoading(): boolean {
 }
 export function getIsSelectingStory(): boolean {
 	return isSelectingStory;
-}
-export function getActiveWorldContent(): string | null {
-	return activeWorldContent;
 }
 export function getActPlotGenerationPhase(): ActPlotPhase | null {
 	return actPlotGenerationPhase;
@@ -112,11 +108,9 @@ export async function loadActLines(actId: string): Promise<void> {
  */
 async function loadStoryContent(storyId: string, storyName: string): Promise<void> {
 	await ensureWorldFile(storyId, storyName);
-	activeWorldContent = await loadStoryWorldContent(storyId, storyName);
 }
 
 function resetStoryContent(): void {
-	activeWorldContent = null;
 	activeDirectorNotes = [];
 }
 
