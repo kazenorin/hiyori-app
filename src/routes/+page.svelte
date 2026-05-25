@@ -58,6 +58,7 @@
 		getActiveDirectorNotesText,
 		getIsSelectingStory,
 		setActPlotGenerationPhase,
+		selectAct,
 		selectActLine,
 	} from '$lib/stores/stories.svelte';
 	import { settings, isDirectorModeEnabled } from '$lib/stores/settings.svelte';
@@ -341,9 +342,10 @@
 		}
 	}
 
-	async function handleStartGameAfterInterview(isGameResumeMode: boolean, actNumber: number = 1) {
+	async function handleStartGameAfterInterview(isGameResumeMode: boolean, actNumber?: number) {
 		const refs = getActLineAndStory();
 		if (!refs) return;
+		const resolvedActNumber = actNumber ?? getActiveAct()?.actNumber ?? 1;
 		createStoryError = null;
 		const actLine = await getActLine(refs.actLineId);
 		if (!actLine) {
@@ -365,7 +367,7 @@
 				const actPlotContent = await ensureActPlot({
 					worldContent,
 					story: refs.story,
-					actNumber,
+					actNumber: resolvedActNumber,
 					actLine,
 					isResumeGame: isGameResumeMode,
 					onPhaseChange: setActPlotGenerationPhase,
@@ -461,36 +463,38 @@
 
 	async function handleContinueToNextAct() {
 		if (getIsBusy()) return;
-		const actLineId = getActiveActLineId();
-		if (!actLineId) return;
+		const endedActLineId = getActiveActLineId();
+		if (!endedActLineId) return;
 
 		const story = getActiveStory();
-		const actLine = await getActLine(actLineId);
-		const endingType = await getEndingType(actLineId);
-		if (!story || !actLine || !endingType) return;
+		const endedActLine = await getActLine(endedActLineId);
+		const endingType = await getEndingType(endedActLineId);
+		if (!story || !endedActLine || !endingType) return;
 
-		const act = getActiveAct();
-		if (!act) return;
+		const endedAct = getActiveAct();
+		if (!endedAct) return;
 
-		const actSummary = getMessages().findLast((m) => m.role === 'assistant')?.actSummary ?? '';
+		const currentSummary = getMessages().findLast((m) => m.role === 'assistant')?.actSummary ?? '';
 		const worldContent = await ensureWorldFile(story.id, story.name);
-		const actPlot = await ensureActPlot({
+
+		const currentActPlot = await ensureActPlot({
 			worldContent,
 			story,
-			actNumber: act.actNumber,
-			actLine,
+			actNumber: endedAct.actNumber,
+			actLine: endedActLine,
 		});
+
 		try {
-			resetActEnded();
 			await clearMessages();
-			const newAct = await createAct(story.id, t('common.actLabel', { n: act.actNumber + 1 }), actLineId);
+			const newAct = await createAct(story.id, t('common.actLabel', { n: endedAct.actNumber + 1 }), endedActLineId);
+			await selectAct(newAct.id);
 			const newLine = await createActLine(newAct.id, 'Main');
 			await selectActLine(newLine.id);
 
 			const newActContext: NewActInterviewContext = {
 				endingType,
-				actSummary,
-				actPlot,
+				actSummary: currentSummary,
+				actPlot: currentActPlot,
 			};
 
 			await enterActPlotInterviewMode(newLine.id, worldContent, undefined, undefined, newActContext);
@@ -739,7 +743,7 @@
 										<div class="leading-relaxed text-primary-900-100 min-w-0">
 											<MarkdownContent content={message.content} />
 										</div>
-									{#if !getIsBusy()}
+										{#if !getIsBusy()}
 											<div class="flex gap-2 mt-3 pt-3 border-t border-primary-200-800">
 												<button
 													class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"

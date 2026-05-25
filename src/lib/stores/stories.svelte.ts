@@ -179,9 +179,10 @@ export async function createAct(storyId: string, name: string, continuesFromActL
 	return act;
 }
 
-export async function createActLine(actId: string, name: string): Promise<dbActLines.ActLineMeta> {
-	const isFirst = actLines.length === 0;
-	const line = await dbActLines.createActLine(crypto.randomUUID(), actId, name, isFirst, getDefaultPlotMode());
+export async function createActLine(actId: string, name: string, plotMode?: PlotMode): Promise<dbActLines.ActLineMeta> {
+	const existingLines = await dbActLines.getActLinesForAct(actId);
+	const isFirst = existingLines.length === 0;
+	const line = await dbActLines.createActLine(crypto.randomUUID(), actId, name, isFirst, plotMode ?? getDefaultPlotMode());
 	actLines = [...actLines, line];
 	return line;
 }
