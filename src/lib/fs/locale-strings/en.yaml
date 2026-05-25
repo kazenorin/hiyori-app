@@ -280,8 +280,8 @@ features:
 
       The previous act ended with a **{endingType}** ending.
       The player has chosen to continue the story into a new act.
-    previousActPlotReference: |
-      ## Previous Act Plot (for reference)
+    nextActInterviewPurpose: |
+      The previous act's story has concluded with a **{endingType}** ending. Acknowledging where the narrative left off, your purpose in this conversation is to interview the player about the coming act — discuss what the next act should be about, what direction the narrative should take, and how the story should evolve from here.
   importWorld:
     messages:
       importCompleteWithInterview: 'Import complete! Starting interview...'

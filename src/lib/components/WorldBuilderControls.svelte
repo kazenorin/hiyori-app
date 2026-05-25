@@ -13,10 +13,12 @@
 		isGameResumeMode: boolean;
 		hasInterviewMessages: boolean;
 		isStreaming: boolean;
+		showUpdateWorldCardOption: boolean;
+		updateWorldCard: boolean;
 		onCreateStory: () => void;
 		onStartImmediate: () => void;
 		onStartInterview: () => void;
-		onStartGame: (isGameResumeMode: boolean) => void;
+		onStartGame: (isGameResumeMode: boolean, updateWorld: boolean) => void;
 		onCancel: () => void;
 		onDismissOptions: () => void;
 		onRetry: () => void;
@@ -34,6 +36,8 @@
 		isGameResumeMode,
 		hasInterviewMessages,
 		isStreaming,
+		showUpdateWorldCardOption,
+		updateWorldCard = $bindable(false),
 		onCreateStory,
 		onStartImmediate,
 		onStartInterview,
@@ -225,8 +229,14 @@
 								</div>
 							</div>
 						{:else}
+							{#if showUpdateWorldCardOption}
+								<label class="flex items-center justify-center gap-2 text-sm text-surface-500">
+									<input type="checkbox" class="checkbox" bind:checked={updateWorldCard} />
+									{t('components.worldBuilderControls.updateWorldCard')}
+								</label>
+							{/if}
 							<div class="flex justify-center">
-								<button class="btn preset-filled-success-500" type="button" onclick={() => onStartGame(isGameResumeMode)}>
+								<button class="btn preset-filled-success-500" type="button" onclick={() => onStartGame(isGameResumeMode, updateWorldCard)}>
 									{t('components.worldBuilderControls.startGame')}
 								</button>
 							</div>

@@ -220,7 +220,8 @@
 			"interviewMode": "訪談模式",
 			"storyCreationOptions": "故事建立選項",
 			"createStoryPrompt": "要建立「{name}」嗎？",
-			"createStoryDefault": "要建立故事嗎？"
+			"createStoryDefault": "要建立故事嗎？",
+			"updateWorldCard": "更新世界卡"
 		}
 	},
 	"characterCards": {

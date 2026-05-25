@@ -36,6 +36,7 @@
 		getIsActive as getIsWorldBuilderActive,
 		getIsComplete as getIsWorldBuilderComplete,
 		getIsStreaming as getIsWorldBuilderStreaming,
+		getIsNextActInterview,
 		getMessages as getWorldBuilderMessages,
 		getStoryName as getWorldBuilderStoryName,
 		getWorldContent as getWorldBuilderContent,
@@ -80,7 +81,9 @@
 	import type { Story } from '$lib/db/stories';
 	import { onMount } from 'svelte';
 	import { t } from '$lib/i18n';
-	import { ensureWorldFile } from '$lib/fs/story-folders';
+	import { ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-folders';
+	import { updateWorldCard } from '$lib/ai/world-generator';
+	import { getPrecedingActSummary, getPremisesMessages } from '$lib/db/act-lines';
 
 	let input = $state('');
 	let chatContainer = $state<HTMLDivElement | null>(null);
@@ -111,6 +114,7 @@
 	let createStoryError = $state<string | null>(null);
 	let isForking = $state(false);
 	let forkChoiceIndex = $state<number | null>(null);
+	let updateWorldCardChecked = $state(false);
 	let forkPlotMode = $state<'guidance' | 'phaseEvent' | null>(null);
 
 	// Reset fork choice when navigating to a different act line
@@ -342,10 +346,10 @@
 		}
 	}
 
-	async function handleStartGameAfterInterview(isGameResumeMode: boolean, actNumber?: number) {
+	async function handleStartGameAfterInterview(isGameResumeMode: boolean, updateWorld: boolean = false) {
 		const refs = getActLineAndStory();
 		if (!refs) return;
-		const resolvedActNumber = actNumber ?? getActiveAct()?.actNumber ?? 1;
+		const resolvedActNumber = getActiveAct()?.actNumber ?? 1;
 		createStoryError = null;
 		const actLine = await getActLine(refs.actLineId);
 		if (!actLine) {
@@ -357,15 +361,31 @@
 		try {
 			await removeLastInterviewAssistantMessage();
 
-			const worldContent = getWorldBuilderContent();
+			let worldContent = getWorldBuilderContent();
 			if (worldContent) {
+				if (updateWorld) {
+					const folderName = await resolveStoryFolder(refs.story.id, refs.story.name);
+					const actSummary = await getPrecedingActSummary(refs.actLineId);
+					const transcript = await getPremisesMessages(refs.actLineId);
+					const transcriptMessages = transcript
+						.filter((m) => m.role === 'user' || m.role === 'assistant')
+						.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+					worldContent = await updateWorldCard({
+						folderName,
+						currentWorldContent: worldContent,
+						actSummary: actSummary ?? '',
+						interviewTranscript: transcriptMessages,
+					});
+				}
+
 				let forkedMessage: Message | undefined = undefined;
 				if (isGameResumeMode) {
 					forkedMessage = await enrichForkedMessageWithTurnOfEvents(refs.actLineId);
 				}
 
 				const actPlotContent = await ensureActPlot({
-					worldContent,
+					worldContent: worldContent ?? undefined,
 					story: refs.story,
 					actNumber: resolvedActNumber,
 					actLine,
@@ -376,7 +396,7 @@
 
 				if (forkedMessage) {
 					await regenerateGameDataForForkedMessage(forkedMessage.id, {
-						worldContent,
+						worldContent: worldContent ?? '',
 						actPlot: actPlotContent,
 						actSummary: forkedMessage.actSummary ?? '',
 						directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(forkedMessage.sceneNumber ?? 1) : '',
@@ -477,13 +497,6 @@
 		const currentSummary = getMessages().findLast((m) => m.role === 'assistant')?.actSummary ?? '';
 		const worldContent = await ensureWorldFile(story.id, story.name);
 
-		const currentActPlot = await ensureActPlot({
-			worldContent,
-			story,
-			actNumber: endedAct.actNumber,
-			actLine: endedActLine,
-		});
-
 		try {
 			await clearMessages();
 			const newAct = await createAct(story.id, t('common.actLabel', { n: endedAct.actNumber + 1 }), endedActLineId);
@@ -494,7 +507,6 @@
 			const newActContext: NewActInterviewContext = {
 				endingType,
 				actSummary: currentSummary,
-				actPlot: currentActPlot,
 			};
 
 			await enterActPlotInterviewMode(newLine.id, worldContent, undefined, undefined, newActContext);
@@ -679,6 +691,8 @@
 				isGameResumeMode={getGameResumeInterview()}
 				hasInterviewMessages={getHasInterviewMessages()}
 				isStreaming={getIsWorldBuilderStreaming()}
+				showUpdateWorldCardOption={getIsNextActInterview()}
+				bind:updateWorldCard={updateWorldCardChecked}
 				onCreateStory={handleCreateFromWorldBuilder}
 				onStartImmediate={handleCreateStoryImmediate}
 				onStartInterview={handleCreateActPlotInterview}

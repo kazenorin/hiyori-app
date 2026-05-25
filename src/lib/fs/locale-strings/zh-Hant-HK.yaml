@@ -272,8 +272,8 @@ features:
 
       上一個章節以 **{endingType}** 結局作結。
       玩家已選擇繼續故事至新的章節。
-    previousActPlotReference: |
-      ## 上一章節劇情 (供參考)
+    nextActInterviewPurpose: |
+      上一個章節的故事已以 **{endingType}** 結局作結。在了解敘事留下的发展之後，你在這段對話中的目的是訪談玩家關於接下來的章節——討論下一個章節應該關於什麼、敘事應該走向何方，以及故事應該如何從這裡演進。
   importWorld:
     messages:
       importCompleteWithInterview: '匯入完成！正在啟動訪談...'

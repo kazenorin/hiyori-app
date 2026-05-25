@@ -36,7 +36,6 @@ export interface ForkInterviewContext {
 export interface NewActInterviewContext {
 	endingType: string;
 	actSummary: string;
-	actPlot: string;
 }
 
 const COMPLETION_MARKER = '[WORLD_BUILDER_COMPLETE]';
@@ -102,6 +101,9 @@ export function getGameResumeInterview(): boolean {
 }
 export function getInterviewActLineId(): string | null {
 	return interviewActLineId;
+}
+export function getIsNextActInterview(): boolean {
+	return actPlotInterview && !gameResumeInterview;
 }
 
 async function loadActiveLocales() {
@@ -207,7 +209,7 @@ export async function enterActPlotInterviewMode(
 		loadActPlotInterviewExtractionPrompt(),
 	]);
 
-	const interviewSystemRole = newActContext ? ls('pipeline.interview.systemRole.nextAct') : ls('pipeline.interview.systemRole.preGame');
+	const interviewSystemRole = newActContext ? ls('features.interview.systemRole.nextAct') : ls('features.interview.systemRole.preGame');
 
 	// Inject general instructions and system role into the interview system prompt and cache it
 	cachedInterviewSystemPrompt = interviewSystemPrompt
@@ -228,12 +230,10 @@ export async function enterActPlotInterviewMode(
 	}
 
 	if (newActContext) {
-		const conclusionSection = ls('pipeline.interview.previousActConclusion', { endingType: newActContext.endingType });
+		const conclusionSection = ls('features.interview.previousActConclusion', { endingType: newActContext.endingType });
 		interviewHiddenContext.push({ role: 'user', content: `${conclusionSection}\n\n${newActContext.actSummary}` });
-		if (newActContext.actPlot) {
-			const plotReferenceSection = ls('pipeline.interview.previousActPlotReference');
-			interviewHiddenContext.push({ role: 'user', content: `${plotReferenceSection}\n\n${newActContext.actPlot}` });
-		}
+		const purposeSection = ls('features.interview.nextActInterviewPurpose', { endingType: newActContext.endingType });
+		interviewHiddenContext.push({ role: 'user', content: purposeSection });
 	}
 
 	// When forking, include act summary so the interview

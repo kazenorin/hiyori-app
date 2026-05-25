@@ -61,6 +61,8 @@ const generateWorldFromChatPrompt = new LocalizedPromptFile(promptDefaults, 'wor
 const generateWorldFromChatSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/generate-world-from-chat-system-prompt.md');
 const generateWorldFromCardsPrompt = new LocalizedPromptFile(promptDefaults, 'world/generate-world-from-cards-prompt.md');
 const generateWorldFromCardsSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/generate-world-from-cards-system-prompt.md');
+const updateWorldFromActPrompt = new LocalizedPromptFile(promptDefaults, 'world/update-world-from-act-prompt.md');
+const updateWorldFromActSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/update-world-from-act-system-prompt.md');
 const worldBuilderSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/world-builder-system-prompt.md');
 
 // Act
@@ -114,6 +116,8 @@ export const loadGenerateWorldFromChatPrompt = (): Promise<string> => generateWo
 export const loadGenerateWorldFromChatSystemPrompt = (): Promise<string> => generateWorldFromChatSystemPrompt.load();
 export const loadGenerateWorldFromCardsPrompt = (): Promise<string> => generateWorldFromCardsPrompt.load();
 export const loadGenerateWorldFromCardsSystemPrompt = (): Promise<string> => generateWorldFromCardsSystemPrompt.load();
+export const loadUpdateWorldFromActPrompt = (): Promise<string> => updateWorldFromActPrompt.load();
+export const loadUpdateWorldFromActSystemPrompt = (): Promise<string> => updateWorldFromActSystemPrompt.load();
 export const loadWorldBuilderSystemPrompt = (): Promise<string> => worldBuilderSystemPrompt.load();
 export const loadActCardTemplate = (): Promise<string> => actCardTemplate.load();
 export const loadActPlotTemplate = (): Promise<string> => actPlotTemplate.load();
@@ -321,6 +325,8 @@ registerDefaults([
 	choicesExtractionPrompt,
 	generateWorldFromCardsPrompt,
 	generateWorldFromCardsSystemPrompt,
+	updateWorldFromActPrompt,
+	updateWorldFromActSystemPrompt,
 	importantPhrasesPrompt,
 	memoryExtractionSystemPrompt,
 	memoryExtractionPrompt,

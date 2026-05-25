@@ -220,7 +220,8 @@
 			"interviewMode": "Interview mode",
 			"storyCreationOptions": "Story creation options",
 			"createStoryPrompt": "Create \"{name}\"?",
-			"createStoryDefault": "Create story?"
+			"createStoryDefault": "Create story?",
+			"updateWorldCard": "Update world card"
 		}
 	},
 	"characterCards": {

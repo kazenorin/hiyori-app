@@ -80,10 +80,14 @@ export async function createActLine(
 ): Promise<ActLineMeta> {
 	const db = getDatabase();
 	const now = Date.now();
-	await db.execute(
-		'INSERT INTO act_line_meta (id, act_id, name, is_main_line, created_at, plot_mode) VALUES ($1, $2, $3, $4, $5, $6)',
-		[id, actId, name, isMainLine ? 1 : 0, now, plotMode]
-	);
+	await db.execute('INSERT INTO act_line_meta (id, act_id, name, is_main_line, created_at, plot_mode) VALUES ($1, $2, $3, $4, $5, $6)', [
+		id,
+		actId,
+		name,
+		isMainLine ? 1 : 0,
+		now,
+		plotMode,
+	]);
 	if (plotMode === 'phaseEvent' && isMainLine) {
 		await db.execute(
 			'INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
@@ -189,10 +193,10 @@ export async function deleteEventsForMessage(messageId: string): Promise<void> {
 
 export async function hasEventForMessage(messageId: string, event: ActLineEventType): Promise<boolean> {
 	const db = getDatabase();
-	const rows = await db.select<{ cnt: number }[]>(
-		'SELECT COUNT(*) as cnt FROM act_line_events WHERE message_id = $1 AND event = $2',
-		[messageId, event]
-	);
+	const rows = await db.select<{ cnt: number }[]>('SELECT COUNT(*) as cnt FROM act_line_events WHERE message_id = $1 AND event = $2', [
+		messageId,
+		event,
+	]);
 	return rows.length > 0 && rows[0].cnt > 0;
 }
 
@@ -272,9 +276,7 @@ export interface ActLineEventSummary {
 	isEpilogueWritten: boolean;
 }
 
-export async function batchGetActLineEventSummary(
-	actLineIds: string[]
-): Promise<Map<string, ActLineEventSummary>> {
+export async function batchGetActLineEventSummary(actLineIds: string[]): Promise<Map<string, ActLineEventSummary>> {
 	const result = new Map<string, ActLineEventSummary>();
 	if (actLineIds.length === 0) return result;
 
@@ -370,10 +372,7 @@ export async function removeMessagesFromActLine(actLineId: string, messageIds: s
 	await db.execute(`DELETE FROM act_lines WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [actLineId, ...messageIds]);
 
 	if (minDeletedSeq != null) {
-		await db.execute(
-			'DELETE FROM act_line_events WHERE act_line_id = $1 AND message_sequence >= $2',
-			[actLineId, minDeletedSeq]
-		);
+		await db.execute('DELETE FROM act_line_events WHERE act_line_id = $1 AND message_sequence >= $2', [actLineId, minDeletedSeq]);
 	}
 
 	await removeOrphanedMessages(db, messageIds);
@@ -561,14 +560,27 @@ export async function branchFromLine(
 	}
 
 	// Copy events up to the fork point
-	const events = await db.select<ActLineEventRow[]>(
-		'SELECT * FROM act_line_events WHERE act_line_id = $1 AND message_sequence <= $2',
-		[fromLineId, fromSequence]
-	);
+	const events = await db.select<ActLineEventRow[]>('SELECT * FROM act_line_events WHERE act_line_id = $1 AND message_sequence <= $2', [
+		fromLineId,
+		fromSequence,
+	]);
 	if (events.length > 0) {
-		const eValues = events.map((_, i) => `($${i * 7 + 1}, $${i * 7 + 2}, $${i * 7 + 3}, $${i * 7 + 4}, $${i * 7 + 5}, $${i * 7 + 6}, $${i * 7 + 7})`).join(', ');
-		const eParams = events.flatMap((e) => [crypto.randomUUID(), newLineId, e.message_id, e.message_sequence, e.event, e.value, e.created_at]);
-		await db.execute(`INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ${eValues}`, eParams);
+		const eValues = events
+			.map((_, i) => `($${i * 7 + 1}, $${i * 7 + 2}, $${i * 7 + 3}, $${i * 7 + 4}, $${i * 7 + 5}, $${i * 7 + 6}, $${i * 7 + 7})`)
+			.join(', ');
+		const eParams = events.flatMap((e) => [
+			crypto.randomUUID(),
+			newLineId,
+			e.message_id,
+			e.message_sequence,
+			e.event,
+			e.value,
+			e.created_at,
+		]);
+		await db.execute(
+			`INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ${eValues}`,
+			eParams
+		);
 	}
 
 	return { lineMeta, remappedMessageIds };
@@ -660,6 +672,26 @@ export async function getLatestActSummary(actLineId: string): Promise<string | n
 			 AND m.act_summary IS NOT NULL
 		 ORDER BY al.sequence DESC
 		 LIMIT 1`,
+		[actLineId]
+	);
+	return rows.length > 0 ? rows[0].act_summary : null;
+}
+
+export async function getPrecedingActSummary(actLineId: string): Promise<string | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ act_summary: string | null }[]>(
+		`SELECT (
+			SELECT m2.act_summary
+			FROM act_lines al2
+				JOIN messages m2 ON m2.id = al2.message_id
+			WHERE al2.act_line_id = a.continues_from_act_line_id
+				AND m2.act_summary IS NOT NULL
+			ORDER BY al2.sequence DESC
+			LIMIT 1
+		) AS act_summary
+		FROM act_line_meta alm
+			JOIN acts a ON a.id = alm.act_id
+		WHERE alm.id = $1`,
 		[actLineId]
 	);
 	return rows.length > 0 ? rows[0].act_summary : null;

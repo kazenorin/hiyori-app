@@ -7,6 +7,8 @@ import {
 	loadWorldTemplate,
 	loadGenerateWorldFromChatPrompt,
 	loadGenerateWorldFromChatSystemPrompt,
+	loadUpdateWorldFromActPrompt,
+	loadUpdateWorldFromActSystemPrompt,
 	loadWorldBuilderSystemPrompt,
 	loadMemoryExtractionSystemPrompt,
 	loadMemoryExtractionPrompt,
@@ -64,6 +66,8 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 		await loadWorldTemplate();
 		await loadGenerateWorldFromChatPrompt();
 		await loadGenerateWorldFromChatSystemPrompt();
+		await loadUpdateWorldFromActPrompt();
+		await loadUpdateWorldFromActSystemPrompt();
 		await loadWorldBuilderSystemPrompt();
 
 		await log.info('init', 'Loading memory prompts...');
