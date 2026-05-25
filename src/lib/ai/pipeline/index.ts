@@ -185,6 +185,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		previousTurnOfEvents,
 		editorOutput: state.editorOutput,
 		directorNotes,
+		previousActSummaries: input.previousActSummaries,
+		actNumber: story.actLine.actNumber,
 	};
 	state = await runGamePhases(ctx, state, postEditorCtx, tracker.trackPhase);
 	state = await runGmTemplateFitter(ctx, state, tracker.trackPhase);

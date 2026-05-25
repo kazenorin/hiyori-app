@@ -9,6 +9,7 @@ import type { ActLineMeta } from '$lib/db/act-lines';
 export interface ActLineContext extends ActLineMeta {
 	currentActPhase: ActPhase | null;
 	lastPlotGeneration: number | null;
+	actNumber: number;
 }
 
 export interface PipelineState {
@@ -105,6 +106,7 @@ export interface CommonPipelineInput {
 	actSummary: string;
 	directorNotes: string;
 	previousNarrativeVariables: NarrativeVariables | undefined;
+	previousActSummaries: { actNumber: number; summary: string }[];
 	story: StoryContext;
 	assistant: AssistantContext;
 	completedScenes: number;
@@ -135,6 +137,8 @@ export interface PreEditorContext {
 	player: PlayerContext | undefined;
 	previousTurnOfEvents: string | undefined;
 	directorNotes: string;
+	previousActSummaries: { actNumber: number; summary: string }[];
+	actNumber: number;
 }
 
 /** Context shared by Game Master and Plot Planner phases. */
@@ -149,6 +153,8 @@ export interface PostEditorContext {
 	previousTurnOfEvents: string | undefined;
 	editorOutput: string | undefined;
 	directorNotes: string;
+	previousActSummaries: { actNumber: number; summary: string }[];
+	actNumber: number;
 }
 
 export type PreEditorContextFactory = new (input: CommonPipelineInput) => PreEditorContext;

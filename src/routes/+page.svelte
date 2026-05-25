@@ -17,7 +17,6 @@
 		isUserMessage,
 		loadActLineMessages,
 		regenerateLastResponse,
-		resetActEnded,
 		runEpilogueFlow,
 		sendInitialNarration,
 		sendMessage,
@@ -83,7 +82,8 @@
 	import { t } from '$lib/i18n';
 	import { ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-folders';
 	import { updateWorldCard } from '$lib/ai/world-generator';
-	import { getPrecedingActSummary, getPremisesMessages } from '$lib/db/act-lines';
+	import { getPrecedingActSummary, getPremisesMessages, getMessageSequence } from '$lib/db/act-lines';
+	import { generateAndRecordActShortSummary } from '$lib/ai/act-short-summary-generator';
 
 	let input = $state('');
 	let chatContainer = $state<HTMLDivElement | null>(null);
@@ -494,8 +494,18 @@
 		const endedAct = getActiveAct();
 		if (!endedAct) return;
 
-		const currentSummary = getMessages().findLast((m) => m.role === 'assistant')?.actSummary ?? '';
+		const lastAssistantMsg = getMessages().findLast((m) => m.role === 'assistant');
+		const currentSummary = lastAssistantMsg?.actSummary ?? '';
 		const worldContent = await ensureWorldFile(story.id, story.name);
+
+		const assistantMessageSequence = lastAssistantMsg?.id ? await getMessageSequence(endedActLineId, lastAssistantMsg.id) : null;
+
+		if (lastAssistantMsg && assistantMessageSequence != null && currentSummary) {
+			generateAndRecordActShortSummary(endedActLineId, currentSummary, {
+				messageId: lastAssistantMsg.id,
+				messageSequence: assistantMessageSequence,
+			}).catch(() => {});
+		}
 
 		try {
 			await clearMessages();

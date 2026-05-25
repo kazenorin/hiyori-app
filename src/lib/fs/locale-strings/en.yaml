@@ -40,6 +40,7 @@ common:
     summary: Summary
     directorNotes: Director's Notes
     actPhase: Act Phase
+    storySoFar: Story So Far
   descriptions:
     interviewTranscript: The following is an interview exchange about the story and premises.
     directorNotes: "The following notes represent the player's explicit creative direction. They override all other context including Act Plot and Act Summary. Honor them with the highest priority."
@@ -50,6 +51,8 @@ pipeline:
     characterSummaries: Character Summaries
     characterProfiles: Character Profiles
   extraction:
+    actShortSummary: 'You are a narrative summarizer. Your task is to distill the provided act summary into exactly 3 concise sentences that capture the key events, conflicts, and outcomes of the act. Focus on what happened and how the story changed. Write in past tense. After the 3 sentences, add a blank line then evaluate the characters listed in the act summary. List only those you judge to be important and likely to appear again in future acts, each on a new line, in the format: "Name (one-line description of their role or arc in this act)". Order them from most to least important. Do not list minor or one-off characters. Output only the summary and character list — no labels, no headings, no commentary.'
+    actShortSummaryCharacterPrefix: 'Characters in this act'
     gameMaster: Generate the game data based on the available information in the chat history.
     gmPhaseEventPhaseAdvancementTrigger: '- **Determine Act Phase**: If you believe the story has completed the {actPhase} Phase, use the `advance-phase` tool exactly once to move the story forward.'
     gmActEndTrigger: >
@@ -129,6 +132,9 @@ pipeline:
     goal: Goal
     relationships: Relationships
     voice: Voice
+    sceneCountSingular: '1 scene'
+    sceneCountPlural: '{count} scenes'
+    actWithNumber: 'Act {actNumber}'
     characterSummaries: 'Summaries of each character for recent Scenes since Scene {sceneNumber}.'
     actPhases:
       introduction: Introduction

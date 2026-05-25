@@ -13,6 +13,8 @@ export const EMPTY_PRE_EDITOR_CONTEXT: PreEditorContext = {
 	player: undefined,
 	previousTurnOfEvents: undefined,
 	directorNotes: '',
+	previousActSummaries: [],
+	actNumber: 1,
 };
 
 const IMPORT_STORY_CONTEXT: StoryContext = {
@@ -27,6 +29,7 @@ const IMPORT_STORY_CONTEXT: StoryContext = {
 		plotMode: 'guidance',
 		currentActPhase: null,
 		lastPlotGeneration: null,
+		actNumber: 1,
 	},
 };
 

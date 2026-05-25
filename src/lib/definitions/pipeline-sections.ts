@@ -1,5 +1,5 @@
-import {ls} from "$lib/localization";
-import type {ActPhase} from '$lib/ai/narrative-types';
+import { ls } from '$lib/localization';
+import type { ActPhase } from '$lib/ai/narrative-types';
 import {
 	worldContentHeader,
 	actPlotHeader,
@@ -19,9 +19,10 @@ import {
 	turnOfEventsHeader,
 	templateHeader,
 	directorNotesHeader,
+	storySoFarHeader,
 	sectionFormat,
 } from './common-headers';
-import {getLocalizedActPhase} from './pipeline-prompts';
+import { getLocalizedActPhase } from './pipeline-prompts';
 
 export const interviewTranscriptDescription = () => ls('common.descriptions.interviewTranscript');
 
@@ -65,6 +66,9 @@ export const SECTION = {
 	},
 	get ACT_PHASE() {
 		return sectionFormat(actPhaseHeader());
+	},
+	get STORY_SO_FAR() {
+		return sectionFormat(storySoFarHeader());
 	},
 };
 
@@ -115,4 +119,10 @@ export function formatDirectorNotesSection(directorNotes: string | null | undefi
 export function formatActPhaseSection(actPhase: ActPhase | null | undefined): string[] {
 	if (!actPhase || actPhase.trim().length === 0) return [];
 	return [SECTION.ACT_PHASE + getLocalizedActPhase(actPhase)];
+}
+
+export function formatStorySoFar(summaries: { actNumber: number; summary: string }[], currentActNumber: number): string[] {
+	if (currentActNumber <= 1 || summaries.length === 0) return [];
+	const items = summaries.map((s) => `**${ls('pipeline.labels.actWithNumber', { actNumber: s.actNumber })}:** ${s.summary}`).join('\n\n');
+	return [SECTION.STORY_SO_FAR + items];
 }

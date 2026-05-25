@@ -233,23 +233,19 @@ export async function sendMessage(actLineId: string, message: string): Promise<v
 	const actLine = await requireActLine(actLineId);
 	const currentActPhase = await dbActLines.getActPhase(actLineId);
 	const currentLastPlotGen = await dbActLines.getLastPlotGeneration(actLineId);
+	const actNumber = (await dbActLines.getActNumberForActLine(actLineId)) ?? 1;
 	error = null;
 	const requestContext: RequestContext = {
 		message,
 		mainConfig,
 		story,
-		actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen },
+		actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen, actNumber },
 		previousSceneNumber: findLastNonNullSceneNumber(messages) ?? 0,
 		previousNarrativeVariables: getPreviousNarrativeMessage(messages),
 	};
 	return executeNarrativeRequest(requestContext);
 }
 
-/**
- * Send the narration template as a hidden message.
- * The narration message is never persisted or shown in the UI.
- * Only the assistant's response (the opening narrative) is persisted and displayed.
- */
 export async function sendInitialNarration(actLineId: string): Promise<void> {
 	setMessages([]);
 	const mainConfig = requireMainConfig();
@@ -257,11 +253,12 @@ export async function sendInitialNarration(actLineId: string): Promise<void> {
 	const actLine = await requireActLine(actLineId);
 	const currentActPhase = await dbActLines.getActPhase(actLineId);
 	const currentLastPlotGen = await dbActLines.getLastPlotGeneration(actLineId);
+	const actNumber = (await dbActLines.getActNumberForActLine(actLineId)) ?? 1;
 	error = null;
 	const requestContext: RequestContext = {
 		mainConfig,
 		story,
-		actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen },
+		actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen, actNumber },
 		previousSceneNumber: 0,
 		previousNarrativeVariables: undefined,
 	};
@@ -310,6 +307,18 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 		const templateReplacements = { sceneNumber: String(nextSceneNumber) };
 		const targetWordCount = settings.targetWordCount;
 
+		const previousActSummaries: { actNumber: number; summary: string }[] = [];
+		if (actLine.actNumber > 1) {
+			const actLineChain = await dbActLines.traceActLineChain(actLine.id);
+			const previousActLines = actLineChain.slice(0, -1);
+			for (const entry of previousActLines) {
+				const shortSummary = await dbActLines.getActShortSummary(entry.actLineId);
+				if (shortSummary) {
+					previousActSummaries.push({ actNumber: entry.actNumber, summary: shortSummary });
+				}
+			}
+		}
+
 		const pipelineCallbacks = createPipelineCallbacks({
 			getCurrentMessage,
 			setCurrentMessage,
@@ -330,6 +339,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 			actSummary,
 			previousNarrativeVariables,
 			previousScenePlot,
+			previousActSummaries,
 			player: playerContext,
 			story: { storyId: story.id, storyName: story.name, actLine },
 			assistant,
@@ -403,6 +413,8 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 		awaitPendingAsyncPhases('epilogue', true),
 	]);
 
+	const actNumber = (await dbActLines.getActNumberForActLine(actLineId)) ?? 1;
+
 	if (!endingType) {
 		error = 'Cannot run epilogue: no ending type set.';
 		return;
@@ -454,8 +466,13 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 			actPlot,
 			actSummary,
 			previousNarrativeVariables,
+			previousActSummaries: [],
 			endingType,
-			story: { storyId: story.id, storyName: story.name, actLine: { ...actLine, currentActPhase: null, lastPlotGeneration: null } },
+			story: {
+				storyId: story.id,
+				storyName: story.name,
+				actLine: { ...actLine, currentActPhase: null, lastPlotGeneration: null, actNumber },
+			},
 			assistant: epilogueAssistant,
 			completedScenes: previousSceneNumber,
 			directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(previousSceneNumber + 1) : '',
@@ -634,6 +651,8 @@ async function regenerateGameData(
 		previousTurnOfEvents: assistantMsg.variables?.turnOfEvents ?? undefined,
 		editorOutput: assistantMsg.content,
 		directorNotes: '',
+		previousActSummaries: [],
+		actNumber: 1,
 	};
 
 	const trackPhase: TrackPhase = (_phaseName, result) => result.state;

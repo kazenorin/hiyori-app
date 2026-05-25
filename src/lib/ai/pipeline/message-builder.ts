@@ -6,6 +6,7 @@ import {
 	formatActPhaseSection,
 	formatDirectorNotesSection,
 	formatPreviousNarrativeBody,
+	formatStorySoFar,
 	formatTurnOfEventsSection,
 	SECTION,
 } from '$lib/definitions/pipeline-sections';
@@ -138,6 +139,7 @@ function buildPreEditorSections(ctx: PreEditorContext): string[] {
 		SECTION.WORLD_CONTENT + ctx.worldContent,
 		SECTION.ACT_PLOT + ctx.actPlot,
 		...formatActPhaseSection(ctx.actPhase),
+		...formatStorySoFar(ctx.previousActSummaries, ctx.actNumber),
 		...formattedActSummary(ctx.actSummary),
 		...(ctx.previousScenePlot ? [SECTION.SCENE_PLOT + ctx.previousScenePlot] : []),
 		...formatPreviousNarrativeBody(ctx.previousNarrativeBody, ctx.completedScenes),
@@ -152,6 +154,7 @@ function buildPostEditorSections(ctx: PostEditorContext): string[] {
 	return [
 		SECTION.ACT_PLOT + ctx.actPlot,
 		...formatActPhaseSection(ctx.actPhase),
+		...formatStorySoFar(ctx.previousActSummaries, ctx.actNumber),
 		...formattedActSummary(ctx.actSummary),
 		...(ctx.previousScenePlot ? [SECTION.SCENE_PLOT + ctx.previousScenePlot] : []),
 		...formatPreviousNarrativeBody(ctx.previousNarrativeBody, ctx.completedScenes),
@@ -246,8 +249,10 @@ export abstract class AbstractPreEditorContext implements PreEditorContext {
 	actPhase: ActPhase | null;
 	actPlot: string;
 	actSummary: string;
+	actNumber: number;
 	completedScenes: number;
 	directorNotes: string;
+	previousActSummaries: { actNumber: number; summary: string }[];
 	previousNarrativeBody: string | undefined;
 	previousTurnOfEvents: string | undefined;
 	worldContent: string;
@@ -261,6 +266,7 @@ export abstract class AbstractPreEditorContext implements PreEditorContext {
 		actSummary,
 		completedScenes,
 		directorNotes,
+		previousActSummaries,
 		story,
 		previousNarrativeVariables,
 	}: CommonPipelineInput) {
@@ -268,8 +274,10 @@ export abstract class AbstractPreEditorContext implements PreEditorContext {
 		this.actPlot = actPlot;
 		this.actPhase = story.actLine.currentActPhase;
 		this.actSummary = actSummary;
+		this.actNumber = story.actLine.actNumber;
 		this.completedScenes = completedScenes;
 		this.directorNotes = directorNotes;
+		this.previousActSummaries = previousActSummaries;
 		this.previousNarrativeBody = previousNarrativeVariables?.narrativeBody ?? undefined;
 		this.previousTurnOfEvents = previousNarrativeVariables?.turnOfEvents ?? undefined;
 	}

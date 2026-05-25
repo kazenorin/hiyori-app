@@ -6,10 +6,11 @@ import type { Story } from './stories';
 import type { PlotMode, ActPhase, EndingType } from '$lib/ai/narrative-types';
 import type { AssistantContext } from '$lib/ai/pipeline/types';
 import { getActPhaseIndex, isValidPlotMode, isValidEndingType } from '$lib/ai/narrative-types';
+import * as dbActs from './acts';
 
 // --- Act line event types ---
 
-export type ActLineEventType = 'plot-generated' | 'act-phase-transition' | 'ending' | 'epilogue-written';
+export type ActLineEventType = 'plot-generated' | 'act-phase-transition' | 'ending' | 'epilogue-written' | 'act-short-summary';
 
 export interface ActLineEvent {
 	id: string;
@@ -186,6 +187,14 @@ export async function recordEpilogueWritten(actLineId: string, assistant: Assist
 	);
 }
 
+export async function recordActShortSummary(actLineId: string, assistant: AssistantContext, summary: string): Promise<void> {
+	const db = getDatabase();
+	await db.execute(
+		'INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+		[crypto.randomUUID(), actLineId, assistant.messageId, assistant.messageSequence, 'act-short-summary', summary, Date.now()]
+	);
+}
+
 export async function deleteEventsForMessage(messageId: string): Promise<void> {
 	const db = getDatabase();
 	await db.execute('DELETE FROM act_line_events WHERE message_id = $1', [messageId]);
@@ -254,6 +263,15 @@ export async function isEpilogueWritten(actLineId: string): Promise<boolean> {
 		[actLineId]
 	);
 	return rows.length > 0 && rows[0].cnt > 0;
+}
+
+export async function getActShortSummary(actLineId: string): Promise<string | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ value: string }[]>(
+		`SELECT value FROM act_line_events WHERE act_line_id = $1 AND event = 'act-short-summary' ORDER BY message_sequence DESC LIMIT 1`,
+		[actLineId]
+	);
+	return rows.length > 0 ? rows[0].value : null;
 }
 
 export async function getEndingType(actLineId: string): Promise<EndingType | null> {
@@ -695,6 +713,24 @@ export async function getPrecedingActSummary(actLineId: string): Promise<string 
 		[actLineId]
 	);
 	return rows.length > 0 ? rows[0].act_summary : null;
+}
+
+export async function traceActLineChain(actLineId: string): Promise<{ actLineId: string; actNumber: number }[]> {
+	const result: { actLineId: string; actNumber: number }[] = [];
+	let currentActLineId: string | null = actLineId;
+	const visited = new Set<string>();
+
+	while (currentActLineId && !visited.has(currentActLineId)) {
+		visited.add(currentActLineId);
+		const actLine = await getActLine(currentActLineId);
+		if (!actLine) break;
+		const act = await dbActs.getAct(actLine.actId);
+		if (!act) break;
+		result.unshift({ actLineId: currentActLineId, actNumber: act.actNumber });
+		currentActLineId = act.continuesFromActLineId;
+	}
+
+	return result;
 }
 
 async function removeOrphanedMessages(db: Database, messageIds: string[]): Promise<string[]> {
