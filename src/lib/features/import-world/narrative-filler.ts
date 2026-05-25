@@ -64,7 +64,6 @@ async function fillNarrativeVariables(
 		const ctx = buildNarrativeFillerRunContext(retryConfig, abortController.signal, callbacks, writerOutputTemplate);
 
 		let state: PipelineState = {
-			currentPhase: null,
 			editorOutput: msg.content,
 			editorVariables: msg.variables ?? null,
 		};

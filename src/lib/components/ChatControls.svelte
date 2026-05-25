@@ -8,6 +8,7 @@
 		activePlotThreads: string[];
 		decisionContext: string | null;
 		isStreaming: boolean;
+		isBusy: boolean;
 		actEnded: boolean;
 		storyConcluded: boolean;
 		onDecisionClick: (decision: string) => void;
@@ -21,6 +22,7 @@
 		activePlotThreads,
 		decisionContext,
 		isStreaming,
+		isBusy,
 		actEnded,
 		storyConcluded,
 		onDecisionClick,
@@ -123,6 +125,11 @@
 
 {#if hasContent && !isStreaming}
 	<div class="border-t border-surface-200-800 bg-surface-50-950">
+		{#if isBusy}
+			<div class="h-1 overflow-hidden bg-surface-200-800">
+				<div class="h-full w-1/3 bg-primary-500 animate-indeterminate-bar"></div>
+			</div>
+		{/if}
 		{#if isMinimized}
 			<button
 				transition:slide={{ duration: 200 }}
@@ -181,10 +188,10 @@
 							<div class="text-surface-950-50"><MarkdownContent content={t('components.chatControls.actEndDecisionContext')} /></div>
 						</div>
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-							<button class="btn preset-filled-primary-500 w-full text-left" type="button" onclick={() => onContinueToNextAct?.()}>
+							<button class="btn preset-filled-primary-500 w-full text-left" type="button" onclick={() => onContinueToNextAct?.()} disabled={isBusy}>
 								{t('components.chatControls.continueToNextAct')}
 							</button>
-							<button class="btn preset-tonal w-full text-left" type="button" onclick={() => onEndStory?.()}>
+							<button class="btn preset-tonal w-full text-left" type="button" onclick={() => onEndStory?.()} disabled={isBusy}>
 								{t('components.chatControls.endTheStory')}
 							</button>
 						</div>
@@ -217,6 +224,7 @@
 												class="btn preset-filled-primary-500 w-full text-left line-clamp-2 whitespace-normal"
 												type="button"
 												onclick={() => onDecisionClick(decision)}
+												disabled={isBusy}
 											>
 												{i + 1}. {decision}
 											</button>

@@ -4,7 +4,34 @@ import type { Message } from './messages';
 import { type MessageRow, mapRowToMessage, cloneMessage } from './messages';
 import type { Story } from './stories';
 import type { PlotMode, ActPhase, EndingType } from '$lib/ai/narrative-types';
+import type { AssistantContext } from '$lib/ai/pipeline/types';
 import { getActPhaseIndex, isValidPlotMode, isValidEndingType } from '$lib/ai/narrative-types';
+
+// --- Act line event types ---
+
+export type ActLineEventType = 'plot-generated' | 'act-phase-transition' | 'ending' | 'epilogue-written';
+
+export interface ActLineEvent {
+	id: string;
+	actLineId: string;
+	messageId: string | null;
+	messageSequence: number;
+	event: ActLineEventType;
+	value: string | null;
+	createdAt: number;
+}
+
+export interface ActLineEventRow {
+	id: string;
+	act_line_id: string;
+	message_id: string | null;
+	message_sequence: number;
+	event: string;
+	value: string | null;
+	created_at: number;
+}
+
+// --- Act line meta ---
 
 export interface ActLineMeta {
 	id: string;
@@ -13,11 +40,6 @@ export interface ActLineMeta {
 	isMainLine: boolean;
 	createdAt: number;
 	plotMode: PlotMode;
-	lastPlotGeneration: number | null;
-	actPhase: ActPhase | null;
-	endedAt: number | null;
-	endingType: EndingType | null;
-	epilogueWrittenAt: number | null;
 }
 
 interface ActLineMetaRow {
@@ -27,11 +49,6 @@ interface ActLineMetaRow {
 	is_main_line: number;
 	created_at: number;
 	plot_mode: string;
-	last_plot_generation: number | null;
-	act_phase: string | null;
-	ended_at: number | null;
-	ending_type: string | null;
-	epilogue_written_at: number | null;
 }
 
 interface ActLineEntryRow {
@@ -42,8 +59,6 @@ interface ActLineEntryRow {
 
 function rowToActLineMeta(row: ActLineMetaRow): ActLineMeta {
 	const plotMode: PlotMode = isValidPlotMode(row.plot_mode) ? row.plot_mode : 'guidance';
-	const actPhase: ActPhase | null = row.act_phase && getActPhaseIndex(row.act_phase) >= 0 ? (row.act_phase as ActPhase) : null;
-	const endingType: EndingType | null = row.ending_type && isValidEndingType(row.ending_type) ? row.ending_type : null;
 	return {
 		id: row.id,
 		actId: row.act_id,
@@ -51,32 +66,30 @@ function rowToActLineMeta(row: ActLineMetaRow): ActLineMeta {
 		isMainLine: row.is_main_line === 1,
 		createdAt: row.created_at,
 		plotMode,
-		lastPlotGeneration: row.last_plot_generation,
-		actPhase,
-		endedAt: row.ended_at,
-		endingType,
-		epilogueWrittenAt: row.epilogue_written_at,
 	};
 }
 
 // === act_line_meta operations ===
 
-/** Create a new act line. initialActPhase: undefined = auto-set based on plotMode; null = explicitly no phase. */
 export async function createActLine(
 	id: string,
 	actId: string,
 	name: string,
 	isMainLine: boolean = false,
-	plotMode: PlotMode = 'guidance',
-	initialActPhase?: ActPhase | null
+	plotMode: PlotMode = 'guidance'
 ): Promise<ActLineMeta> {
 	const db = getDatabase();
 	const now = Date.now();
-	const actPhase: ActPhase | null = initialActPhase !== undefined ? initialActPhase : plotMode === 'phaseEvent' ? 'introduction' : null;
 	await db.execute(
-		'INSERT INTO act_line_meta (id, act_id, name, is_main_line, created_at, plot_mode, last_plot_generation, act_phase, ended_at, ending_type) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)',
-		[id, actId, name, isMainLine ? 1 : 0, now, plotMode, null, actPhase, null, null]
+		'INSERT INTO act_line_meta (id, act_id, name, is_main_line, created_at, plot_mode) VALUES ($1, $2, $3, $4, $5, $6)',
+		[id, actId, name, isMainLine ? 1 : 0, now, plotMode]
 	);
+	if (plotMode === 'phaseEvent' && isMainLine) {
+		await db.execute(
+			'INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+			[crypto.randomUUID(), id, null, 0, 'act-phase-transition', 'introduction', now]
+		);
+	}
 	return {
 		id,
 		actId,
@@ -84,11 +97,6 @@ export async function createActLine(
 		isMainLine,
 		createdAt: now,
 		plotMode,
-		lastPlotGeneration: null,
-		actPhase,
-		endedAt: null,
-		endingType: null,
-		epilogueWrittenAt: null,
 	};
 }
 
@@ -128,15 +136,195 @@ export async function deleteActLine(id: string): Promise<void> {
 	]);
 	const messageIds = [...new Set([...lineMessageRows.map((r) => r.message_id), ...premiseMessageRows.map((r) => r.message_id)])];
 
-	// Delete junction table entries
+	// Delete junction table entries and events
 	await db.execute('DELETE FROM act_lines WHERE act_line_id = $1', [id]);
 	await db.execute('DELETE FROM act_line_premises WHERE act_line_id = $1', [id]);
+	await db.execute('DELETE FROM act_line_events WHERE act_line_id = $1', [id]);
 
 	// Garbage-collect messages no longer referenced by any act line or premises
 	await removeOrphanedMessages(db, messageIds);
 
 	// Delete the act line metadata row
 	await db.execute('DELETE FROM act_line_meta WHERE id = $1', [id]);
+}
+
+// === act_line_events — write operations ===
+
+export async function recordPlotGeneration(actLineId: string, assistant: AssistantContext, sceneNumber: number): Promise<void> {
+	const db = getDatabase();
+	await db.execute(
+		'INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+		[crypto.randomUUID(), actLineId, assistant.messageId, assistant.messageSequence, 'plot-generated', String(sceneNumber), Date.now()]
+	);
+}
+
+export async function recordActPhaseTransition(actLineId: string, assistant: AssistantContext, phase: ActPhase): Promise<void> {
+	const db = getDatabase();
+	await db.execute(
+		'INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+		[crypto.randomUUID(), actLineId, assistant.messageId, assistant.messageSequence, 'act-phase-transition', phase, Date.now()]
+	);
+}
+
+export async function recordEnding(actLineId: string, assistant: AssistantContext, endingType: EndingType): Promise<void> {
+	const db = getDatabase();
+	await db.execute(
+		'INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+		[crypto.randomUUID(), actLineId, assistant.messageId, assistant.messageSequence, 'ending', endingType, Date.now()]
+	);
+}
+
+export async function recordEpilogueWritten(actLineId: string, assistant: AssistantContext): Promise<void> {
+	const db = getDatabase();
+	await db.execute(
+		'INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+		[crypto.randomUUID(), actLineId, assistant.messageId, assistant.messageSequence, 'epilogue-written', null, Date.now()]
+	);
+}
+
+export async function deleteEventsForMessage(messageId: string): Promise<void> {
+	const db = getDatabase();
+	await db.execute('DELETE FROM act_line_events WHERE message_id = $1', [messageId]);
+}
+
+export async function hasEventForMessage(messageId: string, event: ActLineEventType): Promise<boolean> {
+	const db = getDatabase();
+	const rows = await db.select<{ cnt: number }[]>(
+		'SELECT COUNT(*) as cnt FROM act_line_events WHERE message_id = $1 AND event = $2',
+		[messageId, event]
+	);
+	return rows.length > 0 && rows[0].cnt > 0;
+}
+
+// === act_line_events — read operations ===
+
+export async function getActPhase(actLineId: string): Promise<ActPhase | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ value: string }[]>(
+		`SELECT value FROM act_line_events
+		 WHERE act_line_id = $1 AND event = 'act-phase-transition'
+		 ORDER BY message_sequence DESC LIMIT 1`,
+		[actLineId]
+	);
+	if (rows.length === 0) return null;
+	const val = rows[0].value;
+	return val && getActPhaseIndex(val) >= 0 ? (val as ActPhase) : null;
+}
+
+export async function getLastPlotGeneration(actLineId: string): Promise<number | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ value: string }[]>(
+		`WITH last_phase_transition AS (
+				SELECT MAX(message_sequence) AS max_seq
+				FROM act_line_events
+				WHERE act_line_id = $1 AND event = 'act-phase-transition'
+			)
+			SELECT ale.value
+			FROM act_line_events ale
+			CROSS JOIN last_phase_transition lpt
+			WHERE ale.act_line_id = $1
+			  AND ale.event = 'plot-generated'
+			  AND ale.message_sequence > COALESCE(lpt.max_seq, 0)
+			ORDER BY ale.message_sequence DESC
+			LIMIT 1`,
+		[actLineId]
+	);
+	if (rows.length === 0 || rows[0].value == null) return null;
+	const parsed = parseInt(rows[0].value, 10);
+	return isNaN(parsed) ? null : parsed;
+}
+
+export async function isActLineEnded(actLineId: string): Promise<boolean> {
+	const db = getDatabase();
+	const rows = await db.select<{ cnt: number }[]>(
+		`SELECT COUNT(*) as cnt FROM act_line_events WHERE act_line_id = $1 AND event = 'ending'`,
+		[actLineId]
+	);
+	return rows.length > 0 && rows[0].cnt > 0;
+}
+
+export async function isEpilogueWritten(actLineId: string): Promise<boolean> {
+	const db = getDatabase();
+	const rows = await db.select<{ cnt: number }[]>(
+		`SELECT COUNT(*) as cnt FROM act_line_events WHERE act_line_id = $1 AND event = 'epilogue-written'`,
+		[actLineId]
+	);
+	return rows.length > 0 && rows[0].cnt > 0;
+}
+
+export async function getEndingType(actLineId: string): Promise<EndingType | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ value: string }[]>(
+		`SELECT value FROM act_line_events WHERE act_line_id = $1 AND event = 'ending' ORDER BY message_sequence DESC LIMIT 1`,
+		[actLineId]
+	);
+	if (rows.length === 0) return null;
+	return isValidEndingType(rows[0].value) ? rows[0].value : null;
+}
+
+// === act_line_events — batch read ===
+
+export interface ActLineEventSummary {
+	actPhase: ActPhase | null;
+	lastPlotGeneration: number | null;
+	endingType: EndingType | null;
+	endedAt: number | null;
+	isEpilogueWritten: boolean;
+}
+
+export async function batchGetActLineEventSummary(
+	actLineIds: string[]
+): Promise<Map<string, ActLineEventSummary>> {
+	const result = new Map<string, ActLineEventSummary>();
+	if (actLineIds.length === 0) return result;
+
+	for (const id of actLineIds) {
+		result.set(id, { actPhase: null, lastPlotGeneration: null, endingType: null, endedAt: null, isEpilogueWritten: false });
+	}
+
+	const db = getDatabase();
+	const ph = actLineIds.map((_, i) => `$${i + 1}`).join(', ');
+	const rows = await db.select<ActLineEventRow[]>(
+		`SELECT id, act_line_id, message_id, message_sequence, event, value, created_at
+		 FROM act_line_events
+		 WHERE act_line_id IN (${ph})
+		 ORDER BY act_line_id, message_sequence DESC`,
+		actLineIds
+	);
+
+	const phaseTransitionSeqs = new Map<string, number>();
+
+	for (const row of rows) {
+		const summary = result.get(row.act_line_id);
+		if (!summary) continue;
+
+		if (row.event === 'act-phase-transition') {
+			if (summary.actPhase === null) {
+				const val = row.value;
+				summary.actPhase = val && getActPhaseIndex(val) >= 0 ? (val as ActPhase) : null;
+				phaseTransitionSeqs.set(row.act_line_id, row.message_sequence);
+			}
+		} else if (row.event === 'plot-generated') {
+			if (summary.lastPlotGeneration === null) {
+				const phaseSeq = phaseTransitionSeqs.get(row.act_line_id) ?? 0;
+				if (row.message_sequence > phaseSeq && row.value != null) {
+					const parsed = parseInt(row.value, 10);
+					if (!isNaN(parsed)) {
+						summary.lastPlotGeneration = parsed;
+					}
+				}
+			}
+		} else if (row.event === 'ending') {
+			if (summary.endingType === null) {
+				summary.endingType = isValidEndingType(row.value ?? '') ? (row.value as EndingType) : null;
+				summary.endedAt = row.created_at;
+			}
+		} else if (row.event === 'epilogue-written') {
+			summary.isEpilogueWritten = true;
+		}
+	}
+
+	return result;
 }
 
 // === act_lines operations ===
@@ -172,7 +360,21 @@ export async function removeMessagesFromActLine(actLineId: string, messageIds: s
 	const db = getDatabase();
 
 	const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
+
+	const seqRows = await db.select<{ min_seq: number }[]>(
+		`SELECT MIN(sequence) AS min_seq FROM act_lines WHERE act_line_id = $1 AND message_id IN (${placeholders})`,
+		[actLineId, ...messageIds]
+	);
+	const minDeletedSeq = seqRows[0]?.min_seq;
+
 	await db.execute(`DELETE FROM act_lines WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [actLineId, ...messageIds]);
+
+	if (minDeletedSeq != null) {
+		await db.execute(
+			'DELETE FROM act_line_events WHERE act_line_id = $1 AND message_sequence >= $2',
+			[actLineId, minDeletedSeq]
+		);
+	}
 
 	await removeOrphanedMessages(db, messageIds);
 	return messageIds;
@@ -317,14 +519,10 @@ export async function branchFromLine(
 ): Promise<BranchResult> {
 	const db = getDatabase();
 
-	// Resolve mode: override takes precedence, otherwise inherit from source
 	const sourceLine = await getActLine(fromLineId);
 	const resolvedMode = plotModeOverride ?? sourceLine?.plotMode ?? 'guidance';
-	// When no mode override, inherit source line's actPhase; switching modes resets it
-	const initialActPhase = plotModeOverride === undefined ? sourceLine?.actPhase : undefined;
 
-	// Create new act line meta (branches are never main lines)
-	const lineMeta = await createActLine(newLineId, actId, name, false, resolvedMode, initialActPhase);
+	const lineMeta = await createActLine(newLineId, actId, name, false, resolvedMode);
 
 	// Copy entries up to fromSequence
 	const entries = await db.select<ActLineEntryRow[]>(
@@ -360,6 +558,17 @@ export async function branchFromLine(
 		const pValues = premises.map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(', ');
 		const pParams = premises.flatMap((p) => [newLineId, p.message_id, p.sequence]);
 		await db.execute(`INSERT INTO act_line_premises (act_line_id, message_id, sequence) VALUES ${pValues}`, pParams);
+	}
+
+	// Copy events up to the fork point
+	const events = await db.select<ActLineEventRow[]>(
+		'SELECT * FROM act_line_events WHERE act_line_id = $1 AND message_sequence <= $2',
+		[fromLineId, fromSequence]
+	);
+	if (events.length > 0) {
+		const eValues = events.map((_, i) => `($${i * 7 + 1}, $${i * 7 + 2}, $${i * 7 + 3}, $${i * 7 + 4}, $${i * 7 + 5}, $${i * 7 + 6}, $${i * 7 + 7})`).join(', ');
+		const eParams = events.flatMap((e) => [crypto.randomUUID(), newLineId, e.message_id, e.message_sequence, e.event, e.value, e.created_at]);
+		await db.execute(`INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ${eValues}`, eParams);
 	}
 
 	return { lineMeta, remappedMessageIds };
@@ -469,81 +678,4 @@ async function removeOrphanedMessages(db: Database, messageIds: string[]): Promi
 		}
 	}
 	return deleted;
-}
-
-// === plot mode / act phase operations ===
-
-export async function updateActLineMetaFields(
-	id: string,
-	fields: {
-		actPhase?: ActPhase | null;
-		lastPlotGeneration?: number | null;
-		plotMode?: PlotMode;
-		endedAt?: number | null;
-		endingType?: EndingType | null;
-		epilogueWrittenAt?: number | null;
-	}
-): Promise<void> {
-	const db = getDatabase();
-	const setClauses: string[] = [];
-	const params: unknown[] = [];
-	let paramIdx = 1;
-
-	if (fields.actPhase !== undefined) {
-		setClauses.push(`act_phase = $${paramIdx++}`);
-		params.push(fields.actPhase);
-	}
-	if (fields.lastPlotGeneration !== undefined) {
-		setClauses.push(`last_plot_generation = $${paramIdx++}`);
-		params.push(fields.lastPlotGeneration);
-	}
-	if (fields.plotMode !== undefined) {
-		setClauses.push(`plot_mode = $${paramIdx++}`);
-		params.push(fields.plotMode);
-	}
-	if (fields.endedAt !== undefined) {
-		setClauses.push(`ended_at = $${paramIdx++}`);
-		params.push(fields.endedAt);
-	}
-	if (fields.endingType !== undefined) {
-		setClauses.push(`ending_type = $${paramIdx++}`);
-		params.push(fields.endingType);
-	}
-	if (fields.epilogueWrittenAt !== undefined) {
-		setClauses.push(`epilogue_written_at = $${paramIdx++}`);
-		params.push(fields.epilogueWrittenAt);
-	}
-	if (setClauses.length === 0) return;
-
-	params.push(id);
-	await db.execute(`UPDATE act_line_meta SET ${setClauses.join(', ')} WHERE id = $${paramIdx}`, params);
-}
-
-export async function endActLine(id: string, endingType: EndingType): Promise<void> {
-	const current = await getActLine(id);
-	if (!current) throw new Error(`Act line ${id} not found`);
-	if (current.endedAt !== null) throw new Error(`Act line ${id} is already ended`);
-	await updateActLineMetaFields(id, {
-		endedAt: Date.now(),
-		endingType: endingType,
-	});
-}
-
-export async function markEpilogueWritten(id: string): Promise<void> {
-	await updateActLineMetaFields(id, { epilogueWrittenAt: Date.now() });
-}
-
-export async function advanceActPhase(id: string, newPhase: ActPhase): Promise<void> {
-	const current = await getActLine(id);
-	if (!current) throw new Error(`Act line ${id} not found`);
-	if (!current.actPhase) throw new Error(`Cannot advance phase: act line ${id} has no current phase`);
-	const currentIdx = getActPhaseIndex(current.actPhase);
-	const newIdx = getActPhaseIndex(newPhase);
-	if (newIdx <= currentIdx) {
-		throw new Error(`Invalid phase transition: ${current.actPhase} → ${newPhase}. Phases must advance forward.`);
-	}
-	if (newIdx < 0) throw new Error(`Invalid act phase: ${newPhase}`);
-	// Reset lastPlotGeneration: the Plot Planner must re-evaluate
-	// on the first scene of the new phase so it can adjust to the phase change.
-	await updateActLineMetaFields(id, { actPhase: newPhase, lastPlotGeneration: null });
 }

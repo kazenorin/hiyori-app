@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { getDatabase } from '$lib/db/database';
 import { type ToolSet } from 'ai';
 import type { ToolContext } from './tools';
-import { fileLog, log } from '$lib/logging/logger';
+import { log } from './utils';
 
 interface SceneRow {
 	role: string;
@@ -36,9 +36,7 @@ export function createReadSceneTool(ctx: ToolContext) {
 		inputSchema,
 		execute: async (input: z.infer<typeof inputSchema>): Promise<string> => {
 			const { sceneNumber } = input;
-			const logMessage = `read-scene triggered: scene=${sceneNumber}, actLineId=${actLine.id}`;
-			await log.debug('tool', logMessage);
-			await fileLog('debug', 'tool', logMessage);
+			await log(`read-scene triggered: scene=${sceneNumber}, actLineId=${actLine.id}`);
 
 			const rows = await querySceneMessages(actLine.id, sceneNumber);
 
@@ -64,9 +62,7 @@ export function createReadSceneTool(ctx: ToolContext) {
 			}
 
 			const result = parts.join('\n\n');
-			const endLogMessage = `read-scene returned ${result.length} chars`;
-			await log.debug('tool', endLogMessage);
-			await fileLog('debug', 'tool', endLogMessage);
+			await log(`read-scene returned ${result.length} chars`);
 
 			return result;
 		},

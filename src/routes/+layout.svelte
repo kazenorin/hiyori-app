@@ -25,7 +25,8 @@
 		renameAct,
 		renameActLine,
 	} from '$lib/stores/stories.svelte';
-	import { loadActLineMessages, clearMessages } from '$lib/ai/chat.svelte';
+	import { batchGetActLineEventSummary } from '$lib/db/act-lines';
+	import { loadActLineMessages, clearMessages, getActEnded, getStoryConcluded } from '$lib/ai/chat.svelte';
 	import {
 		enterWorldBuilderMode,
 		exitWorldBuilderMode,
@@ -33,6 +34,7 @@
 	} from '$lib/features/world-builder/world-builder.svelte';
 	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
 	import { t } from '$lib/i18n';
+	import type { ActLineEventSummary } from '$lib/db/act-lines';
 
 	let { children } = $props();
 	let appError = $state<string | null>(null);
@@ -43,6 +45,7 @@
 	let newActLineName = $state('');
 	let showNewAct = $state(false);
 	let showNewActLine = $state(false);
+	let actLineEventSummaries = $state<Map<string, ActLineEventSummary>>(new Map());
 
 	// Inline rename state
 	let editingId = $state<string | null>(null);
@@ -80,6 +83,21 @@
 		}
 		window.addEventListener('wheel', handleWheel, { passive: false });
 		return () => window.removeEventListener('wheel', handleWheel);
+	});
+
+	// Fetch event summaries for sidebar badges
+	$effect(() => {
+		const lines = getActLines();
+		getActEnded();
+		getStoryConcluded();
+		if (lines.length === 0) {
+			actLineEventSummaries = new Map();
+			return;
+		}
+		const ids = lines.map((l) => l.id);
+		batchGetActLineEventSummary(ids).then((map) => {
+			actLineEventSummaries = map;
+		});
 	});
 
 	onMount(async () => {
@@ -379,7 +397,7 @@
 												/>
 											{:else}
 												<span class="truncate flex-1">{line.name}</span>
-												{#if line.endedAt !== null}
+												{#if actLineEventSummaries.get(line.id)?.endedAt != null}
 													<span class="text-[10px] font-medium text-surface-400-600 ml-1 shrink-0">{t('sidebar.actConcluded')}</span>
 												{/if}
 												<button

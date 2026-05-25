@@ -11,10 +11,14 @@ import {
 	fullOutput,
 	mergeGameData,
 	mergeVariables,
-	type PreEditorContext,
-	type PostEditorContext,
 } from './message-builder';
-import { isPhraseHighlightingEnabled, isPlotPlannerEnabled, isQuickReview, isReviewerEnabled } from '$lib/stores/settings.svelte';
+import {
+	getReevaluationFrequency,
+	isPhraseHighlightingEnabled,
+	isPlotPlannerEnabled,
+	isQuickReview,
+	isReviewerEnabled,
+} from '$lib/stores/settings.svelte';
 import type { ActPhase, EndingType, GameDataFields, NarrativeVariables, PlotMode } from '../narrative-types';
 import { getActPhaseIndex } from '../narrative-types';
 import { summaryHeader } from '$lib/definitions/common-headers';
@@ -32,7 +36,15 @@ import {
 	templateFitterSystemPrompt,
 	totalViolationsLabel,
 } from '$lib/definitions/pipeline-prompts';
-import type { PipelineCallbacks, PipelineProviderConfigs, PipelineState } from './types';
+import type {
+	AssistantContext,
+	PipelineCallbacks,
+	PipelineProviderConfigs,
+	PipelineState,
+	PostEditorContext,
+	PreEditorContext,
+	StoryContext,
+} from './types';
 import { executeStreamingPhase, updateState } from './phase-executor';
 import type { StreamResultMetadata } from '../streaming';
 import type { StreamState } from '../chat-callbacks';
@@ -55,8 +67,8 @@ export const defaultTargetWordCount = 400;
 
 function resolveGmSystemPrompt(ctx: PipelineRunContext): string {
 	const phaseAdvancementTrigger =
-		ctx.plotMode === 'phaseEvent' && ctx.actPhase
-			? ls('pipeline.extraction.gmPhaseEventPhaseAdvancementTrigger', { actPhase: getLocalizedActPhase(ctx.actPhase) })
+		ctx.story.actLine.plotMode === 'phaseEvent' && ctx.story.actLine.currentActPhase
+			? ls('pipeline.extraction.gmPhaseEventPhaseAdvancementTrigger', { actPhase: getLocalizedActPhase(ctx.story.actLine.currentActPhase) })
 			: null;
 	const gmActEndTrigger = resolveGmActEndTrigger(ctx);
 
@@ -70,8 +82,8 @@ function resolveGmSystemPrompt(ctx: PipelineRunContext): string {
 }
 
 function resolveGmActEndTrigger(ctx: PipelineRunContext): string | null {
-	if (ctx.plotMode === 'phaseEvent') {
-		if (!isActEndPhase(ctx.actPhase ?? null)) return null;
+	if (ctx.story.actLine.plotMode === 'phaseEvent') {
+		if (!isActEndPhase(ctx.story.actLine.currentActPhase ?? null)) return null;
 	}
 	return ls('pipeline.extraction.gmActEndTrigger');
 }
@@ -97,15 +109,19 @@ function resolveDirectorNotesReinforcementPhrase(directorNotes: string) {
 }
 
 function resolveCurrentActPhase(ctx: PipelineRunContext) {
-	return ctx.actPhase ? getLocalizedActPhase(ctx.actPhase) : '';
+	return ctx.story.actLine.currentActPhase ? getLocalizedActPhase(ctx.story.actLine.currentActPhase) : '';
 }
 
 function resolveActEndInstruction(plotMode: PlotMode, actPhase: ActPhase | null): string {
+	const params = {
+		closingSceneRules: ls('pipeline.extraction.writer.closingSceneRules').trim(),
+		endingTypeInstructions: ls('tools.endAct.endingTypeInstructions').trim(),
+	};
 	if (plotMode === 'phaseEvent') {
-		if (isActEndPhase(actPhase)) return '\n' + ls('pipeline.extraction.writer.actEndPhaseEvent').trim();
+		if (isActEndPhase(actPhase)) return '\n' + ls('pipeline.extraction.writer.actEndPhaseEvent', params).trim();
 		return '';
 	} else {
-		return '\n' + ls('pipeline.extraction.writer.actEndGuidance').trim();
+		return '\n' + ls('pipeline.extraction.writer.actEndGuidance', params).trim();
 	}
 }
 
@@ -195,10 +211,8 @@ export interface PipelineRunContext {
 	effectiveTargetWordCount: string;
 	currentScene: string;
 	tools?: ToolSet;
-	plotMode: PlotMode;
-	actPhase?: ActPhase | null;
-	lastPlotGeneration?: number | null;
-	reevaluationFrequency: number;
+	story: StoryContext;
+	assistant: AssistantContext;
 }
 
 export type TrackPhase = (
@@ -209,26 +223,33 @@ export type TrackPhase = (
 
 // --- Phase runner functions ---
 
-export async function runWriterPhase(ctx: PipelineRunContext, state: PipelineState, trackPhase: TrackPhase): Promise<PipelineState> {
+export async function runWriterPhase(
+	ctx: PipelineRunContext,
+	state: PipelineState,
+	trackPhase: TrackPhase,
+	extractionPromptOverride?: string
+): Promise<PipelineState> {
 	const previousSceneNumber = ctx.preEditorCtx.completedScenes;
 	const summarizedScenes = previousSceneNumber - 1;
 	const previousTurnOfEvents = ctx.preEditorCtx.previousTurnOfEvents;
 	const directorNotes = ctx.preEditorCtx.directorNotes;
 
 	const writerExtractionPromptTemplate =
-		ctx.plotMode === 'phaseEvent' ? ctx.prompts.phaseEventWriterExtractionPrompt : ctx.prompts.guidanceWriterExtractionPrompt;
+		ctx.story.actLine.plotMode === 'phaseEvent' ? ctx.prompts.phaseEventWriterExtractionPrompt : ctx.prompts.guidanceWriterExtractionPrompt;
 
-	const writerExtractionPrompt = writerExtractionPromptTemplate
-		.replaceAll('{previousScene}', String(previousSceneNumber))
-		.replaceAll('{currentScene}', ctx.currentScene)
-		.replaceAll('{summarizedScenes}', String(summarizedScenes))
-		.replaceAll('{providedSummary}', resolveSummarizedScenes(summarizedScenes))
-		.replaceAll('{providedTurnOfEvents}', resolveTurnOfEvents(previousTurnOfEvents))
-		.replaceAll('{providedDirectorNotes}', resolveDirectorNotes(directorNotes))
-		.replaceAll('{turnOfEventsReinforcementPhrase}', resolveTurnOfEventsReinforcementPhrase(previousTurnOfEvents))
-		.replaceAll('{directorNotesReinforcementPhrase}', resolveDirectorNotesReinforcementPhrase(directorNotes))
-		.replaceAll('{currentActPhase}', resolveCurrentActPhase(ctx))
-		.replaceAll('{actEndInstruction}', resolveActEndInstruction(ctx.plotMode, ctx.actPhase ?? null));
+	const writerExtractionPrompt =
+		extractionPromptOverride ??
+		writerExtractionPromptTemplate
+			.replaceAll('{previousScene}', String(previousSceneNumber))
+			.replaceAll('{currentScene}', ctx.currentScene)
+			.replaceAll('{summarizedScenes}', String(summarizedScenes))
+			.replaceAll('{providedSummary}', resolveSummarizedScenes(summarizedScenes))
+			.replaceAll('{providedTurnOfEvents}', resolveTurnOfEvents(previousTurnOfEvents))
+			.replaceAll('{providedDirectorNotes}', resolveDirectorNotes(directorNotes))
+			.replaceAll('{turnOfEventsReinforcementPhrase}', resolveTurnOfEventsReinforcementPhrase(previousTurnOfEvents))
+			.replaceAll('{directorNotesReinforcementPhrase}', resolveDirectorNotesReinforcementPhrase(directorNotes))
+			.replaceAll('{currentActPhase}', resolveCurrentActPhase(ctx))
+			.replaceAll('{actEndInstruction}', resolveActEndInstruction(ctx.story.actLine.plotMode, ctx.story.actLine.currentActPhase ?? null));
 
 	const result = await executeStreamingPhase(
 		{
@@ -249,39 +270,12 @@ export async function runWriterPhase(ctx: PipelineRunContext, state: PipelineSta
 	return trackPhase('WRITER', result, ctx.providerConfigs.writer?.model);
 }
 
-const ENDING_LABELS: Record<EndingType, string> = {
+export const ENDING_LABELS: Record<EndingType, string> = {
 	good: ls('tools.endAct.endingGood'),
 	bad: ls('tools.endAct.endingBad'),
 	bittersweet: ls('tools.endAct.endingBittersweet'),
 	alternative: ls('tools.endAct.endingAlternative'),
 };
-
-export async function runEpilogueWriterPhase(
-	ctx: PipelineRunContext,
-	state: PipelineState,
-	trackPhase: TrackPhase,
-	endingType: EndingType
-): Promise<PipelineState> {
-	const epilogueExtractionPrompt = ls('pipeline.extraction.writer.epilogue', { endingType: ENDING_LABELS[endingType] });
-
-	const result = await executeStreamingPhase(
-		{
-			phaseName: 'WRITER',
-			systemPrompt: ctx.prompts.writerSystemPrompt
-				.replaceAll('{generalInstructions}', ctx.prompts.generalInstructions)
-				.replaceAll('{targetWordCount}', ctx.effectiveTargetWordCount)
-				.replaceAll('{writerOutputTemplate}', ctx.prompts.writerOutputTemplate),
-			...ctx.sharedParams,
-			tools: undefined,
-			descriptors: getNarrativeDescriptors(),
-			messages: buildWriterMessages(ctx.preEditorCtx, epilogueExtractionPrompt),
-			providerConfig: ctx.providerConfigs.writer,
-			buildStateUpdate: buildWriterStateUpdate,
-		},
-		state
-	);
-	return trackPhase('WRITER', result, ctx.providerConfigs.writer?.model);
-}
 
 export async function runReviewerEditorPhases(
 	ctx: PipelineRunContext,
@@ -290,7 +284,6 @@ export async function runReviewerEditorPhases(
 ): Promise<PipelineState> {
 	if (!isReviewerEnabled()) {
 		ctx.sharedParams.callbacks.onPhaseStart('EDITOR');
-		state = updateState(state, { currentPhase: 'EDITOR' });
 		ctx.sharedParams.callbacks.onPhaseComplete('EDITOR', state);
 		return state;
 	}
@@ -321,7 +314,6 @@ export async function runReviewerEditorPhases(
 
 	if (reviewerAcceptsAsIs(state.reviewerOutput)) {
 		state = updateState(state, {
-			currentPhase: 'EDITOR',
 			editorOutput: state.writerOutput,
 			editorVariables: state.writerVariables ?? null,
 			editorReasoning: null,
@@ -402,13 +394,13 @@ export async function runGamePhases(
 ): Promise<PipelineState> {
 	if (isPlotPlannerEnabled()) {
 		const shouldRunPlotPlanner =
-			ctx.plotMode === 'guidance' ||
-			ctx.lastPlotGeneration == null ||
-			postEditorCtx.completedScenes - ctx.lastPlotGeneration >= ctx.reevaluationFrequency;
+			ctx.story.actLine.plotMode === 'guidance' ||
+			ctx.story.actLine.lastPlotGeneration == null ||
+			postEditorCtx.completedScenes - ctx.story.actLine.lastPlotGeneration >= getReevaluationFrequency();
 
 		if (shouldRunPlotPlanner) {
 			const plotPlannerPrompt =
-				ctx.plotMode === 'phaseEvent' ? ctx.prompts.phaseEventPlotPlannerSystemPrompt : ctx.prompts.plotPlannerSystemPrompt;
+				ctx.story.actLine.plotMode === 'phaseEvent' ? ctx.prompts.phaseEventPlotPlannerSystemPrompt : ctx.prompts.plotPlannerSystemPrompt;
 
 			const [gmResult, plotResult] = await Promise.all([
 				executeGmPhase(ctx, state, postEditorCtx),
@@ -482,7 +474,10 @@ function executePlotPlannerPhase(
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'PLOT_PLANNER'),
 			descriptors: getPlotPlannerDescriptors(),
-			messages: buildGamePhaseMessages(postEditorCtx, plotPlannerExtractionPrompt(ctx.plotMode, ctx.currentScene, ctx.actPhase)),
+			messages: buildGamePhaseMessages(
+				postEditorCtx,
+				plotPlannerExtractionPrompt(ctx.story.actLine.plotMode, ctx.currentScene, ctx.story.actLine.currentActPhase)
+			),
 			providerConfig: ctx.providerConfigs.plotPlanner,
 			buildStateUpdate: buildPlotPlannerStateUpdate,
 		},

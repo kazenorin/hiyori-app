@@ -67,7 +67,6 @@ export async function executeStreamingPhase(
 
 	while (remainingRetries >= 0) {
 		if (abortSignal?.aborted) throw new DOMException('Aborted', 'AbortError');
-		state = updateState(state, { currentPhase: phaseName });
 		callbacks.onPhaseStart(phaseName);
 		let streamResult: Awaited<ReturnType<typeof runStreamingPhase>> | undefined;
 		try {

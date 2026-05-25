@@ -5,6 +5,7 @@ import { Memory } from '$lib/features/memory';
 import type { InventoryCategory } from '$lib/features/memory/inventory-types';
 import { getEmbeddingProviderConfig, settings } from '$lib/stores/settings.svelte';
 import type { ToolSet } from 'ai';
+import { log } from './utils';
 
 export interface QueryInventoryContext {
 	memory: Memory;
@@ -47,8 +48,8 @@ export function createQueryInventoryTool(context: QueryInventoryContext) {
 		inputSchema,
 		execute: async (input: z.infer<typeof inputSchema>): Promise<QueryInventoryOutput> => {
 			const { characterName, itemCategory, includeHistory } = input;
+			await log(`query-inventory triggered: character=${characterName}, category=${itemCategory ?? 'all'}, includeHistory=${includeHistory}`);
 
-			// Resolve aliases to find all names for the character
 			const resolvedNames = await memory.resolveAliases(storyId, actLineId, characterName);
 
 			// Query inventory for all resolved names and combine results

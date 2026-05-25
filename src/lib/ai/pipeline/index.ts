@@ -1,27 +1,136 @@
-import { getDefaultPlotMode, getReevaluationFrequency, isQuickReview } from '$lib/stores/settings.svelte';
-import type { NarrativeVariables } from '../narrative-types';
-import type { EndingType } from '../narrative-types';
-import { DEFAULT_RETRY_CONFIG, type PhaseMetadata, type RetryConfig, toPhaseMetadata } from '../chat-stream';
-import type { PipelineExecution, PipelineInput, PipelineResult, PipelineState, StoryContext } from './types';
-import { aggregateMetadata, updateState } from './phase-executor';
+import { isQuickReview } from '$lib/stores/settings.svelte';
+import { ls } from '$lib/localization';
+import type { ActPhase, EndingType } from '../narrative-types';
+import { DEFAULT_RETRY_CONFIG, type PhaseMetadata, toPhaseMetadata } from '../chat-stream';
+import {
+	type CommonPipelineInput,
+	type PipelineInput,
+	type PipelineProviderConfigs,
+	type PipelineResult,
+	type PipelineState,
+	type PlayerContext,
+	type PostEditorContext,
+	type PreEditorContext,
+	type PreEditorContextFactory,
+} from './types';
+import { aggregateMetadata } from './phase-executor';
 import { type StreamResultMetadata } from '../streaming';
-import { type PreEditorContext, type PostEditorContext } from './message-builder';
 import {
 	defaultTargetWordCount,
+	ENDING_LABELS,
+	maybeExtractImportantPhrases,
+	type PipelinePrompts,
+	type PipelineRunContext,
 	runEditorTemplateFitter,
-	runEpilogueWriterPhase,
 	runGamePhases,
 	runGmTemplateFitter,
 	runReviewerEditorPhases,
 	runWriterPhase,
-	maybeExtractImportantPhrases,
-	type PipelineRunContext,
 	type TrackPhase,
 } from './runners';
+import type { LoadedPrompts } from './prompt-loader';
 import { loadPrompts } from './prompt-loader';
 import { runAsyncPhases } from './summarizer';
 import { buildPipelineProviderConfigs } from '$lib/ai/chat/pipeline-config';
 import { buildTools } from '$lib/ai/tools/tools';
+import { AbstractPreEditorContext } from '$lib/ai/pipeline/message-builder';
+
+class MainPreEditorContext extends AbstractPreEditorContext {
+	previousScenePlot: string | undefined;
+	player: PlayerContext | undefined;
+	constructor(input: PipelineInput) {
+		super(input);
+		this.previousScenePlot = input.previousScenePlot;
+		this.player = input.player;
+	}
+}
+
+class EpiloguePreEditorContext extends AbstractPreEditorContext {
+	actPhase: ActPhase | null = null;
+	previousScenePlot: string | undefined = undefined;
+	player: PlayerContext | undefined = undefined;
+	constructor(input: CommonPipelineInput) {
+		super(input);
+	}
+}
+
+export interface EpiloguePipelineInput extends CommonPipelineInput {
+	endingType: EndingType;
+}
+
+function preparePipelinePrompts(loadedPrompts: LoadedPrompts) {
+	const reviewerPrompt = isQuickReview() ? loadedPrompts.quickReviewerSystemPromptTemplate : loadedPrompts.reviewerSystemPromptTemplate;
+	const prompts: PipelinePrompts = {
+		generalInstructions: loadedPrompts.generalInstructions,
+		writerOutputTemplate: loadedPrompts.writerOutputTemplate,
+		reviewerPrompt,
+		writerSystemPrompt: loadedPrompts.writerSystemPrompt,
+		editorSystemPrompt: loadedPrompts.editorSystemPrompt,
+		gameMasterSystemPrompt: loadedPrompts.gameMasterSystemPrompt,
+		plotPlannerSystemPrompt: loadedPrompts.plotPlannerSystemPrompt,
+		phaseEventPlotPlannerSystemPrompt: loadedPrompts.phaseEventPlotPlannerSystemPrompt,
+		guidanceWriterExtractionPrompt: loadedPrompts.guidanceWriterExtractionPrompt,
+		phaseEventWriterExtractionPrompt: loadedPrompts.phaseEventWriterExtractionPrompt,
+	};
+	return prompts;
+}
+
+async function buildPipelineContext(
+	input: CommonPipelineInput,
+	loadedPrompts: LoadedPrompts,
+	providerConfigs: PipelineProviderConfigs,
+	preEditorContextClass: PreEditorContextFactory
+): Promise<PipelineRunContext> {
+	const { execution, story, assistant, completedScenes, targetWordCount } = input;
+	const { abortSignal, callbacks } = execution;
+
+	const effectiveTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
+	const currentScene = completedScenes > 0 ? String(completedScenes + 1) : '1';
+	const retryConfig = input.retryConfig ?? DEFAULT_RETRY_CONFIG;
+	const sharedParams = { abortSignal, callbacks, retryConfig };
+
+	const preEditorCtx: PreEditorContext = new preEditorContextClass(input);
+
+	const tools = await buildTools(story.storyId, story.actLine, assistant);
+	const prompts = preparePipelinePrompts(loadedPrompts);
+
+	return {
+		sharedParams,
+		providerConfigs,
+		preEditorCtx,
+		prompts,
+		effectiveTargetWordCount,
+		currentScene,
+		tools,
+		story,
+		assistant,
+	};
+}
+
+function buildTrackPhase() {
+	let aggregatedMetadata: StreamResultMetadata | null = null;
+	const phaseEntries: PhaseMetadata[] = [];
+
+	const trackPhase: TrackPhase = (phaseName, result, model) => {
+		aggregatedMetadata = aggregateMetadata(aggregatedMetadata, result.metadata, model);
+		phaseEntries.push(toPhaseMetadata(phaseName, result.metadata, model));
+		return result.state;
+	};
+
+	return {
+		trackPhase,
+		getAggregatedMetadata: () => aggregatedMetadata ?? undefined,
+		getPhaseEntries: () => (phaseEntries.length > 0 ? phaseEntries : undefined),
+	};
+}
+
+function finalizePipelineResult(state: PipelineState, tracker: ReturnType<typeof buildTrackPhase>): PipelineResult {
+	return {
+		state,
+		aggregatedMetadata: tracker.getAggregatedMetadata(),
+		phases: tracker.getPhaseEntries(),
+	};
+}
 
 /**
  * Run the full narrative generation pipeline.
@@ -33,212 +142,76 @@ import { buildTools } from '$lib/ai/tools/tools';
  * Context is passed as user messages, not stuffed into the system prompt.
  */
 export async function runPipeline(input: PipelineInput): Promise<PipelineResult> {
-	const providerConfigs = buildPipelineProviderConfigs();
-	const {
-		execution,
-		worldContent,
-		actPlot,
-		actSummary,
-		directorNotes,
-		previousNarrativeVariables,
-		previousScenePlot,
-		player,
-		story,
-		completedScenes,
-		targetWordCount,
-	} = input;
-	const { abortSignal, callbacks } = execution;
-	const storyId = story.storyId;
-	const storyName = story.storyName;
-	const actLineId = story.actLine.id;
-	const actPhase = story.actLine.actPhase;
-	const lastPlotGeneration = story.actLine.lastPlotGeneration;
-	const plotMode = story.actLine.plotMode ?? getDefaultPlotMode();
-	const effectiveTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
-	const currentScene = completedScenes > 0 ? String(completedScenes + 1) : '1';
-	const previousNarrativeBody = previousNarrativeVariables?.narrativeBody;
-	const previousTurnOfEvents = previousNarrativeVariables?.turnOfEvents;
-	const retryConfig = input.retryConfig ?? DEFAULT_RETRY_CONFIG;
-	const sharedParams = { abortSignal, callbacks, retryConfig };
+	const { previousScenePlot, player, previousNarrativeVariables, story, completedScenes, directorNotes, execution } = input;
+	const previousNarrativeBody = previousNarrativeVariables?.narrativeBody ?? undefined;
+	const previousTurnOfEvents = previousNarrativeVariables?.turnOfEvents ?? undefined;
 
-	const preEditorCtx: PreEditorContext = {
-		worldContent,
-		actPlot,
-		actPhase,
-		actSummary,
-		previousScenePlot,
-		previousNarrativeBody: previousNarrativeBody ?? undefined,
-		completedScenes,
-		player,
-		previousTurnOfEvents: previousTurnOfEvents ?? undefined,
-		directorNotes,
-	};
+	const loadedPrompts: LoadedPrompts = await loadPrompts(story.storyId, story.storyName);
+	const providerConfigs: PipelineProviderConfigs = buildPipelineProviderConfigs();
+	const ctx = await buildPipelineContext(input, loadedPrompts, providerConfigs, MainPreEditorContext);
 
-	let state: PipelineState = { currentPhase: null };
-	let aggregatedMetadata: StreamResultMetadata | null = null;
-	const phaseEntries: PhaseMetadata[] = [];
-
-	const tools = await buildTools(storyId, story.actLine);
-	const loadedPrompts = await loadPrompts(storyId, storyName);
-	const reviewerPrompt = isQuickReview() ? loadedPrompts.quickReviewerSystemPromptTemplate : loadedPrompts.reviewerSystemPromptTemplate;
-
-	const ctx: PipelineRunContext = {
-		sharedParams,
-		providerConfigs,
-		preEditorCtx,
-		prompts: {
-			generalInstructions: loadedPrompts.generalInstructions,
-			writerOutputTemplate: loadedPrompts.writerOutputTemplate,
-			reviewerPrompt,
-			writerSystemPrompt: loadedPrompts.writerSystemPrompt,
-			editorSystemPrompt: loadedPrompts.editorSystemPrompt,
-			gameMasterSystemPrompt: loadedPrompts.gameMasterSystemPrompt,
-			plotPlannerSystemPrompt: loadedPrompts.plotPlannerSystemPrompt,
-			phaseEventPlotPlannerSystemPrompt: loadedPrompts.phaseEventPlotPlannerSystemPrompt,
-			guidanceWriterExtractionPrompt: loadedPrompts.guidanceWriterExtractionPrompt,
-			phaseEventWriterExtractionPrompt: loadedPrompts.phaseEventWriterExtractionPrompt,
-		},
-		effectiveTargetWordCount,
-		currentScene,
-		tools,
-		plotMode,
-		actPhase,
-		lastPlotGeneration,
-		reevaluationFrequency: getReevaluationFrequency(),
-	};
-
-	const trackPhase: TrackPhase = (phaseName, result, model) => {
-		aggregatedMetadata = aggregateMetadata(aggregatedMetadata, result.metadata, model);
-		phaseEntries.push(toPhaseMetadata(phaseName, result.metadata, model));
-		return result.state;
-	};
+	const { callbacks } = execution;
+	const tracker = buildTrackPhase();
 
 	// --- Async phases (Summarizer → Character Profile Compressor → Memory) ---
 	const asyncPhases = runAsyncPhases({
 		player,
 		completedScenes,
-		actSummary,
+		actSummary: input.actSummary,
 		previousNarrativeVariables,
-		previousNarrativeBody: previousNarrativeBody ?? undefined,
+		previousNarrativeBody,
 		providerConfigs,
-		abortSignal,
-		storyId,
-		actLineId,
+		abortSignal: execution.abortSignal,
+		storyId: story.storyId,
+		actLineId: story.actLine.id,
 		loadedPrompts,
 	});
 
 	// --- Sequential phases ---
-	state = await runWriterPhase(ctx, state, trackPhase);
-	state = await runReviewerEditorPhases(ctx, state, trackPhase);
-	state = await runEditorTemplateFitter(ctx, state, trackPhase);
+	let state: PipelineState = {};
+	state = await runWriterPhase(ctx, state, tracker.trackPhase);
+	state = await runReviewerEditorPhases(ctx, state, tracker.trackPhase);
+	state = await runEditorTemplateFitter(ctx, state, tracker.trackPhase);
 	maybeExtractImportantPhrases(state, callbacks);
 
 	const postEditorCtx: PostEditorContext = {
-		actPlot,
-		actPhase,
-		actSummary,
+		actPlot: input.actPlot,
+		actPhase: story.actLine.currentActPhase,
+		actSummary: input.actSummary,
 		previousScenePlot,
-		previousNarrativeBody: previousNarrativeBody ?? undefined,
+		previousNarrativeBody,
 		completedScenes,
 		player,
-		previousTurnOfEvents: previousTurnOfEvents ?? undefined,
-		editorOutput: state.editorOutput ?? '',
+		previousTurnOfEvents,
+		editorOutput: state.editorOutput,
 		directorNotes,
 	};
-	state = await runGamePhases(ctx, state, postEditorCtx, trackPhase);
-	state = await runGmTemplateFitter(ctx, state, trackPhase);
+	state = await runGamePhases(ctx, state, postEditorCtx, tracker.trackPhase);
+	state = await runGmTemplateFitter(ctx, state, tracker.trackPhase);
 
-	state = updateState(state, { currentPhase: null });
+	const result = finalizePipelineResult(state, tracker);
 	callbacks.onAllComplete(state);
-	return {
-		state,
-		aggregatedMetadata: aggregatedMetadata ?? undefined,
-		phases: phaseEntries.length > 0 ? phaseEntries : undefined,
-		asyncPhases,
-	};
-}
-
-export interface EpiloguePipelineInput {
-	execution: PipelineExecution;
-	worldContent: string;
-	actPlot: string;
-	actSummary: string;
-	previousNarrativeVariables: NarrativeVariables | undefined;
-	endingType: EndingType;
-	story: StoryContext;
-	completedScenes: number;
-	targetWordCount?: number;
-	retryConfig?: RetryConfig;
+	return { ...result, asyncPhases };
 }
 
 export async function runEpiloguePipeline(input: EpiloguePipelineInput): Promise<PipelineResult> {
-	const providerConfigs = buildPipelineProviderConfigs();
-	const { execution, worldContent, actPlot, actSummary, previousNarrativeVariables, endingType, story, completedScenes, targetWordCount } =
-		input;
-	const { abortSignal, callbacks } = execution;
-	const effectiveTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
-	const currentScene = String(completedScenes + 1);
-	const previousNarrativeBody = previousNarrativeVariables?.narrativeBody;
-	const retryConfig = input.retryConfig ?? DEFAULT_RETRY_CONFIG;
-	const sharedParams = { abortSignal, callbacks, retryConfig };
+	const { endingType, execution, story } = input;
+	const { callbacks } = execution;
 
-	const preEditorCtx: PreEditorContext = {
-		worldContent,
-		actPlot,
-		actPhase: null,
-		actSummary,
-		previousScenePlot: undefined,
-		previousNarrativeBody: previousNarrativeBody ?? undefined,
-		completedScenes,
-		player: undefined,
-		previousTurnOfEvents: undefined,
-		directorNotes: '',
-	};
+	const loadedPrompts: LoadedPrompts = await loadPrompts(story.storyId, story.storyName);
+	const providerConfigs: PipelineProviderConfigs = buildPipelineProviderConfigs();
+	const ctx = await buildPipelineContext(input, loadedPrompts, providerConfigs, EpiloguePreEditorContext);
 
-	let state: PipelineState = { currentPhase: null };
-	let aggregatedMetadata: StreamResultMetadata | null = null;
-	const phaseEntries: PhaseMetadata[] = [];
+	const tracker = buildTrackPhase();
+	const epilogueExtractionPrompt = ls('pipeline.extraction.writer.epilogue', { endingType: ENDING_LABELS[endingType] });
 
-	const loadedPrompts = await loadPrompts(story.storyId, story.storyName);
+	let state: PipelineState = {};
+	state = await runWriterPhase(ctx, state, tracker.trackPhase, epilogueExtractionPrompt);
+	state = await runReviewerEditorPhases(ctx, state, tracker.trackPhase);
+	state = await runEditorTemplateFitter(ctx, state, tracker.trackPhase);
+	maybeExtractImportantPhrases(state, callbacks);
 
-	const ctx: PipelineRunContext = {
-		sharedParams,
-		providerConfigs,
-		preEditorCtx,
-		prompts: {
-			generalInstructions: loadedPrompts.generalInstructions,
-			writerOutputTemplate: loadedPrompts.writerOutputTemplate,
-			reviewerPrompt: '',
-			writerSystemPrompt: loadedPrompts.writerSystemPrompt,
-			editorSystemPrompt: '',
-			gameMasterSystemPrompt: '',
-			plotPlannerSystemPrompt: '',
-			phaseEventPlotPlannerSystemPrompt: '',
-			guidanceWriterExtractionPrompt: '',
-			phaseEventWriterExtractionPrompt: '',
-		},
-		effectiveTargetWordCount,
-		currentScene,
-		tools: undefined,
-		plotMode: 'guidance',
-		actPhase: null,
-		lastPlotGeneration: null,
-		reevaluationFrequency: 0,
-	};
-
-	const trackPhase: TrackPhase = (phaseName, result, model) => {
-		aggregatedMetadata = aggregateMetadata(aggregatedMetadata, result.metadata, model);
-		phaseEntries.push(toPhaseMetadata(phaseName, result.metadata, model));
-		return result.state;
-	};
-
-	state = await runEpilogueWriterPhase(ctx, state, trackPhase, endingType);
-
-	state = updateState(state, { currentPhase: null });
+	const result = finalizePipelineResult(state, tracker);
 	callbacks.onAllComplete(state);
-	return {
-		state,
-		aggregatedMetadata: aggregatedMetadata ?? undefined,
-		phases: phaseEntries.length > 0 ? phaseEntries : undefined,
-	};
+	return result;
 }

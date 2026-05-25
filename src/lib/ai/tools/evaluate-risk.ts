@@ -5,7 +5,7 @@ import type { ToolSet } from 'ai';
 import type { ToolContext } from './tools';
 import { evaluateRisk } from '$lib/utils/risk-model';
 import type { RiskOutcome } from '$lib/utils/risk-model';
-import { fileLog, log } from '$lib/logging/logger';
+import { log } from './utils';
 
 const OUTCOME_MESSAGES: Record<RiskOutcome, string> = {
 	[-1]: ls('tools.evaluateRisk.messages.outcomeBad'),
@@ -20,16 +20,12 @@ export function createEvaluateRiskTool(_ctx: ToolContext) {
 			riskLevel: z.number().int().min(1).max(10).describe(ls('tools.evaluateRisk.parameters.riskLevel')),
 		}),
 		execute: async (input): Promise<{ result: string }> => {
-			const logMessage = `evaluate-risk triggered: riskLevel=${input.riskLevel}`;
-			await log.debug('tool', logMessage);
-			await fileLog('debug', 'tool', logMessage);
+			await log(`evaluate-risk triggered: riskLevel=${input.riskLevel}`);
 
 			const outcome = evaluateRisk(input.riskLevel, Math.random());
 			const result = OUTCOME_MESSAGES[outcome];
 
-			const endLogMessage = `evaluate-risk result: riskLevel=${input.riskLevel}, outcome=${outcome}`;
-			await log.debug('tool', endLogMessage);
-			await fileLog('debug', 'tool', endLogMessage);
+			await log(`evaluate-risk result: riskLevel=${input.riskLevel}, outcome=${outcome}`);
 
 			return { result };
 		},

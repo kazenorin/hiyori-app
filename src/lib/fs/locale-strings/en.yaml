@@ -67,23 +67,26 @@ pipeline:
       providedDirectorNotes: "\n- the Director's Notes"
       directorNotesReinforcementPhrase: '**Important**: The Director has given directions for the upcoming scene. You **MUST** consider it when writing, and follow the directions or instructions given.'
       actEndPhaseEvent: >
-        If you believe the story has reached a natural conclusion aligned with one of the Possible Endings defined
-        in the Act Plot, use the `end-act` tool **exactly once** to signal the act's conclusion. When calling
-        `end-act`, specify the `endingType` that best matches the player's choices and the narrative trajectory
-        (good, bad, bittersweet, or alternative).
+        When the story reaches a natural conclusion that aligns with one of the Act Plot's Possible Endings,
+        call the `end-act` tool **exactly once** during your reasoning, before writing the closing scene.
+        {endingTypeInstructions}
 
-        When ending the act, write a **closing scene** that brings the narrative to a satisfying conclusion matching
-        the chosen ending, resolves the central conflict, reflects the consequences of the player's key choices,
-        and provides emotional closure. Do NOT introduce new plot threads or cliffhangers.
+        After calling `end-act`, write the closing scene as your narrative output.
+        {closingSceneRules}
       actEndGuidance: >
-        If you believe the narrative has reached one of the Possible Endings described in the Act Plot — where
-        the central conflict is resolved and the story reaches a natural stopping point — use the `end-act` tool
-        **exactly once** to signal the act's conclusion. When calling `end-act`, specify the `endingType` that best
-        matches the player's choices and the narrative trajectory (good, bad, bittersweet, or alternative).
+        When the narrative reaches one of the Act Plot's Possible Endings — where the central conflict is
+        resolved and the story arrives at a natural stopping point — call the `end-act` tool **exactly once**
+        during your reasoning, before writing the closing scene.
+        {endingTypeInstructions}
 
-        When ending the act, write a **closing scene** that brings the narrative to a satisfying conclusion matching
-        the chosen ending, resolves the central conflict, reflects the consequences of the player's key choices,
-        and provides emotional closure. Do NOT introduce new plot threads or cliffhangers.
+        After calling `end-act`, write the closing scene as your narrative output.
+        {closingSceneRules}
+      closingSceneRules: >
+        When writing the closing scene, ensure it:
+          - Brings the narrative to a satisfying, emotionally resonant conclusion matching the chosen ending
+          - Resolves the central conflict of the act
+          - Reflects the consequences of the player's key choices throughout the act
+          - Provides emotional closure without introducing new plot threads or cliffhangers
       epilogue: >
         You are writing the **epilogue** for this story. The main narrative has concluded with a {endingType} ending.
         Use the World Setting, Act Plot, and Act Summary provided to you for context.
@@ -356,15 +359,20 @@ tools:
       Advance the story to the next narrative phase (e.g., {introduction} → {risingAction} → {climax} → {fallingAction} → {resolution}).
       This signals a major shift in the story's arc. Takes effect starting next turn.
       Can only be used once per scene. Cannot be used once the story has reached the resolution phase.
+      This tool must be called during reasoning, before any narrative output is written. If any output has already been written, do not call this tool.
     messages:
       alreadyAdvanced: 'Phase has already been advanced this scene. It will take effect next turn.'
       success: 'Phase advanced from {current} to {next}. Takes effect next turn.'
       terminalPhase: 'Cannot advance further — the story is already at the resolution phase.'
   endAct:
+    endingTypeInstructions: >
+      When invoking `end-act`, set the `endingType` parameter to the value that best reflects the narrative
+      trajectory and player choices: `good`, `bad`, `bittersweet`, or `alternative`.
     description: >
       End the current act. Call this when the narrative has reached a natural conclusion aligned with
       one of the Possible Endings defined in the Act Plot. Specify which ending the story has reached:
       {good}, {bad}, {bittersweet}, or {alternative}.
+      This tool must be called during reasoning, before any narrative output is written. If any output has already been written, do not call this tool.
     endingGood: Good
     endingBad: Bad
     endingBittersweet: Bittersweet

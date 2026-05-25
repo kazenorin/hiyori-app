@@ -1,4 +1,4 @@
-import type { PhaseName, NarrativeVariables, GameDataFields } from '../narrative-types';
+import type { ActPhase, GameDataFields, NarrativeVariables, PhaseName } from '../narrative-types';
 import type { StreamResultMetadata } from '../streaming';
 import type { ActSummary, CharacterProfile } from '../act-summary-parser';
 import type { ToolSet } from 'ai';
@@ -6,8 +6,12 @@ import type { PhaseMetadata, RetryConfig } from '../chat-stream';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
 import type { ActLineMeta } from '$lib/db/act-lines';
 
+export interface ActLineContext extends ActLineMeta {
+	currentActPhase: ActPhase | null;
+	lastPlotGeneration: number | null;
+}
+
 export interface PipelineState {
-	currentPhase: PhaseName | null;
 	scenePlot?: string;
 	writerOutput?: string;
 	writerVariables?: NarrativeVariables | null;
@@ -79,7 +83,13 @@ export interface PipelineProviderConfigs {
 export interface StoryContext {
 	storyId: string;
 	storyName: string;
-	actLine: ActLineMeta;
+	actLine: ActLineContext;
+}
+
+/** Assistant message identification for tool event recording. */
+export interface AssistantContext {
+	messageId: string;
+	messageSequence: number;
 }
 
 export interface PipelineExecution {
@@ -88,19 +98,23 @@ export interface PipelineExecution {
 	callbacks: PipelineCallbacks;
 }
 
-export interface PipelineInput {
+export interface CommonPipelineInput {
 	execution: PipelineExecution;
 	worldContent: string;
 	actPlot: string;
 	actSummary: string;
 	directorNotes: string;
 	previousNarrativeVariables: NarrativeVariables | undefined;
-	previousScenePlot?: string;
-	player?: PlayerContext;
 	story: StoryContext;
+	assistant: AssistantContext;
 	completedScenes: number;
 	targetWordCount?: number;
 	retryConfig?: RetryConfig;
+}
+
+export interface PipelineInput extends CommonPipelineInput {
+	previousScenePlot?: string;
+	player?: PlayerContext;
 }
 
 export interface PipelineResult {
@@ -109,3 +123,32 @@ export interface PipelineResult {
 	phases?: PhaseMetadata[];
 	asyncPhases?: Promise<AsyncPhaseResults>;
 }
+/** Context shared by Writer, Reviewer, and Editor phases. */
+export interface PreEditorContext {
+	worldContent: string;
+	actPlot: string;
+	actPhase?: ActPhase | null;
+	actSummary: string;
+	previousScenePlot: string | undefined;
+	previousNarrativeBody: string | undefined;
+	completedScenes: number;
+	player: PlayerContext | undefined;
+	previousTurnOfEvents: string | undefined;
+	directorNotes: string;
+}
+
+/** Context shared by Game Master and Plot Planner phases. */
+export interface PostEditorContext {
+	actPlot: string;
+	actPhase?: ActPhase | null;
+	actSummary: string;
+	previousScenePlot: string | undefined;
+	previousNarrativeBody: string | undefined;
+	completedScenes: number;
+	player: PlayerContext | undefined;
+	previousTurnOfEvents: string | undefined;
+	editorOutput: string | undefined;
+	directorNotes: string;
+}
+
+export type PreEditorContextFactory = new (input: CommonPipelineInput) => PreEditorContext;

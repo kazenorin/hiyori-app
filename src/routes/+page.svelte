@@ -8,6 +8,7 @@
 		getError,
 		getForkSequence,
 		getIsStreaming,
+		getIsBusy,
 		getLatestActivePlotThreads,
 		getLatestDecisionContext,
 		getLatestDecisions,
@@ -70,7 +71,7 @@
 	import { formatPhaseName } from '$lib/ai/narrative-types';
 	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
 	import { ensureActPlot } from '$lib/ai/act-plot';
-	import { getActLine, getMessagesForLine } from '$lib/db/act-lines';
+	import { getActLine, getMessagesForLine, getEndingType } from '$lib/db/act-lines';
 	import { log } from '$lib/logging/logger';
 	import { generateTurnOfEvents } from '$lib/features/turn-of-events-generator';
 	import { type Message, updateMessageFields } from '$lib/db/messages';
@@ -127,19 +128,19 @@
 
 	async function handleRegenerate(messageId: string) {
 		const actLineId = getActiveActLineId();
-		if (!actLineId || getIsStreaming()) return;
+		if (!actLineId || getIsBusy()) return;
 		await regenerateLastResponse(actLineId, messageId);
 	}
 
 	async function handleDelete() {
 		const actLineId = getActiveActLineId();
-		if (!actLineId || getIsStreaming()) return;
+		if (!actLineId || getIsBusy()) return;
 		await deleteLastExchange(actLineId);
 	}
 
 	async function handleDeleteOrphanedUserMessages() {
 		const actLineId = getActiveActLineId();
-		if (!actLineId || getIsStreaming()) return;
+		if (!actLineId || getIsBusy()) return;
 		await deleteOrphanedUserMessages(actLineId);
 	}
 
@@ -156,14 +157,14 @@
 	async function handleFork(messageIndex: number) {
 		const actLineId = getActiveActLineId();
 		const act = getActiveAct();
-		if (!actLineId || !act || getIsStreaming() || isForking) return;
+		if (!actLineId || !act || getIsBusy() || isForking) return;
 		forkChoiceIndex = messageIndex;
 	}
 
 	async function handleForkDirect(messageIndex: number) {
 		const actLineId = getActiveActLineId();
 		const act = getActiveAct();
-		if (!actLineId || !act || getIsStreaming() || isForking) return;
+		if (!actLineId || !act || getIsBusy() || isForking) return;
 		isForking = true;
 		forkChoiceIndex = null;
 		try {
@@ -179,7 +180,7 @@
 		const story = getActiveStory();
 		const actLineId = getActiveActLineId();
 		const act = getActiveAct();
-		if (!actLineId || !act || !story || getIsStreaming() || isForking) return;
+		if (!actLineId || !act || !story || getIsBusy() || isForking) return;
 
 		const worldContent = await ensureWorldFile(story.id, story.name);
 		isForking = true;
@@ -212,7 +213,7 @@
 
 	function handleSubmit() {
 		const text = input.trim();
-		if (!text || getIsStreaming() || getIsWorldBuilderStreaming()) return;
+		if (!text || getIsBusy() || getIsWorldBuilderStreaming()) return;
 
 		if (getIsWorldBuilderActive()) {
 			input = '';
@@ -452,20 +453,21 @@
 	}
 
 	function handleDecisionClick(decision: string) {
-		if (getIsStreaming()) return;
+		if (getIsBusy()) return;
 		const actLineId = getActiveActLineId();
 		if (!actLineId) return;
 		sendMessage(actLineId, decision);
 	}
 
 	async function handleContinueToNextAct() {
-		if (getIsStreaming()) return;
+		if (getIsBusy()) return;
 		const actLineId = getActiveActLineId();
 		if (!actLineId) return;
 
 		const story = getActiveStory();
 		const actLine = await getActLine(actLineId);
-		if (!story || !actLine || !actLine.endingType) return;
+		const endingType = await getEndingType(actLineId);
+		if (!story || !actLine || !endingType) return;
 
 		const act = getActiveAct();
 		if (!act) return;
@@ -486,7 +488,7 @@
 			await selectActLine(newLine.id);
 
 			const newActContext: NewActInterviewContext = {
-				endingType: actLine.endingType,
+				endingType,
 				actSummary,
 				actPlot,
 			};
@@ -498,7 +500,7 @@
 	}
 
 	function handleEndStory() {
-		if (getIsStreaming()) return;
+		if (getIsBusy()) return;
 		const actLineId = getActiveActLineId();
 		if (!actLineId) return;
 		runEpilogueFlow(actLineId);
@@ -737,7 +739,7 @@
 										<div class="leading-relaxed text-primary-900-100 min-w-0">
 											<MarkdownContent content={message.content} />
 										</div>
-										{#if !getIsStreaming()}
+									{#if !getIsBusy()}
 											<div class="flex gap-2 mt-3 pt-3 border-t border-primary-200-800">
 												<button
 													class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
@@ -853,7 +855,7 @@
 									{#if message.metadata}
 										<MetadataPanel metadata={message.metadata} />
 									{/if}
-									{#if !getIsStreaming()}
+									{#if !getIsBusy()}
 										<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
 											{#if message.content}
 												<button
@@ -902,7 +904,7 @@
 													<button
 														class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 														title="Fork from here"
-														disabled={isForking || getIsStreaming()}
+														disabled={isForking || getIsBusy()}
 														onclick={() => handleFork(i)}>{isForking ? t('chat.forking') : t('chat.fork')}</button
 													>
 												{/if}
@@ -940,6 +942,7 @@
 				activePlotThreads={latestActivePlotThreads}
 				decisionContext={latestDecisionContext}
 				isStreaming={getIsStreaming()}
+				isBusy={getIsBusy()}
 				actEnded={getActEnded()}
 				storyConcluded={getStoryConcluded()}
 				onDecisionClick={handleDecisionClick}
@@ -964,7 +967,7 @@
 				aria-label="Message input"
 				bind:value={input}
 				onkeydown={handleKeydown}
-				disabled={getIsStreaming() || getActEnded()}
+				disabled={getIsBusy() || getActEnded()}
 			></textarea>
 
 			<div class="mt-3">

@@ -1,5 +1,6 @@
 import type { ActLineMeta } from '$lib/db/act-lines';
 import * as dbActLines from '$lib/db/act-lines';
+import type { ActLineContext, PostEditorContext } from '$lib/ai/pipeline/types';
 import type { Story } from '$lib/db/stories';
 import { logMainChat } from '$lib/logging/chat-logger';
 import { log } from '$lib/logging/logger';
@@ -52,7 +53,6 @@ import { buildPipelineProviderConfigs } from './chat/pipeline-config';
 import { loadPrompts } from './pipeline/prompt-loader';
 import { buildImportRunContext } from '$lib/features/import-world/pipeline-context';
 import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
-import type { PostEditorContext } from './pipeline/message-builder';
 import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { loadLocaleStrings } from '$lib/localization';
@@ -65,13 +65,14 @@ interface RequestContext {
 	message?: string;
 	mainConfig: ProviderConfig;
 	story: Story;
-	actLine: ActLineMeta;
+	actLine: ActLineContext;
 	previousSceneNumber: number;
 	previousNarrativeVariables: NarrativeVariables | undefined;
 }
 
 let messages = $state<UIMessage[]>([]);
 let isStreaming = $state(false);
+let isProcessingAsync = $state(false);
 let error = $state<string | null>(null);
 let actEnded = $state(false);
 let storyConcluded = $state(false);
@@ -84,6 +85,14 @@ export function getMessages(): UIMessage[] {
 
 export function getIsStreaming(): boolean {
 	return isStreaming;
+}
+
+export function getIsProcessingAsync(): boolean {
+	return isProcessingAsync;
+}
+
+export function getIsBusy(): boolean {
+	return isStreaming || isProcessingAsync;
 }
 
 export function getError(): string | null {
@@ -212,7 +221,6 @@ async function awaitPendingAsyncPhases(context: string, throwOnNonAbort = false)
 			await log.error(context, 'Async phases failed', err);
 		}
 	}
-	pendingAsyncPhases = null;
 }
 
 export async function sendMessage(actLineId: string, message: string): Promise<void> {
@@ -223,12 +231,14 @@ export async function sendMessage(actLineId: string, message: string): Promise<v
 	const mainConfig = requireMainConfig();
 	const story = await dbActLines.getStoryForActLine(actLineId);
 	const actLine = await requireActLine(actLineId);
+	const currentActPhase = await dbActLines.getActPhase(actLineId);
+	const currentLastPlotGen = await dbActLines.getLastPlotGeneration(actLineId);
 	error = null;
 	const requestContext: RequestContext = {
 		message,
 		mainConfig,
 		story,
-		actLine,
+		actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen },
 		previousSceneNumber: findLastNonNullSceneNumber(messages) ?? 0,
 		previousNarrativeVariables: getPreviousNarrativeMessage(messages),
 	};
@@ -245,11 +255,13 @@ export async function sendInitialNarration(actLineId: string): Promise<void> {
 	const mainConfig = requireMainConfig();
 	const story = await dbActLines.getStoryForActLine(actLineId);
 	const actLine = await requireActLine(actLineId);
+	const currentActPhase = await dbActLines.getActPhase(actLineId);
+	const currentLastPlotGen = await dbActLines.getLastPlotGeneration(actLineId);
 	error = null;
 	const requestContext: RequestContext = {
 		mainConfig,
 		story,
-		actLine,
+		actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen },
 		previousSceneNumber: 0,
 		previousNarrativeVariables: undefined,
 	};
@@ -276,6 +288,10 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 	const newMessagesCount = await prepareNewMessages(actLine.id, previousSceneNumber, nextSceneNumber, message);
 	const playerContext = getPlayerContext(getMessages());
 	const messageIdx = getLatestMessageIndex();
+
+	const assistantMessageId = getMessageByIndex(messageIdx).id;
+	const assistantSequence = await dbActLines.getNextSequence(actLine.id);
+	const assistant = { messageId: assistantMessageId, messageSequence: assistantSequence };
 
 	function getCurrentMessage(): UIMessage {
 		return getMessageByIndex(messageIdx);
@@ -316,6 +332,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 			previousScenePlot,
 			player: playerContext,
 			story: { storyId: story.id, storyName: story.name, actLine },
+			assistant,
 			completedScenes: previousSceneNumber,
 			directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(previousSceneNumber + 1) : '',
 			targetWordCount,
@@ -324,17 +341,16 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 		updateMessageMetadataByIndex(result, messageIdx);
 
 		await Promise.all([
-			persistMessage(actLine.id, getCurrentMessage()),
-			updateLastPlotGeneration(result.phases, actLine, previousSceneNumber),
+			persistMessage(actLine.id, getCurrentMessage(), assistantSequence),
+			updateLastPlotGeneration(result.phases, actLine.id, assistant, previousSceneNumber),
 			logMainChat({ newMessages: getMessages().slice(-newMessagesCount) }),
 		]);
 
-		const updatedActLine = await requireActLine(actLine.id);
-		if (updatedActLine.endedAt !== null) {
+		const ended = await dbActLines.isActLineEnded(actLine.id);
+		if (ended) {
 			actEnded = true;
 		}
 
-		const assistantMessageId = getCurrentMessage().id;
 		pendingAsyncPhases =
 			result.asyncPhases
 				?.then(async (asyncResults) => {
@@ -356,7 +372,12 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 					} else {
 						await log.error('send-message', 'Async phases failed', err);
 					}
+				})
+				.finally(() => {
+					pendingAsyncPhases = null;
+					isProcessingAsync = false;
 				}) ?? null;
+		isProcessingAsync = !!pendingAsyncPhases;
 	} catch (err: unknown) {
 		const result = await handleStreamError(err, getCurrentMessage(), actLine.id, getMessages());
 		setMessages(result.messages);
@@ -375,24 +396,29 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 	requireMainConfig();
 	const abortSignal = newAbortSignal();
 
-	const [story, actLine] = await Promise.all([
+	const [story, actLine, endingType] = await Promise.all([
 		dbActLines.getStoryForActLine(actLineId),
 		requireActLine(actLineId),
+		dbActLines.getEndingType(actLineId),
 		awaitPendingAsyncPhases('epilogue', true),
 	]);
 
-	setActiveLocale(story.locale);
-	await loadLocaleStrings(story.locale);
-
-	if (!actLine.endingType) {
+	if (!endingType) {
 		error = 'Cannot run epilogue: no ending type set.';
 		return;
 	}
+
+	setActiveLocale(story.locale);
+	await loadLocaleStrings(story.locale);
 
 	const previousSceneNumber = findLastNonNullSceneNumber(messages) ?? 0;
 	const nextSceneNumber = previousSceneNumber + 1;
 	const newMessagesCount = await prepareNewMessages(actLineId, previousSceneNumber, nextSceneNumber);
 	const messageIdx = getLatestMessageIndex();
+
+	const epilogueMessageId = getMessageByIndex(messageIdx).id;
+	const epilogueSequence = await dbActLines.getNextSequence(actLineId);
+	const epilogueAssistant = { messageId: epilogueMessageId, messageSequence: epilogueSequence };
 
 	function getCurrentMessage(): UIMessage {
 		return getMessageByIndex(messageIdx);
@@ -428,17 +454,19 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 			actPlot,
 			actSummary,
 			previousNarrativeVariables,
-			endingType: actLine.endingType,
-			story: { storyId: story.id, storyName: story.name, actLine },
+			endingType,
+			story: { storyId: story.id, storyName: story.name, actLine: { ...actLine, currentActPhase: null, lastPlotGeneration: null } },
+			assistant: epilogueAssistant,
 			completedScenes: previousSceneNumber,
+			directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(previousSceneNumber + 1) : '',
 			targetWordCount,
 		});
 
 		updateMessageMetadataByIndex(result, messageIdx);
 
 		await Promise.all([
-			persistMessage(actLineId, getCurrentMessage()),
-			dbActLines.markEpilogueWritten(actLineId),
+			persistMessage(actLineId, getCurrentMessage(), epilogueSequence),
+			dbActLines.recordEpilogueWritten(actLineId, epilogueAssistant),
 			logMainChat({ newMessages: getMessages().slice(-newMessagesCount) }),
 		]);
 
@@ -463,8 +491,8 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 	error = null;
 
 	const actLine = await dbActLines.getActLine(actLineId);
-	actEnded = actLine?.endedAt != null;
-	storyConcluded = actLine?.epilogueWrittenAt != null;
+	actEnded = await dbActLines.isActLineEnded(actLineId);
+	storyConcluded = await dbActLines.isEpilogueWritten(actLineId);
 
 	if (actLine) {
 		await regenerateMissingMetadata(actLine, messages);
@@ -483,6 +511,9 @@ async function regenerateMissingMetadata(actLine: ActLineMeta, messages: UIMessa
 	if (lastAssistantIdx === -1) return;
 
 	const lastAssistant = messages[lastAssistantIdx];
+	if (!lastAssistant.content.trim()) return;
+	if (await dbActLines.hasEventForMessage(lastAssistant.id, 'epilogue-written')) return;
+
 	const needsSummary = !lastAssistant.actSummary;
 	const needsGameData = !lastAssistant.variables?.gameData;
 
@@ -587,13 +618,14 @@ async function regenerateGameData(
 	);
 
 	const plotMode = actLine.plotMode ?? getDefaultPlotMode();
+	const currentActPhase = await dbActLines.getActPhase(actLine.id);
 	const previousSceneNumber = assistantMsg.sceneNumber ?? 0;
 	const previousScenePlot = getScenePlotForScene(previousSceneNumber, plotMode);
 	const actPlot = await ensureActPlot({ story, actLine });
 
 	const postEditorCtx: PostEditorContext = {
 		actPlot,
-		actPhase: actLine.actPhase,
+		actPhase: currentActPhase,
 		actSummary: _getLatestActSummary(messages),
 		previousScenePlot,
 		previousNarrativeBody: assistantMsg.variables?.narrativeBody ?? undefined,
@@ -605,7 +637,7 @@ async function regenerateGameData(
 	};
 
 	const trackPhase: TrackPhase = (_phaseName, result) => result.state;
-	let state: PipelineState = { currentPhase: null };
+	let state: PipelineState = {};
 	const gmResult = await executeGmPhase(ctx, state, postEditorCtx);
 	state = trackPhase('GAME_MASTER', gmResult, providerConfigs.gameMaster?.model);
 	state = await runGmTemplateFitter(ctx, state, trackPhase);

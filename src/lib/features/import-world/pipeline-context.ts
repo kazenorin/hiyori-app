@@ -1,7 +1,7 @@
-import type { PreEditorContext } from '$lib/ai/pipeline/message-builder';
 import type { PipelineRunContext } from '$lib/ai/pipeline/runners';
 import { buildPipelineProviderConfigs } from '$lib/ai/chat/pipeline-config';
 import type { RetryConfig } from '$lib/ai/chat-stream';
+import type { AssistantContext, PreEditorContext, StoryContext } from '$lib/ai/pipeline/types';
 
 export const EMPTY_PRE_EDITOR_CONTEXT: PreEditorContext = {
 	worldContent: '',
@@ -13,6 +13,26 @@ export const EMPTY_PRE_EDITOR_CONTEXT: PreEditorContext = {
 	player: undefined,
 	previousTurnOfEvents: undefined,
 	directorNotes: '',
+};
+
+const IMPORT_STORY_CONTEXT: StoryContext = {
+	storyId: '',
+	storyName: '',
+	actLine: {
+		id: '',
+		actId: '',
+		name: '',
+		isMainLine: true,
+		createdAt: 0,
+		plotMode: 'guidance',
+		currentActPhase: null,
+		lastPlotGeneration: null,
+	},
+};
+
+const IMPORT_ASSISTANT_CONTEXT: AssistantContext = {
+	messageId: '',
+	messageSequence: 0,
 };
 
 export function buildImportRunContext(
@@ -45,9 +65,7 @@ export function buildImportRunContext(
 		effectiveTargetWordCount: '400',
 		currentScene: '1',
 		tools: undefined,
-		plotMode: 'guidance',
-		actPhase: undefined,
-		lastPlotGeneration: undefined,
-		reevaluationFrequency: 1,
+		story: IMPORT_STORY_CONTEXT,
+		assistant: IMPORT_ASSISTANT_CONTEXT,
 	};
 }

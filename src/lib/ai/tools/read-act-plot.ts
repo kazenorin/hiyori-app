@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { exists, readTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { getLineDir } from '$lib/ai/card-output-path';
-import { fileLog, log } from '$lib/logging/logger';
+import { log } from './utils';
 import { type ToolSet } from 'ai';
 import type { ToolContext } from './tools';
 
@@ -17,9 +17,7 @@ export function createReadActPlotTool(ctx: ToolContext) {
 		description: ls('tools.readActPlot.description'),
 		inputSchema,
 		execute: async (): Promise<string> => {
-			const logMessage = `read-act-plot triggered for storyId=${story.id}, actLineId=${actLine.id}`;
-			await log.debug('tool', logMessage);
-			await fileLog('debug', 'tool', logMessage);
+			await log(`read-act-plot triggered for storyId=${story.id}, actLineId=${actLine.id}`);
 
 			const storyFolder = await resolveStoryFolder(story.id, story.name);
 			const lineDir = await getLineDir(storyFolder, act.actNumber, actLine.isMainLine, actLine.id);
@@ -31,9 +29,7 @@ export function createReadActPlotTool(ctx: ToolContext) {
 			}
 
 			const content = await readTextFile(filePath, { baseDir: BaseDirectory.AppData });
-			const endLogMessage = `read-act-plot returned ${content.length} chars`;
-			await log.debug('tool', endLogMessage);
-			await fileLog('debug', 'tool', endLogMessage);
+			await log(`read-act-plot returned ${content.length} chars`);
 
 			return content;
 		},

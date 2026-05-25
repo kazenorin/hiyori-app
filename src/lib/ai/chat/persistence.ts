@@ -8,8 +8,8 @@ import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 import { getActiveStoryId } from '$lib/stores/stories.svelte';
 import { getErrorMessage } from '$lib/utils/error-handling';
 import type { MessageMetadata, PhaseMetadata } from '../chat-stream';
+import type { AssistantContext } from '$lib/ai/pipeline/types';
 import type { UIMessage } from './types';
-import type { ActLineMeta } from '$lib/db/act-lines';
 
 export function parseMetadata(raw: string | undefined | null): MessageMetadata | undefined {
 	if (!raw) return undefined;
@@ -30,7 +30,7 @@ export function parseMetadata(raw: string | undefined | null): MessageMetadata |
 	}
 }
 
-export async function persistMessage(actLineId: string, message: UIMessage): Promise<void> {
+export async function persistMessage(actLineId: string, message: UIMessage, sequence: number): Promise<void> {
 	await dbMessages.createMessage({
 		id: message.id,
 		role: 'assistant',
@@ -43,8 +43,7 @@ export async function persistMessage(actLineId: string, message: UIMessage): Pro
 		scenePlot: message.scenePlot,
 		importantPhrases: message.importantPhrases ? serializeImportantPhrases(message.importantPhrases) : undefined,
 	});
-	const seq = await dbActLines.getNextSequence(actLineId);
-	await dbActLines.addMessageToLine(actLineId, message.id, seq);
+	await dbActLines.addMessageToLine(actLineId, message.id, sequence);
 }
 
 export async function persistUserMessage(playerResponse: string, sceneNumber: number, actLineId: string): Promise<UIMessage> {
@@ -162,23 +161,26 @@ export async function handleStreamError(
 ): Promise<{ messages: UIMessage[]; error: string | null }> {
 	if (err instanceof DOMException && err.name === 'AbortError') {
 		if (responseMsg && responseMsg.content) {
-			await persistMessage(actLineId, responseMsg);
+			const seq = await dbActLines.getNextSequence(actLineId);
+			await persistMessage(actLineId, responseMsg, seq);
 		}
 		await log.warn('send-message', 'User aborted.');
 		return { messages: msgs, error: null };
 	}
 	const errorMessage = getErrorMessage(err);
 	await log.error('send-message', errorMessage, err);
+	await dbActLines.deleteEventsForMessage(responseMsg.id);
 	return { messages: msgs.filter((m) => m.id !== responseMsg.id), error: errorMessage };
 }
 
 export async function updateLastPlotGeneration(
 	phases: PhaseMetadata[] | undefined,
-	actLine: ActLineMeta,
-	previousSceneNumber: number
+	actLineId: string,
+	assistant: AssistantContext,
+	sceneNumber: number
 ): Promise<void> {
 	if (phases?.some((p) => p.phaseName === 'PLOT_PLANNER')) {
-		await dbActLines.updateActLineMetaFields(actLine.id, { lastPlotGeneration: previousSceneNumber });
+		await dbActLines.recordPlotGeneration(actLineId, assistant, sceneNumber);
 	}
 }
 

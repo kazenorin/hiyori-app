@@ -1,6 +1,6 @@
 import type { MessageBase } from '$lib/db/messages';
 import type { ActPhase, GameDataFields, NarrativeVariables } from '../narrative-types';
-import type { PlayerContext } from './types';
+import type { CommonPipelineInput, PlayerContext, PostEditorContext, PreEditorContext } from './types';
 import type { StreamState } from '../chat-callbacks';
 import {
 	formatActPhaseSection,
@@ -18,8 +18,8 @@ import {
 	characterSummariesHeader,
 	sceneSummariesHeader,
 	summarizerFullExtractionPromptTemplate,
-	summarizerTranscriptStart,
 	summarizerTranscriptEnd,
+	summarizerTranscriptStart,
 } from '$lib/definitions/pipeline-prompts';
 
 // --- Utility functions ---
@@ -132,34 +132,6 @@ export function formatActSummaryForSummarizer(completedScenes: number, actSummar
 
 // --- Context interfaces ---
 
-/** Context shared by Writer, Reviewer, and Editor phases. */
-export interface PreEditorContext {
-	worldContent: string;
-	actPlot: string;
-	actPhase?: ActPhase | null;
-	actSummary: string;
-	previousScenePlot: string | undefined;
-	previousNarrativeBody: string | undefined;
-	completedScenes: number;
-	player: PlayerContext | undefined;
-	previousTurnOfEvents: string | undefined;
-	directorNotes: string;
-}
-
-/** Context shared by Game Master and Plot Planner phases. */
-export interface PostEditorContext {
-	actPlot: string;
-	actPhase?: ActPhase | null;
-	actSummary: string;
-	previousScenePlot: string | undefined;
-	previousNarrativeBody: string | undefined;
-	completedScenes: number;
-	player: PlayerContext | undefined;
-	previousTurnOfEvents: string | undefined;
-	editorOutput: string;
-	directorNotes: string;
-}
-
 /** Build the shared sections used by Writer, Reviewer, and Editor. */
 function buildPreEditorSections(ctx: PreEditorContext): string[] {
 	return [
@@ -268,4 +240,37 @@ export function buildTranscriptSummarizerMessages(transcript: { role: 'user' | '
 		{ role: 'user', content: summarizerTranscriptEnd() },
 		{ role: 'user', content: summarizerFullExtractionPromptTemplate() },
 	];
+}
+
+export abstract class AbstractPreEditorContext implements PreEditorContext {
+	actPhase: ActPhase | null;
+	actPlot: string;
+	actSummary: string;
+	completedScenes: number;
+	directorNotes: string;
+	previousNarrativeBody: string | undefined;
+	previousTurnOfEvents: string | undefined;
+	worldContent: string;
+
+	abstract previousScenePlot: string | undefined;
+	abstract player: PlayerContext | undefined;
+
+	protected constructor({
+		worldContent,
+		actPlot,
+		actSummary,
+		completedScenes,
+		directorNotes,
+		story,
+		previousNarrativeVariables,
+	}: CommonPipelineInput) {
+		this.worldContent = worldContent;
+		this.actPlot = actPlot;
+		this.actPhase = story.actLine.currentActPhase;
+		this.actSummary = actSummary;
+		this.completedScenes = completedScenes;
+		this.directorNotes = directorNotes;
+		this.previousNarrativeBody = previousNarrativeVariables?.narrativeBody ?? undefined;
+		this.previousTurnOfEvents = previousNarrativeVariables?.turnOfEvents ?? undefined;
+	}
 }

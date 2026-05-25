@@ -6,14 +6,15 @@ import { buildRiskTools } from '$lib/ai/tools/evaluate-risk';
 import { allowAdvancePhaseTools, buildAdvancePhaseTools } from '$lib/ai/tools/advance-phase';
 import { allowEndActTools, buildEndActTools } from '$lib/ai/tools/end-act';
 import { getStory, type Story } from '$lib/db/stories';
-import { type ActLineMeta } from '$lib/db/act-lines';
+import type { ActLineContext, AssistantContext } from '$lib/ai/pipeline/types';
+import { isActLineEnded } from '$lib/db/act-lines';
 import { type Act, getAct } from '$lib/db/acts';
 import { type ToolSet } from 'ai';
-import type { PhaseName } from '$lib/ai/narrative-types';
+import type { PhaseName, ActPhase } from '$lib/ai/narrative-types';
 
 export interface ToolContext {
 	story: Story;
-	actLine: ActLineMeta;
+	actLine: ActLineContext;
 	act: Act;
 }
 
@@ -23,7 +24,7 @@ export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 	PLOT_PLANNER: ['read-scene', 'query-memories', 'query-inventory'],
 	WRITER: ['read-scene', 'query-memories', 'query-inventory', 'evaluate-risk', 'advance-phase', 'end-act'],
 	REVIEWER: ['read-scene', 'query-memories', 'query-inventory'],
-	EDITOR: ['advance-phase', 'end-act'],
+	EDITOR: [],
 	TEMPLATE_FITTER: [],
 	GAME_MASTER: ['read-scene', 'query-memories', 'query-inventory', 'advance-phase', 'end-act'],
 	CHARACTER_PROFILE_COMPRESSOR: [],
@@ -42,7 +43,7 @@ export function filterToolsForPhase(allTools: ToolSet | undefined, phase: PhaseN
 	return Object.keys(filtered).length > 0 ? filtered : undefined;
 }
 
-export async function buildTools(storyId: string, actLine: ActLineMeta): Promise<ToolSet | undefined> {
+export async function buildTools(storyId: string, actLine: ActLineContext, assistant: AssistantContext): Promise<ToolSet | undefined> {
 	const story = await getStory(storyId);
 
 	if (!story) return undefined;
@@ -60,12 +61,15 @@ export async function buildTools(storyId: string, actLine: ActLineMeta): Promise
 		...buildRiskTools(ctx),
 	};
 
-	if (allowAdvancePhaseTools(actLine)) {
-		Object.assign(tools, buildAdvancePhaseTools(actLine));
+	const currentPhase: ActPhase | null = actLine.currentActPhase;
+	const ended = await isActLineEnded(actLine.id);
+
+	if (allowAdvancePhaseTools(actLine.plotMode, currentPhase)) {
+		Object.assign(tools, buildAdvancePhaseTools(actLine.id, currentPhase, assistant));
 	}
 
-	if (allowEndActTools(actLine)) {
-		Object.assign(tools, buildEndActTools(actLine));
+	if (allowEndActTools(ended)) {
+		Object.assign(tools, buildEndActTools(actLine.id, actLine.plotMode, currentPhase, ended, assistant));
 	}
 
 	return Object.keys(tools).length > 0 ? tools : undefined;
