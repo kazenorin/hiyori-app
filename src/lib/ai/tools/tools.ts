@@ -21,12 +21,12 @@ export interface ToolContext {
 /** Maps each pipeline phase to the tool names it is allowed to use. */
 export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 	SUMMARIZER: [],
-	PLOT_PLANNER: ['read-scene', 'query-memories', 'query-inventory'],
-	WRITER: ['read-scene', 'query-memories', 'query-inventory', 'evaluate-risk', 'advance-phase', 'end-act'],
-	REVIEWER: ['read-scene', 'query-memories', 'query-inventory'],
+	PLOT_PLANNER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory'],
+	WRITER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory', 'evaluate-risk', 'advance-phase', 'end-act'],
+	REVIEWER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory'],
 	EDITOR: [],
 	TEMPLATE_FITTER: [],
-	GAME_MASTER: ['read-scene', 'query-memories', 'query-inventory', 'advance-phase', 'end-act'],
+	GAME_MASTER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory', 'advance-phase', 'end-act'],
 	CHARACTER_PROFILE_COMPRESSOR: [],
 };
 
@@ -53,11 +53,13 @@ export async function buildTools(storyId: string, actLine: ActLineContext, assis
 
 	const ctx: ToolContext = { story, actLine, act };
 
+	const includeDistantScene = act.actNumber > 1;
+
 	const tools: ToolSet = {
 		...buildMemoryTools(storyId, actLine.id),
 		...buildInventoryTools(storyId, actLine.id),
 		...buildActPlotTools(ctx),
-		...buildSceneTools(ctx),
+		...buildSceneTools(ctx, includeDistantScene),
 		...buildRiskTools(ctx),
 	};
 

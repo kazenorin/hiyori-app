@@ -97,3 +97,14 @@ export async function getActsContinuingFrom(actLineId: string): Promise<Act[]> {
 	const rows = await db.select<ActRow[]>('SELECT * FROM acts WHERE continues_from_act_line_id = $1', [actLineId]);
 	return rows.map(rowToAct);
 }
+
+export async function getActByActLineId(actLineId: string): Promise<Act | null> {
+	const db = getDatabase();
+	const rows = await db.select<ActRow[]>(
+		`SELECT a.* FROM acts a
+		 JOIN act_line_meta alm ON alm.act_id = a.id
+		 WHERE alm.id = $1`,
+		[actLineId]
+	);
+	return rows.length > 0 ? rowToAct(rows[0]) : null;
+}

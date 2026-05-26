@@ -722,9 +722,7 @@ export async function traceActLineChain(actLineId: string): Promise<{ actLineId:
 
 	while (currentActLineId && !visited.has(currentActLineId)) {
 		visited.add(currentActLineId);
-		const actLine = await getActLine(currentActLineId);
-		if (!actLine) break;
-		const act = await dbActs.getAct(actLine.actId);
+		const act = await dbActs.getActByActLineId(currentActLineId);
 		if (!act) break;
 		result.unshift({ actLineId: currentActLineId, actNumber: act.actNumber });
 		currentActLineId = act.continuesFromActLineId;

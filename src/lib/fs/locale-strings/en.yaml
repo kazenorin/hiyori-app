@@ -401,3 +401,21 @@ tools:
       sceneNoContent: 'Scene {sceneNumber} exists but contains no readable content.'
     parameters:
       sceneNumber: 'The scene number to read (1-based)'
+  readDistantScene:
+    description: >
+      Read the content of a specific scene from a previous act. Use this tool ONLY when you need to recall distant
+      memory from earlier acts — for scenes in the current act, always prefer the read-scene tool instead.
+      Returns the narrative body (assistant response) and the player response for the given scene number,
+      formatted in Markdown. The current act is act {currentActNumber}; you may only read from acts that
+      are in the direct lineage of the current narrative line.
+    headers:
+      sceneBody: Scene Body
+      playerResponse: Player Response
+    messages:
+      futureAct: 'Cannot read scenes from acts that have not happened yet.'
+      actNotInLineage: 'Act {actNumber} is not in the lineage of the current narrative line.'
+      noSceneFound: 'No scene found with scene number {sceneNumber} in act {actNumber}.'
+      sceneNoContent: 'Scene {sceneNumber} in act {actNumber} exists but contains no readable content.'
+    parameters:
+      actNumber: 'The act number to read from (must be in the lineage of the current act line)'
+      sceneNumber: 'The scene number to read (1-based)'

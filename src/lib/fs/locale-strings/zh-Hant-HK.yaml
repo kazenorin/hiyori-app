@@ -391,3 +391,19 @@ tools:
       sceneNoContent: '場景 {sceneNumber} 存在但不包含可讀取的內容。'
     parameters:
       sceneNumber: '要閱讀的場景編號 (從 1 開始) '
+  readDistantScene:
+    description: >
+      閱讀先前章節中指定場景的內容。僅在需要回憶早期章節的遙遠記憶時使用此工具 — 對於目前章節的場景，
+      請務必優先使用 read-scene 工具。回傳指定場景編號的敘事正文 (AI 回應) 和玩家回應，
+      以 Markdown 格式呈現。目前章節為第 {currentActNumber} 章；您只能閱讀目前敘事線傳承中的章節。
+    headers:
+      sceneBody: 場景正文
+      playerResponse: 玩家回應
+    messages:
+      futureAct: '無法閱讀尚未發生的章節。'
+      actNotInLineage: '第 {actNumber} 章不在目前敘事線的傳承中。'
+      noSceneFound: '第 {actNumber} 章中找不到場景編號為 {sceneNumber} 的場景。'
+      sceneNoContent: '第 {actNumber} 章的場景 {sceneNumber} 存在但不包含可讀取的內容。'
+    parameters:
+      actNumber: '要閱讀的章節編號 (必須在目前章節線的傳承中)'
+      sceneNumber: '要閱讀的場景編號 (從 1 開始)'
