@@ -304,7 +304,6 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 		const actSummary = getLatestActSummary(previousSceneNumber);
 		const plotMode = actLine.plotMode ?? getDefaultPlotMode();
 		const previousScenePlot = getScenePlotForScene(previousSceneNumber, plotMode);
-		const templateReplacements = { sceneNumber: String(nextSceneNumber) };
 		const targetWordCount = settings.targetWordCount;
 
 		const previousActSummaries: { actNumber: number; summary: string }[] = [];
@@ -322,7 +321,6 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 		const pipelineCallbacks = createPipelineCallbacks({
 			getCurrentMessage,
 			setCurrentMessage,
-			templateReplacements,
 			onError: (errorMessage) => {
 				error = errorMessage;
 			},
@@ -450,7 +448,6 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 		const pipelineCallbacks = createPipelineCallbacks({
 			getCurrentMessage,
 			setCurrentMessage,
-			templateReplacements: { sceneNumber: String(nextSceneNumber) },
 			onError: (errorMessage) => {
 				error = errorMessage;
 			},

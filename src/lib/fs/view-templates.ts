@@ -18,8 +18,6 @@ const storyMessageTemplatePrompt = new LocalizedViewTemplateFile(viewTemplateDef
 
 registerDefaults([storyMessageTemplatePrompt]);
 
-export const storyMessageTemplate = storyMessageTemplatePrompt.getDefaultContent('en');
-
 export function loadStoryMessageTemplate(): Promise<string> {
 	return storyMessageTemplatePrompt.load();
 }

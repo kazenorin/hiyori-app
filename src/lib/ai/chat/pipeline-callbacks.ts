@@ -1,11 +1,9 @@
-import { storyMessageTemplate } from '$lib/fs/view-templates';
 import { log } from '$lib/logging/logger';
 import { isReviewerEnabled } from '$lib/stores/settings.svelte';
 import { getErrorMessage } from '$lib/utils/error-handling';
 import type { UIMessage } from './types';
 import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from '../narrative-types';
 import type { PipelineCallbacks, PipelineState, PhaseStreamState } from '../pipeline/types';
-import { renderFromVariables } from '../template-renderer';
 import { serializeImportantPhrases, updatePersistentMessageMetadata } from './persistence';
 
 /** Merge Editor variables with GM game data into final NarrativeVariables */
@@ -49,7 +47,6 @@ export function getPhaseContent(phase: PhaseName, state: PipelineState): string 
 export interface CallbackDeps {
 	getCurrentMessage: () => UIMessage;
 	setCurrentMessage: (msg: UIMessage) => void;
-	templateReplacements: Record<string, string>;
 	onError: (errorMessage: string) => void;
 }
 
@@ -72,12 +69,7 @@ export function createOptionalCallbacks({
 }
 
 export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
-	const { getCurrentMessage, setCurrentMessage, templateReplacements, onError } = deps;
-	const renderContent = (vars: NarrativeVariables | null | undefined, fallback: string): string => {
-		if (!vars) return fallback;
-		const rendered = renderFromVariables(vars, storyMessageTemplate, templateReplacements);
-		return rendered || fallback;
-	};
+	const { getCurrentMessage, setCurrentMessage, onError } = deps;
 
 	const phasesOfMainChat: PhaseName[] = isReviewerEnabled() ? ['EDITOR'] : ['EDITOR', 'WRITER'];
 
@@ -110,7 +102,7 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 		},
 		onPhaseStream: (phase: PhaseName, streamState: PhaseStreamState) => {
 			if (phasesOfMainChat.includes(phase)) {
-				updateEditorMessage(renderContent(streamState.variables, streamState.content), streamState.reasoning, streamState.variables);
+				updateEditorMessage(streamState.content, streamState.reasoning, streamState.variables);
 				return;
 			}
 			updatePhaseInList(phase, { content: streamState.content, reasoning: streamState.reasoning ?? undefined });
@@ -121,7 +113,7 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 		onPhaseComplete: (phase: PhaseName, pipelineState: PipelineState) => {
 			if (phasesOfMainChat.includes(phase)) {
 				updateEditorMessage(
-					renderContent(pipelineState.editorVariables, pipelineState.editorOutput ?? getCurrentMessage().content),
+					pipelineState.editorOutput ?? getCurrentMessage().content,
 					pipelineState.editorReasoning,
 					pipelineState.editorVariables
 				);
@@ -130,15 +122,14 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 			if (phase === 'TEMPLATE_FITTER') {
 				if (pipelineState.editorVariables) {
 					updateEditorMessage(
-						renderContent(pipelineState.editorVariables, pipelineState.editorOutput ?? getCurrentMessage().content),
+						pipelineState.editorOutput ?? getCurrentMessage().content,
 						pipelineState.editorReasoning,
 						pipelineState.editorVariables
 					);
 				} else if (pipelineState.gameData) {
 					const current = getCurrentMessage();
 					const finalVars = buildFinalVariables(current.variables, pipelineState.gameData);
-					const content = renderContent(finalVars, current.content);
-					setCurrentMessage({ ...current, content, variables: finalVars ?? current.variables });
+					setCurrentMessage({ ...current, variables: finalVars ?? current.variables });
 				}
 				return;
 			}
@@ -148,8 +139,7 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 			if (phase === 'GAME_MASTER') {
 				const current = getCurrentMessage();
 				const finalVars = buildFinalVariables(current.variables, pipelineState.gameData);
-				const content = renderContent(finalVars, current.content);
-				setCurrentMessage({ ...current, content, variables: finalVars ?? current.variables });
+				setCurrentMessage({ ...current, variables: finalVars ?? current.variables });
 			}
 
 			if (phase === 'PLOT_PLANNER' && pipelineState.scenePlot) {
@@ -165,10 +155,9 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 		onAllComplete: (pipelineState: PipelineState) => {
 			const current = getCurrentMessage();
 			const finalVars = buildFinalVariables(current.variables ?? pipelineState.editorVariables, pipelineState.gameData);
-			const content = renderContent(finalVars, pipelineState.editorOutput ?? current.content);
 			setCurrentMessage({
 				...current,
-				content,
+				content: pipelineState.editorOutput ?? current.content,
 				variables: finalVars ?? current.variables,
 			});
 		},
