@@ -11,3 +11,5 @@ export const nameLabel = () => ls('common.labels.name');
 export const locationLabel = () => ls('common.labels.location');
 export const aliasesLabel = () => ls('common.labels.aliases');
 export const lastUpdateLabel = () => ls('common.labels.lastUpdate');
+export const mainLineNameLabel = () => ls('common.labels.mainLineName');
+export const actWithNumberLabel = (actNumber: number | string) => ls('common.labels.actWithNumber', { actNumber });

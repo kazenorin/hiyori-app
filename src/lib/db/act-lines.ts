@@ -1,11 +1,11 @@
 import Database from '@tauri-apps/plugin-sql';
 import { getDatabase } from './database';
 import type { Message } from './messages';
-import { type MessageRow, mapRowToMessage, cloneMessage } from './messages';
+import { cloneMessage, mapRowToMessage, type MessageRow } from './messages';
 import type { Story } from './stories';
-import type { PlotMode, ActPhase, EndingType } from '$lib/ai/narrative-types';
+import type { ActPhase, EndingType, PlotMode } from '$lib/ai/narrative-types';
+import { getActPhaseIndex, isValidEndingType, isValidPlotMode } from '$lib/ai/narrative-types';
 import type { AssistantContext } from '$lib/ai/pipeline/types';
-import { getActPhaseIndex, isValidPlotMode, isValidEndingType } from '$lib/ai/narrative-types';
 import * as dbActs from './acts';
 
 // --- Act line event types ---

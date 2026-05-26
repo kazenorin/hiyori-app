@@ -116,19 +116,6 @@ describe('acts CRUD', () => {
 		testDb.close();
 	});
 
-	it('creates an act with auto-incrementing number', async () => {
-		const act1 = await acts.createAct('act-1', 'story-1', 'Act 1', 1);
-		expect(act1.actNumber).toBe(1);
-		expect(act1.continuesFromActLineId).toBeNull();
-
-		const next = await acts.getNextActNumber('story-1');
-		expect(next).toBe(2);
-	});
-
-	it('returns 1 for getNextActNumber when no acts exist', async () => {
-		expect(await acts.getNextActNumber('story-1')).toBe(1);
-	});
-
 	it('gets acts sorted by act_number ASC', async () => {
 		await acts.createAct('act-1', 'story-1', 'Act 1', 1);
 		await acts.createAct('act-2', 'story-1', 'Act 2', 2);

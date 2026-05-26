@@ -3,21 +3,20 @@ import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import * as dbAppState from '$lib/db/app-state';
 import * as dbDirectorNotes from '$lib/db/director-notes';
+import { loadLocaleStrings } from '$lib/localization';
 import { log } from '$lib/logging/logger';
 import { moveWorldBuilderLog } from '$lib/logging/chat-logger';
 import { getLogFilePath } from '$lib/features/world-builder/world-builder.svelte';
 import { Memory } from '$lib/features/memory';
 import { getDefaultPlotMode, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
-import { loadLocaleStrings } from '$lib/localization';
 import { deriveStoryName, ensureWorldFile, renameStoryFolder, resolveStoryFolder } from '$lib/fs/story-folders';
 import { BaseDirectory, copyFile, exists, mkdir, remove, rename, writeTextFile } from '@tauri-apps/plugin-fs';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, getLineDir, resolveLineSubdir } from '$lib/ai/card-output-path';
 import { type ActPlotPhase } from '$lib/ai/act-plot';
 import type { PlotMode } from '$lib/ai/narrative-types';
-
-export type { dbStories as Story, dbActs as Act, dbActLines as ActLineMeta };
+import { actWithNumberLabel, mainLineNameLabel } from '$lib/definitions/common-labels';
 
 let stories = $state<dbStories.Story[]>([]);
 let acts = $state<dbActs.Act[]>([]);
@@ -172,19 +171,53 @@ export async function createStory(name: string, locale: string): Promise<dbStori
 	return story;
 }
 
-export async function createAct(storyId: string, name: string, continuesFromActLineId?: string): Promise<dbActs.Act> {
-	const actNumber = await dbActs.getNextActNumber(storyId);
-	const act = await dbActs.createAct(crypto.randomUUID(), storyId, name, actNumber, continuesFromActLineId ?? null);
+async function insertAct(
+	storyId: string,
+	name: string,
+	actNumber: number,
+	continuesFromActLineId: string | null = null
+): Promise<dbActs.Act> {
+	const act = await dbActs.createAct(crypto.randomUUID(), storyId, name, actNumber, continuesFromActLineId);
 	acts = [...acts, act].sort((a, b) => a.actNumber - b.actNumber);
 	return act;
 }
 
-export async function createActLine(actId: string, name: string, plotMode?: PlotMode): Promise<dbActLines.ActLineMeta> {
+export async function createActLine(
+	actId: string,
+	name: string,
+	plotMode: PlotMode = getDefaultPlotMode(),
+	isMainLine?: boolean
+): Promise<dbActLines.ActLineMeta> {
 	const existingLines = await dbActLines.getActLinesForAct(actId);
-	const isFirst = existingLines.length === 0;
-	const line = await dbActLines.createActLine(crypto.randomUUID(), actId, name, isFirst, plotMode ?? getDefaultPlotMode());
+	const resolvedIsMainLine = isMainLine || existingLines.length === 0;
+	const line = await dbActLines.createActLine(crypto.randomUUID(), actId, name, resolvedIsMainLine, plotMode);
 	actLines = [...actLines, line];
 	return line;
+}
+
+async function determineMainLineNameForExistingAct(targetActId: string, mainLineName: string): Promise<string> {
+	const existingLines = await dbActLines.getActLinesForAct(targetActId);
+	const mainsCount = existingLines.filter((l) => l.name.startsWith(mainLineName)).length;
+	return mainsCount > 0 ? `${mainLineName} (${mainsCount + 1})` : mainLineName;
+}
+
+export async function createActLineContinuation(
+	fromAct: dbActs.Act,
+	fromActLine: dbActLines.ActLineMeta,
+	story: dbStories.Story
+): Promise<{ act: dbActs.Act; actLine: dbActLines.ActLineMeta }> {
+	const toActNumber = fromAct.actNumber + 1;
+	const toAct = await dbActs.getActByActNumber(story.id, toActNumber);
+	if (toAct) {
+		const lineName = await determineMainLineNameForExistingAct(toAct.id, mainLineNameLabel());
+		const actLine = await createActLine(toAct.id, lineName, fromActLine.plotMode, true);
+		return { act: toAct, actLine };
+	} else {
+		const actName = actWithNumberLabel(toActNumber);
+		const newAct = await insertAct(story.id, actName, toActNumber, fromActLine.id);
+		const actLine = await createActLine(newAct.id, mainLineNameLabel(), fromActLine.plotMode);
+		return { act: newAct, actLine };
+	}
 }
 
 export async function renameStory(id: string, newName: string): Promise<void> {
@@ -491,8 +524,8 @@ export async function restoreState(): Promise<void> {
 
 export async function createStoryFromWorldBuilder(name: string, worldContent: string, locale: string): Promise<void> {
 	const story = await createStory(name, locale);
-	const act = await createAct(story.id, 'Act 1');
-	const actLine = await createActLine(act.id, 'main line');
+	const act = await insertAct(story.id, actWithNumberLabel(1), 1);
+	const actLine = await createActLine(act.id, mainLineNameLabel());
 
 	// Write world.md to story folder before selectStory triggers ensureWorldFile
 	const effectiveName = deriveStoryName(story.name, story.id);

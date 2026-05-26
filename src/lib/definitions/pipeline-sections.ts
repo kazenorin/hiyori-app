@@ -23,6 +23,7 @@ import {
 	sectionFormat,
 } from './common-headers';
 import { getLocalizedActPhase } from './pipeline-prompts';
+import { actWithNumberLabel } from '$lib/definitions/common-labels';
 
 export const interviewTranscriptDescription = () => ls('common.descriptions.interviewTranscript');
 
@@ -123,6 +124,6 @@ export function formatActPhaseSection(actPhase: ActPhase | null | undefined): st
 
 export function formatStorySoFar(summaries: { actNumber: number; summary: string }[], currentActNumber: number): string[] {
 	if (currentActNumber <= 1 || summaries.length === 0) return [];
-	const items = summaries.map((s) => `**${ls('pipeline.labels.actWithNumber', { actNumber: s.actNumber })}:** ${s.summary}`).join('\n\n');
+	const items = summaries.map((s) => `**${actWithNumberLabel(s.actNumber)}:** ${s.summary}`).join('\n\n');
 	return [SECTION.STORY_SO_FAR + items];
 }

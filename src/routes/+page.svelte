@@ -7,8 +7,8 @@
 		getCharacterNames,
 		getError,
 		getForkSequence,
-		getIsStreaming,
 		getIsBusy,
+		getIsStreaming,
 		getLatestActivePlotThreads,
 		getLatestDecisionContext,
 		getLatestDecisions,
@@ -34,45 +34,50 @@
 		getHasInterviewMessages,
 		getIsActive as getIsWorldBuilderActive,
 		getIsComplete as getIsWorldBuilderComplete,
-		getIsStreaming as getIsWorldBuilderStreaming,
 		getIsNextActInterview,
+		getIsStreaming as getIsWorldBuilderStreaming,
 		getMessages as getWorldBuilderMessages,
 		getStoryName as getWorldBuilderStoryName,
 		getWorldContent as getWorldBuilderContent,
+		type NewActInterviewContext,
 		regenerateLastWorldBuilderResponse,
 		removeLastInterviewAssistantMessage,
 		sendWorldBuilderMessage,
 		stopStreaming as stopWorldBuilderStreaming,
 		type WorldBuilderMessage,
-		type NewActInterviewContext,
 	} from '$lib/features/world-builder/world-builder.svelte';
 	import {
-		createAct,
-		createActLine,
+		createActLineContinuation,
 		createStoryFromWorldBuilder,
 		forkActLine,
 		forkActLineForInterview,
 		getActiveAct,
 		getActiveActLineId,
-		getActiveStory,
 		getActiveDirectorNotesText,
+		getActiveStory,
 		getIsSelectingStory,
-		setActPlotGenerationPhase,
 		selectAct,
 		selectActLine,
+		setActPlotGenerationPhase,
 	} from '$lib/stores/stories.svelte';
-	import { settings, isDirectorModeEnabled } from '$lib/stores/settings.svelte';
+	import { isDirectorModeEnabled, settings } from '$lib/stores/settings.svelte';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import ChatControls from '$lib/components/ChatControls.svelte';
 	import DirectorNotesPanel from '$lib/components/DirectorNotesPanel.svelte';
 	import WorldBuilderControls from '$lib/components/WorldBuilderControls.svelte';
 	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
-	import { emptyVariables, type NarrativeVariables } from '$lib/ai/narrative-types';
-	import { formatPhaseName } from '$lib/ai/narrative-types';
+	import { emptyVariables, formatPhaseName, type NarrativeVariables } from '$lib/ai/narrative-types';
 	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
 	import { ensureActPlot } from '$lib/ai/act-plot';
-	import { getActLine, getMessagesForLine, getEndingType } from '$lib/db/act-lines';
+	import {
+		getActLine,
+		getEndingType,
+		getMessageSequence,
+		getMessagesForLine,
+		getPrecedingActSummary,
+		getPremisesMessages,
+	} from '$lib/db/act-lines';
 	import { log } from '$lib/logging/logger';
 	import { generateTurnOfEvents } from '$lib/features/turn-of-events-generator';
 	import { type Message, updateMessageFields } from '$lib/db/messages';
@@ -82,7 +87,6 @@
 	import { t } from '$lib/i18n';
 	import { ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-folders';
 	import { updateWorldCard } from '$lib/ai/world-generator';
-	import { getPrecedingActSummary, getPremisesMessages, getMessageSequence } from '$lib/db/act-lines';
 	import { generateAndRecordActShortSummary } from '$lib/ai/act-short-summary-generator';
 
 	let input = $state('');
@@ -509,9 +513,9 @@
 
 		try {
 			await clearMessages();
-			const newAct = await createAct(story.id, t('common.actLabel', { n: endedAct.actNumber + 1 }), endedActLineId);
+
+			const { act: newAct, actLine: newLine } = await createActLineContinuation(endedAct, endedActLine, story);
 			await selectAct(newAct.id);
-			const newLine = await createActLine(newAct.id, 'Main');
 			await selectActLine(newLine.id);
 
 			const newActContext: NewActInterviewContext = {

@@ -16,7 +16,6 @@
 		selectStory,
 		selectAct,
 		selectActLine,
-		createAct,
 		createActLine,
 		deleteStory,
 		deleteAct,
@@ -41,9 +40,7 @@
 	let initStatus = $state('Starting...');
 	let appReady = $state(false);
 	let sidebarBlocked = $derived(!appReady || getIsWorldBuilderActive());
-	let newActName = $state('');
 	let newActLineName = $state('');
-	let showNewAct = $state(false);
 	let showNewActLine = $state(false);
 	let actLineEventSummaries = $state<Map<string, ActLineEventSummary>>(new Map());
 
@@ -158,15 +155,6 @@
 
 	function cancelNewStory() {
 		showNewStoryModal = false;
-	}
-
-	async function handleCreateAct() {
-		const name = newActName.trim();
-		const storyId = getActiveStoryId();
-		if (!name || !storyId) return;
-		await createAct(storyId, name);
-		newActName = '';
-		showNewAct = false;
 	}
 
 	async function handleCreateActLine() {
@@ -355,15 +343,17 @@
 											title={t('sidebar.renameAct')}>&#9998;</button
 										>
 									{/if}
-									<button
-										class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
-										type="button"
-										onclick={(e) => {
-											e.stopPropagation();
-											requestDeleteAct(act.id, act.name);
-										}}
-										title={t('sidebar.deleteAct')}>&times;</button
-									>
+									{#if getActs().length > 1 && getActs().at(-1)?.id === act.id}
+										<button
+											class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+											type="button"
+											onclick={(e) => {
+												e.stopPropagation();
+												requestDeleteAct(act.id, act.name);
+											}}
+											title={t('sidebar.deleteAct')}>&times;</button
+										>
+									{/if}
 								</div>
 
 								<!-- Act Lines -->
@@ -447,29 +437,6 @@
 								{/if}
 							</div>
 						{/each}
-
-						<!-- Add act button -->
-						{#if showNewAct}
-							<div class="ml-3 p-1">
-								<div class="flex gap-1">
-									<input
-										class="input text-xs flex-1"
-										placeholder={t('sidebar.actNamePlaceholder')}
-										bind:value={newActName}
-										onkeydown={(e) => e.key === 'Enter' && handleCreateAct()}
-									/>
-									<button class="text-xs text-primary-500" type="button" onclick={handleCreateAct}>+</button>
-								</div>
-							</div>
-						{:else}
-							<button
-								class="ml-3 p-2 pl-4 text-xs text-surface-500 hover:text-surface-700-300 transition-colors"
-								type="button"
-								onclick={() => (showNewAct = true)}
-							>
-								{t('sidebar.newAct')}
-							</button>
-						{/if}
 					{/if}
 				</div>
 			{/each}

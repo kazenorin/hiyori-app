@@ -7,6 +7,8 @@ common:
     name: 姓名
     aliases: 別名
     lastUpdate: 最後更新
+    mainLineName: 主線
+    actWithNumber: 第 {actNumber} 章
   headers:
     worldContent: 世界觀內容
     actPlot: 章節劇情
@@ -126,7 +128,6 @@ pipeline:
     voice: 語氣
     sceneCountSingular: 1 個場景
     sceneCountPlural: '{count} 個場景'
-    actWithNumber: 第 {actNumber} 章
     characterSummaries: '自場景 {sceneNumber} 以來每個角色的近期摘要。'
     actPhases:
       introduction: 鋪陳

@@ -75,10 +75,10 @@ export async function getActsForStory(storyId: string): Promise<Act[]> {
 	return rows.map(rowToAct);
 }
 
-export async function getNextActNumber(storyId: string): Promise<number> {
+export async function getActByActNumber(storyId: string, actNumber: number): Promise<Act | null> {
 	const db = getDatabase();
-	const rows = await db.select<{ max: number | null }[]>('SELECT MAX(act_number) as max FROM acts WHERE story_id = $1', [storyId]);
-	return (rows[0]?.max ?? 0) + 1;
+	const rows = await db.select<ActRow[]>('SELECT * FROM acts WHERE story_id = $1 AND act_number = $2 LIMIT 1;', [storyId, actNumber]);
+	return rows.length > 0 ? rowToAct(rows[0]) : null;
 }
 
 export async function updateAct(id: string, name: string): Promise<void> {
