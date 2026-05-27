@@ -41,12 +41,13 @@ export const log = {
 	},
 };
 
-export async function fileLog(level: LogLevel, loggerTag: string, message: string): Promise<void> {
+export async function fileLog(level: LogLevel, loggerTag: string, message: string | (() => string)): Promise<void> {
 	const settingsLevel = LOG_LEVEL_VALUES[getSettings().logLevel];
 	const incomingLevel = LOG_LEVEL_VALUES[level];
 	if (incomingLevel > settingsLevel) return;
 
-	const line = `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${message}\n`;
+	const resolvedMessage = typeof message === 'function' ? message() : message;
+	const line = `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${resolvedMessage}\n`;
 	const filename = `${kebabCase(loggerTag)}.log`;
 	try {
 		await mkdir('logs', { baseDir: BaseDirectory.AppData, recursive: true });

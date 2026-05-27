@@ -350,9 +350,11 @@
 		"allMemories": "所有記憶（{count}）",
 		"allLocations": "所有地點（{count}）",
 		"allInventory": "所有物品（{count}）",
+		"aliasGroups": "別名群組（{count}）",
 		"noMemories": "尚無已儲存的記憶。",
 		"noLocations": "尚無已儲存的地點。",
 		"noInventory": "尚無已儲存的物品。",
+		"noAliases": "尚無已儲存的別名。",
 		"queryPlaceholder": "查詢…",
 		"locationPlaceholder": "地點…",
 		"regenerationComplete": "重新生成完成：{result}",
@@ -372,7 +374,11 @@
 		"foundLocations": "找到 {count} 個地點。",
 		"foundResultsByLocation": "依地點找到 {count} 筆結果。",
 		"actCardSaved": "章節卡已儲存：{file}",
-		"errorPrefix": "錯誤："
+		"errorPrefix": "錯誤：",
+		"currentActOnly": "僅限當前章節",
+		"includeLineage": "包含故事線",
+		"scope": "範圍",
+		"lineageInfo": "顯示 {count} 條連續故事線"
 	},
 	"errors": {
 		"failedToFetchModels": "無法取得模型",

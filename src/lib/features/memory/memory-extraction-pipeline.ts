@@ -10,8 +10,10 @@ import { loadMemoryExtractionPrompt, loadMemoryExtractionSystemPrompt } from '$l
 import { type ExtractedMemories, parseMemoryExtract } from '$lib/features/memory/memory-extract-parser';
 import { Memory } from '$lib/features/memory';
 import { parseCharacterAliases } from '$lib/ai/act-summary-parser';
+import { ls } from '$lib/localization';
+import { stripCodeFences } from '$lib/utils/strings';
 import { isAuthError, toError, withRetry } from '$lib/utils/async';
-import { log } from '$lib/logging/logger';
+import { fileLog,log } from '$lib/logging/logger';
 import { ERR_MEMORY_PROVIDER_NOT_CONFIGURED, ERR_EMBEDDING_PROVIDER_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 
 export interface PipelineResult {
@@ -50,9 +52,13 @@ export async function runMemoryExtractionPipeline(
 		log.debug('memory-pipeline', `Generating memories for message=${messageId}...`),
 	]);
 
+	await fileLog('debug', 'memory-pipeline', () => '--- Generated ---\n\n' + generatedText);
+
 	// Step 2: Parse into structured object
 	await log.debug('memory-pipeline', `parsing memories for message=${messageId}...`);
 	const extracted = parseMemoryExtract(generatedText);
+
+	await fileLog('debug', 'memory-pipeline', () => '--- Extracted ---\n\n' + JSON.stringify(extracted, null, 2));
 
 	// Step 3: Persist each character/location (uses embedding provider)
 	await log.debug('memory-pipeline', `persisting memories for message=${messageId}...`);
@@ -61,9 +67,20 @@ export async function runMemoryExtractionPipeline(
 	// Step 4: Persist aliases from act summary
 	if (actSummary) {
 		const aliasEntries = parseCharacterAliases(actSummary);
-		const aliasGroups = aliasEntries.filter((entry) => entry.aliases.length > 0).map((entry) => entry.aliases);
+		await fileLog('debug', 'memory-pipeline', () => '--- Aliases ---\n\n' + JSON.stringify(aliasEntries, null, 2));
+		const aliasGroups = aliasEntries.filter((entry) => entry.aliases.length > 0).map((entry) => [entry.characterName, ...entry.aliases]);
 		if (aliasGroups.length > 0) {
-			result.aliasesAdded = await persistAliases(embeddingConfig, storyId, actLineId, messageId, aliasGroups);
+			const flatAliases = aliasGroups.flat();
+			await log.debug('memory-pipeline', `Filtering ${flatAliases.length} alias strings via LLM...`);
+			const filtered = await filterAliasesWithRetry(flatAliases, llmConfig);
+			await fileLog('debug', 'memory-pipeline', () => '--- Filtered Aliases ---\n\n' + JSON.stringify(filtered, null, 2));
+			const filteredSet = new Set(filtered);
+			const filteredGroups = aliasGroups
+				.map((group) => group.filter((a) => filteredSet.has(a)))
+				.filter((group) => group.length > 1);
+			if (filteredGroups.length > 0) {
+				result.aliasesAdded = await persistAliases(embeddingConfig, storyId, actLineId, messageId, filteredGroups);
+			}
 		}
 	}
 
@@ -82,6 +99,28 @@ async function generateMemoriesWithRetry(response: string, config: MemoryProvide
 		shouldRetry: (err) => !isAuthError(err),
 		onRetry: (attempt) => log.warn('memory-pipeline', `Memory generation attempt ${attempt} failed, retrying...`),
 	});
+}
+
+async function filterAliasesWithRetry(flatAliases: string[], config: MemoryProviderConfig): Promise<string[]> {
+	const model = createModel(config);
+	const systemPrompt = ls('pipeline.extraction.aliasFilter');
+	const userPrompt = JSON.stringify(flatAliases);
+
+	const result = await withRetry(() => generateText({ model, system: systemPrompt, prompt: userPrompt }).then((r) => r.text), {
+		maxAttempts: RETRY_COUNT + 1,
+		backoffMs: BACKOFF_SECONDS * 1000,
+		shouldRetry: (err) => !isAuthError(err),
+		onRetry: (attempt) => log.warn('memory-pipeline', `Alias filter attempt ${attempt} failed, retrying...`),
+	});
+
+	try {
+		const parsed = JSON.parse(stripCodeFences(result));
+		if (!Array.isArray(parsed)) return flatAliases;
+		return parsed.filter((item): item is string => typeof item === 'string');
+	} catch {
+		await log.warn('memory-pipeline', 'Alias filter returned invalid JSON, using unfiltered aliases');
+		return flatAliases;
+	}
 }
 
 async function persistMemoriesWithRetry(

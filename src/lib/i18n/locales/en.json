@@ -350,9 +350,11 @@
 		"allMemories": "All Memories ({count})",
 		"allLocations": "All Locations ({count})",
 		"allInventory": "All Inventory ({count})",
+		"aliasGroups": "Alias Groups ({count})",
 		"noMemories": "No memories stored yet.",
 		"noLocations": "No locations stored yet.",
 		"noInventory": "No inventory stored yet.",
+		"noAliases": "No aliases stored yet.",
 		"queryPlaceholder": "Query...",
 		"locationPlaceholder": "Location...",
 		"regenerationComplete": "Regeneration complete: {result}",
@@ -372,7 +374,11 @@
 		"foundLocations": "Found {count} location(s).",
 		"foundResultsByLocation": "Found {count} result(s) by location.",
 		"actCardSaved": "Act card saved: {file}",
-		"errorPrefix": "Error:"
+		"errorPrefix": "Error:",
+		"currentActOnly": "Current Act Only",
+		"includeLineage": "Include Lineage",
+		"scope": "Scope",
+		"lineageInfo": "Showing {count} act line(s) in lineage"
 	},
 	"errors": {
 		"failedToFetchModels": "Failed to fetch models",

@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { Memory, type MemoryItem, type LocationItem } from '$lib/features/memory';
+	import { Memory, type MemoryItem, type LocationItem, type AliasGroup } from '$lib/features/memory';
 	import type { InventoryItem } from '$lib/features/memory/inventory-types';
 	import { getEmbeddingProviderConfig, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
 	import { t } from '$lib/i18n';
+	import { sampleSize } from 'lodash-es';
 	import {
 		getActiveStory,
 		getActiveAct,
@@ -20,19 +21,35 @@
 	} from '$lib/stores/memory-regeneration.svelte';
 	import { streamActCard } from '$lib/features/act-card-generator';
 	import { log } from '$lib/logging/logger';
+	import { traceActLineChain } from '$lib/db/act-lines';
 
-	let memories = $state<MemoryItem[]>([]);
 	let inventoryItems = $state<InventoryItem[]>([]);
+	let aliasGroups = $state<AliasGroup[]>([]);
 	let locations = $state<LocationItem[]>([]);
 	let searchQuery = $state('');
 	let searchResults = $state<MemoryItem[]>([]);
 	let locationSearchQuery = $state('');
-	let locationSearchResults = $state<LocationItem[]>([]);
+	let locationSearchResults = $state<MemoryItem[]>([]);
 	let locationQuery = $state('');
 	let locationQueryLocation = $state('');
 	let locationQueryResults = $state<MemoryItem[]>([]);
 	let status = $state('');
 	let isLoading = $state(false);
+	let includeLineage = $state(false);
+	let lineageCount = $state(1);
+
+	const searchLimit = 5;
+
+	function dedup(items: MemoryItem[]): MemoryItem[] {
+		const seen = new Set<string>();
+		return items
+			.filter((item) => {
+				if (seen.has(item.id)) return false;
+				seen.add(item.id);
+				return true;
+			})
+			.sort((a, b) => (a.score ?? Infinity) - (b.score ?? Infinity));
+	}
 
 	// Generation state
 	let isGeneratingAct = $state(false);
@@ -50,27 +67,40 @@
 	const activeActLineId = $derived(getActiveActLineId());
 	const _activeActId = $derived(getActiveActId());
 
+	async function resolveLineage(withLineage: boolean): Promise<{ ids: string[]; count: number }> {
+		if (!withLineage || !activeActLineId) {
+			return { ids: activeActLineId ? [activeActLineId] : [], count: 1 };
+		}
+		if (activeAct?.actNumber && activeAct.actNumber === 1) {
+			return { ids: activeActLineId ? [activeActLineId] : [], count: 1 };
+		}
+		const chain = await traceActLineChain(activeActLineId);
+		return { ids: chain.map((l) => l.actLineId), count: chain.length };
+	}
+
 	function providerLabel(config: { name: string; model: string } | undefined, role: string): string {
 		if (!config) return t('memoryManager.noMemoryProvider', { role });
 		return `${config.name} (${config.model})`;
 	}
 
-	async function loadMemories() {
+	async function loadMemories(ids: string[]) {
 		if (!embeddingConfig || !activeStoryId) {
 			status = !activeStoryId ? t('memoryManager.noStory') : t('memoryManager.noProvider');
 			return;
 		}
 		const memory = new Memory(embeddingConfig);
-		memories = await memory.getAll({ storyId: activeStoryId, actLineIds: activeActLineId ? [activeActLineId] : [] });
-		locations = await memory.getAllLocations({ storyId: activeStoryId, actLineIds: activeActLineId ? [activeActLineId] : [] });
-		if (activeActLineId) {
+		locations = await memory.getAllLocations({ storyId: activeStoryId, actLineIds: ids });
+		if (ids.length > 0) {
 			try {
-				inventoryItems = await memory.getInventoryByActLine(activeStoryId, activeActLineId);
+				inventoryItems = await memory.getAllInventory(activeStoryId, ids);
+				aliasGroups = await memory.getAllAliases(activeStoryId, ids);
 			} catch {
 				inventoryItems = [];
+				aliasGroups = [];
 			}
 		} else {
 			inventoryItems = [];
+			aliasGroups = [];
 		}
 	}
 
@@ -156,7 +186,8 @@
 		} else if (result) {
 			addProgress(`Complete: ${result}`);
 			status = t('memoryManager.regenerationComplete', { result });
-			await loadMemories();
+			const { ids } = await resolveLineage(includeLineage);
+			await loadMemories(ids);
 		}
 	}
 
@@ -165,12 +196,13 @@
 		isLoading = true;
 		status = t('memoryManager.searchingMemories');
 		try {
+			const { ids } = await resolveLineage(includeLineage);
 			const memory = new Memory(embeddingConfig);
-			searchResults = await memory.search(searchQuery.trim(), {
-				storyId: activeStoryId,
-				actLineIds: activeActLineId ? [activeActLineId] : [],
-				limit: 5,
-			});
+			const resolved = await memory.resolveAliases(activeStoryId, ids, searchQuery.trim());
+			const all = await Promise.all(
+				resolved.map((name) => memory.search(name, { storyId: activeStoryId, actLineIds: ids, limit: searchLimit }))
+			);
+			searchResults = dedup(all.flat()).slice(0, searchLimit);
 			status = t('memoryManager.foundResults', { count: searchResults.length });
 		} catch (err) {
 			status = err instanceof Error ? err.message : t('memoryManager.searchFailed');
@@ -185,13 +217,16 @@
 		isLoading = true;
 		status = t('memoryManager.searchingLocations');
 		try {
+			const { ids } = await resolveLineage(includeLineage);
 			const memory = new Memory(embeddingConfig);
-			locationSearchResults = await memory.searchLocations(locationSearchQuery.trim(), {
+			const locs = await memory.searchLocations(locationSearchQuery.trim(), {
 				storyId: activeStoryId,
-				actLineIds: activeActLineId ? [activeActLineId] : [],
-				limit: 5,
+				actLineIds: ids,
+				limit: searchLimit,
 			});
-			status = t('memoryManager.foundLocations', { count: locationSearchResults.length });
+			const sampled = await Promise.all(locs.map((loc) => memory.sampleByLocation(loc, searchLimit)));
+			locationSearchResults = sampleSize(sampled.flat(), searchLimit);
+			status = t('memoryManager.foundResults', { count: locationSearchResults.length });
 		} catch (err) {
 			status = err instanceof Error ? err.message : t('memoryManager.locationSearchFailed');
 			locationSearchResults = [];
@@ -205,12 +240,19 @@
 		isLoading = true;
 		status = t('memoryManager.searchingByLocation');
 		try {
+			const { ids } = await resolveLineage(includeLineage);
 			const memory = new Memory(embeddingConfig);
-			locationQueryResults = await memory.searchByLocation(locationQuery.trim(), locationQueryLocation.trim(), {
-				storyId: activeStoryId,
-				actLineIds: activeActLineId ? [activeActLineId] : [],
-				limit: 5,
-			});
+			const resolved = await memory.resolveAliases(activeStoryId, ids, locationQuery.trim());
+			const all = await Promise.all(
+				resolved.map((name) =>
+					memory.searchByLocation(name, locationQueryLocation.trim(), {
+						storyId: activeStoryId,
+						actLineIds: ids,
+						limit: searchLimit,
+					})
+				)
+			);
+			locationQueryResults = dedup(all.flat()).slice(0, searchLimit);
 			status = t('memoryManager.foundResultsByLocation', { count: locationQueryResults.length });
 		} catch (err) {
 			status = err instanceof Error ? err.message : t('memoryManager.searchByLocationFailed');
@@ -231,7 +273,7 @@
 
 	async function doReset() {
 		isLoading = true;
-		memories = [];
+		aliasGroups = [];
 		inventoryItems = [];
 		locations = [];
 		searchResults = [];
@@ -250,24 +292,15 @@
 		}
 	}
 
-	async function handleDeleteMemory(id: string) {
-		if (!embeddingConfig) return;
-		isLoading = true;
-		try {
-			const memory = new Memory(embeddingConfig);
-			await memory.delete(id);
-			await loadMemories();
-			status = t('memoryManager.memoryDeleted');
-		} catch (err) {
-			status = err instanceof Error ? err.message : t('memoryManager.deleteFailed');
-		} finally {
-			isLoading = false;
-		}
-	}
-
 	$effect(() => {
 		if (embeddingConfig && activeStoryId && settings.memoryEnabled) {
-			loadMemories();
+			searchResults = [];
+			locationSearchResults = [];
+			locationQueryResults = [];
+			resolveLineage(includeLineage).then(({ ids, count }) => {
+				lineageCount = count;
+				loadMemories(ids);
+			});
 		}
 	});
 </script>
@@ -290,6 +323,23 @@
 					<span class="text-xs text-surface-500 w-32 shrink-0">{t('memoryManager.actLine')}</span>
 					<span class="text-sm font-medium">{activeActLine?.name ?? t('memoryManager.noneSelected')}</span>
 				</div>
+				<div class="flex items-center gap-2">
+					<span class="text-xs text-surface-500 w-32 shrink-0">{t('memoryManager.scope')}</span>
+					<label class="flex items-center gap-2 cursor-pointer">
+						<input type="checkbox" bind:checked={includeLineage} />
+						<span class="text-sm">
+							{includeLineage
+								? t('memoryManager.includeLineage')
+								: t('memoryManager.currentActOnly')}
+						</span>
+					</label>
+				</div>
+				{#if includeLineage && lineageCount > 1}
+					<div class="flex items-center gap-2">
+						<span class="text-xs text-surface-500 w-32 shrink-0"></span>
+						<span class="text-xs text-surface-500">{t('memoryManager.lineageInfo', { count: lineageCount })}</span>
+					</div>
+				{/if}
 				<div class="border-t border-surface-200-700 my-2"></div>
 				<div class="flex items-center gap-2">
 					<span class="text-xs text-surface-500 w-32 shrink-0">{t('memoryManager.memoryProvider')}</span>
@@ -463,47 +513,37 @@
 					<p class="text-sm font-medium text-surface-700-300">{t('memoryManager.results')}</p>
 					{#each locationSearchResults as result (result.id)}
 						<div class="p-3 rounded-[var(--radius-base)] bg-surface-100-900">
-							<p class="text-sm">{result.location}</p>
-							<p class="text-xs text-surface-500">{t('memoryManager.distance')}: {result.score?.toFixed(4) ?? 'N/A'}</p>
+							<p class="text-sm">{result.memory}</p>
+							<p class="text-xs text-surface-500">
+								{t('memoryManager.character')}: {result.characterCanonicalName} · {t('memoryManager.location')}: {result.location}
+							</p>
 						</div>
 					{/each}
 				</div>
 			{/if}
 		</section>
 
-		<!-- All Memories -->
+		<!-- Alias Groups -->
 		<section class="card p-6 space-y-4">
 			<div class="flex items-center justify-between">
-				<h2 class="h4">{t('memoryManager.allMemories', { count: memories.length })}</h2>
+				<h2 class="h4">{t('memoryManager.aliasGroups', { count: aliasGroups.length })}</h2>
 			</div>
 
-			{#if memories.length === 0}
-				<p class="text-sm text-surface-500">{t('memoryManager.noMemories')}</p>
+			{#if aliasGroups.length === 0}
+				<p class="text-sm text-surface-500">{t('memoryManager.noAliases')}</p>
 			{:else}
 				<div class="space-y-2">
-					{#each memories as memory (memory.id)}
-						<div class="p-3 rounded-[var(--radius-base)] bg-surface-100-900 flex justify-between items-start">
-							<div>
-								<p class="text-sm">{memory.memory}</p>
-								<p class="text-xs text-surface-500">
-									{memory.characterCanonicalName} · {memory.location} · {memory.createdAt}
-								</p>
-							</div>
-							<button
-								class="btn preset-tonal text-xs px-2 py-1 text-error-700-300"
-								type="button"
-								onclick={() => handleDeleteMemory(memory.id)}
-								disabled={isLoading}
-							>
-								Delete
-							</button>
+					{#each aliasGroups as ag (ag.group)}
+						<div class="p-3 rounded-[var(--radius-base)] bg-surface-100-900">
+							<p class="text-sm font-medium">{ag.group}</p>
+							<p class="text-xs text-surface-500">{ag.aliases.join(', ')}</p>
 						</div>
 					{/each}
 				</div>
 			{/if}
 		</section>
 
-		<!-- All Locations -->
+		<!-- All Inventory -->
 		<section class="card p-6 space-y-4">
 			<div class="flex items-center justify-between">
 				<h2 class="h4">{t('memoryManager.allLocations', { count: locations.length })}</h2>

@@ -314,9 +314,17 @@ export function parseCharacterAliases(actSummaryMarkdown: string): CharacterAlia
 	const entries: CharacterAliasEntry[] = [];
 	let currentName: string | null = null;
 	let currentAliases: string[] = [];
+	const headerPrefix = `## ${characterSummariesHeader()}`;
 	const aliasRegex = new RegExp(`^-?\\s*${escapeRegex(aliasesLabel())}:\\s*\\[?(.+?)\\]?$`, 'i');
 
+	let foundSection = false;
+
 	for (const line of actSummaryMarkdown.split('\n')) {
+		if (!foundSection) {
+			if (line.trim() === headerPrefix) foundSection = true;
+			continue;
+		}
+
 		const headerMatch = line.match(/^###\s+(.+)$/);
 		if (headerMatch) {
 			if (currentName !== null) {

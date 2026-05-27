@@ -74,6 +74,11 @@ export interface LocationItem {
 	createdAt?: string;
 }
 
+export interface AliasGroup {
+	group: string;
+	aliases: string[];
+}
+
 export class Memory {
 	private readonly embeddingProviderConfig: ProviderConfig;
 	private embeddingModel: ReturnType<typeof createEmbeddingModel> | null = null;
@@ -560,6 +565,9 @@ export class Memory {
 
 	async searchByLocation(query: string, location: string, options: MemorySearchOptions): Promise<MemoryItem[]> {
 		const locationResults = await this.searchLocations(location, { ...options, limit: 5 });
+		if (locationResults.length === 0) {
+			return [];
+		}
 		return this.search(query, { ...options, locations: locationResults });
 	}
 
@@ -945,6 +953,22 @@ export class Memory {
 		return rows.length;
 	}
 
+	async getAllAliases(storyId: string, actLineIds: string[]): Promise<AliasGroup[]> {
+		if (actLineIds.length === 0) return [];
+		const db = getMemoryDatabase();
+		const placeholders = actLineIds.map((_, i) => `$${i + 2}`).join(', ');
+		const rows = await db.select<Array<{ alias_group: string; alias: string }>>(
+			`SELECT alias_group, alias FROM aliases WHERE story_id = $1 AND act_line_id IN (${placeholders}) ORDER BY alias_group, alias`,
+			[storyId, ...actLineIds]
+		);
+		const map = new Map<string, string[]>();
+		for (const row of rows) {
+			if (!map.has(row.alias_group)) map.set(row.alias_group, []);
+			map.get(row.alias_group)!.push(row.alias);
+		}
+		return [...map.entries()].map(([group, aliases]) => ({ group, aliases }));
+	}
+
 	// --- Inventory methods ---
 
 	async addInventory(
@@ -1026,6 +1050,23 @@ export class Memory {
 			[storyId, actLineId]
 		);
 		return rows.map((row) => toInventoryItem(row));
+	}
+
+	async getAllInventory(storyId: string, actLineIds: string[]): Promise<InventoryItem[]> {
+		if (actLineIds.length === 0) return [];
+		const db = getMemoryDatabase();
+		const placeholders = actLineIds.map((_, i) => `$${i + 2}`).join(', ');
+		const rows = await db.select<Array<Record<string, unknown>>>(
+			`SELECT * FROM inventory WHERE story_id = $1 AND act_line_id IN (${placeholders}) ORDER BY act_line_id, character_canonical_name, item_name`,
+			[storyId, ...actLineIds]
+		);
+		const byKey = new Map<string, InventoryItem>();
+		for (const row of rows) {
+			const item = toInventoryItem(row);
+			const key = `${item.characterCanonicalName}|${item.itemName}`;
+			byKey.set(key, item);
+		}
+		return [...byKey.values()];
 	}
 
 	async getInventoryChanges(characterCanonicalName: string, options: { storyId: string; actLineIds: string[] }): Promise<InventoryChange[]> {
