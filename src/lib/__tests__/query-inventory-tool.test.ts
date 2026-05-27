@@ -1,11 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock Tauri invoke (not available in test environment)
 vi.mock('@tauri-apps/api/core', () => ({
 	invoke: vi.fn(async () => {}),
 }));
 
-// Mock logger (depends on Tauri)
 vi.mock('$lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
@@ -14,6 +12,15 @@ vi.mock('$lib/logging/logger', () => ({
 		debug: vi.fn(async () => {}),
 	},
 	fileLog: vi.fn(async () => {}),
+}));
+
+const mockTraceActLineChain = vi.fn(async (actLineId: string) => [
+	{ actLineId: 'line-1', actNumber: 1 },
+	{ actLineId, actNumber: 2 },
+]);
+
+vi.mock('$lib/db/act-lines', () => ({
+	traceActLineChain: (actLineId: string) => mockTraceActLineChain(actLineId),
 }));
 
 import { createQueryInventoryTool } from '$lib/ai/tools/query-inventory';
@@ -40,7 +47,7 @@ interface QueryInventoryOutput {
 
 function createMockMemory(items: InventoryItem[], changes: InventoryChange[] = []): Partial<Memory> {
 	return {
-		resolveAliases: vi.fn(async (_storyId: string, _actLineId: string, name: string) => [name]),
+		resolveAliases: vi.fn(async (_storyId: string, _actLineIds: string[], name: string) => [name]),
 		getInventory: vi.fn(async (characterName: string, _options: unknown) =>
 			items.filter((item) => item.characterCanonicalName === characterName)
 		),
@@ -78,12 +85,17 @@ const sampleItems: InventoryItem[] = [
 ];
 
 describe('createQueryInventoryTool', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
 	it('returns inventory items for a character', async () => {
 		const mockMemory = createMockMemory(sampleItems);
 		const tool = createQueryInventoryTool({
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
-			actLineId: 'line-1',
+			actLineId: 'line-2',
+		actNumber: 2,
 		});
 
 		const result = (await tool.execute!(
@@ -132,7 +144,8 @@ describe('createQueryInventoryTool', () => {
 		const tool = createQueryInventoryTool({
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
-			actLineId: 'line-1',
+			actLineId: 'line-2',
+		actNumber: 2,
 		});
 
 		const result = (await tool.execute!(
@@ -149,7 +162,8 @@ describe('createQueryInventoryTool', () => {
 		const tool = createQueryInventoryTool({
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
-			actLineId: 'line-1',
+			actLineId: 'line-2',
+		actNumber: 2,
 		});
 
 		const result = (await tool.execute!(
@@ -164,13 +178,14 @@ describe('createQueryInventoryTool', () => {
 		const tool = createQueryInventoryTool({
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
-			actLineId: 'line-1',
+			actLineId: 'line-2',
+		actNumber: 2,
 		});
 
 		await tool.execute!({ characterName: 'elena', itemCategory: 'skill' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
 		expect(mockMemory.getInventory).toHaveBeenCalledWith('elena', {
 			storyId: 'story-1',
-			actLineId: 'line-1',
+			actLineIds: ['line-1', 'line-2'],
 			category: 'skill',
 		});
 	});
@@ -180,13 +195,14 @@ describe('createQueryInventoryTool', () => {
 		const tool = createQueryInventoryTool({
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
-			actLineId: 'line-1',
+			actLineId: 'line-2',
+		actNumber: 2,
 		});
 
 		await tool.execute!({ characterName: 'elena' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
 		expect(mockMemory.getInventory).toHaveBeenCalledWith('elena', {
 			storyId: 'story-1',
-			actLineId: 'line-1',
+			actLineIds: ['line-1', 'line-2'],
 			category: undefined,
 		});
 	});
@@ -220,7 +236,8 @@ describe('createQueryInventoryTool', () => {
 		const tool = createQueryInventoryTool({
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
-			actLineId: 'line-1',
+			actLineId: 'line-2',
+		actNumber: 2,
 		});
 
 		const result = (await tool.execute!(
@@ -253,7 +270,8 @@ describe('createQueryInventoryTool', () => {
 		const tool = createQueryInventoryTool({
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
-			actLineId: 'line-1',
+			actLineId: 'line-2',
+		actNumber: 2,
 		});
 
 		const result = (await tool.execute!(
@@ -262,7 +280,42 @@ describe('createQueryInventoryTool', () => {
 		)) as unknown as QueryInventoryOutput;
 		expect(result.inventory).toHaveLength(2);
 		expect(result.changes).toBeUndefined();
-		// getInventoryChanges should not have been called
 		expect(mockMemory.getInventoryChanges).not.toHaveBeenCalled();
+	});
+
+	it('calls traceActLineChain and passes lineage actLineIds', async () => {
+		const mockMemory = createMockMemory(sampleItems);
+		const tool = createQueryInventoryTool({
+			memory: mockMemory as Memory,
+			storyId: 'story-1',
+			actLineId: 'line-2',
+		actNumber: 2,
+		});
+
+		await tool.execute!(
+			{ characterName: 'elena' },
+			{ toolCallId: 'test', messages: [], abortSignal: undefined }
+		);
+
+		expect(mockTraceActLineChain).toHaveBeenCalledWith('line-2');
+		expect(mockMemory.resolveAliases).toHaveBeenCalledWith('story-1', ['line-1', 'line-2'], 'elena');
+	});
+
+	it('skips traceActLineChain in act 1 and uses only current actLineId', async () => {
+		const mockMemory = createMockMemory(sampleItems);
+		const tool = createQueryInventoryTool({
+			memory: mockMemory as Memory,
+			storyId: 'story-1',
+			actLineId: 'line-1',
+			actNumber: 1,
+		});
+
+		await tool.execute!(
+			{ characterName: 'elena' },
+			{ toolCallId: 'test', messages: [], abortSignal: undefined }
+		);
+
+		expect(mockTraceActLineChain).not.toHaveBeenCalled();
+		expect(mockMemory.resolveAliases).toHaveBeenCalledWith('story-1', ['line-1'], 'elena');
 	});
 });

@@ -245,7 +245,7 @@ describe('Memory', () => {
 			]);
 
 			const memory = new Memory(testConfig);
-			const results = await memory.search('dragon fight', { storyId: 'story-1' });
+			const results = await memory.search('dragon fight', { storyId: 'story-1', actLineIds: [] });
 
 			// Find the KNN search call (not the sqlite_master or memory_config calls)
 			const searchCall = mockDbSelectCalls.find(([q]) => q.includes('WHERE embedding MATCH'));
@@ -263,7 +263,7 @@ describe('Memory', () => {
 			mockDbSelectResults.push([]);
 
 			const memory = new Memory(testConfig);
-			await memory.search('test', { storyId: 'story-1' });
+			await memory.search('test', { storyId: 'story-1', actLineIds: [] });
 
 			const knnCall = mockDbSelectCalls.find(([q]) => q.includes('k = ?'));
 			expect(knnCall).toBeDefined();
@@ -501,7 +501,7 @@ describe('Memory', () => {
 			]);
 
 			const memory = new Memory(testConfig);
-			const results = await memory.searchLocations('tavern', { storyId: 'story-1', limit: 5 });
+			const results = await memory.searchLocations('tavern', { storyId: 'story-1', actLineIds: [], limit: 5 });
 
 			// Find the KNN search call
 			const searchCall = mockDbSelectCalls.find(([q]) => q.includes('embedding MATCH'));
@@ -609,7 +609,7 @@ describe('Memory', () => {
 			]);
 
 			const memory = new Memory(testConfig);
-			const results = await memory.searchLocations('tavern', { storyId: 'story-1', limit: 5 });
+			const results = await memory.searchLocations('tavern', { storyId: 'story-1', actLineIds: [], limit: 5 });
 
 			// Find the KNN search call
 			const searchCall = mockDbSelectCalls.find(([q]) => q.includes('embedding MATCH'));

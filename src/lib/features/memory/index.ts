@@ -21,7 +21,7 @@ function cosineDistance(a: number[], b: number[]): number {
 
 export interface MemorySearchOptions {
 	storyId: string;
-	actLineId?: string;
+	actLineIds: string[];
 	limit?: number;
 	locations?: LocationItem[];
 }
@@ -467,21 +467,55 @@ export class Memory {
 	}
 
 	async search(query: string, options: MemorySearchOptions): Promise<MemoryItem[]> {
-		const db = getMemoryDatabase();
 		const embedding = await this.generateEmbedding(query);
 		const dimension = embedding.length;
 		await this.ensureMemoryVecTable(dimension);
 		const limit = options.limit ?? 5;
+		const { actLineIds } = options;
 
-		const hasLocations = options.locations && options.locations.length > 0;
-		const locationPlaceholders = hasLocations ? options.locations!.map(() => '?').join(', ') : null;
+		if (actLineIds.length === 0) {
+			return this._searchSingle(embedding, options.storyId, undefined, limit, options.locations);
+		}
 
-		const whereClauses: string[] = ['embedding MATCH ?', 'k = ?', 'story_id = ?'];
-		const params: unknown[] = [JSON.stringify(embedding), limit, options.storyId];
+		if (actLineIds.length === 1) {
+			return this._searchSingle(embedding, options.storyId, actLineIds[0], limit, options.locations);
+		}
 
-		if (options.actLineId) {
-			whereClauses.push('act_line_id = ?');
-			params.push(options.actLineId);
+		const allResults = await Promise.all(
+			actLineIds.map((id) => this._searchSingle(embedding, options.storyId, id, limit, options.locations))
+		);
+		const merged = allResults.flat();
+		const seen = new Set<string>();
+		const unique = merged.filter((item) => {
+			if (seen.has(item.id)) return false;
+			seen.add(item.id);
+			return true;
+		});
+		unique.sort((a, b) => (a.score ?? Infinity) - (b.score ?? Infinity));
+		return unique.slice(0, limit);
+	}
+
+	private async _searchSingle(
+		embedding: number[],
+		storyId: string,
+		actLineId: string | undefined,
+		limit: number,
+		locations?: LocationItem[]
+	): Promise<MemoryItem[]> {
+		const db = getMemoryDatabase();
+
+		const hasLocations = locations && locations.length > 0;
+		const locationStartParam = actLineId ? 5 : 4;
+		const locationPlaceholders = hasLocations
+			? locations!.map((_, i) => `$${locationStartParam + i}`).join(', ')
+			: null;
+
+		const whereClauses: string[] = ['embedding MATCH $1', 'k = $2', 'story_id = $3'];
+		const params: unknown[] = [JSON.stringify(embedding), limit, storyId];
+
+		if (actLineId) {
+			whereClauses.push('act_line_id = $4');
+			params.push(actLineId);
 		}
 
 		const vecSql = `
@@ -496,7 +530,7 @@ export class Memory {
 
 		if (hasLocations) {
 			metaWhere = `m.location IN (${locationPlaceholders})`;
-			metaParams.push(...options.locations!.map((l) => l.location));
+			metaParams.push(...locations!.map((l) => l.location));
 		}
 
 		const sql = `
@@ -532,10 +566,14 @@ export class Memory {
 	async getAll(options: MemorySearchOptions): Promise<MemoryItem[]> {
 		const db = getMemoryDatabase();
 
-		const sql = options.actLineId
-			? 'SELECT id, content, message_id, story_id, act_line_id, character_canonical_name, location, created_at FROM memory_meta WHERE story_id = $1 AND act_line_id = $2 ORDER BY created_at DESC'
+		const hasActLineFilter = options.actLineIds.length > 0;
+		const inPlaceholders = options.actLineIds.map((_, i) => `$${i + 2}`).join(', ');
+		const sql = hasActLineFilter
+			? `SELECT id, content, message_id, story_id, act_line_id, character_canonical_name, location, created_at FROM memory_meta WHERE story_id = $1 AND act_line_id IN (${inPlaceholders}) ORDER BY created_at DESC`
 			: 'SELECT id, content, message_id, story_id, act_line_id, character_canonical_name, location, created_at FROM memory_meta WHERE story_id = $1 ORDER BY created_at DESC';
-		const params = options.actLineId ? [options.storyId, options.actLineId] : [options.storyId];
+		const params = hasActLineFilter
+			? [options.storyId, ...options.actLineIds]
+			: [options.storyId];
 
 		const rows = await db.select<MemoryMetaRow[]>(sql, params);
 
@@ -578,10 +616,14 @@ export class Memory {
 	async getAllLocations(options: MemorySearchOptions): Promise<LocationItem[]> {
 		const db = getMemoryDatabase();
 
-		const sql = options.actLineId
-			? 'SELECT id, location_text, message_id, story_id, act_line_id, created_at FROM location_meta WHERE story_id = $1 AND act_line_id = $2 ORDER BY created_at DESC'
+		const hasActLineFilter = options.actLineIds.length > 0;
+		const inPlaceholders = options.actLineIds.map((_, i) => `$${i + 2}`).join(', ');
+		const sql = hasActLineFilter
+			? `SELECT id, location_text, message_id, story_id, act_line_id, created_at FROM location_meta WHERE story_id = $1 AND act_line_id IN (${inPlaceholders}) ORDER BY created_at DESC`
 			: 'SELECT id, location_text, message_id, story_id, act_line_id, created_at FROM location_meta WHERE story_id = $1 ORDER BY created_at DESC';
-		const params = options.actLineId ? [options.storyId, options.actLineId] : [options.storyId];
+		const params = hasActLineFilter
+			? [options.storyId, ...options.actLineIds]
+			: [options.storyId];
 
 		const rows = await db.select<LocationMetaRow[]>(sql, params);
 
@@ -601,6 +643,13 @@ export class Memory {
 		const dimension = embedding.length;
 		await this.ensureLocationVecTable(dimension);
 		const limit = options.limit ?? 5;
+		const { actLineIds } = options;
+
+		const hasActLineFilter = actLineIds.length > 0;
+
+		const actLineJoin = hasActLineFilter
+			? `AND l.act_line_id IN (${actLineIds.map((_, i) => `$${i + 4}`).join(', ')})`
+			: '';
 
 		const sql = `
 			SELECT l.id, l.location_text, l.message_id, l.story_id, l.act_line_id, l.created_at, sub.distance
@@ -613,10 +662,15 @@ export class Memory {
 				ORDER BY distance
 			) sub
 			JOIN location_meta l ON l.vec_rowid = sub.rowid
+			${actLineJoin}
 			ORDER BY sub.distance
 		`;
 
-		const rows = await db.select<LocationMetaRow[]>(sql, [JSON.stringify(embedding), limit, options.storyId]);
+		const params = hasActLineFilter
+			? [JSON.stringify(embedding), limit, options.storyId, ...actLineIds]
+			: [JSON.stringify(embedding), limit, options.storyId];
+
+		const rows = await db.select<LocationMetaRow[]>(sql, params);
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -831,17 +885,19 @@ export class Memory {
 		}
 	}
 
-	async resolveAliases(storyId: string, actLineId: string, name: string): Promise<string[]> {
+	async resolveAliases(storyId: string, actLineIds: string[], name: string): Promise<string[]> {
 		const db = getMemoryDatabase();
+		const inPlaceholders = actLineIds.map((_, i) => `$${i + 2}`).join(', ');
+		const lastParam = actLineIds.length + 2;
 		const rows = await db.select<Array<{ alias_group: string }>>(
-			'SELECT alias_group FROM aliases WHERE story_id = $1 AND act_line_id = $2 AND alias = $3',
-			[storyId, actLineId, name]
+			`SELECT alias_group FROM aliases WHERE story_id = $1 AND act_line_id IN (${inPlaceholders}) AND alias = $${lastParam}`,
+			[storyId, ...actLineIds, name]
 		);
 		if (rows.length === 0) return [name];
 		const aliasGroup = rows[0].alias_group;
 		const aliasRows = await db.select<Array<{ alias: string }>>(
-			'SELECT alias FROM aliases WHERE story_id = $1 AND act_line_id = $2 AND alias_group = $3',
-			[storyId, actLineId, aliasGroup]
+			`SELECT alias FROM aliases WHERE story_id = $1 AND act_line_id IN (${inPlaceholders}) AND alias_group = $${lastParam}`,
+			[storyId, ...actLineIds, aliasGroup]
 		);
 		return aliasRows.map((r) => r.alias);
 	}
@@ -940,19 +996,27 @@ export class Memory {
 
 	async getInventory(
 		characterCanonicalName: string,
-		options: { storyId: string; actLineId: string; category?: InventoryCategory }
+		options: { storyId: string; actLineIds: string[]; category?: InventoryCategory }
 	): Promise<InventoryItem[]> {
 		const db = getMemoryDatabase();
+		const inPlaceholders = options.actLineIds.map((_, i) => `$${i + 2}`).join(', ');
+		const charParam = options.actLineIds.length + 2;
 
 		const sql = options.category
-			? 'SELECT * FROM inventory WHERE story_id = $1 AND act_line_id = $2 AND character_canonical_name = $3 AND category = $4 ORDER BY item_name'
-			: 'SELECT * FROM inventory WHERE story_id = $1 AND act_line_id = $2 AND character_canonical_name = $3 ORDER BY item_name';
+			? `SELECT * FROM inventory WHERE story_id = $1 AND act_line_id IN (${inPlaceholders}) AND character_canonical_name = $${charParam} AND category = $${charParam + 1} ORDER BY act_line_id, item_name`
+			: `SELECT * FROM inventory WHERE story_id = $1 AND act_line_id IN (${inPlaceholders}) AND character_canonical_name = $${charParam} ORDER BY act_line_id, item_name`;
 		const params = options.category
-			? [options.storyId, options.actLineId, characterCanonicalName, options.category]
-			: [options.storyId, options.actLineId, characterCanonicalName];
+			? [options.storyId, ...options.actLineIds, characterCanonicalName, options.category]
+			: [options.storyId, ...options.actLineIds, characterCanonicalName];
 
 		const rows = await db.select<Array<Record<string, unknown>>>(sql, params);
-		return rows.map((row) => toInventoryItem(row));
+		const byKey = new Map<string, InventoryItem>();
+		for (const row of rows) {
+			const item = toInventoryItem(row);
+			const key = `${item.characterCanonicalName}|${item.itemName}`;
+			byKey.set(key, item);
+		}
+		return [...byKey.values()];
 	}
 
 	async getInventoryByActLine(storyId: string, actLineId: string): Promise<InventoryItem[]> {
@@ -964,11 +1028,13 @@ export class Memory {
 		return rows.map((row) => toInventoryItem(row));
 	}
 
-	async getInventoryChanges(characterCanonicalName: string, options: { storyId: string; actLineId: string }): Promise<InventoryChange[]> {
+	async getInventoryChanges(characterCanonicalName: string, options: { storyId: string; actLineIds: string[] }): Promise<InventoryChange[]> {
 		const db = getMemoryDatabase();
+		const inPlaceholders = options.actLineIds.map((_, i) => `$${i + 2}`).join(', ');
+		const charParam = options.actLineIds.length + 2;
 		const rows = await db.select<Array<Record<string, unknown>>>(
-			'SELECT * FROM inventory_changes WHERE story_id = $1 AND act_line_id = $2 AND character_canonical_name = $3 ORDER BY created_at',
-			[options.storyId, options.actLineId, characterCanonicalName]
+			`SELECT * FROM inventory_changes WHERE story_id = $1 AND act_line_id IN (${inPlaceholders}) AND character_canonical_name = $${charParam} ORDER BY created_at`,
+			[options.storyId, ...options.actLineIds, characterCanonicalName]
 		);
 		return rows.map((row) => toInventoryChange(row));
 	}

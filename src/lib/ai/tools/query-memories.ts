@@ -3,7 +3,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { sampleSize } from 'lodash-es';
 import { Memory, type MemoryItem } from '$lib/features/memory';
-import { batchResolveActLineInfo } from '$lib/db/act-lines';
+import { batchResolveActLineInfo, traceActLineChain } from '$lib/db/act-lines';
 import { getEmbeddingProviderConfig, settings } from '$lib/stores/settings.svelte';
 import { type ToolSet } from 'ai';
 import { log } from './utils';
@@ -22,7 +22,6 @@ interface MemoryResult {
 }
 
 async function toResults(items: MemoryItem[]): Promise<MemoryResult[]> {
-	// Group messageIds by actLineId
 	const grouped: Record<string, string[]> = {};
 	for (const item of items) {
 		if (!grouped[item.actLineId]) grouped[item.actLineId] = [];
@@ -71,21 +70,26 @@ export function createQueryMemoriesTool(context: QueryMemoriesContext) {
 		execute: async (input: z.infer<typeof inputSchema>): Promise<MemoryResult[]> => {
 			const { characterQuery, timeAndLocation, currentActOnly } = input;
 			await log(`query-memories triggered: characterQuery=${characterQuery}, timeAndLocation=${timeAndLocation}, currentActOnly=${currentActOnly}`);
+
+			const actLineIds = currentActOnly
+				? [actLineId]
+				: (await traceActLineChain(actLineId)).map((l) => l.actLineId);
+
 			const opts = {
 				storyId,
-				actLineId: currentActOnly ? actLineId : undefined,
+				actLineIds,
 				limit: 10,
 			};
 
 			let items: MemoryItem[];
 
 			if (characterQuery && timeAndLocation) {
-				const resolvedNames = await memory.resolveAliases(storyId, actLineId, characterQuery);
+				const resolvedNames = await memory.resolveAliases(storyId, actLineIds, characterQuery);
 				const allItems = await Promise.all(resolvedNames.map((name) => memory.searchByLocation(name, timeAndLocation, opts)));
 				items = deduplicateMemoryItems(allItems.flat());
 				return await toResults(items.slice(0, opts.limit));
 			} else if (characterQuery) {
-				const resolvedNames = await memory.resolveAliases(storyId, actLineId, characterQuery);
+				const resolvedNames = await memory.resolveAliases(storyId, actLineIds, characterQuery);
 				const allItems = await Promise.all(resolvedNames.map((name) => memory.search(name, opts)));
 				items = deduplicateMemoryItems(allItems.flat());
 				return await toResults(items.slice(0, opts.limit));

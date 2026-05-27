@@ -61,8 +61,8 @@
 			return;
 		}
 		const memory = new Memory(embeddingConfig);
-		memories = await memory.getAll({ storyId: activeStoryId, actLineId: activeActLineId ?? undefined });
-		locations = await memory.getAllLocations({ storyId: activeStoryId, actLineId: activeActLineId ?? undefined });
+		memories = await memory.getAll({ storyId: activeStoryId, actLineIds: activeActLineId ? [activeActLineId] : [] });
+		locations = await memory.getAllLocations({ storyId: activeStoryId, actLineIds: activeActLineId ? [activeActLineId] : [] });
 		if (activeActLineId) {
 			try {
 				inventoryItems = await memory.getInventoryByActLine(activeStoryId, activeActLineId);
@@ -168,7 +168,7 @@
 			const memory = new Memory(embeddingConfig);
 			searchResults = await memory.search(searchQuery.trim(), {
 				storyId: activeStoryId,
-				actLineId: activeActLineId ?? undefined,
+				actLineIds: activeActLineId ? [activeActLineId] : [],
 				limit: 5,
 			});
 			status = t('memoryManager.foundResults', { count: searchResults.length });
@@ -188,7 +188,7 @@
 			const memory = new Memory(embeddingConfig);
 			locationSearchResults = await memory.searchLocations(locationSearchQuery.trim(), {
 				storyId: activeStoryId,
-				actLineId: activeActLineId ?? undefined,
+				actLineIds: activeActLineId ? [activeActLineId] : [],
 				limit: 5,
 			});
 			status = t('memoryManager.foundLocations', { count: locationSearchResults.length });
@@ -208,7 +208,7 @@
 			const memory = new Memory(embeddingConfig);
 			locationQueryResults = await memory.searchByLocation(locationQuery.trim(), locationQueryLocation.trim(), {
 				storyId: activeStoryId,
-				actLineId: activeActLineId ?? undefined,
+				actLineIds: activeActLineId ? [activeActLineId] : [],
 				limit: 5,
 			});
 			status = t('memoryManager.foundResultsByLocation', { count: locationQueryResults.length });

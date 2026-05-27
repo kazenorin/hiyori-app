@@ -57,7 +57,7 @@ export async function buildTools(storyId: string, actLine: ActLineContext, assis
 
 	const tools: ToolSet = {
 		...buildMemoryTools(storyId, actLine.id),
-		...buildInventoryTools(storyId, actLine.id),
+		...buildInventoryTools(storyId, actLine.id, act.actNumber),
 		...buildActPlotTools(ctx),
 		...buildSceneTools(ctx, includeDistantScene),
 		...buildRiskTools(ctx),
