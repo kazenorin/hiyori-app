@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 	import { t } from '$lib/i18n';
+	import { scrollToBottom } from '$lib/utils/scroll';
 
 	interface Props {
 		isComplete: boolean;
@@ -84,7 +85,7 @@
 		clearTimeout(layoutTimeout);
 		layoutTimeout = setTimeout(() => {
 			if (scrollToBottomAfter && chatContainer) {
-				chatContainer.scrollTop = chatContainer.scrollHeight;
+				scrollToBottom(chatContainer);
 				isNearBottom = true;
 			}
 			layoutTransitioning = false;

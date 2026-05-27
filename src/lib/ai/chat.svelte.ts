@@ -666,19 +666,6 @@ async function regenerateGameData(
 	}
 }
 
-export function updateMessageInState(
-	messageId: string,
-	updates: { content?: string; variables?: NarrativeVariables }
-): void {
-	const idx = messages.findIndex((m) => m.id === messageId);
-	if (idx === -1) return;
-	messages[idx] = {
-		...messages[idx],
-		...(updates.content !== undefined && { content: updates.content }),
-		...(updates.variables !== undefined && { variables: updates.variables }),
-	};
-}
-
 export async function clearMessages(): Promise<void> {
 	await awaitPendingAsyncPhases('clear-messages');
 	setMessages([]);

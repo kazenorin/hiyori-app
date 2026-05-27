@@ -313,12 +313,6 @@ export async function deleteLastWorldBuilderExchange(): Promise<void> {
 	messages = messages.filter((_, i) => i !== lastUserIdx && i !== lastMessageIdx);
 }
 
-export function updateWorldBuilderMessageContent(messageId: string, content: string): void {
-	const idx = messages.findIndex((m) => m.id === messageId);
-	if (idx === -1) return;
-	messages[idx] = { ...messages[idx], content };
-}
-
 async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<void> {
 	const providerConfig = getMainProviderConfig();
 	if (!providerConfig?.apiKey || !providerConfig?.model) {

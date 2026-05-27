@@ -2,6 +2,7 @@
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import { slide } from 'svelte/transition';
 	import { t } from '$lib/i18n';
+	import { scrollToBottom } from '$lib/utils/scroll';
 
 	interface Props {
 		decisions: string[];
@@ -66,7 +67,7 @@
 		clearTimeout(layoutTimeout);
 		layoutTimeout = setTimeout(() => {
 			if (scrollToBottomAfter && chatContainer) {
-				chatContainer.scrollTop = chatContainer.scrollHeight;
+				scrollToBottom(chatContainer);
 				isNearBottom = true;
 			}
 			layoutTransitioning = false;
