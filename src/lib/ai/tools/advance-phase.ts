@@ -3,7 +3,7 @@ import type { ToolSet } from 'ai';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { recordActPhaseTransition } from '$lib/db/act-lines';
-import type { ActPhase } from '$lib/ai/narrative-types';
+import { ACT_PHASE_ORDER, type ActPhase } from '$lib/ai/narrative-types';
 import { getNextActPhase } from '$lib/ai/narrative-types';
 import { getLocalizedActPhase } from '$lib/definitions/pipeline-prompts';
 import type { AssistantContext } from '$lib/ai/pipeline/types';
@@ -19,9 +19,11 @@ export function createAdvancePhaseTool(actLineId: string, currentPhase: ActPhase
 			fallingAction: getLocalizedActPhase('falling-action'),
 			resolution: getLocalizedActPhase('resolution'),
 		}),
-		inputSchema: z.object({}),
-		execute: async (): Promise<{ result: string }> => {
-
+		inputSchema: z.object({
+			currentPhase: z.enum(ACT_PHASE_ORDER).describe(ls('tools.advancePhase.parameters.currentPhase')),
+			nextPhase: z.enum(ACT_PHASE_ORDER).describe(ls('tools.advancePhase.parameters.nextPhase')),
+		}),
+		execute: async ({ currentPhase: inputCurrentPhase, nextPhase: inputNextPhase }): Promise<{ result: string }> => {
 			if (hasAdvancedPhase) {
 				await log('advance-phase triggered: already advanced');
 				return { result: ls('tools.advancePhase.alreadyAdvanced') };
@@ -36,6 +38,27 @@ export function createAdvancePhaseTool(actLineId: string, currentPhase: ActPhase
 			if (!nextPhase) {
 				await log('advance-phase triggered: already terminal phase');
 				return { result: ls('tools.advancePhase.terminalPhase') };
+			}
+
+			if (inputCurrentPhase !== currentPhase) {
+				await log(`advance-phase: currentPhase mismatch (LLM: ${inputCurrentPhase}, actual: ${currentPhase})`);
+				return {
+					result: ls('tools.advancePhase.phaseMismatch.current', {
+						actual: getLocalizedActPhase(currentPhase),
+						provided: getLocalizedActPhase(inputCurrentPhase),
+					}),
+				};
+			}
+
+			if (inputNextPhase !== nextPhase) {
+				await log(`advance-phase: nextPhase mismatch (LLM: ${inputNextPhase}, expected: ${nextPhase})`);
+				return {
+					result: ls('tools.advancePhase.phaseMismatch.next', {
+						actual: getLocalizedActPhase(currentPhase),
+						expected: getLocalizedActPhase(nextPhase),
+						provided: getLocalizedActPhase(inputNextPhase),
+					}),
+				};
 			}
 
 			await recordActPhaseTransition(actLineId, assistant, nextPhase);

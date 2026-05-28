@@ -362,13 +362,21 @@ tools:
   advancePhase:
     description: >
       將故事推進至下一個敘事階段 (例如: {introduction} → {risingAction} → {climax} → {fallingAction} → {resolution}) 。
+      你必須同時指定故事目前所處的階段以及要推進至的下一個階段。
+      兩者必須與實際故事狀態相符——若不相符，工具將回傳錯誤訊息並顯示實際目前階段，且不會推進階段。
       此動作標誌著故事弧線的重大轉折，將於下一回合生效。
       每個場景只能使用一次。故事已達結局階段後無法再使用。
       此工具必須在推理期間呼叫，且必須在任何敘事輸出撰寫之前。若已撰寫任何輸出，請勿呼叫此工具。
+    parameters:
+      currentPhase: '故事目前所處的敘事階段。'
+      nextPhase: '要推進至的下一個敘事階段。'
     messages:
       alreadyAdvanced: '此場景已推進過階段，將於下一回合生效。'
       success: '階段已從 {current} 推進至 {next}，將於下一回合生效。'
       terminalPhase: '無法再推進——故事已達結局階段。'
+      phaseMismatch:
+        current: '階段不符：故事目前處於 {actual}，而非 {provided}。階段未推進。'
+        next: '階段不符：故事目前處於 {actual}，下一個階段為 {expected}，而非 {provided}。階段未推進。'
   endAct:
     endingTypeInstructions: >
       呼叫 `end-act` 時，請將 `endingType` 參數設為最符合敘事走向及玩家選擇的值：`good`(好結局)、`bad`(壞結局)、`bittersweet`(苦甜結局) 或 `alternative`(另類結局)。

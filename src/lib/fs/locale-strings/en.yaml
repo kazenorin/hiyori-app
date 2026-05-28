@@ -371,13 +371,21 @@ tools:
   advancePhase:
     description: >
       Advance the story to the next narrative phase (e.g., {introduction} → {risingAction} → {climax} → {fallingAction} → {resolution}).
+      You must specify both the current phase the story is in and the next phase to advance to.
+      Both must match the actual story state — if they don't, the tool will return an error with the actual current phase and the phase will not change.
       This signals a major shift in the story's arc. Takes effect starting next turn.
       Can only be used once per scene. Cannot be used once the story has reached the resolution phase.
       This tool must be called during reasoning, before any narrative output is written. If any output has already been written, do not call this tool.
+    parameters:
+      currentPhase: 'The current narrative phase the story is in.'
+      nextPhase: 'The next narrative phase to advance to.'
     messages:
       alreadyAdvanced: 'Phase has already been advanced this scene. It will take effect next turn.'
       success: 'Phase advanced from {current} to {next}. Takes effect next turn.'
       terminalPhase: 'Cannot advance further — the story is already at the resolution phase.'
+      phaseMismatch:
+        current: 'Phase mismatch: the story is currently in {actual}, not {provided}. The phase has not been advanced.'
+        next: 'Phase mismatch: the story is currently in {actual} and the next phase is {expected}, not {provided}. The phase has not been advanced.'
   endAct:
     endingTypeInstructions: >
       When invoking `end-act`, set the `endingType` parameter to the value that best reflects the narrative
