@@ -65,7 +65,6 @@ const actPlotSystemPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plo
 const actPlotInterviewSystemPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-interview-system-prompt.md');
 const actPlotReviewerPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-reviewer-prompt.md');
 const actPlotEditorPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-editor-prompt.md');
-const actPlotInterviewExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-interview-extraction-prompt.md');
 const actPlotInterviewTurnOfEventsPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-interview-turn-of-events-prompt.md');
 
 // Character
@@ -105,7 +104,6 @@ export const loadActPlotSystemPrompt = (): Promise<string> => actPlotSystemPromp
 export const loadActPlotInterviewSystemPrompt = (): Promise<string> => actPlotInterviewSystemPrompt.load();
 export const loadActPlotReviewerPrompt = (): Promise<string> => actPlotReviewerPrompt.load();
 export const loadActPlotEditorPrompt = (): Promise<string> => actPlotEditorPrompt.load();
-export const loadActPlotInterviewExtractionPrompt = (): Promise<string> => actPlotInterviewExtractionPrompt.load();
 export const loadActPlotInterviewTurnOfEventsPrompt = (): Promise<string> => actPlotInterviewTurnOfEventsPrompt.load();
 export const loadCharacterCardTemplate = (): Promise<string> => characterCardTemplate.load();
 export const loadMemoryExtractionSystemPrompt = (): Promise<string> => memoryExtractionSystemPrompt.load();
@@ -258,7 +256,6 @@ registerDefaults([
 	actPlotInterviewSystemPrompt,
 	actPlotReviewerPrompt,
 	actPlotEditorPrompt,
-	actPlotInterviewExtractionPrompt,
 	actPlotInterviewTurnOfEventsPrompt,
 	characterCardTemplate,
 	memoryExtractionSystemPrompt,
