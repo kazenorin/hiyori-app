@@ -22,6 +22,7 @@
 		sendMessage,
 		stopStreaming,
 		type UIMessage,
+		updateMessageInState,
 	} from '$lib/ai/chat.svelte';
 	import MetadataPanel from '$lib/components/MetadataPanel.svelte';
 	import {
@@ -45,6 +46,7 @@
 		sendWorldBuilderMessage,
 		stopStreaming as stopWorldBuilderStreaming,
 		type WorldBuilderMessage,
+		updateWorldBuilderMessageContent,
 	} from '$lib/features/world-builder/world-builder.svelte';
 	import {
 		createActLineContinuation,
@@ -123,6 +125,14 @@
 	let updateWorldCardChecked = $state(false);
 	let forkPlotMode = $state<'guidance' | 'phaseEvent' | null>(null);
 
+	let editingMessageId = $state<string | null>(null);
+	let editingIsTemplated = $state(false);
+	let editContent = $state('');
+	let editSceneTitle = $state('');
+	let editBackground = $state('');
+	let editNarrativeBody = $state('');
+	let editCg = $state('');
+
 	// Reset fork choice when navigating to a different act line
 	$effect(() => {
 		getActiveActLineId();
@@ -135,6 +145,89 @@
 		setTimeout(() => {
 			copiedId = null;
 		}, 1500);
+	}
+
+	function isEditingMessage(messageId: string): boolean {
+		return editingMessageId === messageId;
+	}
+
+	function startEditMessage(message: UIMessage | WorldBuilderMessage, isTemplated: boolean) {
+		if (getIsBusy() || getIsWorldBuilderStreaming()) return;
+		editingMessageId = message.id;
+		editingIsTemplated = isTemplated;
+		editContent = '';
+		editSceneTitle = '';
+		editBackground = '';
+		editNarrativeBody = '';
+		editCg = '';
+		if (isTemplated && 'variables' in message && message.variables && hasTemplateMetadata(message.variables)) {
+			editSceneTitle = message.variables.sceneTitle ?? '';
+			editBackground = message.variables.background ?? '';
+			editNarrativeBody = message.variables.narrativeBody ?? '';
+			editCg = message.variables.cg ?? '';
+		} else {
+			editContent = message.content;
+		}
+	}
+
+	function cancelEdit() {
+		editingMessageId = null;
+		editingIsTemplated = false;
+		editContent = '';
+		editSceneTitle = '';
+		editBackground = '';
+		editNarrativeBody = '';
+		editCg = '';
+	}
+
+	function handleWbEditKeydown(message: WorldBuilderMessage, e: KeyboardEvent) {
+		if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+			e.preventDefault();
+			saveEditWorldBuilderMessage(message);
+		}
+	}
+
+	function handleMainEditKeydown(message: UIMessage, e: KeyboardEvent) {
+		if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+			e.preventDefault();
+			saveEditMainChatMessage(message);
+		}
+	}
+
+	async function saveEditMainChatMessage(message: UIMessage) {
+		if (!editingMessageId) return;
+		try {
+			if (editingIsTemplated && message.variables) {
+				const updatedVariables: NarrativeVariables = {
+					...message.variables,
+					sceneTitle: editSceneTitle || null,
+					background: editBackground || null,
+					narrativeBody: editNarrativeBody || null,
+					cg: editCg || null,
+				};
+				await updateMessageFields(message.id, { variables: JSON.stringify(updatedVariables) });
+				updateMessageInState(message.id, { variables: updatedVariables });
+			} else {
+				await updateMessageFields(message.id, { content: editContent });
+				updateMessageInState(message.id, { content: editContent });
+			}
+			cancelEdit();
+		} catch (err) {
+			await log.error('edit-message', 'Failed to save message edit', err);
+		}
+	}
+
+	async function saveEditWorldBuilderMessage(message: WorldBuilderMessage) {
+		if (!editingMessageId) return;
+		try {
+			updateWorldBuilderMessageContent(message.id, editContent);
+			if (getActPlotInterview()) {
+				await updateMessageFields(message.id, { content: editContent });
+			}
+			cancelEdit();
+		} catch (err) {
+			await log.error('edit-message', 'Failed to save world builder message edit', err);
+		}
 	}
 
 	async function handleRegenerate(messageId: string) {
@@ -652,11 +745,30 @@
 						{#if message.role === 'user'}
 							<div class="flex justify-end">
 								<div class="max-w-[80%] rounded-(--radius-container) bg-primary-100-900 p-5">
-									<div class="leading-relaxed text-primary-900-100">
-										<MarkdownContent content={message.content} />
-									</div>
-									{#if !getIsWorldBuilderStreaming()}
+									{#if isEditingMessage(message.id)}
+										<textarea
+											class="input w-full resize-y text-sm leading-relaxed min-h-20 bg-surface-50-950 text-primary-900-100"
+											bind:value={editContent}
+											onkeydown={(e) => handleWbEditKeydown(message, e)}
+										></textarea>
+										<div class="flex gap-2 mt-2">
+											<button class="btn preset-filled-primary-500 text-xs py-1 px-3" onclick={() => saveEditWorldBuilderMessage(message)}
+												>{t('chat.save')}</button
+											>
+											<button class="btn preset-tonal text-xs py-1 px-3" onclick={cancelEdit}>{t('chat.cancel')}</button>
+										</div>
+									{:else}
+										<div class="leading-relaxed text-primary-900-100">
+											<MarkdownContent content={message.content} />
+										</div>
+									{/if}
+									{#if !getIsWorldBuilderStreaming() && !isEditingMessage(message.id)}
 										<div class="flex gap-2 mt-3 pt-3 border-t border-primary-200-800">
+											<button
+												class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
+												title="Edit message"
+												onclick={() => startEditMessage(message, false)}>{t('chat.edit')}</button
+											>
 											<button
 												class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
 												title="Copy message"
@@ -669,7 +781,19 @@
 							</div>
 						{:else}
 							<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
-								{#if message.content}
+								{#if isEditingMessage(message.id)}
+									<textarea
+										class="input w-full resize-y text-sm leading-relaxed min-h-32"
+										bind:value={editContent}
+										onkeydown={(e) => handleWbEditKeydown(message, e)}
+									></textarea>
+									<div class="flex gap-2 mt-2">
+										<button class="btn preset-filled-primary-500 text-xs py-1 px-3" onclick={() => saveEditWorldBuilderMessage(message)}
+											>{t('chat.save')}</button
+										>
+										<button class="btn preset-tonal text-xs py-1 px-3" onclick={cancelEdit}>{t('chat.cancel')}</button>
+									</div>
+								{:else if message.content}
 									<div class="leading-relaxed text-surface-800-200">
 										<MarkdownContent content={message.content} {characterNames} />
 									</div>
@@ -680,8 +804,13 @@
 										class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ? 'mt-2' : ''}"
 									></span>
 								{/if}
-								{#if !getIsWorldBuilderStreaming() && message.content}
+								{#if !getIsWorldBuilderStreaming() && message.content && !isEditingMessage(message.id)}
 									<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
+										<button
+											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+											title="Edit message"
+											onclick={() => startEditMessage(message, false)}>{t('chat.edit')}</button
+										>
 										<button
 											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 											title="Copy message"
@@ -872,7 +1001,54 @@
 									{/if}
 
 									<!-- Main content: Editor output -->
-									{#if message.variables && hasTemplateMetadata(message.variables)}
+									{#if isEditingMessage(message.id) && editingIsTemplated}
+										<div>
+											<div class="space-y-3 mt-2">
+												<div>
+													<label class="block text-xs font-medium text-surface-500 mb-1">{t('chat.sceneTitle')}</label>
+													<textarea
+														class="input w-full resize-y text-sm leading-relaxed min-h-8"
+														rows="1"
+														bind:value={editSceneTitle}
+														onkeydown={(e) => handleMainEditKeydown(message, e)}
+													></textarea>
+												</div>
+												<div>
+													<label class="block text-xs font-medium text-surface-500 mb-1">{t('chat.background')}</label>
+													<textarea
+														class="input w-full resize-y text-sm leading-relaxed min-h-16"
+														rows="3"
+														bind:value={editBackground}
+														onkeydown={(e) => handleMainEditKeydown(message, e)}
+													></textarea>
+												</div>
+												<div>
+													<label class="block text-xs font-medium text-surface-500 mb-1">{t('chat.narrativeBody')}</label>
+													<textarea
+														class="input w-full resize-y text-sm leading-relaxed min-h-32"
+														rows="8"
+														bind:value={editNarrativeBody}
+														onkeydown={(e) => handleMainEditKeydown(message, e)}
+													></textarea>
+												</div>
+												<div>
+													<label class="block text-xs font-medium text-surface-500 mb-1">{t('chat.cg')}</label>
+													<textarea
+														class="input w-full resize-y text-sm leading-relaxed min-h-8"
+														rows="1"
+														bind:value={editCg}
+														onkeydown={(e) => handleMainEditKeydown(message, e)}
+													></textarea>
+												</div>
+											</div>
+										</div>
+									{:else if isEditingMessage(message.id)}
+										<textarea
+											class="input w-full resize-y text-sm leading-relaxed min-h-32"
+											bind:value={editContent}
+											onkeydown={(e) => handleMainEditKeydown(message, e)}
+										></textarea>
+									{:else if message.variables && hasTemplateMetadata(message.variables)}
 										<div class="leading-relaxed text-surface-800-200">
 											{#if storyMessageTemplate}
 												<MarkdownContent
@@ -903,7 +1079,14 @@
 									{#if message.metadata}
 										<MetadataPanel metadata={message.metadata} />
 									{/if}
-									{#if !getIsBusy()}
+									{#if isEditingMessage(message.id)}
+										<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
+											<button class="btn preset-filled-primary-500 text-xs py-1 px-3" onclick={() => saveEditMainChatMessage(message)}
+												>{t('chat.save')}</button
+											>
+											<button class="btn preset-tonal text-xs py-1 px-3" onclick={cancelEdit}>{t('chat.cancel')}</button>
+										</div>
+									{:else if !getIsBusy() && (message.content || i === lastMessageIdx)}
 										<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
 											{#if message.content}
 												<button
@@ -912,6 +1095,15 @@
 													onclick={() => handleCopy(message.id, message.content)}
 													>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
 												>
+											{/if}
+											{#if message.variables && hasTemplateMetadata(message.variables) && i === lastMessageIdx}
+												<button
+													class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+													title="Edit message"
+													onclick={() => startEditMessage(message, true)}>{t('chat.edit')}</button
+												>
+											{/if}
+											{#if message.variables && hasTemplateMetadata(message.variables)}
 												{#if forkChoiceIndex === i}
 													<div class="flex gap-2 items-center">
 														<button
@@ -984,7 +1176,7 @@
 				</div>
 			</div>
 
-			<ScrollToFAB chatContainer={chatContainer} isStreaming={getIsStreaming()} />
+			<ScrollToFAB {chatContainer} isStreaming={getIsStreaming()} />
 
 			<!-- Pinned control section -->
 			<ChatControls
