@@ -2,8 +2,9 @@ import type { MessageBase } from '$lib/db/messages';
 import { streamText } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
-import { loadUpdateWorldFromActPrompt, loadUpdateWorldFromActSystemPrompt, loadWorldTemplate } from '$lib/fs/prompts';
+import { loadWorldTemplate } from '$lib/fs/prompts';
 import { BaseDirectory, exists, rename, writeTextFile } from '@tauri-apps/plugin-fs';
+import { worldFromActSystemPrompt, worldFromActPrompt } from '$lib/definitions/feature-prompts';
 import { ls } from '$lib/localization';
 import { worldContentHeader, actSummaryHeader, interviewTranscriptHeader } from '$lib/definitions/common-headers';
 import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED } from '$lib/definitions/error-messages';
@@ -33,8 +34,8 @@ export async function updateWorldCard(params: UpdateWorldCardParams): Promise<st
 	}
 
 	const [systemPrompt, extractionPrompt, worldTemplate] = await Promise.all([
-		loadUpdateWorldFromActSystemPrompt(),
-		loadUpdateWorldFromActPrompt(),
+		Promise.resolve(worldFromActSystemPrompt()),
+		Promise.resolve(worldFromActPrompt()),
 		loadWorldTemplate(),
 	]);
 

@@ -23,6 +23,7 @@ import { actSummaryHeader, summaryHeader } from '$lib/definitions/common-headers
 import { aliasesLabel, locationLabel, sceneWithNumberLabel } from '$lib/definitions/common-labels';
 import { goalLabel, relationshipsLabel, stateLabel, voiceLabel } from '$lib/definitions/character-profile-labels';
 import {
+	actSummaryIncrementalTemplate,
 	characterProfilesHeader,
 	characterSummariesHeader,
 	sceneSummariesHeader,
@@ -48,7 +49,6 @@ export interface SummarizerInput {
 export interface SummarizerPrompts {
 	summarizerPrompt: string;
 	summarizerIncrementalPrompt: string;
-	actSummaryIncrementalTemplate: string;
 	characterProfileCompressorPrompt: string;
 }
 
@@ -114,7 +114,7 @@ async function generateIncrementalSummary(input: SummarizerInput, prompts: Summa
 
 	const sceneNumber = String(completedScenes);
 	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
-	const processedTemplate = prompts.actSummaryIncrementalTemplate
+	const processedTemplate = actSummaryIncrementalTemplate()
 		.replace(/{sceneSummariesHeader}/g, sceneSummariesHeader())
 		.replace(/{characterSummariesHeader}/g, characterSummariesHeader())
 		.replace(/{sceneWithNumber}/g, sceneWithNumberLabel('{sceneNumber}'))
@@ -266,7 +266,6 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 		const summarizerPrompts: SummarizerPrompts = {
 			summarizerPrompt: loadedPrompts.summarizerPrompt,
 			summarizerIncrementalPrompt: loadedPrompts.summarizerIncrementalPrompt,
-			actSummaryIncrementalTemplate: loadedPrompts.actSummaryIncrementalTemplate,
 			characterProfileCompressorPrompt: loadedPrompts.characterProfileCompressorPrompt,
 		};
 		const result = await generateSummarizerResult(summarizerInput, summarizerPrompts);

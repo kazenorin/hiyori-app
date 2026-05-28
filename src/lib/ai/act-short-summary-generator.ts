@@ -1,7 +1,7 @@
 import { generateText } from 'ai';
 import { createModel } from './provider';
 import { getSummarizerProviderConfig, getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { ls } from '$lib/localization';
+import { actShortSummaryExtractionPrompt, actShortSummaryCharacterPrefix, sceneCountLabel } from '$lib/definitions/pipeline-prompts';
 import { getLastSceneNumber, recordActShortSummary } from '$lib/db/act-lines';
 import type { AssistantContext } from './pipeline/types';
 import { isAuthError, withRetry } from '$lib/utils/async';
@@ -12,7 +12,7 @@ const RETRY_COUNT = 2;
 const BACKOFF_MS = 2000;
 
 function pluralizeScenes(n: number): string {
-	return n === 1 ? ls('pipeline.labels.sceneCountSingular') : ls('pipeline.labels.sceneCountPlural', { count: n });
+	return sceneCountLabel(n);
 }
 
 function extractCharacterNames(actSummaryText: string): string[] {
@@ -38,12 +38,12 @@ export async function generateAndRecordActShortSummary(actLineId: string, actSum
 		}
 
 		const model = createModel(config);
-		const systemPrompt = ls('pipeline.extraction.actShortSummary');
+		const systemPrompt = actShortSummaryExtractionPrompt();
 
 		const characterNames = extractCharacterNames(actSummary);
 		let promptText = actSummary;
 		if (characterNames.length > 0) {
-			promptText += `\n\n${ls('pipeline.extraction.actShortSummaryCharacterPrefix')}: ${characterNames.join(', ')}`;
+			promptText += `\n\n${actShortSummaryCharacterPrefix()}: ${characterNames.join(', ')}`;
 		}
 
 		const text = await withRetry(() => generateText({ model, system: systemPrompt, prompt: promptText }).then((r) => r.text), {

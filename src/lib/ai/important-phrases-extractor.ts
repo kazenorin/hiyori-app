@@ -1,7 +1,7 @@
 import { generateText } from 'ai';
 import { createModel } from './provider';
 import { getMinorTaskAgentProviderConfig, type MinorTaskAgentProviderConfig } from '$lib/stores/settings.svelte';
-import { loadImportantPhrasesPrompt } from '$lib/fs/prompts';
+import { importantPhrasesSystemPrompt } from '$lib/definitions/feature-prompts';
 import { isAuthError, withRetry } from '$lib/utils/async';
 import { log } from '$lib/logging/logger';
 
@@ -27,7 +27,7 @@ export async function extractImportantPhrases(narrativeBody: string): Promise<st
 
 async function generateWithRetry(narrativeBody: string, config: MinorTaskAgentProviderConfig): Promise<string> {
 	const model = createModel(config);
-	const systemPrompt = await loadImportantPhrasesPrompt();
+	const systemPrompt = importantPhrasesSystemPrompt();
 
 	return withRetry(() => generateText({ model, system: systemPrompt, prompt: narrativeBody }).then((r) => r.text), {
 		maxAttempts: RETRY_COUNT + 1,

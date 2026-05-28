@@ -10,10 +10,10 @@ import { loadMemoryExtractionPrompt, loadMemoryExtractionSystemPrompt } from '$l
 import { type ExtractedMemories, parseMemoryExtract } from '$lib/features/memory/memory-extract-parser';
 import { Memory } from '$lib/features/memory';
 import { parseCharacterAliases } from '$lib/ai/act-summary-parser';
-import { ls } from '$lib/localization';
+import { aliasFilterExtractionPrompt } from '$lib/definitions/pipeline-prompts';
 import { stripCodeFences } from '$lib/utils/strings';
 import { isAuthError, toError, withRetry } from '$lib/utils/async';
-import { fileLog,log } from '$lib/logging/logger';
+import { fileLog, log } from '$lib/logging/logger';
 import { ERR_MEMORY_PROVIDER_NOT_CONFIGURED, ERR_EMBEDDING_PROVIDER_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 
 export interface PipelineResult {
@@ -75,9 +75,7 @@ export async function runMemoryExtractionPipeline(
 			const filtered = await filterAliasesWithRetry(flatAliases, llmConfig);
 			await fileLog('debug', 'memory-pipeline', () => '--- Filtered Aliases ---\n\n' + JSON.stringify(filtered, null, 2));
 			const filteredSet = new Set(filtered);
-			const filteredGroups = aliasGroups
-				.map((group) => group.filter((a) => filteredSet.has(a)))
-				.filter((group) => group.length > 1);
+			const filteredGroups = aliasGroups.map((group) => group.filter((a) => filteredSet.has(a))).filter((group) => group.length > 1);
 			if (filteredGroups.length > 0) {
 				result.aliasesAdded = await persistAliases(embeddingConfig, storyId, actLineId, messageId, filteredGroups);
 			}
@@ -103,7 +101,7 @@ async function generateMemoriesWithRetry(response: string, config: MemoryProvide
 
 async function filterAliasesWithRetry(flatAliases: string[], config: MemoryProviderConfig): Promise<string[]> {
 	const model = createModel(config);
-	const systemPrompt = ls('pipeline.extraction.aliasFilter');
+	const systemPrompt = aliasFilterExtractionPrompt();
 	const userPrompt = JSON.stringify(flatAliases);
 
 	const result = await withRetry(() => generateText({ model, system: systemPrompt, prompt: userPrompt }).then((r) => r.text), {

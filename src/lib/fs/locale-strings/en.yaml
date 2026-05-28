@@ -105,6 +105,34 @@ pipeline:
         Write a final epilogue scene that reflects on the protagonist's journey, shows the lasting consequences of
         the player's choices, depicts the world after the main conflict has been resolved, and provides a sense of
         finality and closure. Do NOT introduce new conflicts, plot threads, or cliffhangers. This is the end of the story.
+      guidanceExtraction: |
+        You are now responsible for writing the story prose for Scene {currentScene}, the upcoming scene. You have been provided with:
+
+        - the World Setting
+        - the Act Plot {providedSummary}
+        - the Scene Plot for the upcoming scene
+        - the full narrative body of the most recent scene, Scene {previousScene}
+        - the player's response to the most recent scene {providedTurnOfEvents}{providedDirectorNotes}
+
+        Your job is to a craft vivid, engaging, and immersive narrative based on the provided information.
+        You are instructed to prioritize on developing the events as directed by the Scene Plot. {actEndInstruction}{turnOfEventsReinforcementPhrase}
+        Use the pacing decision from the Scene Plot. If the plot planner allows an expanded word count, you may write up to double the usual length.
+        {directorNotesReinforcementPhrase}
+      phaseEventExtraction: |
+        You are now responsible for writing the story prose for Scene {currentScene}, the upcoming scene. You have been provided with:
+
+        - the World Setting
+        - the Act Plot
+        - the current Act Phase ({currentActPhase}) and the Phase Events {providedSummary}
+        - the full narrative body of the most recent scene, Scene {previousScene}
+        - the player's response to the most recent scene {providedTurnOfEvents}{providedDirectorNotes}
+
+        Your job is to a craft vivid, engaging, and immersive narrative based on the provided information.
+        You are required to evaluate the current state of events, and see if any Phase Events can be triggered or already triggered.
+        For triggered events that have not been elaborated on, you are instructed elaborate on them.
+        If no events are triggered, or all triggered events have reasonable elaboration, drive the story to the most suitable next event.
+        If you believe the story's current state have fulfilled the goals of the {currentActPhase} Phase, use the `advance-phase` tool **exactly once** to move the story forward. {actEndInstruction}{turnOfEventsReinforcementPhrase}
+        {directorNotesReinforcementPhrase}
     plotPlanner:
       guidance: 'The current scene is Scene {currentScene}. Plan a Scene Plot for the Immediate Next Scene, Near-Term Beat (Flexible), and Mid-Term Goal (Flexible) based on the available information in the chat history.'
       phaseEvent: 'The current story phase of the act is {currentActPhase}. Plan the "Phase Events" based on the available information in the chat history.'
@@ -113,6 +141,16 @@ pipeline:
     summarizerFull: 'Generate a complete Act Summary covering all scenes in the transcript.'
     summarizerFallback: 'Update the Act Summary for Scene {completedScenes} based on the Player Response.'
     summarizer: 'Update the Act Summary adding information for the previous scene: "Scene {completedScenes}: {sceneTitle}"'
+    actSummaryIncrementalTemplate: |
+      ## {sceneSummariesHeader}
+      ### {sceneWithNumber}: {sceneTitle}
+      {locationLabel}: [location of where the scene took place.]
+      {summaryHeader}: [summary, max 3 sentences]
+
+      ## {characterSummariesHeader}
+      ### [Well-known name of the character]
+      - {aliasesLabel}: [all known aliases]
+      - {sceneWithNumber}: [summary if appeared, max 2 sentences. Also include the most representative quoted dialogue or internal monologue if any.]
     actPlotResumeNote: |
       ---
 
@@ -223,6 +261,19 @@ features:
       ---
 
       {template}
+    cardExtractionRules: |
+      ## Extraction Rules
+
+      1. **Target Focus:** Extract information _only_ as it pertains to **{{character name}}**. Do not summarize the plot or detail world-lore unless it directly explains this character's immediate behavior or backstory.
+      2. **Strict Canon:** Base your extraction entirely on the provided source text.
+      3. **Handling Unknowns:** If a specific piece of information (like age, eye color, or last name) is not explicitly stated or strongly implied, write "Unknown". Do not invent details.
+      4. **Marking Inferences:** If you must deduce a trait or motive based on the character's actions (e.g., they act nervous, so you infer a fear of authority), preface that detail with `[Inferred]`.
+      5. **Concise & Concrete:** Use bullet points and short, declarative sentences. Avoid flowery language. Focus on actionable behavioral cues (e.g., "Taps fingers when lying" instead of "Has a somewhat nervous disposition at times").
+      6. **Voice Capture:** For the "Dialogue Examples" section, extract 2 to 3 exact quotes spoken by **{{character name}}** that best demonstrate their unique vocabulary, sentence structure, and tone. If they have no dialogue, write "No dialogue provided."
+
+      ## Output Format
+
+      Respond ONLY with the filled-out Markdown template below. Do not include introductory or concluding conversational text.
     transcriptStart: 'The following messages will contain the transcript of the current act:'
     transcriptEnd: 'The previous message was the end of the transcript of the current act.'
     actCard: 'The following message contains the Act Card from Act {actNumber}'
@@ -270,6 +321,16 @@ features:
       - Preserve unresolved tensions, pending reveals, and escalation structure.
   worldBuilder:
     worldBuilderSeed: 'I want to create a new story. Please help me build a world.'
+    actPlotInterviewExtraction: |
+      The following is the world setting for the story:
+
+      ---
+
+      {worldContent}
+
+      ---
+
+      Let's start the interview!
     resumeStoryActPrefix: |
       Continue the pre-game interview based on the latest story context below.
 
@@ -303,8 +364,6 @@ features:
       importCompletedSuccessfully: 'Import completed successfully.'
       importFailed: 'Import failed'
       processingAct: 'Processing Act {actNumber}...'
-      detectingGameData: 'Detecting game data for {count} messages...'
-      generatingGameData: 'Generating GameData[{index}]...'
       fillingNarrativeVariables: 'Filling narrative variables for {count} messages...'
       fillingNarrativeVariable: 'Filling narrative variables[{index}]...'
     validations:
@@ -323,6 +382,60 @@ features:
       characterNameEmpty: 'Character name is empty — a name will be derived from the card content.'
     description:
       unnamedCharacter: 'a character in the story'
+  worldGenerator:
+    fromChatSystemPrompt: 'You are a world-building analyst. Your task is to read through a chat history between a user and an AI storyteller, extract the underlying world-building elements, and produce a structured Markdown document that captures the world setting. Focus on macro-level lore: geography, factions, magic/technology systems, races, and overarching themes. Ignore specific plot events, individual character arcs, and episodic details. Output only the Markdown content — no commentary.'
+    fromChatPrompt: |
+      Analyze our chat history and generate a comprehensive world setting file using the Markdown template below.
+
+      **Rules:**
+
+      1. Base all information strictly on the provided chat history. You may add or omit template sections if the history demands it.
+      2. Focus on overarching world-building and macro-level lore. Do not include specific plot points, timelines, or episodic story details.
+      3. Exclude character profiles unless a character has a massive, world-altering impact (e.g., a ruling monarch, a deity).
+      4. Output ONLY the raw Markdown text. Do not include conversational filler, greetings, or formatting explanations before or after the markdown block.
+
+      ---
+    fromCardsSystemPrompt: 'You are a world-building analyst. Your task is to read through provided world settings, act descriptions, and character information, then synthesize a structured Markdown document that captures the world setting. Focus on macro-level lore: geography, factions, magic/technology systems, races, and overarching themes. Extrapolate from the provided materials — if details are sparse, make reasonable inferences consistent with what is given. Output only the Markdown content — no commentary.'
+    fromCardsPrompt: |
+      Analyze the provided world settings, act descriptions, and character information, then generate a comprehensive world setting file using the Markdown template below.
+
+      **Rules:**
+
+      1. Base all information on the provided materials. You may extrapolate or add details when necessary for a coherent world, but stay consistent with what is given.
+      2. Focus on overarching world-building and macro-level lore. Do not include specific plot timelines or episodic story details unless they define the world itself.
+      3. Exclude individual character profiles unless a character has a massive, world-altering impact (e.g., a ruling monarch, a deity). Character traits should inform the world's tone and themes rather than appear as entries.
+      4. Output ONLY the raw Markdown text. Do not include conversational filler, greetings, or formatting explanations before or after the markdown block.
+
+      ---
+  worldUpdater:
+    fromActSystemPrompt: 'You are a world-building analyst. Your task is to update an existing world setting document based on new information from a completed story act and an interview about the next act. You must update the document, not rewrite it — preserve the existing structure and focus on the less rigid, more variable parts while maintaining logical consistency. Incorporate elements from the act summary and interview that reflect changes to the world. The purpose of this update is to expand the world setting so that a continuation can be written based on it. Output only the updated Markdown content — no commentary.'
+    fromActPrompt: |
+      Update the existing world setting document based on the information provided above.
+
+      **Rules:**
+
+      1. This is an **update**, not a rewrite. Preserve the existing structure, headings, and established lore. Only modify sections where new information from the completed act or interview introduces changes or expansions.
+      2. Focus on the **less rigid, more variable parts** — political shifts, new locations discovered, changes in faction dynamics, technological or magical developments. Maintain logical consistency with what is already established.
+      3. Incorporate elements from the act summary and interview that reflect how the world has changed. If the interview indicates a new direction for the next act, expand the world accordingly.
+      4. The purpose of this update is to write a **continuation** based on the expanded world. Ensure the updated world supports the narrative direction discussed in the interview.
+      5. Do NOT include specific plot events, character arcs, or episodic details. Extract only world-level implications.
+      6. Output ONLY the updated raw Markdown text. Do not include conversational filler or explanations.
+
+      ---
+  importantPhrases:
+    systemPrompt: |
+      Extract only exact phrases from the text.
+
+      Constraints:
+      - Each output line must be copied verbatim from exactly one sentence.
+      - Never include words from more than one sentence on the same line.
+      - Never paraphrase.
+      - Never join fragments from different parts of the text.
+      - Return only the most important 5 items, fewer if needed.
+      - Less than 10 words per item, prefer shorter phrases.
+
+      Output:
+      One phrase per line only.
 
 tools:
   evaluateRisk:

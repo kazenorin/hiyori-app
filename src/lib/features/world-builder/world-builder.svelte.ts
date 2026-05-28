@@ -2,9 +2,15 @@ import { getMainProviderConfig, type ProviderConfig, settings } from '$lib/store
 import { resumeStoryActPrefix, resumeStoryActSuffix, worldBuilderSeed } from '$lib/features/world-builder/prompts';
 import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
 import { actInformationHeader, charactersHeader, currentSceneHeader } from '$lib/definitions/common-headers';
-import { loadLocaleStrings, ls } from '$lib/localization';
 import {
-	loadActPlotInterviewExtractionPrompt,
+	actPlotInterviewExtractionPrompt,
+	interviewSystemRoleNextAct,
+	interviewSystemRolePreGame,
+	interviewPreviousActConclusion,
+	interviewNextActPurpose,
+} from '$lib/definitions/feature-prompts';
+import { loadLocaleStrings } from '$lib/localization';
+import {
 	loadActPlotInterviewSystemPrompt,
 	loadGeneralInstructions,
 	loadWorldBuilderSystemPrompt,
@@ -203,13 +209,11 @@ export async function enterActPlotInterviewMode(
 	interviewWorldContent = worldContent;
 
 	// Load interview system prompt with general instructions injected and interview extraction prompt
-	const [generalInstructions, interviewSystemPrompt, interviewPrompt] = await Promise.all([
-		loadGeneralInstructions(),
-		loadActPlotInterviewSystemPrompt(),
-		loadActPlotInterviewExtractionPrompt(),
-	]);
+	const [generalInstructions, interviewSystemPrompt] = await Promise.all([loadGeneralInstructions(), loadActPlotInterviewSystemPrompt()]);
 
-	const interviewSystemRole = newActContext ? ls('features.interview.systemRole.nextAct') : ls('features.interview.systemRole.preGame');
+	const interviewPrompt = actPlotInterviewExtractionPrompt();
+
+	const interviewSystemRole = newActContext ? interviewSystemRoleNextAct() : interviewSystemRolePreGame();
 
 	// Inject general instructions and system role into the interview system prompt and cache it
 	cachedInterviewSystemPrompt = interviewSystemPrompt
@@ -230,9 +234,9 @@ export async function enterActPlotInterviewMode(
 	}
 
 	if (newActContext) {
-		const conclusionSection = ls('features.interview.previousActConclusion', { endingType: newActContext.endingType });
+		const conclusionSection = interviewPreviousActConclusion(newActContext.endingType);
 		interviewHiddenContext.push({ role: 'user', content: `${conclusionSection}\n\n${newActContext.actSummary}` });
-		const purposeSection = ls('features.interview.nextActInterviewPurpose', { endingType: newActContext.endingType });
+		const purposeSection = interviewNextActPurpose(newActContext.endingType);
 		interviewHiddenContext.push({ role: 'user', content: purposeSection });
 	}
 

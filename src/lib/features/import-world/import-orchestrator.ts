@@ -25,7 +25,18 @@ import type { RetryConfig } from '$lib/ai/chat-stream';
 import { parseTranscriptFile } from './transcript-parsers';
 import { runNarrativeFilling } from './narrative-filler';
 import { generateWorldFromCards } from '$lib/ai/world-generator';
-import { loadLocaleStrings, ls } from '$lib/localization';
+import { loadLocaleStrings } from '$lib/localization';
+import {
+	importWorldUnnamedCharacter,
+	importWorldCompleteWithInterview,
+	importWorldComplete,
+	importWorldCompletedSuccessfully,
+	importWorldFailed,
+	importWorldProcessingAct,
+	importWorldFillingNarrativeVariables,
+	importWorldFillingNarrativeVariable,
+	characterCardCoreIdentityLabel,
+} from '$lib/definitions/feature-prompts';
 import { nameLabel } from '$lib/definitions/common-labels';
 import { type OutputDescriptor, parseContent } from '$lib/utils/chat-stream-parser';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
@@ -116,7 +127,7 @@ export async function prepareImport(formData: ImportFormData, onProgress: Progre
 
 		onProgress({
 			phase: 'error',
-			message: ls('features.importWorld.messages.importFailed'),
+			message: importWorldFailed(),
 			errorMessage: errorMsg,
 			consoleOutput: logs.join('\n'),
 		});
@@ -163,10 +174,8 @@ export async function confirmImport(preview: ImportPreviewData, onProgress: Prog
 
 		onProgress({
 			phase: 'complete',
-			message: needsInterview
-				? ls('features.importWorld.messages.importCompleteWithInterview')
-				: ls('features.importWorld.messages.importComplete'),
-			consoleOutput: logs.join('\n') + '\n\n✓ ' + ls('features.importWorld.messages.importCompletedSuccessfully'),
+			message: needsInterview ? importWorldCompleteWithInterview() : importWorldComplete(),
+			consoleOutput: logs.join('\n') + '\n\n✓ ' + importWorldCompletedSuccessfully(),
 		});
 
 		const firstActId = preview.acts.length > 0 ? preview.acts[0].actId : undefined;
@@ -198,7 +207,7 @@ export async function confirmImport(preview: ImportPreviewData, onProgress: Prog
 
 		onProgress({
 			phase: 'error',
-			message: ls('features.importWorld.messages.importFailed'),
+			message: importWorldFailed(),
 			errorMessage: errorMsg,
 			consoleOutput: logs.join('\n'),
 		});
@@ -274,7 +283,7 @@ async function createActAndLine(
 
 	onProgress({
 		phase: 'processing-act',
-		message: ls('features.importWorld.messages.processingAct', { actNumber }),
+		message: importWorldProcessingAct(actNumber),
 		consoleOutput: '',
 	});
 
@@ -311,7 +320,7 @@ async function enrichTranscriptAct(
 	if (missingNarrative > 0) {
 		onProgress({
 			phase: 'processing-act',
-			message: ls('features.importWorld.messages.fillingNarrativeVariables', { count: missingNarrative }),
+			message: importWorldFillingNarrativeVariables(missingNarrative),
 			consoleOutput: '',
 		});
 		log(`Filling narrative variables for ${missingNarrative} messages...`);
@@ -323,7 +332,7 @@ async function enrichTranscriptAct(
 			(msgIndex, state) => {
 				onProgress({
 					phase: 'processing-act',
-					message: ls('features.importWorld.messages.fillingNarrativeVariable', { index: msgIndex }),
+					message: importWorldFillingNarrativeVariable(msgIndex),
 					consoleOutput: state.content ?? state.reasoning ?? '',
 				});
 			},
@@ -331,7 +340,7 @@ async function enrichTranscriptAct(
 				const errorContent = `[filling-narrative-variables] attempt ${attempt + 1} failed: ${err.message}. Retrying...`;
 				onProgress({
 					phase: 'processing-act',
-					message: ls('features.importWorld.messages.fillingNarrativeVariable', { index: msgIndex }),
+					message: importWorldFillingNarrativeVariable(msgIndex),
 					consoleOutput: '[ERROR]' + errorContent,
 				});
 			}
@@ -414,7 +423,7 @@ async function loadCharacterCards(
 	for (const char of characters) {
 		if (char.cardFile) {
 			const content = await char.cardFile.text();
-			const name = char.name.trim() || extractCharacterName(content) || ls('features.importWorld.description.unnamedCharacter');
+			const name = char.name.trim() || extractCharacterName(content) || importWorldUnnamedCharacter();
 			characterCards.push({ name, content });
 			log(`Character loaded: ${name}`);
 		}
@@ -533,7 +542,7 @@ async function saveActCard(storyFolder: string, actNumber: number, content: stri
 }
 
 function extractCharacterName(content: string): string | null {
-	const coreIdentityHeader = ls('features.characterCardGenerator.coreIdentity');
+	const coreIdentityHeader = characterCardCoreIdentityLabel();
 
 	const descriptors: OutputDescriptor[] = [
 		{

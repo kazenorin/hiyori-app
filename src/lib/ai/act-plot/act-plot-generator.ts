@@ -10,7 +10,7 @@ import {
 } from '$lib/fs/prompts';
 import { log } from '$lib/logging/logger';
 import { type ActLineMeta, getLastSceneNumber, getLatestTurnOfEvents, getPremisesMessages, getLatestActSummary } from '$lib/db/act-lines';
-import { ls } from '$lib/localization';
+import { actPlotResumeNote } from '$lib/definitions/pipeline-prompts';
 import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';
 import { ACT_PLOT_SECTION } from '$lib/definitions/pipeline-sections';
 import { ERR_EMPTY_ACT_PLOT_WRITER, ERR_NO_MAIN_PROVIDER } from '$lib/definitions/error-messages';
@@ -225,7 +225,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 	// Append resume-game note if applicable
 	if (isResumeGame) {
 		const lastSceneNumber = (await getLastSceneNumber(actLineId)) ?? 1;
-		finalText = finalText + '\n\n' + ls('pipeline.extraction.actPlotResumeNote', { sceneNumber: lastSceneNumber.toString() });
+		finalText = finalText + '\n\n' + actPlotResumeNote(lastSceneNumber.toString());
 	}
 
 	return finalText;

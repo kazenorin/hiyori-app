@@ -5,10 +5,6 @@ import { runMemoryMigrations } from '$lib/db/memory-migrations';
 import { loadStories, restoreState } from '$lib/stores/stories.svelte';
 import {
 	loadWorldTemplate,
-	loadGenerateWorldFromChatPrompt,
-	loadGenerateWorldFromChatSystemPrompt,
-	loadUpdateWorldFromActPrompt,
-	loadUpdateWorldFromActSystemPrompt,
 	loadWorldBuilderSystemPrompt,
 	loadMemoryExtractionSystemPrompt,
 	loadMemoryExtractionPrompt,
@@ -64,10 +60,6 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 		onStatus?.('Loading world prompts...');
 		setActiveLocale(settings.locale || 'en');
 		await loadWorldTemplate();
-		await loadGenerateWorldFromChatPrompt();
-		await loadGenerateWorldFromChatSystemPrompt();
-		await loadUpdateWorldFromActPrompt();
-		await loadUpdateWorldFromActSystemPrompt();
 		await loadWorldBuilderSystemPrompt();
 
 		await log.info('init', 'Loading memory prompts...');

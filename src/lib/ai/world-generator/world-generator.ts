@@ -3,18 +3,18 @@ import { streamText } from 'ai';
 import { maxBy } from 'lodash-es';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
-import {
-	loadWorldTemplate,
-	loadGenerateWorldFromChatPrompt,
-	loadGenerateWorldFromChatSystemPrompt,
-	loadGenerateWorldFromCardsPrompt,
-	loadGenerateWorldFromCardsSystemPrompt,
-} from '$lib/fs/prompts';
+import { loadWorldTemplate } from '$lib/fs/prompts';
 import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 import { worldContentHeader, actDescriptionHeader, characterHeader } from '$lib/definitions/common-headers';
-import { ls } from '$lib/localization';
+import {
+	worldFromChatSystemPrompt,
+	worldFromChatPrompt,
+	worldFromCardsSystemPrompt,
+	worldFromCardsPrompt,
+	importWorldUnnamedCharacter,
+} from '$lib/definitions/feature-prompts';
 import {
 	ERR_API_KEY_AND_MODEL_NOT_CONFIGURED,
 	ERR_NO_AT_LEAST_ONE_CONTENT,
@@ -74,9 +74,9 @@ export async function generateWorld(storyId: string, abortSignal?: AbortSignal):
 		throw new Error(ERR_API_KEY_AND_MODEL_NOT_CONFIGURED);
 	}
 
-	const systemPrompt = await loadGenerateWorldFromChatSystemPrompt();
+	const systemPrompt = worldFromChatSystemPrompt();
 
-	const [generatePrompt, worldTemplate] = await Promise.all([loadGenerateWorldFromChatPrompt(), loadWorldTemplate()]);
+	const [generatePrompt, worldTemplate] = await Promise.all([Promise.resolve(worldFromChatPrompt()), loadWorldTemplate()]);
 
 	const userInstruction = generatePrompt + '\n\n' + worldTemplate;
 	const messages = await traceStoryMessages(storyId);
@@ -126,8 +126,8 @@ export async function generateWorldFromCards(
 	}
 
 	const [systemPrompt, generatePrompt, worldTemplate] = await Promise.all([
-		loadGenerateWorldFromCardsSystemPrompt(),
-		loadGenerateWorldFromCardsPrompt(),
+		Promise.resolve(worldFromCardsSystemPrompt()),
+		Promise.resolve(worldFromCardsPrompt()),
 		loadWorldTemplate(),
 	]);
 
@@ -142,7 +142,7 @@ export async function generateWorldFromCards(
 		messages.push({ role: 'user', content: `## ${actDescriptionHeader()}\n\n${actCardContent}` });
 	}
 	for (const card of characterCards) {
-		const name = card.name || ls('features.importWorld.description.unnamedCharacter');
+		const name = card.name || importWorldUnnamedCharacter();
 		messages.push({ role: 'user', content: `## ${characterHeader()}: ${name}\n\n${card.content}` });
 	}
 

@@ -34,8 +34,6 @@ const phaseEventPlotPlannerPrompt = new LocalizedPromptFile(promptDefaults, 'plo
 // Pipeline: Writer
 const writerPrompt = new LocalizedPromptFile(promptDefaults, 'writer/writer-prompt.md');
 const writerOutputTemplate = new LocalizedPromptFile(promptDefaults, 'writer/writer-output-template.md');
-const guidanceWriterExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'writer/guidance-writer-extraction-prompt.md');
-const phaseEventWriterExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'writer/phase-event-writer-extraction-prompt.md');
 
 // Pipeline: Reviewer
 const reviewerPrompt = new LocalizedPromptFile(promptDefaults, 'reviewer/reviewer-prompt.md');
@@ -50,19 +48,12 @@ const gameMasterPrompt = new LocalizedPromptFile(promptDefaults, 'game-master/ga
 // Pipeline: Summarizer
 const summarizerPrompt = new LocalizedPromptFile(promptDefaults, 'summarizer/summarizer-prompt.md');
 const summarizerIncrementalPrompt = new LocalizedPromptFile(promptDefaults, 'summarizer/summarizer-incremental-prompt.md');
-const actSummaryIncrementalTemplate = new LocalizedPromptFile(promptDefaults, 'summarizer/act-summary-incremental-template.md');
 
 // Pipeline: Character Profile Compressor
 const characterProfileCompressorPrompt = new LocalizedPromptFile(promptDefaults, 'summarizer/character-profile-compressor.md');
 
 // World
 const worldTemplate = new LocalizedPromptFile(promptDefaults, 'world/world-template.md');
-const generateWorldFromChatPrompt = new LocalizedPromptFile(promptDefaults, 'world/generate-world-from-chat-prompt.md');
-const generateWorldFromChatSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/generate-world-from-chat-system-prompt.md');
-const generateWorldFromCardsPrompt = new LocalizedPromptFile(promptDefaults, 'world/generate-world-from-cards-prompt.md');
-const generateWorldFromCardsSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/generate-world-from-cards-system-prompt.md');
-const updateWorldFromActPrompt = new LocalizedPromptFile(promptDefaults, 'world/update-world-from-act-prompt.md');
-const updateWorldFromActSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/update-world-from-act-system-prompt.md');
 const worldBuilderSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/world-builder-system-prompt.md');
 
 // Act
@@ -79,17 +70,10 @@ const actPlotInterviewTurnOfEventsPrompt = new LocalizedPromptFile(promptDefault
 
 // Character
 const characterCardTemplate = new LocalizedPromptFile(promptDefaults, 'character/character-card-template.md');
-const characterCardExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'character/character-card-extraction-prompt.md');
-
-// Import
-const choicesExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'import/choices-extraction-prompt.md');
 
 // Memories
 const memoryExtractionSystemPrompt = new LocalizedPromptFile(promptDefaults, 'memories/memory-extraction-system-prompt.md');
 const memoryExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'memories/memory-extraction-prompt.md');
-
-// Features
-const importantPhrasesPrompt = new LocalizedPromptFile(promptDefaults, 'features/important-phrases-prompt.md');
 
 // === Load Functions ===
 
@@ -101,23 +85,14 @@ export const loadPlotPlannerPromptForMode = (mode: 'guidance' | 'phaseEvent'): P
 	mode === 'phaseEvent' ? phaseEventPlotPlannerPrompt.load() : guidancePlotPlannerPrompt.load();
 export const loadWriterPrompt = (): Promise<string> => writerPrompt.load();
 export const loadWriterOutputTemplate = (): Promise<string> => writerOutputTemplate.load();
-export const loadGuidanceWriterExtractionPrompt = (): Promise<string> => guidanceWriterExtractionPrompt.load();
-export const loadPhaseEventWriterExtractionPrompt = (): Promise<string> => phaseEventWriterExtractionPrompt.load();
 export const loadReviewerPrompt = (): Promise<string> => reviewerPrompt.load();
 export const loadQuickReviewerPrompt = (): Promise<string> => quickReviewerPrompt.load();
 export const loadEditorPrompt = (): Promise<string> => editorPrompt.load();
 export const loadGameMasterPrompt = (): Promise<string> => gameMasterPrompt.load();
 export const loadSummarizerPrompt = (): Promise<string> => summarizerPrompt.load();
 export const loadSummarizerIncrementalPrompt = (): Promise<string> => summarizerIncrementalPrompt.load();
-export const loadActSummaryIncrementalTemplate = (): Promise<string> => actSummaryIncrementalTemplate.load();
 export const loadCharacterProfileCompressorPrompt = (): Promise<string> => characterProfileCompressorPrompt.load();
 export const loadWorldTemplate = (): Promise<string> => worldTemplate.load();
-export const loadGenerateWorldFromChatPrompt = (): Promise<string> => generateWorldFromChatPrompt.load();
-export const loadGenerateWorldFromChatSystemPrompt = (): Promise<string> => generateWorldFromChatSystemPrompt.load();
-export const loadGenerateWorldFromCardsPrompt = (): Promise<string> => generateWorldFromCardsPrompt.load();
-export const loadGenerateWorldFromCardsSystemPrompt = (): Promise<string> => generateWorldFromCardsSystemPrompt.load();
-export const loadUpdateWorldFromActPrompt = (): Promise<string> => updateWorldFromActPrompt.load();
-export const loadUpdateWorldFromActSystemPrompt = (): Promise<string> => updateWorldFromActSystemPrompt.load();
 export const loadWorldBuilderSystemPrompt = (): Promise<string> => worldBuilderSystemPrompt.load();
 export const loadActCardTemplate = (): Promise<string> => actCardTemplate.load();
 export const loadActPlotTemplate = (): Promise<string> => actPlotTemplate.load();
@@ -133,9 +108,6 @@ export const loadActPlotEditorPrompt = (): Promise<string> => actPlotEditorPromp
 export const loadActPlotInterviewExtractionPrompt = (): Promise<string> => actPlotInterviewExtractionPrompt.load();
 export const loadActPlotInterviewTurnOfEventsPrompt = (): Promise<string> => actPlotInterviewTurnOfEventsPrompt.load();
 export const loadCharacterCardTemplate = (): Promise<string> => characterCardTemplate.load();
-export const loadCharacterCardExtractionPrompt = (): Promise<string> => characterCardExtractionPrompt.load();
-export const loadChoicesExtractionPrompt = (): Promise<string> => choicesExtractionPrompt.load();
-export const loadImportantPhrasesPrompt = (): Promise<string> => importantPhrasesPrompt.load();
 export const loadMemoryExtractionSystemPrompt = (): Promise<string> => memoryExtractionSystemPrompt.load();
 export const loadMemoryExtractionPrompt = (): Promise<string> => memoryExtractionPrompt.load();
 
@@ -165,14 +137,6 @@ export async function loadStoryWriterOutputTemplate(storyId: string, storyName: 
 	return writerOutputTemplate.loadForStory(storyId, storyName);
 }
 
-export async function loadStoryGuidanceWriterExtractionPrompt(storyId: string, storyName: string): Promise<string> {
-	return guidanceWriterExtractionPrompt.loadForStory(storyId, storyName);
-}
-
-export async function loadStoryPhaseEventWriterExtractionPrompt(storyId: string, storyName: string): Promise<string> {
-	return phaseEventWriterExtractionPrompt.loadForStory(storyId, storyName);
-}
-
 export async function loadStoryReviewerPrompt(storyId: string, storyName: string): Promise<string> {
 	return reviewerPrompt.loadForStory(storyId, storyName);
 }
@@ -195,10 +159,6 @@ export async function loadStorySummarizerPrompt(storyId: string, storyName: stri
 
 export async function loadStorySummarizerIncrementalPrompt(storyId: string, storyName: string): Promise<string> {
 	return summarizerIncrementalPrompt.loadForStory(storyId, storyName);
-}
-
-export async function loadStoryActSummaryIncrementalTemplate(storyId: string, storyName: string): Promise<string> {
-	return actSummaryIncrementalTemplate.loadForStory(storyId, storyName);
 }
 
 export async function loadStoryCharacterProfileCompressorPrompt(storyId: string, storyName: string): Promise<string> {
@@ -237,16 +197,6 @@ export const writerOutputTemplateLoader: PromptLoader = {
 	loadDefault: loadWriterOutputTemplate,
 };
 
-export const guidanceWriterExtractionPromptLoader: PromptLoader = {
-	loadByStory: loadStoryGuidanceWriterExtractionPrompt,
-	loadDefault: loadGuidanceWriterExtractionPrompt,
-};
-
-export const phaseEventWriterExtractionPromptLoader: PromptLoader = {
-	loadByStory: loadStoryPhaseEventWriterExtractionPrompt,
-	loadDefault: loadPhaseEventWriterExtractionPrompt,
-};
-
 export const reviewerSystemPromptTemplateLoader: PromptLoader = {
 	loadByStory: loadStoryReviewerPrompt,
 	loadDefault: loadReviewerPrompt,
@@ -277,11 +227,6 @@ export const summarizerIncrementalPromptLoader: PromptLoader = {
 	loadDefault: loadSummarizerIncrementalPrompt,
 };
 
-export const actSummaryIncrementalTemplateLoader: PromptLoader = {
-	loadByStory: loadStoryActSummaryIncrementalTemplate,
-	loadDefault: loadActSummaryIncrementalTemplate,
-};
-
 export const characterProfileCompressorPromptLoader: PromptLoader = {
 	loadByStory: loadStoryCharacterProfileCompressorPrompt,
 	loadDefault: loadCharacterProfileCompressorPrompt,
@@ -296,19 +241,14 @@ registerDefaults([
 	phaseEventPlotPlannerPrompt,
 	writerPrompt,
 	writerOutputTemplate,
-	guidanceWriterExtractionPrompt,
-	phaseEventWriterExtractionPrompt,
 	reviewerPrompt,
 	quickReviewerPrompt,
 	editorPrompt,
 	gameMasterPrompt,
 	summarizerPrompt,
 	summarizerIncrementalPrompt,
-	actSummaryIncrementalTemplate,
 	characterProfileCompressorPrompt,
 	worldTemplate,
-	generateWorldFromChatPrompt,
-	generateWorldFromChatSystemPrompt,
 	worldBuilderSystemPrompt,
 	actCardTemplate,
 	actPlotTemplate,
@@ -321,13 +261,6 @@ registerDefaults([
 	actPlotInterviewExtractionPrompt,
 	actPlotInterviewTurnOfEventsPrompt,
 	characterCardTemplate,
-	characterCardExtractionPrompt,
-	choicesExtractionPrompt,
-	generateWorldFromCardsPrompt,
-	generateWorldFromCardsSystemPrompt,
-	updateWorldFromActPrompt,
-	updateWorldFromActSystemPrompt,
-	importantPhrasesPrompt,
 	memoryExtractionSystemPrompt,
 	memoryExtractionPrompt,
 ]);

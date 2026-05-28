@@ -1,5 +1,5 @@
 import { isQuickReview } from '$lib/stores/settings.svelte';
-import { ls } from '$lib/localization';
+import { writerEpilogueExtractionPrompt } from '$lib/definitions/pipeline-prompts';
 import type { ActPhase, EndingType } from '../narrative-types';
 import { DEFAULT_RETRY_CONFIG, type PhaseMetadata, toPhaseMetadata } from '../chat-stream';
 import {
@@ -69,8 +69,6 @@ function preparePipelinePrompts(loadedPrompts: LoadedPrompts) {
 		gameMasterSystemPrompt: loadedPrompts.gameMasterSystemPrompt,
 		plotPlannerSystemPrompt: loadedPrompts.plotPlannerSystemPrompt,
 		phaseEventPlotPlannerSystemPrompt: loadedPrompts.phaseEventPlotPlannerSystemPrompt,
-		guidanceWriterExtractionPrompt: loadedPrompts.guidanceWriterExtractionPrompt,
-		phaseEventWriterExtractionPrompt: loadedPrompts.phaseEventWriterExtractionPrompt,
 	};
 	return prompts;
 }
@@ -205,7 +203,7 @@ export async function runEpiloguePipeline(input: EpiloguePipelineInput): Promise
 	const ctx = await buildPipelineContext(input, loadedPrompts, providerConfigs, EpiloguePreEditorContext);
 
 	const tracker = buildTrackPhase();
-	const epilogueExtractionPrompt = ls('pipeline.extraction.writer.epilogue', { endingType: ENDING_LABELS[endingType] });
+	const epilogueExtractionPrompt = writerEpilogueExtractionPrompt(ENDING_LABELS[endingType]);
 
 	let state: PipelineState = {};
 	state = await runWriterPhase(ctx, state, tracker.trackPhase, epilogueExtractionPrompt);

@@ -2,7 +2,21 @@
 
 import type { ImportFormData, ImportActInput, ValidationResult, ValidationError, ValidationWarning } from './types';
 import { MAX_FILE_SIZE } from '$lib/utils/async';
-import { ls } from '$lib/localization';
+import {
+	importValStoryNameEmpty,
+	importValActTranscriptRequired,
+	importValActTranscriptRequiredSingle,
+	importValLastActRequiresContent,
+	importValActNameEmpty,
+	importValCharacterCardMissing,
+	importValCharacterNameEmpty,
+	importValFileTooLarge,
+	importValContentRequired,
+	importValRetryCountRange,
+	importValBackoffIntervalRange,
+	importValFileMustBeMdOrTxt,
+	importValFileMustBeJson,
+} from '$lib/definitions/feature-prompts';
 
 export function validateImportForm(formData: ImportFormData): ValidationResult {
 	const errors: ValidationError[] = [];
@@ -12,7 +26,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	if (!formData.storyName.trim()) {
 		warnings.push({
 			field: 'storyName',
-			message: ls('features.importWorld.validations.storyNameEmpty'),
+			message: importValStoryNameEmpty(),
 		});
 	}
 
@@ -26,9 +40,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (!act.transcript) {
 			errors.push({
 				field: `act-${act.id}`,
-				message: hasMultipleActs
-					? ls('features.importWorld.validations.actTranscriptRequired', { actNumber: i + 1 })
-					: ls('features.importWorld.validations.actTranscriptRequiredSingle'),
+				message: hasMultipleActs ? importValActTranscriptRequired(i + 1) : importValActTranscriptRequiredSingle(),
 			});
 		}
 	}
@@ -39,7 +51,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (!lastAct.transcript && !lastAct.actFile && !hasWorldFile && formData.characters.every((c) => !c.cardFile)) {
 			errors.push({
 				field: `act-${lastAct.id}`,
-				message: ls('features.importWorld.validations.lastActRequiresContent'),
+				message: importValLastActRequiresContent(),
 			});
 		}
 	}
@@ -49,7 +61,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (!act.name.trim()) {
 			warnings.push({
 				field: `act-${act.id}-name`,
-				message: ls('features.importWorld.validations.actNameEmpty', { actNumber: formData.acts.indexOf(act) + 1 }),
+				message: importValActNameEmpty(formData.acts.indexOf(act) + 1),
 			});
 		}
 	}
@@ -59,7 +71,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (!character.cardFile) {
 			warnings.push({
 				field: `character-${character.id}`,
-				message: ls('features.importWorld.validations.characterCardMissing'),
+				message: importValCharacterCardMissing(),
 			});
 		}
 	}
@@ -69,7 +81,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (character.cardFile && !character.name.trim()) {
 			warnings.push({
 				field: `character-${character.id}-name`,
-				message: ls('features.importWorld.validations.characterNameEmpty'),
+				message: importValCharacterNameEmpty(),
 			});
 		}
 	}
@@ -78,32 +90,20 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	if (formData.worldFile && formData.worldFile.size > MAX_FILE_SIZE) {
 		errors.push({
 			field: 'worldFile',
-			message: ls('features.importWorld.validations.fileTooLarge', {
-				field: 'World file',
-				size: (formData.worldFile.size / 1024 / 1024).toFixed(1),
-				max: MAX_FILE_SIZE / 1024 / 1024,
-			}),
+			message: importValFileTooLarge('World file', (formData.worldFile.size / 1024 / 1024).toFixed(1), MAX_FILE_SIZE / 1024 / 1024),
 		});
 	}
 	for (const act of formData.acts) {
 		if (act.actFile && act.actFile.size > MAX_FILE_SIZE) {
 			errors.push({
 				field: `act-${act.id}-file`,
-				message: ls('features.importWorld.validations.fileTooLarge', {
-					field: 'Act file',
-					size: (act.actFile.size / 1024 / 1024).toFixed(1),
-					max: MAX_FILE_SIZE / 1024 / 1024,
-				}),
+				message: importValFileTooLarge('Act file', (act.actFile.size / 1024 / 1024).toFixed(1), MAX_FILE_SIZE / 1024 / 1024),
 			});
 		}
 		if (act.transcript && act.transcript.size > MAX_FILE_SIZE) {
 			errors.push({
 				field: `act-${act.id}-transcript`,
-				message: ls('features.importWorld.validations.fileTooLarge', {
-					field: 'Transcript',
-					size: (act.transcript.size / 1024 / 1024).toFixed(1),
-					max: MAX_FILE_SIZE / 1024 / 1024,
-				}),
+				message: importValFileTooLarge('Transcript', (act.transcript.size / 1024 / 1024).toFixed(1), MAX_FILE_SIZE / 1024 / 1024),
 			});
 		}
 	}
@@ -111,11 +111,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (character.cardFile && character.cardFile.size > MAX_FILE_SIZE) {
 			errors.push({
 				field: `character-${character.id}-file`,
-				message: ls('features.importWorld.validations.fileTooLarge', {
-					field: 'Character card',
-					size: (character.cardFile.size / 1024 / 1024).toFixed(1),
-					max: MAX_FILE_SIZE / 1024 / 1024,
-				}),
+				message: importValFileTooLarge('Character card', (character.cardFile.size / 1024 / 1024).toFixed(1), MAX_FILE_SIZE / 1024 / 1024),
 			});
 		}
 	}
@@ -124,7 +120,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	if (!hasWorldFile && formData.acts.length === 0 && formData.characters.length === 0) {
 		errors.push({
 			field: 'form',
-			message: ls('features.importWorld.validations.contentRequired'),
+			message: importValContentRequired(),
 		});
 	}
 
@@ -132,13 +128,13 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 	if (formData.retryCount < 0 || formData.retryCount > 20) {
 		errors.push({
 			field: 'retryCount',
-			message: ls('features.importWorld.validations.retryCountRange'),
+			message: importValRetryCountRange(),
 		});
 	}
 	if (formData.backoffIntervalSeconds < 1 || formData.backoffIntervalSeconds > 60) {
 		errors.push({
 			field: 'backoffIntervalSeconds',
-			message: ls('features.importWorld.validations.backoffIntervalRange'),
+			message: importValBackoffIntervalRange(),
 		});
 	}
 
@@ -147,13 +143,13 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (act.actFile && !isValidTextFile(act.actFile)) {
 			errors.push({
 				field: `act-${act.id}-file`,
-				message: ls('features.importWorld.validations.fileMustBeMdOrTxt', { field: 'Act/chapter file' }),
+				message: importValFileMustBeMdOrTxt('Act/chapter file'),
 			});
 		}
 		if (act.transcript && !isValidJsonFile(act.transcript)) {
 			errors.push({
 				field: `act-${act.id}-transcript`,
-				message: ls('features.importWorld.validations.fileMustBeJson'),
+				message: importValFileMustBeJson(),
 			});
 		}
 	}
@@ -163,7 +159,7 @@ export function validateImportForm(formData: ImportFormData): ValidationResult {
 		if (character.cardFile && !isValidTextFile(character.cardFile)) {
 			errors.push({
 				field: `character-${character.id}-file`,
-				message: ls('features.importWorld.validations.fileMustBeMdOrTxt', { field: 'Character card file' }),
+				message: importValFileMustBeMdOrTxt('Character card file'),
 			});
 		}
 	}

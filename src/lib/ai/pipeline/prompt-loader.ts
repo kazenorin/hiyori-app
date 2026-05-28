@@ -1,12 +1,9 @@
 import {
-	actSummaryIncrementalTemplateLoader,
 	characterProfileCompressorPromptLoader,
 	editorSystemPromptLoader,
 	gameMasterSystemPromptLoader,
 	generalInstructionsLoader,
-	guidanceWriterExtractionPromptLoader,
 	phaseEventPlotPlannerSystemPromptLoader,
-	phaseEventWriterExtractionPromptLoader,
 	plotPlannerSystemPromptLoader,
 	type PromptLoader,
 	quickReviewerSystemPromptTemplateLoader,
@@ -23,15 +20,12 @@ const promptLoaderDefinitions = {
 	phaseEventPlotPlannerSystemPrompt: phaseEventPlotPlannerSystemPromptLoader,
 	writerSystemPrompt: writerSystemPromptLoader,
 	writerOutputTemplate: writerOutputTemplateLoader,
-	guidanceWriterExtractionPrompt: guidanceWriterExtractionPromptLoader,
-	phaseEventWriterExtractionPrompt: phaseEventWriterExtractionPromptLoader,
 	reviewerSystemPromptTemplate: reviewerSystemPromptTemplateLoader,
 	quickReviewerSystemPromptTemplate: quickReviewerSystemPromptTemplateLoader,
 	editorSystemPrompt: editorSystemPromptLoader,
 	gameMasterSystemPrompt: gameMasterSystemPromptLoader,
 	summarizerPrompt: summarizerPromptLoader,
 	summarizerIncrementalPrompt: summarizerIncrementalPromptLoader,
-	actSummaryIncrementalTemplate: actSummaryIncrementalTemplateLoader,
 	characterProfileCompressorPrompt: characterProfileCompressorPromptLoader,
 } satisfies Record<string, PromptLoader>;
 

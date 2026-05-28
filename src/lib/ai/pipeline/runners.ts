@@ -23,6 +23,20 @@ import type { ActPhase, EndingType, GameDataFields, NarrativeVariables, PlotMode
 import { getActPhaseIndex } from '../narrative-types';
 import { summaryHeader } from '$lib/definitions/common-headers';
 import {
+	gmPhaseEventAdvancementTrigger,
+	gmActEndTrigger,
+	writerProvidedSummary,
+	writerProvidedTurnOfEvents,
+	writerTurnOfEventsReinforcementPhrase,
+	writerProvidedDirectorNotes,
+	writerDirectorNotesReinforcementPhrase,
+	writerClosingSceneRules,
+	writerActEndPhaseEvent,
+	writerActEndGuidance,
+	writerGuidanceExtractionPrompt,
+	writerPhaseEventExtractionPrompt,
+} from '$lib/definitions/pipeline-prompts';
+import {
 	acceptAsIsLabel,
 	editorExtractionPrompt,
 	editorTemplateFitterExtractionPrompt,
@@ -68,7 +82,7 @@ export const defaultTargetWordCount = 400;
 function resolveGmSystemPrompt(ctx: PipelineRunContext): string {
 	const phaseAdvancementTrigger =
 		ctx.story.actLine.plotMode === 'phaseEvent' && ctx.story.actLine.currentActPhase
-			? ls('pipeline.extraction.gmPhaseEventPhaseAdvancementTrigger', { actPhase: getLocalizedActPhase(ctx.story.actLine.currentActPhase) })
+			? gmPhaseEventAdvancementTrigger(getLocalizedActPhase(ctx.story.actLine.currentActPhase))
 			: null;
 	const gmActEndTrigger = resolveGmActEndTrigger(ctx);
 
@@ -85,27 +99,27 @@ function resolveGmActEndTrigger(ctx: PipelineRunContext): string | null {
 	if (ctx.story.actLine.plotMode === 'phaseEvent') {
 		if (!isActEndPhase(ctx.story.actLine.currentActPhase ?? null)) return null;
 	}
-	return ls('pipeline.extraction.gmActEndTrigger');
+	return gmActEndTrigger();
 }
 
 function resolveSummarizedScenes(summarizedScenes: number) {
-	return summarizedScenes > 0 ? ls('pipeline.extraction.writer.providedSummary', { summarizedScenes }) : '';
+	return summarizedScenes > 0 ? writerProvidedSummary(summarizedScenes) : '';
 }
 
 function resolveTurnOfEvents(previousTurnOfEvents: string | undefined) {
-	return previousTurnOfEvents ? '\n' + ls('pipeline.extraction.writer.providedTurnOfEvents').trim() : '';
+	return previousTurnOfEvents ? '\n' + writerProvidedTurnOfEvents().trim() : '';
 }
 
 function resolveDirectorNotes(directorNotes: string) {
-	return directorNotes ? '\n' + ls('pipeline.extraction.writer.providedDirectorNotes').trim() : '';
+	return directorNotes ? '\n' + writerProvidedDirectorNotes().trim() : '';
 }
 
 function resolveTurnOfEventsReinforcementPhrase(previousTurnOfEvents: string | undefined) {
-	return previousTurnOfEvents ? ls('pipeline.extraction.writer.turnOfEventsReinforcementPhrase') : '';
+	return previousTurnOfEvents ? writerTurnOfEventsReinforcementPhrase() : '';
 }
 
 function resolveDirectorNotesReinforcementPhrase(directorNotes: string) {
-	return directorNotes ? ls('pipeline.extraction.writer.directorNotesReinforcementPhrase') : '';
+	return directorNotes ? writerDirectorNotesReinforcementPhrase() : '';
 }
 
 function resolveCurrentActPhase(ctx: PipelineRunContext) {
@@ -114,14 +128,14 @@ function resolveCurrentActPhase(ctx: PipelineRunContext) {
 
 function resolveActEndInstruction(plotMode: PlotMode, actPhase: ActPhase | null): string {
 	const params = {
-		closingSceneRules: ls('pipeline.extraction.writer.closingSceneRules').trim(),
+		closingSceneRules: writerClosingSceneRules().trim(),
 		endingTypeInstructions: ls('tools.endAct.endingTypeInstructions').trim(),
 	};
 	if (plotMode === 'phaseEvent') {
-		if (isActEndPhase(actPhase)) return '\n' + ls('pipeline.extraction.writer.actEndPhaseEvent', params).trim();
+		if (isActEndPhase(actPhase)) return '\n' + writerActEndPhaseEvent(params).trim();
 		return '';
 	} else {
-		return '\n' + ls('pipeline.extraction.writer.actEndGuidance', params).trim();
+		return '\n' + writerActEndGuidance(params).trim();
 	}
 }
 
@@ -195,8 +209,6 @@ export interface PipelinePrompts {
 	gameMasterSystemPrompt: string;
 	plotPlannerSystemPrompt: string;
 	phaseEventPlotPlannerSystemPrompt: string;
-	guidanceWriterExtractionPrompt: string;
-	phaseEventWriterExtractionPrompt: string;
 }
 
 export interface PipelineRunContext {
@@ -235,7 +247,7 @@ export async function runWriterPhase(
 	const directorNotes = ctx.preEditorCtx.directorNotes;
 
 	const writerExtractionPromptTemplate =
-		ctx.story.actLine.plotMode === 'phaseEvent' ? ctx.prompts.phaseEventWriterExtractionPrompt : ctx.prompts.guidanceWriterExtractionPrompt;
+		ctx.story.actLine.plotMode === 'phaseEvent' ? writerPhaseEventExtractionPrompt() : writerGuidanceExtractionPrompt();
 
 	const writerExtractionPrompt =
 		extractionPromptOverride ??

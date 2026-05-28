@@ -1,7 +1,7 @@
 import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
-import { loadCharacterCardTemplate, loadCharacterCardExtractionPrompt, loadGeneralInstructions } from '$lib/fs/prompts';
+import { loadCharacterCardTemplate, loadGeneralInstructions } from '$lib/fs/prompts';
 import { exportActLine } from '$lib/ai/act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
@@ -24,7 +24,7 @@ import {
 } from './extraction-prompts';
 import { ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT, ERR_NO_CHARACTERS_SELECTED } from '$lib/definitions/error-messages';
 import { nameLabel } from '$lib/definitions/common-labels';
-import { ls } from '$lib/localization';
+import { characterCardExtractionRules, characterCardCoreIdentityLabel } from '$lib/definitions/feature-prompts';
 
 // === Types ===
 
@@ -325,16 +325,14 @@ export async function generateCharacterCard(
 	}
 
 	// Load prompts
-	const [template, extractionPrompt, generalInstructions] = await Promise.all([
-		loadCharacterCardTemplate(),
-		loadCharacterCardExtractionPrompt(),
-		loadGeneralInstructions(),
-	]);
+	const [template, generalInstructions] = await Promise.all([loadCharacterCardTemplate(), loadGeneralInstructions()]);
+
+	const extractionPrompt = characterCardExtractionRules();
 
 	const combinedSystem = `${characterCardGenerationSystemPrompt(entry.character)}\n\n---\n\n${generalInstructions}`;
 	const namedExtractionPrompt = extractionPrompt.replaceAll('{{character name}}', entry.character);
 	const namedTemplate = template
-		.replaceAll('{{coreIdentity}}', ls('features.characterCardGenerator.coreIdentity'))
+		.replaceAll('{{coreIdentity}}', characterCardCoreIdentityLabel())
 		.replaceAll('{{name}}', nameLabel())
 		.replaceAll('{{character name}}', entry.character);
 

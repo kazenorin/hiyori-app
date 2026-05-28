@@ -61,8 +61,6 @@ export function buildImportRunContext(
 			editorSystemPrompt: '',
 			plotPlannerSystemPrompt: '',
 			phaseEventPlotPlannerSystemPrompt: '',
-			guidanceWriterExtractionPrompt: '',
-			phaseEventWriterExtractionPrompt: '',
 			...prompts,
 		},
 		effectiveTargetWordCount: '400',
