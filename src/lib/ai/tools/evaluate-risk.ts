@@ -7,11 +7,15 @@ import { evaluateRisk } from '$lib/utils/risk-model';
 import type { RiskOutcome } from '$lib/utils/risk-model';
 import { log } from './utils';
 
-const OUTCOME_MESSAGES: Record<RiskOutcome, string> = {
-	[-1]: ls('tools.evaluateRisk.messages.outcomeBad'),
-	[0]: ls('tools.evaluateRisk.messages.outcomeNeutral'),
-	[1]: ls('tools.evaluateRisk.messages.outcomeGood'),
+const OUTCOME_LABELS: Record<RiskOutcome, string> = {
+	[-1]: 'tools.evaluateRisk.messages.outcomeBad',
+	[0]: 'tools.evaluateRisk.messages.outcomeNeutral',
+	[1]: 'tools.evaluateRisk.messages.outcomeGood',
 };
+
+function getOutcomeMessage(outcome: RiskOutcome): string {
+	return ls(OUTCOME_LABELS[outcome]);
+}
 
 export function createEvaluateRiskTool(_ctx: ToolContext) {
 	return tool({
@@ -23,7 +27,7 @@ export function createEvaluateRiskTool(_ctx: ToolContext) {
 			await log(`evaluate-risk triggered: riskLevel=${input.riskLevel}`);
 
 			const outcome = evaluateRisk(input.riskLevel, Math.random());
-			const result = OUTCOME_MESSAGES[outcome];
+			const result = getOutcomeMessage(outcome);
 
 			await log(`evaluate-risk result: riskLevel=${input.riskLevel}, outcome=${outcome}`);
 

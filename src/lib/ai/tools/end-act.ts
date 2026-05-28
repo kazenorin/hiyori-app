@@ -8,12 +8,16 @@ import { getActPhaseIndex } from '$lib/ai/narrative-types';
 import type { AssistantContext } from '$lib/ai/pipeline/types';
 import { log } from './utils';
 
-const endingLabels: Record<EndingType, string> = {
-	good: ls('tools.endAct.endingGood'),
-	bad: ls('tools.endAct.endingBad'),
-	bittersweet: ls('tools.endAct.endingBittersweet'),
-	alternative: ls('tools.endAct.endingAlternative'),
+const ENDING_LABELS: Record<EndingType, string> = {
+	good: 'tools.endAct.endingGood',
+	bad: 'tools.endAct.endingBad',
+	bittersweet: 'tools.endAct.endingBittersweet',
+	alternative: 'tools.endAct.endingAlternative',
 };
+
+function getEndingLabel(endingType: EndingType): string {
+	return ls(ENDING_LABELS[endingType]);
+}
 
 export function createEndActTool(actLineId: string, plotMode: string, actPhase: ActPhase | null, assistant: AssistantContext) {
 	let hasEndedAct = false;
@@ -50,7 +54,7 @@ export function createEndActTool(actLineId: string, plotMode: string, actPhase: 
 			hasEndedAct = true;
 
 			return {
-				result: ls('tools.endAct.success', { endingType: endingLabels[endingType as EndingType] }),
+				result: ls('tools.endAct.success', { endingType: getEndingLabel(endingType as EndingType) }),
 			};
 		},
 	});
@@ -60,7 +64,13 @@ export function allowEndActTools(isEnded: boolean): boolean {
 	return !isEnded;
 }
 
-export function buildEndActTools(actLineId: string, plotMode: string, actPhase: ActPhase | null, isEnded: boolean, assistant: AssistantContext): ToolSet {
+export function buildEndActTools(
+	actLineId: string,
+	plotMode: string,
+	actPhase: ActPhase | null,
+	isEnded: boolean,
+	assistant: AssistantContext
+): ToolSet {
 	return {
 		'end-act': createEndActTool(actLineId, plotMode, actPhase, assistant),
 	};
