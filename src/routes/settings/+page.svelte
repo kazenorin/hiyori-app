@@ -181,14 +181,14 @@
 	}
 </script>
 
-<div class="flex-1 overflow-y-auto p-6">
+<div class="flex-1 overflow-y-auto p-4 md:p-6">
 	<div class="max-w-2xl mx-auto space-y-8">
 		<h1 class="h2 font-display">{t('settings.heading')}</h1>
 
 		<p class="text-sm text-surface-500">{t('settings.settingsAutoSaved')}</p>
 
 		<!-- AI Providers -->
-		<section class="card p-6 space-y-4">
+		<section class="card p-4 md:p-6 space-y-4">
 			<div class="flex items-center justify-between">
 				<h2 class="h4">{t('settings.aiProviders')}</h2>
 				<button class="btn preset-tonal" type="button" onclick={startAdd}> {t('settings.addProvider')} </button>
@@ -203,7 +203,7 @@
 				{#if isEditing(config)}
 					<!-- Edit Form -->
 					<div class="card p-4 space-y-3 border border-primary-500-300">
-						{#each settings.providers as c(c)}
+						{#each settings.providers as c (c)}
 							{#if c.id === config.id}
 								{@const isMain = mainProviderId === config.id}
 								<p class="text-xs text-surface-500">
@@ -222,25 +222,28 @@
 
 								<label class="block">
 									<span class="text-sm font-medium text-surface-700-300">{t('settings.apiProvider')}</span>
-									<ThemedSelect items={providerItems} value={formProvider} onValueChange={(v) => { formProvider = v as Provider; handleProviderChange(); }} />
+									<ThemedSelect
+										items={providerItems}
+										value={formProvider}
+										onValueChange={(v) => {
+											formProvider = v as Provider;
+											handleProviderChange();
+										}}
+									/>
 								</label>
 
 								{#if formProvider === 'openai'}
 									<label class="block">
 										<span class="text-sm font-medium text-surface-700-300">{t('settings.apiType')}</span>
-										<ThemedSelect items={apiTypeItems} value={formApiType} onValueChange={(v) => formApiType = v as ApiType} />
-										<span class="text-xs text-surface-500 mt-1 block"
-											>{t('settings.apiTypeHint')}</span
-										>
+										<ThemedSelect items={apiTypeItems} value={formApiType} onValueChange={(v) => (formApiType = v as ApiType)} />
+										<span class="text-xs text-surface-500 mt-1 block">{t('settings.apiTypeHint')}</span>
 									</label>
 								{/if}
 
 								<label class="block">
 									<span class="text-sm font-medium text-surface-700-300">{t('settings.baseUrl')}</span>
 									<input class="input mt-1" type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} />
-									<span class="text-xs text-surface-500 mt-1 block"
-										>{t('settings.baseUrlHint')}</span
-									>
+									<span class="text-xs text-surface-500 mt-1 block">{t('settings.baseUrlHint')}</span>
 								</label>
 
 								<div>
@@ -248,7 +251,11 @@
 										<label class="flex-1">
 											<span class="text-sm font-medium text-surface-700-300">{t('settings.model')}</span>
 											{#if availableModels.length > 0}
-												<ThemedSelect items={availableModels.map((m) => ({ label: m.id, value: m.id }))} value={formModel} onValueChange={(v) => formModel = v} />
+												<ThemedSelect
+													items={availableModels.map((m) => ({ label: m.id, value: m.id }))}
+													value={formModel}
+													onValueChange={(v) => (formModel = v)}
+												/>
 											{:else}
 												<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
 											{/if}
@@ -271,9 +278,7 @@
 								<label class="block">
 									<span class="text-sm font-medium text-surface-700-300">{t('settings.apiKey')}</span>
 									<input class="input mt-1" type="password" placeholder="sk-..." bind:value={formApiKey} />
-									<span class="text-xs text-surface-500 mt-1 block"
-										>{t('settings.apiKeyHint')}</span
-									>
+									<span class="text-xs text-surface-500 mt-1 block">{t('settings.apiKeyHint')}</span>
 								</label>
 							</div>
 						</details>
@@ -290,12 +295,20 @@
 						<div class="min-w-0">
 							<p class="text-sm font-medium truncate">{config.name}</p>
 							<p class="text-xs text-surface-500 truncate">
-								{config.provider === 'openai' ? t('settings.providers.openai') : config.provider === 'ollama' ? t('settings.providers.ollama') : t('settings.providers.openaiCompatible')} · {config.model}
+								{config.provider === 'openai'
+									? t('settings.providers.openai')
+									: config.provider === 'ollama'
+										? t('settings.providers.ollama')
+										: t('settings.providers.openaiCompatible')} · {config.model}
 							</p>
 						</div>
 						<div class="flex items-center gap-1 shrink-0">
-							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => handleDuplicate(config)}> {t('settings.copy')} </button>
-							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => startEdit(config)}> {t('settings.edit')} </button>
+							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => handleDuplicate(config)}>
+								{t('settings.copy')}
+							</button>
+							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => startEdit(config)}>
+								{t('settings.edit')}
+							</button>
 							{#if mainProviderId !== config.id}
 								<button class="btn preset-tonal text-xs px-2 py-1 text-error-700-300" type="button" onclick={() => handleDelete(config.id)}>
 									{t('settings.delete')}
@@ -320,25 +333,28 @@
 
 							<label class="block">
 								<span class="text-sm font-medium text-surface-700-300">{t('settings.apiProvider')}</span>
-								<ThemedSelect items={providerItems} value={formProvider} onValueChange={(v) => { formProvider = v as Provider; handleProviderChange(); }} />
+								<ThemedSelect
+									items={providerItems}
+									value={formProvider}
+									onValueChange={(v) => {
+										formProvider = v as Provider;
+										handleProviderChange();
+									}}
+								/>
 							</label>
 
 							{#if formProvider === 'openai'}
 								<label class="block">
 									<span class="text-sm font-medium text-surface-700-300">{t('settings.apiType')}</span>
-									<ThemedSelect items={apiTypeItems} value={formApiType} onValueChange={(v) => formApiType = v as ApiType} />
-									<span class="text-xs text-surface-500 mt-1 block"
-										>{t('settings.apiTypeHint')}</span
-									>
+									<ThemedSelect items={apiTypeItems} value={formApiType} onValueChange={(v) => (formApiType = v as ApiType)} />
+									<span class="text-xs text-surface-500 mt-1 block">{t('settings.apiTypeHint')}</span>
 								</label>
 							{/if}
 
 							<label class="block">
 								<span class="text-sm font-medium text-surface-700-300">{t('settings.baseUrl')}</span>
 								<input class="input mt-1" type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} />
-								<span class="text-xs text-surface-500 mt-1 block"
-									>{t('settings.baseUrlHint')}</span
-								>
+								<span class="text-xs text-surface-500 mt-1 block">{t('settings.baseUrlHint')}</span>
 							</label>
 
 							<div>
@@ -346,7 +362,11 @@
 									<label class="flex-1">
 										<span class="text-sm font-medium text-surface-700-300">{t('settings.model')}</span>
 										{#if availableModels.length > 0}
-											<ThemedSelect items={availableModels.map((m) => ({ label: m.id, value: m.id }))} value={formModel} onValueChange={(v) => formModel = v} />
+											<ThemedSelect
+												items={availableModels.map((m) => ({ label: m.id, value: m.id }))}
+												value={formModel}
+												onValueChange={(v) => (formModel = v)}
+											/>
 										{:else}
 											<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
 										{/if}
@@ -369,9 +389,7 @@
 							<label class="block">
 								<span class="text-sm font-medium text-surface-700-300">{t('settings.apiKey')}</span>
 								<input class="input mt-1" type="password" placeholder="sk-..." bind:value={formApiKey} />
-								<span class="text-xs text-surface-500 mt-1 block"
-									>{t('settings.apiKeyHint')}</span
-								>
+								<span class="text-xs text-surface-500 mt-1 block">{t('settings.apiKeyHint')}</span>
 							</label>
 						</div>
 					</details>
@@ -384,36 +402,48 @@
 		</section>
 
 		<!-- Provider Roles -->
-		<section class="card p-6 space-y-4">
+		<section class="card p-4 md:p-6 space-y-4">
 			<h2 class="h4">{t('settings.providerRoles')}</h2>
 			<span class="text-xs text-surface-500">{t('settings.providerRolesDescription')}</span>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.mainProvider')}</span>
-				<ThemedSelect items={roleItems(false)} value={mainProviderId} onValueChange={(v) => assignRole('main', v)} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect
+					items={roleItems(false)}
+					value={mainProviderId}
+					onValueChange={(v) => assignRole('main', v)}
+					disabled={settings.providers.length === 0}
+					placeholder={t('settings.noProvidersConfigured')}
+				/>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.minorTaskAgent')}</span>
-				<ThemedSelect items={roleItems()} value={settings.minorTaskAgentProviderRole} onValueChange={(v) => updateSettings({ minorTaskAgentProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect
+					items={roleItems()}
+					value={settings.minorTaskAgentProviderRole}
+					onValueChange={(v) => updateSettings({ minorTaskAgentProviderRole: v })}
+					disabled={settings.providers.length === 0}
+					placeholder={t('settings.noProvidersConfigured')}
+				/>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.minorTaskAgentDescription')}</span>
 			</label>
 
-				<label class="flex items-center gap-2">
-					<input
-						type="checkbox"
-						class="checkbox"
-						checked={settings.importantPhraseHighlighting}
-						disabled={!getMinorTaskAgentProviderConfig()}
-						onchange={(e) => updateSettings({ importantPhraseHighlighting: (e.currentTarget as HTMLInputElement).checked })}
-					/>
-					<span class="text-sm font-medium text-surface-700-300">{t('settings.phraseHighlighting')}</span>
-				</label>
-				<span class="text-xs text-surface-500">{t('settings.phraseHighlightingDescription')}</span>
+			<label class="flex items-center gap-2">
+				<input
+					type="checkbox"
+					class="checkbox"
+					checked={settings.importantPhraseHighlighting}
+					disabled={!getMinorTaskAgentProviderConfig()}
+					onchange={(e) => updateSettings({ importantPhraseHighlighting: (e.currentTarget as HTMLInputElement).checked })}
+				/>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.phraseHighlighting')}</span>
+			</label>
+			<span class="text-xs text-surface-500">{t('settings.phraseHighlightingDescription')}</span>
 		</section>
 
 		<!-- Memory -->
-		<section class="card p-6 space-y-4">
+		<section class="card p-4 md:p-6 space-y-4">
 			<h2 class="h4">{t('settings.memory')}</h2>
 			<span class="text-xs text-surface-500">{t('settings.enableMemoryDescription')}</span>
 
@@ -429,19 +459,31 @@
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.memoryProvider')}</span>
-				<ThemedSelect items={roleItems()} value={settings.memoryProviderRole} onValueChange={(v) => updateSettings({ memoryProviderRole: v })} disabled={!settings.memoryEnabled} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect
+					items={roleItems()}
+					value={settings.memoryProviderRole}
+					onValueChange={(v) => updateSettings({ memoryProviderRole: v })}
+					disabled={!settings.memoryEnabled}
+					placeholder={t('settings.noProvidersConfigured')}
+				/>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.memoryProviderDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.embeddingProvider')}</span>
-				<ThemedSelect items={roleItems()} value={settings.embeddingProviderRole} onValueChange={(v) => updateSettings({ embeddingProviderRole: v })} disabled={!settings.memoryEnabled} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect
+					items={roleItems()}
+					value={settings.embeddingProviderRole}
+					onValueChange={(v) => updateSettings({ embeddingProviderRole: v })}
+					disabled={!settings.memoryEnabled}
+					placeholder={t('settings.noProvidersConfigured')}
+				/>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.embeddingProviderDescription')}</span>
 			</label>
 		</section>
 
 		<!-- Director Mode -->
-		<section class="card p-6 space-y-4">
+		<section class="card p-4 md:p-6 space-y-4">
 			<h2 class="h4">{t('settings.directorMode')}</h2>
 			<span class="text-xs text-surface-500">{t('settings.directorModeDescription')}</span>
 
@@ -457,7 +499,7 @@
 		</section>
 
 		<!-- Pipeline Roles -->
-		<section class="card p-6 space-y-4">
+		<section class="card p-4 md:p-6 space-y-4">
 			<h2 class="h4">{t('settings.pipelineRoles')}</h2>
 			<span class="text-xs text-surface-500">{t('settings.pipelineRolesDescription')}</span>
 
@@ -474,7 +516,13 @@
 						/>
 						<span class="text-xs text-surface-500">{t('settings.enabled')}</span>
 					</label>
-					<ThemedSelect items={roleItems()} value={settings.plotPlannerProviderRole} onValueChange={(v) => updateSettings({ plotPlannerProviderRole: v })} disabled={settings.providers.length === 0 || !settings.plotPlannerEnabled} placeholder={t('settings.noProvidersConfigured')} />
+					<ThemedSelect
+						items={roleItems()}
+						value={settings.plotPlannerProviderRole}
+						onValueChange={(v) => updateSettings({ plotPlannerProviderRole: v })}
+						disabled={settings.providers.length === 0 || !settings.plotPlannerEnabled}
+						placeholder={t('settings.noProvidersConfigured')}
+					/>
 				</div>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.plotPlannerDescription')}</span>
 				<span class="text-xs text-surface-500 block">{t('settings.enablePlotPlannerDescription')}</span>
@@ -511,55 +559,95 @@
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.writer')}</span>
-				<ThemedSelect items={roleItems()} value={settings.writerProviderRole} onValueChange={(v) => updateSettings({ writerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect
+					items={roleItems()}
+					value={settings.writerProviderRole}
+					onValueChange={(v) => updateSettings({ writerProviderRole: v })}
+					disabled={settings.providers.length === 0}
+					placeholder={t('settings.noProvidersConfigured')}
+				/>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.writerDescription')}</span>
 			</label>
 
-				<div class="block">
-					<span class="text-sm font-medium text-surface-700-300">{t('settings.reviewer')}</span>
-					<div class="flex items-center gap-2 mt-1">
-						<label class="flex items-center gap-1">
-							<input
-								type="checkbox"
-								class="checkbox"
-								checked={settings.reviewerEnabled}
-								disabled={settings.providers.length === 0}
-								onchange={(e) => updateSettings({ reviewerEnabled: (e.currentTarget as HTMLInputElement).checked })}
-							/>
-							<span class="text-xs text-surface-500">{t('settings.enabled')}</span>
-						</label>
-						<ThemedSelect items={roleItems()} value={settings.reviewerProviderRole} onValueChange={(v) => updateSettings({ reviewerProviderRole: v })} disabled={settings.providers.length === 0 || !settings.reviewerEnabled} placeholder={t('settings.noProvidersConfigured')} />
-					</div>
-					<span class="text-xs text-surface-500 mt-1 block">{t('settings.reviewerDescription')}</span>
-					<span class="text-xs text-surface-500 block">{t('settings.enableReviewerDescription')}</span>
-					<div class="mt-2">
-						<span class="text-xs font-medium text-surface-500">{t('settings.reviewerMode')}</span>
-						<ThemedSelect items={reviewerModeItems} value={settings.reviewerMode} onValueChange={(v) => updateSettings({ reviewerMode: v as 'detailed' | 'quick' })} disabled={!settings.reviewerEnabled} class="mt-1" />
-						<span class="text-xs text-surface-500 block mt-1">{settings.reviewerMode === 'detailed' ? t('settings.reviewerModeDetailedDescription') : t('settings.reviewerModeQuickDescription')}</span>
-					</div>
+			<div class="block">
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.reviewer')}</span>
+				<div class="flex items-center gap-2 mt-1">
+					<label class="flex items-center gap-1">
+						<input
+							type="checkbox"
+							class="checkbox"
+							checked={settings.reviewerEnabled}
+							disabled={settings.providers.length === 0}
+							onchange={(e) => updateSettings({ reviewerEnabled: (e.currentTarget as HTMLInputElement).checked })}
+						/>
+						<span class="text-xs text-surface-500">{t('settings.enabled')}</span>
+					</label>
+					<ThemedSelect
+						items={roleItems()}
+						value={settings.reviewerProviderRole}
+						onValueChange={(v) => updateSettings({ reviewerProviderRole: v })}
+						disabled={settings.providers.length === 0 || !settings.reviewerEnabled}
+						placeholder={t('settings.noProvidersConfigured')}
+					/>
 				</div>
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.reviewerDescription')}</span>
+				<span class="text-xs text-surface-500 block">{t('settings.enableReviewerDescription')}</span>
+				<div class="mt-2">
+					<span class="text-xs font-medium text-surface-500">{t('settings.reviewerMode')}</span>
+					<ThemedSelect
+						items={reviewerModeItems}
+						value={settings.reviewerMode}
+						onValueChange={(v) => updateSettings({ reviewerMode: v as 'detailed' | 'quick' })}
+						disabled={!settings.reviewerEnabled}
+						class="mt-1"
+					/>
+					<span class="text-xs text-surface-500 block mt-1"
+						>{settings.reviewerMode === 'detailed'
+							? t('settings.reviewerModeDetailedDescription')
+							: t('settings.reviewerModeQuickDescription')}</span
+					>
+				</div>
+			</div>
 
-				<label class="block">
-					<span class="text-sm font-medium text-surface-700-300">{t('settings.editor')}</span>
-					<ThemedSelect items={roleItems()} value={settings.editorProviderRole} onValueChange={(v) => updateSettings({ editorProviderRole: v })} disabled={!settings.reviewerEnabled || settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
-					<span class="text-xs text-surface-500 mt-1 block">{t('settings.editorDescription')}</span>
-				</label>
+			<label class="block">
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.editor')}</span>
+				<ThemedSelect
+					items={roleItems()}
+					value={settings.editorProviderRole}
+					onValueChange={(v) => updateSettings({ editorProviderRole: v })}
+					disabled={!settings.reviewerEnabled || settings.providers.length === 0}
+					placeholder={t('settings.noProvidersConfigured')}
+				/>
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.editorDescription')}</span>
+			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.gameMaster')}</span>
-				<ThemedSelect items={roleItems()} value={settings.gameMasterProviderRole} onValueChange={(v) => updateSettings({ gameMasterProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect
+					items={roleItems()}
+					value={settings.gameMasterProviderRole}
+					onValueChange={(v) => updateSettings({ gameMasterProviderRole: v })}
+					disabled={settings.providers.length === 0}
+					placeholder={t('settings.noProvidersConfigured')}
+				/>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.gameMasterDescription')}</span>
 			</label>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.summarizer')}</span>
-				<ThemedSelect items={roleItems()} value={settings.summarizerProviderRole} onValueChange={(v) => updateSettings({ summarizerProviderRole: v })} disabled={settings.providers.length === 0} placeholder={t('settings.noProvidersConfigured')} />
+				<ThemedSelect
+					items={roleItems()}
+					value={settings.summarizerProviderRole}
+					onValueChange={(v) => updateSettings({ summarizerProviderRole: v })}
+					disabled={settings.providers.length === 0}
+					placeholder={t('settings.noProvidersConfigured')}
+				/>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.summarizerDescription')}</span>
 			</label>
 		</section>
 
 		<!-- Narrative -->
-		<section class="card p-6 space-y-4">
+		<section class="card p-4 md:p-6 space-y-4">
 			<h2 class="h4">{t('settings.narrative')}</h2>
 
 			<label class="block">
@@ -576,9 +664,7 @@
 						if (!isNaN(val) && val >= 50 && val <= 2000) updateSettings({ targetWordCount: val });
 					}}
 				/>
-				<span class="text-xs text-surface-500 mt-1 block"
-					>{t('settings.targetWordCountDescription')}</span
-				>
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.targetWordCountDescription')}</span>
 			</label>
 
 			<label class="block">
@@ -595,14 +681,12 @@
 						if (!isNaN(val) && val >= 0 && val <= 50) updateSettings({ characterProfileCompressorInterval: val });
 					}}
 				/>
-				<span class="text-xs text-surface-500 mt-1 block"
-					>{t('settings.compressorIntervalDescription')}</span
-				>
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.compressorIntervalDescription')}</span>
 			</label>
 		</section>
 
 		<!-- Developer -->
-		<section class="card p-6 space-y-4">
+		<section class="card p-4 md:p-6 space-y-4">
 			<h2 class="h4">{t('settings.developer')}</h2>
 
 			<label class="block">

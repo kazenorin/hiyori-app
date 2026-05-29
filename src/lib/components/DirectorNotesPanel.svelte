@@ -53,7 +53,7 @@
 		onclick={() => (isExpanded = !isExpanded)}
 		aria-expanded={isExpanded}
 	>
-		<div class="flex items-center gap-2">
+		<div class="flex flex-wrap items-center gap-2">
 			<span>{t('chat.directorNotes')}</span>
 			{#if activeCount > 0}
 				<span class="badge preset-filled-primary-500 text-[10px] px-1.5 py-0.5">
@@ -127,7 +127,7 @@
 					bind:value={newText}
 					onkeydown={(e) => { if (e.key === 'Enter') handleAdd(); }}
 				/>
-				<div class="flex items-center gap-2">
+				<div class="flex flex-wrap items-center gap-2">
 					<input
 						class="input text-xs w-20"
 						type="number"

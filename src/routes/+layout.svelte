@@ -40,6 +40,7 @@
 	let initStatus = $state('Starting...');
 	let appReady = $state(false);
 	let sidebarBlocked = $derived(!appReady || getIsWorldBuilderActive());
+	let sidebarOpen = $state(false);
 	let newActLineName = $state('');
 	let showNewActLine = $state(false);
 	let actLineEventSummaries = $state<Map<string, ActLineEventSummary>>(new Map());
@@ -243,267 +244,288 @@
 			cancelButton.focus();
 		}
 	});
+
+	function handleRenameKeydown(e: KeyboardEvent) {
+		if (e.key === 'Enter') {
+			e.preventDefault();
+			submitRename();
+		}
+		if (e.key === 'Escape') cancelRename();
+	}
 </script>
 
-<div class="flex h-screen overflow-hidden bg-surface-50-950">
-	<!-- Sidebar -->
-	<aside class="w-72 border-r border-surface-200-800 flex flex-col">
-		<nav class="flex-1 overflow-y-auto p-2 pt-4 space-y-1 relative">
-			{#each getStories() as story (story.id)}
-				<div class="space-y-0.5">
-					<!-- Story header -->
-					<div
-						class="group flex items-center justify-between p-3 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer {getActiveStoryId() ===
-						story.id
-							? 'bg-surface-200-800'
-							: 'hover:bg-surface-200-800'}"
-						onclick={() => handleSelectStory(story.id)}
-					>
-						{#if editingId === story.id && editingType === 'story'}
-							<input
-								autofocus
-								maxlength="200"
-								class="input text-sm flex-1"
-								bind:value={editingName}
-								onkeydown={(e) => {
-									if (e.key === 'Enter') {
-										e.preventDefault();
-										submitRename();
-									}
-									if (e.key === 'Escape') cancelRename();
-								}}
-								onblur={() => {
-									if (!renameSubmitting) submitRename();
-								}}
-								onclick={(e) => e.stopPropagation()}
-								type="text"
-							/>
-						{:else}
-							<span class="text-sm font-medium truncate flex-1">{story.name}</span>
-							<button
-								class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
-								type="button"
-								onclick={(e) => {
-									e.stopPropagation();
-									startRename('story', story.id, story.name);
-								}}
-								title={t('sidebar.renameStory')}>&#9998;</button
-							>
-						{/if}
+{#snippet SidebarNavFooter()}
+	<nav class="flex-1 overflow-y-auto p-2 pt-4 space-y-1 relative">
+		{#each getStories() as story (story.id)}
+			<div class="space-y-0.5">
+				<!-- Story header -->
+				<div
+					class="group flex items-center justify-between p-3 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer {getActiveStoryId() ===
+					story.id
+						? 'bg-surface-200-800'
+						: 'hover:bg-surface-200-800'}"
+					onclick={() => handleSelectStory(story.id)}
+				>
+					{#if editingId === story.id && editingType === 'story'}
+						<input
+							autofocus
+							maxlength="200"
+							class="input text-sm flex-1"
+							bind:value={editingName}
+							onkeydown={handleRenameKeydown}
+							onblur={() => {
+								if (!renameSubmitting) submitRename();
+							}}
+							onclick={(e) => e.stopPropagation()}
+							type="text"
+						/>
+					{:else}
+						<span class="text-sm font-medium truncate flex-1">{story.name}</span>
 						<button
-							class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+							class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 							type="button"
 							onclick={(e) => {
 								e.stopPropagation();
-								requestDeleteStory(story.id, story.name);
+								startRename('story', story.id, story.name);
 							}}
-							title={t('sidebar.deleteStory')}>&times;</button
+							title={t('sidebar.renameStory')}>&#9998;</button
 						>
-					</div>
+					{/if}
+					<button
+						class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+						type="button"
+						onclick={(e) => {
+							e.stopPropagation();
+							requestDeleteStory(story.id, story.name);
+						}}
+						title={t('sidebar.deleteStory')}>&times;</button
+					>
+				</div>
 
-					<!-- Acts (only show for active story) -->
-					{#if getActiveStoryId() === story.id}
-						{#each getActs() as act (act.id)}
-							<div class="ml-3 space-y-0.5">
-								<div
-									class="group flex items-center justify-between p-2 pl-4 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-sm {getActiveActId() ===
-									act.id
-										? 'bg-surface-200-800'
-										: 'hover:bg-surface-200-800'}"
-									onclick={() => handleSelectAct(act.id)}
-								>
-									{#if editingId === act.id && editingType === 'act'}
-										<input
-											autofocus
-											maxlength="200"
-											class="input text-xs flex-1"
-											bind:value={editingName}
-											onkeydown={(e) => {
-												if (e.key === 'Enter') {
-													e.preventDefault();
-													submitRename();
-												}
-												if (e.key === 'Escape') cancelRename();
-											}}
-											onblur={() => {
-												if (!renameSubmitting) submitRename();
-											}}
-											onclick={(e) => e.stopPropagation()}
-											type="text"
-										/>
-									{:else}
-										<span class="truncate flex-1 text-surface-700-300">{t('common.actLabel', { n: act.actNumber })}: {act.name}</span>
-										<button
-											class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
-											type="button"
-											onclick={(e) => {
-												e.stopPropagation();
-												startRename('act', act.id, act.name);
-											}}
-											title={t('sidebar.renameAct')}>&#9998;</button
-										>
-									{/if}
-									{#if getActs().length > 1 && getActs().at(-1)?.id === act.id}
+				<!-- Acts (only show for active story) -->
+				{#if getActiveStoryId() === story.id}
+					{#each getActs() as act (act.id)}
+						<div class="ml-3 space-y-0.5">
+							<div
+								class="group flex items-center justify-between p-2 pl-4 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-sm {getActiveActId() ===
+								act.id
+									? 'bg-surface-200-800'
+									: 'hover:bg-surface-200-800'}"
+								onclick={() => handleSelectAct(act.id)}
+							>
+								{#if editingId === act.id && editingType === 'act'}
+									<input
+										autofocus
+										maxlength="200"
+										class="input text-xs flex-1"
+										bind:value={editingName}
+										onkeydown={handleRenameKeydown}
+										onblur={() => {
+											if (!renameSubmitting) submitRename();
+										}}
+										onclick={(e) => e.stopPropagation()}
+										type="text"
+									/>
+								{:else}
+									<span class="truncate flex-1 text-surface-700-300">{t('common.actLabel', { n: act.actNumber })}: {act.name}</span>
+									<button
+										class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+										type="button"
+										onclick={(e) => {
+											e.stopPropagation();
+											startRename('act', act.id, act.name);
+										}}
+										title={t('sidebar.renameAct')}>&#9998;</button
+									>
+								{/if}
+								{#if getActs().length > 1 && getActs().at(-1)?.id === act.id}
+									<button
+										class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+										type="button"
+										onclick={(e) => {
+											e.stopPropagation();
+											requestDeleteAct(act.id, act.name);
+										}}
+										title={t('sidebar.deleteAct')}>&times;</button
+									>
+								{/if}
+							</div>
+
+							<!-- Act Lines -->
+							{#if getActiveActId() === act.id}
+								{#each getActLines() as line (line.id)}
+									<div
+										class="group flex items-center justify-between p-2 pl-8 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-xs {getActiveActLineId() ===
+										line.id
+											? 'bg-primary-100-900 text-primary-700-300'
+											: 'hover:bg-surface-200-800 text-surface-500'}"
+										onclick={() => handleSelectActLine(line.id)}
+									>
+										{#if editingId === line.id && editingType === 'line'}
+											<input
+												autofocus
+												maxlength="200"
+												class="input text-xs flex-1"
+												bind:value={editingName}
+												onkeydown={handleRenameKeydown}
+												onblur={() => {
+													if (!renameSubmitting) submitRename();
+												}}
+												onclick={(e) => e.stopPropagation()}
+												type="text"
+											/>
+										{:else}
+											<span class="truncate flex-1">{line.name}</span>
+											{#if actLineEventSummaries.get(line.id)?.endedAt != null}
+												<span class="text-[10px] font-medium text-surface-400-600 ml-1 shrink-0">{t('sidebar.actConcluded')}</span>
+											{/if}
+											<button
+												class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+												type="button"
+												onclick={(e) => {
+													e.stopPropagation();
+													startRename('line', line.id, line.name);
+												}}
+												title={t('sidebar.renameLine')}>&#9998;</button
+											>
+										{/if}
 										<button
 											class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
 											type="button"
 											onclick={(e) => {
 												e.stopPropagation();
-												requestDeleteAct(act.id, act.name);
+												requestDeleteActLine(line.id, line.name);
 											}}
-											title={t('sidebar.deleteAct')}>&times;</button
+											title={t('sidebar.deleteLine')}>&times;</button
 										>
-									{/if}
-								</div>
+									</div>
+								{/each}
 
-								<!-- Act Lines -->
-								{#if getActiveActId() === act.id}
-									{#each getActLines() as line (line.id)}
-										<div
-											class="group flex items-center justify-between p-2 pl-8 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-xs {getActiveActLineId() ===
-											line.id
-												? 'bg-primary-100-900 text-primary-700-300'
-												: 'hover:bg-surface-200-800 text-surface-500'}"
-											onclick={() => handleSelectActLine(line.id)}
-										>
-											{#if editingId === line.id && editingType === 'line'}
-												<input
-													autofocus
-													maxlength="200"
-													class="input text-xs flex-1"
-													bind:value={editingName}
-													onkeydown={(e) => {
-														if (e.key === 'Enter') {
-															e.preventDefault();
-															submitRename();
-														}
-														if (e.key === 'Escape') cancelRename();
-													}}
-													onblur={() => {
-														if (!renameSubmitting) submitRename();
-													}}
-													onclick={(e) => e.stopPropagation()}
-													type="text"
-												/>
-											{:else}
-												<span class="truncate flex-1">{line.name}</span>
-												{#if actLineEventSummaries.get(line.id)?.endedAt != null}
-													<span class="text-[10px] font-medium text-surface-400-600 ml-1 shrink-0">{t('sidebar.actConcluded')}</span>
-												{/if}
-												<button
-													class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
-													type="button"
-													onclick={(e) => {
-														e.stopPropagation();
-														startRename('line', line.id, line.name);
-													}}
-													title={t('sidebar.renameLine')}>&#9998;</button
-												>
-											{/if}
-											<button
-												class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
-												type="button"
-												onclick={(e) => {
-													e.stopPropagation();
-													requestDeleteActLine(line.id, line.name);
-												}}
-												title={t('sidebar.deleteLine')}>&times;</button
-											>
+								<!-- Add act line button -->
+								{#if showNewActLine}
+									<div class="pl-8 p-1">
+										<div class="flex gap-1">
+											<input
+												class="input text-xs flex-1"
+												placeholder={t('sidebar.lineNamePlaceholder')}
+												bind:value={newActLineName}
+												onkeydown={(e) => e.key === 'Enter' && handleCreateActLine()}
+											/>
+											<button class="text-xs text-primary-500" type="button" onclick={handleCreateActLine}>+</button>
 										</div>
-									{/each}
-
-									<!-- Add act line button -->
-									{#if showNewActLine}
-										<div class="pl-8 p-1">
-											<div class="flex gap-1">
-												<input
-													class="input text-xs flex-1"
-													placeholder={t('sidebar.lineNamePlaceholder')}
-													bind:value={newActLineName}
-													onkeydown={(e) => e.key === 'Enter' && handleCreateActLine()}
-												/>
-												<button class="text-xs text-primary-500" type="button" onclick={handleCreateActLine}>+</button>
-											</div>
-										</div>
-									{:else}
-										<button
-											class="p-2 pl-8 text-xs text-surface-500 hover:text-surface-700-300 transition-colors"
-											type="button"
-											onclick={() => (showNewActLine = true)}
-										>
-											{t('sidebar.newLine')}
-										</button>
-									{/if}
+									</div>
+								{:else}
+									<button
+										class="p-2 pl-8 text-xs text-surface-500 hover:text-surface-700-300 transition-colors"
+										type="button"
+										onclick={() => (showNewActLine = true)}
+									>
+										{t('sidebar.newLine')}
+									</button>
 								{/if}
-							</div>
-						{/each}
-					{/if}
+							{/if}
+						</div>
+					{/each}
+				{/if}
+			</div>
+		{/each}
+
+		<!-- Add story button -->
+		<button
+			class="w-full p-3 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+			type="button"
+			onclick={handleNewStory}
+		>
+			{t('sidebar.newStory')}
+		</button>
+
+		<!-- Sidebar blocking overlay (covers nav only, not footer) -->
+		{#if sidebarBlocked}
+			<div
+				class="absolute inset-0 z-10 bg-surface-50-950/60 backdrop-blur-sm flex items-center justify-center cursor-not-allowed"
+				role="alert"
+				aria-live="polite"
+				aria-busy="true"
+			>
+				<div class="text-center space-y-2">
+					<div class="inline-block w-8 h-8 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+					<p class="text-xs text-surface-500">{!appReady ? initStatus : t('sidebar.worldBuilderActive')}</p>
 				</div>
-			{/each}
+			</div>
+		{/if}
+	</nav>
 
-			<!-- Add story button -->
-			<button
-				class="w-full p-3 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
-				type="button"
-				onclick={handleNewStory}
-			>
-				{t('sidebar.newStory')}
-			</button>
+	<!-- Sidebar footer -->
+	<div class="p-3 border-t border-surface-200-800 flex flex-col gap-1">
+		<label class="flex items-center gap-2 px-2 py-1 text-xs text-surface-500">
+			<span class="shrink-0 font-medium" style="font-size: 0.65rem;">Aa</span>
+			<input
+				class="flex-1 cursor-pointer"
+				type="range"
+				min="0.7"
+				max="1.5"
+				step="0.05"
+				value={fontSizeSlider}
+				oninput={handleFontSizeChange}
+			/>
+			<span class="shrink-0 w-8 text-right tabular-nums">{(fontSizeSlider * 100).toFixed(0)}%</span>
+		</label>
+		<a
+			href="/"
+			class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+		>
+			{t('sidebar.chat')}
+		</a>
+		<a
+			href="/settings"
+			class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+		>
+			{t('sidebar.settings')}
+		</a>
+		<a
+			href="/memory-manager"
+			class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+		>
+			{t('sidebar.memoryManager')}
+		</a>
+	</div>
+{/snippet}
 
-			<!-- Sidebar blocking overlay (covers nav only, not footer) -->
-			{#if sidebarBlocked}
-				<div
-					class="absolute inset-0 z-10 bg-surface-50-950/60 backdrop-blur-sm flex items-center justify-center cursor-not-allowed"
-					role="alert"
-					aria-live="polite"
-					aria-busy="true"
-				>
-					<div class="text-center space-y-2">
-						<div class="inline-block w-8 h-8 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
-						<p class="text-xs text-surface-500">{!appReady ? initStatus : t('sidebar.worldBuilderActive')}</p>
-					</div>
-				</div>
-			{/if}
-		</nav>
-
-		<!-- Sidebar footer -->
-		<div class="p-3 border-t border-surface-200-800 flex flex-col gap-1">
-			<label class="flex items-center gap-2 px-2 py-1 text-xs text-surface-500">
-				<span class="shrink-0 font-medium" style="font-size: 0.65rem;">Aa</span>
-				<input
-					class="flex-1 cursor-pointer"
-					type="range"
-					min="0.7"
-					max="1.5"
-					step="0.05"
-					value={fontSizeSlider}
-					oninput={handleFontSizeChange}
-				/>
-				<span class="shrink-0 w-8 text-right tabular-nums">{(fontSizeSlider * 100).toFixed(0)}%</span>
-			</label>
-			<a
-				href="/"
-				class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
-			>
-				{t('sidebar.chat')}
-			</a>
-			<a
-				href="/settings"
-				class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
-			>
-				{t('sidebar.settings')}
-			</a>
-			<a
-				href="/memory-manager"
-				class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
-			>
-				{t('sidebar.memoryManager')}
-			</a>
-		</div>
+<div class="flex h-screen overflow-hidden bg-surface-50-950">
+	<!-- Desktop Sidebar -->
+	<aside class="hidden lg:flex lg:w-72 border-r border-surface-200-800 flex-col">
+		{@render SidebarNavFooter()}
 	</aside>
+
+	<!-- Mobile Sidebar Drawer -->
+	{#if sidebarOpen}
+		<div class="fixed inset-0 z-50 flex lg:hidden" role="dialog" aria-modal="true">
+			<aside
+				class="w-72 bg-surface-50-950 border-r border-surface-200-800 flex flex-col overflow-y-auto"
+				onclick={(e) => e.stopPropagation()}
+			>
+				{@render SidebarNavFooter()}
+			</aside>
+			<div class="flex-1 bg-black/50" onclick={() => (sidebarOpen = false)} role="button" aria-label="Close sidebar"></div>
+		</div>
+	{/if}
 
 	<!-- Main content -->
 	<main class="flex-1 flex flex-col min-w-0">
+		<!-- Mobile header bar -->
+		<div class="lg:hidden flex items-center gap-3 p-3 border-b border-surface-200-800 shrink-0">
+			<button class="btn preset-tonal p-2 text-surface-500" type="button" onclick={() => (sidebarOpen = true)} aria-label="Open sidebar">
+				<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+					<path
+						fill-rule="evenodd"
+						d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 5A.75.75 0 012.75 9h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 9.75zm0 5A.75.75 0 012.75 14h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</button>
+			<span class="text-sm font-medium text-surface-700-300 truncate">{getStories()[0]?.name ?? t('sidebar.chat')}</span>
+		</div>
+
 		{#if !appReady}
 			<!-- Init loading in main area -->
 			<div class="flex-1 flex items-center justify-center">

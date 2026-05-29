@@ -305,7 +305,7 @@
 	});
 </script>
 
-<div class="flex-1 overflow-y-auto p-6">
+<div class="flex-1 overflow-y-auto p-4 md:p-6">
 	<div class="max-w-2xl mx-auto space-y-8">
 		<h1 class="h2 font-display">{t('memoryManager.heading')}</h1>
 
@@ -328,9 +328,7 @@
 					<label class="flex items-center gap-2 cursor-pointer">
 						<input type="checkbox" bind:checked={includeLineage} />
 						<span class="text-sm">
-							{includeLineage
-								? t('memoryManager.includeLineage')
-								: t('memoryManager.currentActOnly')}
+							{includeLineage ? t('memoryManager.includeLineage') : t('memoryManager.currentActOnly')}
 						</span>
 					</label>
 				</div>
@@ -362,7 +360,7 @@
 
 		<!-- Generation Tools -->
 		{#if settings.memoryEnabled && activeStoryId}
-			<section class="card p-6 space-y-4">
+			<section class="card p-4 md:p-6 space-y-4">
 				<h2 class="h4">{t('memoryManager.generationTools')}</h2>
 
 				<div class="flex flex-wrap gap-2">
@@ -421,13 +419,19 @@
 		{/if}
 
 		<!-- Search by Location -->
-		<section class="card p-6 space-y-4">
+		<section class="card p-4 md:p-6 space-y-4">
 			<h2 class="h4">{t('memoryManager.searchByLocation')}</h2>
-			<input class="input w-full" type="text" placeholder="{t('memoryManager.queryPlaceholder')}" bind:value={locationQuery} disabled={isLoading || !activeStoryId} />
 			<input
 				class="input w-full"
 				type="text"
-				placeholder="{t('memoryManager.locationPlaceholder')}"
+				placeholder={t('memoryManager.queryPlaceholder')}
+				bind:value={locationQuery}
+				disabled={isLoading || !activeStoryId}
+			/>
+			<input
+				class="input w-full"
+				type="text"
+				placeholder={t('memoryManager.locationPlaceholder')}
 				bind:value={locationQueryLocation}
 				disabled={isLoading || !activeStoryId}
 			/>
@@ -449,7 +453,9 @@
 						<div class="p-3 rounded-[var(--radius-base)] bg-surface-100-900">
 							<p class="text-sm">{result.memory}</p>
 							<p class="text-xs text-surface-500">
-								{t('memoryManager.character')}: {result.characterCanonicalName} · {t('memoryManager.location')}: {result.location} · {t('memoryManager.distance')}: {result.score?.toFixed(4) ?? 'N/A'}
+								{t('memoryManager.character')}: {result.characterCanonicalName} · {t('memoryManager.location')}: {result.location} · {t(
+									'memoryManager.distance'
+								)}: {result.score?.toFixed(4) ?? 'N/A'}
 							</p>
 						</div>
 					{/each}
@@ -458,9 +464,15 @@
 		</section>
 
 		<!-- Search Memories -->
-		<section class="card p-6 space-y-4">
+		<section class="card p-4 md:p-6 space-y-4">
 			<h2 class="h4">{t('memoryManager.searchMemories')}</h2>
-			<input class="input w-full" type="text" placeholder="{t('memoryManager.queryPlaceholder')}" bind:value={searchQuery} disabled={isLoading || !activeStoryId} />
+			<input
+				class="input w-full"
+				type="text"
+				placeholder={t('memoryManager.queryPlaceholder')}
+				bind:value={searchQuery}
+				disabled={isLoading || !activeStoryId}
+			/>
 			<div class="flex gap-2">
 				<button
 					class="btn preset-filled"
@@ -479,7 +491,9 @@
 						<div class="p-3 rounded-[var(--radius-base)] bg-surface-100-900">
 							<p class="text-sm">{result.memory}</p>
 							<p class="text-xs text-surface-500">
-								{t('memoryManager.character')}: {result.characterCanonicalName} · {t('memoryManager.location')}: {result.location} · {t('memoryManager.distance')}: {result.score?.toFixed(4) ?? 'N/A'}
+								{t('memoryManager.character')}: {result.characterCanonicalName} · {t('memoryManager.location')}: {result.location} · {t(
+									'memoryManager.distance'
+								)}: {result.score?.toFixed(4) ?? 'N/A'}
 							</p>
 						</div>
 					{/each}
@@ -488,12 +502,12 @@
 		</section>
 
 		<!-- Search Locations -->
-		<section class="card p-6 space-y-4">
+		<section class="card p-4 md:p-6 space-y-4">
 			<h2 class="h4">{t('memoryManager.searchLocations')}</h2>
 			<input
 				class="input w-full"
 				type="text"
-				placeholder="{t('memoryManager.queryPlaceholder')}"
+				placeholder={t('memoryManager.queryPlaceholder')}
 				bind:value={locationSearchQuery}
 				disabled={isLoading || !activeStoryId}
 			/>
@@ -524,7 +538,7 @@
 		</section>
 
 		<!-- Alias Groups -->
-		<section class="card p-6 space-y-4">
+		<section class="card p-4 md:p-6 space-y-4">
 			<div class="flex items-center justify-between">
 				<h2 class="h4">{t('memoryManager.aliasGroups', { count: aliasGroups.length })}</h2>
 			</div>
@@ -544,7 +558,7 @@
 		</section>
 
 		<!-- All Inventory -->
-		<section class="card p-6 space-y-4">
+		<section class="card p-4 md:p-6 space-y-4">
 			<div class="flex items-center justify-between">
 				<h2 class="h4">{t('memoryManager.allLocations', { count: locations.length })}</h2>
 			</div>
@@ -564,7 +578,7 @@
 		</section>
 
 		<!-- All Inventory -->
-		<section class="card p-6 space-y-4">
+		<section class="card p-4 md:p-6 space-y-4">
 			<div class="flex items-center justify-between">
 				<h2 class="h4">{t('memoryManager.allInventory', { count: inventoryItems.length })}</h2>
 			</div>
@@ -589,7 +603,7 @@
 		</section>
 
 		<!-- Reset -->
-		<section class="card p-6 space-y-4">
+		<section class="card p-4 md:p-6 space-y-4">
 			<h2 class="h4">{t('memoryManager.dangerZone')}</h2>
 			<button class="btn preset-tonal text-error-700-300" type="button" onclick={handleReset} disabled={isLoading}>
 				{t('memoryManager.resetAllMemories')}

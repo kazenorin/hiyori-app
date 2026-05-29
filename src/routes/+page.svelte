@@ -99,6 +99,7 @@
 	let copiedId = $state<string | null>(null);
 	let wasChatStreaming = $state(false);
 	let wasWbStreaming = $state(false);
+	let rightPanelExpanded = $state(false);
 	let latestDecisions = $derived(getLatestDecisions());
 	let latestActivePlotThreads = $derived(getLatestActivePlotThreads());
 	let latestDecisionContext = $derived(getLatestDecisionContext());
@@ -740,7 +741,7 @@
 
 <svelte:window onkeydown={handleGlobalKeydown} />
 
-<div class="flex-1 flex min-h-0">
+<div class="flex-1 flex flex-col lg:flex-row min-h-0">
 	{#if getIsSelectingStory()}
 		<div class="flex-1 flex items-center justify-center">
 			<div class="text-center space-y-3">
@@ -749,9 +750,10 @@
 		</div>
 	{:else if getIsWorldBuilderActive()}
 		<!-- World builder mode -->
-		<div class="flex-1 flex flex-col min-h-0 min-w-0">
-			<div bind:this={wbChatContainer} class="flex-1 overflow-y-auto p-6 min-w-0">
-				<div class="px-8 space-y-4">
+		<div class="flex-1 flex flex-col lg:flex-row min-h-0 min-w-0">
+			<!-- Chat messages area -->
+			<div bind:this={wbChatContainer} class="flex-1 overflow-y-auto p-4 lg:p-6 min-w-0">
+				<div class="px-4 lg:px-8 space-y-4">
 					<div class="text-center py-4">
 						<h2 class="h2 font-display text-surface-700-300 mb-2">{t('chat.worldBuilder')}</h2>
 						<p class="text-xs text-surface-500">{t('chat.worldBuilderPrompt')}</p>
@@ -760,7 +762,7 @@
 					{#each getWorldBuilderMessages() as message, i (message.id)}
 						{#if message.role === 'user'}
 							<div class="flex justify-end">
-								<div class="max-w-[80%] rounded-(--radius-container) bg-primary-100-900 p-5">
+								<div class="max-w-full md:max-w-[80%] min-w-0 rounded-(--radius-container) bg-primary-100-900 p-5">
 									{#if isEditingMessage(message.id)}
 										<textarea
 											class="input w-full resize-y text-sm leading-relaxed min-h-20 bg-surface-50-950 text-primary-900-100"
@@ -879,30 +881,59 @@
 			/>
 		</div>
 
-		<!-- Right-side input panel -->
-		<aside class="w-80 border-l border-surface-200-800 flex flex-col p-4 bg-surface-50-950">
-			<div class="flex items-center justify-between mb-3">
-				<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('chat.worldBuilder')}</span>
-				<button class="text-xs text-surface-500 hover:text-error-500 transition-colors" type="button" onclick={exitWorldBuilderMode}>
-					{t('chat.exit')}
-				</button>
-			</div>
+		<!-- Right-side input panel (mobile collapsible) -->
+		<aside
+			class="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-surface-200-800 flex flex-col bg-surface-50-950 shrink-0 {rightPanelExpanded
+				? 'max-h-none'
+				: 'lg:max-h-none max-h-10'}"
+		>
+			<!-- Mobile toggle bar -->
+			<button
+				class="lg:hidden flex w-full items-center justify-between px-3 py-2 text-xs text-surface-500 hover:bg-surface-100-900 transition-colors"
+				type="button"
+				aria-expanded={rightPanelExpanded}
+				onclick={() => (rightPanelExpanded = !rightPanelExpanded)}
+			>
+				<span class="font-medium text-surface-500 uppercase tracking-wider">{t('chat.worldBuilder')}</span>
+				<svg
+					class="h-4 w-4 transition-transform"
+					class:rotate-180={rightPanelExpanded}
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					aria-hidden="true"
+				>
+					<path
+						fill-rule="evenodd"
+						d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+			</button>
 
-			<textarea
-				class="input flex-1 resize-none text-sm leading-relaxed"
-				placeholder={t('chat.worldBuilderPlaceholder')}
-				aria-label="World builder input"
-				bind:value={input}
-				onkeydown={handleKeydown}
-				disabled={getIsWorldBuilderStreaming() || (getIsWorldBuilderComplete() && !getActPlotInterview())}
-			></textarea>
+			<div class="flex-1 flex flex-col min-h-0 p-3 lg:p-4">
+				<div class="hidden lg:flex items-center justify-between mb-3">
+					<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('chat.worldBuilder')}</span>
+					<button class="text-xs text-surface-500 hover:text-error-500 transition-colors" type="button" onclick={exitWorldBuilderMode}>
+						{t('chat.exit')}
+					</button>
+				</div>
 
-			<div class="mt-3">
-				{#if getIsWorldBuilderStreaming()}
-					<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopWorldBuilderStreaming}> {t('chat.stop')} </button>
-				{:else if !getIsWorldBuilderComplete() || getActPlotInterview()}
-					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
-				{/if}
+				<textarea
+					class="input flex-1 resize-none text-sm leading-relaxed"
+					placeholder={t('chat.worldBuilderPlaceholder')}
+					aria-label="World builder input"
+					bind:value={input}
+					onkeydown={handleKeydown}
+					disabled={getIsWorldBuilderStreaming() || (getIsWorldBuilderComplete() && !getActPlotInterview())}
+				></textarea>
+
+				<div class="mt-3">
+					{#if getIsWorldBuilderStreaming()}
+						<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopWorldBuilderStreaming}> {t('chat.stop')} </button>
+					{:else if !getIsWorldBuilderComplete() || getActPlotInterview()}
+						<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
+					{/if}
+				</div>
 			</div>
 		</aside>
 	{:else if !getActiveActLineId()}
@@ -917,8 +948,8 @@
 		<!-- Middle column: scrollable chat + pinned controls -->
 		<div class="flex-1 flex flex-col min-h-0 min-w-0">
 			<!-- Chat messages area -->
-			<div bind:this={chatContainer} class="flex-1 overflow-y-auto p-6 min-w-0">
-				<div class="px-8 space-y-4">
+			<div bind:this={chatContainer} class="flex-1 overflow-y-auto p-4 lg:p-6 min-w-0">
+				<div class="px-4 lg:px-8 space-y-4">
 					{#if getMessages().length === 0}
 						<div class="flex flex-col items-center justify-center py-24 text-center">
 							<h2 class="h2 font-display text-surface-700-300 mb-3">{t('chat.beginAdventure')}</h2>
@@ -1210,32 +1241,58 @@
 			/>
 		</div>
 
-		<!-- Right-side input panel -->
-		<aside class="w-80 border-l border-surface-200-800 flex flex-col p-4 bg-surface-50-950">
-			{#if isDirectorModeEnabled()}
-				<DirectorNotesPanel />
-			{/if}
-			<div class="flex items-center justify-between mb-3">
-				<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('chat.message')}</span>
-			</div>
+		<!-- Right-side input panel (mobile collapsible) -->
+		<aside
+			class="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-surface-200-800 flex flex-col bg-surface-50-950 shrink-0 {rightPanelExpanded
+				? 'max-h-none'
+				: 'lg:max-h-none max-h-10'}"
+		>
+			<!-- Mobile toggle bar -->
+			<button
+				class="lg:hidden flex w-full items-center justify-between px-3 py-2 text-xs text-surface-500 hover:bg-surface-100-900 transition-colors"
+				type="button"
+				aria-expanded={rightPanelExpanded}
+				onclick={() => (rightPanelExpanded = !rightPanelExpanded)}
+			>
+				<span class="font-medium text-surface-500 uppercase tracking-wider">{t('chat.message')}</span>
+				<svg
+					class="h-4 w-4 transition-transform"
+					class:rotate-180={rightPanelExpanded}
+					viewBox="0 0 20 20"
+					fill="currentColor"
+					aria-hidden="true"
+				>
+					003cpath fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08
+					0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+				</svg>
+			</button>
 
-			<textarea
-				class="input flex-1 resize-none text-sm leading-relaxed"
-				placeholder={t('chat.chatPlaceholder')}
-				aria-label="Message input"
-				bind:value={input}
-				onkeydown={handleKeydown}
-				disabled={getIsBusy() || getActEnded()}
-			></textarea>
-
-			<div class="mt-3">
-				{#if getIsStreaming()}
-					<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopStreaming}> {t('chat.stop')} </button>
-				{:else if getActEnded()}
-					<button class="btn preset-tonal w-full" type="button" disabled> {t('chat.send')} </button>
-				{:else}
-					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
+			<div class="flex-1 flex flex-col min-h-0 p-3 lg:p-4">
+				<div class="hidden lg:flex items-center justify-between mb-3">
+					<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('chat.message')}</span>
+				</div>
+				{#if isDirectorModeEnabled()}
+					<DirectorNotesPanel />
 				{/if}
+
+				<textarea
+					class="input flex-1 resize-none text-sm leading-relaxed"
+					placeholder={t('chat.chatPlaceholder')}
+					aria-label="Message input"
+					bind:value={input}
+					onkeydown={handleKeydown}
+					disabled={getIsBusy() || getActEnded()}
+				></textarea>
+
+				<div class="mt-3">
+					{#if getIsStreaming()}
+						<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopStreaming}> {t('chat.stop')} </button>
+					{:else if getActEnded()}
+						<button class="btn preset-tonal w-full" type="button" disabled> {t('chat.send')} </button>
+					{:else}
+						<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
+					{/if}
+				</div>
 			</div>
 		</aside>
 	{/if}

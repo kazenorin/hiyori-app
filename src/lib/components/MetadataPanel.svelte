@@ -36,7 +36,7 @@
 <div class="mt-3 pt-2 border-t border-surface-200-800 select-none">
 	<!-- Collapsed: single-line telemetry bar -->
 	<button
-		class="w-full flex items-center gap-1.5 text-xs font-mono text-surface-400-500
+		class="w-full flex flex-wrap items-center gap-1.5 text-xs font-mono text-surface-400-500
 		       hover:text-surface-600-300 transition-colors cursor-pointer"
 		onclick={() => (expanded = !expanded)}
 	>

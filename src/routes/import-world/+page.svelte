@@ -79,7 +79,7 @@
 	}
 </script>
 
-<div class="flex-1 overflow-y-auto p-6">
+<div class="flex-1 overflow-y-auto p-4 md:p-6">
 	<div class="max-w-3xl mx-auto space-y-6">
 		<div class="flex items-center justify-between">
 			<h1 class="h2 font-display">{t('importWorld.heading')}</h1>
@@ -90,7 +90,7 @@
 
 		<!-- Import Progress (shown at top for visibility) -->
 		{#if store.isImporting || store.importComplete || store.progressUpdates.length > 0}
-			<section class="card p-6 space-y-4">
+			<section class="card p-4 md:p-6 space-y-4">
 				<h2 class="h4">
 					{#if store.importComplete}
 						{t('importWorld.importComplete')}
@@ -149,7 +149,7 @@
 
 		<!-- Preview: Review imported messages -->
 		{#if store.importPhase === 'preview' && store.previewData}
-			<section class="card p-6 space-y-4">
+			<section class="card p-4 md:p-6 space-y-4">
 				<h2 class="h4">{t('importWorld.reviewMessages')}</h2>
 				<p class="text-sm text-surface-500">{t('importWorld.reviewDescription')}</p>
 				<ImportPreviewTable acts={store.previewData.acts} onToggleRemoved={store.toggleMessageRemoved} />
@@ -181,7 +181,7 @@
 			{/if}
 
 			<!-- Story Name -->
-			<section class="card p-6 space-y-4">
+			<section class="card p-4 md:p-6 space-y-4">
 				<h2 class="h4">{t('importWorld.storyDetails')}</h2>
 
 				<label class="block">
@@ -213,7 +213,7 @@
 			</section>
 
 			<!-- Acts -->
-			<section class="card p-6 space-y-4">
+			<section class="card p-4 md:p-6 space-y-4">
 				<div class="flex items-center justify-between">
 					<h2 class="h4">{t('importWorld.actsChapters')}</h2>
 					<button
@@ -291,7 +291,7 @@
 			</section>
 
 			<!-- Characters -->
-			<section class="card p-6 space-y-4">
+			<section class="card p-4 md:p-6 space-y-4">
 				<div class="flex items-center justify-between">
 					<h2 class="h4">{t('importWorld.characters')}</h2>
 					<button
@@ -354,7 +354,7 @@
 			</section>
 
 			<!-- Import Settings -->
-			<section class="card p-6 space-y-4">
+			<section class="card p-4 md:p-6 space-y-4">
 				<h2 class="h4">{t('importWorld.importSettings')}</h2>
 
 				<label class="flex items-center gap-2">
@@ -367,7 +367,7 @@
 					<span class="text-sm text-surface-700-300">{t('importWorld.skipMalformed')}</span>
 				</label>
 
-				<div class="grid grid-cols-2 gap-4">
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
 					<label class="block">
 						<span class="text-sm font-medium text-surface-700-300">{t('importWorld.llmRetryCount')}</span>
 						<input

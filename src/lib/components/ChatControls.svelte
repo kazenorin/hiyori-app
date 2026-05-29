@@ -154,13 +154,26 @@
 			</button>
 		{:else}
 			<div transition:slide={{ duration: 200 }} aria-expanded="true">
-				<div class="flex items-start justify-between px-8 pt-3">
+				<button
+					class="w-full flex items-start justify-between px-4 md:px-8 pt-3 text-left"
+					type="button"
+					onclick={() => {
+						if (isPinned) {
+							isPinned = false;
+						}
+						isUserExpanded = false;
+						isManuallyClosed = true;
+					}}
+				>
 					<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('components.chatControls.controls')}</span>
-					<button
+					<span
 						class="btn btn-sm variant-ghost text-surface-500"
-						type="button"
-						onclick={() => (isPinned = !isPinned)}
+						role="button"
 						aria-label={isPinned ? 'Unpin controls' : 'Pin controls'}
+						onclick={(e) => {
+							e.stopPropagation();
+							isPinned = !isPinned;
+						}}
 					>
 						{#if isPinned}
 							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -175,9 +188,9 @@
 								/>
 							</svg>
 						{/if}
-					</button>
-				</div>
-				<div class="space-y-2 px-8 pb-3">
+					</span>
+				</button>
+				<div class="space-y-2 px-4 md:px-8 pb-3 max-h-[50vh] lg:max-h-none overflow-y-auto">
 					{#if storyConcluded}
 						<div class="text-center py-2">
 							<span class="text-sm font-medium text-surface-400-600">{t('components.chatControls.storyConcluded')}</span>
@@ -189,7 +202,12 @@
 							<div class="text-surface-950-50"><MarkdownContent content={t('components.chatControls.actEndDecisionContext')} /></div>
 						</div>
 						<div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-							<button class="btn preset-filled-primary-500 w-full text-left" type="button" onclick={() => onContinueToNextAct?.()} disabled={isBusy}>
+							<button
+								class="btn preset-filled-primary-500 w-full text-left"
+								type="button"
+								onclick={() => onContinueToNextAct?.()}
+								disabled={isBusy}
+							>
 								{t('components.chatControls.continueToNextAct')}
 							</button>
 							<button class="btn preset-tonal w-full text-left" type="button" onclick={() => onEndStory?.()} disabled={isBusy}>

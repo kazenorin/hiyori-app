@@ -57,7 +57,7 @@
 	<title>{t('characterCards.heading')}</title>
 </svelte:head>
 
-<div class="flex-1 overflow-y-auto p-6">
+<div class="flex-1 overflow-y-auto p-4 md:p-6">
 	<div class="max-w-4xl mx-auto space-y-6">
 		<!-- Header -->
 		<div class="flex items-center gap-4">
@@ -112,75 +112,79 @@
 		<!-- Character Table -->
 		{#if !getIsExtracting() && (getCharacters().length > 0 || getExtractionError())}
 			<section class="card p-4 space-y-3">
-				<div
-					class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(100px,1fr)_60px_36px] gap-3 text-xs font-semibold text-surface-700-300 uppercase tracking-wide border-b border-surface-200-800 pb-2"
-				>
-					<span>{t('characterCards.character')}</span>
-					<span>{t('characterCards.summary')}</span>
-					<span>{t('characterCards.canonicalName')}</span>
-					<span class="text-center">{t('characterCards.include')}</span>
-					<span></span>
-				</div>
+				<div class="overflow-x-auto">
+					<div class="min-w-[600px]">
+						<div
+							class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(100px,1fr)_60px_36px] gap-3 text-xs font-semibold text-surface-700-300 uppercase tracking-wide border-b border-surface-200-800 pb-2"
+						>
+							<span>{t('characterCards.character')}</span>
+							<span>{t('characterCards.summary')}</span>
+							<span>{t('characterCards.canonicalName')}</span>
+							<span class="text-center">{t('characterCards.include')}</span>
+							<span></span>
+						</div>
 
-				{#each getCharacters() as char, i (i)}
-					<div
-						class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(100px,1fr)_60px_36px] gap-3 items-center py-2 border-b border-surface-100-900"
-					>
-						<span class="text-surface-950-50">
-							{#if char.isManual}
-								<input
-									type="text"
-									class="input text-sm"
-									value={char.character}
-									oninput={(e) => updateCharacter(i, { character: e.currentTarget.value })}
-									placeholder="{t('characterCards.enterNamePlaceholder')}"
-								/>
-							{:else}
-								{char.character}
-							{/if}
-						</span>
-						<span class="text-surface-700-300 text-sm">
-							{#if char.isManual}
-								<input
-									type="text"
-									class="input text-sm"
-									value={char.importance}
-									oninput={(e) => updateCharacter(i, { importance: e.currentTarget.value })}
-									placeholder="{t('characterCards.summary')}"
-								/>
-							{:else}
-								{char.importance}
-							{/if}
-						</span>
-						<span>
-							<input
-								type="text"
-								class="input text-sm"
-								value={char.canonicalName}
-								oninput={(e) => updateCanonicalName(i, e.currentTarget.value)}
-							/>
-						</span>
-						<span class="text-center">
-							{#if char.isManual}
-								<span class="text-xs text-surface-500">{t('characterCards.manual')}</span>
-							{:else}
-								<input
-									type="checkbox"
-									class="checkbox"
-									checked={char.include}
-									onchange={(e) => updateInclude(i, e.currentTarget.checked)}
-								/>
-							{/if}
-						</span>
-						<span>
-							{#if char.isManual}
-								<button class="btn btn-sm preset-filled-error-500" onclick={() => handleRemoveRow(i)}>&times;</button>
-							{/if}
-						</span>
+						{#each getCharacters() as char, i (i)}
+							<div
+								class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(100px,1fr)_60px_36px] gap-3 items-center py-2 border-b border-surface-100-900"
+							>
+								<span class="text-surface-950-50">
+									{#if char.isManual}
+										<input
+											type="text"
+											class="input text-sm"
+											value={char.character}
+											oninput={(e) => updateCharacter(i, { character: e.currentTarget.value })}
+											placeholder={t('characterCards.enterNamePlaceholder')}
+										/>
+									{:else}
+										{char.character}
+									{/if}
+								</span>
+								<span class="text-surface-700-300 text-sm">
+									{#if char.isManual}
+										<input
+											type="text"
+											class="input text-sm"
+											value={char.importance}
+											oninput={(e) => updateCharacter(i, { importance: e.currentTarget.value })}
+											placeholder={t('characterCards.summary')}
+										/>
+									{:else}
+										{char.importance}
+									{/if}
+								</span>
+								<span>
+									<input
+										type="text"
+										class="input text-sm"
+										value={char.canonicalName}
+										oninput={(e) => updateCanonicalName(i, e.currentTarget.value)}
+									/>
+								</span>
+								<span class="text-center">
+									{#if char.isManual}
+										<span class="text-xs text-surface-500">{t('characterCards.manual')}</span>
+									{:else}
+										<input
+											type="checkbox"
+											class="checkbox"
+											checked={char.include}
+											onchange={(e) => updateInclude(i, e.currentTarget.checked)}
+										/>
+									{/if}
+								</span>
+								<span>
+									{#if char.isManual}
+										<button class="btn btn-sm preset-filled-error-500" onclick={() => handleRemoveRow(i)}>&times;</button>
+									{/if}
+								</span>
+							</div>
+						{/each}
+
+						<button class="btn btn-sm preset-tonal" onclick={handleAddRow}>{t('characterCards.addRow')}</button>
 					</div>
-				{/each}
-
-				<button class="btn btn-sm preset-tonal" onclick={handleAddRow}>{t('characterCards.addRow')}</button>
+				</div>
 			</section>
 		{/if}
 
