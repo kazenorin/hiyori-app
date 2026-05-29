@@ -3,7 +3,7 @@
 	import { getImportWorldStore } from './import-state.svelte';
 	import { prepareImport, confirmImport, cancelImport } from '$lib/features/import-world/import-orchestrator';
 	import { enterActPlotInterviewMode } from '$lib/features/world-builder/world-builder.svelte';
-	import {selectStory, selectAct, selectActLine} from '$lib/stores/stories.svelte';
+	import { selectStory, selectAct, selectActLine } from '$lib/stores/stories.svelte';
 	import { t } from '$lib/i18n';
 	import ImportPreviewTable from './ImportPreviewTable.svelte';
 
@@ -49,17 +49,16 @@
 				await selectStory(importResult.storyId!);
 				await selectAct(importResult.lastActId!);
 				await selectActLine(importResult.actLineId);
-				await enterActPlotInterviewMode(
-					importResult.actLineId,
-					importResult.worldContent,
-					undefined,
-					importResult.interviewContext
+				await enterActPlotInterviewMode({
+					actLineId: importResult.actLineId,
+					worldContent: importResult.worldContent,
+					additionalContext: importResult.interviewContext
 						? {
 								actCard: importResult.interviewContext.actCard?.content ?? undefined,
 								characterCards: importResult.interviewContext.characterCards,
 							}
-						: undefined
-				);
+						: undefined,
+				});
 				goto('/');
 			}
 		} else {
@@ -153,10 +152,7 @@
 			<section class="card p-6 space-y-4">
 				<h2 class="h4">{t('importWorld.reviewMessages')}</h2>
 				<p class="text-sm text-surface-500">{t('importWorld.reviewDescription')}</p>
-				<ImportPreviewTable
-					acts={store.previewData.acts}
-					onToggleRemoved={store.toggleMessageRemoved}
-				/>
+				<ImportPreviewTable acts={store.previewData.acts} onToggleRemoved={store.toggleMessageRemoved} />
 			</section>
 		{/if}
 

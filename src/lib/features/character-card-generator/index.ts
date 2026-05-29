@@ -1,7 +1,7 @@
 import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
-import { loadCharacterCardTemplate, loadGeneralInstructions } from '$lib/fs/prompts';
+import { characterCardTemplateLoader, generalInstructionsLoader } from '$lib/fs/prompts';
 import { exportActLine } from '$lib/ai/act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
@@ -325,7 +325,10 @@ export async function generateCharacterCard(
 	}
 
 	// Load prompts
-	const [template, generalInstructions] = await Promise.all([loadCharacterCardTemplate(), loadGeneralInstructions()]);
+	const [template, generalInstructions] = await Promise.all([
+		characterCardTemplateLoader.loadByStory(storyId, story.name),
+		generalInstructionsLoader.loadByStory(storyId, story.name),
+	]);
 
 	const extractionPrompt = characterCardExtractionRules();
 

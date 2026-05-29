@@ -1,6 +1,6 @@
 import type { MessageBase } from '$lib/db/messages';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { loadActCardTemplate } from '$lib/fs/prompts';
+import { actCardTemplateLoader } from '$lib/fs/prompts';
 import { exportActLine } from '$lib/ai/act-line-export';
 import { getActLine, getMessagesForLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
@@ -66,7 +66,10 @@ async function resolveActCardContext(abortSignal?: AbortSignal): Promise<ActCard
 
 	const isMainLine = actLine.isMainLine ?? false;
 
-	const [template, world] = await Promise.all([loadActCardTemplate(), ensureWorldFile(story.id, story.name, abortSignal)]);
+	const [template, world] = await Promise.all([
+		actCardTemplateLoader.loadByStory(story.id, story.name),
+		ensureWorldFile(story.id, story.name, abortSignal),
+	]);
 	const extractionPrompt = actCardExtractionPrompt();
 
 	return {

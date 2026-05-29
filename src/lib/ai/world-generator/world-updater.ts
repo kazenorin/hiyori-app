@@ -2,7 +2,7 @@ import type { MessageBase } from '$lib/db/messages';
 import { streamText } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
-import { loadWorldTemplate } from '$lib/fs/prompts';
+import { worldTemplateLoader } from '$lib/fs/prompts';
 import { BaseDirectory, exists, rename, writeTextFile } from '@tauri-apps/plugin-fs';
 import { worldFromActSystemPrompt, worldFromActPrompt } from '$lib/definitions/feature-prompts';
 import { ls } from '$lib/localization';
@@ -36,7 +36,7 @@ export async function updateWorldCard(params: UpdateWorldCardParams): Promise<st
 	const [systemPrompt, extractionPrompt, worldTemplate] = await Promise.all([
 		Promise.resolve(worldFromActSystemPrompt()),
 		Promise.resolve(worldFromActPrompt()),
-		loadWorldTemplate(),
+		worldTemplateLoader.loadDefault(),
 	]);
 
 	const userInstruction = extractionPrompt + '\n\n---\n\n' + worldTemplate;

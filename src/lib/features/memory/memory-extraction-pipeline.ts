@@ -6,7 +6,7 @@ import {
 	getMemoryProviderConfig,
 	type MemoryProviderConfig,
 } from '$lib/stores/settings.svelte';
-import { loadMemoryExtractionPrompt, loadMemoryExtractionSystemPrompt } from '$lib/fs/prompts';
+import { memoryExtractionPromptLoader, memoryExtractionSystemPromptLoader } from '$lib/fs/prompts';
 import { type ExtractedMemories, parseMemoryExtract } from '$lib/features/memory/memory-extract-parser';
 import { Memory } from '$lib/features/memory';
 import { parseCharacterAliases } from '$lib/ai/act-summary-parser';
@@ -87,8 +87,8 @@ export async function runMemoryExtractionPipeline(
 
 async function generateMemoriesWithRetry(response: string, config: MemoryProviderConfig): Promise<string> {
 	const model = createModel(config);
-	const systemPrompt = await loadMemoryExtractionSystemPrompt();
-	const extractionPromptTemplate = await loadMemoryExtractionPrompt();
+	const systemPrompt = await memoryExtractionSystemPromptLoader.loadDefault();
+	const extractionPromptTemplate = await memoryExtractionPromptLoader.loadDefault();
 	const userPrompt = extractionPromptTemplate + '\n' + response;
 
 	return await withRetry(() => generateText({ model, system: systemPrompt, prompt: userPrompt }).then((r) => r.text), {

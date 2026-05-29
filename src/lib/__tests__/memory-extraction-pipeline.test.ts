@@ -43,8 +43,8 @@ vi.mock('$lib/stores/settings.svelte', () => ({
 
 // Mock prompts
 vi.mock('$lib/fs/prompts', () => ({
-	loadMemoryExtractionSystemPrompt: vi.fn(async () => 'System prompt'),
-	loadMemoryExtractionPrompt: vi.fn(async () => 'User prompt'),
+	memoryExtractionSystemPromptLoader: { loadByStory: vi.fn(), loadDefault: vi.fn(async () => 'System prompt') },
+	memoryExtractionPromptLoader: { loadByStory: vi.fn(), loadDefault: vi.fn(async () => 'User prompt') },
 }));
 
 // Mock parser — typed as returning ExtractedMemories

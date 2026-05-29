@@ -301,7 +301,12 @@
 			const sceneNumber = forkedMessage?.sceneNumber ?? 1;
 			const sceneTitle = forkedMessage?.variables?.sceneTitle ?? '';
 
-			await enterActPlotInterviewMode(line.id, worldContent, { actSummary, narrativeBody, sceneNumber, sceneTitle });
+			await enterActPlotInterviewMode({
+				actLineId: line.id,
+				worldContent,
+				forkContext: { actSummary, narrativeBody, sceneNumber, sceneTitle },
+				story: { id: story.id, name: story.name },
+			});
 		} catch (err) {
 			await log.error('fork', 'Failed to start fork interview', err);
 			createStoryError = err instanceof Error ? err.message : t('errors.failedToStartForkInterview');
@@ -437,7 +442,11 @@
 				isCreatingStory = false;
 				return;
 			}
-			await enterActPlotInterviewMode(refs.actLineId, worldContent);
+			await enterActPlotInterviewMode({
+				actLineId: refs.actLineId,
+				worldContent,
+				story: { id: refs.story.id, name: refs.story.name },
+			});
 		} catch (err) {
 			createStoryError = err instanceof Error ? err.message : t('errors.failedToStartInterview');
 		} finally {
@@ -480,7 +489,7 @@
 
 				let forkedMessage: Message | undefined = undefined;
 				if (isGameResumeMode) {
-					forkedMessage = await enrichForkedMessageWithTurnOfEvents(refs.actLineId);
+					forkedMessage = await enrichForkedMessageWithTurnOfEvents(refs.actLineId, refs.story.id, refs.story.name);
 				}
 
 				const actPlotContent = await ensureActPlot({
@@ -523,7 +532,7 @@
 		}
 	}
 
-	async function enrichForkedMessageWithTurnOfEvents(actLineId: string): Promise<Message | undefined> {
+	async function enrichForkedMessageWithTurnOfEvents(actLineId: string, storyId: string, storyName: string): Promise<Message | undefined> {
 		const lineMessages = await getMessagesForLine(actLineId);
 		const lastAssistant = lineMessages.findLast((m) => m.role === 'assistant');
 		if (!lastAssistant || !lastAssistant.variables?.narrativeBody) return undefined;
@@ -532,6 +541,8 @@
 		if (interviewMessages.length === 0) return undefined;
 
 		const turnOfEventsText = await generateTurnOfEvents({
+			storyId,
+			storyName,
 			actSummary: lastAssistant.actSummary ?? '',
 			narrativeBody: lastAssistant.variables.narrativeBody,
 			sceneNumber: lastAssistant.sceneNumber ?? 1,
@@ -628,7 +639,12 @@
 				actSummary: currentSummary,
 			};
 
-			await enterActPlotInterviewMode(newLine.id, worldContent, undefined, undefined, newActContext);
+			await enterActPlotInterviewMode({
+				actLineId: newLine.id,
+				worldContent,
+				newActContext,
+				story: { id: story.id, name: story.name },
+			});
 		} catch (err) {
 			await log.error('continue-to-next-act', 'Failed to start next act', err);
 		}

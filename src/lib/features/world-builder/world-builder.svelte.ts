@@ -11,10 +11,10 @@ import {
 } from '$lib/definitions/feature-prompts';
 import { loadLocaleStrings } from '$lib/localization';
 import {
-	loadActPlotInterviewSystemPrompt,
-	loadGeneralInstructions,
-	loadWorldBuilderSystemPrompt,
-	loadWorldTemplate,
+	actPlotInterviewSystemPromptLoader,
+	generalInstructionsLoader,
+	worldBuilderSystemPromptLoader,
+	worldTemplateLoader,
 } from '$lib/fs/prompts';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { generateWorldBuilderLogFilename, logWorldBuilderChat } from '$lib/logging/chat-logger';
@@ -182,7 +182,10 @@ export async function enterWorldBuilderMode(): Promise<void> {
 	logFilePath = generateWorldBuilderLogFilename();
 
 	// Load and cache prompts once (now uses locale-scoped dirs)
-	const [worldBuilderPrompt, worldTemplate] = await Promise.all([loadWorldBuilderSystemPrompt(), loadWorldTemplate()]);
+	const [worldBuilderPrompt, worldTemplate] = await Promise.all([
+		worldBuilderSystemPromptLoader.loadDefault(),
+		worldTemplateLoader.loadDefault(),
+	]);
 	cachedWorldBuilderPrompt = worldBuilderPrompt;
 	cachedWorldTemplate = worldTemplate;
 
@@ -194,13 +197,17 @@ export interface InterviewAdditionalContext {
 	characterCards?: { name: string; content: string }[];
 }
 
-export async function enterActPlotInterviewMode(
-	actLineId: string,
-	worldContent: string,
-	forkContext?: ForkInterviewContext,
-	additionalContext?: InterviewAdditionalContext,
-	newActContext?: NewActInterviewContext
-): Promise<void> {
+export interface EnterActPlotInterviewModeParams {
+	actLineId: string;
+	worldContent: string;
+	forkContext?: ForkInterviewContext;
+	additionalContext?: InterviewAdditionalContext;
+	newActContext?: NewActInterviewContext;
+	story?: { id: string; name: string };
+}
+
+export async function enterActPlotInterviewMode(params: EnterActPlotInterviewModeParams): Promise<void> {
+	const { actLineId, worldContent, forkContext, additionalContext, newActContext, story } = params;
 	// Reset world builder state but keep isActive true
 	resetState();
 	isActive = true;
@@ -209,7 +216,12 @@ export async function enterActPlotInterviewMode(
 	interviewWorldContent = worldContent;
 
 	// Load interview system prompt with general instructions injected and interview extraction prompt
-	const [generalInstructions, interviewSystemPrompt] = await Promise.all([loadGeneralInstructions(), loadActPlotInterviewSystemPrompt()]);
+	const [generalInstructions, interviewSystemPrompt] = story
+		? await Promise.all([
+				generalInstructionsLoader.loadByStory(story.id, story.name),
+				actPlotInterviewSystemPromptLoader.loadByStory(story.id, story.name),
+			])
+		: await Promise.all([generalInstructionsLoader.loadDefault(), actPlotInterviewSystemPromptLoader.loadDefault()]);
 
 	const interviewPrompt = actPlotInterviewExtractionPrompt();
 

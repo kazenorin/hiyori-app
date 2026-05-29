@@ -4,10 +4,10 @@ import { initMemoryDatabase } from '$lib/db/memory-database';
 import { runMemoryMigrations } from '$lib/db/memory-migrations';
 import { loadStories, restoreState } from '$lib/stores/stories.svelte';
 import {
-	loadWorldTemplate,
-	loadWorldBuilderSystemPrompt,
-	loadMemoryExtractionSystemPrompt,
-	loadMemoryExtractionPrompt,
+	worldTemplateLoader,
+	worldBuilderSystemPromptLoader,
+	memoryExtractionSystemPromptLoader,
+	memoryExtractionPromptLoader,
 } from '$lib/fs/prompts';
 import { ensureAllBaseConfigs, setActiveLocale } from '$lib/fs/prompt-loader';
 import { initLogging, log } from '$lib/logging/logger';
@@ -59,12 +59,12 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 		await log.info('init', 'Loading world prompts...');
 		onStatus?.('Loading world prompts...');
 		setActiveLocale(settings.locale || 'en');
-		await loadWorldTemplate();
-		await loadWorldBuilderSystemPrompt();
+		await worldTemplateLoader.loadDefault();
+		await worldBuilderSystemPromptLoader.loadDefault();
 
 		await log.info('init', 'Loading memory prompts...');
-		await loadMemoryExtractionSystemPrompt();
-		await loadMemoryExtractionPrompt();
+		await memoryExtractionSystemPromptLoader.loadDefault();
+		await memoryExtractionPromptLoader.loadDefault();
 
 		await log.info('init', 'Loading stories...');
 		onStatus?.('Loading stories...');

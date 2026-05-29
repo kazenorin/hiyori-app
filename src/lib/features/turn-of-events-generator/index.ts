@@ -1,7 +1,7 @@
 import { generateText } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
-import { loadActPlotInterviewSystemPrompt, loadGeneralInstructions, loadActPlotInterviewTurnOfEventsPrompt } from '$lib/fs/prompts';
+import { actPlotInterviewSystemPromptLoader, generalInstructionsLoader, actPlotInterviewTurnOfEventsPromptLoader } from '$lib/fs/prompts';
 import { log } from '$lib/logging/logger';
 import type { WorldBuilderMessage } from '$lib/features/world-builder/world-builder.svelte';
 import { playerLabel, interviewerLabel, sceneWithNumberLabel } from '$lib/definitions/common-labels';
@@ -23,6 +23,8 @@ const sectionHeaders = {
 };
 
 export interface GenerateTurnOfEventsParams {
+	storyId: string;
+	storyName: string;
 	actSummary: string;
 	narrativeBody: string;
 	sceneNumber: number;
@@ -59,16 +61,16 @@ function buildContext(
 }
 
 export async function generateTurnOfEvents(params: GenerateTurnOfEventsParams): Promise<string> {
-	const { actSummary, narrativeBody, sceneNumber, sceneTitle, interviewMessages } = params;
+	const { storyId, storyName, actSummary, narrativeBody, sceneNumber, sceneTitle, interviewMessages } = params;
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) {
 		throw new Error(ERR_NO_MAIN_PROVIDER);
 	}
 
 	const [generalInstructions, systemPrompt, promptTemplate] = await Promise.all([
-		loadGeneralInstructions(),
-		loadActPlotInterviewSystemPrompt(),
-		loadActPlotInterviewTurnOfEventsPrompt(),
+		generalInstructionsLoader.loadByStory(storyId, storyName),
+		actPlotInterviewSystemPromptLoader.loadByStory(storyId, storyName),
+		actPlotInterviewTurnOfEventsPromptLoader.loadByStory(storyId, storyName),
 	]);
 
 	const fullSystemPrompt = systemPrompt.replace('{generalInstructions}', generalInstructions);

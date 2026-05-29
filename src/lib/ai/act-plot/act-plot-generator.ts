@@ -2,11 +2,12 @@ import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig, isReviewerEnabled } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
 import {
-	loadActPlotEditorPrompt,
-	loadActPlotGenerationPrompt,
-	loadActPlotReviewerPrompt,
-	loadActPlotSystemPrompt,
-	loadActPlotTemplateForMode,
+	actPlotEditorPromptLoader,
+	actPlotGenerationPromptLoader,
+	actPlotReviewerPromptLoader,
+	actPlotSystemPromptLoader,
+	guidanceActPlotTemplateLoader,
+	phaseEventActPlotTemplateLoader,
 } from '$lib/fs/prompts';
 import { log } from '$lib/logging/logger';
 import { type ActLineMeta, getLastSceneNumber, getLatestTurnOfEvents, getPremisesMessages, getLatestActSummary } from '$lib/db/act-lines';
@@ -110,7 +111,7 @@ export interface GenerateActPlotParams {
  * If the reviewer or editor phase fails, falls back to writer output.
  */
 export async function generateActPlot(params: GenerateActPlotParams): Promise<string> {
-	const { storyName, worldContent, actLine, actNumber, isResumeGame = false, onPhaseChange, abortSignal } = params;
+	const { storyId, storyName, worldContent, actLine, actNumber, isResumeGame = false, onPhaseChange, abortSignal } = params;
 	const config = getMainProviderConfig();
 	if (!config?.apiKey) {
 		throw new Error(ERR_NO_MAIN_PROVIDER);
@@ -119,13 +120,14 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 	const actLineId = actLine.id;
 
 	// Load prompts and context in parallel
+	const actPlotTemplateLoader = actLine.plotMode === 'phaseEvent' ? phaseEventActPlotTemplateLoader : guidanceActPlotTemplateLoader;
 	const [template, generationPrompt, systemPrompt, reviewerPrompt, editorPrompt, interviewTranscript, previousActSummary, turnOfEvents] =
 		await Promise.all([
-			loadActPlotTemplateForMode(actLine.plotMode),
-			loadActPlotGenerationPrompt().then((p) => p.replace('{actNumber}', actNumber.toString())),
-			loadActPlotSystemPrompt(),
-			loadActPlotReviewerPrompt(),
-			loadActPlotEditorPrompt(),
+			actPlotTemplateLoader.loadByStory(storyId, storyName),
+			actPlotGenerationPromptLoader.loadByStory(storyId, storyName).then((p) => p.replace('{actNumber}', actNumber.toString())),
+			actPlotSystemPromptLoader.loadByStory(storyId, storyName),
+			actPlotReviewerPromptLoader.loadByStory(storyId, storyName),
+			actPlotEditorPromptLoader.loadByStory(storyId, storyName),
 			loadInterviewTranscript(actLineId),
 			getLatestActSummary(actLineId),
 			isResumeGame ? getLatestTurnOfEvents(actLineId) : Promise.resolve(null),

@@ -1,13 +1,5 @@
-// Unified prompt loading module
-// Replaces: system-prompt.ts, world-prompts.ts, act-card-prompts.ts, character-card-prompts.ts
-
 import { LocalizedPromptFile, registerDefaults } from './prompt-loader';
 import type { SupportedLocale } from './prompt-loader';
-
-// === Bundled Defaults via import.meta.glob ===
-// Each locale's prompt files are batch-imported at build time.
-// Adding a new prompt file only requires: drop the .md file + add a Prompt() constructor below.
-// Adding a new locale requires: add glob line + add to SUPPORTED_LOCALES + create directory.
 
 const promptDefaults: Record<SupportedLocale, Record<string, string>> = {
 	en: import.meta.glob('./en/prompts/**/*.md', {
@@ -22,242 +14,76 @@ const promptDefaults: Record<SupportedLocale, Record<string, string>> = {
 	}) as Record<string, string>,
 };
 
-// === Prompt Config Instances ===
-
-// General Instructions
-const generalInstructions = new LocalizedPromptFile(promptDefaults, 'general-instructions.md');
-
-// Pipeline: Plot Planner
-const guidancePlotPlannerPrompt = new LocalizedPromptFile(promptDefaults, 'plot-planner/guidance-plot-planner-prompt.md');
-const phaseEventPlotPlannerPrompt = new LocalizedPromptFile(promptDefaults, 'plot-planner/phase-event-plot-planner-prompt.md');
-
-// Pipeline: Writer
-const writerPrompt = new LocalizedPromptFile(promptDefaults, 'writer/writer-prompt.md');
-const writerOutputTemplate = new LocalizedPromptFile(promptDefaults, 'writer/writer-output-template.md');
-
-// Pipeline: Reviewer
-const reviewerPrompt = new LocalizedPromptFile(promptDefaults, 'reviewer/reviewer-prompt.md');
-const quickReviewerPrompt = new LocalizedPromptFile(promptDefaults, 'reviewer/quick-reviewer-prompt.md');
-
-// Pipeline: Editor
-const editorPrompt = new LocalizedPromptFile(promptDefaults, 'editor/editor-prompt.md');
-
-// Pipeline: Game Master
-const gameMasterPrompt = new LocalizedPromptFile(promptDefaults, 'game-master/game-master-prompt.md');
-
-// Pipeline: Summarizer
-const summarizerPrompt = new LocalizedPromptFile(promptDefaults, 'summarizer/summarizer-prompt.md');
-const summarizerIncrementalPrompt = new LocalizedPromptFile(promptDefaults, 'summarizer/summarizer-incremental-prompt.md');
-
-// Pipeline: Character Profile Compressor
-const characterProfileCompressorPrompt = new LocalizedPromptFile(promptDefaults, 'summarizer/character-profile-compressor.md');
-
-// World
-const worldTemplate = new LocalizedPromptFile(promptDefaults, 'world/world-template.md');
-const worldBuilderSystemPrompt = new LocalizedPromptFile(promptDefaults, 'world/world-builder-system-prompt.md');
-
-// Act
-const actCardTemplate = new LocalizedPromptFile(promptDefaults, 'act/act-card-template.md');
-const actPlotTemplate = new LocalizedPromptFile(promptDefaults, 'act/guidance-act-plot-template.md');
-const phaseEventActPlotTemplate = new LocalizedPromptFile(promptDefaults, 'act/phase-event-act-plot-template.md');
-const actPlotGenerationPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-generation-prompt.md');
-const actPlotSystemPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-system-prompt.md');
-const actPlotInterviewSystemPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-interview-system-prompt.md');
-const actPlotReviewerPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-reviewer-prompt.md');
-const actPlotEditorPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-editor-prompt.md');
-const actPlotInterviewTurnOfEventsPrompt = new LocalizedPromptFile(promptDefaults, 'act/act-plot-interview-turn-of-events-prompt.md');
-
-// Character
-const characterCardTemplate = new LocalizedPromptFile(promptDefaults, 'character/character-card-template.md');
-
-// Memories
-const memoryExtractionSystemPrompt = new LocalizedPromptFile(promptDefaults, 'memories/memory-extraction-system-prompt.md');
-const memoryExtractionPrompt = new LocalizedPromptFile(promptDefaults, 'memories/memory-extraction-prompt.md');
-
-// === Load Functions ===
-
-export const loadGeneralInstructions = (): Promise<string> => generalInstructions.load();
-export const loadPlotPlannerPrompt = (): Promise<string> => guidancePlotPlannerPrompt.load();
-export const loadGuidancePlotPlannerPrompt = (): Promise<string> => guidancePlotPlannerPrompt.load();
-export const loadPhaseEventPlotPlannerPrompt = (): Promise<string> => phaseEventPlotPlannerPrompt.load();
-export const loadPlotPlannerPromptForMode = (mode: 'guidance' | 'phaseEvent'): Promise<string> =>
-	mode === 'phaseEvent' ? phaseEventPlotPlannerPrompt.load() : guidancePlotPlannerPrompt.load();
-export const loadWriterPrompt = (): Promise<string> => writerPrompt.load();
-export const loadWriterOutputTemplate = (): Promise<string> => writerOutputTemplate.load();
-export const loadReviewerPrompt = (): Promise<string> => reviewerPrompt.load();
-export const loadQuickReviewerPrompt = (): Promise<string> => quickReviewerPrompt.load();
-export const loadEditorPrompt = (): Promise<string> => editorPrompt.load();
-export const loadGameMasterPrompt = (): Promise<string> => gameMasterPrompt.load();
-export const loadSummarizerPrompt = (): Promise<string> => summarizerPrompt.load();
-export const loadSummarizerIncrementalPrompt = (): Promise<string> => summarizerIncrementalPrompt.load();
-export const loadCharacterProfileCompressorPrompt = (): Promise<string> => characterProfileCompressorPrompt.load();
-export const loadWorldTemplate = (): Promise<string> => worldTemplate.load();
-export const loadWorldBuilderSystemPrompt = (): Promise<string> => worldBuilderSystemPrompt.load();
-export const loadActCardTemplate = (): Promise<string> => actCardTemplate.load();
-export const loadActPlotTemplate = (): Promise<string> => actPlotTemplate.load();
-export const loadGuidanceActPlotTemplate = (): Promise<string> => actPlotTemplate.load();
-export const loadPhaseEventActPlotTemplate = (): Promise<string> => phaseEventActPlotTemplate.load();
-export const loadActPlotTemplateForMode = (mode: 'guidance' | 'phaseEvent'): Promise<string> =>
-	mode === 'phaseEvent' ? phaseEventActPlotTemplate.load() : actPlotTemplate.load();
-export const loadActPlotGenerationPrompt = (): Promise<string> => actPlotGenerationPrompt.load();
-export const loadActPlotSystemPrompt = (): Promise<string> => actPlotSystemPrompt.load();
-export const loadActPlotInterviewSystemPrompt = (): Promise<string> => actPlotInterviewSystemPrompt.load();
-export const loadActPlotReviewerPrompt = (): Promise<string> => actPlotReviewerPrompt.load();
-export const loadActPlotEditorPrompt = (): Promise<string> => actPlotEditorPrompt.load();
-export const loadActPlotInterviewTurnOfEventsPrompt = (): Promise<string> => actPlotInterviewTurnOfEventsPrompt.load();
-export const loadCharacterCardTemplate = (): Promise<string> => characterCardTemplate.load();
-export const loadMemoryExtractionSystemPrompt = (): Promise<string> => memoryExtractionSystemPrompt.load();
-export const loadMemoryExtractionPrompt = (): Promise<string> => memoryExtractionPrompt.load();
-
-// Story-specific loaders
-export async function loadStoryGeneralInstructions(storyId: string, storyName: string): Promise<string> {
-	return generalInstructions.loadForStory(storyId, storyName);
-}
-
-// Story-specific pipeline prompt loaders
-export async function loadStoryPlotPlannerPrompt(storyId: string, storyName: string): Promise<string> {
-	return guidancePlotPlannerPrompt.loadForStory(storyId, storyName);
-}
-
-export async function loadStoryPhaseEventPlotPlannerPrompt(storyId: string, storyName: string): Promise<string> {
-	return phaseEventPlotPlannerPrompt.loadForStory(storyId, storyName);
-}
-
-export function loadStoryPlotPlannerPromptForMode(storyId: string, storyName: string, mode: 'guidance' | 'phaseEvent'): Promise<string> {
-	return mode === 'phaseEvent' ? loadStoryPhaseEventPlotPlannerPrompt(storyId, storyName) : loadStoryPlotPlannerPrompt(storyId, storyName);
-}
-
-export async function loadStoryWriterPrompt(storyId: string, storyName: string): Promise<string> {
-	return writerPrompt.loadForStory(storyId, storyName);
-}
-
-export async function loadStoryWriterOutputTemplate(storyId: string, storyName: string): Promise<string> {
-	return writerOutputTemplate.loadForStory(storyId, storyName);
-}
-
-export async function loadStoryReviewerPrompt(storyId: string, storyName: string): Promise<string> {
-	return reviewerPrompt.loadForStory(storyId, storyName);
-}
-
-export async function loadStoryQuickReviewerPrompt(storyId: string, storyName: string): Promise<string> {
-	return quickReviewerPrompt.loadForStory(storyId, storyName);
-}
-
-export async function loadStoryEditorPrompt(storyId: string, storyName: string): Promise<string> {
-	return editorPrompt.loadForStory(storyId, storyName);
-}
-
-export async function loadStoryGameMasterPrompt(storyId: string, storyName: string): Promise<string> {
-	return gameMasterPrompt.loadForStory(storyId, storyName);
-}
-
-export async function loadStorySummarizerPrompt(storyId: string, storyName: string): Promise<string> {
-	return summarizerPrompt.loadForStory(storyId, storyName);
-}
-
-export async function loadStorySummarizerIncrementalPrompt(storyId: string, storyName: string): Promise<string> {
-	return summarizerIncrementalPrompt.loadForStory(storyId, storyName);
-}
-
-export async function loadStoryCharacterProfileCompressorPrompt(storyId: string, storyName: string): Promise<string> {
-	return characterProfileCompressorPrompt.loadForStory(storyId, storyName);
-}
-
-// === Prompt loaders ===
-
 export interface PromptLoader {
 	loadByStory: (storyId: string, storyName: string) => Promise<string>;
 	loadDefault: () => Promise<string>;
 }
 
-export const generalInstructionsLoader: PromptLoader = {
-	loadByStory: loadStoryGeneralInstructions,
-	loadDefault: loadGeneralInstructions,
-};
+function createLoader(path: string): PromptLoader {
+	const file = new LocalizedPromptFile(promptDefaults, path);
+	const loader: PromptLoader = {
+		loadByStory: (storyId, storyName) => file.loadForStory(storyId, storyName),
+		loadDefault: () => file.load(),
+	};
+	registerDefaults([file]);
+	return loader;
+}
 
-export const plotPlannerSystemPromptLoader: PromptLoader = {
-	loadByStory: loadStoryPlotPlannerPrompt,
-	loadDefault: loadPlotPlannerPrompt,
-};
+// === Writer pipeline ===
 
-export const phaseEventPlotPlannerSystemPromptLoader: PromptLoader = {
-	loadByStory: loadStoryPhaseEventPlotPlannerPrompt,
-	loadDefault: loadPhaseEventPlotPlannerPrompt,
-};
+export const writerSystemPromptLoader = createLoader('writer/writer-prompt.md');
+export const writerOutputTemplateLoader = createLoader('writer/writer-output-template.md');
 
-export const writerSystemPromptLoader: PromptLoader = {
-	loadByStory: loadStoryWriterPrompt,
-	loadDefault: loadWriterPrompt,
-};
+// === Review pipeline ===
 
-export const writerOutputTemplateLoader: PromptLoader = {
-	loadByStory: loadStoryWriterOutputTemplate,
-	loadDefault: loadWriterOutputTemplate,
-};
+export const reviewerSystemPromptTemplateLoader = createLoader('reviewer/reviewer-prompt.md');
+export const quickReviewerSystemPromptTemplateLoader = createLoader('reviewer/quick-reviewer-prompt.md');
 
-export const reviewerSystemPromptTemplateLoader: PromptLoader = {
-	loadByStory: loadStoryReviewerPrompt,
-	loadDefault: loadReviewerPrompt,
-};
+// === Editor pipeline ===
 
-export const quickReviewerSystemPromptTemplateLoader: PromptLoader = {
-	loadByStory: loadStoryQuickReviewerPrompt,
-	loadDefault: loadQuickReviewerPrompt,
-};
+export const editorSystemPromptLoader = createLoader('editor/editor-prompt.md');
 
-export const editorSystemPromptLoader: PromptLoader = {
-	loadByStory: loadStoryEditorPrompt,
-	loadDefault: loadEditorPrompt,
-};
+// === Plot planner ===
 
-export const gameMasterSystemPromptLoader: PromptLoader = {
-	loadByStory: loadStoryGameMasterPrompt,
-	loadDefault: loadGameMasterPrompt,
-};
+export const plotPlannerSystemPromptLoader = createLoader('plot-planner/guidance-plot-planner-prompt.md');
+export const phaseEventPlotPlannerSystemPromptLoader = createLoader('plot-planner/phase-event-plot-planner-prompt.md');
 
-export const summarizerPromptLoader: PromptLoader = {
-	loadByStory: loadStorySummarizerPrompt,
-	loadDefault: loadSummarizerPrompt,
-};
+// === Game master ===
 
-export const summarizerIncrementalPromptLoader: PromptLoader = {
-	loadByStory: loadStorySummarizerIncrementalPrompt,
-	loadDefault: loadSummarizerIncrementalPrompt,
-};
+export const gameMasterSystemPromptLoader = createLoader('game-master/game-master-prompt.md');
 
-export const characterProfileCompressorPromptLoader: PromptLoader = {
-	loadByStory: loadStoryCharacterProfileCompressorPrompt,
-	loadDefault: loadCharacterProfileCompressorPrompt,
-};
+// === Summarizer ===
 
-// === Ensure All Base Configs ===
+export const summarizerPromptLoader = createLoader('summarizer/summarizer-prompt.md');
+export const summarizerIncrementalPromptLoader = createLoader('summarizer/summarizer-incremental-prompt.md');
+export const characterProfileCompressorPromptLoader = createLoader('summarizer/character-profile-compressor.md');
 
-// Register all defaults so ensureAllBaseConfigs() can create them on launch
-registerDefaults([
-	generalInstructions,
-	guidancePlotPlannerPrompt,
-	phaseEventPlotPlannerPrompt,
-	writerPrompt,
-	writerOutputTemplate,
-	reviewerPrompt,
-	quickReviewerPrompt,
-	editorPrompt,
-	gameMasterPrompt,
-	summarizerPrompt,
-	summarizerIncrementalPrompt,
-	characterProfileCompressorPrompt,
-	worldTemplate,
-	worldBuilderSystemPrompt,
-	actCardTemplate,
-	actPlotTemplate,
-	phaseEventActPlotTemplate,
-	actPlotGenerationPrompt,
-	actPlotSystemPrompt,
-	actPlotInterviewSystemPrompt,
-	actPlotReviewerPrompt,
-	actPlotEditorPrompt,
-	actPlotInterviewTurnOfEventsPrompt,
-	characterCardTemplate,
-	memoryExtractionSystemPrompt,
-	memoryExtractionPrompt,
-]);
+// === General instructions ===
+
+export const generalInstructionsLoader = createLoader('general-instructions.md');
+
+// === World builder ===
+
+export const worldTemplateLoader = createLoader('world/world-template.md');
+export const worldBuilderSystemPromptLoader = createLoader('world/world-builder-system-prompt.md');
+
+// === Act plot ===
+
+export const guidanceActPlotTemplateLoader = createLoader('act/guidance-act-plot-template.md');
+export const phaseEventActPlotTemplateLoader = createLoader('act/phase-event-act-plot-template.md');
+export const actPlotGenerationPromptLoader = createLoader('act/act-plot-generation-prompt.md');
+export const actPlotSystemPromptLoader = createLoader('act/act-plot-system-prompt.md');
+export const actPlotInterviewSystemPromptLoader = createLoader('act/act-plot-interview-system-prompt.md');
+export const actPlotReviewerPromptLoader = createLoader('act/act-plot-reviewer-prompt.md');
+export const actPlotEditorPromptLoader = createLoader('act/act-plot-editor-prompt.md');
+export const actPlotInterviewTurnOfEventsPromptLoader = createLoader('act/act-plot-interview-turn-of-events-prompt.md');
+export const actCardTemplateLoader = createLoader('act/act-card-template.md');
+
+// === Character cards ===
+
+export const characterCardTemplateLoader = createLoader('character/character-card-template.md');
+
+// === Memory extraction ===
+
+export const memoryExtractionSystemPromptLoader = createLoader('memories/memory-extraction-system-prompt.md');
+export const memoryExtractionPromptLoader = createLoader('memories/memory-extraction-prompt.md');

@@ -9,7 +9,7 @@ import type { StreamState } from '$lib/ai/chat-callbacks';
 import { runEditorTemplateFitter, type PipelineRunContext, type TrackPhase } from '$lib/ai/pipeline/runners';
 import { editorHasTemplateMetadata } from '$lib/ai/pipeline/message-builder';
 import type { PipelineCallbacks, PipelineState } from '$lib/ai/pipeline/types';
-import { loadWriterOutputTemplate } from '$lib/fs/prompts';
+import { writerOutputTemplateLoader } from '$lib/fs/prompts';
 import { buildImportRunContext } from './pipeline-context';
 import { emptyVariables } from '$lib/ai/narrative-types';
 
@@ -51,7 +51,7 @@ async function fillNarrativeVariables(
 	onProgress: (msgIndex: number, state: StreamState) => void,
 	onError: (msgIndex: number, err: Error, attempt: number) => void
 ): Promise<NarrativeExtractionResult[]> {
-	const writerOutputTemplate = await loadWriterOutputTemplate();
+	const writerOutputTemplate = await writerOutputTemplateLoader.loadDefault();
 	const results: NarrativeExtractionResult[] = [];
 
 	for (let i = 0; i < indicesNeedingFilling.length; i++) {
