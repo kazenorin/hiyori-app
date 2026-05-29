@@ -4,7 +4,12 @@ import { getFileSystem } from '$lib/fs/file-system';
 import { kebabCase } from 'lodash-es';
 import { getSettings, LOG_LEVEL_VALUES, type LogLevel } from '$lib/stores/settings.svelte';
 
-const fileFs = getFileSystem();
+let fileFs: ReturnType<typeof getFileSystem>;
+
+function getFileFs() {
+	if (!fileFs) fileFs = getFileSystem();
+	return fileFs;
+}
 
 function checkIsTauri() {
 	try {
@@ -26,11 +31,17 @@ let logDebug = (msg: string) => logWeb('debug', msg);
 export async function initLogging(): Promise<void> {
 	if (checkIsTauri()) {
 		await tauriLog.attachConsole();
-		logInfo = (msg: string) => tauriLog.info(msg);
-		logError = (msg: string) => tauriLog.error(msg);
-		logWarn = (msg: string) => tauriLog.warn(msg);
-		logDebug = (msg: string) => tauriLog.debug(msg);
+		logInfo = (msg: string) => safeTauriLog(tauriLog.info, msg);
+		logError = (msg: string) => safeTauriLog(tauriLog.error, msg);
+		logWarn = (msg: string) => safeTauriLog(tauriLog.warn, msg);
+		logDebug = (msg: string) => safeTauriLog(tauriLog.debug, msg);
 	}
+}
+
+function safeTauriLog(fn: (msg: string) => Promise<void>, msg: string): Promise<void> {
+	return fn(msg).catch(() => {
+		console.log(msg);
+	});
 }
 
 function writeToConsole(level: string, msg: string): Promise<void> {
@@ -43,7 +54,7 @@ async function logWeb(level: string, message: string): Promise<void> {
 	// noinspection ES6MissingAwait
 	writeToConsole(level, message);
 
-	return await fileFs
+	return await getFileFs()
 		.writeTextFileEnsuringDir(`logs/app.log`, `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${message}\n`, {
 			append: true,
 		})
@@ -78,7 +89,7 @@ export async function fileLog(level: LogLevel, loggerTag: string, message: strin
 	const line = `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${resolvedMessage}\n`;
 	const filename = `${kebabCase(loggerTag)}.log`;
 	try {
-		await fileFs.writeTextFileEnsuringDir(`logs/${filename}`, line, { append: true });
+		await getFileFs().writeTextFileEnsuringDir(`logs/${filename}`, line, { append: true });
 	} catch {
 		// Silent fail — file logging is best-effort
 	}
