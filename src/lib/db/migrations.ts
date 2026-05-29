@@ -130,7 +130,9 @@ async function migrateV9Data(): Promise<void> {
 	const db = getDatabase();
 	const now = Date.now();
 
-	const rows = await db.select<ActLineMetaMigrateRow[]>('SELECT id, plot_mode, last_plot_generation, act_phase, ended_at, ending_type, epilogue_written_at FROM act_line_meta');
+	const rows = await db.select<ActLineMetaMigrateRow[]>(
+		'SELECT id, plot_mode, last_plot_generation, act_phase, ended_at, ending_type, epilogue_written_at FROM act_line_meta'
+	);
 
 	for (const row of rows) {
 		const actLineId = row.id;
@@ -160,7 +162,15 @@ async function migrateV9Data(): Promise<void> {
 			if (seqRows.length > 0) {
 				await db.execute(
 					'INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-					[crypto.randomUUID(), actLineId, seqRows[0].message_id, seqRows[0].sequence, 'plot-generated', String(row.last_plot_generation), now]
+					[
+						crypto.randomUUID(),
+						actLineId,
+						seqRows[0].message_id,
+						seqRows[0].sequence,
+						'plot-generated',
+						String(row.last_plot_generation),
+						now,
+					]
 				);
 			}
 		}

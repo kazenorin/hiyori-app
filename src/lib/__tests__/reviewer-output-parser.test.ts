@@ -22,6 +22,7 @@ vi.mock('$lib/logging/logger', () => ({
 		warn: vi.fn(async () => {}),
 		debug: vi.fn(async () => {}),
 	},
+	fileLog: vi.fn(async () => {}),
 }));
 
 import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';

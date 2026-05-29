@@ -3,12 +3,14 @@ import { streamText } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
 import { worldTemplateLoader } from '$lib/fs/prompts';
-import { BaseDirectory, exists, rename, writeTextFile } from '@tauri-apps/plugin-fs';
+import { getFileSystem } from '$lib/fs/file-system';
 import { worldFromActSystemPrompt, worldFromActPrompt } from '$lib/definitions/feature-prompts';
 import { ls } from '$lib/localization';
 import { worldContentHeader, actSummaryHeader, interviewTranscriptHeader } from '$lib/definitions/common-headers';
 import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 import { log } from '$lib/logging/logger';
+
+const fileFs = getFileSystem();
 
 const LOG_TAG = 'world-updater';
 
@@ -25,12 +27,9 @@ export async function updateWorldCard(params: UpdateWorldCardParams): Promise<st
 	const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
 	const backupPath = `${params.folderName}/world-${timestamp}.md`;
 
-	if (await exists(worldPath, { baseDir: BaseDirectory.AppData })) {
+	if (await fileFs.exists(worldPath)) {
 		await log.info(LOG_TAG, `Backing up world.md to world-${timestamp}.md`);
-		await rename(worldPath, backupPath, {
-			newPathBaseDir: BaseDirectory.AppData,
-			oldPathBaseDir: BaseDirectory.AppData,
-		});
+		await fileFs.rename(worldPath, backupPath);
 	}
 
 	const [systemPrompt, extractionPrompt, worldTemplate] = await Promise.all([
@@ -74,17 +73,14 @@ export async function updateWorldCard(params: UpdateWorldCardParams): Promise<st
 		}
 
 		const updatedContent = contentParts.join('');
-		await writeTextFile(worldPath, updatedContent, { baseDir: BaseDirectory.AppData });
+		await fileFs.writeTextFile(worldPath, updatedContent);
 
 		await log.info(LOG_TAG, `World card update complete. Length: ${updatedContent.length} chars`);
 		return updatedContent;
 	} catch (err) {
 		await log.error(LOG_TAG, 'World card update failed, restoring backup', err);
-		if (await exists(backupPath, { baseDir: BaseDirectory.AppData })) {
-			await rename(backupPath, worldPath, {
-				newPathBaseDir: BaseDirectory.AppData,
-				oldPathBaseDir: BaseDirectory.AppData,
-			});
+		if (await fileFs.exists(backupPath)) {
+			await fileFs.rename(backupPath, worldPath);
 		}
 		throw err;
 	}

@@ -7,7 +7,7 @@ import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { getActiveStoryId, getActiveActId, getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
-import { mkdir, writeTextFile, readTextFile, exists, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { getFileSystem } from '$lib/fs/file-system';
 import { kebabCase } from 'lodash-es';
 import { log } from '$lib/logging/logger';
 import { logCharacterCardActivity } from '$lib/logging/chat-logger';
@@ -25,6 +25,8 @@ import {
 import { ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT, ERR_NO_CHARACTERS_SELECTED } from '$lib/definitions/error-messages';
 import { nameLabel } from '$lib/definitions/common-labels';
 import { characterCardExtractionRules, characterCardCoreIdentityLabel } from '$lib/definitions/feature-prompts';
+
+const fileFs = getFileSystem();
 
 // === Types ===
 
@@ -216,9 +218,8 @@ async function loadActCard(storyFolder: string, actNumber: number, isMainLine: b
 	const path = `${lineDir}/act-card.md`;
 
 	try {
-		const fileExists = await exists(path, { baseDir: BaseDirectory.AppData });
-		if (!fileExists) return null;
-		return await readTextFile(path, { baseDir: BaseDirectory.AppData });
+		const content = await fileFs.readTextFileIfExists(path);
+		return content ?? null;
 	} catch (err) {
 		await log.warn('character-card', `Failed to read act card at ${path}: ${err}`);
 		return null;
@@ -238,9 +239,8 @@ async function loadExistingCharacterCard(
 	const path = `${charactersDir}/${filename}`;
 
 	try {
-		const fileExists = await exists(path, { baseDir: BaseDirectory.AppData });
-		if (!fileExists) return null;
-		return await readTextFile(path, { baseDir: BaseDirectory.AppData });
+		const content = await fileFs.readTextFileIfExists(path);
+		return content ?? null;
 	} catch (err) {
 		await log.warn('character-card', `Failed to read character card at ${path}: ${err}`);
 		return null;
@@ -382,8 +382,7 @@ export async function generateCharacterCard(
 	const filename = computeCardFilename(entry.canonicalName);
 	const filePath = `${charactersDir}/${filename}`;
 
-	await mkdir(charactersDir, { baseDir: BaseDirectory.AppData, recursive: true });
-	await writeTextFile(filePath, result.text, { baseDir: BaseDirectory.AppData });
+	await fileFs.writeTextFileEnsuringDir(filePath, result.text);
 
 	return {
 		characterName: entry.character,

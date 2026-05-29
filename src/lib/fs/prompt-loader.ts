@@ -1,6 +1,8 @@
-import { readTextFile, writeTextFile, mkdir, exists, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { getFileSystem } from '$lib/fs/file-system';
 import { log } from '$lib/logging/logger';
 import { resolveStoryFolder } from './story-folders';
+
+const fs = getFileSystem();
 
 /**
  * All locales that have bundled default content.
@@ -136,26 +138,14 @@ export function registerDefaults(entries: LocalizedTemplateFile[]): void {
 }
 
 /**
- * Ensure the directory for a relative path exists.
- */
-async function ensureDirForPath(baseDir: string, relativePath: string): Promise<void> {
-	const fullPath = `${baseDir}/${relativePath}`;
-	const lastSlashIndex = fullPath.lastIndexOf('/');
-	const dir = lastSlashIndex > 0 ? fullPath.substring(0, lastSlashIndex) : baseDir;
-	await mkdir(dir, { baseDir: BaseDirectory.AppData, recursive: true });
-}
-
-/**
  * Ensure a single base template file exists in AppData.
  * Creates the file from bundled defaults if it doesn't exist.
  */
 async function ensureBaseFileExists(baseDir: string, relativePath: string, defaultContent: string): Promise<void> {
 	const fullPath = `${baseDir}/${relativePath}`;
-	await ensureDirForPath(baseDir, relativePath);
-
-	const fileExists = await exists(fullPath, { baseDir: BaseDirectory.AppData });
+	const fileExists = await fs.exists(fullPath);
 	if (!fileExists) {
-		await writeTextFile(fullPath, defaultContent, { baseDir: BaseDirectory.AppData });
+		await fs.writeTextFileEnsuringDir(fullPath, defaultContent);
 	}
 }
 
@@ -166,7 +156,7 @@ async function ensureBaseFileExists(baseDir: string, relativePath: string, defau
 async function ensureAndLoadBase(baseDir: string, relativePath: string, defaultContent: string): Promise<string> {
 	await ensureBaseFileExists(baseDir, relativePath, defaultContent);
 	const fullPath = `${baseDir}/${relativePath}`;
-	return await readTextFile(fullPath, { baseDir: BaseDirectory.AppData });
+	return await fs.readTextFile(fullPath);
 }
 
 /**
@@ -189,9 +179,9 @@ async function loadWithOverride(
 	try {
 		const storyFolder = await resolveStoryFolder(storyId, storyName);
 		const storyPath = `${storyFolder}/${templatesDir}/${relativePath}`;
-		const storyFileExists = await exists(storyPath, { baseDir: BaseDirectory.AppData });
-		if (storyFileExists) {
-			return await readTextFile(storyPath, { baseDir: BaseDirectory.AppData });
+		const storyContent = await fs.readTextFileIfExists(storyPath);
+		if (storyContent) {
+			return storyContent;
 		}
 	} catch (err) {
 		await log.debug('template-loader', `Error checking story override at ${relativePath}: ${err}`);

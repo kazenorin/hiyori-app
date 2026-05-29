@@ -1,10 +1,12 @@
-import { writeTextFile, readTextFile, mkdir, exists, remove, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { getFileSystem } from '$lib/fs/file-system';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { getActiveStory } from '$lib/stores/stories.svelte';
 import { getSettings } from '$lib/stores/settings.svelte';
 import { log } from './logger';
 import type { NarrativeVariables } from '$lib/ai/narrative-types';
 import type { MessageBase } from '$lib/db/messages';
+
+const fs = getFileSystem();
 
 interface ChatLogMessage extends MessageBase {
 	variables?: NarrativeVariables;
@@ -29,10 +31,7 @@ async function appendToStoryLog(filename: string, label: string, content: string
 	if (!story) return;
 	try {
 		const folder = await resolveStoryFolder(story.id, story.name);
-		await writeTextFile(`${folder}/${filename}`, formatEntry(label, content), {
-			baseDir: BaseDirectory.AppData,
-			append: true,
-		});
+		await fs.writeTextFile(`${folder}/${filename}`, formatEntry(label, content), { append: true });
 	} catch (err) {
 		await log.error('chat-logger', `Failed to write to ${filename}`, err);
 	}
@@ -97,9 +96,7 @@ export async function logWorldBuilderChat(context: {
 	// Write to temp log file if filename provided
 	if (context.logFilename) {
 		try {
-			await mkdir('logs', { baseDir: BaseDirectory.AppData, recursive: true });
-			await writeTextFile(`logs/${context.logFilename}`, formatEntry('World Builder Chat Context', content), {
-				baseDir: BaseDirectory.AppData,
+			await fs.writeTextFileEnsuringDir(`logs/${context.logFilename}`, formatEntry('World Builder Chat Context', content), {
 				append: true,
 			});
 		} catch (err) {
@@ -115,15 +112,11 @@ export async function moveWorldBuilderLog(logFilename: string, storyFolder: stri
 	if (!logFilename) return;
 	try {
 		const srcPath = `logs/${logFilename}`;
-		const srcExists = await exists(srcPath, { baseDir: BaseDirectory.AppData });
-		if (!srcExists) return;
+		const content = await fs.readTextFileIfExists(srcPath);
+		if (!content) return;
 
-		const content = await readTextFile(srcPath, { baseDir: BaseDirectory.AppData });
-		await writeTextFile(`${storyFolder}/${logFilename}`, content, {
-			baseDir: BaseDirectory.AppData,
-			append: false,
-		});
-		await remove(srcPath, { baseDir: BaseDirectory.AppData });
+		await fs.writeTextFile(`${storyFolder}/${logFilename}`, content);
+		await fs.remove(srcPath);
 	} catch (err) {
 		await log.error('chat-logger', `Failed to move world builder log`, err);
 	}

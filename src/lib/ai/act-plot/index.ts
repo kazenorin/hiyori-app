@@ -1,10 +1,12 @@
 import { type ActPlotPhase, generateActPlot } from '$lib/ai/act-plot/act-plot-generator';
 import { getLineDir } from '$lib/ai/card-output-path';
 import { ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-folders';
-import { BaseDirectory, exists, mkdir, readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
+import { getFileSystem } from '$lib/fs/file-system';
 import type { EnsureActPlotParams } from '$lib/ai/act-plot/types';
 import { log } from '$lib/logging/logger';
 import * as dbActs from '$lib/db/acts';
+
+const fileFs = getFileSystem();
 
 export type { ActPlotPhase };
 
@@ -24,9 +26,9 @@ export async function ensureActPlot(params: EnsureActPlotParams): Promise<string
 	const storyFolder = await resolveStoryFolder(story.id, story.name);
 	const lineDir = await getLineDir(storyFolder, actNumber, actLine.isMainLine, actLine.id);
 	const plotPath = `${lineDir}/${ACT_PLOT_FILENAME}`;
-	const plotExists = await exists(plotPath, { baseDir: BaseDirectory.AppData });
+	const plotExists = await fileFs.exists(plotPath);
 	if (plotExists) {
-		return await readTextFile(plotPath, { baseDir: BaseDirectory.AppData });
+		return await fileFs.readTextFile(plotPath);
 	} else {
 		// Generate act plot if it doesn't exist yet
 
@@ -47,8 +49,7 @@ export async function ensureActPlot(params: EnsureActPlotParams): Promise<string
 
 		// Write output file
 
-		await mkdir(lineDir, { baseDir: BaseDirectory.AppData, recursive: true });
-		await writeTextFile(plotPath, result, { baseDir: BaseDirectory.AppData });
+		await fileFs.writeTextFileEnsuringDir(plotPath, result);
 
 		await log.info(LOG_TAG, `Act-plot pipeline complete for actLine: ${actLine.id.slice(-8)} of story: ${story.id}`);
 

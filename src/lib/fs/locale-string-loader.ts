@@ -1,6 +1,8 @@
-import { readTextFile, writeTextFile, mkdir, exists, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { getFileSystem } from '$lib/fs/file-system';
 import yaml from 'js-yaml';
 import { log } from '$lib/logging/logger';
+
+const fs = getFileSystem();
 
 const LOCALE_STRINGS_FILENAME = 'locale-strings.yaml';
 
@@ -36,26 +38,18 @@ export function registerLocaleStringDefaults(entries: LocaleStringBundle[]): voi
 	defaultsRegistry = defaultsRegistry.concat(entries);
 }
 
-async function ensureDirForPath(baseDir: string, relativePath: string): Promise<void> {
-	const fullPath = `${baseDir}/${relativePath}`;
-	const lastSlashIndex = fullPath.lastIndexOf('/');
-	const dir = lastSlashIndex > 0 ? fullPath.substring(0, lastSlashIndex) : baseDir;
-	await mkdir(dir, { baseDir: BaseDirectory.AppData, recursive: true });
-}
-
 async function ensureBaseFileExists(baseDir: string, fileName: string, defaultContent: string): Promise<void> {
-	await ensureDirForPath(baseDir, fileName);
 	const fullPath = `${baseDir}/${fileName}`;
-	const fileExists = await exists(fullPath, { baseDir: BaseDirectory.AppData });
+	const fileExists = await fs.exists(fullPath);
 	if (!fileExists) {
-		await writeTextFile(fullPath, defaultContent, { baseDir: BaseDirectory.AppData });
+		await fs.writeTextFileEnsuringDir(fullPath, defaultContent);
 	}
 }
 
 async function ensureAndLoadBase(baseDir: string, fileName: string, defaultContent: string): Promise<Record<string, unknown>> {
 	await ensureBaseFileExists(baseDir, fileName, defaultContent);
 	const fullPath = `${baseDir}/${fileName}`;
-	const content = await readTextFile(fullPath, { baseDir: BaseDirectory.AppData });
+	const content = await fs.readTextFile(fullPath);
 	return yaml.load(content) as Record<string, unknown>;
 }
 
@@ -110,9 +104,8 @@ async function loadLocaleStringsWithOverride(
 	const storyPath = `${storyFolder}/${fileName}`;
 
 	try {
-		const storyFileExists = await exists(storyPath, { baseDir: BaseDirectory.AppData });
-		if (storyFileExists) {
-			const storyContent = await readTextFile(storyPath, { baseDir: BaseDirectory.AppData });
+		const storyContent = await fs.readTextFileIfExists(storyPath);
+		if (storyContent) {
 			const storyData = yaml.load(storyContent) as Record<string, unknown>;
 			const baseData = await ensureAndLoadBase(baseDir, fileName, defaultContent);
 			return deepMerge(baseData, storyData);

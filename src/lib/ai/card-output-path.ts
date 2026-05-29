@@ -1,5 +1,7 @@
 import { kebabCase } from 'lodash-es';
-import { readDir, BaseDirectory, type DirEntry } from '@tauri-apps/plugin-fs';
+import { getFileSystem, type DirEntry } from '$lib/fs/file-system';
+
+const fileFs = getFileSystem();
 
 /**
  * Convert an act line name into a kebab-case suffix for the folder name.
@@ -43,7 +45,7 @@ export function buildLineDir(storyFolder: string, actNumber: number, isMainLine:
 export async function resolveLineSubdir(actDir: string, actLineId: string): Promise<string | null> {
 	const idPart = actLineId.slice(-8);
 	try {
-		const entries = await readDir(actDir, { baseDir: BaseDirectory.AppData });
+		const entries = await fileFs.readDir(actDir);
 		const matches = entries.filter((e: DirEntry) => e.isDirectory && e.name.startsWith(idPart)).map((e: DirEntry) => e.name);
 		return matches.length === 1 ? matches[0] : null;
 	} catch {

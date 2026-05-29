@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+
 import { canonicalName } from '$lib/fs/story-folders';
 
 describe('canonicalName', () => {

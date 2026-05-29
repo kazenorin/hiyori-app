@@ -95,7 +95,7 @@ describe('createQueryInventoryTool', () => {
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
 			actLineId: 'line-2',
-		actNumber: 2,
+			actNumber: 2,
 		});
 
 		const result = (await tool.execute!(
@@ -145,7 +145,7 @@ describe('createQueryInventoryTool', () => {
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
 			actLineId: 'line-2',
-		actNumber: 2,
+			actNumber: 2,
 		});
 
 		const result = (await tool.execute!(
@@ -163,7 +163,7 @@ describe('createQueryInventoryTool', () => {
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
 			actLineId: 'line-2',
-		actNumber: 2,
+			actNumber: 2,
 		});
 
 		const result = (await tool.execute!(
@@ -179,7 +179,7 @@ describe('createQueryInventoryTool', () => {
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
 			actLineId: 'line-2',
-		actNumber: 2,
+			actNumber: 2,
 		});
 
 		await tool.execute!({ characterName: 'elena', itemCategory: 'skill' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
@@ -196,7 +196,7 @@ describe('createQueryInventoryTool', () => {
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
 			actLineId: 'line-2',
-		actNumber: 2,
+			actNumber: 2,
 		});
 
 		await tool.execute!({ characterName: 'elena' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
@@ -237,7 +237,7 @@ describe('createQueryInventoryTool', () => {
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
 			actLineId: 'line-2',
-		actNumber: 2,
+			actNumber: 2,
 		});
 
 		const result = (await tool.execute!(
@@ -271,7 +271,7 @@ describe('createQueryInventoryTool', () => {
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
 			actLineId: 'line-2',
-		actNumber: 2,
+			actNumber: 2,
 		});
 
 		const result = (await tool.execute!(
@@ -289,13 +289,10 @@ describe('createQueryInventoryTool', () => {
 			memory: mockMemory as Memory,
 			storyId: 'story-1',
 			actLineId: 'line-2',
-		actNumber: 2,
+			actNumber: 2,
 		});
 
-		await tool.execute!(
-			{ characterName: 'elena' },
-			{ toolCallId: 'test', messages: [], abortSignal: undefined }
-		);
+		await tool.execute!({ characterName: 'elena' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
 
 		expect(mockTraceActLineChain).toHaveBeenCalledWith('line-2');
 		expect(mockMemory.resolveAliases).toHaveBeenCalledWith('story-1', ['line-1', 'line-2'], 'elena');
@@ -310,10 +307,7 @@ describe('createQueryInventoryTool', () => {
 			actNumber: 1,
 		});
 
-		await tool.execute!(
-			{ characterName: 'elena' },
-			{ toolCallId: 'test', messages: [], abortSignal: undefined }
-		);
+		await tool.execute!({ characterName: 'elena' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
 
 		expect(mockTraceActLineChain).not.toHaveBeenCalled();
 		expect(mockMemory.resolveAliases).toHaveBeenCalledWith('story-1', ['line-1'], 'elena');

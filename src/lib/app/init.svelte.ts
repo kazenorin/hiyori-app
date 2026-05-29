@@ -15,6 +15,7 @@ import { getSettings } from '$lib/stores/settings.svelte';
 import { loadLocale } from '$lib/i18n';
 import { loadLocaleStrings } from '$lib/localization';
 import { ensureAllLocaleStringConfigs } from '$lib/fs/locale-string-loader';
+import { initFileSystem } from '$lib/fs/file-system';
 
 let initialized = false;
 let initializing = false;
@@ -24,6 +25,7 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 	initializing = true;
 
 	try {
+		await initFileSystem();
 		await initLogging();
 		const settings = getSettings();
 		await loadLocale(settings.locale || 'en');

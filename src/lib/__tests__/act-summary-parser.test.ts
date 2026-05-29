@@ -50,6 +50,7 @@ vi.mock('$lib/logging/logger', () => ({
 		warn: vi.fn(async () => {}),
 		debug: vi.fn(async () => {}),
 	},
+	fileLog: vi.fn(async () => {}),
 }));
 
 import {
@@ -560,9 +561,7 @@ Summary: The hero discovers a hidden path.
 			completedScenes: 5,
 			scenes: [],
 			characters: [],
-			characterProfiles: [
-				{ characterName: 'Elena', state: 'Wounded', goal: 'Escape', relationships: 'Distrusts Voss', voice: 'Quiet' },
-			],
+			characterProfiles: [{ characterName: 'Elena', state: 'Wounded', goal: 'Escape', relationships: 'Distrusts Voss', voice: 'Quiet' }],
 			characterProfileLastScene: 5,
 			turnOfEvents: null,
 			turnOfEventsSceneNumber: null,
@@ -577,9 +576,7 @@ Summary: The hero discovers a hidden path.
 		expect(merged.characterProfiles).toHaveLength(1);
 		expect(merged.characterProfileLastScene).toBe(5);
 	});
-
 });
-
 
 describe('parseProfilesBody', () => {
 	it('parses character profiles with all fields', () => {

@@ -1,13 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+const { mockFs } = vi.hoisted(() => {
+	const mockFs = {
+		readTextFile: vi.fn(async () => ''),
+		readTextFileIfExists: vi.fn(async () => undefined),
+		writeTextFile: vi.fn(async () => {}),
+		writeTextFileEnsuringDir: vi.fn(async () => {}),
+		mkdir: vi.fn(async () => {}),
+		exists: vi.fn(async () => false),
+		remove: vi.fn(async () => {}),
+		rename: vi.fn(async () => {}),
+		copyFile: vi.fn(async () => {}),
+		readDir: vi.fn(async () => []),
+		ensureDir: vi.fn(async () => {}),
+	};
+	return { mockFs };
+});
+
 // Mock dependencies before importing
-vi.mock('@tauri-apps/plugin-fs', () => ({
-	writeTextFile: vi.fn(async () => {}),
-	readTextFile: vi.fn(async () => ''),
-	mkdir: vi.fn(async () => {}),
-	exists: vi.fn(async () => false),
-	remove: vi.fn(async () => {}),
-	BaseDirectory: { AppData: 0 },
+vi.mock('$lib/fs/file-system', () => ({
+	getFileSystem: vi.fn(() => mockFs),
 }));
 
 vi.mock('$lib/fs/story-folders', () => ({
@@ -36,15 +48,16 @@ vi.mock('$lib/logging/logger', () => ({
 		warn: vi.fn(async () => {}),
 		debug: vi.fn(async () => {}),
 	},
+	fileLog: vi.fn(async () => {}),
 }));
 
 import { logMainChat, logWorldBuilderChat } from '$lib/logging/chat-logger';
-import { writeTextFile } from '@tauri-apps/plugin-fs';
+import { getFileSystem } from '$lib/fs/file-system';
 import { getSettings } from '$lib/stores/settings.svelte';
 import { getActiveStory } from '$lib/stores/stories.svelte';
 import type { Story } from '$lib/db/stories';
 
-const mockWriteTextFile = vi.mocked(writeTextFile);
+const mockWriteTextFile = vi.mocked(mockFs.writeTextFile);
 const mockGetSettings = vi.mocked(getSettings);
 const mockGetActiveStory = vi.mocked(getActiveStory);
 
@@ -104,7 +117,7 @@ describe('chat-logger', () => {
 				newMessages: [],
 			});
 
-			const loggedContent = mockWriteTextFile.mock.calls[0][1] as string;
+			const loggedContent = (mockWriteTextFile.mock.calls[0] as unknown as [string, string])[1];
 			expect(loggedContent).toContain('You are a GM');
 			expect(loggedContent).toContain('SYSTEM PROMPT');
 		});
@@ -118,7 +131,7 @@ describe('chat-logger', () => {
 				],
 			});
 
-			const loggedContent = mockWriteTextFile.mock.calls[0][1] as string;
+			const loggedContent = (mockWriteTextFile.mock.calls[0] as unknown as [string, string])[1];
 			expect(loggedContent).toContain('[USER]');
 			expect(loggedContent).toContain('Hello');
 			expect(loggedContent).toContain('[ASSISTANT]');
@@ -131,7 +144,7 @@ describe('chat-logger', () => {
 				newMessages: [],
 			});
 
-			const loggedContent = mockWriteTextFile.mock.calls[0][1] as string;
+			const loggedContent = (mockWriteTextFile.mock.calls[0] as unknown as [string, string])[1];
 			expect(loggedContent).toMatch(/^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]/);
 		});
 
@@ -166,7 +179,7 @@ describe('chat-logger', () => {
 				logFilename: 'worldbuilding-20260411093000.log',
 			});
 
-			expect(mockWriteTextFile).toHaveBeenCalledWith(
+			expect(mockFs.writeTextFileEnsuringDir).toHaveBeenCalledWith(
 				expect.stringContaining('logs/worldbuilding-20260411093000.log'),
 				expect.any(String),
 				expect.objectContaining({ append: true })
@@ -180,7 +193,7 @@ describe('chat-logger', () => {
 				logFilename: 'worldbuilding-test.log',
 			});
 
-			const loggedContent = mockWriteTextFile.mock.calls[0][1] as string;
+			const loggedContent = (mockFs.writeTextFileEnsuringDir.mock.calls[0] as unknown as [string, string])[1];
 			expect(loggedContent).toContain('world-builder prompt');
 			expect(loggedContent).toContain('I want dragons');
 		});

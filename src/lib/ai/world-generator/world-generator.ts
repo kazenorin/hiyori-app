@@ -6,7 +6,7 @@ import { createModel } from '$lib/ai/provider';
 import { worldTemplateLoader } from '$lib/fs/prompts';
 import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
-import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { getFileSystem } from '$lib/fs/file-system';
 import { worldContentHeader, actDescriptionHeader, characterHeader } from '$lib/definitions/common-headers';
 import {
 	worldFromChatSystemPrompt,
@@ -20,6 +20,8 @@ import {
 	ERR_NO_AT_LEAST_ONE_CONTENT,
 	ERR_NO_MESSAGES_FOR_WORLD,
 } from '$lib/definitions/error-messages';
+
+const fileFs = getFileSystem();
 
 /**
  * Trace back through the act line chain to collect the full message history.
@@ -171,7 +173,7 @@ export async function generateWorldFromCards(
 	const generatedContent = contentParts.join('');
 
 	const worldPath = `${folderName}/world.md`;
-	await writeTextFile(worldPath, generatedContent, { baseDir: BaseDirectory.AppData });
+	await fileFs.writeTextFile(worldPath, generatedContent);
 
 	return generatedContent;
 }

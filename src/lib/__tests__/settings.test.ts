@@ -13,6 +13,7 @@ vi.mock('$lib/logging/logger', () => ({
 		warn: vi.fn(async () => {}),
 		debug: vi.fn(async () => {}),
 	},
+	fileLog: vi.fn(async () => {}),
 }));
 
 // Mock uuid to return predictable values

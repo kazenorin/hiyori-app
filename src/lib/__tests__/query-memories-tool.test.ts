@@ -110,7 +110,7 @@ describe('createQueryMemoriesTool', () => {
 		}));
 		vi.doMock('$lib/db/act-lines', () => ({
 			batchResolveActLineInfo: vi.fn(async () => new Map()),
-	traceActLineChain: (actLineId: string) => mockTraceActLineChain(actLineId),
+			traceActLineChain: (actLineId: string) => mockTraceActLineChain(actLineId),
 		}));
 
 		const mod = await import('$lib/ai/tools/query-memories');

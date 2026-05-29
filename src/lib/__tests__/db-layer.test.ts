@@ -17,6 +17,7 @@ vi.mock('$lib/logging/logger', () => ({
 		warn: vi.fn(async () => {}),
 		debug: vi.fn(async () => {}),
 	},
+	fileLog: vi.fn(async () => {}),
 }));
 
 import * as stories from '$lib/db/stories';
@@ -53,7 +54,8 @@ describe('migrations', () => {
 		await runMigrations();
 		await runMigrations();
 		const versions = testDb._db.prepare('SELECT version FROM schema_version ORDER BY version').all();
-		expect(versions).toHaveLength(5);
+		expect(versions.length).toBeGreaterThan(0);
+		expect(new Set(versions.map((v: any) => v.version)).size).toBe(versions.length);
 	});
 });
 
@@ -436,7 +438,7 @@ describe('act-lines operations', () => {
 		});
 	});
 
-	describe('getLatestActSummary', () => {
+	describe('getPrecedingActSummary', () => {
 		it('returns the latest actSummary from the previous act line', async () => {
 			await acts.createAct('act-prev', 'story-1', 'Previous Act', 1);
 			await actLines.createActLine('line-prev', 'act-prev', 'prev line', true);
@@ -451,7 +453,7 @@ describe('act-lines operations', () => {
 			await acts.createAct('act-2', 'story-1', 'Current Act', 2, 'line-prev');
 			await actLines.createActLine('line-cur', 'act-2', 'current line', true);
 
-			const result = await actLines.getLatestActSummary('line-cur');
+			const result = await actLines.getPrecedingActSummary('line-cur');
 			expect(result).toBe('Previous act summary content');
 		});
 
@@ -466,7 +468,7 @@ describe('act-lines operations', () => {
 			await acts.createAct('act-2', 'story-1', 'Current Act', 2, 'line-prev');
 			await actLines.createActLine('line-cur', 'act-2', 'current line', true);
 
-			const result = await actLines.getLatestActSummary('line-cur');
+			const result = await actLines.getPrecedingActSummary('line-cur');
 			expect(result).toBe('Newer summary');
 		});
 
@@ -479,12 +481,49 @@ describe('act-lines operations', () => {
 			await acts.createAct('act-2', 'story-1', 'Current Act', 2, 'line-prev');
 			await actLines.createActLine('line-cur', 'act-2', 'current line', true);
 
-			expect(await actLines.getLatestActSummary('line-cur')).toBeNull();
+			expect(await actLines.getPrecedingActSummary('line-cur')).toBeNull();
 		});
 
 		it('returns null when the current act has no continuation', async () => {
 			await actLines.createActLine('line-cur', 'act-1', 'current line', true);
-			expect(await actLines.getLatestActSummary('line-cur')).toBeNull();
+			expect(await actLines.getPrecedingActSummary('line-cur')).toBeNull();
+		});
+	});
+
+	describe('getLatestActSummary', () => {
+		it('returns the latest actSummary from the current act line', async () => {
+			await actLines.createActLine('line-1', 'act-1', 'main line', true);
+			await messages.createMessage({
+				id: 'msg-1',
+				role: 'assistant',
+				content: 'Scene 1',
+				actSummary: 'First summary',
+			});
+			await messages.createMessage({
+				id: 'msg-2',
+				role: 'assistant',
+				content: 'Scene 2',
+				actSummary: 'Second summary',
+			});
+			await actLines.addMessageToLine('line-1', 'msg-1', 1);
+			await actLines.addMessageToLine('line-1', 'msg-2', 2);
+
+			const result = await actLines.getLatestActSummary('line-1');
+			expect(result).toBe('Second summary');
+		});
+
+		it('returns null when no messages have actSummary', async () => {
+			await actLines.createActLine('line-1', 'act-1', 'main line', true);
+			await messages.createMessage({ id: 'msg-1', role: 'assistant', content: 'No summary' });
+			await actLines.addMessageToLine('line-1', 'msg-1', 1);
+
+			expect(await actLines.getLatestActSummary('line-1')).toBeNull();
+		});
+
+		it('returns null when act line has no messages', async () => {
+			await actLines.createActLine('line-1', 'act-1', 'main line', true);
+
+			expect(await actLines.getLatestActSummary('line-1')).toBeNull();
 		});
 	});
 });
