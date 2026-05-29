@@ -1,4 +1,4 @@
-import { fetch } from '@tauri-apps/plugin-http';
+import { fetch } from '$lib/http/fetch';
 import type { Provider } from '$lib/stores/settings.svelte';
 
 export interface ModelInfo {
@@ -38,9 +38,7 @@ export async function fetchModels(settings: { baseURL: string; apiKey: string; p
 			throw new Error('Invalid response format from models API');
 		}
 
-		return Array.from(
-			new Map((data.data as ModelInfo[]).map((item) => [item.id, item])).values()
-		).sort((a, b) => a.id.localeCompare(b.id));
+		return Array.from(new Map((data.data as ModelInfo[]).map((item) => [item.id, item])).values()).sort((a, b) => a.id.localeCompare(b.id));
 	} finally {
 		clearTimeout(timeoutId);
 	}

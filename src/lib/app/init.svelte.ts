@@ -16,6 +16,7 @@ import { loadLocale } from '$lib/i18n';
 import { loadLocaleStrings } from '$lib/localization';
 import { ensureAllLocaleStringConfigs } from '$lib/fs/locale-string-loader';
 import { initFileSystem } from '$lib/fs/file-system';
+import { initHttpClient } from '$lib/http/fetch';
 
 let initialized = false;
 let initializing = false;
@@ -27,6 +28,7 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 	try {
 		await initFileSystem();
 		await initLogging();
+		initHttpClient();
 		const settings = getSettings();
 		await loadLocale(settings.locale || 'en');
 		try {
