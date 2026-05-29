@@ -1,45 +1,71 @@
-import { attachConsole, debug as tauriDebug, error as tauriError, info as tauriInfo, warn as tauriWarn } from '@tauri-apps/plugin-log';
+import { isTauri } from '@tauri-apps/api/core';
+import * as tauriLog from '@tauri-apps/plugin-log';
 import { getFileSystem } from '$lib/fs/file-system';
 import { kebabCase } from 'lodash-es';
 import { getSettings, LOG_LEVEL_VALUES, type LogLevel } from '$lib/stores/settings.svelte';
 
 const fileFs = getFileSystem();
 
-let attached = false;
-
-/**
- * Attach Tauri log output to the browser DevTools console.
- * Call once during app initialization.
- */
-export async function initLogging(): Promise<void> {
-	if (!attached) {
-		await attachConsole();
-		attached = true;
+function checkIsTauri() {
+	try {
+		return isTauri();
+	} catch {
+		return false;
 	}
 }
 
-function safeLog(fn: (msg: string) => Promise<void>, level: string, msg: string): Promise<void> {
-	return fn(msg).catch(() => {
-		console.log(`[${level}] ${msg}`);
-	});
+let logInfo = (msg: string) => logWeb('info', msg);
+let logError = (msg: string) => logWeb('error', msg);
+let logWarn = (msg: string) => logWeb('warn', msg);
+let logDebug = (msg: string) => logWeb('debug', msg);
+
+/**
+ * Attach Tauri log output to the browser DevTools console.
+ * Call once during app initialization. No-op in web environments.
+ */
+export async function initLogging(): Promise<void> {
+	if (checkIsTauri()) {
+		await tauriLog.attachConsole();
+		logInfo = (msg: string) => tauriLog.info(msg);
+		logError = (msg: string) => tauriLog.error(msg);
+		logWarn = (msg: string) => tauriLog.warn(msg);
+		logDebug = (msg: string) => tauriLog.debug(msg);
+	}
+}
+
+function writeToConsole(level: string, msg: string): Promise<void> {
+	const fns: Record<string, (m: string) => void> = { error: console.error, warn: console.warn, info: console.info, debug: console.debug };
+	fns[level]?.(msg);
+	return Promise.resolve();
+}
+
+async function logWeb(level: string, message: string): Promise<void> {
+	// noinspection ES6MissingAwait
+	writeToConsole(level, message);
+
+	return await fileFs
+		.writeTextFileEnsuringDir(`logs/app.log`, `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${message}\n`, {
+			append: true,
+		})
+		.catch(() => {});
 }
 
 export const log = {
 	info(context: string, message: string): Promise<void> {
-		return safeLog(tauriInfo, 'info', `[${context}] ${message}`);
+		return logInfo(`[${context}] ${message}`);
 	},
 
 	error(context: string, message: string, err?: unknown): Promise<void> {
 		const detail = `${message}: ${parseErrorMessage(err)}`;
-		return safeLog(tauriError, 'error', `[${context}] ${detail}`);
+		return logError(`[${context}] ${detail}`);
 	},
 
 	warn(context: string, message: string): Promise<void> {
-		return safeLog(tauriWarn, 'warn', `[${context}] ${message}`);
+		return logWarn(`[${context}] ${message}`);
 	},
 
 	debug(context: string, message: string): Promise<void> {
-		return safeLog(tauriDebug, 'debug', `[${context}] ${message}`);
+		return logDebug(`[${context}] ${message}`);
 	},
 };
 
