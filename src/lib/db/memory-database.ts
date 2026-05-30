@@ -1,4 +1,5 @@
-import Database from '@tauri-apps/plugin-sql';
+import { TauriDatabase } from './adapters/tauri-database';
+import type { Database } from './types';
 import { ERR_MEMORY_DB_NOT_INITIALIZED } from '$lib/definitions/error-messages';
 
 let memoryDb: Database | null = null;
@@ -6,7 +7,7 @@ let memoryDb: Database | null = null;
 export async function initMemoryDatabase(): Promise<Database> {
 	if (memoryDb) return memoryDb;
 
-	memoryDb = await Database.load('sqlite:byoa-memory.db');
+	memoryDb = await TauriDatabase.create('sqlite:byoa-memory.db');
 	return memoryDb;
 }
 

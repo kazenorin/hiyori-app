@@ -16,7 +16,7 @@ vi.mock('$lib/logging/logger', () => ({
 }));
 
 const mockDb = {
-	execute: vi.fn(async () => ({ rows: [] })),
+	execute: vi.fn(async () => ({ rowsAffected: 0 })),
 	select: vi.fn(async () => []),
 };
 
@@ -26,7 +26,7 @@ vi.mock('$lib/db/database', () => ({
 
 vi.mock('$lib/db/memory-database', () => ({
 	getMemoryDatabase: () => ({
-		execute: vi.fn(async () => ({ rows: [] })),
+		execute: vi.fn(async () => ({ rowsAffected: 0 })),
 		select: vi.fn(async () => []),
 	}),
 }));
@@ -96,7 +96,7 @@ describe('createQueryMemoriesTool', () => {
 		vi.doMock('$lib/db/database', () => ({ getDatabase: () => mockDb }));
 		vi.doMock('$lib/db/memory-database', () => ({
 			getMemoryDatabase: () => ({
-				execute: vi.fn(async () => ({ rows: [] })),
+				execute: vi.fn(async () => ({ rowsAffected: 0 })),
 				select: vi.fn(async () => []),
 			}),
 		}));

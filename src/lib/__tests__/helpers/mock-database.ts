@@ -1,73 +1,67 @@
 import { vi } from 'vitest';
+import type { Database, QueryResult } from '$lib/db/types';
 
-/**
- * In-memory mock for @tauri-apps/plugin-sql Database.
- * Stores tables as Map<string, Map<string, any[]>> where the outer key is the table name.
- */
-export function createMockDatabase() {
+export function createMockDatabase(): Database & {
+	getTables: () => Map<string, any[]>;
+	seed: (tableName: string, rows: any[]) => void;
+	clear: () => void;
+} {
 	const tables = new Map<string, any[]>();
 
 	return {
-		execute: vi.fn(async (query: string, params?: (string | number | boolean | null | undefined)[]) => {
+		execute: vi.fn(async (query: string, params?: unknown[]): Promise<QueryResult> => {
 			const normalized = query.trim().toUpperCase();
 
-			// SELECT
 			if (normalized.startsWith('SELECT')) {
-				return { rows: select(query, params) };
+				return { rowsAffected: 0 };
 			}
 
-			// INSERT
 			if (normalized.startsWith('INSERT')) {
 				insert(query, params);
-				return { rows: [] };
+				return { rowsAffected: 1, lastInsertId: undefined };
 			}
 
-			// UPDATE
 			if (normalized.startsWith('UPDATE')) {
-				update(query, params);
-				return { rows: [] };
+				const count = update(query, params);
+				return { rowsAffected: count };
 			}
 
-			// DELETE
 			if (normalized.startsWith('DELETE')) {
-				deleteRows(query, params);
-				return { rows: [] };
+				const count = deleteRows(query, params);
+				return { rowsAffected: count };
 			}
 
-			// CREATE TABLE, etc.
 			if (normalized.startsWith('CREATE') || normalized.startsWith('ALTER') || normalized.startsWith('DROP')) {
-				return { rows: [] };
+				return { rowsAffected: 0 };
 			}
 
-			return { rows: [] };
+			return { rowsAffected: 0 };
 		}),
 
-		select: vi.fn(async (query: string, params?: (string | number | boolean | null | undefined)[]) => {
+		select: vi.fn(async (query: string, params?: unknown[]) => {
 			return select(query, params);
-		}),
+		}) as unknown as Database['select'],
+
+		close: vi.fn(() => {}),
 
 		getTables: () => tables,
 
-		/** Seed a table with rows for testing. */
 		seed(tableName: string, rows: any[]) {
 			tables.set(tableName, [...rows]);
 		},
 
-		/** Clear all tables. */
 		clear() {
 			tables.clear();
 		},
 	};
 
-	function select(query: string, params?: (string | number | boolean | null | undefined)[]) {
-		// Extract table name from simple SELECT queries
+	function select(query: string, params?: unknown[]) {
 		const fromMatch = query.match(/FROM\s+(\w+)/i);
 		if (!fromMatch) return [];
 
 		const tableName = fromMatch[1];
 		const rows = tables.get(tableName) ?? [];
 
-		// Extract WHERE column = $N
 		const whereMatch = query.match(/WHERE\s+(\w+)\s*=\s*\$(\d+)/i);
 		if (whereMatch && params) {
 			const col = whereMatch[1];
@@ -76,7 +70,6 @@ export function createMockDatabase() {
 			return rows.filter((r) => r[col] === value);
 		}
 
-		// MAX(col) aggregate
 		const maxMatch = query.match(/MAX\((\w+)\)/i);
 		if (maxMatch) {
 			const col = maxMatch[1];
@@ -85,7 +78,6 @@ export function createMockDatabase() {
 			return [{ [`MAX(${col})`]: maxVal }];
 		}
 
-		// ORDER BY
 		if (query.match(/ORDER BY/i)) {
 			const orderMatch = query.match(/ORDER BY\s+(\w+)\s*(ASC|DESC)?/i);
 			if (orderMatch) {
@@ -103,7 +95,7 @@ export function createMockDatabase() {
 		return [...rows];
 	}
 
-	function insert(query: string, params?: (string | number | boolean | null | undefined)[]) {
+	function insert(query: string, params?: unknown[]) {
 		const intoMatch = query.match(/INTO\s+(\w+)/i);
 		if (!intoMatch || !params) return;
 
@@ -112,11 +104,10 @@ export function createMockDatabase() {
 			tables.set(tableName, []);
 		}
 
-		// Extract column names from INSERT INTO table (col1, col2, ...)
 		const colsMatch = query.match(/\(([^)]+)\)/);
 		if (colsMatch) {
 			const cols = colsMatch[1].split(',').map((c) => c.trim());
-			const row: Record<string, any> = {};
+			const row: Record<string, unknown> = {};
 			cols.forEach((col, i) => {
 				row[col] = params[i] ?? null;
 			});
@@ -124,15 +115,15 @@ export function createMockDatabase() {
 		}
 	}
 
-	function update(query: string, params?: (string | number | boolean | null | undefined)[]) {
+	function update(query: string, params?: unknown[]): number {
 		const tableMatch = query.match(/UPDATE\s+(\w+)/i);
-		if (!tableMatch || !params) return;
+		if (!tableMatch || !params) return 0;
 
 		const tableName = tableMatch[1];
 		const rows = tables.get(tableName);
-		if (!rows) return;
+		if (!rows) return 0;
 
-		// Extract SET col1 = $N, col2 = $N
+		let count = 0;
 		const setMatch = query.match(/SET\s+(.+?)(?:\s+WHERE|$)/is);
 		const whereMatch = query.match(/WHERE\s+(\w+)\s*=\s*\$(\d+)/i);
 
@@ -153,27 +144,32 @@ export function createMockDatabase() {
 				assignments.forEach(({ col, paramIdx }) => {
 					row[col] = params[paramIdx];
 				});
+				count++;
 			});
 		}
+		return count;
 	}
 
-	function deleteRows(query: string, params?: (string | number | boolean | null | undefined)[]) {
+	function deleteRows(query: string, params?: unknown[]): number {
 		const fromMatch = query.match(/FROM\s+(\w+)/i);
-		if (!fromMatch || !params) return;
+		if (!fromMatch || !params) return 0;
 
 		const tableName = fromMatch[1];
 		const rows = tables.get(tableName);
-		if (!rows) return;
+		if (!rows) return 0;
 
 		const whereMatch = query.match(/WHERE\s+(\w+)\s*=\s*\$(\d+)/i);
 		if (whereMatch) {
 			const col = whereMatch[1];
 			const paramIdx = parseInt(whereMatch[2]) - 1;
 			const value = params[paramIdx];
+			const before = rows.length;
 			const filtered = rows.filter((r) => r[col] !== value);
 			tables.set(tableName, filtered);
-		} else {
-			tables.set(tableName, []);
+			return before - filtered.length;
 		}
+		const before = rows.length;
+		tables.set(tableName, []);
+		return before;
 	}
 }

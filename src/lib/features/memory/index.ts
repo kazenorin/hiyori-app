@@ -1,5 +1,5 @@
 import { embed, embedMany } from 'ai';
-import Database from '@tauri-apps/plugin-sql';
+import type { Database } from '$lib/db/types';
 import { getMemoryDatabase } from '$lib/db/memory-database';
 import { createEmbeddingModel } from '$lib/ai/provider';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
@@ -511,9 +511,7 @@ export class Memory {
 
 		const hasLocations = locations && locations.length > 0;
 		const locationStartParam = actLineId ? 5 : 4;
-		const locationPlaceholders = hasLocations
-			? locations!.map((_, i) => `$${locationStartParam + i}`).join(', ')
-			: null;
+		const locationPlaceholders = hasLocations ? locations!.map((_, i) => `$${locationStartParam + i}`).join(', ') : null;
 
 		const whereClauses: string[] = ['embedding MATCH $1', 'k = $2', 'story_id = $3'];
 		const params: unknown[] = [JSON.stringify(embedding), limit, storyId];
@@ -579,9 +577,7 @@ export class Memory {
 		const sql = hasActLineFilter
 			? `SELECT id, content, message_id, story_id, act_line_id, character_canonical_name, location, created_at FROM memory_meta WHERE story_id = $1 AND act_line_id IN (${inPlaceholders}) ORDER BY created_at DESC`
 			: 'SELECT id, content, message_id, story_id, act_line_id, character_canonical_name, location, created_at FROM memory_meta WHERE story_id = $1 ORDER BY created_at DESC';
-		const params = hasActLineFilter
-			? [options.storyId, ...options.actLineIds]
-			: [options.storyId];
+		const params = hasActLineFilter ? [options.storyId, ...options.actLineIds] : [options.storyId];
 
 		const rows = await db.select<MemoryMetaRow[]>(sql, params);
 
@@ -629,9 +625,7 @@ export class Memory {
 		const sql = hasActLineFilter
 			? `SELECT id, location_text, message_id, story_id, act_line_id, created_at FROM location_meta WHERE story_id = $1 AND act_line_id IN (${inPlaceholders}) ORDER BY created_at DESC`
 			: 'SELECT id, location_text, message_id, story_id, act_line_id, created_at FROM location_meta WHERE story_id = $1 ORDER BY created_at DESC';
-		const params = hasActLineFilter
-			? [options.storyId, ...options.actLineIds]
-			: [options.storyId];
+		const params = hasActLineFilter ? [options.storyId, ...options.actLineIds] : [options.storyId];
 
 		const rows = await db.select<LocationMetaRow[]>(sql, params);
 
@@ -655,9 +649,7 @@ export class Memory {
 
 		const hasActLineFilter = actLineIds.length > 0;
 
-		const actLineJoin = hasActLineFilter
-			? `AND l.act_line_id IN (${actLineIds.map((_, i) => `$${i + 4}`).join(', ')})`
-			: '';
+		const actLineJoin = hasActLineFilter ? `AND l.act_line_id IN (${actLineIds.map((_, i) => `$${i + 4}`).join(', ')})` : '';
 
 		const sql = `
 			SELECT l.id, l.location_text, l.message_id, l.story_id, l.act_line_id, l.created_at, sub.distance
@@ -1069,7 +1061,10 @@ export class Memory {
 		return [...byKey.values()];
 	}
 
-	async getInventoryChanges(characterCanonicalName: string, options: { storyId: string; actLineIds: string[] }): Promise<InventoryChange[]> {
+	async getInventoryChanges(
+		characterCanonicalName: string,
+		options: { storyId: string; actLineIds: string[] }
+	): Promise<InventoryChange[]> {
 		const db = getMemoryDatabase();
 		const inPlaceholders = options.actLineIds.map((_, i) => `$${i + 2}`).join(', ');
 		const charParam = options.actLineIds.length + 2;

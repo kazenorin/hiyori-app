@@ -15,7 +15,7 @@ vi.mock('$lib/logging/logger', () => ({
 }));
 
 const mockDb = {
-	execute: vi.fn(async () => ({ rows: [] })),
+	execute: vi.fn(async () => ({ rowsAffected: 0 })),
 	select: vi.fn(async () => []),
 };
 

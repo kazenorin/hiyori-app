@@ -1,4 +1,4 @@
-import Database from '@tauri-apps/plugin-sql';
+import type { Database } from './types';
 import { getDatabase } from './database';
 import type { Message } from './messages';
 import { cloneMessage, mapRowToMessage, type MessageRow } from './messages';

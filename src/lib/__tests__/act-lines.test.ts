@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Shared mock state
 let mockDbSelectResults: unknown[] = [];
 const mockDb = {
-	execute: vi.fn(async () => ({ rows: [] })),
+	execute: vi.fn(async () => ({ rowsAffected: 0 })),
 	select: vi.fn(async (_query: string, _params?: unknown[]) => {
 		if (mockDbSelectResults.length > 0) {
 			return mockDbSelectResults.shift();

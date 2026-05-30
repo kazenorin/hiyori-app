@@ -9,7 +9,7 @@ let mockDbSelectResults: unknown[] = [];
 const mockDb = {
 	execute: vi.fn(async (query: string, params?: unknown[]) => {
 		mockDbExecuteCalls.push([query, params ?? []]);
-		return { rows: [] };
+		return { rowsAffected: 0 };
 	}),
 	select: vi.fn(async (query: string, params?: unknown[]) => {
 		mockDbSelectCalls.push([query, params ?? []]);
