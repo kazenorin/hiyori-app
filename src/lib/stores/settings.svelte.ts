@@ -48,6 +48,7 @@ export interface Settings {
 	characterProfileCompressorInterval: number;
 	defaultPlotMode: 'guidance' | 'phaseEvent';
 	reevaluationFrequency: number;
+	wispProxyUrl: string;
 }
 
 const STORAGE_KEY = 'byoa-settings';
@@ -77,6 +78,7 @@ const defaults: Settings = {
 	characterProfileCompressorInterval: 5, // scenes between compressor runs; 0 = disabled
 	defaultPlotMode: 'phaseEvent',
 	reevaluationFrequency: 10,
+	wispProxyUrl: '',
 };
 
 /**
@@ -316,6 +318,7 @@ export async function updateSettings(
 			| 'characterProfileCompressorInterval'
 			| 'defaultPlotMode'
 			| 'reevaluationFrequency'
+			| 'wispProxyUrl'
 		>
 	>
 ): Promise<void> {
@@ -346,6 +349,7 @@ export async function updateSettings(
 		settings.characterProfileCompressorInterval = partial.characterProfileCompressorInterval;
 	if (partial.defaultPlotMode !== undefined) settings.defaultPlotMode = partial.defaultPlotMode;
 	if (partial.reevaluationFrequency !== undefined) settings.reevaluationFrequency = partial.reevaluationFrequency;
+	if (partial.wispProxyUrl !== undefined) settings.wispProxyUrl = partial.wispProxyUrl;
 	persist();
 
 	// Apply font size preference when fontSize changes

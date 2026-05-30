@@ -18,6 +18,7 @@
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
 	import { exportDatabase, importDatabase, downloadExport, readFileAsUint8Array, isBinaryFormat } from '$lib/db/data-portability';
 	import { isTauriSync } from '$lib/runtime';
+	import { initHttpClient } from '$lib/http/fetch';
 
 	// Editing state
 	let editingId = $state<string | null>(null);
@@ -779,6 +780,26 @@
 				<ThemedSelect items={logLevelItems} value={settings.logLevel} onValueChange={(v) => updateSettings({ logLevel: v as LogLevel })} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.logLevelDescription')}</span>
 			</label>
+
+			{#if !isTauriSync()}
+				<label class="block">
+					<span class="text-sm font-medium text-surface-700-300">Wisp Proxy URL</span>
+					<input
+						type="url"
+						class="input"
+						placeholder="wss://example.com/ws/"
+						value={settings.wispProxyUrl}
+						onchange={(e) => {
+							updateSettings({ wispProxyUrl: e.currentTarget.value });
+							initHttpClient();
+						}}
+					/>
+					<span class="text-xs text-surface-500 mt-1 block">
+						Required for CORS bypass in web mode. Connects to a Wisp proxy server (e.g. wisp-server-python) to route API requests without
+						browser CORS restrictions. Saved automatically; reload the page to apply.
+					</span>
+				</label>
+			{/if}
 		</section>
 	</div>
 </div>

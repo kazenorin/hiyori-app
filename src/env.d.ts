@@ -10,3 +10,18 @@ declare module 'virtual:pwa-register' {
 	}
 	export function registerSW(options?: RegisterSWOptions): (reloadPage?: boolean) => Promise<void>;
 }
+declare module 'libcurl.js' {
+	interface LibcurlFetchOptions extends RequestInit {
+		_libcurl_verbose?: number;
+		_libcurl_http_version?: number;
+		proxy?: string;
+	}
+	interface Libcurl {
+		fetch: typeof globalThis.fetch;
+		load_wasm: (url: string) => Promise<void>;
+		set_websocket: (url: string) => void;
+		ready: boolean;
+		version: { lib: string; [key: string]: string };
+	}
+	export const libcurl: Libcurl;
+}
