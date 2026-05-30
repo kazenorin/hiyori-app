@@ -49,5 +49,9 @@ export function createTestDatabase(): Database & { _db: BetterSqlite3.Database }
 		close() {
 			db.close();
 		},
+
+		async flush(): Promise<void> {
+			// No-op: better-sqlite3 writes through immediately
+		},
 	};
 }

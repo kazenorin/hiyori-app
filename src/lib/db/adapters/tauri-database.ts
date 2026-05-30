@@ -21,6 +21,10 @@ export class TauriDatabase implements IDatabase {
 		return this.db.execute(query, bindValues);
 	}
 
+	async flush(): Promise<void> {
+		// Tauri's SQLite plugin writes through immediately; no buffering.
+	}
+
 	close(): void {
 		this.db.close();
 	}

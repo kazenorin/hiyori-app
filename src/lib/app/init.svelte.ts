@@ -1,6 +1,6 @@
-import { initDatabase } from '$lib/db/database';
+import { initDatabase, getDatabase } from '$lib/db/database';
 import { runMigrations } from '$lib/db/migrations';
-import { initMemoryDatabase } from '$lib/db/memory-database';
+import { initMemoryDatabase, getMemoryDatabase } from '$lib/db/memory-database';
 import { runMemoryMigrations } from '$lib/db/memory-migrations';
 import { loadStories, restoreState } from '$lib/stores/stories.svelte';
 import {
@@ -49,6 +49,17 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 		onStatus?.('Initializing memory database...');
 		await initMemoryDatabase();
 		await runMemoryMigrations();
+
+		if (typeof window !== 'undefined') {
+			window.addEventListener('beforeunload', () => {
+				getDatabase()
+					.flush()
+					.catch(() => {});
+				getMemoryDatabase()
+					.flush()
+					.catch(() => {});
+			});
+		}
 
 		await log.info('init', 'Ensuring base configs...');
 		onStatus?.('Ensuring base configs...');

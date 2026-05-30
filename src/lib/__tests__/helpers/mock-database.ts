@@ -44,6 +44,8 @@ export function createMockDatabase(): Database & {
 
 		close: vi.fn(() => {}),
 
+		flush: vi.fn(async () => {}),
+
 		getTables: () => tables,
 
 		seed(tableName: string, rows: any[]) {

@@ -67,9 +67,6 @@ export class SqlJsDatabase implements IDatabase {
 	}
 
 	close(): void {
-		this.flush().catch((err: unknown) => {
-			console.error('[SqlJsDatabase] Flush on close failed:', err);
-		});
 		this.db.close();
 	}
 
