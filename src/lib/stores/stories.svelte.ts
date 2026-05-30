@@ -11,12 +11,8 @@ import { Memory } from '$lib/features/memory';
 import { getDefaultPlotMode, getMemoryProviderConfig, isMemoryAvailable, settings } from '$lib/stores/settings.svelte';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { deriveStoryName, ensureWorldFile, renameStoryFolder, resolveStoryFolder } from '$lib/fs/story-folders';
-import { getFileSystem } from '$lib/fs/file-system';
+import { fs } from '$lib/fs/file-system';
 import * as dbStoryFolders from '$lib/db/story-folders';
-
-function fs() {
-	return getFileSystem();
-}
 import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, getLineDir, resolveLineSubdir } from '$lib/ai/card-output-path';
 import { type ActPlotPhase } from '$lib/ai/act-plot';
 import type { PlotMode } from '$lib/ai/narrative-types';
@@ -255,7 +251,7 @@ export async function renameActLine(id: string, newName: string): Promise<void> 
 			if (oldSubdir) {
 				const newSubdir = computeLineSubdir(false, id, buildLineSubdirSuffix(newName));
 				if (oldSubdir !== newSubdir) {
-					await fs().rename(`${actDir}/${oldSubdir}`, `${actDir}/${newSubdir}`);
+					await fs.rename(`${actDir}/${oldSubdir}`, `${actDir}/${newSubdir}`);
 				}
 			}
 		} catch (err) {
@@ -271,7 +267,7 @@ export async function deleteStory(id: string, removeFolder: boolean = false): Pr
 		const folderName = await dbStoryFolders.getStoryFolder(id);
 		if (folderName) {
 			try {
-				await fs().remove(folderName);
+				await fs.remove(folderName);
 			} catch {
 				// Folder may already be gone
 			}
@@ -317,7 +313,7 @@ export async function deleteActLine(id: string, removeFolder: boolean = false): 
 		try {
 			const storyFolder = await resolveStoryFolder(storyId, storyName);
 			const lineDir = await getLineDir(storyFolder, act.actNumber, line.isMainLine, line.id);
-			await fs().remove(lineDir);
+			await fs.remove(lineDir);
 		} catch (err) {
 			await log.error('delete-act-line', 'Failed to remove line folder', err);
 		}
@@ -416,9 +412,9 @@ async function copyActPlotForFork(fromLineId: string, toLineId: string): Promise
 		const fromPath = `${fromDir}/act-plot.md`;
 		const toPath = `${toDir}/act-plot.md`;
 
-		if (await fs().exists(fromPath)) {
-			await fs().mkdir(toDir);
-			await fs().copyFile(fromPath, toPath);
+		if (await fs.exists(fromPath)) {
+			await fs.mkdir(toDir);
+			await fs.copyFile(fromPath, toPath);
 		}
 	} catch (err) {
 		await log.error('fork', 'Failed to copy act-plot for fork', err);
@@ -456,7 +452,7 @@ export async function forkActLineForInterview(
 		const storyFolder = await resolveStoryFolder(storyId, storyName);
 		if (act && storyFolder) {
 			const lineDir = buildLineDir(storyFolder, act.actNumber, false, lineMeta.id, buildLineSubdirSuffix(name));
-			await fs().mkdir(lineDir);
+			await fs.mkdir(lineDir);
 		}
 	}
 
@@ -532,7 +528,7 @@ export async function createStoryFromWorldBuilder(name: string, worldContent: st
 	const effectiveName = deriveStoryName(story.name, story.id);
 	const folderName = await resolveStoryFolder(story.id, effectiveName);
 	const worldPath = `${folderName}/world.md`;
-	await fs().writeTextFile(worldPath, worldContent);
+	await fs.writeTextFile(worldPath, worldContent);
 
 	// Move world builder log from AppData/logs/ to story folder
 	const logFile = getLogFilePath();

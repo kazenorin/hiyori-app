@@ -7,7 +7,7 @@ import { getDefaultPlotMode, settings } from '$lib/stores/settings.svelte';
 import { createMessage, deleteMessage } from '$lib/db/messages';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { deleteStoryFolder } from '$lib/db/story-folders';
-import { getFileSystem } from '$lib/fs/file-system';
+import { fs } from '$lib/fs/file-system';
 import { loadStories } from '$lib/stores/stories.svelte';
 import { kebabCase } from 'lodash-es';
 import type {
@@ -40,10 +40,6 @@ import {
 import { nameLabel } from '$lib/definitions/common-labels';
 import { type OutputDescriptor, parseContent } from '$lib/utils/chat-stream-parser';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
-
-function fileFs() {
-	return getFileSystem();
-}
 
 // === Progress Callback Type ===
 
@@ -97,7 +93,7 @@ export async function prepareImport(formData: ImportFormData, onProgress: Progre
 		if (formData.worldFile) {
 			worldContent = await formData.worldFile.text();
 			const worldPath = `${storyFolder}/world.md`;
-			await fileFs().writeTextFileEnsuringDir(worldPath, worldContent);
+			await fs.writeTextFileEnsuringDir(worldPath, worldContent);
 			log(`World file saved: ${formData.worldFile.name}`);
 		}
 
@@ -531,14 +527,14 @@ async function saveCharacterCards(
 		usedNames.add(canonicalName);
 
 		const filePath = `${charactersDir}/${canonicalName}.md`;
-		await fileFs().writeTextFileEnsuringDir(filePath, card.content);
+		await fs.writeTextFileEnsuringDir(filePath, card.content);
 		log(`Character card saved: ${canonicalName}.md`);
 	}
 }
 
 async function saveActCard(storyFolder: string, actNumber: number, content: string): Promise<void> {
 	const filePath = `${storyFolder}/act-${actNumber}/act-card.md`;
-	await fileFs().writeTextFileEnsuringDir(filePath, content);
+	await fs.writeTextFileEnsuringDir(filePath, content);
 }
 
 function extractCharacterName(content: string): string | null {

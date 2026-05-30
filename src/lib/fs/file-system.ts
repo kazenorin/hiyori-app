@@ -1,5 +1,4 @@
 import { checkIsTauri } from '$lib/runtime';
-import { InMemoryFileSystem } from './file-system-in-memory';
 
 export interface DirEntry {
 	name: string;
@@ -50,6 +49,18 @@ export function getFileSystem(): FileSystem {
 	}
 	return backend;
 }
+
+/**
+ * Lazy proxy that delegates every property access to the current backend.
+ * Safe to use at module level — calls getFileSystem() at actual-use time.
+ */
+export const fs: FileSystem = new Proxy({} as FileSystem, {
+	get(_, prop) {
+		const target = getFileSystem();
+		const value = Reflect.get(target, prop);
+		return typeof value === 'function' ? value.bind(target) : value;
+	},
+});
 
 /**
  * Asynchronously initialize the file system backend.

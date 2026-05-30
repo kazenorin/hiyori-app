@@ -6,16 +6,12 @@ import { getActLine, getMessagesForLine } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
 import { ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-folders';
 import { getActiveActLineId } from '$lib/stores/stories.svelte';
-import { getFileSystem } from '$lib/fs/file-system';
+import { fs } from '$lib/fs/file-system';
 import { getLineDir } from '$lib/ai/card-output-path';
 import { logActCardActivity } from '$lib/logging/chat-logger';
 import { type RetryConfig, streamWithRetry } from '$lib/ai/chat-stream';
 import type { StreamState } from '$lib/ai/chat-callbacks';
 import { actCardExtractionPrompt, actCardSystemPrompt, actCardTranscriptEnd, actCardTranscriptStart, worldContextLabel } from './prompts';
-
-function fileFs() {
-	return getFileSystem();
-}
 import {
 	ERR_ACT_NOT_FOUND,
 	ERR_NO_ACT_LINE_SELECTED,
@@ -93,7 +89,7 @@ async function resolveAndWrite(ctx: ActCardContext, content: string): Promise<st
 	const lineDir = await getLineDir(storyFolder, ctx.actNumber, ctx.isMainLine, ctx.actLineId);
 	const filePath = `${lineDir}/act-card.md`;
 
-	await fileFs().writeTextFileEnsuringDir(filePath, content);
+	await fs.writeTextFileEnsuringDir(filePath, content);
 
 	return filePath;
 }

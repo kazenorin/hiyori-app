@@ -1,14 +1,10 @@
 import { type ActPlotPhase, generateActPlot } from '$lib/ai/act-plot/act-plot-generator';
 import { getLineDir } from '$lib/ai/card-output-path';
 import { ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-folders';
-import { getFileSystem } from '$lib/fs/file-system';
+import { fs } from '$lib/fs/file-system';
 import type { EnsureActPlotParams } from '$lib/ai/act-plot/types';
 import { log } from '$lib/logging/logger';
 import * as dbActs from '$lib/db/acts';
-
-function fileFs() {
-	return getFileSystem();
-}
 
 export type { ActPlotPhase };
 
@@ -28,9 +24,9 @@ export async function ensureActPlot(params: EnsureActPlotParams): Promise<string
 	const storyFolder = await resolveStoryFolder(story.id, story.name);
 	const lineDir = await getLineDir(storyFolder, actNumber, actLine.isMainLine, actLine.id);
 	const plotPath = `${lineDir}/${ACT_PLOT_FILENAME}`;
-	const plotExists = await fileFs().exists(plotPath);
+	const plotExists = await fs.exists(plotPath);
 	if (plotExists) {
-		return await fileFs().readTextFile(plotPath);
+		return await fs.readTextFile(plotPath);
 	} else {
 		// Generate act plot if it doesn't exist yet
 
@@ -51,7 +47,7 @@ export async function ensureActPlot(params: EnsureActPlotParams): Promise<string
 
 		// Write output file
 
-		await fileFs().writeTextFileEnsuringDir(plotPath, result);
+		await fs.writeTextFileEnsuringDir(plotPath, result);
 
 		await log.info(LOG_TAG, `Act-plot pipeline complete for actLine: ${actLine.id.slice(-8)} of story: ${story.id}`);
 

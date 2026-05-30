@@ -1,10 +1,6 @@
-import { getFileSystem } from '$lib/fs/file-system';
+import { fs } from '$lib/fs/file-system';
 import yaml from 'js-yaml';
 import { log } from '$lib/logging/logger';
-
-function fs() {
-	return getFileSystem();
-}
 
 const LOCALE_STRINGS_FILENAME = 'locale-strings.yaml';
 
@@ -42,16 +38,16 @@ export function registerLocaleStringDefaults(entries: LocaleStringBundle[]): voi
 
 async function ensureBaseFileExists(baseDir: string, fileName: string, defaultContent: string): Promise<void> {
 	const fullPath = `${baseDir}/${fileName}`;
-	const fileExists = await fs().exists(fullPath);
+	const fileExists = await fs.exists(fullPath);
 	if (!fileExists) {
-		await fs().writeTextFileEnsuringDir(fullPath, defaultContent);
+		await fs.writeTextFileEnsuringDir(fullPath, defaultContent);
 	}
 }
 
 async function ensureAndLoadBase(baseDir: string, fileName: string, defaultContent: string): Promise<Record<string, unknown>> {
 	await ensureBaseFileExists(baseDir, fileName, defaultContent);
 	const fullPath = `${baseDir}/${fileName}`;
-	const content = await fs().readTextFile(fullPath);
+	const content = await fs.readTextFile(fullPath);
 	return yaml.load(content) as Record<string, unknown>;
 }
 
@@ -106,7 +102,7 @@ async function loadLocaleStringsWithOverride(
 	const storyPath = `${storyFolder}/${fileName}`;
 
 	try {
-		const storyContent = await fs().readTextFileIfExists(storyPath);
+		const storyContent = await fs.readTextFileIfExists(storyPath);
 		if (storyContent) {
 			const storyData = yaml.load(storyContent) as Record<string, unknown>;
 			const baseData = await ensureAndLoadBase(baseDir, fileName, defaultContent);

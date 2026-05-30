@@ -1,9 +1,5 @@
 import { kebabCase } from 'lodash-es';
-import { getFileSystem, type DirEntry } from '$lib/fs/file-system';
-
-function fileFs() {
-	return getFileSystem();
-}
+import { fs, type DirEntry } from '$lib/fs/file-system';
 
 /**
  * Convert an act line name into a kebab-case suffix for the folder name.
@@ -47,7 +43,7 @@ export function buildLineDir(storyFolder: string, actNumber: number, isMainLine:
 export async function resolveLineSubdir(actDir: string, actLineId: string): Promise<string | null> {
 	const idPart = actLineId.slice(-8);
 	try {
-		const entries = await fileFs().readDir(actDir);
+		const entries = await fs.readDir(actDir);
 		const matches = entries.filter((e: DirEntry) => e.isDirectory && e.name.startsWith(idPart)).map((e: DirEntry) => e.name);
 		return matches.length === 1 ? matches[0] : null;
 	} catch {

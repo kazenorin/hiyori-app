@@ -1,19 +1,7 @@
 import { checkIsTauri } from '$lib/runtime';
-import { getFileSystem } from '$lib/fs/file-system';
+import { fs } from '$lib/fs/file-system';
 import { kebabCase } from 'lodash-es';
 import { getSettings, LOG_LEVEL_VALUES, type LogLevel } from '$lib/stores/settings.svelte';
-
-let fileFs: ReturnType<typeof getFileSystem>;
-
-function getFileFs() {
-	if (fileFs) return fileFs;
-	try {
-		fileFs = getFileSystem();
-		return fileFs;
-	} catch {
-		return null;
-	}
-}
 
 let logInfo = (msg: string) => logWeb('info', msg);
 let logError = (msg: string) => logWeb('error', msg);
@@ -48,16 +36,15 @@ function writeToConsole(level: string, msg: string): Promise<void> {
 }
 
 async function logWeb(level: string, message: string): Promise<void> {
-	// noinspection ES6MissingAwait
 	writeToConsole(level, message);
 
-	return (
-		(await getFileFs()
-			?.writeTextFileEnsuringDir(`logs/app.log`, `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${message}\n`, {
-				append: true,
-			})
-			.catch(() => {})) ?? Promise.resolve()
-	);
+	try {
+		await fs.writeTextFileEnsuringDir(`logs/app.log`, `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${message}\n`, {
+			append: true,
+		});
+	} catch {
+		// File logging is best-effort; FS may not be initialized yet
+	}
 }
 
 export const log = {
@@ -88,7 +75,7 @@ export async function fileLog(level: LogLevel, loggerTag: string, message: strin
 	const line = `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${resolvedMessage}\n`;
 	const filename = `${kebabCase(loggerTag)}.log`;
 	try {
-		await getFileFs()?.writeTextFileEnsuringDir(`logs/${filename}`, line, { append: true });
+		await fs.writeTextFileEnsuringDir(`logs/${filename}`, line, { append: true });
 	} catch {
 		// Silent fail — file logging is best-effort
 	}

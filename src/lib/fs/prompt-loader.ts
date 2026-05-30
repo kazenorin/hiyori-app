@@ -1,10 +1,6 @@
-import { getFileSystem } from '$lib/fs/file-system';
+import { fs } from '$lib/fs/file-system';
 import { log } from '$lib/logging/logger';
 import { resolveStoryFolder } from './story-folders';
-
-function fs() {
-	return getFileSystem();
-}
 
 /**
  * All locales that have bundled default content.
@@ -145,9 +141,9 @@ export function registerDefaults(entries: LocalizedTemplateFile[]): void {
  */
 async function ensureBaseFileExists(baseDir: string, relativePath: string, defaultContent: string): Promise<void> {
 	const fullPath = `${baseDir}/${relativePath}`;
-	const fileExists = await fs().exists(fullPath);
+	const fileExists = await fs.exists(fullPath);
 	if (!fileExists) {
-		await fs().writeTextFileEnsuringDir(fullPath, defaultContent);
+		await fs.writeTextFileEnsuringDir(fullPath, defaultContent);
 	}
 }
 
@@ -158,7 +154,7 @@ async function ensureBaseFileExists(baseDir: string, relativePath: string, defau
 async function ensureAndLoadBase(baseDir: string, relativePath: string, defaultContent: string): Promise<string> {
 	await ensureBaseFileExists(baseDir, relativePath, defaultContent);
 	const fullPath = `${baseDir}/${relativePath}`;
-	return await fs().readTextFile(fullPath);
+	return await fs.readTextFile(fullPath);
 }
 
 /**
@@ -181,7 +177,7 @@ async function loadWithOverride(
 	try {
 		const storyFolder = await resolveStoryFolder(storyId, storyName);
 		const storyPath = `${storyFolder}/${templatesDir}/${relativePath}`;
-		const storyContent = await fs().readTextFileIfExists(storyPath);
+		const storyContent = await fs.readTextFileIfExists(storyPath);
 		if (storyContent) {
 			return storyContent;
 		}

@@ -1,11 +1,7 @@
-import { getFileSystem, type DirEntry } from '$lib/fs/file-system';
+import { fs, type DirEntry } from '$lib/fs/file-system';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import * as dbStories from '$lib/db/stories';
 import { generateWorld } from '$lib/ai/world-generator';
-
-function fs() {
-	return getFileSystem();
-}
 
 /**
  * Compute the canonical folder name for a story.
@@ -37,7 +33,7 @@ export function deriveStoryName(name: string, id: string): string {
 }
 
 async function listAppDataFolders(): Promise<string[]> {
-	const entries = await fs().readDir('');
+	const entries = await fs.readDir('');
 	return entries.filter((e: DirEntry) => e.isDirectory).map((e: DirEntry) => e.name);
 }
 
@@ -58,7 +54,7 @@ export async function resolveStoryFolder(storyId: string, storyName: string): Pr
 	// 1. Check DB cache
 	const cached = await dbStoryFolders.getStoryFolder(storyId);
 	if (cached) {
-		const folderExists = await fs().exists(cached);
+		const folderExists = await fs.exists(cached);
 		if (folderExists) return cached;
 		// Stale mapping — remove and re-resolve
 		await dbStoryFolders.deleteStoryFolder(storyId);
@@ -67,7 +63,7 @@ export async function resolveStoryFolder(storyId: string, storyName: string): Pr
 	// Fallback if canonical name is empty
 	if (!canon) {
 		const folderName = `story-${shortId(storyId)}`;
-		await fs().mkdir(folderName);
+		await fs.mkdir(folderName);
 		await dbStoryFolders.setStoryFolder(storyId, folderName);
 		return folderName;
 	}
@@ -92,7 +88,7 @@ export async function resolveStoryFolder(storyId: string, storyName: string): Pr
 		// Collision — fall through to UUID suffix
 	} else {
 		// No exact match — this name is free
-		await fs().mkdir(canon);
+		await fs.mkdir(canon);
 		await dbStoryFolders.setStoryFolder(storyId, canon);
 		return canon;
 	}
@@ -106,7 +102,7 @@ export async function resolveStoryFolder(storyId: string, storyName: string): Pr
 	}
 
 	// 5. Collision exists — create with UUID suffix
-	await fs().mkdir(suffixedName);
+	await fs.mkdir(suffixedName);
 	await dbStoryFolders.setStoryFolder(storyId, suffixedName);
 	return suffixedName;
 }
@@ -125,13 +121,13 @@ export async function ensureWorldFile(storyId: string, storyName?: string, abort
 	const folderName = folder ?? (await resolveStoryFolder(storyId, storyName ?? story.name));
 	const worldPath = `${folderName}/world.md`;
 
-	const worldContent = await fs().readTextFileIfExists(worldPath);
+	const worldContent = await fs.readTextFileIfExists(worldPath);
 	if (worldContent !== undefined) {
 		return worldContent;
 	}
 
 	const generated = await generateWorld(storyId, abortSignal);
-	await fs().writeTextFile(worldPath, generated);
+	await fs.writeTextFile(worldPath, generated);
 	return generated;
 }
 
@@ -165,7 +161,7 @@ export async function renameStoryFolder(storyId: string, newName: string): Promi
 
 	// Rename on disk if the name actually changed
 	if (oldFolder !== newFolder) {
-		await fs().rename(oldFolder, newFolder);
+		await fs.rename(oldFolder, newFolder);
 		await dbStoryFolders.setStoryFolder(storyId, newFolder);
 	}
 

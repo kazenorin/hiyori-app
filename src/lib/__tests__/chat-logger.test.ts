@@ -19,7 +19,7 @@ const { mockFs } = vi.hoisted(() => {
 
 // Mock dependencies before importing
 vi.mock('$lib/fs/file-system', () => ({
-	getFileSystem: vi.fn(() => mockFs),
+	fs: mockFs,
 }));
 
 vi.mock('$lib/fs/story-folders', () => ({
@@ -52,7 +52,6 @@ vi.mock('$lib/logging/logger', () => ({
 }));
 
 import { logMainChat, logWorldBuilderChat } from '$lib/logging/chat-logger';
-import { getFileSystem } from '$lib/fs/file-system';
 import { getSettings } from '$lib/stores/settings.svelte';
 import { getActiveStory } from '$lib/stores/stories.svelte';
 import type { Story } from '$lib/db/stories';
