@@ -1,3 +1,4 @@
+// Bump this version when releasing a new app version to invalidate the cache.
 const CACHE_NAME = 'byoa-v1';
 
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/icons/icon-512.png', '/sql-wasm.wasm'];

@@ -1,5 +1,4 @@
 import { getDatabase } from '$lib/db/database';
-import { isTauriSync } from '$lib/runtime';
 
 /**
  * Export the entire database as a binary Uint8Array.

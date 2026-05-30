@@ -15,10 +15,13 @@ export class SqlJsDatabase implements IDatabase {
 	private options: SqlJsDatabaseOptions;
 	private flushTimer: ReturnType<typeof setTimeout> | null = null;
 	private dirty = false;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	private sqlModule: any;
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	private constructor(db: any, options: SqlJsDatabaseOptions) {
+	private constructor(db: any, sqlModule: any, options: SqlJsDatabaseOptions) {
 		this.db = db;
+		this.sqlModule = sqlModule;
 		this.options = options;
 	}
 
@@ -27,7 +30,7 @@ export class SqlJsDatabase implements IDatabase {
 		const db = new SQL.Database(data);
 		db.run('PRAGMA journal_mode = WAL');
 
-		return new SqlJsDatabase(db, options ?? {});
+		return new SqlJsDatabase(db, SQL, options ?? {});
 	}
 
 	// SELECT queries don't mutate data, so no persistence flush needed
@@ -117,9 +120,8 @@ export class SqlJsDatabase implements IDatabase {
 	 * Caller must call flush() afterwards to persist to OPFS.
 	 */
 	async importFromData(data: Uint8Array | ArrayLike<number>): Promise<void> {
-		const SQL = await loadSqlJs(this.options.locateWasm);
 		this.db.close();
-		this.db = new SQL.Database(data);
+		this.db = new this.sqlModule.Database(data);
 		this.db.run('PRAGMA journal_mode = WAL');
 		this.dirty = true;
 	}
