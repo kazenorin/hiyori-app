@@ -239,15 +239,8 @@ export class Memory {
 				`CREATE VIRTUAL TABLE vec_memories USING vec0(story_id TEXT PARTITION KEY, act_line_id TEXT PARTITION KEY, embedding float[${dimension}])`
 			);
 		} catch (err) {
-			if (err instanceof Error && err.message.includes('no such module: vec0')) {
-				await db.execute(`
-					CREATE TABLE vec_memories (
-						rowid INTEGER PRIMARY KEY AUTOINCREMENT,
-						story_id TEXT NOT NULL,
-						act_line_id TEXT NOT NULL,
-						embedding TEXT NOT NULL
-					)
-				`);
+			if (err instanceof Error && err.message.includes('already exists')) {
+				// Concurrent initialization — table was created by another call
 			} else {
 				throw err;
 			}
@@ -304,14 +297,8 @@ export class Memory {
 		try {
 			await db.execute(`CREATE VIRTUAL TABLE vec_locations USING vec0(story_id TEXT PARTITION KEY, embedding float[${dimension}])`);
 		} catch (err) {
-			if (err instanceof Error && err.message.includes('no such module: vec0')) {
-				await db.execute(`
-					CREATE TABLE vec_locations (
-						rowid INTEGER PRIMARY KEY AUTOINCREMENT,
-						story_id TEXT NOT NULL,
-						embedding TEXT NOT NULL
-					)
-				`);
+			if (err instanceof Error && err.message.includes('already exists')) {
+				// Concurrent initialization — table was created by another call
 			} else {
 				throw err;
 			}

@@ -53,5 +53,9 @@ export function createTestDatabase(): Database & { _db: BetterSqlite3.Database }
 		async flush(): Promise<void> {
 			// No-op: better-sqlite3 writes through immediately
 		},
+
+		isSqliteVecAvailable(): boolean {
+			return true;
+		},
 	};
 }

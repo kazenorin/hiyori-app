@@ -25,6 +25,10 @@ export class TauriDatabase implements IDatabase {
 		// Tauri's SQLite plugin writes through immediately; no buffering.
 	}
 
+	isSqliteVecAvailable(): boolean {
+		return true;
+	}
+
 	close(): void {
 		this.db.close();
 	}

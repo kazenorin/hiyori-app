@@ -7,6 +7,7 @@
 		assignRole,
 		updateSettings,
 		getMinorTaskAgentProviderConfig,
+		isMemoryAvailable,
 		type ProviderConfig,
 		type Provider,
 		type ApiType,
@@ -453,9 +454,13 @@
 					class="checkbox"
 					checked={settings.memoryEnabled}
 					onchange={(e) => updateSettings({ memoryEnabled: (e.currentTarget as HTMLInputElement).checked })}
+					disabled={!isMemoryAvailable()}
 				/>
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.enableMemory')}</span>
 			</label>
+			{#if !isMemoryAvailable()}
+				<span class="text-xs text-warning-500">{t('settings.memoryUnavailableNoVec')}</span>
+			{/if}
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.memoryProvider')}</span>
@@ -463,7 +468,7 @@
 					items={roleItems()}
 					value={settings.memoryProviderRole}
 					onValueChange={(v) => updateSettings({ memoryProviderRole: v })}
-					disabled={!settings.memoryEnabled}
+					disabled={!settings.memoryEnabled || !isMemoryAvailable()}
 					placeholder={t('settings.noProvidersConfigured')}
 				/>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.memoryProviderDescription')}</span>
@@ -475,7 +480,7 @@
 					items={roleItems()}
 					value={settings.embeddingProviderRole}
 					onValueChange={(v) => updateSettings({ embeddingProviderRole: v })}
-					disabled={!settings.memoryEnabled}
+					disabled={!settings.memoryEnabled || !isMemoryAvailable()}
 					placeholder={t('settings.noProvidersConfigured')}
 				/>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.embeddingProviderDescription')}</span>

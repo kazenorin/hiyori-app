@@ -2,7 +2,7 @@
 	import { goto } from '$app/navigation';
 	import { Memory, type MemoryItem, type LocationItem, type AliasGroup } from '$lib/features/memory';
 	import type { InventoryItem } from '$lib/features/memory/inventory-types';
-	import { getEmbeddingProviderConfig, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
+	import { getEmbeddingProviderConfig, getMemoryProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
 	import { t } from '$lib/i18n';
 	import { sampleSize } from 'lodash-es';
 	import {
@@ -293,7 +293,7 @@
 	}
 
 	$effect(() => {
-		if (embeddingConfig && activeStoryId && settings.memoryEnabled) {
+		if (embeddingConfig && activeStoryId && isMemoryAvailable()) {
 			searchResults = [];
 			locationSearchResults = [];
 			locationQueryResults = [];
@@ -309,7 +309,7 @@
 	<div class="max-w-2xl mx-auto space-y-8">
 		<h1 class="h2 font-display">{t('memoryManager.heading')}</h1>
 
-		{#if settings.memoryEnabled}
+		{#if isMemoryAvailable()}
 			<section class="card p-4 space-y-2">
 				<div class="flex items-center gap-2">
 					<span class="text-xs text-surface-500 w-32 shrink-0">{t('memoryManager.story')}</span>
@@ -350,7 +350,7 @@
 			</section>
 		{/if}
 
-		{#if !settings.memoryEnabled}
+		{#if !isMemoryAvailable()}
 			<p class="text-warning-700-300">{t('memoryManager.memoryDisabled')}</p>
 		{:else if !activeStoryId}
 			<p class="text-error-700-300">{t('memoryManager.noStorySelected')}</p>
@@ -359,7 +359,7 @@
 		{/if}
 
 		<!-- Generation Tools -->
-		{#if settings.memoryEnabled && activeStoryId}
+		{#if isMemoryAvailable() && activeStoryId}
 			<section class="card p-4 md:p-6 space-y-4">
 				<h2 class="h4">{t('memoryManager.generationTools')}</h2>
 

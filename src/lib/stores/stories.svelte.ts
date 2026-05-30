@@ -8,7 +8,7 @@ import { log } from '$lib/logging/logger';
 import { moveWorldBuilderLog } from '$lib/logging/chat-logger';
 import { getLogFilePath } from '$lib/features/world-builder/world-builder.svelte';
 import { Memory } from '$lib/features/memory';
-import { getDefaultPlotMode, getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
+import { getDefaultPlotMode, getMemoryProviderConfig, isMemoryAvailable, settings } from '$lib/stores/settings.svelte';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { deriveStoryName, ensureWorldFile, renameStoryFolder, resolveStoryFolder } from '$lib/fs/story-folders';
 import { getFileSystem } from '$lib/fs/file-system';
@@ -474,7 +474,7 @@ async function copyMemoriesForFork(
 	remappedMessageIds: Map<string, string>
 ): Promise<void> {
 	const storyId = activeStoryId;
-	if (!storyId || !settings.memoryEnabled) return;
+	if (!storyId || !isMemoryAvailable()) return;
 
 	const config = getMemoryProviderConfig();
 	if (!config) return;

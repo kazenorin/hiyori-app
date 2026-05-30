@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { Memory } from '$lib/features/memory';
 import type { InventoryCategory } from '$lib/features/memory/inventory-types';
 import { traceActLineChain } from '$lib/db/act-lines';
-import { getEmbeddingProviderConfig, settings } from '$lib/stores/settings.svelte';
+import { getEmbeddingProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
 import type { ToolSet } from 'ai';
 import { log } from './utils';
 
@@ -50,11 +50,11 @@ export function createQueryInventoryTool(context: QueryInventoryContext) {
 		inputSchema,
 		execute: async (input: z.infer<typeof inputSchema>): Promise<QueryInventoryOutput> => {
 			const { characterName, itemCategory, includeHistory } = input;
-			await log(`query-inventory triggered: character=${characterName}, category=${itemCategory ?? 'all'}, includeHistory=${includeHistory}`);
+			await log(
+				`query-inventory triggered: character=${characterName}, category=${itemCategory ?? 'all'}, includeHistory=${includeHistory}`
+			);
 
-			const actLineIds = actNumber > 1
-				? (await traceActLineChain(actLineId)).map((l) => l.actLineId)
-				: [actLineId];
+			const actLineIds = actNumber > 1 ? (await traceActLineChain(actLineId)).map((l) => l.actLineId) : [actLineId];
 
 			const resolvedNames = await memory.resolveAliases(storyId, actLineIds, characterName);
 
@@ -98,7 +98,7 @@ export function createQueryInventoryTool(context: QueryInventoryContext) {
 }
 
 export function buildInventoryTools(storyId: string | null, actLineId: string, actNumber: number): ToolSet {
-	if (!settings.memoryEnabled) return {};
+	if (!isMemoryAvailable()) return {};
 	if (!storyId || !actLineId) return {};
 
 	const memConfig = getEmbeddingProviderConfig();

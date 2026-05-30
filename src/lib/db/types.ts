@@ -12,10 +12,12 @@ export interface Database {
 
 	close(): void;
 
-	/**
-	 * Persist any buffered writes to durable storage. No-op for adapters
-	 * that don't buffer (e.g. TauriDatabase). Must be called before close()
-	 * in environments where data loss on shutdown is unacceptable.
-	 */
 	flush(): Promise<void>;
+
+	/**
+	 * Whether sqlite-vec (vec0 virtual table module) is available.
+	 * TauriDatabase: true (loaded via Rust auto-extension).
+	 * SqlJsDatabase: false (WASM SQLite cannot load native extensions).
+	 */
+	isSqliteVecAvailable(): boolean;
 }

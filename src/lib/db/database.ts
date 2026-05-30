@@ -6,6 +6,7 @@ import type { Database } from './types';
 import { ERR_DB_NOT_INITIALIZED } from '$lib/definitions/error-messages';
 
 let db: Database | null = null;
+let dbInit: Promise<Database> | null = null;
 
 function checkIsTauri(): boolean {
 	try {
@@ -17,18 +18,23 @@ function checkIsTauri(): boolean {
 
 export async function initDatabase(): Promise<Database> {
 	if (db) return db;
+	if (dbInit) return dbInit;
 
-	if (checkIsTauri()) {
-		db = await TauriDatabase.create('sqlite:byoa.db');
-	} else {
-		const existingData = await loadFromOpfs('byoa.db.bin');
-		db = await SqlJsDatabase.create(existingData, {
-			persistToOpfs: true,
-			opfsFilename: 'byoa.db.bin',
-		});
-	}
+	dbInit = (async () => {
+		if (checkIsTauri()) {
+			db = await TauriDatabase.create('sqlite:byoa.db');
+		} else {
+			const existingData = await loadFromOpfs('byoa.db.bin');
+			db = await SqlJsDatabase.create(existingData, {
+				persistToOpfs: true,
+				opfsFilename: 'byoa.db.bin',
+			});
+		}
+		dbInit = null;
+		return db;
+	})();
 
-	return db;
+	return dbInit;
 }
 
 export function getDatabase(): Database {

@@ -4,7 +4,7 @@ import { parseImportantPhrases, serializeImportantPhrases } from '$lib/db/messag
 export { serializeImportantPhrases };
 import { Memory } from '$lib/features/memory';
 import { log } from '$lib/logging/logger';
-import { getMemoryProviderConfig, settings } from '$lib/stores/settings.svelte';
+import { getMemoryProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
 import { getActiveStoryId } from '$lib/stores/stories.svelte';
 import { getErrorMessage } from '$lib/utils/error-handling';
 import type { MessageMetadata, PhaseMetadata } from '../chat-stream';
@@ -137,7 +137,7 @@ export async function removeMessagesById(actLineId: string, messageIds: string[]
 
 export async function removeMemoriesFromActLine(actLineId: string, messageIdsToRemove: string[]): Promise<void> {
 	const storyId = getActiveStoryId();
-	if (storyId && settings.memoryEnabled) {
+	if (storyId && isMemoryAvailable()) {
 		const config = getMemoryProviderConfig();
 		if (config) {
 			const memory = new Memory(config);

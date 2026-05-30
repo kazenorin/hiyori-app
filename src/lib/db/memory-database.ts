@@ -5,6 +5,7 @@ import type { Database } from './types';
 import { ERR_MEMORY_DB_NOT_INITIALIZED } from '$lib/definitions/error-messages';
 
 let memoryDb: Database | null = null;
+let memoryDbInit: Promise<Database> | null = null;
 
 function checkIsTauri(): boolean {
 	try {
@@ -16,14 +17,19 @@ function checkIsTauri(): boolean {
 
 export async function initMemoryDatabase(): Promise<Database> {
 	if (memoryDb) return memoryDb;
+	if (memoryDbInit) return memoryDbInit;
 
-	if (checkIsTauri()) {
-		memoryDb = await TauriDatabase.create('sqlite:byoa-memory.db');
-	} else {
-		memoryDb = await SqlJsDatabase.create(null);
-	}
+	memoryDbInit = (async () => {
+		if (checkIsTauri()) {
+			memoryDb = await TauriDatabase.create('sqlite:byoa-memory.db');
+		} else {
+			memoryDb = await SqlJsDatabase.create(null);
+		}
+		memoryDbInit = null;
+		return memoryDb;
+	})();
 
-	return memoryDb;
+	return memoryDbInit;
 }
 
 export function getMemoryDatabase(): Database {

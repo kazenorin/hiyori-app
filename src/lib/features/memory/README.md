@@ -155,6 +155,6 @@ Both `vec_memories` and `vec_locations` use `story_id` as a partition key (sqlit
 
 The system tracks the embedding model used to create each table via `memory_config`. If the model or dimension changes, the `ensureMemoryVecTable` / `ensureLocationVecTable` methods throw an error. This prevents mixing embeddings from different models, which would produce meaningless similarity scores. A full `reset()` is required to switch embedding models.
 
-## Fallback
+## sqlite-vec requirement
 
-If sqlite-vec (`vec0` virtual table module) is not available, the system falls back to regular SQLite tables with embeddings stored as JSON text strings. In this mode, vector similarity search is not available.
+The memory system requires sqlite-vec (`vec0` virtual table module). It is only available in Tauri environments where the Rust backend registers it as a SQLite auto-extension. In non-Tauri environments (web/browser), the memory system is disabled entirely — see `isMemoryAvailable()` in settings.

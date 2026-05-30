@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { sampleSize } from 'lodash-es';
 import { Memory, type MemoryItem } from '$lib/features/memory';
 import { batchResolveActLineInfo, traceActLineChain } from '$lib/db/act-lines';
-import { getEmbeddingProviderConfig, settings } from '$lib/stores/settings.svelte';
+import { getEmbeddingProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
 import { type ToolSet } from 'ai';
 import { log } from './utils';
 
@@ -69,11 +69,11 @@ export function createQueryMemoriesTool(context: QueryMemoriesContext) {
 		inputSchema,
 		execute: async (input: z.infer<typeof inputSchema>): Promise<MemoryResult[]> => {
 			const { characterQuery, timeAndLocation, currentActOnly } = input;
-			await log(`query-memories triggered: characterQuery=${characterQuery}, timeAndLocation=${timeAndLocation}, currentActOnly=${currentActOnly}`);
+			await log(
+				`query-memories triggered: characterQuery=${characterQuery}, timeAndLocation=${timeAndLocation}, currentActOnly=${currentActOnly}`
+			);
 
-			const actLineIds = currentActOnly
-				? [actLineId]
-				: (await traceActLineChain(actLineId)).map((l) => l.actLineId);
+			const actLineIds = currentActOnly ? [actLineId] : (await traceActLineChain(actLineId)).map((l) => l.actLineId);
 
 			const opts = {
 				storyId,
@@ -105,7 +105,7 @@ export function createQueryMemoriesTool(context: QueryMemoriesContext) {
 }
 
 export function buildMemoryTools(storyId: string | null, actLineId: string): ToolSet {
-	if (!settings.memoryEnabled) return {};
+	if (!isMemoryAvailable()) return {};
 	if (!storyId || !actLineId) return {};
 
 	const memConfig = getEmbeddingProviderConfig();

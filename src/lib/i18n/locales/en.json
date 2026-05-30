@@ -56,6 +56,7 @@
 		"memory": "Memory",
 		"enableMemory": "Enable memory",
 		"enableMemoryDescription": "Automatically save and recall context from past conversations.",
+		"memoryUnavailableNoVec": "Memory requires sqlite-vec, which is only available in the desktop app.",
 		"memoryProvider": "Memory Provider",
 		"memoryProviderDescription": "The LLM provider used to extract memories from chat responses.",
 		"embeddingProvider": "Embedding Provider",

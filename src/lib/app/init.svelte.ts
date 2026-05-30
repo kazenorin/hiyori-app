@@ -39,7 +39,7 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 		}
 		await log.info('init', 'Initializing database...');
 		onStatus?.('Initializing database...');
-		await initDatabase();
+		const db = await initDatabase();
 
 		await log.info('init', 'Running migrations...');
 		onStatus?.('Running migrations...');
@@ -47,17 +47,23 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 
 		await log.info('init', 'Initializing memory database...');
 		onStatus?.('Initializing memory database...');
-		await initMemoryDatabase();
-		await runMemoryMigrations();
+		if (db.isSqliteVecAvailable()) {
+			await initMemoryDatabase();
+			await runMemoryMigrations();
+		} else {
+			await log.info('init', 'sqlite-vec unavailable — memory system disabled');
+		}
 
 		if (typeof window !== 'undefined') {
 			window.addEventListener('beforeunload', () => {
 				getDatabase()
 					.flush()
 					.catch(() => {});
-				getMemoryDatabase()
-					.flush()
-					.catch(() => {});
+				if (db.isSqliteVecAvailable()) {
+					getMemoryDatabase()
+						.flush()
+						.catch(() => {});
+				}
 			});
 		}
 

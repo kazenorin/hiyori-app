@@ -46,6 +46,8 @@ export function createMockDatabase(): Database & {
 
 		flush: vi.fn(async () => {}),
 
+		isSqliteVecAvailable: vi.fn(() => true),
+
 		getTables: () => tables,
 
 		seed(tableName: string, rows: any[]) {

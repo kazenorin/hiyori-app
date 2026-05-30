@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { omitBy } from 'lodash-es';
+import { getDatabase } from '$lib/db/database';
 
 export type Provider = 'openai' | 'openai-compatible' | 'ollama';
 export type ApiType = 'chat-completions' | 'responses';
@@ -222,6 +223,15 @@ export type MinorTaskAgentProviderConfig = NonNullable<ReturnType<typeof getMino
 
 export function isPhraseHighlightingEnabled(): boolean {
 	return settings.importantPhraseHighlighting && !!getMinorTaskAgentProviderConfig();
+}
+
+export function isMemoryAvailable(): boolean {
+	if (!settings.memoryEnabled) return false;
+	try {
+		return getDatabase().isSqliteVecAvailable();
+	} catch {
+		return false;
+	}
 }
 
 export function isPlotPlannerEnabled(): boolean {

@@ -198,12 +198,12 @@ describe('SqlJsDatabase', () => {
 	});
 
 	describe('edge cases', () => {
-		it('execute() with SELECT returns rows via select internally', async () => {
+		it('execute() with SELECT returns rowsAffected = 0 (SELECT does not modify rows)', async () => {
 			await db.execute('CREATE TABLE test (id INTEGER, name TEXT)');
 			await db.execute('INSERT INTO test (id, name) VALUES ($1, $2)', [1, 'Alice']);
 
 			const result = await db.execute('SELECT * FROM test WHERE id = $1', [1]);
-			expect(result.rowsAffected).toBe(1);
+			expect(result.rowsAffected).toBe(0);
 		});
 
 		it('PRAGMA journal_mode = WAL is harmless', async () => {

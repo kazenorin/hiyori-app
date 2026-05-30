@@ -34,13 +34,16 @@ export class SqlJsDatabase implements IDatabase {
 	async select<T>(query: string, bindValues?: unknown[]): Promise<T> {
 		const params = this.convertParams(bindValues);
 		const stmt = this.db.prepare(query);
-		stmt.bind(params);
-		const rows: Record<string, unknown>[] = [];
-		while (stmt.step()) {
-			rows.push(stmt.getAsObject());
+		try {
+			stmt.bind(params);
+			const rows: Record<string, unknown>[] = [];
+			while (stmt.step()) {
+				rows.push(stmt.getAsObject());
+			}
+			return rows as T;
+		} finally {
+			stmt.free();
 		}
-		stmt.free();
-		return rows as T;
 	}
 
 	async execute(query: string, bindValues?: unknown[]): Promise<QueryResult> {
@@ -49,14 +52,17 @@ export class SqlJsDatabase implements IDatabase {
 		if (upperQuery.startsWith('SELECT') || upperQuery.startsWith('PRAGMA')) {
 			const params = this.convertParams(bindValues);
 			const stmt = this.db.prepare(query);
-			stmt.bind(params);
-			const rows: Record<string, unknown>[] = [];
-			while (stmt.step()) {
-				rows.push(stmt.getAsObject());
+			try {
+				stmt.bind(params);
+				const rows: Record<string, unknown>[] = [];
+				while (stmt.step()) {
+					rows.push(stmt.getAsObject());
+				}
+			} finally {
+				stmt.free();
 			}
-			stmt.free();
 			this.markDirty();
-			return { rowsAffected: rows.length, lastInsertId: undefined };
+			return { rowsAffected: 0, lastInsertId: undefined };
 		}
 
 		const params = this.convertParams(bindValues);
@@ -95,6 +101,10 @@ export class SqlJsDatabase implements IDatabase {
 		if (this.options.persistToOpfs) {
 			await persistToOpfs(this.db.export(), this.options.opfsFilename ?? 'byoa.db.bin');
 		}
+	}
+
+	isSqliteVecAvailable(): boolean {
+		return false;
 	}
 
 	export(): Uint8Array {
