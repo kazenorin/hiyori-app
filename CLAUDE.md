@@ -42,6 +42,11 @@ Conformance > taste inside the codebase. If you genuinely think a convention is 
 ### Rule 12 — Fail loud
 "Completed" is wrong if anything was skipped silently. "Tests pass" is wrong if any were skipped. Default to surfacing uncertainty, not hiding it.
 
+## Workflow notes
+
+1. Worktrees should be created in `tmp/worktrees` under the **project root**
+2. Temporary files should be stored in `local-references/` under the **project root**
+
 ## Architecture
 
 **Tauri v2 + SvelteKit 5 desktop app.** Two layers:

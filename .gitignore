@@ -71,7 +71,8 @@ docker-compose.override.yml
 Thumbs.db
 
 # =========================
-# Local References
+# Temporary files and Local References
 # =========================
-local-references
 /.opencode/plans/
+/local-references
+/tmp
