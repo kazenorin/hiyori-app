@@ -160,7 +160,14 @@ async function loadSqlJs(locateWasm?: (file: string) => string) {
 	const sqlJsModule = await import('sql.js');
 	const initSqlJs: typeof import('sql.js') = sqlJsModule.default ?? sqlJsModule;
 
-	const locateFile = locateWasm ?? ((file: string) => `/${file}`);
+	const locateFile =
+		locateWasm ??
+		((file: string) => {
+			if (file === 'sql-wasm-browser.wasm' || file === 'sql-wasm-browser-debug.wasm') {
+				return '/sql-wasm.wasm';
+			}
+			return `/${file}`;
+		});
 
 	return initSqlJs({ locateFile });
 }
