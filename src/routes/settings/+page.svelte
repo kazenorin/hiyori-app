@@ -8,6 +8,7 @@
 		updateSettings,
 		getMinorTaskAgentProviderConfig,
 		isMemoryAvailable,
+		isMemoryCapable,
 		type ProviderConfig,
 		type Provider,
 		type ApiType,
@@ -495,11 +496,11 @@
 					class="checkbox"
 					checked={settings.memoryEnabled}
 					onchange={(e) => updateSettings({ memoryEnabled: (e.currentTarget as HTMLInputElement).checked })}
-					disabled={!isMemoryAvailable()}
+					disabled={!isMemoryCapable()}
 				/>
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.enableMemory')}</span>
 			</label>
-			{#if !isMemoryAvailable()}
+			{#if !isMemoryCapable()}
 				<span class="text-xs text-warning-500">{t('settings.memoryUnavailableNoVec')}</span>
 			{/if}
 

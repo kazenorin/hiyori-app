@@ -1,5 +1,5 @@
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
-import { getSettings } from '$lib/stores/settings.svelte';
+import { getSettings, isMemoryAvailable } from '$lib/stores/settings.svelte';
 import type { MessageBase } from '$lib/db/messages';
 import type { NarrativeVariables } from '../narrative-types';
 import type { AsyncPhaseResults, CompressorResult, PipelineProviderConfigs, PlayerContext, SummarizerResult } from './types';
@@ -287,7 +287,7 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 
 		const serializedSummary = compressorResult?.serializedSummary ?? result?.serializedSummary;
 		const playerMessageId = player.playerMessageId;
-		if (previousNarrativeBody && actLineId && playerMessageId && storyId) {
+		if (previousNarrativeBody && actLineId && playerMessageId && storyId && isMemoryAvailable()) {
 			try {
 				await runMemoryExtractionPipeline(previousNarrativeBody, storyId, actLineId, playerMessageId, serializedSummary);
 			} catch (err) {

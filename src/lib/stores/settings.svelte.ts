@@ -235,13 +235,16 @@ export function isPhraseHighlightingEnabled(): boolean {
 	return settings.importantPhraseHighlighting && !!getMinorTaskAgentProviderConfig();
 }
 
-export function isMemoryAvailable(): boolean {
-	if (!settings.memoryEnabled) return false;
+export function isMemoryCapable(): boolean {
 	try {
 		return getDatabase().isSqliteVecAvailable();
 	} catch {
 		return false;
 	}
+}
+
+export function isMemoryAvailable(): boolean {
+	return settings.memoryEnabled && isMemoryCapable();
 }
 
 export function isPlotPlannerEnabled(): boolean {
