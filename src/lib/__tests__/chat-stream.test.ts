@@ -70,7 +70,7 @@ const providerConfig: ProviderConfig = {
 	apiKey: 'test-key',
 	model: 'gpt-4',
 	corsBypassEnabled: false,
-	wispProxyUrl: '',
+	wispProxyUrl: 'ws://localhost:6001',
 };
 
 describe('streamWithRetry', () => {

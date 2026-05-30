@@ -36,7 +36,7 @@
 	let formModel = $state('');
 	let formApiKey = $state('');
 	let formCorsBypassEnabled = $state(false);
-	let formWispProxyUrl = $state('');
+	let formWispProxyUrl = $state('ws://localhost:6001');
 
 	// Model fetching
 	let availableModels = $state<ModelInfo[]>([]);
@@ -51,7 +51,7 @@
 		formModel = '';
 		formApiKey = '';
 		formCorsBypassEnabled = false;
-		formWispProxyUrl = '';
+		formWispProxyUrl = 'ws://localhost:6001';
 		availableModels = [];
 		modelsError = null;
 	}
@@ -420,7 +420,7 @@
 								{#if formCorsBypassEnabled}
 									<label class="block">
 										<span class="text-sm font-medium text-surface-700-300">Wisp Proxy URL</span>
-										<input class="input mt-1" type="url" placeholder="wss://example.com/ws/" bind:value={formWispProxyUrl} />
+										<input class="input mt-1" type="url" placeholder="ws://localhost:6001" bind:value={formWispProxyUrl} />
 										<span class="text-xs text-surface-500 mt-1 block"
 											>Connects to a Wisp proxy server (e.g. wisp-server-python) to route API requests without browser CORS restrictions.</span
 										>

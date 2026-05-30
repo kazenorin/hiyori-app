@@ -53,7 +53,7 @@ const testConfig: ProviderConfig = {
 	model: 'text-embedding-3-small',
 	apiKey: 'sk-test-key',
 	corsBypassEnabled: false,
-	wispProxyUrl: '',
+	wispProxyUrl: 'ws://localhost:6001',
 };
 
 const MODEL_KEY = 'openai-text-embedding-3-small-https://api.openai.com/v1';

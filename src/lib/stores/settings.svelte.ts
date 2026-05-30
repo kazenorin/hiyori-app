@@ -99,7 +99,7 @@ function loadSettings(): Settings {
 			if (merged.providers) {
 				merged.providers = merged.providers.map((p: Record<string, unknown>) => ({
 					corsBypassEnabled: false,
-					wispProxyUrl: '',
+					wispProxyUrl: 'ws://localhost:6001',
 					...p,
 				}));
 			}
