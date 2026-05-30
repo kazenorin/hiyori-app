@@ -73,9 +73,9 @@ export async function generateTurnOfEvents(params: GenerateTurnOfEventsParams): 
 		actPlotInterviewTurnOfEventsPromptLoader.loadByStory(storyId, storyName),
 	]);
 
-	const fullSystemPrompt = systemPrompt.replace('{generalInstructions}', generalInstructions);
+	const fullSystemPrompt = systemPrompt.replace('{{generalInstructions}}', generalInstructions);
 	const context = buildContext(actSummary, sceneNumber, sceneTitle, narrativeBody, interviewMessages);
-	const userMessage = promptTemplate.replace('{context}', context);
+	const userMessage = promptTemplate.replace('{{context}}', context);
 
 	const model = await createModel(config);
 

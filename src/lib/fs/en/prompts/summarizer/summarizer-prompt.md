@@ -23,5 +23,5 @@ Your responsibility is to update the Act Summary by appending a new entry using 
 Produce your updated Act Summary using the following template:
 
 ```markdown
-{actSummaryTemplate}
+{{actSummaryTemplate}}
 ```

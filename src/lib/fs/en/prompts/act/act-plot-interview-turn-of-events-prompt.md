@@ -10,6 +10,7 @@ Create a prompt that redirects the narrative into the player's newly expressed i
 ## What to use
 
 Use all relevant signals from:
+
 - The recent chat history containing the interview conversation
 - The story context
 - The current scene and act summary
@@ -17,6 +18,7 @@ Use all relevant signals from:
 ## What the prompt must do
 
 The generated "Turn of Events" prompt must:
+
 - Identify what the player now wants more of, less of, or changed.
 - Translate those preferences into clear narrative direction.
 - Bridge naturally from the current story state into the new direction.
@@ -26,6 +28,7 @@ The generated "Turn of Events" prompt must:
 ## What to avoid
 
 Do NOT:
+
 - Write story prose.
 - Write dialogue.
 - Write a scene continuation.
@@ -38,6 +41,7 @@ Do NOT:
 Write only the "Turn of Events" instruction prompt in 1-3 short paragraphs.
 
 The prompt should:
+
 - Briefly state the narrative shift.
 - Explain how future responses should steer the story.
 - Mention key constraints or elements to preserve.
@@ -45,6 +49,7 @@ The prompt should:
 
 Write in directive language aimed at another storyteller or model.
 Use phrases like:
+
 - "Shift the story toward..."
 - "Emphasize..."
 - "Keep continuity with..."
@@ -55,7 +60,7 @@ Use phrases like:
 
 ---
 
-{context}
+{{context}}
 
 ---
 

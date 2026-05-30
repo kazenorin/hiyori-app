@@ -47,7 +47,7 @@ export function ls(key: string, params?: Record<string, string | number>): strin
 	}
 	if (!params) return template;
 
-	return template.replace(/\{(\w+)\}/g, (match, paramKey) => {
+	return template.replace(/\{\{(\w+)}}/g, (match, paramKey) => {
 		const value = params[paramKey];
 		return value !== undefined ? String(value) : match;
 	});

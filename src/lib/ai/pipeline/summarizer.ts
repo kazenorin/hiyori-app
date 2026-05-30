@@ -65,7 +65,7 @@ export async function generateFullSummary(input: SummarizerInput, prompts: Summa
 	const { providerConfig, abortSignal } = input;
 
 	const actSummaryTemplate = buildActSummaryTemplate();
-	const summarizerSystemPrompt = prompts.summarizerPrompt.replaceAll('{actSummaryTemplate}', actSummaryTemplate);
+	const summarizerSystemPrompt = prompts.summarizerPrompt.replaceAll('{{actSummaryTemplate}}', actSummaryTemplate);
 
 	let summarizerMessages: MessageBase[];
 
@@ -115,17 +115,17 @@ async function generateIncrementalSummary(input: SummarizerInput, prompts: Summa
 	const sceneNumber = String(completedScenes);
 	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
 	const processedTemplate = actSummaryIncrementalTemplate()
-		.replace(/{sceneSummariesHeader}/g, sceneSummariesHeader())
-		.replace(/{characterSummariesHeader}/g, characterSummariesHeader())
-		.replace(/{sceneWithNumber}/g, sceneWithNumberLabel('{sceneNumber}'))
-		.replace(/{locationLabel}/g, locationLabel())
-		.replace(/{summaryHeader}/g, summaryHeader())
-		.replace(/{aliasesLabel}/g, aliasesLabel())
-		.replaceAll('{completedScenes}', sceneNumber)
-		.replaceAll('{sceneNumber}', sceneNumber)
-		.replaceAll('{sceneTitle}', sceneTitle);
+		.replace(/{{sceneSummariesHeader}}/g, sceneSummariesHeader())
+		.replace(/{{characterSummariesHeader}}/g, characterSummariesHeader())
+		.replace(/{{sceneWithNumber}}/g, sceneWithNumberLabel('{{sceneNumber}}'))
+		.replace(/{{locationLabel}}/g, locationLabel())
+		.replace(/{{summaryHeader}}/g, summaryHeader())
+		.replace(/{{aliasesLabel}}/g, aliasesLabel())
+		.replaceAll('{{completedScenes}}', sceneNumber)
+		.replaceAll('{{sceneNumber}}', sceneNumber)
+		.replaceAll('{{sceneTitle}}', sceneTitle);
 
-	const incrementalSystemPrompt = prompts.summarizerIncrementalPrompt.replaceAll('{actSummaryTemplate}', processedTemplate);
+	const incrementalSystemPrompt = prompts.summarizerIncrementalPrompt.replaceAll('{{actSummaryTemplate}}', processedTemplate);
 
 	const incrementalMessages = buildSummarizerMessages(
 		input.actSummary,
@@ -192,12 +192,12 @@ export async function generateCharacterProfiles(
 	if (completedScenes - lastScene < interval) return null;
 
 	const compressorSystemPrompt = prompts.characterProfileCompressorPrompt
-		.replaceAll('{actSummaryHeader}', actSummaryHeader())
-		.replaceAll('{characterProfilesHeader}', characterProfilesHeader())
-		.replaceAll('{stateLabel}', stateLabel())
-		.replaceAll('{goalLabel}', goalLabel())
-		.replaceAll('{relationshipsLabel}', relationshipsLabel())
-		.replaceAll('{voiceLabel}', voiceLabel());
+		.replaceAll('{{actSummaryHeader}}', actSummaryHeader())
+		.replaceAll('{{characterProfilesHeader}}', characterProfilesHeader())
+		.replaceAll('{{stateLabel}}', stateLabel())
+		.replaceAll('{{goalLabel}}', goalLabel())
+		.replaceAll('{{relationshipsLabel}}', relationshipsLabel())
+		.replaceAll('{{voiceLabel}}', voiceLabel());
 
 	const messages = toUserMessages(formatActSummaryForCompressor(completedScenes, newActSummary));
 

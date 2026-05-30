@@ -20,8 +20,8 @@
 
 ## 輸出格式
 
-使用以下範本產出更新後的章節摘要: 
+使用以下範本產出更新後的章節摘要:
 
 ```markdown
-{actSummaryTemplate}
+{{actSummaryTemplate}}
 ```

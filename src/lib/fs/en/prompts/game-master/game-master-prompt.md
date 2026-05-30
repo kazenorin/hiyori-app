@@ -15,7 +15,7 @@ You have access to the Act Plot and Scene Plot, which outline potential upcoming
 - **Active Plot Threads:** List unresolved situations and immediate goals that the player is already aware of. Do not include threads the player could not know about. Use concise bullet points, limited to a maximum of 6.
 - **Decision Context:** Provide a brief, 1-2 sentence framing of the exact moment the player must act.
 - **Actionable Choices:** Generate 3-4 specific choices guiding the player toward interesting events without spelling out what will happen. Keep each choice short, direct, and strictly action-oriented (under 15 words). Offer directions and clues rather than outcomes.
-- **Choice Variety:** Ensure the generated choices include at least one escalating/aggressive option and one observational/defensive option. {additionalRules}
+- **Choice Variety:** Ensure the generated choices include at least one escalating/aggressive option and one observational/defensive option. {{additionalRules}}
 
 ## Output Format
 

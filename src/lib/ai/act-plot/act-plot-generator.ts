@@ -124,7 +124,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 	const [template, generationPrompt, systemPrompt, reviewerPrompt, editorPrompt, interviewTranscript, previousActSummary, turnOfEvents] =
 		await Promise.all([
 			actPlotTemplateLoader.loadByStory(storyId, storyName),
-			actPlotGenerationPromptLoader.loadByStory(storyId, storyName).then((p) => p.replace('{actNumber}', actNumber.toString())),
+			actPlotGenerationPromptLoader.loadByStory(storyId, storyName).then((p) => p.replace('{{actNumber}}', actNumber.toString())),
 			actPlotSystemPromptLoader.loadByStory(storyId, storyName),
 			actPlotReviewerPromptLoader.loadByStory(storyId, storyName),
 			actPlotEditorPromptLoader.loadByStory(storyId, storyName),

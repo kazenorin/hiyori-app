@@ -9,7 +9,7 @@
 
 ## 通用指令
 
-{generalInstructions}
+{{generalInstructions}}
 
 ## 角色專屬指令
 

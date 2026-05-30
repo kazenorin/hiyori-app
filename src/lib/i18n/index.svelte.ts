@@ -68,7 +68,7 @@ export function t(key: string, params?: Record<string, string | number>): string
 	}
 	if (params) {
 		for (const [paramKey, paramValue] of Object.entries(params)) {
-			value = value.replaceAll(`{${paramKey}}`, String(paramValue));
+			value = value.replaceAll(`{{${paramKey}}}`, String(paramValue));
 		}
 	}
 	return value;

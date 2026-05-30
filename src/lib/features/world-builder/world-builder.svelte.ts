@@ -229,11 +229,11 @@ export async function enterActPlotInterviewMode(params: EnterActPlotInterviewMod
 
 	// Inject general instructions and system role into the interview system prompt and cache it
 	cachedInterviewSystemPrompt = interviewSystemPrompt
-		.replace('{generalInstructions}', generalInstructions)
-		.replace('{interviewSystemRole}', interviewSystemRole);
+		.replace('{{generalInstructions}}', generalInstructions)
+		.replace('{{interviewSystemRole}}', interviewSystemRole);
 
 	// Build hidden context (invisible to user, sent to LLM every turn)
-	interviewHiddenContext = [{ role: 'user', content: interviewPrompt.replace('{worldContent}', worldContent) }];
+	interviewHiddenContext = [{ role: 'user', content: interviewPrompt.replace('{{worldContent}}', worldContent) }];
 
 	if (additionalContext) {
 		if (additionalContext.actCard) {

@@ -36,7 +36,7 @@ export function hasNarrativeBody(vars: NarrativeVariables): boolean {
 // --- Rendering ---
 
 /**
- * Render a view template by substituting {placeholder} tokens with variable values.
+ * Render a view template by substituting {{placeholder}} tokens with variable values.
  * Uses single-pass regex replacement to avoid order-dependent behavior and
  * second-order substitution. Extra replacements take precedence over narrative variables.
  */
@@ -66,7 +66,7 @@ export function renderTemplate(template: string, vars: NarrativeVariables, extra
 	}
 
 	// Single-pass replacement — avoids second-order substitution and order-dependent behavior
-	return template.replace(/\{(\w+)}/g, (_, key: string) => replacements[key] ?? `{${key}}`);
+	return template.replace(/\{\{(\w+)}}/g, (_, key: string) => replacements[key] ?? `{{${key}}}`);
 }
 
 /**

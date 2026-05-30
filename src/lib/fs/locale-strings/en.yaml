@@ -2,13 +2,13 @@ common:
   labels:
     player: Player
     interviewer: Interviewer
-    sceneWithNumber: 'Scene {sceneNumber}'
+    sceneWithNumber: 'Scene {{sceneNumber}}'
     location: Location
     name: Name
     aliases: Aliases
     lastUpdate: Last update
     mainLineName: Main
-    actWithNumber: 'Act {actNumber}'
+    actWithNumber: 'Act {{actNumber}}'
   headers:
     worldContent: World Content
     actPlot: Act Plot
@@ -27,8 +27,8 @@ common:
     editorOutput: Editor Output
     gameMasterOutput: Game Master Output
     previousActSummary: Previous Act Summary
-    actSummaryForScenes: 'Act Summary {summarizedScenes}'
-    previousNarrativeBody: 'Narrative Body for Scene {completedScenes}'
+    actSummaryForScenes: 'Act Summary {{summarizedScenes}}'
+    previousNarrativeBody: 'Narrative Body for Scene {{completedScenes}}'
     sceneTitle: Scene title
     background: Background
     narrativeBody: Narrative Body
@@ -63,17 +63,17 @@ pipeline:
       Do not make changes to the strings.
       Return only the JSON array.
     gameMaster: Generate the game data based on the available information in the chat history.
-    gmPhaseEventPhaseAdvancementTrigger: '- **Determine Act Phase**: If you believe the story has completed the {actPhase} Phase, use the `advance-phase` tool exactly once to move the story forward.'
+    gmPhaseEventPhaseAdvancementTrigger: '- **Determine Act Phase**: If you believe the story has completed the {{actPhase}} Phase, use the `advance-phase` tool exactly once to move the story forward.'
     gmActEndTrigger: >
       - **Determine Act Conclusion**: If you believe the story has reached one of the Possible Endings defined in the
       Act Plot, where the central conflict is resolved and the narrative reaches a natural stopping point, use the
       `end-act` tool exactly once to signal the act's conclusion. Specify the `endingType` that best matches the
       player's choices (good, bad, bittersweet, or alternative).
     editor: Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history.
-    reviewer: "Perform a review on the writer's output for Scene {currentScene} based on the available information in the chat history."
-    reviewerQuick: "Quick-review the writer's output for Scene {currentScene}. Skim for glaring errors only — output the review template immediately with no reasoning."
+    reviewer: "Perform a review on the writer's output for Scene {{currentScene}} based on the available information in the chat history."
+    reviewerQuick: "Quick-review the writer's output for Scene {{currentScene}}. Skim for glaring errors only — output the review template immediately with no reasoning."
     writer:
-      providedSummary: "\n- the summary of events up to Scene {summarizedScenes}"
+      providedSummary: "\n- the summary of events up to Scene {{summarizedScenes}}"
       providedTurnOfEvents: "\n- the Turn Of Events instructions"
       turnOfEventsReinforcementPhrase: "\nYou must also consider the Turn Of Events that may drive the story to a different direction."
       providedDirectorNotes: "\n- the Director's Notes"
@@ -81,18 +81,18 @@ pipeline:
       actEndPhaseEvent: >
         When the story reaches a natural conclusion that aligns with one of the Act Plot's Possible Endings,
         call the `end-act` tool **exactly once** during your reasoning, before writing the closing scene.
-        {endingTypeInstructions}
+        {{endingTypeInstructions}}
 
         After calling `end-act`, write the closing scene as your narrative output.
-        {closingSceneRules}
+        {{closingSceneRules}}
       actEndGuidance: >
         When the narrative reaches one of the Act Plot's Possible Endings — where the central conflict is
         resolved and the story arrives at a natural stopping point — call the `end-act` tool **exactly once**
         during your reasoning, before writing the closing scene.
-        {endingTypeInstructions}
+        {{endingTypeInstructions}}
 
         After calling `end-act`, write the closing scene as your narrative output.
-        {closingSceneRules}
+        {{closingSceneRules}}
       closingSceneRules: >
         When writing the closing scene, ensure it:
           - Brings the narrative to a satisfying, emotionally resonant conclusion matching the chosen ending
@@ -100,63 +100,63 @@ pipeline:
           - Reflects the consequences of the player's key choices throughout the act
           - Provides emotional closure without introducing new plot threads or cliffhangers
       epilogue: >
-        You are writing the **epilogue** for this story. The main narrative has concluded with a {endingType} ending.
+        You are writing the **epilogue** for this story. The main narrative has concluded with a {{endingType}} ending.
         Use the World Setting, Act Plot, and Act Summary provided to you for context.
         Write a final epilogue scene that reflects on the protagonist's journey, shows the lasting consequences of
         the player's choices, depicts the world after the main conflict has been resolved, and provides a sense of
         finality and closure. Do NOT introduce new conflicts, plot threads, or cliffhangers. This is the end of the story.
       guidanceExtraction: |
-        You are now responsible for writing the story prose for Scene {currentScene}, the upcoming scene. You have been provided with:
+        You are now responsible for writing the story prose for Scene {{currentScene}}, the upcoming scene. You have been provided with:
 
         - the World Setting
-        - the Act Plot {providedSummary}
+        - the Act Plot {{providedSummary}}
         - the Scene Plot for the upcoming scene
-        - the full narrative body of the most recent scene, Scene {previousScene}
-        - the player's response to the most recent scene {providedTurnOfEvents}{providedDirectorNotes}
+        - the full narrative body of the most recent scene, Scene {{previousScene}}
+        - the player's response to the most recent scene {{providedTurnOfEvents}}{{providedDirectorNotes}}
 
         Your job is to a craft vivid, engaging, and immersive narrative based on the provided information.
-        You are instructed to prioritize on developing the events as directed by the Scene Plot. {actEndInstruction}{turnOfEventsReinforcementPhrase}
+        You are instructed to prioritize on developing the events as directed by the Scene Plot. {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
         Use the pacing decision from the Scene Plot. If the plot planner allows an expanded word count, you may write up to double the usual length.
-        {directorNotesReinforcementPhrase}
+        {{directorNotesReinforcementPhrase}}
       phaseEventExtraction: |
-        You are now responsible for writing the story prose for Scene {currentScene}, the upcoming scene. You have been provided with:
+        You are now responsible for writing the story prose for Scene {{currentScene}}, the upcoming scene. You have been provided with:
 
         - the World Setting
         - the Act Plot
-        - the current Act Phase ({currentActPhase}) and the Phase Events {providedSummary}
-        - the full narrative body of the most recent scene, Scene {previousScene}
-        - the player's response to the most recent scene {providedTurnOfEvents}{providedDirectorNotes}
+        - the current Act Phase ({{currentActPhase}}) and the Phase Events {{providedSummary}}
+        - the full narrative body of the most recent scene, Scene {{previousScene}}
+        - the player's response to the most recent scene {{providedTurnOfEvents}}{{providedDirectorNotes}}
 
         Your job is to a craft vivid, engaging, and immersive narrative based on the provided information.
         You are required to evaluate the current state of events, and see if any Phase Events can be triggered or already triggered.
         For triggered events that have not been elaborated on, you are instructed elaborate on them.
         If no events are triggered, or all triggered events have reasonable elaboration, drive the story to the most suitable next event.
-        If you believe the story's current state have fulfilled the goals of the {currentActPhase} Phase, use the `advance-phase` tool **exactly once** to move the story forward. {actEndInstruction}{turnOfEventsReinforcementPhrase}
-        {directorNotesReinforcementPhrase}
+        If you believe the story's current state have fulfilled the goals of the {{currentActPhase}} Phase, use the `advance-phase` tool **exactly once** to move the story forward. {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
+        {{directorNotesReinforcementPhrase}}
     plotPlanner:
-      guidance: 'The current scene is Scene {currentScene}. Plan a Scene Plot for the Immediate Next Scene, Near-Term Beat (Flexible), and Mid-Term Goal (Flexible) based on the available information in the chat history.'
-      phaseEvent: 'The current story phase of the act is {currentActPhase}. Plan the "Phase Events" based on the available information in the chat history.'
+      guidance: 'The current scene is Scene {{currentScene}}. Plan a Scene Plot for the Immediate Next Scene, Near-Term Beat (Flexible), and Mid-Term Goal (Flexible) based on the available information in the chat history.'
+      phaseEvent: 'The current story phase of the act is {{currentActPhase}}. Plan the "Phase Events" based on the available information in the chat history.'
     summarizerTranscriptStart: 'The following messages will contain the transcript of the story act:'
     summarizerTranscriptEnd: 'The previous message was the end of the transcript of the story act.'
     summarizerFull: 'Generate a complete Act Summary covering all scenes in the transcript.'
-    summarizerFallback: 'Update the Act Summary for Scene {completedScenes} based on the Player Response.'
-    summarizer: 'Update the Act Summary adding information for the previous scene: "Scene {completedScenes}: {sceneTitle}"'
+    summarizerFallback: 'Update the Act Summary for Scene {{completedScenes}} based on the Player Response.'
+    summarizer: 'Update the Act Summary adding information for the previous scene: "Scene {{completedScenes}}: {{sceneTitle}}"'
     actSummaryIncrementalTemplate: |
-      ## {sceneSummariesHeader}
-      ### {sceneWithNumber}: {sceneTitle}
-      {locationLabel}: [location of where the scene took place.]
-      {summaryHeader}: [summary, max 3 sentences]
+      ## {{sceneSummariesHeader}}
+      ### {{sceneWithNumber}}: {{sceneTitle}}
+      {{locationLabel}}: [location of where the scene took place.]
+      {{summaryHeader}}: [summary, max 3 sentences]
 
-      ## {characterSummariesHeader}
+      ## {{characterSummariesHeader}}
       ### [Well-known name of the character]
-      - {aliasesLabel}: [all known aliases]
-      - {sceneWithNumber}: [summary if appeared, max 2 sentences. Also include the most representative quoted dialogue or internal monologue if any.]
+      - {{aliasesLabel}}: [all known aliases]
+      - {{sceneWithNumber}}: [summary if appeared, max 2 sentences. Also include the most representative quoted dialogue or internal monologue if any.]
     actPlotResumeNote: |
       ---
 
       ## Important Note
 
-      This Act Line is restarted from Scene {sceneNumber}, plot and events that happened at or prior to Scene {sceneNumber} may be have a different plot, or written from another perspective.
+      This Act Line is restarted from Scene {{sceneNumber}}, plot and events that happened at or prior to Scene {{sceneNumber}} may be have a different plot, or written from another perspective.
     editorTemplateFitter: >
       The "Editor Output" does not follow the required template format. Restructure it to match the Writer Output Template
       by inserting the appropriate section headers defined by "Writer Output Template" without changing any content.
@@ -180,8 +180,8 @@ pipeline:
     relationships: Relationships
     voice: Voice
     sceneCountSingular: '1 scene'
-    sceneCountPlural: '{count} scenes'
-    characterSummaries: 'Summaries of each character for recent Scenes since Scene {sceneNumber}.'
+    sceneCountPlural: '{{count}} scenes'
+    characterSummaries: 'Summaries of each character for recent Scenes since Scene {{sceneNumber}}.'
     actPhases:
       introduction: Introduction
       risingAction: Rising Action
@@ -207,7 +207,7 @@ features:
         - **Assess Importance:** The "importance" field should briefly explain what role this character plays in this specific act.
       prefix: |
         I need your help to extract all the characters from the current act.
-        {transcriptStart}
+        {{transcriptStart}}
       extractionPrompt: |
         Extract all the characters from the current act according to the following rules:
 
@@ -244,23 +244,23 @@ features:
     cardGenerationSystemPrompt: |
       You are a co-writer for an interactive narrative game, specializing in constructing detailed Character Cards.
       You exist entirely outside the game world.
-      Your responsibility is to analyze the provided source material and construct a Character Card for {characterName} that will be used as an active memory file to keep their personality, voice, and motivations consistent during future story generation.
+      Your responsibility is to analyze the provided source material and construct a Character Card for {{characterName}} that will be used as an active memory file to keep their personality, voice, and motivations consistent during future story generation.
 
       ## Rules
 
       - **Strict Canon:** Base your card entirely on the provided source text. Do not invent details not present or strongly implied.
-      - **Target Focus:** Extract information only as it pertains to {characterName}. Do not summarize the plot or detail world-lore unless it directly explains this character's behavior or backstory.
+      - **Target Focus:** Extract information only as it pertains to {{characterName}}. Do not summarize the plot or detail world-lore unless it directly explains this character's behavior or backstory.
       - **Handling Unknowns:** If a specific piece of information is not explicitly stated or strongly implied, write "Unknown".
       - **Marking Inferences:** If you deduce a trait or motive based on actions, preface that detail with [Inferred].
       - **Concise & Concrete:** Use bullet points and short, declarative sentences. Focus on actionable behavioral cues.
       - **Voice Capture:** For "Dialogue Examples", extract 2-3 exact quotes that best demonstrate their unique vocabulary, sentence structure, and tone. If no dialogue, write "No dialogue provided."
     characterCardGeneration: |
       Based on the information from the chat history, generate a new Character Card according to the following rules:
-      {extractionPrompt}
+      {{extractionPrompt}}
 
       ---
 
-      {template}
+      {{template}}
     cardExtractionRules: |
       ## Extraction Rules
 
@@ -276,8 +276,8 @@ features:
       Respond ONLY with the filled-out Markdown template below. Do not include introductory or concluding conversational text.
     transcriptStart: 'The following messages will contain the transcript of the current act:'
     transcriptEnd: 'The previous message was the end of the transcript of the current act.'
-    actCard: 'The following message contains the Act Card from Act {actNumber}'
-    characterCard: 'The following message contains the previous Character Card of {characterName} from Act {actNumber}'
+    actCard: 'The following message contains the Act Card from Act {{actNumber}}'
+    characterCard: 'The following message contains the previous Character Card of {{characterName}} from Act {{actNumber}}'
   actCardGenerator:
     transcriptStart: 'The following messages will contain the transcript of the current act:'
     transcriptEnd: 'The previous message was the end of the transcript of the current act. The following message will contain the Act Card template:'
@@ -326,7 +326,7 @@ features:
 
       ---
 
-      {worldContent}
+      {{worldContent}}
 
       ---
 
@@ -353,31 +353,31 @@ features:
     previousActConclusion: |
       ## Previous Act Conclusion
 
-      The previous act ended with a **{endingType}** ending.
+      The previous act ended with a **{{endingType}}** ending.
       The player has chosen to continue the story into a new act.
     nextActInterviewPurpose: |
-      The previous act's story has concluded with a **{endingType}** ending. Acknowledging where the narrative left off, your purpose in this conversation is to interview the player about the coming act — discuss what the next act should be about, what direction the narrative should take, and how the story should evolve from here.
+      The previous act's story has concluded with a **{{endingType}}** ending. Acknowledging where the narrative left off, your purpose in this conversation is to interview the player about the coming act — discuss what the next act should be about, what direction the narrative should take, and how the story should evolve from here.
   importWorld:
     messages:
       importCompleteWithInterview: 'Import complete! Starting interview...'
       importComplete: 'Import complete!'
       importCompletedSuccessfully: 'Import completed successfully.'
       importFailed: 'Import failed'
-      processingAct: 'Processing Act {actNumber}...'
-      fillingNarrativeVariables: 'Filling narrative variables for {count} messages...'
-      fillingNarrativeVariable: 'Filling narrative variables[{index}]...'
+      processingAct: 'Processing Act {{actNumber}}...'
+      fillingNarrativeVariables: 'Filling narrative variables for {{count}} messages...'
+      fillingNarrativeVariable: 'Filling narrative variables[{{index}}]...'
     validations:
-      actTranscriptRequired: 'Act {actNumber} must have a transcript. Only the last act may be created without one.'
+      actTranscriptRequired: 'Act {{actNumber}} must have a transcript. Only the last act may be created without one.'
       actTranscriptRequiredSingle: 'Each act must have a transcript except the last one.'
       lastActRequiresContent: 'The last act without a transcript requires at least a world file, act file, or character card to proceed.'
-      fileTooLarge: '{field} too large ({size}MB). Maximum is {max}MB.'
+      fileTooLarge: '{{field}} too large ({{size}}MB). Maximum is {{max}}MB.'
       contentRequired: 'At least a world building file, an act, or a character must be provided.'
       retryCountRange: 'LLM Retry Count must be between 0 and 20.'
       backoffIntervalRange: 'Backoff Interval must be between 1 and 60 seconds.'
-      fileMustBeMdOrTxt: '{field} must be a .md or .txt file.'
+      fileMustBeMdOrTxt: '{{field}} must be a .md or .txt file.'
       fileMustBeJson: 'Transcript file must be a .json file.'
       storyNameEmpty: 'Story name is empty — a placeholder name will be auto-generated.'
-      actNameEmpty: 'Act {actNumber} name is empty — a placeholder name will be auto-generated.'
+      actNameEmpty: 'Act {{actNumber}} name is empty — a placeholder name will be auto-generated.'
       characterCardMissing: 'Character card file is missing — character will be skipped during import.'
       characterNameEmpty: 'Character name is empty — a name will be derived from the card content.'
     description:
@@ -483,7 +483,7 @@ tools:
       noActPlot: 'No act plot has been generated for this act yet.'
   advancePhase:
     description: >
-      Advance the story to the next narrative phase (e.g., {introduction} → {risingAction} → {climax} → {fallingAction} → {resolution}).
+      Advance the story to the next narrative phase (e.g., {{introduction}} → {{risingAction}} → {{climax}} → {{fallingAction}} → {{resolution}}).
       You must specify both the current phase the story is in and the next phase to advance to.
       Both must match the actual story state — if they don't, the tool will return an error with the actual current phase and the phase will not change.
       This signals a major shift in the story's arc. Takes effect starting next turn.
@@ -494,11 +494,11 @@ tools:
       nextPhase: 'The next narrative phase to advance to.'
     messages:
       alreadyAdvanced: 'Phase has already been advanced this scene. It will take effect next turn.'
-      success: 'Phase advanced from {current} to {next}. Takes effect next turn.'
+      success: 'Phase advanced from {{current}} to {{next}}. Takes effect next turn.'
       terminalPhase: 'Cannot advance further — the story is already at the resolution phase.'
       phaseMismatch:
-        current: 'Phase mismatch: the story is currently in {actual}, not {provided}. The phase has not been advanced.'
-        next: 'Phase mismatch: the story is currently in {actual} and the next phase is {expected}, not {provided}. The phase has not been advanced.'
+        current: 'Phase mismatch: the story is currently in {{actual}}, not {{provided}}. The phase has not been advanced.'
+        next: 'Phase mismatch: the story is currently in {{actual}} and the next phase is {{expected}}, not {{provided}}. The phase has not been advanced.'
   endAct:
     endingTypeInstructions: >
       When invoking `end-act`, set the `endingType` parameter to the value that best reflects the narrative
@@ -506,7 +506,7 @@ tools:
     description: >
       End the current act. Call this when the narrative has reached a natural conclusion aligned with
       one of the Possible Endings defined in the Act Plot. Specify which ending the story has reached:
-      {good}, {bad}, {bittersweet}, or {alternative}.
+      {{good}}, {{bad}}, {{bittersweet}}, or {{alternative}}.
       This tool must be called during reasoning, before any narrative output is written. If any output has already been written, do not call this tool.
     endingGood: Good
     endingBad: Bad
@@ -516,7 +516,7 @@ tools:
     tooEarly: >
       The story has not reached a point where ending the act is appropriate.
       The narrative needs to progress further before a natural conclusion can be reached.
-    success: 'The act has concluded with a {endingType} ending. Write a closing scene that brings the narrative to a satisfying conclusion.'
+    success: 'The act has concluded with a {{endingType}} ending. Write a closing scene that brings the narrative to a satisfying conclusion.'
   readScene:
     description: >
       Read the content of a specific scene in the current act. Returns the narrative body (assistant response) and
@@ -525,8 +525,8 @@ tools:
       sceneBody: Scene Body
       playerResponse: Player Response
     messages:
-      noSceneFound: 'No scene found with scene number {sceneNumber}.'
-      sceneNoContent: 'Scene {sceneNumber} exists but contains no readable content.'
+      noSceneFound: 'No scene found with scene number {{sceneNumber}}.'
+      sceneNoContent: 'Scene {{sceneNumber}} exists but contains no readable content.'
     parameters:
       sceneNumber: 'The scene number to read (1-based)'
   readDistantScene:
@@ -534,16 +534,16 @@ tools:
       Read the content of a specific scene from a previous act. Use this tool ONLY when you need to recall distant
       memory from earlier acts — for scenes in the current act, always prefer the read-scene tool instead.
       Returns the narrative body (assistant response) and the player response for the given scene number,
-      formatted in Markdown. The current act is act {currentActNumber}; you may only read from acts that
+      formatted in Markdown. The current act is act {{currentActNumber}}; you may only read from acts that
       are in the direct lineage of the current narrative line.
     headers:
       sceneBody: Scene Body
       playerResponse: Player Response
     messages:
       futureAct: 'Cannot read scenes from acts that have not happened yet.'
-      actNotInLineage: 'Act {actNumber} is not in the lineage of the current narrative line.'
-      noSceneFound: 'No scene found with scene number {sceneNumber} in act {actNumber}.'
-      sceneNoContent: 'Scene {sceneNumber} in act {actNumber} exists but contains no readable content.'
+      actNotInLineage: 'Act {{actNumber}} is not in the lineage of the current narrative line.'
+      noSceneFound: 'No scene found with scene number {{sceneNumber}} in act {{actNumber}}.'
+      sceneNoContent: 'Scene {{sceneNumber}} in act {{actNumber}} exists but contains no readable content.'
     parameters:
       actNumber: 'The act number to read from (must be in the lineage of the current act line)'
       sceneNumber: 'The scene number to read (1-based)'

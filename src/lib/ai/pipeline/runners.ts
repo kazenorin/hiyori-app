@@ -92,7 +92,7 @@ function resolveGmSystemPrompt(ctx: PipelineRunContext): string {
 
 	const additionalRulesText = additionalRules.length > 0 ? '\n' + additionalRules.join('\n') : '';
 
-	return ctx.prompts.gameMasterSystemPrompt.replaceAll('{additionalRules}', additionalRulesText);
+	return ctx.prompts.gameMasterSystemPrompt.replaceAll('{{additionalRules}}', additionalRulesText);
 }
 
 function resolveGmActEndTrigger(ctx: PipelineRunContext): string | null {
@@ -252,24 +252,24 @@ export async function runWriterPhase(
 	const writerExtractionPrompt =
 		extractionPromptOverride ??
 		writerExtractionPromptTemplate
-			.replaceAll('{previousScene}', String(previousSceneNumber))
-			.replaceAll('{currentScene}', ctx.currentScene)
-			.replaceAll('{summarizedScenes}', String(summarizedScenes))
-			.replaceAll('{providedSummary}', resolveSummarizedScenes(summarizedScenes))
-			.replaceAll('{providedTurnOfEvents}', resolveTurnOfEvents(previousTurnOfEvents))
-			.replaceAll('{providedDirectorNotes}', resolveDirectorNotes(directorNotes))
-			.replaceAll('{turnOfEventsReinforcementPhrase}', resolveTurnOfEventsReinforcementPhrase(previousTurnOfEvents))
-			.replaceAll('{directorNotesReinforcementPhrase}', resolveDirectorNotesReinforcementPhrase(directorNotes))
-			.replaceAll('{currentActPhase}', resolveCurrentActPhase(ctx))
-			.replaceAll('{actEndInstruction}', resolveActEndInstruction(ctx.story.actLine.plotMode, ctx.story.actLine.currentActPhase ?? null));
+			.replaceAll('{{previousScene}}', String(previousSceneNumber))
+			.replaceAll('{{currentScene}}', ctx.currentScene)
+			.replaceAll('{{summarizedScenes}}', String(summarizedScenes))
+			.replaceAll('{{providedSummary}}', resolveSummarizedScenes(summarizedScenes))
+			.replaceAll('{{providedTurnOfEvents}}', resolveTurnOfEvents(previousTurnOfEvents))
+			.replaceAll('{{providedDirectorNotes}}', resolveDirectorNotes(directorNotes))
+			.replaceAll('{{turnOfEventsReinforcementPhrase}}', resolveTurnOfEventsReinforcementPhrase(previousTurnOfEvents))
+			.replaceAll('{{directorNotesReinforcementPhrase}}', resolveDirectorNotesReinforcementPhrase(directorNotes))
+			.replaceAll('{{currentActPhase}}', resolveCurrentActPhase(ctx))
+			.replaceAll('{{actEndInstruction}}', resolveActEndInstruction(ctx.story.actLine.plotMode, ctx.story.actLine.currentActPhase ?? null));
 
 	const result = await executeStreamingPhase(
 		{
 			phaseName: 'WRITER',
 			systemPrompt: ctx.prompts.writerSystemPrompt
-				.replaceAll('{generalInstructions}', ctx.prompts.generalInstructions)
-				.replaceAll('{targetWordCount}', ctx.effectiveTargetWordCount)
-				.replaceAll('{writerOutputTemplate}', ctx.prompts.writerOutputTemplate),
+				.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
+				.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
+				.replaceAll('{{writerOutputTemplate}}', ctx.prompts.writerOutputTemplate),
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'WRITER'),
 			descriptors: getNarrativeDescriptors(),
@@ -304,11 +304,11 @@ export async function runReviewerEditorPhases(
 		{
 			phaseName: 'REVIEWER',
 			systemPrompt: ctx.prompts.reviewerPrompt
-				.replaceAll('{generalInstructions}', ctx.prompts.generalInstructions)
-				.replaceAll('{acceptAsIs}', acceptAsIsLabel())
-				.replaceAll('{summary}', summaryHeader())
-				.replaceAll('{totalViolations}', totalViolationsLabel())
-				.replaceAll('{recommendation}', recommendationLabel()),
+				.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
+				.replaceAll('{{acceptAsIs}}', acceptAsIsLabel())
+				.replaceAll('{{summary}}', summaryHeader())
+				.replaceAll('{{totalViolations}}', totalViolationsLabel())
+				.replaceAll('{{recommendation}}', recommendationLabel()),
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'REVIEWER'),
 			descriptors: getReviewerDescriptors(),
@@ -337,9 +337,9 @@ export async function runReviewerEditorPhases(
 			{
 				phaseName: 'EDITOR',
 				systemPrompt: ctx.prompts.editorSystemPrompt
-					.replaceAll('{generalInstructions}', ctx.prompts.generalInstructions)
-					.replaceAll('{targetWordCount}', ctx.effectiveTargetWordCount)
-					.replaceAll('{writerOutputTemplate}', ctx.prompts.writerOutputTemplate),
+					.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
+					.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
+					.replaceAll('{{writerOutputTemplate}}', ctx.prompts.writerOutputTemplate),
 				...ctx.sharedParams,
 				tools: filterToolsForPhase(ctx.tools, 'EDITOR'),
 				descriptors: getEditorDescriptors(),
@@ -481,8 +481,8 @@ function executePlotPlannerPhase(
 		{
 			phaseName: 'PLOT_PLANNER',
 			systemPrompt: plotPlannerPrompt
-				.replaceAll('{generalInstructions}', ctx.prompts.generalInstructions)
-				.replaceAll('{targetWordCount}', ctx.effectiveTargetWordCount),
+				.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
+				.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount),
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'PLOT_PLANNER'),
 			descriptors: getPlotPlannerDescriptors(),

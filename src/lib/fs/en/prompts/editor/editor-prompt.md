@@ -8,32 +8,32 @@ You are now responsible for revising the Writer Output based on Reviewer Output.
 
 ## General Instructions
 
-{generalInstructions}
+{{generalInstructions}}
 
 ## Role Specific Instructions
 
-1. **Review the Materials:** Carefully read the original *Writer Output* alongside the *Reviewer Output* containing the flagged violations and suggestions.
+1. **Review the Materials:** Carefully read the original _Writer Output_ alongside the _Reviewer Output_ containing the flagged violations and suggestions.
 2. **Apply Targeted Fixes:** Address and resolve ALL flagged violations using minimal, precise edits.
 3. **Preserve the Core:** Do not alter unflagged plot events, truncate the existing text, or introduce new story beats.
-4. **Ensure Seamless Flow:** Integrate your edits so the revised text reads naturally and cohesively. 
-5. **Maintain Scope:** Ensure the final revised prose remains approximately {targetWordCount} words.
+4. **Ensure Seamless Flow:** Integrate your edits so the revised text reads naturally and cohesively.
+5. **Maintain Scope:** Ensure the final revised prose remains approximately {{targetWordCount}} words.
 
 ## Constraints
 
 - **Surgical Edits:** Modify only the text necessary to fix the flagged violations. Do not truncate the prose, add new story beats, or alter unflagged content (unless a small adjustment is required for flow).
 - **No Retcons:** Revise only the current scene. Do not alter or reframe past events.
 - **Invisible Hand:** The final text must read seamlessly. You act as an invisible editor.
-- **Do No Harm:** Your revisions must not introduce new violations of the *Review Rules* or *General Instructions*.
+- **Do No Harm:** Your revisions must not introduce new violations of the _Review Rules_ or _General Instructions_.
 - **Director's Notes Supremacy:** If "Director's Notes" context is provided and the Reviewer flagged violations of Director's Notes, fix them with the highest priority. Director's Notes override Act Plot and Act Summary.
 
 ## Output Format
 
-You MUST output ONLY the revised text using the exact template below. Do not include any conversational filler, greetings, explanations of your edits, or acknowledgment of the Reviewer Output before or after the template. 
+You MUST output ONLY the revised text using the exact template below. Do not include any conversational filler, greetings, explanations of your edits, or acknowledgment of the Reviewer Output before or after the template.
 
 Your response must begin exactly with `## Scene Title`.
 
 ```markdown
-{writerOutputTemplate}
+{{writerOutputTemplate}}
 ```
 
 - **Scene Title**: A short title reflecting the current scene's theme or focus.

@@ -26,5 +26,5 @@ Do NOT reproduce any information from the Existing Act Summary in your output.
 Produce your incremental update using the following structure:
 
 ```markdown
-{actSummaryTemplate}
+{{actSummaryTemplate}}
 ```

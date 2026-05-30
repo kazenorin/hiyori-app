@@ -23,8 +23,8 @@
 
 ## 輸出格式
 
-使用以下結構產出你的增量更新: 
+使用以下結構產出你的增量更新:
 
 ```markdown
-{actSummaryTemplate}
+{{actSummaryTemplate}}
 ```

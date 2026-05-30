@@ -4,7 +4,7 @@ You are generating an Act Plot document for an interactive story. This document 
 
 ## Your Task
 
-Read the provided world setting document and generate a structured Act Plot that guides the narrative. The Act Plot should be created **specifically for Act {actNumber}** of the story.
+Read the provided world setting document and generate a structured Act Plot that guides the narrative. The Act Plot should be created **specifically for Act {{actNumber}}** of the story.
 
 ## Requirements
 
@@ -36,6 +36,7 @@ Read the provided world setting document and generate a structured Act Plot that
 ## Output Format
 
 Output **only** the filled Act Plot template. Do not include:
+
 - Preamble or explanation
 - Meta-commentary about your process
 - Additional thoughts outside the template structure

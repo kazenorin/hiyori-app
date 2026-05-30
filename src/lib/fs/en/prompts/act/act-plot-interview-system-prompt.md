@@ -1,10 +1,10 @@
 # System Role
 
-{interviewSystemRole}
+{{interviewSystemRole}}
 
 ## General instructions
 
-{generalInstructions}
+{{generalInstructions}}
 
 ## Role-specific instructions
 

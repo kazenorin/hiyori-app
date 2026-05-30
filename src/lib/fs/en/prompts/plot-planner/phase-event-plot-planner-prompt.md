@@ -9,7 +9,7 @@ Your job is to design and craft the events, not to write prose.
 
 ## General Instructions
 
-{generalInstructions}
+{{generalInstructions}}
 
 ## Role Specific Instructions
 

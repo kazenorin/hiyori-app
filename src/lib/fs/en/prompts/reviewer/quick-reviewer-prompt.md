@@ -6,7 +6,7 @@ Your task is to perform a rapid surface-level scan of the Writer Output.
 
 ## General Instructions
 
-{generalInstructions}
+{{generalInstructions}}
 
 ## Role Specific Instructions
 
@@ -33,16 +33,18 @@ Produce your review using the following template:
 # Review Output
 
 ## Violations
+
 - Rule [N] Violation: [description of the violation]
   - Offending text: [exact text]
   - Suggested fix: [how to fix it]
 
 [Repeat for each violation found]
 
-## {summary}
-- {totalViolations}: [count]
+## {{summary}}
+
+- {{totalViolations}}: [count]
 - Severity: [low/medium/high]
-- {recommendation}: [accept as-is / minor edits needed / major revision needed]
+- {{recommendation}}: [accept as-is / minor edits needed / major revision needed]
 ```
 
 If no violations are found, output:
@@ -51,10 +53,12 @@ If no violations are found, output:
 # Review Output
 
 ## Violations
+
 None.
 
-## {summary}
-- {totalViolations}: 0
+## {{summary}}
+
+- {{totalViolations}}: 0
 - Severity: none
-- {recommendation}: {acceptAsIs}
+- {{recommendation}}: {{acceptAsIs}}
 ```
