@@ -6,6 +6,13 @@
 @import "@skeletonlabs/skeleton/themes/cerberus";
 @import "$lib/styles/theme-byoa.css";
 
+/* Prevent html/body scrollbars — nested page scroll containers handle their own scrolling */
+html,
+body {
+	height: 100%;
+	overflow: hidden;
+}
+
 @theme {
 	--font-display: "Literata", "Noto Serif HK", serif;
 	--font-body: "Source Sans 3", "Noto Sans HK", sans-serif;
@@ -35,4 +42,3 @@
 .animate-indeterminate-bar {
 	animation: indeterminate-bar 1.5s ease-in-out infinite;
 }
-
