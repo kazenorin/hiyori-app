@@ -1,4 +1,5 @@
-import { fetch } from '$lib/http/fetch';
+import { fetch, createLibcurlFetch } from '$lib/http/fetch';
+import { isTauriSync } from '$lib/runtime';
 import type { Provider } from '$lib/stores/settings.svelte';
 
 export interface ModelInfo {
@@ -9,9 +10,17 @@ export interface ModelInfo {
 
 const FETCH_TIMEOUT_MS = 10000;
 
-export async function fetchModels(settings: { baseURL: string; apiKey: string; provider: Provider }): Promise<ModelInfo[]> {
+export async function fetchModels(settings: {
+	baseURL: string;
+	apiKey: string;
+	provider: Provider;
+	corsBypassEnabled: boolean;
+	wispProxyUrl: string;
+}): Promise<ModelInfo[]> {
+	const resolvedFetch = await resolveFetch(settings.corsBypassEnabled, settings.wispProxyUrl);
+
 	if (settings.provider === 'ollama') {
-		return fetchOllamaModels(settings);
+		return fetchOllamaModels(settings, resolvedFetch);
 	}
 
 	const baseURL = settings.baseURL || 'https://api.openai.com/v1';
@@ -26,7 +35,7 @@ export async function fetchModels(settings: { baseURL: string; apiKey: string; p
 	const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
 	try {
-		const response = await fetch(url, { headers, signal: controller.signal });
+		const response = await resolvedFetch(url, { headers, signal: controller.signal });
 
 		if (!response.ok) {
 			throw new Error(`Failed to fetch models (${response.status})`);
@@ -44,7 +53,10 @@ export async function fetchModels(settings: { baseURL: string; apiKey: string; p
 	}
 }
 
-async function fetchOllamaModels(settings: { baseURL: string; apiKey: string; provider: Provider }): Promise<ModelInfo[]> {
+async function fetchOllamaModels(
+	settings: { baseURL: string; apiKey: string },
+	resolvedFetch: typeof globalThis.fetch
+): Promise<ModelInfo[]> {
 	const baseURL = settings.baseURL || 'https://ollama.com';
 	const url = `${baseURL}/api/tags`;
 
@@ -57,7 +69,7 @@ async function fetchOllamaModels(settings: { baseURL: string; apiKey: string; pr
 	const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
 	try {
-		const response = await fetch(url, { headers, signal: controller.signal });
+		const response = await resolvedFetch(url, { headers, signal: controller.signal });
 
 		if (!response.ok) {
 			throw new Error(`Failed to fetch models (${response.status})`);
@@ -79,4 +91,11 @@ async function fetchOllamaModels(settings: { baseURL: string; apiKey: string; pr
 	} finally {
 		clearTimeout(timeoutId);
 	}
+}
+
+async function resolveFetch(corsBypassEnabled?: boolean, wispProxyUrl?: string): Promise<typeof globalThis.fetch> {
+	if (corsBypassEnabled && wispProxyUrl && !isTauriSync()) {
+		return createLibcurlFetch(wispProxyUrl);
+	}
+	return fetch;
 }

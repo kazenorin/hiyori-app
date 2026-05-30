@@ -150,7 +150,13 @@
 		isLoadingModels = true;
 		modelsError = null;
 		try {
-			availableModels = await fetchModels({ baseURL: formBaseURL, apiKey: formApiKey, provider: formProvider });
+			availableModels = await fetchModels({
+				baseURL: formBaseURL,
+				apiKey: formApiKey,
+				provider: formProvider,
+				corsBypassEnabled: formCorsBypassEnabled,
+				wispProxyUrl: formWispProxyUrl,
+			});
 		} catch (err: unknown) {
 			modelsError = err instanceof Error ? err.message : t('settings.failedToFetchModels');
 			availableModels = [];
