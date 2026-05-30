@@ -44,8 +44,9 @@ Conformance > taste inside the codebase. If you genuinely think a convention is 
 
 ## Workflow notes
 
-1. Worktrees should be created in `tmp/worktrees` under the **project root**
-2. Temporary files should be stored in `local-references/` under the **project root**
+1. Worktrees must be created in `<project-root>/tmp/worktrees`
+2. Temporary files must be stored in `<project-root>/local-references`
+3. HTML-based plans must be created in `<project-root>/local-references`
 
 ## Architecture
 
