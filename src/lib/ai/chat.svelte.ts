@@ -165,8 +165,8 @@ function setMessages(newMessages: UIMessage[]) {
 
 function requireMainConfig(): ProviderConfig {
 	const mainConfig = getMainProviderConfig();
-	if (!mainConfig?.apiKey) {
-		error = 'Please configure your API key in Settings.';
+	if (!mainConfig) {
+		error = 'Please configure your AI API provider in Settings.';
 		throw new Error(error);
 	}
 	if (!mainConfig?.model) {

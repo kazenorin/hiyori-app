@@ -26,24 +26,24 @@ export function createAdvancePhaseTool(actLineId: string, currentPhase: ActPhase
 		execute: async ({ currentPhase: inputCurrentPhase, nextPhase: inputNextPhase }): Promise<{ result: string }> => {
 			if (hasAdvancedPhase) {
 				await log('advance-phase triggered: already advanced');
-				return { result: ls('tools.advancePhase.alreadyAdvanced') };
+				return { result: ls('tools.advancePhase.messages.alreadyAdvanced') };
 			}
 
 			if (!currentPhase) {
 				await log('advance-phase triggered: current phase is null, treated as terminal phase');
-				return { result: ls('tools.advancePhase.terminalPhase') };
+				return { result: ls('tools.advancePhase.messages.terminalPhase') };
 			}
 
 			const nextPhase = getNextActPhase(currentPhase);
 			if (!nextPhase) {
 				await log('advance-phase triggered: already terminal phase');
-				return { result: ls('tools.advancePhase.terminalPhase') };
+				return { result: ls('tools.advancePhase.messages.terminalPhase') };
 			}
 
 			if (inputCurrentPhase !== currentPhase) {
 				await log(`advance-phase: currentPhase mismatch (LLM: ${inputCurrentPhase}, actual: ${currentPhase})`);
 				return {
-					result: ls('tools.advancePhase.phaseMismatch.current', {
+					result: ls('tools.advancePhase.messages.phaseMismatch.current', {
 						actual: getLocalizedActPhase(currentPhase),
 						provided: getLocalizedActPhase(inputCurrentPhase),
 					}),
@@ -53,7 +53,7 @@ export function createAdvancePhaseTool(actLineId: string, currentPhase: ActPhase
 			if (inputNextPhase !== nextPhase) {
 				await log(`advance-phase: nextPhase mismatch (LLM: ${inputNextPhase}, expected: ${nextPhase})`);
 				return {
-					result: ls('tools.advancePhase.phaseMismatch.next', {
+					result: ls('tools.advancePhase.messages.phaseMismatch.next', {
 						actual: getLocalizedActPhase(currentPhase),
 						expected: getLocalizedActPhase(nextPhase),
 						provided: getLocalizedActPhase(inputNextPhase),
@@ -66,7 +66,7 @@ export function createAdvancePhaseTool(actLineId: string, currentPhase: ActPhase
 			hasAdvancedPhase = true;
 
 			return {
-				result: ls('tools.advancePhase.success', {
+				result: ls('tools.advancePhase.messages.success', {
 					current: getLocalizedActPhase(currentPhase),
 					next: getLocalizedActPhase(nextPhase),
 				}),
