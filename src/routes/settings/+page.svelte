@@ -753,7 +753,7 @@
 								const data = await exportDatabase();
 								const ext = isBinaryFormat() ? 'db' : 'json';
 								const ts = new Date().toISOString().slice(0, 10);
-								downloadExport(data, `byoa-backup-${ts}.${ext}`);
+								await downloadExport(data, `byoa-backup-${ts}.${ext}`);
 							} catch (err) {
 								importError = t('settings.exportFailed', { error: err instanceof Error ? err.message : String(err) });
 							} finally {

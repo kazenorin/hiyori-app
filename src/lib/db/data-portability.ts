@@ -1,4 +1,5 @@
 import { getDatabase } from '$lib/db/database';
+import { isTauriSync } from '$lib/runtime';
 
 /**
  * Export the entire database as a binary Uint8Array.
@@ -85,8 +86,20 @@ export async function importDatabase(data: Uint8Array): Promise<void> {
 /**
  * Trigger a browser download of the database export.
  */
-export function downloadExport(data: Uint8Array, filename: string): void {
-	const blob = new Blob([data.buffer as ArrayBuffer], { type: 'application/octet-stream' });
+export async function downloadExport(data: Uint8Array, filename: string): Promise<void> {
+	if (isTauriSync()) {
+		const { save } = await import('@tauri-apps/plugin-dialog');
+		const { writeFile } = await import('@tauri-apps/plugin-fs');
+		const filePath = await save({
+			defaultPath: filename,
+			filters: [{ name: 'Backup', extensions: [filename.endsWith('.json') ? 'json' : 'db'] }],
+		});
+		if (!filePath) return;
+		await writeFile(filePath, data);
+		return;
+	}
+
+	const blob = new Blob([new Uint8Array(data)], { type: 'application/octet-stream' });
 	const url = URL.createObjectURL(blob);
 	const a = document.createElement('a');
 	a.href = url;

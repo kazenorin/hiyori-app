@@ -121,6 +121,18 @@
 		  ]
 		},
     "sql:default",
-    "sql:allow-execute"
+    "sql:allow-execute",
+    "dialog:allow-save",
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [
+        { "path": "$APPDATA/*" },
+        { "path": "$APPDATA/**" },
+        { "path": "$HOME/**" },
+        { "path": "$DOWNLOAD/**" },
+        { "path": "$DESKTOP/**" },
+        { "path": "$DOCUMENTS/**" }
+      ]
+    }
   ]
 }
