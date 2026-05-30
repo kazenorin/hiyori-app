@@ -17,7 +17,7 @@
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
 	import { t } from '$lib/i18n';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
-	import { exportDatabase, importDatabase, downloadExport, readFileAsUint8Array, isBinaryFormat } from '$lib/db/data-portability';
+	import { exportAppData, importAppData, downloadExport, readFileAsUint8Array } from '$lib/db/data-portability';
 	import { isTauriSync } from '$lib/runtime';
 
 	// Editing state
@@ -28,6 +28,8 @@
 	let isExporting = $state(false);
 	let isImporting = $state(false);
 	let importError = $state<string | null>(null);
+	let showImportConfirm = $state(false);
+	let pendingImportFile = $state<File | null>(null);
 
 	// Form state for the provider being edited/added
 	let formName = $state('');
@@ -750,10 +752,9 @@
 							isExporting = true;
 							importError = null;
 							try {
-								const data = await exportDatabase();
-								const ext = isBinaryFormat() ? 'db' : 'json';
+								const data = await exportAppData();
 								const ts = new Date().toISOString().slice(0, 10);
-								await downloadExport(data, `byoa-backup-${ts}.${ext}`);
+								await downloadExport(data, `byoa-backup-${ts}.zip`);
 							} catch (err) {
 								importError = t('settings.exportFailed', { error: err instanceof Error ? err.message : String(err) });
 							} finally {
@@ -771,27 +772,21 @@
 						{isImporting ? '...' : t('settings.importDatabase')}
 						<input
 							type="file"
-							accept=".db,.json"
+							accept=".zip"
 							class="sr-only"
 							disabled={isImporting}
-							onchange={async (e) => {
+							onchange={(e) => {
 								const file = (e.currentTarget as HTMLInputElement).files?.[0];
 								if (!file) return;
-								isImporting = true;
-								importError = null;
-								try {
-									const data = await readFileAsUint8Array(file);
-									await importDatabase(data);
-									window.location.reload();
-								} catch (err) {
-									importError = t('settings.importFailed', { error: err instanceof Error ? err.message : String(err) });
-									isImporting = false;
-								}
+								pendingImportFile = file;
+								showImportConfirm = true;
+								(e.currentTarget as HTMLInputElement).value = '';
 							}}
 						/>
 					</label>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.importDatabaseDescription')}</span>
-					<span class="text-xs text-warning-500 mt-1 block">{t('settings.importWarning')}</span>
+					<span class="text-xs text-warning-500 mt-1 block">{t('settings.importRecommendExport')}</span>
+					<span class="text-xs text-error-500 mt-1 block">{t('settings.importWarning')}</span>
 				</div>
 
 				{#if importError}
@@ -817,3 +812,59 @@
 		</section>
 	</div>
 </div>
+
+{#if showImportConfirm}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		role="dialog"
+		aria-modal="true"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+		onclick={() => (showImportConfirm = false)}
+		onkeydown={(e) => e.key === 'Escape' && (showImportConfirm = false)}
+	>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+		>
+			<h3 class="text-lg font-semibold text-error-500 mb-3">{t('settings.importDatabase')}</h3>
+			<p class="text-sm text-surface-600-400 mb-2">{t('settings.importRecommendExport')}</p>
+			<p class="text-sm text-surface-700-300 mb-5">{t('settings.importWarning')}</p>
+			<div class="flex gap-2">
+				<button
+					class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+					type="button"
+					onclick={() => {
+						showImportConfirm = false;
+						pendingImportFile = null;
+					}}
+				>
+					{t('settings.cancel')}
+				</button>
+				<button
+					class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
+					type="button"
+					onclick={async () => {
+						showImportConfirm = false;
+						if (!pendingImportFile) return;
+						isImporting = true;
+						importError = null;
+						try {
+							const data = await readFileAsUint8Array(pendingImportFile);
+							await importAppData(data);
+							window.location.reload();
+						} catch (err) {
+							importError = t('settings.importFailed', { error: err instanceof Error ? err.message : String(err) });
+							isImporting = false;
+						} finally {
+							pendingImportFile = null;
+						}
+					}}
+				>
+					{t('settings.importDatabase')}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}

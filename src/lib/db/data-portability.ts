@@ -1,105 +1,347 @@
 import { getDatabase } from '$lib/db/database';
 import { isTauriSync } from '$lib/runtime';
+import { fs } from '$lib/fs/file-system';
+import { loadManifest, type ConfigAssetEntry } from '$lib/fs/config-manifest';
+import { log } from '$lib/logging/logger';
+import JSZip from 'jszip';
 
-/**
- * Export the entire database as a binary Uint8Array.
- * - SqlJsDatabase: returns the raw SQLite binary (via .export())
- * - TauriDatabase: returns a JSON-serialized dump of all tables
- */
-export async function exportDatabase(): Promise<Uint8Array> {
+// --- Hash helper ---
+
+async function hashContent(content: string): Promise<string> {
+	const normalized = content.replaceAll('\r\n', '\n');
+	const data = new TextEncoder().encode(normalized);
+	const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+	return Array.from(new Uint8Array(hashBuffer))
+		.map((b) => b.toString(16).padStart(2, '0'))
+		.join('');
+}
+
+// --- Recursive directory walker ---
+
+interface FileEntry {
+	zipPath: string;
+	fsPath: string;
+}
+
+async function walkDir(dirPath: string, zipPrefix: string): Promise<FileEntry[]> {
+	const entries = await fs.readDir(dirPath);
+	const files: FileEntry[] = [];
+
+	for (const entry of entries) {
+		const childFsPath = dirPath ? `${dirPath}/${entry.name}` : entry.name;
+		const childZipPath = zipPrefix ? `${zipPrefix}/${entry.name}` : entry.name;
+
+		if (entry.isDirectory) {
+			files.push(...(await walkDir(childFsPath, childZipPath)));
+		} else {
+			files.push({ zipPath: childZipPath, fsPath: childFsPath });
+		}
+	}
+
+	return files;
+}
+
+// --- Config filtering ---
+
+async function isUserEditedConfig(configPath: string, content: string, manifest: Map<string, ConfigAssetEntry>): Promise<boolean> {
+	const entry = manifest.get(configPath);
+	if (!entry) return true;
+
+	const diskHash = await hashContent(content);
+	const knownHashes = [...entry.oldHashes, entry.hash].filter((h): h is string => h !== null);
+	return !knownHashes.includes(diskHash);
+}
+
+// --- Story folder names from DB ---
+
+async function getStoryFolderNames(): Promise<string[]> {
 	const db = getDatabase();
+	const rows = await db.select<{ folder_name: string }[]>('SELECT folder_name FROM story_folders');
+	return rows.map((r) => r.folder_name);
+}
 
+// --- Database binary read ---
+
+async function readMainDbBinary(): Promise<Uint8Array> {
+	const db = getDatabase();
 	if ('export' in db && typeof db.export === 'function') {
 		return (db as { export: () => Uint8Array }).export();
 	}
 
-	// TauriDatabase: serialize all tables to JSON
-	const tables = await db.select<Array<{ name: string }>>(
-		"SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_litestream_%'"
-	);
-
-	const data: Record<string, unknown[]> = {};
-	for (const { name } of tables) {
-		data[name] = await db.select(`SELECT * FROM "${name}"`);
+	if (isTauriSync()) {
+		const { readFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+		return await readFile('byoa.db', { baseDir: BaseDirectory.AppData });
 	}
 
-	const encoder = new TextEncoder();
-	return encoder.encode(JSON.stringify(data));
+	throw new Error('Cannot read main database binary');
 }
 
-/**
- * Import a previously exported database.
- * Overwrites all current data with the import data.
- * The app must be reloaded after import to re-initialize state.
- */
-export async function importDatabase(data: Uint8Array): Promise<void> {
-	const db = getDatabase();
+async function readMemoryDbBinary(): Promise<Uint8Array | null> {
+	try {
+		const { getMemoryDatabase } = await import('$lib/db/memory-database');
+		const { isMemoryCapable } = await import('$lib/stores/settings.svelte');
+		if (!isMemoryCapable()) return null;
 
-	// For SqlJsDatabase: replace the in-memory database with the imported data
-	if ('importFromData' in db && typeof (db as any).importFromData === 'function') {
-		await (db as any).importFromData(data);
-		await db.flush();
+		const memDb = getMemoryDatabase();
+		if ('export' in memDb && typeof memDb.export === 'function') {
+			return (memDb as { export: () => Uint8Array }).export();
+		}
+
+		if (isTauriSync()) {
+			const { readFile, exists, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+			const memExists = await exists('byoa-memory.db', { baseDir: BaseDirectory.AppData });
+			if (!memExists) return null;
+			return await readFile('byoa-memory.db', { baseDir: BaseDirectory.AppData });
+		}
+	} catch {
+		return null;
+	}
+	return null;
+}
+
+// --- Export ---
+
+export async function exportAppData(): Promise<Uint8Array> {
+	const zip = new JSZip();
+	const manifest = loadManifest();
+
+	// 1. Config: settings.json
+	const settingsJson = typeof localStorage !== 'undefined' ? localStorage.getItem('byoa-settings') : null;
+	if (settingsJson) {
+		zip.file('user-data/config/settings.json', settingsJson);
+	}
+
+	// 2. Config: customized prompt/view template files
+	await exportConfigFiles(zip, manifest);
+
+	// 3. Logs
+	await exportLogFiles(zip);
+
+	// 4. Stories
+	await exportStoryFolders(zip);
+
+	// 5. Database
+	const mainDb = await readMainDbBinary();
+	zip.file('database/main-db/byoa.db', mainDb);
+
+	const memoryDb = await readMemoryDbBinary();
+	if (memoryDb) {
+		zip.file('database/memory-db/byoa-memory.db', memoryDb);
+	}
+
+	return await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+}
+
+async function exportConfigFiles(zip: JSZip, manifest: Map<string, ConfigAssetEntry>): Promise<void> {
+	const configDir = 'config';
+	let configExists = false;
+	try {
+		configExists = await fs.exists(configDir);
+	} catch {
 		return;
 	}
+	if (!configExists) return;
 
-	// Fallback: JSON format for TauriDatabase
-	const decoder = new TextDecoder();
-	const json = JSON.parse(decoder.decode(data)) as Record<string, unknown[]>;
+	const files = await walkDir(configDir, 'user-data/config');
+	for (const { fsPath, zipPath } of files) {
+		try {
+			const content = await fs.readTextFile(fsPath);
+			const relativeConfigPath = fsPath.slice('config/'.length);
 
-	// Disable foreign keys during import
-	await db.execute('PRAGMA foreign_keys = OFF');
-
-	try {
-		// Drop existing tables
-		const tables = await db.select<Array<{ name: string }>>(
-			"SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '_litestream_%'"
-		);
-		for (const { name } of tables) {
-			await db.execute(`DROP TABLE IF EXISTS "${name}"`);
-		}
-
-		// Re-run migrations to create schema
-		const { runMigrations } = await import('$lib/db/migrations');
-		await runMigrations();
-
-		// Insert data
-		for (const [tableName, rows] of Object.entries(json)) {
-			if (!Array.isArray(rows) || rows.length === 0) continue;
-
-			const columns = Object.keys(rows[0] as Record<string, unknown>);
-			const placeholders = columns.map((_, i) => `$${i + 1}`).join(', ');
-			const colNames = columns.map((c) => `"${c}"`).join(', ');
-
-			for (const row of rows) {
-				const record = row as Record<string, unknown>;
-				const values = columns.map((c) => record[c] ?? null);
-				await db.execute(`INSERT INTO "${tableName}" (${colNames}) VALUES (${placeholders})`, values);
+			if (await isUserEditedConfig(relativeConfigPath, content, manifest)) {
+				zip.file(zipPath, content);
 			}
+		} catch (err) {
+			await log.warn('export', `Skipping config file ${fsPath}: ${err}`);
 		}
-	} finally {
-		await db.execute('PRAGMA foreign_keys = ON');
 	}
-
-	await db.flush();
 }
 
-/**
- * Trigger a browser download of the database export.
- */
+async function exportLogFiles(zip: JSZip): Promise<void> {
+	const logsDir = 'logs';
+	let logsExists = false;
+	try {
+		logsExists = await fs.exists(logsDir);
+	} catch {
+		return;
+	}
+	if (!logsExists) return;
+
+	const files = await walkDir(logsDir, 'user-data/logs');
+	for (const { fsPath, zipPath } of files) {
+		try {
+			const content = await fs.readTextFile(fsPath);
+			zip.file(zipPath, content);
+		} catch (err) {
+			await log.warn('export', `Skipping log file ${fsPath}: ${err}`);
+		}
+	}
+}
+
+async function exportStoryFolders(zip: JSZip): Promise<void> {
+	const folderNames = await getStoryFolderNames();
+
+	for (const folderName of folderNames) {
+		let exists = false;
+		try {
+			exists = await fs.exists(folderName);
+		} catch {
+			continue;
+		}
+		if (!exists) continue;
+
+		const files = await walkDir(folderName, `user-data/stories/${folderName}`);
+		for (const { fsPath, zipPath } of files) {
+			try {
+				const content = await fs.readTextFile(fsPath);
+				zip.file(zipPath, content);
+			} catch (err) {
+				await log.warn('export', `Skipping story file ${fsPath}: ${err}`);
+			}
+		}
+	}
+}
+
+// --- Import ---
+
+export async function importAppData(data: Uint8Array): Promise<void> {
+	const zip = await JSZip.loadAsync(data);
+
+	// 1. Database — direct replacement
+	await importDatabase(zip);
+
+	// 2. Settings — full replacement
+	await importSettings(zip);
+
+	// 3. Story folders — remove all existing, then extract from zip
+	await importStoryFolders(zip);
+
+	// 4. Config files — full replacement
+	await importConfigFiles(zip);
+}
+
+async function importDatabase(zip: JSZip): Promise<void> {
+	const mainDbFile = zip.file('database/main-db/byoa.db');
+	if (!mainDbFile) throw new Error('Invalid backup: missing database/main-db/byoa.db');
+
+	const mainDbBinary = await mainDbFile.async('uint8array');
+	const db = getDatabase();
+
+	if ('importFromData' in db && typeof (db as any).importFromData === 'function') {
+		await (db as any).importFromData(mainDbBinary);
+		await db.flush();
+	} else if (isTauriSync()) {
+		const { writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+		await writeFile('byoa.db', mainDbBinary, { baseDir: BaseDirectory.AppData });
+	}
+
+	const memoryDbFile = zip.file('database/memory-db/byoa-memory.db');
+	if (memoryDbFile) {
+		const memoryDbBinary = await memoryDbFile.async('uint8array');
+		if (isTauriSync()) {
+			const { writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+			await writeFile('byoa-memory.db', memoryDbBinary, { baseDir: BaseDirectory.AppData });
+		}
+	}
+}
+
+async function importSettings(zip: JSZip): Promise<void> {
+	const settingsFile = zip.file('user-data/config/settings.json');
+	if (!settingsFile) return;
+
+	const settingsJson = await settingsFile.async('string');
+	if (typeof localStorage !== 'undefined') {
+		localStorage.setItem('byoa-settings', settingsJson);
+	}
+}
+
+async function importStoryFolders(zip: JSZip): Promise<void> {
+	const existingFolders = await getStoryFolderNames();
+	for (const folderName of existingFolders) {
+		try {
+			await fs.remove(folderName);
+		} catch {
+			// Folder may already be gone
+		}
+	}
+
+	const storyPrefix = 'user-data/stories/';
+	const storyFiles: string[] = [];
+
+	zip.forEach((relativePath) => {
+		if (relativePath.startsWith(storyPrefix)) {
+			storyFiles.push(relativePath);
+		}
+	});
+
+	if (storyFiles.length === 0) return;
+
+	const folderNames = new Set<string>();
+	for (const path of storyFiles) {
+		const afterPrefix = path.slice(storyPrefix.length);
+		const slashIdx = afterPrefix.indexOf('/');
+		if (slashIdx > 0) {
+			folderNames.add(afterPrefix.slice(0, slashIdx));
+		}
+	}
+
+	for (const folderName of folderNames) {
+		await fs.mkdir(folderName);
+
+		const folderPrefix = `${storyPrefix}${folderName}/`;
+		const filesToExtract = storyFiles.filter((p) => p.startsWith(folderPrefix));
+
+		for (const zipPath of filesToExtract) {
+			const zipEntry = zip.file(zipPath);
+			if (!zipEntry) continue;
+
+			const content = await zipEntry.async('string');
+			const relPath = zipPath.slice(folderPrefix.length);
+			const fsPath = `${folderName}/${relPath}`;
+
+			await fs.writeTextFileEnsuringDir(fsPath, content);
+		}
+	}
+}
+
+async function importConfigFiles(zip: JSZip): Promise<void> {
+	const configPrefix = 'user-data/config/';
+	const filesToExtract: string[] = [];
+
+	zip.forEach((relativePath) => {
+		if (relativePath.startsWith(configPrefix) && !relativePath.endsWith('/')) {
+			if (!relativePath.endsWith('settings.json')) {
+				filesToExtract.push(relativePath);
+			}
+		}
+	});
+
+	for (const zipPath of filesToExtract) {
+		const zipEntry = zip.file(zipPath);
+		if (!zipEntry) continue;
+
+		const content = await zipEntry.async('string');
+		const relPath = zipPath.slice('user-data/'.length);
+		await fs.writeTextFileEnsuringDir(relPath, content);
+	}
+}
+
+// --- Download / Upload helpers ---
+
 export async function downloadExport(data: Uint8Array, filename: string): Promise<void> {
 	if (isTauriSync()) {
 		const { save } = await import('@tauri-apps/plugin-dialog');
 		const { writeFile } = await import('@tauri-apps/plugin-fs');
 		const filePath = await save({
 			defaultPath: filename,
-			filters: [{ name: 'Backup', extensions: [filename.endsWith('.json') ? 'json' : 'db'] }],
+			filters: [{ name: 'Backup', extensions: ['zip'] }],
 		});
 		if (!filePath) return;
 		await writeFile(filePath, data);
 		return;
 	}
 
-	const blob = new Blob([new Uint8Array(data)], { type: 'application/octet-stream' });
+	const blob = new Blob([new Uint8Array(data)], { type: 'application/zip' });
 	const url = URL.createObjectURL(blob);
 	const a = document.createElement('a');
 	a.href = url;
@@ -110,9 +352,6 @@ export async function downloadExport(data: Uint8Array, filename: string): Promis
 	URL.revokeObjectURL(url);
 }
 
-/**
- * Read a File as Uint8Array.
- */
 export function readFileAsUint8Array(file: File): Promise<Uint8Array> {
 	return new Promise((resolve, reject) => {
 		const reader = new FileReader();
@@ -126,13 +365,4 @@ export function readFileAsUint8Array(file: File): Promise<Uint8Array> {
 		reader.onerror = () => reject(reader.error);
 		reader.readAsArrayBuffer(file);
 	});
-}
-
-/**
- * Whether the current database supports binary export/import (SqlJsDatabase).
- * TauriDatabase uses JSON serialization.
- */
-export function isBinaryFormat(): boolean {
-	const db = getDatabase();
-	return 'export' in db && typeof db.export === 'function';
 }
