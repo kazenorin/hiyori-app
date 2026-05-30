@@ -5,6 +5,7 @@
 	import { goto } from '$app/navigation';
 	import { initializeApp } from '$lib/app/init.svelte';
 	import { log } from '$lib/logging/logger';
+	import { registerSW } from 'virtual:pwa-register';
 	import {
 		getStories,
 		getActs,
@@ -99,6 +100,7 @@
 	});
 
 	onMount(async () => {
+		registerSW({ immediate: true });
 		try {
 			await log.info('init', 'Starting app initialization...');
 			await initializeApp((status) => (initStatus = status));
