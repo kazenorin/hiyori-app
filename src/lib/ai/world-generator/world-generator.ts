@@ -88,7 +88,7 @@ export async function generateWorld(storyId: string, abortSignal?: AbortSignal):
 	// Append the instruction + template as the final user message
 	const allMessages = [...messages, { role: 'user' as const, content: userInstruction }];
 
-	const model = createModel(config!);
+	const model = await createModel(config!);
 
 	const result = streamText({
 		model,
@@ -152,7 +152,7 @@ export async function generateWorldFromCards(
 
 	messages.push({ role: 'user', content: userInstruction });
 
-	const model = createModel(config!);
+	const model = await createModel(config!);
 
 	const result = streamText({
 		model,

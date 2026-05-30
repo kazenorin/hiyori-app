@@ -62,7 +62,7 @@ export async function updateWorldCard(params: UpdateWorldCardParams): Promise<st
 	try {
 		await log.info(LOG_TAG, 'Starting world card update');
 
-		const model = createModel(config);
+		const model = await createModel(config);
 		const result = streamText({ model, messages, system: systemPrompt, abortSignal: params.abortSignal });
 
 		const contentParts: string[] = [];

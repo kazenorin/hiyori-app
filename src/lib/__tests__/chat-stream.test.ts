@@ -69,6 +69,8 @@ const providerConfig: ProviderConfig = {
 	baseURL: '',
 	apiKey: 'test-key',
 	model: 'gpt-4',
+	corsBypassEnabled: false,
+	wispProxyUrl: '',
 };
 
 describe('streamWithRetry', () => {

@@ -37,7 +37,7 @@ export async function generateAndRecordActShortSummary(actLineId: string, actSum
 			return;
 		}
 
-		const model = createModel(config);
+		const model = await createModel(config);
 		const systemPrompt = actShortSummaryExtractionPrompt();
 
 		const characterNames = extractCharacterNames(actSummary);

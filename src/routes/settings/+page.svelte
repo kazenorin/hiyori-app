@@ -18,7 +18,6 @@
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
 	import { exportDatabase, importDatabase, downloadExport, readFileAsUint8Array, isBinaryFormat } from '$lib/db/data-portability';
 	import { isTauriSync } from '$lib/runtime';
-	import { initHttpClient } from '$lib/http/fetch';
 
 	// Editing state
 	let editingId = $state<string | null>(null);
@@ -36,6 +35,8 @@
 	let formBaseURL = $state('https://api.openai.com/v1');
 	let formModel = $state('');
 	let formApiKey = $state('');
+	let formCorsBypassEnabled = $state(false);
+	let formWispProxyUrl = $state('');
 
 	// Model fetching
 	let availableModels = $state<ModelInfo[]>([]);
@@ -49,6 +50,8 @@
 		formBaseURL = 'https://api.openai.com/v1';
 		formModel = '';
 		formApiKey = '';
+		formCorsBypassEnabled = false;
+		formWispProxyUrl = '';
 		availableModels = [];
 		modelsError = null;
 	}
@@ -62,6 +65,8 @@
 		formBaseURL = config.baseURL;
 		formModel = config.model;
 		formApiKey = config.apiKey;
+		formCorsBypassEnabled = config.corsBypassEnabled;
+		formWispProxyUrl = config.wispProxyUrl;
 		availableModels = [];
 		modelsError = null;
 	}
@@ -96,6 +101,8 @@
 			baseURL: formBaseURL,
 			model: formModel,
 			apiKey: formApiKey,
+			corsBypassEnabled: formCorsBypassEnabled,
+			wispProxyUrl: formWispProxyUrl,
 		});
 		// If no main provider assigned, make this the main one
 		if (!settings.roleAssignments['main']) {
@@ -113,6 +120,8 @@
 			baseURL: formBaseURL,
 			model: formModel,
 			apiKey: formApiKey,
+			corsBypassEnabled: formCorsBypassEnabled,
+			wispProxyUrl: formWispProxyUrl,
 		});
 		cancelEdit();
 	}
@@ -130,6 +139,8 @@
 			baseURL: config.baseURL,
 			model: config.model,
 			apiKey: config.apiKey,
+			corsBypassEnabled: config.corsBypassEnabled,
+			wispProxyUrl: config.wispProxyUrl,
 		});
 		// Start editing the copy immediately
 		startEdit(copy);
@@ -400,6 +411,22 @@
 								<input class="input mt-1" type="password" placeholder="sk-..." bind:value={formApiKey} />
 								<span class="text-xs text-surface-500 mt-1 block">{t('settings.apiKeyHint')}</span>
 							</label>
+
+							{#if !isTauriSync()}
+								<label class="flex items-center gap-2">
+									<input type="checkbox" class="checkbox" bind:checked={formCorsBypassEnabled} />
+									<span class="text-sm font-medium text-surface-700-300">Bypass CORS via Wisp proxy</span>
+								</label>
+								{#if formCorsBypassEnabled}
+									<label class="block">
+										<span class="text-sm font-medium text-surface-700-300">Wisp Proxy URL</span>
+										<input class="input mt-1" type="url" placeholder="wss://example.com/ws/" bind:value={formWispProxyUrl} />
+										<span class="text-xs text-surface-500 mt-1 block"
+											>Connects to a Wisp proxy server (e.g. wisp-server-python) to route API requests without browser CORS restrictions.</span
+										>
+									</label>
+								{/if}
+							{/if}
 						</div>
 					</details>
 					<div class="flex gap-2">
@@ -780,26 +807,6 @@
 				<ThemedSelect items={logLevelItems} value={settings.logLevel} onValueChange={(v) => updateSettings({ logLevel: v as LogLevel })} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.logLevelDescription')}</span>
 			</label>
-
-			{#if !isTauriSync()}
-				<label class="block">
-					<span class="text-sm font-medium text-surface-700-300">Wisp Proxy URL</span>
-					<input
-						type="url"
-						class="input"
-						placeholder="wss://example.com/ws/"
-						value={settings.wispProxyUrl}
-						onchange={(e) => {
-							updateSettings({ wispProxyUrl: e.currentTarget.value });
-							initHttpClient();
-						}}
-					/>
-					<span class="text-xs text-surface-500 mt-1 block">
-						Required for CORS bypass in web mode. Connects to a Wisp proxy server (e.g. wisp-server-python) to route API requests without
-						browser CORS restrictions. Saved automatically; reload the page to apply.
-					</span>
-				</label>
-			{/if}
 		</section>
 	</div>
 </div>

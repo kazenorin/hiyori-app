@@ -133,7 +133,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 			isResumeGame ? getLatestTurnOfEvents(actLineId) : Promise.resolve(null),
 		]);
 
-	const model = createModel(config);
+	const model = await createModel(config);
 
 	await log.info(
 		LOG_TAG,

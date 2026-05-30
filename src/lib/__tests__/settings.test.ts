@@ -52,6 +52,8 @@ describe('settings', () => {
 			baseURL: 'https://api.openai.com/v1',
 			model: 'gpt-4o',
 			apiKey: 'sk-test',
+			corsBypassEnabled: false,
+			wispProxyUrl: '',
 		});
 
 		expect(config.id).toBe('test-uuid-1');
@@ -69,6 +71,8 @@ describe('settings', () => {
 			baseURL: '',
 			model: 'gpt-4o',
 			apiKey: 'sk-1',
+			corsBypassEnabled: false,
+			wispProxyUrl: '',
 		});
 		const c2 = addProviderConfig({
 			name: 'Second',
@@ -77,6 +81,8 @@ describe('settings', () => {
 			baseURL: 'http://localhost:11434/v1',
 			model: 'llama3',
 			apiKey: '',
+			corsBypassEnabled: false,
+			wispProxyUrl: '',
 		});
 
 		updateProviderConfig(c1.id, { apiKey: 'sk-updated' });
@@ -95,6 +101,8 @@ describe('settings', () => {
 			baseURL: '',
 			model: 'gpt-4o',
 			apiKey: 'sk-1',
+			corsBypassEnabled: false,
+			wispProxyUrl: '',
 		});
 		const c2 = addProviderConfig({
 			name: 'Other',
@@ -103,6 +111,8 @@ describe('settings', () => {
 			baseURL: '',
 			model: 'llama3',
 			apiKey: '',
+			corsBypassEnabled: false,
+			wispProxyUrl: '',
 		});
 
 		assignRole('main', c1.id);
@@ -125,6 +135,8 @@ describe('settings', () => {
 			baseURL: '',
 			model: 'gpt-4o',
 			apiKey: 'sk-test',
+			corsBypassEnabled: false,
+			wispProxyUrl: '',
 		});
 		assignRole('main', config.id);
 
@@ -149,6 +161,8 @@ describe('settings', () => {
 			baseURL: '',
 			model: 'gpt-4o',
 			apiKey: 'sk-test',
+			corsBypassEnabled: false,
+			wispProxyUrl: '',
 		});
 
 		assignRole('embedding', config.id);
@@ -165,6 +179,8 @@ describe('settings', () => {
 			baseURL: '',
 			model: 'gpt-4o',
 			apiKey: 'sk-test',
+			corsBypassEnabled: false,
+			wispProxyUrl: '',
 		});
 		assignRole('main', config.id);
 
@@ -194,6 +210,8 @@ describe('settings', () => {
 			baseURL: 'https://api.openai.com/v1',
 			model: 'gpt-4o',
 			apiKey: 'sk-test',
+			corsBypassEnabled: false,
+			wispProxyUrl: '',
 		});
 
 		// Simulate duplicate like the UI does
@@ -204,6 +222,8 @@ describe('settings', () => {
 			baseURL: original.baseURL,
 			model: original.model,
 			apiKey: original.apiKey,
+			corsBypassEnabled: false,
+			wispProxyUrl: '',
 		});
 
 		expect(copy.id).not.toBe(original.id);

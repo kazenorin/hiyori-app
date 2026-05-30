@@ -160,7 +160,7 @@ export async function runNonStreamingPhase(
 		throw new Error(ERR_NO_PROVIDER_FOR_PHASE(phaseName));
 	}
 
-	const model = createModel(providerConfig);
+	const model = await createModel(providerConfig);
 	const startTime = Date.now();
 	const result = await generateText({
 		model,

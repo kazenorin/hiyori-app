@@ -86,7 +86,6 @@ function defaultSettings() {
 		characterProfileCompressorInterval: 5,
 		defaultPlotMode: 'phaseEvent' as const,
 		reevaluationFrequency: 10,
-		wispProxyUrl: '',
 	};
 }
 

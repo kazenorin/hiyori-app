@@ -86,7 +86,7 @@ export async function runMemoryExtractionPipeline(
 }
 
 async function generateMemoriesWithRetry(response: string, config: MemoryProviderConfig): Promise<string> {
-	const model = createModel(config);
+	const model = await createModel(config);
 	const systemPrompt = await memoryExtractionSystemPromptLoader.loadDefault();
 	const extractionPromptTemplate = await memoryExtractionPromptLoader.loadDefault();
 	const userPrompt = extractionPromptTemplate + '\n' + response;
@@ -100,7 +100,7 @@ async function generateMemoriesWithRetry(response: string, config: MemoryProvide
 }
 
 async function filterAliasesWithRetry(flatAliases: string[], config: MemoryProviderConfig): Promise<string[]> {
-	const model = createModel(config);
+	const model = await createModel(config);
 	const systemPrompt = aliasFilterExtractionPrompt();
 	const userPrompt = JSON.stringify(flatAliases);
 

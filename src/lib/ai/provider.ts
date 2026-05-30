@@ -2,18 +2,27 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createOllama } from 'ai-sdk-ollama';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
-import { fetch } from '$lib/http/fetch';
+import { fetch, createLibcurlFetch } from '$lib/http/fetch';
+import { isTauriSync } from '$lib/runtime';
 import { ERR_API_KEY_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 
-export function createModel(config: ProviderConfig) {
+async function resolveFetch(config: ProviderConfig): Promise<typeof globalThis.fetch> {
+	if (config.corsBypassEnabled && config.wispProxyUrl && !isTauriSync()) {
+		return createLibcurlFetch(config.wispProxyUrl);
+	}
+	return fetch;
+}
+
+export async function createModel(config: ProviderConfig) {
 	if (!config.apiKey) {
 		throw new Error(ERR_API_KEY_NOT_CONFIGURED);
 	}
 
 	const baseURL = config.baseURL || 'https://api.openai.com/v1';
+	const providerFetch = await resolveFetch(config);
 
 	if (config.provider === 'ollama') {
-		const provider = createOllama({ baseURL, apiKey: config.apiKey, fetch });
+		const provider = createOllama({ baseURL, apiKey: config.apiKey, fetch: providerFetch });
 		return provider.chat(config.model);
 	}
 
@@ -21,7 +30,7 @@ export function createModel(config: ProviderConfig) {
 		const provider = createOpenAICompatible({
 			name: config.name || 'openai-compatible',
 			baseURL,
-			fetch,
+			fetch: providerFetch,
 			apiKey: config.apiKey,
 		});
 		return provider.chatModel(config.model);
@@ -30,7 +39,7 @@ export function createModel(config: ProviderConfig) {
 	const provider = createOpenAI({
 		apiKey: config.apiKey,
 		baseURL,
-		fetch,
+		fetch: providerFetch,
 	});
 
 	if (config.apiType === 'chat-completions') {
@@ -40,15 +49,16 @@ export function createModel(config: ProviderConfig) {
 	return provider.responses(config.model);
 }
 
-export function createEmbeddingModel(config: ProviderConfig) {
+export async function createEmbeddingModel(config: ProviderConfig) {
 	if (!config.apiKey) {
 		throw new Error(ERR_API_KEY_NOT_CONFIGURED);
 	}
 
 	const baseURL = config.baseURL || 'https://api.openai.com/v1';
+	const providerFetch = await resolveFetch(config);
 
 	if (config.provider === 'ollama') {
-		const provider = createOllama({ baseURL, apiKey: config.apiKey, fetch });
+		const provider = createOllama({ baseURL, apiKey: config.apiKey, fetch: providerFetch });
 		return provider.embedding(config.model);
 	}
 
@@ -56,6 +66,7 @@ export function createEmbeddingModel(config: ProviderConfig) {
 		const provider = createOpenAICompatible({
 			name: config.name || 'openai-compatible',
 			baseURL,
+			fetch: providerFetch,
 			apiKey: config.apiKey,
 		});
 		return provider.embeddingModel(config.model);
@@ -64,6 +75,7 @@ export function createEmbeddingModel(config: ProviderConfig) {
 	const provider = createOpenAI({
 		apiKey: config.apiKey,
 		baseURL,
+		fetch: providerFetch,
 	});
 
 	return provider.embeddingModel(config.model);

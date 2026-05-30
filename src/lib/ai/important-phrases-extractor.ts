@@ -26,7 +26,7 @@ export async function extractImportantPhrases(narrativeBody: string): Promise<st
 }
 
 async function generateWithRetry(narrativeBody: string, config: MinorTaskAgentProviderConfig): Promise<string> {
-	const model = createModel(config);
+	const model = await createModel(config);
 	const systemPrompt = importantPhrasesSystemPrompt();
 
 	return withRetry(() => generateText({ model, system: systemPrompt, prompt: narrativeBody }).then((r) => r.text), {

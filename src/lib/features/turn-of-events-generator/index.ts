@@ -77,7 +77,7 @@ export async function generateTurnOfEvents(params: GenerateTurnOfEventsParams): 
 	const context = buildContext(actSummary, sceneNumber, sceneTitle, narrativeBody, interviewMessages);
 	const userMessage = promptTemplate.replace('{context}', context);
 
-	const model = createModel(config);
+	const model = await createModel(config);
 
 	await log.info(LOG_TAG, `Generating turn of events for Scene ${sceneNumber}: ${sceneTitle}`);
 

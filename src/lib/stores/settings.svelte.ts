@@ -21,6 +21,8 @@ export interface ProviderConfig {
 	baseURL: string;
 	model: string;
 	apiKey: string;
+	corsBypassEnabled: boolean;
+	wispProxyUrl: string;
 }
 
 export interface Settings {
@@ -48,7 +50,6 @@ export interface Settings {
 	characterProfileCompressorInterval: number;
 	defaultPlotMode: 'guidance' | 'phaseEvent';
 	reevaluationFrequency: number;
-	wispProxyUrl: string;
 }
 
 const STORAGE_KEY = 'byoa-settings';
@@ -78,7 +79,6 @@ const defaults: Settings = {
 	characterProfileCompressorInterval: 5, // scenes between compressor runs; 0 = disabled
 	defaultPlotMode: 'phaseEvent',
 	reevaluationFrequency: 10,
-	wispProxyUrl: '',
 };
 
 /**
@@ -95,7 +95,15 @@ function loadSettings(): Settings {
 		const stored = localStorage.getItem(STORAGE_KEY);
 		if (stored) {
 			const raw = JSON.parse(stored);
-			return { ...defaults, ...raw };
+			const merged = { ...defaults, ...raw };
+			if (merged.providers) {
+				merged.providers = merged.providers.map((p: Record<string, unknown>) => ({
+					corsBypassEnabled: false,
+					wispProxyUrl: '',
+					...p,
+				}));
+			}
+			return merged;
 		}
 	} catch {
 		// Invalid JSON or localStorage unavailable — use defaults
@@ -318,7 +326,6 @@ export async function updateSettings(
 			| 'characterProfileCompressorInterval'
 			| 'defaultPlotMode'
 			| 'reevaluationFrequency'
-			| 'wispProxyUrl'
 		>
 	>
 ): Promise<void> {
@@ -349,7 +356,6 @@ export async function updateSettings(
 		settings.characterProfileCompressorInterval = partial.characterProfileCompressorInterval;
 	if (partial.defaultPlotMode !== undefined) settings.defaultPlotMode = partial.defaultPlotMode;
 	if (partial.reevaluationFrequency !== undefined) settings.reevaluationFrequency = partial.reevaluationFrequency;
-	if (partial.wispProxyUrl !== undefined) settings.wispProxyUrl = partial.wispProxyUrl;
 	persist();
 
 	// Apply font size preference when fontSize changes

@@ -8,7 +8,12 @@ import { parseContent } from '$lib/utils/chat-stream-parser';
 import { variablesToMarkdown } from './template-renderer';
 import { getGameMasterDescriptors } from './descriptors';
 import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
-import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection, formatDirectorNotesSection } from '$lib/definitions/pipeline-sections';
+import {
+	SECTION,
+	formatPreviousNarrativeBody,
+	formatTurnOfEventsSection,
+	formatDirectorNotesSection,
+} from '$lib/definitions/pipeline-sections';
 import { gameMasterExtractionPrompt } from '$lib/definitions/pipeline-prompts';
 
 export interface GameDataRegenerationContext {
@@ -32,7 +37,7 @@ export async function regenerateGameData(params: GameDataRegenerationContext): P
 
 	const gameMasterSystemPrompt = await gameMasterSystemPromptLoader.loadDefault();
 
-	const model = createModel(config);
+	const model = await createModel(config);
 	const editorOutput = variablesToMarkdown(narrativeVariables);
 
 	const contents = [

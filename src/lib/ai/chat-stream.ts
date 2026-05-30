@@ -100,7 +100,7 @@ export async function streamChatResponse(
 	if (!providerConfig) {
 		throw new Error(ERR_NO_MAIN_PROVIDER);
 	}
-	const model = createModel(providerConfig);
+	const model = await createModel(providerConfig);
 
 	// Create stream accumulator with parser chain integrated
 	const accumulator = createStreamAccumulator(onStateUpdate, onError, descriptors);

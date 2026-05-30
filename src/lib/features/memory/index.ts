@@ -81,7 +81,7 @@ export interface AliasGroup {
 
 export class Memory {
 	private readonly embeddingProviderConfig: ProviderConfig;
-	private embeddingModel: ReturnType<typeof createEmbeddingModel> | null = null;
+	private embeddingModel: Awaited<ReturnType<typeof createEmbeddingModel>> | null = null;
 	private vecDimension: number | null = null;
 	private locVecDimension: number | null = null;
 	private cachedModelKey: string | null = null;
@@ -148,21 +148,21 @@ export class Memory {
 		return true;
 	}
 
-	private getEmbeddingModel() {
+	private async getEmbeddingModel() {
 		if (!this.embeddingModel) {
-			this.embeddingModel = createEmbeddingModel(this.embeddingProviderConfig);
+			this.embeddingModel = await createEmbeddingModel(this.embeddingProviderConfig);
 		}
 		return this.embeddingModel;
 	}
 
 	private async generateEmbedding(text: string): Promise<number[]> {
-		const model = this.getEmbeddingModel();
+		const model = await this.getEmbeddingModel();
 		const result = await embed({ model, value: text });
 		return result.embedding;
 	}
 
 	private async generateEmbeddings(texts: string[]): Promise<number[][]> {
-		const model = this.getEmbeddingModel();
+		const model = await this.getEmbeddingModel();
 		const result = await embedMany({ model, values: texts });
 		return result.embeddings;
 	}

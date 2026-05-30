@@ -14,34 +14,19 @@ export async function initHttpClient(): Promise<void> {
 	if (await checkIsTauri()) {
 		const tauriHttp = await import('@tauri-apps/plugin-http');
 		_fetch = tauriHttp.fetch;
-	} else {
-		await initLibcurl();
 	}
 }
 
-async function initLibcurl(): Promise<void> {
-	const wispUrl = getWispProxyUrl();
-	if (!wispUrl) return;
+let libcurlReady = false;
 
+export async function createLibcurlFetch(wispProxyUrl: string): Promise<typeof globalThis.fetch> {
 	const { libcurl } = await import('libcurl.js');
-	await libcurl.load_wasm('/libcurl.wasm');
-	libcurl.set_websocket(wispUrl);
-	_fetch = libcurl.fetch.bind(libcurl);
-}
 
-function getWispProxyUrl(): string | undefined {
-	if (typeof localStorage === 'undefined') return undefined;
-	try {
-		const raw = localStorage.getItem('byoa-settings');
-		if (!raw) return undefined;
-		const settings = JSON.parse(raw);
-		return settings.wispProxyUrl || undefined;
-	} catch {
-		return undefined;
+	if (!libcurlReady) {
+		await libcurl.load_wasm('/libcurl.wasm');
+		libcurlReady = true;
 	}
-}
 
-export async function reinitLibcurl(): Promise<void> {
-	if (await checkIsTauri()) return;
-	await initLibcurl();
+	libcurl.set_websocket(wispProxyUrl);
+	return libcurl.fetch.bind(libcurl);
 }
