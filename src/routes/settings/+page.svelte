@@ -85,10 +85,12 @@
 	}
 
 	function handleProviderChange() {
-		if (formProvider === 'openai') {
-			formBaseURL = 'https://api.openai.com/v1';
+		if (formProvider === 'openai-compatible') {
+			formBaseURL = 'http://localhost:1234/v1';
 		} else if (formProvider === 'ollama') {
 			formBaseURL = 'https://ollama.com';
+		} else if (formProvider === 'openai') {
+			formBaseURL = 'https://api.openai.com/v1';
 		} else {
 			formBaseURL = '';
 		}
@@ -173,8 +175,8 @@
 	const mainProviderId = $derived(settings.roleAssignments['main']);
 
 	const providerItems: { label: string; value: string }[] = [
-		{ label: t('settings.providers.openai'), value: 'openai' },
 		{ label: t('settings.providers.openaiCompatible'), value: 'openai-compatible' },
+		{ label: t('settings.providers.openai'), value: 'openai' },
 		{ label: t('settings.providers.ollama'), value: 'ollama' },
 	];
 
@@ -485,49 +487,48 @@
 			<span class="text-xs text-surface-500">{t('settings.phraseHighlightingDescription')}</span>
 		</section>
 
-		<!-- Memory -->
-		<section class="card p-4 md:p-6 space-y-4">
-			<h2 class="h4">{t('settings.memory')}</h2>
-			<span class="text-xs text-surface-500">{t('settings.enableMemoryDescription')}</span>
+		{#if isMemoryCapable()}
+			<!-- Memory -->
+			<section class="card p-4 md:p-6 space-y-4">
+				<h2 class="h4">{t('settings.memory')}</h2>
+				<span class="text-xs text-surface-500">{t('settings.enableMemoryDescription')}</span>
 
-			<label class="flex items-center gap-2">
-				<input
-					type="checkbox"
-					class="checkbox"
-					checked={settings.memoryEnabled}
-					onchange={(e) => updateSettings({ memoryEnabled: (e.currentTarget as HTMLInputElement).checked })}
-					disabled={!isMemoryCapable()}
-				/>
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.enableMemory')}</span>
-			</label>
-			{#if !isMemoryCapable()}
-				<span class="text-xs text-warning-500">{t('settings.memoryUnavailableNoVec')}</span>
-			{/if}
+				<label class="flex items-center gap-2">
+					<input
+						type="checkbox"
+						class="checkbox"
+						checked={settings.memoryEnabled}
+						onchange={(e) => updateSettings({ memoryEnabled: (e.currentTarget as HTMLInputElement).checked })}
+						disabled={!isMemoryCapable()}
+					/>
+					<span class="text-sm font-medium text-surface-700-300">{t('settings.enableMemory')}</span>
+				</label>
 
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.memoryProvider')}</span>
-				<ThemedSelect
-					items={roleItems()}
-					value={settings.memoryProviderRole}
-					onValueChange={(v) => updateSettings({ memoryProviderRole: v })}
-					disabled={!settings.memoryEnabled || !isMemoryAvailable()}
-					placeholder={t('settings.noProvidersConfigured')}
-				/>
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.memoryProviderDescription')}</span>
-			</label>
+				<label class="block">
+					<span class="text-sm font-medium text-surface-700-300">{t('settings.memoryProvider')}</span>
+					<ThemedSelect
+						items={roleItems()}
+						value={settings.memoryProviderRole}
+						onValueChange={(v) => updateSettings({ memoryProviderRole: v })}
+						disabled={!settings.memoryEnabled || !isMemoryAvailable()}
+						placeholder={t('settings.noProvidersConfigured')}
+					/>
+					<span class="text-xs text-surface-500 mt-1 block">{t('settings.memoryProviderDescription')}</span>
+				</label>
 
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.embeddingProvider')}</span>
-				<ThemedSelect
-					items={roleItems()}
-					value={settings.embeddingProviderRole}
-					onValueChange={(v) => updateSettings({ embeddingProviderRole: v })}
-					disabled={!settings.memoryEnabled || !isMemoryAvailable()}
-					placeholder={t('settings.noProvidersConfigured')}
-				/>
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.embeddingProviderDescription')}</span>
-			</label>
-		</section>
+				<label class="block">
+					<span class="text-sm font-medium text-surface-700-300">{t('settings.embeddingProvider')}</span>
+					<ThemedSelect
+						items={roleItems()}
+						value={settings.embeddingProviderRole}
+						onValueChange={(v) => updateSettings({ embeddingProviderRole: v })}
+						disabled={!settings.memoryEnabled || !isMemoryAvailable()}
+						placeholder={t('settings.noProvidersConfigured')}
+					/>
+					<span class="text-xs text-surface-500 mt-1 block">{t('settings.embeddingProviderDescription')}</span>
+				</label>
+			</section>
+		{/if}
 
 		<!-- Director Mode -->
 		<section class="card p-4 md:p-6 space-y-4">
@@ -646,7 +647,6 @@
 						value={settings.reviewerMode}
 						onValueChange={(v) => updateSettings({ reviewerMode: v as 'detailed' | 'quick' })}
 						disabled={!settings.reviewerEnabled}
-						class="mt-1"
 					/>
 					<span class="text-xs text-surface-500 block mt-1"
 						>{settings.reviewerMode === 'detailed'
