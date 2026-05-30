@@ -982,6 +982,11 @@
 										{/if}
 									</div>
 								</div>
+							{:else if !message.content && !message.reasoning && !(message.phases?.length) && !(message.variables && hasTemplateMetadata(message.variables)) && getIsStreaming() && message === getMessages().at(-1)}
+								<span
+									data-streaming-cursor
+									class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm"
+								></span>
 							{:else}
 								<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
 									<!-- Pipeline phase accordions -->
@@ -1116,10 +1121,7 @@
 									{#if getIsStreaming() && message === getMessages().at(-1)}
 										<span
 											data-streaming-cursor
-											class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm {message.content ||
-											hasTemplateMetadata(message.variables)
-												? 'mt-2'
-												: ''}"
+											class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm mt-2"
 										></span>
 									{/if}
 

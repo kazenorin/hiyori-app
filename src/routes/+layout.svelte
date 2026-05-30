@@ -39,7 +39,7 @@
 	let appError = $state<string | null>(null);
 	let initStatus = $state('Starting...');
 	let appReady = $state(false);
-	let sidebarBlocked = $derived(!appReady || getIsWorldBuilderActive());
+	let sidebarBlocked = $derived(getIsWorldBuilderActive());
 	let sidebarOpen = $state(false);
 	let newActLineName = $state('');
 	let showNewActLine = $state(false);
@@ -260,7 +260,7 @@
 			<div class="space-y-0.5">
 				<!-- Story header -->
 				<div
-					class="group flex items-center justify-between p-3 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer {getActiveStoryId() ===
+					class="group flex items-center justify-between p-3 rounded-(--radius-base) transition-colors duration-150 cursor-pointer {getActiveStoryId() ===
 					story.id
 						? 'bg-surface-200-800'
 						: 'hover:bg-surface-200-800'}"
@@ -307,7 +307,7 @@
 					{#each getActs() as act (act.id)}
 						<div class="ml-3 space-y-0.5">
 							<div
-								class="group flex items-center justify-between p-2 pl-4 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-sm {getActiveActId() ===
+								class="group flex items-center justify-between p-2 pl-4 rounded-(--radius-base) transition-colors duration-150 cursor-pointer text-sm {getActiveActId() ===
 								act.id
 									? 'bg-surface-200-800'
 									: 'hover:bg-surface-200-800'}"
@@ -355,7 +355,7 @@
 							{#if getActiveActId() === act.id}
 								{#each getActLines() as line (line.id)}
 									<div
-										class="group flex items-center justify-between p-2 pl-8 rounded-[var(--radius-base)] transition-colors duration-150 cursor-pointer text-xs {getActiveActLineId() ===
+										class="group flex items-center justify-between p-2 pl-8 rounded-(--radius-base) transition-colors duration-150 cursor-pointer text-xs {getActiveActLineId() ===
 										line.id
 											? 'bg-primary-100-900 text-primary-700-300'
 											: 'hover:bg-surface-200-800 text-surface-500'}"
@@ -432,7 +432,7 @@
 
 		<!-- Add story button -->
 		<button
-			class="w-full p-3 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+			class="w-full p-3 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 			type="button"
 			onclick={handleNewStory}
 		>
@@ -449,7 +449,7 @@
 			>
 				<div class="text-center space-y-2">
 					<div class="inline-block w-8 h-8 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
-					<p class="text-xs text-surface-500">{!appReady ? initStatus : t('sidebar.worldBuilderActive')}</p>
+					<p class="text-xs text-surface-500">{t('sidebar.worldBuilderActive')}</p>
 				</div>
 			</div>
 		{/if}
@@ -472,19 +472,19 @@
 		</label>
 		<a
 			href="/"
-			class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+			class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 		>
 			{t('sidebar.chat')}
 		</a>
 		<a
 			href="/settings"
-			class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+			class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 		>
 			{t('sidebar.settings')}
 		</a>
 		<a
 			href="/memory-manager"
-			class="flex items-center gap-2 p-2 rounded-[var(--radius-base)] hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+			class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 		>
 			{t('sidebar.memoryManager')}
 		</a>
@@ -492,58 +492,58 @@
 {/snippet}
 
 <div class="flex h-screen overflow-hidden bg-surface-50-950">
-	<!-- Desktop Sidebar -->
-	<aside class="hidden lg:flex lg:w-72 border-r border-surface-200-800 flex-col">
-		{@render SidebarNavFooter()}
-	</aside>
-
-	<!-- Mobile Sidebar Drawer -->
-	{#if sidebarOpen}
-		<div class="fixed inset-0 z-50 flex lg:hidden" role="dialog" aria-modal="true">
-			<aside
-				class="w-72 bg-surface-50-950 border-r border-surface-200-800 flex flex-col overflow-y-auto"
-				onclick={(e) => e.stopPropagation()}
-			>
-				{@render SidebarNavFooter()}
-			</aside>
-			<div class="flex-1 bg-black/50" onclick={() => (sidebarOpen = false)} role="button" aria-label="Close sidebar"></div>
+	{#if !appReady}
+		<div class="flex-1 flex items-center justify-center">
+			{#if appError}
+				<div class="text-center space-y-3">
+					<p class="text-error-500">{appError}</p>
+				</div>
+			{:else}
+				<div class="text-center space-y-2">
+					<div class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+					<div class="text-surface-500 animate-pulse">Loading...</div>
+					<div class="text-xs text-surface-600">{initStatus}</div>
+				</div>
+			{/if}
 		</div>
-	{/if}
+	{:else}
+		<!-- Desktop Sidebar -->
+		<aside class="hidden lg:flex lg:w-72 border-r border-surface-200-800 flex-col">
+			{@render SidebarNavFooter()}
+		</aside>
 
-	<!-- Main content -->
-	<main class="flex-1 flex flex-col min-w-0">
-		<!-- Mobile header bar -->
-		<div class="lg:hidden flex items-center gap-3 p-3 border-b border-surface-200-800 shrink-0">
-			<button class="btn preset-tonal p-2 text-surface-500" type="button" onclick={() => (sidebarOpen = true)} aria-label="Open sidebar">
-				<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-					<path
-						fill-rule="evenodd"
-						d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 5A.75.75 0 012.75 9h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 9.75zm0 5A.75.75 0 012.75 14h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75z"
-						clip-rule="evenodd"
-					/>
-				</svg>
-			</button>
-			<span class="text-sm font-medium text-surface-700-300 truncate">{getStories()[0]?.name ?? t('sidebar.chat')}</span>
-		</div>
-
-		{#if !appReady}
-			<!-- Init loading in main area -->
-			<div class="flex-1 flex items-center justify-center">
-				{#if appError}
-					<div class="text-center space-y-3">
-						<p class="text-error-500">{appError}</p>
-					</div>
-				{:else}
-					<div class="text-center space-y-2">
-						<div class="text-surface-500 animate-pulse">{t('sidebar.loading')}</div>
-						<div class="text-xs text-surface-600">{initStatus}</div>
-					</div>
-				{/if}
+		<!-- Mobile Sidebar Drawer -->
+		{#if sidebarOpen}
+			<div class="fixed inset-0 z-50 flex lg:hidden" role="dialog" aria-modal="true">
+				<aside
+					class="w-72 bg-surface-50-950 border-r border-surface-200-800 flex flex-col overflow-y-auto"
+					onclick={(e) => e.stopPropagation()}
+				>
+					{@render SidebarNavFooter()}
+				</aside>
+				<div class="flex-1 bg-black/50" onclick={() => (sidebarOpen = false)} role="button" aria-label="Close sidebar"></div>
 			</div>
-		{:else}
-			{@render children()}
 		{/if}
-	</main>
+
+		<!-- Main content -->
+		<main class="flex-1 flex flex-col min-w-0">
+			<!-- Mobile header bar -->
+			<div class="lg:hidden flex items-center gap-3 p-3 border-b border-surface-200-800 shrink-0">
+				<button class="btn preset-tonal p-2 text-surface-500" type="button" onclick={() => (sidebarOpen = true)} aria-label="Open sidebar">
+					<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+						<path
+							fill-rule="evenodd"
+							d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 5A.75.75 0 012.75 9h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 9.75zm0 5A.75.75 0 012.75 14h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75z"
+							clip-rule="evenodd"
+						/>
+					</svg>
+				</button>
+				<span class="text-sm font-medium text-surface-700-300 truncate">{getStories()[0]?.name ?? t('sidebar.chat')}</span>
+			</div>
+
+			{@render children()}
+		</main>
+	{/if}
 </div>
 
 <!-- Delete Confirmation Modal -->

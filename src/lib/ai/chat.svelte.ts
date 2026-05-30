@@ -228,41 +228,52 @@ export async function sendMessage(actLineId: string, message: string): Promise<v
 		await log.warn('send-message', 'Called with no message body.');
 		return;
 	}
-	const mainConfig = requireMainConfig();
-	const story = await dbActLines.getStoryForActLine(actLineId);
-	const actLine = await requireActLine(actLineId);
-	const currentActPhase = await dbActLines.getActPhase(actLineId);
-	const currentLastPlotGen = await dbActLines.getLastPlotGeneration(actLineId);
-	const actNumber = (await dbActLines.getActNumberForActLine(actLineId)) ?? 1;
-	error = null;
-	const requestContext: RequestContext = {
-		message,
-		mainConfig,
-		story,
-		actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen, actNumber },
-		previousSceneNumber: findLastNonNullSceneNumber(messages) ?? 0,
-		previousNarrativeVariables: getPreviousNarrativeMessage(messages),
-	};
-	return executeNarrativeRequest(requestContext);
+	try {
+		isStreaming = true;
+		const mainConfig = requireMainConfig();
+		const story = await dbActLines.getStoryForActLine(actLineId);
+		const actLine = await requireActLine(actLineId);
+		const currentActPhase = await dbActLines.getActPhase(actLineId);
+		const currentLastPlotGen = await dbActLines.getLastPlotGeneration(actLineId);
+		const actNumber = (await dbActLines.getActNumberForActLine(actLineId)) ?? 1;
+		error = null;
+		const requestContext: RequestContext = {
+			message,
+			mainConfig,
+			story,
+			actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen, actNumber },
+			previousSceneNumber: findLastNonNullSceneNumber(messages) ?? 0,
+			previousNarrativeVariables: getPreviousNarrativeMessage(messages),
+		};
+		return executeNarrativeRequest(requestContext);
+	} finally {
+		isStreaming = false;
+	}
 }
 
 export async function sendInitialNarration(actLineId: string): Promise<void> {
 	setMessages([]);
-	const mainConfig = requireMainConfig();
-	const story = await dbActLines.getStoryForActLine(actLineId);
-	const actLine = await requireActLine(actLineId);
-	const currentActPhase = await dbActLines.getActPhase(actLineId);
-	const currentLastPlotGen = await dbActLines.getLastPlotGeneration(actLineId);
-	const actNumber = (await dbActLines.getActNumberForActLine(actLineId)) ?? 1;
-	error = null;
-	const requestContext: RequestContext = {
-		mainConfig,
-		story,
-		actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen, actNumber },
-		previousSceneNumber: 0,
-		previousNarrativeVariables: undefined,
-	};
-	return executeNarrativeRequest(requestContext);
+	isStreaming = true;
+
+	try {
+		const mainConfig = requireMainConfig();
+		const story = await dbActLines.getStoryForActLine(actLineId);
+		const actLine = await requireActLine(actLineId);
+		const currentActPhase = await dbActLines.getActPhase(actLineId);
+		const currentLastPlotGen = await dbActLines.getLastPlotGeneration(actLineId);
+		const actNumber = (await dbActLines.getActNumberForActLine(actLineId)) ?? 1;
+		error = null;
+		const requestContext: RequestContext = {
+			mainConfig,
+			story,
+			actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen, actNumber },
+			previousSceneNumber: 0,
+			previousNarrativeVariables: undefined,
+		};
+		return executeNarrativeRequest(requestContext);
+	} finally {
+		isStreaming = false;
+	}
 }
 
 function updateMessageMetadataByIndex(result: PipelineResult, messageIdx: number) {
@@ -325,8 +336,6 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 				error = errorMessage;
 			},
 		});
-
-		isStreaming = true;
 		const result = await runPipeline({
 			execution: {
 				abortSignal,
@@ -391,7 +400,6 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 		setMessages(result.messages);
 		if (result.error) error = result.error;
 	} finally {
-		isStreaming = false;
 		abortController = null;
 	}
 }
@@ -452,8 +460,6 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 				error = errorMessage;
 			},
 		});
-
-		isStreaming = true;
 		const result = await runEpiloguePipeline({
 			execution: {
 				abortSignal: abortSignal,
@@ -490,7 +496,6 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 		setMessages(result.messages);
 		if (result.error) error = result.error;
 	} finally {
-		isStreaming = false;
 		abortController = null;
 	}
 }
