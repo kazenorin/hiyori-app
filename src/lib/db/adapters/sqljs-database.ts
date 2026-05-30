@@ -112,6 +112,19 @@ export class SqlJsDatabase implements IDatabase {
 	}
 
 	/**
+	 * Replace the in-memory database with the provided data.
+	 * After calling this, all previous data is gone and the new data is loaded.
+	 * Caller must call flush() afterwards to persist to OPFS.
+	 */
+	async importFromData(data: Uint8Array | ArrayLike<number>): Promise<void> {
+		const SQL = await loadSqlJs(this.options.locateWasm);
+		this.db.close();
+		this.db = new SQL.Database(data);
+		this.db.run('PRAGMA journal_mode = WAL');
+		this.dirty = true;
+	}
+
+	/**
 	 * Convert positional params[] to {$1: val1, $2: val2, …} named object for sql.js.
 	 * sql.js uses $-prefixed keys ($1, $2) for named parameter binding.
 	 * Note: better-sqlite3 (test helper) uses numeric keys (1, 2) without the $ prefix.

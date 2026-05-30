@@ -109,7 +109,19 @@
 		"logLevelDescription": "Debug Log 包含完整的 AI 上下文對話。 Log 會被寫入應用程式的 log 資料夾。",
 		"settingsAutoSaved": "設定會自動儲存。",
 		"noProvidersAdd": "尚未設定AI提供者。新增一個即可開始。",
-		"failedToFetchModels": "無法取得模型"
+		"failedToFetchModels": "無法取得模型",
+		"data": "資料",
+		"dataDescription": "匯出和匯入你的應用程式資料以進行備份或遷移。",
+		"exportDatabase": "匯出資料",
+		"exportDatabaseDescription": "下載所有故事、設定和資料的副本。",
+		"importDatabase": "匯入資料",
+		"importDatabaseDescription": "從先前匯出的備份還原。這將取代所有目前的資料。",
+		"importWarning": "這將取代所有目前的資料。匯入後應用程式將重新載入。",
+		"exportSuccess": "資料匯出成功。",
+		"importSuccess": "資料匯入成功。重新載入中...",
+		"importFailed": "匯入失敗：{error}",
+		"exportFailed": "匯出失敗：{error}",
+		"dataWebNotice": "你的資料儲存在瀏覽器中。請定期匯出以避免資料遺失。"
 	},
 	"chat": {
 		"emptyState": "建立故事、加入章節，然後選擇或建立故事線即可開始聊天。",

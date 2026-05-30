@@ -109,7 +109,19 @@
 		"logLevelDescription": "Debug logs include full AI chat context. Logs are written to the app log directory.",
 		"settingsAutoSaved": "Settings are saved automatically.",
 		"noProvidersAdd": "No providers configured. Add one to get started.",
-		"failedToFetchModels": "Failed to fetch models"
+		"failedToFetchModels": "Failed to fetch models",
+		"data": "Data",
+		"dataDescription": "Export and import your application data for backup or migration.",
+		"exportDatabase": "Export Data",
+		"exportDatabaseDescription": "Download a copy of all your stories, settings, and data.",
+		"importDatabase": "Import Data",
+		"importDatabaseDescription": "Restore from a previously exported backup. This will replace all current data.",
+		"importWarning": "This will replace all current data. The app will reload after import.",
+		"exportSuccess": "Data exported successfully.",
+		"importSuccess": "Data imported successfully. Reloading...",
+		"importFailed": "Import failed: {error}",
+		"exportFailed": "Export failed: {error}",
+		"dataWebNotice": "Your data is stored in the browser. Export regularly to avoid data loss."
 	},
 	"chat": {
 		"emptyState": "Create a story, add an act, then select or create an act line to start chatting.",

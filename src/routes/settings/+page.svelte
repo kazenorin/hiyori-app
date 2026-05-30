@@ -16,10 +16,17 @@
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
 	import { t } from '$lib/i18n';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
+	import { exportDatabase, importDatabase, downloadExport, readFileAsUint8Array, isBinaryFormat } from '$lib/db/data-portability';
+	import { isTauriSync } from '$lib/runtime';
 
 	// Editing state
 	let editingId = $state<string | null>(null);
 	let isAddingNew = $state(false);
+
+	// Data import/export state
+	let isExporting = $state(false);
+	let isImporting = $state(false);
+	let importError = $state<string | null>(null);
 
 	// Form state for the provider being edited/added
 	let formName = $state('');
@@ -688,6 +695,74 @@
 				/>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.compressorIntervalDescription')}</span>
 			</label>
+		</section>
+
+		<!-- Data -->
+		<section class="card p-4 md:p-6 space-y-4">
+			<h2 class="h4">{t('settings.data')}</h2>
+			<span class="text-xs text-surface-500">{t('settings.dataDescription')}</span>
+
+			{#if !isTauriSync()}
+				<p class="text-xs text-warning-500">{t('settings.dataWebNotice')}</p>
+			{/if}
+
+			<div class="space-y-3">
+				<div>
+					<button
+						class="btn variant-filled"
+						disabled={isExporting}
+						onclick={async () => {
+							isExporting = true;
+							importError = null;
+							try {
+								const data = await exportDatabase();
+								const ext = isBinaryFormat() ? 'db' : 'json';
+								const ts = new Date().toISOString().slice(0, 10);
+								downloadExport(data, `byoa-backup-${ts}.${ext}`);
+							} catch (err) {
+								importError = t('settings.exportFailed', { error: err instanceof Error ? err.message : String(err) });
+							} finally {
+								isExporting = false;
+							}
+						}}
+					>
+						{isExporting ? '...' : t('settings.exportDatabase')}
+					</button>
+					<span class="text-xs text-surface-500 mt-1 block">{t('settings.exportDatabaseDescription')}</span>
+				</div>
+
+				<div>
+					<label class="btn variant-outline cursor-pointer">
+						{isImporting ? '...' : t('settings.importDatabase')}
+						<input
+							type="file"
+							accept=".db,.json"
+							class="sr-only"
+							disabled={isImporting}
+							onchange={async (e) => {
+								const file = (e.currentTarget as HTMLInputElement).files?.[0];
+								if (!file) return;
+								isImporting = true;
+								importError = null;
+								try {
+									const data = await readFileAsUint8Array(file);
+									await importDatabase(data);
+									window.location.reload();
+								} catch (err) {
+									importError = t('settings.importFailed', { error: err instanceof Error ? err.message : String(err) });
+									isImporting = false;
+								}
+							}}
+						/>
+					</label>
+					<span class="text-xs text-surface-500 mt-1 block">{t('settings.importDatabaseDescription')}</span>
+					<span class="text-xs text-warning-500 mt-1 block">{t('settings.importWarning')}</span>
+				</div>
+
+				{#if importError}
+					<p class="text-xs text-error-500">{importError}</p>
+				{/if}
+			</div>
 		</section>
 
 		<!-- Developer -->
