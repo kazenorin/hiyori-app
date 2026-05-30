@@ -2,16 +2,8 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createOllama } from 'ai-sdk-ollama';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
-import { fetch, createLibcurlFetch } from '$lib/http/fetch';
-import { isTauriSync } from '$lib/runtime';
+import { fetch, resolveFetch } from '$lib/http/fetch';
 import { ERR_API_KEY_NOT_CONFIGURED } from '$lib/definitions/error-messages';
-
-async function resolveFetch(config: ProviderConfig): Promise<typeof globalThis.fetch> {
-	if (config.corsBypassEnabled && config.wispProxyUrl && !isTauriSync()) {
-		return createLibcurlFetch(config.wispProxyUrl);
-	}
-	return fetch;
-}
 
 export async function createModel(config: ProviderConfig) {
 	if (!config.apiKey) {
@@ -19,7 +11,7 @@ export async function createModel(config: ProviderConfig) {
 	}
 
 	const baseURL = config.baseURL || 'https://api.openai.com/v1';
-	const providerFetch = await resolveFetch(config);
+	const providerFetch = await resolveFetch(config.corsBypassEnabled, config.wispProxyUrl);
 
 	if (config.provider === 'ollama') {
 		const provider = createOllama({ baseURL, apiKey: config.apiKey, fetch: providerFetch });
@@ -55,7 +47,7 @@ export async function createEmbeddingModel(config: ProviderConfig) {
 	}
 
 	const baseURL = config.baseURL || 'https://api.openai.com/v1';
-	const providerFetch = await resolveFetch(config);
+	const providerFetch = await resolveFetch(config.corsBypassEnabled, config.wispProxyUrl);
 
 	if (config.provider === 'ollama') {
 		const provider = createOllama({ baseURL, apiKey: config.apiKey, fetch: providerFetch });

@@ -1,5 +1,4 @@
-import { fetch, createLibcurlFetch } from '$lib/http/fetch';
-import { isTauriSync } from '$lib/runtime';
+import { fetch, resolveFetch } from '$lib/http/fetch';
 import type { Provider } from '$lib/stores/settings.svelte';
 
 export interface ModelInfo {
@@ -91,11 +90,4 @@ async function fetchOllamaModels(
 	} finally {
 		clearTimeout(timeoutId);
 	}
-}
-
-async function resolveFetch(corsBypassEnabled?: boolean, wispProxyUrl?: string): Promise<typeof globalThis.fetch> {
-	if (corsBypassEnabled && wispProxyUrl && !isTauriSync()) {
-		return createLibcurlFetch(wispProxyUrl);
-	}
-	return fetch;
 }

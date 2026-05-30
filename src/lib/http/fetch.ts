@@ -1,4 +1,4 @@
-import { checkIsTauri } from '$lib/runtime';
+import { checkIsTauri, isTauriSync } from '$lib/runtime';
 
 let _fetch: typeof globalThis.fetch = globalThis.fetch.bind(globalThis);
 let initialized = false;
@@ -29,4 +29,11 @@ export async function createLibcurlFetch(wispProxyUrl: string): Promise<typeof g
 
 	libcurl.set_websocket(wispProxyUrl);
 	return libcurl.fetch.bind(libcurl);
+}
+
+export async function resolveFetch(corsBypassEnabled?: boolean, wispProxyUrl?: string): Promise<typeof globalThis.fetch> {
+	if (corsBypassEnabled && wispProxyUrl && !isTauriSync()) {
+		return createLibcurlFetch(wispProxyUrl);
+	}
+	return fetch;
 }
