@@ -11,6 +11,8 @@ function classifyOpfsError(error: unknown): FileSystemError {
 				return new FileSystemError(error.message, 'already_exists', error);
 			case 'NotAllowedError':
 				return new FileSystemError(error.message, 'permission_denied', error);
+			case 'TypeMismatchError':
+				return new FileSystemError(error.message, 'already_exists', error);
 		}
 	}
 	return new FileSystemError(error instanceof Error ? error.message : String(error), 'unknown', error);
@@ -71,7 +73,10 @@ export class OpfsFileSystem implements FileSystem {
 			try {
 				current = await current.getDirectoryHandle(segment);
 			} catch (error) {
-				if (createIfMissing && error instanceof DOMException && error.name === 'NotFoundError') {
+				if (error instanceof DOMException && error.name === 'NotFoundError' && createIfMissing) {
+					current = await current.getDirectoryHandle(segment, { create: true });
+				} else if (error instanceof DOMException && error.name === 'TypeMismatchError' && createIfMissing) {
+					await current.removeEntry(segment);
 					current = await current.getDirectoryHandle(segment, { create: true });
 				} else {
 					throw classifyOpfsError(error);
@@ -101,13 +106,13 @@ export class OpfsFileSystem implements FileSystem {
 				const file = await fileHandle.getFile();
 				return await file.text();
 			} catch (error) {
-				if (error instanceof DOMException && error.name === 'NotFoundError') {
+				if (error instanceof DOMException && (error.name === 'NotFoundError' || error.name === 'TypeMismatchError')) {
 					return undefined;
 				}
 				throw classifyOpfsError(error);
 			}
 		} catch (error) {
-			if (error instanceof FileSystemError && error.code === 'not_found') {
+			if (error instanceof FileSystemError && (error.code === 'not_found' || error.code === 'already_exists')) {
 				return undefined;
 			}
 			throw error;
@@ -117,7 +122,18 @@ export class OpfsFileSystem implements FileSystem {
 	async writeTextFile(path: string, content: string, options?: { append?: boolean }): Promise<void> {
 		try {
 			const { parent, name } = await this.getParentAndNameAsync(path);
-			const fileHandle = await parent.getFileHandle(name, { create: true });
+			let fileHandle: FileSystemFileHandle;
+			try {
+				fileHandle = await parent.getFileHandle(name, { create: true });
+			} catch (error) {
+				if (error instanceof DOMException && error.name === 'TypeMismatchError') {
+					await parent.removeEntry(name, { recursive: true });
+					this.invalidatePathCache(path);
+					fileHandle = await parent.getFileHandle(name, { create: true });
+				} else {
+					throw classifyOpfsError(error);
+				}
+			}
 			const writable = await fileHandle.createWritable({ keepExistingData: options?.append ?? false });
 			try {
 				await writable.write(content);
@@ -156,11 +172,17 @@ export class OpfsFileSystem implements FileSystem {
 						return false;
 					}
 				}
+				if (error instanceof DOMException && error.name === 'TypeMismatchError') {
+					return true;
+				}
 				throw classifyOpfsError(error);
 			}
 		} catch (error) {
 			if (error instanceof FileSystemError && error.code === 'not_found') {
 				return false;
+			}
+			if (error instanceof FileSystemError && error.code === 'already_exists') {
+				return true;
 			}
 			throw error;
 		}
@@ -217,7 +239,17 @@ export class OpfsFileSystem implements FileSystem {
 		const srcHandle = await srcParent.getFileHandle(srcName);
 		const srcFile = await srcHandle.getFile();
 
-		const dstHandle = await dstParent.getFileHandle(dstName, { create: true });
+		let dstHandle: FileSystemFileHandle;
+		try {
+			dstHandle = await dstParent.getFileHandle(dstName, { create: true });
+		} catch (error) {
+			if (error instanceof DOMException && error.name === 'TypeMismatchError') {
+				await dstParent.removeEntry(dstName, { recursive: true });
+				dstHandle = await dstParent.getFileHandle(dstName, { create: true });
+			} else {
+				throw classifyOpfsError(error);
+			}
+		}
 		const writable = await dstHandle.createWritable();
 		try {
 			await writable.write(await srcFile.arrayBuffer());
@@ -237,7 +269,18 @@ export class OpfsFileSystem implements FileSystem {
 		newPath: string
 	): Promise<void> {
 		const srcDirHandle = await srcParent.getDirectoryHandle(srcName);
-		const dstDirHandle = await dstParent.getDirectoryHandle(dstName, { create: true });
+		let dstDirHandle: FileSystemDirectoryHandle;
+		try {
+			dstDirHandle = await dstParent.getDirectoryHandle(dstName, { create: true });
+		} catch (error) {
+			if (error instanceof DOMException && error.name === 'TypeMismatchError') {
+				await dstParent.removeEntry(dstName, { recursive: true });
+				this.invalidatePathCache(newPath);
+				dstDirHandle = await dstParent.getDirectoryHandle(dstName, { create: true });
+			} else {
+				throw classifyOpfsError(error);
+			}
+		}
 
 		await this.copyDirectoryContentsWithCache(srcDirHandle, dstDirHandle, newPath);
 
@@ -285,7 +328,18 @@ export class OpfsFileSystem implements FileSystem {
 			const srcHandle = await srcParent.getFileHandle(srcName);
 			const srcFile = await srcHandle.getFile();
 
-			const dstHandle = await dstParent.getFileHandle(dstName, { create: true });
+			let dstHandle: FileSystemFileHandle;
+			try {
+				dstHandle = await dstParent.getFileHandle(dstName, { create: true });
+			} catch (error) {
+				if (error instanceof DOMException && error.name === 'TypeMismatchError') {
+					await dstParent.removeEntry(dstName, { recursive: true });
+					this.invalidatePathCache(toPath);
+					dstHandle = await dstParent.getFileHandle(dstName, { create: true });
+				} else {
+					throw classifyOpfsError(error);
+				}
+			}
 			const writable = await dstHandle.createWritable();
 			try {
 				await writable.write(await srcFile.arrayBuffer());
