@@ -1,6 +1,7 @@
 import { fs } from '$lib/fs/file-system';
 import { log } from '$lib/logging/logger';
 import { resolveStoryFolder } from './story-folders';
+import { syncConfigAssets, loadManifest } from './config-manifest';
 
 /**
  * All locales that have bundled default content.
@@ -212,12 +213,29 @@ export async function ensureAllBaseConfigs(): Promise<void> {
 		return;
 	}
 
+	const tombstonePaths = new Set<string>();
+	try {
+		const manifest = loadManifest();
+		for (const [configPath, entry] of manifest) {
+			if (entry.hash === null) {
+				tombstonePaths.add(configPath);
+			}
+		}
+	} catch (err) {
+		void log.warn('template-loader', `Failed to load manifest for tombstone filtering: ${err}`);
+	}
+
 	const results = await Promise.allSettled(
 		SUPPORTED_LOCALES.flatMap((locale) =>
 			defaultsRegistry.map(async (entry) => {
 				try {
 					const baseDir = entry.getBaseDirForLocale(locale);
 					const defaultContent = entry.getDefaultContent(locale);
+					const rawPath = `${baseDir}/${entry.relativePath}`;
+					const configPath = rawPath.startsWith('config/') ? rawPath.slice('config/'.length) : rawPath;
+					if (tombstonePaths.has(configPath)) {
+						return { relativePath: entry.relativePath, locale, success: true, skipped: true };
+					}
 					await ensureBaseFileExists(baseDir, entry.relativePath, defaultContent);
 					return { relativePath: entry.relativePath, locale, success: true };
 				} catch (err) {
@@ -232,4 +250,6 @@ export async function ensureAllBaseConfigs(): Promise<void> {
 	if (failed.length > 0) {
 		await log.warn('template-loader', `${failed.length} of ${results.length} base configs failed to ensure`);
 	}
+
+	await syncConfigAssets();
 }

@@ -1,0 +1,310 @@
+src:
+  lib:
+    fs:
+      en:
+        prompts:
+          act:
+            act-card-template.md:
+              configPath: en/prompt-templates/act/act-card-template.md
+              hash: 2216d5a3e4ec7bf5f1542736d3ba95d93916433a489bd77513b9e5fdec7dc511
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            act-plot-editor-prompt.md:
+              configPath: en/prompt-templates/act/act-plot-editor-prompt.md
+              hash: dbae688cf91f1a32f6b7dd5fa9d2520cbab0904ce3ac9425d94c45ac392389a9
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            act-plot-generation-prompt.md:
+              configPath: en/prompt-templates/act/act-plot-generation-prompt.md
+              hash: 2778d6563586f82b16d96c5d13c3138c8a21b1190ce9fd2a523306a1d47b94fb
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            act-plot-interview-system-prompt.md:
+              configPath: en/prompt-templates/act/act-plot-interview-system-prompt.md
+              hash: 44050c41986740153ae8abd917834c3e033eca6502bb9bb633b78c655024f46f
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            act-plot-interview-turn-of-events-prompt.md:
+              configPath: en/prompt-templates/act/act-plot-interview-turn-of-events-prompt.md
+              hash: f6983571ac2c740139aa9cdc619eed7b3d3a0966c274a6e400b831a55e62f9db
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            act-plot-reviewer-prompt.md:
+              configPath: en/prompt-templates/act/act-plot-reviewer-prompt.md
+              hash: 8d1078fd1c9f0d32f3312e805667c4662dc91bd09197f2212fa08b9895477642
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            act-plot-system-prompt.md:
+              configPath: en/prompt-templates/act/act-plot-system-prompt.md
+              hash: c3efbdb3337b1b5c338f182fe0ca893e91c376c382f2fca05e921f6942f67b35
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            guidance-act-plot-template.md:
+              configPath: en/prompt-templates/act/guidance-act-plot-template.md
+              hash: eaa1e57a57afb4bbcd54c681d6a276df48281efbd916b39048c6a805c3fd7981
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            phase-event-act-plot-template.md:
+              configPath: en/prompt-templates/act/phase-event-act-plot-template.md
+              hash: b7afd4e4e042a4a9a65adf8be4a37d7a1e9701b805c3a03a9183502ee09d8b07
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          character:
+            character-card-template.md:
+              configPath: en/prompt-templates/character/character-card-template.md
+              hash: f8af44bf8425d13365fdf6496453750514f2fcaf6a0b2b1eae27b6934dab63fc
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          editor:
+            editor-prompt.md:
+              configPath: en/prompt-templates/editor/editor-prompt.md
+              hash: 6885989bdac949c93ab00d99b41864797459dd19987cc87968790555783358b6
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          game-master:
+            game-master-prompt.md:
+              configPath: en/prompt-templates/game-master/game-master-prompt.md
+              hash: 8cb3434931b97a804103de914fbb0604716e279b9e893e7b6a41ea6d3b6bac21
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          general-instructions.md:
+            configPath: en/prompt-templates/general-instructions.md
+            hash: acb1359fc7763f73e6fcc4b5c281a406c0f499a35485ef79cae2f50ef8a30399
+            oldHashes: []
+            updatedAt: "2026-05-30T16:51:23.217Z"
+          memories:
+            memory-extraction-prompt.md:
+              configPath: en/prompt-templates/memories/memory-extraction-prompt.md
+              hash: 4cbfdf90cc82593f1ca4694bfcc2fa357e989a89e63b0147cc0a4bf10ab73783
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            memory-extraction-system-prompt.md:
+              configPath: en/prompt-templates/memories/memory-extraction-system-prompt.md
+              hash: 5b5d6dd335ef01fd420d8ac80f771dc8d75243a7936e4510c2d8e9f401db4dd3
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          plot-planner:
+            guidance-plot-planner-prompt.md:
+              configPath: en/prompt-templates/plot-planner/guidance-plot-planner-prompt.md
+              hash: c3954072a5ca8a5d41400f3cd6a50de3d41895923eddfb145acae8fe434f5d34
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            phase-event-plot-planner-prompt.md:
+              configPath: en/prompt-templates/plot-planner/phase-event-plot-planner-prompt.md
+              hash: eba123a0e017f11c0c00b83c5e76ec0ff4ac4a89e30d830558bd3ca39e611508
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          reviewer:
+            quick-reviewer-prompt.md:
+              configPath: en/prompt-templates/reviewer/quick-reviewer-prompt.md
+              hash: 3ae98b23baa0a9782dc594c628e57ff308906510cb154b73b4361746b759b624
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            reviewer-prompt.md:
+              configPath: en/prompt-templates/reviewer/reviewer-prompt.md
+              hash: a3819a85ca0d64d9fef7a0c07e71e306fe34c69c28e918234ee5a9d653d8c0ad
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          summarizer:
+            character-profile-compressor.md:
+              configPath: en/prompt-templates/summarizer/character-profile-compressor.md
+              hash: 2438a90b9599afc9f40d34fe3e466765eebbcd916ef3f1d2643fed9a031bfdae
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            summarizer-incremental-prompt.md:
+              configPath: en/prompt-templates/summarizer/summarizer-incremental-prompt.md
+              hash: 1adea755ce3238373ed5176705bb0a34d5b186a29ea140bf746d2d16691ea273
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            summarizer-prompt.md:
+              configPath: en/prompt-templates/summarizer/summarizer-prompt.md
+              hash: ca13fc3d6c9abcb4d414448e25e0e1299345738f499a3e3f6b58cf5c9b63b8ee
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          world:
+            world-builder-system-prompt.md:
+              configPath: en/prompt-templates/world/world-builder-system-prompt.md
+              hash: 724187bfef83065b2f4c58007fa74695669dfe5eaa0b088d0a60665eab27f0a2
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            world-template.md:
+              configPath: en/prompt-templates/world/world-template.md
+              hash: 9953c22a391e34f1b1b8e9eacfcd3928cb96bbcc80e7ac1e64ea4e4135049a3b
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          writer:
+            writer-output-template.md:
+              configPath: en/prompt-templates/writer/writer-output-template.md
+              hash: 344890e0826be326bb367a878006e774003dcb792abc44f3085de9b5dcdd023a
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            writer-prompt.md:
+              configPath: en/prompt-templates/writer/writer-prompt.md
+              hash: 724117b6adfa2b3b08709f7c79f07e368f62c3a1b6d0a905576cfac8aa544d10
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+        view-templates:
+          story-message-template.md:
+            configPath: en/view-templates/story-message-template.md
+            hash: 69b842b1a1dba04da41621d7e61ed78c10c7c90034e860a9c71d015fb12882f1
+            oldHashes: []
+            updatedAt: "2026-05-30T16:51:23.217Z"
+      zh-Hant-HK:
+        prompts:
+          act:
+            act-card-template.md:
+              configPath: zh-Hant-HK/prompt-templates/act/act-card-template.md
+              hash: d5bf1e4ec0e8572bcb4246b0e0de1c371b121160551fee00bf1bfa5fddee78ba
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            act-plot-editor-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/act/act-plot-editor-prompt.md
+              hash: 8c4c3bb29ea02333d53abb5f4599cf064b01de0302493f499262662a2d028a4c
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            act-plot-generation-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/act/act-plot-generation-prompt.md
+              hash: 792c8d384823aa346ede9c84087a74a1d2fb722c0bdeea952c88562fd3e9db76
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            act-plot-interview-system-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/act/act-plot-interview-system-prompt.md
+              hash: f9d144fe8a80e3da9512cdbdd084e7ff80cf0351614003cd11d1a5c2be70a496
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            act-plot-interview-turn-of-events-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/act/act-plot-interview-turn-of-events-prompt.md
+              hash: 0721bbd5f932c68ab07e7875bca70d155d3a0ebff542f98d7e58df29192ff34e
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            act-plot-reviewer-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/act/act-plot-reviewer-prompt.md
+              hash: 80c5d1005392a94325b2f27952f5d2520bc9ea9bcc6684c2da8fac3e16f19405
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            act-plot-system-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/act/act-plot-system-prompt.md
+              hash: d7013818bf0f0e33b51aa8520cf1daaaff2d789ba0999577f81f71a437866201
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            guidance-act-plot-template.md:
+              configPath: zh-Hant-HK/prompt-templates/act/guidance-act-plot-template.md
+              hash: a1d6362e298f606da059bbfa7e39578efee6ffe99a271663c2c5dc3734b9ddbe
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            phase-event-act-plot-template.md:
+              configPath: zh-Hant-HK/prompt-templates/act/phase-event-act-plot-template.md
+              hash: 0b507a58107673a3e52e3d1bbbb97d49bf1165e8c6ca7e9b602dfe5864f233f9
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          character:
+            character-card-template.md:
+              configPath: zh-Hant-HK/prompt-templates/character/character-card-template.md
+              hash: 9bce6f314353e21aa708cdcd4f843b007af945b21050566d365e65479fdf3372
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          editor:
+            editor-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/editor/editor-prompt.md
+              hash: 841f5710dbadfd88fc60d04896640c65596a8e25885953e8da230771c34ff02d
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          game-master:
+            game-master-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/game-master/game-master-prompt.md
+              hash: 9774d2d3bf12be4e492d0bf553af669bb91703cd4ed1dc322eeaa5245630f58c
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          general-instructions.md:
+            configPath: zh-Hant-HK/prompt-templates/general-instructions.md
+            hash: d8c70e92990ffb7fedda3e2206799dc475a6d428e41e70bc6c595f3d01267ea5
+            oldHashes: []
+            updatedAt: "2026-05-30T16:51:23.217Z"
+          memories:
+            memory-extraction-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/memories/memory-extraction-prompt.md
+              hash: 2634d09686781a5a383590834c90caef1606f0e05aa98f5672bc89b71ae79264
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            memory-extraction-system-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/memories/memory-extraction-system-prompt.md
+              hash: 5d58933c1865421e69a5bf887d655b92d4d3011c25d0d22176c0bdd328e25dc7
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          plot-planner:
+            guidance-plot-planner-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/plot-planner/guidance-plot-planner-prompt.md
+              hash: f5b7de82287cfc028b6640cfe2064d27db1e3bc77d3ce4dabf8593b1c0410f22
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            phase-event-plot-planner-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/plot-planner/phase-event-plot-planner-prompt.md
+              hash: c1415926c1645bfedc4d80bae7615c61f911861b20a576701756d5546d3d6516
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          reviewer:
+            quick-reviewer-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/reviewer/quick-reviewer-prompt.md
+              hash: fccfa0ca62909d8e337acf0afd832c1f69deeab9e5a641d6ec97cfbf8c5c1e9b
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            reviewer-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/reviewer/reviewer-prompt.md
+              hash: 20cb84a655a48096bdfe3fc4f72a05107ebca9baf8f83e527fbc0fb8cd6f84e6
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          summarizer:
+            character-profile-compressor.md:
+              configPath: zh-Hant-HK/prompt-templates/summarizer/character-profile-compressor.md
+              hash: 3a55e9df6531ed7f7f94156222dac4fe1de4b02c86704fcf1dd5aa340225ab69
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            summarizer-incremental-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/summarizer/summarizer-incremental-prompt.md
+              hash: 61f39151a50a0e03382a05c4b1ed57f425dc9899ad6a9bc3c6e5b762a50047af
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            summarizer-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/summarizer/summarizer-prompt.md
+              hash: 6334ad160f6ec46a1286883e257d393c53d8455f6b7298c284340f07e93bc22d
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          world:
+            world-builder-system-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/world/world-builder-system-prompt.md
+              hash: 4809cd56814e0a301c18668dbd6543e3da99d212bea8ea51d49c857bd47cdfb5
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            world-template.md:
+              configPath: zh-Hant-HK/prompt-templates/world/world-template.md
+              hash: 6e2051f1c1cd9a49130cff7bc820c656a149a11f335145decd4f8bb7c7d1e547
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+          writer:
+            writer-output-template.md:
+              configPath: zh-Hant-HK/prompt-templates/writer/writer-output-template.md
+              hash: c4431cd1c7cdbc78b8a6d44a5c9f1f631429b3b4740d378919a39ed13abd3f1d
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+            writer-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/writer/writer-prompt.md
+              hash: c26496fe7698bc5da81f79bf7ebc227f0211738824a8789f987b07afee3bee1a
+              oldHashes: []
+              updatedAt: "2026-05-30T16:51:23.217Z"
+        view-templates:
+          story-message-template.md:
+            configPath: zh-Hant-HK/view-templates/story-message-template.md
+            hash: 85a0e66842ce68133d064185eca05d0241a6271f3aed3110f6e562958fa15599
+            oldHashes: []
+            updatedAt: "2026-05-30T16:51:23.217Z"
+      locale-strings:
+        en.yaml:
+          configPath: en/locale-strings.yaml
+          hash: 02c2f6c61d948f401f32cdd4eb656a574da0366b3a2809ee2ff3c42b47348649
+          oldHashes: []
+          updatedAt: "2026-05-30T16:51:23.217Z"
+        zh-Hant-HK.yaml:
+          configPath: zh-Hant-HK/locale-strings.yaml
+          hash: f7772bf027cfec167bdc5e5d85aa783fac24f47303072a00685d5d7b70b80b54
+          oldHashes: []
+          updatedAt: "2026-05-30T16:51:23.217Z"

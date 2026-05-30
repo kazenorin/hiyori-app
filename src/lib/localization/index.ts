@@ -1,5 +1,6 @@
 import { LocaleStringBundle, registerLocaleStringDefaults, flattenToPaths } from '$lib/fs/locale-string-loader';
 import { log } from '$lib/logging/logger';
+import { registerBundledContent } from '$lib/fs/config-manifest';
 import defaultEnStrings from '$lib/fs/locale-strings/en.yaml?raw';
 import defaultZhHantHkStrings from '$lib/fs/locale-strings/zh-Hant-HK.yaml?raw';
 
@@ -8,6 +9,8 @@ const enBundle = new LocaleStringBundle({ locale: 'en', defaultContent: defaultE
 const zhHantHkBundle = new LocaleStringBundle({ locale: 'zh-Hant-HK', defaultContent: defaultZhHantHkStrings });
 
 registerLocaleStringDefaults([enBundle, zhHantHkBundle]);
+registerBundledContent('en/locale-strings.yaml', defaultEnStrings);
+registerBundledContent('zh-Hant-HK/locale-strings.yaml', defaultZhHantHkStrings);
 
 export async function loadLocaleStrings(locale: string, storyId?: string, storyName?: string): Promise<void> {
 	let data: Record<string, unknown>;

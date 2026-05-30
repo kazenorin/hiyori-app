@@ -1,5 +1,6 @@
-import { LocalizedPromptFile, registerDefaults } from './prompt-loader';
+import { LocalizedPromptFile, registerDefaults, SUPPORTED_LOCALES } from './prompt-loader';
 import type { SupportedLocale } from './prompt-loader';
+import { registerBundledContent } from './config-manifest';
 
 const promptDefaults: Record<SupportedLocale, Record<string, string>> = {
 	en: import.meta.glob('./en/prompts/**/*.md', {
@@ -13,6 +14,15 @@ const promptDefaults: Record<SupportedLocale, Record<string, string>> = {
 		import: 'default' as const,
 	}) as Record<string, string>,
 };
+
+for (const locale of SUPPORTED_LOCALES) {
+	for (const [globKey, content] of Object.entries(promptDefaults[locale])) {
+		const normalizedKey = globKey.replace(/^\.\//, '');
+		const relFromPrompts = normalizedKey.replace(/^.*?prompts\//, '');
+		const configPath = `${locale}/prompt-templates/${relFromPrompts}`;
+		registerBundledContent(configPath, content);
+	}
+}
 
 export interface PromptLoader {
 	loadByStory: (storyId: string, storyName: string) => Promise<string>;
