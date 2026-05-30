@@ -41,7 +41,9 @@ import { nameLabel } from '$lib/definitions/common-labels';
 import { type OutputDescriptor, parseContent } from '$lib/utils/chat-stream-parser';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 
-const fileFs = getFileSystem();
+function fileFs() {
+	return getFileSystem();
+}
 
 // === Progress Callback Type ===
 
@@ -95,7 +97,7 @@ export async function prepareImport(formData: ImportFormData, onProgress: Progre
 		if (formData.worldFile) {
 			worldContent = await formData.worldFile.text();
 			const worldPath = `${storyFolder}/world.md`;
-			await fileFs.writeTextFileEnsuringDir(worldPath, worldContent);
+			await fileFs().writeTextFileEnsuringDir(worldPath, worldContent);
 			log(`World file saved: ${formData.worldFile.name}`);
 		}
 
@@ -529,14 +531,14 @@ async function saveCharacterCards(
 		usedNames.add(canonicalName);
 
 		const filePath = `${charactersDir}/${canonicalName}.md`;
-		await fileFs.writeTextFileEnsuringDir(filePath, card.content);
+		await fileFs().writeTextFileEnsuringDir(filePath, card.content);
 		log(`Character card saved: ${canonicalName}.md`);
 	}
 }
 
 async function saveActCard(storyFolder: string, actNumber: number, content: string): Promise<void> {
 	const filePath = `${storyFolder}/act-${actNumber}/act-card.md`;
-	await fileFs.writeTextFileEnsuringDir(filePath, content);
+	await fileFs().writeTextFileEnsuringDir(filePath, content);
 }
 
 function extractCharacterName(content: string): string | null {

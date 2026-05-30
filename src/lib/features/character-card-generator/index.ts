@@ -26,7 +26,9 @@ import { ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT, ERR_NO_CHARACTERS_SELEC
 import { nameLabel } from '$lib/definitions/common-labels';
 import { characterCardExtractionRules, characterCardCoreIdentityLabel } from '$lib/definitions/feature-prompts';
 
-const fileFs = getFileSystem();
+function fileFs() {
+	return getFileSystem();
+}
 
 // === Types ===
 
@@ -218,7 +220,7 @@ async function loadActCard(storyFolder: string, actNumber: number, isMainLine: b
 	const path = `${lineDir}/act-card.md`;
 
 	try {
-		const content = await fileFs.readTextFileIfExists(path);
+		const content = await fileFs().readTextFileIfExists(path);
 		return content ?? null;
 	} catch (err) {
 		await log.warn('character-card', `Failed to read act card at ${path}: ${err}`);
@@ -239,7 +241,7 @@ async function loadExistingCharacterCard(
 	const path = `${charactersDir}/${filename}`;
 
 	try {
-		const content = await fileFs.readTextFileIfExists(path);
+		const content = await fileFs().readTextFileIfExists(path);
 		return content ?? null;
 	} catch (err) {
 		await log.warn('character-card', `Failed to read character card at ${path}: ${err}`);
@@ -382,7 +384,7 @@ export async function generateCharacterCard(
 	const filename = computeCardFilename(entry.canonicalName);
 	const filePath = `${charactersDir}/${filename}`;
 
-	await fileFs.writeTextFileEnsuringDir(filePath, result.text);
+	await fileFs().writeTextFileEnsuringDir(filePath, result.text);
 
 	return {
 		characterName: entry.character,

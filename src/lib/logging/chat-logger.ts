@@ -6,7 +6,9 @@ import { log } from './logger';
 import type { NarrativeVariables } from '$lib/ai/narrative-types';
 import type { MessageBase } from '$lib/db/messages';
 
-const fs = getFileSystem();
+function fs() {
+	return getFileSystem();
+}
 
 interface ChatLogMessage extends MessageBase {
 	variables?: NarrativeVariables;
@@ -31,7 +33,7 @@ async function appendToStoryLog(filename: string, label: string, content: string
 	if (!story) return;
 	try {
 		const folder = await resolveStoryFolder(story.id, story.name);
-		await fs.writeTextFile(`${folder}/${filename}`, formatEntry(label, content), { append: true });
+		await fs().writeTextFile(`${folder}/${filename}`, formatEntry(label, content), { append: true });
 	} catch (err) {
 		await log.error('chat-logger', `Failed to write to ${filename}`, err);
 	}
@@ -96,7 +98,7 @@ export async function logWorldBuilderChat(context: {
 	// Write to temp log file if filename provided
 	if (context.logFilename) {
 		try {
-			await fs.writeTextFileEnsuringDir(`logs/${context.logFilename}`, formatEntry('World Builder Chat Context', content), {
+			await fs().writeTextFileEnsuringDir(`logs/${context.logFilename}`, formatEntry('World Builder Chat Context', content), {
 				append: true,
 			});
 		} catch (err) {
@@ -112,11 +114,11 @@ export async function moveWorldBuilderLog(logFilename: string, storyFolder: stri
 	if (!logFilename) return;
 	try {
 		const srcPath = `logs/${logFilename}`;
-		const content = await fs.readTextFileIfExists(srcPath);
+		const content = await fs().readTextFileIfExists(srcPath);
 		if (!content) return;
 
-		await fs.writeTextFile(`${storyFolder}/${logFilename}`, content);
-		await fs.remove(srcPath);
+		await fs().writeTextFile(`${storyFolder}/${logFilename}`, content);
+		await fs().remove(srcPath);
 	} catch (err) {
 		await log.error('chat-logger', `Failed to move world builder log`, err);
 	}

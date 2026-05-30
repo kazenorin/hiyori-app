@@ -6,8 +6,13 @@ import { getSettings, LOG_LEVEL_VALUES, type LogLevel } from '$lib/stores/settin
 let fileFs: ReturnType<typeof getFileSystem>;
 
 function getFileFs() {
-	if (!fileFs) fileFs = getFileSystem();
-	return fileFs;
+	if (fileFs) return fileFs;
+	try {
+		fileFs = getFileSystem();
+		return fileFs;
+	} catch {
+		return null;
+	}
 }
 
 let logInfo = (msg: string) => logWeb('info', msg);
@@ -46,11 +51,13 @@ async function logWeb(level: string, message: string): Promise<void> {
 	// noinspection ES6MissingAwait
 	writeToConsole(level, message);
 
-	return await getFileFs()
-		.writeTextFileEnsuringDir(`logs/app.log`, `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${message}\n`, {
-			append: true,
-		})
-		.catch(() => {});
+	return (
+		(await getFileFs()
+			?.writeTextFileEnsuringDir(`logs/app.log`, `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${message}\n`, {
+				append: true,
+			})
+			.catch(() => {})) ?? Promise.resolve()
+	);
 }
 
 export const log = {
@@ -81,7 +88,7 @@ export async function fileLog(level: LogLevel, loggerTag: string, message: strin
 	const line = `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${resolvedMessage}\n`;
 	const filename = `${kebabCase(loggerTag)}.log`;
 	try {
-		await getFileFs().writeTextFileEnsuringDir(`logs/${filename}`, line, { append: true });
+		await getFileFs()?.writeTextFileEnsuringDir(`logs/${filename}`, line, { append: true });
 	} catch {
 		// Silent fail — file logging is best-effort
 	}

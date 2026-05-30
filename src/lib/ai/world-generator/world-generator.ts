@@ -21,7 +21,9 @@ import {
 	ERR_NO_MESSAGES_FOR_WORLD,
 } from '$lib/definitions/error-messages';
 
-const fileFs = getFileSystem();
+function fileFs() {
+	return getFileSystem();
+}
 
 /**
  * Trace back through the act line chain to collect the full message history.
@@ -173,7 +175,7 @@ export async function generateWorldFromCards(
 	const generatedContent = contentParts.join('');
 
 	const worldPath = `${folderName}/world.md`;
-	await fileFs.writeTextFile(worldPath, generatedContent);
+	await fileFs().writeTextFile(worldPath, generatedContent);
 
 	return generatedContent;
 }

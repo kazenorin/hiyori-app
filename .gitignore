@@ -9,6 +9,8 @@ CLAUDE.local.md
 .cline/.history/
 .cline/memory/
 
+.playwright-mcp/
+
 # =========================
 # Node.js / Web
 # =========================

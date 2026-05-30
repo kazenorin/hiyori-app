@@ -41,15 +41,13 @@ let backend: FileSystem | undefined;
 /**
  * Get the file system backend.
  *
- * Falls back to InMemoryFileSystem if not initialized.
- * Tests should call setFileSystem() explicitly.
+ * Must be called after initFileSystem() or setFileSystem().
+ * Throws if no backend has been initialized.
  */
 export function getFileSystem(): FileSystem {
-	if (backend) return backend;
-	console.warn(
-		'File system backend not explicitly set; falling back to InMemoryFileSystem. Data will not persist. Call setFileSystem() or initFileSystem() first.'
-	);
-	backend = new InMemoryFileSystem();
+	if (!backend) {
+		throw new Error('File system not initialized. Call initFileSystem() first.');
+	}
 	return backend;
 }
 

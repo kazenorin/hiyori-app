@@ -8,7 +8,9 @@ import { log } from './utils';
 import { type ToolSet } from 'ai';
 import type { ToolContext } from './tools';
 
-const fileFs = getFileSystem();
+function fileFs() {
+	return getFileSystem();
+}
 
 export function createReadActPlotTool(ctx: ToolContext) {
 	const { story, actLine, act } = ctx;
@@ -25,7 +27,7 @@ export function createReadActPlotTool(ctx: ToolContext) {
 			const lineDir = await getLineDir(storyFolder, act.actNumber, actLine.isMainLine, actLine.id);
 			const filePath = `${lineDir}/act-plot.md`;
 
-			const content = await fileFs.readTextFileIfExists(filePath);
+			const content = await fileFs().readTextFileIfExists(filePath);
 			if (!content) {
 				return ls('tools.readActPlot.messages.noActPlot');
 			}

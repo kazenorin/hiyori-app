@@ -10,7 +10,9 @@ import { worldContentHeader, actSummaryHeader, interviewTranscriptHeader } from 
 import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 import { log } from '$lib/logging/logger';
 
-const fileFs = getFileSystem();
+function fileFs() {
+	return getFileSystem();
+}
 
 const LOG_TAG = 'world-updater';
 
@@ -27,9 +29,9 @@ export async function updateWorldCard(params: UpdateWorldCardParams): Promise<st
 	const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
 	const backupPath = `${params.folderName}/world-${timestamp}.md`;
 
-	if (await fileFs.exists(worldPath)) {
+	if (await fileFs().exists(worldPath)) {
 		await log.info(LOG_TAG, `Backing up world.md to world-${timestamp}.md`);
-		await fileFs.rename(worldPath, backupPath);
+		await fileFs().rename(worldPath, backupPath);
 	}
 
 	const [systemPrompt, extractionPrompt, worldTemplate] = await Promise.all([
@@ -73,14 +75,14 @@ export async function updateWorldCard(params: UpdateWorldCardParams): Promise<st
 		}
 
 		const updatedContent = contentParts.join('');
-		await fileFs.writeTextFile(worldPath, updatedContent);
+		await fileFs().writeTextFile(worldPath, updatedContent);
 
 		await log.info(LOG_TAG, `World card update complete. Length: ${updatedContent.length} chars`);
 		return updatedContent;
 	} catch (err) {
 		await log.error(LOG_TAG, 'World card update failed, restoring backup', err);
-		if (await fileFs.exists(backupPath)) {
-			await fileFs.rename(backupPath, worldPath);
+		if (await fileFs().exists(backupPath)) {
+			await fileFs().rename(backupPath, worldPath);
 		}
 		throw err;
 	}

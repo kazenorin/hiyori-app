@@ -13,7 +13,9 @@ import { type RetryConfig, streamWithRetry } from '$lib/ai/chat-stream';
 import type { StreamState } from '$lib/ai/chat-callbacks';
 import { actCardExtractionPrompt, actCardSystemPrompt, actCardTranscriptEnd, actCardTranscriptStart, worldContextLabel } from './prompts';
 
-const fileFs = getFileSystem();
+function fileFs() {
+	return getFileSystem();
+}
 import {
 	ERR_ACT_NOT_FOUND,
 	ERR_NO_ACT_LINE_SELECTED,
@@ -91,7 +93,7 @@ async function resolveAndWrite(ctx: ActCardContext, content: string): Promise<st
 	const lineDir = await getLineDir(storyFolder, ctx.actNumber, ctx.isMainLine, ctx.actLineId);
 	const filePath = `${lineDir}/act-card.md`;
 
-	await fileFs.writeTextFileEnsuringDir(filePath, content);
+	await fileFs().writeTextFileEnsuringDir(filePath, content);
 
 	return filePath;
 }
