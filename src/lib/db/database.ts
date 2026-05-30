@@ -1,29 +1,21 @@
-import { isTauri } from '@tauri-apps/api/core';
-import { TauriDatabase } from './adapters/tauri-database';
-import { SqlJsDatabase } from './adapters/sqljs-database';
-import { loadFromOpfs } from './adapters/opfs-persistence';
+import { checkIsTauri } from '$lib/runtime';
 import type { Database } from './types';
 import { ERR_DB_NOT_INITIALIZED } from '$lib/definitions/error-messages';
 
 let db: Database | null = null;
 let dbInit: Promise<Database> | null = null;
 
-function checkIsTauri(): boolean {
-	try {
-		return isTauri();
-	} catch {
-		return false;
-	}
-}
-
 export async function initDatabase(): Promise<Database> {
 	if (db) return db;
 	if (dbInit) return dbInit;
 
 	dbInit = (async () => {
-		if (checkIsTauri()) {
+		if (await checkIsTauri()) {
+			const { TauriDatabase } = await import('./adapters/tauri-database');
 			db = await TauriDatabase.create('sqlite:byoa.db');
 		} else {
+			const { SqlJsDatabase } = await import('./adapters/sqljs-database');
+			const { loadFromOpfs } = await import('./adapters/opfs-persistence');
 			const existingData = await loadFromOpfs('byoa.db.bin');
 			db = await SqlJsDatabase.create(existingData, {
 				persistToOpfs: true,

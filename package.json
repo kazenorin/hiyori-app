@@ -13,7 +13,8 @@
 		"format:check": "prettier --check .",
 		"test": "vitest run",
 		"test:watch": "vitest",
-		"tauri": "tauri"
+		"tauri": "tauri",
+		"postinstall": "node scripts/copy-wasm.mjs"
 	},
 	"repository": {
 		"type": "git",

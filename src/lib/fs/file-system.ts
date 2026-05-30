@@ -1,4 +1,5 @@
-import { isTauri } from '@tauri-apps/api/core';
+import { checkIsTauri } from '$lib/runtime';
+import { InMemoryFileSystem } from './file-system-in-memory';
 
 export interface DirEntry {
 	name: string;
@@ -32,54 +33,35 @@ export interface FileSystem {
 	writeTextFileEnsuringDir(path: string, content: string, options?: { append?: boolean }): Promise<void>;
 }
 
-import { TauriFileSystem } from './file-system-tauri';
-import { InMemoryFileSystem } from './file-system-in-memory';
-export { TauriFileSystem } from './file-system-tauri';
 export { OpfsFileSystem } from './file-system-opfs';
 export { InMemoryFileSystem } from './file-system-in-memory';
 
 let backend: FileSystem | undefined;
 
-function checkIsTauri(): boolean {
-	try {
-		return isTauri();
-	} catch {
-		return false;
-	}
-}
-
 /**
  * Get the file system backend.
  *
- * In Tauri environments, auto-creates a TauriFileSystem on first call.
- * In non-Tauri environments (tests, dev), falls back to InMemoryFileSystem.
- * Tests that need spy/mock behavior should call setFileSystem() explicitly.
+ * Falls back to InMemoryFileSystem if not initialized.
+ * Tests should call setFileSystem() explicitly.
  */
 export function getFileSystem(): FileSystem {
 	if (backend) return backend;
-
-	if (checkIsTauri()) {
-		backend = new TauriFileSystem();
-	} else {
-		console.warn(
-			'File system backend not explicitly set; falling back to InMemoryFileSystem. Data will not persist. Call setFileSystem() or initFileSystem() first.'
-		);
-		backend = new InMemoryFileSystem();
-	}
+	console.warn(
+		'File system backend not explicitly set; falling back to InMemoryFileSystem. Data will not persist. Call setFileSystem() or initFileSystem() first.'
+	);
+	backend = new InMemoryFileSystem();
 	return backend;
 }
 
 /**
  * Asynchronously initialize the file system backend.
- * Uses `isTauri()` to detect the runtime, falling back to OPFS detection.
- *
- * Call this during app initialization in non-Tauri environments
- * (e.g. standalone web builds). In Tauri, getFileSystem() auto-initializes.
+ * Uses dynamic import based on runtime detection.
  */
 export async function initFileSystem(): Promise<FileSystem> {
 	if (backend) return backend;
 
-	if (checkIsTauri()) {
+	if (await checkIsTauri()) {
+		const { TauriFileSystem } = await import('./file-system-tauri');
 		backend = new TauriFileSystem();
 	} else if (typeof navigator !== 'undefined' && !!navigator.storage?.getDirectory) {
 		const { OpfsFileSystem } = await import('./file-system-opfs');

@@ -28,7 +28,7 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 	try {
 		await initFileSystem();
 		await initLogging();
-		initHttpClient();
+		await initHttpClient();
 		const settings = getSettings();
 		await loadLocale(settings.locale || 'en');
 		try {

@@ -1,5 +1,4 @@
-import { isTauri } from '@tauri-apps/api/core';
-import * as tauriLog from '@tauri-apps/plugin-log';
+import { checkIsTauri } from '$lib/runtime';
 import { getFileSystem } from '$lib/fs/file-system';
 import { kebabCase } from 'lodash-es';
 import { getSettings, LOG_LEVEL_VALUES, type LogLevel } from '$lib/stores/settings.svelte';
@@ -9,14 +8,6 @@ let fileFs: ReturnType<typeof getFileSystem>;
 function getFileFs() {
 	if (!fileFs) fileFs = getFileSystem();
 	return fileFs;
-}
-
-function checkIsTauri() {
-	try {
-		return isTauri();
-	} catch {
-		return false;
-	}
 }
 
 let logInfo = (msg: string) => logWeb('info', msg);
@@ -29,7 +20,8 @@ let logDebug = (msg: string) => logWeb('debug', msg);
  * Call once during app initialization. No-op in web environments.
  */
 export async function initLogging(): Promise<void> {
-	if (checkIsTauri()) {
+	if (await checkIsTauri()) {
+		const tauriLog = await import('@tauri-apps/plugin-log');
 		await tauriLog.attachConsole();
 		logInfo = (msg: string) => safeTauriLog(tauriLog.info, msg);
 		logError = (msg: string) => safeTauriLog(tauriLog.error, msg);
