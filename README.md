@@ -74,6 +74,45 @@ Output artifacts:
 | .deb     | `src-tauri/target/release/bundle/deb/BYOA_0.1.0_amd64.deb`    |
 | .rpm     | `src-tauri/target/release/bundle/rpm/BYOA-0.1.0-1.x86_64.rpm` |
 
+## Building the Standalone Web App
+
+The same codebase produces a standalone web app that runs in any modern browser without Tauri. Runtime detection automatically selects the correct backends:
+
+| Layer               | Tauri                                       | Web (browser)                                    |
+| ------------------- | ------------------------------------------- | ------------------------------------------------ |
+| Database            | `TauriDatabase` (native SQLite)             | `SqlJsDatabase` (WASM SQLite + OPFS persistence) |
+| File system         | `TauriFileSystem` (`@tauri-apps/plugin-fs`) | `OpfsFileSystem` (browser OPFS API)              |
+| HTTP                | `@tauri-apps/plugin-http` (CORS-free)       | `globalThis.fetch` (subject to CORS)             |
+| Logging             | Tauri log plugin                            | Console + file via OPFS                          |
+| Memory (sqlite-vec) | Enabled                                     | Disabled                                         |
+
+### Build
+
+```bash
+npm install   # postinstall copies sql-wasm.wasm to static/
+npm run build # outputs to build/
+```
+
+The `build/` directory is a fully static SPA — deploy it to any static host (Netlify, Vercel, GitHub Pages, S3) or serve locally with `npx serve build`.
+
+### Requirements
+
+- **HTTPS or localhost** — OPFS requires a secure context. `file://` protocol will not work.
+- **Chromium-based browser** — OPFS and File System Access API are primarily supported in Chrome, Edge, and Opera. Firefox and Safari have limited or no support.
+- **CORS** — LLM API calls use standard `fetch()`. Most providers (OpenAI, Anthropic) work fine. Self-hosted endpoints (especially Ollama) may require CORS configuration.
+
+### Data persistence
+
+App data is stored in the browser via OPFS (Origin Private File System). Clearing browser data will erase it. Use the **Data → Export** button in Settings to create backups.
+
+### PWA
+
+The web build includes a service worker (via `@vite-pwa/sveltekit`) that caches the app shell for offline use. On Chromium browsers, the app can be installed as a PWA via the browser's install prompt.
+
+### CORS note for Ollama
+
+When running in the browser, API calls to local Ollama instances require the `OLLAMA_ORIGINS=*` environment variable to allow cross-origin requests.
+
 ## Cross-Compiling for Windows (from Linux)
 
 Cross-compiling to Windows uses the GNU toolchain with MinGW-w64.
