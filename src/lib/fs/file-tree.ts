@@ -1,4 +1,5 @@
 import { fs } from '$lib/fs/file-system';
+import { isTauriSync } from '$lib/runtime';
 
 export interface FileNode {
 	id: string;
@@ -46,6 +47,16 @@ export async function isBinaryFile(path: string): Promise<boolean> {
 export async function downloadFile(path: string): Promise<void> {
 	const data = await fs.readBinaryFile(path);
 	const fileName = path.split('/').pop() ?? path;
+
+	if (isTauriSync()) {
+		const { save } = await import('@tauri-apps/plugin-dialog');
+		const { writeFile } = await import('@tauri-apps/plugin-fs');
+		const filePath = await save({ defaultPath: fileName });
+		if (!filePath) return;
+		await writeFile(filePath, data);
+		return;
+	}
+
 	const blob = new Blob([new Uint8Array(data)]);
 	const url = URL.createObjectURL(blob);
 	const a = document.createElement('a');
