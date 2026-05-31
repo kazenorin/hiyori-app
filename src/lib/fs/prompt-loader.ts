@@ -101,7 +101,7 @@ export abstract class LocalizedTemplateFile {
 	 * 3. Bundled default (in-memory)
 	 */
 	async loadForStory(storyId: string, storyName: string): Promise<string> {
-		return loadWithOverride(this.baseDir, storyId, storyName, this.relativePath, this.getDefaultContent(getActiveLocale()));
+		return loadWithOverride(this.baseDir, storyId, storyName, this.relativePath, this.getDefaultContent(getActiveLocale()), getActiveLocale());
 	}
 }
 
@@ -171,13 +171,14 @@ async function loadWithOverride(
 	storyId: string,
 	storyName: string,
 	relativePath: string,
-	defaultContent: string
+	defaultContent: string,
+	locale: string
 ): Promise<string> {
 	const templatesDir = baseDir.split('/').pop() ?? 'templates';
 
 	try {
 		const storyFolder = await resolveStoryFolder(storyId, storyName);
-		const storyPath = `${storyFolder}/${templatesDir}/${relativePath}`;
+		const storyPath = `${storyFolder}/${locale}/${templatesDir}/${relativePath}`;
 		const storyContent = await fs.readTextFileIfExists(storyPath);
 		if (storyContent) {
 			return storyContent;
