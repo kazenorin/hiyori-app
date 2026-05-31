@@ -1,25 +1,26 @@
 <script lang="ts">
 	import {
-		settings,
 		addProviderConfig,
-		updateProviderConfig,
-		deleteProviderConfig,
+		type ApiType,
 		assignRole,
-		updateSettings,
-		resetConfiguration,
+		deleteProviderConfig,
 		getMinorTaskAgentProviderConfig,
 		isMemoryAvailable,
 		isMemoryCapable,
-		type ProviderConfig,
-		type Provider,
-		type ApiType,
 		type LogLevel,
+		type Provider,
+		type ProviderConfig,
+		resetConfiguration,
+		settings,
+		updateProviderConfig,
+		updateSettings,
 	} from '$lib/stores/settings.svelte';
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
 	import { t } from '$lib/i18n';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
-	import { exportAppData, importAppData, downloadExport, readFileAsUint8Array } from '$lib/db/data-portability';
+	import { downloadExport, exportAppData, importAppData, readFileAsUint8Array } from '$lib/db/data-portability';
 	import { isTauriSync } from '$lib/runtime';
+	import { ensureAllBaseConfigs } from '$lib/fs/prompt-loader';
 
 	// Editing state
 	let editingId = $state<string | null>(null);
@@ -33,6 +34,19 @@
 	let pendingImportFile = $state<File | null>(null);
 	let showResetConfirm = $state(false);
 	let isResetting = $state(false);
+
+	async function handleResetConfirm() {
+		showResetConfirm = false;
+		isResetting = true;
+		try {
+			await resetConfiguration();
+			await ensureAllBaseConfigs();
+			window.location.reload();
+		} catch (err) {
+			console.error('Reset failed:', err);
+			isResetting = false;
+		}
+	}
 
 	// Form state for the provider being edited/added
 	let formName = $state('');
@@ -830,20 +844,17 @@
 </div>
 
 {#if showImportConfirm}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		role="dialog"
 		aria-modal="true"
+		tabindex="-1"
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-		onclick={() => (showImportConfirm = false)}
+		onclick={(e) => {
+			if (e.currentTarget === e.target) showImportConfirm = false;
+		}}
 		onkeydown={(e) => e.key === 'Escape' && (showImportConfirm = false)}
 	>
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.stopPropagation()}
-		>
+		<div class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4">
 			<h3 class="text-lg font-semibold text-error-500 mb-3">{t('settings.importDatabase')}</h3>
 			<p class="text-sm text-surface-600-400 mb-2">{t('settings.importRecommendExport')}</p>
 			<p class="text-sm text-surface-700-300 mb-5">{t('settings.importWarning')}</p>
@@ -886,20 +897,17 @@
 {/if}
 
 {#if showResetConfirm}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		role="dialog"
 		aria-modal="true"
+		tabindex="-1"
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-		onclick={() => (showResetConfirm = false)}
+		onclick={(e) => {
+			if (e.currentTarget === e.target) showResetConfirm = false;
+		}}
 		onkeydown={(e) => e.key === 'Escape' && (showResetConfirm = false)}
 	>
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.stopPropagation()}
-		>
+		<div class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4">
 			<h3 class="text-lg font-semibold text-error-500 mb-3">{t('settings.resetConfiguration')}</h3>
 			<p class="text-sm text-surface-700-300 mb-5">{t('settings.resetConfigurationWarning')}</p>
 			<div class="flex gap-2">
@@ -913,17 +921,7 @@
 				<button
 					class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
 					type="button"
-					onclick={async () => {
-						showResetConfirm = false;
-						isResetting = true;
-						try {
-							await resetConfiguration();
-							window.location.reload();
-						} catch (err) {
-							console.error('Reset failed:', err);
-							isResetting = false;
-						}
-					}}
+					onclick={handleResetConfirm}
 				>
 					{t('settings.resetConfiguration')}
 				</button>

@@ -2,7 +2,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { omitBy } from 'lodash-es';
 import { getDatabase } from '$lib/db/database';
 import { fs } from '$lib/fs/file-system';
-import { ensureAllBaseConfigs } from '$lib/fs/prompt-loader';
 
 export type Provider = 'openai' | 'openai-compatible' | 'ollama';
 export type ApiType = 'chat-completions' | 'responses';
@@ -364,7 +363,6 @@ export async function resetConfiguration(): Promise<void> {
 	} catch {
 		// config/ may not exist — that's fine
 	}
-	await ensureAllBaseConfigs();
 	localStorage.removeItem(STORAGE_KEY);
 	Object.assign(settings, { ...defaults });
 	persist();
