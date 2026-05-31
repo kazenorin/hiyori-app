@@ -10,10 +10,12 @@
 		readFileContent,
 		isBinaryFile,
 		downloadFile,
+		getLanguageFromPath,
 		type FileNode,
 	} from '$lib/fs/file-tree';
 	import { t } from '$lib/i18n';
 	import { log } from '$lib/logging/logger';
+	import CodeBlock from '$lib/components/CodeBlock.svelte';
 
 	function createCollection(children: FileNode[] = []) {
 		return createTreeViewCollection<FileNode>({
@@ -29,6 +31,7 @@
 	let fileContent = $state<string | null>(null);
 	let fileError = $state<string | null>(null);
 	let isBinary = $state(false);
+	let fileLang = $state('');
 	let isLoadingFile = $state(false);
 	let isLoadingRoot = $state(true);
 	let rootError = $state<string | null>(null);
@@ -70,6 +73,7 @@
 		fileContent = null;
 		fileError = null;
 		isBinary = false;
+		fileLang = '';
 	}
 
 	async function handleSelectionChange(details: {
@@ -84,6 +88,7 @@
 
 		const requestId = ++loadRequestId;
 		selectedFilePath = node.id;
+		fileLang = getLanguageFromPath(node.id);
 		isLoadingFile = true;
 		try {
 			const binary = await isBinaryFile(node.id);
@@ -103,6 +108,7 @@
 			fileError = err instanceof Error ? err.message : String(err);
 			fileContent = null;
 			isBinary = false;
+			fileLang = '';
 		} finally {
 			if (requestId === loadRequestId) {
 				isLoadingFile = false;
@@ -187,7 +193,7 @@
 							</div>
 						</div>
 					{:else if fileContent !== null}
-						<pre class="text-xs whitespace-pre-wrap break-words font-mono text-surface-800-200 leading-relaxed">{fileContent}</pre>
+						<CodeBlock code={fileContent} lang={fileLang || undefined} />
 					{/if}
 				{:else}
 					<div class="flex items-center justify-center h-full text-sm text-surface-600-400">

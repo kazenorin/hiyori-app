@@ -44,6 +44,19 @@ export async function isBinaryFile(path: string): Promise<boolean> {
 	return isBinaryData(data);
 }
 
+export function getLanguageFromPath(path: string): string {
+	const ext = path.split('.').pop()?.toLowerCase() ?? '';
+	const langMap: Record<string, string> = {
+		md: 'markdown',
+		markdown: 'markdown',
+		json: 'json',
+		jsonc: 'json',
+		yaml: 'yaml',
+		yml: 'yaml',
+	};
+	return langMap[ext] ?? '';
+}
+
 export async function downloadFile(path: string): Promise<void> {
 	const data = await fs.readBinaryFile(path);
 	const fileName = path.split('/').pop() ?? path;
