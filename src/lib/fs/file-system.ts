@@ -32,9 +32,6 @@ export interface FileSystem {
 	writeTextFileEnsuringDir(path: string, content: string, options?: { append?: boolean }): Promise<void>;
 }
 
-export { OpfsFileSystem } from './file-system-opfs';
-export { InMemoryFileSystem } from './file-system-in-memory';
-
 let backend: FileSystem | undefined;
 
 /**
