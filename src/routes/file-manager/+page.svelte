@@ -7,10 +7,10 @@
 	} from '@skeletonlabs/skeleton-svelte';
 	import {
 		readDirectoryNodes,
-		readFileContent,
-		isBinaryFile,
+		readFileData,
 		downloadFile,
 		getLanguageFromPath,
+		decodeText,
 		type FileNode,
 	} from '$lib/fs/file-tree';
 	import { t } from '$lib/i18n';
@@ -91,16 +91,14 @@
 		fileLang = getLanguageFromPath(node.id);
 		isLoadingFile = true;
 		try {
-			const binary = await isBinaryFile(node.id);
+			const { data, isBinary: binary } = await readFileData(node.id);
 			if (requestId !== loadRequestId) return;
 			isBinary = binary;
 			if (binary) {
 				fileContent = null;
 				fileError = null;
 			} else {
-				const content = await readFileContent(node.id);
-				if (requestId !== loadRequestId) return;
-				fileContent = content;
+				fileContent = decodeText(data);
 				fileError = null;
 			}
 		} catch (err) {
@@ -186,7 +184,9 @@
 								<button
 									class="btn preset-filled"
 									type="button"
-									onclick={() => downloadFile(selectedFilePath!)}
+									onclick={() => {
+										if (selectedFilePath) downloadFile(selectedFilePath);
+									}}
 								>
 									{t('fileManager.download')}
 								</button>

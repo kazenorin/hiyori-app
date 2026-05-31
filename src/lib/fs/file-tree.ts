@@ -44,6 +44,20 @@ export async function isBinaryFile(path: string): Promise<boolean> {
 	return isBinaryData(data);
 }
 
+export interface FileData {
+	data: Uint8Array;
+	isBinary: boolean;
+}
+
+export async function readFileData(path: string): Promise<FileData> {
+	const data = await fs.readBinaryFile(path);
+	return { data, isBinary: isBinaryData(data) };
+}
+
+export function decodeText(data: Uint8Array): string {
+	return new TextDecoder().decode(data);
+}
+
 export function getLanguageFromPath(path: string): string {
 	const ext = path.split('.').pop()?.toLowerCase() ?? '';
 	const langMap: Record<string, string> = {

@@ -12,6 +12,8 @@
 		engine: createJavaScriptRegexEngine(),
 	});
 
+	const supportedLangs = new Set(highlighter.getLoadedLanguages());
+
 	interface CodeBlockProps {
 		code: string;
 		lang?: string;
@@ -21,14 +23,12 @@
 <script lang="ts">
 	const { code, lang = 'txt' }: CodeBlockProps = $props();
 
-	const supportedLangs = new Set(highlighter.getLoadedLanguages());
-
 	const generatedHtml =
 		lang && supportedLangs.has(lang)
 			? highlighter.codeToHtml(code, { lang, theme: 'github-dark' })
-			: `<pre style="background-color:#0d1117;color:#e6edf3;padding:1rem;overflow-x:auto;border-radius:0.375rem;font-size:0.75rem;line-height:1.625;">${code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+			: `<pre class="bg-surface-950-50 text-surface-800-200 p-4 overflow-x-auto rounded-(--radius-base) text-xs leading-relaxed">${code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
 </script>
 
-<div class="overflow-auto rounded-container [&>pre]:p-4 [&>pre]:text-xs [&>pre]:leading-relaxed">
+<div class="overflow-auto rounded-container">
 	{@html generatedHtml}
 </div>
