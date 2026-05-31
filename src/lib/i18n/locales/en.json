@@ -122,7 +122,10 @@
 		"importSuccess": "Data imported successfully. Reloading...",
 		"importFailed": "Import failed: {{error}}",
 		"exportFailed": "Export failed: {{error}}",
-		"dataWebNotice": "Your data is stored in the browser. Export regularly to avoid data loss."
+		"dataWebNotice": "Your data is stored in the browser. Export regularly to avoid data loss.",
+		"resetConfiguration": "Reset Configuration",
+		"resetConfigurationDescription": "Remove all configuration files and restore settings to their defaults. Stories are not affected.",
+		"resetConfigurationWarning": "This will delete all customized prompts, locale strings, and settings. Story data will be preserved. This cannot be undone."
 	},
 	"chat": {
 		"emptyState": "Create a story, add an act, then select or create an act line to start chatting.",

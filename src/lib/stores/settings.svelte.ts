@@ -1,6 +1,8 @@
 import { v4 as uuidv4 } from 'uuid';
 import { omitBy } from 'lodash-es';
 import { getDatabase } from '$lib/db/database';
+import { fs } from '$lib/fs/file-system';
+import { ensureAllBaseConfigs } from '$lib/fs/prompt-loader';
 
 export type Provider = 'openai' | 'openai-compatible' | 'ollama';
 export type ApiType = 'chat-completions' | 'responses';
@@ -301,64 +303,20 @@ export function assignRole(role: string, providerConfigId: string): void {
 	persist();
 }
 
+type UpdatableSettings = Omit<Settings, 'providers' | 'roleAssignments'>;
+
 // --- Global Settings ---
 
-export async function updateSettings(
-	partial: Partial<
-		Pick<
-			Settings,
-			| 'locale'
-			| 'logLevel'
-			| 'fontSize'
-			| 'memoryEnabled'
-			| 'memoryProviderRole'
-			| 'embeddingProviderRole'
-			| 'plotPlannerProviderRole'
-			| 'plotPlannerEnabled'
-			| 'writerProviderRole'
-			| 'reviewerEnabled'
-			| 'reviewerMode'
-			| 'reviewerProviderRole'
-			| 'editorProviderRole'
-			| 'gameMasterProviderRole'
-			| 'summarizerProviderRole'
-			| 'minorTaskAgentProviderRole'
-			| 'importantPhraseHighlighting'
-			| 'targetWordCount'
-			| 'directorModeEnabled'
-			| 'characterProfileCompressorInterval'
-			| 'defaultPlotMode'
-			| 'reevaluationFrequency'
-		>
-	>
-): Promise<void> {
+export async function updateSettings(partial: Partial<UpdatableSettings>): Promise<void> {
 	const prevFontSize = settings.fontSize;
 	const prevLogLevel = settings.logLevel;
 	const prevLocale = settings.locale;
 
-	if (partial.locale !== undefined) settings.locale = partial.locale;
-	if (partial.logLevel !== undefined) settings.logLevel = partial.logLevel;
-	if (partial.fontSize !== undefined) settings.fontSize = partial.fontSize;
-	if (partial.memoryEnabled !== undefined) settings.memoryEnabled = partial.memoryEnabled;
-	if (partial.memoryProviderRole !== undefined) settings.memoryProviderRole = partial.memoryProviderRole;
-	if (partial.embeddingProviderRole !== undefined) settings.embeddingProviderRole = partial.embeddingProviderRole;
-	if (partial.plotPlannerProviderRole !== undefined) settings.plotPlannerProviderRole = partial.plotPlannerProviderRole;
-	if (partial.plotPlannerEnabled !== undefined) settings.plotPlannerEnabled = partial.plotPlannerEnabled;
-	if (partial.writerProviderRole !== undefined) settings.writerProviderRole = partial.writerProviderRole;
-	if (partial.reviewerProviderRole !== undefined) settings.reviewerProviderRole = partial.reviewerProviderRole;
-	if (partial.reviewerEnabled !== undefined) settings.reviewerEnabled = partial.reviewerEnabled;
-	if (partial.reviewerMode !== undefined) settings.reviewerMode = partial.reviewerMode;
-	if (partial.editorProviderRole !== undefined) settings.editorProviderRole = partial.editorProviderRole;
-	if (partial.gameMasterProviderRole !== undefined) settings.gameMasterProviderRole = partial.gameMasterProviderRole;
-	if (partial.summarizerProviderRole !== undefined) settings.summarizerProviderRole = partial.summarizerProviderRole;
-	if (partial.minorTaskAgentProviderRole !== undefined) settings.minorTaskAgentProviderRole = partial.minorTaskAgentProviderRole;
-	if (partial.importantPhraseHighlighting !== undefined) settings.importantPhraseHighlighting = partial.importantPhraseHighlighting;
-	if (partial.targetWordCount !== undefined) settings.targetWordCount = partial.targetWordCount;
-	if (partial.directorModeEnabled !== undefined) settings.directorModeEnabled = partial.directorModeEnabled;
-	if (partial.characterProfileCompressorInterval !== undefined)
-		settings.characterProfileCompressorInterval = partial.characterProfileCompressorInterval;
-	if (partial.defaultPlotMode !== undefined) settings.defaultPlotMode = partial.defaultPlotMode;
-	if (partial.reevaluationFrequency !== undefined) settings.reevaluationFrequency = partial.reevaluationFrequency;
+	for (const [key, value] of Object.entries(partial)) {
+		if (value !== undefined) {
+			(settings as unknown as Record<string, unknown>)[key] = value;
+		}
+	}
 	persist();
 
 	// Apply font size preference when fontSize changes
@@ -398,4 +356,12 @@ export async function updateSettings(
 			console.error('Failed to sync locale strings:', err);
 		}
 	}
+}
+
+export async function resetConfiguration(): Promise<void> {
+	await fs.remove('config');
+	await ensureAllBaseConfigs();
+	localStorage.removeItem(STORAGE_KEY);
+	Object.assign(settings, { ...defaults });
+	persist();
 }

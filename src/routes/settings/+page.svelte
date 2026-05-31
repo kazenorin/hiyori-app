@@ -6,6 +6,7 @@
 		deleteProviderConfig,
 		assignRole,
 		updateSettings,
+		resetConfiguration,
 		getMinorTaskAgentProviderConfig,
 		isMemoryAvailable,
 		isMemoryCapable,
@@ -30,6 +31,8 @@
 	let importError = $state<string | null>(null);
 	let showImportConfirm = $state(false);
 	let pendingImportFile = $state<File | null>(null);
+	let showResetConfirm = $state(false);
+	let isResetting = $state(false);
 
 	// Form state for the provider being edited/added
 	let formName = $state('');
@@ -793,6 +796,19 @@
 					<p class="text-xs text-error-500">{importError}</p>
 				{/if}
 			</div>
+
+			<hr class="border-surface-200-800" />
+
+			<div>
+				<button
+					class="btn variant-outline border-error-500-700 text-error-500 hover:bg-error-500/10"
+					disabled={isResetting}
+					onclick={() => (showResetConfirm = true)}
+				>
+					{isResetting ? '...' : t('settings.resetConfiguration')}
+				</button>
+				<span class="text-xs text-surface-500 mt-1 block">{t('settings.resetConfigurationDescription')}</span>
+			</div>
 		</section>
 
 		<!-- Developer -->
@@ -863,6 +879,53 @@
 					}}
 				>
 					{t('settings.importDatabase')}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+{#if showResetConfirm}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		role="dialog"
+		aria-modal="true"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+		onclick={() => (showResetConfirm = false)}
+		onkeydown={(e) => e.key === 'Escape' && (showResetConfirm = false)}
+	>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+		>
+			<h3 class="text-lg font-semibold text-error-500 mb-3">{t('settings.resetConfiguration')}</h3>
+			<p class="text-sm text-surface-700-300 mb-5">{t('settings.resetConfigurationWarning')}</p>
+			<div class="flex gap-2">
+				<button
+					class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+					type="button"
+					onclick={() => (showResetConfirm = false)}
+				>
+					{t('settings.cancel')}
+				</button>
+				<button
+					class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
+					type="button"
+					onclick={async () => {
+						showResetConfirm = false;
+						isResetting = true;
+						try {
+							await resetConfiguration();
+							window.location.reload();
+						} catch (err) {
+							console.error('Reset failed:', err);
+							isResetting = false;
+						}
+					}}
+				>
+					{t('settings.resetConfiguration')}
 				</button>
 			</div>
 		</div>
