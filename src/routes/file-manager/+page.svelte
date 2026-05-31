@@ -454,7 +454,7 @@
 {#snippet editMode()}
 	<div class="space-y-2">
 		<textarea
-			class="w-full max-h-[70vh] rounded border border-surface-200-800 bg-surface-50-950 p-4 font-mono text-xs leading-relaxed text-surface-900-100 resize-y"
+			class="w-full h-[70vh] rounded border border-surface-200-800 bg-surface-50-950 p-4 font-mono text-xs leading-relaxed text-surface-900-100 resize-y"
 			bind:value={editContent}
 		></textarea>
 		{#if saveError}
