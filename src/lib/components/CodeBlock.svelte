@@ -21,14 +21,20 @@
 </script>
 
 <script lang="ts">
+	import DOMPurify from 'dompurify';
+
 	const { code, lang = 'txt' }: CodeBlockProps = $props();
 
-	const generatedHtml =
+	const generatedHtml = $derived(
 		lang && supportedLangs.has(lang)
-			? highlighter.codeToHtml(code, { lang, theme: 'github-dark' })
-			: `<pre class="bg-surface-950-50 text-surface-800-200 p-4 overflow-x-auto rounded-(--radius-base) text-xs leading-relaxed">${code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</pre>`;
+			? DOMPurify.sanitize(highlighter.codeToHtml(code, { lang, theme: 'github-dark' }))
+			: DOMPurify.sanitize(
+					`<pre class="bg-surface-950-50 text-surface-800-200 p-4 overflow-x-auto rounded-(--radius-base) text-xs leading-relaxed">${code}</pre>`,
+				),
+	);
 </script>
 
 <div class="overflow-auto rounded-container">
+	<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized via DOMPurify -->
 	{@html generatedHtml}
 </div>
