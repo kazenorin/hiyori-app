@@ -424,7 +424,9 @@
 		"treeLabel": "App Files",
 		"refresh": "Refresh",
 		"retry": "Retry",
-		"selectFile": "Select a file to preview its contents"
+		"selectFile": "Select a file to preview its contents",
+		"binaryFile": "Binary file",
+		"download": "Download"
 	},
 	"errors": {
 		"failedToFetchModels": "Failed to fetch models",

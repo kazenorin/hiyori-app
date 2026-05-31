@@ -418,7 +418,9 @@
 		"treeLabel": "應用程式檔案",
 		"refresh": "重新整理",
 		"retry": "重試",
-		"selectFile": "選擇檔案以預覽其內容"
+		"selectFile": "選擇檔案以預覽其內容",
+		"binaryFile": "二進位檔案",
+		"download": "下載"
 	},
 	"errors": {
 		"failedToFetchModels": "無法取得模型",

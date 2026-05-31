@@ -5,7 +5,13 @@
 		createTreeViewCollection,
 		type TreeViewRootProps,
 	} from '@skeletonlabs/skeleton-svelte';
-	import { readDirectoryNodes, readFileContent, type FileNode } from '$lib/fs/file-tree';
+	import {
+		readDirectoryNodes,
+		readFileContent,
+		isBinaryFile,
+		downloadFile,
+		type FileNode,
+	} from '$lib/fs/file-tree';
 	import { t } from '$lib/i18n';
 	import { log } from '$lib/logging/logger';
 
@@ -22,6 +28,7 @@
 	let selectedFilePath = $state<string | null>(null);
 	let fileContent = $state<string | null>(null);
 	let fileError = $state<string | null>(null);
+	let isBinary = $state(false);
 	let isLoadingFile = $state(false);
 	let isLoadingRoot = $state(true);
 	let rootError = $state<string | null>(null);
@@ -62,6 +69,7 @@
 		selectedFilePath = null;
 		fileContent = null;
 		fileError = null;
+		isBinary = false;
 	}
 
 	async function handleSelectionChange(details: {
@@ -78,14 +86,23 @@
 		selectedFilePath = node.id;
 		isLoadingFile = true;
 		try {
-			const content = await readFileContent(node.id);
+			const binary = await isBinaryFile(node.id);
 			if (requestId !== loadRequestId) return;
-			fileContent = content;
-			fileError = null;
+			isBinary = binary;
+			if (binary) {
+				fileContent = null;
+				fileError = null;
+			} else {
+				const content = await readFileContent(node.id);
+				if (requestId !== loadRequestId) return;
+				fileContent = content;
+				fileError = null;
+			}
 		} catch (err) {
 			if (requestId !== loadRequestId) return;
 			fileError = err instanceof Error ? err.message : String(err);
 			fileContent = null;
+			isBinary = false;
 		} finally {
 			if (requestId === loadRequestId) {
 				isLoadingFile = false;
@@ -153,6 +170,22 @@
 						</div>
 					{:else if fileError}
 						<p class="text-error-500 text-sm">{fileError}</p>
+					{:else if isBinary}
+						<div class="flex items-center justify-center h-64">
+							<div class="text-center space-y-3">
+								<svg class="size-8 mx-auto text-surface-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+									<path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3" />
+								</svg>
+								<p class="text-sm text-surface-600-400">{t('fileManager.binaryFile')}</p>
+								<button
+									class="btn preset-filled"
+									type="button"
+									onclick={() => downloadFile(selectedFilePath!)}
+								>
+									{t('fileManager.download')}
+								</button>
+							</div>
+						</div>
 					{:else if fileContent !== null}
 						<pre class="text-xs whitespace-pre-wrap break-words font-mono text-surface-800-200 leading-relaxed">{fileContent}</pre>
 					{/if}

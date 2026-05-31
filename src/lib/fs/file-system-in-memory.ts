@@ -134,6 +134,11 @@ export class InMemoryFileSystem implements FileSystem {
 		return entries;
 	}
 
+	async readBinaryFile(path: string): Promise<Uint8Array> {
+		const content = await this.readTextFile(path);
+		return new TextEncoder().encode(content);
+	}
+
 	async ensureDir(path: string): Promise<void> {
 		await this.mkdir(path);
 	}

@@ -1,5 +1,6 @@
 import {
 	readTextFile as tauriRead,
+	readFile as tauriReadBinary,
 	writeTextFile as tauriWrite,
 	mkdir as tauriMkdir,
 	exists as tauriExists,
@@ -108,6 +109,14 @@ export class TauriFileSystem implements FileSystem {
 		try {
 			const entries = await tauriReadDir(path, { baseDir: BD });
 			return entries.map((e) => ({ name: e.name, isDirectory: e.isDirectory }));
+		} catch (error) {
+			throw classifyTauriError(error);
+		}
+	}
+
+	async readBinaryFile(path: string): Promise<Uint8Array> {
+		try {
+			return await tauriReadBinary(path, { baseDir: BD });
 		} catch (error) {
 			throw classifyTauriError(error);
 		}

@@ -28,6 +28,7 @@ export interface FileSystem {
 	rename(oldPath: string, newPath: string): Promise<void>;
 	copyFile(fromPath: string, toPath: string): Promise<void>;
 	readDir(path: string): Promise<DirEntry[]>;
+	readBinaryFile(path: string): Promise<Uint8Array>;
 	ensureDir(path: string): Promise<void>;
 	writeTextFileEnsuringDir(path: string, content: string, options?: { append?: boolean }): Promise<void>;
 }
