@@ -101,7 +101,7 @@ async function readMemoryDbBinary(): Promise<Uint8Array | null> {
 
 // --- Export ---
 
-export async function exportGameData(): Promise<Uint8Array> {
+export async function exportGameData(onProgress?: (percent: number) => void): Promise<Uint8Array> {
 	const zip = new JSZip();
 
 	await exportStoryFolders(zip);
@@ -115,10 +115,13 @@ export async function exportGameData(): Promise<Uint8Array> {
 		zip.file('database/memory-db/byoa-memory.db', memoryDb);
 	}
 
-	return await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+	return await zip.generateAsync(
+		{ type: 'uint8array', compression: 'DEFLATE' },
+		onProgress ? (metadata) => onProgress(metadata.percent) : undefined
+	);
 }
 
-export async function exportConfigData(): Promise<Uint8Array> {
+export async function exportConfigData(onProgress?: (percent: number) => void): Promise<Uint8Array> {
 	const zip = new JSZip();
 	const manifest = loadManifest();
 
@@ -129,7 +132,10 @@ export async function exportConfigData(): Promise<Uint8Array> {
 		zip.file('user-data/config/settings.json', settingsJson);
 	}
 
-	return await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+	return await zip.generateAsync(
+		{ type: 'uint8array', compression: 'DEFLATE' },
+		onProgress ? (metadata) => onProgress(metadata.percent) : undefined
+	);
 }
 
 async function exportConfigFiles(zip: JSZip, manifest: Map<string, ConfigAssetEntry>): Promise<void> {

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Progress } from '@skeletonlabs/skeleton-svelte';
 	import {
 		addProviderConfig,
 		type ApiType,
@@ -46,20 +47,25 @@
 	let showConfigImportConfirm = $state(false);
 	let pendingConfigImportFile = $state<File | null>(null);
 
+	let exportProgress = $state<number | null>(null);
+	let isImporting = $state(false);
+
 	let showResetConfirm = $state(false);
 	let isResetting = $state(false);
 
 	async function handleExportGameData() {
 		isExportingGame = true;
 		gameImportError = null;
+		exportProgress = 0;
 		try {
-			const data = await exportGameData();
+			const data = await exportGameData((percent: number) => (exportProgress = Math.round(percent)));
 			const ts = new Date().toISOString().slice(0, 10);
 			await downloadExport(data, `byoa-game-data-${ts}.zip`);
 		} catch (err) {
 			gameImportError = t('settings.exportFailed', { error: err instanceof Error ? err.message : String(err) });
 		} finally {
 			isExportingGame = false;
+			exportProgress = null;
 		}
 	}
 
@@ -80,6 +86,7 @@
 		showGameImportConfirm = false;
 		if (!pendingGameImportFile) return;
 		isImportingGame = true;
+		isImporting = true;
 		gameImportError = null;
 		try {
 			const data = await readFileAsUint8Array(pendingGameImportFile);
@@ -88,6 +95,7 @@
 		} catch (err) {
 			gameImportError = t('settings.importFailed', { error: err instanceof Error ? err.message : String(err) });
 			isImportingGame = false;
+			isImporting = false;
 		} finally {
 			pendingGameImportFile = null;
 		}
@@ -96,14 +104,16 @@
 	async function handleExportConfigData() {
 		isExportingConfig = true;
 		configImportError = null;
+		exportProgress = 0;
 		try {
-			const data = await exportConfigData();
+			const data = await exportConfigData((percent: number) => (exportProgress = Math.round(percent)));
 			const ts = new Date().toISOString().slice(0, 10);
 			await downloadExport(data, `byoa-config-${ts}.zip`);
 		} catch (err) {
 			configImportError = t('settings.exportFailed', { error: err instanceof Error ? err.message : String(err) });
 		} finally {
 			isExportingConfig = false;
+			exportProgress = null;
 		}
 	}
 
@@ -124,6 +134,7 @@
 		showConfigImportConfirm = false;
 		if (!pendingConfigImportFile) return;
 		isImportingConfig = true;
+		isImporting = true;
 		configImportError = null;
 		try {
 			const data = await readFileAsUint8Array(pendingConfigImportFile);
@@ -132,6 +143,7 @@
 		} catch (err) {
 			configImportError = t('settings.importFailed', { error: err instanceof Error ? err.message : String(err) });
 			isImportingConfig = false;
+			isImporting = false;
 		} finally {
 			pendingConfigImportFile = null;
 		}
@@ -870,6 +882,14 @@
 						{isExportingGame ? '...' : t('settings.exportGameData')}
 					</button>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.exportGameDataDescription')}</span>
+					{#if exportProgress !== null && isExportingGame}
+						<Progress value={exportProgress} class="mt-2">
+							<Progress.Track>
+								<Progress.Range />
+							</Progress.Track>
+						</Progress>
+						<span class="text-xs text-surface-500">{exportProgress}%</span>
+					{/if}
 				</div>
 
 				<div>
@@ -897,6 +917,14 @@
 						{isExportingConfig ? '...' : t('settings.exportConfigData')}
 					</button>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.exportConfigDataDescription')}</span>
+					{#if exportProgress !== null && isExportingConfig}
+						<Progress value={exportProgress} class="mt-2">
+							<Progress.Track>
+								<Progress.Range />
+							</Progress.Track>
+						</Progress>
+						<span class="text-xs text-surface-500">{exportProgress}%</span>
+					{/if}
 				</div>
 
 				<div>
@@ -1046,6 +1074,15 @@
 					{t('settings.resetConfiguration')}
 				</button>
 			</div>
+		</div>
+	</div>
+{/if}
+
+{#if isImporting}
+	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="alert" aria-live="assertive">
+		<div class="text-center space-y-2">
+			<div class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+			<div class="text-surface-100 animate-pulse">{t('settings.importing')}</div>
 		</div>
 	</div>
 {/if}

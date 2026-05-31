@@ -139,7 +139,8 @@
 		"exportConfigDataDescription": "Download a copy of your settings and customized prompts as a zip file.",
 		"importConfigData": "Import Configuration",
 		"importConfigDataDescription": "Restore settings and prompts from a previously exported configuration backup.",
-		"importConfigDataWarning": "Importing will replace all current configuration — settings, providers, and prompt templates. This cannot be undone."
+		"importConfigDataWarning": "Importing will replace all current configuration — settings, providers, and prompt templates. This cannot be undone.",
+		"importing": "Importing..."
 	},
 	"chat": {
 		"emptyState": "Create a story, add an act, then select or create an act line to start chatting.",
