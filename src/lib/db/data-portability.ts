@@ -101,32 +101,32 @@ async function readMemoryDbBinary(): Promise<Uint8Array | null> {
 
 // --- Export ---
 
-export async function exportAppData(): Promise<Uint8Array> {
+export async function exportGameData(): Promise<Uint8Array> {
 	const zip = new JSZip();
-	const manifest = loadManifest();
 
-	// 1. Config: settings.json
-	const settingsJson = typeof localStorage !== 'undefined' ? localStorage.getItem('byoa-settings') : null;
-	if (settingsJson) {
-		zip.file('user-data/config/settings.json', settingsJson);
-	}
-
-	// 2. Config: customized prompt/view template files
-	await exportConfigFiles(zip, manifest);
-
-	// 3. Logs
+	await exportStoryFolders(zip);
 	await exportLogFiles(zip);
 
-	// 4. Stories
-	await exportStoryFolders(zip);
-
-	// 5. Database
 	const mainDb = await readMainDbBinary();
 	zip.file('database/main-db/byoa.db', mainDb);
 
 	const memoryDb = await readMemoryDbBinary();
 	if (memoryDb) {
 		zip.file('database/memory-db/byoa-memory.db', memoryDb);
+	}
+
+	return await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+}
+
+export async function exportConfigData(): Promise<Uint8Array> {
+	const zip = new JSZip();
+	const manifest = loadManifest();
+
+	await exportConfigFiles(zip, manifest);
+
+	const settingsJson = typeof localStorage !== 'undefined' ? localStorage.getItem('byoa-settings') : null;
+	if (settingsJson) {
+		zip.file('user-data/config/settings.json', settingsJson);
 	}
 
 	return await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
@@ -204,19 +204,17 @@ async function exportStoryFolders(zip: JSZip): Promise<void> {
 
 // --- Import ---
 
-export async function importAppData(data: Uint8Array): Promise<void> {
+export async function importGameData(data: Uint8Array): Promise<void> {
 	const zip = await JSZip.loadAsync(data);
 
-	// 1. Database — direct replacement
 	await importDatabase(zip);
-
-	// 2. Settings — full replacement
-	await importSettings(zip);
-
-	// 3. Story folders — remove all existing, then extract from zip
 	await importStoryFolders(zip);
+}
 
-	// 4. Config files — full replacement
+export async function importConfigData(data: Uint8Array): Promise<void> {
+	const zip = await JSZip.loadAsync(data);
+
+	await importSettings(zip);
 	await importConfigFiles(zip);
 }
 

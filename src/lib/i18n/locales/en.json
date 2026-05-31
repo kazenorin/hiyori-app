@@ -125,7 +125,21 @@
 		"dataWebNotice": "Your data is stored in the browser. Export regularly to avoid data loss.",
 		"resetConfiguration": "Reset Configuration",
 		"resetConfigurationDescription": "Remove all configuration files and restore settings to their defaults. Stories are not affected.",
-		"resetConfigurationWarning": "This will delete all customized prompts, locale strings, and settings. Story data will be preserved. This cannot be undone."
+		"resetConfigurationWarning": "This will delete all customized prompts, locale strings, and settings. Story data will be preserved. This cannot be undone.",
+		"gameData": "Game Data",
+		"gameDataDescription": "Your stories, messages, and databases. Does not include configuration.",
+		"exportGameData": "Export Game Data",
+		"exportGameDataDescription": "Download a copy of your stories and databases as a zip file.",
+		"importGameData": "Import Game Data",
+		"importGameDataDescription": "Restore stories and databases from a previously exported game data backup.",
+		"importGameDataWarning": "Importing will replace all current stories and databases. Existing stories will be deleted.",
+		"configData": "Configuration",
+		"configDataDescription": "Settings, AI providers, and prompt templates. Does not include story data.",
+		"exportConfigData": "Export Configuration",
+		"exportConfigDataDescription": "Download a copy of your settings and customized prompts as a zip file.",
+		"importConfigData": "Import Configuration",
+		"importConfigDataDescription": "Restore settings and prompts from a previously exported configuration backup.",
+		"importConfigDataWarning": "Importing will replace all current configuration — settings, providers, and prompt templates. This cannot be undone."
 	},
 	"chat": {
 		"emptyState": "Create a story, add an act, then select or create an act line to start chatting.",
