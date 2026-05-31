@@ -52,21 +52,19 @@ export async function readDirectoryNodes(dirPath: string): Promise<FileNode[]> {
 
 	const nodes: FileNode[] = entries.map((entry) => {
 		const id = dirPath ? `${dirPath}/${entry.name}` : entry.name;
-		let folderType: FolderType | undefined;
-		let managedConfig: ManagedConfigKind | undefined;
-		if (entry.isDirectory) {
-			folderType = getFolderType(id);
-			if (folderType === 'default') {
-				const topSegment = id.split('/')[0];
-				if (storyFolderNames.has(topSegment)) {
-					folderType = 'story';
-				}
+		let folderType = getFolderType(id);
+		if (folderType === 'default') {
+			const topSegment = id.split('/')[0];
+			if (storyFolderNames.has(topSegment)) {
+				folderType = 'story';
 			}
-		} else {
+		}
+		let managedConfig: ManagedConfigKind | undefined;
+		if (!entry.isDirectory) {
 			const mc = classifyManagedConfig(id, folderType);
 			if (mc !== null) managedConfig = mc;
 		}
-		return { id, name: entry.name, isDirectory: entry.isDirectory, folderType, managedConfig };
+		return { id, name: entry.name, isDirectory: entry.isDirectory, folderType: entry.isDirectory ? folderType : undefined, managedConfig };
 	});
 
 	nodes.sort((a, b) => {
