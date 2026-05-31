@@ -1,21 +1,43 @@
 import { fs } from '$lib/fs/file-system';
 import { isTauriSync } from '$lib/runtime';
+import JSZip from 'jszip';
+import * as dbStoryFolders from '$lib/db/story-folders';
+
+export type FolderType = 'story' | 'config' | 'default';
 
 export interface FileNode {
 	id: string;
 	name: string;
 	isDirectory: boolean;
+	folderType?: FolderType;
 	children?: FileNode[];
+}
+
+export function getFolderType(path: string): FolderType {
+	if (path === 'config' || path.startsWith('config/')) return 'config';
+	return 'default';
 }
 
 export async function readDirectoryNodes(dirPath: string): Promise<FileNode[]> {
 	const entries = await fs.readDir(dirPath);
 
-	const nodes: FileNode[] = entries.map((entry) => ({
-		id: dirPath ? `${dirPath}/${entry.name}` : entry.name,
-		name: entry.name,
-		isDirectory: entry.isDirectory,
-	}));
+	let storyFolderNames: Set<string> | undefined;
+	if (dirPath === '') {
+		const rows = await dbStoryFolders.getAllFolderNames();
+		storyFolderNames = new Set(rows);
+	}
+
+	const nodes: FileNode[] = entries.map((entry) => {
+		const id = dirPath ? `${dirPath}/${entry.name}` : entry.name;
+		let folderType: FolderType | undefined;
+		if (entry.isDirectory) {
+			folderType = getFolderType(id);
+			if (folderType === 'default' && storyFolderNames?.has(entry.name)) {
+				folderType = 'story';
+			}
+		}
+		return { id, name: entry.name, isDirectory: entry.isDirectory, folderType };
+	});
 
 	nodes.sort((a, b) => {
 		if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
@@ -93,4 +115,67 @@ export async function downloadFile(path: string): Promise<void> {
 	a.click();
 	document.body.removeChild(a);
 	URL.revokeObjectURL(url);
+}
+
+export async function saveFileContent(path: string, content: string): Promise<void> {
+	await fs.writeTextFile(path, content);
+}
+
+export async function collectFilesInDir(dirPath: string): Promise<string[]> {
+	const entries = await fs.readDir(dirPath);
+	const files: string[] = [];
+	for (const entry of entries) {
+		const childPath = dirPath ? `${dirPath}/${entry.name}` : entry.name;
+		if (entry.isDirectory) {
+			files.push(...await collectFilesInDir(childPath));
+		} else {
+			files.push(childPath);
+		}
+	}
+	return files;
+}
+
+export async function exportFolderAsZip(folderPath: string): Promise<void> {
+	const zip = new JSZip();
+	const files = await collectFilesInDir(folderPath);
+	const folderName = folderPath.split('/').pop() ?? folderPath;
+
+	for (const filePath of files) {
+		const content = await fs.readTextFile(filePath);
+		const relativePath = filePath.slice(folderPath.length + 1);
+		zip.file(`${folderName}/${relativePath}`, content);
+	}
+
+	const data = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+	const fileName = `${folderName}.zip`;
+
+	if (isTauriSync()) {
+		const { save } = await import('@tauri-apps/plugin-dialog');
+		const { writeFile } = await import('@tauri-apps/plugin-fs');
+		const filePath = await save({ defaultPath: fileName, filters: [{ name: 'ZIP', extensions: ['zip'] }] });
+		if (!filePath) return;
+		await writeFile(filePath, data);
+		return;
+	}
+
+	const blob = new Blob([new Uint8Array(data)], { type: 'application/zip' });
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement('a');
+	a.href = url;
+	a.download = fileName;
+	document.body.appendChild(a);
+	a.click();
+	document.body.removeChild(a);
+	URL.revokeObjectURL(url);
+}
+
+export async function isProtectedFolder(folderPath: string): Promise<boolean> {
+	if (folderPath === 'config' || folderPath.startsWith('config/')) return true;
+	const folderName = folderPath.split('/')[0];
+	const owner = await dbStoryFolders.getFolderOwner(folderName);
+	return owner !== null;
+}
+
+export async function deleteFolder(folderPath: string): Promise<void> {
+	await fs.remove(folderPath);
 }

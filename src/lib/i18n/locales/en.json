@@ -426,7 +426,17 @@
 		"retry": "Retry",
 		"selectFile": "Select a file to preview its contents",
 		"binaryFile": "Binary file",
-		"download": "Download"
+		"download": "Download",
+		"edit": "Edit",
+		"save": "Save",
+		"cancel": "Cancel",
+		"unsavedChanges": "You have unsaved changes. Discard?",
+		"export": "Export",
+		"exporting": "Exporting...",
+		"delete": "Delete",
+		"deleteWarning": "This folder and all its contents will be deleted. This cannot be undone.",
+		"protected": "Protected",
+		"saving": "Saving..."
 	},
 	"errors": {
 		"failedToFetchModels": "Failed to fetch models",

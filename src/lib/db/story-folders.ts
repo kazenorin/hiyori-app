@@ -30,3 +30,9 @@ export async function deleteStoryFolder(storyId: string): Promise<void> {
 	const db = getDatabase();
 	await db.execute('DELETE FROM story_folders WHERE story_id = $1', [storyId]);
 }
+
+export async function getAllFolderNames(): Promise<string[]> {
+	const db = getDatabase();
+	const result = await db.select<StoryFolder[]>('SELECT folder_name FROM story_folders');
+	return result.map((r) => r.folder_name);
+}
