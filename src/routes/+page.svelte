@@ -70,7 +70,7 @@
 	import WorldBuilderControls from '$lib/components/WorldBuilderControls.svelte';
 	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
 	import { emptyVariables, formatPhaseName, type NarrativeVariables } from '$lib/ai/narrative-types';
-	import { loadStoryMessageTemplate } from '$lib/fs/view-templates';
+	import { loadStoryMessageTemplate, loadStoryMessageTemplateForStory } from '$lib/fs/view-templates';
 	import { ensureActPlot } from '$lib/ai/act-plot';
 	import {
 		getActLine,
@@ -85,7 +85,7 @@
 	import { type Message, updateMessageFields } from '$lib/db/messages';
 	import { type GameDataRegenerationContext, regenerateGameData } from '$lib/ai/game-data-regenerator';
 	import type { Story } from '$lib/db/stories';
-	import { onMount } from 'svelte';
+
 	import { t } from '$lib/i18n';
 	import { ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-folders';
 	import { updateWorldCard } from '$lib/ai/world-generator';
@@ -107,13 +107,18 @@
 	let characterNames = $derived(getCharacterNames());
 	let storyMessageTemplate = $state<string>('');
 
-	// Preload template on mount
-	onMount(() => {
-		loadStoryMessageTemplate()
-			.then((tmpl) => {
-				storyMessageTemplate = tmpl;
+	$effect(() => {
+		getActiveActLineId();
+		const story = getActiveStory();
+		let stale = false;
+		const templatePromise = story ? loadStoryMessageTemplateForStory(story.id, story.name) : loadStoryMessageTemplate();
+		templatePromise.then((loadedTemplate) => {
+				if (!stale) storyMessageTemplate = loadedTemplate;
 			})
 			.catch(() => {});
+		return () => {
+			stale = true;
+		};
 	});
 	let lastWbMessageIdx = $derived(getWorldBuilderMessages().findLastIndex((m: WorldBuilderMessage) => m.role === 'assistant'));
 
@@ -150,6 +155,17 @@
 
 	function isEditingMessage(messageId: string): boolean {
 		return editingMessageId === messageId;
+	}
+
+	function shouldShowStreamingCursor(message: UIMessage): boolean {
+		return (
+			!message.content &&
+			!message.reasoning &&
+			!message.phases?.length &&
+			!(message.variables && hasTemplateMetadata(message.variables)) &&
+			getIsStreaming() &&
+			message === getMessages().at(-1)
+		);
 	}
 
 	function startEditMessage(message: UIMessage | WorldBuilderMessage, isTemplated: boolean) {
@@ -982,11 +998,8 @@
 										{/if}
 									</div>
 								</div>
-							{:else if !message.content && !message.reasoning && !(message.phases?.length) && !(message.variables && hasTemplateMetadata(message.variables)) && getIsStreaming() && message === getMessages().at(-1)}
-								<span
-									data-streaming-cursor
-									class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm"
-								></span>
+							{:else if shouldShowStreamingCursor(message)}
+								<span data-streaming-cursor class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm"></span>
 							{:else}
 								<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
 									<!-- Pipeline phase accordions -->
@@ -1057,8 +1070,11 @@
 										<div>
 											<div class="space-y-3 mt-2">
 												<div>
-													<label class="block text-xs font-medium text-surface-500 mb-1">{t('chat.sceneTitle')}</label>
+													<label for="edit-scene-title-{message.id}" class="block text-xs font-medium text-surface-500 mb-1"
+														>{t('chat.sceneTitle')}</label
+													>
 													<textarea
+														id="edit-scene-title-{message.id}"
 														class="input w-full resize-y text-sm leading-relaxed min-h-8"
 														rows="1"
 														bind:value={editSceneTitle}
@@ -1066,8 +1082,11 @@
 													></textarea>
 												</div>
 												<div>
-													<label class="block text-xs font-medium text-surface-500 mb-1">{t('chat.background')}</label>
+													<label for="edit-background-{message.id}" class="block text-xs font-medium text-surface-500 mb-1"
+														>{t('chat.background')}</label
+													>
 													<textarea
+														id="edit-background-{message.id}"
 														class="input w-full resize-y text-sm leading-relaxed min-h-16"
 														rows="3"
 														bind:value={editBackground}
@@ -1075,8 +1094,11 @@
 													></textarea>
 												</div>
 												<div>
-													<label class="block text-xs font-medium text-surface-500 mb-1">{t('chat.narrativeBody')}</label>
+													<label for="edit-narrative-body-{message.id}" class="block text-xs font-medium text-surface-500 mb-1"
+														>{t('chat.narrativeBody')}</label
+													>
 													<textarea
+														id="edit-narrative-body-{message.id}"
 														class="input w-full resize-y text-sm leading-relaxed min-h-32"
 														rows="8"
 														bind:value={editNarrativeBody}
@@ -1084,8 +1106,9 @@
 													></textarea>
 												</div>
 												<div>
-													<label class="block text-xs font-medium text-surface-500 mb-1">{t('chat.cg')}</label>
+													<label for="edit-cg-{message.id}" class="block text-xs font-medium text-surface-500 mb-1">{t('chat.cg')}</label>
 													<textarea
+														id="edit-cg-{message.id}"
 														class="input w-full resize-y text-sm leading-relaxed min-h-8"
 														rows="1"
 														bind:value={editCg}
@@ -1119,10 +1142,7 @@
 									{/if}
 
 									{#if getIsStreaming() && message === getMessages().at(-1)}
-										<span
-											data-streaming-cursor
-											class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm mt-2"
-										></span>
+										<span data-streaming-cursor class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm mt-2"></span>
 									{/if}
 
 									{#if message.metadata}

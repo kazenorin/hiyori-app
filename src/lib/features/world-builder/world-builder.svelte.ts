@@ -181,7 +181,8 @@ export async function enterWorldBuilderMode(): Promise<void> {
 	isActive = true;
 	logFilePath = generateWorldBuilderLogFilename();
 
-	// Load and cache prompts once (now uses locale-scoped dirs)
+	await loadActiveLocales();
+
 	const [worldBuilderPrompt, worldTemplate] = await Promise.all([
 		worldBuilderSystemPromptLoader.loadDefault(),
 		worldTemplateLoader.loadDefault(),
@@ -208,12 +209,13 @@ export interface EnterActPlotInterviewModeParams {
 
 export async function enterActPlotInterviewMode(params: EnterActPlotInterviewModeParams): Promise<void> {
 	const { actLineId, worldContent, forkContext, additionalContext, newActContext, story } = params;
-	// Reset world builder state but keep isActive true
 	resetState();
 	isActive = true;
 	actPlotInterview = true;
 	interviewActLineId = actLineId;
 	interviewWorldContent = worldContent;
+
+	await loadActiveLocales();
 
 	// Load interview system prompt with general instructions injected and interview extraction prompt
 	const [generalInstructions, interviewSystemPrompt] = story
@@ -341,8 +343,6 @@ async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<vo
 		error = ERR_API_KEY_AND_MODEL_NOT_CONFIGURED;
 		return;
 	}
-
-	await loadActiveLocales();
 
 	const responseMessage: WorldBuilderMessage = { id: crypto.randomUUID(), role: 'assistant', content: '' };
 	if (userMessage) {

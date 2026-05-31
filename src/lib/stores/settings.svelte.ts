@@ -359,7 +359,11 @@ export async function updateSettings(partial: Partial<UpdatableSettings>): Promi
 }
 
 export async function resetConfiguration(): Promise<void> {
-	await fs.remove('config');
+	try {
+		await fs.remove('config');
+	} catch {
+		// config/ may not exist — that's fine
+	}
 	await ensureAllBaseConfigs();
 	localStorage.removeItem(STORAGE_KEY);
 	Object.assign(settings, { ...defaults });
