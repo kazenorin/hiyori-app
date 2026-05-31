@@ -490,6 +490,12 @@
 		>
 			{t('sidebar.memoryManager')}
 		</a>
+		<a
+			href="/file-manager"
+			class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+		>
+			{t('sidebar.fileManager')}
+		</a>
 	</div>
 {/snippet}
 

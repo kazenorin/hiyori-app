@@ -199,6 +199,7 @@
 		"chat": "聊天",
 		"settings": "設定",
 		"memoryManager": "記憶管理員",
+		"fileManager": "檔案管理員",
 		"newLine": "+ 新故事線",
 		"newAct": "+ 新章節",
 		"newStory": "+ 新故事",
@@ -411,6 +412,13 @@
 		"includeLineage": "包含故事線",
 		"scope": "範圍",
 		"lineageInfo": "顯示 {{count}} 條連續故事線"
+	},
+	"fileManager": {
+		"title": "檔案管理員",
+		"treeLabel": "應用程式檔案",
+		"refresh": "重新整理",
+		"retry": "重試",
+		"selectFile": "選擇檔案以預覽其內容"
 	},
 	"errors": {
 		"failedToFetchModels": "無法取得模型",

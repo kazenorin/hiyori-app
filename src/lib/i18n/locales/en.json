@@ -205,6 +205,7 @@
 		"chat": "Chat",
 		"settings": "Settings",
 		"memoryManager": "Memory Manager",
+		"fileManager": "File Manager",
 		"newLine": "+ New Line",
 		"newAct": "+ New Act",
 		"newStory": "+ New Story",
@@ -417,6 +418,13 @@
 		"includeLineage": "Include Lineage",
 		"scope": "Scope",
 		"lineageInfo": "Showing {{count}} act line(s) in lineage"
+	},
+	"fileManager": {
+		"title": "File Manager",
+		"treeLabel": "App Files",
+		"refresh": "Refresh",
+		"retry": "Retry",
+		"selectFile": "Select a file to preview its contents"
 	},
 	"errors": {
 		"failedToFetchModels": "Failed to fetch models",
