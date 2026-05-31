@@ -425,6 +425,7 @@
 		"save": "儲存",
 		"cancel": "取消",
 		"unsavedChanges": "有未儲存的變更。放棄？",
+		"discard": "放棄",
 		"export": "匯出",
 		"exporting": "匯出中...",
 		"delete": "刪除",

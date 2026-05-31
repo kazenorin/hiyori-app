@@ -13,8 +13,8 @@
 		decodeText,
 		saveFileContent,
 		exportFolderAsZip,
-		isProtectedFolder,
 		deleteFolder,
+		isFolderTypeProtected,
 		type FileNode,
 		type FolderType,
 	} from '$lib/fs/file-tree';
@@ -53,6 +53,16 @@
 	let isExporting = $state(false);
 	let showDeleteConfirm = $state(false);
 	let isDeleting = $state(false);
+	let cancelButton: HTMLButtonElement | null = $state(null);
+
+	let confirmDiscard = $state(false);
+	let actionError = $state<string | null>(null);
+
+	$effect(() => {
+		if ((showDeleteConfirm || confirmDiscard) && cancelButton) {
+			cancelButton.focus();
+		}
+	});
 
 	async function loadRoot() {
 		isLoadingRoot = true;
@@ -96,6 +106,7 @@
 		editContent = '';
 		saveError = null;
 		showDeleteConfirm = false;
+		actionError = null;
 	}
 
 	async function handleSelectionChange(details: {
@@ -114,13 +125,14 @@
 		editContent = '';
 		saveError = null;
 		showDeleteConfirm = false;
+		actionError = null;
 
 		if (node.isDirectory) {
 			fileContent = null;
 			fileError = null;
 			isBinary = false;
 			fileLang = '';
-			isFolderProtected = await isProtectedFolder(node.id);
+			isFolderProtected = isFolderTypeProtected(node.folderType);
 			return;
 		}
 
@@ -162,8 +174,16 @@
 
 	function cancelEditing() {
 		if (editContent !== fileContent) {
-			if (!confirm(t('fileManager.unsavedChanges'))) return;
+			confirmDiscard = true;
+			return;
 		}
+		isEditing = false;
+		editContent = '';
+		saveError = null;
+	}
+
+	function confirmDiscardEdits() {
+		confirmDiscard = false;
 		isEditing = false;
 		editContent = '';
 		saveError = null;
@@ -171,29 +191,37 @@
 
 	async function saveEditing() {
 		if (!selectedFilePath) return;
+		const requestId = ++loadRequestId;
 		isSaving = true;
 		saveError = null;
 		try {
 			await saveFileContent(selectedFilePath, editContent);
+			if (requestId !== loadRequestId) return;
 			const { data, isBinary: binary } = await readFileData(selectedFilePath);
+			if (requestId !== loadRequestId) return;
 			isBinary = binary;
 			fileContent = binary ? null : decodeText(data);
 			fileLang = getLanguageFromPath(selectedFilePath);
 			isEditing = false;
 			editContent = '';
 		} catch (err) {
+			if (requestId !== loadRequestId) return;
 			saveError = err instanceof Error ? err.message : String(err);
 		} finally {
-			isSaving = false;
+			if (requestId === loadRequestId) {
+				isSaving = false;
+			}
 		}
 	}
 
 	async function handleExport() {
 		if (!selectedFilePath) return;
 		isExporting = true;
+		actionError = null;
 		try {
 			await exportFolderAsZip(selectedFilePath);
 		} catch (err) {
+			actionError = err instanceof Error ? err.message : String(err);
 			await log.error('file-manager', 'Failed to export folder', err);
 		} finally {
 			isExporting = false;
@@ -203,11 +231,13 @@
 	async function handleDelete() {
 		if (!selectedFilePath) return;
 		isDeleting = true;
+		actionError = null;
 		try {
 			await deleteFolder(selectedFilePath);
 			clearPreview();
 			await loadRoot();
 		} catch (err) {
+			actionError = err instanceof Error ? err.message : String(err);
 			await log.error('file-manager', 'Failed to delete folder', err);
 		} finally {
 			isDeleting = false;
@@ -343,9 +373,23 @@
 			{/if}
 
 			{#if showDeleteConfirm && !isFolderProtected}
-				<div class="space-y-3">
-					<p class="text-sm text-warning-500">{t('fileManager.deleteWarning')}</p>
-					<div class="flex items-center justify-center gap-2">
+				<p class="text-sm text-warning-500">{t('fileManager.deleteWarning')}</p>
+			{/if}
+
+			<div class="flex items-center justify-center gap-2">
+				<button
+					class="btn preset-tonal text-xs gap-1"
+					type="button"
+					onclick={handleExport}
+					disabled={isExporting}
+				>
+					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3" />
+					</svg>
+					{isExporting ? t('fileManager.exporting') : t('fileManager.export')}
+				</button>
+				{#if !isFolderProtected}
+					{#if showDeleteConfirm}
 						<button
 							class="btn preset-filled-error text-xs gap-1"
 							type="button"
@@ -358,28 +402,14 @@
 							{isDeleting ? '...' : t('fileManager.delete')}
 						</button>
 						<button
+							bind:this={cancelButton}
 							class="btn preset-tonal text-xs"
 							type="button"
 							onclick={() => { showDeleteConfirm = false; }}
 						>
 							{t('fileManager.cancel')}
 						</button>
-					</div>
-				</div>
-			{:else}
-				<div class="flex items-center justify-center gap-2">
-					<button
-						class="btn preset-tonal text-xs gap-1"
-						type="button"
-						onclick={handleExport}
-						disabled={isExporting}
-					>
-						<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3" />
-						</svg>
-						{isExporting ? t('fileManager.exporting') : t('fileManager.export')}
-					</button>
-					{#if !isFolderProtected}
+					{:else}
 						<button
 							class="btn preset-tonal text-xs gap-1"
 							type="button"
@@ -391,7 +421,11 @@
 							{t('fileManager.delete')}
 						</button>
 					{/if}
-				</div>
+				{/if}
+			</div>
+
+			{#if actionError}
+				<p class="text-xs text-error-500">{actionError}</p>
 			{/if}
 		</div>
 	</div>
@@ -481,3 +515,45 @@
 		{/if}
 	</TreeView.NodeProvider>
 {/snippet}
+
+{#if confirmDiscard}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		role="dialog"
+		aria-modal="true"
+		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+		onclick={() => { confirmDiscard = false; }}
+		onkeydown={(e) => e.key === 'Escape' && (confirmDiscard = false)}
+	>
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<div
+			class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4"
+			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
+		>
+			<h3 class="text-lg font-semibold text-surface-900-100 mb-2">
+				{t('fileManager.edit')}
+			</h3>
+			<p class="text-sm text-surface-600-400 mb-5">
+				{t('fileManager.unsavedChanges')}
+			</p>
+			<div class="flex justify-end gap-3">
+				<button
+					bind:this={cancelButton}
+					class="btn preset-tonal"
+					type="button"
+					onclick={() => { confirmDiscard = false; }}
+				>
+					{t('fileManager.cancel')}
+				</button>
+				<button
+					class="bg-error-500 hover:bg-error-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+					type="button"
+					onclick={confirmDiscardEdits}
+				>
+					{t('fileManager.discard')}
+				</button>
+			</div>
+		</div>
+	</div>
+{/if}

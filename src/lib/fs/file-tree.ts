@@ -21,19 +21,19 @@ export function getFolderType(path: string): FolderType {
 export async function readDirectoryNodes(dirPath: string): Promise<FileNode[]> {
 	const entries = await fs.readDir(dirPath);
 
-	let storyFolderNames: Set<string> | undefined;
-	if (dirPath === '') {
-		const rows = await dbStoryFolders.getAllFolderNames();
-		storyFolderNames = new Set(rows);
-	}
+	const rows = await dbStoryFolders.getAllFolderNames();
+	const storyFolderNames = new Set(rows);
 
 	const nodes: FileNode[] = entries.map((entry) => {
 		const id = dirPath ? `${dirPath}/${entry.name}` : entry.name;
 		let folderType: FolderType | undefined;
 		if (entry.isDirectory) {
 			folderType = getFolderType(id);
-			if (folderType === 'default' && storyFolderNames?.has(entry.name)) {
-				folderType = 'story';
+			if (folderType === 'default') {
+				const topSegment = id.split('/')[0];
+				if (storyFolderNames.has(topSegment)) {
+					folderType = 'story';
+				}
 			}
 		}
 		return { id, name: entry.name, isDirectory: entry.isDirectory, folderType };
@@ -93,20 +93,20 @@ export function getLanguageFromPath(path: string): string {
 	return langMap[ext] ?? '';
 }
 
-export async function downloadFile(path: string): Promise<void> {
-	const data = await fs.readBinaryFile(path);
-	const fileName = path.split('/').pop() ?? path;
-
+async function saveBinaryToFile(data: Uint8Array, fileName: string, mimeType?: string): Promise<void> {
 	if (isTauriSync()) {
 		const { save } = await import('@tauri-apps/plugin-dialog');
 		const { writeFile } = await import('@tauri-apps/plugin-fs');
-		const filePath = await save({ defaultPath: fileName });
-		if (!filePath) return;
-		await writeFile(filePath, data);
+		const filters = mimeType === 'application/zip'
+			? [{ name: 'ZIP', extensions: ['zip'] }]
+			: undefined;
+		const savePath = await save({ defaultPath: fileName, filters });
+		if (!savePath) return;
+		await writeFile(savePath, data);
 		return;
 	}
 
-	const blob = new Blob([new Uint8Array(data)]);
+	const blob = new Blob([new Uint8Array(data)], ...(mimeType ? [{ type: mimeType }] : []));
 	const url = URL.createObjectURL(blob);
 	const a = document.createElement('a');
 	a.href = url;
@@ -115,6 +115,12 @@ export async function downloadFile(path: string): Promise<void> {
 	a.click();
 	document.body.removeChild(a);
 	URL.revokeObjectURL(url);
+}
+
+export async function downloadFile(path: string): Promise<void> {
+	const data = await fs.readBinaryFile(path);
+	const fileName = path.split('/').pop() ?? path;
+	await saveBinaryToFile(data, fileName);
 }
 
 export async function saveFileContent(path: string, content: string): Promise<void> {
@@ -140,40 +146,18 @@ export async function exportFolderAsZip(folderPath: string): Promise<void> {
 	const files = await collectFilesInDir(folderPath);
 	const folderName = folderPath.split('/').pop() ?? folderPath;
 
-	for (const filePath of files) {
-		const content = await fs.readTextFile(filePath);
-		const relativePath = filePath.slice(folderPath.length + 1);
+	for (const fp of files) {
+		const content = await fs.readTextFile(fp);
+		const relativePath = fp.slice(folderPath.length + 1);
 		zip.file(`${folderName}/${relativePath}`, content);
 	}
 
 	const data = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
-	const fileName = `${folderName}.zip`;
-
-	if (isTauriSync()) {
-		const { save } = await import('@tauri-apps/plugin-dialog');
-		const { writeFile } = await import('@tauri-apps/plugin-fs');
-		const filePath = await save({ defaultPath: fileName, filters: [{ name: 'ZIP', extensions: ['zip'] }] });
-		if (!filePath) return;
-		await writeFile(filePath, data);
-		return;
-	}
-
-	const blob = new Blob([new Uint8Array(data)], { type: 'application/zip' });
-	const url = URL.createObjectURL(blob);
-	const a = document.createElement('a');
-	a.href = url;
-	a.download = fileName;
-	document.body.appendChild(a);
-	a.click();
-	document.body.removeChild(a);
-	URL.revokeObjectURL(url);
+	await saveBinaryToFile(data, `${folderName}.zip`, 'application/zip');
 }
 
-export async function isProtectedFolder(folderPath: string): Promise<boolean> {
-	if (folderPath === 'config' || folderPath.startsWith('config/')) return true;
-	const folderName = folderPath.split('/')[0];
-	const owner = await dbStoryFolders.getFolderOwner(folderName);
-	return owner !== null;
+export function isFolderTypeProtected(folderType: FolderType | undefined): boolean {
+	return folderType === 'story' || folderType === 'config';
 }
 
 export async function deleteFolder(folderPath: string): Promise<void> {

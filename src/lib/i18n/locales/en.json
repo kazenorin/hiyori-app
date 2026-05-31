@@ -431,6 +431,7 @@
 		"save": "Save",
 		"cancel": "Cancel",
 		"unsavedChanges": "You have unsaved changes. Discard?",
+		"discard": "Discard",
 		"export": "Export",
 		"exporting": "Exporting...",
 		"delete": "Delete",
