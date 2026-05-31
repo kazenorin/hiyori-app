@@ -15,9 +15,15 @@
 		exportFolderAsZip,
 		deleteFolder,
 		isFolderTypeProtected,
+		copyConfigToStory,
+		isConfigUserModified,
+		restoreConfigDefault,
+		deleteFile,
 		type FileNode,
 		type FolderType,
+		type ManagedConfigKind,
 	} from '$lib/fs/file-tree';
+	import { getAllStoryFolderInfo, type StoryFolderInfo } from '$lib/db/story-folders';
 	import { t } from '$lib/i18n';
 	import { log } from '$lib/logging/logger';
 	import CodeBlock from '$lib/components/CodeBlock.svelte';
@@ -58,6 +64,13 @@
 	let confirmDiscard = $state(false);
 	let actionError = $state<string | null>(null);
 
+	let isConfigModified = $state<boolean | null>(null);
+	let stories = $state<StoryFolderInfo[]>([]);
+	let selectedStoryFolder = $state<string>('');
+	let showCopyPanel = $state(false);
+	let isCopying = $state(false);
+	let isRestoring = $state(false);
+
 	$effect(() => {
 		if ((showDeleteConfirm || confirmDiscard) && cancelButton) {
 			cancelButton.focus();
@@ -76,6 +89,15 @@
 			await log.error('file-manager', 'Failed to load root directory', err);
 		} finally {
 			isLoadingRoot = false;
+		}
+	}
+
+	async function loadStories() {
+		if (stories.length > 0) return;
+		try {
+			stories = await getAllStoryFolderInfo();
+		} catch (err) {
+			await log.error('file-manager', 'Failed to load stories', err);
 		}
 	}
 
@@ -107,6 +129,9 @@
 		saveError = null;
 		showDeleteConfirm = false;
 		actionError = null;
+		isConfigModified = null;
+		showCopyPanel = false;
+		selectedStoryFolder = '';
 	}
 
 	async function handleSelectionChange(details: {
@@ -126,6 +151,9 @@
 		saveError = null;
 		showDeleteConfirm = false;
 		actionError = null;
+		showCopyPanel = false;
+		selectedStoryFolder = '';
+		isConfigModified = null;
 
 		if (node.isDirectory) {
 			fileContent = null;
@@ -140,6 +168,13 @@
 		const requestId = ++loadRequestId;
 		fileLang = getLanguageFromPath(node.id);
 		isLoadingFile = true;
+
+		if (node.managedConfig === 'managed') {
+			isConfigUserModified(node.id).then((modified) => {
+				isConfigModified = modified;
+			});
+		}
+
 		try {
 			const { data, isBinary: binary } = await readFileData(node.id);
 			if (requestId !== loadRequestId) return;
@@ -228,7 +263,7 @@
 		}
 	}
 
-	async function handleDelete() {
+	async function handleDeleteFolder() {
 		if (!selectedFilePath) return;
 		isDeleting = true;
 		actionError = null;
@@ -242,6 +277,65 @@
 		} finally {
 			isDeleting = false;
 		}
+	}
+
+	async function handleCopyToStory() {
+		if (!selectedFilePath || !selectedStoryFolder) return;
+		isCopying = true;
+		actionError = null;
+		try {
+			await copyConfigToStory(selectedFilePath, selectedStoryFolder);
+			clearPreview();
+			await loadRoot();
+		} catch (err) {
+			actionError = err instanceof Error ? err.message : String(err);
+			await log.error('file-manager', 'Failed to copy to story', err);
+		} finally {
+			isCopying = false;
+		}
+	}
+
+	async function handleRestoreDefault() {
+		if (!selectedFilePath) return;
+		isRestoring = true;
+		actionError = null;
+		try {
+			await restoreConfigDefault(selectedFilePath);
+			isConfigModified = false;
+			const requestId = ++loadRequestId;
+			const { data, isBinary: binary } = await readFileData(selectedFilePath);
+			if (requestId !== loadRequestId) return;
+			isBinary = binary;
+			fileContent = binary ? null : decodeText(data);
+			fileLang = getLanguageFromPath(selectedFilePath);
+		} catch (err) {
+			actionError = err instanceof Error ? err.message : String(err);
+			await log.error('file-manager', 'Failed to restore default', err);
+		} finally {
+			isRestoring = false;
+		}
+	}
+
+	async function handleDeleteFile() {
+		if (!selectedFilePath) return;
+		isDeleting = true;
+		actionError = null;
+		try {
+			await deleteFile(selectedFilePath);
+			clearPreview();
+			await loadRoot();
+		} catch (err) {
+			actionError = err instanceof Error ? err.message : String(err);
+			await log.error('file-manager', 'Failed to delete file', err);
+		} finally {
+			isDeleting = false;
+		}
+	}
+
+	function openCopyPanel() {
+		showCopyPanel = true;
+		selectedStoryFolder = '';
+		loadStories();
 	}
 
 	onMount(loadRoot);
@@ -393,7 +487,7 @@
 						<button
 							class="btn preset-filled-error text-xs gap-1"
 							type="button"
-							onclick={handleDelete}
+							onclick={handleDeleteFolder}
 							disabled={isDeleting}
 						>
 							<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -431,10 +525,107 @@
 	</div>
 {/snippet}
 
+{#snippet configActionBar()}
+	{@const mc = selectedNode?.managedConfig}
+	<div class="flex flex-wrap items-center gap-2 mb-2">
+		{#if mc === 'managed' || mc === 'obsolete'}
+			{#if mc === 'managed'}
+				<button
+					class="btn preset-tonal text-xs gap-1"
+					type="button"
+					onclick={openCopyPanel}
+					disabled={isCopying}
+				>
+					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+					</svg>
+					{t('fileManager.copyToStory')}
+				</button>
+				{#if isConfigModified}
+					<button
+						class="btn preset-tonal text-xs gap-1"
+						type="button"
+						onclick={handleRestoreDefault}
+						disabled={isRestoring}
+					>
+						<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+						</svg>
+						{isRestoring ? t('fileManager.restoring') : t('fileManager.restoreDefault')}
+					</button>
+				{/if}
+			{/if}
+			{#if mc === 'obsolete'}
+				<p class="text-xs text-surface-600-400">{t('fileManager.obsoleteDescription')}</p>
+				<button
+					class="btn preset-filled-error text-xs gap-1"
+					type="button"
+					onclick={handleDeleteFile}
+					disabled={isDeleting}
+				>
+					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+					</svg>
+					{t('fileManager.deleteObsolete')}
+				</button>
+			{/if}
+		{/if}
+		{#if mc === 'story-override'}
+			<p class="text-xs text-surface-600-400">{t('fileManager.overrideDescription')}</p>
+			<button
+				class="btn preset-filled-error text-xs gap-1"
+				type="button"
+				onclick={handleDeleteFile}
+				disabled={isDeleting}
+			>
+				<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+				</svg>
+				{t('fileManager.deleteOverride')}
+			</button>
+		{/if}
+	</div>
+
+	{#if showCopyPanel && (mc === 'managed' || mc === 'obsolete')}
+		<div class="border border-surface-200-800 rounded-lg p-3 mb-2 space-y-2">
+			<select
+				class="w-full rounded border border-surface-200-800 bg-surface-50-950 px-3 py-1.5 text-xs text-surface-900-100"
+				bind:value={selectedStoryFolder}
+			>
+				<option value="">{t('fileManager.selectStory')}</option>
+				{#each stories as story}
+					<option value={story.folderName}>{story.storyName}</option>
+				{/each}
+			</select>
+			<div class="flex items-center gap-2">
+				<button
+					class="btn preset-filled text-xs gap-1"
+					type="button"
+					onclick={handleCopyToStory}
+					disabled={isCopying || !selectedStoryFolder}
+				>
+					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+					</svg>
+					{isCopying ? t('fileManager.copying') : t('fileManager.copy')}
+				</button>
+				<button
+					class="btn preset-tonal text-xs"
+					type="button"
+					onclick={() => { showCopyPanel = false; }}
+				>
+					{t('fileManager.cancel')}
+				</button>
+			</div>
+		</div>
+	{/if}
+{/snippet}
+
 {#snippet filePreview()}
 	<div class="space-y-2">
-		{#if fileLang && !isBinary}
-			<div class="flex justify-end">
+		{@render configActionBar()}
+		<div class="flex justify-end gap-2">
+			{#if fileLang && !isBinary && selectedNode?.managedConfig !== 'obsolete'}
 				<button
 					class="btn preset-tonal text-xs gap-1"
 					type="button"
@@ -445,8 +636,8 @@
 					</svg>
 					{t('fileManager.edit')}
 				</button>
-			</div>
-		{/if}
+			{/if}
+		</div>
 		<CodeBlock code={fileContent!} lang={fileLang || undefined} />
 	</div>
 {/snippet}

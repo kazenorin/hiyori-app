@@ -437,7 +437,18 @@
 		"delete": "Delete",
 		"deleteWarning": "This folder and all its contents will be deleted. This cannot be undone.",
 		"protected": "Protected",
-		"saving": "Saving..."
+		"saving": "Saving...",
+		"copyToStory": "Copy to Story",
+		"restoreDefault": "Restore",
+		"deleteObsolete": "Delete Obsolete",
+		"deleteOverride": "Delete Override",
+		"selectStory": "Select a story...",
+		"copy": "Copy",
+		"copying": "Copying...",
+		"restoring": "Restoring...",
+		"overrideExists": "This file already exists in the story folder. Overwrite?",
+		"obsoleteDescription": "This file is obsolete and no longer part of the app configuration.",
+		"overrideDescription": "This is a story-specific override of a config file."
 	},
 	"errors": {
 		"failedToFetchModels": "Failed to fetch models",

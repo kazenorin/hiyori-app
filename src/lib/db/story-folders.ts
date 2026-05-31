@@ -36,3 +36,16 @@ export async function getAllFolderNames(): Promise<string[]> {
 	const result = await db.select<StoryFolder[]>('SELECT folder_name FROM story_folders');
 	return result.map((r) => r.folder_name);
 }
+
+export interface StoryFolderInfo {
+	folderName: string;
+	storyId: string;
+	storyName: string;
+}
+
+export async function getAllStoryFolderInfo(): Promise<StoryFolderInfo[]> {
+	const db = getDatabase();
+	return await db.select<StoryFolderInfo[]>(
+		'SELECT sf.folder_name AS folderName, sf.story_id AS storyId, s.name AS storyName FROM story_folders sf JOIN stories s ON sf.story_id = s.id ORDER BY s.name',
+	);
+}

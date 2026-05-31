@@ -61,6 +61,10 @@ export function registerBundledContent(configPath: string, content: string): voi
 	bundledContentMap.set(configPath, content);
 }
 
+export function getBundledContent(configPath: string): string | undefined {
+	return bundledContentMap.get(configPath);
+}
+
 export async function syncConfigAssets(): Promise<void> {
 	const manifest = loadManifest();
 	let updated = false;

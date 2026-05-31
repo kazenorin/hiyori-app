@@ -2,20 +2,46 @@ import { fs } from '$lib/fs/file-system';
 import { isTauriSync } from '$lib/runtime';
 import JSZip from 'jszip';
 import * as dbStoryFolders from '$lib/db/story-folders';
+import { loadManifest, getBundledContent } from '$lib/fs/config-manifest';
+
+const manifest = loadManifest();
 
 export type FolderType = 'story' | 'config' | 'default';
+export type ManagedConfigKind = 'managed' | 'obsolete' | 'story-override';
 
 export interface FileNode {
 	id: string;
 	name: string;
 	isDirectory: boolean;
 	folderType?: FolderType;
+	managedConfig?: ManagedConfigKind;
 	children?: FileNode[];
 }
 
 export function getFolderType(path: string): FolderType {
 	if (path === 'config' || path.startsWith('config/')) return 'config';
 	return 'default';
+}
+
+export function classifyManagedConfig(filePath: string, folderType: FolderType | undefined): ManagedConfigKind | null {
+	if (!filePath.endsWith('.md')) return null;
+
+	if (folderType === 'config') {
+		const configPath = filePath.slice('config/'.length);
+		const entry = manifest.get(configPath);
+		if (!entry) return null;
+		return entry.hash !== null ? 'managed' : 'obsolete';
+	}
+
+	if (folderType === 'story') {
+		const storyPrefix = filePath.split('/')[0];
+		const relFromStory = filePath.slice(storyPrefix.length + 1);
+		const entry = manifest.get(relFromStory);
+		if (!entry) return null;
+		return 'story-override';
+	}
+
+	return null;
 }
 
 export async function readDirectoryNodes(dirPath: string): Promise<FileNode[]> {
@@ -27,6 +53,7 @@ export async function readDirectoryNodes(dirPath: string): Promise<FileNode[]> {
 	const nodes: FileNode[] = entries.map((entry) => {
 		const id = dirPath ? `${dirPath}/${entry.name}` : entry.name;
 		let folderType: FolderType | undefined;
+		let managedConfig: ManagedConfigKind | undefined;
 		if (entry.isDirectory) {
 			folderType = getFolderType(id);
 			if (folderType === 'default') {
@@ -35,8 +62,11 @@ export async function readDirectoryNodes(dirPath: string): Promise<FileNode[]> {
 					folderType = 'story';
 				}
 			}
+		} else {
+			const mc = classifyManagedConfig(id, folderType);
+			if (mc !== null) managedConfig = mc;
 		}
-		return { id, name: entry.name, isDirectory: entry.isDirectory, folderType };
+		return { id, name: entry.name, isDirectory: entry.isDirectory, folderType, managedConfig };
 	});
 
 	nodes.sort((a, b) => {
@@ -162,4 +192,40 @@ export function isFolderTypeProtected(folderType: FolderType | undefined): boole
 
 export async function deleteFolder(folderPath: string): Promise<void> {
 	await fs.remove(folderPath);
+}
+
+async function hashContent(content: string): Promise<string> {
+	const normalized = content.replaceAll('\r\n', '\n');
+	const data = new TextEncoder().encode(normalized);
+	const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+	return Array.from(new Uint8Array(hashBuffer))
+		.map((b) => b.toString(16).padStart(2, '0'))
+		.join('');
+}
+
+export async function isConfigUserModified(configFilePath: string): Promise<boolean> {
+	const configPath = configFilePath.slice('config/'.length);
+	const entry = manifest.get(configPath);
+	if (!entry || entry.hash === null) return true;
+	const content = await fs.readTextFile(configFilePath);
+	const diskHash = await hashContent(content);
+	return diskHash !== entry.hash;
+}
+
+export async function copyConfigToStory(configFilePath: string, storyFolderName: string): Promise<void> {
+	const content = await fs.readTextFile(configFilePath);
+	const configPath = configFilePath.slice('config/'.length);
+	const destPath = `${storyFolderName}/${configPath}`;
+	await fs.writeTextFileEnsuringDir(destPath, content);
+}
+
+export async function restoreConfigDefault(configFilePath: string): Promise<void> {
+	const configPath = configFilePath.slice('config/'.length);
+	const content = getBundledContent(configPath);
+	if (content === undefined) throw new Error('No bundled content for: ' + configPath);
+	await fs.writeTextFile(configFilePath, content);
+}
+
+export async function deleteFile(filePath: string): Promise<void> {
+	await fs.remove(filePath);
 }
