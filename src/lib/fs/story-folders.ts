@@ -1,7 +1,5 @@
 import { fs, type DirEntry } from '$lib/fs/file-system';
 import * as dbStoryFolders from '$lib/db/story-folders';
-import * as dbStories from '$lib/db/stories';
-import { generateWorld } from '$lib/ai/world-generator';
 
 /**
  * Compute the canonical folder name for a story.
@@ -105,30 +103,6 @@ export async function resolveStoryFolder(storyId: string, storyName: string): Pr
 	await fs.mkdir(suffixedName);
 	await dbStoryFolders.setStoryFolder(storyId, suffixedName);
 	return suffixedName;
-}
-
-/**
- * Ensure the story folder has a world.md file.
- * If it doesn't exist, generate it from the story's chat history.
- */
-export async function ensureWorldFile(storyId: string, storyName?: string, abortSignal?: AbortSignal): Promise<string> {
-	const story = await dbStories.getStory(storyId);
-	if (!story) {
-		throw new Error(`Invalid storyId: ${storyId}, not found.`);
-	}
-
-	const folder = await dbStoryFolders.getStoryFolder(storyId);
-	const folderName = folder ?? (await resolveStoryFolder(storyId, storyName ?? story.name));
-	const worldPath = `${folderName}/world.md`;
-
-	const worldContent = await fs.readTextFileIfExists(worldPath);
-	if (worldContent !== undefined) {
-		return worldContent;
-	}
-
-	const generated = await generateWorld(storyId, abortSignal);
-	await fs.writeTextFile(worldPath, generated);
-	return generated;
 }
 
 /**

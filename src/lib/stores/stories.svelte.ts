@@ -10,7 +10,8 @@ import { getLogFilePath } from '$lib/features/world-builder/world-builder.svelte
 import { Memory } from '$lib/features/memory';
 import { getDefaultPlotMode, getMemoryProviderConfig, isMemoryAvailable, settings } from '$lib/stores/settings.svelte';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
-import { deriveStoryName, ensureWorldFile, renameStoryFolder, resolveStoryFolder } from '$lib/fs/story-folders';
+import { ensureWorldFile } from '$lib/ai/world-generator';
+import { deriveStoryName, renameStoryFolder, resolveStoryFolder } from '$lib/fs/story-folders';
 import { fs } from '$lib/fs/file-system';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, getLineDir, resolveLineSubdir } from '$lib/ai/card-output-path';

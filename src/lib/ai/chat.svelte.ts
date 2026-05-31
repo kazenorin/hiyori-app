@@ -56,7 +56,7 @@ import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
 import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { loadLocaleStrings } from '$lib/localization';
-import { ensureWorldFile } from '$lib/fs/story-folders';
+import { ensureWorldFile } from '$lib/ai/world-generator';
 
 // Re-exported for `+page.svelte` only
 export type { UIMessage };

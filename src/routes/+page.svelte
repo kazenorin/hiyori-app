@@ -87,8 +87,8 @@
 	import type { Story } from '$lib/db/stories';
 
 	import { t } from '$lib/i18n';
-	import { ensureWorldFile, resolveStoryFolder } from '$lib/fs/story-folders';
-	import { updateWorldCard } from '$lib/ai/world-generator';
+	import { resolveStoryFolder } from '$lib/fs/story-folders';
+	import { updateWorldCard, ensureWorldFile } from '$lib/ai/world-generator';
 	import { generateAndRecordActShortSummary } from '$lib/ai/act-short-summary-generator';
 	import ScrollToFAB from '$lib/components/ScrollToFAB.svelte';
 	import { scrollToBottom } from '$lib/utils/scroll';
@@ -112,7 +112,8 @@
 		const story = getActiveStory();
 		let stale = false;
 		const templatePromise = story ? loadStoryMessageTemplateForStory(story.id, story.name) : loadStoryMessageTemplate();
-		templatePromise.then((loadedTemplate) => {
+		templatePromise
+			.then((loadedTemplate) => {
 				if (!stale) storyMessageTemplate = loadedTemplate;
 			})
 			.catch(() => {});
