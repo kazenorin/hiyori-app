@@ -2,7 +2,7 @@ import { fs } from '$lib/fs/file-system';
 import { isTauriSync } from '$lib/runtime';
 import JSZip from 'jszip';
 import * as dbStoryFolders from '$lib/db/story-folders';
-import { loadManifest, getBundledContent } from '$lib/fs/config-manifest';
+import { loadManifest, getBundledContent, hashContent } from '$lib/fs/config-manifest';
 
 const manifest = loadManifest();
 
@@ -192,15 +192,6 @@ export function isFolderTypeProtected(folderType: FolderType | undefined): boole
 
 export async function deleteFolder(folderPath: string): Promise<void> {
 	await fs.remove(folderPath);
-}
-
-async function hashContent(content: string): Promise<string> {
-	const normalized = content.replaceAll('\r\n', '\n');
-	const data = new TextEncoder().encode(normalized);
-	const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-	return Array.from(new Uint8Array(hashBuffer))
-		.map((b) => b.toString(16).padStart(2, '0'))
-		.join('');
 }
 
 export async function isConfigUserModified(configFilePath: string): Promise<boolean> {

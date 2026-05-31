@@ -70,9 +70,10 @@
 	let showCopyPanel = $state(false);
 	let isCopying = $state(false);
 	let isRestoring = $state(false);
+	let showFileDeleteConfirm = $state(false);
 
 	$effect(() => {
-		if ((showDeleteConfirm || confirmDiscard) && cancelButton) {
+		if ((showDeleteConfirm || confirmDiscard || showFileDeleteConfirm) && cancelButton) {
 			cancelButton.focus();
 		}
 	});
@@ -132,6 +133,7 @@
 		isConfigModified = null;
 		showCopyPanel = false;
 		selectedStoryFolder = '';
+		showFileDeleteConfirm = false;
 	}
 
 	async function handleSelectionChange(details: {
@@ -154,6 +156,7 @@
 		showCopyPanel = false;
 		selectedStoryFolder = '';
 		isConfigModified = null;
+		showFileDeleteConfirm = false;
 
 		if (node.isDirectory) {
 			fileContent = null;
@@ -170,7 +173,9 @@
 		isLoadingFile = true;
 
 		if (node.managedConfig === 'managed') {
+			const modRequestId = requestId;
 			isConfigUserModified(node.id).then((modified) => {
+				if (modRequestId !== loadRequestId) return;
 				isConfigModified = modified;
 			});
 		}
@@ -557,6 +562,45 @@
 			{/if}
 			{#if mc === 'obsolete'}
 				<p class="text-xs text-surface-600-400">{t('fileManager.obsoleteDescription')}</p>
+				{#if showFileDeleteConfirm}
+					<p class="text-xs text-warning-500">{t('fileManager.deleteFileWarning')}</p>
+					<button
+						class="btn preset-filled-error text-xs gap-1"
+						type="button"
+						onclick={handleDeleteFile}
+						disabled={isDeleting}
+					>
+						<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+						</svg>
+						{isDeleting ? '...' : t('fileManager.deleteObsolete')}
+					</button>
+					<button
+						bind:this={cancelButton}
+						class="btn preset-tonal text-xs"
+						type="button"
+						onclick={() => { showFileDeleteConfirm = false; }}
+					>
+						{t('fileManager.cancel')}
+					</button>
+				{:else}
+					<button
+						class="btn preset-filled-error text-xs gap-1"
+						type="button"
+						onclick={() => { showFileDeleteConfirm = true; }}
+					>
+						<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+							<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+						</svg>
+						{t('fileManager.deleteObsolete')}
+					</button>
+				{/if}
+			{/if}
+		{/if}
+		{#if mc === 'story-override'}
+			<p class="text-xs text-surface-600-400">{t('fileManager.overrideDescription')}</p>
+			{#if showFileDeleteConfirm}
+				<p class="text-xs text-warning-500">{t('fileManager.deleteFileWarning')}</p>
 				<button
 					class="btn preset-filled-error text-xs gap-1"
 					type="button"
@@ -566,27 +610,32 @@
 					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
 					</svg>
-					{t('fileManager.deleteObsolete')}
+					{isDeleting ? '...' : t('fileManager.deleteOverride')}
+				</button>
+				<button
+					bind:this={cancelButton}
+					class="btn preset-tonal text-xs"
+					type="button"
+					onclick={() => { showFileDeleteConfirm = false; }}
+				>
+					{t('fileManager.cancel')}
+				</button>
+			{:else}
+				<button
+					class="btn preset-filled-error text-xs gap-1"
+					type="button"
+					onclick={() => { showFileDeleteConfirm = true; }}
+				>
+					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+						<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+					</svg>
+					{t('fileManager.deleteOverride')}
 				</button>
 			{/if}
 		{/if}
-		{#if mc === 'story-override'}
-			<p class="text-xs text-surface-600-400">{t('fileManager.overrideDescription')}</p>
-			<button
-				class="btn preset-filled-error text-xs gap-1"
-				type="button"
-				onclick={handleDeleteFile}
-				disabled={isDeleting}
-			>
-				<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-				</svg>
-				{t('fileManager.deleteOverride')}
-			</button>
-		{/if}
 	</div>
 
-	{#if showCopyPanel && (mc === 'managed' || mc === 'obsolete')}
+	{#if showCopyPanel && mc === 'managed'}
 		<div class="border border-surface-200-800 rounded-lg p-3 mb-2 space-y-2">
 			<select
 				class="w-full rounded border border-surface-200-800 bg-surface-50-950 px-3 py-1.5 text-xs text-surface-900-100"

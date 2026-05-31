@@ -442,7 +442,8 @@
 		"restoring": "還原中...",
 		"overrideExists": "此檔案已在故事資料夾中存在。覆寫？",
 		"obsoleteDescription": "此檔案已過時，不再是應用程式設定的一部分。",
-		"overrideDescription": "此為設定檔的故事專屬覆寫。"
+		"overrideDescription": "此為設定檔的故事專屬覆寫。",
+		"deleteFileWarning": "此檔案將被刪除。此操作無法復原。"
 	},
 	"errors": {
 		"failedToFetchModels": "無法取得模型",

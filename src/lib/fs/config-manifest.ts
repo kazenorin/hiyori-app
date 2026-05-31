@@ -46,7 +46,7 @@ export function loadManifest(): Map<string, ConfigAssetEntry> {
 	return map;
 }
 
-async function hashFileContent(content: string): Promise<string> {
+export async function hashContent(content: string): Promise<string> {
 	const normalized = content.replaceAll('\r\n', '\n');
 	const encoder = new TextEncoder();
 	const data = encoder.encode(normalized);
@@ -76,7 +76,7 @@ export async function syncConfigAssets(): Promise<void> {
 		if (!fileExists) continue;
 
 		const diskContent = await fs.readTextFile(fullPath);
-		const diskHash = await hashFileContent(diskContent);
+		const diskHash = await hashContent(diskContent);
 		const knownHashes = [...entry.oldHashes, entry.hash].filter((h): h is string => h !== null);
 		const isUserEdited = !knownHashes.includes(diskHash);
 
