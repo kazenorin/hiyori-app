@@ -245,7 +245,7 @@ export async function sendMessage(actLineId: string, message: string): Promise<v
 			previousSceneNumber: findLastNonNullSceneNumber(messages) ?? 0,
 			previousNarrativeVariables: getPreviousNarrativeMessage(messages),
 		};
-		return executeNarrativeRequest(requestContext);
+		return await executeNarrativeRequest(requestContext);
 	} finally {
 		isStreaming = false;
 	}
@@ -270,7 +270,7 @@ export async function sendInitialNarration(actLineId: string): Promise<void> {
 			previousSceneNumber: 0,
 			previousNarrativeVariables: undefined,
 		};
-		return executeNarrativeRequest(requestContext);
+		return await executeNarrativeRequest(requestContext);
 	} finally {
 		isStreaming = false;
 	}
