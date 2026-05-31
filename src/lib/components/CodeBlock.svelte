@@ -8,7 +8,7 @@
 			import('@shikijs/langs/markdown'),
 			import('@shikijs/langs/yaml'),
 		],
-		themes: [import('@shikijs/themes/github-dark')],
+		themes: [import('@shikijs/themes/github-dark'), import('@shikijs/themes/github-light')],
 		engine: createJavaScriptRegexEngine(),
 	});
 
@@ -25,16 +25,23 @@
 
 	const { code, lang = 'txt' }: CodeBlockProps = $props();
 
+	let isDark = $state(window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+	const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+	mediaQuery.addEventListener('change', (e) => {
+		isDark = e.matches;
+	});
+
 	const generatedHtml = $derived(
 		lang && supportedLangs.has(lang)
-			? DOMPurify.sanitize(highlighter.codeToHtml(code, { lang, theme: 'github-dark' }))
+			? DOMPurify.sanitize(highlighter.codeToHtml(code, { lang, theme: isDark ? 'github-dark' : 'github-light' }))
 			: DOMPurify.sanitize(
-					`<pre class="bg-surface-950-50 text-surface-800-200 p-4 overflow-x-auto rounded-(--radius-base) text-xs leading-relaxed">${code}</pre>`,
+					`<pre class="p-4 overflow-x-auto rounded-(--radius-base) text-xs leading-relaxed">${code}</pre>`,
 				),
 	);
 </script>
 
-<div class="overflow-auto rounded-container">
+<div class="overflow-auto rounded-container max-h-[70vh]">
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -- sanitized via DOMPurify -->
 	{@html generatedHtml}
 </div>
