@@ -1484,122 +1484,124 @@
 											{/if}
 										</div>
 									{/if}
-									<div class="md:hidden">
-										<MessageActionBar
-											showCopy={!!message.content}
-											showEdit={!!(message.variables && hasTemplateMetadata(message.variables) && i === lastMessageIdx)}
-											showFork={!!(message.variables && hasTemplateMetadata(message.variables))}
-											showRegenerate={i === lastMessageIdx}
-											showDelete={i === lastMessageIdx}
-											onCopy={() => handleCopy(message.id, message.content)}
-											onEdit={message.variables && hasTemplateMetadata(message.variables) && i === lastMessageIdx
-												? () => startEditMessage(message, true)
-												: undefined}
-											onFork={message.variables && hasTemplateMetadata(message.variables) ? () => handleFork(i) : undefined}
-											onRegenerate={i === lastMessageIdx ? () => handleRegenerate(message.id) : undefined}
-											onDelete={i === lastMessageIdx ? handleDelete : undefined}
-										/>
-										{#if forkChoiceIndex === i}
-											<div class="flex flex-col gap-2 mt-2 pt-2 border-t border-surface-200-800">
-												<!-- Plot Mode selector (first) -->
-												<div class="flex gap-2">
-													<button
-														class="flex-1 h-8 px-2.5 rounded-full text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none transition-colors {forkPlotMode ===
-														null
-															? 'preset-tonal-tertiary'
-															: 'preset-outlined'}"
-														onclick={() => (forkPlotMode = null)}
-													>
-														<svg
-															class="w-3.5 h-3.5"
-															viewBox="0 0 24 24"
-															fill="none"
-															stroke="currentColor"
-															stroke-width="2"
-															stroke-linecap="round"
-															stroke-linejoin="round"
+									{#if !getIsBusy()}
+										<div class="md:hidden">
+											<MessageActionBar
+												showCopy={!!message.content}
+												showEdit={!!(message.variables && hasTemplateMetadata(message.variables) && i === lastMessageIdx)}
+												showFork={!!(message.variables && hasTemplateMetadata(message.variables))}
+												showRegenerate={i === lastMessageIdx}
+												showDelete={i === lastMessageIdx}
+												onCopy={() => handleCopy(message.id, message.content)}
+												onEdit={message.variables && hasTemplateMetadata(message.variables) && i === lastMessageIdx
+													? () => startEditMessage(message, true)
+													: undefined}
+												onFork={message.variables && hasTemplateMetadata(message.variables) ? () => handleFork(i) : undefined}
+												onRegenerate={i === lastMessageIdx ? () => handleRegenerate(message.id) : undefined}
+												onDelete={i === lastMessageIdx ? handleDelete : undefined}
+											/>
+											{#if forkChoiceIndex === i}
+												<div class="flex flex-col gap-2 mt-2 pt-2 border-t border-surface-200-800">
+													<!-- Plot Mode selector (first) -->
+													<div class="flex gap-2">
+														<button
+															class="flex-1 h-8 px-2.5 rounded-full text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none transition-colors {forkPlotMode ===
+															null
+																? 'preset-tonal-tertiary'
+																: 'preset-outlined'}"
+															onclick={() => (forkPlotMode = null)}
 														>
-															<circle cx="12" cy="12" r="10" />
-															<circle cx="12" cy="12" r="3" fill="currentColor" />
-														</svg>
-														{t('chat.keepPlotMode')}
-													</button>
-													<button
-														class="flex-1 h-8 px-2.5 rounded-full text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none transition-colors {forkPlotMode ===
-														'guidance'
-															? 'preset-tonal-tertiary'
-															: 'preset-outlined'}"
-														onclick={() => (forkPlotMode = 'guidance')}
-													>
-														<svg
-															class="w-3.5 h-3.5"
-															viewBox="0 0 24 24"
-															fill="none"
-															stroke="currentColor"
-															stroke-width="2"
-															stroke-linecap="round"
-															stroke-linejoin="round"
+															<svg
+																class="w-3.5 h-3.5"
+																viewBox="0 0 24 24"
+																fill="none"
+																stroke="currentColor"
+																stroke-width="2"
+																stroke-linecap="round"
+																stroke-linejoin="round"
+															>
+																<circle cx="12" cy="12" r="10" />
+																<circle cx="12" cy="12" r="3" fill="currentColor" />
+															</svg>
+															{t('chat.keepPlotMode')}
+														</button>
+														<button
+															class="flex-1 h-8 px-2.5 rounded-full text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none transition-colors {forkPlotMode ===
+															'guidance'
+																? 'preset-tonal-tertiary'
+																: 'preset-outlined'}"
+															onclick={() => (forkPlotMode = 'guidance')}
 														>
-															<circle cx="12" cy="12" r="10" />
-															<polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-														</svg>
-														{t('chat.switchToGuidance')}
-													</button>
-													<button
-														class="flex-1 h-8 px-2.5 rounded-full text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none transition-colors {forkPlotMode ===
-														'phaseEvent'
-															? 'preset-tonal-tertiary'
-															: 'preset-outlined'}"
-														onclick={() => (forkPlotMode = 'phaseEvent')}
-													>
-														<svg
-															class="w-3.5 h-3.5"
-															viewBox="0 0 24 24"
-															fill="none"
-															stroke="currentColor"
-															stroke-width="2"
-															stroke-linecap="round"
-															stroke-linejoin="round"
+															<svg
+																class="w-3.5 h-3.5"
+																viewBox="0 0 24 24"
+																fill="none"
+																stroke="currentColor"
+																stroke-width="2"
+																stroke-linecap="round"
+																stroke-linejoin="round"
+															>
+																<circle cx="12" cy="12" r="10" />
+																<polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+															</svg>
+															{t('chat.switchToGuidance')}
+														</button>
+														<button
+															class="flex-1 h-8 px-2.5 rounded-full text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none transition-colors {forkPlotMode ===
+															'phaseEvent'
+																? 'preset-tonal-tertiary'
+																: 'preset-outlined'}"
+															onclick={() => (forkPlotMode = 'phaseEvent')}
 														>
-															<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-															<line x1="4" y1="22" x2="4" y2="15" />
-														</svg>
-														{t('chat.switchToPhaseEvent')}
-													</button>
+															<svg
+																class="w-3.5 h-3.5"
+																viewBox="0 0 24 24"
+																fill="none"
+																stroke="currentColor"
+																stroke-width="2"
+																stroke-linecap="round"
+																stroke-linejoin="round"
+															>
+																<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+																<line x1="4" y1="22" x2="4" y2="15" />
+															</svg>
+															{t('chat.switchToPhaseEvent')}
+														</button>
+													</div>
+													<!-- Action buttons (second) -->
+													<div class="flex flex-wrap gap-2">
+														<button class="btn preset-filled-primary-500 flex-1 min-h-11 gap-2" onclick={() => handleForkDirect(i)}>
+															<svg
+																class="w-4 h-4"
+																viewBox="0 0 24 24"
+																fill="none"
+																stroke="currentColor"
+																stroke-width="2"
+																stroke-linecap="round"
+																stroke-linejoin="round"
+															>
+																<line x1="6" y1="3" x2="6" y2="15" />
+																<circle cx="18" cy="6" r="3" />
+																<circle cx="6" cy="18" r="3" />
+																<path d="M18 9a9 9 0 01-9 9" />
+															</svg>
+															{t('chat.fork')}
+														</button>
+														<button class="btn preset-filled-success-500 flex-1 min-h-11 gap-2" onclick={() => handleForkWithInterview(i)}>
+															<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+																<path d="M12 20h9" />
+																<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+															</svg>
+															{t('chat.newPlot')}
+														</button>
+														<button class="btn preset-tonal min-h-11 px-4" onclick={cancelForkChoice}>
+															{t('chat.cancel')}
+														</button>
+													</div>
 												</div>
-												<!-- Action buttons (second) -->
-												<div class="flex flex-wrap gap-2">
-													<button class="btn preset-filled-primary-500 flex-1 min-h-11 gap-2" onclick={() => handleForkDirect(i)}>
-														<svg
-															class="w-4 h-4"
-															viewBox="0 0 24 24"
-															fill="none"
-															stroke="currentColor"
-															stroke-width="2"
-															stroke-linecap="round"
-															stroke-linejoin="round"
-														>
-															<line x1="6" y1="3" x2="6" y2="15" />
-															<circle cx="18" cy="6" r="3" />
-															<circle cx="6" cy="18" r="3" />
-															<path d="M18 9a9 9 0 01-9 9" />
-														</svg>
-														{t('chat.fork')}
-													</button>
-													<button class="btn preset-filled-success-500 flex-1 min-h-11 gap-2" onclick={() => handleForkWithInterview(i)}>
-														<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-															<path d="M12 20h9" />
-															<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-														</svg>
-														{t('chat.newPlot')}
-													</button>
-													<button class="btn preset-tonal min-h-11 px-4" onclick={cancelForkChoice}>
-														{t('chat.cancel')}
-													</button>
-												</div>
-											</div>
-										{/if}
-									</div>
+											{/if}
+										</div>
+									{/if}
 								</div>
 							{/if}
 						{/each}
