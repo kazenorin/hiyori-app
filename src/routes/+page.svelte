@@ -810,16 +810,43 @@
 									{#if !getIsWorldBuilderStreaming() && !isEditingMessage(message.id)}
 										<div class="flex gap-2 mt-3 pt-3 border-t border-primary-200-800">
 											<button
-												class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
+												class="flex items-center gap-1 text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
 												title="Edit message"
-												onclick={() => startEditMessage(message, false)}>{t('chat.edit')}</button
+												onclick={() => startEditMessage(message, false)}
 											>
+												<svg
+													class="w-3.5 h-3.5"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												>
+													<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+													<path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+												</svg>
+												{t('chat.edit')}
+											</button>
 											<button
-												class="text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
+												class="flex items-center gap-1 text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
 												title="Copy message"
 												onclick={() => handleCopy(message.id, message.content)}
-												>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
 											>
+												<svg
+													class="w-3.5 h-3.5"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												>
+													<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+													<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+												</svg>
+												{copiedId === message.id ? t('chat.copied') : t('chat.copy')}
+											</button>
 										</div>
 									{/if}
 								</div>
@@ -852,27 +879,83 @@
 								{#if !getIsWorldBuilderStreaming() && message.content && !isEditingMessage(message.id)}
 									<div class="flex gap-2 mt-2 md:mt-3 pt-2 md:pt-3 border-t border-surface-200-800">
 										<button
-											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+											class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 											title="Edit message"
-											onclick={() => startEditMessage(message, false)}>{t('chat.edit')}</button
+											onclick={() => startEditMessage(message, false)}
 										>
+											<svg
+												class="w-3.5 h-3.5"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+											>
+												<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+												<path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+											</svg>
+											{t('chat.edit')}
+										</button>
 										<button
-											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+											class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 											title="Copy message"
 											onclick={() => handleCopy(message.id, message.content)}
-											>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
 										>
+											<svg
+												class="w-3.5 h-3.5"
+												viewBox="0 0 24 24"
+												fill="none"
+												stroke="currentColor"
+												stroke-width="2"
+												stroke-linecap="round"
+												stroke-linejoin="round"
+											>
+												<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+												<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+											</svg>
+											{copiedId === message.id ? t('chat.copied') : t('chat.copy')}
+										</button>
 										{#if i === lastWbMessageIdx}
 											<button
-												class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+												class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 												title="Regenerate response"
-												onclick={handleWorldBuilderRegenerate}>{t('chat.regenerate')}</button
+												onclick={handleWorldBuilderRegenerate}
 											>
+												<svg
+													class="w-3.5 h-3.5"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												>
+													<polyline points="23 4 23 10 17 10" />
+													<polyline points="1 20 1 14 7 14" />
+													<path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+												</svg>
+												{t('chat.regenerate')}
+											</button>
 											<button
-												class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
+												class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-error-500 transition-colors"
 												title="Delete last exchange"
-												onclick={handleWorldBuilderDelete}>{t('chat.delete')}</button
+												onclick={handleWorldBuilderDelete}
 											>
+												<svg
+													class="w-3.5 h-3.5"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													stroke-width="2"
+													stroke-linecap="round"
+													stroke-linejoin="round"
+												>
+													<polyline points="3 6 5 6 21 6" />
+													<path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+												</svg>
+												{t('chat.delete')}
+											</button>
 										{/if}
 									</div>
 								{/if}
@@ -1187,76 +1270,217 @@
 										<div class="hidden md:flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
 											{#if message.content}
 												<button
-													class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+													class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 													title="Copy message"
 													onclick={() => handleCopy(message.id, message.content)}
-													>{copiedId === message.id ? t('chat.copied') : t('chat.copy')}</button
 												>
+													<svg
+														class="w-3.5 h-3.5"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="2"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+													>
+														<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+														<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
+													</svg>
+													{copiedId === message.id ? t('chat.copied') : t('chat.copy')}
+												</button>
 											{/if}
 											{#if message.variables && hasTemplateMetadata(message.variables) && i === lastMessageIdx}
 												<button
-													class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+													class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 													title="Edit message"
-													onclick={() => startEditMessage(message, true)}>{t('chat.edit')}</button
+													onclick={() => startEditMessage(message, true)}
 												>
+													<svg
+														class="w-3.5 h-3.5"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="2"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+													>
+														<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+														<path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
+													</svg>
+													{t('chat.edit')}
+												</button>
 											{/if}
 											{#if message.variables && hasTemplateMetadata(message.variables)}
 												{#if forkChoiceIndex === i}
-													<div class="flex gap-2 items-center">
-														<button
-															class="text-xs bg-surface-100-800 hover:bg-surface-200-700 text-primary-500 px-2 py-1 rounded transition-colors"
-															onclick={() => handleForkDirect(i)}>{t('chat.keepCurrentPlot')}</button
-														>
-														<button
-															class="text-xs bg-surface-100-800 hover:bg-surface-200-700 text-primary-500 px-2 py-1 rounded transition-colors"
-															onclick={() => handleForkWithInterview(i)}>{t('chat.tellUsWhatsDifferent')}</button
-														>
-														<button
-															class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
-															onclick={cancelForkChoice}>{t('chat.cancel')}</button
-														>
-													</div>
-													<div class="flex gap-2 items-center mt-1">
-														<span class="text-xs text-surface-400-500">{t('chat.plotMode')}:</span>
-														<button
-															class="text-xs {forkPlotMode === null
-																? 'bg-primary-500 text-white'
-																: 'bg-surface-100-800 text-surface-700-300 hover:bg-surface-200-700'} px-2 py-0.5 rounded transition-colors"
-															onclick={() => (forkPlotMode = null)}>{t('chat.keepPlotMode')}</button
-														>
-														<button
-															class="text-xs {forkPlotMode === 'guidance'
-																? 'bg-primary-500 text-white'
-																: 'bg-surface-100-800 text-surface-700-300 hover:bg-surface-200-700'} px-2 py-0.5 rounded transition-colors"
-															onclick={() => (forkPlotMode = 'guidance')}>{t('chat.switchToGuidance')}</button
-														>
-														<button
-															class="text-xs {forkPlotMode === 'phaseEvent'
-																? 'bg-primary-500 text-white'
-																: 'bg-surface-100-800 text-surface-700-300 hover:bg-surface-200-700'} px-2 py-0.5 rounded transition-colors"
-															onclick={() => (forkPlotMode = 'phaseEvent')}>{t('chat.switchToPhaseEvent')}</button
-														>
+													<div class="flex flex-col gap-2">
+														<!-- Plot Mode row (first) -->
+														<div class="flex gap-2 items-center">
+															<button
+																class="flex items-center gap-1 h-7 px-2 rounded-full text-xs transition-colors {forkPlotMode === null
+																	? 'preset-tonal-tertiary'
+																	: 'preset-outlined'}"
+																onclick={() => (forkPlotMode = null)}
+															>
+																<svg
+																	class="w-3 h-3"
+																	viewBox="0 0 24 24"
+																	fill="none"
+																	stroke="currentColor"
+																	stroke-width="2"
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																>
+																	<circle cx="12" cy="12" r="10" />
+																	<circle cx="12" cy="12" r="3" fill="currentColor" />
+																</svg>
+																{t('chat.keepPlotMode')}
+															</button>
+															<button
+																class="flex items-center gap-1 h-7 px-2 rounded-full text-xs transition-colors {forkPlotMode === 'guidance'
+																	? 'preset-tonal-tertiary'
+																	: 'preset-outlined'}"
+																onclick={() => (forkPlotMode = 'guidance')}
+															>
+																<svg
+																	class="w-3 h-3"
+																	viewBox="0 0 24 24"
+																	fill="none"
+																	stroke="currentColor"
+																	stroke-width="2"
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																>
+																	<circle cx="12" cy="12" r="10" />
+																	<polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
+																</svg>
+																{t('chat.switchToGuidance')}
+															</button>
+															<button
+																class="flex items-center gap-1 h-7 px-2 rounded-full text-xs transition-colors {forkPlotMode ===
+																'phaseEvent'
+																	? 'preset-tonal-tertiary'
+																	: 'preset-outlined'}"
+																onclick={() => (forkPlotMode = 'phaseEvent')}
+															>
+																<svg
+																	class="w-3 h-3"
+																	viewBox="0 0 24 24"
+																	fill="none"
+																	stroke="currentColor"
+																	stroke-width="2"
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																>
+																	<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+																	<line x1="4" y1="22" x2="4" y2="15" />
+																</svg>
+																{t('chat.switchToPhaseEvent')}
+															</button>
+														</div>
+														<!-- Action row (second) -->
+														<div class="flex gap-2 items-center">
+															<button class="btn preset-filled-primary-500 text-xs gap-1" onclick={() => handleForkDirect(i)}>
+																<svg
+																	class="w-3.5 h-3.5"
+																	viewBox="0 0 24 24"
+																	fill="none"
+																	stroke="currentColor"
+																	stroke-width="2"
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																>
+																	<line x1="6" y1="3" x2="6" y2="15" />
+																	<circle cx="18" cy="6" r="3" />
+																	<circle cx="6" cy="18" r="3" />
+																	<path d="M18 9a9 9 0 01-9 9" />
+																</svg>
+																{t('chat.keepCurrentPlot')}
+															</button>
+															<button class="btn preset-filled-success-500 text-xs gap-1" onclick={() => handleForkWithInterview(i)}>
+																<svg
+																	class="w-3.5 h-3.5"
+																	viewBox="0 0 24 24"
+																	fill="none"
+																	stroke="currentColor"
+																	stroke-width="2"
+																	stroke-linecap="round"
+																	stroke-linejoin="round"
+																>
+																	<path d="M12 20h9" />
+																	<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+																</svg>
+																{t('chat.tellUsWhatsDifferent')}
+															</button>
+															<button class="btn preset-tonal text-xs" onclick={cancelForkChoice}>
+																{t('chat.cancel')}
+															</button>
+														</div>
 													</div>
 												{:else}
 													<button
-														class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+														class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 														title="Fork from here"
 														disabled={isForking || getIsBusy()}
-														onclick={() => handleFork(i)}>{isForking ? t('chat.forking') : t('chat.fork')}</button
+														onclick={() => handleFork(i)}
 													>
+														<svg
+															class="w-3.5 h-3.5"
+															viewBox="0 0 24 24"
+															fill="none"
+															stroke="currentColor"
+															stroke-width="2"
+															stroke-linecap="round"
+															stroke-linejoin="round"
+														>
+															<line x1="6" y1="3" x2="6" y2="15" />
+															<circle cx="18" cy="6" r="3" />
+															<circle cx="6" cy="18" r="3" />
+															<path d="M18 9a9 9 0 01-9 9" />
+														</svg>
+														{isForking ? t('chat.forking') : t('chat.fork')}
+													</button>
 												{/if}
 											{/if}
 											{#if i === lastMessageIdx}
 												<button
-													class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+													class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 													title="Regenerate response"
-													onclick={() => handleRegenerate(message.id)}>{t('chat.regenerate')}</button
+													onclick={() => handleRegenerate(message.id)}
 												>
+													<svg
+														class="w-3.5 h-3.5"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="2"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+													>
+														<polyline points="23 4 23 10 17 10" />
+														<polyline points="1 20 1 14 7 14" />
+														<path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
+													</svg>
+													{t('chat.regenerate')}
+												</button>
 												<button
-													class="text-xs text-surface-400-500 hover:text-error-500 transition-colors"
+													class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-error-500 transition-colors"
 													title="Delete last exchange"
-													onclick={handleDelete}>{t('chat.delete')}</button
+													onclick={handleDelete}
 												>
+													<svg
+														class="w-3.5 h-3.5"
+														viewBox="0 0 24 24"
+														fill="none"
+														stroke="currentColor"
+														stroke-width="2"
+														stroke-linecap="round"
+														stroke-linejoin="round"
+													>
+														<polyline points="3 6 5 6 21 6" />
+														<path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
+													</svg>
+													{t('chat.delete')}
+												</button>
 											{/if}
 										</div>
 									{/if}
