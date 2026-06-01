@@ -222,6 +222,24 @@
 		"worldBuilderActive": "世界建構進行中…",
 		"actConcluded": "章節已結束"
 	},
+	"bottomNav": {
+		"chat": "聊天",
+		"choices": "選擇",
+		"menu": "選單"
+	},
+	"mobileInput": {
+		"send": "傳送",
+		"stop": "停止",
+		"close": "關閉",
+		"inputSheet": "訊息",
+		"directorNotes": "導演備註",
+		"directorNotesPlaceholder": "新增導演備註…"
+	},
+	"choicesSheet": {
+		"title": "選擇",
+		"close": "關閉",
+		"noDecisions": "沒有待處理的回應選項"
+	},
 	"components": {
 		"chatControls": {
 			"controls": "控制台",
