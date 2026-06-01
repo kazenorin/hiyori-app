@@ -46,6 +46,7 @@
 	let appReady = $state(false);
 	let sidebarBlocked = $derived(getIsWorldBuilderActive());
 	let sidebarOpen = $state(false);
+	let suppressSidebarClose = $state(false);
 	let newActLineName = $state('');
 	let showNewActLine = $state(false);
 	let actLineEventSummaries = $state<Map<string, ActLineEventSummary>>(new Map());
@@ -146,7 +147,10 @@
 
 	// Close sidebar drawer on any navigation (prevents it staying open across pages)
 	beforeNavigate(() => {
-		sidebarOpen = false;
+		if (!suppressSidebarClose) {
+			sidebarOpen = false;
+		}
+		suppressSidebarClose = false;
 	});
 
 	onMount(async () => {
@@ -169,6 +173,7 @@
 	});
 
 	async function handleSelectStory(id: string) {
+		suppressSidebarClose = true;
 		if (getIsWorldBuilderActive()) exitWorldBuilderMode();
 		await selectStory(id);
 		clearMessages();
@@ -176,6 +181,7 @@
 	}
 
 	async function handleSelectAct(id: string) {
+		suppressSidebarClose = true;
 		if (getIsWorldBuilderActive()) exitWorldBuilderMode();
 		await selectAct(id);
 		clearMessages();
