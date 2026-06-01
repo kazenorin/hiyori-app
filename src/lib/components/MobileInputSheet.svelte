@@ -25,17 +25,17 @@
 		onKeydown,
 	}: Props = $props();
 
-	let isExpanded = $state(false);
+	let isExpanded = $derived(mobileNav.inputSheetOpen);
 	let textareaRef = $state<HTMLTextAreaElement | null>(null);
 	let isChoicesActive = $derived(mobileNav.activeTab === 'choices');
 
 	function expand() {
-		isExpanded = true;
+		mobileNav.inputSheetOpen = true;
 		setTimeout(() => textareaRef?.focus(), 100);
 	}
 
 	function collapse() {
-		isExpanded = false;
+		mobileNav.inputSheetOpen = false;
 	}
 
 	function handleSubmit() {

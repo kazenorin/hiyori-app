@@ -10,9 +10,13 @@
 	let { sidebarOpen = false, onOpenSidebar }: Props = $props();
 
 	function handleTabClick(tab: 'chat' | 'choices' | 'menu') {
+		// Always dismiss expanded input sheet on any tab click
+		mobileNav.inputSheetOpen = false;
+
 		if (tab === 'menu') {
 			onOpenSidebar?.();
-			// Don't change activeTab — menu is an action, not a tab state
+			// Hide choices sheet when menu opens
+			mobileNav.activeTab = 'chat';
 		} else if (tab === 'choices') {
 			mobileNav.activeTab = mobileNav.activeTab === 'choices' ? 'chat' : 'choices';
 		} else {

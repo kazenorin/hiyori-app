@@ -11,6 +11,7 @@
 		getActs,
 		getActLines,
 		getActiveStoryId,
+		getActiveStoryName,
 		getActiveActId,
 		getActiveActLineId,
 		getActPlotGenerationPhase,
@@ -539,7 +540,7 @@
 
 		<!-- Mobile Sidebar Drawer -->
 		{#if sidebarOpen}
-			<div class="fixed inset-0 z-50 flex md:hidden" role="dialog" aria-modal="true">
+			<div class="fixed inset-0 z-[60] flex md:hidden" role="dialog" aria-modal="true">
 				<aside
 					class="w-[80vw] max-w-[320px] bg-surface-50-950 border-r border-surface-200-800 flex flex-col overflow-y-auto"
 					onclick={(e) => e.stopPropagation()}
@@ -563,7 +564,7 @@
 						/>
 					</svg>
 				</button>
-				<span class="text-sm font-medium text-surface-700-300 truncate">{getStories()[0]?.name ?? t('sidebar.chat')}</span>
+				<span class="text-sm font-medium text-surface-700-300 truncate">{getActiveStoryName() ?? t('sidebar.chat')}</span>
 			</div>
 
 			{@render children()}

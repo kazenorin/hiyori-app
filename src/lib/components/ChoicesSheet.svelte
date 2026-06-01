@@ -2,6 +2,7 @@
 	import { t } from '$lib/i18n';
 	import { mobileNav, mobileFeatures } from '$lib/stores/mobile-nav.svelte';
 	import MarkdownContent from './MarkdownContent.svelte';
+	import { Accordion } from '@skeletonlabs/skeleton-svelte';
 
 	interface Props {
 		decisions: string[];
@@ -107,19 +108,34 @@
 				{/if}
 
 				{#if activePlotThreads.length > 0}
-					<div class="mb-3">
-						<span class="text-xs font-medium text-surface-500 uppercase tracking-wider"
-							>{t('components.chatControls.activePlotThreads')}</span
-						>
-						<div class="text-sm text-surface-700-300 mt-1 space-y-1">
-							{#each activePlotThreads as thread}
-								<div class="flex items-center gap-1.5">
-									<span class="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
-									<span>{thread}</span>
+					<Accordion collapsible>
+						<Accordion.Item value="plot-threads">
+							<Accordion.ItemTrigger
+								class="flex items-center justify-between w-full text-xs font-medium text-surface-500 uppercase tracking-wider py-2"
+							>
+								<span>{t('components.chatControls.activePlotThreads')}</span>
+								<Accordion.ItemIndicator>
+									<svg class="h-4 w-4 transition-transform" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+										<path
+											fill-rule="evenodd"
+											d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+											clip-rule="evenodd"
+										/>
+									</svg>
+								</Accordion.ItemIndicator>
+							</Accordion.ItemTrigger>
+							<Accordion.ItemContent>
+								<div class="text-sm text-surface-700-300 mt-1 space-y-1 pb-2">
+									{#each activePlotThreads as thread}
+										<div class="flex items-center gap-1.5">
+											<span class="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
+											<span>{thread}</span>
+										</div>
+									{/each}
 								</div>
-							{/each}
-						</div>
-					</div>
+							</Accordion.ItemContent>
+						</Accordion.Item>
+					</Accordion>
 				{/if}
 
 				{#if decisions.length > 0}
