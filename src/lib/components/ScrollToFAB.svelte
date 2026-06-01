@@ -46,10 +46,12 @@
 	type="button"
 	aria-label="Scroll to bottom"
 	onclick={handleClick}
-	class="mx-auto -mt-9 mb-2 max-md:mb-[100px] z-10 rounded-full
+	class="z-10 rounded-full
 	       h-10 w-10 flex items-center justify-center
 	       bg-surface-50-950 border border-surface-200-700
 	       shadow-lg transition-all duration-150
+	       fixed md:static left-1/2 md:left-auto -translate-x-1/2 md:translate-x-0
+	       bottom-[120px] md:bottom-auto md:mx-auto md:-mt-9 md:mb-2
 	       {visible
 		? 'opacity-50 pointer-events-auto hover:opacity-100 hover:shadow-xl hover:border-primary-500'
 		: 'opacity-0 pointer-events-none'}"
