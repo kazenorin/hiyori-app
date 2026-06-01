@@ -584,7 +584,9 @@
 		<main class="flex-1 flex flex-col min-w-0 pb-[52px] md:pb-0">
 			<!-- Mobile header bar (tab bar replaces hamburger; just show story name) -->
 			<div class="md:hidden flex items-center justify-center p-3 border-b border-surface-200-800 shrink-0">
-				<span class="text-sm font-medium text-surface-700-300 truncate">{getActiveStoryName() ?? t('sidebar.chat')}</span>
+				<button class="text-sm font-medium text-surface-700-300 truncate cursor-pointer" onclick={() => (sidebarOpen = true)} type="button">
+					{getActiveStoryName() ?? t('sidebar.chat')}
+				</button>
 			</div>
 
 			{@render children()}

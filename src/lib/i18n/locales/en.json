@@ -154,6 +154,7 @@
 		"importWorld": "Import World",
 		"keepCurrentPlot": "Keep current plot",
 		"tellUsWhatsDifferent": "Tell us what's different",
+		"newPlot": "New Plot",
 		"send": "Send",
 		"stop": "Stop",
 		"exit": "Exit",
@@ -184,9 +185,9 @@
 		"effectiveTo": "To scene",
 		"sceneRangeUnset": "All scenes",
 		"plotMode": "Plot Mode",
-		"keepCurrentMode": "Keep Current Mode",
-		"switchToGuidance": "Guidance-based",
-		"switchToPhaseEvent": "Event-based"
+		"keepPlotMode": "Keep Plot Mode",
+		"switchToGuidance": "Guidance",
+		"switchToPhaseEvent": "Event"
 	},
 	"sidebar": {
 		"loading": "Loading...",

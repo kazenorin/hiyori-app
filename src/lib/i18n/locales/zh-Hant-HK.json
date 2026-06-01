@@ -154,6 +154,7 @@
 		"importWorld": "匯入世界",
 		"keepCurrentPlot": "保留目前劇情",
 		"tellUsWhatsDifferent": "引入不同的元素",
+		"newPlot": "新劇情",
 		"send": "傳送",
 		"stop": "停止",
 		"exit": "退出",
@@ -178,7 +179,7 @@
 		"effectiveTo": "結束場景",
 		"sceneRangeUnset": "所有場景",
 		"plotMode": "劇情模式",
-		"keepCurrentMode": "維持目前模式",
+		"keepPlotMode": "保留劇情模式",
 		"switchToGuidance": "引導式",
 		"switchToPhaseEvent": "事件式"
 	},

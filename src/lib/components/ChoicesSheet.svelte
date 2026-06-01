@@ -149,7 +149,7 @@
 									onclick={() => handleDecision(decision)}
 									disabled={isBusy}
 								>
-									{i + 1}. {decision}
+									{decision}
 								</button>
 							{/each}
 						</div>
