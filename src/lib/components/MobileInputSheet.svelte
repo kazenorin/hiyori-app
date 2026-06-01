@@ -51,14 +51,15 @@
 
 {#if !isExpanded}
 	<div
-		class="fixed left-0 right-0 z-30 bg-surface-50-950 border-t border-surface-200-800 px-2 py-1.5"
+		class="fixed left-0 right-0 z-30 bg-surface-50-950 border-t border-surface-200-800 px-3 py-2"
 		style="bottom: calc(52px + env(safe-area-inset-bottom, 0px));"
 	>
-		<div class="flex items-center gap-2">
+		<div class="flex items-center gap-3">
+			<!-- Message preview / expand trigger -->
 			<button
 				type="button"
 				onclick={expand}
-				class="flex-1 flex items-center px-3 py-2 rounded-(--radius-base) bg-surface-100-900 border border-surface-200-800 text-sm text-surface-500 text-left min-h-[40px]"
+				class="flex-1 flex items-center px-4 py-2.5 rounded-(--radius-base) bg-surface-100-900 border border-surface-200-800 text-sm text-surface-500 text-left min-h-[48px]"
 				aria-label={placeholder}
 			>
 				{#if value}
@@ -67,16 +68,18 @@
 					<span class="truncate">{placeholder}</span>
 				{/if}
 			</button>
+
+			<!-- Send FAB -->
 			<button
 				type="button"
-				class="shrink-0 w-10 h-10 rounded-(--radius-base) bg-primary-500 text-white flex items-center justify-center disabled:opacity-50"
+				class="shrink-0 w-12 h-12 rounded-full bg-primary-500 text-white flex items-center justify-center disabled:opacity-40 shadow-lg shadow-primary-500/30 active:scale-95 transition-transform"
 				disabled={!value.trim() || isDisabled}
 				onclick={handleSubmit}
 				aria-label={t('mobileInput.send')}
 			>
 				<svg
 					xmlns="http://www.w3.org/2000/svg"
-					class="h-5 w-5"
+					class="h-6 w-6"
 					viewBox="0 0 24 24"
 					fill="none"
 					stroke="currentColor"
