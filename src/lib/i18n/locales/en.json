@@ -228,6 +228,24 @@
 		"worldBuilderActive": "World builder in progress...",
 		"actConcluded": "Act Concluded"
 	},
+	"bottomNav": {
+		"chat": "Chat",
+		"choices": "Choices",
+		"menu": "Menu"
+	},
+	"mobileInput": {
+		"send": "Send",
+		"stop": "Stop",
+		"close": "Close",
+		"inputSheet": "Message",
+		"directorNotes": "Director's Notes",
+		"directorNotesPlaceholder": "Add a director's note..."
+	},
+	"choicesSheet": {
+		"title": "Choices",
+		"close": "Close",
+		"noDecisions": "No pending decisions"
+	},
 	"components": {
 		"chatControls": {
 			"controls": "Controls",

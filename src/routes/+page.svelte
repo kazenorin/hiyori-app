@@ -91,6 +91,9 @@
 	import { updateWorldCard, ensureWorldFile } from '$lib/ai/world-generator';
 	import { generateAndRecordActShortSummary } from '$lib/ai/act-short-summary-generator';
 	import ScrollToFAB from '$lib/components/ScrollToFAB.svelte';
+	import MobileInputSheet from '$lib/components/MobileInputSheet.svelte';
+	import ChoicesSheet from '$lib/components/ChoicesSheet.svelte';
+	import { mobileNav } from '$lib/stores/mobile-nav.svelte';
 	import { scrollToBottom } from '$lib/utils/scroll';
 
 	let input = $state('');
@@ -100,12 +103,18 @@
 	let wasChatStreaming = $state(false);
 	let wasWbStreaming = $state(false);
 	let rightPanelExpanded = $state(false);
+	let mobileDirectorNotesExpanded = $state(false);
 	let latestDecisions = $derived(getLatestDecisions());
 	let latestActivePlotThreads = $derived(getLatestActivePlotThreads());
 	let latestDecisionContext = $derived(getLatestDecisionContext());
 	let lastMessageIdx = $derived(getMessages().findLastIndex((m: UIMessage) => m.role === 'assistant'));
 	let characterNames = $derived(getCharacterNames());
 	let storyMessageTemplate = $state<string>('');
+
+	// Sync choices badge count for mobile bottom nav
+	$effect(() => {
+		mobileNav.choicesCount = latestDecisions.length;
+	});
 
 	$effect(() => {
 		getActiveActLineId();
@@ -769,8 +778,8 @@
 		<!-- World builder mode -->
 		<div class="flex-1 flex flex-col min-h-0 min-w-0">
 			<!-- Chat messages area -->
-			<div bind:this={wbChatContainer} class="flex-1 overflow-y-auto p-4 lg:p-6 min-w-0">
-				<div class="px-4 lg:px-8 space-y-4">
+			<div bind:this={wbChatContainer} class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6 min-w-0">
+				<div class="px-2 md:px-4 lg:px-8 space-y-3 md:space-y-4">
 					<div class="text-center py-4">
 						<h2 class="h2 font-display text-surface-700-300 mb-2">{t('chat.worldBuilder')}</h2>
 						<p class="text-xs text-surface-500">{t('chat.worldBuilderPrompt')}</p>
@@ -779,7 +788,7 @@
 					{#each getWorldBuilderMessages() as message, i (message.id)}
 						{#if message.role === 'user'}
 							<div class="flex justify-end">
-								<div class="max-w-full md:max-w-[80%] min-w-0 rounded-(--radius-container) bg-primary-100-900 p-5">
+								<div class="max-w-[90%] md:max-w-[80%] min-w-0 rounded-(--radius-container) bg-primary-100-900 p-3 md:p-5">
 									{#if isEditingMessage(message.id)}
 										<textarea
 											class="input w-full resize-y text-sm leading-relaxed min-h-20 bg-surface-50-950 text-primary-900-100"
@@ -815,7 +824,7 @@
 								</div>
 							</div>
 						{:else}
-							<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
+							<div class="rounded-(--radius-container) bg-surface-50-950 p-3 md:p-5 shadow-message border border-surface-200-800">
 								{#if isEditingMessage(message.id)}
 									<textarea
 										class="input w-full resize-y text-sm leading-relaxed min-h-32"
@@ -840,7 +849,7 @@
 									></span>
 								{/if}
 								{#if !getIsWorldBuilderStreaming() && message.content && !isEditingMessage(message.id)}
-									<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
+									<div class="flex gap-2 mt-2 md:mt-3 pt-2 md:pt-3 border-t border-surface-200-800">
 										<button
 											class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 											title="Edit message"
@@ -874,33 +883,50 @@
 
 			<ScrollToFAB chatContainer={wbChatContainer} isStreaming={getIsWorldBuilderStreaming()} />
 
-			<WorldBuilderControls
-				isComplete={getIsWorldBuilderComplete()}
-				storyName={getWorldBuilderStoryName()}
-				{showCreateStoryOptions}
-				{isCreatingStory}
-				{createStoryError}
-				worldBuilderError={getWorldBuilderError()}
-				isInterviewMode={getActPlotInterview()}
-				isGameResumeMode={getGameResumeInterview()}
-				hasInterviewMessages={getHasInterviewMessages()}
-				isStreaming={getIsWorldBuilderStreaming()}
-				showUpdateWorldCardOption={getIsNextActInterview()}
-				bind:updateWorldCard={updateWorldCardChecked}
-				onCreateStory={handleCreateFromWorldBuilder}
-				onStartImmediate={handleCreateStoryImmediate}
-				onStartInterview={handleCreateActPlotInterview}
-				onStartGame={handleStartGameAfterInterview}
-				onCancel={exitWorldBuilderMode}
-				onDismissOptions={cancelCreateStoryOptions}
-				onRetry={handleCreateStoryImmediate}
-				chatContainer={wbChatContainer}
-			/>
+			<!-- Pinned control section -->
+			<div class="hidden md:block">
+				<WorldBuilderControls
+					isComplete={getIsWorldBuilderComplete()}
+					storyName={getWorldBuilderStoryName()}
+					{showCreateStoryOptions}
+					{isCreatingStory}
+					{createStoryError}
+					worldBuilderError={getWorldBuilderError()}
+					isInterviewMode={getActPlotInterview()}
+					isGameResumeMode={getGameResumeInterview()}
+					hasInterviewMessages={getHasInterviewMessages()}
+					isStreaming={getIsWorldBuilderStreaming()}
+					showUpdateWorldCardOption={getIsNextActInterview()}
+					bind:updateWorldCard={updateWorldCardChecked}
+					onCreateStory={handleCreateFromWorldBuilder}
+					onStartImmediate={handleCreateStoryImmediate}
+					onStartInterview={handleCreateActPlotInterview}
+					onStartGame={handleStartGameAfterInterview}
+					onCancel={exitWorldBuilderMode}
+					onDismissOptions={cancelCreateStoryOptions}
+					onRetry={handleCreateStoryImmediate}
+					chatContainer={wbChatContainer}
+				/>
+			</div>
+
+			<!-- Mobile Input Sheet -->
+			<div class="md:hidden">
+				<MobileInputSheet
+					bind:value={input}
+					isStreaming={getIsWorldBuilderStreaming()}
+					isDisabled={getIsWorldBuilderStreaming() || (getIsWorldBuilderComplete() && !getActPlotInterview())}
+					placeholder={t('chat.worldBuilderPlaceholder')}
+					showDirectorNotes={false}
+					onSubmit={handleSubmit}
+					onStop={stopWorldBuilderStreaming}
+					onKeydown={handleKeydown}
+				/>
+			</div>
 		</div>
 
-		<!-- Right-side input panel (mobile collapsible) -->
+		<!-- Right-side input panel (tablet+ only) -->
 		<aside
-			class="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-surface-200-800 flex flex-col bg-surface-50-950 shrink-0 {rightPanelExpanded
+			class="hidden md:flex lg:w-80 border-t lg:border-t-0 lg:border-l border-surface-200-800 flex-col bg-surface-50-950 shrink-0 {rightPanelExpanded
 				? 'max-h-none'
 				: 'lg:max-h-none max-h-10'}"
 		>
@@ -965,8 +991,8 @@
 		<!-- Middle column: scrollable chat + pinned controls -->
 		<div class="flex-1 flex flex-col min-h-0 min-w-0">
 			<!-- Chat messages area -->
-			<div bind:this={chatContainer} class="flex-1 overflow-y-auto p-4 lg:p-6 min-w-0">
-				<div class="px-4 lg:px-8 space-y-4">
+			<div bind:this={chatContainer} class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6 min-w-0">
+				<div class="px-2 md:px-4 lg:px-8 space-y-3 md:space-y-4">
 					{#if getMessages().length === 0}
 						<div class="flex flex-col items-center justify-center py-24 text-center">
 							<h2 class="h2 font-display text-surface-700-300 mb-3">{t('chat.beginAdventure')}</h2>
@@ -976,7 +1002,7 @@
 						{#each getMessages() as message, i (message.id)}
 							{#if message.role === 'user'}
 								<div class="flex justify-end">
-									<div class="max-w-[80%] min-w-0 rounded-(--radius-container) bg-primary-100-900 p-5">
+									<div class="max-w-[90%] md:max-w-[80%] min-w-0 rounded-(--radius-container) bg-primary-100-900 p-3 md:p-5">
 										<div class="leading-relaxed text-primary-900-100 min-w-0">
 											<MarkdownContent content={message.content} />
 										</div>
@@ -1002,7 +1028,7 @@
 							{:else if shouldShowStreamingCursor(message)}
 								<span data-streaming-cursor class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm"></span>
 							{:else}
-								<div class="rounded-(--radius-container) bg-surface-50-950 p-5 shadow-message border border-surface-200-800">
+								<div class="rounded-(--radius-container) bg-surface-50-950 p-3 md:p-5 shadow-message border border-surface-200-800">
 									<!-- Pipeline phase accordions -->
 									{#if message.phases && message.phases.length > 0}
 										{#each message.phases as phase, pi (pi)}
@@ -1249,24 +1275,55 @@
 			<ScrollToFAB {chatContainer} isStreaming={getIsStreaming()} />
 
 			<!-- Pinned control section -->
-			<ChatControls
+			<div class="hidden md:block">
+				<ChatControls
+					decisions={latestDecisions}
+					activePlotThreads={latestActivePlotThreads}
+					decisionContext={latestDecisionContext}
+					isStreaming={getIsStreaming()}
+					isBusy={getIsBusy()}
+					actEnded={getActEnded()}
+					storyConcluded={getStoryConcluded()}
+					onDecisionClick={handleDecisionClick}
+					onContinueToNextAct={handleContinueToNextAct}
+					onEndStory={handleEndStory}
+					{chatContainer}
+				/>
+			</div>
+
+			<!-- Mobile Choices Sheet -->
+			<ChoicesSheet
 				decisions={latestDecisions}
 				activePlotThreads={latestActivePlotThreads}
 				decisionContext={latestDecisionContext}
-				isStreaming={getIsStreaming()}
-				isBusy={getIsBusy()}
 				actEnded={getActEnded()}
 				storyConcluded={getStoryConcluded()}
+				isBusy={getIsBusy()}
 				onDecisionClick={handleDecisionClick}
 				onContinueToNextAct={handleContinueToNextAct}
 				onEndStory={handleEndStory}
-				{chatContainer}
 			/>
+
+			<!-- Mobile Input Sheet -->
+			<div class="md:hidden">
+				<MobileInputSheet
+					bind:value={input}
+					isStreaming={getIsStreaming()}
+					isDisabled={getIsBusy() || getActEnded()}
+					placeholder={t('chat.chatPlaceholder')}
+					showDirectorNotes={isDirectorModeEnabled()}
+					directorNotesExpanded={mobileDirectorNotesExpanded}
+					onDirectorNotesToggle={() => (mobileDirectorNotesExpanded = !mobileDirectorNotesExpanded)}
+					onSubmit={handleSubmit}
+					onStop={stopStreaming}
+					onKeydown={handleKeydown}
+				/>
+			</div>
 		</div>
 
-		<!-- Right-side input panel (mobile collapsible) -->
+		<!-- Right-side input panel (tablet+ only, desktop side panel) -->
 		<aside
-			class="w-full lg:w-80 border-t lg:border-t-0 lg:border-l border-surface-200-800 flex flex-col bg-surface-50-950 shrink-0 {rightPanelExpanded
+			class="hidden md:flex lg:w-80 border-t lg:border-t-0 lg:border-l border-surface-200-800 flex-col bg-surface-50-950 shrink-0 {rightPanelExpanded
 				? 'max-h-none'
 				: 'lg:max-h-none max-h-10'}"
 		>
@@ -1285,8 +1342,11 @@
 					fill="currentColor"
 					aria-hidden="true"
 				>
-					003cpath fill-rule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08
-					0l-4.25-4.5a.75.75 0 01.02-1.06z" clip-rule="evenodd" />
+					<path
+						fill-rule="evenodd"
+						d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+						clip-rule="evenodd"
+					/>
 				</svg>
 			</button>
 

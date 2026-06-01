@@ -203,7 +203,7 @@
 						{/if}
 					</button>
 				</div>
-				<div class="space-y-2 px-8 pb-3">
+				<div class="space-y-2 px-4 md:px-8 pb-3 max-h-[50vh] lg:max-h-none overflow-y-auto">
 					{#if worldBuilderError}
 						<div class="rounded-(--radius-container) bg-error-100-900 p-4 mb-2">
 							<p class="text-sm text-error-700-300">{worldBuilderError}</p>

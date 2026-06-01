@@ -36,6 +36,9 @@
 	import { t } from '$lib/i18n';
 	import type { ActLineEventSummary } from '$lib/db/act-lines';
 
+	import BottomTabBar from '$lib/components/BottomTabBar.svelte';
+	import { mobileNav, mobileFeatures } from '$lib/stores/mobile-nav.svelte';
+
 	let { children } = $props();
 	let appError = $state<string | null>(null);
 	let initStatus = $state('Starting...');
@@ -45,6 +48,20 @@
 	let newActLineName = $state('');
 	let showNewActLine = $state(false);
 	let actLineEventSummaries = $state<Map<string, ActLineEventSummary>>(new Map());
+
+	// Mobile detection
+	$effect(() => {
+		const mql = window.matchMedia('(max-width: 767px)');
+		mobileFeatures.isPhone = mql.matches;
+		const handler = (e: MediaQueryListEvent) => {
+			mobileFeatures.isPhone = e.matches;
+			if (!e.matches) {
+				mobileNav.activeTab = 'chat';
+			}
+		};
+		mql.addEventListener('change', handler);
+		return () => mql.removeEventListener('change', handler);
+	});
 
 	// Inline rename state
 	let editingId = $state<string | null>(null);
@@ -516,15 +533,15 @@
 		</div>
 	{:else}
 		<!-- Desktop Sidebar -->
-		<aside class="hidden lg:flex lg:w-72 border-r border-surface-200-800 flex-col">
+		<aside class="hidden md:flex lg:w-72 border-r border-surface-200-800 flex-col">
 			{@render SidebarNavFooter()}
 		</aside>
 
 		<!-- Mobile Sidebar Drawer -->
 		{#if sidebarOpen}
-			<div class="fixed inset-0 z-50 flex lg:hidden" role="dialog" aria-modal="true">
+			<div class="fixed inset-0 z-50 flex md:hidden" role="dialog" aria-modal="true">
 				<aside
-					class="w-72 bg-surface-50-950 border-r border-surface-200-800 flex flex-col overflow-y-auto"
+					class="w-[80vw] max-w-[320px] bg-surface-50-950 border-r border-surface-200-800 flex flex-col overflow-y-auto"
 					onclick={(e) => e.stopPropagation()}
 				>
 					{@render SidebarNavFooter()}
@@ -534,9 +551,9 @@
 		{/if}
 
 		<!-- Main content -->
-		<main class="flex-1 flex flex-col min-w-0">
+		<main class="flex-1 flex flex-col min-w-0 pb-[52px] md:pb-0">
 			<!-- Mobile header bar -->
-			<div class="lg:hidden flex items-center gap-3 p-3 border-b border-surface-200-800 shrink-0">
+			<div class="md:hidden flex items-center gap-3 p-3 border-b border-surface-200-800 shrink-0">
 				<button class="btn preset-tonal p-2 text-surface-500" type="button" onclick={() => (sidebarOpen = true)} aria-label="Open sidebar">
 					<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
 						<path
@@ -550,6 +567,7 @@
 			</div>
 
 			{@render children()}
+			<BottomTabBar onOpenSidebar={() => (sidebarOpen = true)} />
 		</main>
 	{/if}
 </div>
