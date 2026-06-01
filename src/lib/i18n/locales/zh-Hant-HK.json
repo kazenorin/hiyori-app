@@ -140,7 +140,10 @@
 		"importConfigData": "匯入設定",
 		"importConfigDataDescription": "從先前匯出的設定備份還原設定和提示詞。",
 		"importConfigDataWarning": "匯入將取代所有目前的設定 — 設定、提供者和提示詞範本。此操作無法復原。",
-		"importing": "匯入中…"
+		"importing": "匯入中…",
+		"bypassCorsViaWispProxy": "透過 Wisp proxy 繞過 CORS",
+		"wispProxyUrl": "Wisp Proxy URL",
+		"wispProxyUrlHint": "連接至 Wisp proxy 伺服器（如 wisp-server-python）以繞過瀏覽器的 CORS 限制來路由 API 請求。"
 	},
 	"chat": {
 		"emptyState": "建立故事、加入章節，然後選擇或建立故事線即可開始聊天。",

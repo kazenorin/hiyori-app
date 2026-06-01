@@ -140,7 +140,10 @@
 		"importConfigData": "Import Configuration",
 		"importConfigDataDescription": "Restore settings and prompts from a previously exported configuration backup.",
 		"importConfigDataWarning": "Importing will replace all current configuration — settings, providers, and prompt templates. This cannot be undone.",
-		"importing": "Importing..."
+		"importing": "Importing...",
+		"bypassCorsViaWispProxy": "Bypass CORS via Wisp proxy",
+		"wispProxyUrl": "Wisp Proxy URL",
+		"wispProxyUrlHint": "Connects to a Wisp proxy server (e.g. wisp-server-python) to route API requests without browser CORS restrictions."
 	},
 	"chat": {
 		"emptyState": "Create a story, add an act, then select or create an act line to start chatting.",

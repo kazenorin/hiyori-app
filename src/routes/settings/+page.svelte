@@ -442,6 +442,20 @@
 									<input class="input mt-1" type="password" placeholder="sk-..." bind:value={formApiKey} />
 									<span class="text-xs text-surface-500 mt-1 block">{t('settings.apiKeyHint')}</span>
 								</label>
+
+								{#if !isTauriSync()}
+									<label class="flex items-center gap-2">
+										<input type="checkbox" class="checkbox" bind:checked={formCorsBypassEnabled} />
+										<span class="text-sm font-medium text-surface-700-300">{t('settings.bypassCorsViaWispProxy')}</span>
+									</label>
+									{#if formCorsBypassEnabled}
+										<label class="block">
+											<span class="text-sm font-medium text-surface-700-300">{t('settings.wispProxyUrl')}</span>
+											<input class="input mt-1" type="url" placeholder="ws://localhost:6001" bind:value={formWispProxyUrl} />
+											<span class="text-xs text-surface-500 mt-1 block">{t('settings.wispProxyUrlHint')}</span>
+										</label>
+									{/if}
+								{/if}
 							</div>
 						</details>
 						<div class="flex gap-2">
@@ -557,15 +571,13 @@
 							{#if !isTauriSync()}
 								<label class="flex items-center gap-2">
 									<input type="checkbox" class="checkbox" bind:checked={formCorsBypassEnabled} />
-									<span class="text-sm font-medium text-surface-700-300">Bypass CORS via Wisp proxy</span>
+									<span class="text-sm font-medium text-surface-700-300">{t('settings.bypassCorsViaWispProxy')}</span>
 								</label>
 								{#if formCorsBypassEnabled}
 									<label class="block">
-										<span class="text-sm font-medium text-surface-700-300">Wisp Proxy URL</span>
+										<span class="text-sm font-medium text-surface-700-300">{t('settings.wispProxyUrl')}</span>
 										<input class="input mt-1" type="url" placeholder="ws://localhost:6001" bind:value={formWispProxyUrl} />
-										<span class="text-xs text-surface-500 mt-1 block"
-											>Connects to a Wisp proxy server (e.g. wisp-server-python) to route API requests without browser CORS restrictions.</span
-										>
+										<span class="text-xs text-surface-500 mt-1 block">{t('settings.wispProxyUrlHint')}</span>
 									</label>
 								{/if}
 							{/if}
