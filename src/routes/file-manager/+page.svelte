@@ -341,18 +341,6 @@
 </script>
 
 <div class="flex h-full flex-col">
-	<div class="flex items-center gap-2 p-3 border-b border-surface-200-800 shrink-0 md:hidden">
-		<a href="/" class="text-sm font-medium text-surface-500 hover:text-surface-700-300 transition-colors flex items-center gap-1">
-			<svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-				<path
-					fill-rule="evenodd"
-					d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
-					clip-rule="evenodd"
-				/>
-			</svg>
-			{t('chat.back')}
-		</a>
-	</div>
 	<div class="flex items-center justify-between border-b border-surface-200-800 px-3 py-2 md:px-4">
 		<h2 class="text-sm font-semibold text-surface-900-100">{t('fileManager.title')}</h2>
 		<div class="flex items-center gap-2">

@@ -93,6 +93,7 @@
 	import ScrollToFAB from '$lib/components/ScrollToFAB.svelte';
 	import MobileInputSheet from '$lib/components/MobileInputSheet.svelte';
 	import ChoicesSheet from '$lib/components/ChoicesSheet.svelte';
+	import MessageActionBar from '$lib/components/MessageActionBar.svelte';
 	import { mobileNav } from '$lib/stores/mobile-nav.svelte';
 	import { scrollToBottom } from '$lib/utils/scroll';
 
@@ -1183,7 +1184,7 @@
 											<button class="btn preset-tonal text-xs py-1 px-3" onclick={cancelEdit}>{t('chat.cancel')}</button>
 										</div>
 									{:else if !getIsBusy() && (message.content || i === lastMessageIdx)}
-										<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
+										<div class="hidden md:flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
 											{#if message.content}
 												<button
 													class="text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
@@ -1259,6 +1260,22 @@
 											{/if}
 										</div>
 									{/if}
+								<div class="md:hidden">
+									<MessageActionBar
+										showCopy={!!message.content}
+										showEdit={!!(message.variables && hasTemplateMetadata(message.variables) && i === lastMessageIdx)}
+										showFork={!!(message.variables && hasTemplateMetadata(message.variables))}
+										showRegenerate={i === lastMessageIdx}
+										showDelete={i === lastMessageIdx}
+										onCopy={() => handleCopy(message.id, message.content)}
+										onEdit={message.variables && hasTemplateMetadata(message.variables) && i === lastMessageIdx
+											? () => startEditMessage(message, true)
+											: undefined}
+										onFork={message.variables && hasTemplateMetadata(message.variables) ? () => handleFork(i) : undefined}
+										onRegenerate={i === lastMessageIdx ? () => handleRegenerate(message.id) : undefined}
+										onDelete={i === lastMessageIdx ? handleDelete : undefined}
+									/>
+								</div>
 								</div>
 							{/if}
 						{/each}

@@ -1,21 +1,28 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
 	import { mobileNav, mobileFeatures } from '$lib/stores/mobile-nav.svelte';
+	import { page } from '$app/stores';
+	import { goto } from '$app/navigation';
 
 	interface Props {
-		sidebarOpen?: boolean;
 		onOpenSidebar?: () => void;
 	}
 
-	let { sidebarOpen = false, onOpenSidebar }: Props = $props();
+	let { onOpenSidebar }: Props = $props();
+
+	let isOnChat = $derived($page.url.pathname === '/');
 
 	function handleTabClick(tab: 'chat' | 'choices' | 'menu') {
 		// Always dismiss expanded input sheet on any tab click
 		mobileNav.inputSheetOpen = false;
 
+		if (!isOnChat) {
+			// On secondary pages, all tabs navigate back to chat first
+			goto('/');
+		}
+
 		if (tab === 'menu') {
 			onOpenSidebar?.();
-			// Hide choices sheet when menu opens
 			mobileNav.activeTab = 'chat';
 		} else if (tab === 'choices') {
 			mobileNav.activeTab = mobileNav.activeTab === 'choices' ? 'chat' : 'choices';
