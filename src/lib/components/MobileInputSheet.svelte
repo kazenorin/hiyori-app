@@ -1,5 +1,7 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
+	import { mobileNav } from '$lib/stores/mobile-nav.svelte';
+	import DirectorNotesPanel from './DirectorNotesPanel.svelte';
 
 	interface Props {
 		value: string;
@@ -7,13 +9,9 @@
 		isDisabled: boolean;
 		placeholder: string;
 		showDirectorNotes: boolean;
-		directorNotesExpanded?: boolean;
-		onDirectorNotesToggle?: () => void;
 		onSubmit: () => void;
 		onStop?: () => void;
 		onKeydown: (e: KeyboardEvent) => void;
-		// Director notes content handlers
-		onDirectorNotesContentUpdate?: (text: string) => void;
 	}
 
 	let {
@@ -22,16 +20,14 @@
 		isDisabled = false,
 		placeholder = '',
 		showDirectorNotes = false,
-		directorNotesExpanded = false,
-		onDirectorNotesToggle,
 		onSubmit,
 		onStop,
 		onKeydown,
-		onDirectorNotesContentUpdate,
 	}: Props = $props();
 
 	let isExpanded = $state(false);
 	let textareaRef = $state<HTMLTextAreaElement | null>(null);
+	let isChoicesActive = $derived(mobileNav.activeTab === 'choices');
 
 	function expand() {
 		isExpanded = true;
@@ -49,7 +45,7 @@
 	}
 </script>
 
-{#if !isExpanded}
+{#if !isExpanded && !isChoicesActive}
 	<!-- Collapsed input bar: sits above the z-40 tab bar -->
 	<div
 		class="fixed left-0 right-0 z-50 bg-surface-50-950 border-t border-surface-200-800 px-3 py-2"
@@ -131,50 +127,11 @@
 			<div class="w-8 h-1 rounded-full bg-surface-400-600"></div>
 		</button>
 
-		<!-- Director notes toggle -->
+		<!-- Director notes -->
 		{#if showDirectorNotes}
-			<div class="mb-2">
-				<button
-					type="button"
-					class="flex items-center gap-1.5 text-xs text-surface-500 hover:text-surface-700-300 transition-colors"
-					onclick={() => onDirectorNotesToggle?.()}
-				>
-					<svg
-						xmlns="http://www.w3.org/2000/svg"
-						class="h-3.5 w-3.5 {directorNotesExpanded ? 'text-primary-500' : ''}"
-						viewBox="0 0 24 24"
-						fill="none"
-						stroke="currentColor"
-						stroke-width="2"
-						stroke-linecap="round"
-						stroke-linejoin="round"
-					>
-						<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-						<polyline points="14 2 14 8 20 8" />
-						<line x1="16" y1="13" x2="8" y2="13" />
-						<line x1="16" y1="17" x2="8" y2="17" />
-						<polyline points="10 9 9 9 8 9" />
-					</svg>
-					<span>{t('mobileInput.directorNotes')}</span>
-					<svg class="h-3 w-3 transition-transform {directorNotesExpanded ? 'rotate-180' : ''}" viewBox="0 0 20 20" fill="currentColor">
-						<path
-							fill-rule="evenodd"
-							d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				</button>
+			<div class="border-b border-surface-200-800 pb-2 mb-2">
+				<DirectorNotesPanel />
 			</div>
-			{#if directorNotesExpanded}
-				<div class="mb-2 p-2 bg-surface-100-900 rounded-(--radius-base) border border-surface-200-800">
-					<p class="text-xs text-surface-500 mb-1">{t('mobileInput.directorNotesPlaceholder')}</p>
-					<textarea
-						class="input w-full text-sm resize-none h-20"
-						placeholder={t('mobileInput.directorNotesPlaceholder')}
-						oninput={(e) => onDirectorNotesContentUpdate?.(e.currentTarget.value)}
-					></textarea>
-				</div>
-			{/if}
 		{/if}
 
 		<!-- Textarea -->

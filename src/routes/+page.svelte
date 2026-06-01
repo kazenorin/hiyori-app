@@ -1312,8 +1312,6 @@
 					isDisabled={getIsBusy() || getActEnded()}
 					placeholder={t('chat.chatPlaceholder')}
 					showDirectorNotes={isDirectorModeEnabled()}
-					directorNotesExpanded={mobileDirectorNotesExpanded}
-					onDirectorNotesToggle={() => (mobileDirectorNotesExpanded = !mobileDirectorNotesExpanded)}
 					onSubmit={handleSubmit}
 					onStop={stopStreaming}
 					onKeydown={handleKeydown}
