@@ -48,100 +48,102 @@
 </script>
 
 {#if isOpen}
+	<!-- Backdrop: only covers viewport above the tab bar -->
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div class="fixed inset-0 z-40 bg-black/50" onclick={closeSheet} role="presentation">
-		<div
-			class="absolute bottom-0 left-0 right-0 bg-surface-50-950 border-t border-surface-200-800 rounded-t-2xl p-4 max-h-[75vh] overflow-y-auto"
-			onclick={(e) => e.stopPropagation()}
-			role="dialog"
-			aria-modal="true"
-			aria-label={t('choicesSheet.title')}
-			tabindex="0"
-			onkeydown={(e) => {
-				if (e.key === 'Escape') {
-					closeSheet();
-				}
-			}}
+	<div class="fixed inset-x-0 top-0 z-40 bg-black/50" style="bottom: 52px;" onclick={closeSheet} role="presentation"></div>
+
+	<!-- Sheet content: sits above backdrop, bottom-aligned above tab bar -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="fixed inset-x-0 bottom-[52px] z-50 bg-surface-50-950 border-t border-surface-200-800 rounded-t-2xl p-4 max-h-[75vh] overflow-y-auto"
+		role="dialog"
+		aria-modal="true"
+		aria-label={t('choicesSheet.title')}
+		tabindex="0"
+		onclick={(e) => e.stopPropagation()}
+		onkeydown={(e) => {
+			if (e.key === 'Escape') {
+				closeSheet();
+			}
+		}}
+	>
+		<!-- Drag handle -->
+		<button
+			type="button"
+			class="w-full flex justify-center py-1 cursor-grab active:cursor-grabbing"
+			onclick={closeSheet}
+			aria-label={t('choicesSheet.close')}
 		>
-			<!-- Drag handle -->
-			<button
-				type="button"
-				class="w-full flex justify-center py-1 cursor-grab active:cursor-grabbing"
-				onclick={closeSheet}
-				aria-label={t('choicesSheet.close')}
-			>
-				<div class="w-8 h-1 rounded-full bg-surface-400-600"></div>
-			</button>
+			<div class="w-8 h-1 rounded-full bg-surface-400-600"></div>
+		</button>
 
-			<!-- Content -->
-			<div class="space-y-4 mt-2">
-				{#if storyConcluded}
-					<div class="text-center py-4">
-						<span class="text-sm font-medium text-surface-400-600">{t('components.chatControls.storyConcluded')}</span>
+		<!-- Content -->
+		<div class="space-y-4 mt-2">
+			{#if storyConcluded}
+				<div class="text-center py-4">
+					<span class="text-sm font-medium text-surface-400-600">{t('components.chatControls.storyConcluded')}</span>
+				</div>
+			{:else if actEnded}
+				<div class="space-y-3">
+					<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('components.chatControls.decisionPoint')}</span>
+					<div class="text-surface-950-50 text-sm">
+						<MarkdownContent content={t('components.chatControls.actEndDecisionContext')} />
 					</div>
-				{:else if actEnded}
-					<div class="space-y-3">
+					<button class="btn preset-filled-primary-500 w-full h-11" type="button" onclick={handleContinue} disabled={isBusy}>
+						{t('components.chatControls.continueToNextAct')}
+					</button>
+					<button class="btn preset-tonal w-full h-11" type="button" onclick={handleEnd} disabled={isBusy}>
+						{t('components.chatControls.endTheStory')}
+					</button>
+				</div>
+			{:else}
+				{#if decisionContext}
+					<div class="mb-2">
 						<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('components.chatControls.decisionPoint')}</span>
-						<div class="text-surface-950-50 text-sm">
-							<MarkdownContent content={t('components.chatControls.actEndDecisionContext')} />
+						<div class="text-surface-950-50 text-sm mt-1">
+							<MarkdownContent content={decisionContext} />
 						</div>
-						<button class="btn preset-filled-primary-500 w-full h-11" type="button" onclick={handleContinue} disabled={isBusy}>
-							{t('components.chatControls.continueToNextAct')}
-						</button>
-						<button class="btn preset-tonal w-full h-11" type="button" onclick={handleEnd} disabled={isBusy}>
-							{t('components.chatControls.endTheStory')}
-						</button>
 					</div>
-				{:else}
-					{#if decisionContext}
-						<div class="mb-2">
-							<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('components.chatControls.decisionPoint')}</span
-							>
-							<div class="text-surface-950-50 text-sm mt-1">
-								<MarkdownContent content={decisionContext} />
-							</div>
-						</div>
-					{/if}
-
-					{#if activePlotThreads.length > 0}
-						<div class="mb-3">
-							<span class="text-xs font-medium text-surface-500 uppercase tracking-wider"
-								>{t('components.chatControls.activePlotThreads')}</span
-							>
-							<div class="text-sm text-surface-700-300 mt-1 space-y-1">
-								{#each activePlotThreads as thread}
-									<div class="flex items-center gap-1.5">
-										<span class="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
-										<span>{thread}</span>
-									</div>
-								{/each}
-							</div>
-						</div>
-					{/if}
-
-					{#if decisions.length > 0}
-						<div class="space-y-1">
-							<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('components.chatControls.decisions')}</span>
-							<div class="mt-1 space-y-2">
-								{#each decisions as decision, i (i)}
-									<button
-										class="btn preset-filled-primary-500 w-full h-11 text-left whitespace-normal line-clamp-2"
-										type="button"
-										onclick={() => handleDecision(decision)}
-										disabled={isBusy}
-									>
-										{i + 1}. {decision}
-									</button>
-								{/each}
-							</div>
-						</div>
-					{:else if !decisionContext && activePlotThreads.length === 0}
-						<div class="text-center py-8 text-surface-500 text-sm">
-							{t('choicesSheet.noDecisions')}
-						</div>
-					{/if}
 				{/if}
-			</div>
+
+				{#if activePlotThreads.length > 0}
+					<div class="mb-3">
+						<span class="text-xs font-medium text-surface-500 uppercase tracking-wider"
+							>{t('components.chatControls.activePlotThreads')}</span
+						>
+						<div class="text-sm text-surface-700-300 mt-1 space-y-1">
+							{#each activePlotThreads as thread}
+								<div class="flex items-center gap-1.5">
+									<span class="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
+									<span>{thread}</span>
+								</div>
+							{/each}
+						</div>
+					</div>
+				{/if}
+
+				{#if decisions.length > 0}
+					<div class="space-y-1">
+						<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('components.chatControls.decisions')}</span>
+						<div class="mt-1 space-y-2">
+							{#each decisions as decision, i (i)}
+								<button
+									class="btn preset-filled-primary-500 w-full h-11 text-left whitespace-normal line-clamp-2"
+									type="button"
+									onclick={() => handleDecision(decision)}
+									disabled={isBusy}
+								>
+									{i + 1}. {decision}
+								</button>
+							{/each}
+						</div>
+					</div>
+				{:else if !decisionContext && activePlotThreads.length === 0}
+					<div class="text-center py-8 text-surface-500 text-sm">
+						{t('choicesSheet.noDecisions')}
+					</div>
+				{/if}
+			{/if}
 		</div>
 	</div>
 {/if}
