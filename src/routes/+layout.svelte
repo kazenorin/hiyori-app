@@ -64,7 +64,34 @@
 		return () => mql.removeEventListener('change', handler);
 	});
 
-	// Inline rename state
+	// Swipe right from left edge to open sidebar (phone)
+	let touchStartX = 0;
+	let touchStartY = 0;
+	const EDGE_THRESHOLD = 30;
+	const SWIPE_MIN_X = 60;
+	const SWIPE_MAX_Y = 40;
+
+	function handleTouchStart(e: TouchEvent) {
+		touchStartX = e.changedTouches[0].screenX;
+		touchStartY = e.changedTouches[0].screenY;
+	}
+
+	function handleTouchEnd(e: TouchEvent) {
+		if (!mobileFeatures.isPhone) return;
+		const x = e.changedTouches[0].screenX;
+		const y = e.changedTouches[0].screenY;
+		const dx = x - touchStartX;
+		const dy = y - touchStartY;
+
+		// Swipe right from left edge → open sidebar
+		if (dx > SWIPE_MIN_X && Math.abs(dy) < SWIPE_MAX_Y && touchStartX < EDGE_THRESHOLD && !sidebarOpen) {
+			sidebarOpen = true;
+		}
+		// Swipe left on sidebar to close
+		if (dx < -SWIPE_MIN_X && Math.abs(dy) < SWIPE_MAX_Y && sidebarOpen) {
+			sidebarOpen = false;
+		}
+	}
 	let editingId = $state<string | null>(null);
 	let editingType = $state<'story' | 'act' | 'line' | null>(null);
 	let editingName = $state('');
@@ -517,7 +544,7 @@
 	</div>
 {/snippet}
 
-<div class="flex h-screen overflow-hidden bg-surface-50-950">
+<div class="flex h-screen overflow-hidden bg-surface-50-950" ontouchstart={handleTouchStart} ontouchend={handleTouchEnd}>
 	{#if !appReady}
 		<div class="flex-1 flex items-center justify-center">
 			{#if appError}
@@ -553,17 +580,8 @@
 
 		<!-- Main content -->
 		<main class="flex-1 flex flex-col min-w-0 pb-[52px] md:pb-0">
-			<!-- Mobile header bar -->
-			<div class="md:hidden flex items-center gap-3 p-3 border-b border-surface-200-800 shrink-0">
-				<button class="btn preset-tonal p-2 text-surface-500" type="button" onclick={() => (sidebarOpen = true)} aria-label="Open sidebar">
-					<svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-						<path
-							fill-rule="evenodd"
-							d="M2 4.75A.75.75 0 012.75 4h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 4.75zm0 5A.75.75 0 012.75 9h14.5a.75.75 0 010 1.5H2.75A.75.75 0 012 9.75zm0 5A.75.75 0 012.75 14h14.5a.75.75 0 010 1.5H2.75a.75.75 0 01-.75-.75z"
-							clip-rule="evenodd"
-						/>
-					</svg>
-				</button>
+			<!-- Mobile header bar (tab bar replaces hamburger; just show story name) -->
+			<div class="md:hidden flex items-center justify-center p-3 border-b border-surface-200-800 shrink-0">
 				<span class="text-sm font-medium text-surface-700-300 truncate">{getActiveStoryName() ?? t('sidebar.chat')}</span>
 			</div>
 

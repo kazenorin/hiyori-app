@@ -57,11 +57,25 @@
 	<title>{t('characterCards.heading')}</title>
 </svelte:head>
 
-<div class="flex-1 overflow-y-auto p-4 md:p-6">
+<div class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6">
+	<div class="flex items-center gap-2 p-3 border-b border-surface-200-800 shrink-0 md:hidden">
+		<a href="/" class="text-sm font-medium text-surface-500 hover:text-surface-700-300 transition-colors flex items-center gap-1">
+			<svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"
+				><path
+					fill-rule="evenodd"
+					d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+					clip-rule="evenodd"
+				/></svg
+			>
+			{t('chat.back')}
+		</a>
+	</div>
 	<div class="max-w-4xl mx-auto space-y-6">
 		<!-- Header -->
 		<div class="flex items-center gap-4">
-			<button class="btn btn-sm preset-tonal" onclick={handleBack}> &larr; {t('characterCards.back')} </button>
+			<button class="btn btn-sm preset-tonal min-h-11 hidden md:inline-flex" onclick={handleBack}>
+				&larr; {t('characterCards.back')}
+			</button>
 			<h2 class="h2">{t('characterCards.heading')}</h2>
 		</div>
 
@@ -111,8 +125,70 @@
 
 		<!-- Character Table -->
 		{#if !getIsExtracting() && (getCharacters().length > 0 || getExtractionError())}
-			<section class="card p-4 space-y-3">
-				<div class="overflow-x-auto">
+			<section class="card p-3 md:p-4 space-y-3">
+				<!-- Mobile card layout -->
+				<div class="md:hidden space-y-3">
+					{#each getCharacters() as char, i (i)}
+						<div class="space-y-2 p-3 border border-surface-200-800 rounded-container">
+							<div class="flex items-center justify-between">
+								<span class="text-xs font-semibold text-surface-700-300 uppercase tracking-wide">{t('characterCards.character')}</span>
+								{#if char.isManual}
+									<button class="btn btn-sm preset-filled-error-500 min-h-11" onclick={() => handleRemoveRow(i)}>&times;</button>
+								{/if}
+							</div>
+							{#if char.isManual}
+								<input
+									type="text"
+									class="input text-sm"
+									value={char.character}
+									oninput={(e) => updateCharacter(i, { character: e.currentTarget.value })}
+									placeholder={t('characterCards.enterNamePlaceholder')}
+								/>
+							{:else}
+								<p class="text-surface-950-50 text-sm">{char.character}</p>
+							{/if}
+
+							<span class="text-xs font-semibold text-surface-700-300 uppercase tracking-wide">{t('characterCards.summary')}</span>
+							{#if char.isManual}
+								<input
+									type="text"
+									class="input text-sm"
+									value={char.importance}
+									oninput={(e) => updateCharacter(i, { importance: e.currentTarget.value })}
+									placeholder={t('characterCards.summary')}
+								/>
+							{:else}
+								<p class="text-surface-700-300 text-sm">{char.importance}</p>
+							{/if}
+
+							<span class="text-xs font-semibold text-surface-700-300 uppercase tracking-wide">{t('characterCards.canonicalName')}</span>
+							<input
+								type="text"
+								class="input text-sm"
+								value={char.canonicalName}
+								oninput={(e) => updateCanonicalName(i, e.currentTarget.value)}
+							/>
+
+							<div class="flex items-center justify-between">
+								<span class="text-xs font-semibold text-surface-700-300 uppercase tracking-wide">{t('characterCards.include')}</span>
+								{#if char.isManual}
+									<span class="text-xs text-surface-500">{t('characterCards.manual')}</span>
+								{:else}
+									<input
+										type="checkbox"
+										class="checkbox"
+										checked={char.include}
+										onchange={(e) => updateInclude(i, e.currentTarget.checked)}
+									/>
+								{/if}
+							</div>
+						</div>
+					{/each}
+					<button class="btn btn-sm preset-tonal w-full min-h-11" onclick={handleAddRow}>{t('characterCards.addRow')}</button>
+				</div>
+
+				<!-- Desktop table layout -->
+				<div class="hidden md:block overflow-x-auto">
 					<div class="min-w-[600px]">
 						<div
 							class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(100px,1fr)_60px_36px] gap-3 text-xs font-semibold text-surface-700-300 uppercase tracking-wide border-b border-surface-200-800 pb-2"
@@ -208,7 +284,9 @@
 					<input type="checkbox" class="checkbox" bind:checked={concurrent} />
 					{t('characterCards.concurrentGeneration')}
 				</label>
-				<button class="btn preset-filled-primary-500" onclick={handleGenerate}>{t('characterCards.generateCards')}</button>
+				<button class="btn preset-filled-primary-500 min-h-11 md:min-h-0" onclick={handleGenerate}
+					>{t('characterCards.generateCards')}</button
+				>
 			</div>
 		{/if}
 

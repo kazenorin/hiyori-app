@@ -343,17 +343,29 @@
 	}
 </script>
 
-<div class="flex-1 overflow-y-auto p-4 md:p-6">
+<div class="flex items-center gap-2 p-3 border-b border-surface-200-800 shrink-0 md:hidden">
+	<a href="/" class="text-sm font-medium text-surface-500 hover:text-surface-700-300 transition-colors flex items-center gap-1">
+		<svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"
+			><path
+				fill-rule="evenodd"
+				d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+				clip-rule="evenodd"
+			/></svg
+		>
+		{t('chat.back')}
+	</a>
+</div>
+<div class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6">
 	<div class="max-w-2xl mx-auto space-y-8">
 		<h1 class="h2 font-display">{t('settings.heading')}</h1>
 
 		<p class="text-sm text-surface-500">{t('settings.settingsAutoSaved')}</p>
 
 		<!-- AI Providers -->
-		<section class="card p-4 md:p-6 space-y-4">
+		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
 			<div class="flex items-center justify-between">
 				<h2 class="h4">{t('settings.aiProviders')}</h2>
-				<button class="btn preset-tonal" type="button" onclick={startAdd}> {t('settings.addProvider')} </button>
+				<button class="btn preset-tonal min-h-11" type="button" onclick={startAdd}> {t('settings.addProvider')} </button>
 			</div>
 
 			{#if settings.providers.length === 0 && !isAddingNew}
@@ -364,7 +376,7 @@
 			{#each settings.providers as config (config.id)}
 				{#if isEditing(config)}
 					<!-- Edit Form -->
-					<div class="card p-4 space-y-3 border border-primary-500-300">
+					<div class="card p-3 md:p-4 space-y-3 border border-primary-500-300">
 						{#each settings.providers as c (c)}
 							{#if c.id === config.id}
 								{@const isMain = mainProviderId === config.id}
@@ -422,7 +434,7 @@
 												<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
 											{/if}
 										</label>
-										<button class="btn preset-tonal shrink-0" type="button" onclick={handleFetchModels} disabled={isLoadingModels}>
+										<button class="btn preset-tonal shrink-0 min-h-11" type="button" onclick={handleFetchModels} disabled={isLoadingModels}>
 											{isLoadingModels ? t('settings.loading') : t('settings.fetchModels')}
 										</button>
 									</div>
@@ -459,8 +471,8 @@
 							</div>
 						</details>
 						<div class="flex gap-2">
-							<button class="btn preset-filled" type="button" onclick={handleSaveEdit}> {t('settings.save')} </button>
-							<button class="btn preset-tonal" type="button" onclick={cancelEdit}> {t('settings.cancel')} </button>
+							<button class="btn preset-filled min-h-11" type="button" onclick={handleSaveEdit}> {t('settings.save')} </button>
+							<button class="btn preset-tonal min-h-11" type="button" onclick={cancelEdit}> {t('settings.cancel')} </button>
 						</div>
 					</div>
 				{:else}
@@ -479,14 +491,18 @@
 							</p>
 						</div>
 						<div class="flex items-center gap-1 shrink-0">
-							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => handleDuplicate(config)}>
+							<button class="btn preset-tonal text-xs px-2 py-1 min-h-11" type="button" onclick={() => handleDuplicate(config)}>
 								{t('settings.copy')}
 							</button>
-							<button class="btn preset-tonal text-xs px-2 py-1" type="button" onclick={() => startEdit(config)}>
+							<button class="btn preset-tonal text-xs px-2 py-1 min-h-11" type="button" onclick={() => startEdit(config)}>
 								{t('settings.edit')}
 							</button>
 							{#if mainProviderId !== config.id}
-								<button class="btn preset-tonal text-xs px-2 py-1 text-error-700-300" type="button" onclick={() => handleDelete(config.id)}>
+								<button
+									class="btn preset-tonal text-xs px-2 py-1 text-error-700-300 min-h-11"
+									type="button"
+									onclick={() => handleDelete(config.id)}
+								>
 									{t('settings.delete')}
 								</button>
 							{/if}
@@ -497,7 +513,7 @@
 
 			<!-- Add New Provider Form -->
 			{#if isAddingNew}
-				<div class="card p-4 space-y-3 border border-primary-500-300">
+				<div class="card p-3 md:p-4 space-y-3 border border-primary-500-300">
 					<p class="text-xs text-surface-500">{t('settings.newProvider')}</p>
 					<details open>
 						<summary class="text-sm font-medium cursor-pointer">{formName || t('settings.newProviderTitle')}</summary>
@@ -547,7 +563,7 @@
 											<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
 										{/if}
 									</label>
-									<button class="btn preset-tonal shrink-0" type="button" onclick={handleFetchModels} disabled={isLoadingModels}>
+									<button class="btn preset-tonal shrink-0 min-h-11" type="button" onclick={handleFetchModels} disabled={isLoadingModels}>
 										{isLoadingModels ? t('settings.loading') : t('settings.fetchModels')}
 									</button>
 								</div>
@@ -584,15 +600,15 @@
 						</div>
 					</details>
 					<div class="flex gap-2">
-						<button class="btn preset-filled" type="button" onclick={handleSaveNew}> {t('settings.addProviderButton')} </button>
-						<button class="btn preset-tonal" type="button" onclick={cancelEdit}> {t('settings.cancel')} </button>
+						<button class="btn preset-filled min-h-11" type="button" onclick={handleSaveNew}> {t('settings.addProviderButton')} </button>
+						<button class="btn preset-tonal min-h-11" type="button" onclick={cancelEdit}> {t('settings.cancel')} </button>
 					</div>
 				</div>
 			{/if}
 		</section>
 
 		<!-- Provider Roles -->
-		<section class="card p-4 md:p-6 space-y-4">
+		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
 			<h2 class="h4">{t('settings.providerRoles')}</h2>
 			<span class="text-xs text-surface-500">{t('settings.providerRolesDescription')}</span>
 
@@ -634,7 +650,7 @@
 
 		{#if isMemoryCapable()}
 			<!-- Memory -->
-			<section class="card p-4 md:p-6 space-y-4">
+			<section class="card p-3 md:p-4 lg:p-6 space-y-4">
 				<h2 class="h4">{t('settings.memory')}</h2>
 				<span class="text-xs text-surface-500">{t('settings.enableMemoryDescription')}</span>
 
@@ -676,7 +692,7 @@
 		{/if}
 
 		<!-- Director Mode -->
-		<section class="card p-4 md:p-6 space-y-4">
+		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
 			<h2 class="h4">{t('settings.directorMode')}</h2>
 			<span class="text-xs text-surface-500">{t('settings.directorModeDescription')}</span>
 
@@ -692,7 +708,7 @@
 		</section>
 
 		<!-- Pipeline Roles -->
-		<section class="card p-4 md:p-6 space-y-4">
+		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
 			<h2 class="h4">{t('settings.pipelineRoles')}</h2>
 			<span class="text-xs text-surface-500">{t('settings.pipelineRolesDescription')}</span>
 
@@ -839,7 +855,7 @@
 		</section>
 
 		<!-- Narrative -->
-		<section class="card p-4 md:p-6 space-y-4">
+		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
 			<h2 class="h4">{t('settings.narrative')}</h2>
 
 			<label class="block">
@@ -878,7 +894,7 @@
 		</section>
 
 		<!-- Data -->
-		<section class="card p-4 md:p-6 space-y-4">
+		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
 			<h2 class="h4">{t('settings.data')}</h2>
 			<span class="text-xs text-surface-500">{t('settings.dataDescription')}</span>
 
@@ -890,7 +906,7 @@
 			<span class="text-xs text-surface-500">{t('settings.gameDataDescription')}</span>
 			<div class="space-y-3">
 				<div>
-					<button class="btn variant-filled" disabled={isExportingGame} onclick={handleExportGameData}>
+					<button class="btn variant-filled min-h-11" disabled={isExportingGame} onclick={handleExportGameData}>
 						{isExportingGame ? '...' : t('settings.exportGameData')}
 					</button>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.exportGameDataDescription')}</span>
@@ -905,7 +921,7 @@
 				</div>
 
 				<div>
-					<label class="btn variant-outline cursor-pointer">
+					<label class="btn variant-outline cursor-pointer min-h-11">
 						{isImportingGame ? '...' : t('settings.importGameData')}
 						<input type="file" accept=".zip" class="sr-only" disabled={isImportingGame} onchange={handleImportGameData} />
 					</label>
@@ -925,7 +941,7 @@
 			<span class="text-xs text-surface-500">{t('settings.configDataDescription')}</span>
 			<div class="space-y-3">
 				<div>
-					<button class="btn variant-filled" disabled={isExportingConfig} onclick={handleExportConfigData}>
+					<button class="btn variant-filled min-h-11" disabled={isExportingConfig} onclick={handleExportConfigData}>
 						{isExportingConfig ? '...' : t('settings.exportConfigData')}
 					</button>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.exportConfigDataDescription')}</span>
@@ -940,7 +956,7 @@
 				</div>
 
 				<div>
-					<label class="btn variant-outline cursor-pointer">
+					<label class="btn variant-outline cursor-pointer min-h-11">
 						{isImportingConfig ? '...' : t('settings.importConfigData')}
 						<input type="file" accept=".zip" class="sr-only" disabled={isImportingConfig} onchange={handleImportConfigData} />
 					</label>
@@ -958,7 +974,7 @@
 
 			<div>
 				<button
-					class="btn variant-filled bg-error-500 hover:bg-error-600 text-white"
+					class="btn variant-filled bg-error-500 hover:bg-error-600 text-white min-h-11"
 					disabled={isResetting}
 					onclick={() => (showResetConfirm = true)}
 				>
@@ -969,7 +985,7 @@
 		</section>
 
 		<!-- Developer -->
-		<section class="card p-4 md:p-6 space-y-4">
+		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
 			<h2 class="h4">{t('settings.developer')}</h2>
 
 			<label class="block">
@@ -1003,14 +1019,14 @@
 			<p class="text-sm text-surface-700-300 mb-5">{t('settings.importGameDataWarning')}</p>
 			<div class="flex gap-2">
 				<button
-					class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+					class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors min-h-11"
 					type="button"
 					onclick={handleImportGameDataCancel}
 				>
 					{t('settings.cancel')}
 				</button>
 				<button
-					class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
+					class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors min-h-11"
 					type="button"
 					onclick={handleImportGameDataConfirm}
 				>
@@ -1038,14 +1054,14 @@
 			<p class="text-sm text-surface-700-300 mb-5">{t('settings.importConfigDataWarning')}</p>
 			<div class="flex gap-2">
 				<button
-					class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+					class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors min-h-11"
 					type="button"
 					onclick={handleImportConfigDataCancel}
 				>
 					{t('settings.cancel')}
 				</button>
 				<button
-					class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
+					class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors min-h-11"
 					type="button"
 					onclick={handleImportConfigDataConfirm}
 				>
@@ -1072,14 +1088,14 @@
 			<p class="text-sm text-surface-700-300 mb-5">{t('settings.resetConfigurationWarning')}</p>
 			<div class="flex gap-2">
 				<button
-					class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+					class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors min-h-11"
 					type="button"
 					onclick={() => (showResetConfirm = false)}
 				>
 					{t('settings.cancel')}
 				</button>
 				<button
-					class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
+					class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors min-h-11"
 					type="button"
 					onclick={handleResetConfirm}
 				>

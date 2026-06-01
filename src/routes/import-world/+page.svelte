@@ -80,10 +80,22 @@
 </script>
 
 <div class="flex-1 overflow-y-auto p-4 md:p-6">
+	<div class="flex items-center gap-2 p-3 border-b border-surface-200-800 shrink-0 md:hidden" style="margin: -1rem -1rem 1rem -1rem;">
+		<a href="/" class="text-sm font-medium text-surface-500 hover:text-surface-700-300 transition-colors flex items-center gap-1">
+			<svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+				<path
+					fill-rule="evenodd"
+					d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+					clip-rule="evenodd"
+				/>
+			</svg>
+			{t('chat.back')}
+		</a>
+	</div>
 	<div class="max-w-3xl mx-auto space-y-6">
 		<div class="flex items-center justify-between">
 			<h1 class="h2 font-display">{t('importWorld.heading')}</h1>
-			<button class="btn preset-tonal" type="button" onclick={handleBack} disabled={store.isImporting}>
+			<button class="btn preset-tonal hidden md:inline-flex" type="button" onclick={handleBack} disabled={store.isImporting}>
 				{t('importWorld.backToChat')}
 			</button>
 		</div>

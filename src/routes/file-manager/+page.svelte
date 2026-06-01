@@ -1,10 +1,6 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
-	import {
-		TreeView,
-		createTreeViewCollection,
-		type TreeViewRootProps,
-	} from '@skeletonlabs/skeleton-svelte';
+	import { TreeView, createTreeViewCollection, type TreeViewRootProps } from '@skeletonlabs/skeleton-svelte';
 	import {
 		readDirectoryNodes,
 		readFileData,
@@ -59,6 +55,8 @@
 	let isExporting = $state(false);
 	let showDeleteConfirm = $state(false);
 	let isDeleting = $state(false);
+	let isCopying = $state(false);
+	let isRestoring = $state(false);
 	let cancelButton: HTMLButtonElement | null = $state(null);
 
 	let confirmDiscard = $state(false);
@@ -68,8 +66,7 @@
 	let stories = $state<StoryFolderInfo[]>([]);
 	let selectedStoryFolder = $state<string>('');
 	let showCopyPanel = $state(false);
-	let isCopying = $state(false);
-	let isRestoring = $state(false);
+	let showTreeOnMobile = $state(false);
 	let showFileDeleteConfirm = $state(false);
 
 	$effect(() => {
@@ -136,10 +133,7 @@
 		showFileDeleteConfirm = false;
 	}
 
-	async function handleSelectionChange(details: {
-		selectedValue: string[];
-		selectedNodes: FileNode[];
-	}) {
+	async function handleSelectionChange(details: { selectedValue: string[]; selectedNodes: FileNode[] }) {
 		const node = details.selectedNodes[0];
 		if (!node) {
 			clearPreview();
@@ -347,19 +341,46 @@
 </script>
 
 <div class="flex h-full flex-col">
-	<div class="flex items-center justify-between border-b border-surface-200-800 px-4 py-2">
-		<h2 class="text-sm font-semibold text-surface-900-100">{t('fileManager.title')}</h2>
-		<button
-			class="btn preset-tonal p-1.5 text-surface-500 hover:text-surface-700-300 transition-colors"
-			type="button"
-			onclick={loadRoot}
-			disabled={isLoadingRoot}
-			aria-label={t('fileManager.refresh')}
-		>
-			<svg class="size-4 {isLoadingRoot ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-				<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+	<div class="flex items-center gap-2 p-3 border-b border-surface-200-800 shrink-0 md:hidden">
+		<a href="/" class="text-sm font-medium text-surface-500 hover:text-surface-700-300 transition-colors flex items-center gap-1">
+			<svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+				<path
+					fill-rule="evenodd"
+					d="M17 10a.75.75 0 01-.75.75H5.612l4.158 3.96a.75.75 0 11-1.04 1.08l-5.5-5.25a.75.75 0 010-1.08l5.5-5.25a.75.75 0 111.04 1.08L5.612 9.25H16.25A.75.75 0 0117 10z"
+					clip-rule="evenodd"
+				/>
 			</svg>
-		</button>
+			{t('chat.back')}
+		</a>
+	</div>
+	<div class="flex items-center justify-between border-b border-surface-200-800 px-3 py-2 md:px-4">
+		<h2 class="text-sm font-semibold text-surface-900-100">{t('fileManager.title')}</h2>
+		<div class="flex items-center gap-2">
+			<button
+				class="btn preset-tonal p-1.5 text-surface-500 hover:text-surface-700-300 transition-colors md:hidden"
+				type="button"
+				onclick={() => (showTreeOnMobile = !showTreeOnMobile)}
+			>
+				<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
+					><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18" /></svg
+				>
+			</button>
+			<button
+				class="btn preset-tonal p-1.5 text-surface-500 hover:text-surface-700-300 transition-colors"
+				type="button"
+				onclick={loadRoot}
+				disabled={isLoadingRoot}
+				aria-label={t('fileManager.refresh')}
+			>
+				<svg class="size-4 {isLoadingRoot ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+					/>
+				</svg>
+			</button>
+		</div>
 	</div>
 
 	{#if loadChildrenError}
@@ -377,7 +398,9 @@
 				</div>
 			</div>
 		{:else}
-			<div class="w-72 shrink-0 border-r border-surface-200-800 overflow-y-auto relative">
+			<div
+				class="shrink-0 border-r border-surface-200-800 overflow-y-auto relative {showTreeOnMobile ? 'block' : 'hidden md:block'} md:w-72"
+			>
 				{#if isLoadingRoot}
 					<div class="flex items-center justify-center p-8">
 						<div class="inline-block w-6 h-6 border-3 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
@@ -394,7 +417,7 @@
 				{/if}
 			</div>
 
-			<div class="flex-1 overflow-auto p-4">
+			<div class="flex-1 overflow-auto p-3 md:p-4">
 				{#if selectedFilePath && selectedNode}
 					<div class="mb-3 flex items-center gap-2 text-xs font-medium text-surface-600-400 break-all">
 						{#if selectedNode.isDirectory}
@@ -421,7 +444,9 @@
 								<button
 									class="btn preset-filled"
 									type="button"
-									onclick={() => { if (selectedFilePath) downloadFile(selectedFilePath); }}
+									onclick={() => {
+										if (selectedFilePath) downloadFile(selectedFilePath);
+									}}
 								>
 									{t('fileManager.download')}
 								</button>
@@ -445,11 +470,19 @@
 {#snippet folderIcon(type: FolderType, sizeClass: string = 'size-4')}
 	{#if type === 'story'}
 		<svg class={sizeClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-			<path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
+			/>
 		</svg>
 	{:else if type === 'config'}
 		<svg class={sizeClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-			<path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.573-1.066z" />
+			<path
+				stroke-linecap="round"
+				stroke-linejoin="round"
+				d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.573-1.066z"
+			/>
 			<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
 		</svg>
 	{:else}
@@ -465,7 +498,11 @@
 			{#if isFolderProtected}
 				<div class="flex items-center justify-center gap-2 text-sm text-surface-600-400">
 					<svg class="size-4 text-warning-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+						/>
 					</svg>
 					{t('fileManager.protected')}
 				</div>
@@ -476,12 +513,7 @@
 			{/if}
 
 			<div class="flex items-center justify-center gap-2">
-				<button
-					class="btn preset-tonal text-xs gap-1"
-					type="button"
-					onclick={handleExport}
-					disabled={isExporting}
-				>
+				<button class="btn preset-tonal text-xs gap-1" type="button" onclick={handleExport} disabled={isExporting}>
 					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
 						<path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3" />
 					</svg>
@@ -489,14 +521,13 @@
 				</button>
 				{#if !isFolderProtected}
 					{#if showDeleteConfirm}
-						<button
-							class="btn preset-filled-error text-xs gap-1"
-							type="button"
-							onclick={handleDeleteFolder}
-							disabled={isDeleting}
-						>
+						<button class="btn preset-filled-error text-xs gap-1" type="button" onclick={handleDeleteFolder} disabled={isDeleting}>
 							<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+								/>
 							</svg>
 							{isDeleting ? '...' : t('fileManager.delete')}
 						</button>
@@ -504,7 +535,9 @@
 							bind:this={cancelButton}
 							class="btn preset-tonal text-xs"
 							type="button"
-							onclick={() => { showDeleteConfirm = false; }}
+							onclick={() => {
+								showDeleteConfirm = false;
+							}}
 						>
 							{t('fileManager.cancel')}
 						</button>
@@ -512,10 +545,16 @@
 						<button
 							class="btn preset-tonal text-xs gap-1"
 							type="button"
-							onclick={() => { showDeleteConfirm = true; }}
+							onclick={() => {
+								showDeleteConfirm = true;
+							}}
 						>
 							<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-								<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+								/>
 							</svg>
 							{t('fileManager.delete')}
 						</button>
@@ -535,26 +574,24 @@
 	<div class="flex flex-wrap items-center gap-2 mb-2">
 		{#if mc === 'managed' || mc === 'obsolete'}
 			{#if mc === 'managed'}
-				<button
-					class="btn preset-tonal text-xs gap-1"
-					type="button"
-					onclick={openCopyPanel}
-					disabled={isCopying}
-				>
+				<button class="btn preset-tonal text-xs" type="button" onclick={openCopyPanel} disabled={isCopying}>
 					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+						/>
 					</svg>
 					{t('fileManager.copyToStory')}
 				</button>
 				{#if isConfigModified}
-					<button
-						class="btn preset-tonal text-xs gap-1"
-						type="button"
-						onclick={handleRestoreDefault}
-						disabled={isRestoring}
-					>
+					<button class="btn preset-tonal text-xs gap-1" type="button" onclick={handleRestoreDefault} disabled={isRestoring}>
 						<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+							/>
 						</svg>
 						{isRestoring ? t('fileManager.restoring') : t('fileManager.restoreDefault')}
 					</button>
@@ -564,14 +601,13 @@
 				<p class="text-xs text-surface-600-400">{t('fileManager.obsoleteDescription')}</p>
 				{#if showFileDeleteConfirm}
 					<p class="text-xs text-warning-500">{t('fileManager.deleteFileWarning')}</p>
-					<button
-						class="btn preset-filled-error text-xs gap-1"
-						type="button"
-						onclick={handleDeleteFile}
-						disabled={isDeleting}
-					>
+					<button class="btn preset-filled-error text-xs gap-1" type="button" onclick={handleDeleteFile} disabled={isDeleting}>
 						<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+							/>
 						</svg>
 						{isDeleting ? '...' : t('fileManager.deleteObsolete')}
 					</button>
@@ -579,7 +615,9 @@
 						bind:this={cancelButton}
 						class="btn preset-tonal text-xs"
 						type="button"
-						onclick={() => { showFileDeleteConfirm = false; }}
+						onclick={() => {
+							showFileDeleteConfirm = false;
+						}}
 					>
 						{t('fileManager.cancel')}
 					</button>
@@ -587,10 +625,16 @@
 					<button
 						class="btn preset-filled-error text-xs gap-1"
 						type="button"
-						onclick={() => { showFileDeleteConfirm = true; }}
+						onclick={() => {
+							showFileDeleteConfirm = true;
+						}}
 					>
 						<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+							/>
 						</svg>
 						{t('fileManager.deleteObsolete')}
 					</button>
@@ -601,14 +645,13 @@
 			<p class="text-xs text-surface-600-400">{t('fileManager.overrideDescription')}</p>
 			{#if showFileDeleteConfirm}
 				<p class="text-xs text-warning-500">{t('fileManager.deleteFileWarning')}</p>
-				<button
-					class="btn preset-filled-error text-xs gap-1"
-					type="button"
-					onclick={handleDeleteFile}
-					disabled={isDeleting}
-				>
+				<button class="btn preset-filled-error text-xs gap-1" type="button" onclick={handleDeleteFile} disabled={isDeleting}>
 					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+						/>
 					</svg>
 					{isDeleting ? '...' : t('fileManager.deleteOverride')}
 				</button>
@@ -616,7 +659,9 @@
 					bind:this={cancelButton}
 					class="btn preset-tonal text-xs"
 					type="button"
-					onclick={() => { showFileDeleteConfirm = false; }}
+					onclick={() => {
+						showFileDeleteConfirm = false;
+					}}
 				>
 					{t('fileManager.cancel')}
 				</button>
@@ -624,10 +669,16 @@
 				<button
 					class="btn preset-filled-error text-xs gap-1"
 					type="button"
-					onclick={() => { showFileDeleteConfirm = true; }}
+					onclick={() => {
+						showFileDeleteConfirm = true;
+					}}
 				>
 					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+						/>
 					</svg>
 					{t('fileManager.deleteOverride')}
 				</button>
@@ -654,14 +705,20 @@
 					disabled={isCopying || !selectedStoryFolder}
 				>
 					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+						/>
 					</svg>
 					{isCopying ? t('fileManager.copying') : t('fileManager.copy')}
 				</button>
 				<button
 					class="btn preset-tonal text-xs"
 					type="button"
-					onclick={() => { showCopyPanel = false; }}
+					onclick={() => {
+						showCopyPanel = false;
+					}}
 				>
 					{t('fileManager.cancel')}
 				</button>
@@ -675,13 +732,13 @@
 		{@render configActionBar()}
 		<div class="flex justify-end gap-2">
 			{#if fileLang && !isBinary && selectedNode?.managedConfig !== 'obsolete'}
-				<button
-					class="btn preset-tonal text-xs gap-1"
-					type="button"
-					onclick={startEditing}
-				>
+				<button class="btn preset-tonal text-xs gap-1" type="button" onclick={startEditing}>
 					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
+						/>
 					</svg>
 					{t('fileManager.edit')}
 				</button>
@@ -712,12 +769,7 @@
 				</svg>
 				{isSaving ? t('fileManager.saving') : t('fileManager.save')}
 			</button>
-			<button
-				class="btn preset-tonal text-xs"
-				type="button"
-				onclick={cancelEditing}
-				disabled={isSaving}
-			>
+			<button class="btn preset-tonal text-xs" type="button" onclick={cancelEditing} disabled={isSaving}>
 				{t('fileManager.cancel')}
 			</button>
 		</div>
@@ -748,7 +800,11 @@
 		{:else}
 			<TreeView.Item>
 				<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+					/>
 				</svg>
 				{node.name}
 			</TreeView.Item>
@@ -762,7 +818,9 @@
 		role="dialog"
 		aria-modal="true"
 		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-		onclick={() => { confirmDiscard = false; }}
+		onclick={() => {
+			confirmDiscard = false;
+		}}
 		onkeydown={(e) => e.key === 'Escape' && (confirmDiscard = false)}
 	>
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -782,7 +840,9 @@
 					bind:this={cancelButton}
 					class="btn preset-tonal"
 					type="button"
-					onclick={() => { confirmDiscard = false; }}
+					onclick={() => {
+						confirmDiscard = false;
+					}}
 				>
 					{t('fileManager.cancel')}
 				</button>

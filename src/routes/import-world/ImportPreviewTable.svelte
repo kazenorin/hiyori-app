@@ -69,8 +69,8 @@
 				{#snippet element(attributes)}
 					{#if !attributes.hidden}
 						<div {...attributes}>
-							<div class="overflow-x-auto">
-								<table class="w-full border-collapse text-sm">
+							<div class="overflow-x-auto md:overflow-visible">
+								<table class="w-full border-collapse text-sm min-w-[600px] md:min-w-0">
 									<thead>
 										<tr class="border-b border-surface-200-800">
 											<th class="px-3 py-2 text-left text-xs font-semibold text-surface-500 w-16">{t('importWorld.sceneNumber')}</th>
