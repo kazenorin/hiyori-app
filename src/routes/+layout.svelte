@@ -2,7 +2,7 @@
 	import './+layout.css';
 	import { onMount } from 'svelte';
 	import { clamp } from 'lodash-es';
-	import { goto } from '$app/navigation';
+	import { goto, beforeNavigate } from '$app/navigation';
 	import { initializeApp } from '$lib/app/init.svelte';
 	import { log } from '$lib/logging/logger';
 	import { registerSW } from 'virtual:pwa-register';
@@ -142,6 +142,11 @@
 		batchGetActLineEventSummary(ids).then((map) => {
 			actLineEventSummaries = map;
 		});
+	});
+
+	// Close sidebar drawer on any navigation (prevents it staying open across pages)
+	beforeNavigate(() => {
+		sidebarOpen = false;
 	});
 
 	onMount(async () => {
@@ -568,10 +573,7 @@
 		<!-- Mobile Sidebar Drawer -->
 		{#if sidebarOpen}
 			<div class="fixed inset-0 z-[60] flex md:hidden" role="dialog" aria-modal="true">
-				<aside
-					class="w-[80vw] max-w-[320px] bg-surface-50-950 border-r border-surface-200-800 flex flex-col overflow-y-auto"
-					onclick={(e) => e.stopPropagation()}
-				>
+				<aside class="w-[80vw] max-w-[320px] bg-surface-50-950 border-r border-surface-200-800 flex flex-col overflow-y-auto">
 					{@render SidebarNavFooter()}
 				</aside>
 				<div class="flex-1 bg-black/50" onclick={() => (sidebarOpen = false)} role="button" aria-label="Close sidebar"></div>
