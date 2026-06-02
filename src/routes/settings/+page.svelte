@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { Progress } from '@skeletonlabs/skeleton-svelte';
 	import {
 		addProviderConfig,
 		type ApiType,
@@ -19,6 +18,9 @@
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
 	import { t } from '$lib/i18n';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
+	import ProgressField from '$lib/components/ui/ProgressField.svelte';
 	import {
 		downloadExport,
 		exportConfigData,
@@ -353,7 +355,7 @@
 		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
 			<div class="flex items-center justify-between">
 				<h2 class="h4">{t('settings.aiProviders')}</h2>
-				<button class="btn preset-tonal min-h-11" type="button" onclick={startAdd}> {t('settings.addProvider')} </button>
+				<Button class="min-h-11" onclick={startAdd}>{t('settings.addProvider')}</Button>
 			</div>
 
 			{#if settings.providers.length === 0 && !isAddingNew}
@@ -459,8 +461,8 @@
 							</div>
 						</details>
 						<div class="flex gap-2">
-							<button class="btn preset-filled min-h-11" type="button" onclick={handleSaveEdit}> {t('settings.save')} </button>
-							<button class="btn preset-tonal min-h-11" type="button" onclick={cancelEdit}> {t('settings.cancel')} </button>
+							<Button variant="filled" class="min-h-11" onclick={handleSaveEdit}>{t('settings.save')}</Button>
+							<Button class="min-h-11" onclick={cancelEdit}>{t('settings.cancel')}</Button>
 						</div>
 					</div>
 				{:else}
@@ -588,8 +590,8 @@
 						</div>
 					</details>
 					<div class="flex gap-2">
-						<button class="btn preset-filled min-h-11" type="button" onclick={handleSaveNew}> {t('settings.addProviderButton')} </button>
-						<button class="btn preset-tonal min-h-11" type="button" onclick={cancelEdit}> {t('settings.cancel')} </button>
+						<Button variant="filled" class="min-h-11" onclick={handleSaveNew}>{t('settings.addProviderButton')}</Button>
+						<Button class="min-h-11" onclick={cancelEdit}>{t('settings.cancel')}</Button>
 					</div>
 				</div>
 			{/if}
@@ -898,14 +900,7 @@
 						{isExportingGame ? '...' : t('settings.exportGameData')}
 					</button>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.exportGameDataDescription')}</span>
-					{#if exportProgress !== null && isExportingGame}
-						<Progress value={exportProgress} class="mt-2">
-							<Progress.Track>
-								<Progress.Range />
-							</Progress.Track>
-						</Progress>
-						<span class="text-xs text-surface-500">{exportProgress}%</span>
-					{/if}
+					<ProgressField value={exportProgress ?? 0} label="{exportProgress}%" visible={exportProgress !== null && isExportingGame} />
 				</div>
 
 				<div>
@@ -933,14 +928,7 @@
 						{isExportingConfig ? '...' : t('settings.exportConfigData')}
 					</button>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.exportConfigDataDescription')}</span>
-					{#if exportProgress !== null && isExportingConfig}
-						<Progress value={exportProgress} class="mt-2">
-							<Progress.Track>
-								<Progress.Range />
-							</Progress.Track>
-						</Progress>
-						<span class="text-xs text-surface-500">{exportProgress}%</span>
-					{/if}
+					<ProgressField value={exportProgress ?? 0} label="{exportProgress}%" visible={exportProgress !== null && isExportingConfig} />
 				</div>
 
 				<div>
@@ -990,109 +978,79 @@
 	</div>
 </div>
 
-{#if showGameImportConfirm}
-	<div
-		role="dialog"
-		aria-modal="true"
-		tabindex="-1"
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-		onclick={(e) => {
-			if (e.currentTarget === e.target) showGameImportConfirm = false;
-		}}
-		onkeydown={(e) => e.key === 'Escape' && (showGameImportConfirm = false)}
-	>
-		<div class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4">
-			<h3 class="text-lg font-semibold text-error-500 mb-3">{t('settings.importGameData')}</h3>
-			<p class="text-sm text-surface-600-400 mb-2">{t('settings.importRecommendExport')}</p>
-			<p class="text-sm text-surface-700-300 mb-5">{t('settings.importGameDataWarning')}</p>
-			<div class="flex gap-2">
-				<button
-					class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors min-h-11"
-					type="button"
-					onclick={handleImportGameDataCancel}
-				>
-					{t('settings.cancel')}
-				</button>
-				<button
-					class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors min-h-11"
-					type="button"
-					onclick={handleImportGameDataConfirm}
-				>
-					{t('settings.importGameData')}
-				</button>
-			</div>
+<Modal bind:open={showGameImportConfirm} title={t('settings.importGameData')} variant="danger">
+	{#snippet body()}
+		<p class="text-sm text-surface-600-400 mb-2">{t('settings.importRecommendExport')}</p>
+		<p class="text-sm text-surface-700-300">{t('settings.importGameDataWarning')}</p>
+	{/snippet}
+	{#snippet footer()}
+		<div class="flex gap-2">
+			<button
+				class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors min-h-11"
+				type="button"
+				onclick={handleImportGameDataCancel}
+			>
+				{t('settings.cancel')}
+			</button>
+			<button
+				class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors min-h-11"
+				type="button"
+				onclick={handleImportGameDataConfirm}
+			>
+				{t('settings.importGameData')}
+			</button>
 		</div>
-	</div>
-{/if}
+	{/snippet}
+</Modal>
 
-{#if showConfigImportConfirm}
-	<div
-		role="dialog"
-		aria-modal="true"
-		tabindex="-1"
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-		onclick={(e) => {
-			if (e.currentTarget === e.target) showConfigImportConfirm = false;
-		}}
-		onkeydown={(e) => e.key === 'Escape' && (showConfigImportConfirm = false)}
-	>
-		<div class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4">
-			<h3 class="text-lg font-semibold text-error-500 mb-3">{t('settings.importConfigData')}</h3>
-			<p class="text-sm text-surface-600-400 mb-2">{t('settings.importRecommendExport')}</p>
-			<p class="text-sm text-surface-700-300 mb-5">{t('settings.importConfigDataWarning')}</p>
-			<div class="flex gap-2">
-				<button
-					class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors min-h-11"
-					type="button"
-					onclick={handleImportConfigDataCancel}
-				>
-					{t('settings.cancel')}
-				</button>
-				<button
-					class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors min-h-11"
-					type="button"
-					onclick={handleImportConfigDataConfirm}
-				>
-					{t('settings.importConfigData')}
-				</button>
-			</div>
+<Modal bind:open={showConfigImportConfirm} title={t('settings.importConfigData')} variant="danger">
+	{#snippet body()}
+		<p class="text-sm text-surface-600-400 mb-2">{t('settings.importRecommendExport')}</p>
+		<p class="text-sm text-surface-700-300">{t('settings.importConfigDataWarning')}</p>
+	{/snippet}
+	{#snippet footer()}
+		<div class="flex gap-2">
+			<button
+				class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors min-h-11"
+				type="button"
+				onclick={handleImportConfigDataCancel}
+			>
+				{t('settings.cancel')}
+			</button>
+			<button
+				class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors min-h-11"
+				type="button"
+				onclick={handleImportConfigDataConfirm}
+			>
+				{t('settings.importConfigData')}
+			</button>
 		</div>
-	</div>
-{/if}
+	{/snippet}
+</Modal>
 
-{#if showResetConfirm}
-	<div
-		role="dialog"
-		aria-modal="true"
-		tabindex="-1"
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-		onclick={(e) => {
-			if (e.currentTarget === e.target) showResetConfirm = false;
-		}}
-		onkeydown={(e) => e.key === 'Escape' && (showResetConfirm = false)}
-	>
-		<div class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4">
-			<h3 class="text-lg font-semibold text-error-500 mb-3">{t('settings.resetConfiguration')}</h3>
-			<p class="text-sm text-surface-700-300 mb-5">{t('settings.resetConfigurationWarning')}</p>
-			<div class="flex gap-2">
-				<button
-					class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors min-h-11"
-					type="button"
-					onclick={() => (showResetConfirm = false)}
-				>
-					{t('settings.cancel')}
-				</button>
-				<button
-					class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors min-h-11"
-					type="button"
-					onclick={handleResetConfirm}
-				>
-					{t('settings.resetConfiguration')}
-				</button>
-			</div>
+<Modal bind:open={showResetConfirm} title={t('settings.resetConfiguration')} variant="danger">
+	{#snippet body()}
+		<p class="text-sm text-surface-700-300">{t('settings.resetConfigurationWarning')}</p>
+	{/snippet}
+	{#snippet footer()}
+		<div class="flex gap-2">
+			<button
+				class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors min-h-11"
+				type="button"
+				onclick={() => (showResetConfirm = false)}
+			>
+				{t('settings.cancel')}
+			</button>
+			<button
+				class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors min-h-11"
+				type="button"
+				onclick={handleResetConfirm}
+			>
+				{t('settings.resetConfiguration')}
+			</button>
 		</div>
-	</div>
-{/if}
+	{/snippet}
+</Modal>
 
 {#if isImporting}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="alert" aria-live="assertive">

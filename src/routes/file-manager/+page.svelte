@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
+	import { onMount, tick } from 'svelte';
 	import { TreeView, createTreeViewCollection, type TreeViewRootProps } from '@skeletonlabs/skeleton-svelte';
 	import {
 		readDirectoryNodes,
@@ -24,6 +24,8 @@
 	import { log } from '$lib/logging/logger';
 	import CodeBlock from '$lib/components/CodeBlock.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 
 	function createCollection(children: FileNode[] = []) {
 		return createTreeViewCollection<FileNode>({
@@ -58,10 +60,11 @@
 	let isDeleting = $state(false);
 	let isCopying = $state(false);
 	let isRestoring = $state(false);
-	let cancelButton: HTMLButtonElement | null = $state(null);
 
 	let confirmDiscard = $state(false);
 	let actionError = $state<string | null>(null);
+
+	let inlineCancelRef: HTMLButtonElement | null = $state(null);
 
 	let isConfigModified = $state<boolean | null>(null);
 	let stories = $state<StoryFolderInfo[]>([]);
@@ -70,9 +73,13 @@
 	let showTreeOnMobile = $state(false);
 	let showFileDeleteConfirm = $state(false);
 
+	function focusInlineCancel() {
+		if (inlineCancelRef) inlineCancelRef.focus();
+	}
+
 	$effect(() => {
-		if ((showDeleteConfirm || confirmDiscard || showFileDeleteConfirm) && cancelButton) {
-			cancelButton.focus();
+		if (showDeleteConfirm || showFileDeleteConfirm) {
+			tick().then(focusInlineCancel);
 		}
 	});
 
@@ -420,15 +427,14 @@
 							<div class="text-center space-y-3">
 								<Icon name="download" class="size-8 mx-auto text-surface-500" />
 								<p class="text-sm text-surface-600-400">{t('fileManager.binaryFile')}</p>
-								<button
-									class="btn preset-filled"
-									type="button"
+								<Button
+									variant="filled"
 									onclick={() => {
 										if (selectedFilePath) downloadFile(selectedFilePath);
 									}}
 								>
 									{t('fileManager.download')}
-								</button>
+								</Button>
 							</div>
 						</div>
 					{:else if isEditing}
@@ -482,7 +488,7 @@
 							{isDeleting ? '...' : t('fileManager.delete')}
 						</button>
 						<button
-							bind:this={cancelButton}
+							bind:this={inlineCancelRef}
 							class="btn preset-tonal text-xs"
 							type="button"
 							onclick={() => {
@@ -528,7 +534,7 @@
 						{isDeleting ? '...' : t('fileManager.deleteObsolete')}
 					</button>
 					<button
-						bind:this={cancelButton}
+						bind:this={inlineCancelRef}
 						class="btn preset-tonal text-xs"
 						type="button"
 						onclick={() => {
@@ -560,7 +566,7 @@
 					{isDeleting ? '...' : t('fileManager.deleteOverride')}
 				</button>
 				<button
-					bind:this={cancelButton}
+					bind:this={inlineCancelRef}
 					class="btn preset-tonal text-xs"
 					type="button"
 					onclick={() => {
@@ -690,48 +696,30 @@
 	</TreeView.NodeProvider>
 {/snippet}
 
-{#if confirmDiscard}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		role="dialog"
-		aria-modal="true"
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-		onclick={() => {
-			confirmDiscard = false;
-		}}
-		onkeydown={(e) => e.key === 'Escape' && (confirmDiscard = false)}
-	>
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.stopPropagation()}
-		>
-			<h3 class="text-lg font-semibold text-surface-900-100 mb-2">
-				{t('fileManager.edit')}
-			</h3>
-			<p class="text-sm text-surface-600-400 mb-5">
-				{t('fileManager.unsavedChanges')}
-			</p>
-			<div class="flex justify-end gap-3">
-				<button
-					bind:this={cancelButton}
-					class="btn preset-tonal"
-					type="button"
-					onclick={() => {
-						confirmDiscard = false;
-					}}
-				>
-					{t('fileManager.cancel')}
-				</button>
-				<button
-					class="bg-error-500 hover:bg-error-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-					type="button"
-					onclick={confirmDiscardEdits}
-				>
-					{t('fileManager.discard')}
-				</button>
-			</div>
+<Modal bind:open={confirmDiscard} title={t('fileManager.edit')}>
+	{#snippet body()}
+		<p class="text-sm text-surface-600-400">
+			{t('fileManager.unsavedChanges')}
+		</p>
+	{/snippet}
+	{#snippet footer()}
+		<div class="flex justify-end gap-3">
+			<button
+				class="btn preset-tonal"
+				type="button"
+				onclick={() => {
+					confirmDiscard = false;
+				}}
+			>
+				{t('fileManager.cancel')}
+			</button>
+			<button
+				class="bg-error-500 hover:bg-error-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+				type="button"
+				onclick={confirmDiscardEdits}
+			>
+				{t('fileManager.discard')}
+			</button>
 		</div>
-	</div>
-{/if}
+	{/snippet}
+</Modal>

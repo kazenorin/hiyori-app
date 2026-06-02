@@ -22,6 +22,7 @@
 	import { streamActCard } from '$lib/features/act-card-generator';
 	import { log } from '$lib/logging/logger';
 	import { traceActLineChain } from '$lib/db/act-lines';
+	import Modal from '$lib/components/ui/Modal.svelte';
 
 	let inventoryItems = $state<InventoryItem[]>([]);
 	let aliasGroups = $state<AliasGroup[]>([]);
@@ -304,7 +305,6 @@
 		}
 	});
 </script>
-
 
 <div class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6">
 	<div class="max-w-2xl mx-auto space-y-8">
@@ -618,41 +618,28 @@
 </div>
 
 <!-- Confirmation Dialog -->
-{#if confirmDialog}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		role="dialog"
-		aria-modal="true"
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-		onclick={() => (confirmDialog = null)}
-		onkeydown={(e) => e.key === 'Escape' && (confirmDialog = null)}
-	>
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.stopPropagation()}
-		>
-			<h3 class="text-lg font-semibold text-surface-900-100 mb-2">
-				{confirmDialog.title}
-			</h3>
-			<p class="text-sm text-surface-600-400 mb-5">
-				{confirmDialog.message}
-			</p>
-			<div class="flex justify-end gap-3">
-				<button class="btn preset-tonal" type="button" onclick={() => (confirmDialog = null)}> {t('memoryManager.cancel')} </button>
-				<button
-					class="btn variant-filled"
-					type="button"
-					onclick={() => {
-						const handler = confirmDialog!.onConfirm;
-						confirmDialog = null;
-						handler();
-					}}
-				>
-					{t('memoryManager.confirm')}
-				</button>
-			</div>
+<Modal open={confirmDialog !== null} title={confirmDialog?.title ?? ''} onclose={() => (confirmDialog = null)}>
+	{#snippet body()}
+		<p class="text-sm text-surface-600-400">
+			{confirmDialog?.message ?? ''}
+		</p>
+	{/snippet}
+	{#snippet footer()}
+		<div class="flex justify-end gap-3">
+			<button class="btn preset-tonal" type="button" onclick={() => (confirmDialog = null)}>
+				{t('memoryManager.cancel')}
+			</button>
+			<button
+				class="btn variant-filled"
+				type="button"
+				onclick={() => {
+					const handler = confirmDialog?.onConfirm;
+					confirmDialog = null;
+					handler?.();
+				}}
+			>
+				{t('memoryManager.confirm')}
+			</button>
 		</div>
-	</div>
-{/if}
+	{/snippet}
+</Modal>

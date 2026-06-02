@@ -39,6 +39,7 @@
 
 	import BottomTabBar from '$lib/components/BottomTabBar.svelte';
 	import { mobileNav, mobileFeatures } from '$lib/stores/mobile-nav.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
 
 	let { children } = $props();
 	let appError = $state<string | null>(null);
@@ -101,7 +102,6 @@
 	// Delete confirmation state
 	type DeleteTarget = { type: 'story' | 'act' | 'line'; id: string; name: string };
 	let confirmDelete = $state<DeleteTarget | null>(null);
-	let cancelButton: HTMLButtonElement | null = $state(null);
 
 	// New story mode selection
 	let showNewStoryModal = $state(false);
@@ -296,12 +296,6 @@
 			await log.error('delete', 'Failed to delete', err);
 		}
 	}
-
-	$effect(() => {
-		if (confirmDelete && cancelButton) {
-			cancelButton.focus();
-		}
-	});
 
 	function handleRenameKeydown(e: KeyboardEvent) {
 		if (e.key === 'Enter') {
@@ -602,130 +596,102 @@
 </div>
 
 <!-- Delete Confirmation Modal -->
-{#if confirmDelete}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="delete-dialog-title"
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-		onclick={cancelDelete}
-		onkeydown={(e) => e.key === 'Escape' && cancelDelete()}
-	>
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-sm w-full mx-4"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.stopPropagation()}
-		>
-			<h3 id="delete-dialog-title" class="text-lg font-semibold text-surface-900-100 mb-2">
-				{t('sidebar.deleteConfirmTitle', { type: confirmDelete.type })}
-			</h3>
-			<p class="text-sm text-surface-600-400 mb-5">
-				{#if confirmDelete.type === 'story'}
-					{t('sidebar.deleteStoryConfirm', { name: confirmDelete.name })}
-				{:else if confirmDelete.type === 'act'}
-					{t('sidebar.deleteActConfirm', { name: confirmDelete.name })}
-				{:else if confirmDelete.type === 'line'}
-					{t('sidebar.deleteLineConfirm', { name: confirmDelete.name })}
-				{:else}
-					{t('sidebar.deleteGenericConfirm', { name: confirmDelete.name })}
-				{/if}
-			</p>
-			{#if confirmDelete.type === 'story' || confirmDelete.type === 'line'}
-				<div class="flex flex-col gap-2">
-					<button
-						class="w-full px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
-						type="button"
-						onclick={() => confirmDeleteAction(false)}
-					>
-						{t('sidebar.deleteKeepFolder')}
-					</button>
-					<button
-						class="w-full px-4 py-2 rounded-lg bg-error-700 hover:bg-error-800 text-white text-sm font-medium transition-colors"
-						type="button"
-						onclick={() => confirmDeleteAction(true)}
-					>
-						{t('sidebar.deleteWithFolder')}
-					</button>
-					<button
-						bind:this={cancelButton}
-						class="w-full px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
-						type="button"
-						onclick={cancelDelete}
-					>
-						{t('sidebar.cancel')}
-					</button>
-				</div>
+<Modal
+	open={confirmDelete !== null}
+	title={confirmDelete ? t('sidebar.deleteConfirmTitle', { type: confirmDelete.type }) : ''}
+	onclose={cancelDelete}
+>
+	{#snippet body()}
+		<p class="text-sm text-surface-600-400">
+			{#if confirmDelete?.type === 'story'}
+				{t('sidebar.deleteStoryConfirm', { name: confirmDelete.name })}
+			{:else if confirmDelete?.type === 'act'}
+				{t('sidebar.deleteActConfirm', { name: confirmDelete.name })}
+			{:else if confirmDelete?.type === 'line'}
+				{t('sidebar.deleteLineConfirm', { name: confirmDelete.name })}
 			{:else}
-				<div class="flex gap-2">
-					<button
-						bind:this={cancelButton}
-						class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
-						type="button"
-						onclick={cancelDelete}
-					>
-						{t('sidebar.cancel')}
-					</button>
-					<button
-						class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
-						type="button"
-						onclick={() => confirmDeleteAction()}
-					>
-						{t('sidebar.deleteLabel')}
-					</button>
-				</div>
+				{t('sidebar.deleteGenericConfirm', { name: confirmDelete?.name ?? '' })}
 			{/if}
-		</div>
-	</div>
-{/if}
-
-<!-- New Story Modal -->
-{#if showNewStoryModal}
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
-	<div
-		role="dialog"
-		aria-modal="true"
-		aria-labelledby="new-story-dialog-title"
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
-		onclick={cancelNewStory}
-		onkeydown={(e) => e.key === 'Escape' && cancelNewStory()}
-	>
-		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<div
-			class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-6 max-w-md w-full mx-4"
-			onclick={(e) => e.stopPropagation()}
-			onkeydown={(e) => e.stopPropagation()}
-		>
-			<h3 id="new-story-dialog-title" class="text-lg font-semibold text-surface-900-100 mb-4">{t('sidebar.createNewStory')}</h3>
-			<div class="flex flex-col gap-3">
+		</p>
+	{/snippet}
+	{#snippet footer()}
+		{#if confirmDelete?.type === 'story' || confirmDelete?.type === 'line'}
+			<div class="flex flex-col gap-2">
 				<button
-					class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
+					class="w-full px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
 					type="button"
-					onclick={handleStartWorldBuilder}
+					onclick={() => confirmDeleteAction(false)}
 				>
-					<div class="font-medium text-surface-900-100 mb-1">{t('sidebar.worldBuilder')}</div>
-					<div class="text-sm text-surface-600-400">{t('sidebar.worldBuilderDescription')}</div>
+					{t('sidebar.deleteKeepFolder')}
 				</button>
 				<button
-					class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
+					class="w-full px-4 py-2 rounded-lg bg-error-700 hover:bg-error-800 text-white text-sm font-medium transition-colors"
 					type="button"
-					onclick={handleStartImportWorld}
+					onclick={() => confirmDeleteAction(true)}
 				>
-					<div class="font-medium text-surface-900-100 mb-1">{t('sidebar.importWorld')}</div>
-					<div class="text-sm text-surface-600-400">{t('sidebar.importWorldDescription')}</div>
+					{t('sidebar.deleteWithFolder')}
+				</button>
+				<button
+					class="w-full px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+					type="button"
+					onclick={cancelDelete}
+				>
+					{t('sidebar.cancel')}
 				</button>
 			</div>
+		{:else}
+			<div class="flex gap-2">
+				<button
+					class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+					type="button"
+					onclick={cancelDelete}
+				>
+					{t('sidebar.cancel')}
+				</button>
+				<button
+					class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
+					type="button"
+					onclick={() => confirmDeleteAction()}
+				>
+					{t('sidebar.deleteLabel')}
+				</button>
+			</div>
+		{/if}
+	{/snippet}
+</Modal>
+
+<!-- New Story Modal -->
+<Modal bind:open={showNewStoryModal} title={t('sidebar.createNewStory')} width="md">
+	{#snippet body()}
+		<div class="flex flex-col gap-3">
 			<button
-				class="w-full mt-4 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+				class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
 				type="button"
-				onclick={cancelNewStory}
+				onclick={handleStartWorldBuilder}
 			>
-				{t('sidebar.cancel')}
+				<div class="font-medium text-surface-900-100 mb-1">{t('sidebar.worldBuilder')}</div>
+				<div class="text-sm text-surface-600-400">{t('sidebar.worldBuilderDescription')}</div>
+			</button>
+			<button
+				class="w-full text-left p-4 rounded-lg border border-surface-200-800 hover:bg-surface-200-800 transition-colors duration-150"
+				type="button"
+				onclick={handleStartImportWorld}
+			>
+				<div class="font-medium text-surface-900-100 mb-1">{t('sidebar.importWorld')}</div>
+				<div class="text-sm text-surface-600-400">{t('sidebar.importWorldDescription')}</div>
 			</button>
 		</div>
-	</div>
-{/if}
+	{/snippet}
+	{#snippet footer()}
+		<button
+			class="w-full px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors"
+			type="button"
+			onclick={cancelNewStory}
+		>
+			{t('sidebar.cancel')}
+		</button>
+	{/snippet}
+</Modal>
 
 <!-- Act Plot Generation Overlay -->
 {#if getActPlotGenerationPhase() !== null}

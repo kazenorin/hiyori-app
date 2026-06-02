@@ -95,6 +95,7 @@
 	import ChoicesSheet from '$lib/components/ChoicesSheet.svelte';
 	import MessageActionBar from '$lib/components/MessageActionBar.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import Button from '$lib/components/ui/Button.svelte';
 	import { mobileNav } from '$lib/stores/mobile-nav.svelte';
 	import { scrollToBottom } from '$lib/utils/scroll';
 
@@ -978,7 +979,7 @@
 
 				<div class="mt-3">
 					{#if getIsWorldBuilderStreaming()}
-						<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopWorldBuilderStreaming}> {t('chat.stop')} </button>
+						<Button variant="filled-error" fullWidth onclick={stopWorldBuilderStreaming}>{t('chat.stop')}</Button>
 					{:else if !getIsWorldBuilderComplete() || getActPlotInterview()}
 						<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
 					{/if}
@@ -1456,9 +1457,9 @@
 
 				<div class="mt-3">
 					{#if getIsStreaming()}
-						<button class="btn preset-filled-error-500 w-full" type="button" onclick={stopStreaming}> {t('chat.stop')} </button>
+						<Button variant="filled-error" fullWidth onclick={stopStreaming}>{t('chat.stop')}</Button>
 					{:else if getActEnded()}
-						<button class="btn preset-tonal w-full" type="button" disabled> {t('chat.send')} </button>
+						<Button fullWidth disabled>{t('chat.send')}</Button>
 					{:else}
 						<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
 					{/if}
