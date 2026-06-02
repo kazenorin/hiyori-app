@@ -15,7 +15,6 @@
 		updateProviderConfig,
 		updateSettings,
 	} from '$lib/stores/settings.svelte';
-	import { fetchModels, type ModelInfo } from '$lib/ai/models';
 	import { t } from '$lib/i18n';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
@@ -23,6 +22,7 @@
 	import ProgressField from '$lib/components/ui/ProgressField.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
+	import ProviderForm from '$lib/components/chat/ProviderForm.svelte';
 	import TextField from '$lib/components/ui/TextField.svelte';
 	import NumberField from '$lib/components/ui/NumberField.svelte';
 	import {
@@ -168,51 +168,12 @@
 		}
 	}
 
-	// Form state for the provider being edited/added
-	let formName = $state('');
-	let formProvider = $state<Provider>('openai');
-	let formApiType = $state<ApiType>('responses');
-	let formBaseURL = $state('https://api.openai.com/v1');
-	let formModel = $state('');
-	let formApiKey = $state('');
-	let formCorsBypassEnabled = $state(false);
-	let formWispProxyUrl = $state('ws://localhost:6001');
-
-	// Model fetching
-	let availableModels = $state<ModelInfo[]>([]);
-	let isLoadingModels = $state(false);
-	let modelsError = $state<string | null>(null);
-
-	function resetForm() {
-		formName = '';
-		formProvider = 'openai';
-		formApiType = 'responses';
-		formBaseURL = 'https://api.openai.com/v1';
-		formModel = '';
-		formApiKey = '';
-		formCorsBypassEnabled = false;
-		formWispProxyUrl = 'ws://localhost:6001';
-		availableModels = [];
-		modelsError = null;
-	}
-
 	function startEdit(config: ProviderConfig) {
 		editingId = config.id;
 		isAddingNew = false;
-		formName = config.name;
-		formProvider = config.provider;
-		formApiType = config.apiType;
-		formBaseURL = config.baseURL;
-		formModel = config.model;
-		formApiKey = config.apiKey;
-		formCorsBypassEnabled = config.corsBypassEnabled;
-		formWispProxyUrl = config.wispProxyUrl;
-		availableModels = [];
-		modelsError = null;
 	}
 
 	function startAdd() {
-		resetForm();
 		isAddingNew = true;
 		editingId = null;
 	}
@@ -220,51 +181,18 @@
 	function cancelEdit() {
 		editingId = null;
 		isAddingNew = false;
-		resetForm();
 	}
 
-	function handleProviderChange() {
-		if (formProvider === 'openai-compatible') {
-			formBaseURL = 'http://localhost:1234/v1';
-		} else if (formProvider === 'ollama') {
-			formBaseURL = 'https://ollama.com';
-		} else if (formProvider === 'openai') {
-			formBaseURL = 'https://api.openai.com/v1';
-		} else {
-			formBaseURL = '';
-		}
-	}
-
-	function handleSaveNew() {
-		const config = addProviderConfig({
-			name: formName || t('settings.untitledProvider'),
-			provider: formProvider,
-			apiType: formApiType,
-			baseURL: formBaseURL,
-			model: formModel,
-			apiKey: formApiKey,
-			corsBypassEnabled: formCorsBypassEnabled,
-			wispProxyUrl: formWispProxyUrl,
-		});
-		// If no main provider assigned, make this the main one
-		if (!settings.roleAssignments['main']) {
-			assignRole('main', config.id);
-		}
+	function handleSaveFromForm(id: string, data: Omit<ProviderConfig, 'id'>) {
+		updateProviderConfig(id, data);
 		cancelEdit();
 	}
 
-	function handleSaveEdit() {
-		if (!editingId) return;
-		updateProviderConfig(editingId, {
-			name: formName,
-			provider: formProvider,
-			apiType: formApiType,
-			baseURL: formBaseURL,
-			model: formModel,
-			apiKey: formApiKey,
-			corsBypassEnabled: formCorsBypassEnabled,
-			wispProxyUrl: formWispProxyUrl,
-		});
+	function handleSaveNewFromForm(data: Omit<ProviderConfig, 'id'>) {
+		const config = addProviderConfig(data);
+		if (!settings.roleAssignments['main']) {
+			assignRole('main', config.id);
+		}
 		cancelEdit();
 	}
 
@@ -286,25 +214,6 @@
 		});
 		// Start editing the copy immediately
 		startEdit(copy);
-	}
-
-	async function handleFetchModels() {
-		isLoadingModels = true;
-		modelsError = null;
-		try {
-			availableModels = await fetchModels({
-				baseURL: formBaseURL,
-				apiKey: formApiKey,
-				provider: formProvider,
-				corsBypassEnabled: formCorsBypassEnabled,
-				wispProxyUrl: formWispProxyUrl,
-			});
-		} catch (err: unknown) {
-			modelsError = err instanceof Error ? err.message : t('settings.failedToFetchModels');
-			availableModels = [];
-		} finally {
-			isLoadingModels = false;
-		}
 	}
 
 	function isEditing(config: ProviderConfig): boolean {
@@ -369,91 +278,13 @@
 			<!-- Provider List -->
 			{#each settings.providers as config (config.id)}
 				{#if isEditing(config)}
-					<!-- Edit Form -->
-					<div class="card p-3 md:p-4 space-y-3 border border-primary-500-300">
-						{#each settings.providers as c (c)}
-							{#if c.id === config.id}
-								{@const isMain = mainProviderId === config.id}
-								<p class="text-xs text-surface-500">
-									{t('settings.editing')}{#if isMain}
-										{t('settings.mainProviderTag')}{/if}
-								</p>
-							{/if}
-						{/each}
-						<details open>
-							<summary class="text-sm font-medium cursor-pointer">{formName || t('settings.untitled')}</summary>
-							<div class="mt-3 space-y-3">
-								<TextField label={t('settings.name')} type="text" placeholder={t('settings.namePlaceholder')} bind:value={formName} />
-
-								<label class="block">
-									<span class="text-sm font-medium text-surface-700-300">{t('settings.apiProvider')}</span>
-									<ThemedSelect
-										items={providerItems}
-										value={formProvider}
-										onValueChange={(v) => {
-											formProvider = v as Provider;
-											handleProviderChange();
-										}}
-									/>
-								</label>
-
-								{#if formProvider === 'openai'}
-									<label class="block">
-										<span class="text-sm font-medium text-surface-700-300">{t('settings.apiType')}</span>
-										<ThemedSelect items={apiTypeItems} value={formApiType} onValueChange={(v) => (formApiType = v as ApiType)} />
-										<span class="text-xs text-surface-500 mt-1 block">{t('settings.apiTypeHint')}</span>
-									</label>
-								{/if}
-
-								<TextField label={t('settings.baseUrl')} type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} hint={t('settings.baseUrlHint')} />
-
-								<div>
-									<div class="flex items-end gap-2">
-										<label class="flex-1">
-											<span class="text-sm font-medium text-surface-700-300">{t('settings.model')}</span>
-											{#if availableModels.length > 0}
-												<ThemedSelect
-													items={availableModels.map((m) => ({ label: m.id, value: m.id }))}
-													value={formModel}
-													onValueChange={(v) => (formModel = v)}
-												/>
-											{:else}
-												<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
-											{/if}
-										</label>
-										<button class="btn preset-tonal shrink-0 min-h-11" type="button" onclick={handleFetchModels} disabled={isLoadingModels}>
-											{isLoadingModels ? t('settings.loading') : t('settings.fetchModels')}
-										</button>
-									</div>
-									{#if availableModels.length > 0}
-										<label class="block mt-2">
-											<span class="text-xs text-surface-500">{t('settings.modelOrType')}</span>
-											<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
-										</label>
-									{/if}
-									{#if modelsError}
-										<p class="text-xs text-error-700-300 mt-1">{modelsError}</p>
-									{/if}
-								</div>
-
-								<TextField label={t('settings.apiKey')} type="password" placeholder="sk-..." bind:value={formApiKey} hint={t('settings.apiKeyHint')} />
-
-								{#if !isTauriSync()}
-									<label class="flex items-center gap-2">
-										<input type="checkbox" class="checkbox" bind:checked={formCorsBypassEnabled} />
-										<span class="text-sm font-medium text-surface-700-300">{t('settings.bypassCorsViaWispProxy')}</span>
-									</label>
-									{#if formCorsBypassEnabled}
-										<TextField label={t('settings.wispProxyUrl')} type="url" placeholder="ws://localhost:6001" bind:value={formWispProxyUrl} hint={t('settings.wispProxyUrlHint')} />
-									{/if}
-								{/if}
-							</div>
-						</details>
-						<div class="flex gap-2">
-							<Button variant="filled" class="min-h-11" onclick={handleSaveEdit}>{t('settings.save')}</Button>
-							<Button class="min-h-11" onclick={cancelEdit}>{t('settings.cancel')}</Button>
-						</div>
-					</div>
+					<ProviderForm
+						mode="edit"
+						{config}
+						isMainProvider={mainProviderId === config.id}
+						onsave={(data) => handleSaveFromForm(config.id, data)}
+						oncancel={cancelEdit}
+					/>
 				{:else}
 					<!-- Provider Card -->
 					<div
@@ -490,90 +321,13 @@
 				{/if}
 			{/each}
 
-			<!-- Add New Provider Form -->
 			{#if isAddingNew}
-				<div class="card p-3 md:p-4 space-y-3 border border-primary-500-300">
-					<p class="text-xs text-surface-500">{t('settings.newProvider')}</p>
-					<details open>
-						<summary class="text-sm font-medium cursor-pointer">{formName || t('settings.newProviderTitle')}</summary>
-						<div class="mt-3 space-y-3">
-							<TextField label={t('settings.name')} type="text" placeholder={t('settings.namePlaceholder')} bind:value={formName} />
-
-							<label class="block">
-								<span class="text-sm font-medium text-surface-700-300">{t('settings.apiProvider')}</span>
-								<ThemedSelect
-									items={providerItems}
-									value={formProvider}
-									onValueChange={(v) => {
-										formProvider = v as Provider;
-										handleProviderChange();
-									}}
-								/>
-							</label>
-
-							{#if formProvider === 'openai'}
-								<label class="block">
-									<span class="text-sm font-medium text-surface-700-300">{t('settings.apiType')}</span>
-									<ThemedSelect items={apiTypeItems} value={formApiType} onValueChange={(v) => (formApiType = v as ApiType)} />
-									<span class="text-xs text-surface-500 mt-1 block">{t('settings.apiTypeHint')}</span>
-								</label>
-							{/if}
-
-							<TextField label={t('settings.baseUrl')} type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} hint={t('settings.baseUrlHint')} />
-
-							<div>
-								<div class="flex items-end gap-2">
-									<label class="flex-1">
-										<span class="text-sm font-medium text-surface-700-300">{t('settings.model')}</span>
-										{#if availableModels.length > 0}
-											<ThemedSelect
-												items={availableModels.map((m) => ({ label: m.id, value: m.id }))}
-												value={formModel}
-												onValueChange={(v) => (formModel = v)}
-											/>
-										{:else}
-											<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
-										{/if}
-									</label>
-									<button class="btn preset-tonal shrink-0 min-h-11" type="button" onclick={handleFetchModels} disabled={isLoadingModels}>
-										{isLoadingModels ? t('settings.loading') : t('settings.fetchModels')}
-									</button>
-								</div>
-								{#if availableModels.length > 0}
-									<label class="block mt-2">
-										<span class="text-xs text-surface-500">{t('settings.modelOrType')}</span>
-										<input class="input mt-1" type="text" placeholder={t('settings.modelPlaceholder')} bind:value={formModel} />
-									</label>
-								{/if}
-								{#if modelsError}
-									<p class="text-xs text-error-700-300 mt-1">{modelsError}</p>
-								{/if}
-							</div>
-
-							<TextField label={t('settings.apiKey')} type="password" placeholder="sk-..." bind:value={formApiKey} hint={t('settings.apiKeyHint')} />
-
-							{#if !isTauriSync()}
-								<label class="flex items-center gap-2">
-									<input type="checkbox" class="checkbox" bind:checked={formCorsBypassEnabled} />
-									<span class="text-sm font-medium text-surface-700-300">{t('settings.bypassCorsViaWispProxy')}</span>
-								</label>
-								{#if formCorsBypassEnabled}
-									<TextField label={t('settings.wispProxyUrl')} type="url" placeholder="ws://localhost:6001" bind:value={formWispProxyUrl} hint={t('settings.wispProxyUrlHint')} />
-								{/if}
-							{/if}
-						</div>
-					</details>
-					<div class="flex gap-2">
-						<Button variant="filled" class="min-h-11" onclick={handleSaveNew}>{t('settings.addProviderButton')}</Button>
-						<Button class="min-h-11" onclick={cancelEdit}>{t('settings.cancel')}</Button>
-					</div>
-				</div>
+				<ProviderForm mode="add" onsave={handleSaveNewFromForm} oncancel={cancelEdit} />
 			{/if}
 		</Card>
 
 		<!-- Provider Roles -->
 		<Card title={t('settings.providerRoles')} description={t('settings.providerRolesDescription')}>
-
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.mainProvider')}</span>
 				<ThemedSelect
@@ -613,7 +367,6 @@
 		{#if isMemoryCapable()}
 			<!-- Memory -->
 			<Card title={t('settings.memory')} description={t('settings.enableMemoryDescription')}>
-
 				<label class="flex items-center gap-2">
 					<input
 						type="checkbox"
@@ -653,7 +406,6 @@
 
 		<!-- Director Mode -->
 		<Card title={t('settings.directorMode')} description={t('settings.directorModeDescription')}>
-
 			<label class="flex items-center gap-2">
 				<input
 					type="checkbox"
@@ -667,7 +419,6 @@
 
 		<!-- Pipeline Roles -->
 		<Card title={t('settings.pipelineRoles')} description={t('settings.pipelineRolesDescription')}>
-
 			<div class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.plotPlanner')}</span>
 				<div class="flex items-center gap-2 mt-1">
@@ -812,15 +563,33 @@
 
 		<!-- Narrative -->
 		<Card title={t('settings.narrative')}>
+			<NumberField
+				label={t('settings.targetWordCount')}
+				hint={t('settings.targetWordCountDescription')}
+				min={50}
+				max={2000}
+				step={50}
+				value={settings.targetWordCount}
+				onValueChange={(v) => {
+					if (v >= 50 && v <= 2000) updateSettings({ targetWordCount: v });
+				}}
+			/>
 
-			<NumberField label={t('settings.targetWordCount')} hint={t('settings.targetWordCountDescription')} min={50} max={2000} step={50} value={settings.targetWordCount} onValueChange={(v) => { if (v >= 50 && v <= 2000) updateSettings({ targetWordCount: v }); }} />
-
-			<NumberField label={t('settings.compressorInterval')} hint={t('settings.compressorIntervalDescription')} min={0} max={50} step={1} value={settings.characterProfileCompressorInterval} onValueChange={(v) => { if (v >= 0 && v <= 50) updateSettings({ characterProfileCompressorInterval: v }); }} />
+			<NumberField
+				label={t('settings.compressorInterval')}
+				hint={t('settings.compressorIntervalDescription')}
+				min={0}
+				max={50}
+				step={1}
+				value={settings.characterProfileCompressorInterval}
+				onValueChange={(v) => {
+					if (v >= 0 && v <= 50) updateSettings({ characterProfileCompressorInterval: v });
+				}}
+			/>
 		</Card>
 
 		<!-- Data -->
 		<Card title={t('settings.data')} description={t('settings.dataDescription')}>
-
 			{#if !isTauriSync()}
 				<p class="text-xs text-warning-500">{t('settings.dataWebNotice')}</p>
 			{/if}
@@ -895,7 +664,6 @@
 
 		<!-- Developer -->
 		<Card title={t('settings.developer')}>
-
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.locale')}</span>
 				<ThemedSelect items={localeItems} value={settings.locale} onValueChange={(v) => updateSettings({ locale: v })} />

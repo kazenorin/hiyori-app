@@ -63,7 +63,6 @@
 		setActPlotGenerationPhase,
 	} from '$lib/stores/stories.svelte';
 	import { isDirectorModeEnabled, settings } from '$lib/stores/settings.svelte';
-	import { Accordion } from '@skeletonlabs/skeleton-svelte';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import ChatControls from '$lib/components/ChatControls.svelte';
 	import DirectorNotesPanel from '$lib/components/DirectorNotesPanel.svelte';
@@ -93,7 +92,10 @@
 	import ScrollToFAB from '$lib/components/ScrollToFAB.svelte';
 	import MobileInputSheet from '$lib/components/MobileInputSheet.svelte';
 	import ChoicesSheet from '$lib/components/ChoicesSheet.svelte';
-	import MessageActionBar from '$lib/components/MessageActionBar.svelte';
+	import ReasoningAccordion from '$lib/components/chat/ReasoningAccordion.svelte';
+	import MessageActions from '$lib/components/chat/MessageActions.svelte';
+	import ForkChoicePanel from '$lib/components/chat/ForkChoicePanel.svelte';
+	import MessageEditForm from '$lib/components/chat/MessageEditForm.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { mobileNav } from '$lib/stores/mobile-nav.svelte';
@@ -146,11 +148,7 @@
 
 	let editingMessageId = $state<string | null>(null);
 	let editingIsTemplated = $state(false);
-	let editContent = $state('');
-	let editSceneTitle = $state('');
-	let editBackground = $state('');
-	let editNarrativeBody = $state('');
-	let editCg = $state('');
+
 
 	// Reset fork choice when navigating to a different act line
 	$effect(() => {
@@ -185,61 +183,31 @@
 		if (getIsBusy() || getIsWorldBuilderStreaming()) return;
 		editingMessageId = message.id;
 		editingIsTemplated = isTemplated;
-		editContent = '';
-		editSceneTitle = '';
-		editBackground = '';
-		editNarrativeBody = '';
-		editCg = '';
-		if (isTemplated && 'variables' in message && message.variables && hasTemplateMetadata(message.variables)) {
-			editSceneTitle = message.variables.sceneTitle ?? '';
-			editBackground = message.variables.background ?? '';
-			editNarrativeBody = message.variables.narrativeBody ?? '';
-			editCg = message.variables.cg ?? '';
-		} else {
-			editContent = message.content;
-		}
 	}
 
 	function cancelEdit() {
 		editingMessageId = null;
 		editingIsTemplated = false;
-		editContent = '';
-		editSceneTitle = '';
-		editBackground = '';
-		editNarrativeBody = '';
-		editCg = '';
 	}
 
-	function handleWbEditKeydown(message: WorldBuilderMessage, e: KeyboardEvent) {
-		if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-			e.preventDefault();
-			saveEditWorldBuilderMessage(message);
-		}
-	}
 
-	function handleMainEditKeydown(message: UIMessage, e: KeyboardEvent) {
-		if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-			e.preventDefault();
-			saveEditMainChatMessage(message);
-		}
-	}
 
-	async function saveEditMainChatMessage(message: UIMessage) {
+	async function saveEditMainChatMessage(message: UIMessage, data: { content?: string; variables?: { sceneTitle?: string; background?: string; narrativeBody?: string; cg?: string } }) {
 		if (!editingMessageId) return;
 		try {
-			if (editingIsTemplated && message.variables) {
+			if (data.variables) {
 				const updatedVariables: NarrativeVariables = {
 					...message.variables,
-					sceneTitle: editSceneTitle || null,
-					background: editBackground || null,
-					narrativeBody: editNarrativeBody || null,
-					cg: editCg || null,
+					sceneTitle: data.variables.sceneTitle || null,
+					background: data.variables.background || null,
+					narrativeBody: data.variables.narrativeBody || null,
+					cg: data.variables.cg || null,
 				};
 				await updateMessageFields(message.id, { variables: JSON.stringify(updatedVariables) });
 				updateMessageInState(message.id, { variables: updatedVariables });
 			} else {
-				await updateMessageFields(message.id, { content: editContent });
-				updateMessageInState(message.id, { content: editContent });
+				await updateMessageFields(message.id, { content: data.content ?? '' });
+				updateMessageInState(message.id, { content: data.content ?? '' });
 			}
 			cancelEdit();
 		} catch (err) {
@@ -247,12 +215,13 @@
 		}
 	}
 
-	async function saveEditWorldBuilderMessage(message: WorldBuilderMessage) {
+	async function saveEditWorldBuilderMessage(message: WorldBuilderMessage, data: { content?: string }) {
 		if (!editingMessageId) return;
 		try {
-			updateWorldBuilderMessageContent(message.id, editContent);
+			const content = data.content ?? '';
+			updateWorldBuilderMessageContent(message.id, content);
 			if (getActPlotInterview()) {
-				await updateMessageFields(message.id, { content: editContent });
+				await updateMessageFields(message.id, { content });
 			}
 			cancelEdit();
 		} catch (err) {
@@ -793,17 +762,13 @@
 							<div class="flex justify-end">
 								<div class="max-w-[90%] md:max-w-[80%] min-w-0 rounded-(--radius-container) bg-primary-100-900 p-3 md:p-5">
 									{#if isEditingMessage(message.id)}
-										<textarea
-											class="input w-full resize-y text-sm leading-relaxed min-h-20 bg-surface-50-950 text-primary-900-100"
-											bind:value={editContent}
-											onkeydown={(e) => handleWbEditKeydown(message, e)}
-										></textarea>
-										<div class="flex gap-2 mt-2">
-											<button class="btn preset-filled-primary-500 text-xs py-1 px-3" onclick={() => saveEditWorldBuilderMessage(message)}
-												>{t('chat.save')}</button
-											>
-											<button class="btn preset-tonal text-xs py-1 px-3" onclick={cancelEdit}>{t('chat.cancel')}</button>
-										</div>
+										<MessageEditForm
+											mode="wb-user"
+											messageId={message.id}
+											initial={{ content: message.content }}
+											onsave={(data) => saveEditWorldBuilderMessage(message, data)}
+											oncancel={cancelEdit}
+										/>
 									{:else}
 										<div class="leading-relaxed text-primary-900-100">
 											<MarkdownContent content={message.content} />
@@ -834,17 +799,13 @@
 						{:else}
 							<div class="rounded-(--radius-container) bg-surface-50-950 p-3 md:p-5 shadow-message border border-surface-200-800">
 								{#if isEditingMessage(message.id)}
-									<textarea
-										class="input w-full resize-y text-sm leading-relaxed min-h-32"
-										bind:value={editContent}
-										onkeydown={(e) => handleWbEditKeydown(message, e)}
-									></textarea>
-									<div class="flex gap-2 mt-2">
-										<button class="btn preset-filled-primary-500 text-xs py-1 px-3" onclick={() => saveEditWorldBuilderMessage(message)}
-											>{t('chat.save')}</button
-										>
-										<button class="btn preset-tonal text-xs py-1 px-3" onclick={cancelEdit}>{t('chat.cancel')}</button>
-									</div>
+									<MessageEditForm
+										mode="wb-assistant"
+										messageId={message.id}
+										initial={{ content: message.content }}
+										onsave={(data) => saveEditWorldBuilderMessage(message, data)}
+										oncancel={cancelEdit}
+									/>
 								{:else if message.content}
 									<div class="leading-relaxed text-surface-800-200">
 										<MarkdownContent content={message.content} {characterNames} />
@@ -1039,124 +1000,40 @@
 									<!-- Pipeline phase accordions -->
 									{#if message.phases && message.phases.length > 0}
 										{#each message.phases as phase, pi (pi)}
-											<div class="mb-3">
-												<Accordion collapsible>
-													<Accordion.Item value={phase.phaseName}>
-														<Accordion.ItemTrigger
-															class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1"
-														>
-															<span>{formatPhaseName(phase.phaseName)}</span>
-															<Accordion.ItemIndicator>
-																<span class="transition-transform duration-150 text-surface-500">&#9660;</span>
-															</Accordion.ItemIndicator>
-														</Accordion.ItemTrigger>
-														<Accordion.ItemContent>
-															{#snippet element(attributes)}
-																{#if !attributes.hidden}
-																	<div
-																		{...attributes}
-																		class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
-																	>
-																		{#if phase.reasoning}
-																			<div class="mb-2 italic text-surface-400">{phase.reasoning}</div>
-																		{/if}
-																		<MarkdownContent content={phase.content} />
-																	</div>
-																{/if}
-															{/snippet}
-														</Accordion.ItemContent>
-													</Accordion.Item>
-												</Accordion>
-											</div>
+											<ReasoningAccordion label={formatPhaseName(phase.phaseName)} value={phase.phaseName}>
+												{#if phase.reasoning}
+													<div class="mb-2 italic text-surface-400">{phase.reasoning}</div>
+												{/if}
+												<MarkdownContent content={phase.content} />
+											</ReasoningAccordion>
 										{/each}
 									{/if}
 
-									<!-- Editor reasoning -->
 									{#if message.reasoning}
-										<div class="mb-3">
-											<Accordion collapsible>
-												<Accordion.Item value="reasoning">
-													<Accordion.ItemTrigger class="flex items-center justify-between w-full text-xs font-medium text-surface-500 py-1">
-														<span>{t('chat.reasoning')}</span>
-														<Accordion.ItemIndicator>
-															<span class="transition-transform duration-150 text-surface-500">&#9660;</span>
-														</Accordion.ItemIndicator>
-													</Accordion.ItemTrigger>
-													<Accordion.ItemContent>
-														{#snippet element(attributes)}
-															{#if !attributes.hidden}
-																<div
-																	{...attributes}
-																	class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
-																>
-																	{message.reasoning}
-																</div>
-															{/if}
-														{/snippet}
-													</Accordion.ItemContent>
-												</Accordion.Item>
-											</Accordion>
-										</div>
+										<ReasoningAccordion label={t('chat.reasoning')} value="reasoning">
+											{message.reasoning}
+										</ReasoningAccordion>
 									{/if}
 
 									<!-- Main content: Editor output -->
-									{#if isEditingMessage(message.id) && editingIsTemplated}
-										<div>
-											<div class="space-y-3 mt-2">
-												<div>
-													<label for="edit-scene-title-{message.id}" class="block text-xs font-medium text-surface-500 mb-1"
-														>{t('chat.sceneTitle')}</label
-													>
-													<textarea
-														id="edit-scene-title-{message.id}"
-														class="input w-full resize-y text-sm leading-relaxed min-h-8"
-														rows="1"
-														bind:value={editSceneTitle}
-														onkeydown={(e) => handleMainEditKeydown(message, e)}
-													></textarea>
-												</div>
-												<div>
-													<label for="edit-background-{message.id}" class="block text-xs font-medium text-surface-500 mb-1"
-														>{t('chat.background')}</label
-													>
-													<textarea
-														id="edit-background-{message.id}"
-														class="input w-full resize-y text-sm leading-relaxed min-h-16"
-														rows="3"
-														bind:value={editBackground}
-														onkeydown={(e) => handleMainEditKeydown(message, e)}
-													></textarea>
-												</div>
-												<div>
-													<label for="edit-narrative-body-{message.id}" class="block text-xs font-medium text-surface-500 mb-1"
-														>{t('chat.narrativeBody')}</label
-													>
-													<textarea
-														id="edit-narrative-body-{message.id}"
-														class="input w-full resize-y text-sm leading-relaxed min-h-32"
-														rows="8"
-														bind:value={editNarrativeBody}
-														onkeydown={(e) => handleMainEditKeydown(message, e)}
-													></textarea>
-												</div>
-												<div>
-													<label for="edit-cg-{message.id}" class="block text-xs font-medium text-surface-500 mb-1">{t('chat.cg')}</label>
-													<textarea
-														id="edit-cg-{message.id}"
-														class="input w-full resize-y text-sm leading-relaxed min-h-8"
-														rows="1"
-														bind:value={editCg}
-														onkeydown={(e) => handleMainEditKeydown(message, e)}
-													></textarea>
-												</div>
-											</div>
-										</div>
-									{:else if isEditingMessage(message.id)}
-										<textarea
-											class="input w-full resize-y text-sm leading-relaxed min-h-32"
-											bind:value={editContent}
-											onkeydown={(e) => handleMainEditKeydown(message, e)}
-										></textarea>
+									{#if isEditingMessage(message.id)}
+										<MessageEditForm
+											mode="main"
+											isTemplated={editingIsTemplated}
+											messageId={message.id}
+											initial={editingIsTemplated && message.variables
+												? {
+													variables: {
+														sceneTitle: message.variables.sceneTitle ?? '',
+														background: message.variables.background ?? '',
+														narrativeBody: message.variables.narrativeBody ?? '',
+														cg: message.variables.cg ?? '',
+													}
+												}
+												: { content: message.content ?? '' }}
+											onsave={(data) => saveEditMainChatMessage(message, data)}
+											oncancel={cancelEdit}
+										/>
 									{:else if message.variables && hasTemplateMetadata(message.variables)}
 										<div class="leading-relaxed text-surface-800-200">
 											{#if storyMessageTemplate}
@@ -1182,14 +1059,7 @@
 									{#if message.metadata}
 										<MetadataPanel metadata={message.metadata} />
 									{/if}
-									{#if isEditingMessage(message.id)}
-										<div class="flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
-											<button class="btn preset-filled-primary-500 text-xs py-1 px-3" onclick={() => saveEditMainChatMessage(message)}
-												>{t('chat.save')}</button
-											>
-											<button class="btn preset-tonal text-xs py-1 px-3" onclick={cancelEdit}>{t('chat.cancel')}</button>
-										</div>
-									{:else if !getIsBusy() && (message.content || i === lastMessageIdx)}
+									{#if !getIsBusy() && !isEditingMessage(message.id) && (message.content || i === lastMessageIdx)}
 										<div class="hidden md:flex gap-2 mt-3 pt-3 border-t border-surface-200-800">
 											{#if message.content}
 												<button
@@ -1213,53 +1083,18 @@
 											{/if}
 											{#if message.variables && hasTemplateMetadata(message.variables)}
 												{#if forkChoiceIndex === i}
-													<div class="flex flex-col gap-2">
-														<!-- Plot Mode row (first) -->
-														<div class="flex gap-2 items-center">
-															<button
-																class="flex items-center gap-1 h-7 px-2 rounded-full text-xs transition-colors {forkPlotMode === null
-																	? 'preset-tonal-tertiary'
-																	: 'preset-outlined'}"
-																onclick={() => (forkPlotMode = null)}
-															>
-																<Icon name="keep-plot" class="w-3 h-3" />
-																{t('chat.keepPlotMode')}
-															</button>
-															<button
-																class="flex items-center gap-1 h-7 px-2 rounded-full text-xs transition-colors {forkPlotMode === 'guidance'
-																	? 'preset-tonal-tertiary'
-																	: 'preset-outlined'}"
-																onclick={() => (forkPlotMode = 'guidance')}
-															>
-																<Icon name="guidance" class="w-3 h-3" />
-																{t('chat.switchToGuidance')}
-															</button>
-															<button
-																class="flex items-center gap-1 h-7 px-2 rounded-full text-xs transition-colors {forkPlotMode ===
-																'phaseEvent'
-																	? 'preset-tonal-tertiary'
-																	: 'preset-outlined'}"
-																onclick={() => (forkPlotMode = 'phaseEvent')}
-															>
-																<Icon name="phase-event" class="w-3 h-3" />
-																{t('chat.switchToPhaseEvent')}
-															</button>
-														</div>
-														<!-- Action row (second) -->
-														<div class="flex gap-2 items-center">
-															<button class="btn preset-filled-primary-500 text-xs gap-1" onclick={() => handleForkDirect(i)}>
-																<Icon name="fork" class="w-3.5 h-3.5" />
-																{t('chat.keepCurrentPlot')}
-															</button>
-															<button class="btn preset-filled-success-500 text-xs gap-1" onclick={() => handleForkWithInterview(i)}>
-																<Icon name="edit" class="w-3.5 h-3.5" />
-																{t('chat.tellUsWhatsDifferent')}
-															</button>
-															<button class="btn preset-tonal text-xs" onclick={cancelForkChoice}>
-																{t('chat.cancel')}
-															</button>
-														</div>
-													</div>
+													<ForkChoicePanel
+														variant="desktop"
+														bind:forkPlotMode
+														isForking={isForking}
+														isBusy={getIsBusy()}
+														actions={{
+															onForkDirect: () => handleForkDirect(i),
+															onForkWithInterview: () => handleForkWithInterview(i),
+															onFork: () => handleFork(i),
+															onCancel: cancelForkChoice,
+														}}
+													/>
 												{:else}
 													<button
 														class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
@@ -1294,7 +1129,7 @@
 									{/if}
 									{#if !getIsBusy()}
 										<div class="md:hidden">
-											<MessageActionBar
+											<MessageActions
 												showCopy={!!message.content}
 												showEdit={!!(message.variables && hasTemplateMetadata(message.variables) && i === lastMessageIdx)}
 												showFork={!!(message.variables && hasTemplateMetadata(message.variables))}
@@ -1308,57 +1143,18 @@
 												onRegenerate={i === lastMessageIdx ? () => handleRegenerate(message.id) : undefined}
 												onDelete={i === lastMessageIdx ? handleDelete : undefined}
 											/>
-											{#if forkChoiceIndex === i}
-												<div class="flex flex-col gap-2 mt-2 pt-2 border-t border-surface-200-800">
-													<!-- Plot Mode selector (first) -->
-													<div class="flex gap-2">
-														<button
-															class="flex-1 h-8 px-2.5 rounded-full text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none transition-colors {forkPlotMode ===
-															null
-																? 'preset-tonal-tertiary'
-																: 'preset-outlined'}"
-															onclick={() => (forkPlotMode = null)}
-														>
-															<Icon name="keep-plot" class="w-3.5 h-3.5" />
-															{t('chat.keepPlotMode')}
-														</button>
-														<button
-															class="flex-1 h-8 px-2.5 rounded-full text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none transition-colors {forkPlotMode ===
-															'guidance'
-																? 'preset-tonal-tertiary'
-																: 'preset-outlined'}"
-															onclick={() => (forkPlotMode = 'guidance')}
-														>
-															<Icon name="guidance" class="w-3.5 h-3.5" />
-															{t('chat.switchToGuidance')}
-														</button>
-														<button
-															class="flex-1 h-8 px-2.5 rounded-full text-xs flex items-center justify-center gap-1.5 cursor-pointer select-none transition-colors {forkPlotMode ===
-															'phaseEvent'
-																? 'preset-tonal-tertiary'
-																: 'preset-outlined'}"
-															onclick={() => (forkPlotMode = 'phaseEvent')}
-														>
-															<Icon name="phase-event" class="w-3.5 h-3.5" />
-															{t('chat.switchToPhaseEvent')}
-														</button>
-													</div>
-													<!-- Action buttons (second) -->
-													<div class="flex flex-wrap gap-2">
-														<button class="btn preset-filled-primary-500 flex-1 min-h-11 gap-2" onclick={() => handleForkDirect(i)}>
-															<Icon name="fork" class="w-4 h-4" />
-															{t('chat.fork')}
-														</button>
-														<button class="btn preset-filled-success-500 flex-1 min-h-11 gap-2" onclick={() => handleForkWithInterview(i)}>
-															<Icon name="edit" class="w-4 h-4" />
-															{t('chat.newPlot')}
-														</button>
-														<button class="btn preset-tonal min-h-11 px-4" onclick={cancelForkChoice}>
-															{t('chat.cancel')}
-														</button>
-													</div>
-												</div>
-											{/if}
+												<ForkChoicePanel
+													variant="mobile"
+													bind:forkPlotMode
+													isForking={isForking}
+													isBusy={getIsBusy()}
+													actions={{
+														onForkDirect: () => handleForkDirect(i),
+														onForkWithInterview: () => handleForkWithInterview(i),
+														onFork: () => handleFork(i),
+														onCancel: cancelForkChoice,
+													}}
+												/>
 										</div>
 									{/if}
 								</div>
