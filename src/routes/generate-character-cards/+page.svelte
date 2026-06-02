@@ -19,6 +19,7 @@
 		resetState,
 	} from '$lib/stores/character-card.svelte';
 	import { onMount } from 'svelte';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 
 	let concurrent = $state(false);
 
@@ -90,7 +91,7 @@
 				aria-busy="true"
 			>
 				<div class="card p-8 text-center">
-					<div class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+					<Spinner size="xl" />
 					<p class="mt-4 text-surface-950-50">{t('characterCards.extractingCharacters')}</p>
 				</div>
 			</div>

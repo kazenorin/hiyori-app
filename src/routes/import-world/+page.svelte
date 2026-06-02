@@ -6,6 +6,8 @@
 	import { selectStory, selectAct, selectActLine } from '$lib/stores/stories.svelte';
 	import { t } from '$lib/i18n';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import NumberField from '$lib/components/ui/NumberField.svelte';
+	import FileField from '$lib/components/ui/FileField.svelte';
 	import ImportPreviewTable from './ImportPreviewTable.svelte';
 
 	const store = getImportWorldStore();
@@ -195,20 +197,7 @@
 					/>
 				</label>
 
-				<label class="block">
-					<span class="text-sm font-medium text-surface-700-300">{t('importWorld.worldBuildingFile')}</span>
-					<span class="text-xs text-surface-500 ml-2">{t('importWorld.mdOrTxtHint')}</span>
-					<input
-						class="input mt-1"
-						type="file"
-						accept=".md,.txt"
-						disabled={store.isImporting || store.importComplete}
-						onchange={(e) => {
-							const target = e.target as HTMLInputElement;
-							store.worldFile = target.files?.[0] ?? null;
-						}}
-					/>
-				</label>
+				<FileField label={t('importWorld.worldBuildingFile')} hint={t('importWorld.mdOrTxtHint')} accept=".md,.txt" disabled={store.isImporting || store.importComplete} onFileChange={(file) => { store.worldFile = file }} />
 			</section>
 
 			<!-- Acts -->
@@ -256,35 +245,9 @@
 							/>
 						</label>
 
-						<label class="block">
-							<span class="text-sm font-medium text-surface-700-300">{t('importWorld.actChapterFile')}</span>
-							<span class="text-xs text-surface-500 ml-2">{t('importWorld.mdOrTxtHint')}</span>
-							<input
-								class="input mt-1"
-								type="file"
-								accept=".md,.txt"
-								disabled={store.isImporting || store.importComplete}
-								onchange={(e) => {
-									const target = e.target as HTMLInputElement;
-									store.updateActFile(act.id, target.files?.[0] ?? null);
-								}}
-							/>
-						</label>
+						<FileField label={t('importWorld.actChapterFile')} hint={t('importWorld.mdOrTxtHint')} accept=".md,.txt" disabled={store.isImporting || store.importComplete} onFileChange={(file) => { store.updateActFile(act.id, file) }} />
 
-						<label class="block">
-							<span class="text-sm font-medium text-surface-700-300">{t('importWorld.transcript')}</span>
-							<span class="text-xs text-surface-500 ml-2">{t('importWorld.jsonHint')}</span>
-							<input
-								class="input mt-1"
-								type="file"
-								accept=".json"
-								disabled={store.isImporting || store.importComplete}
-								onchange={(e) => {
-									const target = e.target as HTMLInputElement;
-									store.updateActTranscript(act.id, target.files?.[0] ?? null);
-								}}
-							/>
-						</label>
+						<FileField label={t('importWorld.transcript')} hint={t('importWorld.jsonHint')} accept=".json" disabled={store.isImporting || store.importComplete} onFileChange={(file) => { store.updateActTranscript(act.id, file) }} />
 					</div>
 				{/each}
 			</section>
@@ -334,20 +297,7 @@
 							/>
 						</label>
 
-						<label class="block">
-							<span class="text-sm font-medium text-surface-700-300">{t('importWorld.characterCard')}</span>
-							<span class="text-xs text-surface-500 ml-2">{t('importWorld.mdOrTxtRequiredHint')}</span>
-							<input
-								class="input mt-1"
-								type="file"
-								accept=".md,.txt"
-								disabled={store.isImporting || store.importComplete}
-								onchange={(e) => {
-									const target = e.target as HTMLInputElement;
-									store.updateCharacterFile(character.id, target.files?.[0] ?? null);
-								}}
-							/>
-						</label>
+						<FileField label={t('importWorld.characterCard')} hint={t('importWorld.mdOrTxtRequiredHint')} accept=".md,.txt" disabled={store.isImporting || store.importComplete} onFileChange={(file) => { store.updateCharacterFile(character.id, file) }} />
 					</div>
 				{/each}
 			</section>
@@ -367,29 +317,9 @@
 				</label>
 
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<label class="block">
-						<span class="text-sm font-medium text-surface-700-300">{t('importWorld.llmRetryCount')}</span>
-						<input
-							class="input mt-1"
-							type="number"
-							min="0"
-							max="20"
-							bind:value={store.retryCount}
-							disabled={store.isImporting || store.importComplete}
-						/>
-					</label>
+					<NumberField label={t('importWorld.llmRetryCount')} min={0} max={20} bind:value={store.retryCount} disabled={store.isImporting || store.importComplete} />
 
-					<label class="block">
-						<span class="text-sm font-medium text-surface-700-300">{t('importWorld.backoffInterval')}</span>
-						<input
-							class="input mt-1"
-							type="number"
-							min="1"
-							max="60"
-							bind:value={store.backoffIntervalSeconds}
-							disabled={store.isImporting || store.importComplete}
-						/>
-					</label>
+					<NumberField label={t('importWorld.backoffInterval')} min={1} max={60} bind:value={store.backoffIntervalSeconds} disabled={store.isImporting || store.importComplete} />
 				</div>
 			</section>
 		{/if}

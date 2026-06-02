@@ -40,6 +40,7 @@
 	import BottomTabBar from '$lib/components/BottomTabBar.svelte';
 	import { mobileNav, mobileFeatures } from '$lib/stores/mobile-nav.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 
 	let { children } = $props();
 	let appError = $state<string | null>(null);
@@ -500,7 +501,7 @@
 				aria-busy="true"
 			>
 				<div class="text-center space-y-2">
-					<div class="inline-block w-8 h-8 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+					<Spinner size="lg" />
 					<p class="text-xs text-surface-500">{t('sidebar.worldBuilderActive')}</p>
 				</div>
 			</div>
@@ -558,7 +559,7 @@
 				</div>
 			{:else}
 				<div class="text-center space-y-2">
-					<div class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+					<Spinner size="xl" />
 					<div class="text-surface-500 animate-pulse">Loading...</div>
 					<div class="text-xs text-surface-600">{initStatus}</div>
 				</div>
@@ -702,7 +703,7 @@
 		aria-busy="true"
 	>
 		<div class="bg-surface-100-900 border border-surface-200-800 rounded-xl shadow-2xl p-8 text-center">
-			<div class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+			<Spinner size="xl" />
 			<p class="mt-4 text-surface-950-50">
 				{#if getActPlotGenerationPhase() === 'writing'}
 					{t('sidebar.actPlotWriting')}

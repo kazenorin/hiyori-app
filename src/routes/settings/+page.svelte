@@ -21,6 +21,10 @@
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import ProgressField from '$lib/components/ui/ProgressField.svelte';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
+	import Card from '$lib/components/ui/Card.svelte';
+	import TextField from '$lib/components/ui/TextField.svelte';
+	import NumberField from '$lib/components/ui/NumberField.svelte';
 	import {
 		downloadExport,
 		exportConfigData,
@@ -352,7 +356,7 @@
 		<p class="text-sm text-surface-500">{t('settings.settingsAutoSaved')}</p>
 
 		<!-- AI Providers -->
-		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
+		<Card>
 			<div class="flex items-center justify-between">
 				<h2 class="h4">{t('settings.aiProviders')}</h2>
 				<Button class="min-h-11" onclick={startAdd}>{t('settings.addProvider')}</Button>
@@ -379,10 +383,7 @@
 						<details open>
 							<summary class="text-sm font-medium cursor-pointer">{formName || t('settings.untitled')}</summary>
 							<div class="mt-3 space-y-3">
-								<label class="block">
-									<span class="text-sm font-medium text-surface-700-300">{t('settings.name')}</span>
-									<input class="input mt-1" type="text" placeholder={t('settings.namePlaceholder')} bind:value={formName} />
-								</label>
+								<TextField label={t('settings.name')} type="text" placeholder={t('settings.namePlaceholder')} bind:value={formName} />
 
 								<label class="block">
 									<span class="text-sm font-medium text-surface-700-300">{t('settings.apiProvider')}</span>
@@ -404,11 +405,7 @@
 									</label>
 								{/if}
 
-								<label class="block">
-									<span class="text-sm font-medium text-surface-700-300">{t('settings.baseUrl')}</span>
-									<input class="input mt-1" type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} />
-									<span class="text-xs text-surface-500 mt-1 block">{t('settings.baseUrlHint')}</span>
-								</label>
+								<TextField label={t('settings.baseUrl')} type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} hint={t('settings.baseUrlHint')} />
 
 								<div>
 									<div class="flex items-end gap-2">
@@ -439,11 +436,7 @@
 									{/if}
 								</div>
 
-								<label class="block">
-									<span class="text-sm font-medium text-surface-700-300">{t('settings.apiKey')}</span>
-									<input class="input mt-1" type="password" placeholder="sk-..." bind:value={formApiKey} />
-									<span class="text-xs text-surface-500 mt-1 block">{t('settings.apiKeyHint')}</span>
-								</label>
+								<TextField label={t('settings.apiKey')} type="password" placeholder="sk-..." bind:value={formApiKey} hint={t('settings.apiKeyHint')} />
 
 								{#if !isTauriSync()}
 									<label class="flex items-center gap-2">
@@ -451,11 +444,7 @@
 										<span class="text-sm font-medium text-surface-700-300">{t('settings.bypassCorsViaWispProxy')}</span>
 									</label>
 									{#if formCorsBypassEnabled}
-										<label class="block">
-											<span class="text-sm font-medium text-surface-700-300">{t('settings.wispProxyUrl')}</span>
-											<input class="input mt-1" type="url" placeholder="ws://localhost:6001" bind:value={formWispProxyUrl} />
-											<span class="text-xs text-surface-500 mt-1 block">{t('settings.wispProxyUrlHint')}</span>
-										</label>
+										<TextField label={t('settings.wispProxyUrl')} type="url" placeholder="ws://localhost:6001" bind:value={formWispProxyUrl} hint={t('settings.wispProxyUrlHint')} />
 									{/if}
 								{/if}
 							</div>
@@ -508,10 +497,7 @@
 					<details open>
 						<summary class="text-sm font-medium cursor-pointer">{formName || t('settings.newProviderTitle')}</summary>
 						<div class="mt-3 space-y-3">
-							<label class="block">
-								<span class="text-sm font-medium text-surface-700-300">{t('settings.name')}</span>
-								<input class="input mt-1" type="text" placeholder={t('settings.namePlaceholder')} bind:value={formName} />
-							</label>
+							<TextField label={t('settings.name')} type="text" placeholder={t('settings.namePlaceholder')} bind:value={formName} />
 
 							<label class="block">
 								<span class="text-sm font-medium text-surface-700-300">{t('settings.apiProvider')}</span>
@@ -533,11 +519,7 @@
 								</label>
 							{/if}
 
-							<label class="block">
-								<span class="text-sm font-medium text-surface-700-300">{t('settings.baseUrl')}</span>
-								<input class="input mt-1" type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} />
-								<span class="text-xs text-surface-500 mt-1 block">{t('settings.baseUrlHint')}</span>
-							</label>
+							<TextField label={t('settings.baseUrl')} type="url" placeholder="https://api.openai.com/v1" bind:value={formBaseURL} hint={t('settings.baseUrlHint')} />
 
 							<div>
 								<div class="flex items-end gap-2">
@@ -568,11 +550,7 @@
 								{/if}
 							</div>
 
-							<label class="block">
-								<span class="text-sm font-medium text-surface-700-300">{t('settings.apiKey')}</span>
-								<input class="input mt-1" type="password" placeholder="sk-..." bind:value={formApiKey} />
-								<span class="text-xs text-surface-500 mt-1 block">{t('settings.apiKeyHint')}</span>
-							</label>
+							<TextField label={t('settings.apiKey')} type="password" placeholder="sk-..." bind:value={formApiKey} hint={t('settings.apiKeyHint')} />
 
 							{#if !isTauriSync()}
 								<label class="flex items-center gap-2">
@@ -580,11 +558,7 @@
 									<span class="text-sm font-medium text-surface-700-300">{t('settings.bypassCorsViaWispProxy')}</span>
 								</label>
 								{#if formCorsBypassEnabled}
-									<label class="block">
-										<span class="text-sm font-medium text-surface-700-300">{t('settings.wispProxyUrl')}</span>
-										<input class="input mt-1" type="url" placeholder="ws://localhost:6001" bind:value={formWispProxyUrl} />
-										<span class="text-xs text-surface-500 mt-1 block">{t('settings.wispProxyUrlHint')}</span>
-									</label>
+									<TextField label={t('settings.wispProxyUrl')} type="url" placeholder="ws://localhost:6001" bind:value={formWispProxyUrl} hint={t('settings.wispProxyUrlHint')} />
 								{/if}
 							{/if}
 						</div>
@@ -595,12 +569,10 @@
 					</div>
 				</div>
 			{/if}
-		</section>
+		</Card>
 
 		<!-- Provider Roles -->
-		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
-			<h2 class="h4">{t('settings.providerRoles')}</h2>
-			<span class="text-xs text-surface-500">{t('settings.providerRolesDescription')}</span>
+		<Card title={t('settings.providerRoles')} description={t('settings.providerRolesDescription')}>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.mainProvider')}</span>
@@ -636,13 +608,11 @@
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.phraseHighlighting')}</span>
 			</label>
 			<span class="text-xs text-surface-500">{t('settings.phraseHighlightingDescription')}</span>
-		</section>
+		</Card>
 
 		{#if isMemoryCapable()}
 			<!-- Memory -->
-			<section class="card p-3 md:p-4 lg:p-6 space-y-4">
-				<h2 class="h4">{t('settings.memory')}</h2>
-				<span class="text-xs text-surface-500">{t('settings.enableMemoryDescription')}</span>
+			<Card title={t('settings.memory')} description={t('settings.enableMemoryDescription')}>
 
 				<label class="flex items-center gap-2">
 					<input
@@ -678,13 +648,11 @@
 					/>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.embeddingProviderDescription')}</span>
 				</label>
-			</section>
+			</Card>
 		{/if}
 
 		<!-- Director Mode -->
-		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
-			<h2 class="h4">{t('settings.directorMode')}</h2>
-			<span class="text-xs text-surface-500">{t('settings.directorModeDescription')}</span>
+		<Card title={t('settings.directorMode')} description={t('settings.directorModeDescription')}>
 
 			<label class="flex items-center gap-2">
 				<input
@@ -695,12 +663,10 @@
 				/>
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.enabled')}</span>
 			</label>
-		</section>
+		</Card>
 
 		<!-- Pipeline Roles -->
-		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
-			<h2 class="h4">{t('settings.pipelineRoles')}</h2>
-			<span class="text-xs text-surface-500">{t('settings.pipelineRolesDescription')}</span>
+		<Card title={t('settings.pipelineRoles')} description={t('settings.pipelineRolesDescription')}>
 
 			<div class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.plotPlanner')}</span>
@@ -842,51 +808,18 @@
 				/>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.summarizerDescription')}</span>
 			</label>
-		</section>
+		</Card>
 
 		<!-- Narrative -->
-		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
-			<h2 class="h4">{t('settings.narrative')}</h2>
+		<Card title={t('settings.narrative')}>
 
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.targetWordCount')}</span>
-				<input
-					type="number"
-					class="input mt-1 w-32"
-					min="50"
-					max="2000"
-					step="50"
-					value={settings.targetWordCount}
-					onchange={(e) => {
-						const val = parseInt((e.currentTarget as HTMLInputElement).value, 10);
-						if (!isNaN(val) && val >= 50 && val <= 2000) updateSettings({ targetWordCount: val });
-					}}
-				/>
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.targetWordCountDescription')}</span>
-			</label>
+			<NumberField label={t('settings.targetWordCount')} hint={t('settings.targetWordCountDescription')} min={50} max={2000} step={50} value={settings.targetWordCount} onValueChange={(v) => { if (v >= 50 && v <= 2000) updateSettings({ targetWordCount: v }); }} />
 
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.compressorInterval')}</span>
-				<input
-					type="number"
-					class="input mt-1 w-32"
-					min="0"
-					max="50"
-					step="1"
-					value={settings.characterProfileCompressorInterval}
-					onchange={(e) => {
-						const val = parseInt((e.currentTarget as HTMLInputElement).value, 10);
-						if (!isNaN(val) && val >= 0 && val <= 50) updateSettings({ characterProfileCompressorInterval: val });
-					}}
-				/>
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.compressorIntervalDescription')}</span>
-			</label>
-		</section>
+			<NumberField label={t('settings.compressorInterval')} hint={t('settings.compressorIntervalDescription')} min={0} max={50} step={1} value={settings.characterProfileCompressorInterval} onValueChange={(v) => { if (v >= 0 && v <= 50) updateSettings({ characterProfileCompressorInterval: v }); }} />
+		</Card>
 
 		<!-- Data -->
-		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
-			<h2 class="h4">{t('settings.data')}</h2>
-			<span class="text-xs text-surface-500">{t('settings.dataDescription')}</span>
+		<Card title={t('settings.data')} description={t('settings.dataDescription')}>
 
 			{#if !isTauriSync()}
 				<p class="text-xs text-warning-500">{t('settings.dataWebNotice')}</p>
@@ -958,11 +891,10 @@
 				</button>
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.resetConfigurationDescription')}</span>
 			</div>
-		</section>
+		</Card>
 
 		<!-- Developer -->
-		<section class="card p-3 md:p-4 lg:p-6 space-y-4">
-			<h2 class="h4">{t('settings.developer')}</h2>
+		<Card title={t('settings.developer')}>
 
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.locale')}</span>
@@ -974,7 +906,7 @@
 				<ThemedSelect items={logLevelItems} value={settings.logLevel} onValueChange={(v) => updateSettings({ logLevel: v as LogLevel })} />
 				<span class="text-xs text-surface-500 mt-1 block">{t('settings.logLevelDescription')}</span>
 			</label>
-		</section>
+		</Card>
 	</div>
 </div>
 
@@ -1055,7 +987,7 @@
 {#if isImporting}
 	<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" role="alert" aria-live="assertive">
 		<div class="text-center space-y-2">
-			<div class="inline-block w-10 h-10 border-4 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+			<Spinner size="xl" />
 			<div class="text-surface-100 animate-pulse">{t('settings.importing')}</div>
 		</div>
 	</div>

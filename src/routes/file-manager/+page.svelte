@@ -26,6 +26,8 @@
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
+	import FolderIcon from '$lib/components/ui/FolderIcon.svelte';
 
 	function createCollection(children: FileNode[] = []) {
 		return createTreeViewCollection<FileNode>({
@@ -391,7 +393,7 @@
 			>
 				{#if isLoadingRoot}
 					<div class="flex items-center justify-center p-8">
-						<div class="inline-block w-6 h-6 border-3 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+						<Spinner size="md" />
 					</div>
 				{:else}
 					<TreeView {collection} {loadChildren} {onLoadChildrenComplete} {onLoadChildrenError} onSelectionChange={handleSelectionChange}>
@@ -409,7 +411,7 @@
 				{#if selectedFilePath && selectedNode}
 					<div class="mb-3 flex items-center gap-2 text-xs font-medium text-surface-600-400 break-all">
 						{#if selectedNode.isDirectory}
-							{@render folderIcon(selectedNode.folderType ?? 'default', 'size-4')}
+							<FolderIcon type={selectedNode.folderType ?? 'default'} />
 						{/if}
 						{selectedFilePath}
 					</div>
@@ -451,16 +453,6 @@
 		{/if}
 	</div>
 </div>
-
-{#snippet folderIcon(type: FolderType, sizeClass: string = 'size-4')}
-	{#if type === 'story'}
-		<Icon name="book" class={sizeClass} />
-	{:else if type === 'config'}
-		<Icon name="cog" class={sizeClass} />
-	{:else}
-		<Icon name="folder" class={sizeClass} />
-	{/if}
-{/snippet}
 
 {#snippet folderPreview()}
 	<div class="flex items-center justify-center h-64">
@@ -673,10 +665,10 @@
 				<TreeView.BranchControl>
 					<TreeView.BranchIndicator class="data-loading:hidden" />
 					<TreeView.BranchIndicator class="hidden data-loading:inline">
-						<div class="inline-block w-3 h-3 border-2 border-surface-200-800 border-t-primary-500 rounded-full animate-spin"></div>
+						<Spinner size="xs" />
 					</TreeView.BranchIndicator>
 					<TreeView.BranchText>
-						{@render folderIcon(node.folderType ?? 'default')}
+						<FolderIcon type={node.folderType ?? 'default'} />
 						{node.name}
 					</TreeView.BranchText>
 				</TreeView.BranchControl>
