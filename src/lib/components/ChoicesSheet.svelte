@@ -3,6 +3,7 @@
 	import { mobileNav, mobileFeatures } from '$lib/stores/mobile-nav.svelte';
 	import MarkdownContent from './MarkdownContent.svelte';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
+	import Icon from '$lib/components/ui/Icon.svelte';
 
 	interface Props {
 		decisions: string[];
@@ -115,13 +116,7 @@
 							>
 								<span>{t('components.chatControls.activePlotThreads')}</span>
 								<Accordion.ItemIndicator>
-									<svg class="h-4 w-4 transition-transform" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-										<path
-											fill-rule="evenodd"
-											d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-											clip-rule="evenodd"
-										/>
-									</svg>
+									<Icon name="chevron-down" class="h-4 w-4 transition-transform" />
 								</Accordion.ItemIndicator>
 							</Accordion.ItemTrigger>
 							<Accordion.ItemContent>

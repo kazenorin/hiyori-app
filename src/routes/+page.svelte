@@ -94,6 +94,7 @@
 	import MobileInputSheet from '$lib/components/MobileInputSheet.svelte';
 	import ChoicesSheet from '$lib/components/ChoicesSheet.svelte';
 	import MessageActionBar from '$lib/components/MessageActionBar.svelte';
+	import Icon from '$lib/components/ui/Icon.svelte';
 	import { mobileNav } from '$lib/stores/mobile-nav.svelte';
 	import { scrollToBottom } from '$lib/utils/scroll';
 
@@ -814,18 +815,7 @@
 												title="Edit message"
 												onclick={() => startEditMessage(message, false)}
 											>
-												<svg
-													class="w-3.5 h-3.5"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												>
-													<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-													<path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-												</svg>
+												<Icon name="edit" class="w-3.5 h-3.5" />
 												{t('chat.edit')}
 											</button>
 											<button
@@ -833,18 +823,7 @@
 												title="Copy message"
 												onclick={() => handleCopy(message.id, message.content)}
 											>
-												<svg
-													class="w-3.5 h-3.5"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												>
-													<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-													<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-												</svg>
+												<Icon name="copy" class="w-3.5 h-3.5" />
 												{copiedId === message.id ? t('chat.copied') : t('chat.copy')}
 											</button>
 										</div>
@@ -883,18 +862,7 @@
 											title="Edit message"
 											onclick={() => startEditMessage(message, false)}
 										>
-											<svg
-												class="w-3.5 h-3.5"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-												<path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-											</svg>
+											<Icon name="edit" class="w-3.5 h-3.5" />
 											{t('chat.edit')}
 										</button>
 										<button
@@ -902,18 +870,7 @@
 											title="Copy message"
 											onclick={() => handleCopy(message.id, message.content)}
 										>
-											<svg
-												class="w-3.5 h-3.5"
-												viewBox="0 0 24 24"
-												fill="none"
-												stroke="currentColor"
-												stroke-width="2"
-												stroke-linecap="round"
-												stroke-linejoin="round"
-											>
-												<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-												<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-											</svg>
+											<Icon name="copy" class="w-3.5 h-3.5" />
 											{copiedId === message.id ? t('chat.copied') : t('chat.copy')}
 										</button>
 										{#if i === lastWbMessageIdx}
@@ -922,19 +879,7 @@
 												title="Regenerate response"
 												onclick={handleWorldBuilderRegenerate}
 											>
-												<svg
-													class="w-3.5 h-3.5"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												>
-													<polyline points="23 4 23 10 17 10" />
-													<polyline points="1 20 1 14 7 14" />
-													<path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-												</svg>
+												<Icon name="regenerate" class="w-3.5 h-3.5" />
 												{t('chat.regenerate')}
 											</button>
 											<button
@@ -942,18 +887,7 @@
 												title="Delete last exchange"
 												onclick={handleWorldBuilderDelete}
 											>
-												<svg
-													class="w-3.5 h-3.5"
-													viewBox="0 0 24 24"
-													fill="none"
-													stroke="currentColor"
-													stroke-width="2"
-													stroke-linecap="round"
-													stroke-linejoin="round"
-												>
-													<polyline points="3 6 5 6 21 6" />
-													<path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-												</svg>
+												<Icon name="trash" class="w-3.5 h-3.5" />
 												{t('chat.delete')}
 											</button>
 										{/if}
@@ -1022,19 +956,7 @@
 				onclick={() => (rightPanelExpanded = !rightPanelExpanded)}
 			>
 				<span class="font-medium text-surface-500 uppercase tracking-wider">{t('chat.worldBuilder')}</span>
-				<svg
-					class="h-4 w-4 transition-transform"
-					class:rotate-180={rightPanelExpanded}
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					aria-hidden="true"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-						clip-rule="evenodd"
-					/>
-				</svg>
+				<Icon name="chevron-down" class="h-4 w-4 transition-transform {rightPanelExpanded ? 'rotate-180' : ''}" />
 			</button>
 
 			<div class="flex-1 flex flex-col min-h-0 p-3 lg:p-4">
@@ -1274,18 +1196,7 @@
 													title="Copy message"
 													onclick={() => handleCopy(message.id, message.content)}
 												>
-													<svg
-														class="w-3.5 h-3.5"
-														viewBox="0 0 24 24"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="2"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-													>
-														<rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-														<path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1" />
-													</svg>
+													<Icon name="copy" class="w-3.5 h-3.5" />
 													{copiedId === message.id ? t('chat.copied') : t('chat.copy')}
 												</button>
 											{/if}
@@ -1295,18 +1206,7 @@
 													title="Edit message"
 													onclick={() => startEditMessage(message, true)}
 												>
-													<svg
-														class="w-3.5 h-3.5"
-														viewBox="0 0 24 24"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="2"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-													>
-														<path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-														<path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" />
-													</svg>
+													<Icon name="edit" class="w-3.5 h-3.5" />
 													{t('chat.edit')}
 												</button>
 											{/if}
@@ -1321,18 +1221,7 @@
 																	: 'preset-outlined'}"
 																onclick={() => (forkPlotMode = null)}
 															>
-																<svg
-																	class="w-3 h-3"
-																	viewBox="0 0 24 24"
-																	fill="none"
-																	stroke="currentColor"
-																	stroke-width="2"
-																	stroke-linecap="round"
-																	stroke-linejoin="round"
-																>
-																	<circle cx="12" cy="12" r="10" />
-																	<circle cx="12" cy="12" r="3" fill="currentColor" />
-																</svg>
+																<Icon name="keep-plot" class="w-3 h-3" />
 																{t('chat.keepPlotMode')}
 															</button>
 															<button
@@ -1341,18 +1230,7 @@
 																	: 'preset-outlined'}"
 																onclick={() => (forkPlotMode = 'guidance')}
 															>
-																<svg
-																	class="w-3 h-3"
-																	viewBox="0 0 24 24"
-																	fill="none"
-																	stroke="currentColor"
-																	stroke-width="2"
-																	stroke-linecap="round"
-																	stroke-linejoin="round"
-																>
-																	<circle cx="12" cy="12" r="10" />
-																	<polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-																</svg>
+																<Icon name="guidance" class="w-3 h-3" />
 																{t('chat.switchToGuidance')}
 															</button>
 															<button
@@ -1362,53 +1240,18 @@
 																	: 'preset-outlined'}"
 																onclick={() => (forkPlotMode = 'phaseEvent')}
 															>
-																<svg
-																	class="w-3 h-3"
-																	viewBox="0 0 24 24"
-																	fill="none"
-																	stroke="currentColor"
-																	stroke-width="2"
-																	stroke-linecap="round"
-																	stroke-linejoin="round"
-																>
-																	<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-																	<line x1="4" y1="22" x2="4" y2="15" />
-																</svg>
+																<Icon name="phase-event" class="w-3 h-3" />
 																{t('chat.switchToPhaseEvent')}
 															</button>
 														</div>
 														<!-- Action row (second) -->
 														<div class="flex gap-2 items-center">
 															<button class="btn preset-filled-primary-500 text-xs gap-1" onclick={() => handleForkDirect(i)}>
-																<svg
-																	class="w-3.5 h-3.5"
-																	viewBox="0 0 24 24"
-																	fill="none"
-																	stroke="currentColor"
-																	stroke-width="2"
-																	stroke-linecap="round"
-																	stroke-linejoin="round"
-																>
-																	<line x1="6" y1="3" x2="6" y2="15" />
-																	<circle cx="18" cy="6" r="3" />
-																	<circle cx="6" cy="18" r="3" />
-																	<path d="M18 9a9 9 0 01-9 9" />
-																</svg>
+																<Icon name="fork" class="w-3.5 h-3.5" />
 																{t('chat.keepCurrentPlot')}
 															</button>
 															<button class="btn preset-filled-success-500 text-xs gap-1" onclick={() => handleForkWithInterview(i)}>
-																<svg
-																	class="w-3.5 h-3.5"
-																	viewBox="0 0 24 24"
-																	fill="none"
-																	stroke="currentColor"
-																	stroke-width="2"
-																	stroke-linecap="round"
-																	stroke-linejoin="round"
-																>
-																	<path d="M12 20h9" />
-																	<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-																</svg>
+																<Icon name="edit" class="w-3.5 h-3.5" />
 																{t('chat.tellUsWhatsDifferent')}
 															</button>
 															<button class="btn preset-tonal text-xs" onclick={cancelForkChoice}>
@@ -1423,20 +1266,7 @@
 														disabled={isForking || getIsBusy()}
 														onclick={() => handleFork(i)}
 													>
-														<svg
-															class="w-3.5 h-3.5"
-															viewBox="0 0 24 24"
-															fill="none"
-															stroke="currentColor"
-															stroke-width="2"
-															stroke-linecap="round"
-															stroke-linejoin="round"
-														>
-															<line x1="6" y1="3" x2="6" y2="15" />
-															<circle cx="18" cy="6" r="3" />
-															<circle cx="6" cy="18" r="3" />
-															<path d="M18 9a9 9 0 01-9 9" />
-														</svg>
+														<Icon name="fork" class="w-3.5 h-3.5" />
 														{isForking ? t('chat.forking') : t('chat.fork')}
 													</button>
 												{/if}
@@ -1447,19 +1277,7 @@
 													title="Regenerate response"
 													onclick={() => handleRegenerate(message.id)}
 												>
-													<svg
-														class="w-3.5 h-3.5"
-														viewBox="0 0 24 24"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="2"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-													>
-														<polyline points="23 4 23 10 17 10" />
-														<polyline points="1 20 1 14 7 14" />
-														<path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-													</svg>
+													<Icon name="regenerate" class="w-3.5 h-3.5" />
 													{t('chat.regenerate')}
 												</button>
 												<button
@@ -1467,18 +1285,7 @@
 													title="Delete last exchange"
 													onclick={handleDelete}
 												>
-													<svg
-														class="w-3.5 h-3.5"
-														viewBox="0 0 24 24"
-														fill="none"
-														stroke="currentColor"
-														stroke-width="2"
-														stroke-linecap="round"
-														stroke-linejoin="round"
-													>
-														<polyline points="3 6 5 6 21 6" />
-														<path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" />
-													</svg>
+													<Icon name="trash" class="w-3.5 h-3.5" />
 													{t('chat.delete')}
 												</button>
 											{/if}
@@ -1511,18 +1318,7 @@
 																: 'preset-outlined'}"
 															onclick={() => (forkPlotMode = null)}
 														>
-															<svg
-																class="w-3.5 h-3.5"
-																viewBox="0 0 24 24"
-																fill="none"
-																stroke="currentColor"
-																stroke-width="2"
-																stroke-linecap="round"
-																stroke-linejoin="round"
-															>
-																<circle cx="12" cy="12" r="10" />
-																<circle cx="12" cy="12" r="3" fill="currentColor" />
-															</svg>
+															<Icon name="keep-plot" class="w-3.5 h-3.5" />
 															{t('chat.keepPlotMode')}
 														</button>
 														<button
@@ -1532,18 +1328,7 @@
 																: 'preset-outlined'}"
 															onclick={() => (forkPlotMode = 'guidance')}
 														>
-															<svg
-																class="w-3.5 h-3.5"
-																viewBox="0 0 24 24"
-																fill="none"
-																stroke="currentColor"
-																stroke-width="2"
-																stroke-linecap="round"
-																stroke-linejoin="round"
-															>
-																<circle cx="12" cy="12" r="10" />
-																<polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />
-															</svg>
+															<Icon name="guidance" class="w-3.5 h-3.5" />
 															{t('chat.switchToGuidance')}
 														</button>
 														<button
@@ -1553,45 +1338,18 @@
 																: 'preset-outlined'}"
 															onclick={() => (forkPlotMode = 'phaseEvent')}
 														>
-															<svg
-																class="w-3.5 h-3.5"
-																viewBox="0 0 24 24"
-																fill="none"
-																stroke="currentColor"
-																stroke-width="2"
-																stroke-linecap="round"
-																stroke-linejoin="round"
-															>
-																<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
-																<line x1="4" y1="22" x2="4" y2="15" />
-															</svg>
+															<Icon name="phase-event" class="w-3.5 h-3.5" />
 															{t('chat.switchToPhaseEvent')}
 														</button>
 													</div>
 													<!-- Action buttons (second) -->
 													<div class="flex flex-wrap gap-2">
 														<button class="btn preset-filled-primary-500 flex-1 min-h-11 gap-2" onclick={() => handleForkDirect(i)}>
-															<svg
-																class="w-4 h-4"
-																viewBox="0 0 24 24"
-																fill="none"
-																stroke="currentColor"
-																stroke-width="2"
-																stroke-linecap="round"
-																stroke-linejoin="round"
-															>
-																<line x1="6" y1="3" x2="6" y2="15" />
-																<circle cx="18" cy="6" r="3" />
-																<circle cx="6" cy="18" r="3" />
-																<path d="M18 9a9 9 0 01-9 9" />
-															</svg>
+															<Icon name="fork" class="w-4 h-4" />
 															{t('chat.fork')}
 														</button>
 														<button class="btn preset-filled-success-500 flex-1 min-h-11 gap-2" onclick={() => handleForkWithInterview(i)}>
-															<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-																<path d="M12 20h9" />
-																<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-															</svg>
+															<Icon name="edit" class="w-4 h-4" />
 															{t('chat.newPlot')}
 														</button>
 														<button class="btn preset-tonal min-h-11 px-4" onclick={cancelForkChoice}>
@@ -1676,19 +1434,7 @@
 				onclick={() => (rightPanelExpanded = !rightPanelExpanded)}
 			>
 				<span class="font-medium text-surface-500 uppercase tracking-wider">{t('chat.message')}</span>
-				<svg
-					class="h-4 w-4 transition-transform"
-					class:rotate-180={rightPanelExpanded}
-					viewBox="0 0 20 20"
-					fill="currentColor"
-					aria-hidden="true"
-				>
-					<path
-						fill-rule="evenodd"
-						d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-						clip-rule="evenodd"
-					/>
-				</svg>
+				<Icon name="chevron-down" class="h-4 w-4 transition-transform {rightPanelExpanded ? 'rotate-180' : ''}" />
 			</button>
 
 			<div class="flex-1 flex flex-col min-h-0 p-3 lg:p-4">

@@ -2,6 +2,7 @@
 	import { t } from '$lib/i18n';
 	import { mobileNav } from '$lib/stores/mobile-nav.svelte';
 	import DirectorNotesPanel from './DirectorNotesPanel.svelte';
+	import Icon from '$lib/components/ui/Icon.svelte';
 
 	interface Props {
 		value: string;
@@ -74,19 +75,7 @@
 				onclick={handleSubmit}
 				aria-label={t('mobileInput.send')}
 			>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					class="h-6 w-6"
-					viewBox="0 0 24 24"
-					fill="none"
-					stroke="currentColor"
-					stroke-width="2"
-					stroke-linecap="round"
-					stroke-linejoin="round"
-				>
-					<line x1="22" y1="2" x2="11" y2="13" />
-					<polygon points="22 2 15 22 11 13 2 9 22 2" />
-				</svg>
+				<Icon name="send" class="h-6 w-6" />
 			</button>
 		</div>
 	</div>

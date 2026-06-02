@@ -3,6 +3,7 @@
 	import { slide } from 'svelte/transition';
 	import { t } from '$lib/i18n';
 	import { scrollToBottom } from '$lib/utils/scroll';
+	import Icon from '$lib/components/ui/Icon.svelte';
 
 	interface Props {
 		decisions: string[];
@@ -144,13 +145,7 @@
 				}}
 			>
 				<span class="truncate">{summaryText}</span>
-				<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-					<path
-						fill-rule="evenodd"
-						d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-						clip-rule="evenodd"
-					/>
-				</svg>
+				<Icon name="chevron-down" class="h-4 w-4" />
 			</button>
 		{:else}
 			<div transition:slide={{ duration: 200 }} aria-expanded="true">
@@ -176,17 +171,9 @@
 						}}
 					>
 						{#if isPinned}
-							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-								<path
-									d="M9.854 2.354a.5.5 0 00-.708 0l-1.5 1.5a.5.5 0 000 .708L9.5 6.914l-5.354 5.354a.5.5 0 000 .708l2 2a.5.5 0 00.708 0L12.086 9.5l2.352 2.354a.5.5 0 00.708 0l1.5-1.5a.5.5 0 000-.708L14.414 7.5l2.352-2.354a.5.5 0 000-.708l-2-2a.5.5 0 00-.708 0L11.5 4.586 9.854 2.354z"
-								/>
-							</svg>
+							<Icon name="pin" class="h-4 w-4" />
 						{:else}
-							<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-								<path
-									d="M10 2a.75.75 0 01.75.75v1.5h3.5a.75.75 0 010 1.5h-.444l-.5 6h.444a.75.75 0 010 1.5h-3v5.25a.75.75 0 01-1.5 0V13.25h-3a.75.75 0 010-1.5h.444l-.5-6H5.75a.75.75 0 010-1.5h3.5v-1.5A.75.75 0 0110 2z"
-								/>
-							</svg>
+							<Icon name="pin-outline" class="h-4 w-4" />
 						{/if}
 					</span>
 				</button>

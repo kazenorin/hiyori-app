@@ -5,6 +5,7 @@
 	import { enterActPlotInterviewMode } from '$lib/features/world-builder/world-builder.svelte';
 	import { selectStory, selectAct, selectActLine } from '$lib/stores/stories.svelte';
 	import { t } from '$lib/i18n';
+	import Icon from '$lib/components/ui/Icon.svelte';
 	import ImportPreviewTable from './ImportPreviewTable.svelte';
 
 	const store = getImportWorldStore();
@@ -79,7 +80,6 @@
 	}
 </script>
 
-
 <div class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6">
 	<div class="max-w-3xl mx-auto space-y-6">
 		<div class="flex items-center justify-between">
@@ -111,9 +111,7 @@
 
 				{#if store.importComplete}
 					<div class="flex items-center gap-2 text-success-600">
-						<svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-							<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-						</svg>
+						<Icon name="check" class="h-5 w-5" />
 						<span class="text-sm font-medium">{t('importWorld.storyImportedSuccessfully')}</span>
 					</div>
 				{/if}

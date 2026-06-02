@@ -23,6 +23,7 @@
 	import { t } from '$lib/i18n';
 	import { log } from '$lib/logging/logger';
 	import CodeBlock from '$lib/components/CodeBlock.svelte';
+	import Icon from '$lib/components/ui/Icon.svelte';
 
 	function createCollection(children: FileNode[] = []) {
 		return createTreeViewCollection<FileNode>({
@@ -349,9 +350,7 @@
 				type="button"
 				onclick={() => (showTreeOnMobile = !showTreeOnMobile)}
 			>
-				<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"
-					><path stroke-linecap="round" stroke-linejoin="round" d="M3 7h18M3 12h18M3 17h18" /></svg
-				>
+				<Icon name="dots-horizontal" class="size-4" />
 			</button>
 			<button
 				class="btn preset-tonal p-1.5 text-surface-500 hover:text-surface-700-300 transition-colors"
@@ -360,13 +359,7 @@
 				disabled={isLoadingRoot}
 				aria-label={t('fileManager.refresh')}
 			>
-				<svg class="size-4 {isLoadingRoot ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-					/>
-				</svg>
+				<Icon name="refresh-arrows" class="size-4 {isLoadingRoot ? 'animate-spin' : ''}" />
 			</button>
 		</div>
 	</div>
@@ -425,9 +418,7 @@
 					{:else if isBinary}
 						<div class="flex items-center justify-center h-64">
 							<div class="text-center space-y-3">
-								<svg class="size-8 mx-auto text-surface-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-									<path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3" />
-								</svg>
+								<Icon name="download" class="size-8 mx-auto text-surface-500" />
 								<p class="text-sm text-surface-600-400">{t('fileManager.binaryFile')}</p>
 								<button
 									class="btn preset-filled"
@@ -457,26 +448,11 @@
 
 {#snippet folderIcon(type: FolderType, sizeClass: string = 'size-4')}
 	{#if type === 'story'}
-		<svg class={sizeClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-			<path
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"
-			/>
-		</svg>
+		<Icon name="book" class={sizeClass} />
 	{:else if type === 'config'}
-		<svg class={sizeClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-			<path
-				stroke-linecap="round"
-				stroke-linejoin="round"
-				d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.573-1.066z"
-			/>
-			<path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-		</svg>
+		<Icon name="cog" class={sizeClass} />
 	{:else}
-		<svg class={sizeClass} fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-			<path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
-		</svg>
+		<Icon name="folder" class={sizeClass} />
 	{/if}
 {/snippet}
 
@@ -485,13 +461,7 @@
 		<div class="text-center space-y-4">
 			{#if isFolderProtected}
 				<div class="flex items-center justify-center gap-2 text-sm text-surface-600-400">
-					<svg class="size-4 text-warning-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-						/>
-					</svg>
+					<Icon name="lock" class="size-4 text-warning-500" />
 					{t('fileManager.protected')}
 				</div>
 			{/if}
@@ -502,21 +472,13 @@
 
 			<div class="flex items-center justify-center gap-2">
 				<button class="btn preset-tonal text-xs gap-1" type="button" onclick={handleExport} disabled={isExporting}>
-					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path stroke-linecap="round" stroke-linejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3" />
-					</svg>
+					<Icon name="download" class="size-3.5" />
 					{isExporting ? t('fileManager.exporting') : t('fileManager.export')}
 				</button>
 				{#if !isFolderProtected}
 					{#if showDeleteConfirm}
 						<button class="btn preset-filled-error text-xs gap-1" type="button" onclick={handleDeleteFolder} disabled={isDeleting}>
-							<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-								/>
-							</svg>
+							<Icon name="trash-can" class="size-3.5" />
 							{isDeleting ? '...' : t('fileManager.delete')}
 						</button>
 						<button
@@ -537,13 +499,7 @@
 								showDeleteConfirm = true;
 							}}
 						>
-							<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-								<path
-									stroke-linecap="round"
-									stroke-linejoin="round"
-									d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-								/>
-							</svg>
+							<Icon name="trash-can" class="size-3.5" />
 							{t('fileManager.delete')}
 						</button>
 					{/if}
@@ -563,40 +519,12 @@
 		{#if mc === 'managed' || mc === 'obsolete'}
 			{#if mc === 'managed'}
 				<button class="btn preset-tonal text-xs" type="button" onclick={openCopyPanel} disabled={isCopying}>
-					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-						/>
-					</svg>
+					<Icon name="copy-duplicate" class="size-3.5" />
 					{t('fileManager.copyToStory')}
 				</button>
 				{#if isConfigModified}
 					<button class="btn preset-tonal text-xs gap-1" type="button" onclick={handleRestoreDefault} disabled={isRestoring}>
-						<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-							/>
-						</svg>
-						{isRestoring ? t('fileManager.restoring') : t('fileManager.restoreDefault')}
-					</button>
-				{/if}
-			{/if}
-			{#if mc === 'obsolete'}
-				<p class="text-xs text-surface-600-400">{t('fileManager.obsoleteDescription')}</p>
-				{#if showFileDeleteConfirm}
-					<p class="text-xs text-warning-500">{t('fileManager.deleteFileWarning')}</p>
-					<button class="btn preset-filled-error text-xs gap-1" type="button" onclick={handleDeleteFile} disabled={isDeleting}>
-						<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-							/>
-						</svg>
+						<Icon name="refresh-arrows" class="size-3.5" />
 						{isDeleting ? '...' : t('fileManager.deleteObsolete')}
 					</button>
 					<button
@@ -617,13 +545,7 @@
 							showFileDeleteConfirm = true;
 						}}
 					>
-						<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-							<path
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-							/>
-						</svg>
+						<Icon name="trash-can" class="size-3.5" />
 						{t('fileManager.deleteObsolete')}
 					</button>
 				{/if}
@@ -634,13 +556,7 @@
 			{#if showFileDeleteConfirm}
 				<p class="text-xs text-warning-500">{t('fileManager.deleteFileWarning')}</p>
 				<button class="btn preset-filled-error text-xs gap-1" type="button" onclick={handleDeleteFile} disabled={isDeleting}>
-					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-						/>
-					</svg>
+					<Icon name="trash-can" class="size-3.5" />
 					{isDeleting ? '...' : t('fileManager.deleteOverride')}
 				</button>
 				<button
@@ -661,13 +577,7 @@
 						showFileDeleteConfirm = true;
 					}}
 				>
-					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-						/>
-					</svg>
+					<Icon name="trash-can" class="size-3.5" />
 					{t('fileManager.deleteOverride')}
 				</button>
 			{/if}
@@ -692,13 +602,7 @@
 					onclick={handleCopyToStory}
 					disabled={isCopying || !selectedStoryFolder}
 				>
-					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-						/>
-					</svg>
+					<Icon name="copy-duplicate" class="size-3.5" />
 					{isCopying ? t('fileManager.copying') : t('fileManager.copy')}
 				</button>
 				<button
@@ -721,13 +625,7 @@
 		<div class="flex justify-end gap-2">
 			{#if fileLang && !isBinary && selectedNode?.managedConfig !== 'obsolete'}
 				<button class="btn preset-tonal text-xs gap-1" type="button" onclick={startEditing}>
-					<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-						<path
-							stroke-linecap="round"
-							stroke-linejoin="round"
-							d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-						/>
-					</svg>
+					<Icon name="pencil" class="size-3.5" />
 					{t('fileManager.edit')}
 				</button>
 			{/if}
@@ -752,9 +650,7 @@
 				onclick={saveEditing}
 				disabled={isSaving || editContent === fileContent}
 			>
-				<svg class="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-				</svg>
+				<Icon name="check" class="size-3.5" />
 				{isSaving ? t('fileManager.saving') : t('fileManager.save')}
 			</button>
 			<button class="btn preset-tonal text-xs" type="button" onclick={cancelEditing} disabled={isSaving}>
@@ -787,13 +683,7 @@
 			</TreeView.Branch>
 		{:else}
 			<TreeView.Item>
-				<svg class="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-					<path
-						stroke-linecap="round"
-						stroke-linejoin="round"
-						d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-					/>
-				</svg>
+				<Icon name="document" class="size-4" />
 				{node.name}
 			</TreeView.Item>
 		{/if}
