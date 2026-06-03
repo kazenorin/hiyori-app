@@ -1,12 +1,10 @@
 <script lang="ts">
 	import {
-		clearMessages,
 		deleteLastExchange,
 		deleteOrphanedUserMessages,
 		getActEnded,
 		getCharacterNames,
 		getError,
-		getForkSequence,
 		getIsBusy,
 		getIsStreaming,
 		getLatestActivePlotThreads,
@@ -15,21 +13,15 @@
 		getMessages,
 		getStoryConcluded,
 		isUserMessage,
-		loadActLineMessages,
 		regenerateLastResponse,
-		runEpilogueFlow,
-		sendInitialNarration,
 		sendMessage,
 		stopStreaming,
 		type UIMessage,
-		updateMessageInState,
 	} from '$lib/ai/chat.svelte';
 	import MetadataPanel from '$lib/components/MetadataPanel.svelte';
 	import {
 		deleteLastWorldBuilderExchange,
-		enterActPlotInterviewMode,
 		exitWorldBuilderMode,
-		getActPlotInterview,
 		getError as getWorldBuilderError,
 		getGameResumeInterview,
 		getHasInterviewMessages,
@@ -38,57 +30,52 @@
 		getIsNextActInterview,
 		getIsStreaming as getIsWorldBuilderStreaming,
 		getMessages as getWorldBuilderMessages,
+		getActPlotInterview,
 		getStoryName as getWorldBuilderStoryName,
-		getWorldContent as getWorldBuilderContent,
-		type NewActInterviewContext,
 		regenerateLastWorldBuilderResponse,
-		removeLastInterviewAssistantMessage,
 		sendWorldBuilderMessage,
 		stopStreaming as stopWorldBuilderStreaming,
 		type WorldBuilderMessage,
-		updateWorldBuilderMessageContent,
 	} from '$lib/features/world-builder/world-builder.svelte';
 	import {
-		createActLineContinuation,
-		createStoryFromWorldBuilder,
-		forkActLine,
-		forkActLineForInterview,
-		getActiveAct,
-		getActiveActLineId,
-		getActiveDirectorNotesText,
-		getActiveStory,
-		getIsSelectingStory,
-		selectAct,
-		selectActLine,
-		setActPlotGenerationPhase,
-	} from '$lib/stores/stories.svelte';
-	import { isDirectorModeEnabled, settings } from '$lib/stores/settings.svelte';
+		getShowCreateStoryOptions,
+		getIsCreatingStory,
+		getCreateStoryError,
+		handleCreateFromWorldBuilder,
+		cancelCreateStoryOptions,
+		handleCreateStoryImmediate,
+		handleCreateActPlotInterview,
+		handleStartGameAfterInterview,
+	} from '$lib/features/world-builder/story-creation.svelte';
+	import {
+		getIsForking,
+		getForkChoiceIndex,
+		handleFork,
+		handleForkDirect,
+		handleForkWithInterview,
+		cancelForkChoice,
+	} from '$lib/features/fork-controller.svelte';
+	import {
+		getEditingIsTemplated,
+		isEditingMessage,
+		shouldShowStreamingCursor,
+		startEditMessage,
+		cancelEdit,
+		saveEditMainChatMessage,
+		saveEditWorldBuilderMessage,
+	} from '$lib/features/message-editor.svelte';
+	import { getActiveAct, getActiveActLineId, getActiveStory, getIsSelectingStory } from '$lib/stores/stories.svelte';
+	import { isDirectorModeEnabled } from '$lib/stores/settings.svelte';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import ChatControls from '$lib/components/ChatControls.svelte';
 	import DirectorNotesPanel from '$lib/components/DirectorNotesPanel.svelte';
 	import WorldBuilderControls from '$lib/components/WorldBuilderControls.svelte';
 	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
-	import { emptyVariables, formatPhaseName, type NarrativeVariables } from '$lib/ai/narrative-types';
+	import { formatPhaseName } from '$lib/ai/narrative-types';
 	import { loadStoryMessageTemplate, loadStoryMessageTemplateForStory } from '$lib/fs/view-templates';
-	import { ensureActPlot } from '$lib/ai/act-plot';
-	import {
-		getActLine,
-		getEndingType,
-		getMessageSequence,
-		getMessagesForLine,
-		getPrecedingActSummary,
-		getPremisesMessages,
-	} from '$lib/db/act-lines';
-	import { log } from '$lib/logging/logger';
-	import { generateTurnOfEvents } from '$lib/features/turn-of-events-generator';
-	import { type Message, updateMessageFields } from '$lib/db/messages';
-	import { type GameDataRegenerationContext, regenerateGameData } from '$lib/ai/game-data-regenerator';
-	import type { Story } from '$lib/db/stories';
 
 	import { t } from '$lib/i18n';
-	import { resolveStoryFolder } from '$lib/fs/story-folders';
-	import { updateWorldCard, ensureWorldFile } from '$lib/ai/world-generator';
-	import { generateAndRecordActShortSummary } from '$lib/ai/act-short-summary-generator';
+
 	import ScrollToFAB from '$lib/components/ScrollToFAB.svelte';
 	import MobileInputSheet from '$lib/components/MobileInputSheet.svelte';
 	import ChoicesSheet from '$lib/components/ChoicesSheet.svelte';
@@ -100,6 +87,8 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import { mobileNav } from '$lib/stores/mobile-nav.svelte';
 	import { scrollToBottom } from '$lib/utils/scroll';
+	import { setupScrollObservers, handleStreamEndScroll } from '$lib/features/auto-scroller.svelte';
+	import { handleContinueToNextAct, handleEndStory } from '$lib/features/act-transition.svelte';
 
 	let input = $state('');
 	let chatContainer = $state<HTMLDivElement | null>(null);
@@ -108,7 +97,6 @@
 	let wasChatStreaming = $state(false);
 	let wasWbStreaming = $state(false);
 	let rightPanelExpanded = $state(false);
-	let mobileDirectorNotesExpanded = $state(false);
 	let latestDecisions = $derived(getLatestDecisions());
 	let latestActivePlotThreads = $derived(getLatestActivePlotThreads());
 	let latestDecisionContext = $derived(getLatestDecisionContext());
@@ -137,24 +125,8 @@
 	});
 	let lastWbMessageIdx = $derived(getWorldBuilderMessages().findLastIndex((m: WorldBuilderMessage) => m.role === 'assistant'));
 
-	// World builder story creation state
-	let showCreateStoryOptions = $state(false);
-	let isCreatingStory = $state(false);
-	let createStoryError = $state<string | null>(null);
-	let isForking = $state(false);
-	let forkChoiceIndex = $state<number | null>(null);
 	let updateWorldCardChecked = $state(false);
 	let forkPlotMode = $state<'guidance' | 'phaseEvent' | null>(null);
-
-	let editingMessageId = $state<string | null>(null);
-	let editingIsTemplated = $state(false);
-
-
-	// Reset fork choice when navigating to a different act line
-	$effect(() => {
-		getActiveActLineId();
-		forkChoiceIndex = null;
-	});
 
 	async function handleCopy(messageId: string, content: string) {
 		await navigator.clipboard.writeText(content);
@@ -162,71 +134,6 @@
 		setTimeout(() => {
 			copiedId = null;
 		}, 1500);
-	}
-
-	function isEditingMessage(messageId: string): boolean {
-		return editingMessageId === messageId;
-	}
-
-	function shouldShowStreamingCursor(message: UIMessage): boolean {
-		return (
-			!message.content &&
-			!message.reasoning &&
-			!message.phases?.length &&
-			!(message.variables && hasTemplateMetadata(message.variables)) &&
-			getIsStreaming() &&
-			message === getMessages().at(-1)
-		);
-	}
-
-	function startEditMessage(message: UIMessage | WorldBuilderMessage, isTemplated: boolean) {
-		if (getIsBusy() || getIsWorldBuilderStreaming()) return;
-		editingMessageId = message.id;
-		editingIsTemplated = isTemplated;
-	}
-
-	function cancelEdit() {
-		editingMessageId = null;
-		editingIsTemplated = false;
-	}
-
-
-
-	async function saveEditMainChatMessage(message: UIMessage, data: { content?: string; variables?: { sceneTitle?: string; background?: string; narrativeBody?: string; cg?: string } }) {
-		if (!editingMessageId) return;
-		try {
-			if (data.variables) {
-				const updatedVariables: NarrativeVariables = {
-					...message.variables,
-					sceneTitle: data.variables.sceneTitle || null,
-					background: data.variables.background || null,
-					narrativeBody: data.variables.narrativeBody || null,
-					cg: data.variables.cg || null,
-				};
-				await updateMessageFields(message.id, { variables: JSON.stringify(updatedVariables) });
-				updateMessageInState(message.id, { variables: updatedVariables });
-			} else {
-				await updateMessageFields(message.id, { content: data.content ?? '' });
-				updateMessageInState(message.id, { content: data.content ?? '' });
-			}
-			cancelEdit();
-		} catch (err) {
-			await log.error('edit-message', 'Failed to save message edit', err);
-		}
-	}
-
-	async function saveEditWorldBuilderMessage(message: WorldBuilderMessage, data: { content?: string }) {
-		if (!editingMessageId) return;
-		try {
-			const content = data.content ?? '';
-			updateWorldBuilderMessageContent(message.id, content);
-			if (getActPlotInterview()) {
-				await updateMessageFields(message.id, { content });
-			}
-			cancelEdit();
-		} catch (err) {
-			await log.error('edit-message', 'Failed to save world builder message edit', err);
-		}
 	}
 
 	async function handleRegenerate(messageId: string) {
@@ -257,68 +164,6 @@
 		await deleteLastWorldBuilderExchange();
 	}
 
-	async function handleFork(messageIndex: number) {
-		const actLineId = getActiveActLineId();
-		const act = getActiveAct();
-		if (!actLineId || !act || getIsBusy() || isForking) return;
-		forkChoiceIndex = messageIndex;
-	}
-
-	async function handleForkDirect(messageIndex: number) {
-		const actLineId = getActiveActLineId();
-		const act = getActiveAct();
-		if (!actLineId || !act || getIsBusy() || isForking) return;
-		isForking = true;
-		forkChoiceIndex = null;
-		try {
-			const { branchSeq, name } = await getForkSequence(actLineId, messageIndex);
-			const line = await forkActLine(actLineId, branchSeq, act.id, name);
-			await loadActLineMessages(line.id);
-		} finally {
-			isForking = false;
-		}
-	}
-
-	async function handleForkWithInterview(messageIndex: number) {
-		const story = getActiveStory();
-		const actLineId = getActiveActLineId();
-		const act = getActiveAct();
-		if (!actLineId || !act || !story || getIsBusy() || isForking) return;
-
-		const worldContent = await ensureWorldFile(story.id, story.name);
-		isForking = true;
-		forkChoiceIndex = null;
-		try {
-			const { branchSeq, name } = await getForkSequence(actLineId, messageIndex);
-			const plotModeOverride = forkPlotMode ?? undefined;
-			const line = await forkActLineForInterview(actLineId, branchSeq, act.id, name, plotModeOverride);
-			await selectActLine(line.id);
-
-			const forkedMessage = getMessages()[messageIndex];
-			const actSummary = forkedMessage?.actSummary ?? '';
-			const narrativeBody = forkedMessage?.variables?.narrativeBody ?? '';
-			const sceneNumber = forkedMessage?.sceneNumber ?? 1;
-			const sceneTitle = forkedMessage?.variables?.sceneTitle ?? '';
-
-			await enterActPlotInterviewMode({
-				actLineId: line.id,
-				worldContent,
-				forkContext: { actSummary, narrativeBody, sceneNumber, sceneTitle },
-				story: { id: story.id, name: story.name },
-			});
-		} catch (err) {
-			await log.error('fork', 'Failed to start fork interview', err);
-			createStoryError = err instanceof Error ? err.message : t('errors.failedToStartForkInterview');
-		} finally {
-			isForking = false;
-		}
-	}
-
-	function cancelForkChoice() {
-		forkChoiceIndex = null;
-		forkPlotMode = null;
-	}
-
 	function handleSubmit() {
 		const text = input.trim();
 		if (!text || getIsBusy() || getIsWorldBuilderStreaming()) return;
@@ -333,247 +178,6 @@
 		if (!actLineId) return;
 		input = '';
 		sendMessage(actLineId, text);
-	}
-
-	function handleCreateFromWorldBuilder() {
-		const name = getWorldBuilderStoryName();
-		if (!name) return;
-		showCreateStoryOptions = true;
-	}
-
-	function cancelCreateStoryOptions() {
-		showCreateStoryOptions = false;
-		createStoryError = null;
-		storyCreated = false;
-	}
-
-	// Track whether story was already created to prevent duplicates on retry
-	let storyCreated = $state(false);
-
-	/**
-	 * Ensure story is created from world builder content.
-	 * Returns true if story exists (either already created or newly created).
-	 */
-	async function ensureStoryCreated(): Promise<boolean> {
-		const name = getWorldBuilderStoryName();
-		const worldContent = getWorldBuilderContent();
-		if (!name || !worldContent) return false;
-
-		if (!storyCreated) {
-			await createStoryFromWorldBuilder(name, worldContent, settings.locale || 'en');
-			storyCreated = true;
-		}
-		return true;
-	}
-
-	/**
-	 * Get active act line and story references, setting error if missing.
-	 * Returns null if either is missing.
-	 */
-	function getActLineAndStory(): { actLineId: string; story: Story } | null {
-		const actLineId = getActiveActLineId();
-		const story = getActiveStory();
-
-		if (!actLineId || !story) {
-			createStoryError = t('errors.storyCreationFailed');
-			return null;
-		}
-		return { actLineId, story };
-	}
-
-	async function handleCreateStoryImmediate(actNumber: number = 1) {
-		isCreatingStory = true;
-		createStoryError = null;
-
-		const storyCreated = await ensureStoryCreated();
-		const worldContent = getWorldBuilderContent();
-		const refs = getActLineAndStory();
-
-		if (!storyCreated || !worldContent || !refs) {
-			createStoryError = t('errors.missingRequiredContents');
-			isCreatingStory = false;
-			return;
-		}
-
-		const actLine = await getActLine(refs.actLineId);
-		if (!actLine) {
-			createStoryError = t('errors.storyCreationFailed');
-			return;
-		}
-
-		try {
-			await ensureActPlot({
-				worldContent,
-				story: refs.story,
-				actNumber,
-				actLine,
-				isResumeGame: false,
-				onPhaseChange: setActPlotGenerationPhase,
-				onGenerationComplete: () => setActPlotGenerationPhase(null),
-			});
-		} catch (err) {
-			createStoryError = err instanceof Error ? err.message : t('errors.failedToCreateStory');
-		} finally {
-			setActPlotGenerationPhase(null);
-			isCreatingStory = false;
-		}
-
-		exitWorldBuilderMode();
-		await sendInitialNarration(refs.actLineId).then(() => log.debug('story-creation', 'initial narration sent'));
-	}
-
-	async function handleCreateActPlotInterview() {
-		isCreatingStory = true;
-		createStoryError = null;
-
-		try {
-			if (!(await ensureStoryCreated())) return;
-
-			const refs = getActLineAndStory();
-			if (!refs) {
-				isCreatingStory = false;
-				return;
-			}
-
-			const worldContent = getWorldBuilderContent();
-			if (!worldContent) {
-				createStoryError = t('errors.worldContentNotAvailable');
-				isCreatingStory = false;
-				return;
-			}
-			await enterActPlotInterviewMode({
-				actLineId: refs.actLineId,
-				worldContent,
-				story: { id: refs.story.id, name: refs.story.name },
-			});
-		} catch (err) {
-			createStoryError = err instanceof Error ? err.message : t('errors.failedToStartInterview');
-		} finally {
-			isCreatingStory = false;
-		}
-	}
-
-	async function handleStartGameAfterInterview(isGameResumeMode: boolean, updateWorld: boolean = false) {
-		const refs = getActLineAndStory();
-		if (!refs) return;
-		const resolvedActNumber = getActiveAct()?.actNumber ?? 1;
-		createStoryError = null;
-		const actLine = await getActLine(refs.actLineId);
-		if (!actLine) {
-			createStoryError = t('errors.storyCreationFailed');
-			return;
-		}
-
-		isCreatingStory = true;
-		try {
-			await removeLastInterviewAssistantMessage();
-
-			let worldContent = getWorldBuilderContent();
-			if (worldContent) {
-				if (updateWorld) {
-					const folderName = await resolveStoryFolder(refs.story.id, refs.story.name);
-					const actSummary = await getPrecedingActSummary(refs.actLineId);
-					const transcript = await getPremisesMessages(refs.actLineId);
-					const transcriptMessages = transcript
-						.filter((m) => m.role === 'user' || m.role === 'assistant')
-						.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
-
-					worldContent = await updateWorldCard({
-						folderName,
-						currentWorldContent: worldContent,
-						actSummary: actSummary ?? '',
-						interviewTranscript: transcriptMessages,
-					});
-				}
-
-				let forkedMessage: Message | undefined = undefined;
-				if (isGameResumeMode) {
-					forkedMessage = await enrichForkedMessageWithTurnOfEvents(refs.actLineId, refs.story.id, refs.story.name);
-				}
-
-				const actPlotContent = await ensureActPlot({
-					worldContent: worldContent ?? undefined,
-					story: refs.story,
-					actNumber: resolvedActNumber,
-					actLine,
-					isResumeGame: isGameResumeMode,
-					onPhaseChange: setActPlotGenerationPhase,
-					onGenerationComplete: () => setActPlotGenerationPhase(null),
-				});
-
-				if (forkedMessage) {
-					await regenerateGameDataForForkedMessage(forkedMessage.id, {
-						worldContent: worldContent ?? '',
-						actPlot: actPlotContent,
-						actSummary: forkedMessage.actSummary ?? '',
-						directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(forkedMessage.sceneNumber ?? 1) : '',
-						sceneNumber: forkedMessage.sceneNumber ?? 1,
-						narrativeVariables: forkedMessage.variables ?? emptyVariables(),
-						playerResponse: null,
-					});
-				}
-
-				exitWorldBuilderMode();
-
-				if (isGameResumeMode) {
-					await loadActLineMessages(refs.actLineId);
-				} else {
-					sendInitialNarration(refs.actLineId).then(() => log.debug('story-creation', 'initial narration sent'));
-				}
-			} else {
-				createStoryError = t('errors.worldContentNotAvailable');
-			}
-		} catch (err) {
-			createStoryError = err instanceof Error ? err.message : t('errors.failedToStartGame');
-		} finally {
-			setActPlotGenerationPhase(null);
-			isCreatingStory = false;
-		}
-	}
-
-	async function enrichForkedMessageWithTurnOfEvents(actLineId: string, storyId: string, storyName: string): Promise<Message | undefined> {
-		const lineMessages = await getMessagesForLine(actLineId);
-		const lastAssistant = lineMessages.findLast((m) => m.role === 'assistant');
-		if (!lastAssistant || !lastAssistant.variables?.narrativeBody) return undefined;
-
-		const interviewMessages = getWorldBuilderMessages();
-		if (interviewMessages.length === 0) return undefined;
-
-		const turnOfEventsText = await generateTurnOfEvents({
-			storyId,
-			storyName,
-			actSummary: lastAssistant.actSummary ?? '',
-			narrativeBody: lastAssistant.variables.narrativeBody,
-			sceneNumber: lastAssistant.sceneNumber ?? 1,
-			sceneTitle: lastAssistant.variables.sceneTitle ?? '',
-			interviewMessages: interviewMessages.filter((m) => m.role === 'user' || m.role === 'assistant'),
-		});
-
-		const enrichedVariables: NarrativeVariables = {
-			...lastAssistant.variables,
-			turnOfEvents: turnOfEventsText,
-		};
-
-		await updateMessageFields(lastAssistant.id, {
-			variables: JSON.stringify(enrichedVariables),
-		});
-		return {
-			...lastAssistant,
-			variables: enrichedVariables,
-		};
-	}
-
-	async function regenerateGameDataForForkedMessage(messageId: string, ctx: GameDataRegenerationContext) {
-		const regeneratedGameData = await regenerateGameData(ctx);
-		if (regeneratedGameData) {
-			const updatedVariables: NarrativeVariables = {
-				...ctx.narrativeVariables,
-				gameData: regeneratedGameData,
-			};
-			await updateMessageFields(messageId, {
-				variables: JSON.stringify(updatedVariables),
-			});
-		}
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
@@ -600,140 +204,22 @@
 		sendMessage(actLineId, decision);
 	}
 
-	async function handleContinueToNextAct() {
-		if (getIsBusy()) return;
-		const endedActLineId = getActiveActLineId();
-		if (!endedActLineId) return;
-
-		const story = getActiveStory();
-		const endedActLine = await getActLine(endedActLineId);
-		const endingType = await getEndingType(endedActLineId);
-		if (!story || !endedActLine || !endingType) return;
-
-		const endedAct = getActiveAct();
-		if (!endedAct) return;
-
-		const lastAssistantMsg = getMessages().findLast((m) => m.role === 'assistant');
-		const currentSummary = lastAssistantMsg?.actSummary ?? '';
-		const worldContent = await ensureWorldFile(story.id, story.name);
-
-		const assistantMessageSequence = lastAssistantMsg?.id ? await getMessageSequence(endedActLineId, lastAssistantMsg.id) : null;
-
-		if (lastAssistantMsg && assistantMessageSequence != null && currentSummary) {
-			generateAndRecordActShortSummary(endedActLineId, currentSummary, {
-				messageId: lastAssistantMsg.id,
-				messageSequence: assistantMessageSequence,
-			}).catch(() => {});
-		}
-
-		try {
-			await clearMessages();
-
-			const { act: newAct, actLine: newLine } = await createActLineContinuation(endedAct, endedActLine, story);
-			await selectAct(newAct.id);
-			await selectActLine(newLine.id);
-
-			const newActContext: NewActInterviewContext = {
-				endingType,
-				actSummary: currentSummary,
-			};
-
-			await enterActPlotInterviewMode({
-				actLineId: newLine.id,
-				worldContent,
-				newActContext,
-				story: { id: story.id, name: story.name },
-			});
-		} catch (err) {
-			await log.error('continue-to-next-act', 'Failed to start next act', err);
-		}
-	}
-
-	function handleEndStory() {
-		if (getIsBusy()) return;
-		const actLineId = getActiveActLineId();
-		if (!actLineId) return;
-		runEpilogueFlow(actLineId);
-	}
-
-	function isCursorVisible(container: HTMLDivElement | null) {
-		if (!container) return false;
-		const cursor = container.querySelector('[data-streaming-cursor]');
-		if (!cursor) return false;
-		const containerRect = container.getBoundingClientRect();
-		const cursorRect = cursor.getBoundingClientRect();
-		return cursorRect.top <= containerRect.bottom && cursorRect.bottom >= containerRect.top;
-	}
-
-	function isWbCursorVisible(container: HTMLDivElement | null) {
-		if (!container) return false;
-		const cursor = container.querySelector('[data-streaming-cursor]');
-		if (!cursor) return false;
-		const containerRect = container.getBoundingClientRect();
-		const cursorRect = cursor.getBoundingClientRect();
-		return cursorRect.top <= containerRect.bottom && cursorRect.bottom >= containerRect.top;
-	}
-
 	$effect(() => {
 		if (!chatContainer) return;
-
-		const scrollIfCursorVisible = (container: HTMLDivElement) => {
-			if (isCursorVisible(container)) {
-				scrollToBottom(container);
-			}
-		};
-
-		const mutationObserver = new MutationObserver((_) => scrollIfCursorVisible(chatContainer!));
-		mutationObserver.observe(chatContainer, { childList: true, subtree: true, characterData: true });
-
-		const resizeObserver = new ResizeObserver((_) => scrollIfCursorVisible(chatContainer!));
-		resizeObserver.observe(chatContainer);
-
-		return () => {
-			mutationObserver.disconnect();
-			resizeObserver.disconnect();
-		};
+		return setupScrollObservers(chatContainer);
 	});
 
 	$effect(() => {
 		if (!wbChatContainer) return;
-
-		const scrollWbIfCursorVisible = (container: HTMLDivElement) => {
-			if (isWbCursorVisible(container)) {
-				scrollToBottom(container);
-			}
-		};
-
-		const mutationObserver = new MutationObserver((_) => scrollWbIfCursorVisible(wbChatContainer!));
-		mutationObserver.observe(wbChatContainer, { childList: true, subtree: true, characterData: true });
-
-		const resizeObserver = new ResizeObserver((_) => scrollWbIfCursorVisible(wbChatContainer!));
-		resizeObserver.observe(wbChatContainer);
-
-		return () => {
-			mutationObserver.disconnect();
-			resizeObserver.disconnect();
-		};
+		return setupScrollObservers(wbChatContainer);
 	});
 
 	$effect(() => {
-		const isStreaming = getIsStreaming();
-		if (wasChatStreaming && !isStreaming && chatContainer) {
-			requestAnimationFrame(() => {
-				if (chatContainer) scrollToBottom(chatContainer);
-			});
-		}
-		wasChatStreaming = isStreaming;
+		wasChatStreaming = handleStreamEndScroll(chatContainer, wasChatStreaming, getIsStreaming());
 	});
 
 	$effect(() => {
-		const isStreaming = getIsWorldBuilderStreaming();
-		if (wasWbStreaming && !isStreaming && wbChatContainer) {
-			requestAnimationFrame(() => {
-				if (wbChatContainer) scrollToBottom(wbChatContainer);
-			});
-		}
-		wasWbStreaming = isStreaming;
+		wasWbStreaming = handleStreamEndScroll(wbChatContainer, wasWbStreaming, getIsWorldBuilderStreaming());
 	});
 </script>
 
@@ -868,9 +354,9 @@
 				<WorldBuilderControls
 					isComplete={getIsWorldBuilderComplete()}
 					storyName={getWorldBuilderStoryName()}
-					{showCreateStoryOptions}
-					{isCreatingStory}
-					{createStoryError}
+					showCreateStoryOptions={getShowCreateStoryOptions()}
+					isCreatingStory={getIsCreatingStory()}
+					createStoryError={getCreateStoryError()}
 					worldBuilderError={getWorldBuilderError()}
 					isInterviewMode={getActPlotInterview()}
 					isGameResumeMode={getGameResumeInterview()}
@@ -1019,17 +505,17 @@
 									{#if isEditingMessage(message.id)}
 										<MessageEditForm
 											mode="main"
-											isTemplated={editingIsTemplated}
+											isTemplated={getEditingIsTemplated()}
 											messageId={message.id}
-											initial={editingIsTemplated && message.variables
+											initial={getEditingIsTemplated() && message.variables
 												? {
-													variables: {
-														sceneTitle: message.variables.sceneTitle ?? '',
-														background: message.variables.background ?? '',
-														narrativeBody: message.variables.narrativeBody ?? '',
-														cg: message.variables.cg ?? '',
+														variables: {
+															sceneTitle: message.variables.sceneTitle ?? '',
+															background: message.variables.background ?? '',
+															narrativeBody: message.variables.narrativeBody ?? '',
+															cg: message.variables.cg ?? '',
+														},
 													}
-												}
 												: { content: message.content ?? '' }}
 											onsave={(data) => saveEditMainChatMessage(message, data)}
 											oncancel={cancelEdit}
@@ -1082,28 +568,31 @@
 												</button>
 											{/if}
 											{#if message.variables && hasTemplateMetadata(message.variables)}
-												{#if forkChoiceIndex === i}
+												{#if getForkChoiceIndex() === i}
 													<ForkChoicePanel
 														variant="desktop"
 														bind:forkPlotMode
-														isForking={isForking}
+														isForking={getIsForking()}
 														isBusy={getIsBusy()}
 														actions={{
 															onForkDirect: () => handleForkDirect(i),
-															onForkWithInterview: () => handleForkWithInterview(i),
+															onForkWithInterview: () => handleForkWithInterview(i, forkPlotMode),
 															onFork: () => handleFork(i),
-															onCancel: cancelForkChoice,
+															onCancel: () =>
+																cancelForkChoice(() => {
+																	forkPlotMode = null;
+																}),
 														}}
 													/>
 												{:else}
 													<button
 														class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 														title="Fork from here"
-														disabled={isForking || getIsBusy()}
+														disabled={getIsForking() || getIsBusy()}
 														onclick={() => handleFork(i)}
 													>
 														<Icon name="fork" class="w-3.5 h-3.5" />
-														{isForking ? t('chat.forking') : t('chat.fork')}
+														{getIsForking() ? t('chat.forking') : t('chat.fork')}
 													</button>
 												{/if}
 											{/if}
@@ -1143,18 +632,21 @@
 												onRegenerate={i === lastMessageIdx ? () => handleRegenerate(message.id) : undefined}
 												onDelete={i === lastMessageIdx ? handleDelete : undefined}
 											/>
-												<ForkChoicePanel
-													variant="mobile"
-													bind:forkPlotMode
-													isForking={isForking}
-													isBusy={getIsBusy()}
-													actions={{
-														onForkDirect: () => handleForkDirect(i),
-														onForkWithInterview: () => handleForkWithInterview(i),
-														onFork: () => handleFork(i),
-														onCancel: cancelForkChoice,
-													}}
-												/>
+											<ForkChoicePanel
+												variant="mobile"
+												bind:forkPlotMode
+												isForking={getIsForking()}
+												isBusy={getIsBusy()}
+												actions={{
+													onForkDirect: () => handleForkDirect(i),
+													onForkWithInterview: () => handleForkWithInterview(i, forkPlotMode),
+													onFork: () => handleFork(i),
+													onCancel: () =>
+														cancelForkChoice(() => {
+															forkPlotMode = null;
+														}),
+												}}
+											/>
 										</div>
 									{/if}
 								</div>

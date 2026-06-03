@@ -8,17 +8,20 @@
 		getLanguageFromPath,
 		decodeText,
 		saveFileContent,
-		exportFolderAsZip,
-		deleteFolder,
 		isFolderTypeProtected,
-		copyConfigToStory,
 		isConfigUserModified,
-		restoreConfigDefault,
-		deleteFile,
 		type FileNode,
 		type FolderType,
-		type ManagedConfigKind,
 	} from '$lib/fs/file-tree';
+	import {
+		type FileActionState,
+		createFileActionState,
+		handleExport as doHandleExport,
+		handleDeleteFolder as doHandleDeleteFolder,
+		handleCopyToStory as doHandleCopyToStory,
+		handleRestoreDefault as doHandleRestoreDefault,
+		handleDeleteFile as doHandleDeleteFile,
+	} from '$lib/features/file-actions';
 	import { getAllStoryFolderInfo, type StoryFolderInfo } from '$lib/db/story-folders';
 	import { t } from '$lib/i18n';
 	import { log } from '$lib/logging/logger';
@@ -57,14 +60,10 @@
 	let isSaving = $state(false);
 	let saveError = $state<string | null>(null);
 
-	let isExporting = $state(false);
+	let actions = $state<FileActionState>(createFileActionState());
 	let showDeleteConfirm = $state(false);
-	let isDeleting = $state(false);
-	let isCopying = $state(false);
-	let isRestoring = $state(false);
 
 	let confirmDiscard = $state(false);
-	let actionError = $state<string | null>(null);
 
 	let inlineCancelRef: HTMLButtonElement | null = $state(null);
 
@@ -136,7 +135,7 @@
 		editContent = '';
 		saveError = null;
 		showDeleteConfirm = false;
-		actionError = null;
+		actions.actionError = null;
 		isConfigModified = null;
 		showCopyPanel = false;
 		selectedStoryFolder = '';
@@ -156,7 +155,7 @@
 		editContent = '';
 		saveError = null;
 		showDeleteConfirm = false;
-		actionError = null;
+		actions.actionError = null;
 		showCopyPanel = false;
 		selectedStoryFolder = '';
 		isConfigModified = null;
@@ -258,87 +257,43 @@
 		}
 	}
 
-	async function handleExport() {
+	function handleExport() {
 		if (!selectedFilePath) return;
-		isExporting = true;
-		actionError = null;
-		try {
-			await exportFolderAsZip(selectedFilePath);
-		} catch (err) {
-			actionError = err instanceof Error ? err.message : String(err);
-			await log.error('file-manager', 'Failed to export folder', err);
-		} finally {
-			isExporting = false;
-		}
+		doHandleExport(actions, selectedFilePath);
 	}
 
-	async function handleDeleteFolder() {
+	function handleDeleteFolder() {
 		if (!selectedFilePath) return;
-		isDeleting = true;
-		actionError = null;
-		try {
-			await deleteFolder(selectedFilePath);
+		doHandleDeleteFolder(actions, selectedFilePath, async () => {
 			clearPreview();
 			await loadRoot();
-		} catch (err) {
-			actionError = err instanceof Error ? err.message : String(err);
-			await log.error('file-manager', 'Failed to delete folder', err);
-		} finally {
-			isDeleting = false;
-		}
+		});
 	}
 
-	async function handleCopyToStory() {
+	function handleCopyToStory() {
 		if (!selectedFilePath || !selectedStoryFolder) return;
-		isCopying = true;
-		actionError = null;
-		try {
-			await copyConfigToStory(selectedFilePath, selectedStoryFolder);
+		doHandleCopyToStory(actions, selectedFilePath, selectedStoryFolder, async () => {
 			clearPreview();
 			await loadRoot();
-		} catch (err) {
-			actionError = err instanceof Error ? err.message : String(err);
-			await log.error('file-manager', 'Failed to copy to story', err);
-		} finally {
-			isCopying = false;
-		}
+		});
 	}
 
-	async function handleRestoreDefault() {
+	function handleRestoreDefault() {
 		if (!selectedFilePath) return;
-		isRestoring = true;
-		actionError = null;
-		try {
-			await restoreConfigDefault(selectedFilePath);
+		doHandleRestoreDefault(actions, selectedFilePath, { value: loadRequestId }, (content, binary, lang) => {
 			isConfigModified = false;
-			const requestId = ++loadRequestId;
-			const { data, isBinary: binary } = await readFileData(selectedFilePath);
-			if (requestId !== loadRequestId) return;
 			isBinary = binary;
-			fileContent = binary ? null : decodeText(data);
-			fileLang = getLanguageFromPath(selectedFilePath);
-		} catch (err) {
-			actionError = err instanceof Error ? err.message : String(err);
-			await log.error('file-manager', 'Failed to restore default', err);
-		} finally {
-			isRestoring = false;
-		}
+			fileContent = content;
+			fileLang = lang;
+		});
 	}
 
-	async function handleDeleteFile() {
+	function handleDeleteFile() {
 		if (!selectedFilePath) return;
-		isDeleting = true;
-		actionError = null;
-		try {
-			await deleteFile(selectedFilePath);
+		doHandleDeleteFile(actions, selectedFilePath, async () => {
 			clearPreview();
 			await loadRoot();
-		} catch (err) {
-			actionError = err instanceof Error ? err.message : String(err);
-			await log.error('file-manager', 'Failed to delete file', err);
-		} finally {
-			isDeleting = false;
-		}
+		});
 	}
 
 	function openCopyPanel() {
@@ -469,15 +424,15 @@
 			{/if}
 
 			<div class="flex items-center justify-center gap-2">
-				<button class="btn preset-tonal text-xs gap-1" type="button" onclick={handleExport} disabled={isExporting}>
+				<button class="btn preset-tonal text-xs gap-1" type="button" onclick={handleExport} disabled={actions.isExporting}>
 					<Icon name="download" class="size-3.5" />
-					{isExporting ? t('fileManager.exporting') : t('fileManager.export')}
+					{actions.isExporting ? t('fileManager.exporting') : t('fileManager.export')}
 				</button>
 				{#if !isFolderProtected}
 					{#if showDeleteConfirm}
-						<button class="btn preset-filled-error text-xs gap-1" type="button" onclick={handleDeleteFolder} disabled={isDeleting}>
+						<button class="btn preset-filled-error text-xs gap-1" type="button" onclick={handleDeleteFolder} disabled={actions.isDeleting}>
 							<Icon name="trash-can" class="size-3.5" />
-							{isDeleting ? '...' : t('fileManager.delete')}
+							{actions.isDeleting ? '...' : t('fileManager.delete')}
 						</button>
 						<button
 							bind:this={inlineCancelRef}
@@ -504,8 +459,8 @@
 				{/if}
 			</div>
 
-			{#if actionError}
-				<p class="text-xs text-error-500">{actionError}</p>
+			{#if actions.actionError}
+				<p class="text-xs text-error-500">{actions.actionError}</p>
 			{/if}
 		</div>
 	</div>
@@ -516,14 +471,14 @@
 	<div class="flex flex-wrap items-center gap-2 mb-2">
 		{#if mc === 'managed' || mc === 'obsolete'}
 			{#if mc === 'managed'}
-				<button class="btn preset-tonal text-xs" type="button" onclick={openCopyPanel} disabled={isCopying}>
+				<button class="btn preset-tonal text-xs" type="button" onclick={openCopyPanel} disabled={actions.isCopying}>
 					<Icon name="copy-duplicate" class="size-3.5" />
 					{t('fileManager.copyToStory')}
 				</button>
 				{#if isConfigModified}
-					<button class="btn preset-tonal text-xs gap-1" type="button" onclick={handleRestoreDefault} disabled={isRestoring}>
+					<button class="btn preset-tonal text-xs gap-1" type="button" onclick={handleRestoreDefault} disabled={actions.isRestoring}>
 						<Icon name="refresh-arrows" class="size-3.5" />
-						{isDeleting ? '...' : t('fileManager.deleteObsolete')}
+						{actions.isDeleting ? '...' : t('fileManager.deleteObsolete')}
 					</button>
 					<button
 						bind:this={inlineCancelRef}
@@ -553,9 +508,9 @@
 			<p class="text-xs text-surface-600-400">{t('fileManager.overrideDescription')}</p>
 			{#if showFileDeleteConfirm}
 				<p class="text-xs text-warning-500">{t('fileManager.deleteFileWarning')}</p>
-				<button class="btn preset-filled-error text-xs gap-1" type="button" onclick={handleDeleteFile} disabled={isDeleting}>
+				<button class="btn preset-filled-error text-xs gap-1" type="button" onclick={handleDeleteFile} disabled={actions.isDeleting}>
 					<Icon name="trash-can" class="size-3.5" />
-					{isDeleting ? '...' : t('fileManager.deleteOverride')}
+					{actions.isDeleting ? '...' : t('fileManager.deleteOverride')}
 				</button>
 				<button
 					bind:this={inlineCancelRef}
@@ -598,10 +553,10 @@
 					class="btn preset-filled text-xs gap-1"
 					type="button"
 					onclick={handleCopyToStory}
-					disabled={isCopying || !selectedStoryFolder}
+					disabled={actions.isCopying || !selectedStoryFolder}
 				>
 					<Icon name="copy-duplicate" class="size-3.5" />
-					{isCopying ? t('fileManager.copying') : t('fileManager.copy')}
+					{actions.isCopying ? t('fileManager.copying') : t('fileManager.copy')}
 				</button>
 				<button
 					class="btn preset-tonal text-xs"

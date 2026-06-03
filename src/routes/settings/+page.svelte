@@ -26,13 +26,22 @@
 	import TextField from '$lib/components/ui/TextField.svelte';
 	import NumberField from '$lib/components/ui/NumberField.svelte';
 	import {
-		downloadExport,
-		exportConfigData,
-		exportGameData,
-		importConfigData,
-		importGameData,
-		readFileAsUint8Array,
-	} from '$lib/db/data-portability';
+		getProviderItems,
+		getApiTypeItems,
+		getLocaleItems,
+		getLogLevelItems,
+		getReviewerModeItems,
+		getRoleItems,
+	} from '$lib/features/settings-options';
+	import {
+		type DataImportExportState,
+		createDataImportExportState,
+		handleExport,
+		handleImportFileSelect,
+		handleImportCancel,
+		handleImportConfirm,
+	} from '$lib/features/data-import-export';
+	import { exportGameData, importGameData, exportConfigData, importConfigData } from '$lib/db/data-portability';
 	import { isTauriSync } from '$lib/runtime';
 	import { ensureAllBaseConfigs } from '$lib/fs/prompt-loader';
 
@@ -40,119 +49,37 @@
 	let editingId = $state<string | null>(null);
 	let isAddingNew = $state(false);
 
-	// Data import/export state
-	let isExportingGame = $state(false);
-	let isImportingGame = $state(false);
-	let gameImportError = $state<string | null>(null);
-	let showGameImportConfirm = $state(false);
-	let pendingGameImportFile = $state<File | null>(null);
-
-	let isExportingConfig = $state(false);
-	let isImportingConfig = $state(false);
-	let configImportError = $state<string | null>(null);
-	let showConfigImportConfirm = $state(false);
-	let pendingConfigImportFile = $state<File | null>(null);
-
+	let gameIO = $state<DataImportExportState>(createDataImportExportState());
+	let configIO = $state<DataImportExportState>(createDataImportExportState());
 	let exportProgress = $state<number | null>(null);
 	let isImporting = $state(false);
 
 	let showResetConfirm = $state(false);
 	let isResetting = $state(false);
 
-	async function handleExportGameData() {
-		isExportingGame = true;
-		gameImportError = null;
-		exportProgress = 0;
-		try {
-			const data = await exportGameData((percent: number) => (exportProgress = Math.round(percent)));
-			const ts = new Date().toISOString().slice(0, 10);
-			await downloadExport(data, `byoa-game-data-${ts}.zip`);
-		} catch (err) {
-			gameImportError = t('settings.exportFailed', { error: err instanceof Error ? err.message : String(err) });
-		} finally {
-			isExportingGame = false;
-			exportProgress = null;
-		}
+	function handleExportGameData() {
+		handleExport(gameIO, exportGameData, 'byoa-game-data', (v) => (exportProgress = v));
 	}
-
 	function handleImportGameData(e: Event) {
-		const file = (e.currentTarget as HTMLInputElement).files?.[0];
-		if (!file) return;
-		pendingGameImportFile = file;
-		showGameImportConfirm = true;
-		(e.currentTarget as HTMLInputElement).value = '';
+		handleImportFileSelect(gameIO, e);
 	}
-
 	function handleImportGameDataCancel() {
-		showGameImportConfirm = false;
-		pendingGameImportFile = null;
+		handleImportCancel(gameIO);
 	}
-
-	async function handleImportGameDataConfirm() {
-		showGameImportConfirm = false;
-		if (!pendingGameImportFile) return;
-		isImportingGame = true;
-		isImporting = true;
-		gameImportError = null;
-		try {
-			const data = await readFileAsUint8Array(pendingGameImportFile);
-			await importGameData(data);
-			window.location.reload();
-		} catch (err) {
-			gameImportError = t('settings.importFailed', { error: err instanceof Error ? err.message : String(err) });
-			isImportingGame = false;
-			isImporting = false;
-		} finally {
-			pendingGameImportFile = null;
-		}
+	function handleImportGameDataConfirm() {
+		handleImportConfirm(gameIO, importGameData, (v) => (isImporting = v));
 	}
-
-	async function handleExportConfigData() {
-		isExportingConfig = true;
-		configImportError = null;
-		exportProgress = 0;
-		try {
-			const data = await exportConfigData((percent: number) => (exportProgress = Math.round(percent)));
-			const ts = new Date().toISOString().slice(0, 10);
-			await downloadExport(data, `byoa-config-${ts}.zip`);
-		} catch (err) {
-			configImportError = t('settings.exportFailed', { error: err instanceof Error ? err.message : String(err) });
-		} finally {
-			isExportingConfig = false;
-			exportProgress = null;
-		}
+	function handleExportConfigData() {
+		handleExport(configIO, exportConfigData, 'byoa-config', (v) => (exportProgress = v));
 	}
-
 	function handleImportConfigData(e: Event) {
-		const file = (e.currentTarget as HTMLInputElement).files?.[0];
-		if (!file) return;
-		pendingConfigImportFile = file;
-		showConfigImportConfirm = true;
-		(e.currentTarget as HTMLInputElement).value = '';
+		handleImportFileSelect(configIO, e);
 	}
-
 	function handleImportConfigDataCancel() {
-		showConfigImportConfirm = false;
-		pendingConfigImportFile = null;
+		handleImportCancel(configIO);
 	}
-
-	async function handleImportConfigDataConfirm() {
-		showConfigImportConfirm = false;
-		if (!pendingConfigImportFile) return;
-		isImportingConfig = true;
-		isImporting = true;
-		configImportError = null;
-		try {
-			const data = await readFileAsUint8Array(pendingConfigImportFile);
-			await importConfigData(data);
-			window.location.reload();
-		} catch (err) {
-			configImportError = t('settings.importFailed', { error: err instanceof Error ? err.message : String(err) });
-			isImportingConfig = false;
-			isImporting = false;
-		} finally {
-			pendingConfigImportFile = null;
-		}
+	function handleImportConfigDataConfirm() {
+		handleImportConfirm(configIO, importConfigData, (v) => (isImporting = v));
 	}
 
 	async function handleResetConfirm() {
@@ -222,40 +149,15 @@
 
 	const mainProviderId = $derived(settings.roleAssignments['main']);
 
-	const providerItems: { label: string; value: string }[] = [
-		{ label: t('settings.providers.openaiCompatible'), value: 'openai-compatible' },
-		{ label: t('settings.providers.openai'), value: 'openai' },
-		{ label: t('settings.providers.ollama'), value: 'ollama' },
-	];
+	const providerItems = $derived(getProviderItems());
 
-	const apiTypeItems: { label: string; value: string }[] = [
-		{ label: t('settings.apiTypes.responses'), value: 'responses' },
-		{ label: t('settings.apiTypes.chatCompletions'), value: 'chat-completions' },
-	];
+	const apiTypeItems = $derived(getApiTypeItems());
 
-	const localeItems: { label: string; value: string }[] = [
-		{ label: 'English', value: 'en' },
-		{ label: '繁體中文（香港）', value: 'zh-Hant-HK' },
-	];
+	const localeItems = $derived(getLocaleItems());
 
-	const logLevelItems: { label: string; value: string }[] = [
-		{ label: t('settings.logLevels.error'), value: 'error' },
-		{ label: t('settings.logLevels.warn'), value: 'warn' },
-		{ label: t('settings.logLevels.info'), value: 'info' },
-		{ label: t('settings.logLevels.debug'), value: 'debug' },
-	];
+	const logLevelItems = $derived(getLogLevelItems());
 
-	const reviewerModeItems: { label: string; value: string }[] = [
-		{ label: t('settings.reviewerModeDetailed'), value: 'detailed' },
-		{ label: t('settings.reviewerModeQuick'), value: 'quick' },
-	];
-
-	function roleItems(includeMain: boolean = true): { label: string; value: string }[] {
-		const items: { label: string; value: string }[] = [];
-		if (includeMain) items.push({ label: t('settings.mainProvider'), value: 'main' });
-		for (const c of settings.providers) items.push({ label: c.name, value: c.id });
-		return items;
-	}
+	const reviewerModeItems = $derived(getReviewerModeItems());
 </script>
 
 <div class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6">
@@ -331,7 +233,7 @@
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.mainProvider')}</span>
 				<ThemedSelect
-					items={roleItems(false)}
+					items={getRoleItems(false)}
 					value={mainProviderId}
 					onValueChange={(v) => assignRole('main', v)}
 					disabled={settings.providers.length === 0}
@@ -342,7 +244,7 @@
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.minorTaskAgent')}</span>
 				<ThemedSelect
-					items={roleItems()}
+					items={getRoleItems()}
 					value={settings.minorTaskAgentProviderRole}
 					onValueChange={(v) => updateSettings({ minorTaskAgentProviderRole: v })}
 					disabled={settings.providers.length === 0}
@@ -381,7 +283,7 @@
 				<label class="block">
 					<span class="text-sm font-medium text-surface-700-300">{t('settings.memoryProvider')}</span>
 					<ThemedSelect
-						items={roleItems()}
+						items={getRoleItems()}
 						value={settings.memoryProviderRole}
 						onValueChange={(v) => updateSettings({ memoryProviderRole: v })}
 						disabled={!settings.memoryEnabled || !isMemoryAvailable()}
@@ -393,7 +295,7 @@
 				<label class="block">
 					<span class="text-sm font-medium text-surface-700-300">{t('settings.embeddingProvider')}</span>
 					<ThemedSelect
-						items={roleItems()}
+						items={getRoleItems()}
 						value={settings.embeddingProviderRole}
 						onValueChange={(v) => updateSettings({ embeddingProviderRole: v })}
 						disabled={!settings.memoryEnabled || !isMemoryAvailable()}
@@ -433,7 +335,7 @@
 						<span class="text-xs text-surface-500">{t('settings.enabled')}</span>
 					</label>
 					<ThemedSelect
-						items={roleItems()}
+						items={getRoleItems()}
 						value={settings.plotPlannerProviderRole}
 						onValueChange={(v) => updateSettings({ plotPlannerProviderRole: v })}
 						disabled={settings.providers.length === 0 || !settings.plotPlannerEnabled}
@@ -476,7 +378,7 @@
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.writer')}</span>
 				<ThemedSelect
-					items={roleItems()}
+					items={getRoleItems()}
 					value={settings.writerProviderRole}
 					onValueChange={(v) => updateSettings({ writerProviderRole: v })}
 					disabled={settings.providers.length === 0}
@@ -499,7 +401,7 @@
 						<span class="text-xs text-surface-500">{t('settings.enabled')}</span>
 					</label>
 					<ThemedSelect
-						items={roleItems()}
+						items={getRoleItems()}
 						value={settings.reviewerProviderRole}
 						onValueChange={(v) => updateSettings({ reviewerProviderRole: v })}
 						disabled={settings.providers.length === 0 || !settings.reviewerEnabled}
@@ -527,7 +429,7 @@
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.editor')}</span>
 				<ThemedSelect
-					items={roleItems()}
+					items={getRoleItems()}
 					value={settings.editorProviderRole}
 					onValueChange={(v) => updateSettings({ editorProviderRole: v })}
 					disabled={!settings.reviewerEnabled || settings.providers.length === 0}
@@ -539,7 +441,7 @@
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.gameMaster')}</span>
 				<ThemedSelect
-					items={roleItems()}
+					items={getRoleItems()}
 					value={settings.gameMasterProviderRole}
 					onValueChange={(v) => updateSettings({ gameMasterProviderRole: v })}
 					disabled={settings.providers.length === 0}
@@ -551,7 +453,7 @@
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.summarizer')}</span>
 				<ThemedSelect
-					items={roleItems()}
+					items={getRoleItems()}
 					value={settings.summarizerProviderRole}
 					onValueChange={(v) => updateSettings({ summarizerProviderRole: v })}
 					disabled={settings.providers.length === 0}
@@ -598,25 +500,25 @@
 			<span class="text-xs text-surface-500">{t('settings.gameDataDescription')}</span>
 			<div class="space-y-3">
 				<div>
-					<button class="btn variant-filled min-h-11" disabled={isExportingGame} onclick={handleExportGameData}>
-						{isExportingGame ? '...' : t('settings.exportGameData')}
+					<button class="btn variant-filled min-h-11" disabled={gameIO.isExporting} onclick={handleExportGameData}>
+						{gameIO.isExporting ? '...' : t('settings.exportGameData')}
 					</button>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.exportGameDataDescription')}</span>
-					<ProgressField value={exportProgress ?? 0} label="{exportProgress}%" visible={exportProgress !== null && isExportingGame} />
+					<ProgressField value={exportProgress ?? 0} label="{exportProgress}%" visible={exportProgress !== null && gameIO.isExporting} />
 				</div>
 
 				<div>
 					<label class="btn variant-outline cursor-pointer min-h-11">
-						{isImportingGame ? '...' : t('settings.importGameData')}
-						<input type="file" accept=".zip" class="sr-only" disabled={isImportingGame} onchange={handleImportGameData} />
+						{gameIO.isImporting ? '...' : t('settings.importGameData')}
+						<input type="file" accept=".zip" class="sr-only" disabled={gameIO.isImporting} onchange={handleImportGameData} />
 					</label>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.importGameDataDescription')}</span>
 					<span class="text-xs text-warning-500 mt-1 block">{t('settings.importRecommendExport')}</span>
 					<span class="text-xs text-error-500 mt-1 block">{t('settings.importGameDataWarning')}</span>
 				</div>
 
-				{#if gameImportError}
-					<p class="text-xs text-error-500">{gameImportError}</p>
+				{#if gameIO.importError}
+					<p class="text-xs text-error-500">{gameIO.importError}</p>
 				{/if}
 			</div>
 
@@ -626,25 +528,25 @@
 			<span class="text-xs text-surface-500">{t('settings.configDataDescription')}</span>
 			<div class="space-y-3">
 				<div>
-					<button class="btn variant-filled min-h-11" disabled={isExportingConfig} onclick={handleExportConfigData}>
-						{isExportingConfig ? '...' : t('settings.exportConfigData')}
+					<button class="btn variant-filled min-h-11" disabled={configIO.isExporting} onclick={handleExportConfigData}>
+						{configIO.isExporting ? '...' : t('settings.exportConfigData')}
 					</button>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.exportConfigDataDescription')}</span>
-					<ProgressField value={exportProgress ?? 0} label="{exportProgress}%" visible={exportProgress !== null && isExportingConfig} />
+					<ProgressField value={exportProgress ?? 0} label="{exportProgress}%" visible={exportProgress !== null && configIO.isExporting} />
 				</div>
 
 				<div>
 					<label class="btn variant-outline cursor-pointer min-h-11">
-						{isImportingConfig ? '...' : t('settings.importConfigData')}
-						<input type="file" accept=".zip" class="sr-only" disabled={isImportingConfig} onchange={handleImportConfigData} />
+						{configIO.isImporting ? '...' : t('settings.importConfigData')}
+						<input type="file" accept=".zip" class="sr-only" disabled={configIO.isImporting} onchange={handleImportConfigData} />
 					</label>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.importConfigDataDescription')}</span>
 					<span class="text-xs text-warning-500 mt-1 block">{t('settings.importRecommendExport')}</span>
 					<span class="text-xs text-error-500 mt-1 block">{t('settings.importConfigDataWarning')}</span>
 				</div>
 
-				{#if configImportError}
-					<p class="text-xs text-error-500">{configImportError}</p>
+				{#if configIO.importError}
+					<p class="text-xs text-error-500">{configIO.importError}</p>
 				{/if}
 			</div>
 
@@ -678,7 +580,7 @@
 	</div>
 </div>
 
-<Modal bind:open={showGameImportConfirm} title={t('settings.importGameData')} variant="danger">
+<Modal bind:open={gameIO.showImportConfirm} title={t('settings.importGameData')} variant="danger">
 	{#snippet body()}
 		<p class="text-sm text-surface-600-400 mb-2">{t('settings.importRecommendExport')}</p>
 		<p class="text-sm text-surface-700-300">{t('settings.importGameDataWarning')}</p>
@@ -703,7 +605,7 @@
 	{/snippet}
 </Modal>
 
-<Modal bind:open={showConfigImportConfirm} title={t('settings.importConfigData')} variant="danger">
+<Modal bind:open={configIO.showImportConfirm} title={t('settings.importConfigData')} variant="danger">
 	{#snippet body()}
 		<p class="text-sm text-surface-600-400 mb-2">{t('settings.importRecommendExport')}</p>
 		<p class="text-sm text-surface-700-300">{t('settings.importConfigDataWarning')}</p>
