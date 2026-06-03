@@ -23,6 +23,7 @@
 	import { log } from '$lib/logging/logger';
 	import { traceActLineChain } from '$lib/db/act-lines';
 	import Modal from '$lib/components/ui/Modal.svelte';
+	import Card from '$lib/components/ui/Card.svelte';
 
 	let inventoryItems = $state<InventoryItem[]>([]);
 	let aliasGroups = $state<AliasGroup[]>([]);
@@ -311,7 +312,7 @@
 		<h1 class="h2 font-display">{t('memoryManager.heading')}</h1>
 
 		{#if isMemoryAvailable()}
-			<section class="card p-4 space-y-2">
+			<Card padding="none" gap="sm" class="p-4">
 				<div class="flex items-center gap-2">
 					<span class="text-xs text-surface-500 w-32 shrink-0">{t('memoryManager.story')}</span>
 					<span class="text-sm font-medium">{activeStory?.name ?? t('memoryManager.noneSelected')}</span>
@@ -348,7 +349,7 @@
 					<span class="text-xs text-surface-500 w-32 shrink-0">{t('memoryManager.embeddingProvider')}</span>
 					<span class="text-sm font-medium">{providerLabel(embeddingConfig, 'embedding')}</span>
 				</div>
-			</section>
+			</Card>
 		{/if}
 
 		{#if !isMemoryAvailable()}
@@ -361,7 +362,7 @@
 
 		<!-- Generation Tools -->
 		{#if isMemoryAvailable() && activeStoryId}
-			<section class="card p-4 md:p-6 space-y-4">
+			<Card padding="standard" gap="lg">
 				<h2 class="h4">{t('memoryManager.generationTools')}</h2>
 
 				<div class="flex flex-wrap gap-2">
@@ -416,11 +417,11 @@
 						</div>
 					</details>
 				{/if}
-			</section>
+			</Card>
 		{/if}
 
 		<!-- Search by Location -->
-		<section class="card p-4 md:p-6 space-y-4">
+		<Card padding="standard" gap="lg">
 			<h2 class="h4">{t('memoryManager.searchByLocation')}</h2>
 			<input
 				class="input w-full"
@@ -462,10 +463,10 @@
 					{/each}
 				</div>
 			{/if}
-		</section>
+		</Card>
 
 		<!-- Search Memories -->
-		<section class="card p-4 md:p-6 space-y-4">
+		<Card padding="standard" gap="lg">
 			<h2 class="h4">{t('memoryManager.searchMemories')}</h2>
 			<input
 				class="input w-full"
@@ -500,10 +501,10 @@
 					{/each}
 				</div>
 			{/if}
-		</section>
+		</Card>
 
 		<!-- Search Locations -->
-		<section class="card p-4 md:p-6 space-y-4">
+		<Card padding="standard" gap="lg">
 			<h2 class="h4">{t('memoryManager.searchLocations')}</h2>
 			<input
 				class="input w-full"
@@ -536,10 +537,10 @@
 					{/each}
 				</div>
 			{/if}
-		</section>
+		</Card>
 
 		<!-- Alias Groups -->
-		<section class="card p-4 md:p-6 space-y-4">
+		<Card padding="standard" gap="lg">
 			<div class="flex items-center justify-between">
 				<h2 class="h4">{t('memoryManager.aliasGroups', { count: aliasGroups.length })}</h2>
 			</div>
@@ -556,10 +557,10 @@
 					{/each}
 				</div>
 			{/if}
-		</section>
+		</Card>
 
 		<!-- All Inventory -->
-		<section class="card p-4 md:p-6 space-y-4">
+		<Card padding="standard" gap="lg">
 			<div class="flex items-center justify-between">
 				<h2 class="h4">{t('memoryManager.allLocations', { count: locations.length })}</h2>
 			</div>
@@ -576,10 +577,10 @@
 					{/each}
 				</div>
 			{/if}
-		</section>
+		</Card>
 
 		<!-- All Inventory -->
-		<section class="card p-4 md:p-6 space-y-4">
+		<Card padding="standard" gap="lg">
 			<div class="flex items-center justify-between">
 				<h2 class="h4">{t('memoryManager.allInventory', { count: inventoryItems.length })}</h2>
 			</div>
@@ -601,15 +602,15 @@
 					{/each}
 				</div>
 			{/if}
-		</section>
+		</Card>
 
 		<!-- Reset -->
-		<section class="card p-4 md:p-6 space-y-4">
+		<Card padding="standard" gap="lg">
 			<h2 class="h4">{t('memoryManager.dangerZone')}</h2>
 			<button class="btn preset-tonal text-error-700-300" type="button" onclick={handleReset} disabled={isLoading}>
 				{t('memoryManager.resetAllMemories')}
 			</button>
-		</section>
+		</Card>
 
 		{#if status}
 			<p class="text-sm text-surface-500">{status}</p>

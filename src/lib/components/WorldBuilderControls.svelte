@@ -3,6 +3,7 @@
 	import { t } from '$lib/i18n';
 	import { scrollToBottom } from '$lib/utils/scroll';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 
 	interface Props {
 		isComplete: boolean;
@@ -212,7 +213,7 @@
 						{#if isCreatingStory}
 							<div class="rounded-(--radius-container) bg-success-100-900 p-6 text-center space-y-3">
 								<div class="flex items-center justify-center gap-3">
-									<span class="inline-block w-4 h-4 border-2 border-surface-400 border-t-transparent rounded-full animate-spin"></span>
+									<Spinner size="xs" />
 									<span class="text-sm text-success-700-300">{t('components.worldBuilderControls.generatingPlot')}</span>
 								</div>
 							</div>
@@ -235,7 +236,7 @@
 								<h3 class="h3 font-display text-primary-900-100 text-center">Create "{storyName ?? 'Story'}"?</h3>
 								{#if isCreatingStory}
 									<div class="flex items-center justify-center gap-3 py-4">
-										<span class="inline-block w-4 h-4 border-2 border-surface-400 border-t-transparent rounded-full animate-spin"></span>
+										<Spinner size="xs" />
 										<span class="text-sm text-primary-700-300">{t('components.worldBuilderControls.creatingStory')}</span>
 									</div>
 								{:else}

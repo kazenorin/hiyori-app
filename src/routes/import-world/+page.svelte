@@ -6,6 +6,8 @@
 	import { selectStory, selectAct, selectActLine } from '$lib/stores/stories.svelte';
 	import { t } from '$lib/i18n';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import Card from '$lib/components/ui/Card.svelte';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import NumberField from '$lib/components/ui/NumberField.svelte';
 	import FileField from '$lib/components/ui/FileField.svelte';
 	import ImportPreviewTable from './ImportPreviewTable.svelte';
@@ -93,7 +95,7 @@
 
 		<!-- Import Progress (shown at top for visibility) -->
 		{#if store.isImporting || store.importComplete || store.progressUpdates.length > 0}
-			<section class="card p-4 md:p-6 space-y-4">
+			<Card padding="standard" gap="lg">
 				<h2 class="h4">
 					{#if store.importComplete}
 						{t('importWorld.importComplete')}
@@ -104,7 +106,7 @@
 
 				{#if store.isImporting}
 					<div class="flex items-center gap-2">
-						<div class="animate-spin h-4 w-4 border-2 border-primary-500 border-t-transparent rounded-full"></div>
+						<Spinner size="xs" class="border-primary-500 border-t-transparent" />
 						<span class="text-sm text-surface-700-300">
 							{store.progressUpdates[store.progressUpdates.length - 1]?.message ?? t('importWorld.processing')}
 						</span>
@@ -145,16 +147,16 @@
 						{/each}
 					</div>
 				</details>
-			</section>
+			</Card>
 		{/if}
 
 		<!-- Preview: Review imported messages -->
 		{#if store.importPhase === 'preview' && store.previewData}
-			<section class="card p-4 md:p-6 space-y-4">
+			<Card padding="standard" gap="lg">
 				<h2 class="h4">{t('importWorld.reviewMessages')}</h2>
 				<p class="text-sm text-surface-500">{t('importWorld.reviewDescription')}</p>
 				<ImportPreviewTable acts={store.previewData.acts} onToggleRemoved={store.toggleMessageRemoved} />
-			</section>
+			</Card>
 		{/if}
 
 		<!-- Form Sections - Hidden During Import and Preview -->
@@ -182,7 +184,7 @@
 			{/if}
 
 			<!-- Story Name -->
-			<section class="card p-4 md:p-6 space-y-4">
+			<Card padding="standard" gap="lg">
 				<h2 class="h4">{t('importWorld.storyDetails')}</h2>
 
 				<label class="block">
@@ -198,10 +200,10 @@
 				</label>
 
 				<FileField label={t('importWorld.worldBuildingFile')} hint={t('importWorld.mdOrTxtHint')} accept=".md,.txt" disabled={store.isImporting || store.importComplete} onFileChange={(file) => { store.worldFile = file }} />
-			</section>
+			</Card>
 
 			<!-- Acts -->
-			<section class="card p-4 md:p-6 space-y-4">
+			<Card padding="standard" gap="lg">
 				<div class="flex items-center justify-between">
 					<h2 class="h4">{t('importWorld.actsChapters')}</h2>
 					<button
@@ -250,10 +252,10 @@
 						<FileField label={t('importWorld.transcript')} hint={t('importWorld.jsonHint')} accept=".json" disabled={store.isImporting || store.importComplete} onFileChange={(file) => { store.updateActTranscript(act.id, file) }} />
 					</div>
 				{/each}
-			</section>
+			</Card>
 
 			<!-- Characters -->
-			<section class="card p-4 md:p-6 space-y-4">
+			<Card padding="standard" gap="lg">
 				<div class="flex items-center justify-between">
 					<h2 class="h4">{t('importWorld.characters')}</h2>
 					<button
@@ -300,10 +302,10 @@
 						<FileField label={t('importWorld.characterCard')} hint={t('importWorld.mdOrTxtRequiredHint')} accept=".md,.txt" disabled={store.isImporting || store.importComplete} onFileChange={(file) => { store.updateCharacterFile(character.id, file) }} />
 					</div>
 				{/each}
-			</section>
+			</Card>
 
 			<!-- Import Settings -->
-			<section class="card p-4 md:p-6 space-y-4">
+			<Card padding="standard" gap="lg">
 				<h2 class="h4">{t('importWorld.importSettings')}</h2>
 
 				<label class="flex items-center gap-2">
@@ -321,7 +323,7 @@
 
 					<NumberField label={t('importWorld.backoffInterval')} min={1} max={60} bind:value={store.backoffIntervalSeconds} disabled={store.isImporting || store.importComplete} />
 				</div>
-			</section>
+			</Card>
 		{/if}
 
 		<!-- Submit -->

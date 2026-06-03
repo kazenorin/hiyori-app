@@ -2,6 +2,7 @@
 	const PADDING_CLASS = {
 		sm: 'p-3 md:p-4',
 		md: 'p-3 md:p-4 lg:p-6',
+		standard: 'p-4 md:p-6',
 		lg: 'p-8',
 		none: '',
 	} as const;
