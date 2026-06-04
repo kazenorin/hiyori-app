@@ -83,7 +83,7 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 	if (!story) throw new Error(ERR_NO_CONTEXT);
 
 	const config = getMainProviderConfig();
-	if (!config?.apiKey) throw new Error(ERR_NO_MAIN_PROVIDER);
+	if (!config?.model) throw new Error(ERR_NO_MAIN_PROVIDER);
 
 	const allMessages = await getMessagesForLine(actLineId);
 	const transcript: string[] = exportActLine(allMessages);
@@ -312,7 +312,7 @@ export async function generateCharacterCard(
 	}
 
 	const config = getMainProviderConfig();
-	if (!config?.apiKey) throw new Error(ERR_NO_MAIN_PROVIDER);
+	if (!config?.model) throw new Error(ERR_NO_MAIN_PROVIDER);
 
 	if (!entry.canonicalName.trim()) {
 		throw new Error(`Character name resolves to empty identifier: "${entry.character}"`);

@@ -566,7 +566,7 @@ async function regenerateActSummary(
 ): Promise<void> {
 	const assistantMsg = messages[assistantIdx];
 	const providerConfig = getSummarizerProviderConfig();
-	if (!providerConfig?.apiKey) {
+	if (!providerConfig?.model) {
 		await log.warn('regenerate-metadata', 'No summarizer provider configured, skipping act summary regeneration');
 		return;
 	}
@@ -618,7 +618,7 @@ async function regenerateGameData(
 ): Promise<void> {
 	const assistantMsg = messages[assistantIdx];
 	const providerConfigs = buildPipelineProviderConfigs();
-	if (!providerConfigs.gameMaster?.apiKey) {
+	if (!providerConfigs.gameMaster?.model) {
 		await log.warn('regenerate-metadata', 'No GM provider configured, skipping game data regeneration');
 		return;
 	}

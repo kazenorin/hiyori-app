@@ -63,7 +63,7 @@ function buildContext(
 export async function generateTurnOfEvents(params: GenerateTurnOfEventsParams): Promise<string> {
 	const { storyId, storyName, actSummary, narrativeBody, sceneNumber, sceneTitle, interviewMessages } = params;
 	const config = getMainProviderConfig();
-	if (!config?.apiKey) {
+	if (!config?.model) {
 		throw new Error(ERR_NO_MAIN_PROVIDER);
 	}
 

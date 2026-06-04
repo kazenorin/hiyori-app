@@ -339,7 +339,7 @@ export function updateWorldBuilderMessageContent(messageId: string, content: str
 
 async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<void> {
 	const providerConfig = getMainProviderConfig();
-	if (!providerConfig?.apiKey || !providerConfig?.model) {
+	if (!providerConfig?.model) {
 		error = ERR_API_KEY_AND_MODEL_NOT_CONFIGURED;
 		return;
 	}

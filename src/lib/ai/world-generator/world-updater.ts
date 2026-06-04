@@ -55,7 +55,7 @@ export async function updateWorldCard(params: UpdateWorldCardParams): Promise<st
 	messages.push({ role: 'user', content: userInstruction });
 
 	const config = getMainProviderConfig();
-	if (!config?.apiKey || !config?.model) {
+	if (!config?.model) {
 		throw new Error(ERR_API_KEY_AND_MODEL_NOT_CONFIGURED);
 	}
 

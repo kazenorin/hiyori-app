@@ -33,7 +33,7 @@ export interface GameDataRegenerationContext {
 export async function regenerateGameData(params: GameDataRegenerationContext): Promise<GameDataFields | null> {
 	const { worldContent, actPlot, actSummary, directorNotes, narrativeVariables, playerResponse, sceneNumber } = params;
 	const config = getMainProviderConfig();
-	if (!config?.apiKey) return null;
+	if (!config?.model) return null;
 
 	const gameMasterSystemPrompt = await gameMasterSystemPromptLoader.loadDefault();
 

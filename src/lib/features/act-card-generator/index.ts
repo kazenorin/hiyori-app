@@ -40,7 +40,7 @@ interface ActCardContext {
 
 async function resolveActCardContext(abortSignal?: AbortSignal): Promise<ActCardContext> {
 	const config = getMainProviderConfig();
-	if (!config?.apiKey) {
+	if (!config?.model) {
 		throw new Error(ERR_NO_MAIN_PROVIDER);
 	}
 

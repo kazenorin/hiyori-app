@@ -70,7 +70,7 @@ async function traceStoryMessages(storyId: string): Promise<MessageBase[]> {
 export async function generateWorld(storyId: string, abortSignal?: AbortSignal): Promise<string> {
 	const config = getMainProviderConfig();
 
-	if (!config?.apiKey || !config?.model) {
+	if (!config?.model) {
 		throw new Error(ERR_API_KEY_AND_MODEL_NOT_CONFIGURED);
 	}
 
@@ -121,7 +121,7 @@ export async function generateWorldFromCards(
 ): Promise<string> {
 	const config = getMainProviderConfig();
 
-	if (!config?.apiKey || !config?.model) {
+	if (!config?.model) {
 		throw new Error(ERR_API_KEY_AND_MODEL_NOT_CONFIGURED);
 	}
 

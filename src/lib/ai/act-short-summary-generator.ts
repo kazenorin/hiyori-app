@@ -26,7 +26,7 @@ function extractCharacterNames(actSummaryText: string): string[] {
 
 export async function generateAndRecordActShortSummary(actLineId: string, actSummary: string, assistant: AssistantContext): Promise<void> {
 	const config = getSummarizerProviderConfig() ?? getMainProviderConfig();
-	if (!config?.apiKey || !config?.model) {
+	if (!config?.model) {
 		await log.warn('act-short-summary', 'No provider configured, skipping');
 		return;
 	}

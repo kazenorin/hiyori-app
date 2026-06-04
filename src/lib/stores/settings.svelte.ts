@@ -21,7 +21,7 @@ export interface ProviderConfig {
 	apiType: ApiType;
 	baseURL: string;
 	model: string;
-	apiKey: string;
+	apiKey?: string;
 	corsBypassEnabled: boolean;
 	wispProxyUrl: string;
 }
@@ -145,7 +145,7 @@ export function getMemoryProviderConfig(): ProviderConfig | undefined {
 	// If it's a named role (like "main"), resolve through roleAssignments
 	const id = settings.roleAssignments[role];
 	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.apiKey) return undefined;
+	if (!config?.model) return undefined;
 	return config;
 }
 
@@ -156,7 +156,7 @@ export function getEmbeddingProviderConfig(): ProviderConfig | undefined {
 	const role = settings.embeddingProviderRole || 'main';
 	const id = settings.roleAssignments[role];
 	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.apiKey) return undefined;
+	if (!config?.model) return undefined;
 	return config;
 }
 
@@ -166,7 +166,7 @@ export function getReviewerProviderConfig(): ProviderConfig | undefined {
 	const role = settings.reviewerProviderRole || 'main';
 	const id = settings.roleAssignments[role];
 	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.apiKey) return undefined;
+	if (!config?.model) return undefined;
 	return config;
 }
 
@@ -176,7 +176,7 @@ export function getPlotPlannerProviderConfig(): ProviderConfig | undefined {
 	const role = settings.plotPlannerProviderRole || 'main';
 	const id = settings.roleAssignments[role];
 	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.apiKey) return undefined;
+	if (!config?.model) return undefined;
 	return config;
 }
 
@@ -186,7 +186,7 @@ export function getWriterProviderConfig(): ProviderConfig | undefined {
 	const role = settings.writerProviderRole || 'main';
 	const id = settings.roleAssignments[role];
 	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.apiKey) return undefined;
+	if (!config?.model) return undefined;
 	return config;
 }
 
@@ -196,7 +196,7 @@ export function getEditorProviderConfig(): ProviderConfig | undefined {
 	const role = settings.editorProviderRole || 'main';
 	const id = settings.roleAssignments[role];
 	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.apiKey) return undefined;
+	if (!config?.model) return undefined;
 	return config;
 }
 
@@ -206,7 +206,7 @@ export function getGameMasterProviderConfig(): ProviderConfig | undefined {
 	const role = settings.gameMasterProviderRole || 'main';
 	const id = settings.roleAssignments[role];
 	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.apiKey) return undefined;
+	if (!config?.model) return undefined;
 	return config;
 }
 
@@ -216,7 +216,7 @@ export function getSummarizerProviderConfig(): ProviderConfig | undefined {
 	const role = settings.summarizerProviderRole || 'main';
 	const id = settings.roleAssignments[role];
 	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.apiKey) return undefined;
+	if (!config?.model) return undefined;
 	return config;
 }
 
@@ -226,7 +226,7 @@ export function getMinorTaskAgentProviderConfig(): ProviderConfig | undefined {
 	const role = settings.minorTaskAgentProviderRole || 'main';
 	const id = settings.roleAssignments[role];
 	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.apiKey) return undefined;
+	if (!config?.model) return undefined;
 	return config;
 }
 

@@ -6,10 +6,6 @@ import { fetch, resolveFetch } from '$lib/http/fetch';
 import { ERR_API_KEY_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 
 export async function createModel(config: ProviderConfig) {
-	if (!config.apiKey) {
-		throw new Error(ERR_API_KEY_NOT_CONFIGURED);
-	}
-
 	const baseURL = config.baseURL || 'https://api.openai.com/v1';
 	const providerFetch = await resolveFetch(config.corsBypassEnabled, config.wispProxyUrl);
 
@@ -28,6 +24,10 @@ export async function createModel(config: ProviderConfig) {
 		return provider.chatModel(config.model);
 	}
 
+	if (!config.apiKey) {
+		throw new Error(ERR_API_KEY_NOT_CONFIGURED);
+	}
+
 	const provider = createOpenAI({
 		apiKey: config.apiKey,
 		baseURL,
@@ -42,10 +42,6 @@ export async function createModel(config: ProviderConfig) {
 }
 
 export async function createEmbeddingModel(config: ProviderConfig) {
-	if (!config.apiKey) {
-		throw new Error(ERR_API_KEY_NOT_CONFIGURED);
-	}
-
 	const baseURL = config.baseURL || 'https://api.openai.com/v1';
 	const providerFetch = await resolveFetch(config.corsBypassEnabled, config.wispProxyUrl);
 
@@ -62,6 +58,10 @@ export async function createEmbeddingModel(config: ProviderConfig) {
 			apiKey: config.apiKey,
 		});
 		return provider.embeddingModel(config.model);
+	}
+
+	if (!config.apiKey) {
+		throw new Error(ERR_API_KEY_NOT_CONFIGURED);
 	}
 
 	const provider = createOpenAI({
