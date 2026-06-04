@@ -632,21 +632,23 @@
 												onRegenerate={i === lastMessageIdx ? () => handleRegenerate(message.id) : undefined}
 												onDelete={i === lastMessageIdx ? handleDelete : undefined}
 											/>
-											<ForkChoicePanel
-												variant="mobile"
-												bind:forkPlotMode
-												isForking={getIsForking()}
-												isBusy={getIsBusy()}
-												actions={{
-													onForkDirect: () => handleForkDirect(i),
-													onForkWithInterview: () => handleForkWithInterview(i, forkPlotMode),
-													onFork: () => handleFork(i),
-													onCancel: () =>
-														cancelForkChoice(() => {
-															forkPlotMode = null;
-														}),
-												}}
-											/>
+											{#if getForkChoiceIndex() === i}
+												<ForkChoicePanel
+													variant="mobile"
+													bind:forkPlotMode
+													isForking={getIsForking()}
+													isBusy={getIsBusy()}
+													actions={{
+														onForkDirect: () => handleForkDirect(i),
+														onForkWithInterview: () => handleForkWithInterview(i, forkPlotMode),
+														onFork: () => handleFork(i),
+														onCancel: () =>
+															cancelForkChoice(() => {
+																forkPlotMode = null;
+															}),
+													}}
+												/>
+											{/if}
 										</div>
 									{/if}
 								</div>
