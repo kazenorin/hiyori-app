@@ -56,6 +56,7 @@
 	// Swipe right from left edge to open sidebar (phone)
 	let touchStartX = 0;
 	let touchStartY = 0;
+	let touchInSwipeRow = false;
 	const EDGE_THRESHOLD = 30;
 	const SWIPE_MIN_X = 60;
 	const SWIPE_MAX_Y = 40;
@@ -63,6 +64,11 @@
 	function handleTouchStart(e: TouchEvent) {
 		touchStartX = e.changedTouches[0].screenX;
 		touchStartY = e.changedTouches[0].screenY;
+		// If the touch started inside a row that has its own swipe-to-reveal
+		// gesture, let that row handle it. Closing the sidebar here would
+		// race with the row's swipeend and dismiss the row.
+		const target = e.target as Element | null;
+		touchInSwipeRow = !!target?.closest('[data-swipe-row]');
 	}
 
 	function handleTouchEnd(e: TouchEvent) {
@@ -76,10 +82,13 @@
 		if (dx > SWIPE_MIN_X && Math.abs(dy) < SWIPE_MAX_Y && touchStartX < EDGE_THRESHOLD && !sidebarOpen) {
 			sidebarOpen = true;
 		}
-		// Swipe left on sidebar to close
-		if (dx < -SWIPE_MIN_X && Math.abs(dy) < SWIPE_MAX_Y && sidebarOpen) {
+		// Swipe left on sidebar to close — but not if a row's own
+		// swipe-to-reveal gesture is in progress, otherwise the row
+		// gesture competes with the drawer-close gesture.
+		if (dx < -SWIPE_MIN_X && Math.abs(dy) < SWIPE_MAX_Y && sidebarOpen && !touchInSwipeRow) {
 			sidebarOpen = false;
 		}
+		touchInSwipeRow = false;
 	}
 
 	// Delete confirmation state
@@ -235,6 +244,7 @@
 		<!-- Desktop Sidebar -->
 		<aside class="hidden md:flex lg:w-72 border-r border-surface-200-800 flex-col">
 			<SidebarNav
+				variant="desktop"
 				onselectstory={handleSelectStory}
 				onselectact={handleSelectAct}
 				onselectactline={handleSelectActLine}
@@ -250,6 +260,7 @@
 			<div class="fixed inset-0 z-[60] flex md:hidden" role="dialog" aria-modal="true">
 				<aside class="w-[80vw] max-w-[320px] bg-surface-50-950 border-r border-surface-200-800 flex flex-col overflow-y-auto">
 					<SidebarNav
+						variant="mobile"
 						onselectstory={handleSelectStory}
 						onselectact={handleSelectAct}
 						onselectactline={handleSelectActLine}

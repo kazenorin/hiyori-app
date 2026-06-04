@@ -27,8 +27,10 @@
 	"license": "ISC",
 	"type": "module",
 	"devDependencies": {
+		"@lucide/svelte": "^1.17.0",
 		"@skeletonlabs/skeleton": "^4.15.0",
 		"@skeletonlabs/skeleton-svelte": "^4.15.0",
+		"@svelte-put/swipeable": "^1.1.0",
 		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.56.1",
 		"@sveltejs/vite-plugin-svelte": "^7.0.0",

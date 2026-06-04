@@ -16,9 +16,12 @@
 	import { batchGetActLineEventSummary, type ActLineEventSummary } from '$lib/db/act-lines';
 	import { getActEnded, getStoryConcluded } from '$lib/ai/chat.svelte';
 	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
+	import { swipeable, type SwipeEndEventDetail, type SwipeStartEventDetail } from '@svelte-put/swipeable';
+	import { Pencil, Trash2 } from '@lucide/svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
 
 	interface Props {
+		variant: 'desktop' | 'mobile';
 		onselectstory: (id: string) => void;
 		onselectact: (id: string) => void;
 		onselectactline: (id: string) => void;
@@ -28,8 +31,16 @@
 		onnewstory: () => void;
 	}
 
-	let { onselectstory, onselectact, onselectactline, onrequestdeletestory, onrequestdeleteact, onrequestdeleteactline, onnewstory }: Props =
-		$props();
+	let {
+		variant,
+		onselectstory,
+		onselectact,
+		onselectactline,
+		onrequestdeletestory,
+		onrequestdeleteact,
+		onrequestdeleteactline,
+		onnewstory,
+	}: Props = $props();
 
 	let editingId = $state<string | null>(null);
 	let editingType = $state<'story' | 'act' | 'line' | null>(null);
@@ -39,6 +50,116 @@
 	let showNewActLine = $state(false);
 	let actLineEventSummaries = $state<Map<string, ActLineEventSummary>>(new Map());
 	let sidebarBlocked = $derived(getIsWorldBuilderActive());
+
+	// --- Mobile swipe state ---
+	let openSwipeRowId = $state<string | null>(null);
+	let swipeStates = $state<Record<string, { direction: 'left' | 'right' | null; offset: number }>>({});
+	// Suppress click events that fire immediately after a swipe-end gesture.
+	// Real touch devices fire a trailing `click` after `pointerup`; without
+	// suppression, that click closes the row the swipe just opened.
+	// The flag is single-shot: the first click handler that sees it consumes
+	// it (and stops propagation) so the row stays open. Using a microtask
+	// would clear it before the trailing click, which is the original bug.
+	let justSwipedRowId = $state<string | null>(null);
+
+	const swipeConfig = {
+		direction: ['left', 'right'],
+		threshold: '30%',
+		customPropertyPrefix: null,
+		followThrough: false,
+		allowFlick: true,
+		disableTouchEvents: false,
+	} satisfies {
+		direction: ('left' | 'right')[];
+		threshold: `${number}%`;
+		customPropertyPrefix: string | null;
+		followThrough: boolean;
+		allowFlick: boolean;
+		disableTouchEvents: boolean;
+	};
+
+	function getSwipeDir(rowId: string): 'left' | 'right' | null {
+		return swipeStates[rowId]?.direction ?? null;
+	}
+
+	function getSwipeOffset(rowId: string): number {
+		return swipeStates[rowId]?.offset ?? 0;
+	}
+
+	function setSwipe(rowId: string, direction: 'left' | 'right' | null, offset: number) {
+		swipeStates[rowId] = { direction, offset };
+	}
+
+	function handleSwipeStart(rowId: string) {
+		return (e: CustomEvent<SwipeStartEventDetail>) => {
+			setSwipe(rowId, e.detail.direction as 'left' | 'right', getSwipeOffset(rowId));
+		};
+	}
+
+	function handleSwipeEnd(rowId: string) {
+		return (e: CustomEvent<SwipeEndEventDetail>) => {
+			const { direction, passThreshold } = e.detail;
+			if (passThreshold) {
+				setSwipe(rowId, direction as 'left' | 'right', direction === 'left' ? -100 : 100);
+				openSwipeRowId = rowId;
+				// Mark this row so the trailing click (which browsers fire
+				// after pointerup on real touch devices) is consumed by the
+				// first click handler that sees it instead of closing the row.
+				justSwipedRowId = rowId;
+			} else {
+				setSwipe(rowId, null, 0);
+				if (openSwipeRowId === rowId) openSwipeRowId = null;
+			}
+		};
+	}
+
+	function handleContentClick(rowId: string) {
+		return (e: Event) => {
+			if (justSwipedRowId === rowId) {
+				// This click is the trailing click from the swipe-end gesture;
+				// consume the flag and stop propagation so the row we just
+				// opened doesn't snap shut.
+				e.stopPropagation();
+				justSwipedRowId = null;
+				return;
+			}
+			if (openSwipeRowId === rowId) {
+				e.stopPropagation();
+				setSwipe(rowId, null, 0);
+				openSwipeRowId = null;
+			}
+		};
+	}
+
+	function handleMobileLeftAction(rowId: string, action: () => void) {
+		return (e: Event) => {
+			e.stopPropagation();
+			action();
+			setSwipe(rowId, null, 0);
+			openSwipeRowId = null;
+		};
+	}
+
+	function handleMobileRightAction(rowId: string, action: () => void) {
+		return (e: Event) => {
+			e.stopPropagation();
+			action();
+			setSwipe(rowId, null, 0);
+			openSwipeRowId = null;
+		};
+	}
+
+	// Close all other rows when one opens
+	$effect(() => {
+		const openId = openSwipeRowId;
+		if (!openId) return;
+		for (const [id, state] of Object.entries(swipeStates)) {
+			if (id !== openId && state.offset !== 0) {
+				setSwipe(id, null, 0);
+			}
+		}
+	});
+	// --------------------------
 
 	$effect(() => {
 		const lines = getActLines();
@@ -105,71 +226,142 @@
 		const target = e.currentTarget as HTMLInputElement;
 		updateSettings({ fontSize: parseFloat(target.value) });
 	}
+
+	let isDesktop = $derived(variant === 'desktop');
+	// Close any open row when user clicks/taps anywhere outside the open row
+	function handleGlobalTap(e: MouseEvent) {
+		if (justSwipedRowId) {
+			// A swipe gesture just finished; consume the trailing click so
+			// it won't close the row we just opened. (The inner sliding div
+			// or its row should have already consumed it, but this guards
+			// against the click landing outside the row in the nav area.)
+			e.stopPropagation();
+			justSwipedRowId = null;
+			return;
+		}
+		if (!openSwipeRowId) return;
+		if (e.target instanceof HTMLElement) {
+			const targetRow = e.target.closest('[data-swipe-row]') as HTMLElement | null;
+			if (!targetRow || targetRow.dataset.swipeRow !== openSwipeRowId) {
+				setSwipe(openSwipeRowId, null, 0);
+				openSwipeRowId = null;
+			}
+		}
+	}
 </script>
 
-<nav class="flex-1 overflow-y-auto p-2 pt-4 space-y-1 relative">
+<nav class="flex-1 overflow-y-auto p-2 pt-4 space-y-1 relative" onclick={handleGlobalTap}>
 	{#each getStories() as story (story.id)}
 		<div class="space-y-0.5">
-			<!-- Story header -->
-			<div
-				class="group flex items-center justify-between p-3 rounded-(--radius-base) transition-colors duration-150 cursor-pointer {getActiveStoryId() ===
-				story.id
-					? 'bg-surface-200-800'
-					: 'hover:bg-surface-200-800'}"
-				onclick={() => onselectstory(story.id)}
-			>
-				{#if editingId === story.id && editingType === 'story'}
-					<input
-						autofocus
-						maxlength="200"
-						class="input text-sm flex-1"
-						bind:value={editingName}
-						onkeydown={handleRenameKeydown}
-						onblur={() => {
-							if (!renameSubmitting) submitRename();
-						}}
-						onclick={(e) => e.stopPropagation()}
-						type="text"
-					/>
-				{:else}
-					<span class="text-sm font-medium truncate flex-1">{story.name}</span>
+			<!-- Story row -->
+			{#if isDesktop}
+				<div
+					class="group flex items-center justify-between p-3 rounded-(--radius-base) transition-colors duration-150 cursor-pointer {getActiveStoryId() ===
+					story.id
+						? 'bg-surface-200-800'
+						: 'hover:bg-surface-200-800'}"
+					onclick={() => onselectstory(story.id)}
+				>
+					{#if editingId === story.id && editingType === 'story'}
+						<input
+							autofocus
+							maxlength="200"
+							class="input text-sm flex-1"
+							bind:value={editingName}
+							onkeydown={handleRenameKeydown}
+							onblur={() => {
+								if (!renameSubmitting) submitRename();
+							}}
+							onclick={(e) => e.stopPropagation()}
+							type="text"
+						/>
+					{:else}
+						<span class="text-sm font-medium truncate flex-1">{story.name}</span>
+						<button
+							class="text-surface-500 hover:text-surface-700-300 ml-3 md:ml-2 transition-opacity text-xs shrink-0 w-9 h-9 md:w-auto md:h-auto flex items-center justify-center rounded-md {getActiveStoryId() ===
+							story.id
+								? 'opacity-100'
+								: 'opacity-0 group-hover:opacity-100'}"
+							type="button"
+							onclick={(e) => {
+								e.stopPropagation();
+								startRename('story', story.id, story.name);
+							}}
+							title={t('sidebar.renameStory')}>&#9998;</button
+						>
+					{/if}
 					<button
-						class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+						class="text-surface-500 hover:text-error-500 ml-2 md:ml-1 transition-opacity text-xs shrink-0 w-9 h-9 md:w-auto md:h-auto flex items-center justify-center rounded-md {getActiveStoryId() ===
+						story.id
+							? 'opacity-100'
+							: 'opacity-0 group-hover:opacity-100'}"
 						type="button"
 						onclick={(e) => {
 							e.stopPropagation();
-							startRename('story', story.id, story.name);
+							onrequestdeletestory(story.id, story.name);
 						}}
-						title={t('sidebar.renameStory')}>&#9998;</button
+						title={t('sidebar.deleteStory')}>&times;</button
 					>
-				{/if}
-				<button
-					class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
-					type="button"
-					onclick={(e) => {
-						e.stopPropagation();
-						onrequestdeletestory(story.id, story.name);
-					}}
-					title={t('sidebar.deleteStory')}>&times;</button
+				</div>
+			{:else}
+				<div
+					class="relative overflow-hidden w-full select-none touch-pan-y"
+					use:swipeable={swipeConfig}
+					data-swipe-row={story.id}
+					onswipestart={handleSwipeStart(story.id)}
+					onswipeend={handleSwipeEnd(story.id)}
 				>
-			</div>
-
-			<!-- Acts (only show for active story) -->
-			{#if getActiveStoryId() === story.id}
-				{#each getActs() as act (act.id)}
-					<div class="ml-3 space-y-0.5">
+					{#if getSwipeDir(story.id) === 'left'}
+						<button
+							class="btn preset-filled-error-500 text-white absolute inset-y-0 right-0 w-[100px] p-0 border-0 rounded-none"
+							type="button"
+							aria-label={t('sidebar.deleteStory')}
+							onclick={handleMobileRightAction(story.id, () => onrequestdeletestory(story.id, story.name))}
+						>
+							<Trash2 size={20} />
+						</button>
+					{/if}
+					{#if getSwipeDir(story.id) === 'right'}
+						<button
+							class="btn preset-filled-secondary-500 text-white absolute inset-y-0 left-0 w-[100px] p-0 border-0 rounded-none"
+							type="button"
+							aria-label={t('sidebar.renameStory')}
+							onclick={handleMobileLeftAction(story.id, () => startRename('story', story.id, story.name))}
+						>
+							<Pencil size={20} />
+						</button>
+					{/if}
+					<div
+						class="relative bg-surface-50-950 transition-transform duration-200"
+						style:transform="translateX({getSwipeOffset(story.id)}px)"
+						onclick={handleContentClick(story.id)}
+					>
 						<div
-							class="group flex items-center justify-between p-2 pl-4 rounded-(--radius-base) transition-colors duration-150 cursor-pointer text-sm {getActiveActId() ===
-							act.id
+							class="group flex items-center justify-between p-3 rounded-(--radius-base) transition-colors duration-150 cursor-pointer {getActiveStoryId() ===
+							story.id
 								? 'bg-surface-200-800'
 								: 'hover:bg-surface-200-800'}"
-							onclick={() => onselectact(act.id)}
+							onclick={(e) => {
+								if (justSwipedRowId === story.id) {
+									// Trailing click from a swipe-end gesture; consume
+									// the flag and stop propagation so the row stays open.
+									e.stopPropagation();
+									justSwipedRowId = null;
+									return;
+								}
+								if (openSwipeRowId === story.id) {
+									setSwipe(story.id, null, 0);
+									openSwipeRowId = null;
+									return;
+								}
+								onselectstory(story.id);
+							}}
 						>
-							{#if editingId === act.id && editingType === 'act'}
+							{#if editingId === story.id && editingType === 'story'}
 								<input
 									autofocus
 									maxlength="200"
-									class="input text-xs flex-1"
+									class="input text-sm flex-1"
 									bind:value={editingName}
 									onkeydown={handleRenameKeydown}
 									onblur={() => {
@@ -179,78 +371,272 @@
 									type="text"
 								/>
 							{:else}
-								<span class="truncate flex-1 text-surface-700-300">{t('common.actLabel', { n: act.actNumber })}: {act.name}</span>
-								<button
-									class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
-									type="button"
-									onclick={(e) => {
-										e.stopPropagation();
-										startRename('act', act.id, act.name);
-									}}
-									title={t('sidebar.renameAct')}>&#9998;</button
-								>
-							{/if}
-							{#if getActs().length > 1 && getActs().at(-1)?.id === act.id}
-								<button
-									class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
-									type="button"
-									onclick={(e) => {
-										e.stopPropagation();
-										onrequestdeleteact(act.id, act.name);
-									}}
-									title={t('sidebar.deleteAct')}>&times;</button
-								>
+								<span class="text-sm font-medium truncate flex-1">{story.name}</span>
 							{/if}
 						</div>
+					</div>
+				</div>
+			{/if}
+
+			<!-- Acts (only show for active story) -->
+			{#if getActiveStoryId() === story.id}
+				{#each getActs() as act (act.id)}
+					<div class="ml-3 space-y-0.5">
+						<!-- Act row -->
+						{#if isDesktop}
+							<div
+								class="group flex items-center justify-between p-2 pl-4 rounded-(--radius-base) transition-colors duration-150 cursor-pointer text-sm {getActiveActId() ===
+								act.id
+									? 'bg-surface-200-800'
+									: 'hover:bg-surface-200-800'}"
+								onclick={() => onselectact(act.id)}
+							>
+								{#if editingId === act.id && editingType === 'act'}
+									<input
+										autofocus
+										maxlength="200"
+										class="input text-xs flex-1"
+										bind:value={editingName}
+										onkeydown={handleRenameKeydown}
+										onblur={() => {
+											if (!renameSubmitting) submitRename();
+										}}
+										onclick={(e) => e.stopPropagation()}
+										type="text"
+									/>
+								{:else}
+									<span class="truncate flex-1 text-surface-700-300">{t('common.actLabel', { n: act.actNumber })}: {act.name}</span>
+									<button
+										class="text-surface-500 hover:text-surface-700-300 ml-3 md:ml-2 transition-opacity text-xs shrink-0 w-9 h-9 md:w-auto md:h-auto flex items-center justify-center rounded-md {getActiveActId() ===
+										act.id
+											? 'opacity-100'
+											: 'opacity-0 group-hover:opacity-100'}"
+										type="button"
+										onclick={(e) => {
+											e.stopPropagation();
+											startRename('act', act.id, act.name);
+										}}
+										title={t('sidebar.renameAct')}>&#9998;</button
+									>
+								{/if}
+								{#if getActs().length > 1 && getActs().at(-1)?.id === act.id}
+									<button
+										class="text-surface-500 hover:text-error-500 ml-2 md:ml-1 transition-opacity text-xs shrink-0 w-9 h-9 md:w-auto md:h-auto flex items-center justify-center rounded-md {getActiveActId() ===
+										act.id
+											? 'opacity-100'
+											: 'opacity-0 group-hover:opacity-100'}"
+										type="button"
+										onclick={(e) => {
+											e.stopPropagation();
+											onrequestdeleteact(act.id, act.name);
+										}}
+										title={t('sidebar.deleteAct')}>&times;</button
+									>
+								{/if}
+							</div>
+						{:else}
+							<div
+								class="relative overflow-hidden w-full select-none touch-pan-y"
+								use:swipeable={swipeConfig}
+								data-swipe-row={act.id}
+								onswipestart={handleSwipeStart(act.id)}
+								onswipeend={handleSwipeEnd(act.id)}
+							>
+								{#if getSwipeDir(act.id) === 'left'}
+									<button
+										class="btn preset-filled-error-500 text-white absolute inset-y-0 right-0 w-[100px] p-0 border-0 rounded-none"
+										type="button"
+										aria-label={t('sidebar.deleteAct')}
+										onclick={handleMobileRightAction(act.id, () => onrequestdeleteact(act.id, act.name))}
+									>
+										<Trash2 size={20} />
+									</button>
+								{/if}
+								{#if getSwipeDir(act.id) === 'right'}
+									<button
+										class="btn preset-filled-secondary-500 text-white absolute inset-y-0 left-0 w-[100px] p-0 border-0 rounded-none"
+										type="button"
+										aria-label={t('sidebar.renameAct')}
+										onclick={handleMobileLeftAction(act.id, () => startRename('act', act.id, act.name))}
+									>
+										<Pencil size={20} />
+									</button>
+								{/if}
+								<div
+									class="relative bg-surface-50-950 transition-transform duration-200"
+									style:transform="translateX({getSwipeOffset(act.id)}px)"
+									onclick={handleContentClick(act.id)}
+								>
+									<div
+										class="group flex items-center justify-between p-2 pl-4 rounded-(--radius-base) transition-colors duration-150 cursor-pointer text-sm {getActiveActId() ===
+										act.id
+											? 'bg-surface-200-800'
+											: 'hover:bg-surface-200-800'}"
+										onclick={(e) => {
+											if (justSwipedRowId === act.id) {
+												e.stopPropagation();
+												justSwipedRowId = null;
+												return;
+											}
+											if (openSwipeRowId === act.id) {
+												setSwipe(act.id, null, 0);
+												openSwipeRowId = null;
+												return;
+											}
+											onselectact(act.id);
+										}}
+									>
+										{#if editingId === act.id && editingType === 'act'}
+											<input
+												autofocus
+												maxlength="200"
+												class="input text-xs flex-1"
+												bind:value={editingName}
+												onkeydown={handleRenameKeydown}
+												onblur={() => {
+													if (!renameSubmitting) submitRename();
+												}}
+												onclick={(e) => e.stopPropagation()}
+												type="text"
+											/>
+										{:else}
+											<span class="truncate flex-1 text-surface-700-300">{t('common.actLabel', { n: act.actNumber })}: {act.name}</span>
+										{/if}
+									</div>
+								</div>
+							</div>
+						{/if}
 
 						<!-- Act Lines -->
 						{#if getActiveActId() === act.id}
 							{#each getActLines() as line (line.id)}
-								<div
-									class="group flex items-center justify-between p-2 pl-8 rounded-(--radius-base) transition-colors duration-150 cursor-pointer text-xs {getActiveActLineId() ===
-									line.id
-										? 'bg-primary-100-900 text-primary-700-300'
-										: 'hover:bg-surface-200-800 text-surface-500'}"
-									onclick={() => onselectactline(line.id)}
-								>
-									{#if editingId === line.id && editingType === 'line'}
-										<input
-											autofocus
-											maxlength="200"
-											class="input text-xs flex-1"
-											bind:value={editingName}
-											onkeydown={handleRenameKeydown}
-											onblur={() => {
-												if (!renameSubmitting) submitRename();
-											}}
-											onclick={(e) => e.stopPropagation()}
-											type="text"
-										/>
-									{:else}
-										<span class="truncate flex-1">{line.name}</span>
-										{#if actLineEventSummaries.get(line.id)?.endedAt != null}
-											<span class="text-[10px] font-medium text-surface-400-600 ml-1 shrink-0">{t('sidebar.actConcluded')}</span>
+								{#if isDesktop}
+									<div
+										class="group flex items-center justify-between p-2 pl-8 rounded-(--radius-base) transition-colors duration-150 cursor-pointer text-xs {getActiveActLineId() ===
+										line.id
+											? 'bg-primary-100-900 text-primary-700-300'
+											: 'hover:bg-surface-200-800 text-surface-500'}"
+										onclick={() => onselectactline(line.id)}
+									>
+										{#if editingId === line.id && editingType === 'line'}
+											<input
+												autofocus
+												maxlength="200"
+												class="input text-xs flex-1"
+												bind:value={editingName}
+												onkeydown={handleRenameKeydown}
+												onblur={() => {
+													if (!renameSubmitting) submitRename();
+												}}
+												onclick={(e) => e.stopPropagation()}
+												type="text"
+											/>
+										{:else}
+											<span class="truncate flex-1">{line.name}</span>
+											{#if actLineEventSummaries.get(line.id)?.endedAt != null}
+												<span class="text-[10px] font-medium text-surface-400-600 ml-1 shrink-0">{t('sidebar.actConcluded')}</span>
+											{/if}
+											<button
+												class="text-surface-500 hover:text-surface-700-300 ml-3 md:ml-2 transition-opacity text-xs shrink-0 w-9 h-9 md:w-auto md:h-auto flex items-center justify-center rounded-md {getActiveActLineId() ===
+												line.id
+													? 'opacity-100'
+													: 'opacity-0 group-hover:opacity-100'}"
+												type="button"
+												onclick={(e) => {
+													e.stopPropagation();
+													startRename('line', line.id, line.name);
+												}}
+												title={t('sidebar.renameLine')}>&#9998;</button
+											>
 										{/if}
 										<button
-											class="text-surface-500 hover:text-surface-700-300 ml-2 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
+											class="text-surface-500 hover:text-error-500 ml-2 md:ml-1 transition-opacity text-xs shrink-0 w-9 h-9 md:w-auto md:h-auto flex items-center justify-center rounded-md {getActiveActLineId() ===
+											line.id
+												? 'opacity-100'
+												: 'opacity-0 group-hover:opacity-100'}"
 											type="button"
 											onclick={(e) => {
 												e.stopPropagation();
-												startRename('line', line.id, line.name);
+												onrequestdeleteactline(line.id, line.name);
 											}}
-											title={t('sidebar.renameLine')}>&#9998;</button
+											title={t('sidebar.deleteLine')}>&times;</button
 										>
-									{/if}
-									<button
-										class="text-surface-500 hover:text-error-500 ml-1 opacity-0 group-hover:opacity-100 transition-opacity text-xs shrink-0"
-										type="button"
-										onclick={(e) => {
-											e.stopPropagation();
-											onrequestdeleteactline(line.id, line.name);
-										}}
-										title={t('sidebar.deleteLine')}>&times;</button
+									</div>
+								{:else}
+									<div
+										class="relative overflow-hidden w-full select-none touch-pan-y"
+										use:swipeable={swipeConfig}
+										data-swipe-row={line.id}
+										onswipestart={handleSwipeStart(line.id)}
+										onswipeend={handleSwipeEnd(line.id)}
 									>
-								</div>
+										{#if getSwipeDir(line.id) === 'left'}
+											<button
+												class="btn preset-filled-error-500 text-white absolute inset-y-0 right-0 w-[100px] p-0 border-0 rounded-none"
+												type="button"
+												aria-label={t('sidebar.deleteLine')}
+												onclick={handleMobileRightAction(line.id, () => onrequestdeleteactline(line.id, line.name))}
+											>
+												<Trash2 size={20} />
+											</button>
+										{/if}
+										{#if getSwipeDir(line.id) === 'right'}
+											<button
+												class="btn preset-filled-secondary-500 text-white absolute inset-y-0 left-0 w-[100px] p-0 border-0 rounded-none"
+												type="button"
+												aria-label={t('sidebar.renameLine')}
+												onclick={handleMobileLeftAction(line.id, () => startRename('line', line.id, line.name))}
+											>
+												<Pencil size={20} />
+											</button>
+										{/if}
+										<div
+											class="relative bg-surface-50-950 transition-transform duration-200"
+											style:transform="translateX({getSwipeOffset(line.id)}px)"
+											onclick={handleContentClick(line.id)}
+										>
+											<div
+												class="group flex items-center justify-between p-2 pl-8 rounded-(--radius-base) transition-colors duration-150 cursor-pointer text-xs {getActiveActLineId() ===
+												line.id
+													? 'bg-primary-100-900 text-primary-700-300'
+													: 'hover:bg-surface-200-800 text-surface-500'}"
+												onclick={(e) => {
+													if (justSwipedRowId === line.id) {
+														e.stopPropagation();
+														justSwipedRowId = null;
+														return;
+													}
+													if (openSwipeRowId === line.id) {
+														setSwipe(line.id, null, 0);
+														openSwipeRowId = null;
+														return;
+													}
+													onselectactline(line.id);
+												}}
+											>
+												{#if editingId === line.id && editingType === 'line'}
+													<input
+														autofocus
+														maxlength="200"
+														class="input text-xs flex-1"
+														bind:value={editingName}
+														onkeydown={handleRenameKeydown}
+														onblur={() => {
+															if (!renameSubmitting) submitRename();
+														}}
+														onclick={(e) => e.stopPropagation()}
+														type="text"
+													/>
+												{:else}
+													<span class="truncate flex-1">{line.name}</span>
+													{#if actLineEventSummaries.get(line.id)?.endedAt != null}
+														<span class="text-[10px] font-medium text-surface-400-600 ml-1 shrink-0">{t('sidebar.actConcluded')}</span>
+													{/if}
+												{/if}
+											</div>
+										</div>
+									</div>
+								{/if}
 							{/each}
 
 							<!-- Add act line button -->
