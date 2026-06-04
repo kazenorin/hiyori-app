@@ -21,21 +21,30 @@
 	];
 
 	function handleTabClick(tab: 'chat' | 'choices' | 'menu') {
-		// Always dismiss expanded input sheet on any tab click
-		mobileNav.inputSheetOpen = false;
-
 		if (!isOnChat) {
 			// On secondary pages, all tabs navigate back to chat first
 			goto('/');
+			mobileNav.activeTab = 'chat';
+			mobileNav.inputSheetOpen = false;
+			return;
 		}
 
 		if (tab === 'menu') {
+			mobileNav.inputSheetOpen = false;
 			onOpenSidebar?.();
 			mobileNav.activeTab = 'chat';
 		} else if (tab === 'choices') {
+			mobileNav.inputSheetOpen = false;
 			mobileNav.activeTab = mobileNav.activeTab === 'choices' ? 'chat' : 'choices';
 		} else {
-			mobileNav.activeTab = 'chat';
+			// Chat tab
+			if (mobileNav.activeTab !== 'chat') {
+				mobileNav.activeTab = 'chat';
+				mobileNav.inputSheetOpen = false;
+			} else {
+				// Already on chat tab → toggle input sheet
+				mobileNav.inputSheetOpen = !mobileNav.inputSheetOpen;
+			}
 		}
 	}
 </script>

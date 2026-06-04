@@ -2,7 +2,6 @@
 	import { t } from '$lib/i18n';
 	import { mobileNav } from '$lib/stores/mobile-nav.svelte';
 	import DirectorNotesPanel from './DirectorNotesPanel.svelte';
-	import Icon from '$lib/components/ui/Icon.svelte';
 
 	interface Props {
 		value: string;
@@ -28,12 +27,12 @@
 
 	let isExpanded = $derived(mobileNav.inputSheetOpen);
 	let textareaRef = $state<HTMLTextAreaElement | null>(null);
-	let isChoicesActive = $derived(mobileNav.activeTab === 'choices');
 
-	function expand() {
-		mobileNav.inputSheetOpen = true;
-		setTimeout(() => textareaRef?.focus(), 100);
-	}
+	$effect(() => {
+		if (isExpanded && textareaRef) {
+			setTimeout(() => textareaRef?.focus(), 100);
+		}
+	});
 
 	function collapse() {
 		mobileNav.inputSheetOpen = false;
@@ -45,41 +44,6 @@
 		collapse();
 	}
 </script>
-
-{#if !isExpanded && !isChoicesActive}
-	<!-- Collapsed input bar: sits above the z-40 tab bar -->
-	<div
-		class="fixed left-0 right-0 z-50 bg-surface-50-950 border-t border-surface-200-800 px-3 py-2"
-		style="bottom: calc(52px + env(safe-area-inset-bottom, 0px));"
-	>
-		<div class="flex items-center gap-3 overflow-hidden">
-			<!-- Message preview / expand trigger -->
-			<button
-				type="button"
-				onclick={expand}
-				class="flex-1 min-w-0 flex items-center px-4 py-2.5 rounded-(--radius-base) bg-surface-100-900 border border-surface-200-800 text-sm text-surface-500 text-left min-h-[48px]"
-				aria-label={placeholder}
-			>
-				{#if value}
-					<span class="text-surface-800-200 truncate">{value}</span>
-				{:else}
-					<span class="truncate">{placeholder}</span>
-				{/if}
-			</button>
-
-			<!-- Send FAB -->
-			<button
-				type="button"
-				class="shrink-0 w-12 h-12 rounded-full bg-primary-500 text-white flex items-center justify-center disabled:opacity-40 shadow-lg shadow-primary-500/30 active:scale-95 transition-transform"
-				disabled={!value.trim() || isDisabled}
-				onclick={handleSubmit}
-				aria-label={t('mobileInput.send')}
-			>
-				<Icon name="send" class="h-6 w-6" />
-			</button>
-		</div>
-	</div>
-{/if}
 
 {#if isExpanded}
 	<!-- Expanded sheet: backdrop covers viewport above tab bar; content sits at bottom above tab bar -->
