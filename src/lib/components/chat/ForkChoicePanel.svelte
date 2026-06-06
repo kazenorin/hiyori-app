@@ -69,7 +69,11 @@
 		</div>
 		<!-- Action row -->
 		<div class="flex gap-2 items-center">
-			<button class="btn preset-filled-primary-500 text-xs gap-1" onclick={actions.onForkDirect}>
+			<button
+				class="btn preset-filled-primary-500 text-xs gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
+				disabled={forkPlotMode !== null}
+				onclick={actions.onForkDirect}
+			>
 				<Icon name="fork" class="w-3.5 h-3.5" />
 				{t('chat.keepCurrentPlot')}
 			</button>
@@ -119,7 +123,11 @@
 		</div>
 		<!-- Action buttons -->
 		<div class="flex flex-wrap gap-2">
-			<button class="btn preset-filled-primary-500 flex-1 min-h-11 gap-2" onclick={actions.onForkDirect}>
+			<button
+				class="btn preset-filled-primary-500 flex-1 min-h-11 gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+				disabled={forkPlotMode !== null}
+				onclick={actions.onForkDirect}
+			>
 				<Icon name="fork" class="w-4 h-4" />
 				{t('chat.fork')}
 			</button>
