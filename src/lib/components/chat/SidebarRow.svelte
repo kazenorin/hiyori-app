@@ -100,19 +100,19 @@
 				title={renameAriaLabel}>&#9998;</button
 			>
 		{/if}
-		{#if canDelete}
-			<button
-				class="text-surface-500 hover:text-error-500 ml-2 md:ml-1 transition-opacity text-xs shrink-0 w-9 h-9 md:w-auto md:h-auto flex items-center justify-center rounded-md {isActive
-					? 'opacity-100'
-					: 'opacity-0 group-hover:opacity-100'}"
-				type="button"
-				onclick={(e) => {
-					e.stopPropagation();
-					onRequestDelete();
-				}}
-				title={deleteAriaLabel}>&times;</button
-			>
-		{/if}
+		<button
+			class="text-surface-500 hover:text-error-500 ml-2 md:ml-1 transition-opacity text-xs shrink-0 w-9 h-9 md:w-auto md:h-auto flex items-center justify-center rounded-md {isActive
+				? 'opacity-100'
+				: 'opacity-0 group-hover:opacity-100'} disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-surface-500"
+			type="button"
+			disabled={!canDelete}
+			aria-label={deleteAriaLabel}
+			onclick={(e) => {
+				e.stopPropagation();
+				onRequestDelete();
+			}}
+			title={deleteAriaLabel}>&times;</button
+		>
 	</div>
 {:else}
 	<div
@@ -121,11 +121,12 @@
 		data-swipe-row={rowId}
 		onswipeend={onSwipeEnd}
 	>
-		{#if isOpen && openOffset < 0 && canDelete}
+		{#if isOpen && openOffset < 0}
 			<button
-				class="btn preset-filled-error-500 text-white absolute inset-y-0 right-0 w-[100px] p-0 border-0 rounded-none"
+				class="btn preset-filled-error-500 text-white absolute inset-y-0 right-0 w-[100px] p-0 border-0 rounded-none disabled:opacity-50 disabled:cursor-not-allowed"
 				type="button"
 				aria-label={deleteAriaLabel}
+				disabled={!canDelete}
 				onclick={onMobileAction(rowId, onRequestDelete)}
 			>
 				<Trash2 size={20} />
