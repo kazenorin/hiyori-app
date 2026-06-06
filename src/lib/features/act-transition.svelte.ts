@@ -1,4 +1,4 @@
-import { getIsBusy, getMessages, clearMessages, runEpilogueFlow } from '$lib/ai/chat.svelte';
+import { getIsBusy, getMessages, clearMessages, runEpilogueFlow, setIsConcludingStory } from '$lib/ai/chat.svelte';
 import {
 	getActiveActLineId,
 	getActiveAct,
@@ -39,6 +39,7 @@ export async function handleContinueToNextAct(): Promise<void> {
 		}).catch(() => {});
 	}
 
+	setIsConcludingStory(true);
 	try {
 		await clearMessages();
 
@@ -59,6 +60,8 @@ export async function handleContinueToNextAct(): Promise<void> {
 		});
 	} catch (err) {
 		await log.error('continue-to-next-act', 'Failed to start next act', err);
+	} finally {
+		setIsConcludingStory(false);
 	}
 }
 

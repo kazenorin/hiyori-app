@@ -73,6 +73,7 @@ interface RequestContext {
 let messages = $state<UIMessage[]>([]);
 let isStreaming = $state(false);
 let isProcessingAsync = $state(false);
+let isConcludingStory = $state(false);
 let error = $state<string | null>(null);
 let actEnded = $state(false);
 let storyConcluded = $state(false);
@@ -92,7 +93,15 @@ export function getIsProcessingAsync(): boolean {
 }
 
 export function getIsBusy(): boolean {
-	return isStreaming || isProcessingAsync;
+	return isStreaming || isProcessingAsync || isConcludingStory;
+}
+
+export function getIsConcludingStory(): boolean {
+	return isConcludingStory;
+}
+
+export function setIsConcludingStory(value: boolean): void {
+	isConcludingStory = value;
 }
 
 export function getError(): string | null {
@@ -411,6 +420,8 @@ export function stopStreaming(): void {
 export async function runEpilogueFlow(actLineId: string): Promise<void> {
 	requireMainConfig();
 	const abortSignal = newAbortSignal();
+	isConcludingStory = true;
+	isStreaming = true;
 
 	const [story, actLine, endingType] = await Promise.all([
 		dbActLines.getStoryForActLine(actLineId),
@@ -497,6 +508,8 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 		if (result.error) error = result.error;
 	} finally {
 		abortController = null;
+		isStreaming = false;
+		isConcludingStory = false;
 	}
 }
 
