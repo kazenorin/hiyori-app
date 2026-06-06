@@ -57,7 +57,7 @@
 		aria-modal="true"
 		aria-labelledby={titleId}
 		tabindex="-1"
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+		class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm"
 		onclick={() => onclose?.()}
 		onkeydown={handleKeydown}
 	>

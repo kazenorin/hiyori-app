@@ -187,16 +187,8 @@
 
 	// === Delete handlers ===
 
-	function requestDeleteStory(id: string, name: string) {
-		confirmDelete = { type: 'story', id, name };
-	}
-
-	function requestDeleteAct(id: string, name: string) {
-		confirmDelete = { type: 'act', id, name };
-	}
-
-	function requestDeleteActLine(id: string, name: string) {
-		confirmDelete = { type: 'line', id, name };
+	function requestDelete(type: 'story' | 'act' | 'line', id: string, name: string) {
+		confirmDelete = { type, id, name };
 	}
 
 	function cancelDelete() {
@@ -245,13 +237,13 @@
 		<aside class="hidden md:flex lg:w-72 border-r border-surface-200-800 flex-col">
 			<SidebarNav
 				variant="desktop"
-				onselectstory={handleSelectStory}
-				onselectact={handleSelectAct}
-				onselectactline={handleSelectActLine}
-				onrequestdeletestory={requestDeleteStory}
-				onrequestdeleteact={requestDeleteAct}
-				onrequestdeleteactline={requestDeleteActLine}
-				onnewstory={handleNewStory}
+				onSelectStory={handleSelectStory}
+				onSelectAct={handleSelectAct}
+				onSelectActLine={handleSelectActLine}
+				onRequestDeleteStory={(id, name) => requestDelete('story', id, name)}
+				onRequestDeleteAct={(id, name) => requestDelete('act', id, name)}
+				onRequestDeleteActLine={(id, name) => requestDelete('line', id, name)}
+				onNewStory={handleNewStory}
 			/>
 		</aside>
 
@@ -261,13 +253,13 @@
 				<aside class="w-[80vw] max-w-[320px] bg-surface-50-950 border-r border-surface-200-800 flex flex-col overflow-y-auto">
 					<SidebarNav
 						variant="mobile"
-						onselectstory={handleSelectStory}
-						onselectact={handleSelectAct}
-						onselectactline={handleSelectActLine}
-						onrequestdeletestory={requestDeleteStory}
-						onrequestdeleteact={requestDeleteAct}
-						onrequestdeleteactline={requestDeleteActLine}
-						onnewstory={handleNewStory}
+						onSelectStory={handleSelectStory}
+						onSelectAct={handleSelectAct}
+						onSelectActLine={handleSelectActLine}
+						onRequestDeleteStory={(id, name) => requestDelete('story', id, name)}
+						onRequestDeleteAct={(id, name) => requestDelete('act', id, name)}
+						onRequestDeleteActLine={(id, name) => requestDelete('line', id, name)}
+						onNewStory={handleNewStory}
 					/>
 				</aside>
 				<div class="flex-1 bg-black/50" onclick={() => (sidebarOpen = false)} role="button" aria-label="Close sidebar"></div>
@@ -390,7 +382,7 @@
 <!-- Act Plot Generation Overlay -->
 {#if getActPlotGenerationPhase() !== null}
 	<div
-		class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+		class="fixed inset-0 z-[70] flex items-center justify-center bg-black/50 backdrop-blur-sm"
 		role="alert"
 		aria-live="polite"
 		aria-busy="true"
