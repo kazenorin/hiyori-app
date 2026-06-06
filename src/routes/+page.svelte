@@ -89,6 +89,7 @@
 	import { scrollToBottom } from '$lib/utils/scroll';
 	import { setupScrollObservers, handleStreamEndScroll } from '$lib/features/auto-scroller.svelte';
 	import { handleContinueToNextAct, handleEndStory } from '$lib/features/act-transition.svelte';
+	import { toaster } from '$lib/stores/toaster.svelte';
 
 	let input = $state('');
 	let chatContainer = $state<HTMLDivElement | null>(null);
@@ -129,11 +130,16 @@
 	let forkPlotMode = $state<'guidance' | 'phaseEvent' | null>(null);
 
 	async function handleCopy(messageId: string, content: string) {
-		await navigator.clipboard.writeText(content);
-		copiedId = messageId;
-		setTimeout(() => {
-			copiedId = null;
-		}, 1500);
+		try {
+			await navigator.clipboard.writeText(content);
+			copiedId = messageId;
+			setTimeout(() => {
+				copiedId = null;
+			}, 1500);
+			toaster.success({ title: t('chat.copied') });
+		} catch {
+			toaster.error({ title: t('chat.copyFailed') });
+		}
 	}
 
 	async function handleRegenerate(messageId: string) {
@@ -145,13 +151,23 @@
 	async function handleDelete() {
 		const actLineId = getActiveActLineId();
 		if (!actLineId || getIsBusy()) return;
-		await deleteLastExchange(actLineId);
+		try {
+			await deleteLastExchange(actLineId);
+			toaster.success({ title: t('chat.deleteSuccess') });
+		} catch {
+			toaster.error({ title: t('chat.deleteFailed') });
+		}
 	}
 
 	async function handleDeleteOrphanedUserMessages() {
 		const actLineId = getActiveActLineId();
 		if (!actLineId || getIsBusy()) return;
-		await deleteOrphanedUserMessages(actLineId);
+		try {
+			await deleteOrphanedUserMessages(actLineId);
+			toaster.success({ title: t('chat.deleteSuccess') });
+		} catch {
+			toaster.error({ title: t('chat.deleteFailed') });
+		}
 	}
 
 	async function handleWorldBuilderRegenerate() {
@@ -161,7 +177,12 @@
 
 	async function handleWorldBuilderDelete() {
 		if (getIsWorldBuilderStreaming()) return;
-		await deleteLastWorldBuilderExchange();
+		try {
+			await deleteLastWorldBuilderExchange();
+			toaster.success({ title: t('chat.deleteSuccess') });
+		} catch {
+			toaster.error({ title: t('chat.deleteFailed') });
+		}
 	}
 
 	function handleSubmit() {
@@ -577,7 +598,6 @@
 														actions={{
 															onForkDirect: () => handleForkDirect(i),
 															onForkWithInterview: () => handleForkWithInterview(i, forkPlotMode),
-															onFork: () => handleFork(i),
 															onCancel: () =>
 																cancelForkChoice(() => {
 																	forkPlotMode = null;
@@ -641,7 +661,6 @@
 													actions={{
 														onForkDirect: () => handleForkDirect(i),
 														onForkWithInterview: () => handleForkWithInterview(i, forkPlotMode),
-														onFork: () => handleFork(i),
 														onCancel: () =>
 															cancelForkChoice(() => {
 																forkPlotMode = null;

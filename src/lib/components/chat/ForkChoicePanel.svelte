@@ -1,13 +1,14 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import Spinner from '$lib/components/ui/Spinner.svelte';
+	import { slide } from 'svelte/transition';
 
 	type PlotMode = 'guidance' | 'phaseEvent' | null;
 
 	interface ForkActions {
 		onForkDirect: () => void;
 		onForkWithInterview: () => void;
-		onFork: () => void;
 		onCancel: () => void;
 	}
 
@@ -22,8 +23,20 @@
 	let { variant, forkPlotMode = $bindable(null), isForking, isBusy, actions }: Props = $props();
 </script>
 
-{#if variant === 'desktop'}
-	<div class="flex flex-col gap-2">
+{#if isForking || isBusy}
+	<div
+		class={variant === 'desktop'
+			? 'flex items-center gap-2 text-xs text-surface-600-400'
+			: 'flex items-center justify-center gap-2 min-h-11 text-sm text-surface-600-400'}
+		role="status"
+		aria-live="polite"
+		transition:slide={{ duration: 200 }}
+	>
+		<Spinner size={variant === 'desktop' ? 'xs' : 'md'} />
+		<span>{t('chat.forking')}</span>
+	</div>
+{:else if variant === 'desktop'}
+	<div class="flex flex-col gap-2" transition:slide={{ duration: 200 }}>
 		<!-- Plot Mode row -->
 		<div class="flex gap-2 items-center">
 			<button
@@ -70,7 +83,7 @@
 		</div>
 	</div>
 {:else}
-	<div class="flex flex-col gap-2 mt-2 pt-2 border-t border-surface-200-800">
+	<div class="flex flex-col gap-2 mt-2 pt-2 border-t border-surface-200-800" transition:slide={{ duration: 200 }}>
 		<!-- Plot Mode selector -->
 		<div class="flex gap-2">
 			<button

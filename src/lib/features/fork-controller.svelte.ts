@@ -12,6 +12,7 @@ import { ensureWorldFile } from '$lib/ai/world-generator';
 import { setError as setStoryCreationError } from '$lib/features/world-builder/story-creation.svelte';
 import { log } from '$lib/logging/logger';
 import { t } from '$lib/i18n';
+import { toaster } from '$lib/stores/toaster.svelte';
 
 let isForking = $state(false);
 let forkChoiceIndex = $state<number | null>(null);
@@ -37,10 +38,15 @@ export async function handleForkDirect(messageIndex: number): Promise<void> {
 	if (!actLineId || !act || getIsBusy() || isForking) return;
 	isForking = true;
 	forkChoiceIndex = null;
+	const toastId = toaster.create({ title: t('chat.forking'), type: 'loading' });
 	try {
 		const { branchSeq, name } = await getForkSequence(actLineId, messageIndex);
 		const line = await forkActLine(actLineId, branchSeq, act.id, name);
 		await loadActLineMessages(line.id);
+		toaster.update(toastId, { title: t('chat.forkSuccess'), type: 'success' });
+	} catch (err) {
+		toaster.update(toastId, { title: t('chat.forkFailed'), type: 'error' });
+		throw err;
 	} finally {
 		isForking = false;
 	}

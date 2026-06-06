@@ -31,6 +31,8 @@
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import SidebarNav from '$lib/components/chat/SidebarNav.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
+	import { Toast } from '@skeletonlabs/skeleton-svelte';
+	import { toaster } from '$lib/stores/toaster.svelte';
 
 	let { children } = $props();
 	let appError = $state<string | null>(null);
@@ -403,3 +405,15 @@
 		</div>
 	</div>
 {/if}
+
+<!-- App-wide Toast container -->
+<Toast.Group {toaster}>
+	{#snippet children(toast)}
+		<Toast {toast} class="bg-surface-50-950 border border-surface-200-800 rounded-xl shadow-xl">
+			<Toast.Message class="p-3 pr-2">
+				<Toast.Title class="text-sm font-medium text-surface-950-50">{toast.title}</Toast.Title>
+			</Toast.Message>
+			<Toast.CloseTrigger class="text-sm px-2 opacity-70 hover:opacity-100 text-surface-950-50">×</Toast.CloseTrigger>
+		</Toast>
+	{/snippet}
+</Toast.Group>
