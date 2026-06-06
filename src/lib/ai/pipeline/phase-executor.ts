@@ -91,7 +91,7 @@ export async function executeStreamingPhase(
 				callbacks.onError(phaseName, lastError);
 				throw lastError;
 			}
-			remainingRetries -= streamResult?.retriesConsumed ?? remainingRetries;
+			remainingRetries -= Math.max(streamResult?.retriesConsumed ?? 0, 1);
 		}
 	}
 
