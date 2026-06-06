@@ -450,6 +450,8 @@
 		"refresh": "Refresh",
 		"retry": "Retry",
 		"selectFile": "Select a file to preview its contents",
+		"selectFileMobile": "Tap the menu button (☰) in the header above to open the file list, then select a file.",
+		"openFileList": "Open file list",
 		"binaryFile": "Binary file",
 		"download": "Download",
 		"edit": "Edit",

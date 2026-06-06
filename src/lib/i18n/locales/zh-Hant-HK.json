@@ -444,6 +444,8 @@
 		"refresh": "重新整理",
 		"retry": "重試",
 		"selectFile": "選擇檔案以預覽其內容",
+		"selectFileMobile": "點擊上方標題列的 ☰ 按鈕以開啟檔案清單，再選擇檔案。",
+		"openFileList": "開啟檔案清單",
 		"binaryFile": "二進位檔案",
 		"download": "下載",
 		"edit": "編輯",

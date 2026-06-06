@@ -25,6 +25,7 @@
 	import { getAllStoryFolderInfo, type StoryFolderInfo } from '$lib/db/story-folders';
 	import { t } from '$lib/i18n';
 	import { log } from '$lib/logging/logger';
+	import { mobileFeatures } from '$lib/stores/mobile-nav.svelte';
 	import CodeBlock from '$lib/components/CodeBlock.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
@@ -305,7 +306,7 @@
 	onMount(loadRoot);
 </script>
 
-<div class="flex h-full flex-col">
+<div class="flex h-full min-h-0 flex-col">
 	<div class="flex items-center justify-between border-b border-surface-200-800 px-3 py-2 md:px-4">
 		<h2 class="text-sm font-semibold text-surface-900-100">{t('fileManager.title')}</h2>
 		<div class="flex items-center gap-2">
@@ -313,8 +314,9 @@
 				class="btn preset-tonal p-1.5 text-surface-500 hover:text-surface-700-300 transition-colors md:hidden"
 				type="button"
 				onclick={() => (showTreeOnMobile = !showTreeOnMobile)}
+				aria-label={t('fileManager.openFileList')}
 			>
-				<Icon name="dots-horizontal" class="size-4" />
+				<Icon name="menu" class="size-4" />
 			</button>
 			<button
 				class="btn preset-tonal p-1.5 text-surface-500 hover:text-surface-700-300 transition-colors"
@@ -400,8 +402,12 @@
 						{@render filePreview()}
 					{/if}
 				{:else}
-					<div class="flex items-center justify-center h-full text-sm text-surface-600-400">
-						{t('fileManager.selectFile')}
+					<div class="flex flex-col items-center justify-center h-full gap-3 text-sm text-surface-600-400 text-center px-4">
+						<Icon name="document" class="size-8" />
+						<p>{t('fileManager.selectFile')}</p>
+						{#if mobileFeatures.isPhone}
+							<p class="text-xs">{t('fileManager.selectFileMobile')}</p>
+						{/if}
 					</div>
 				{/if}
 			</div>
@@ -469,39 +475,46 @@
 {#snippet configActionBar()}
 	{@const mc = selectedNode?.managedConfig}
 	<div class="flex flex-wrap items-center gap-2 mb-2">
-		{#if mc === 'managed' || mc === 'obsolete'}
-			{#if mc === 'managed'}
-				<button class="btn preset-tonal text-xs" type="button" onclick={openCopyPanel} disabled={actions.isCopying}>
-					<Icon name="copy-duplicate" class="size-3.5" />
-					{t('fileManager.copyToStory')}
+		{#if mc === 'managed'}
+			<button class="btn preset-tonal text-xs" type="button" onclick={openCopyPanel} disabled={actions.isCopying}>
+				<Icon name="copy-duplicate" class="size-3.5" />
+				{t('fileManager.copyToStory')}
+			</button>
+			{#if isConfigModified}
+				<button class="btn preset-tonal text-xs gap-1" type="button" onclick={handleRestoreDefault} disabled={actions.isRestoring}>
+					<Icon name="refresh-arrows" class="size-3.5" />
+					{actions.isRestoring ? t('fileManager.restoring') : t('fileManager.restoreDefault')}
 				</button>
-				{#if isConfigModified}
-					<button class="btn preset-tonal text-xs gap-1" type="button" onclick={handleRestoreDefault} disabled={actions.isRestoring}>
-						<Icon name="refresh-arrows" class="size-3.5" />
-						{actions.isDeleting ? '...' : t('fileManager.deleteObsolete')}
-					</button>
-					<button
-						bind:this={inlineCancelRef}
-						class="btn preset-tonal text-xs"
-						type="button"
-						onclick={() => {
-							showFileDeleteConfirm = false;
-						}}
-					>
-						{t('fileManager.cancel')}
-					</button>
-				{:else}
-					<button
-						class="btn preset-filled-error text-xs gap-1"
-						type="button"
-						onclick={() => {
-							showFileDeleteConfirm = true;
-						}}
-					>
-						<Icon name="trash-can" class="size-3.5" />
-						{t('fileManager.deleteObsolete')}
-					</button>
-				{/if}
+			{/if}
+		{:else if mc === 'obsolete'}
+			<p class="text-xs text-surface-600-400">{t('fileManager.obsoleteDescription')}</p>
+			{#if showFileDeleteConfirm}
+				<p class="text-xs text-warning-500">{t('fileManager.deleteFileWarning')}</p>
+				<button class="btn preset-filled-error text-xs gap-1" type="button" onclick={handleDeleteFile} disabled={actions.isDeleting}>
+					<Icon name="trash-can" class="size-3.5" />
+					{actions.isDeleting ? '...' : t('fileManager.deleteObsolete')}
+				</button>
+				<button
+					bind:this={inlineCancelRef}
+					class="btn preset-tonal text-xs"
+					type="button"
+					onclick={() => {
+						showFileDeleteConfirm = false;
+					}}
+				>
+					{t('fileManager.cancel')}
+				</button>
+			{:else}
+				<button
+					class="btn preset-filled-error text-xs gap-1"
+					type="button"
+					onclick={() => {
+						showFileDeleteConfirm = true;
+					}}
+				>
+					<Icon name="trash-can" class="size-3.5" />
+					{t('fileManager.deleteObsolete')}
+				</button>
 			{/if}
 		{/if}
 		{#if mc === 'story-override'}
@@ -590,25 +603,27 @@
 {#snippet editMode()}
 	<div class="space-y-2">
 		<textarea
-			class="w-full h-[70vh] rounded border border-surface-200-800 bg-surface-50-950 p-4 font-mono text-xs leading-relaxed text-surface-900-100 resize-y"
+			class="w-full h-[70dvh] rounded border border-surface-200-800 bg-surface-50-950 p-4 font-mono text-xs leading-relaxed text-surface-900-100 resize-y"
 			bind:value={editContent}
 		></textarea>
 		{#if saveError}
 			<p class="text-error-500 text-xs">{saveError}</p>
 		{/if}
-		<div class="flex items-center gap-2">
-			<button
-				class="btn preset-filled text-xs gap-1"
-				type="button"
-				onclick={saveEditing}
-				disabled={isSaving || editContent === fileContent}
-			>
-				<Icon name="check" class="size-3.5" />
-				{isSaving ? t('fileManager.saving') : t('fileManager.save')}
-			</button>
-			<button class="btn preset-tonal text-xs" type="button" onclick={cancelEditing} disabled={isSaving}>
-				{t('fileManager.cancel')}
-			</button>
+		<div class="sticky bottom-0 -mx-3 md:-mx-4 px-3 md:px-4 py-2 bg-surface-50-950 border-t border-surface-200-800">
+			<div class="flex items-center gap-2">
+				<button
+					class="btn preset-filled text-xs gap-1"
+					type="button"
+					onclick={saveEditing}
+					disabled={isSaving || editContent === fileContent}
+				>
+					<Icon name="check" class="size-3.5" />
+					{isSaving ? t('fileManager.saving') : t('fileManager.save')}
+				</button>
+				<button class="btn preset-tonal text-xs" type="button" onclick={cancelEditing} disabled={isSaving}>
+					{t('fileManager.cancel')}
+				</button>
+			</div>
 		</div>
 	</div>
 {/snippet}
