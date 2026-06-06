@@ -4,13 +4,13 @@
 		getStories,
 		getActs,
 		getActLines,
+		getActiveAct,
 		getActiveStoryId,
 		getActiveActId,
 		getActiveActLineId,
 		renameStory,
 		renameAct,
 		renameActLine,
-		createActLine,
 	} from '$lib/stores/stories.svelte';
 	import { getIsActive as getIsWorldBuilderActive } from '$lib/features/world-builder/world-builder.svelte';
 	import { batchGetActLineEventSummary, type ActLineEventSummary } from '$lib/db/act-lines';
@@ -46,8 +46,6 @@
 	let editingType = $state<'story' | 'act' | 'line' | null>(null);
 	let editingName = $state('');
 	let renameSubmitting = $state(false);
-	let newActLineName = $state('');
-	let showNewActLine = $state(false);
 	let actLineEventSummaries = $state<Map<string, ActLineEventSummary>>(new Map());
 	let sidebarBlocked = $derived(getIsWorldBuilderActive());
 
@@ -171,16 +169,6 @@
 		cancelRename();
 	}
 
-	async function handleCreateActLine() {
-		const name = newActLineName.trim();
-		const actId = getActiveActId();
-		if (!name || !actId) return;
-		const line = await createActLine(actId, name);
-		newActLineName = '';
-		showNewActLine = false;
-		onSelectActLine(line.id);
-	}
-
 	let fontSizeSlider = $derived(getSettings().fontSize);
 
 	function handleFontSizeChange(e: Event) {
@@ -288,7 +276,7 @@
 									indent="pl-8"
 									activeClass="bg-primary-100-900 text-primary-700-300"
 									bind:renameValue={editingName}
-									canDelete
+									canDelete={getActiveAct()?.actNumber !== 1 || getActLines().length > 1}
 									{swipeConfig}
 									isOpen={openSwipeRowId === line.id}
 									openOffset={openSwipeOffset}
@@ -312,29 +300,6 @@
 									{/if}
 								</SidebarRow>
 							{/each}
-
-							<!-- Add act line button -->
-							{#if showNewActLine}
-								<div class="pl-8 p-1">
-									<div class="flex gap-1">
-										<input
-											class="input text-xs flex-1"
-											placeholder={t('sidebar.lineNamePlaceholder')}
-											bind:value={newActLineName}
-											onkeydown={(e) => e.key === 'Enter' && handleCreateActLine()}
-										/>
-										<button class="text-xs text-primary-500" type="button" onclick={handleCreateActLine}>+</button>
-									</div>
-								</div>
-							{:else}
-								<button
-									class="p-2 pl-8 text-xs text-surface-500 hover:text-surface-700-300 transition-colors"
-									type="button"
-									onclick={() => (showNewActLine = true)}
-								>
-									{t('sidebar.newLine')}
-								</button>
-							{/if}
 						{/if}
 					</div>
 				{/each}
