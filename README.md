@@ -69,10 +69,10 @@ npm run tauri build
 Output artifacts:
 
 | Artifact | Path                                                          |
-| -------- | ------------------------------------------------------------- |
+| -------- |---------------------------------------------------------------|
 | Binary   | `src-tauri/target/release/app`                                |
-| .deb     | `src-tauri/target/release/bundle/deb/BYOA_0.1.0_amd64.deb`    |
-| .rpm     | `src-tauri/target/release/bundle/rpm/BYOA-0.1.0-1.x86_64.rpm` |
+| .deb     | `src-tauri/target/release/bundle/deb/BYOA_0.2.0_amd64.deb`    |
+| .rpm     | `src-tauri/target/release/bundle/rpm/BYOA-0.2.0-1.x86_64.rpm` |
 
 ## Building the Standalone Web App
 
@@ -136,9 +136,9 @@ npm run tauri build -- --target x86_64-pc-windows-gnu
 Output:
 
 | Artifact       | Path                                                                                  |
-| -------------- | ------------------------------------------------------------------------------------- |
+| -------------- |---------------------------------------------------------------------------------------|
 | .exe           | `src-tauri/target/x86_64-pc-windows-gnu/release/app.exe`                              |
-| NSIS installer | `src-tauri/target/x86_64-pc-windows-gnu/release/bundle/nsis/BYOA_0.1.0_x64-setup.exe` |
+| NSIS installer | `src-tauri/target/x86_64-pc-windows-gnu/release/bundle/nsis/BYOA_0.2.0_x64-setup.exe` |
 
 The `.exe` includes the embedded frontend assets and requires [WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (pre-installed on Windows 10/11).
 
