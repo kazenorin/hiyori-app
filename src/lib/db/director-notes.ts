@@ -32,12 +32,28 @@ function mapRowToDirectorNote(row: DirectorNoteRow): DirectorNote {
 	};
 }
 
+export async function getDirectorNotesForActLines(actLineIds: string[]): Promise<DirectorNote[]> {
+	if (actLineIds.length === 0) return [];
+	const db = getDatabase();
+	const placeholder = actLineIds.map((_, i) => `$${i + 1}`).join(', ');
+	const rows = await db.select<DirectorNoteRow[]>(
+		`SELECT id, act_line_id, text, is_active, effective_from_scene, effective_to_scene, created_at FROM director_notes WHERE act_line_id IN (${placeholder})`,
+		actLineIds
+	);
+	return rows.map(mapRowToDirectorNote);
+}
+
+export async function insertDirectorNote(note: DirectorNote): Promise<void> {
+	const db = getDatabase();
+	await db.execute(
+		`INSERT INTO director_notes (id, act_line_id, text, is_active, effective_from_scene, effective_to_scene, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		[note.id, note.actLineId, note.text, note.isActive ? 1 : 0, note.effectiveFromScene, note.effectiveToScene, note.createdAt]
+	);
+}
+
 export async function getDirectorNotes(actLineId: string): Promise<DirectorNote[]> {
 	const db = getDatabase();
-	const rows = await db.select<DirectorNoteRow[]>(
-		'SELECT * FROM director_notes WHERE act_line_id = $1 ORDER BY created_at',
-		[actLineId]
-	);
+	const rows = await db.select<DirectorNoteRow[]>('SELECT * FROM director_notes WHERE act_line_id = $1 ORDER BY created_at', [actLineId]);
 	return rows.map(mapRowToDirectorNote);
 }
 
@@ -85,10 +101,7 @@ export async function updateDirectorNote(
 	if (sets.length === 0) return;
 
 	values.push(id);
-	await db.execute(
-		`UPDATE director_notes SET ${sets.join(', ')} WHERE id = $${paramIndex}`,
-		values
-	);
+	await db.execute(`UPDATE director_notes SET ${sets.join(', ')} WHERE id = $${paramIndex}`, values);
 }
 
 export async function deleteDirectorNote(id: string): Promise<void> {

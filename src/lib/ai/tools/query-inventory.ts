@@ -3,7 +3,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { Memory } from '$lib/features/memory';
 import type { InventoryCategory } from '$lib/features/memory/inventory-types';
-import { traceActLineChain } from '$lib/db/act-lines';
+import { traceActLineChain } from '$lib/db/acts';
 import { getEmbeddingProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
 import type { ToolSet } from 'ai';
 import { log } from './utils';

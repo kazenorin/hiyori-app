@@ -94,6 +94,12 @@ export const ICONS = {
 	document: stroke(
 		'<path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />'
 	),
+	sparkles: stroke(
+		'<path d="M9.937 3.737a.5.5 0 01.939 0l.97 2.423a.5.5 0 00.406.345l2.592.44a.5.5 0 01.265.863l-1.86 1.84a.5.5 0 00-.146.447l.439 2.587a.5.5 0 01-.758.536l-2.3-1.287a.5.5 0 00-.494 0l-2.3 1.287a.5.5 0 01-.757-.536l.439-2.587a.5.5 0 00-.147-.448L5.32 7.808a.5.5 0 01.265-.863l2.592-.44a.5.5 0 00.406-.345l.97-2.423zM18 2h1v1M18 7h3v1M16 4h1v1" />'
+	),
+	'book-open-text': stroke(
+		'<path d="M2 3h5a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-5a4 4 0 00-4 4v14a3 3 0 013-3h6z" /><path d="M6 8h2" /><path d="M6 12h2" /><path d="M16 8h2" /><path d="M16 12h2" />'
+	),
 } as const satisfies Record<string, IconDef>;
 
 export type IconName = keyof typeof ICONS;

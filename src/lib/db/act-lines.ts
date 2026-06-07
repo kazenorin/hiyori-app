@@ -6,7 +6,6 @@ import type { Story } from './stories';
 import type { ActPhase, EndingType, PlotMode } from '$lib/ai/narrative-types';
 import { getActPhaseIndex, isValidEndingType, isValidPlotMode } from '$lib/ai/narrative-types';
 import type { AssistantContext } from '$lib/ai/pipeline/types';
-import * as dbActs from './acts';
 
 // --- Act line event types ---
 
@@ -43,6 +42,12 @@ export interface ActLineMeta {
 	plotMode: PlotMode;
 }
 
+export interface ActLineEntry {
+	actLineId: string;
+	messageId: string;
+	sequence: number;
+}
+
 interface ActLineMetaRow {
 	id: string;
 	act_id: string;
@@ -67,6 +72,18 @@ function rowToActLineMeta(row: ActLineMetaRow): ActLineMeta {
 		isMainLine: row.is_main_line === 1,
 		createdAt: row.created_at,
 		plotMode,
+	};
+}
+
+function rowToActLineEvent(row: ActLineEventRow): ActLineEvent {
+	return {
+		id: row.id,
+		actLineId: row.act_line_id,
+		messageId: row.message_id,
+		messageSequence: row.message_sequence,
+		event: row.event as ActLineEventType,
+		value: row.value,
+		createdAt: row.created_at,
 	};
 }
 
@@ -131,26 +148,126 @@ export async function updateActLine(id: string, name: string): Promise<void> {
 	await db.execute('UPDATE act_line_meta SET name = $1 WHERE id = $2', [name, id]);
 }
 
+export async function getActLineMetasForStory(storyId: string): Promise<ActLineMeta[]> {
+	const db = getDatabase();
+	const rows = await db.select<ActLineMetaRow[]>(
+		`SELECT id, act_id, name, is_main_line, created_at, plot_mode FROM act_line_meta
+		 WHERE act_id IN (SELECT id FROM acts WHERE story_id = $1)`,
+		[storyId]
+	);
+	return rows.map(rowToActLineMeta);
+}
+
+export async function getActLineEventsForLines(actLineIds: string[]): Promise<ActLineEvent[]> {
+	if (actLineIds.length === 0) return [];
+	const db = getDatabase();
+	const placeholder = actLineIds.map((_, i) => `$${i + 1}`).join(', ');
+	const rows = await db.select<ActLineEventRow[]>(
+		`SELECT id, act_line_id, message_id, message_sequence, event, value, created_at FROM act_line_events WHERE act_line_id IN (${placeholder})`,
+		actLineIds
+	);
+	return rows.map(rowToActLineEvent);
+}
+
+function rowToActLineEntry(row: ActLineEntryRow): ActLineEntry {
+	return { actLineId: row.act_line_id, messageId: row.message_id, sequence: row.sequence };
+}
+
+function actLineEntryToRow(entry: ActLineEntry): ActLineEntryRow {
+	return { act_line_id: entry.actLineId, message_id: entry.messageId, sequence: entry.sequence };
+}
+
+export async function getActLineEntriesForLines(actLineIds: string[]): Promise<ActLineEntry[]> {
+	if (actLineIds.length === 0) return [];
+	const db = getDatabase();
+	const placeholder = actLineIds.map((_, i) => `$${i + 1}`).join(', ');
+	const rows = await db.select<ActLineEntryRow[]>(
+		`SELECT act_line_id, message_id, sequence FROM act_lines WHERE act_line_id IN (${placeholder})`,
+		actLineIds
+	);
+	return rows.map(rowToActLineEntry);
+}
+
+export async function getActLinePremisesForLines(actLineIds: string[]): Promise<ActLineEntry[]> {
+	if (actLineIds.length === 0) return [];
+	const db = getDatabase();
+	const placeholder = actLineIds.map((_, i) => `$${i + 1}`).join(', ');
+	const rows = await db.select<ActLineEntryRow[]>(
+		`SELECT act_line_id, message_id, sequence FROM act_line_premises WHERE act_line_id IN (${placeholder})`,
+		actLineIds
+	);
+	return rows.map(rowToActLineEntry);
+}
+
+export async function insertActLineMeta(meta: ActLineMeta): Promise<void> {
+	const db = getDatabase();
+	await db.execute('INSERT INTO act_line_meta (id, act_id, name, is_main_line, created_at, plot_mode) VALUES ($1, $2, $3, $4, $5, $6)', [
+		meta.id,
+		meta.actId,
+		meta.name,
+		meta.isMainLine ? 1 : 0,
+		meta.createdAt,
+		meta.plotMode,
+	]);
+}
+
+export async function insertActLineEvents(events: ActLineEvent[]): Promise<void> {
+	if (events.length === 0) return;
+	const db = getDatabase();
+	const placeholders = events
+		.map((_, i) => `($${i * 7 + 1}, $${i * 7 + 2}, $${i * 7 + 3}, $${i * 7 + 4}, $${i * 7 + 5}, $${i * 7 + 6}, $${i * 7 + 7})`)
+		.join(', ');
+	const params = events.flatMap((e) => [e.id, e.actLineId, e.messageId, e.messageSequence, e.event, e.value, e.createdAt]);
+	await db.execute(
+		`INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ${placeholders}`,
+		params
+	);
+}
+
+export async function insertActLineEntries(entries: ActLineEntry[]): Promise<void> {
+	if (entries.length === 0) return;
+	const rows = entries.map(actLineEntryToRow);
+	await insertActLineEntryRows(rows);
+}
+
+export async function insertActLinePremises(premises: ActLineEntry[]): Promise<void> {
+	if (premises.length === 0) return;
+	const rows = premises.map(actLineEntryToRow);
+	await insertActLinePremiseRows(rows);
+}
+
+async function insertActLineEntryRows(entries: ActLineEntryRow[]): Promise<void> {
+	if (entries.length === 0) return;
+	const db = getDatabase();
+	const placeholders = entries.map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(', ');
+	const params = entries.flatMap((e) => [e.act_line_id, e.message_id, e.sequence]);
+	await db.execute(`INSERT INTO act_lines (act_line_id, message_id, sequence) VALUES ${placeholders}`, params);
+}
+
+async function insertActLinePremiseRows(premises: ActLineEntryRow[]): Promise<void> {
+	if (premises.length === 0) return;
+	const db = getDatabase();
+	const placeholders = premises.map((_, i) => `($${i * 3 + 1}, $${i * 3 + 2}, $${i * 3 + 3})`).join(', ');
+	const params = premises.flatMap((p) => [p.act_line_id, p.message_id, p.sequence]);
+	await db.execute(`INSERT INTO act_line_premises (act_line_id, message_id, sequence) VALUES ${placeholders}`, params);
+}
+
 export async function deleteActLine(id: string): Promise<void> {
 	const db = getDatabase();
 
-	// Collect all message IDs from both junction tables before deletion
 	const lineMessageRows = await db.select<{ message_id: string }[]>('SELECT message_id FROM act_lines WHERE act_line_id = $1', [id]);
 	const premiseMessageRows = await db.select<{ message_id: string }[]>('SELECT message_id FROM act_line_premises WHERE act_line_id = $1', [
 		id,
 	]);
 	const messageIds = [...new Set([...lineMessageRows.map((r) => r.message_id), ...premiseMessageRows.map((r) => r.message_id)])];
 
-	// Delete junction table entries and events
 	await db.execute('DELETE FROM act_lines WHERE act_line_id = $1', [id]);
 	await db.execute('DELETE FROM act_line_premises WHERE act_line_id = $1', [id]);
 	await db.execute('DELETE FROM act_line_events WHERE act_line_id = $1', [id]);
-
-	// Garbage-collect messages no longer referenced by any act line or premises
-	await removeOrphanedMessages(db, messageIds);
-
-	// Delete the act line metadata row
+	await db.execute('DELETE FROM director_notes WHERE act_line_id = $1', [id]);
 	await db.execute('DELETE FROM act_line_meta WHERE id = $1', [id]);
+
+	await removeOrphanedMessages(db, messageIds);
 }
 
 // === act_line_events — write operations ===
@@ -713,22 +830,6 @@ export async function getPrecedingActSummary(actLineId: string): Promise<string 
 		[actLineId]
 	);
 	return rows.length > 0 ? rows[0].act_summary : null;
-}
-
-export async function traceActLineChain(actLineId: string): Promise<{ actLineId: string; actNumber: number }[]> {
-	const result: { actLineId: string; actNumber: number }[] = [];
-	let currentActLineId: string | null = actLineId;
-	const visited = new Set<string>();
-
-	while (currentActLineId && !visited.has(currentActLineId)) {
-		visited.add(currentActLineId);
-		const act = await dbActs.getActByActLineId(currentActLineId);
-		if (!act) break;
-		result.unshift({ actLineId: currentActLineId, actNumber: act.actNumber });
-		currentActLineId = act.continuesFromActLineId;
-	}
-
-	return result;
 }
 
 async function removeOrphanedMessages(db: Database, messageIds: string[]): Promise<string[]> {

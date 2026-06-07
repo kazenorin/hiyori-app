@@ -102,6 +102,88 @@ function parseGameDataFields(raw: Record<string, unknown>): GameDataFields {
 	return gd;
 }
 
+export async function getMessagesByIds(messageIds: string[]): Promise<Message[]> {
+	if (messageIds.length === 0) return [];
+	const rows = await getMessageRowsByIds(messageIds);
+	return rows.map(mapRowToMessage);
+}
+
+export async function upsertMessage(msg: Message): Promise<void> {
+	const row = messageToRow(msg);
+	await upsertMessageRow(row);
+}
+
+export async function insertMessage(msg: Message): Promise<void> {
+	const row = messageToRow(msg);
+	await insertMessageRow(row);
+}
+
+function messageToRow(msg: Message): MessageRow {
+	return {
+		id: msg.id,
+		role: msg.role,
+		content: msg.content,
+		reasoning: msg.reasoning ?? null,
+		metadata: msg.metadata ?? null,
+		variables: msg.variables ? JSON.stringify(msg.variables) : null,
+		act_summary: msg.actSummary ?? null,
+		scene_plot: msg.scenePlot ?? null,
+		important_phrases: msg.importantPhrases ?? null,
+		scene_number: msg.sceneNumber ?? null,
+		created_at: msg.createdAt,
+	};
+}
+
+async function getMessageRowsByIds(messageIds: string[]): Promise<MessageRow[]> {
+	if (messageIds.length === 0) return [];
+	const db = getDatabase();
+	const placeholder = messageIds.map((_, i) => `$${i + 1}`).join(', ');
+	return db.select<MessageRow[]>(
+		`SELECT id, role, content, reasoning, metadata, variables, act_summary, scene_plot, important_phrases, scene_number, created_at FROM messages WHERE id IN (${placeholder})`,
+		messageIds
+	);
+}
+
+async function upsertMessageRow(row: MessageRow): Promise<void> {
+	const db = getDatabase();
+	await db.execute(
+		`INSERT OR REPLACE INTO messages (id, role, content, reasoning, metadata, variables, act_summary, scene_plot, important_phrases, scene_number, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		[
+			row.id,
+			row.role,
+			row.content,
+			row.reasoning,
+			row.metadata,
+			row.variables,
+			row.act_summary,
+			row.scene_plot,
+			row.important_phrases,
+			row.scene_number,
+			row.created_at,
+		]
+	);
+}
+
+async function insertMessageRow(row: MessageRow): Promise<void> {
+	const db = getDatabase();
+	await db.execute(
+		`INSERT INTO messages (id, role, content, reasoning, metadata, variables, act_summary, scene_plot, important_phrases, scene_number, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		[
+			row.id,
+			row.role,
+			row.content,
+			row.reasoning,
+			row.metadata,
+			row.variables,
+			row.act_summary,
+			row.scene_plot,
+			row.important_phrases,
+			row.scene_number,
+			row.created_at,
+		]
+	);
+}
+
 export async function createMessage(message: Omit<Message, 'createdAt'>): Promise<Message> {
 	const db = getDatabase();
 	const now = Date.now();

@@ -1,5 +1,6 @@
 import type { ActLineMeta } from '$lib/db/act-lines';
 import * as dbActLines from '$lib/db/act-lines';
+import { traceActLineChain } from '$lib/db/acts';
 import type { ActLineContext, PostEditorContext } from '$lib/ai/pipeline/types';
 import type { Story } from '$lib/db/stories';
 import { logMainChat } from '$lib/logging/chat-logger';
@@ -328,7 +329,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 
 		const previousActSummaries: { actNumber: number; summary: string }[] = [];
 		if (actLine.actNumber > 1) {
-			const actLineChain = await dbActLines.traceActLineChain(actLine.id);
+			const actLineChain = await traceActLineChain(actLine.id);
 			const previousActLines = actLineChain.slice(0, -1);
 			for (const entry of previousActLines) {
 				const shortSummary = await dbActLines.getActShortSummary(entry.actLineId);

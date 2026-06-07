@@ -6,6 +6,29 @@ interface StoryFolder {
 	created_at: number;
 }
 
+export interface StoryFolderRecord {
+	storyId: string;
+	folderName: string;
+	createdAt: number;
+}
+
+export async function getStoryFolderInfo(storyId: string): Promise<StoryFolderRecord | null> {
+	const db = getDatabase();
+	const result = await db.select<StoryFolder[]>('SELECT story_id, folder_name, created_at FROM story_folders WHERE story_id = $1', [
+		storyId,
+	]);
+	return result.length > 0 ? { storyId: result[0].story_id, folderName: result[0].folder_name, createdAt: result[0].created_at } : null;
+}
+
+export async function upsertStoryFolder(storyId: string, folderName: string, createdAt: number): Promise<void> {
+	const db = getDatabase();
+	await db.execute('INSERT OR REPLACE INTO story_folders (story_id, folder_name, created_at) VALUES ($1, $2, $3)', [
+		storyId,
+		folderName,
+		createdAt,
+	]);
+}
+
 export async function getStoryFolder(storyId: string): Promise<string | null> {
 	const db = getDatabase();
 	const result = await db.select<StoryFolder[]>('SELECT folder_name FROM story_folders WHERE story_id = $1', [storyId]);
@@ -46,6 +69,6 @@ export interface StoryFolderInfo {
 export async function getAllStoryFolderInfo(): Promise<StoryFolderInfo[]> {
 	const db = getDatabase();
 	return await db.select<StoryFolderInfo[]>(
-		'SELECT sf.folder_name AS folderName, sf.story_id AS storyId, s.name AS storyName FROM story_folders sf JOIN stories s ON sf.story_id = s.id ORDER BY s.name',
+		'SELECT sf.folder_name AS folderName, sf.story_id AS storyId, s.name AS storyName FROM story_folders sf JOIN stories s ON sf.story_id = s.id ORDER BY s.name'
 	);
 }

@@ -1,4 +1,5 @@
 import { getDatabase } from './database';
+import { deleteAct } from './acts';
 
 export interface Story {
 	id: string;
@@ -29,7 +30,13 @@ function rowToStory(row: StoryRow): Story {
 export async function createStory(id: string, name: string, locale: string): Promise<Story> {
 	const db = getDatabase();
 	const now = Date.now();
-	await db.execute('INSERT INTO stories (id, name, locale, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)', [id, name, locale, now, now]);
+	await db.execute('INSERT INTO stories (id, name, locale, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)', [
+		id,
+		name,
+		locale,
+		now,
+		now,
+	]);
 	return { id, name, locale, createdAt: now, updatedAt: now };
 }
 
@@ -37,6 +44,17 @@ export async function getStory(id: string): Promise<Story | null> {
 	const db = getDatabase();
 	const rows = await db.select<StoryRow[]>('SELECT * FROM stories WHERE id = $1', [id]);
 	return rows.length > 0 ? rowToStory(rows[0]) : null;
+}
+
+export async function upsertStory(id: string, name: string, locale: string, createdAt: number): Promise<void> {
+	const db = getDatabase();
+	await db.execute('INSERT OR REPLACE INTO stories (id, name, locale, created_at, updated_at) VALUES ($1, $2, $3, $4, $5)', [
+		id,
+		name,
+		locale,
+		createdAt,
+		Date.now(),
+	]);
 }
 
 export async function getAllStories(): Promise<Story[]> {
@@ -53,5 +71,11 @@ export async function updateStory(id: string, name: string): Promise<void> {
 
 export async function deleteStory(id: string): Promise<void> {
 	const db = getDatabase();
+
+	const actRows = await db.select<{ id: string }[]>('SELECT id FROM acts WHERE story_id = $1', [id]);
+	for (const row of actRows) {
+		await deleteAct(row.id);
+	}
+
 	await db.execute('DELETE FROM stories WHERE id = $1', [id]);
 }

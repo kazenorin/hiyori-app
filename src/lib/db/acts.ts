@@ -1,4 +1,5 @@
 import { getDatabase } from './database';
+import { deleteActLine } from './act-lines';
 
 export interface Act {
 	id: string;
@@ -57,6 +58,22 @@ export async function createAct(
 	};
 }
 
+export async function upsertAct(act: Act): Promise<void> {
+	const db = getDatabase();
+	await db.execute(
+		`INSERT OR REPLACE INTO acts (id, story_id, name, act_number, continues_from_act_line_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		[act.id, act.storyId, act.name, act.actNumber, act.continuesFromActLineId, act.createdAt, act.updatedAt]
+	);
+}
+
+export async function insertAct(act: Act): Promise<void> {
+	const db = getDatabase();
+	await db.execute(
+		`INSERT INTO acts (id, story_id, name, act_number, continues_from_act_line_id, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		[act.id, act.storyId, act.name, act.actNumber, act.continuesFromActLineId, act.createdAt, act.updatedAt]
+	);
+}
+
 export async function getAct(id: string): Promise<Act | null> {
 	const db = getDatabase();
 	const rows = await db.select<ActRow[]>('SELECT * FROM acts WHERE id = $1', [id]);
@@ -89,6 +106,12 @@ export async function updateAct(id: string, name: string): Promise<void> {
 
 export async function deleteAct(id: string): Promise<void> {
 	const db = getDatabase();
+
+	const actLineRows = await db.select<{ id: string }[]>('SELECT id FROM act_line_meta WHERE act_id = $1', [id]);
+	for (const row of actLineRows) {
+		await deleteActLine(row.id);
+	}
+
 	await db.execute('DELETE FROM acts WHERE id = $1', [id]);
 }
 
@@ -107,4 +130,20 @@ export async function getActByActLineId(actLineId: string): Promise<Act | null> 
 		[actLineId]
 	);
 	return rows.length > 0 ? rowToAct(rows[0]) : null;
+}
+
+export async function traceActLineChain(actLineId: string): Promise<{ actLineId: string; actNumber: number }[]> {
+	const result: { actLineId: string; actNumber: number }[] = [];
+	let currentActLineId: string | null = actLineId;
+	const visited = new Set<string>();
+
+	while (currentActLineId && !visited.has(currentActLineId)) {
+		visited.add(currentActLineId);
+		const act = await getActByActLineId(currentActLineId);
+		if (!act) break;
+		result.unshift({ actLineId: currentActLineId, actNumber: act.actNumber });
+		currentActLineId = act.continuesFromActLineId;
+	}
+
+	return result;
 }

@@ -16,9 +16,12 @@
 	import { batchGetActLineEventSummary, type ActLineEventSummary } from '$lib/db/act-lines';
 	import { getActEnded, getStoryConcluded } from '$lib/ai/chat.svelte';
 	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
+	import { exportStory } from '$lib/features/story-export-load/story-exporter';
+	import { toaster } from '$lib/stores/toaster.svelte';
 	import { type SwipeEndEventDetail } from '@svelte-put/swipeable';
 	import SidebarRow from './SidebarRow.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
+	import Icon from '$lib/components/ui/Icon.svelte';
 
 	interface Props {
 		variant: 'desktop' | 'mobile';
@@ -170,6 +173,22 @@
 	}
 
 	let fontSizeSlider = $derived(getSettings().fontSize);
+	let exportingStory = $state(false);
+
+	async function handleExportStory() {
+		const storyId = getActiveStoryId();
+		if (!storyId || exportingStory) return;
+		exportingStory = true;
+		try {
+			await exportStory(storyId);
+			toaster.success({ title: t('sidebar.exportSuccess') });
+		} catch (err) {
+			console.error('Failed to export story:', err);
+			toaster.error({ title: t('sidebar.exportFailed') });
+		} finally {
+			exportingStory = false;
+		}
+	}
 
 	function handleFontSizeChange(e: Event) {
 		const target = e.currentTarget as HTMLInputElement;
@@ -307,14 +326,24 @@
 		</div>
 	{/each}
 
-	<!-- Add story button -->
-	<button
-		class="w-full p-3 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
-		type="button"
-		onclick={onNewStory}
-	>
-		{t('sidebar.newStory')}
-	</button>
+	<!-- New + Load Story buttons -->
+	<div class="flex gap-1">
+		<button
+			class="flex-1 flex items-center justify-center gap-1 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-xs text-surface-500 whitespace-nowrap"
+			type="button"
+			onclick={onNewStory}
+		>
+			<Icon name="sparkles" class="w-3.5 h-3.5" />
+			{t('sidebar.newStory')}
+		</button>
+		<a
+			href="/load-story"
+			class="flex-1 flex items-center justify-center gap-1 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-xs text-surface-500 whitespace-nowrap"
+		>
+			<Icon name="book-open-text" class="w-3.5 h-3.5" />
+			{t('sidebar.loadStory')}
+		</a>
+	</div>
 
 	<!-- Sidebar blocking overlay (covers nav only, not footer) -->
 	{#if sidebarBlocked}
@@ -359,6 +388,14 @@
 	>
 		{t('sidebar.settings')}
 	</a>
+	<button
+		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500 w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
+		type="button"
+		onclick={handleExportStory}
+		disabled={!getActiveStoryId() || exportingStory}
+	>
+		{exportingStory ? t('sidebar.exporting') : t('sidebar.exportStory')}
+	</button>
 	<a
 		href="/memory-manager"
 		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"

@@ -305,9 +305,7 @@ export async function deleteActLine(id: string, removeFolder: boolean = false): 
 	const storyId = activeStoryId;
 	const storyName = activeStoryName;
 
-	// Perform full DB cleanup (act_line_meta + junctions + orphaned messages)
 	await dbActLines.deleteActLine(id);
-	await dbDirectorNotes.deleteDirectorNotesForActLine(id);
 
 	// Remove folder if requested
 	if (removeFolder && line && act && storyId && storyName) {

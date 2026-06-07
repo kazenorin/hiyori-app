@@ -25,7 +25,9 @@ vi.mock('$lib/db/database', () => ({
 
 const mockTraceActLineChain = vi.fn(async () => []);
 
-vi.mock('$lib/db/act-lines', () => ({
+vi.mock('$lib/db/act-lines', () => ({}));
+
+vi.mock('$lib/db/acts', () => ({
 	traceActLineChain: (...args: unknown[]) => mockTraceActLineChain(...args),
 }));
 

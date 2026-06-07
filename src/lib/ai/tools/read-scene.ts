@@ -5,7 +5,7 @@ import { getDatabase } from '$lib/db/database';
 import { type ToolSet } from 'ai';
 import type { ToolContext } from './tools';
 import { log } from './utils';
-import { traceActLineChain } from '$lib/db/act-lines';
+import { traceActLineChain } from '$lib/db/acts';
 
 interface SceneRow {
 	role: string;
@@ -63,11 +63,7 @@ export function createReadSceneTool(ctx: ToolContext) {
 				return ls('tools.readScene.messages.noSceneFound', { sceneNumber });
 			}
 
-			const result = formatSceneRows(
-				rows,
-				ls('tools.readScene.headers.sceneBody'),
-				ls('tools.readScene.headers.playerResponse'),
-			);
+			const result = formatSceneRows(rows, ls('tools.readScene.headers.sceneBody'), ls('tools.readScene.headers.playerResponse'));
 			if (!result) {
 				return ls('tools.readScene.messages.sceneNoContent', { sceneNumber });
 			}
@@ -115,7 +111,7 @@ export function createReadDistantSceneTool(ctx: ToolContext) {
 			const result = formatSceneRows(
 				rows,
 				ls('tools.readDistantScene.headers.sceneBody'),
-				ls('tools.readDistantScene.headers.playerResponse'),
+				ls('tools.readDistantScene.headers.playerResponse')
 			);
 			if (!result) {
 				return ls('tools.readDistantScene.messages.sceneNoContent', { actNumber, sceneNumber });

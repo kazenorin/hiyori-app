@@ -48,6 +48,9 @@ const mockTraceActLineChain = vi.fn(async (actLineId: string) => [
 
 vi.mock('$lib/db/act-lines', () => ({
 	batchResolveActLineInfo: vi.fn(async () => new Map()),
+}));
+
+vi.mock('$lib/db/acts', () => ({
 	traceActLineChain: (actLineId: string) => mockTraceActLineChain(actLineId),
 }));
 
@@ -110,6 +113,8 @@ describe('createQueryMemoriesTool', () => {
 		}));
 		vi.doMock('$lib/db/act-lines', () => ({
 			batchResolveActLineInfo: vi.fn(async () => new Map()),
+		}));
+		vi.doMock('$lib/db/acts', () => ({
 			traceActLineChain: (actLineId: string) => mockTraceActLineChain(actLineId),
 		}));
 

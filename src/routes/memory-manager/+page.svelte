@@ -21,7 +21,7 @@
 	} from '$lib/stores/memory-regeneration.svelte';
 	import { streamActCard } from '$lib/features/act-card-generator';
 	import { log } from '$lib/logging/logger';
-	import { traceActLineChain } from '$lib/db/act-lines';
+	import { traceActLineChain } from '$lib/db/acts';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 
