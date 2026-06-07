@@ -17,6 +17,7 @@ import { loadLocaleStrings } from '$lib/localization';
 import { ensureAllLocaleStringConfigs } from '$lib/fs/locale-string-loader';
 import { initFileSystem } from '$lib/fs/file-system';
 import { initHttpClient } from '$lib/http/fetch';
+import { checkIsTauri } from '$lib/runtime';
 
 let initialized = false;
 let initializing = false;
@@ -26,18 +27,27 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 	initializing = true;
 
 	try {
-		await initFileSystem();
 		await initLogging();
-		await initHttpClient();
+		await log.info('init', 'Initialized logging...');
+
+		await initFileSystem();
+		await log.info('init', 'Initialized File System...');
+
 		const settings = getSettings();
 		await loadLocale(settings.locale || 'en');
 		try {
-			const { invoke } = await import('@tauri-apps/api/core');
-			await invoke('set_log_level', { level: settings.logLevel });
+			if (await checkIsTauri()) {
+				const { invoke } = await import('@tauri-apps/api/core');
+				await invoke('set_log_level', { level: settings.logLevel });
+			}
 		} catch {
 			// Rust backend unavailable
 		}
+
+		await initHttpClient();
+		await log.info('init', 'Initialized HTTP Client...');
 		await log.info('init', 'Initializing database...');
+
 		onStatus?.('Initializing database...');
 		const db = await initDatabase();
 

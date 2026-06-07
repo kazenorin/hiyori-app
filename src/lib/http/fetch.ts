@@ -1,4 +1,5 @@
 import { checkIsTauri, isTauriSync } from '$lib/runtime';
+import { log } from '$lib/logging/logger';
 
 let _fetch: typeof globalThis.fetch = globalThis.fetch.bind(globalThis);
 let initialized = false;
@@ -14,6 +15,9 @@ export async function initHttpClient(): Promise<void> {
 	if (await checkIsTauri()) {
 		const tauriHttp = await import('@tauri-apps/plugin-http');
 		_fetch = tauriHttp.fetch;
+		await log.info('fetch', 'Using Tauri plugin-http');
+	} else {
+		await log.info('fetch', 'Using default HTTP Client');
 	}
 }
 

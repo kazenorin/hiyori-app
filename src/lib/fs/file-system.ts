@@ -1,4 +1,5 @@
 import { checkIsTauri } from '$lib/runtime';
+import { log } from '$lib/logging/logger';
 
 export interface DirEntry {
 	name: string;
@@ -70,9 +71,11 @@ export async function initFileSystem(): Promise<FileSystem> {
 	if (await checkIsTauri()) {
 		const { TauriFileSystem } = await import('./file-system-tauri');
 		backend = new TauriFileSystem();
+		await log.info('file-system', 'TauriFS backend initialized');
 	} else if (typeof navigator !== 'undefined' && !!navigator.storage?.getDirectory) {
 		const { OpfsFileSystem } = await import('./file-system-opfs');
 		backend = new OpfsFileSystem();
+		await log.info('file-system', 'OPFS backend initialized');
 	} else {
 		throw new FileSystemError('No file system backend available: neither Tauri nor OPFS runtime detected', 'unknown');
 	}
