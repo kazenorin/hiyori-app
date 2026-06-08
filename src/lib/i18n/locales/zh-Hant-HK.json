@@ -22,7 +22,11 @@
 		},
 		"apiTypeHint": "'Responses' 會 call 'OpenAI Responses API'; 而 Chat Completions 則會 call '/chat/completions'",
 		"baseUrl": "基礎 URL",
-		"baseUrlHint": "Local: http://localhost:11434/v1 (Ollama), http://localhost:1234/v1 (LM Studio)",
+		"baseUrlHint": {
+			"openai": "僅適用於官方 OpenAI API。OpenAI-Compatible API 不適用於此提供者。",
+			"openaiCompatible": "本機: http://localhost:1234/v1 (LM Studio), http://localhost:11434/v1 (Ollama)",
+			"ollama": "本機: 'http://localhost:11434' 本機部署需設定環境變數 OLLAMA_ORIGINS 為 'http://*' 或 '*'。"
+		},
 		"model": "模型",
 		"modelOrType": "或手動輸入",
 		"modelPlaceholder": "gpt-4o",

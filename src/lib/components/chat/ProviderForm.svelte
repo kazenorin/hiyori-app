@@ -18,13 +18,21 @@
 	let { mode, config, isMainProvider = false, onsave, oncancel }: Props = $props();
 
 	let formName = $state(config?.name ?? '');
-	let formProvider = $state<Provider>(config?.provider ?? 'openai');
-	let formApiType = $state<ApiType>(config?.apiType ?? 'responses');
-	let formBaseURL = $state(config?.baseURL ?? 'https://api.openai.com/v1');
+	let formProvider = $state<Provider>(config?.provider ?? 'openai-compatible');
+	let formApiType = $state<ApiType>(config?.apiType ?? 'chat-completions');
+	let formBaseURL = $state(config?.baseURL ?? 'http://localhost:1234/v1');
 	let formModel = $state(config?.model ?? '');
 	let formApiKey = $state(config?.apiKey ?? '');
 	let formCorsBypassEnabled = $state(config?.corsBypassEnabled ?? false);
 	let formWispProxyUrl = $state(config?.wispProxyUrl ?? 'ws://localhost:6001');
+
+	let baseUrlHint = $derived(
+		formProvider === 'openai'
+			? t('settings.baseUrlHint.openai')
+			: formProvider === 'ollama'
+				? t('settings.baseUrlHint.ollama')
+				: t('settings.baseUrlHint.openaiCompatible')
+	);
 
 	let availableModels = $state<ModelInfo[]>([]);
 	let isLoadingModels = $state(false);
@@ -126,7 +134,7 @@
 				type="url"
 				placeholder="https://api.openai.com/v1"
 				bind:value={formBaseURL}
-				hint={t('settings.baseUrlHint')}
+				hint={baseUrlHint}
 			/>
 
 			<div>

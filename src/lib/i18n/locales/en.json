@@ -22,7 +22,11 @@
 		},
 		"apiTypeHint": "Responses uses the OpenAI Responses API. Chat Completions uses /chat/completions.",
 		"baseUrl": "Base URL",
-		"baseUrlHint": "Local: http://localhost:11434/v1 (Ollama), http://localhost:1234/v1 (LM Studio)",
+		"baseUrlHint": {
+			"openai": "Only for the official OpenAI API. OpenAI-Compatible APIs will not work with this provider.",
+			"openaiCompatible": "Local: http://localhost:1234/v1 (LM Studio), http://localhost:11434/v1 (Ollama)",
+			"ollama": "Local: 'http://localhost:11434' Set the OLLAMA_ORIGINS environment variable to 'http://*' or '*' for local deployments."
+		},
 		"model": "Model",
 		"modelOrType": "Or type manually",
 		"modelPlaceholder": "gpt-4o",
