@@ -15,6 +15,8 @@
 		updateProviderConfig,
 		updateSettings,
 	} from '$lib/stores/settings.svelte';
+	import { deleteStory, getStories } from '$lib/stores/stories.svelte';
+	import * as dbAppState from '$lib/db/app-state';
 	import { t } from '$lib/i18n';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
@@ -44,6 +46,7 @@
 	import { exportGameData, importGameData, exportConfigData, importConfigData } from '$lib/db/data-portability';
 	import { isTauriSync } from '$lib/runtime';
 	import { ensureAllBaseConfigs } from '$lib/fs/prompt-loader';
+	import { getDatabase } from '$lib/db/database';
 
 	// Editing state
 	let editingId = $state<string | null>(null);
@@ -56,6 +59,9 @@
 
 	let showResetConfirm = $state(false);
 	let isResetting = $state(false);
+
+	let showDeleteAllGameDataConfirm = $state(false);
+	let isDeletingAllGameData = $state(false);
 
 	function handleExportGameData() {
 		handleExport(gameIO, exportGameData, 'byoa-game-data', (v) => (exportProgress = v));
@@ -92,6 +98,23 @@
 		} catch (err) {
 			console.error('Reset failed:', err);
 			isResetting = false;
+		}
+	}
+
+	async function handleDeleteAllGameDataConfirm() {
+		showDeleteAllGameDataConfirm = false;
+		isDeletingAllGameData = true;
+		try {
+			await dbAppState.setActiveAll(null, null, null);
+			const storyIds = getStories().map((s) => s.id);
+			for (const id of storyIds) {
+				await deleteStory(id, true);
+			}
+			await getDatabase().flush();
+			window.location.reload();
+		} catch (err) {
+			console.error('Delete all game data failed:', err);
+			isDeletingAllGameData = false;
 		}
 	}
 
@@ -517,6 +540,17 @@
 					<span class="text-xs text-error-500 mt-1 block">{t('settings.importGameDataWarning')}</span>
 				</div>
 
+				<div>
+					<button
+						class="btn variant-filled bg-error-500 hover:bg-error-600 text-white min-h-11"
+						disabled={isDeletingAllGameData}
+						onclick={() => (showDeleteAllGameDataConfirm = true)}
+					>
+						{isDeletingAllGameData ? '...' : t('settings.deleteAllGameData')}
+					</button>
+					<span class="text-xs text-surface-500 mt-1 block">{t('settings.deleteAllGameDataDescription')}</span>
+				</div>
+
 				{#if gameIO.importError}
 					<p class="text-xs text-error-500">{gameIO.importError}</p>
 				{/if}
@@ -649,6 +683,30 @@
 				onclick={handleResetConfirm}
 			>
 				{t('settings.resetConfiguration')}
+			</button>
+		</div>
+	{/snippet}
+</Modal>
+
+<Modal bind:open={showDeleteAllGameDataConfirm} title={t('settings.deleteAllGameData')} variant="danger">
+	{#snippet body()}
+		<p class="text-sm text-surface-700-300">{t('settings.deleteAllGameDataWarning')}</p>
+	{/snippet}
+	{#snippet footer()}
+		<div class="flex gap-2">
+			<button
+				class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors min-h-11"
+				type="button"
+				onclick={() => (showDeleteAllGameDataConfirm = false)}
+			>
+				{t('settings.cancel')}
+			</button>
+			<button
+				class="flex-1 px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors min-h-11"
+				type="button"
+				onclick={handleDeleteAllGameDataConfirm}
+			>
+				{t('settings.deleteAllGameData')}
 			</button>
 		</div>
 	{/snippet}
