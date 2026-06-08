@@ -91,12 +91,15 @@ async function generateMemoriesWithRetry(response: string, config: MemoryProvide
 	const extractionPromptTemplate = await memoryExtractionPromptLoader.loadDefault();
 	const userPrompt = extractionPromptTemplate + '\n' + response;
 
-	return await withRetry(() => generateText({ model, system: systemPrompt, prompt: userPrompt }).then((r) => r.text), {
-		maxAttempts: RETRY_COUNT + 1,
-		backoffMs: BACKOFF_SECONDS * 1000,
-		shouldRetry: (err) => !isAuthError(err),
-		onRetry: (attempt) => log.warn('memory-pipeline', `Memory generation attempt ${attempt} failed, retrying...`),
-	});
+	return await withRetry(
+		() => generateText({ model, system: systemPrompt, prompt: userPrompt, ...(config.callSettings ?? {}) }).then((r) => r.text),
+		{
+			maxAttempts: RETRY_COUNT + 1,
+			backoffMs: BACKOFF_SECONDS * 1000,
+			shouldRetry: (err) => !isAuthError(err),
+			onRetry: (attempt) => log.warn('memory-pipeline', `Memory generation attempt ${attempt} failed, retrying...`),
+		}
+	);
 }
 
 async function filterAliasesWithRetry(flatAliases: string[], config: MemoryProviderConfig): Promise<string[]> {
@@ -104,12 +107,15 @@ async function filterAliasesWithRetry(flatAliases: string[], config: MemoryProvi
 	const systemPrompt = aliasFilterExtractionPrompt();
 	const userPrompt = JSON.stringify(flatAliases);
 
-	const result = await withRetry(() => generateText({ model, system: systemPrompt, prompt: userPrompt }).then((r) => r.text), {
-		maxAttempts: RETRY_COUNT + 1,
-		backoffMs: BACKOFF_SECONDS * 1000,
-		shouldRetry: (err) => !isAuthError(err),
-		onRetry: (attempt) => log.warn('memory-pipeline', `Alias filter attempt ${attempt} failed, retrying...`),
-	});
+	const result = await withRetry(
+		() => generateText({ model, system: systemPrompt, prompt: userPrompt, ...(config.callSettings ?? {}) }).then((r) => r.text),
+		{
+			maxAttempts: RETRY_COUNT + 1,
+			backoffMs: BACKOFF_SECONDS * 1000,
+			shouldRetry: (err) => !isAuthError(err),
+			onRetry: (attempt) => log.warn('memory-pipeline', `Alias filter attempt ${attempt} failed, retrying...`),
+		}
+	);
 
 	try {
 		const parsed = JSON.parse(stripCodeFences(result));

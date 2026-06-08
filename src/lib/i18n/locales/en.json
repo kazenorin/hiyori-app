@@ -9,6 +9,7 @@
 		"heading": "Settings",
 		"aiProviders": "AI Providers",
 		"addProvider": "+ Add Provider",
+		"advanced": "Advanced",
 		"apiProvider": "API Provider",
 		"providers": {
 			"openai": "OpenAI",

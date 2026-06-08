@@ -46,12 +46,15 @@ export async function generateAndRecordActShortSummary(actLineId: string, actSum
 			promptText += `\n\n${actShortSummaryCharacterPrefix()}: ${characterNames.join(', ')}`;
 		}
 
-		const text = await withRetry(() => generateText({ model, system: systemPrompt, prompt: promptText }).then((r) => r.text), {
-			maxAttempts: RETRY_COUNT + 1,
-			backoffMs: BACKOFF_MS,
-			shouldRetry: (err) => !isAuthError(err),
-			onRetry: (attempt) => log.warn('act-short-summary', `Attempt ${attempt} failed, retrying...`),
-		});
+		const text = await withRetry(
+			() => generateText({ model, system: systemPrompt, prompt: promptText, ...(config.callSettings ?? {}) }).then((r) => r.text),
+			{
+				maxAttempts: RETRY_COUNT + 1,
+				backoffMs: BACKOFF_MS,
+				shouldRetry: (err) => !isAuthError(err),
+				onRetry: (attempt) => log.warn('act-short-summary', `Attempt ${attempt} failed, retrying...`),
+			}
+		);
 
 		const sceneCount = (await getLastSceneNumber(actLineId)) ?? 0;
 		const summaryWithCount = `${text.trim()} [${pluralizeScenes(sceneCount)}]`;

@@ -9,6 +9,7 @@
 		"heading": "設定",
 		"aiProviders": "AI 提供者",
 		"addProvider": "+ 新增提供者",
+		"advanced": "進階",
 		"apiProvider": "API 提供者",
 		"providers": {
 			"openai": "OpenAI",

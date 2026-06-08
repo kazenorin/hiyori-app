@@ -113,6 +113,7 @@ export async function streamChatResponse(
 			systemPrompt,
 			abortSignal: abortSignal,
 			providerOptions: getProviderOptions(providerConfig),
+			callSettings: providerConfig.callSettings,
 			tools,
 		},
 		accumulator.callbacks

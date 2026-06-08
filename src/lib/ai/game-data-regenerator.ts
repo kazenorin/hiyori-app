@@ -54,7 +54,7 @@ export async function regenerateGameData(params: GameDataRegenerationContext): P
 
 	const messages: MessageBase[] = contents.map((content) => ({ role: 'user' as const, content }));
 
-	const result = await generateText({ model, system: gameMasterSystemPrompt, messages });
+	const result = await generateText({ model, system: gameMasterSystemPrompt, messages, ...(config.callSettings ?? {}) });
 	const gmText = result.text.trim();
 	if (!gmText) return null;
 

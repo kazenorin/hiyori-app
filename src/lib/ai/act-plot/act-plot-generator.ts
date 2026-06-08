@@ -152,7 +152,13 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 		prompt: generationPrompt,
 		template,
 	});
-	const writerResult = await generateText({ model, system: systemPrompt, messages: writerMessages, abortSignal });
+	const writerResult = await generateText({
+		model,
+		system: systemPrompt,
+		messages: writerMessages,
+		abortSignal,
+		...(config.callSettings ?? {}),
+	});
 	const writerText = writerResult.text.trim();
 
 	if (!writerText) {
@@ -180,7 +186,13 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 				writerOutput: writerText,
 				prompt: reviewerPrompt,
 			});
-			const reviewerResult = await generateText({ model, system: systemPrompt, messages: reviewerMessages, abortSignal });
+			const reviewerResult = await generateText({
+				model,
+				system: systemPrompt,
+				messages: reviewerMessages,
+				abortSignal,
+				...(config.callSettings ?? {}),
+			});
 			const reviewerText = reviewerResult.text.trim();
 
 			await log.info(
@@ -204,7 +216,13 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 					reviewerOutput: reviewerText,
 					prompt: editorPrompt,
 				});
-				const editorResult = await generateText({ model, system: systemPrompt, messages: editorMessages, abortSignal });
+				const editorResult = await generateText({
+					model,
+					system: systemPrompt,
+					messages: editorMessages,
+					abortSignal,
+					...(config.callSettings ?? {}),
+				});
 				const editorText = editorResult.text.trim();
 
 				if (!editorText) {

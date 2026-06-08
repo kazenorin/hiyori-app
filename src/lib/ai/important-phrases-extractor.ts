@@ -29,12 +29,15 @@ async function generateWithRetry(narrativeBody: string, config: MinorTaskAgentPr
 	const model = await createModel(config);
 	const systemPrompt = importantPhrasesSystemPrompt();
 
-	return withRetry(() => generateText({ model, system: systemPrompt, prompt: narrativeBody }).then((r) => r.text), {
-		maxAttempts: RETRY_COUNT + 1,
-		backoffMs: BACKOFF_MS,
-		shouldRetry: (err) => !isAuthError(err),
-		onRetry: (attempt) => log.warn('important-phrases', `Extraction attempt ${attempt} failed, retrying...`),
-	});
+	return withRetry(
+		() => generateText({ model, system: systemPrompt, prompt: narrativeBody, ...(config.callSettings ?? {}) }).then((r) => r.text),
+		{
+			maxAttempts: RETRY_COUNT + 1,
+			backoffMs: BACKOFF_MS,
+			shouldRetry: (err) => !isAuthError(err),
+			onRetry: (attempt) => log.warn('important-phrases', `Extraction attempt ${attempt} failed, retrying...`),
+		}
+	);
 }
 
 function parsePhrases(text: string): string[] {

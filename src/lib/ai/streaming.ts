@@ -1,5 +1,5 @@
 import type { MessageBase } from '$lib/db/messages';
-import { stepCountIs, streamText, type ToolSet } from 'ai';
+import { stepCountIs, streamText, type ToolSet, type CallSettings } from 'ai';
 import type { LanguageModel } from 'ai';
 import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
 import { fileLog } from '$lib/logging/logger';
@@ -14,6 +14,7 @@ export interface StreamConfig {
 	systemPrompt: string;
 	abortSignal: AbortSignal;
 	providerOptions?: SharedV3ProviderOptions;
+	callSettings?: CallSettings;
 	tools?: ToolSet;
 	maxSteps?: number;
 }
@@ -70,6 +71,7 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 
 		const result = streamText({
 			...baseConfig,
+			...(config.callSettings ?? {}),
 			...(hasTools
 				? {
 						tools: config.tools,

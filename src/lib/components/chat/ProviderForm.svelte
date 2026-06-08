@@ -3,6 +3,7 @@
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
 	import { isTauriSync } from '$lib/runtime';
 	import type { ApiType, Provider, ProviderConfig } from '$lib/stores/settings.svelte';
+	import type { CallSettings } from 'ai';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
 	import TextField from '$lib/components/ui/TextField.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -25,6 +26,17 @@
 	let formApiKey = $state(config?.apiKey ?? '');
 	let formCorsBypassEnabled = $state(config?.corsBypassEnabled ?? false);
 	let formWispProxyUrl = $state(config?.wispProxyUrl ?? 'ws://localhost:6001');
+
+	let formTemperatureEnabled = $state(config?.callSettings?.temperature !== undefined);
+	let formTemperature = $state(config?.callSettings?.temperature ?? 0.7);
+	let formTopPEnabled = $state(config?.callSettings?.topP !== undefined);
+	let formTopP = $state(config?.callSettings?.topP ?? 1);
+	let formTopKEnabled = $state(config?.callSettings?.topK !== undefined);
+	let formTopK = $state(config?.callSettings?.topK ?? 0);
+	let formPresencePenaltyEnabled = $state(config?.callSettings?.presencePenalty !== undefined);
+	let formPresencePenalty = $state(config?.callSettings?.presencePenalty ?? 0);
+	let formFrequencyPenaltyEnabled = $state(config?.callSettings?.frequencyPenalty !== undefined);
+	let formFrequencyPenalty = $state(config?.callSettings?.frequencyPenalty ?? 0);
 
 	let baseUrlHint = $derived(
 		formProvider === 'openai'
@@ -80,6 +92,16 @@
 		}
 	}
 
+	function buildCallSettings(): CallSettings | undefined {
+		const cs: CallSettings = {};
+		if (formTemperatureEnabled) cs.temperature = formTemperature;
+		if (formTopPEnabled) cs.topP = formTopP;
+		if (formTopKEnabled) cs.topK = formTopK;
+		if (formPresencePenaltyEnabled) cs.presencePenalty = formPresencePenalty;
+		if (formFrequencyPenaltyEnabled) cs.frequencyPenalty = formFrequencyPenalty;
+		return Object.keys(cs).length > 0 ? cs : undefined;
+	}
+
 	function handleSave() {
 		onsave({
 			name: formName || t('settings.untitledProvider'),
@@ -90,6 +112,7 @@
 			apiKey: formApiKey,
 			corsBypassEnabled: formCorsBypassEnabled,
 			wispProxyUrl: formWispProxyUrl,
+			callSettings: buildCallSettings(),
 		});
 	}
 </script>
@@ -189,6 +212,51 @@
 					/>
 				{/if}
 			{/if}
+
+			<details class="mt-2">
+				<summary class="text-sm font-medium cursor-pointer">{t('settings.advanced')}</summary>
+				<div class="mt-2 space-y-2">
+					<label class="flex items-center gap-2">
+						<input type="checkbox" class="checkbox" bind:checked={formTemperatureEnabled} />
+						<span class="text-sm font-medium text-surface-700-300">Temperature</span>
+					</label>
+					{#if formTemperatureEnabled}
+						<input class="input" type="number" step="0.01" min="0" max="1" bind:value={formTemperature} />
+					{/if}
+
+					<label class="flex items-center gap-2">
+						<input type="checkbox" class="checkbox" bind:checked={formTopPEnabled} />
+						<span class="text-sm font-medium text-surface-700-300">Top P</span>
+					</label>
+					{#if formTopPEnabled}
+						<input class="input" type="number" step="0.01" min="0" max="1" bind:value={formTopP} />
+					{/if}
+
+					<label class="flex items-center gap-2">
+						<input type="checkbox" class="checkbox" bind:checked={formTopKEnabled} />
+						<span class="text-sm font-medium text-surface-700-300">Top K</span>
+					</label>
+					{#if formTopKEnabled}
+						<input class="input" type="number" step="1" min="0" max="100" bind:value={formTopK} />
+					{/if}
+
+					<label class="flex items-center gap-2">
+						<input type="checkbox" class="checkbox" bind:checked={formPresencePenaltyEnabled} />
+						<span class="text-sm font-medium text-surface-700-300">Presence Penalty</span>
+					</label>
+					{#if formPresencePenaltyEnabled}
+						<input class="input" type="number" step="0.01" min="-1" max="1" bind:value={formPresencePenalty} />
+					{/if}
+
+					<label class="flex items-center gap-2">
+						<input type="checkbox" class="checkbox" bind:checked={formFrequencyPenaltyEnabled} />
+						<span class="text-sm font-medium text-surface-700-300">Frequency Penalty</span>
+					</label>
+					{#if formFrequencyPenaltyEnabled}
+						<input class="input" type="number" step="0.01" min="-1" max="1" bind:value={formFrequencyPenalty} />
+					{/if}
+				</div>
+			</details>
 		</div>
 	</details>
 	<div class="flex gap-2">

@@ -95,6 +95,7 @@ export async function generateWorld(storyId: string, abortSignal?: AbortSignal):
 		messages: allMessages,
 		system: systemPrompt,
 		abortSignal,
+		...(config!.callSettings ?? {}),
 	});
 
 	const contentParts: string[] = [];
@@ -159,6 +160,7 @@ export async function generateWorldFromCards(
 		messages,
 		system: systemPrompt,
 		abortSignal,
+		...(config!.callSettings ?? {}),
 	});
 
 	const contentParts: string[] = [];

@@ -169,6 +169,7 @@ export async function runNonStreamingPhase(
 		abortSignal,
 		...(tools && Object.keys(tools).length > 0 ? { tools } : {}),
 		stopWhen: stepCountIs(maxSteps),
+		...(providerConfig.callSettings ?? {}),
 	});
 
 	const usage = result.usage;

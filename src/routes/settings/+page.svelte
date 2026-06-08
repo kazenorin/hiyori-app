@@ -151,6 +151,7 @@
 			apiKey: config.apiKey,
 			corsBypassEnabled: config.corsBypassEnabled,
 			wispProxyUrl: config.wispProxyUrl,
+			callSettings: config.callSettings,
 		});
 		// Start editing the copy immediately
 		startEdit(copy);

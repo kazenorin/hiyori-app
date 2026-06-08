@@ -112,7 +112,7 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 			content: characterExtractionPrompt(),
 		},
 	];
-	const result = await generateText({ model, system: systemPrompt, messages });
+	const result = await generateText({ model, system: systemPrompt, messages, ...(config.callSettings ?? {}) });
 
 	await logCharacterCardActivity(
 		'extraction-end',
@@ -363,7 +363,7 @@ export async function generateCharacterCard(
 
 	await logCharacterCardActivity('generation-start', `Character: ${entry.character}\n\nMessages:\n${JSON.stringify(messages, null, 2)}`);
 
-	const result = await generateText({ model, system: combinedSystem, messages });
+	const result = await generateText({ model, system: combinedSystem, messages, ...(config.callSettings ?? {}) });
 
 	await logCharacterCardActivity(
 		'generation-end',

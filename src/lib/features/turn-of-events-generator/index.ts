@@ -85,6 +85,7 @@ export async function generateTurnOfEvents(params: GenerateTurnOfEventsParams): 
 		model,
 		system: fullSystemPrompt,
 		messages: [{ role: 'user', content: userMessage }],
+		...(config.callSettings ?? {}),
 	});
 
 	const text = result.text.trim();
