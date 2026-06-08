@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { omitBy } from 'lodash-es';
 import { getDatabase } from '$lib/db/database';
 import { fs } from '$lib/fs/file-system';
+import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
 
 export type Provider = 'openai' | 'openai-compatible' | 'ollama';
 export type ApiType = 'chat-completions' | 'responses';
@@ -24,6 +25,18 @@ export interface ProviderConfig {
 	apiKey?: string;
 	corsBypassEnabled: boolean;
 	wispProxyUrl: string;
+}
+
+export function getProviderOptions(config: ProviderConfig): SharedV3ProviderOptions {
+	if (config.provider === 'openai') {
+		return {
+			openai: {
+				reasoningEffort: 'medium',
+				reasoningSummary: 'detailed',
+			},
+		};
+	}
+	return {};
 }
 
 export interface Settings {

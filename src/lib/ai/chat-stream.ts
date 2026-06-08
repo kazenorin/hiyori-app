@@ -1,7 +1,7 @@
 import type { MessageBase } from '$lib/db/messages';
 import { type ToolSet } from 'ai';
 import { executeStream, type StreamResultMetadata } from './streaming';
-import { getMainProviderConfig, type ProviderConfig } from '../stores/settings.svelte';
+import { getMainProviderConfig, type ProviderConfig, getProviderOptions } from '../stores/settings.svelte';
 import { createStreamAccumulator, type StreamAccumulator, type StreamState } from './chat-callbacks';
 import { ERR_NO_MAIN_PROVIDER, ERR_AUTH_FAILED } from '$lib/definitions/error-messages';
 import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
@@ -112,12 +112,7 @@ export async function streamChatResponse(
 			messages: history,
 			systemPrompt,
 			abortSignal: abortSignal,
-			providerOptions: {
-				openai: {
-					reasoningEffort: 'medium',
-					reasoningSummary: 'detailed',
-				},
-			},
+			providerOptions: getProviderOptions(providerConfig),
 			tools,
 		},
 		accumulator.callbacks
