@@ -15,7 +15,7 @@
 	import { getIsActive as getIsWorldBuilderActive } from '$lib/features/world-builder/world-builder.svelte';
 	import { batchGetActLineEventSummary, type ActLineEventSummary } from '$lib/db/act-lines';
 	import { getActEnded, getStoryConcluded } from '$lib/ai/chat.svelte';
-	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
+	import { getSettings, isMemoryAvailable, updateSettings } from '$lib/stores/settings.svelte';
 	import { exportStory } from '$lib/features/story-export-load/story-exporter';
 	import { toaster } from '$lib/stores/toaster.svelte';
 	import { type SwipeEndEventDetail } from '@svelte-put/swipeable';
@@ -396,12 +396,14 @@
 	>
 		{exportingStory ? t('sidebar.exporting') : t('sidebar.exportStory')}
 	</button>
-	<a
-		href="/memory-manager"
-		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
-	>
-		{t('sidebar.memoryManager')}
-	</a>
+	{#if isMemoryAvailable()}
+		<a
+			href="/memory-manager"
+			class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+		>
+			{t('sidebar.memoryManager')}
+		</a>
+	{/if}
 	<a
 		href="/file-manager"
 		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"

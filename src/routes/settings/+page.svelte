@@ -1,14 +1,12 @@
 <script lang="ts">
 	import {
 		addProviderConfig,
-		type ApiType,
 		assignRole,
 		deleteProviderConfig,
 		getMinorTaskAgentProviderConfig,
 		isMemoryAvailable,
 		isMemoryCapable,
 		type LogLevel,
-		type Provider,
 		type ProviderConfig,
 		resetConfiguration,
 		settings,
@@ -25,16 +23,8 @@
 	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import ProviderForm from '$lib/components/chat/ProviderForm.svelte';
-	import TextField from '$lib/components/ui/TextField.svelte';
 	import NumberField from '$lib/components/ui/NumberField.svelte';
-	import {
-		getProviderItems,
-		getApiTypeItems,
-		getLocaleItems,
-		getLogLevelItems,
-		getReviewerModeItems,
-		getRoleItems,
-	} from '$lib/features/settings-options';
+	import { getLocaleItems, getLogLevelItems, getReviewerModeItems, getRoleItems } from '$lib/features/settings-options';
 	import {
 		type DataImportExportState,
 		createDataImportExportState,
@@ -171,10 +161,6 @@
 	}
 
 	const mainProviderId = $derived(settings.roleAssignments['main']);
-
-	const providerItems = $derived(getProviderItems());
-
-	const apiTypeItems = $derived(getApiTypeItems());
 
 	const localeItems = $derived(getLocaleItems());
 
