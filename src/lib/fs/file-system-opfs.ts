@@ -136,6 +136,10 @@ export class OpfsFileSystem implements FileSystem {
 			}
 			const writable = await fileHandle.createWritable({ keepExistingData: options?.append ?? false });
 			try {
+				if (options?.append) {
+					const file = await fileHandle.getFile();
+					await writable.seek(file.size);
+				}
 				await writable.write(content);
 			} finally {
 				await writable.close();
