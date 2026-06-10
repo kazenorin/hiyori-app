@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
-	import { version } from '$app/environment';
+	import { version } from '$lib/app/version';
 	import {
 		getStories,
 		getActs,
@@ -413,5 +413,5 @@
 	>
 		{t('sidebar.fileManager')}
 	</a>
-	<p class="text-center text-xs text-surface-400-600 pt-1 pb-1 select-none">{version}</p>
+	<p class="text-center text-[10px] text-surface-400-600 select-none">{version}</p>
 </div>
