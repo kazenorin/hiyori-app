@@ -106,11 +106,11 @@
 				<h2 class="h4">{t('loadStory.storyInfo')}</h2>
 				<div class="grid grid-cols-2 gap-4">
 					<div>
-						<label class="text-sm font-medium text-surface-700-300">{t('loadStory.storyName')}</label>
+						<span class="text-sm font-medium text-surface-700-300">{t('loadStory.storyName')}</span>
 						<p class="text-sm">{store.data.story.name}</p>
 					</div>
 					<div>
-						<label class="text-sm font-medium text-surface-700-300">{t('loadStory.locale')}</label>
+						<span class="text-sm font-medium text-surface-700-300">{t('loadStory.locale')}</span>
 						<p class="text-sm">{store.data.story.locale}</p>
 					</div>
 				</div>

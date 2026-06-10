@@ -282,12 +282,15 @@ export async function runWriterPhase(
 	return trackPhase('WRITER', result, ctx.providerConfigs.writer?.model);
 }
 
-export const ENDING_LABELS: Record<EndingType, string> = {
-	good: ls('tools.endAct.endingGood'),
-	bad: ls('tools.endAct.endingBad'),
-	bittersweet: ls('tools.endAct.endingBittersweet'),
-	alternative: ls('tools.endAct.endingAlternative'),
-};
+export function getEndingLabel(endingType: EndingType): string {
+	const labels: Record<EndingType, string> = {
+		good: ls('tools.endAct.endingGood'),
+		bad: ls('tools.endAct.endingBad'),
+		bittersweet: ls('tools.endAct.endingBittersweet'),
+		alternative: ls('tools.endAct.endingAlternative'),
+	};
+	return labels[endingType];
+}
 
 export async function runReviewerEditorPhases(
 	ctx: PipelineRunContext,

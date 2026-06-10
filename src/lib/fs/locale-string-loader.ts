@@ -48,7 +48,9 @@ async function ensureAndLoadBase(baseDir: string, fileName: string, defaultConte
 	await ensureBaseFileExists(baseDir, fileName, defaultContent);
 	const fullPath = `${baseDir}/${fileName}`;
 	const content = await fs.readTextFile(fullPath);
-	return yaml.load(content) as Record<string, unknown>;
+	const fileData = yaml.load(content) as Record<string, unknown>;
+	const defaults = yaml.load(defaultContent) as Record<string, unknown>;
+	return deepMerge(defaults, fileData);
 }
 
 function deepMerge(target: Record<string, unknown>, source: Record<string, unknown>): Record<string, unknown> {

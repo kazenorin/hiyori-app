@@ -79,7 +79,7 @@ const defaults: Settings = {
 	locale: 'en',
 	logLevel: 'info',
 	fontSize: 1.0,
-	memoryEnabled: true,
+	memoryEnabled: false,
 	memoryProviderRole: 'main',
 	embeddingProviderRole: 'main',
 	plotPlannerProviderRole: 'main',

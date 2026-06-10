@@ -17,7 +17,7 @@ import { aggregateMetadata } from './phase-executor';
 import { type StreamResultMetadata } from '../streaming';
 import {
 	defaultTargetWordCount,
-	ENDING_LABELS,
+	getEndingLabel,
 	maybeExtractImportantPhrases,
 	type PipelinePrompts,
 	type PipelineRunContext,
@@ -203,7 +203,7 @@ export async function runEpiloguePipeline(input: EpiloguePipelineInput): Promise
 	const ctx = await buildPipelineContext(input, loadedPrompts, providerConfigs, EpiloguePreEditorContext);
 
 	const tracker = buildTrackPhase();
-	const epilogueExtractionPrompt = writerEpilogueExtractionPrompt(ENDING_LABELS[endingType]);
+	const epilogueExtractionPrompt = writerEpilogueExtractionPrompt(getEndingLabel(endingType));
 
 	let state: PipelineState = {};
 	state = await runWriterPhase(ctx, state, tracker.trackPhase, epilogueExtractionPrompt);

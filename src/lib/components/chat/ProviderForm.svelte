@@ -18,24 +18,43 @@
 
 	let { mode, config, isMainProvider = false, onsave, oncancel }: Props = $props();
 
+	// Snapshot the initial values once; the edit form should not reactively track prop changes
+	// svelte-ignore state_referenced_locally
 	let formName = $state(config?.name ?? '');
+	// svelte-ignore state_referenced_locally
 	let formProvider = $state<Provider>(config?.provider ?? 'openai-compatible');
+	// svelte-ignore state_referenced_locally
 	let formApiType = $state<ApiType>(config?.apiType ?? 'chat-completions');
+	// svelte-ignore state_referenced_locally
 	let formBaseURL = $state(config?.baseURL ?? 'http://localhost:1234/v1');
+	// svelte-ignore state_referenced_locally
 	let formModel = $state(config?.model ?? '');
+	// svelte-ignore state_referenced_locally
 	let formApiKey = $state(config?.apiKey ?? '');
+	// svelte-ignore state_referenced_locally
 	let formCorsBypassEnabled = $state(config?.corsBypassEnabled ?? false);
+	// svelte-ignore state_referenced_locally
 	let formWispProxyUrl = $state(config?.wispProxyUrl ?? 'ws://localhost:6001');
 
+	// svelte-ignore state_referenced_locally
 	let formTemperatureEnabled = $state(config?.callSettings?.temperature !== undefined);
+	// svelte-ignore state_referenced_locally
 	let formTemperature = $state(config?.callSettings?.temperature ?? 0.7);
+	// svelte-ignore state_referenced_locally
 	let formTopPEnabled = $state(config?.callSettings?.topP !== undefined);
+	// svelte-ignore state_referenced_locally
 	let formTopP = $state(config?.callSettings?.topP ?? 1);
+	// svelte-ignore state_referenced_locally
 	let formTopKEnabled = $state(config?.callSettings?.topK !== undefined);
+	// svelte-ignore state_referenced_locally
 	let formTopK = $state(config?.callSettings?.topK ?? 0);
+	// svelte-ignore state_referenced_locally
 	let formPresencePenaltyEnabled = $state(config?.callSettings?.presencePenalty !== undefined);
+	// svelte-ignore state_referenced_locally
 	let formPresencePenalty = $state(config?.callSettings?.presencePenalty ?? 0);
+	// svelte-ignore state_referenced_locally
 	let formFrequencyPenaltyEnabled = $state(config?.callSettings?.frequencyPenalty !== undefined);
+	// svelte-ignore state_referenced_locally
 	let formFrequencyPenalty = $state(config?.callSettings?.frequencyPenalty ?? 0);
 
 	let baseUrlHint = $derived(
