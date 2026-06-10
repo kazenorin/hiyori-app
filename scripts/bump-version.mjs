@@ -63,6 +63,15 @@ function bumpFiles(oldVer, newVer) {
 	}
 }
 
+function updatePackageLock() {
+	try {
+		execSync('npm install --package-lock-only --ignore-scripts', { cwd: join(ROOT, '..'), stdio: 'inherit' });
+		console.log('  Updated package-lock.json');
+	} catch {
+		console.warn('  Warning: npm install --package-lock-only failed. Run it manually if needed.');
+	}
+}
+
 function updateCargoLock() {
 	const cargoTomlDir = join(ROOT, '..', 'src-tauri');
 	try {
@@ -87,6 +96,7 @@ function main() {
 
 	bumpFiles(oldVer, newVer);
 	console.log('');
+	updatePackageLock();
 	updateCargoLock();
 
 	console.log(`\nDone. To commit, run:`);
