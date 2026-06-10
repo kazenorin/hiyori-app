@@ -2,7 +2,6 @@ import {
 	getActiveActLineId,
 	getActiveAct,
 	createStoryFromWorldBuilder,
-	selectActLine,
 	setActPlotGenerationPhase,
 	getActiveStory,
 	getActiveDirectorNotesText,
@@ -15,11 +14,10 @@ import {
 	removeLastInterviewAssistantMessage,
 	exitWorldBuilderMode,
 	getMessages as getWorldBuilderMessages,
-	getActPlotInterview,
 } from '$lib/features/world-builder/world-builder.svelte';
 import { loadActLineMessages, sendInitialNarration } from '$lib/ai/chat.svelte';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
-import { updateWorldCard, ensureWorldFile } from '$lib/ai/world-generator';
+import { updateWorldCard } from '$lib/ai/world-generator';
 import { ensureActPlot } from '$lib/ai/act-plot';
 import { getActLine, getPrecedingActSummary, getPremisesMessages, getMessagesForLine } from '$lib/db/act-lines';
 import { generateTurnOfEvents } from '$lib/features/turn-of-events-generator';

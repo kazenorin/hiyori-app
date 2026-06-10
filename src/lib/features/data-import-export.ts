@@ -1,11 +1,4 @@
-import {
-	downloadExport,
-	exportConfigData,
-	exportGameData,
-	importConfigData,
-	importGameData,
-	readFileAsUint8Array,
-} from '$lib/db/data-portability';
+import { downloadExport, readFileAsUint8Array } from '$lib/db/data-portability';
 import { t } from '$lib/i18n';
 
 export interface DataImportExportState {

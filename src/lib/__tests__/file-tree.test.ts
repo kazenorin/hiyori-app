@@ -2,11 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
 import { setFileSystem } from '$lib/fs/file-system';
 import * as dbStoryFolders from '$lib/db/story-folders';
-import {
-	readDirectoryNodes,
-	classifyManagedConfig,
-	getFolderType,
-} from '$lib/fs/file-tree';
+import { readDirectoryNodes, classifyManagedConfig, getFolderType } from '$lib/fs/file-tree';
 
 describe('readDirectoryNodes — managedConfig classification', () => {
 	let fs: InMemoryFileSystem;
@@ -45,18 +41,12 @@ describe('readDirectoryNodes — managedConfig classification', () => {
 
 		it('classifies known config .md files as managed', () => {
 			// This path exists in the bundled manifest
-			const result = classifyManagedConfig(
-				'config/en/prompt-templates/act/act-card-template.md',
-				'config'
-			);
+			const result = classifyManagedConfig('config/en/prompt-templates/act/act-card-template.md', 'config');
 			expect(result).toBe('managed');
 		});
 
 		it('classifies story files with manifest match as story-override', () => {
-			const result = classifyManagedConfig(
-				'my-story/en/prompt-templates/act/act-card-template.md',
-				'story'
-			);
+			const result = classifyManagedConfig('my-story/en/prompt-templates/act/act-card-template.md', 'story');
 			expect(result).toBe('story-override');
 		});
 	});
@@ -79,8 +69,8 @@ describe('readDirectoryNodes — managedConfig classification', () => {
 			const enDir = children.find((n) => n.name === 'en');
 			expect(enDir?.folderType).toBe('config');
 
-			const promptChildren = await readDirectoryNodes('config/en');
-			const templateChildren = await readDirectoryNodes('config/en/prompt-templates');
+			const _promptChildren = await readDirectoryNodes('config/en');
+			const _templateChildren = await readDirectoryNodes('config/en/prompt-templates');
 			const actChildren = await readDirectoryNodes('config/en/prompt-templates/act');
 			const mdFile = actChildren.find((n) => n.name === 'act-card-template.md');
 			expect(mdFile).toBeDefined();

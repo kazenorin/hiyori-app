@@ -51,11 +51,9 @@
 
 {#if isOpen}
 	<!-- Backdrop: only covers viewport above the tab bar -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div class="fixed inset-x-0 top-0 z-40 bg-black/50" style="bottom: 52px;" onclick={closeSheet} role="presentation"></div>
 
 	<!-- Sheet content: sits above backdrop, bottom-aligned above tab bar -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-x-0 bottom-[52px] z-50 bg-surface-50-950 border-t border-surface-200-800 rounded-t-2xl p-4 max-h-[75vh] overflow-y-auto"
 		role="dialog"
@@ -121,7 +119,7 @@
 							</Accordion.ItemTrigger>
 							<Accordion.ItemContent>
 								<div class="text-sm text-surface-700-300 mt-1 space-y-1 pb-2">
-									{#each activePlotThreads as thread}
+									{#each activePlotThreads as thread (thread)}
 										<div class="flex items-center gap-1.5">
 											<span class="w-1.5 h-1.5 rounded-full bg-primary-500"></span>
 											<span>{thread}</span>

@@ -5,6 +5,7 @@
 	import { getEmbeddingProviderConfig, getMemoryProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
 	import { t } from '$lib/i18n';
 	import { sampleSize } from 'lodash-es';
+	import { SvelteSet } from 'svelte/reactivity';
 	import {
 		getActiveStory,
 		getActiveAct,
@@ -43,7 +44,7 @@
 	const searchLimit = 5;
 
 	function dedup(items: MemoryItem[]): MemoryItem[] {
-		const seen = new Set<string>();
+		const seen = new SvelteSet<string>();
 		return items
 			.filter((item) => {
 				if (seen.has(item.id)) return false;

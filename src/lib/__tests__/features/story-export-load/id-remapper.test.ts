@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { regenerateIds } from '$lib/features/story-export-load/id-remapper';
 import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
 

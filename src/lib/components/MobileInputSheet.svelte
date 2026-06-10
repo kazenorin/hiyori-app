@@ -47,7 +47,6 @@
 
 {#if isExpanded}
 	<!-- Expanded sheet: backdrop covers viewport above tab bar; content sits at bottom above tab bar -->
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-x-0 top-0 z-40 bg-black/50 transition-opacity duration-200"
 		style="bottom: 52px;"
@@ -55,7 +54,6 @@
 		role="presentation"
 	></div>
 
-	<!-- svelte-ignore a11y_no_static_element_interactions -->
 	<div
 		class="fixed inset-x-0 bottom-[52px] z-50 bg-surface-50-950 border-t border-surface-200-800 rounded-t-2xl p-3 max-h-[80vh] flex flex-col"
 		role="dialog"

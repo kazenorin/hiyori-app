@@ -1,4 +1,5 @@
 <script lang="ts">
+	/* eslint-disable svelte/no-at-html-tags -- SVG body is from trusted internal icon set */
 	import { ICONS, type IconName } from '$lib/ui/icons';
 
 	interface Props {

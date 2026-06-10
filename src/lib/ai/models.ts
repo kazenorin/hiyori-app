@@ -1,4 +1,4 @@
-import { fetch, resolveFetch } from '$lib/http/fetch';
+import { resolveFetch } from '$lib/http/fetch';
 import type { Provider } from '$lib/stores/settings.svelte';
 
 export interface ModelInfo {

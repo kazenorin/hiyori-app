@@ -2,6 +2,7 @@ import JSZip from 'jszip';
 import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
 import type { LoadMode } from '$lib/features/story-export-load/story-loader';
 import { validateArchive } from '$lib/features/story-export-load/archive-validator';
+import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 export interface ActLineSelection {
 	id: string;
@@ -80,8 +81,8 @@ class LoadStoryState {
 	}
 
 	private buildActLineSelections(data: StoryExportData): ActLineSelection[] {
-		const actMap = new Map<string, (typeof data.acts)[number]>(data.acts.map((a) => [a.id, a]));
-		const eventMap = new Map<string, boolean>();
+		const actMap = new SvelteMap<string, (typeof data.acts)[number]>(data.acts.map((a) => [a.id, a]));
+		const eventMap = new SvelteMap<string, boolean>();
 
 		for (const evt of data.actLineEvents) {
 			if (evt.event === 'ending') {
@@ -143,7 +144,7 @@ class LoadStoryState {
 			if (!act?.continuesFromActLineId) continue;
 
 			let currentId: string | null = act.continuesFromActLineId;
-			const visited = new Set<string>();
+			const visited = new SvelteSet<string>();
 			while (currentId && !visited.has(currentId)) {
 				visited.add(currentId);
 				const parentLine = actLineMap.get(currentId);

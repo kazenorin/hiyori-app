@@ -2,7 +2,7 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createOllama } from 'ai-sdk-ollama';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
-import { fetch, resolveFetch } from '$lib/http/fetch';
+import { resolveFetch } from '$lib/http/fetch';
 import { ERR_API_KEY_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 
 export async function createModel(config: ProviderConfig) {

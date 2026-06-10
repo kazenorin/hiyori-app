@@ -11,7 +11,6 @@
 		isFolderTypeProtected,
 		isConfigUserModified,
 		type FileNode,
-		type FolderType,
 	} from '$lib/fs/file-tree';
 	import {
 		type FileActionState,
@@ -557,7 +556,7 @@
 				bind:value={selectedStoryFolder}
 			>
 				<option value="">{t('fileManager.selectStory')}</option>
-				{#each stories as story}
+				{#each stories as story (story.folderName)}
 					<option value={story.folderName}>{story.storyName}</option>
 				{/each}
 			</select>

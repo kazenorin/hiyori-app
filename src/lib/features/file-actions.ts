@@ -20,7 +20,7 @@ export function createFileActionState(): FileActionState {
 	};
 }
 
-export async function handleExport(state: FileActionState, selectedFilePath: string, onComplete?: () => void): Promise<void> {
+export async function handleExport(state: FileActionState, selectedFilePath: string, _onComplete?: () => void): Promise<void> {
 	state.isExporting = true;
 	state.actionError = null;
 	try {

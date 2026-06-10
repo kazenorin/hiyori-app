@@ -41,7 +41,7 @@ vi.mock('$lib/ai/provider', () => ({
 	createEmbeddingModel: vi.fn(() => ({})),
 }));
 
-const mockTraceActLineChain = vi.fn(async (actLineId: string) => [
+const mockTraceActLineChain = vi.fn(async (_actLineId: string) => [
 	{ actLineId: 'line-1', actNumber: 1 },
 	{ actLineId: 'line-2', actNumber: 2 },
 ]);
