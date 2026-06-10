@@ -64,8 +64,10 @@
 		saveEditMainChatMessage,
 		saveEditWorldBuilderMessage,
 	} from '$lib/features/message-editor.svelte';
-	import { getActiveAct, getActiveActLineId, getActiveStory, getIsSelectingStory } from '$lib/stores/stories.svelte';
-	import { isDirectorModeEnabled } from '$lib/stores/settings.svelte';
+	import { getActiveActLineId, getActiveStory, getIsSelectingStory } from '$lib/stores/stories.svelte';
+	import { isDirectorModeEnabled, isTTSEnabled, getTTSVoice } from '$lib/stores/settings.svelte';
+	import { ttsPlayer } from '$lib/kokoro/player.svelte';
+	import { buildTTSPassage } from '$lib/kokoro/passage';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
 	import ChatControls from '$lib/components/ChatControls.svelte';
 	import DirectorNotesPanel from '$lib/components/DirectorNotesPanel.svelte';
@@ -95,7 +97,9 @@
 	let chatContainer = $state<HTMLDivElement | null>(null);
 	let wbChatContainer = $state<HTMLDivElement | null>(null);
 	let copiedId = $state<string | null>(null);
+	// eslint-disable-next-line svelte/prefer-writable-derived -- wasChatStreaming depends on its own previous value (stateful observer)
 	let wasChatStreaming = $state(false);
+	// eslint-disable-next-line svelte/prefer-writable-derived -- wasWbStreaming depends on its own previous value (stateful observer)
 	let wasWbStreaming = $state(false);
 	let rightPanelExpanded = $state(false);
 	let latestDecisions = $derived(getLatestDecisions());
@@ -104,6 +108,13 @@
 	let lastMessageIdx = $derived(getMessages().findLastIndex((m: UIMessage) => m.role === 'assistant'));
 	let characterNames = $derived(getCharacterNames());
 	let storyMessageTemplate = $state<string>('');
+
+	$effect(() => {
+		const story = getActiveStory();
+		if (story?.locale !== 'en' && ttsPlayer.playingMessageId) {
+			ttsPlayer.stop();
+		}
+	});
 
 	// Sync choices badge count for mobile bottom nav
 	$effect(() => {
@@ -141,6 +152,15 @@
 			toaster.error({ title: t('chat.copyFailed') });
 		}
 	}
+
+	function handleTTS(message: UIMessage): void {
+		const passage = buildTTSPassage(message.variables, message.content);
+		if (!passage) return;
+		const voice = getTTSVoice();
+		ttsPlayer.play(passage, message.id, voice);
+	}
+
+	const ttsVisible = $derived(getActiveStory()?.locale === 'en');
 
 	async function handleRegenerate(messageId: string) {
 		const actLineId = getActiveActLineId();
@@ -578,6 +598,36 @@
 													{copiedId === message.id ? t('chat.copied') : t('chat.copy')}
 												</button>
 											{/if}
+											{#if ttsVisible && message.role === 'assistant' && message.content}
+												{#if ttsPlayer.playingMessageId === message.id}
+													<button
+														class="flex items-center gap-1 text-xs text-primary-400-500 hover:text-primary-700-300 transition-colors"
+														title={t('tts.stopReading')}
+														onclick={() => ttsPlayer.stop()}
+													>
+														<Icon name="volume-x" class="w-3.5 h-3.5" />
+														{t('tts.stop')}
+													</button>
+												{:else if isTTSEnabled()}
+													<button
+														class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+														title={t('tts.readAloud')}
+														onclick={() => handleTTS(message)}
+													>
+														<Icon name="volume-2" class="w-3.5 h-3.5" />
+														{t('tts.read')}
+													</button>
+												{:else}
+													<button
+														class="flex items-center gap-1 text-xs text-surface-300-600 cursor-not-allowed"
+														title={t('tts.enableTtsInSettings')}
+														disabled
+													>
+														<Icon name="volume-2" class="w-3.5 h-3.5" />
+														{t('tts.read')}
+													</button>
+												{/if}
+											{/if}
 											{#if message.variables && hasTemplateMetadata(message.variables) && i === lastMessageIdx}
 												<button
 													class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
@@ -640,11 +690,16 @@
 										<div class="md:hidden">
 											<MessageActions
 												showCopy={!!message.content}
+												showRead={!!(ttsVisible && message.role === 'assistant' && message.content)}
+												isPlaying={ttsPlayer.playingMessageId === message.id}
+												ttsEnabled={isTTSEnabled()}
 												showEdit={!!(message.variables && hasTemplateMetadata(message.variables) && i === lastMessageIdx)}
 												showFork={!!(message.variables && hasTemplateMetadata(message.variables))}
 												showRegenerate={i === lastMessageIdx}
 												showDelete={i === lastMessageIdx}
 												onCopy={() => handleCopy(message.id, message.content)}
+												onRead={() => handleTTS(message)}
+												onStop={() => ttsPlayer.stop()}
 												onEdit={message.variables && hasTemplateMetadata(message.variables) && i === lastMessageIdx
 													? () => startEditMessage(message, true)
 													: undefined}

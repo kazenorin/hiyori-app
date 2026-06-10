@@ -33,6 +33,7 @@ export default defineConfig({
 			scope: '/',
 			workbox: {
 				globPatterns: ['**/*.{js,css,ico,png,svg,webmanifest,wasm}'],
+				maximumFileSizeToCacheInBytes: 25 * 1024 * 1024,
 			},
 		}),
 	],
@@ -40,5 +41,8 @@ export default defineConfig({
 	server: {
 		port: 1420,
 		strictPort: true,
+	},
+	worker: {
+		format: 'es',
 	},
 });

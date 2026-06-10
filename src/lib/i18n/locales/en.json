@@ -538,5 +538,25 @@
 		"failedToCreateStory": "Failed to create story",
 		"failedToStartInterview": "Failed to start interview",
 		"failedToStartGame": "Failed to start game"
+	},
+	"tts": {
+		"read": "Read",
+		"readAloud": "Read aloud",
+		"stop": "Stop",
+		"stopReading": "Stop reading",
+		"enableTtsInSettings": "Enable TTS in Settings",
+		"tts": "Text-to-Speech",
+		"enableTts": "Enable Text-to-Speech",
+		"ttsDescription": "Allow the app to read narrative messages aloud in English.",
+		"ttsLanguageNote": "TTS is only available for English stories.",
+		"voice": "Voice",
+		"voiceDescription": "Choose a voice for text-to-speech playback. American English and British English voices are available.",
+		"downloadModelTitle": "Download TTS Model",
+		"downloadModelDescription": "The TTS model needs to be downloaded before text-to-speech can be used. This is approximately 80 MB.",
+		"startDownload": "Download",
+		"cancelDownload": "Cancel",
+		"downloading": "Downloading model...",
+		"downloadError": "Failed to download TTS model. Please try again.",
+		"modelReady": "TTS model is ready."
 	}
 }

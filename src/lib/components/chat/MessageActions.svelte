@@ -8,11 +8,16 @@
 		showFork?: boolean;
 		showRegenerate?: boolean;
 		showDelete?: boolean;
+		showRead?: boolean;
+		isPlaying?: boolean;
+		ttsEnabled?: boolean;
 		onCopy: () => void;
 		onEdit?: () => void;
 		onFork?: () => void;
 		onRegenerate?: () => void;
 		onDelete?: () => void;
+		onRead?: () => void;
+		onStop?: () => void;
 	}
 
 	let {
@@ -21,11 +26,16 @@
 		showFork = false,
 		showRegenerate = false,
 		showDelete = false,
+		showRead = false,
+		isPlaying = false,
+		ttsEnabled = false,
 		onCopy,
 		onEdit,
 		onFork,
 		onRegenerate,
 		onDelete,
+		onRead,
+		onStop,
 	}: Props = $props();
 </script>
 
@@ -40,6 +50,40 @@
 		>
 			<Icon name="copy" class="h-5 w-5" />
 		</button>
+	{/if}
+
+	{#if showRead}
+		{#if isPlaying && onStop}
+			<button
+				type="button"
+				class="flex items-center justify-center w-11 h-11 rounded-lg bg-primary-500/10 text-primary-500 transition-colors"
+				aria-label={t('tts.stopReading')}
+				title={t('tts.stopReading')}
+				onclick={onStop}
+			>
+				<Icon name="volume-x" class="h-5 w-5" />
+			</button>
+		{:else if ttsEnabled && onRead}
+			<button
+				type="button"
+				class="flex items-center justify-center w-11 h-11 rounded-lg hover:bg-surface-100-900 text-surface-500 transition-colors"
+				onclick={onRead}
+				aria-label={t('tts.readAloud')}
+				title={t('tts.readAloud')}
+			>
+				<Icon name="volume-2" class="h-5 w-5" />
+			</button>
+		{:else}
+			<button
+				type="button"
+				class="flex items-center justify-center w-11 h-11 rounded-lg text-surface-300-600 cursor-not-allowed"
+				aria-label={t('tts.enableTtsInSettings')}
+				title={t('tts.enableTtsInSettings')}
+				disabled
+			>
+				<Icon name="volume-2" class="h-5 w-5" />
+			</button>
+		{/if}
 	{/if}
 
 	{#if showEdit && onEdit}

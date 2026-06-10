@@ -382,6 +382,21 @@ export class OpfsFileSystem implements FileSystem {
 		}
 	}
 
+	async writeBinaryFile(path: string, data: Uint8Array): Promise<void> {
+		try {
+			const { parent, name } = await this.getParentAndNameAsync(path);
+			const fileHandle = await parent.getFileHandle(name, { create: true });
+			const writable = await fileHandle.createWritable();
+			try {
+				await writable.write(data.buffer as ArrayBuffer);
+			} finally {
+				await writable.close();
+			}
+		} catch (error) {
+			throw error instanceof FileSystemError ? error : classifyOpfsError(error);
+		}
+	}
+
 	async ensureDir(path: string): Promise<void> {
 		await this.mkdir(path);
 	}

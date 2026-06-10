@@ -25,3 +25,28 @@ declare module 'libcurl.js' {
 	}
 	export const libcurl: Libcurl;
 }
+
+declare module 'kokoro-js' {
+	interface KokoroTTSOptions {
+		dtype?: string;
+		device?: string | null;
+		progress_callback?: ((progress: { status?: string; progress?: number }) => void) | null;
+	}
+
+	interface GenerateOptions {
+		voice?: string;
+		speed?: number;
+	}
+
+	interface RawAudio {
+		audio: Float32Array;
+		sampleRate: number;
+	}
+
+	export class KokoroTTS {
+		constructor(model: unknown, tokenizer: unknown);
+		static from_pretrained(modelId: string, options?: KokoroTTSOptions): Promise<KokoroTTS>;
+		generate(text: string, options?: GenerateOptions): Promise<RawAudio>;
+		voices: Record<string, unknown>;
+	}
+}

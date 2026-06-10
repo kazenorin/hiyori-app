@@ -139,6 +139,10 @@ export class InMemoryFileSystem implements FileSystem {
 		return new TextEncoder().encode(content);
 	}
 
+	async writeBinaryFile(_path: string, _data: Uint8Array): Promise<void> {
+		throw new Error('writeBinaryFile not implemented in InMemoryFileSystem');
+	}
+
 	async ensureDir(path: string): Promise<void> {
 		await this.mkdir(path);
 	}

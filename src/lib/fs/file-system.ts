@@ -30,6 +30,7 @@ export interface FileSystem {
 	copyFile(fromPath: string, toPath: string): Promise<void>;
 	readDir(path: string): Promise<DirEntry[]>;
 	readBinaryFile(path: string): Promise<Uint8Array>;
+	writeBinaryFile(path: string, data: Uint8Array): Promise<void>;
 	ensureDir(path: string): Promise<void>;
 	writeTextFileEnsuringDir(path: string, content: string, options?: { append?: boolean }): Promise<void>;
 }

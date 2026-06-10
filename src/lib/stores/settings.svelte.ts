@@ -66,6 +66,8 @@ export interface Settings {
 	characterProfileCompressorInterval: number;
 	defaultPlotMode: 'guidance' | 'phaseEvent';
 	reevaluationFrequency: number;
+	ttsEnabled: boolean;
+	ttsVoice: string;
 }
 
 const STORAGE_KEY = 'byoa-settings';
@@ -95,6 +97,8 @@ const defaults: Settings = {
 	characterProfileCompressorInterval: 5, // scenes between compressor runs; 0 = disabled
 	defaultPlotMode: 'phaseEvent',
 	reevaluationFrequency: 10,
+	ttsEnabled: false,
+	ttsVoice: 'af_heart',
 };
 
 /**
@@ -249,6 +253,14 @@ export type MinorTaskAgentProviderConfig = NonNullable<ReturnType<typeof getMino
 
 export function isPhraseHighlightingEnabled(): boolean {
 	return settings.importantPhraseHighlighting && !!getMinorTaskAgentProviderConfig();
+}
+
+export function isTTSEnabled(): boolean {
+	return settings.ttsEnabled;
+}
+
+export function getTTSVoice(): string {
+	return settings.ttsVoice;
 }
 
 export function isMemoryCapable(): boolean {

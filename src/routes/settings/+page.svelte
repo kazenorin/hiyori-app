@@ -24,7 +24,9 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import ProviderForm from '$lib/components/chat/ProviderForm.svelte';
 	import NumberField from '$lib/components/ui/NumberField.svelte';
-	import { getLocaleItems, getLogLevelItems, getReviewerModeItems, getRoleItems } from '$lib/features/settings-options';
+	import { getLocaleItems, getLogLevelItems, getReviewerModeItems, getRoleItems, getVoiceItems } from '$lib/features/settings-options';
+	import { isTTSModelCached } from '$lib/kokoro/model';
+	import { ttsPlayer } from '$lib/kokoro/player.svelte';
 	import {
 		type DataImportExportState,
 		createDataImportExportState,
@@ -168,6 +170,58 @@
 	const logLevelItems = $derived(getLogLevelItems());
 
 	const reviewerModeItems = $derived(getReviewerModeItems());
+
+	const voiceItems = $derived(getVoiceItems());
+
+	let showTTSDownloadModal = $state(false);
+	let ttsDownloadProgress = $state<number | null>(null);
+	let ttsDownloading = $state(false);
+	let ttsDownloadError = $state<string | null>(null);
+
+	async function handleToggleTTS(): Promise<void> {
+		if (settings.ttsEnabled) {
+			await updateSettings({ ttsEnabled: false });
+			return;
+		}
+
+		ttsDownloadError = null;
+		const cached = await isTTSModelCached();
+		if (cached) {
+			await updateSettings({ ttsEnabled: true });
+		} else {
+			showTTSDownloadModal = true;
+		}
+	}
+
+	function handleTTSDownload(): void {
+		ttsDownloading = true;
+		ttsDownloadProgress = 0;
+		ttsDownloadError = null;
+
+		ttsPlayer.loadModel({
+			onProgress: (progress: number) => {
+				ttsDownloadProgress = progress;
+			},
+			onError: (error: string) => {
+				ttsDownloadError = error;
+				ttsDownloading = false;
+			},
+			onReady: () => {
+				ttsDownloading = false;
+				showTTSDownloadModal = false;
+				ttsDownloadProgress = null;
+				updateSettings({ ttsEnabled: true });
+			},
+		});
+	}
+
+	function handleTTSDownloadCancel(): void {
+		ttsPlayer.cancelLoad();
+		showTTSDownloadModal = false;
+		ttsDownloadProgress = null;
+		ttsDownloadError = null;
+		ttsDownloading = false;
+	}
 </script>
 
 <div class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6">
@@ -585,6 +639,23 @@
 			</div>
 		</Card>
 
+		<!-- Text-to-Speech -->
+		<Card title={t('tts.tts')} description={t('tts.ttsDescription')}>
+			<label class="flex items-center gap-2">
+				<input type="checkbox" class="checkbox" checked={settings.ttsEnabled} onchange={handleToggleTTS} />
+				<span class="text-sm font-medium text-surface-700-300">{t('tts.enableTts')}</span>
+			</label>
+			<span class="text-xs text-surface-500">{t('tts.ttsLanguageNote')}</span>
+
+			{#if settings.ttsEnabled}
+				<label class="block">
+					<span class="text-sm font-medium text-surface-700-300">{t('tts.voice')}</span>
+					<ThemedSelect items={voiceItems} value={settings.ttsVoice} onValueChange={(v) => updateSettings({ ttsVoice: v })} />
+					<span class="text-xs text-surface-500 mt-1 block">{t('tts.voiceDescription')}</span>
+				</label>
+			{/if}
+		</Card>
+
 		<!-- Developer -->
 		<Card title={t('settings.developer')}>
 			<label class="block">
@@ -694,6 +765,38 @@
 				onclick={handleDeleteAllGameDataConfirm}
 			>
 				{t('settings.deleteAllGameData')}
+			</button>
+		</div>
+	{/snippet}
+</Modal>
+
+<Modal bind:open={showTTSDownloadModal} title={t('tts.downloadModelTitle')}>
+	{#snippet body()}
+		<p class="text-sm text-surface-700-300">{t('tts.downloadModelDescription')}</p>
+		{#if ttsDownloadProgress !== null}
+			<ProgressField value={ttsDownloadProgress} label={`${ttsDownloadProgress}%`} visible={true} />
+		{/if}
+		{#if ttsDownloadError}
+			<p class="text-sm text-error-500 mt-2">{ttsDownloadError}</p>
+		{/if}
+	{/snippet}
+	{#snippet footer()}
+		<div class="flex gap-2">
+			<button
+				class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors min-h-11"
+				type="button"
+				disabled={ttsDownloading}
+				onclick={handleTTSDownloadCancel}
+			>
+				{t('tts.cancelDownload')}
+			</button>
+			<button
+				class="flex-1 px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium transition-colors min-h-11"
+				type="button"
+				disabled={ttsDownloading}
+				onclick={handleTTSDownload}
+			>
+				{ttsDownloading ? t('tts.downloading') : t('tts.startDownload')}
 			</button>
 		</div>
 	{/snippet}

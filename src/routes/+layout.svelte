@@ -23,7 +23,8 @@
 		exitWorldBuilderMode,
 		getIsActive as getIsWorldBuilderActive,
 	} from '$lib/features/world-builder/world-builder.svelte';
-	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
+	import { getSettings, updateSettings, settings } from '$lib/stores/settings.svelte';
+	import { isTTSModelCached } from '$lib/kokoro/model';
 	import { t } from '$lib/i18n';
 
 	import BottomTabBar from '$lib/components/BottomTabBar.svelte';
@@ -137,6 +138,13 @@
 				await loadActLineMessages(lineId);
 			}
 			appReady = true;
+
+			if (settings.ttsEnabled) {
+				const cached = await isTTSModelCached();
+				if (!cached) {
+					await updateSettings({ ttsEnabled: false });
+				}
+			}
 		} catch (err) {
 			await log.error('init', 'Failed', err);
 			appError = err instanceof Error ? err.message : String(err);

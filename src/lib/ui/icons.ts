@@ -100,6 +100,12 @@ export const ICONS = {
 	'book-open-text': stroke(
 		'<path d="M2 3h5a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-5a4 4 0 00-4 4v14a3 3 0 013-3h6z" /><path d="M6 8h2" /><path d="M6 12h2" /><path d="M16 8h2" /><path d="M16 12h2" />'
 	),
+	'volume-2': stroke(
+		'<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><path d="M19.07 4.93a10 10 0 010 14.14" /><path d="M15.54 8.46a5 5 0 010 7.07" />'
+	),
+	'volume-x': stroke(
+		'<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="22" y1="9" x2="16" y2="15" /><line x1="16" y1="9" x2="22" y2="15" />'
+	),
 } as const satisfies Record<string, IconDef>;
 
 export type IconName = keyof typeof ICONS;
