@@ -22,10 +22,16 @@
 
 	let { mode, isTemplated = false, messageId, initial, onsave, oncancel }: Props = $props();
 
+	// Snapshot the initial values once, so reference the edit form contains the initial data
+	// svelte-ignore state_referenced_locally
 	let formContent = $state(initial.content ?? '');
+	// svelte-ignore state_referenced_locally
 	let formSceneTitle = $state(initial.variables?.sceneTitle ?? '');
+	// svelte-ignore state_referenced_locally
 	let formBackground = $state(initial.variables?.background ?? '');
+	// svelte-ignore state_referenced_locally
 	let formNarrativeBody = $state(initial.variables?.narrativeBody ?? '');
+	// svelte-ignore state_referenced_locally
 	let formCg = $state(initial.variables?.cg ?? '');
 
 	function handleKeydown(e: KeyboardEvent) {

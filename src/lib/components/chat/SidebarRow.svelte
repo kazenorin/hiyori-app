@@ -83,7 +83,18 @@
 </script>
 
 {#if variant === 'desktop'}
-	<div class="{HOVER_CLASS} {isActive ? activeClass : 'hover:bg-surface-200-800'}" onclick={onSelect}>
+	<div
+		class="{HOVER_CLASS} {isActive ? activeClass : 'hover:bg-surface-200-800'}"
+		onclick={onSelect}
+		role="button"
+		tabindex="0"
+		onkeydown={(e) => {
+			if (e.key === 'Enter' || e.key === ' ') {
+				e.preventDefault();
+				onSelect();
+			}
+		}}
+	>
 		{#if isEditing}
 			<RenameInput bind:value={renameValue} {size} onSubmit={onSubmitRename} onCancel={onCancelRename} />
 		{:else}
@@ -142,6 +153,8 @@
 				<Pencil size={20} />
 			</button>
 		{/if}
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
 		<div
 			class="relative bg-surface-50-950 transition-transform duration-200"
 			style:transform="translateX({isOpen ? openOffset : 0}px)"
@@ -149,6 +162,8 @@
 		>
 			<div
 				class="{HOVER_CLASS} {isActive ? activeClass : 'hover:bg-surface-200-800'}"
+				role="button"
+				tabindex="0"
 				onclick={(e) => {
 					if (justSwipedRowId === rowId) {
 						// Trailing click from a swipe-end gesture; consume the
@@ -162,6 +177,16 @@
 						return;
 					}
 					onSelect();
+				}}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' || e.key === ' ') {
+						e.preventDefault();
+						if (isOpen) {
+							onDismissOpen();
+							return;
+						}
+						onSelect();
+					}
 				}}
 			>
 				{#if isEditing}

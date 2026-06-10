@@ -18,6 +18,7 @@
 	}
 </script>
 
+<!-- svelte-ignore a11y_autofocus -->
 <input
 	autofocus
 	maxlength="200"

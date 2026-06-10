@@ -164,10 +164,17 @@
 					<span
 						class="btn btn-sm variant-ghost text-surface-500"
 						role="button"
+						tabindex="0"
 						aria-label={isPinned ? 'Unpin controls' : 'Pin controls'}
 						onclick={(e) => {
 							e.stopPropagation();
 							isPinned = !isPinned;
+						}}
+						onkeydown={(e) => {
+							if (e.key === 'Enter' || e.key === ' ') {
+								e.preventDefault();
+								isPinned = !isPinned;
+							}
 						}}
 					>
 						{#if isPinned}

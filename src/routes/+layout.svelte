@@ -232,6 +232,7 @@
 	}
 </script>
 
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <div class="flex h-dvh overflow-hidden bg-surface-50-950" ontouchstart={handleTouchStart} ontouchend={handleTouchEnd}>
 	{#if !appReady}
 		<div class="flex-1 flex items-center justify-center">
@@ -277,7 +278,16 @@
 						onNewStory={handleNewStory}
 					/>
 				</aside>
-				<div class="flex-1 bg-black/50" onclick={() => (sidebarOpen = false)} role="button" aria-label="Close sidebar"></div>
+				<div
+					class="flex-1 bg-black/50"
+					onclick={() => (sidebarOpen = false)}
+					role="button"
+					tabindex="-1"
+					aria-label="Close sidebar"
+					onkeydown={(e) => {
+						if (e.key === 'Enter' || e.key === ' ') sidebarOpen = false;
+					}}
+				></div>
 			</div>
 		{/if}
 

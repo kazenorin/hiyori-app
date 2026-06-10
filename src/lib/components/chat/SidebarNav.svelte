@@ -217,6 +217,8 @@
 	}
 </script>
 
+<!-- svelte-ignore a11y_click_events_have_key_events -->
+<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <nav class="flex-1 overflow-y-auto p-2 pt-4 space-y-1 relative" onclick={handleGlobalTap}>
 	{#each getStories() as story (story.id)}
 		<div class="space-y-0.5">
