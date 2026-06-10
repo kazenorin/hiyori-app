@@ -16,6 +16,7 @@ export class TTSPlayer {
 	private processedChunks = 0;
 	private stopped = false;
 	private loadCallbacks: LoadModelCallbacks | null = null;
+	private modelLoaded = false;
 
 	playingMessageId: string | null = $state(null);
 
@@ -34,7 +35,11 @@ export class TTSPlayer {
 		this.dispose();
 	}
 
-	async play(text: string, messageId: string, voice: string): Promise<void> {
+	get isModelLoaded(): boolean {
+		return this.modelLoaded;
+	}
+
+	async play(text: string, messageId: string, voice: string, speed: number = 1): Promise<void> {
 		if (this.playingMessageId) {
 			this.stop();
 		}
@@ -50,7 +55,7 @@ export class TTSPlayer {
 			this.initWorker();
 		}
 
-		this.worker!.postMessage({ type: 'generate', text, voice });
+		this.worker!.postMessage({ type: 'generate', text, voice, speed });
 	}
 
 	stop(): void {
@@ -97,6 +102,7 @@ export class TTSPlayer {
 		}
 
 		if (status === 'loading_model_ready') {
+			this.modelLoaded = true;
 			this.loadCallbacks?.onReady?.();
 			this.loadCallbacks = null;
 			return;
@@ -135,6 +141,7 @@ export class TTSPlayer {
 
 	private cleanup(): void {
 		this.stopped = true;
+		this.modelLoaded = false;
 		this.audioQueue = [];
 		this.isPlaying = false;
 		this.playingMessageId = null;
@@ -198,6 +205,7 @@ export class TTSPlayer {
 
 	dispose(): void {
 		this.stop();
+		this.modelLoaded = false;
 		if (this.audioContext && this.audioContext.state !== 'closed') {
 			this.audioContext.close();
 			this.audioContext = null;

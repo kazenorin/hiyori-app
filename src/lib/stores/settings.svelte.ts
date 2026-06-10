@@ -68,6 +68,7 @@ export interface Settings {
 	reevaluationFrequency: number;
 	ttsEnabled: boolean;
 	ttsVoice: string;
+	ttsSpeed: number;
 }
 
 const STORAGE_KEY = 'byoa-settings';
@@ -99,6 +100,7 @@ const defaults: Settings = {
 	reevaluationFrequency: 10,
 	ttsEnabled: false,
 	ttsVoice: 'af_heart',
+	ttsSpeed: 1,
 };
 
 /**
@@ -261,6 +263,10 @@ export function isTTSEnabled(): boolean {
 
 export function getTTSVoice(): string {
 	return settings.ttsVoice;
+}
+
+export function getTTSSpeed(): number {
+	return settings.ttsSpeed;
 }
 
 export function isMemoryCapable(): boolean {

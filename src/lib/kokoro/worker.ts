@@ -40,7 +40,7 @@ let bufferQueueSize = 0;
 let shouldStop = false;
 
 ctx.addEventListener('message', async (e: MessageEvent) => {
-	const { type, text, voice } = e.data;
+	const { type, text, voice, speed } = e.data;
 
 	if (type === 'init_model') {
 		try {
@@ -98,7 +98,7 @@ ctx.addEventListener('message', async (e: MessageEvent) => {
 					break;
 				}
 
-				const audio = await tts!.generate(chunk, { voice });
+				const audio = await tts!.generate(chunk, { voice, speed: speed ?? 1 });
 				const ab = audio.audio.buffer;
 				bufferQueueSize++;
 				ctx.postMessage({ status: 'stream_audio_data', audio: ab, text: chunk }, [ab]);

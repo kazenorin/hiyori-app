@@ -27,6 +27,7 @@
 	import { getLocaleItems, getLogLevelItems, getReviewerModeItems, getRoleItems, getVoiceItems } from '$lib/features/settings-options';
 	import { isTTSModelCached } from '$lib/kokoro/model';
 	import { ttsPlayer } from '$lib/kokoro/player.svelte';
+	import { TTS_SPEED_MIN, TTS_SPEED_MAX, TTS_SPEED_STEP } from '$lib/kokoro/constants';
 	import {
 		type DataImportExportState,
 		createDataImportExportState,
@@ -177,10 +178,36 @@
 	let ttsDownloadProgress = $state<number | null>(null);
 	let ttsDownloading = $state(false);
 	let ttsDownloadError = $state<string | null>(null);
+	let ttsPreviewPlaying = $state(false);
+
+	const TTS_PREVIEW_TEXT = `The Tortoise and the Hare\n\nA Hare was making fun of the Tortoise one day for being so slow. "Do you ever get anywhere?" he asked with a mocking laugh. "Yes," replied the Tortoise, "and I get there sooner than you think. I'll run you a race and prove it." The Hare was much amused at the idea of running a race with the Tortoise, but for the fun of the thing he agreed. So the Fox, who had consented to act as judge, marked the distance and started them off. The Hare was soon far out of sight, and to make the Tortoise feel very deeply how ridiculous it was for him to try a race with a Hare, he lay down beside the road to have a nap. The Tortoise meanwhile kept going slowly but steadily, and, after a time, passed the place where the Hare was sleeping. When the Hare awoke from his nap, he saw the Tortoise was near the winning-post, and could not run up in time to save the race.`;
+
+	function handleTTSPreview(): void {
+		if (ttsPreviewPlaying) {
+			ttsPlayer.stop();
+			ttsPreviewPlaying = false;
+			return;
+		}
+		ttsPreviewPlaying = true;
+		const voice = settings.ttsVoice;
+		const speed = settings.ttsSpeed;
+		ttsPlayer.play(TTS_PREVIEW_TEXT, '__tts_preview__', voice, speed);
+	}
+
+	$effect(() => {
+		if (ttsPreviewPlaying && ttsPlayer.playingMessageId !== '__tts_preview__') {
+			ttsPreviewPlaying = false;
+		}
+	});
 
 	async function handleToggleTTS(): Promise<void> {
 		if (settings.ttsEnabled) {
 			await updateSettings({ ttsEnabled: false });
+			return;
+		}
+
+		if (ttsPlayer.isModelLoaded) {
+			await updateSettings({ ttsEnabled: true });
 			return;
 		}
 
@@ -653,6 +680,39 @@
 					<ThemedSelect items={voiceItems} value={settings.ttsVoice} onValueChange={(v) => updateSettings({ ttsVoice: v })} />
 					<span class="text-xs text-surface-500 mt-1 block">{t('tts.voiceDescription')}</span>
 				</label>
+
+				<label class="block">
+					<span class="text-sm font-medium text-surface-700-300">{t('tts.speed')}</span>
+					<span class="text-xs text-surface-500 block">{t('tts.speedDescription')}</span>
+					<div class="flex items-center gap-3 mt-1">
+						<input
+							type="range"
+							class="flex-1 cursor-pointer"
+							min={TTS_SPEED_MIN}
+							max={TTS_SPEED_MAX}
+							step={TTS_SPEED_STEP}
+							value={settings.ttsSpeed}
+							oninput={(e) => updateSettings({ ttsSpeed: parseFloat((e.target as HTMLInputElement).value) })}
+						/>
+						<span class="text-sm tabular-nums min-w-[3ch] text-surface-700-300">{settings.ttsSpeed.toFixed(1)}×</span>
+					</div>
+				</label>
+
+				<div class="space-y-2">
+					<span class="text-sm font-medium text-surface-700-300">{t('tts.preview')}</span>
+					<span class="text-xs text-surface-500 block">{t('tts.previewDescription')}</span>
+					<button
+						type="button"
+						class="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium transition-colors min-h-11"
+						onclick={handleTTSPreview}
+						disabled={!settings.ttsEnabled}
+					>
+						{ttsPreviewPlaying ? t('tts.stop') : t('tts.preview')}
+					</button>
+					{#if ttsPreviewPlaying}
+						<span class="text-xs text-surface-500 block">{t('tts.previewPlaying')}</span>
+					{/if}
+				</div>
 			{/if}
 		</Card>
 

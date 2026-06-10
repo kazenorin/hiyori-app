@@ -88,6 +88,7 @@ function defaultSettings() {
 		reevaluationFrequency: 10,
 		ttsEnabled: false,
 		ttsVoice: 'af_heart',
+		ttsSpeed: 1,
 	};
 }
 

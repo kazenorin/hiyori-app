@@ -65,7 +65,7 @@
 		saveEditWorldBuilderMessage,
 	} from '$lib/features/message-editor.svelte';
 	import { getActiveActLineId, getActiveStory, getIsSelectingStory } from '$lib/stores/stories.svelte';
-	import { isDirectorModeEnabled, isTTSEnabled, getTTSVoice } from '$lib/stores/settings.svelte';
+	import { isDirectorModeEnabled, isTTSEnabled, getTTSVoice, getTTSSpeed } from '$lib/stores/settings.svelte';
 	import { ttsPlayer } from '$lib/kokoro/player.svelte';
 	import { buildTTSPassage } from '$lib/kokoro/passage';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
@@ -157,7 +157,8 @@
 		const passage = buildTTSPassage(message.variables, message.content);
 		if (!passage) return;
 		const voice = getTTSVoice();
-		ttsPlayer.play(passage, message.id, voice);
+		const speed = getTTSSpeed();
+		ttsPlayer.play(passage, message.id, voice, speed);
 	}
 
 	const ttsVisible = $derived(getActiveStory()?.locale === 'en');

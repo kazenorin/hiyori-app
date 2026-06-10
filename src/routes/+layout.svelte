@@ -25,6 +25,7 @@
 	} from '$lib/features/world-builder/world-builder.svelte';
 	import { getSettings, updateSettings, settings } from '$lib/stores/settings.svelte';
 	import { isTTSModelCached } from '$lib/kokoro/model';
+	import { ttsPlayer } from '$lib/kokoro/player.svelte';
 	import { t } from '$lib/i18n';
 
 	import BottomTabBar from '$lib/components/BottomTabBar.svelte';
@@ -140,9 +141,13 @@
 			appReady = true;
 
 			if (settings.ttsEnabled) {
-				const cached = await isTTSModelCached();
-				if (!cached) {
-					await updateSettings({ ttsEnabled: false });
+				if (ttsPlayer.isModelLoaded) {
+					// Model already in memory, no need to check cache
+				} else {
+					const cached = await isTTSModelCached();
+					if (!cached) {
+						await updateSettings({ ttsEnabled: false });
+					}
 				}
 			}
 		} catch (err) {
