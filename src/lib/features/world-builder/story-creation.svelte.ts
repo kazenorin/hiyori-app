@@ -8,12 +8,15 @@ import {
 } from '$lib/stores/stories.svelte';
 import { settings, isDirectorModeEnabled } from '$lib/stores/settings.svelte';
 import {
-	getStoryName as getWorldBuilderStoryName,
+	getStoryName,
+	setStoryName,
 	getWorldContent as getWorldBuilderContent,
+	getReadyToCreate,
 	enterActPlotInterviewMode,
 	removeLastInterviewAssistantMessage,
 	exitWorldBuilderMode,
 	getMessages as getWorldBuilderMessages,
+	requestStart,
 } from '$lib/features/world-builder/world-builder.svelte';
 import { loadActLineMessages, sendInitialNarration } from '$lib/ai/chat.svelte';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
@@ -28,14 +31,9 @@ import { log } from '$lib/logging/logger';
 import { t } from '$lib/i18n';
 import type { Story } from '$lib/db/stories';
 
-let showCreateStoryOptions = $state(false);
 let isCreatingStory = $state(false);
 let createStoryError = $state<string | null>(null);
 let storyCreated = $state(false);
-
-export function getShowCreateStoryOptions(): boolean {
-	return showCreateStoryOptions;
-}
 
 export function getIsCreatingStory(): boolean {
 	return isCreatingStory;
@@ -49,20 +47,29 @@ export function setError(error: string | null): void {
 	createStoryError = error;
 }
 
-export function handleCreateFromWorldBuilder(): void {
-	const name = getWorldBuilderStoryName();
-	if (!name) return;
-	showCreateStoryOptions = true;
-}
-
 export function cancelCreateStoryOptions(): void {
-	showCreateStoryOptions = false;
 	createStoryError = null;
 	storyCreated = false;
 }
 
+/**
+ * Start button handler: validates the user-typed name, persists it to the
+ * world-builder module, runs the silent compile turn, then on success the
+ * two-option panel becomes available (gated by `getReadyToCreate()`).
+ * On failure, surfaces the error from the world-builder module.
+ */
+export async function handleStartFromWorldBuilder(name: string): Promise<void> {
+	const trimmed = name.trim();
+	if (!trimmed) return;
+	setStoryName(trimmed);
+	await requestStart();
+	if (!getReadyToCreate() && !createStoryError) {
+		createStoryError = t('errors.failedToCreateStory');
+	}
+}
+
 async function ensureStoryCreated(): Promise<boolean> {
-	const name = getWorldBuilderStoryName();
+	const name = getStoryName();
 	const worldContent = getWorldBuilderContent();
 	if (!name || !worldContent) return false;
 

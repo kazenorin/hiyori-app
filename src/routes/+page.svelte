@@ -26,25 +26,25 @@
 		getGameResumeInterview,
 		getHasInterviewMessages,
 		getIsActive as getIsWorldBuilderActive,
-		getIsComplete as getIsWorldBuilderComplete,
+		getIsCompilingWorld,
 		getIsNextActInterview,
 		getIsStreaming as getIsWorldBuilderStreaming,
 		getMessages as getWorldBuilderMessages,
 		getActPlotInterview,
 		getStoryName as getWorldBuilderStoryName,
+		getReadyToCreate,
 		regenerateLastWorldBuilderResponse,
 		sendWorldBuilderMessage,
 		stopStreaming as stopWorldBuilderStreaming,
 		type WorldBuilderMessage,
 	} from '$lib/features/world-builder/world-builder.svelte';
 	import {
-		getShowCreateStoryOptions,
 		getIsCreatingStory,
 		getCreateStoryError,
-		handleCreateFromWorldBuilder,
 		cancelCreateStoryOptions,
 		handleCreateStoryImmediate,
 		handleCreateActPlotInterview,
+		handleStartFromWorldBuilder,
 		handleStartGameAfterInterview,
 	} from '$lib/features/world-builder/story-creation.svelte';
 	import {
@@ -138,7 +138,12 @@
 	let lastWbMessageIdx = $derived(getWorldBuilderMessages().findLastIndex((m: WorldBuilderMessage) => m.role === 'assistant'));
 
 	let updateWorldCardChecked = $state(false);
+	let worldBuilderStoryNameDraft = $state('');
+
 	let forkPlotMode = $state<'guidance' | 'phaseEvent' | null>(null);
+	const wbShowPreStartBar = $derived(
+		!getReadyToCreate() && !getActPlotInterview() && !(getIsCompilingWorld() || getIsWorldBuilderStreaming())
+	);
 
 	async function handleCopy(messageId: string, content: string) {
 		try {
@@ -391,12 +396,13 @@
 
 			<ScrollToFAB chatContainer={wbChatContainer} isStreaming={getIsWorldBuilderStreaming()} />
 
-			<!-- Pinned control section -->
-			<div class="hidden md:block">
+			<!-- Pinned control section: desktop always, mobile only when pre-start bar is visible -->
+			<div class="{wbShowPreStartBar ? 'block' : 'hidden'} md:block">
 				<WorldBuilderControls
-					isComplete={getIsWorldBuilderComplete()}
+					isReadyToStart={getReadyToCreate()}
+					isCompiling={getIsCompilingWorld() || getIsWorldBuilderStreaming()}
 					storyName={getWorldBuilderStoryName()}
-					showCreateStoryOptions={getShowCreateStoryOptions()}
+					bind:storyNameDraft={worldBuilderStoryNameDraft}
 					isCreatingStory={getIsCreatingStory()}
 					createStoryError={getCreateStoryError()}
 					worldBuilderError={getWorldBuilderError()}
@@ -406,13 +412,13 @@
 					isStreaming={getIsWorldBuilderStreaming()}
 					showUpdateWorldCardOption={getIsNextActInterview()}
 					bind:updateWorldCard={updateWorldCardChecked}
-					onCreateStory={handleCreateFromWorldBuilder}
-					onStartImmediate={handleCreateStoryImmediate}
+					onStart={() => handleStartFromWorldBuilder(worldBuilderStoryNameDraft)}
+					onStartImmediate={() => handleCreateStoryImmediate()}
 					onStartInterview={handleCreateActPlotInterview}
 					onStartGame={handleStartGameAfterInterview}
 					onCancel={exitWorldBuilderMode}
 					onDismissOptions={cancelCreateStoryOptions}
-					onRetry={handleCreateStoryImmediate}
+					onRetry={getReadyToCreate() ? () => handleCreateStoryImmediate() : () => handleStartFromWorldBuilder(worldBuilderStoryNameDraft)}
 					chatContainer={wbChatContainer}
 				/>
 			</div>
@@ -422,7 +428,7 @@
 				<MobileInputSheet
 					bind:value={input}
 					isStreaming={getIsWorldBuilderStreaming()}
-					isDisabled={getIsWorldBuilderStreaming() || (getIsWorldBuilderComplete() && !getActPlotInterview())}
+					isDisabled={getIsWorldBuilderStreaming() || (getReadyToCreate() && !getActPlotInterview())}
 					placeholder={t('chat.worldBuilderPlaceholder')}
 					showDirectorNotes={false}
 					onSubmit={handleSubmit}
@@ -463,13 +469,13 @@
 					aria-label="World builder input"
 					bind:value={input}
 					onkeydown={handleKeydown}
-					disabled={getIsWorldBuilderStreaming() || (getIsWorldBuilderComplete() && !getActPlotInterview())}
+					disabled={getIsWorldBuilderStreaming() || (getReadyToCreate() && !getActPlotInterview())}
 				></textarea>
 
 				<div class="mt-3">
 					{#if getIsWorldBuilderStreaming()}
 						<Button variant="filled-error" fullWidth onclick={stopWorldBuilderStreaming}>{t('chat.stop')}</Button>
-					{:else if !getIsWorldBuilderComplete() || getActPlotInterview()}
+					{:else if !getReadyToCreate() || getActPlotInterview()}
 						<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
 					{/if}
 				</div>

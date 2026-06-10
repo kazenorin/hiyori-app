@@ -124,9 +124,10 @@ src:
           world:
             world-builder-system-prompt.md:
               configPath: en/prompt-templates/world/world-builder-system-prompt.md
-              hash: 724187bfef83065b2f4c58007fa74695669dfe5eaa0b088d0a60665eab27f0a2
-              oldHashes: []
-              updatedAt: "2026-05-30T16:51:23.217Z"
+              hash: df84cfd9f963b198aa953a5b6bab1667191306b171e382a994af8129b019ff90
+              oldHashes:
+                - 724187bfef83065b2f4c58007fa74695669dfe5eaa0b088d0a60665eab27f0a2
+              updatedAt: "2026-06-10T16:51:22.070Z"
             world-template.md:
               configPath: en/prompt-templates/world/world-template.md
               hash: 9953c22a391e34f1b1b8e9eacfcd3928cb96bbcc80e7ac1e64ea4e4135049a3b
@@ -272,9 +273,10 @@ src:
           world:
             world-builder-system-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/world/world-builder-system-prompt.md
-              hash: 4809cd56814e0a301c18668dbd6543e3da99d212bea8ea51d49c857bd47cdfb5
-              oldHashes: []
-              updatedAt: "2026-05-30T16:51:23.217Z"
+              hash: fd76496e067ac51f7e568acf90f21f796937c84f284d9a6abdf62decd7219b73
+              oldHashes:
+                - 4809cd56814e0a301c18668dbd6543e3da99d212bea8ea51d49c857bd47cdfb5
+              updatedAt: "2026-06-10T16:51:22.070Z"
             world-template.md:
               configPath: zh-Hant-HK/prompt-templates/world/world-template.md
               hash: 6e2051f1c1cd9a49130cff7bc820c656a149a11f335145decd4f8bb7c7d1e547
@@ -300,11 +302,13 @@ src:
       locale-strings:
         en.yaml:
           configPath: en/locale-strings.yaml
-          hash: 02c2f6c61d948f401f32cdd4eb656a574da0366b3a2809ee2ff3c42b47348649
-          oldHashes: []
-          updatedAt: "2026-05-30T16:51:23.217Z"
+          hash: 80d841aa000184d8604696b1f1877aebb1a348db16d2267e57b421c5eed4c959
+          oldHashes:
+            - 02c2f6c61d948f401f32cdd4eb656a574da0366b3a2809ee2ff3c42b47348649
+          updatedAt: "2026-06-10T16:51:22.070Z"
         zh-Hant-HK.yaml:
           configPath: zh-Hant-HK/locale-strings.yaml
-          hash: f7772bf027cfec167bdc5e5d85aa783fac24f47303072a00685d5d7b70b80b54
-          oldHashes: []
-          updatedAt: "2026-05-30T16:51:23.217Z"
+          hash: c9bca07458a02fd17114e6456a4c281b2460dc392ffccd2bd103199af045c4cb
+          oldHashes:
+            - f7772bf027cfec167bdc5e5d85aa783fac24f47303072a00685d5d7b70b80b54
+          updatedAt: "2026-06-10T16:51:22.070Z"

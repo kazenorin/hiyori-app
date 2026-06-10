@@ -321,6 +321,7 @@ features:
       - Preserve unresolved tensions, pending reveals, and escalation structure.
   worldBuilder:
     worldBuilderSeed: 'I want to create a new story. Please help me build a world.'
+    worldBuilderExtractionPrompt: 'Please compile our conversation into the final world document now. Output the markdown directly with no preamble, no closing text, and no marker line.'
     actPlotInterviewExtraction: |
       The following is the world setting for the story:
 

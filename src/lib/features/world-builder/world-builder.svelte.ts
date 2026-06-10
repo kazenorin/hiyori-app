@@ -1,5 +1,10 @@
 import { getMainProviderConfig, type ProviderConfig, settings } from '$lib/stores/settings.svelte';
-import { resumeStoryActPrefix, resumeStoryActSuffix, worldBuilderSeed } from '$lib/features/world-builder/prompts';
+import {
+	resumeStoryActPrefix,
+	resumeStoryActSuffix,
+	worldBuilderExtractionPrompt,
+	worldBuilderSeed,
+} from '$lib/features/world-builder/prompts';
 import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
 import { actInformationHeader, charactersHeader, currentSceneHeader } from '$lib/definitions/common-headers';
 import {
@@ -44,17 +49,16 @@ export interface NewActInterviewContext {
 	actSummary: string;
 }
 
-const COMPLETION_MARKER = '[WORLD_BUILDER_COMPLETE]';
-
 const seedMsg = () => ({ role: 'user' as const, content: worldBuilderSeed() });
 
 let isActive = $state(false);
 let messages = $state<WorldBuilderMessage[]>([]);
 let isStreaming = $state(false);
 let error = $state<string | null>(null);
-let storyName = $state<string | null>(null);
+let storyName = $state('');
 let worldContent = $state<string | null>(null);
-let isComplete = $state(false);
+let readyToCreate = $state(false);
+let isCompilingWorld = $state(false);
 let abortController: AbortController | null = null;
 let logFilePath: string | null = null;
 
@@ -84,14 +88,20 @@ export function getIsStreaming(): boolean {
 export function getError(): string | null {
 	return error;
 }
-export function getStoryName(): string | null {
-	return storyName;
+export function getStoryName(): string {
+	return storyName.trim() || 'Untitled Story';
 }
 export function getWorldContent(): string | null {
 	return actPlotInterview ? interviewWorldContent : worldContent;
 }
-export function getIsComplete(): boolean {
-	return isComplete;
+export function setStoryName(name: string): void {
+	storyName = name;
+}
+export function getReadyToCreate(): boolean {
+	return readyToCreate;
+}
+export function getIsCompilingWorld(): boolean {
+	return isCompilingWorld;
 }
 export function getLogFilePath(): string | null {
 	return logFilePath;
@@ -123,9 +133,10 @@ function resetState(): void {
 	messages = [];
 	isStreaming = false;
 	error = null;
-	storyName = null;
+	storyName = '';
 	worldContent = null;
-	isComplete = false;
+	readyToCreate = false;
+	isCompilingWorld = false;
 	abortController = null;
 	logFilePath = null;
 	cachedWorldBuilderPrompt = null;
@@ -147,33 +158,6 @@ export function exitWorldBuilderMode(): void {
 
 function buildFullWorldBuildPrompt(): string {
 	return (cachedWorldBuilderPrompt ?? '') + '\n\n---\n\n' + (cachedWorldTemplate ?? '') + '\n\n---\n\n';
-}
-
-/**
- * Pure function to extract completion data from content.
- * Returns { storyName, worldContent } or null if no marker found.
- */
-export function extractCompletionData(content: string): { storyName: string; worldContent: string } | null {
-	const markerIndex = content.indexOf(COMPLETION_MARKER);
-	if (markerIndex === -1) return null;
-
-	const afterMarker = content.slice(markerIndex + COMPLETION_MARKER.length).trim();
-	const lines = afterMarker.split('\n');
-
-	const extractedName = (lines[0] ?? '').trim() || 'Untitled Story';
-	const extractedContent = lines.slice(1).join('\n').trim();
-
-	if (!extractedContent) return null;
-	return { storyName: extractedName, worldContent: extractedContent };
-}
-
-function parseCompletionMarker(content: string): void {
-	const result = extractCompletionData(content);
-	if (result) {
-		storyName = result.storyName;
-		worldContent = result.worldContent;
-		isComplete = true;
-	}
 }
 
 export async function enterWorldBuilderMode(): Promise<void> {
@@ -295,6 +279,77 @@ export function stopStreaming(): void {
 	abortController?.abort();
 }
 
+/**
+ * Trigger the silent compile turn: sends a hidden user message asking the LLM
+ * to produce the final world document, then on success captures the full
+ * streamed response as `worldContent` and sets `readyToCreate=true`.
+ *
+ * Idempotent: if a compile is already in progress or completed, this is a no-op
+ * (returns immediately when `isStreaming` or `readyToCreate` is true).
+ *
+ * To retry after a failure, the caller must first invoke `cancelStart()`.
+ */
+export async function requestStart(): Promise<void> {
+	if (isStreaming || readyToCreate) return;
+	isCompilingWorld = true;
+	error = null;
+	try {
+		const compiled = await runHiddenCompileTurn();
+		if (compiled) {
+			worldContent = compiled;
+			readyToCreate = true;
+		}
+	} finally {
+		isCompilingWorld = false;
+	}
+}
+
+/** Reset the ready-to-create gate so the user can re-compile after a failure. */
+export function cancelStart(): void {
+	if (readyToCreate) {
+		readyToCreate = false;
+		worldContent = null;
+	}
+}
+
+async function runHiddenCompileTurn(): Promise<string | null> {
+	if (isStreaming) return null;
+
+	const providerConfig = getMainProviderConfig();
+	if (!providerConfig?.model) {
+		error = ERR_API_KEY_AND_MODEL_NOT_CONFIGURED;
+		return null;
+	}
+	const existingMsgs: MessageBase[] = messages.map((m) => ({ role: m.role, content: m.content }));
+	const history: MessageBase[] = actPlotInterview
+		? existingMsgs
+		: [seedMsg(), ...existingMsgs, { role: 'user', content: worldBuilderExtractionPrompt() }];
+	let captured = '';
+	isStreaming = true;
+	abortController = new AbortController();
+
+	try {
+		await streamWorldBuilderChat(
+			history,
+			(state: StreamState) => {
+				captured = state.content;
+			},
+			abortController.signal,
+			providerConfig
+		);
+		return captured.trim() || null;
+	} catch (err: unknown) {
+		if (err instanceof DOMException && err.name === 'AbortError') {
+			return null;
+		}
+		error = err instanceof Error ? err.message : 'An unexpected error occurred.';
+		return null;
+	} finally {
+		isStreaming = false;
+		abortController = null;
+	}
+}
+
 export async function regenerateLastWorldBuilderResponse(): Promise<void> {
 	if (isStreaming) return;
 
@@ -338,6 +393,8 @@ export function updateWorldBuilderMessageContent(messageId: string, content: str
 }
 
 async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<void> {
+	if (isStreaming) return;
+
 	const providerConfig = getMainProviderConfig();
 	if (!providerConfig?.model) {
 		error = ERR_API_KEY_AND_MODEL_NOT_CONFIGURED;
@@ -360,10 +417,12 @@ async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<vo
 	abortController = new AbortController();
 
 	try {
-		const existingMsgs = messages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
-		const history = actPlotInterview ? existingMsgs : [seedMsg(), ...existingMsgs];
-		await streamWorldBuilderChat(history, messageIdx, abortController.signal, providerConfig);
-		parseCompletionMarker(getCurrentMessage().content);
+		const existingMsgs: MessageBase[] = messages.slice(0, -1).map((m) => ({ role: m.role, content: m.content }));
+		const history: MessageBase[] = actPlotInterview ? existingMsgs : [seedMsg(), ...existingMsgs];
+		const updateCallback = (state: StreamState) => {
+			messages[messageIdx] = { ...messages[messageIdx], content: state.content };
+		};
+		await streamWorldBuilderChat(history, updateCallback, abortController.signal, providerConfig);
 
 		// Persist messages to DB when in interview mode
 		if (actPlotInterview && interviewActLineId) {
@@ -427,7 +486,7 @@ export async function removeLastInterviewAssistantMessage(): Promise<void> {
 
 async function streamWorldBuilderChat(
 	history: MessageBase[],
-	messageIdx: number,
+	onUpdate: (state: StreamState) => void,
 	abortSignal: AbortSignal,
 	providerConfig: ProviderConfig
 ): Promise<StreamAccumulator> {
@@ -440,16 +499,7 @@ async function streamWorldBuilderChat(
 			messages: llmHistory,
 			logFilename: logFilePath ?? undefined,
 		}),
-		streamChatResponse(
-			fullSystemPrompt,
-			llmHistory,
-			abortSignal,
-			(state: StreamState) => {
-				messages[messageIdx] = { ...messages[messageIdx], content: state.content };
-			},
-			() => {},
-			providerConfig
-		),
+		streamChatResponse(fullSystemPrompt, llmHistory, abortSignal, onUpdate, () => {}, providerConfig),
 	]);
 	return result[1];
 }

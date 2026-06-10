@@ -312,6 +312,7 @@ features:
       - 保留未解決的緊張局勢、待揭示的內容和事件升級、加劇的結構。
   worldBuilder:
     worldBuilderSeed: '我想創作一個新故事。請協助我構建世界觀。'
+    worldBuilderExtractionPrompt: '請將我們的對話編譯為最終的世界觀文件。請直接輸出 Markdown，不要前言、結語或標記行。'
     actPlotInterviewExtraction: |
       以下是故事的世界觀設定: 
 
