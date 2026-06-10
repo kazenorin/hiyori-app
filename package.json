@@ -61,6 +61,9 @@
 		"vite": "^8.0.5",
 		"vitest": "^4.1.4"
 	},
+	"overrides": {
+		"onnxruntime-node": "npm:onnxruntime-web@1.22.0-dev.20250409-89f8206ba4"
+	},
 	"dependencies": {
 		"@ai-sdk/openai": "^3.0.51",
 		"@ai-sdk/openai-compatible": "^2.0.40",
