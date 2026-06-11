@@ -313,6 +313,11 @@ features:
   worldBuilder:
     worldBuilderSeed: '我想創作一個新故事。請協助我構建世界觀。'
     worldBuilderExtractionPrompt: '請將我們的對話編譯為最終的世界觀文件。請直接輸出 Markdown，不要前言、結語或標記行。'
+    templates:
+      highFantasy: 高奇幻
+      modernSliceOfLife: 現代日常
+      sciFi: 科幻
+      urbanFantasy: 都市奇幻
     actPlotInterviewExtraction: |
       以下是故事的世界觀設定: 
 
@@ -430,6 +435,17 @@ features:
       每行僅一個短語。
 
 tools:
+  selectWorldTemplate:
+    description: >
+      選擇最符合使用者故事想法的世界觀模板。
+      當你對類型和設定有信心時呼叫此工具。
+    parameters:
+      templateId: '所選世界觀模板的 ID'
+    messages:
+      success: '已選擇模板：{{templateName}}。你現在可以使用此模板開始構建世界觀。'
+      errors:
+        alreadySelected: '此工作階段已選擇了模板。'
+        invalidTemplateId: '無效的模板 ID。請從以下選擇：high-fantasy、modern-slice-of-life、sci-fi、urban-fantasy。'
   evaluateRisk:
     description: >
       透過擲骰來評估帶有風險的行動的結果。風險等級越高，壞結果的機率越大。

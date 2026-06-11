@@ -3,7 +3,7 @@ import { streamText } from 'ai';
 import { maxBy } from 'lodash-es';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
-import { worldTemplateLoader } from '$lib/fs/prompts';
+import { highFantasyTemplateLoader } from '$lib/fs/prompts';
 import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import { fs } from '$lib/fs/file-system';
@@ -76,7 +76,10 @@ export async function generateWorld(storyId: string, abortSignal?: AbortSignal):
 
 	const systemPrompt = worldFromChatSystemPrompt();
 
-	const [generatePrompt, worldTemplate] = await Promise.all([Promise.resolve(worldFromChatPrompt()), worldTemplateLoader.loadDefault()]);
+	const [generatePrompt, worldTemplate] = await Promise.all([
+		Promise.resolve(worldFromChatPrompt()),
+		highFantasyTemplateLoader.loadDefault(),
+	]);
 
 	const userInstruction = generatePrompt + '\n\n' + worldTemplate;
 	const messages = await traceStoryMessages(storyId);
@@ -129,7 +132,7 @@ export async function generateWorldFromCards(
 	const [systemPrompt, generatePrompt, worldTemplate] = await Promise.all([
 		Promise.resolve(worldFromCardsSystemPrompt()),
 		Promise.resolve(worldFromCardsPrompt()),
-		worldTemplateLoader.loadDefault(),
+		highFantasyTemplateLoader.loadDefault(),
 	]);
 
 	const userInstruction = generatePrompt + '\n\n' + worldTemplate;

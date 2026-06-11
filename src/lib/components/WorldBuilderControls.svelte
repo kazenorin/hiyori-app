@@ -17,6 +17,7 @@
 		isGameResumeMode: boolean;
 		hasInterviewMessages: boolean;
 		isStreaming: boolean;
+		isPreTemplatePhase: boolean;
 		showUpdateWorldCardOption: boolean;
 		updateWorldCard: boolean;
 		onStart: () => void;
@@ -41,6 +42,7 @@
 		isGameResumeMode,
 		hasInterviewMessages,
 		isStreaming,
+		isPreTemplatePhase,
 		showUpdateWorldCardOption,
 		updateWorldCard = $bindable(false),
 		onStart,
@@ -165,7 +167,7 @@
 	</div>
 {/snippet}
 
-{#if !isReadyToStart && !isInterviewMode && !isCompiling}
+{#if !isReadyToStart && !isInterviewMode && !isCompiling && !isPreTemplatePhase}
 	<!-- Pre-start bar: name input + Start button -->
 	<div class="border-t border-surface-200-800 bg-surface-50-950 px-4 md:px-8 py-3">
 		<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">

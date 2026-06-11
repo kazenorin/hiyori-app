@@ -37,6 +37,7 @@
 		sendWorldBuilderMessage,
 		stopStreaming as stopWorldBuilderStreaming,
 		type WorldBuilderMessage,
+		getWbPhase,
 	} from '$lib/features/world-builder/world-builder.svelte';
 	import {
 		getIsCreatingStory,
@@ -142,7 +143,10 @@
 
 	let forkPlotMode = $state<'guidance' | 'phaseEvent' | null>(null);
 	const wbShowPreStartBar = $derived(
-		!getReadyToCreate() && !getActPlotInterview() && !(getIsCompilingWorld() || getIsWorldBuilderStreaming())
+		!getReadyToCreate() &&
+			!getActPlotInterview() &&
+			!(getIsCompilingWorld() || getIsWorldBuilderStreaming()) &&
+			getWbPhase() === 'post-template'
 	);
 
 	async function handleCopy(messageId: string, content: string) {
@@ -410,6 +414,7 @@
 					isGameResumeMode={getGameResumeInterview()}
 					hasInterviewMessages={getHasInterviewMessages()}
 					isStreaming={getIsWorldBuilderStreaming()}
+					isPreTemplatePhase={getWbPhase() === 'pre-template'}
 					showUpdateWorldCardOption={getIsNextActInterview()}
 					bind:updateWorldCard={updateWorldCardChecked}
 					onStart={() => handleStartFromWorldBuilder(worldBuilderStoryNameDraft)}

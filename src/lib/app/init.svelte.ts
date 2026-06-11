@@ -4,7 +4,11 @@ import { initMemoryDatabase, getMemoryDatabase } from '$lib/db/memory-database';
 import { runMemoryMigrations } from '$lib/db/memory-migrations';
 import { loadStories, restoreState } from '$lib/stores/stories.svelte';
 import {
-	worldTemplateLoader,
+	highFantasyTemplateLoader,
+	modernSliceOfLifeTemplateLoader,
+	sciFiTemplateLoader,
+	urbanFantasyTemplateLoader,
+	worldPreTemplateDiscoveryLoader,
 	worldBuilderSystemPromptLoader,
 	memoryExtractionSystemPromptLoader,
 	memoryExtractionPromptLoader,
@@ -90,7 +94,11 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 		await log.info('init', 'Loading world prompts...');
 		onStatus?.('Loading world prompts...');
 		setActiveLocale(settings.locale || 'en');
-		await worldTemplateLoader.loadDefault();
+		await highFantasyTemplateLoader.loadDefault();
+		await modernSliceOfLifeTemplateLoader.loadDefault();
+		await sciFiTemplateLoader.loadDefault();
+		await urbanFantasyTemplateLoader.loadDefault();
+		await worldPreTemplateDiscoveryLoader.loadDefault();
 		await worldBuilderSystemPromptLoader.loadDefault();
 
 		await log.info('init', 'Loading memory prompts...');

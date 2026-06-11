@@ -124,15 +124,42 @@ src:
           world:
             world-builder-system-prompt.md:
               configPath: en/prompt-templates/world/world-builder-system-prompt.md
-              hash: df84cfd9f963b198aa953a5b6bab1667191306b171e382a994af8129b019ff90
+              hash: e6c44422f30d157fa9240567389b0d5a16a55c18c9f21403a4bbe601d85347b8
               oldHashes:
+                - df84cfd9f963b198aa953a5b6bab1667191306b171e382a994af8129b019ff90
                 - 724187bfef83065b2f4c58007fa74695669dfe5eaa0b088d0a60665eab27f0a2
-              updatedAt: "2026-06-10T16:51:22.070Z"
+              updatedAt: "2026-06-11T14:37:15.215Z"
             world-template.md:
               configPath: en/prompt-templates/world/world-template.md
+              hash: null
+              oldHashes:
+                - 9953c22a391e34f1b1b8e9eacfcd3928cb96bbcc80e7ac1e64ea4e4135049a3b
+              updatedAt: "2026-06-11T14:37:15.215Z"
+            world-pre-template-discovery.md:
+              configPath: en/prompt-templates/world/world-pre-template-discovery.md
+              hash: 4356ea74ed49d85458f8b66dbe42835380c700a68efb03b308d70a86407e1660
+              oldHashes: []
+              updatedAt: "2026-06-11T14:37:15.215Z"
+            world-template-high-fantasy.md:
+              configPath: en/prompt-templates/world/world-template-high-fantasy.md
               hash: 9953c22a391e34f1b1b8e9eacfcd3928cb96bbcc80e7ac1e64ea4e4135049a3b
               oldHashes: []
-              updatedAt: "2026-05-30T16:51:23.217Z"
+              updatedAt: "2026-06-11T14:37:15.215Z"
+            world-template-modern-slice-of-life.md:
+              configPath: en/prompt-templates/world/world-template-modern-slice-of-life.md
+              hash: a89b35b906881e9b2a590eab2d2ca56419f4690d88634dd4fd40320088ec88ac
+              oldHashes: []
+              updatedAt: "2026-06-11T14:37:15.215Z"
+            world-template-sci-fi.md:
+              configPath: en/prompt-templates/world/world-template-sci-fi.md
+              hash: 1f8ac89566681ba30a494640d87a9d9baa5ceba342f462a2072d859324f9f4e7
+              oldHashes: []
+              updatedAt: "2026-06-11T14:37:15.215Z"
+            world-template-urban-fantasy.md:
+              configPath: en/prompt-templates/world/world-template-urban-fantasy.md
+              hash: dae4f04cecb35ce8d527cf36724df4fe54b2bc86adbc51d45e702888dcd570df
+              oldHashes: []
+              updatedAt: "2026-06-11T14:37:15.215Z"
           writer:
             writer-output-template.md:
               configPath: en/prompt-templates/writer/writer-output-template.md
@@ -273,15 +300,42 @@ src:
           world:
             world-builder-system-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/world/world-builder-system-prompt.md
-              hash: fd76496e067ac51f7e568acf90f21f796937c84f284d9a6abdf62decd7219b73
+              hash: acc41bbf4fdf8239c2f651c4c1109aad0bb14dffd9c14da1ae4e92536dc70abc
               oldHashes:
+                - fd76496e067ac51f7e568acf90f21f796937c84f284d9a6abdf62decd7219b73
                 - 4809cd56814e0a301c18668dbd6543e3da99d212bea8ea51d49c857bd47cdfb5
-              updatedAt: "2026-06-10T16:51:22.070Z"
+              updatedAt: "2026-06-11T14:37:15.215Z"
             world-template.md:
               configPath: zh-Hant-HK/prompt-templates/world/world-template.md
+              hash: null
+              oldHashes:
+                - 6e2051f1c1cd9a49130cff7bc820c656a149a11f335145decd4f8bb7c7d1e547
+              updatedAt: "2026-06-11T14:37:15.215Z"
+            world-pre-template-discovery.md:
+              configPath: zh-Hant-HK/prompt-templates/world/world-pre-template-discovery.md
+              hash: ecdea76bc3a4e1960f8f4f3a26ae2c87ad9d594de5d99389812485372e664853
+              oldHashes: []
+              updatedAt: "2026-06-11T14:37:15.215Z"
+            world-template-high-fantasy.md:
+              configPath: zh-Hant-HK/prompt-templates/world/world-template-high-fantasy.md
               hash: 6e2051f1c1cd9a49130cff7bc820c656a149a11f335145decd4f8bb7c7d1e547
               oldHashes: []
-              updatedAt: "2026-05-30T16:51:23.217Z"
+              updatedAt: "2026-06-11T14:37:15.215Z"
+            world-template-modern-slice-of-life.md:
+              configPath: zh-Hant-HK/prompt-templates/world/world-template-modern-slice-of-life.md
+              hash: 1b58a5685c25cf58bb798ed56de7c147cfa2597d01e7da095d40ad5c9c36bcb2
+              oldHashes: []
+              updatedAt: "2026-06-11T14:37:15.215Z"
+            world-template-sci-fi.md:
+              configPath: zh-Hant-HK/prompt-templates/world/world-template-sci-fi.md
+              hash: 578ab17d832aae1a4f808cd1c21fc163e50265c54cdc214034bbcb52f51ecd05
+              oldHashes: []
+              updatedAt: "2026-06-11T14:37:15.215Z"
+            world-template-urban-fantasy.md:
+              configPath: zh-Hant-HK/prompt-templates/world/world-template-urban-fantasy.md
+              hash: 68043d356febb70562730ba8af5d0351f9b0be93a6534669d77c19205f5f6b5e
+              oldHashes: []
+              updatedAt: "2026-06-11T14:37:15.215Z"
           writer:
             writer-output-template.md:
               configPath: zh-Hant-HK/prompt-templates/writer/writer-output-template.md
@@ -302,13 +356,15 @@ src:
       locale-strings:
         en.yaml:
           configPath: en/locale-strings.yaml
-          hash: 80d841aa000184d8604696b1f1877aebb1a348db16d2267e57b421c5eed4c959
+          hash: 2dac94173236f1d91ad05073d7ac651ae1265c4182815041ba5663713dcdd799
           oldHashes:
+            - 80d841aa000184d8604696b1f1877aebb1a348db16d2267e57b421c5eed4c959
             - 02c2f6c61d948f401f32cdd4eb656a574da0366b3a2809ee2ff3c42b47348649
-          updatedAt: "2026-06-10T16:51:22.070Z"
+          updatedAt: "2026-06-11T14:37:15.215Z"
         zh-Hant-HK.yaml:
           configPath: zh-Hant-HK/locale-strings.yaml
-          hash: c9bca07458a02fd17114e6456a4c281b2460dc392ffccd2bd103199af045c4cb
+          hash: 0eda1a48149469d75b776af15e1b34a8510a948660818ad2f0047cb2c4e95f1c
           oldHashes:
+            - c9bca07458a02fd17114e6456a4c281b2460dc392ffccd2bd103199af045c4cb
             - f7772bf027cfec167bdc5e5d85aa783fac24f47303072a00685d5d7b70b80b54
-          updatedAt: "2026-06-10T16:51:22.070Z"
+          updatedAt: "2026-06-11T14:37:15.215Z"

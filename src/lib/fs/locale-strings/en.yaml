@@ -322,6 +322,11 @@ features:
   worldBuilder:
     worldBuilderSeed: 'I want to create a new story. Please help me build a world.'
     worldBuilderExtractionPrompt: 'Please compile our conversation into the final world document now. Output the markdown directly with no preamble, no closing text, and no marker line.'
+    templates:
+      highFantasy: High Fantasy
+      modernSliceOfLife: Modern Slice of Life
+      sciFi: Sci-Fi
+      urbanFantasy: Urban Fantasy
     actPlotInterviewExtraction: |
       The following is the world setting for the story:
 
@@ -439,6 +444,17 @@ features:
       One phrase per line only.
 
 tools:
+  selectWorldTemplate:
+    description: >
+      Select the world template that best matches the user's story idea.
+      Call this when you are confident about the genre and setting.
+    parameters:
+      templateId: 'The ID of the selected world template'
+    messages:
+      success: 'Template selected: {{templateName}}. You may now begin world-building using this template.'
+      errors:
+        alreadySelected: 'A template has already been selected for this session.'
+        invalidTemplateId: 'Invalid template ID. Please choose from: high-fantasy, modern-slice-of-life, sci-fi, urban-fantasy.'
   evaluateRisk:
     description: >
       Evaluates the outcome of taking a risk by rolling a dice. The higher the risk level, the more likely a bad outcome.

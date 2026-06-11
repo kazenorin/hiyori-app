@@ -74,7 +74,11 @@ export const generalInstructionsLoader = createLoader('general-instructions.md')
 
 // === World builder ===
 
-export const worldTemplateLoader = createLoader('world/world-template.md');
+export const worldPreTemplateDiscoveryLoader = createLoader('world/world-pre-template-discovery.md');
+export const highFantasyTemplateLoader = createLoader('world/world-template-high-fantasy.md');
+export const modernSliceOfLifeTemplateLoader = createLoader('world/world-template-modern-slice-of-life.md');
+export const sciFiTemplateLoader = createLoader('world/world-template-sci-fi.md');
+export const urbanFantasyTemplateLoader = createLoader('world/world-template-urban-fantasy.md');
 export const worldBuilderSystemPromptLoader = createLoader('world/world-builder-system-prompt.md');
 
 // === Act plot ===

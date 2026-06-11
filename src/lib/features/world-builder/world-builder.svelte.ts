@@ -19,7 +19,7 @@ import {
 	actPlotInterviewSystemPromptLoader,
 	generalInstructionsLoader,
 	worldBuilderSystemPromptLoader,
-	worldTemplateLoader,
+	worldPreTemplateDiscoveryLoader,
 } from '$lib/fs/prompts';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { generateWorldBuilderLogFilename, logWorldBuilderChat } from '$lib/logging/chat-logger';
@@ -30,6 +30,9 @@ import type { MessageBase } from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
 import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED } from '$lib/definitions/error-messages';
+import { ls } from '$lib/localization';
+import { WORLD_TEMPLATES } from '$lib/features/world-builder/template-registry';
+import { buildWorldBuilderTools } from '$lib/ai/tools/select-world-template';
 
 export interface WorldBuilderMessage {
 	id: string;
@@ -73,8 +76,12 @@ let interviewWorldContent: string | null = null;
 
 // Cached prompts loaded once on enter
 let cachedWorldBuilderPrompt: string | null = null;
-let cachedWorldTemplate: string | null = null;
 let cachedInterviewSystemPrompt: string | null = null;
+
+// World builder phase state
+type WorldBuilderPhase = 'pre-template' | 'post-template';
+let wbPhase: WorldBuilderPhase = $state('pre-template');
+let selectedTemplateId: string | null = $state(null);
 
 export function getIsActive(): boolean {
 	return isActive;
@@ -140,8 +147,9 @@ function resetState(): void {
 	abortController = null;
 	logFilePath = null;
 	cachedWorldBuilderPrompt = null;
-	cachedWorldTemplate = null;
 	cachedInterviewSystemPrompt = null;
+	wbPhase = 'pre-template';
+	selectedTemplateId = null;
 	actPlotInterview = false;
 	gameResumeInterview = false;
 	interviewActLineId = null;
@@ -156,23 +164,26 @@ export function exitWorldBuilderMode(): void {
 	resetState();
 }
 
-function buildFullWorldBuildPrompt(): string {
-	return (cachedWorldBuilderPrompt ?? '') + '\n\n---\n\n' + (cachedWorldTemplate ?? '') + '\n\n---\n\n';
+async function buildFullWorldBuildPrompt(): Promise<string> {
+	if (wbPhase === 'pre-template') {
+		const discoveryPrompt = await worldPreTemplateDiscoveryLoader.loadDefault();
+		return (cachedWorldBuilderPrompt ?? '') + '\n\n---\n\n' + discoveryPrompt + '\n\n---\n\n';
+	}
+	const entry = WORLD_TEMPLATES.find((t) => t.id === selectedTemplateId);
+	const templateContent = entry ? await entry.loader.loadDefault() : '';
+	return (cachedWorldBuilderPrompt ?? '') + '\n\n---\n\n' + templateContent + '\n\n---\n\n';
 }
 
 export async function enterWorldBuilderMode(): Promise<void> {
 	exitWorldBuilderMode();
 	isActive = true;
+	wbPhase = 'pre-template';
+	selectedTemplateId = null;
 	logFilePath = generateWorldBuilderLogFilename();
 
 	await loadActiveLocales();
 
-	const [worldBuilderPrompt, worldTemplate] = await Promise.all([
-		worldBuilderSystemPromptLoader.loadDefault(),
-		worldTemplateLoader.loadDefault(),
-	]);
-	cachedWorldBuilderPrompt = worldBuilderPrompt;
-	cachedWorldTemplate = worldTemplate;
+	cachedWorldBuilderPrompt = await worldBuilderSystemPromptLoader.loadDefault();
 
 	await streamNextResponse();
 }
@@ -310,6 +321,30 @@ export function cancelStart(): void {
 		readyToCreate = false;
 		worldContent = null;
 	}
+}
+
+async function handleTemplateSelected(templateId: string): Promise<string> {
+	if (wbPhase !== 'pre-template' || selectedTemplateId !== null) {
+		return ls('tools.selectWorldTemplate.messages.errors.alreadySelected');
+	}
+
+	const entry = WORLD_TEMPLATES.find((t) => t.id === templateId);
+	if (!entry) {
+		return ls('tools.selectWorldTemplate.messages.errors.invalidTemplateId');
+	}
+
+	selectedTemplateId = templateId;
+	wbPhase = 'post-template';
+
+	return ls('tools.selectWorldTemplate.messages.success', { templateName: entry.label() });
+}
+
+export function getWbPhase(): WorldBuilderPhase {
+	return wbPhase;
+}
+
+export function getSelectedTemplateId(): string | null {
+	return selectedTemplateId;
 }
 
 async function runHiddenCompileTurn(): Promise<string | null> {
@@ -490,16 +525,19 @@ async function streamWorldBuilderChat(
 	abortSignal: AbortSignal,
 	providerConfig: ProviderConfig
 ): Promise<StreamAccumulator> {
-	const fullSystemPrompt = actPlotInterview && cachedInterviewSystemPrompt ? cachedInterviewSystemPrompt : buildFullWorldBuildPrompt();
-	// Prepend hidden context for interview mode (invisible to user, but sent to LLM)
+	const fullSystemPrompt =
+		actPlotInterview && cachedInterviewSystemPrompt ? cachedInterviewSystemPrompt : await buildFullWorldBuildPrompt();
 	const llmHistory = actPlotInterview ? [...interviewHiddenContext, ...history] : history;
+
+	const tools = !actPlotInterview && wbPhase === 'pre-template' ? buildWorldBuilderTools(handleTemplateSelected) : undefined;
+
 	const result = await Promise.all([
 		logWorldBuilderChat({
 			systemPrompt: fullSystemPrompt,
 			messages: llmHistory,
 			logFilename: logFilePath ?? undefined,
 		}),
-		streamChatResponse(fullSystemPrompt, llmHistory, abortSignal, onUpdate, () => {}, providerConfig),
+		streamChatResponse(fullSystemPrompt, llmHistory, abortSignal, onUpdate, () => {}, providerConfig, tools),
 	]);
 	return result[1];
 }

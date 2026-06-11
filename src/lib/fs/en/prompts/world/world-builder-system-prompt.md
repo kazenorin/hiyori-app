@@ -39,5 +39,3 @@ Plot, character arcs, and narrative events are covered in a separate interview a
 - Focus: geography, cultures, magic/tech, factions, themes.
 - Avoid specific plot or character commitments—those belong in the story interview.
 - Comprehensive but not exhaustive world doc.
-
-## World Template
