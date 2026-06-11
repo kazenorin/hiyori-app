@@ -327,6 +327,13 @@ features:
       modernSliceOfLife: Modern Slice of Life
       sciFi: Sci-Fi
       urbanFantasy: Urban Fantasy
+    templateClassifierSystemPrompt: |
+      Classify the following world description into one of these categories:
+      - high-fantasy
+      - modern-slice-of-life
+      - sci-fi
+      - urban-fantasy
+      Reply with ONLY the category ID.
     actPlotInterviewExtraction: |
       The following is the world setting for the story:
 

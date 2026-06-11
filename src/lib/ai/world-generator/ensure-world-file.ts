@@ -19,7 +19,7 @@ export async function ensureWorldFile(storyId: string, storyName?: string, abort
 		return worldContent;
 	}
 
-	const generated = await generateWorld(storyId, abortSignal);
+	const generated = await generateWorld(storyId, folderName, abortSignal);
 	await fs.writeTextFile(worldPath, generated);
 	return generated;
 }

@@ -2,13 +2,13 @@ import type { MessageBase } from '$lib/db/messages';
 import { streamText } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
-import { highFantasyTemplateLoader } from '$lib/fs/prompts';
 import { fs } from '$lib/fs/file-system';
 import { worldFromActSystemPrompt, worldFromActPrompt } from '$lib/definitions/feature-prompts';
 import { ls } from '$lib/localization';
 import { worldContentHeader, actSummaryHeader, interviewTranscriptHeader } from '$lib/definitions/common-headers';
 import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 import { log } from '$lib/logging/logger';
+import { resolveTemplateForUpdate } from './template-resolution';
 
 const LOG_TAG = 'world-updater';
 
@@ -33,7 +33,7 @@ export async function updateWorldCard(params: UpdateWorldCardParams): Promise<st
 	const [systemPrompt, extractionPrompt, worldTemplate] = await Promise.all([
 		Promise.resolve(worldFromActSystemPrompt()),
 		Promise.resolve(worldFromActPrompt()),
-		highFantasyTemplateLoader.loadDefault(),
+		resolveTemplateForUpdate(params.folderName, params.currentWorldContent),
 	]);
 
 	const userInstruction = extractionPrompt + '\n\n---\n\n' + worldTemplate;

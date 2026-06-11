@@ -17,6 +17,7 @@ import {
 	exitWorldBuilderMode,
 	getMessages as getWorldBuilderMessages,
 	requestStart,
+	getSelectedTemplateId,
 } from '$lib/features/world-builder/world-builder.svelte';
 import { loadActLineMessages, sendInitialNarration } from '$lib/ai/chat.svelte';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
@@ -74,7 +75,7 @@ async function ensureStoryCreated(): Promise<boolean> {
 	if (!name || !worldContent) return false;
 
 	if (!storyCreated) {
-		await createStoryFromWorldBuilder(name, worldContent, settings.locale || 'en');
+		await createStoryFromWorldBuilder(name, worldContent, settings.locale || 'en', getSelectedTemplateId());
 		storyCreated = true;
 	}
 	return true;

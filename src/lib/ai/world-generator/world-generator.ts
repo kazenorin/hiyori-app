@@ -3,11 +3,11 @@ import { streamText } from 'ai';
 import { maxBy } from 'lodash-es';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
-import { highFantasyTemplateLoader } from '$lib/fs/prompts';
 import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import { fs } from '$lib/fs/file-system';
-import { worldContentHeader, actDescriptionHeader, characterHeader } from '$lib/definitions/common-headers';
+import { resolveTemplateForGeneration } from './template-resolution';
+import { actDescriptionHeader, characterHeader } from '$lib/definitions/common-headers';
 import {
 	worldFromChatSystemPrompt,
 	worldFromChatPrompt,
@@ -67,7 +67,7 @@ async function traceStoryMessages(storyId: string): Promise<MessageBase[]> {
  * Generate world.md for a story by analyzing its chat history.
  * Uses generate-world-from-chat-prompt.md + world-template.md as system prompt.
  */
-export async function generateWorld(storyId: string, abortSignal?: AbortSignal): Promise<string> {
+export async function generateWorld(storyId: string, folderName?: string | null, abortSignal?: AbortSignal): Promise<string> {
 	const config = getMainProviderConfig();
 
 	if (!config?.model) {
@@ -76,17 +76,24 @@ export async function generateWorld(storyId: string, abortSignal?: AbortSignal):
 
 	const systemPrompt = worldFromChatSystemPrompt();
 
-	const [generatePrompt, worldTemplate] = await Promise.all([
-		Promise.resolve(worldFromChatPrompt()),
-		highFantasyTemplateLoader.loadDefault(),
-	]);
-
-	const userInstruction = generatePrompt + '\n\n' + worldTemplate;
 	const messages = await traceStoryMessages(storyId);
 
 	if (messages.length === 0) {
 		throw new Error(ERR_NO_MESSAGES_FOR_WORLD);
 	}
+
+	const classificationContent =
+		messages
+			.map((m) => m.content)
+			.filter(Boolean)
+			.join('\n\n') || null;
+
+	const [generatePrompt, worldTemplate] = await Promise.all([
+		Promise.resolve(worldFromChatPrompt()),
+		resolveTemplateForGeneration(folderName ?? null, classificationContent),
+	]);
+
+	const userInstruction = generatePrompt + '\n\n' + worldTemplate;
 
 	// Append the instruction + template as the final user message
 	const allMessages = [...messages, { role: 'user' as const, content: userInstruction }];
@@ -117,7 +124,6 @@ export interface CardInput {
 }
 
 export async function generateWorldFromCards(
-	worldContent: string | null,
 	actCardContent: string | null,
 	characterCards: CardInput[],
 	folderName: string,
@@ -129,19 +135,18 @@ export async function generateWorldFromCards(
 		throw new Error(ERR_API_KEY_AND_MODEL_NOT_CONFIGURED);
 	}
 
+	const classificationContent = [actCardContent, ...characterCards.map((c) => c.content)].filter(Boolean).join('\n\n') || null;
+
 	const [systemPrompt, generatePrompt, worldTemplate] = await Promise.all([
 		Promise.resolve(worldFromCardsSystemPrompt()),
 		Promise.resolve(worldFromCardsPrompt()),
-		highFantasyTemplateLoader.loadDefault(),
+		resolveTemplateForGeneration(folderName, classificationContent),
 	]);
 
 	const userInstruction = generatePrompt + '\n\n' + worldTemplate;
 
 	const messages: MessageBase[] = [];
 
-	if (worldContent) {
-		messages.push({ role: 'user', content: `## ${worldContentHeader()}\n\n${worldContent}` });
-	}
 	if (actCardContent) {
 		messages.push({ role: 'user', content: `## ${actDescriptionHeader()}\n\n${actCardContent}` });
 	}

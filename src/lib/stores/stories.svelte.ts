@@ -11,6 +11,7 @@ import { Memory } from '$lib/features/memory';
 import { getDefaultPlotMode, getMemoryProviderConfig, isMemoryAvailable, settings } from '$lib/stores/settings.svelte';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { ensureWorldFile } from '$lib/ai/world-generator';
+import { writeWorldTemplateId } from '$lib/ai/world-generator/template-resolution';
 import { deriveStoryName, renameStoryFolder, resolveStoryFolder } from '$lib/fs/story-folders';
 import { fs } from '$lib/fs/file-system';
 import * as dbStoryFolders from '$lib/db/story-folders';
@@ -518,7 +519,12 @@ export async function restoreState(): Promise<void> {
 	isLoading = false;
 }
 
-export async function createStoryFromWorldBuilder(name: string, worldContent: string, locale: string): Promise<void> {
+export async function createStoryFromWorldBuilder(
+	name: string,
+	worldContent: string,
+	locale: string,
+	templateId: string | null = null
+): Promise<void> {
 	const story = await createStory(name, locale);
 	const act = await insertAct(story.id, actWithNumberLabel(1), 1);
 	const actLine = await createActLine(act.id, mainLineNameLabel());
@@ -528,6 +534,7 @@ export async function createStoryFromWorldBuilder(name: string, worldContent: st
 	const folderName = await resolveStoryFolder(story.id, effectiveName);
 	const worldPath = `${folderName}/world.md`;
 	await fs.writeTextFile(worldPath, worldContent);
+	await writeWorldTemplateId(folderName, templateId);
 
 	// Move world builder log from AppData/logs/ to story folder
 	const logFile = getLogFilePath();

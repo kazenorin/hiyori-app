@@ -387,7 +387,7 @@ async function regenerateWorldFromCards(
 	const lastActCardContent = interviewActCard?.content ?? null;
 	if (lastActCardContent || characterCards.length > 0) {
 		log('Generating world file from provided cards...');
-		result = await generateWorldFromCards(null, lastActCardContent, characterCards, storyFolder);
+		result = await generateWorldFromCards(lastActCardContent, characterCards, storyFolder);
 		log(`World file generated (${result.length} chars)`);
 	}
 	return result;
