@@ -39,10 +39,18 @@ export class TTSPlayer {
 		return this.modelLoaded;
 	}
 
+	private ensureAudioContext(): void {
+		if (!this.audioContext || this.audioContext.state === 'closed') {
+			this.audioContext = new AudioContext({ sampleRate: TTS_SAMPLE_RATE });
+		}
+	}
+
 	async play(text: string, messageId: string, voice: string, speed: number = 1): Promise<void> {
 		if (this.playingMessageId) {
 			this.stop();
 		}
+
+		this.ensureAudioContext();
 
 		this.playingMessageId = messageId;
 		this.stopped = false;
@@ -128,7 +136,7 @@ export class TTSPlayer {
 		}
 
 		if (status === 'complete') {
-			if (!this.isPlaying && this.audioQueue.length === 0) {
+			if (!this.isPlaying && this.audioQueue.length === 0 && this.processedChunks >= this.totalChunks && this.totalChunks > 0) {
 				this.playingMessageId = null;
 			}
 		}
@@ -151,16 +159,16 @@ export class TTSPlayer {
 	private async queueAudio(audioData: ArrayBuffer): Promise<void> {
 		if (this.stopped) return;
 
-		if (!this.audioContext) {
-			this.audioContext = new AudioContext({ sampleRate: TTS_SAMPLE_RATE });
-		}
-
-		if (this.audioContext.state === 'suspended') {
-			await this.audioContext.resume();
+		if (this.audioContext!.state === 'suspended') {
+			try {
+				await this.audioContext!.resume();
+			} catch {
+				return;
+			}
 		}
 
 		const float32 = new Float32Array(audioData);
-		const audioBuffer = this.audioContext.createBuffer(1, float32.length, TTS_SAMPLE_RATE);
+		const audioBuffer = this.audioContext!.createBuffer(1, float32.length, TTS_SAMPLE_RATE);
 		audioBuffer.getChannelData(0).set(float32);
 		this.audioQueue.push(audioBuffer);
 		this.playAudioQueue();
@@ -173,6 +181,14 @@ export class TTSPlayer {
 		try {
 			while (this.audioQueue.length > 0) {
 				if (this.stopped) break;
+
+				if (this.audioContext!.state === 'suspended') {
+					try {
+						await this.audioContext!.resume();
+					} catch {
+						break;
+					}
+				}
 
 				const source = this.audioContext!.createBufferSource();
 				this.currentSource = source;

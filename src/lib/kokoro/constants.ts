@@ -5,4 +5,3 @@ export const TTS_MAX_QUEUE_SIZE = 6;
 export const TTS_SPEED_MIN = 0.5;
 export const TTS_SPEED_MAX = 2;
 export const TTS_SPEED_STEP = 0.1;
-export const TTS_SPEED_DEFAULT = 1;

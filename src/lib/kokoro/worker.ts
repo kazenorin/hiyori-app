@@ -69,6 +69,7 @@ ctx.addEventListener('message', async (e: MessageEvent) => {
 
 	if (type === 'generate' && text) {
 		shouldStop = false;
+		bufferQueueSize = 0;
 
 		if (!tts) {
 			try {
