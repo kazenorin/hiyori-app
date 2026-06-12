@@ -40,6 +40,7 @@
 	import { isTauriSync } from '$lib/runtime';
 	import { ensureAllBaseConfigs } from '$lib/fs/prompt-loader';
 	import { getDatabase } from '$lib/db/database';
+	import { Accordion } from '@skeletonlabs/skeleton-svelte';
 
 	// Editing state
 	let editingId = $state<string | null>(null);
@@ -258,6 +259,11 @@
 
 		<p class="text-sm text-surface-500">{t('settings.settingsAutoSaved')}</p>
 
+		<!-- Locale -->
+		<Card title={t('settings.locale')} description={t('settings.localeDescription')}>
+			<ThemedSelect items={localeItems} value={settings.locale} onValueChange={(v) => updateSettings({ locale: v })} />
+		</Card>
+
 		<!-- AI Providers -->
 		<Card>
 			<div class="flex items-center justify-between">
@@ -322,100 +328,103 @@
 
 		<!-- Provider Roles -->
 		<Card title={t('settings.providerRoles')} description={t('settings.providerRolesDescription')}>
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.mainProvider')}</span>
-				<ThemedSelect
-					items={getRoleItems(false)}
-					value={mainProviderId}
-					onValueChange={(v) => assignRole('main', v)}
-					disabled={settings.providers.length === 0}
-					placeholder={t('settings.noProvidersConfigured')}
-				/>
-			</label>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.mainProvider')}</h3>
+					<ThemedSelect
+						items={getRoleItems(false)}
+						value={mainProviderId}
+						onValueChange={(v) => assignRole('main', v)}
+						disabled={settings.providers.length === 0}
+						placeholder={t('settings.noProvidersConfigured')}
+					/>
+					<span class="text-xs text-surface-500 block">{t('settings.mainProviderDescription')}</span>
+				</div>
 
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.minorTaskAgent')}</span>
-				<ThemedSelect
-					items={getRoleItems()}
-					value={settings.minorTaskAgentProviderRole}
-					onValueChange={(v) => updateSettings({ minorTaskAgentProviderRole: v })}
-					disabled={settings.providers.length === 0}
-					placeholder={t('settings.noProvidersConfigured')}
-				/>
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.minorTaskAgentDescription')}</span>
-			</label>
-
-			<label class="flex items-center gap-2">
-				<input
-					type="checkbox"
-					class="checkbox"
-					checked={settings.importantPhraseHighlighting}
-					disabled={!getMinorTaskAgentProviderConfig()}
-					onchange={(e) => updateSettings({ importantPhraseHighlighting: (e.currentTarget as HTMLInputElement).checked })}
-				/>
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.phraseHighlighting')}</span>
-			</label>
-			<span class="text-xs text-surface-500">{t('settings.phraseHighlightingDescription')}</span>
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.minorTaskAgent')}</h3>
+					<ThemedSelect
+						items={getRoleItems()}
+						value={settings.minorTaskAgentProviderRole}
+						onValueChange={(v) => updateSettings({ minorTaskAgentProviderRole: v })}
+						disabled={settings.providers.length === 0}
+						placeholder={t('settings.noProvidersConfigured')}
+					/>
+					<span class="text-xs text-surface-500 block">{t('settings.minorTaskAgentDescription')}</span>
+				</div>
+			</div>
 		</Card>
 
-		{#if isMemoryCapable()}
-			<!-- Memory -->
-			<Card title={t('settings.memory')} description={t('settings.enableMemoryDescription')}>
-				<label class="flex items-center gap-2">
-					<input
-						type="checkbox"
-						class="checkbox"
-						checked={settings.memoryEnabled}
-						onchange={(e) => updateSettings({ memoryEnabled: (e.currentTarget as HTMLInputElement).checked })}
-						disabled={!isMemoryCapable()}
+		<!-- Narrative -->
+		<Card title={t('settings.narrative')}>
+			<!-- Word Count & Compressor: side-by-side mini-cards -->
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<NumberField
+						label={t('settings.targetWordCount')}
+						hint={t('settings.targetWordCountDescription')}
+						min={50}
+						max={2000}
+						step={50}
+						value={settings.targetWordCount}
+						onValueChange={(v) => {
+							if (v >= 50 && v <= 2000) updateSettings({ targetWordCount: v });
+						}}
 					/>
-					<span class="text-sm font-medium text-surface-700-300">{t('settings.enableMemory')}</span>
-				</label>
+				</div>
 
-				<label class="block">
-					<span class="text-sm font-medium text-surface-700-300">{t('settings.memoryProvider')}</span>
-					<ThemedSelect
-						items={getRoleItems()}
-						value={settings.memoryProviderRole}
-						onValueChange={(v) => updateSettings({ memoryProviderRole: v })}
-						disabled={!settings.memoryEnabled || !isMemoryAvailable()}
-						placeholder={t('settings.noProvidersConfigured')}
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<NumberField
+						label={t('settings.compressorInterval')}
+						hint={t('settings.compressorIntervalDescription')}
+						min={0}
+						max={50}
+						step={1}
+						value={settings.characterProfileCompressorInterval}
+						onValueChange={(v) => {
+							if (v >= 0 && v <= 50) updateSettings({ characterProfileCompressorInterval: v });
+						}}
 					/>
-					<span class="text-xs text-surface-500 mt-1 block">{t('settings.memoryProviderDescription')}</span>
-				</label>
+				</div>
+			</div>
 
-				<label class="block">
-					<span class="text-sm font-medium text-surface-700-300">{t('settings.embeddingProvider')}</span>
-					<ThemedSelect
-						items={getRoleItems()}
-						value={settings.embeddingProviderRole}
-						onValueChange={(v) => updateSettings({ embeddingProviderRole: v })}
-						disabled={!settings.memoryEnabled || !isMemoryAvailable()}
-						placeholder={t('settings.noProvidersConfigured')}
-					/>
-					<span class="text-xs text-surface-500 mt-1 block">{t('settings.embeddingProviderDescription')}</span>
-				</label>
-			</Card>
-		{/if}
+			<!-- Director Mode & Phrase Highlighting: side-by-side mini-cards -->
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<div class="flex items-center gap-2">
+						<input
+							type="checkbox"
+							class="checkbox"
+							checked={settings.directorModeEnabled}
+							onchange={(e) => updateSettings({ directorModeEnabled: (e.currentTarget as HTMLInputElement).checked })}
+						/>
+						<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.directorMode')}</h3>
+					</div>
+					<span class="text-xs text-surface-500 block">{t('settings.directorModeDescription')}</span>
+				</div>
 
-		<!-- Director Mode -->
-		<Card title={t('settings.directorMode')} description={t('settings.directorModeDescription')}>
-			<label class="flex items-center gap-2">
-				<input
-					type="checkbox"
-					class="checkbox"
-					checked={settings.directorModeEnabled}
-					onchange={(e) => updateSettings({ directorModeEnabled: (e.currentTarget as HTMLInputElement).checked })}
-				/>
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.enabled')}</span>
-			</label>
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<label class="flex items-center gap-2">
+						<input
+							type="checkbox"
+							class="checkbox"
+							checked={settings.importantPhraseHighlighting}
+							disabled={!getMinorTaskAgentProviderConfig()}
+							onchange={(e) => updateSettings({ importantPhraseHighlighting: (e.currentTarget as HTMLInputElement).checked })}
+						/>
+						<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.phraseHighlighting')}</h3>
+					</label>
+					<span class="text-xs text-surface-500 block">{t('settings.phraseHighlightingDescription')}</span>
+				</div>
+			</div>
 		</Card>
 
 		<!-- Pipeline Roles -->
 		<Card title={t('settings.pipelineRoles')} description={t('settings.pipelineRolesDescription')}>
-			<div class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.plotPlanner')}</span>
-				<div class="flex items-center gap-2 mt-1">
+			<!-- Plot Planner: full-width mini-card -->
+			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+				<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.plotPlanner')}</h3>
+				<div class="flex items-center gap-2">
 					<label class="flex items-center gap-1">
 						<input
 							type="checkbox"
@@ -434,9 +443,8 @@
 						placeholder={t('settings.noProvidersConfigured')}
 					/>
 				</div>
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.plotPlannerDescription')}</span>
-				<span class="text-xs text-surface-500 block">{t('settings.enablePlotPlannerDescription')}</span>
-				<div class="flex items-center gap-2 mt-2">
+				<p class="text-xs text-surface-500">{t('settings.plotPlannerDescription')} {t('settings.enablePlotPlannerDescription')}</p>
+				<div class="flex items-center gap-2">
 					<span class="text-xs text-surface-500">{t('settings.plotMode')}</span>
 					<ThemedSelect
 						items={[
@@ -449,7 +457,7 @@
 					/>
 				</div>
 				<span class="text-xs text-surface-500 block">{t('settings.plotModeDescription')}</span>
-				<div class="flex items-center gap-2 mt-2">
+				<div class="flex items-center gap-2">
 					<span class="text-xs text-surface-500">{t('settings.reevaluationFrequency')}</span>
 					<input
 						type="number"
@@ -467,21 +475,10 @@
 				<span class="text-xs text-surface-500 block">{t('settings.reevaluationFrequencyDescription')}</span>
 			</div>
 
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.writer')}</span>
-				<ThemedSelect
-					items={getRoleItems()}
-					value={settings.writerProviderRole}
-					onValueChange={(v) => updateSettings({ writerProviderRole: v })}
-					disabled={settings.providers.length === 0}
-					placeholder={t('settings.noProvidersConfigured')}
-				/>
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.writerDescription')}</span>
-			</label>
-
-			<div class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.reviewer')}</span>
-				<div class="flex items-center gap-2 mt-1">
+			<!-- Reviewer: full-width mini-card -->
+			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+				<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.reviewer')}</h3>
+				<div class="flex items-center gap-2">
 					<label class="flex items-center gap-1">
 						<input
 							type="checkbox"
@@ -500,9 +497,8 @@
 						placeholder={t('settings.noProvidersConfigured')}
 					/>
 				</div>
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.reviewerDescription')}</span>
-				<span class="text-xs text-surface-500 block">{t('settings.enableReviewerDescription')}</span>
-				<div class="mt-2">
+				<p class="text-xs text-surface-500">{t('settings.reviewerDescription')} {t('settings.enableReviewerDescription')}</p>
+				<div>
 					<span class="text-xs font-medium text-surface-500">{t('settings.reviewerMode')}</span>
 					<ThemedSelect
 						items={reviewerModeItems}
@@ -518,68 +514,63 @@
 				</div>
 			</div>
 
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.editor')}</span>
-				<ThemedSelect
-					items={getRoleItems()}
-					value={settings.editorProviderRole}
-					onValueChange={(v) => updateSettings({ editorProviderRole: v })}
-					disabled={!settings.reviewerEnabled || settings.providers.length === 0}
-					placeholder={t('settings.noProvidersConfigured')}
-				/>
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.editorDescription')}</span>
-			</label>
+			<!-- 2x2 grid: Writer, Editor, Game Master, Summarizer -->
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<!-- Writer -->
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.writer')}</h3>
+					<ThemedSelect
+						items={getRoleItems()}
+						value={settings.writerProviderRole}
+						onValueChange={(v) => updateSettings({ writerProviderRole: v })}
+						disabled={settings.providers.length === 0}
+						placeholder={t('settings.noProvidersConfigured')}
+					/>
+					<span class="text-xs text-surface-500 block">{t('settings.writerDescription')}</span>
+				</div>
 
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.gameMaster')}</span>
-				<ThemedSelect
-					items={getRoleItems()}
-					value={settings.gameMasterProviderRole}
-					onValueChange={(v) => updateSettings({ gameMasterProviderRole: v })}
-					disabled={settings.providers.length === 0}
-					placeholder={t('settings.noProvidersConfigured')}
-				/>
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.gameMasterDescription')}</span>
-			</label>
+				<!-- Editor -->
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.editor')}</h3>
+					<ThemedSelect
+						items={getRoleItems()}
+						value={settings.editorProviderRole}
+						onValueChange={(v) => updateSettings({ editorProviderRole: v })}
+						disabled={!settings.reviewerEnabled || settings.providers.length === 0}
+						placeholder={t('settings.noProvidersConfigured')}
+					/>
+					<span class="text-xs text-surface-500 block">{t('settings.editorDescription')}</span>
+					{#if !settings.reviewerEnabled}
+						<span class="text-xs text-surface-500">{t('settings.editorRequiresReviewer')}</span>
+					{/if}
+				</div>
 
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.summarizer')}</span>
-				<ThemedSelect
-					items={getRoleItems()}
-					value={settings.summarizerProviderRole}
-					onValueChange={(v) => updateSettings({ summarizerProviderRole: v })}
-					disabled={settings.providers.length === 0}
-					placeholder={t('settings.noProvidersConfigured')}
-				/>
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.summarizerDescription')}</span>
-			</label>
-		</Card>
+				<!-- Game Master -->
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.gameMaster')}</h3>
+					<ThemedSelect
+						items={getRoleItems()}
+						value={settings.gameMasterProviderRole}
+						onValueChange={(v) => updateSettings({ gameMasterProviderRole: v })}
+						disabled={settings.providers.length === 0}
+						placeholder={t('settings.noProvidersConfigured')}
+					/>
+					<span class="text-xs text-surface-500 block">{t('settings.gameMasterDescription')}</span>
+				</div>
 
-		<!-- Narrative -->
-		<Card title={t('settings.narrative')}>
-			<NumberField
-				label={t('settings.targetWordCount')}
-				hint={t('settings.targetWordCountDescription')}
-				min={50}
-				max={2000}
-				step={50}
-				value={settings.targetWordCount}
-				onValueChange={(v) => {
-					if (v >= 50 && v <= 2000) updateSettings({ targetWordCount: v });
-				}}
-			/>
-
-			<NumberField
-				label={t('settings.compressorInterval')}
-				hint={t('settings.compressorIntervalDescription')}
-				min={0}
-				max={50}
-				step={1}
-				value={settings.characterProfileCompressorInterval}
-				onValueChange={(v) => {
-					if (v >= 0 && v <= 50) updateSettings({ characterProfileCompressorInterval: v });
-				}}
-			/>
+				<!-- Summarizer -->
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.summarizer')}</h3>
+					<ThemedSelect
+						items={getRoleItems()}
+						value={settings.summarizerProviderRole}
+						onValueChange={(v) => updateSettings({ summarizerProviderRole: v })}
+						disabled={settings.providers.length === 0}
+						placeholder={t('settings.noProvidersConfigured')}
+					/>
+					<span class="text-xs text-surface-500 block">{t('settings.summarizerDescription')}</span>
+				</div>
+			</div>
 		</Card>
 
 		<!-- Data -->
@@ -588,82 +579,106 @@
 				<p class="text-xs text-warning-500">{t('settings.dataWebNotice')}</p>
 			{/if}
 
-			<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.gameData')}</h3>
-			<span class="text-xs text-surface-500">{t('settings.gameDataDescription')}</span>
-			<div class="space-y-3">
-				<div>
-					<button class="btn variant-filled min-h-11" disabled={gameIO.isExporting} onclick={handleExportGameData}>
-						{gameIO.isExporting ? '...' : t('settings.exportGameData')}
-					</button>
-					<span class="text-xs text-surface-500 mt-1 block">{t('settings.exportGameDataDescription')}</span>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<!-- Game Data -->
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<div>
+						<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.gameData')}</h3>
+						<span class="text-xs text-surface-500">{t('settings.gameDataDescription')}</span>
+					</div>
+					<div class="flex items-center gap-2">
+						<button
+							class="btn preset-filled-tertiary-400-600 text-xs px-3 py-1 min-h-9"
+							disabled={gameIO.isExporting}
+							onclick={handleExportGameData}
+						>
+							{gameIO.isExporting ? '...' : t('settings.exportGameData')}
+						</button>
+						<label class="btn preset-outlined cursor-pointer text-xs px-3 py-1 min-h-9">
+							{gameIO.isImporting ? '...' : t('settings.importGameData')}
+							<input type="file" accept=".zip" class="sr-only" disabled={gameIO.isImporting} onchange={handleImportGameData} />
+						</label>
+					</div>
 					<ProgressField value={exportProgress ?? 0} label="{exportProgress}%" visible={exportProgress !== null && gameIO.isExporting} />
+					{#if gameIO.importError}
+						<p class="text-xs text-error-500">{gameIO.importError}</p>
+					{/if}
 				</div>
 
-				<div>
-					<label class="btn variant-outline cursor-pointer min-h-11">
-						{gameIO.isImporting ? '...' : t('settings.importGameData')}
-						<input type="file" accept=".zip" class="sr-only" disabled={gameIO.isImporting} onchange={handleImportGameData} />
-					</label>
-					<span class="text-xs text-surface-500 mt-1 block">{t('settings.importGameDataDescription')}</span>
-					<span class="text-xs text-warning-500 mt-1 block">{t('settings.importRecommendExport')}</span>
-					<span class="text-xs text-error-500 mt-1 block">{t('settings.importGameDataWarning')}</span>
-				</div>
-
-				<div>
-					<button
-						class="btn variant-filled bg-error-500 hover:bg-error-600 text-white min-h-11"
-						disabled={isDeletingAllGameData}
-						onclick={() => (showDeleteAllGameDataConfirm = true)}
-					>
-						{isDeletingAllGameData ? '...' : t('settings.deleteAllGameData')}
-					</button>
-					<span class="text-xs text-surface-500 mt-1 block">{t('settings.deleteAllGameDataDescription')}</span>
-				</div>
-
-				{#if gameIO.importError}
-					<p class="text-xs text-error-500">{gameIO.importError}</p>
-				{/if}
-			</div>
-
-			<hr class="border-surface-200-800" />
-
-			<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.configData')}</h3>
-			<span class="text-xs text-surface-500">{t('settings.configDataDescription')}</span>
-			<div class="space-y-3">
-				<div>
-					<button class="btn variant-filled min-h-11" disabled={configIO.isExporting} onclick={handleExportConfigData}>
-						{configIO.isExporting ? '...' : t('settings.exportConfigData')}
-					</button>
-					<span class="text-xs text-surface-500 mt-1 block">{t('settings.exportConfigDataDescription')}</span>
+				<!-- Configuration -->
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<div>
+						<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.configData')}</h3>
+						<span class="text-xs text-surface-500">{t('settings.configDataDescription')}</span>
+					</div>
+					<div class="flex items-center gap-2">
+						<button
+							class="btn preset-filled-tertiary-400-600 text-xs px-3 py-1 min-h-9"
+							disabled={configIO.isExporting}
+							onclick={handleExportConfigData}
+						>
+							{configIO.isExporting ? '...' : t('settings.exportConfigData')}
+						</button>
+						<label class="btn preset-outlined cursor-pointer text-xs px-3 py-1 min-h-9">
+							{configIO.isImporting ? '...' : t('settings.importConfigData')}
+							<input type="file" accept=".zip" class="sr-only" disabled={configIO.isImporting} onchange={handleImportConfigData} />
+						</label>
+					</div>
 					<ProgressField value={exportProgress ?? 0} label="{exportProgress}%" visible={exportProgress !== null && configIO.isExporting} />
+					{#if configIO.importError}
+						<p class="text-xs text-error-500">{configIO.importError}</p>
+					{/if}
 				</div>
-
-				<div>
-					<label class="btn variant-outline cursor-pointer min-h-11">
-						{configIO.isImporting ? '...' : t('settings.importConfigData')}
-						<input type="file" accept=".zip" class="sr-only" disabled={configIO.isImporting} onchange={handleImportConfigData} />
-					</label>
-					<span class="text-xs text-surface-500 mt-1 block">{t('settings.importConfigDataDescription')}</span>
-					<span class="text-xs text-warning-500 mt-1 block">{t('settings.importRecommendExport')}</span>
-					<span class="text-xs text-error-500 mt-1 block">{t('settings.importConfigDataWarning')}</span>
-				</div>
-
-				{#if configIO.importError}
-					<p class="text-xs text-error-500">{configIO.importError}</p>
-				{/if}
 			</div>
 
-			<hr class="border-surface-200-800" />
-
-			<div>
-				<button
-					class="btn variant-filled bg-error-500 hover:bg-error-600 text-white min-h-11"
-					disabled={isResetting}
-					onclick={() => (showResetConfirm = true)}
-				>
-					{isResetting ? '...' : t('settings.resetConfiguration')}
-				</button>
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.resetConfigurationDescription')}</span>
+			<!-- Danger Zone -->
+			<div class="border border-error-500/30 rounded-lg overflow-hidden">
+				<Accordion collapsible>
+					<Accordion.Item value="danger-zone">
+						<Accordion.ItemTrigger
+							class="flex items-center justify-between w-full text-xs font-semibold uppercase tracking-wide text-error-500 px-4 py-3"
+						>
+							<span>{t('settings.dangerZone')}</span>
+							<Accordion.ItemIndicator>
+								<span class="transition-transform duration-150 text-error-500">&#9660;</span>
+							</Accordion.ItemIndicator>
+						</Accordion.ItemTrigger>
+						<Accordion.ItemContent class="px-4 pb-4">
+							<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-stretch">
+								<div class="flex flex-col gap-2">
+									<div>
+										<span class="text-sm font-medium text-surface-700-300">{t('settings.deleteAllGameData')}</span>
+										<span class="text-xs text-surface-500 block">{t('settings.deleteAllGameDataDescription')}</span>
+									</div>
+									<div class="mt-auto">
+										<button
+											class="btn preset-filled-error-400-600 text-xs px-3 py-1 min-h-9"
+											disabled={isDeletingAllGameData}
+											onclick={() => (showDeleteAllGameDataConfirm = true)}
+										>
+											{isDeletingAllGameData ? '...' : t('settings.deleteAllGameData')}
+										</button>
+									</div>
+								</div>
+								<div class="flex flex-col gap-2">
+									<div>
+										<span class="text-sm font-medium text-surface-700-300">{t('settings.resetConfiguration')}</span>
+										<span class="text-xs text-surface-500 block">{t('settings.resetConfigurationDescription')}</span>
+									</div>
+									<div class="mt-auto">
+										<button
+											class="btn preset-filled-error-400-600 text-xs px-3 py-1 min-h-9"
+											disabled={isResetting}
+											onclick={() => (showResetConfirm = true)}
+										>
+											{isResetting ? '...' : t('settings.resetConfiguration')}
+										</button>
+									</div>
+								</div>
+							</div>
+						</Accordion.ItemContent>
+					</Accordion.Item>
+				</Accordion>
 			</div>
 		</Card>
 
@@ -717,13 +732,48 @@
 			{/if}
 		</Card>
 
+		{#if isMemoryCapable()}
+			<!-- Memory -->
+			<Card title={t('settings.memory')} description={t('settings.enableMemoryDescription')}>
+				<label class="flex items-center gap-2">
+					<input
+						type="checkbox"
+						class="checkbox"
+						checked={settings.memoryEnabled}
+						onchange={(e) => updateSettings({ memoryEnabled: (e.currentTarget as HTMLInputElement).checked })}
+						disabled={!isMemoryCapable()}
+					/>
+					<span class="text-sm font-medium text-surface-700-300">{t('settings.enableMemory')}</span>
+				</label>
+
+				<label class="block">
+					<span class="text-sm font-medium text-surface-700-300">{t('settings.memoryProvider')}</span>
+					<ThemedSelect
+						items={getRoleItems()}
+						value={settings.memoryProviderRole}
+						onValueChange={(v) => updateSettings({ memoryProviderRole: v })}
+						disabled={!settings.memoryEnabled || !isMemoryAvailable()}
+						placeholder={t('settings.noProvidersConfigured')}
+					/>
+					<span class="text-xs text-surface-500 mt-1 block">{t('settings.memoryProviderDescription')}</span>
+				</label>
+
+				<label class="block">
+					<span class="text-sm font-medium text-surface-700-300">{t('settings.embeddingProvider')}</span>
+					<ThemedSelect
+						items={getRoleItems()}
+						value={settings.embeddingProviderRole}
+						onValueChange={(v) => updateSettings({ embeddingProviderRole: v })}
+						disabled={!settings.memoryEnabled || !isMemoryAvailable()}
+						placeholder={t('settings.noProvidersConfigured')}
+					/>
+					<span class="text-xs text-surface-500 mt-1 block">{t('settings.embeddingProviderDescription')}</span>
+				</label>
+			</Card>
+		{/if}
+
 		<!-- Developer -->
 		<Card title={t('settings.developer')}>
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.locale')}</span>
-				<ThemedSelect items={localeItems} value={settings.locale} onValueChange={(v) => updateSettings({ locale: v })} />
-			</label>
-
 			<label class="block">
 				<span class="text-sm font-medium text-surface-700-300">{t('settings.logLevel')}</span>
 				<ThemedSelect items={logLevelItems} value={settings.logLevel} onValueChange={(v) => updateSettings({ logLevel: v as LogLevel })} />
