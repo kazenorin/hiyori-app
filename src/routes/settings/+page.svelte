@@ -203,6 +203,7 @@
 	async function handleToggleTTS(): Promise<void> {
 		if (settings.ttsEnabled) {
 			await updateSettings({ ttsEnabled: false });
+			ttsPlayer.shutdownModel();
 			return;
 		}
 

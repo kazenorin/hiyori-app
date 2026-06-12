@@ -150,6 +150,10 @@
 					}
 				}
 			}
+
+			if (!settings.ttsEnabled && ttsPlayer.isModelLoaded) {
+				ttsPlayer.shutdownModel();
+			}
 		} catch (err) {
 			await log.error('init', 'Failed', err);
 			appError = err instanceof Error ? err.message : String(err);
