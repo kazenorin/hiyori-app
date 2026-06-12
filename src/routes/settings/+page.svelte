@@ -8,6 +8,7 @@
 		isMemoryCapable,
 		type LogLevel,
 		type ProviderConfig,
+		type ThemeMode,
 		resetConfiguration,
 		settings,
 		updateProviderConfig,
@@ -24,7 +25,15 @@
 	import Card from '$lib/components/ui/Card.svelte';
 	import ProviderForm from '$lib/components/chat/ProviderForm.svelte';
 	import NumberField from '$lib/components/ui/NumberField.svelte';
-	import { getLocaleItems, getLogLevelItems, getReviewerModeItems, getRoleItems, getVoiceItems } from '$lib/features/settings-options';
+	import {
+		getLocaleItems,
+		getLogLevelItems,
+		getReviewerModeItems,
+		getRoleItems,
+		getVoiceItems,
+		getThemeModeItems,
+		getColorThemeItems,
+	} from '$lib/features/settings-options';
 	import { isTTSModelCached } from '$lib/kokoro/model';
 	import { ttsPlayer } from '$lib/kokoro/player.svelte';
 	import { TTS_SPEED_MIN, TTS_SPEED_MAX, TTS_SPEED_STEP } from '$lib/kokoro/constants';
@@ -169,6 +178,10 @@
 
 	const localeItems = $derived(getLocaleItems());
 
+	const themeModeItems = $derived(getThemeModeItems());
+
+	const colorThemeItems = $derived(getColorThemeItems());
+
 	const logLevelItems = $derived(getLogLevelItems());
 
 	const reviewerModeItems = $derived(getReviewerModeItems());
@@ -259,9 +272,27 @@
 
 		<p class="text-sm text-surface-500">{t('settings.settingsAutoSaved')}</p>
 
-		<!-- Locale -->
-		<Card title={t('settings.locale')} description={t('settings.localeDescription')}>
-			<ThemedSelect items={localeItems} value={settings.locale} onValueChange={(v) => updateSettings({ locale: v })} />
+		<!-- Appearance -->
+		<Card title={t('settings.appearance')} description={t('settings.appearanceDescription')}>
+			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+				<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.locale')}</h3>
+				<ThemedSelect items={localeItems} value={settings.locale} onValueChange={(v) => updateSettings({ locale: v })} />
+				<span class="text-xs text-surface-500 block">{t('settings.localeDescription')}</span>
+			</div>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.colorTheme')}</h3>
+					<ThemedSelect items={colorThemeItems} value={settings.colorTheme} onValueChange={(v) => updateSettings({ colorTheme: v })} />
+				</div>
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.themeMode')}</h3>
+					<ThemedSelect
+						items={themeModeItems}
+						value={settings.themeMode}
+						onValueChange={(v) => updateSettings({ themeMode: v as ThemeMode })}
+					/>
+				</div>
+			</div>
 		</Card>
 
 		<!-- AI Providers -->
@@ -684,38 +715,43 @@
 
 		<!-- Text-to-Speech -->
 		<Card title={t('tts.tts')} description={t('tts.ttsDescription')}>
-			<label class="flex items-center gap-2">
-				<input type="checkbox" class="checkbox" checked={settings.ttsEnabled} onchange={handleToggleTTS} />
-				<span class="text-sm font-medium text-surface-700-300">{t('tts.enableTts')}</span>
-			</label>
-			<span class="text-xs text-surface-500">{t('tts.ttsLanguageNote')}</span>
-
-			{#if settings.ttsEnabled}
-				<label class="block">
-					<span class="text-sm font-medium text-surface-700-300">{t('tts.voice')}</span>
-					<ThemedSelect items={voiceItems} value={settings.ttsVoice} onValueChange={(v) => updateSettings({ ttsVoice: v })} />
-					<span class="text-xs text-surface-500 mt-1 block">{t('tts.voiceDescription')}</span>
+			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+				<label class="flex items-center gap-2">
+					<input type="checkbox" class="checkbox" checked={settings.ttsEnabled} onchange={handleToggleTTS} />
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('tts.enableTts')}</h3>
 				</label>
-
-				<label class="block">
-					<span class="text-sm font-medium text-surface-700-300">{t('tts.speed')}</span>
-					<span class="text-xs text-surface-500 block">{t('tts.speedDescription')}</span>
-					<div class="flex items-center gap-3 mt-1">
-						<input
-							type="range"
-							class="flex-1 cursor-pointer"
-							min={TTS_SPEED_MIN}
-							max={TTS_SPEED_MAX}
-							step={TTS_SPEED_STEP}
-							value={settings.ttsSpeed}
-							oninput={(e) => updateSettings({ ttsSpeed: parseFloat((e.target as HTMLInputElement).value) })}
-						/>
-						<span class="text-sm tabular-nums min-w-[3ch] text-surface-700-300">{settings.ttsSpeed.toFixed(1)}×</span>
-					</div>
-				</label>
-
-				<div class="space-y-2">
-					<span class="text-sm font-medium text-surface-700-300">{t('tts.preview')}</span>
+				<span class="text-xs text-surface-500 block">{t('tts.ttsLanguageNote')}</span>
+			</div>
+			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+				<h3 class="text-sm font-semibold text-surface-700-300">{t('tts.speed')}</h3>
+				<span class="text-xs text-surface-500 block">{t('tts.speedDescription')}</span>
+				<div class="flex items-center gap-3">
+					<input
+						type="range"
+						class="flex-1 cursor-pointer"
+						min={TTS_SPEED_MIN}
+						max={TTS_SPEED_MAX}
+						step={TTS_SPEED_STEP}
+						value={settings.ttsSpeed}
+						disabled={!settings.ttsEnabled}
+						oninput={(e) => updateSettings({ ttsSpeed: parseFloat((e.target as HTMLInputElement).value) })}
+					/>
+					<span class="text-sm tabular-nums min-w-[3ch] text-surface-700-300">{settings.ttsSpeed.toFixed(1)}×</span>
+				</div>
+			</div>
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('tts.voice')}</h3>
+					<ThemedSelect
+						items={voiceItems}
+						value={settings.ttsVoice}
+						onValueChange={(v) => updateSettings({ ttsVoice: v })}
+						disabled={!settings.ttsEnabled}
+					/>
+					<span class="text-xs text-surface-500 block">{t('tts.voiceDescription')}</span>
+				</div>
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('tts.preview')}</h3>
 					<span class="text-xs text-surface-500 block">{t('tts.previewDescription')}</span>
 					<button
 						type="button"
@@ -729,7 +765,7 @@
 						<span class="text-xs text-surface-500 block">{t('tts.previewPlaying')}</span>
 					{/if}
 				</div>
-			{/if}
+			</div>
 		</Card>
 
 		{#if isMemoryCapable()}
@@ -774,11 +810,11 @@
 
 		<!-- Developer -->
 		<Card title={t('settings.developer')}>
-			<label class="block">
-				<span class="text-sm font-medium text-surface-700-300">{t('settings.logLevel')}</span>
+			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+				<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.logLevel')}</h3>
 				<ThemedSelect items={logLevelItems} value={settings.logLevel} onValueChange={(v) => updateSettings({ logLevel: v as LogLevel })} />
-				<span class="text-xs text-surface-500 mt-1 block">{t('settings.logLevelDescription')}</span>
-			</label>
+				<span class="text-xs text-surface-500 block">{t('settings.logLevelDescription')}</span>
+			</div>
 		</Card>
 	</div>
 </div>

@@ -107,6 +107,13 @@
 		"developer": "Developer",
 		"locale": "語言地區",
 		"localeDescription": "應用程式介面的語言。新故事將預設使用此語言地區。",
+		"appearance": "外觀",
+		"appearanceDescription": "自訂應用程式的語言和視覺風格。",
+		"themeMode": "色彩模式",
+		"themeModeSystem": "系統預設",
+		"themeModeLight": "淺色",
+		"themeModeDark": "深色",
+		"colorTheme": "色彩主題",
 		"logLevel": "Log Level",
 		"logLevels": {
 			"error": "錯誤",

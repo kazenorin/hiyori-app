@@ -8,6 +8,7 @@ import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
 export type Provider = 'openai' | 'openai-compatible' | 'ollama';
 export type ApiType = 'chat-completions' | 'responses';
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
+export type ThemeMode = 'system' | 'light' | 'dark';
 
 export const LOG_LEVEL_VALUES: Record<LogLevel, number> = {
 	error: 1,
@@ -45,6 +46,8 @@ export interface Settings {
 	providers: ProviderConfig[];
 	roleAssignments: Record<string, string>;
 	locale: string;
+	themeMode: ThemeMode;
+	colorTheme: string;
 	logLevel: LogLevel;
 	fontSize: number;
 	memoryEnabled: boolean;
@@ -77,6 +80,8 @@ const defaults: Settings = {
 	providers: [],
 	roleAssignments: {},
 	locale: 'en',
+	themeMode: 'system',
+	colorTheme: 'byoa',
 	logLevel: 'info',
 	fontSize: 1.0,
 	memoryEnabled: false,
@@ -112,6 +117,13 @@ export function applyFontSizePreference(fontSize: number): void {
 	}
 }
 
+export function applyTheme(mode: ThemeMode, colorTheme: string): void {
+	if (typeof document === 'undefined') return;
+	const html = document.documentElement;
+	html.setAttribute('data-theme', colorTheme);
+	html.classList.toggle('dark', mode === 'dark' || (mode === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches));
+}
+
 function loadSettings(): Settings {
 	try {
 		const stored = localStorage.getItem(STORAGE_KEY);
@@ -144,6 +156,7 @@ export let settings = $state<Settings>(loadSettings());
 
 /** Apply initial font size preference when store is initialized */
 applyFontSizePreference(settings.fontSize);
+applyTheme(settings.themeMode, settings.colorTheme);
 
 export function getSettings(): Settings {
 	return settings;
@@ -354,6 +367,11 @@ export async function updateSettings(partial: Partial<UpdatableSettings>): Promi
 	// Apply font size preference when fontSize changes
 	if (partial.fontSize !== undefined && partial.fontSize !== prevFontSize) {
 		applyFontSizePreference(settings.fontSize);
+	}
+
+	// Apply theme when themeMode or colorTheme changes
+	if (partial.themeMode !== undefined || partial.colorTheme !== undefined) {
+		applyTheme(settings.themeMode, settings.colorTheme);
 	}
 
 	// Sync log level to Rust backend

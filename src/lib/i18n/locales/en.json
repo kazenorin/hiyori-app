@@ -107,6 +107,13 @@
 		"developer": "Developer",
 		"locale": "Locale",
 		"localeDescription": "Language for the app interface. New stories will use this locale by default.",
+		"appearance": "Appearance",
+		"appearanceDescription": "Customize the language and look of the app.",
+		"themeMode": "Color Mode",
+		"themeModeSystem": "System Default",
+		"themeModeLight": "Light",
+		"themeModeDark": "Dark",
+		"colorTheme": "Color Theme",
 		"logLevel": "Log Level",
 		"logLevels": {
 			"error": "Error",

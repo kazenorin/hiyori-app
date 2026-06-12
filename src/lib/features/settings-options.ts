@@ -24,6 +24,42 @@ export function getLocaleItems(): { label: string; value: string }[] {
 	];
 }
 
+export function getThemeModeItems(): { label: string; value: string }[] {
+	return [
+		{ label: t('settings.themeModeSystem'), value: 'system' },
+		{ label: t('settings.themeModeLight'), value: 'light' },
+		{ label: t('settings.themeModeDark'), value: 'dark' },
+	];
+}
+
+export function getColorThemeItems(): { label: string; value: string }[] {
+	return [
+		{ label: 'BYOA', value: 'byoa' },
+		{ label: 'Catppuccin', value: 'catppuccin' },
+		{ label: 'Cerberus', value: 'cerberus' },
+		{ label: 'Concord', value: 'concord' },
+		{ label: 'Crimson', value: 'crimson' },
+		{ label: 'Fennec', value: 'fennec' },
+		{ label: 'Hamlindigo', value: 'hamlindigo' },
+		{ label: 'Legacy', value: 'legacy' },
+		{ label: 'Mint', value: 'mint' },
+		{ label: 'Modern', value: 'modern' },
+		{ label: 'Mona', value: 'mona' },
+		{ label: 'Nosh', value: 'nosh' },
+		{ label: 'Nouveau', value: 'nouveau' },
+		{ label: 'Pine', value: 'pine' },
+		{ label: 'Reign', value: 'reign' },
+		{ label: 'Rocket', value: 'rocket' },
+		{ label: 'Rose', value: 'rose' },
+		{ label: 'Sahara', value: 'sahara' },
+		{ label: 'Seafoam', value: 'seafoam' },
+		{ label: 'Terminus', value: 'terminus' },
+		{ label: 'Vintage', value: 'vintage' },
+		{ label: 'Vox', value: 'vox' },
+		{ label: 'Wintry', value: 'wintry' },
+	];
+}
+
 export function getLogLevelItems(): { label: string; value: string }[] {
 	return [
 		{ label: t('settings.logLevels.error'), value: 'error' },
