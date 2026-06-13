@@ -1,16 +1,16 @@
 # BYOA — Build Your Own Adventure
 
-An AI-powered interactive fiction desktop app built with [Tauri v2](https://v2.tauri.app/) and [SvelteKit 5](https://kit.svelte.dev/). Create stories through an AI-guided world builder, then play through branching narratives with real-time game state tracking.
+An AI-powered interactive storytelling app built with [Tauri v2](https://v2.tauri.app/) and [SvelteKit 5](https://kit.svelte.dev/). Create stories through an AI-guided world builder, then play through branching narratives with real-time game state tracking.
 
 ## Features
 
 ### Narrative Engine
 
 - **Multi-Phase Pipeline** — Writer → Reviewer → Editor → Game Master + Plot Planner (sequential), with async Summarizer, Character Profile Compressor, and Memory extraction
+  - **Write-Review-Edit** Optional feedback loop to keep up the quality of the writing
 - **Branching Narratives** — Fork storylines at any point; each branch is an independent act line sharing messages up to the fork point
-- **Game Data Blocks** — Structured `worldState` and `decisions` emitted during streaming, rendered as clickable decision buttons
-- **Act Plots** — AI-generated scene-by-scene plot outlines with guided interview creation
-- **Turn of Events & Director Notes** — AI-generated narrative twists and directorial guidance
+- **Act Plots** — AI-generated scene-by-scene plot outlines with guided interview creation the drives the storytelling
+- **Director Notes** — Player-initiated directorial guidance
 - **Act Transitions** — AI-assisted bridging between acts with continuity checks
 - **Risk Evaluation** — Dice-roll risk model for determining action outcomes
 
@@ -32,14 +32,231 @@ An AI-powered interactive fiction desktop app built with [Tauri v2](https://v2.t
 
 ### Configuration & UX
 
-- **Multi-Provider Support** — Multiple AI providers (OpenAI, OpenAI-compatible, Ollama) with per-role assignment
+- **Wide API Provider Support** — OpenAI, OpenAI-compatible, Anthropic, Ollama, and local endpoints via `chat-completions` or `responses` API format
+- **Multi-Provider Assignment** — Assign different models to different pipeline roles (Writer, Reviewer, Editor, Game Master, etc.)
+- **Fully User-Customizable Prompts** — Edit bundled default prompts or create story-specific overrides via the File Manager; every AI-facing instruction can be tailored
 - **Localization** — Three-tier system: `t()` for UI, `ls()` for LLM-facing strings, localized prompt/template files (English and Traditional Chinese)
 - **Text-to-Speech** — Kokoro-based in-browser speech synthesis for narrative playback
 - **Dynamic Typography** — Sidebar slider and Ctrl+scroll to adjust text size (70%–150%)
 
 ## User Guide
 
-> **TODO:** User-facing documentation — getting started, creating a story, playing through narratives, configuring providers, using the world builder, managing saves, etc.
+### 1. Running BYOA
+
+| Option            | How                                                                                        | Recommendation    |
+| ----------------- | ------------------------------------------------------------------------------------------ | ----------------- |
+| **Installer**     | Download `BYOA_<version>.<ext>` (Windows `.exe`, Linux `.deb`/`.rpm`, macOS)               | Recommended       |
+| **Dev server**    | `npm install && npm run dev`, then open browser                                            | Recommended       |
+| **Built SPA**     | `npm install && npm run build`, then serve `build/` (e.g. `npx serve build`, Nginx, Caddy) | Recommended       |
+| **Local desktop** | `npm install && npm run tauri dev` (requires Rust)                                         | For development   |
+| **Online**        | [https://byoa.kazenor.in](https://byoa.kazenor.in) or self-hosted                          | No install needed |
+
+> Not recommended: running the locally-built executable directly — the local data cache is not automatically erased between versions, which can cause stale data issues.
+
+> Web app note:
+>
+> `localhost`/`127.0.0.1` is allowed on HTTP (e.g. http://localhost:1420); all other hosts require HTTPS.
+>
+> An HTTPS web app can only call HTTPS providers or localhost providers. Some providers (e.g. Ollama Cloud, Nvidia NIM) do not support CORS and will not work without a proxy.
+> This app comes with support for a light-weight websocket-based proxying protocol WISP, see the AI Provider section for set up instructions.
+
+### 2. Setting Up Your First AI Provider
+
+![Provider roles with multiple AI configurations](docs/settings-page-dark.png)
+
+Nothing works without a provider.
+
+1. Go to **Settings → AI Providers** and click **+ Add Provider**
+2. Choose a provider type: **OpenAI Compatible**, **OpenAI**, or **Ollama**
+3. Fill in the **Base URL** and **Model** — use the **Fetch Models** button to auto-populate if your endpoint supports it
+4. Select the correct **API type**: `chat-completions` for most providers, `responses` only for OpenAI's `responses` API
+
+> Ollama (Local) users: set `OLLAMA_ORIGINS=*` on your Ollama server to allow browser CORS requests.
+
+#### 2.1 WISP Proxy for WebApp
+
+Since some API providers do not support CORS, any API requests to those providers would fail.
+
+To overcome this, you would need some form of proxying.
+
+This app comes with support for the [WISP-prototcol proxy](https://github.com/MercuryWorkshop/wisp-protocol).
+You can set up a local WISP proxy with [wisp-server-python](https://github.com/MercuryWorkshop/wisp-server-python) to proxy API requests.
+
+### 3. Assigning Provider Roles
+
+![provider-roles.png](docs/provider-roles.png)
+
+All pipeline roles default to the **Main Provider**. You can assign different models to different roles for better results or cost control.
+
+| Role                                                            | What it does                        | Tip                                                  |
+| --------------------------------------------------------------- | ----------------------------------- | ---------------------------------------------------- |
+| **Main Provider**                                               | Fallback for all unassigned roles   | Set your best model here                             |
+| **Minor Task Agent**                                            | Phrase extraction, template fitting | Must be assigned for **Phrase Highlighting** to work |
+| **Writer / Reviewer / Editor / GM / Plot Planner / Summarizer** | Individual pipeline phases          | Assign smaller/faster models to minor roles          |
+
+Enable the **Reviewer** to unlock the **Editor** role assignment.
+
+![pipeline-roles.png](docs/pipeline-roles.png)
+
+### 4. World Builder — Creating a Story
+
+1. Click **New Story** → **World Builder**
+2. Chat with the AI about your world (genre, setting, tone, key factions)
+3. When the world is ready, choose:
+   - **Start Immediately** — skips the act-plot interview and jumps straight into narrative
+   - **Tell us about your story** — enters a guided act-plot interview for structured scene planning
+
+> The act-plot interview is easy to miss but highly recommended for long or complex stories.
+
+### 5. Playing the Narrative
+
+The core loop: send a message → AI generates narrative → you choose a decision or enter one your own → repeat.
+
+- When an act ends, choose **Continue to Next Act** or **End the Story**
+  ![concluding-act.png](docs/concluding-act.png)
+- "Continue to Next Act": Will create a new Act continuing from this Act line
+- "End the story here": Will write an Epilogue of the story for this Act
+
+### 6. Message Actions
+
+Every assistant message has action buttons:
+
+- **Copy** — copy source Markdown text
+- **Read** — text-to-speech (English stories only, enabled in Settings)
+- **Fork** — branch the narrative from this point
+- **Regenerate** — re-run the pipeline for this response
+- **Edit** — opens structured fields (scene title, background, narrative, CG) for templated messages
+
+> The Edit form reveals structured fields that aren't obvious when just reading the message.
+
+### 7. Branching Narratives (Forking)
+
+![Fork dialog showing plot mode options and branch creation choices](docs/fork-dialog.png)
+
+Forking lets you explore "what if" scenarios from any point in the story.
+
+1. Click **Fork** on any assistant message
+2. Choose how the branch diverges:
+   - **Keep current plot** — continue with the same plot from the fork point
+   - **Tell us what's different** — describe the divergence in an interview; the AI generates a new act plot for the branch
+3. Optionally switch **Plot Mode** (Guidance → Event or vice versa)
+
+### 8. Plot Planner & Act Plots
+
+The Plot Planner shapes narrative direction before the Writer runs.
+
+- Enable it in **Settings → Pipeline Roles**
+- **Event-based mode** (recommended):
+  - Structures the story through narrative phases
+  - Prepares events and triggers that may or may not be triggered.
+  - Runs at a configurable frequency (default every 10 scenes)
+- **Guidance-based mode**:
+  - Runs every turn to plan what to write next
+  - Strong directional guidance, imagine modern Bethesda game story plots.
+- An **act plot** is generated via **Tell us about your story** after World Building, or when you continue from a concluded act to a new act
+
+### 9. Director Mode
+
+Off by default. When enabled, a **Director Notes** panel appears in the input area.
+
+- Add persistent notes to override the story's planned direction
+- Set a **Scene range** (effective from/to) so notes apply only to specific scenes — this is easy to miss
+- Toggle notes on/off without deleting them
+
+> Director Notes strongly influence the plot and may trigger cascading cause-and-effect changes.
+
+### 10. Story Export & Load
+
+**Per-story export** (sidebar footer):
+
+- Export as `.zip`
+- Load Story page supports **selective act line import** — check/uncheck which branches to include
+- Choose **Overwrite** or **Load as New**
+  - **Overwrite** is will overwrite any conflicting act lines, while preserving act lines that does not exist in the imported source
+  - **Load as New** is remap all IDs and the imported story will exist independently
+
+**Full app backup** (Settings → Data):
+![import-game-data.png](docs/import-game-data.png)
+
+- Export/import **Game Data** (stories, messages, databases)
+- Export/import **Configuration** (providers, settings, prompt templates)
+
+### 11. Mobile Navigation
+
+On mobile, the UI is completely different:
+
+- Swipe right from the left edge to open the **sidebar drawer**
+- **Bottom tab bar**: Chat, Choices (with decision count badge), Menu
+- Choose decisions from the **Choices** tab
+- Swipe right-to-left on stories/acts/lines to delete: ![mobile-delete.png](docs/mobile-delete.png)
+- Swipe left-to-right on stories/acts/lines to rename: ![mobile-rename.png](docs/mobile-rename.png)
+
+### 12. Important Phrase Highlighting
+
+When enabled, the "Minor Task Agent" will highlight important phrases in the prose.
+
+Requires **both**:
+
+1. The **Phrase Highlighting** toggle ON in Settings → Narrative
+2. A **Minor Task Agent** assigned in Settings → Provider Roles
+
+Phrases are extracted in the background (fire-and-forget) after each Editor phase. Older messages get backfilled when you load an act line.
+
+### 13. Text-to-Speech
+
+1. Enable **Text-to-Speech** in Settings
+2. First use downloads the Kokoro TTS model (~300MB)
+3. Only available for **English-locale stories** — the read-aloud icon won't appear for other languages
+4. Choose voice and speed in Settings; use **Preview** to test before committing
+
+### 14. World Builder — Importing Existing Content
+
+Import chat transcripts, world cards, act cards and character as new stories:
+
+- Supported: **Open WebUI JSON transcripts, Markdown, text files**
+- Multi-step form: story details → acts/chapters → characters → settings → preview
+- **Preview step**: review and remove individual messages before committing
+- Auto-enters World Builder if the import determines the act plot needs guidance
+
+Note: This is an expensive process in terms of requests and tokens.
+
+### 15. Font Size & Appearance
+
+- **Ctrl+Scroll** to adjust text size (70%–150%)
+- Or use the **Aa** slider in the sidebar
+- 23 color themes + System/Light/Dark mode
+- Languages: English and Traditional Chinese (Hong Kong)
+
+### 16. File Manager
+
+**File Manager** (sidebar link) lets you browse and edit the app's data directory:
+
+- Browse story folders, prompt templates, and generated files
+- Managed config files: **Restore Default** reverts overrides; **Copy to Story** makes a story-specific copy
+- Protected directories cannot be deleted
+- Edit and save text files directly
+
+> Common use case: Overriding general-instructions.md
+> 
+> General Instructions is the main component of the system prompt. Overriding it allows you to define how the assistants work.
+> The file is located in `config/<local>/prompt-templates/general-instructions.md`.
+
+> Note: when using the Desktop App, the files are stored in the user's App Data directory.
+> 
+> On Windows, App Data is located in `%APPDATA%/in.kazenor.byoa-app` and `%LOCALAPPDATA%/in.kazenor.byoa-app`
+> 
+> On Linux, it is located in `~/.config/in.kazenor.byoa-app` and `~/.local/share/in.kazenor.byoa-app`
+
+### 17. Memory System
+
+Advanced feature, disabled by default. Not available in the web app (no `sqlite-vec` in browser).
+
+- Requires both a **Memory provider** and an **Embedding provider**
+- Memory extraction runs automatically after narrative generation
+- **Memory Manager** page: search by character, location, or both
+- Regenerate memories or reset (danger zone)
+
+> Memory is useful for very long stories but not needed to get started.
 
 ---
 
@@ -94,11 +311,13 @@ npm run tauri build
 
 Output artifacts:
 
-| Artifact | Path                                                          |
-| -------- | ------------------------------------------------------------- |
-| Binary   | `src-tauri/target/release/app`                                |
-| .deb     | `src-tauri/target/release/bundle/deb/BYOA_0.5.0_amd64.deb`    |
-| .rpm     | `src-tauri/target/release/bundle/rpm/BYOA-0.5.0-1.x86_64.rpm` |
+| Artifact | Plaform | Path                                                                |
+| -------- | ------- | ------------------------------------------------------------------- |
+| Binary   | All     | `src-tauri/target/release/app`                                      |
+| .deb     | Linux   | `src-tauri/target/release/bundle/deb/BYOA_<version>_amd64.deb`      |
+| .rpm     | Linux   | `src-tauri/target/release/bundle/rpm/BYOA-<version>-N.x86_64.rpm`   |
+| .msi     | Windows | `src-tauri/target/release/bundle/msi/BYOA_<version>_x64_en-US.msi`  |
+| .exe     | Windows | `src-tauri/target/release/bundle/nsis/BYOA_<version>_x64-setup.exe` |
 
 ### Building the Standalone Web App
 
@@ -158,13 +377,6 @@ sudo apt install -y gcc-mingw-w64-x86-64 nsis
 ```bash
 npm run tauri build -- --target x86_64-pc-windows-gnu
 ```
-
-Output:
-
-| Artifact       | Path                                                                                  |
-| -------------- | ------------------------------------------------------------------------------------- |
-| .exe           | `src-tauri/target/x86_64-pc-windows-gnu/release/app.exe`                              |
-| NSIS installer | `src-tauri/target/x86_64-pc-windows-gnu/release/bundle/nsis/BYOA_0.5.0_x64-setup.exe` |
 
 The `.exe` includes the embedded frontend assets and requires [WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/) (pre-installed on Windows 10/11).
 
