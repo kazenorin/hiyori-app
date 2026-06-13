@@ -30,6 +30,7 @@ import {
 	summarizerExtractionPromptTemplate,
 	summarizerFallbackExtractionPromptTemplate,
 } from '$lib/definitions/pipeline-prompts';
+import { isAbortLikeError } from '$lib/utils/async';
 import { log } from '$lib/logging/logger';
 import { runMemoryExtractionPipeline } from '$lib/features/memory/memory-extraction-pipeline';
 import { type LoadedPrompts } from './prompt-loader';
@@ -268,7 +269,17 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 			summarizerIncrementalPrompt: loadedPrompts.summarizerIncrementalPrompt,
 			characterProfileCompressorPrompt: loadedPrompts.characterProfileCompressorPrompt,
 		};
-		const result = await generateSummarizerResult(summarizerInput, summarizerPrompts);
+		let result: SummarizerResult;
+		try {
+			result = await generateSummarizerResult(summarizerInput, summarizerPrompts);
+		} catch (err) {
+			if (isAbortLikeError(err)) {
+				await log.warn('pipeline', 'Async summarizer aborted');
+			} else {
+				await log.error('pipeline', 'Async summarizer failed', err);
+			}
+			return {};
+		}
 
 		let compressorResult: CompressorResult | null = null;
 		try {
@@ -282,7 +293,11 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 				compressorResult = await generateCharacterProfiles(result.actSummary, compressorInput, summarizerPrompts);
 			}
 		} catch (err) {
-			await log.warn('pipeline', `Character profile compressor failed: ${err}`);
+			if (isAbortLikeError(err)) {
+				await log.warn('pipeline', 'Character profile compressor aborted');
+			} else {
+				await log.warn('pipeline', `Character profile compressor failed: ${err}`);
+			}
 		}
 
 		const serializedSummary = compressorResult?.serializedSummary ?? result?.serializedSummary;
@@ -291,7 +306,11 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 			try {
 				await runMemoryExtractionPipeline(previousNarrativeBody, storyId, actLineId, playerMessageId, serializedSummary);
 			} catch (err) {
-				await log.error('memory-pipeline', 'Memory extraction failed', err);
+				if (isAbortLikeError(err)) {
+					await log.warn('memory-pipeline', 'Memory extraction aborted');
+				} else {
+					await log.error('memory-pipeline', 'Memory extraction failed', err);
+				}
 			}
 		}
 

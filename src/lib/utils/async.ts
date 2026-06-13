@@ -88,6 +88,16 @@ export function isAbortError(error: Error): boolean {
 }
 
 /**
+ * Check if an error resembles an abort, including non-standard formats.
+ * Handles: standard DOMException(AbortError), Tauri's "Aborted(Assertion failed)",
+ * and generic errors with abort-related messages.
+ */
+export function isAbortLikeError(error: unknown): boolean {
+	if (error instanceof DOMException && error.name === 'AbortError') return true;
+	return !!(error instanceof Error && error.message.includes('Aborted'));
+}
+
+/**
  * Sleep for the specified duration, but reject early if the abort signal fires.
  * Throws a DOMException with name 'AbortError' if the signal aborts during the sleep.
  */

@@ -1,3 +1,4 @@
+import { isAbortLikeError } from '$lib/utils/async';
 import type { ActLineMeta } from '$lib/db/act-lines';
 import * as dbActLines from '$lib/db/act-lines';
 import { traceActLineChain } from '$lib/db/acts';
@@ -394,7 +395,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 					return asyncResults;
 				})
 				.catch(async (err) => {
-					if (err instanceof DOMException && err.name === 'AbortError') {
+					if (isAbortLikeError(err)) {
 						await log.warn('send-message', 'Async phases aborted');
 					} else {
 						await log.error('send-message', 'Async phases failed', err);
@@ -725,6 +726,17 @@ export async function regenerateLastResponse(actLineId: string, messageId: strin
 		}
 		// sendInitialNarration will reset `messages` array
 		await sendInitialNarration(actLineId);
+		return;
+	}
+
+	// If this is an epilogue, remove and re-run the epilogue flow
+	if (await dbActLines.isEpilogueWritten(actLineId)) {
+		const removed = await removeMessagesById(actLineId, [messageId]);
+		if (!removed) {
+			await loadActLineMessages(actLineId);
+			return;
+		}
+		await runEpilogueFlow(actLineId);
 		return;
 	}
 

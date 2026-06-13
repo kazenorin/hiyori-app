@@ -9,7 +9,7 @@ import type { StreamState } from '../chat-callbacks';
 import { extractCacheTokens, type StreamResultMetadata } from '../streaming';
 import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
 import { ERR_NO_PROVIDER_FOR_PHASE } from '$lib/definitions/error-messages';
-import { isAbortError } from '$lib/utils/async';
+import { isAbortLikeError } from '$lib/utils/async';
 
 export interface StreamingPhaseParams {
 	phaseName: PhaseName;
@@ -87,7 +87,7 @@ export async function executeStreamingPhase(
 		} catch (err: unknown) {
 			lastError = err instanceof Error ? err : new Error(String(err));
 			// Don't retry on user-initiated abort
-			if (isAbortError(lastError)) {
+			if (isAbortLikeError(lastError)) {
 				callbacks.onError(phaseName, lastError);
 				throw lastError;
 			}

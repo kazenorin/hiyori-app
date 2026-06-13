@@ -149,6 +149,10 @@
 			getWbPhase() === 'post-template'
 	);
 
+	const wbHideMobileInput = $derived(
+		(getReadyToCreate() || (getActPlotInterview() && !getIsWorldBuilderStreaming())) && !wbShowPreStartBar
+	);
+
 	async function handleCopy(messageId: string, content: string) {
 		try {
 			await navigator.clipboard.writeText(content);
@@ -400,8 +404,8 @@
 
 			<ScrollToFAB chatContainer={wbChatContainer} isStreaming={getIsWorldBuilderStreaming()} />
 
-			<!-- Pinned control section: desktop always, mobile only when pre-start bar is visible -->
-			<div class="{wbShowPreStartBar ? 'block' : 'hidden'} md:block">
+			<!-- Pinned control section: desktop always, mobile when controls or pre-start bar needed -->
+			<div class="{wbShowPreStartBar || wbHideMobileInput ? 'block' : 'hidden'} md:block">
 				<WorldBuilderControls
 					isReadyToStart={getReadyToCreate()}
 					isCompiling={getIsCompilingWorld() || getIsWorldBuilderStreaming()}
@@ -429,7 +433,7 @@
 			</div>
 
 			<!-- Mobile Input Sheet -->
-			<div class="md:hidden">
+			<div class="md:hidden {wbHideMobileInput ? 'hidden' : ''}">
 				<MobileInputSheet
 					bind:value={input}
 					isStreaming={getIsWorldBuilderStreaming()}

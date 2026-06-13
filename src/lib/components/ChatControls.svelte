@@ -1,6 +1,6 @@
 <script lang="ts">
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
-	import { slide } from 'svelte/transition';
+	import { slide as svelteSlide } from 'svelte/transition';
 	import { t } from '$lib/i18n';
 	import { scrollToBottom } from '$lib/utils/scroll';
 	import Icon from '$lib/components/ui/Icon.svelte';
@@ -34,6 +34,18 @@
 	}: Props = $props();
 
 	const SCROLL_BOTTOM_THRESHOLD_PX = 5;
+
+	function slide(node: Element, opts: { duration?: number } = {}) {
+		const result = svelteSlide(node, opts);
+		const origCss = result.css;
+		if (origCss) {
+			result.css = (t, u, ...args) => {
+				const css = origCss(t, u, ...args);
+				return css.replace(/height:\s*NaNpx/g, 'height: 0px');
+			};
+		}
+		return result;
+	}
 
 	let isPinned = $state(false);
 	let isUserExpanded = $state(false);
@@ -79,7 +91,9 @@
 		const container = chatContainer;
 		if (!container) return;
 
-		isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < SCROLL_BOTTOM_THRESHOLD_PX;
+		isNearBottom = container.isConnected
+			? container.scrollHeight - container.scrollTop - container.clientHeight < SCROLL_BOTTOM_THRESHOLD_PX
+			: true;
 
 		let rafId = 0;
 
@@ -87,6 +101,7 @@
 			cancelAnimationFrame(rafId);
 			rafId = requestAnimationFrame(() => {
 				if (layoutTransitioning) return;
+				if (!container.isConnected) return;
 				const wasNearBottom = isNearBottom;
 				isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < SCROLL_BOTTOM_THRESHOLD_PX;
 				if (isNearBottom && !wasNearBottom) {

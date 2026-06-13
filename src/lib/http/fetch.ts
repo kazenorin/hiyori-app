@@ -22,17 +22,27 @@ export async function initHttpClient(): Promise<void> {
 }
 
 let libcurlReady = false;
+let libcurlInitPromise: Promise<typeof globalThis.fetch> | null = null;
 
 export async function createLibcurlFetch(wispProxyUrl: string): Promise<typeof globalThis.fetch> {
-	const { libcurl } = await import('libcurl.js');
+	if (libcurlInitPromise) return libcurlInitPromise;
 
-	if (!libcurlReady) {
-		await libcurl.load_wasm('/libcurl.wasm');
-		libcurlReady = true;
-	}
+	libcurlInitPromise = (async () => {
+		const { libcurl } = await import('libcurl.js');
 
-	libcurl.set_websocket(wispProxyUrl);
-	return libcurl.fetch.bind(libcurl);
+		if (!libcurlReady) {
+			await libcurl.load_wasm('/libcurl.wasm');
+			libcurlReady = true;
+		}
+
+		libcurl.set_websocket(wispProxyUrl);
+		return libcurl.fetch.bind(libcurl);
+	})().catch((err) => {
+		libcurlInitPromise = null;
+		throw err;
+	});
+
+	return libcurlInitPromise;
 }
 
 export async function resolveFetch(corsBypassEnabled?: boolean, wispProxyUrl?: string): Promise<typeof globalThis.fetch> {
