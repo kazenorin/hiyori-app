@@ -56,8 +56,9 @@ import { loadPrompts } from './pipeline/prompt-loader';
 import { buildImportRunContext } from '$lib/features/import-world/pipeline-context';
 import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
 import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
+import { otherDirectorNotesHeader, sectionFormat } from '$lib/definitions/common-headers';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
-import { loadLocaleStrings } from '$lib/localization';
+import { loadLocaleStrings, ls } from '$lib/localization';
 import { ensureWorldFile } from '$lib/ai/world-generator';
 
 // Re-exported for `+page.svelte` only
@@ -70,6 +71,7 @@ interface RequestContext {
 	actLine: ActLineContext;
 	previousSceneNumber: number;
 	previousNarrativeVariables: NarrativeVariables | undefined;
+	rewriteDirectorNote?: string;
 }
 
 let messages = $state<UIMessage[]>([]);
@@ -234,7 +236,7 @@ async function awaitPendingAsyncPhases(context: string, throwOnNonAbort = false)
 	}
 }
 
-export async function sendMessage(actLineId: string, message: string): Promise<void> {
+export async function sendMessage(actLineId: string, message: string, rewriteDirectorNote?: string): Promise<void> {
 	if (message.trim().length === 0) {
 		await log.warn('send-message', 'Called with no message body.');
 		return;
@@ -255,6 +257,7 @@ export async function sendMessage(actLineId: string, message: string): Promise<v
 			actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen, actNumber },
 			previousSceneNumber: findLastNonNullSceneNumber(messages) ?? 0,
 			previousNarrativeVariables: getPreviousNarrativeMessage(messages),
+			rewriteDirectorNote,
 		};
 		return await executeNarrativeRequest(requestContext);
 	} finally {
@@ -293,6 +296,13 @@ function updateMessageMetadataByIndex(result: PipelineResult, messageIdx: number
 		...getMessageByIndex(messageIdx),
 		...(updatedMetadata && { metadata: updatedMetadata }),
 	});
+}
+
+function composeDirectorNotes(rewriteNote: string | undefined, targetScene: number): string {
+	const existingNotes = isDirectorModeEnabled() ? getActiveDirectorNotesText(targetScene) : '';
+	if (!rewriteNote) return existingNotes;
+	if (!existingNotes) return rewriteNote;
+	return rewriteNote + '\n\n' + sectionFormat(otherDirectorNotesHeader()) + existingNotes;
 }
 
 async function executeNarrativeRequest(requestContext: RequestContext): Promise<void> {
@@ -362,7 +372,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 			story: { storyId: story.id, storyName: story.name, actLine },
 			assistant,
 			completedScenes: previousSceneNumber,
-			directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(previousSceneNumber + 1) : '',
+			directorNotes: composeDirectorNotes(requestContext.rewriteDirectorNote, previousSceneNumber + 1),
 			targetWordCount,
 		});
 
@@ -419,7 +429,7 @@ export function stopStreaming(): void {
 	abortController?.abort();
 }
 
-export async function runEpilogueFlow(actLineId: string): Promise<void> {
+export async function runEpilogueFlow(actLineId: string, rewriteDirectorNote?: string): Promise<void> {
 	requireMainConfig();
 	const abortSignal = newAbortSignal();
 	isConcludingStory = true;
@@ -491,7 +501,7 @@ export async function runEpilogueFlow(actLineId: string): Promise<void> {
 			},
 			assistant: epilogueAssistant,
 			completedScenes: previousSceneNumber,
-			directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(previousSceneNumber + 1) : '',
+			directorNotes: composeDirectorNotes(rewriteDirectorNote, previousSceneNumber + 1),
 			targetWordCount,
 		});
 
@@ -705,7 +715,7 @@ export async function clearMessages(): Promise<void> {
 	storyConcluded = false;
 }
 
-export async function regenerateLastResponse(actLineId: string, messageId: string): Promise<void> {
+export async function regenerateLastResponse(actLineId: string, messageId: string, directorRewriteRequest?: string): Promise<void> {
 	const currentMessages = [...messages];
 	const lastAssistantMsgIdx = currentMessages.findLastIndex((m) => m.role === 'assistant');
 	if (lastAssistantMsgIdx === -1) return;
@@ -715,6 +725,19 @@ export async function regenerateLastResponse(actLineId: string, messageId: strin
 		error = 'Message state is stale, reloading messages from database.';
 		await loadActLineMessages(actLineId);
 		return;
+	}
+
+	const lastAssistantMessage = currentMessages[lastAssistantMsgIdx];
+
+	let rewriteDirectorNote: string | undefined;
+	if (directorRewriteRequest) {
+		const originalNarrativeBody = lastAssistantMessage.variables?.narrativeBody ?? '';
+		const sceneNumber = lastAssistantMessage.sceneNumber ?? 0;
+		rewriteDirectorNote = ls('common.descriptions.directorRewriteRequest', {
+			sceneNumber: String(sceneNumber),
+			originalNarrativeBody,
+			directorRewriteRequest,
+		});
 	}
 
 	// If the assistant message is the first message, regenerate as initial narration
@@ -736,7 +759,7 @@ export async function regenerateLastResponse(actLineId: string, messageId: strin
 			await loadActLineMessages(actLineId);
 			return;
 		}
-		await runEpilogueFlow(actLineId);
+		await runEpilogueFlow(actLineId, rewriteDirectorNote);
 		return;
 	}
 
@@ -756,7 +779,7 @@ export async function regenerateLastResponse(actLineId: string, messageId: strin
 
 	// Send the new response first (safe — original data intact on failure)
 	try {
-		await sendMessage(actLineId, userMessageContent);
+		await sendMessage(actLineId, userMessageContent, rewriteDirectorNote);
 	} catch (err) {
 		await log.error('regenerate-last-response', 'Failed to regenerate response', err);
 		await loadActLineMessages(actLineId);

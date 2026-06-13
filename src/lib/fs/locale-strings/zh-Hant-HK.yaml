@@ -41,11 +41,19 @@ common:
     decisions: 回應選項
     summary: 摘要
     directorNotes: 導演備註
+    otherDirectorNotes: 其他導演備註
     actPhase: 章節階段
     storySoFar: 故事回顧
   descriptions:
     interviewTranscript: 以下是有關此故事及設定的訪談內容。
     directorNotes: '以下備註代表玩家的明確創作方向。它們凌駕於所有其他脈絡之上，包含章節劇情和章節摘要。請以最高優先順序遵循。'
+    directorRewriteRequest: |
+      這是場景 {{sceneNumber}} 的改寫請求：
+      ### 場景 {{sceneNumber}} 的原始敘事正文：
+      {{originalNarrativeBody}}
+
+      ### 導演的要求：
+      {{directorRewriteRequest}}
 
 pipeline:
   headers:

@@ -56,6 +56,7 @@
 		handleForkWithInterview,
 		cancelForkChoice,
 	} from '$lib/features/fork-controller.svelte';
+	import { getRegenerateChoiceIndex, handleRegenerateChoice, cancelRegenerateChoice } from '$lib/features/regenerate-controller.svelte';
 	import {
 		getEditingIsTemplated,
 		isEditingMessage,
@@ -85,6 +86,7 @@
 	import ReasoningAccordion from '$lib/components/chat/ReasoningAccordion.svelte';
 	import MessageActions from '$lib/components/chat/MessageActions.svelte';
 	import ForkChoicePanel from '$lib/components/chat/ForkChoicePanel.svelte';
+	import RegenerateChoicePanel from '$lib/components/chat/RegenerateChoicePanel.svelte';
 	import MessageEditForm from '$lib/components/chat/MessageEditForm.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -180,6 +182,24 @@
 		const actLineId = getActiveActLineId();
 		if (!actLineId || getIsBusy()) return;
 		await regenerateLastResponse(actLineId, messageId);
+	}
+
+	async function handleRegenerateWithDirection(messageId: string, direction: string) {
+		const actLineId = getActiveActLineId();
+		if (!actLineId || getIsBusy()) return;
+		await regenerateLastResponse(actLineId, messageId, direction);
+	}
+
+	function openRegenerateChoice(messageIndex: number) {
+		cancelForkChoice(() => {
+			forkPlotMode = null;
+		});
+		handleRegenerateChoice(messageIndex);
+	}
+
+	function openForkChoice(messageIndex: number) {
+		cancelRegenerateChoice();
+		handleFork(messageIndex);
 	}
 
 	async function handleDelete() {
@@ -675,7 +695,7 @@
 														class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 														title="Fork from here"
 														disabled={getIsForking() || getIsBusy()}
-														onclick={() => handleFork(i)}
+														onclick={() => openForkChoice(i)}
 													>
 														<Icon name="fork" class="w-3.5 h-3.5" />
 														{getIsForking() ? t('chat.forking') : t('chat.fork')}
@@ -683,22 +703,40 @@
 												{/if}
 											{/if}
 											{#if i === lastMessageIdx}
-												<button
-													class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
-													title="Regenerate response"
-													onclick={() => handleRegenerate(message.id)}
-												>
-													<Icon name="regenerate" class="w-3.5 h-3.5" />
-													{t('chat.regenerate')}
-												</button>
-												<button
-													class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-error-500 transition-colors"
-													title="Delete last exchange"
-													onclick={handleDelete}
-												>
-													<Icon name="trash" class="w-3.5 h-3.5" />
-													{t('chat.delete')}
-												</button>
+												{#if getRegenerateChoiceIndex() === i}
+													<RegenerateChoicePanel
+														variant="desktop"
+														isBusy={getIsBusy()}
+														actions={{
+															onTryAgain: () => {
+																cancelRegenerateChoice();
+																handleRegenerate(message.id);
+															},
+															onDescribeChanges: (text) => {
+																cancelRegenerateChoice();
+																handleRegenerateWithDirection(message.id, text);
+															},
+															onCancel: cancelRegenerateChoice,
+														}}
+													/>
+												{:else}
+													<button
+														class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
+														title="Regenerate response"
+														onclick={() => openRegenerateChoice(i)}
+													>
+														<Icon name="regenerate" class="w-3.5 h-3.5" />
+														{t('chat.regenerate')}
+													</button>
+													<button
+														class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-error-500 transition-colors"
+														title="Delete last exchange"
+														onclick={handleDelete}
+													>
+														<Icon name="trash" class="w-3.5 h-3.5" />
+														{t('chat.delete')}
+													</button>
+												{/if}
 											{/if}
 										</div>
 									{/if}
@@ -719,8 +757,8 @@
 												onEdit={message.variables && hasTemplateMetadata(message.variables) && i === lastMessageIdx
 													? () => startEditMessage(message, true)
 													: undefined}
-												onFork={message.variables && hasTemplateMetadata(message.variables) ? () => handleFork(i) : undefined}
-												onRegenerate={i === lastMessageIdx ? () => handleRegenerate(message.id) : undefined}
+												onFork={message.variables && hasTemplateMetadata(message.variables) ? () => openForkChoice(i) : undefined}
+												onRegenerate={i === lastMessageIdx && getRegenerateChoiceIndex() !== i ? () => openRegenerateChoice(i) : undefined}
 												onDelete={i === lastMessageIdx ? handleDelete : undefined}
 											/>
 											{#if getForkChoiceIndex() === i}
@@ -736,6 +774,23 @@
 															cancelForkChoice(() => {
 																forkPlotMode = null;
 															}),
+													}}
+												/>
+											{/if}
+											{#if getRegenerateChoiceIndex() === i}
+												<RegenerateChoicePanel
+													variant="mobile"
+													isBusy={getIsBusy()}
+													actions={{
+														onTryAgain: () => {
+															cancelRegenerateChoice();
+															handleRegenerate(message.id);
+														},
+														onDescribeChanges: (text) => {
+															cancelRegenerateChoice();
+															handleRegenerateWithDirection(message.id, text);
+														},
+														onCancel: cancelRegenerateChoice,
 													}}
 												/>
 											{/if}
