@@ -16,14 +16,6 @@ const FILES = {
 		path: join(ROOT, '..', 'src-tauri', 'tauri.conf.json'),
 		replace: (content, oldVer, newVer) => content.replace(`"version": "${oldVer}"`, `"version": "${newVer}"`),
 	},
-	'README.md': {
-		path: join(ROOT, '..', 'README.md'),
-		replace: (content, oldVer, newVer) =>
-			content
-				.replaceAll(`BYOA_${oldVer}_amd64.deb`, `BYOA_${newVer}_amd64.deb`)
-				.replaceAll(`BYOA-${oldVer}-1.x86_64.rpm`, `BYOA-${newVer}-1.x86_64.rpm`)
-				.replaceAll(`BYOA_${oldVer}_x64-setup.exe`, `BYOA_${newVer}_x64-setup.exe`),
-	},
 };
 
 function getCurrentVersion() {
