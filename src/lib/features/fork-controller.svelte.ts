@@ -77,7 +77,7 @@ export async function handleForkWithInterview(messageIndex: number, plotMode: 'g
 			actLineId: line.id,
 			worldContent,
 			forkContext: { actSummary, narrativeBody, sceneNumber, sceneTitle },
-			story: { id: story.id, name: story.name },
+			story: { id: story.id, name: story.name, locale: story.locale },
 		});
 	} catch (err) {
 		await log.error('fork', 'Failed to start fork interview', err);

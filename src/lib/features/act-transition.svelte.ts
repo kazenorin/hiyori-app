@@ -56,7 +56,7 @@ export async function handleContinueToNextAct(): Promise<void> {
 			actLineId: newLine.id,
 			worldContent,
 			newActContext,
-			story: { id: story.id, name: story.name },
+			story: { id: story.id, name: story.name, locale: story.locale },
 		});
 	} catch (err) {
 		await log.error('continue-to-next-act', 'Failed to start next act', err);

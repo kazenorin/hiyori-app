@@ -129,10 +129,10 @@ export function getIsNextActInterview(): boolean {
 	return actPlotInterview && !gameResumeInterview;
 }
 
-async function loadActiveLocales() {
-	// Set active locale to i18n locale for world builder session
-	setActiveLocale(settings.locale || 'en');
-	await loadLocaleStrings(settings.locale || 'en');
+async function loadActiveLocales(storyLocale?: string, storyId?: string, storyName?: string) {
+	const locale = storyLocale || settings.locale || 'en';
+	setActiveLocale(locale);
+	await loadLocaleStrings(locale, storyId, storyName);
 }
 
 function resetState(): void {
@@ -199,7 +199,7 @@ export interface EnterActPlotInterviewModeParams {
 	forkContext?: ForkInterviewContext;
 	additionalContext?: InterviewAdditionalContext;
 	newActContext?: NewActInterviewContext;
-	story?: { id: string; name: string };
+	story?: { id: string; name: string; locale: string };
 }
 
 export async function enterActPlotInterviewMode(params: EnterActPlotInterviewModeParams): Promise<void> {
@@ -210,7 +210,7 @@ export async function enterActPlotInterviewMode(params: EnterActPlotInterviewMod
 	interviewActLineId = actLineId;
 	interviewWorldContent = worldContent;
 
-	await loadActiveLocales();
+	await loadActiveLocales(story?.locale, story?.id, story?.name);
 
 	// Load interview system prompt with general instructions injected and interview extraction prompt
 	const [generalInstructions, interviewSystemPrompt] = story
