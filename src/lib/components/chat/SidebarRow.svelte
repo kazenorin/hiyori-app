@@ -89,7 +89,7 @@
 		role="button"
 		tabindex="0"
 		onkeydown={(e) => {
-			if (e.key === 'Enter' || e.key === ' ') {
+			if (e.key === 'Enter' || (e.key === ' ' && !isEditing)) {
 				e.preventDefault();
 				onSelect();
 			}
@@ -179,7 +179,7 @@
 					onSelect();
 				}}
 				onkeydown={(e) => {
-					if (e.key === 'Enter' || e.key === ' ') {
+					if (e.key === 'Enter' || (e.key === ' ' && !isEditing)) {
 						e.preventDefault();
 						if (isOpen) {
 							onDismissOpen();
