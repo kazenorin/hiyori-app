@@ -92,10 +92,25 @@ Since some API providers do not support CORS, API requests from the web app dire
 
 ![Provider roles configuration panel](docs/provider-roles.png)
 
-All pipeline roles default to your **Main Provider**. To optimize speed and cost, assign smaller/faster models to minor roles in **Settings → Pipeline Roles**.
+All pipeline roles default to your **Main Provider**. To optimize speed and cost, assign smaller/faster models to minor roles in **Settings → Pipeline Roles**. Each role is an independent agent that does not share much context with the others, and you can mix providers and models freely across roles.
 
 - Enable the **Reviewer** to unlock the **Editor** role.
 - You must assign a **Minor Task Agent** to enable phrase extraction and template fitting.
+
+#### Role Recommendations
+
+| Role                 | Recommendation                                                                                                                                                        | KV-cache                                       |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| **Main Provider**    | Cloud "Flash"-class models or local ~30B models                                                                                                                       | —                                              |
+| **Minor Task Agent** | Small, fast non-reasoning models (e.g. Gemma 4B, 12B class)                                                                                                           | Not needed                                     |
+| **Plot Planner**     | Strong frontier models with Event-based mode; "Flash"-class with Guidance-based mode. Both modes are token-heavy and slow, but they drive the entire story direction. | Needed for Guidance-based, not for Event-based |
+| **Reviewer**         | Reasoning models — quick review with stronger models, or detailed review with ~30B models                                                                             | Needed                                         |
+| **Writer**           | Same as Main Provider                                                                                                                                                 | Needed                                         |
+| **Editor**           | Fast non-reasoning models, but not too weak — quality still matters                                                                                                   | Needed                                         |
+| **Game Master**      | Same as Main Provider. Primarily generates decisions that drive the plot — weaker models work if decision quality isn't critical                                      | Needed                                         |
+| **Summarizer**       | Same as Main Provider, or a stronger frontier model with reasoning disabled — better summarization means higher-quality context for other agents                      | Needed                                         |
+
+> **KV-cache note:** Roles marked "Needed" benefit significantly from prompt-caching. Using the same provider and model for these roles allows the cache to persist across turns. Conversely, the Minor Task Agent's context shifts every call, so prompt-caching offers no advantage — a different provider can be used without penalty.
 
 ![Pipeline roles with detailed assignments](docs/pipeline-roles.png)
 
