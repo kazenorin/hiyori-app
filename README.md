@@ -99,16 +99,20 @@ All pipeline roles default to your **Main Provider**. To optimize speed and cost
 
 #### Role Recommendations
 
-| Role                 | Recommendation                                                                                                                                                        | KV-cache                                       |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| **Main Provider**    | Cloud "Flash"-class models or local ~30B models                                                                                                                       | —                                              |
-| **Minor Task Agent** | Small, fast non-reasoning models (e.g. Gemma 4B, 12B class)                                                                                                           | Not needed                                     |
-| **Plot Planner**     | Strong frontier models with Event-based mode; "Flash"-class with Guidance-based mode. Both modes are token-heavy and slow, but they drive the entire story direction. | Needed for Guidance-based, not for Event-based |
-| **Reviewer**         | Reasoning models — quick review with stronger models, or detailed review with ~30B models                                                                             | Needed                                         |
-| **Writer**           | Same as Main Provider                                                                                                                                                 | Needed                                         |
-| **Editor**           | Fast non-reasoning models, but not too weak — quality still matters                                                                                                   | Needed                                         |
-| **Game Master**      | Same as Main Provider. Primarily generates decisions that drive the plot — weaker models work if decision quality isn't critical                                      | Needed                                         |
-| **Summarizer**       | Same as Main Provider, or a stronger frontier model with reasoning disabled — better summarization means higher-quality context for other agents                      | Needed                                         |
+The "minimum" requirement is a local Gemma 12B class model for everything.
+
+Using open weight/open source frontier models (e.g. DeepSeek V4 Pro, GLM-5, Kimi K2.6) for everything is good, but may also be too slow for a semi-interactive game.
+
+| Role                 | Recommendation                                                                                                                                                         | KV-cache                                       |
+| -------------------- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ---------------------------------------------- |
+| **Main Provider**    | Cloud "Flash"-class models (e.g. DeepSeek V4 Flash, Gemini 3.1 Flash Lite Preview), or local ~24-30B models (e.g. Qwen3.6 27B/35B A3B, Gemma 31b/26B A4B, GPT-OSS 20B) | —                                              |
+| **Minor Task Agent** | Small, fast non-reasoning models (e.g. Gemma E4B, 12B class). May work with even smaller models.                                                                       | Not needed                                     |
+| **Plot Planner**     | Strong frontier models with Event-based mode; "Flash"-class with Guidance-based mode. Both modes are token-heavy and slow, but they drive the entire story direction.  | Needed for Guidance-based, not for Event-based |
+| **Writer**           | Same as Main Provider, may also opt for frontier models. What you read will mostly be written by this model.                                                           | Needed                                         |
+| **Reviewer**         | Reasoning models — quick review with stronger models, or detailed review with local ~24-30B models                                                                     | Needed                                         |
+| **Editor**           | Fast non-reasoning models, but not too weak — quality still matters (e.g. Gemma E4B/12B class). Depending on the reviewer, the editor will be asked to rewrite stuff.  | Needed                                         |
+| **Game Master**      | Same as Main Provider. Primarily generates decisions that drive the plot — weaker models work if decision quality isn't critical                                       | Needed                                         |
+| **Summarizer**       | Same as Main Provider, or a stronger frontier model with reasoning disabled — better summarization means higher-quality context for other agents                       | Needed                                         |
 
 > **KV-cache note:** Roles marked "Needed" benefit significantly from prompt-caching. Using the same provider and model for these roles allows the cache to persist across turns. Conversely, the Minor Task Agent's context shifts every call, so prompt-caching offers no advantage — a different provider can be used without penalty.
 
