@@ -1,278 +1,336 @@
 # Import World Feature
 
-The Import World feature allows users to import existing stories from world building documents, transcripts, and character cards. It supports multiple transcript formats, automatically detects game data (decision points), and can generate new content via LLM when no transcript is provided.
+> **Last updated:** 2026-06-13 | **Version:** 0.5.0
+
+Import existing stories from world-building documents, chat transcripts, and character cards into the app's narrative database. Supports multiple transcript formats, extracts structured narrative variables via the Template Fitter pipeline phase, and produces a preview before committing to the database.
+
+---
 
 ## Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                     Import World Flow                        │
-├─────────────────────────────────────────────────────────────┤
-│  User Input → Validation → Parse/Generate → Save to DB       │
-│                                                              │
-│  +page.svelte                                                 │
-│       ↓                                                       │
-│  import-state.svelte.ts (form state)                          │
-│       ↓                                                       │
-│  validators.ts (validate form)                                │
-│       ↓                                                       │
-│  import-orchestrator.ts (coordinate import)                   │
-│       ├─→ transcript-parsers.ts (parse JSON formats)         │
-│       │      └─→ game-data-detector.ts (extract decisions)   │
-│       └─→ act-generator.ts (LLM generation)                   │
-│              └─→ prompts.ts (LLM prompts)                    │
-└─────────────────────────────────────────────────────────────┘
+ +page.svelte
+      │
+      ▼
+ import-state.svelte.ts          Form + UI state (Svelte 5 runes)
+      │
+      ▼
+ validators.ts                   Validate form before processing
+      │
+      ▼
+ import-orchestrator.ts          Two-phase coordinator
+      ├──── transcript-parsers.ts      Parse JSON → ParsedMessage[]
+      ├──── narrative-filler.ts        Extract NarrativeVariables via LLM
+      │      └── pipeline-context.ts   Build PipelineRunContext for import
+      │             └── ← $lib/ai/pipeline/runners.ts (runEditorTemplateFitter)
+      └──── world-generator.ts        Generate world.md from cards (no world file)
 ```
 
-## Core Files
+---
 
-### types.ts
+## Two-Phase Import Flow
 
-Defines all TypeScript interfaces for the import feature:
+The import is split into **prepare** and **confirm** so the user can review and edit before data is written to the database.
 
-- **`ImportFormData`** — Form state with story name, world file, acts array, characters array, settings
-- **`ImportActInput`** — Single act with name, act card file, transcript file
-- **`ImportCharacterInput`** — Character with name, card file
-- **`ParsedTranscript`** — Result of parsing any format with detected format type
-- **`ParsedMessage`** — Unified message format (role, content, reasoning, metadata, gameData)
-- **`GameData`** — Extracted decision point: `{ worldState: string, decisions: string[] }`
-- **`ImportPhase`** — Progress phases: `'validating' | 'creating-story' | 'processing-act' | ...`
+### Phase 1 — `prepareImport(formData, onProgress) → ImportPreviewData | null`
 
-### validators.ts
+1. Create story in DB, resolve story folder on disk
+2. Save `world.md` (if provided); otherwise generate from act/character cards via `generateWorldFromCards()`
+3. Load character card files → extract names via `parseContent()` → save to `characters/{kebab-name}.md`
+4. Read and save act card files to `act-{N}/act-card.md`
+5. For each act:
+   - Create Act + ActLine in DB
+   - If transcript provided: parse via `transcript-parsers.ts` → run `narrative-filler.ts` on messages missing `sceneTitle`
+   - Build `ImportPreviewMessage[]` with `id` and `removed` flag
+6. Return `ImportPreviewData` (includes `createdResources` for rollback on failure)
 
-Form validation logic:
+On any error, `cleanupImport()` deletes all created resources in reverse order.
 
-- Validates story name, world file, acts, characters
-- Enforces business rules:
-  - Without world file: each act must have act file or transcript
-  - Character sections require card files
-  - File type validation (.md, .txt, .json)
-  - File size limits (50MB max via `MAX_FILE_SIZE`)
-- Returns `{ isValid, errors[], warnings[] }`
+### Phase 2 — `confirmImport(preview, onProgress) → ImportResult`
 
-### transcript-parsers.ts
+1. Filter out `system` messages and messages marked `removed`
+2. Assign scene numbers via `assignSceneNumbers()`
+3. Create DB message records + link to act lines with sequence numbers
+4. Determine `needsInterview`: true when the last act has no visible messages (i.e., user only provided cards, no transcript — the World Builder interview should run)
+5. Return `ImportResult` with `needsInterview`, `worldContent`, and `interviewContext`
 
-Parses three transcript formats into unified `ParsedMessage[]`:
+If `needsInterview`, the UI navigates to the main chat in World Builder interview mode.
 
-| Format         | Detection                                            | Notes                                  |
-| -------------- | ---------------------------------------------------- | -------------------------------------- |
-| **App Export** | `{ messages: [...] }` with metadata/game_data fields | Native format with full game data      |
-| **OpenAI API** | `{ messages: [...] }` simple role/content            | No metadata, needs game data detection |
-| **Open WebUI** | Array with `chat.history.messages`                   | Tree structure, uses longest path      |
+### Cancel — `cancelImport(preview)`
 
-**Key functions:**
+Calls `cleanupImport()` to roll back everything created in Phase 1.
 
-- `detectTranscriptFormat(json)` — Returns detected format
-- `parseAppExportFormat()` — Parses native app format
-- `parseSimpleOpenAIFormat()` — Parses basic OpenAI format
-- `parseOpenWebUIFormat()` — Builds longest sequence from tree structure
-- `parseTranscriptFile(file, skipOptionalMalformed)` — Main entry point
+---
 
-### game-data-detector.ts
+## Core Modules
 
-Two-pass pipeline to extract `GameData` (decision points) from assistant messages:
+### `types.ts`
 
-**Pass 1: Traditional Extraction** (synchronous)
+Canonical type definitions imported by every other module in the feature.
 
-- Splits content on markdown headers (`#`, `##`, etc.)
-- Detects decision keywords: `decision`, `choice`, `option`, `what...do?`
-- Extracts:
-  - `worldState`: text between header and first list item
-  - `decisions`: list items (`*`, `-`, `1.`, `2)`) cleaned of markdown
-- Requires at least 2 decisions to be valid
+| Type                                                         | Purpose                                                                                                                                                              |
+| ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TranscriptFormat`                                           | `'app-export' \| 'openai-api' \| 'openwebui' \| 'unknown'`                                                                                                           |
+| `ImportFormData`                                             | Top-level form state: story name, world file, acts, characters, retry config                                                                                         |
+| `ImportActInput`                                             | Single act: `id`, `name`, `actFile` (.md/.txt), `transcript` (.json)                                                                                                 |
+| `ImportCharacterInput`                                       | Character: `id`, `name`, `cardFile` (.md/.txt)                                                                                                                       |
+| `ParsedTranscript`                                           | Result of parsing: `{ format, messages: ParsedMessage[] }`                                                                                                           |
+| `ParsedMessage`                                              | Unified message: `role`, `content`, `reasoning?`, `metadata?`, `variables?` (NarrativeVariables)                                                                     |
+| `NarrativeExtractionResult`                                  | Template Fitter result per message: `messageIndex`, `variables`, `source`                                                                                            |
+| `ImportPreviewMessage`                                       | Preview table row: extends ParsedMessage with `id` and `removed`                                                                                                     |
+| `ImportPreviewAct`                                           | Preview act: `actId`, `actLineId`, `actName`, `actNumber`, messages                                                                                                  |
+| `ImportPreviewData`                                          | Full preview: story info, acts, cards, `createdResources`                                                                                                            |
+| `CreatedResources`                                           | Tracks all created DB IDs for rollback: `storyId?`, `storyFolder?`, `actIds[]`, `actLineIds[]`, `messageIds[]`                                                       |
+| `ImportResult`                                               | Final outcome: `success`, `storyId`, act IDs, `needsInterview`, `worldContent`, `interviewContext`                                                                   |
+| `ImportProgressUpdate`                                       | Progress event: `phase`, `message`, `errorMessage?`, `consoleOutput?`                                                                                                |
+| `ImportPhase`                                                | `'validating' \| 'creating-story' \| 'processing-act' \| 'generating-world' \| 'generating-game-data' \| 'saving-messages' \| 'finalizing' \| 'complete' \| 'error'` |
+| `ValidationResult` / `ValidationError` / `ValidationWarning` | Validation output with field-level errors and warnings                                                                                                               |
 
-**Pass 2: LLM Extraction** (asynchronous)
+### `transcript-parsers.ts`
 
-- For messages where Pass 1 returned null
-- Sends to LLM with `choices-extraction-prompt.md`
-- LLM returns JSON: `{ worldState: "...", decisions: ["...", "..."] }`
-- Parses JSON from code blocks or raw text
-- 100ms rate limit between calls to avoid API throttling
-- Updates messages in-place with detected game data
+Parses uploaded JSON files into `ParsedMessage[]`. Auto-detects format and delegates:
 
-**Entry point:** `runGameDataDetection(messages, retryConfig, choicesExtractionPrompt)`
+| Format         | Detection signal                                                 | Notes                                                                         |
+| -------------- | ---------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| **App Export** | `messages[]` with `metadata`, `game_data`, or `reasoning` fields | Native format; preserves game data as `GameDataFields`                        |
+| **OpenAI API** | `messages[]` with simple `role`/`content` only                   | Supports `reasoning` and `reasoning_content`                                  |
+| **Open WebUI** | Array with `chat.history.messages` tree                          | DFS with cycle detection, extracts `output[]` arrays into content + reasoning |
 
-### act-generator.ts
+**Entry point:** `parseTranscriptFile(file, skipOptionalMalformed)`
 
-Generates story content via LLM when no transcript is provided:
+Key internals:
 
-**`generateActFromCards()`**
+- `detectTranscriptFormat(json)` — inspects structure to identify format
+- `parseAppExportFormat()` — preserves `game_data` → `GameDataFields`, `metadata`, `reasoning`
+- `parseSimpleOpenAIFormat()` — basic role/content with optional reasoning
+- `parseOpenWebUIFormat()` — tree traversal (`buildSequence()`) to find longest message chain; `convertOpenWebUIMessage()` separates content from reasoning in `output[]`
+- `parseGameData(raw, skipOptionalMalformed)` — safely JSON-parses `game_data` string, falls back to `null` on failure when `skipOptionalMalformed` is true
 
-- Builds prompt from world card + act card + character cards
-- Uses streaming via `streamChatResponse()` for real-time feedback
-- Retries with exponential backoff
-- Fast-fails on auth errors (401/403)
+### `validators.ts`
 
-**`formatIntoScenes()`**
+`validateImportForm(formData) → ValidationResult`
 
-- Takes raw generated content
-- Feeds back to LLM to split into scenes using narration template
-- Returns formatted content in proper structure
+Validation rules:
 
-Prompts are centralized in `prompts.ts`:
+- All acts except the last **must** have a transcript (blocking error)
+- The last act must have a transcript OR act file OR world file OR character cards (blocking error)
+- Empty story name → warning (auto-generated if missing)
+- Empty act names → warning
+- Missing character card files → warning
+- Missing character names → warning (derived from card content)
+- File type validation: act/character files must be `.md`/`.txt`, transcripts must be `.json`
+- File size limit: 50 MB per file (`MAX_FILE_SIZE`)
+- `retryCount` must be in `[0, 20]`; `backoffIntervalSeconds` in `[1, 60]`
+- At least one piece of content must be provided (world file, acts, or characters)
 
-- `WORLD_CARD_LABEL` — "The following message is a world building settings card."
-- `ACT_CARD_LABEL` — "The following message is an act card..."
-- `CHARACTER_CARD_LABEL` — "The following message is a character card for {name}."
-- `ACT_GENERATION_INSTRUCTION` — "Generate a story based on the above settings."
-- `SCENE_FORMAT_PROMPT` — Multi-line template for scene formatting
+### `narrative-filler.ts`
 
-### import-orchestrator.ts
+Runs the **Template Fitter** pipeline phase against assistant messages that lack structured `NarrativeVariables` (specifically, messages missing `sceneTitle`). This enriches raw imported text with scene title, background, narrative body, etc. — extracting structure from unstructured transcripts via LLM.
 
-Main coordinator. Orchestrates the entire import process:
+**Entry point:** `runNarrativeFilling(messages, retryConfig, log, onProgress, onError)`
 
-**`executeImport(formData, onProgress)`**
+Flow:
 
-1. **Create story** — Generate UUID, create in DB, resolve folder, refresh sidebar
-2. **Save world file** — Write to `storyFolder/world.md`
-3. **Load character cards** — Parse each card file, extract names, validate
-4. **Save character cards** — Write to `storyFolder/characters/{kebab-name}.md`
-5. **Process acts** — For each act:
-   - **Transcript path**: Parse JSON → detect game data → save messages
-   - **Generation path**: LLM generate → format scenes → save messages
-6. **Finalize** — Refresh sidebar, return success
+1. Scan for assistant messages where `editorHasTemplateMetadata(message.variables)` is false
+2. For each, sequentially:
+   - Build `PipelineRunContext` via `buildImportRunContext()` with `writerOutputTemplate`
+   - Run `runEditorTemplateFitter(ctx, state, trackPhase)` — the same `TEMPLATE_FITTER` phase used in the main narrative pipeline
+   - If fitter produces `narrativeBody`, mark `source: 'template-fitter'`; otherwise wrap raw content in `emptyVariables()` with `source: 'none'`
+   - 100 ms delay between messages (rate limiting)
 
-**Error handling:**
+This is the key integration point where import-world **reuses the pipeline infrastructure** rather than implementing its own LLM extraction.
 
-- Tracks all created resources (story, acts, act lines, messages)
-- On failure: `cleanupImport()` deletes everything in reverse order
-- Logs cleanup warnings for any failures
+### `pipeline-context.ts`
 
-**Helper functions:**
+Builds a `PipelineRunContext` suitable for import-world operations. This is the bridge between the import feature and the narrative generation pipeline — it provides the pipeline with the context it needs without requiring a real story/act/assistant setup.
 
-- `processActs()` — Iterate acts and route to transcript or generation
-- `createActAndLine()` — Create act and main act line in DB
-- `processTranscriptAct()` — Parse transcript and detect game data
-- `generateActFromLLM()` — Generate content via LLM
-- `createMessagesFromParsed()` — Save messages to DB with progress updates
-- `saveCharacterCards()` — Write character cards with collision handling
-- `extractCharacterName()` — Parse name from card content
+| Export                                                                | Purpose                                                                                                                                         |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EMPTY_PRE_EDITOR_CONTEXT`                                            | A `PreEditorContext` with all fields empty/zeroed — used when importing has no prior story state                                                |
+| `buildImportRunContext(retryConfig, abortSignal, callbacks, prompts)` | Constructs a full `PipelineRunContext` using empty story/assistant contexts, `buildPipelineProviderConfigs()`, and any partial prompt overrides |
 
-### prompts.ts
+The `prompts` parameter is a `Partial<PipelineRunContext['prompts']>`, so callers only need to provide the specific prompt overrides (e.g., `writerOutputTemplate` for narrative filling). All other prompt fields default to empty strings.
 
-Centralized LLM prompts as constants:
+**Used by:**
 
-```typescript
-WORLD_CARD_LABEL; // Context label for world building card
-ACT_CARD_LABEL; // Context label for act card
-CHARACTER_CARD_LABEL; // Template with {name} placeholder
-ACT_GENERATION_INSTRUCTION; // Final LLM instruction
-SCENE_FORMAT_PROMPT; // Multi-line template with placeholders
+- `narrative-filler.ts` — to run the Template Fitter on parsed messages
+- `chat.svelte.ts` `regenerateGameData()` — to re-run the GM phase for an existing message outside a full pipeline run
+
+### `import-orchestrator.ts`
+
+Main coordinator. See [Two-Phase Import Flow](#two-phase-import-flow) above for the overall flow. Key internal helpers:
+
+| Function                     | Purpose                                                                                                     |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `prepareActs()`              | Iterate acts, create Act + ActLine, parse transcript, run narrative filling                                 |
+| `createActAndLine()`         | Create Act and main ActLine in DB, track created IDs                                                        |
+| `enrichTranscriptAct()`      | Parse transcript file, detect missing `sceneTitle`, call `runNarrativeFilling()`, merge results back        |
+| `regenerateWorldFromCards()` | Generate `world.md` via `generateWorldFromCards()` when no world file was provided                          |
+| `readAndSaveActCards()`      | Read act card files and save to `act-{N}/act-card.md`                                                       |
+| `loadCharacterCards()`       | Read character card files, extract names via `parseContent()`                                               |
+| `saveCharacterCards()`       | Write cards to `characters/{kebab-name}.md` with collision handling                                         |
+| `createMessagesFromParsed()` | Create DB message records + link to act line with sequence numbers                                          |
+| `assignSceneNumbers()`       | Assign scene numbers: increments after each user message that has a following assistant message             |
+| `extractCharacterName()`     | Uses `parseContent()` to extract name from "Core Identity" section of character card                        |
+| `cleanupImport()`            | Rollback: delete messages → line entries → act lines → acts → story folder → story (reverse creation order) |
+
+---
+
+## Connection to the Narrative Pipeline
+
+The import-world feature reuses the pipeline's `runEditorTemplateFitter` from `runners.ts` to extract structured narrative variables from raw text. This avoids duplicating LLM extraction logic.
+
+```
+import-world                      pipeline
+────────────                      ────────
+narrative-filler.ts
+  └── buildImportRunContext()
+        ├── EMPTY_PRE_EDITOR_CONTEXT    ←   types.ts (PreEditorContext)
+        ├── buildPipelineProviderConfigs()  ←   chat/pipeline-config.ts
+        └── PipelineRunContext           ←   runners.ts
+              │
+  └── runEditorTemplateFitter()         ←   runners.ts
+        └── executeStreamingPhase()      ←   phase-executor.ts
+              └── streamWithRetry()      ←   chat-stream.ts
 ```
 
-Benefit: All user-facing LLM text in one place for easy review/modification.
+The `buildImportRunContext()` function creates an "empty" run context with:
+
+- `preEditorCtx`: All fields zeroed (no world content, no act plot, no previous narrative)
+- `story` / `assistant`: Empty IDs (no real story or message sequence)
+- `prompts`: All empty strings except for the specific overrides passed by the caller
+- `effectiveTargetWordCount`: `'400'` (default)
+- `currentScene`: `'1'` (default)
+
+This allows single pipeline phases to be executed in isolation without a full story session.
+
+---
 
 ## UI Layer
 
-### +page.svelte
+### `+page.svelte` (`src/routes/import-world/`)
 
-Import World page UI:
+Import World page. Three-step flow:
 
-- Form sections: Story Details, Acts/Chapters, Characters, Import Settings
-- File inputs for world file, act files, transcripts (.json), character cards
-- Progress panel at top showing current phase and console output
-- Import button with validation
-- Stays on page after completion (shows success indicator)
-- All controls disabled after successful import
+1. **Form phase** — user fills in story name, world file, acts (with transcript + act card), characters, retry settings
+2. **Preview phase** — after `prepareImport()`, shows `ImportPreviewTable` with expandable acts, scene numbers, message excerpts; user can remove/restore individual messages
+3. **Saving phase** — after `confirmImport()`, shows completion or error
 
-### import-state.svelte.ts
+Key handlers:
 
-Svelte 5 runes-based state management:
+- `handleImport()` → validate form → `prepareImport()` → show preview or error
+- `handleConfirmImport()` → `confirmImport()` → if `needsInterview`, navigate to chat with World Builder interview mode
+- `handleCancelImport()` → `cancelImport()` → clear preview
 
-- Form state: `storyName`, `worldFile`, `acts[]`, `characters[]`, settings
-- UI state: `isImporting`, `importComplete`, `progressUpdates[]`, `consoleOutput`
-- Actions: `addAct()`, `removeAct()`, `updateActFile()`, `validate()`, etc.
-- Derived: `canSubmit` — only when not importing, not complete, and valid
+### `import-state.svelte.ts` (`src/routes/import-world/`)
+
+Svelte 5 runes-based state management. Form state (`storyName`, `worldFile`, `acts[]`, `characters[]`, `skipOptionalMalformed`, `retryCount`, `backoffIntervalSeconds`) and UI state (`isImporting`, `importComplete`, `progressUpdates[]`, `importPhase`, `previewData`). Exposed via `getImportWorldStore()`.
+
+`addProgressUpdate()` includes deduplication: consecutive updates with the same phase + message increment a `repeatedMessageCounter` instead of appending new entries. Console output is capped at 50 lines.
+
+### `ImportPreviewTable.svelte` (`src/routes/import-world/`)
+
+Renders expandable/collapsible acts using Skeleton Accordion. Computes scene numbers (same `assignSceneNumbers()` algorithm), shows scene titles, truncated excerpts, role badges, and remove/restore toggles per message.
+
+---
 
 ## Data Flow Example
 
-**Scenario: Import with transcript (OpenAI API format)**
+**Scenario: Import with an OpenAI API transcript and character cards (no world file)**
 
 ```
-User selects:
-  - Story name: "My Adventure"
-  - World file: world.md
-  - Act 1: transcript.json (OpenAI API format)
-  - Character: alice.md
+User fills form:
+  Story: "My Adventure"
+  World file: (none)
+  Act 1: transcript.json (OpenAI API format), act-1.md
+  Character: alice.md
 
 1. validateImportForm()
-   → isValid: true, warnings: []
+   → isValid: true, warnings: [story name empty → auto-generated]
 
-2. executeImport()
+2. prepareImport()
    → Create story "My Adventure" (uuid: abc123)
-   → Save world.md to stories/My-Adventure-abc123/world.md
-   → Load alice.md → name: "Alice"
+   → Resolve story folder → "My-Adventure-abc123"
+   → No world file → generate from act card + alice.md via generateWorldFromCards()
+   → Load alice.md → extractCharacterName() → "Alice"
    → Save characters/alice.md
+   → Save act-1/act-card.md
+   → Create Act + ActLine
+   → Parse transcript.json → 30 messages (openai-api format)
+   → 15 assistant messages lack sceneTitle
+   → runNarrativeFilling() → runEditorTemplateFitter() × 15
+   → Merge extracted variables back into messages
+   → Return ImportPreviewData
 
-3. processTranscriptAct()
-   → Parse transcript.json → 50 messages (openai-api format)
-   → Check: 30 assistant messages, 20 lack game data
-   → runGameDataDetection()
-      Pass 1: 12 messages have decision headers
-      Pass 2: LLM extracts 5 more
-   → Log: "Game data detection: 17/20 messages processed (5 LLM calls)"
+3. User reviews preview table, removes 2 messages
 
-4. createMessagesFromParsed()
-   → Save all 50 messages to DB
-   → Link to act line
-
-5. Return success
-   → Refresh sidebar (new story appears)
-   → Stay on page with completion log
+4. confirmImport()
+   → Save 28 messages to DB with scene numbers
+   → needsInterview: false (last act has messages)
+   → Return ImportResult { success: true }
+   → Refresh sidebar
 ```
+
+---
+
+## Progress Phases
+
+| Phase                  | When                                                |
+| ---------------------- | --------------------------------------------------- |
+| `validating`           | Before import starts                                |
+| `creating-story`       | Creating story, folder, world file, character cards |
+| `processing-act`       | Parsing transcript, running narrative filler        |
+| `generating-world`     | Generating world.md from cards                      |
+| `generating-game-data` | Reserved for future GM phase during import          |
+| `saving-messages`      | Persisting messages to DB                           |
+| `finalizing`           | Post-import cleanup                                 |
+| `complete`             | Import finished successfully                        |
+| `error`                | Import failed (with `errorMessage`)                 |
+
+---
 
 ## Error Handling
 
-| Error Type               | Handling                                           |
-| ------------------------ | -------------------------------------------------- |
-| Validation errors        | Show in UI before import starts                    |
-| File too large           | Reject with size limit message                     |
-| Invalid JSON             | Throw with "File is not valid JSON"                |
-| Unknown format           | Throw with "Unable to detect transcript format"    |
-| LLM auth failure         | Fast-fail with settings message                    |
-| LLM retry exhaustion     | Log warning, continue or fail based on context     |
-| DB failure during import | `cleanupImport()` rolls back all created resources |
+| Error                     | Handling                                                            |
+| ------------------------- | ------------------------------------------------------------------- |
+| Validation errors         | Shown in UI before processing starts                                |
+| Invalid JSON              | Throw `"File is not valid JSON"`                                    |
+| Unknown transcript format | Throw `"Unable to detect transcript format"`                        |
+| Malformed `game_data`     | Skipped when `skipOptionalMalformed` is true; throws otherwise      |
+| Malformed `metadata`      | Same as `game_data`                                                 |
+| File too large            | Reject with size limit message (50 MB)                              |
+| LLM retry exhaustion      | Warning logged; per-message failure recorded                        |
+| DB failure during import  | `cleanupImport()` rolls back all created resources in reverse order |
+| Any Phase 1 failure       | `cleanupImport()` + error progress event + return `null`            |
+| Any Phase 2 failure       | `cleanupImport()` + `ImportResult { success: false }`               |
 
-## File Size Limits
+`cleanupImport()` iterates in reverse creation order: messages → line entries → act lines → acts → story folder → story. Individual deletion failures are logged as warnings rather than aborting the remaining cleanup.
 
-All uploaded files are validated against `MAX_FILE_SIZE = 50 * 1024 * 1024` (50MB):
+---
 
-- World files (.md, .txt)
-- Act files (.md, .txt)
-- Transcripts (.json)
-- Character cards (.md, .txt)
+## File Layout on Disk
+
+After import, a story folder contains:
+
+```
+stories/{StoryName-uuid}/
+  world.md                        ← World document (provided or generated)
+  act-1/
+    act-card.md                   ← Act card (if provided)
+  act-2/
+    act-card.md
+  characters/
+    alice.md                      ← Character cards (kebab-cased names)
+    bob-2.md                      ← Collision handling with numeric suffix
+```
+
+---
 
 ## Testing
 
 Test files in `src/lib/__tests__/import-world/`:
 
-- `transcript-parsers.test.ts` — 400+ lines covering all 3 formats
-- `validators.test.ts` — Validation rules and edge cases
-- `game-data-detector.test.ts` — Traditional extraction and LLM parsing
+- `transcript-parsers.test.ts` — Covers all 3 formats, edge cases, malformed input
+- `validators.test.ts` — Validation rules and boundary conditions
 
 Run tests: `npm test`
-
-## Dependencies
-
-- `$lib/ai/chat-stream.ts` — Streaming LLM responses
-- `$lib/ai/provider.ts` — Model creation
-- `$lib/db/*` — Database operations (stories, acts, act-lines, messages)
-- `$lib/fs/prompts.ts` — Prompt loading system
-- `$lib/fs/story-folders.ts` — Story folder resolution
-- `$lib/utils/async.ts` — Shared `sleep()` and `isAuthError()`
-- `$lib/utils/string.ts` — `toKebabCase()` for file naming
-
-## Prompt Files (in prompts/)
-
-- `import/act-generation-prompt.md` — LLM instructions for act generation
-- `import/choices-extraction-prompt.md` — LLM instructions for game data extraction
-
-These are registered in `$lib/fs/prompts.ts` and loaded via the `Prompt` class pattern.
-
-## Security Considerations
-
-- File size limits prevent DoS via large uploads
-- File type validation restricts to expected extensions
-- Cleanup on failure prevents orphaned database records
-- Auth errors fail fast to avoid wasted API calls
-- Rate limiting (100ms) between LLM calls respects provider limits
