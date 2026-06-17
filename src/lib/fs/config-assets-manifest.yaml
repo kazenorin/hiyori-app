@@ -64,9 +64,10 @@ src:
           game-master:
             game-master-prompt.md:
               configPath: en/prompt-templates/game-master/game-master-prompt.md
-              hash: 8cb3434931b97a804103de914fbb0604716e279b9e893e7b6a41ea6d3b6bac21
-              oldHashes: []
-              updatedAt: "2026-05-30T16:51:23.217Z"
+              hash: 0b67ab460f9bd625a0519a3c8a6282d21ea1086228dfae2ba1a741a72386f770
+              oldHashes:
+                - 8cb3434931b97a804103de914fbb0604716e279b9e893e7b6a41ea6d3b6bac21
+              updatedAt: "2026-06-17T15:47:14.656Z"
           general-instructions.md:
             configPath: en/prompt-templates/general-instructions.md
             hash: acb1359fc7763f73e6fcc4b5c281a406c0f499a35485ef79cae2f50ef8a30399
@@ -240,9 +241,10 @@ src:
           game-master:
             game-master-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/game-master/game-master-prompt.md
-              hash: 9774d2d3bf12be4e492d0bf553af669bb91703cd4ed1dc322eeaa5245630f58c
-              oldHashes: []
-              updatedAt: "2026-05-30T16:51:23.217Z"
+              hash: c61cd6f9212c30a031f59cdc1af9c34e32abe4697414e54424775229046272bd
+              oldHashes:
+                - 9774d2d3bf12be4e492d0bf553af669bb91703cd4ed1dc322eeaa5245630f58c
+              updatedAt: "2026-06-17T15:47:14.656Z"
           general-instructions.md:
             configPath: zh-Hant-HK/prompt-templates/general-instructions.md
             hash: d8c70e92990ffb7fedda3e2206799dc475a6d428e41e70bc6c595f3d01267ea5
