@@ -253,3 +253,72 @@ describe('isCriticalSystemFile', () => {
 		expect(isCriticalSystemFile('my-story/some-world.md', 'story')).toBe(false);
 	});
 });
+
+describe('readDirectoryNodes — empty subdirectory filtering', () => {
+	let fs: InMemoryFileSystem;
+
+	beforeEach(() => {
+		fs = new InMemoryFileSystem();
+		fs.clear();
+		setFileSystem(fs);
+		vi.restoreAllMocks();
+	});
+
+	it('hides empty subdirectories inside story folders', async () => {
+		vi.spyOn(dbStoryFolders, 'getAllFolderNames').mockResolvedValue(['my-story']);
+		await fs.mkdir('my-story/empty-dir');
+
+		const nodes = await readDirectoryNodes('my-story');
+		expect(nodes.find((n) => n.name === 'empty-dir')).toBeUndefined();
+	});
+
+	it('hides subdirectories that contain only empty subdirectories (transitively empty)', async () => {
+		vi.spyOn(dbStoryFolders, 'getAllFolderNames').mockResolvedValue(['my-story']);
+		await fs.mkdir('my-story/act-1/main-line/characters');
+
+		const nodes = await readDirectoryNodes('my-story');
+		expect(nodes.find((n) => n.name === 'act-1')).toBeUndefined();
+	});
+
+	it('keeps subdirectories that contain files at any depth', async () => {
+		vi.spyOn(dbStoryFolders, 'getAllFolderNames').mockResolvedValue(['my-story']);
+		await fs.writeTextFileEnsuringDir('my-story/act-1/main-line/act-plot.md', 'plot');
+
+		const nodes = await readDirectoryNodes('my-story');
+		expect(nodes.find((n) => n.name === 'act-1')).toBeDefined();
+	});
+
+	it('does not hide the story folder itself at root level even if empty', async () => {
+		vi.spyOn(dbStoryFolders, 'getAllFolderNames').mockResolvedValue(['my-story']);
+		await fs.mkdir('my-story');
+
+		const nodes = await readDirectoryNodes('');
+		expect(nodes.find((n) => n.name === 'my-story')).toBeDefined();
+	});
+
+	it('does not filter empty subdirectories in config folder', async () => {
+		vi.spyOn(dbStoryFolders, 'getAllFolderNames').mockResolvedValue(['my-story']);
+		await fs.mkdir('config/empty-subdir');
+
+		const nodes = await readDirectoryNodes('config');
+		expect(nodes.find((n) => n.name === 'empty-subdir')).toBeDefined();
+	});
+
+	it('does not filter empty subdirectories in default (non-story) folders', async () => {
+		vi.spyOn(dbStoryFolders, 'getAllFolderNames').mockResolvedValue([]);
+		await fs.mkdir('random-folder/empty-subdir');
+
+		const nodes = await readDirectoryNodes('random-folder');
+		expect(nodes.find((n) => n.name === 'empty-subdir')).toBeDefined();
+	});
+
+	it('keeps the deepest non-empty directory in a mixed tree', async () => {
+		vi.spyOn(dbStoryFolders, 'getAllFolderNames').mockResolvedValue(['my-story']);
+		await fs.mkdir('my-story/empty-branch/nested-empty');
+		await fs.writeTextFileEnsuringDir('my-story/full-branch/deep/file.md', 'content');
+
+		const nodes = await readDirectoryNodes('my-story');
+		expect(nodes.find((n) => n.name === 'empty-branch')).toBeUndefined();
+		expect(nodes.find((n) => n.name === 'full-branch')).toBeDefined();
+	});
+});

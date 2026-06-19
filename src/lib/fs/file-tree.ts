@@ -52,13 +52,31 @@ export function classifyManagedConfig(filePath: string, folderType: FolderType |
 	return null;
 }
 
+async function hasFilesRecursively(dirPath: string): Promise<boolean> {
+	try {
+		const entries = await fs.readDir(dirPath);
+		for (const entry of entries) {
+			if (entry.isDirectory) {
+				const childPath = dirPath ? `${dirPath}/${entry.name}` : entry.name;
+				if (await hasFilesRecursively(childPath)) return true;
+			} else {
+				return true;
+			}
+		}
+		return false;
+	} catch {
+		return true;
+	}
+}
+
 export async function readDirectoryNodes(dirPath: string): Promise<FileNode[]> {
 	const entries = await fs.readDir(dirPath);
 
 	const rows = await dbStoryFolders.getAllFolderNames();
 	const storyFolderNames = new Set(rows);
 
-	const nodes: FileNode[] = entries.map((entry) => {
+	const nodes: FileNode[] = [];
+	for (const entry of entries) {
 		const id = dirPath ? `${dirPath}/${entry.name}` : entry.name;
 		let folderType = getFolderType(id);
 		if (folderType === 'default') {
@@ -67,13 +85,19 @@ export async function readDirectoryNodes(dirPath: string): Promise<FileNode[]> {
 				folderType = 'story';
 			}
 		}
+
+		if (entry.isDirectory && folderType === 'story' && dirPath !== '') {
+			const hasFiles = await hasFilesRecursively(id);
+			if (!hasFiles) continue;
+		}
+
 		let managedConfig: ManagedConfigKind | undefined;
 		if (!entry.isDirectory) {
 			const mc = classifyManagedConfig(id, folderType);
 			if (mc !== null) managedConfig = mc;
 		}
-		return { id, name: entry.name, isDirectory: entry.isDirectory, folderType, managedConfig };
-	});
+		nodes.push({ id, name: entry.name, isDirectory: entry.isDirectory, folderType, managedConfig });
+	}
 
 	nodes.sort((a, b) => {
 		if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
