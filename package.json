@@ -1,6 +1,6 @@
 {
 	"name": "byoa-app",
-	"version": "0.5.2",
+	"version": "0.5.3",
 	"description": "",
 	"scripts": {
 		"dev": "vite dev",
