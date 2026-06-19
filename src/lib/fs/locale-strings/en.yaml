@@ -71,12 +71,6 @@ pipeline:
       Do not make changes to the strings.
       Return only the JSON array.
     gameMaster: Generate the game data based on the available information in the chat history.
-    gmPhaseEventPhaseAdvancementTrigger: '- **Determine Act Phase**: If you believe the story has completed the {{actPhase}} Phase, use the `advance-phase` tool exactly once to move the story forward.'
-    gmActEndTrigger: >
-      - **Determine Act Conclusion**: If you believe the story has reached one of the Possible Endings defined in the
-      Act Plot, where the central conflict is resolved and the narrative reaches a natural stopping point, use the
-      `end-act` tool exactly once to signal the act's conclusion. Specify the `endingType` that best matches the
-      player's choices (good, bad, bittersweet, or alternative).
     editor: Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history.
     reviewer: "Perform a review on the writer's output for Scene {{currentScene}} based on the available information in the chat history."
     reviewerQuick: "Quick-review the writer's output for Scene {{currentScene}}. Skim for glaring errors only — output the review template immediately with no reasoning."

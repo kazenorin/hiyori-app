@@ -23,8 +23,6 @@ import type { ActPhase, EndingType, GameDataFields, NarrativeVariables, PlotMode
 import { getActPhaseIndex } from '../narrative-types';
 import { summaryHeader } from '$lib/definitions/common-headers';
 import {
-	gmPhaseEventAdvancementTrigger,
-	gmActEndTrigger,
 	writerProvidedSummary,
 	writerProvidedTurnOfEvents,
 	writerTurnOfEventsReinforcementPhrase,
@@ -80,26 +78,7 @@ import {
 export const defaultTargetWordCount = 400;
 
 function resolveGmSystemPrompt(ctx: PipelineRunContext): string {
-	const phaseAdvancementTrigger =
-		ctx.story.actLine.plotMode === 'phaseEvent' && ctx.story.actLine.currentActPhase
-			? gmPhaseEventAdvancementTrigger(getLocalizedActPhase(ctx.story.actLine.currentActPhase))
-			: null;
-	const gmActEndTrigger = resolveGmActEndTrigger(ctx);
-
-	const additionalRules: string[] = [];
-	if (phaseAdvancementTrigger) additionalRules.push(phaseAdvancementTrigger);
-	if (gmActEndTrigger) additionalRules.push(gmActEndTrigger);
-
-	const additionalRulesText = additionalRules.length > 0 ? '\n' + additionalRules.join('\n') : '';
-
-	return ctx.prompts.gameMasterSystemPrompt.replaceAll('{{additionalRules}}', additionalRulesText);
-}
-
-function resolveGmActEndTrigger(ctx: PipelineRunContext): string | null {
-	if (ctx.story.actLine.plotMode === 'phaseEvent') {
-		if (!isActEndPhase(ctx.story.actLine.currentActPhase ?? null)) return null;
-	}
-	return gmActEndTrigger();
+	return ctx.prompts.gameMasterSystemPrompt.replaceAll('{{additionalRules}}', '');
 }
 
 function resolveSummarizedScenes(summarizedScenes: number) {

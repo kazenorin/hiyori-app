@@ -27,9 +27,6 @@ export const templateFitterSystemPrompt = () => ls('pipeline.system.templateFitt
 
 // Extraction prompts
 export const gameMasterExtractionPrompt = () => ls('pipeline.extraction.gameMaster');
-export const gmPhaseEventAdvancementTrigger = (actPhase: string) =>
-	ls('pipeline.extraction.gmPhaseEventPhaseAdvancementTrigger', { actPhase });
-export const gmActEndTrigger = () => ls('pipeline.extraction.gmActEndTrigger');
 export const editorExtractionPrompt = () => ls('pipeline.extraction.editor');
 export const editorTemplateFitterExtractionPrompt = () => ls('pipeline.extraction.editorTemplateFitter');
 export const gmTemplateFitterExtractionPrompt = () => ls('pipeline.extraction.gmTemplateFitter');

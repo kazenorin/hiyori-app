@@ -70,14 +70,14 @@ The pipeline supports two plot modes stored on `ActLineMeta.plotMode`:
 
 All system prompts use `{{variable}}` placeholders resolved at runtime:
 
-| Placeholder                                                | Used By                          | Source                               |
-| ---------------------------------------------------------- | -------------------------------- | ------------------------------------ |
-| `{{generalInstructions}}`                                  | Writer, Editor, GM, Plot Planner | `LoadedPrompts.generalInstructions`  |
-| `{{targetWordCount}}`                                      | Writer, Editor, Plot Planner     | `settings.targetWordCount ?? 400`    |
-| `{{writerOutputTemplate}}`                                 | Writer, Editor                   | `LoadedPrompts.writerOutputTemplate` |
-| `{{acceptAsIs}}`                                           | Reviewer                         | Localized label                      |
-| `{{summary}}`, `{{totalViolations}}`, `{{recommendation}}` | Reviewer                         | Localized labels                     |
-| `{{additionalRules}}`                                      | Game Master                      | Phase triggers + act-end rules       |
+| Placeholder                                                | Used By                          | Source                                                  |
+| ---------------------------------------------------------- | -------------------------------- | ------------------------------------------------------- |
+| `{{generalInstructions}}`                                  | Writer, Editor, GM, Plot Planner | `LoadedPrompts.generalInstructions`                     |
+| `{{targetWordCount}}`                                      | Writer, Editor, Plot Planner     | `settings.targetWordCount ?? 400`                       |
+| `{{writerOutputTemplate}}`                                 | Writer, Editor                   | `LoadedPrompts.writerOutputTemplate`                    |
+| `{{acceptAsIs}}`                                           | Reviewer                         | Localized label                                         |
+| `{{summary}}`, `{{totalViolations}}`, `{{recommendation}}` | Reviewer                         | Localized labels                                        |
+| `{{additionalRules}}`                                      | Game Master                      | Currently always empty; placeholder kept for future use |
 
 Writer extraction prompts also use: `{{previousScene}}`, `{{currentScene}}`, `{{summarizedScenes}}`, `{{providedSummary}}`, `{{providedTurnOfEvents}}`, `{{providedDirectorNotes}}`, `{{turnOfEventsReinforcementPhrase}}`, `{{directorNotesReinforcementPhrase}}`, `{{currentActPhase}}`, `{{actEndInstruction}}`.
 

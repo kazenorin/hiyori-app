@@ -70,11 +70,6 @@ pipeline:
       不要修改任何字串。
       只回傳 JSON 陣列。
     gameMaster: 根據聊天記錄中的可用資訊，生成遊戲資料。
-    gmPhaseEventPhaseAdvancementTrigger: '- **判斷章節階段:** 若你認為故事已完成 {{actPhase}} 階段，請使用 `advance-phase` 工具精確一次來推進故事。'
-    gmActEndTrigger: >
-      - **判斷章節結束:** 若你認為故事已達到章節劇情中定義的可能結局之一，即核心衝突已解決且敘事到達自然的停止點，
-      請使用 `end-act` 工具精確一次來標誌章節的結束。指定最符合玩家選擇的 `endingType`
-      (好結局、壞結局、苦甜結局或另類結局) 。
     editor: 根據審閱者輸出的建議，修改寫手輸出。請根據聊天記錄中的可用資訊，判斷這些建議是否有必要採納。
     reviewer: '根據聊天記錄中的可用資訊，審閱寫手對場景 {{currentScene}} 的輸出。'
     reviewerQuick: '快速審閱寫手對場景 {{currentScene}} 的輸出。僅略讀明顯錯誤——立即輸出審閱範本，不附帶推理過程。'
