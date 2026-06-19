@@ -266,7 +266,7 @@ export async function sendMessage(actLineId: string, message: string, rewriteDir
 	}
 }
 
-export async function sendInitialNarration(actLineId: string): Promise<void> {
+export async function sendInitialNarration(actLineId: string, rewriteDirectorNote?: string): Promise<void> {
 	setMessages([]);
 	isStreaming = true;
 
@@ -284,6 +284,7 @@ export async function sendInitialNarration(actLineId: string): Promise<void> {
 			actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen, actNumber },
 			previousSceneNumber: 0,
 			previousNarrativeVariables: undefined,
+			rewriteDirectorNote,
 		};
 		return await executeNarrativeRequest(requestContext);
 	} finally {
@@ -749,7 +750,7 @@ export async function regenerateLastResponse(actLineId: string, messageId: strin
 			return;
 		}
 		// sendInitialNarration will reset `messages` array
-		await sendInitialNarration(actLineId);
+		await sendInitialNarration(actLineId, rewriteDirectorNote);
 		return;
 	}
 
