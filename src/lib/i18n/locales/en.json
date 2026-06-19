@@ -509,7 +509,8 @@
 		"overrideDescription": "This is a story-specific override of a config file.",
 		"deleteFileWarning": "This file will be deleted. This cannot be undone.",
 		"toConfig": "To Config",
-		"unmanagedFileDescription": "This file is not part of the app configuration."
+		"unmanagedFileDescription": "This file is not part of the app configuration.",
+		"criticalDeleteAcknowledge": "I understand this will cause loss of story context."
 	},
 	"loadStory": {
 		"heading": "Load Story",

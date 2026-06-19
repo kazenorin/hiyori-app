@@ -8,6 +8,8 @@ import {
 	getFolderType,
 	copyStoryOverrideToConfig,
 	copyStoryOverrideToStory,
+	isCriticalSystemFile,
+	CRITICAL_SYSTEM_FILENAMES,
 } from '$lib/fs/file-tree';
 
 describe('readDirectoryNodes — managedConfig classification', () => {
@@ -102,7 +104,7 @@ describe('readDirectoryNodes — managedConfig classification', () => {
 			expect(mdFile!.managedConfig).toBe('story-override');
 		});
 
-		it('does not set folderType on file nodes', async () => {
+		it('sets folderType on file nodes matching parent directory', async () => {
 			vi.spyOn(dbStoryFolders, 'getAllFolderNames').mockResolvedValue([]);
 
 			await fs.writeTextFile('config/test.md', 'test');
@@ -110,7 +112,7 @@ describe('readDirectoryNodes — managedConfig classification', () => {
 			const nodes = await readDirectoryNodes('config');
 			const file = nodes.find((n) => n.name === 'test.md');
 			expect(file!.isDirectory).toBe(false);
-			expect(file!.folderType).toBeUndefined();
+			expect(file!.folderType).toBe('config');
 			expect(file!.managedConfig).toBeUndefined();
 		});
 	});
@@ -185,5 +187,69 @@ describe('copyStoryOverrideToStory', () => {
 
 		expect(await fs.exists(destPath)).toBe(true);
 		expect(await fs.readTextFile(destPath)).toBe('new override');
+	});
+});
+
+describe('CRITICAL_SYSTEM_FILENAMES', () => {
+	it('lists the critical system filenames', () => {
+		expect([...CRITICAL_SYSTEM_FILENAMES]).toEqual(['world.md', 'act-plot.md']);
+	});
+});
+
+describe('isCriticalSystemFile', () => {
+	it('returns true for world.md at story root', () => {
+		expect(isCriticalSystemFile('my-story/world.md', 'story')).toBe(true);
+	});
+
+	it('returns true for act-plot.md in a canonical main-line dir', () => {
+		expect(isCriticalSystemFile('my-story/act-1/main-line/act-plot.md', 'story')).toBe(true);
+	});
+
+	it('returns true for act-plot.md in a forked line dir with 8-hex id', () => {
+		expect(isCriticalSystemFile('my-story/act-2/a1b2c3d4/act-plot.md', 'story')).toBe(true);
+	});
+
+	it('returns true for act-plot.md in a forked line dir with named suffix', () => {
+		expect(isCriticalSystemFile('my-story/act-2/a1b2c3d4-the-fork/act-plot.md', 'story')).toBe(true);
+	});
+
+	it('returns true for act-plot.md in an import-flat layout (orphaned but still loss-of-context)', () => {
+		expect(isCriticalSystemFile('my-story/act-1/act-plot.md', 'story')).toBe(true);
+	});
+
+	it('returns false for world-{timestamp}.md backups', () => {
+		expect(isCriticalSystemFile('my-story/world-20260501143022.md', 'story')).toBe(false);
+	});
+
+	it('returns false for world-template-id', () => {
+		expect(isCriticalSystemFile('my-story/world-template-id', 'story')).toBe(false);
+	});
+
+	it('returns false for act-card.md (regenerable, not critical)', () => {
+		expect(isCriticalSystemFile('my-story/act-1/main-line/act-card.md', 'story')).toBe(false);
+	});
+
+	it('returns false for character cards', () => {
+		expect(isCriticalSystemFile('my-story/act-1/main-line/characters/elena-cross.md', 'story')).toBe(false);
+	});
+
+	it('returns false for debug logs', () => {
+		expect(isCriticalSystemFile('my-story/main-chat.log', 'story')).toBe(false);
+	});
+
+	it('returns false when folderType is config, even for world.md basename', () => {
+		expect(isCriticalSystemFile('config/world.md', 'config')).toBe(false);
+	});
+
+	it('returns false when folderType is undefined', () => {
+		expect(isCriticalSystemFile('random/world.md', undefined)).toBe(false);
+	});
+
+	it('returns false when folderType is default', () => {
+		expect(isCriticalSystemFile('random/world.md', 'default')).toBe(false);
+	});
+
+	it('returns false for a similarly-named file (some-world.md)', () => {
+		expect(isCriticalSystemFile('my-story/some-world.md', 'story')).toBe(false);
 	});
 });

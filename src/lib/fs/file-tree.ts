@@ -9,6 +9,8 @@ const manifest = loadManifest();
 export type FolderType = 'story' | 'config' | 'default';
 export type ManagedConfigKind = 'managed' | 'obsolete' | 'story-override';
 
+export const CRITICAL_SYSTEM_FILENAMES = ['world.md', 'act-plot.md'] as const;
+
 export interface FileNode {
 	id: string;
 	name: string;
@@ -21,6 +23,12 @@ export interface FileNode {
 export function getFolderType(path: string): FolderType {
 	if (path === 'config' || path.startsWith('config/')) return 'config';
 	return 'default';
+}
+
+export function isCriticalSystemFile(filePath: string, folderType: FolderType | undefined): boolean {
+	if (folderType !== 'story') return false;
+	const basename = filePath.split('/').pop() ?? filePath;
+	return (CRITICAL_SYSTEM_FILENAMES as readonly string[]).includes(basename);
 }
 
 export function classifyManagedConfig(filePath: string, folderType: FolderType | undefined): ManagedConfigKind | null {
@@ -64,7 +72,7 @@ export async function readDirectoryNodes(dirPath: string): Promise<FileNode[]> {
 			const mc = classifyManagedConfig(id, folderType);
 			if (mc !== null) managedConfig = mc;
 		}
-		return { id, name: entry.name, isDirectory: entry.isDirectory, folderType: entry.isDirectory ? folderType : undefined, managedConfig };
+		return { id, name: entry.name, isDirectory: entry.isDirectory, folderType, managedConfig };
 	});
 
 	nodes.sort((a, b) => {

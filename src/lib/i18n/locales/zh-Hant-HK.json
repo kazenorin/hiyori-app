@@ -503,7 +503,8 @@
 		"overrideDescription": "此為設定檔的故事專屬覆寫。",
 		"deleteFileWarning": "此檔案將被刪除。此操作無法復原。",
 		"toConfig": "到設定",
-		"unmanagedFileDescription": "此檔案非應用程式設定的一部分。"
+		"unmanagedFileDescription": "此檔案非應用程式設定的一部分。",
+		"criticalDeleteAcknowledge": "我了解這將導致故事上下文遺失。"
 	},
 	"loadStory": {
 		"heading": "載入故事",

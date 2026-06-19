@@ -10,6 +10,7 @@
 		saveFileContent,
 		isFolderTypeProtected,
 		isConfigUserModified,
+		isCriticalSystemFile,
 		type FileNode,
 	} from '$lib/fs/file-tree';
 	import {
@@ -66,6 +67,7 @@
 
 	let actions = $state<FileActionState>(createFileActionState());
 	let showDeleteConfirm = $state(false);
+	let acknowledgeCriticalLoss = $state(false);
 
 	let confirmDiscard = $state(false);
 
@@ -144,6 +146,7 @@
 		showCopyPanel = false;
 		selectedStoryFolder = '';
 		showFileDeleteConfirm = false;
+		acknowledgeCriticalLoss = false;
 	}
 
 	async function handleSelectionChange(details: { selectedValue: string[]; selectedNodes: FileNode[] }) {
@@ -164,6 +167,7 @@
 		selectedStoryFolder = '';
 		isConfigModified = null;
 		showFileDeleteConfirm = false;
+		acknowledgeCriticalLoss = false;
 
 		if (node.isDirectory) {
 			fileContent = null;
@@ -563,10 +567,22 @@
 			{/if}
 		{/if}
 		{#if mc === undefined}
+			{@const isCritical = selectedFilePath ? isCriticalSystemFile(selectedFilePath, selectedNode?.folderType) : false}
 			<p class="text-xs text-surface-600-400">{t('fileManager.unmanagedFileDescription')}</p>
 			{#if showFileDeleteConfirm}
 				<p class="text-xs text-warning-500">{t('fileManager.deleteFileWarning')}</p>
-				<button class="btn preset-filled-error text-xs gap-1" type="button" onclick={handleDeleteFile} disabled={actions.isDeleting}>
+				{#if isCritical}
+					<label class="text-xs text-warning-500 flex items-center gap-2">
+						<input type="checkbox" bind:checked={acknowledgeCriticalLoss} />
+						{t('fileManager.criticalDeleteAcknowledge')}
+					</label>
+				{/if}
+				<button
+					class="btn preset-filled-error text-xs gap-1"
+					type="button"
+					onclick={handleDeleteFile}
+					disabled={actions.isDeleting || (isCritical && !acknowledgeCriticalLoss)}
+				>
 					<Icon name="trash-can" class="size-3.5" />
 					{actions.isDeleting ? '...' : t('fileManager.delete')}
 				</button>
@@ -576,6 +592,7 @@
 					type="button"
 					onclick={() => {
 						showFileDeleteConfirm = false;
+						acknowledgeCriticalLoss = false;
 					}}
 				>
 					{t('fileManager.cancel')}
