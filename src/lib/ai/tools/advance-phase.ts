@@ -29,22 +29,19 @@ export function createAdvancePhaseTool(actLineId: string, currentPhase: ActPhase
 				return { result: ls('tools.advancePhase.messages.alreadyAdvanced') };
 			}
 
-			if (!currentPhase) {
-				await log('advance-phase triggered: current phase is null, treated as terminal phase');
-				return { result: ls('tools.advancePhase.messages.terminalPhase') };
-			}
+			const effectiveCurrentPhase = currentPhase ?? inputCurrentPhase;
 
-			const nextPhase = getNextActPhase(currentPhase);
+			const nextPhase = getNextActPhase(effectiveCurrentPhase);
 			if (!nextPhase) {
 				await log('advance-phase triggered: already terminal phase');
 				return { result: ls('tools.advancePhase.messages.terminalPhase') };
 			}
 
-			if (inputCurrentPhase !== currentPhase) {
-				await log(`advance-phase: currentPhase mismatch (LLM: ${inputCurrentPhase}, actual: ${currentPhase})`);
+			if (inputCurrentPhase !== effectiveCurrentPhase) {
+				await log(`advance-phase: currentPhase mismatch (LLM: ${inputCurrentPhase}, actual: ${effectiveCurrentPhase})`);
 				return {
 					result: ls('tools.advancePhase.messages.phaseMismatch.current', {
-						actual: getLocalizedActPhase(currentPhase),
+						actual: getLocalizedActPhase(effectiveCurrentPhase),
 						provided: getLocalizedActPhase(inputCurrentPhase),
 					}),
 				};
@@ -54,7 +51,7 @@ export function createAdvancePhaseTool(actLineId: string, currentPhase: ActPhase
 				await log(`advance-phase: nextPhase mismatch (LLM: ${inputNextPhase}, expected: ${nextPhase})`);
 				return {
 					result: ls('tools.advancePhase.messages.phaseMismatch.next', {
-						actual: getLocalizedActPhase(currentPhase),
+						actual: getLocalizedActPhase(effectiveCurrentPhase),
 						expected: getLocalizedActPhase(nextPhase),
 						provided: getLocalizedActPhase(inputNextPhase),
 					}),
@@ -67,7 +64,7 @@ export function createAdvancePhaseTool(actLineId: string, currentPhase: ActPhase
 
 			return {
 				result: ls('tools.advancePhase.messages.success', {
-					current: getLocalizedActPhase(currentPhase),
+					current: getLocalizedActPhase(effectiveCurrentPhase),
 					next: getLocalizedActPhase(nextPhase),
 				}),
 			};
