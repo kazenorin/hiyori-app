@@ -2,7 +2,13 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
 import { setFileSystem } from '$lib/fs/file-system';
 import * as dbStoryFolders from '$lib/db/story-folders';
-import { readDirectoryNodes, classifyManagedConfig, getFolderType } from '$lib/fs/file-tree';
+import {
+	readDirectoryNodes,
+	classifyManagedConfig,
+	getFolderType,
+	copyStoryOverrideToConfig,
+	copyStoryOverrideToStory,
+} from '$lib/fs/file-tree';
 
 describe('readDirectoryNodes — managedConfig classification', () => {
 	let fs: InMemoryFileSystem;
@@ -107,5 +113,77 @@ describe('readDirectoryNodes — managedConfig classification', () => {
 			expect(file!.folderType).toBeUndefined();
 			expect(file!.managedConfig).toBeUndefined();
 		});
+	});
+});
+
+describe('copyStoryOverrideToConfig', () => {
+	let fs: InMemoryFileSystem;
+
+	beforeEach(() => {
+		fs = new InMemoryFileSystem();
+		fs.clear();
+		setFileSystem(fs);
+		vi.restoreAllMocks();
+	});
+
+	it('writes the override content into the corresponding config path, overwriting prior content', async () => {
+		const storyPath = 'my-story/en/prompt-templates/act/act-card-template.md';
+		const configPath = 'config/en/prompt-templates/act/act-card-template.md';
+		await fs.writeTextFileEnsuringDir(configPath, 'old default');
+		await fs.writeTextFileEnsuringDir(storyPath, 'override content');
+
+		await copyStoryOverrideToConfig(storyPath);
+
+		expect(await fs.readTextFile(configPath)).toBe('override content');
+		expect(await fs.readTextFile(storyPath)).toBe('override content');
+	});
+
+	it('creates the destination directory tree when missing', async () => {
+		const storyPath = 'my-story/en/prompt-templates/act/act-card-template.md';
+		const configPath = 'config/en/prompt-templates/act/act-card-template.md';
+		await fs.writeTextFileEnsuringDir(storyPath, 'fresh override');
+
+		expect(await fs.exists(configPath)).toBe(false);
+
+		await copyStoryOverrideToConfig(storyPath);
+
+		expect(await fs.exists(configPath)).toBe(true);
+		expect(await fs.readTextFile(configPath)).toBe('fresh override');
+	});
+});
+
+describe('copyStoryOverrideToStory', () => {
+	let fs: InMemoryFileSystem;
+
+	beforeEach(() => {
+		fs = new InMemoryFileSystem();
+		fs.clear();
+		setFileSystem(fs);
+		vi.restoreAllMocks();
+	});
+
+	it('writes the override content into another story folder, overwriting prior content', async () => {
+		const srcPath = 'story-a/en/prompt-templates/act/act-card-template.md';
+		const destPath = 'story-b/en/prompt-templates/act/act-card-template.md';
+		await fs.writeTextFileEnsuringDir(destPath, 'dest original');
+		await fs.writeTextFileEnsuringDir(srcPath, 'shared override');
+
+		await copyStoryOverrideToStory(srcPath, 'story-b');
+
+		expect(await fs.readTextFile(destPath)).toBe('shared override');
+		expect(await fs.readTextFile(srcPath)).toBe('shared override');
+	});
+
+	it('creates the destination directory tree when missing', async () => {
+		const srcPath = 'story-a/en/prompt-templates/act/act-card-template.md';
+		const destPath = 'story-b/en/prompt-templates/act/act-card-template.md';
+		await fs.writeTextFileEnsuringDir(srcPath, 'new override');
+
+		expect(await fs.exists(destPath)).toBe(false);
+
+		await copyStoryOverrideToStory(srcPath, 'story-b');
+
+		expect(await fs.exists(destPath)).toBe(true);
+		expect(await fs.readTextFile(destPath)).toBe('new override');
 	});
 });

@@ -18,6 +18,8 @@
 		handleExport as doHandleExport,
 		handleDeleteFolder as doHandleDeleteFolder,
 		handleCopyToStory as doHandleCopyToStory,
+		handleCopyToConfig as doHandleCopyToConfig,
+		handleCopyToAnotherStory as doHandleCopyToAnotherStory,
 		handleRestoreDefault as doHandleRestoreDefault,
 		handleDeleteFile as doHandleDeleteFile,
 	} from '$lib/features/file-actions';
@@ -39,6 +41,8 @@
 			rootNode: { id: 'root', name: '', isDirectory: true, children },
 		});
 	}
+
+	const CONFIG_DEST = '__config__';
 
 	let collection = $state(createCollection());
 
@@ -270,12 +274,19 @@
 		});
 	}
 
-	function handleCopyToStory() {
+	function handleCopy() {
 		if (!selectedFilePath || !selectedStoryFolder) return;
-		doHandleCopyToStory(actions, selectedFilePath, selectedStoryFolder, async () => {
+		const onComplete = async () => {
 			clearPreview();
 			await loadRoot();
-		});
+		};
+		if (selectedStoryFolder === CONFIG_DEST) {
+			doHandleCopyToConfig(actions, selectedFilePath, onComplete);
+		} else if (selectedNode?.managedConfig === 'story-override') {
+			doHandleCopyToAnotherStory(actions, selectedFilePath, selectedStoryFolder, onComplete);
+		} else {
+			doHandleCopyToStory(actions, selectedFilePath, selectedStoryFolder, onComplete);
+		}
 	}
 
 	function handleRestoreDefault() {
@@ -518,6 +529,10 @@
 		{/if}
 		{#if mc === 'story-override'}
 			<p class="text-xs text-surface-600-400">{t('fileManager.overrideDescription')}</p>
+			<button class="btn preset-tonal text-xs" type="button" onclick={openCopyPanel} disabled={actions.isCopying}>
+				<Icon name="copy-duplicate" class="size-3.5" />
+				{t('fileManager.copy')}
+			</button>
 			{#if showFileDeleteConfirm}
 				<p class="text-xs text-warning-500">{t('fileManager.deleteFileWarning')}</p>
 				<button class="btn preset-filled-error text-xs gap-1" type="button" onclick={handleDeleteFile} disabled={actions.isDeleting}>
@@ -547,16 +562,51 @@
 				</button>
 			{/if}
 		{/if}
+		{#if mc === undefined}
+			<p class="text-xs text-surface-600-400">{t('fileManager.unmanagedFileDescription')}</p>
+			{#if showFileDeleteConfirm}
+				<p class="text-xs text-warning-500">{t('fileManager.deleteFileWarning')}</p>
+				<button class="btn preset-filled-error text-xs gap-1" type="button" onclick={handleDeleteFile} disabled={actions.isDeleting}>
+					<Icon name="trash-can" class="size-3.5" />
+					{actions.isDeleting ? '...' : t('fileManager.delete')}
+				</button>
+				<button
+					bind:this={inlineCancelRef}
+					class="btn preset-tonal text-xs"
+					type="button"
+					onclick={() => {
+						showFileDeleteConfirm = false;
+					}}
+				>
+					{t('fileManager.cancel')}
+				</button>
+			{:else}
+				<button
+					class="btn preset-filled-error text-xs gap-1"
+					type="button"
+					onclick={() => {
+						showFileDeleteConfirm = true;
+					}}
+				>
+					<Icon name="trash-can" class="size-3.5" />
+					{t('fileManager.delete')}
+				</button>
+			{/if}
+		{/if}
 	</div>
 
-	{#if showCopyPanel && mc === 'managed'}
+	{#if showCopyPanel}
+		{@const sourceStoryFolder = selectedFilePath?.split('/')[0] ?? ''}
 		<div class="border border-surface-200-800 rounded-lg p-3 mb-2 space-y-2">
 			<select
 				class="w-full rounded border border-surface-200-800 bg-surface-50-950 px-3 py-1.5 text-xs text-surface-900-100"
 				bind:value={selectedStoryFolder}
 			>
 				<option value="">{t('fileManager.selectStory')}</option>
-				{#each stories as story (story.folderName)}
+				{#if mc === 'story-override'}
+					<option value={CONFIG_DEST}>⚙ {t('fileManager.toConfig')}</option>
+				{/if}
+				{#each stories.filter((s) => s.folderName !== sourceStoryFolder) as story (story.folderName)}
 					<option value={story.folderName}>{story.storyName}</option>
 				{/each}
 			</select>
@@ -564,7 +614,7 @@
 				<button
 					class="btn preset-filled text-xs gap-1"
 					type="button"
-					onclick={handleCopyToStory}
+					onclick={handleCopy}
 					disabled={actions.isCopying || !selectedStoryFolder}
 				>
 					<Icon name="copy-duplicate" class="size-3.5" />

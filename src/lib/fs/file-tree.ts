@@ -125,9 +125,7 @@ async function saveBinaryToFile(data: Uint8Array, fileName: string, mimeType?: s
 	if (isTauriSync()) {
 		const { save } = await import('@tauri-apps/plugin-dialog');
 		const { writeFile } = await import('@tauri-apps/plugin-fs');
-		const filters = mimeType === 'application/zip'
-			? [{ name: 'ZIP', extensions: ['zip'] }]
-			: undefined;
+		const filters = mimeType === 'application/zip' ? [{ name: 'ZIP', extensions: ['zip'] }] : undefined;
 		const savePath = await save({ defaultPath: fileName, filters });
 		if (!savePath) return;
 		await writeFile(savePath, data);
@@ -161,7 +159,7 @@ export async function collectFilesInDir(dirPath: string): Promise<string[]> {
 	for (const entry of entries) {
 		const childPath = dirPath ? `${dirPath}/${entry.name}` : entry.name;
 		if (entry.isDirectory) {
-			files.push(...await collectFilesInDir(childPath));
+			files.push(...(await collectFilesInDir(childPath)));
 		} else {
 			files.push(childPath);
 		}
@@ -205,6 +203,26 @@ export async function copyConfigToStory(configFilePath: string, storyFolderName:
 	const content = await fs.readTextFile(configFilePath);
 	const configPath = configFilePath.slice('config/'.length);
 	const destPath = `${storyFolderName}/${configPath}`;
+	await fs.writeTextFileEnsuringDir(destPath, content);
+}
+
+function splitStoryPath(storyFilePath: string): { storyPrefix: string; relFromStory: string } {
+	const storyPrefix = storyFilePath.split('/')[0];
+	const relFromStory = storyFilePath.slice(storyPrefix.length + 1);
+	return { storyPrefix, relFromStory };
+}
+
+export async function copyStoryOverrideToConfig(storyFilePath: string): Promise<void> {
+	const { relFromStory } = splitStoryPath(storyFilePath);
+	const destPath = `config/${relFromStory}`;
+	const content = await fs.readTextFile(storyFilePath);
+	await fs.writeTextFileEnsuringDir(destPath, content);
+}
+
+export async function copyStoryOverrideToStory(storyFilePath: string, destStoryFolderName: string): Promise<void> {
+	const { relFromStory } = splitStoryPath(storyFilePath);
+	const destPath = `${destStoryFolderName}/${relFromStory}`;
+	const content = await fs.readTextFile(storyFilePath);
 	await fs.writeTextFileEnsuringDir(destPath, content);
 }
 

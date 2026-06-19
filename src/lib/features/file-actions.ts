@@ -1,4 +1,12 @@
-import { exportFolderAsZip, deleteFolder, copyConfigToStory, restoreConfigDefault, deleteFile } from '$lib/fs/file-tree';
+import {
+	exportFolderAsZip,
+	deleteFolder,
+	copyConfigToStory,
+	copyStoryOverrideToConfig,
+	copyStoryOverrideToStory,
+	restoreConfigDefault,
+	deleteFile,
+} from '$lib/fs/file-tree';
 import { readFileData, getLanguageFromPath, decodeText } from '$lib/fs/file-tree';
 import { log } from '$lib/logging/logger';
 
@@ -61,6 +69,39 @@ export async function handleCopyToStory(
 	} catch (err) {
 		state.actionError = err instanceof Error ? err.message : String(err);
 		await log.error('file-manager', 'Failed to copy to story', err);
+	} finally {
+		state.isCopying = false;
+	}
+}
+
+export async function handleCopyToConfig(state: FileActionState, selectedFilePath: string, onComplete: () => Promise<void>): Promise<void> {
+	state.isCopying = true;
+	state.actionError = null;
+	try {
+		await copyStoryOverrideToConfig(selectedFilePath);
+		await onComplete();
+	} catch (err) {
+		state.actionError = err instanceof Error ? err.message : String(err);
+		await log.error('file-manager', 'Failed to copy to config', err);
+	} finally {
+		state.isCopying = false;
+	}
+}
+
+export async function handleCopyToAnotherStory(
+	state: FileActionState,
+	selectedFilePath: string,
+	selectedStoryFolder: string,
+	onComplete: () => Promise<void>
+): Promise<void> {
+	state.isCopying = true;
+	state.actionError = null;
+	try {
+		await copyStoryOverrideToStory(selectedFilePath, selectedStoryFolder);
+		await onComplete();
+	} catch (err) {
+		state.actionError = err instanceof Error ? err.message : String(err);
+		await log.error('file-manager', 'Failed to copy to another story', err);
 	} finally {
 		state.isCopying = false;
 	}

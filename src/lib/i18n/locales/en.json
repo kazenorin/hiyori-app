@@ -507,7 +507,9 @@
 		"overrideExists": "This file already exists in the story folder. Overwrite?",
 		"obsoleteDescription": "This file is obsolete and no longer part of the app configuration.",
 		"overrideDescription": "This is a story-specific override of a config file.",
-		"deleteFileWarning": "This file will be deleted. This cannot be undone."
+		"deleteFileWarning": "This file will be deleted. This cannot be undone.",
+		"toConfig": "To Config",
+		"unmanagedFileDescription": "This file is not part of the app configuration."
 	},
 	"loadStory": {
 		"heading": "Load Story",
