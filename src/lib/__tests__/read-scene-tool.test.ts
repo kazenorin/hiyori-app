@@ -16,19 +16,19 @@ vi.mock('$lib/logging/logger', () => ({
 
 const mockDb = {
 	execute: vi.fn(async () => ({ rowsAffected: 0 })),
-	select: vi.fn(async () => []),
+	select: vi.fn(async (): Promise<{ role: string; content: string; scene_number: number | null }[]> => []),
 };
 
 vi.mock('$lib/db/database', () => ({
 	getDatabase: () => mockDb,
 }));
 
-const mockTraceActLineChain = vi.fn(async () => []);
+const mockTraceActLineChain = vi.fn(async (_actLineId: string): Promise<{ actLineId: string; actNumber: number }[]> => []);
 
 vi.mock('$lib/db/act-lines', () => ({}));
 
 vi.mock('$lib/db/acts', () => ({
-	traceActLineChain: (...args: unknown[]) => mockTraceActLineChain(...args),
+	traceActLineChain: (actLineId: string) => mockTraceActLineChain(actLineId),
 }));
 
 vi.mock('ai', () => ({
