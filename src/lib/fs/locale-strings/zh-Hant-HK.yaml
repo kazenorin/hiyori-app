@@ -44,6 +44,7 @@ common:
     otherDirectorNotes: 其他導演備註
     actPhase: 章節階段
     storySoFar: 故事回顧
+    targetWordCountPerScene: 每場景目標字數
   descriptions:
     interviewTranscript: 以下是有關此故事及設定的訪談內容。
     directorNotes: '以下備註代表玩家的明確創作方向。它們凌駕於所有其他脈絡之上，包含章節劇情和章節摘要。請以最高優先順序遵循。'

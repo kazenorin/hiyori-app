@@ -44,6 +44,7 @@ common:
     otherDirectorNotes: Other Director's Notes
     actPhase: Act Phase
     storySoFar: Story So Far
+    targetWordCountPerScene: Target Word Count per Scene
   descriptions:
     interviewTranscript: The following is an interview exchange about the story and premises.
     directorNotes: "The following notes represent the player's explicit creative direction. They override all other context including Act Plot and Act Summary. Honor them with the highest priority."

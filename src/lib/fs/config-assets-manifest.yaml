@@ -21,9 +21,10 @@ src:
               updatedAt: "2026-05-30T16:51:23.217Z"
             act-plot-interview-system-prompt.md:
               configPath: en/prompt-templates/act/act-plot-interview-system-prompt.md
-              hash: 44050c41986740153ae8abd917834c3e033eca6502bb9bb633b78c655024f46f
-              oldHashes: []
-              updatedAt: "2026-05-30T16:51:23.217Z"
+              hash: c5704f97ef451750d57e153ffe4eb4b55acbea4460757f2a7ffc4908bab8dec8
+              oldHashes:
+                - 44050c41986740153ae8abd917834c3e033eca6502bb9bb633b78c655024f46f
+              updatedAt: "2026-06-19T09:54:51.230Z"
             act-plot-interview-turn-of-events-prompt.md:
               configPath: en/prompt-templates/act/act-plot-interview-turn-of-events-prompt.md
               hash: f6983571ac2c740139aa9cdc619eed7b3d3a0966c274a6e400b831a55e62f9db
@@ -41,14 +42,16 @@ src:
               updatedAt: "2026-05-30T16:51:23.217Z"
             guidance-act-plot-template.md:
               configPath: en/prompt-templates/act/guidance-act-plot-template.md
-              hash: eaa1e57a57afb4bbcd54c681d6a276df48281efbd916b39048c6a805c3fd7981
-              oldHashes: []
-              updatedAt: "2026-05-30T16:51:23.217Z"
+              hash: 0f6f94e1919f14d72065887946f7f104e99a8976b2a1ea2032df44597aaa5d07
+              oldHashes:
+                - eaa1e57a57afb4bbcd54c681d6a276df48281efbd916b39048c6a805c3fd7981
+              updatedAt: "2026-06-19T09:54:51.230Z"
             phase-event-act-plot-template.md:
               configPath: en/prompt-templates/act/phase-event-act-plot-template.md
-              hash: b7afd4e4e042a4a9a65adf8be4a37d7a1e9701b805c3a03a9183502ee09d8b07
-              oldHashes: []
-              updatedAt: "2026-05-30T16:51:23.217Z"
+              hash: 7ab2bf72b9d9821d20f3cd3a74e82c64c79c36a5f8eeaa01e3e262c066daa078
+              oldHashes:
+                - b7afd4e4e042a4a9a65adf8be4a37d7a1e9701b805c3a03a9183502ee09d8b07
+              updatedAt: "2026-06-19T09:54:51.230Z"
           character:
             character-card-template.md:
               configPath: en/prompt-templates/character/character-card-template.md
@@ -198,9 +201,10 @@ src:
               updatedAt: "2026-05-30T16:51:23.217Z"
             act-plot-interview-system-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/act/act-plot-interview-system-prompt.md
-              hash: f9d144fe8a80e3da9512cdbdd084e7ff80cf0351614003cd11d1a5c2be70a496
-              oldHashes: []
-              updatedAt: "2026-05-30T16:51:23.217Z"
+              hash: 6bee8a8603276e52393219ee7020462f709ac2976ec5dbedde4036674068efcc
+              oldHashes:
+                - f9d144fe8a80e3da9512cdbdd084e7ff80cf0351614003cd11d1a5c2be70a496
+              updatedAt: "2026-06-19T09:54:51.230Z"
             act-plot-interview-turn-of-events-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/act/act-plot-interview-turn-of-events-prompt.md
               hash: 0721bbd5f932c68ab07e7875bca70d155d3a0ebff542f98d7e58df29192ff34e
@@ -218,14 +222,17 @@ src:
               updatedAt: "2026-05-30T16:51:23.217Z"
             guidance-act-plot-template.md:
               configPath: zh-Hant-HK/prompt-templates/act/guidance-act-plot-template.md
-              hash: a1d6362e298f606da059bbfa7e39578efee6ffe99a271663c2c5dc3734b9ddbe
-              oldHashes: []
-              updatedAt: "2026-05-30T16:51:23.217Z"
+              hash: c8d7de8beb3b4c965a10fd9b81fbfa1b90cffd72017b5f290cf653ea958f283f
+              oldHashes:
+                - b67f07cbc1851e0921e3196371e99733024525af48020001907452cf4a5f2065
+                - a1d6362e298f606da059bbfa7e39578efee6ffe99a271663c2c5dc3734b9ddbe
+              updatedAt: "2026-06-19T10:04:07.440Z"
             phase-event-act-plot-template.md:
               configPath: zh-Hant-HK/prompt-templates/act/phase-event-act-plot-template.md
-              hash: 0b507a58107673a3e52e3d1bbbb97d49bf1165e8c6ca7e9b602dfe5864f233f9
-              oldHashes: []
-              updatedAt: "2026-05-30T16:51:23.217Z"
+              hash: 22a743eeb7c97f2facb83e86c4f2fd3c190d80b88545b1e52b466340d2b11741
+              oldHashes:
+                - 0b507a58107673a3e52e3d1bbbb97d49bf1165e8c6ca7e9b602dfe5864f233f9
+              updatedAt: "2026-06-19T09:54:51.230Z"
           character:
             character-card-template.md:
               configPath: zh-Hant-HK/prompt-templates/character/character-card-template.md
@@ -358,21 +365,23 @@ src:
       locale-strings:
         en.yaml:
           configPath: en/locale-strings.yaml
-          hash: a312d1d717bbdbe6c452986680100ce8d5c14dad450805e9708bd14a8ff49139
+          hash: 5feee7d281ea6a4199ea97d386a8b39696130b98c49333b7250c8c8e4e3fafc7
           oldHashes:
+            - a312d1d717bbdbe6c452986680100ce8d5c14dad450805e9708bd14a8ff49139
             - 38a851f6bd592d9b7f92b1b69ff17d2f43d3f2182fdebc8c579ad9cf3c08fd32
             - afe9257c4f97b75b5e4f7294d67a9ff969193ac9be8569cd7a728ac71b60cf91
             - 2dac94173236f1d91ad05073d7ac651ae1265c4182815041ba5663713dcdd799
             - 80d841aa000184d8604696b1f1877aebb1a348db16d2267e57b421c5eed4c959
             - 02c2f6c61d948f401f32cdd4eb656a574da0366b3a2809ee2ff3c42b47348649
-          updatedAt: "2026-06-19T02:28:42.935Z"
+          updatedAt: "2026-06-19T09:54:51.230Z"
         zh-Hant-HK.yaml:
           configPath: zh-Hant-HK/locale-strings.yaml
-          hash: dac345165f8da974296444d28cf9c1cd61a33cb9ea3421b7fc8370a3b2227104
+          hash: 6727b1ff75ddca54c953db58817b2f8f07829a914a6f7e3ca5196a9a06460085
           oldHashes:
+            - dac345165f8da974296444d28cf9c1cd61a33cb9ea3421b7fc8370a3b2227104
             - ab58fe0db424d01c846a5a4ae9c6b9fa11c7d7ad86efbd60523c83fd85d661d7
             - 2aadfa9ae0247b5283af97356153fa20e5194db6f1c1c14ca8d60d9f443a4110
             - 0eda1a48149469d75b776af15e1b34a8510a948660818ad2f0047cb2c4e95f1c
             - c9bca07458a02fd17114e6456a4c281b2460dc392ffccd2bd103199af045c4cb
             - f7772bf027cfec167bdc5e5d85aa783fac24f47303072a00685d5d7b70b80b54
-          updatedAt: "2026-06-19T02:28:42.935Z"
+          updatedAt: "2026-06-19T09:54:51.230Z"

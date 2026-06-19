@@ -3,7 +3,7 @@
 ## Story Structure
 
 - **Target Scenes:** [35-50 scenes recommended]
-- **Target Word Count per Scene:** [400-500 words]
+- **{{targetWordCountPerSceneLabel}}:** [400-500 words]
 - **Estimated Total Words:** [14,000-25,000 words]
 
 ## Premise

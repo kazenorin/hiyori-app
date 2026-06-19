@@ -26,6 +26,7 @@ import { generateWorldBuilderLogFilename, logWorldBuilderChat } from '$lib/loggi
 import { log } from '$lib/logging/logger';
 import { type StreamAccumulator, type StreamState } from '$lib/ai/chat-callbacks';
 import { streamChatResponse } from '$lib/ai/chat-stream';
+import { computeTargetWordCountRange } from '$lib/ai/act-plot/target-word-count-parser';
 import type { MessageBase } from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
@@ -227,7 +228,8 @@ export async function enterActPlotInterviewMode(params: EnterActPlotInterviewMod
 	// Inject general instructions and system role into the interview system prompt and cache it
 	cachedInterviewSystemPrompt = interviewSystemPrompt
 		.replace('{{generalInstructions}}', generalInstructions)
-		.replace('{{interviewSystemRole}}', interviewSystemRole);
+		.replace('{{interviewSystemRole}}', interviewSystemRole)
+		.replace('{{targetWordCountRange}}', computeTargetWordCountRange(settings.targetWordCount));
 
 	// Build hidden context (invisible to user, sent to LLM every turn)
 	interviewHiddenContext = [{ role: 'user', content: interviewPrompt.replace('{{worldContent}}', worldContent) }];

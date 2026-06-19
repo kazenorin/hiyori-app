@@ -14,6 +14,7 @@ import { type ActLineMeta, getLastSceneNumber, getLatestTurnOfEvents, getPremise
 import { actPlotResumeNote } from '$lib/definitions/pipeline-prompts';
 import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';
 import { ACT_PLOT_SECTION } from '$lib/definitions/pipeline-sections';
+import { targetWordCountPerSceneHeader } from '$lib/definitions/common-headers';
 import { ERR_EMPTY_ACT_PLOT_WRITER, ERR_NO_MAIN_PROVIDER } from '$lib/definitions/error-messages';
 
 const LOG_TAG = 'act-plot-generator';
@@ -123,7 +124,9 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 	const actPlotTemplateLoader = actLine.plotMode === 'phaseEvent' ? phaseEventActPlotTemplateLoader : guidanceActPlotTemplateLoader;
 	const [template, generationPrompt, systemPrompt, reviewerPrompt, editorPrompt, interviewTranscript, previousActSummary, turnOfEvents] =
 		await Promise.all([
-			actPlotTemplateLoader.loadByStory(storyId, storyName),
+			actPlotTemplateLoader
+				.loadByStory(storyId, storyName)
+				.then((p) => p.replace('{{targetWordCountPerSceneLabel}}', targetWordCountPerSceneHeader())),
 			actPlotGenerationPromptLoader.loadByStory(storyId, storyName).then((p) => p.replace('{{actNumber}}', actNumber.toString())),
 			actPlotSystemPromptLoader.loadByStory(storyId, storyName),
 			actPlotReviewerPromptLoader.loadByStory(storyId, storyName),

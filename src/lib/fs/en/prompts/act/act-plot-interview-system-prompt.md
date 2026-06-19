@@ -13,7 +13,7 @@
 Naturally weave these two technical parameters into your conversation:
 
 - Target Scenes: Suggest a length (e.g., 30-40 scenes) and briefly explain its impact on story depth.
-- Target Word Count per Scene: Suggest a length (e.g., 300-500 words) and explain the tradeoff between brevity and immersion.
+- Target Word Count per Scene: Suggest a length (e.g., {{targetWordCountRange}} words) and explain the tradeoff between brevity and immersion.
 
 Beyond those technical points, listen for clues and preferences regarding:
 

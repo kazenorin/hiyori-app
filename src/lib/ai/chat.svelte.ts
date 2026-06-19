@@ -17,6 +17,7 @@ import {
 } from '$lib/stores/settings.svelte';
 import { getActiveDirectorNotesText } from '$lib/stores/stories.svelte';
 import { ensureActPlot } from '$lib/ai/act-plot';
+import { parseActPlotTargetWordCount } from '$lib/ai/act-plot/target-word-count-parser';
 import { extractImportantPhrases } from './important-phrases-extractor';
 import {
 	findLastNonNullSceneNumber,
@@ -336,7 +337,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 		const actSummary = getLatestActSummary(previousSceneNumber);
 		const plotMode = actLine.plotMode ?? getDefaultPlotMode();
 		const previousScenePlot = getScenePlotForScene(previousSceneNumber, plotMode);
-		const targetWordCount = settings.targetWordCount;
+		const targetWordCount = parseActPlotTargetWordCount(actPlot) ?? settings.targetWordCount;
 
 		const previousActSummaries: { actNumber: number; summary: string }[] = [];
 		if (actLine.actNumber > 1) {
@@ -474,7 +475,7 @@ export async function runEpilogueFlow(actLineId: string, rewriteDirectorNote?: s
 		const actPlot = await ensureActPlot({ story, actLine, worldContent, abortSignal });
 		const actSummary = getLatestActSummary(previousSceneNumber);
 		const previousNarrativeVariables = getPreviousNarrativeMessage(messages);
-		const targetWordCount = settings.targetWordCount;
+		const targetWordCount = parseActPlotTargetWordCount(actPlot) ?? settings.targetWordCount;
 
 		const pipelineCallbacks = createPipelineCallbacks({
 			getCurrentMessage,
