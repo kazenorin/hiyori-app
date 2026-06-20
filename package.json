@@ -25,7 +25,7 @@
 	},
 	"keywords": [],
 	"author": "",
-	"license": "ISC",
+	"license": "AGPL-3.0-or-later",
 	"type": "module",
 	"devDependencies": {
 		"@lucide/svelte": "^1.17.0",

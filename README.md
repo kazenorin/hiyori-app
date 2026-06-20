@@ -1,5 +1,9 @@
 # Hiyori — Build Your Own Adventure
 
+<p align="center">
+  <img src="docs/hiyori-logo.png" alt="Hiyori Logo" width="256">
+</p>
+
 Hiyori is an AI-powered interactive storytelling app built with Tauri v2 and SvelteKit 5. Create intricate stories through an AI-guided world builder, then play through branching narratives with real-time game state tracking, robust memory, and customizable AI pipelines.
 
 ## Table of Contents
@@ -257,4 +261,4 @@ npm run tauri build -- --target x86_64-pc-windows-gnu
 
 ### License
 
-ISC
+AGPL-3.0-or-later. See [LICENSE](LICENSE) for details.
