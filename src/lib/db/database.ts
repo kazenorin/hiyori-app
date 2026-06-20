@@ -12,14 +12,14 @@ export async function initDatabase(): Promise<Database> {
 	dbInit = (async () => {
 		if (await checkIsTauri()) {
 			const { TauriDatabase } = await import('./adapters/tauri-database');
-			db = await TauriDatabase.create('sqlite:byoa.db');
+			db = await TauriDatabase.create('sqlite:hiyori.db');
 		} else {
 			const { SqlJsDatabase } = await import('./adapters/sqljs-database');
 			const { loadFromOpfs } = await import('./adapters/opfs-persistence');
-			const existingData = await loadFromOpfs('byoa.db.bin');
+			const existingData = await loadFromOpfs('hiyori.db.bin');
 			db = await SqlJsDatabase.create(existingData, {
 				persistToOpfs: true,
-				opfsFilename: 'byoa.db.bin',
+				opfsFilename: 'hiyori.db.bin',
 			});
 		}
 		dbInit = null;

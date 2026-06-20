@@ -34,7 +34,7 @@ export function getThemeModeItems(): { label: string; value: string }[] {
 
 export function getColorThemeItems(): { label: string; value: string }[] {
 	return [
-		{ label: 'BYOA', value: 'byoa' },
+		{ label: 'Hiyori', value: 'hiyori' },
 		{ label: 'Catppuccin', value: 'catppuccin' },
 		{ label: 'Cerberus', value: 'cerberus' },
 		{ label: 'Concord', value: 'concord' },

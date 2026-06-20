@@ -12,7 +12,7 @@ export async function initMemoryDatabase(): Promise<Database> {
 	memoryDbInit = (async () => {
 		if (await checkIsTauri()) {
 			const { TauriDatabase } = await import('./adapters/tauri-database');
-			memoryDb = await TauriDatabase.create('sqlite:byoa-memory.db');
+			memoryDb = await TauriDatabase.create('sqlite:hiyori-memory.db');
 		} else {
 			const { SqlJsDatabase } = await import('./adapters/sqljs-database');
 			memoryDb = await SqlJsDatabase.create(null);

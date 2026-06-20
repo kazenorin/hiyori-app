@@ -66,7 +66,7 @@ function defaultSettings() {
 		roleAssignments: {},
 		locale: 'en',
 		themeMode: 'system' as const,
-		colorTheme: 'byoa',
+		colorTheme: 'hiyori',
 		logLevel: 'debug' as const,
 		fontSize: 1.0,
 		memoryEnabled: true,

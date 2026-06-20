@@ -67,7 +67,7 @@
 	let isDeletingAllGameData = $state(false);
 
 	function handleExportGameData() {
-		handleExport(gameIO, exportGameData, 'byoa-game-data', (v) => (exportProgress = v));
+		handleExport(gameIO, exportGameData, 'hiyori-game-data', (v) => (exportProgress = v));
 	}
 	function handleImportGameData(e: Event) {
 		handleImportFileSelect(gameIO, e);
@@ -79,7 +79,7 @@
 		handleImportConfirm(gameIO, importGameData, (v) => (isImporting = v));
 	}
 	function handleExportConfigData() {
-		handleExport(configIO, exportConfigData, 'byoa-config', (v) => (exportProgress = v));
+		handleExport(configIO, exportConfigData, 'hiyori-config', (v) => (exportProgress = v));
 	}
 	function handleImportConfigData(e: Event) {
 		handleImportFileSelect(configIO, e);

@@ -74,14 +74,14 @@ export interface Settings {
 	ttsSpeed: number;
 }
 
-const STORAGE_KEY = 'byoa-settings';
+const STORAGE_KEY = 'hiyori-settings';
 
 const defaults: Settings = {
 	providers: [],
 	roleAssignments: {},
 	locale: 'en',
 	themeMode: 'system',
-	colorTheme: 'byoa',
+	colorTheme: 'hiyori',
 	logLevel: 'info',
 	fontSize: 1.0,
 	memoryEnabled: false,

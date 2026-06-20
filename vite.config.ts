@@ -14,8 +14,8 @@ export default defineConfig({
 		SvelteKitPWA({
 			registerType: 'autoUpdate',
 			manifest: {
-				name: 'BYOA — Build Your Own Adventure',
-				short_name: 'BYOA',
+				name: 'Hiyori — Build Your Own Adventure',
+				short_name: 'Hiyori',
 				description: 'Interactive narrative adventure builder',
 				start_url: '/',
 				display: 'standalone',

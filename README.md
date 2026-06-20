@@ -1,6 +1,6 @@
-# BYOA — Build Your Own Adventure
+# Hiyori — Build Your Own Adventure
 
-BYOA is an AI-powered interactive storytelling app built with Tauri v2 and SvelteKit 5. Create intricate stories through an AI-guided world builder, then play through branching narratives with real-time game state tracking, robust memory, and customizable AI pipelines.
+Hiyori is an AI-powered interactive storytelling app built with Tauri v2 and SvelteKit 5. Create intricate stories through an AI-guided world builder, then play through branching narratives with real-time game state tracking, robust memory, and customizable AI pipelines.
 
 ## Table of Contents
 
@@ -14,7 +14,7 @@ BYOA is an AI-powered interactive storytelling app built with Tauri v2 and Svelt
 
 ## Quick Start
 
-Get BYOA running in three simple steps:
+Get Hiyori running in three simple steps:
 
 1. **Download:** Grab the latest release for your platform (`.exe`, `.deb`/`.rpm`, or macOS) from the Releases page.
 2. **Connect AI:** Open the app, go to **Settings → AI Providers**, and add your preferred provider (OpenAI, Anthropic, Ollama, etc.).
@@ -22,7 +22,7 @@ Get BYOA running in three simple steps:
 
 | Option            | How to Run                                          | Recommendation        |
 | ----------------- | --------------------------------------------------- | --------------------- |
-| **Installer**     | Download `BYOA_<version>.<ext>`                     | **Recommended**       |
+| **Installer**     | Download `Hiyori_<version>.<ext>`                   | **Recommended**       |
 | **Built SPA**     | `npm install && npm run build`, then serve `build/` | **Recommended (Web)** |
 | **Online**        | Visit `https://byoa.kazenor.in` or self-host        | **No install needed** |
 | **Dev server**    | `npm install && npm run dev`                        | For web development   |
@@ -86,7 +86,7 @@ Nothing works without an AI provider.
 Since some API providers do not support CORS, API requests from the web app directly to those providers will fail.
 
 - **WISP Protocol:** This app supports the [WISP-protocol proxy](https://github.com/MercuryWorkshop/wisp-protocol). You can easily proxy web app requests by setting up a local server using [wisp-server-python](https://github.com/MercuryWorkshop/wisp-server-python).
-- **Advanced Usage (Cost & Token Management):** For power users managing multiple APIs, consider routing your BYOA requests through an intermediate gateway. Deploying a self-contained Docker Compose stack running LiteLLM on a local NAS is an excellent strategy to bypass CORS restrictions, unify your endpoints, and monitor your overall token usage without relying on a host-machine database.
+- **Advanced Usage (Cost & Token Management):** For power users managing multiple APIs, consider routing your Hiyori requests through an intermediate gateway. Deploying a self-contained Docker Compose stack running LiteLLM on a local NAS is an excellent strategy to bypass CORS restrictions, unify your endpoints, and monitor your overall token usage without relying on a host-machine database.
 
 ### 3. Assigning Provider Roles
 
@@ -104,7 +104,7 @@ The "minimum" requirement is a local Gemma 12B class model for everything.
 Using open weight/open source frontier models (e.g. DeepSeek V4 Pro, GLM-5, Kimi K2.6) for everything is good, but may also be too slow for a semi-interactive game.
 
 | Role                 | Recommendation                                                                                                                                                         | KV-cache                                       |
-| -------------------- |------------------------------------------------------------------------------------------------------------------------------------------------------------------------| ---------------------------------------------- |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
 | **Main Provider**    | Cloud "Flash"-class models (e.g. DeepSeek V4 Flash, Gemini 3.1 Flash Lite Preview), or local ~24-30B models (e.g. Qwen3.6 27B/35B A3B, Gemma 31b/26B A4B, GPT-OSS 20B) | —                                              |
 | **Minor Task Agent** | Small, fast non-reasoning models (e.g. Gemma E4B, 12B class). May work with even smaller models.                                                                       | Not needed                                     |
 | **Plot Planner**     | Strong frontier models with Event-based mode; "Flash"-class with Guidance-based mode. Both modes are token-heavy and slow, but they drive the entire story direction.  | Needed for Guidance-based, not for Event-based |

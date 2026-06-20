@@ -22,7 +22,7 @@ vi.mock('uuid', () => ({
 	v4: () => `test-uuid-${++uuidCounter}`,
 }));
 
-const STORAGE_KEY = 'byoa-settings';
+const STORAGE_KEY = 'hiyori-settings';
 
 // Re-import for each test to reset module state
 describe('settings', () => {

@@ -70,7 +70,7 @@ async function readMainDbBinary(): Promise<Uint8Array> {
 
 	if (isTauriSync()) {
 		const { readFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
-		return await readFile('byoa.db', { baseDir: BaseDirectory.AppData });
+		return await readFile('hiyori.db', { baseDir: BaseDirectory.AppData });
 	}
 
 	throw new Error('Cannot read main database binary');
@@ -89,9 +89,9 @@ async function readMemoryDbBinary(): Promise<Uint8Array | null> {
 
 		if (isTauriSync()) {
 			const { readFile, exists, BaseDirectory } = await import('@tauri-apps/plugin-fs');
-			const memExists = await exists('byoa-memory.db', { baseDir: BaseDirectory.AppData });
+			const memExists = await exists('hiyori-memory.db', { baseDir: BaseDirectory.AppData });
 			if (!memExists) return null;
-			return await readFile('byoa-memory.db', { baseDir: BaseDirectory.AppData });
+			return await readFile('hiyori-memory.db', { baseDir: BaseDirectory.AppData });
 		}
 	} catch {
 		return null;
@@ -108,11 +108,11 @@ export async function exportGameData(onProgress?: (percent: number) => void): Pr
 	await exportLogFiles(zip);
 
 	const mainDb = await readMainDbBinary();
-	zip.file('database/main-db/byoa.db', mainDb);
+	zip.file('database/main-db/hiyori.db', mainDb);
 
 	const memoryDb = await readMemoryDbBinary();
 	if (memoryDb) {
-		zip.file('database/memory-db/byoa-memory.db', memoryDb);
+		zip.file('database/memory-db/hiyori-memory.db', memoryDb);
 	}
 
 	return await zip.generateAsync(
@@ -127,7 +127,7 @@ export async function exportConfigData(onProgress?: (percent: number) => void): 
 
 	await exportConfigFiles(zip, manifest);
 
-	const settingsJson = typeof localStorage !== 'undefined' ? localStorage.getItem('byoa-settings') : null;
+	const settingsJson = typeof localStorage !== 'undefined' ? localStorage.getItem('hiyori-settings') : null;
 	if (settingsJson) {
 		zip.file('user-data/config/settings.json', settingsJson);
 	}
@@ -225,8 +225,8 @@ export async function importConfigData(data: Uint8Array): Promise<void> {
 }
 
 async function importDatabase(zip: JSZip): Promise<void> {
-	const mainDbFile = zip.file('database/main-db/byoa.db');
-	if (!mainDbFile) throw new Error('Invalid backup: missing database/main-db/byoa.db');
+	const mainDbFile = zip.file('database/main-db/hiyori.db');
+	if (!mainDbFile) throw new Error('Invalid backup: missing database/main-db/hiyori.db');
 
 	const mainDbBinary = await mainDbFile.async('uint8array');
 	const db = getDatabase();
@@ -236,15 +236,15 @@ async function importDatabase(zip: JSZip): Promise<void> {
 		await db.flush();
 	} else if (isTauriSync()) {
 		const { writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
-		await writeFile('byoa.db', mainDbBinary, { baseDir: BaseDirectory.AppData });
+		await writeFile('hiyori.db', mainDbBinary, { baseDir: BaseDirectory.AppData });
 	}
 
-	const memoryDbFile = zip.file('database/memory-db/byoa-memory.db');
+	const memoryDbFile = zip.file('database/memory-db/hiyori-memory.db');
 	if (memoryDbFile) {
 		const memoryDbBinary = await memoryDbFile.async('uint8array');
 		if (isTauriSync()) {
 			const { writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');
-			await writeFile('byoa-memory.db', memoryDbBinary, { baseDir: BaseDirectory.AppData });
+			await writeFile('hiyori-memory.db', memoryDbBinary, { baseDir: BaseDirectory.AppData });
 		}
 	}
 }
@@ -255,7 +255,7 @@ async function importSettings(zip: JSZip): Promise<void> {
 
 	const settingsJson = await settingsFile.async('string');
 	if (typeof localStorage !== 'undefined') {
-		localStorage.setItem('byoa-settings', settingsJson);
+		localStorage.setItem('hiyori-settings', settingsJson);
 	}
 }
 

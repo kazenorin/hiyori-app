@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "BYOA",
+  "productName": "Hiyori",
   "version": "0.5.4",
-  "identifier": "in.kazenor.byoa-app",
+  "identifier": "in.kazenor.hiyori-app",
   "build": {
     "frontendDist": "../build",
     "devUrl": "http://localhost:1420",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "BYOA — Build Your Own Adventure",
+        "title": "Hiyori — Build Your Own Adventure",
         "width": 1200,
         "height": 800,
         "resizable": true,

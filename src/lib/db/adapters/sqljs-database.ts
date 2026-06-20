@@ -102,7 +102,7 @@ export class SqlJsDatabase implements IDatabase {
 		this.dirty = false;
 
 		if (this.options.persistToOpfs) {
-			await persistToOpfs(this.db.export(), this.options.opfsFilename ?? 'byoa.db.bin');
+			await persistToOpfs(this.db.export(), this.options.opfsFilename ?? 'hiyori.db.bin');
 		}
 	}
 
