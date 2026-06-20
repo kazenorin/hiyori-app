@@ -1,7 +1,7 @@
 {
 	"name": "hiyori-app",
-	"version": "1.0.0",
-	"description": "",
+	"version": "1.0.1",
+	"description": "Hiyori (日和) is an AI-powered interactive storytelling app built with Tauri v2 and SvelteKit 5.",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
@@ -21,10 +21,10 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "ssh://garytychu@git.local.kazenor.in://volume1/Main/Dev/Git/byoa-app"
+		"url": "git@github.com:kazenorin/hiyori-app.git"
 	},
-	"keywords": [],
-	"author": "",
+	"keywords": ["storytelling", "create your own adventure"],
+	"author": "kazenorin",
 	"license": "AGPL-3.0-or-later",
 	"type": "module",
 	"engines": {

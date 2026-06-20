@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Hiyori",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "identifier": "in.kazenor.hiyori-app",
   "build": {
     "frontendDist": "../build",
