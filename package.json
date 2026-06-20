@@ -27,6 +27,9 @@
 	"author": "",
 	"license": "AGPL-3.0-or-later",
 	"type": "module",
+	"engines": {
+		"node": ">=24"
+	},
 	"devDependencies": {
 		"@lucide/svelte": "^1.17.0",
 		"@skeletonlabs/skeleton": "^4.15.0",
