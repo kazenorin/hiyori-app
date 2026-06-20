@@ -6,6 +6,8 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, 'package.json'), 'utf-8'));
+const baseRaw = (process.env.BASE_PATH || '').replace(/\/$/, '');
+const base = baseRaw ? `${baseRaw}/` : '/';
 
 export default defineConfig({
 	plugins: [
@@ -17,24 +19,24 @@ export default defineConfig({
 				name: 'Hiyori — Build Your Own Adventure',
 				short_name: 'Hiyori',
 				description: 'Interactive narrative adventure builder',
-				start_url: '/',
+				start_url: base,
 				display: 'standalone',
 				background_color: '#0d1117',
 				theme_color: '#0d1117',
 				icons: [
 					{
-						src: '/icons/icon-192.png',
+						src: `${base}icons/icon-192.png`,
 						sizes: '192x192',
 						type: 'image/png',
 					},
 					{
-						src: '/icons/icon-512.png',
+						src: `${base}icons/icon-512.png`,
 						sizes: '512x512',
 						type: 'image/png',
 					},
 				],
 			},
-			scope: '/',
+			scope: base,
 			workbox: {
 				globPatterns: ['**/*.{js,css,ico,png,svg,webmanifest,wasm}'],
 				maximumFileSizeToCacheInBytes: 25 * 1024 * 1024,

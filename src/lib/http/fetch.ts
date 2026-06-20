@@ -1,5 +1,6 @@
 import { checkIsTauri, isTauriSync } from '$lib/runtime';
 import { log } from '$lib/logging/logger';
+import { base } from '$app/paths';
 
 let _fetch: typeof globalThis.fetch = globalThis.fetch.bind(globalThis);
 let initialized = false;
@@ -31,7 +32,7 @@ export async function createLibcurlFetch(wispProxyUrl: string): Promise<typeof g
 		const { libcurl } = await import('libcurl.js');
 
 		if (!libcurlReady) {
-			await libcurl.load_wasm('/libcurl.wasm');
+			await libcurl.load_wasm(`${base}/libcurl.wasm`);
 			libcurlReady = true;
 		}
 
