@@ -4,7 +4,7 @@
 	import { getIsActive as getIsWorldBuilderActive } from '$lib/features/world-builder/world-builder.svelte';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
-	import { base } from '$app/paths';
+	import { resolve } from '$app/paths';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import type { IconName } from '$lib/ui/icons';
 
@@ -32,7 +32,7 @@
 	function handleTabClick(tab: TabId) {
 		if (!isOnChat) {
 			// On secondary pages, all tabs navigate back to chat first
-			goto(`${base}/`);
+			goto(resolve('/'));
 			mobileNav.activeTab = 'chat';
 			mobileNav.inputSheetOpen = false;
 			return;

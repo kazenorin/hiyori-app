@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { base } from '$app/paths';
+	import { resolve } from '$app/paths';
 	import { Memory, type MemoryItem, type LocationItem, type AliasGroup } from '$lib/features/memory';
 	import type { InventoryItem } from '$lib/features/memory/inventory-types';
 	import { getEmbeddingProviderConfig, getMemoryProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
@@ -383,7 +383,7 @@
 					<button
 						class="btn preset-outlined"
 						type="button"
-						onclick={() => goto(`${base}/generate-character-cards`)}
+						onclick={() => goto(resolve('/generate-character-cards'))}
 						disabled={!activeActLineId || isGeneratingAct || getIsRegenerating()}
 					>
 						{t('memoryManager.generateCharacterCards')}

@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
-	import { base } from '$app/paths';
+	import { resolve } from '$app/paths';
 	import { getImportWorldStore } from './import-state.svelte';
 	import { prepareImport, confirmImport, cancelImport } from '$lib/features/import-world/import-orchestrator';
 	import { enterActPlotInterviewMode } from '$lib/features/world-builder/world-builder.svelte';
@@ -65,7 +65,7 @@
 							}
 						: undefined,
 				});
-				goto(`${base}/`);
+				goto(resolve('/'));
 			}
 		} else {
 			store.setImporting(false);
@@ -81,7 +81,7 @@
 	}
 
 	function handleBack() {
-		goto(`${base}/`);
+		goto(resolve('/'));
 	}
 </script>
 

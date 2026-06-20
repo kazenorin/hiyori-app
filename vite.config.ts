@@ -14,6 +14,7 @@ export default defineConfig({
 		tailwindcss(),
 		sveltekit(),
 		SvelteKitPWA({
+			disable: baseRaw !== '',
 			registerType: 'autoUpdate',
 			manifest: {
 				name: 'Hiyori — Build Your Own Adventure',

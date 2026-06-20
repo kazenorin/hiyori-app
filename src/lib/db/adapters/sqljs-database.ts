@@ -1,6 +1,6 @@
 import type { Database as IDatabase, QueryResult } from '../types';
 import { persistToOpfs } from './opfs-persistence';
-import { base } from '$app/paths';
+import { asset } from '$app/paths';
 
 type SqlJsParams = Record<string, string | number | boolean | null | Uint8Array> | (string | number | boolean | null | Uint8Array)[];
 
@@ -165,9 +165,9 @@ async function loadSqlJs(locateWasm?: (file: string) => string) {
 		locateWasm ??
 		((file: string) => {
 			if (file === 'sql-wasm-browser.wasm' || file === 'sql-wasm-browser-debug.wasm') {
-				return `${base}/sql-wasm.wasm`;
+				return asset('/sql-wasm.wasm');
 			}
-			return `${base}/${file}`;
+			return asset(`/${file}`);
 		});
 
 	return initSqlJs({ locateFile });
