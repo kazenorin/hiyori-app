@@ -1,10 +1,10 @@
 # Hiyori — Build Your Own Adventure
 
-<p align="center">
+<div style="text-align: center">
   <img src="docs/hiyori-logo.png" alt="Hiyori Logo" width="256">
-</p>
+</div>
 
-Hiyori is an AI-powered interactive storytelling app built with Tauri v2 and SvelteKit 5. Create intricate stories through an AI-guided world builder, then play through branching narratives with real-time game state tracking, robust memory, and customizable AI pipelines.
+Hiyori (日和) is an AI-powered interactive storytelling app built with Tauri v2 and SvelteKit 5. Create intricate stories through an AI-guided world builder, then play through branching narratives with real-time game state tracking, robust memory, and customizable AI pipelines.
 
 ## Table of Contents
 
@@ -25,10 +25,10 @@ Get Hiyori running in three simple steps:
 3. **Play:** Click **New Story → World Builder** to generate your first universe!
 
 | Option            | How to Run                                          | Recommendation        |
-| ----------------- | --------------------------------------------------- | --------------------- |
+| ----------------- |-----------------------------------------------------| --------------------- |
 | **Installer**     | Download `Hiyori_<version>.<ext>`                   | **Recommended**       |
 | **Built SPA**     | `npm install && npm run build`, then serve `build/` | **Recommended (Web)** |
-| **Online**        | Visit `https://byoa.kazenor.in` or self-host        | **No install needed** |
+| **Online**        | Visit GitHub Pages or self-host                     | **No install needed** |
 | **Dev server**    | `npm install && npm run dev`                        | For web development   |
 | **Local desktop** | `npm install && npm run tauri dev` (requires Rust)  | For app development   |
 
