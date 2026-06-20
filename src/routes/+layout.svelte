@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { clamp } from 'lodash-es';
 	import { goto, beforeNavigate } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { initializeApp } from '$lib/app/init.svelte';
 	import { log } from '$lib/logging/logger';
 	import { registerSW } from 'virtual:pwa-register';
@@ -165,7 +166,7 @@
 		if (getIsWorldBuilderActive()) exitWorldBuilderMode();
 		await selectStory(id);
 		clearMessages();
-		goto('/');
+		goto(`${base}/`);
 	}
 
 	async function handleSelectAct(id: string) {
@@ -173,14 +174,14 @@
 		if (getIsWorldBuilderActive()) exitWorldBuilderMode();
 		await selectAct(id);
 		clearMessages();
-		goto('/');
+		goto(`${base}/`);
 	}
 
 	async function handleSelectActLine(id: string) {
 		if (getIsWorldBuilderActive()) exitWorldBuilderMode();
 		await selectActLine(id);
 		await loadActLineMessages(id);
-		goto('/');
+		goto(`${base}/`);
 	}
 
 	async function handleNewStory() {
@@ -192,12 +193,12 @@
 		exitWorldBuilderMode();
 		clearMessages();
 		enterWorldBuilderMode();
-		goto('/');
+		goto(`${base}/`);
 	}
 
 	function handleStartImportWorld() {
 		showNewStoryModal = false;
-		goto('/import-world');
+		goto(`${base}/import-world`);
 	}
 
 	function cancelNewStory() {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { getLoadStoryStore, type ActLineSelection } from './load-story-state.svelte';
 	import { loadStoryOverwrite, loadStoryAsNew } from '$lib/features/story-export-load/story-loader';
 	import { t } from '$lib/i18n';
@@ -58,7 +59,7 @@
 
 		if (result.success) {
 			toaster.success({ title: t('loadStory.loadComplete') });
-			goto('/');
+			goto(`${base}/`);
 		} else {
 			store.phase = 'error';
 			store.errorMessage = result.error ?? 'Unknown error';
@@ -68,7 +69,7 @@
 	}
 
 	function handleBack() {
-		goto('/');
+		goto(`${base}/`);
 	}
 
 	function getContinuedFromName(line: ActLineSelection): string {

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { base } from '$app/paths';
 	import { getActiveStory, getActiveAct, getActiveActLine } from '$lib/stores/stories.svelte';
 	import { t } from '$lib/i18n';
 	import {
@@ -34,7 +35,7 @@
 
 	function handleBack() {
 		resetState();
-		goto('/');
+		goto(`${base}/`);
 	}
 
 	function updateCanonicalName(index: number, value: string) {

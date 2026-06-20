@@ -20,6 +20,7 @@
 	import { exportStory } from '$lib/features/story-export-load/story-exporter';
 	import { toaster } from '$lib/stores/toaster.svelte';
 	import { type SwipeEndEventDetail } from '@svelte-put/swipeable';
+	import { base } from '$app/paths';
 	import SidebarRow from './SidebarRow.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
@@ -340,7 +341,7 @@
 			{t('sidebar.newStory')}
 		</button>
 		<a
-			href="/load-story"
+			href={`${base}/load-story`}
 			class="flex-1 flex items-center justify-center gap-1 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-xs text-surface-500 whitespace-nowrap"
 		>
 			<Icon name="book-open-text" class="w-3.5 h-3.5" />
@@ -380,13 +381,13 @@
 		<span class="shrink-0 w-8 text-right tabular-nums">{(fontSizeSlider * 100).toFixed(0)}%</span>
 	</label>
 	<a
-		href="/"
+		href={`${base}/`}
 		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 	>
 		{t('sidebar.chat')}
 	</a>
 	<a
-		href="/settings"
+		href={`${base}/settings`}
 		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 	>
 		{t('sidebar.settings')}
@@ -401,14 +402,14 @@
 	</button>
 	{#if isMemoryAvailable()}
 		<a
-			href="/memory-manager"
+			href={`${base}/memory-manager`}
 			class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 		>
 			{t('sidebar.memoryManager')}
 		</a>
 	{/if}
 	<a
-		href="/file-manager"
+		href={`${base}/file-manager`}
 		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 	>
 		{t('sidebar.fileManager')}
