@@ -24,13 +24,13 @@ Get Hiyori running in three simple steps:
 2. **Connect AI:** Open the app, go to **Settings → AI Providers**, and add your preferred provider (OpenAI, Anthropic, Ollama, etc.).
 3. **Play:** Click **New Story → World Builder** to generate your first universe!
 
-| Option            | How to Run                                          | Recommendation        |
-| ----------------- |-----------------------------------------------------| --------------------- |
-| **Installer**     | Download `Hiyori_<version>.<ext>`                   | **Recommended**       |
-| **Built SPA**     | `npm install && npm run build`, then serve `build/` | **Recommended (Web)** |
-| **Online**        | Visit GitHub Pages or self-host                     | **No install needed** |
-| **Dev server**    | `npm install && npm run dev`                        | For web development   |
-| **Local desktop** | `npm install && npm run tauri dev` (requires Rust)  | For app development   |
+| Option            | How to Run                                                                 | Recommendation        |
+|-------------------|----------------------------------------------------------------------------|-----------------------|
+| **Installer**     | Download `Hiyori_<version>.<ext>`                                          | **Recommended**       |
+| **Built SPA**     | `npm install && npm run build`, then serve `build/`                        | **Recommended (Web)** |
+| **Online**        | Visit [GitHub Pages](https://kazenorin.github.io/hiyori-app/) or self-host | **No install needed** |
+| **Dev server**    | `npm install && npm run dev`                                               | For web development   |
+| **Local desktop** | `npm install && npm run tauri dev` (requires Rust)                         | For app development   |
 
 > **Note:** Running the locally-built executable directly without the installer is not recommended, as the local data cache is not automatically erased between versions and can cause stale data issues.
 > **Web App Note:** `localhost`/`127.0.0.1` is allowed on HTTP. All other hosts require HTTPS. An HTTPS web app can only call HTTPS providers or localhost providers. See the [WISP Proxy](#wisp-proxy--advanced-routing) section for CORS workarounds.
