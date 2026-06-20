@@ -1,0 +1,1 @@
+import{t as e}from"./iWZeGjX0.js";export{e as getMemoryDatabase};

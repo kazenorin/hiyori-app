@@ -15,7 +15,6 @@ CLAUDE.local.md
 # Node.js / Web
 # =========================
 node_modules/
-build/
 dist/
 .svelte-kit/
 

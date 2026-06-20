@@ -1,0 +1,1 @@
+import{M as e}from"./8ZOAwcOM.js";export{e as isMemoryCapable};

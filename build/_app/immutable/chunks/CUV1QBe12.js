@@ -1,0 +1,1 @@
+function e(e){let t=[`act`,`scene`,`session`];return e.filter(e=>{if(e.role!==`assistant`)return!1;let n=e.content.toLowerCase();return t.some(e=>n.includes(e))}).map(e=>e.content)}export{e as t};

@@ -1,0 +1,1 @@
+import{t as e}from"./CeVfXRoD.js";export{e as loadLocaleStrings};

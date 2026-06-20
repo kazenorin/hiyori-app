@@ -1,0 +1,35 @@
+/* Noto Sans HK — full font, weights 400/700 */
+
+@font-face {
+  font-family: 'Noto Sans HK';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(noto-sans-hk-400.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Sans HK';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(noto-sans-hk-700.woff2) format('woff2');
+}
+
+/* Noto Serif HK — full font, weights 400/700 */
+
+@font-face {
+  font-family: 'Noto Serif HK';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 400;
+  src: url(noto-serif-hk-400.woff2) format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Serif HK';
+  font-style: normal;
+  font-display: swap;
+  font-weight: 700;
+  src: url(noto-serif-hk-700.woff2) format('woff2');
+}

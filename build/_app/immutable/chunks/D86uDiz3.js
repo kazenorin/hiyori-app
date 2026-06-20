@@ -1,0 +1,1 @@
+import{n as e}from"./B0TTkTmr.js";export{e as setLocale};
