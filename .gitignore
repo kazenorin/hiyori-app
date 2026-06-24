@@ -23,7 +23,6 @@ dist/
 # Tauri
 # =========================
 src-tauri/target/
-src-tauri/gen/
 .xwin-cache/
 
 # =========================

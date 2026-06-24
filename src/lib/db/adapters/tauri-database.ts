@@ -3,6 +3,7 @@ import type { Database as IDatabase, QueryResult } from '../types';
 
 export class TauriDatabase implements IDatabase {
 	private db: Database;
+	private _sqliteVecAvailable = false;
 
 	private constructor(db: Database) {
 		this.db = db;
@@ -10,7 +11,18 @@ export class TauriDatabase implements IDatabase {
 
 	static async create(filename: string): Promise<TauriDatabase> {
 		const db = await Database.load(filename);
-		return new TauriDatabase(db);
+		const instance = new TauriDatabase(db);
+		await instance.probeSqliteVec();
+		return instance;
+	}
+
+	private async probeSqliteVec(): Promise<void> {
+		try {
+			await this.db.select<{ vec_version: string }[]>('SELECT vec_version()');
+			this._sqliteVecAvailable = true;
+		} catch {
+			this._sqliteVecAvailable = false;
+		}
 	}
 
 	async select<T>(query: string, bindValues?: unknown[]): Promise<T> {
@@ -26,7 +38,7 @@ export class TauriDatabase implements IDatabase {
 	}
 
 	isSqliteVecAvailable(): boolean {
-		return true;
+		return this._sqliteVecAvailable;
 	}
 
 	close(): void {

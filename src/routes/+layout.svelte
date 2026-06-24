@@ -238,7 +238,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="flex h-dvh overflow-hidden bg-surface-50-950" ontouchstart={handleTouchStart} ontouchend={handleTouchEnd}>
+<div class="flex h-dvh overflow-hidden bg-surface-50-950 pt-safe" ontouchstart={handleTouchStart} ontouchend={handleTouchEnd}>
 	{#if !appReady}
 		<div class="flex-1 flex items-center justify-center">
 			{#if appError}
@@ -270,7 +270,7 @@
 
 		<!-- Mobile Sidebar Drawer -->
 		{#if sidebarOpen}
-			<div class="fixed inset-0 z-60 flex md:hidden" role="dialog" aria-modal="true">
+			<div class="fixed inset-0 z-60 flex md:hidden pt-safe pb-safe" role="dialog" aria-modal="true">
 				<aside class="w-[80vw] max-w-[320px] bg-surface-50-950 border-r border-surface-200-800 flex flex-col overflow-y-auto">
 					<SidebarNav
 						variant="mobile"
@@ -297,7 +297,7 @@
 		{/if}
 
 		<!-- Main content -->
-		<main class="flex-1 flex flex-col min-w-0 pb-[calc(52px+env(safe-area-inset-bottom))] md:pb-0">
+		<main class="flex-1 flex flex-col min-w-0 pb-[calc(52px_+_env(safe-area-inset-bottom))] md:pb-0">
 			<!-- Mobile header bar (tab bar replaces hamburger; just show story name) -->
 			<div class="md:hidden flex items-center justify-center p-3 border-b border-surface-200-800 shrink-0">
 				<button class="text-sm font-medium text-surface-700-300 truncate cursor-pointer" onclick={() => (sidebarOpen = true)} type="button">

@@ -1,0 +1,12 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "identifier": "in.kazenor.hiyoriapp",
+  "bundle": {
+    "android": {
+      "minSdkVersion": 24
+    }
+  },
+  "build": {
+    "beforeBuildCommand": "npm run build && node scripts/clean-wasm.mjs"
+  }
+}

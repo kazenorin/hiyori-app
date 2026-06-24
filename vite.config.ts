@@ -8,13 +8,14 @@ import { resolve } from 'node:path';
 const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, 'package.json'), 'utf-8'));
 const baseRaw = (process.env.BASE_PATH || '').replace(/\/$/, '');
 const base = baseRaw ? `${baseRaw}/` : '/';
+const isTauriBuild = !!process.env.TAURI_ENV_PLATFORM;
 
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
 		sveltekit(),
 		SvelteKitPWA({
-			disable: baseRaw !== '',
+			disable: baseRaw !== '' || isTauriBuild,
 			registerType: 'autoUpdate',
 			manifest: {
 				name: 'Hiyori — Build Your Own Adventure',

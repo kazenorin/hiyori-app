@@ -2,6 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { omitBy } from 'lodash-es';
 import { getDatabase } from '$lib/db/database';
 import { fs } from '$lib/fs/file-system';
+import { detectDefaultLocale } from '$lib/i18n';
 import type { CallSettings } from 'ai';
 import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
 
@@ -79,7 +80,7 @@ const STORAGE_KEY = 'hiyori-settings';
 const defaults: Settings = {
 	providers: [],
 	roleAssignments: {},
-	locale: 'en',
+	locale: detectDefaultLocale(),
 	themeMode: 'system',
 	colorTheme: 'hiyori',
 	logLevel: 'info',

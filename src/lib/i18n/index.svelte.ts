@@ -8,6 +8,14 @@ export type Locale = string;
 type TranslationValue = string | { [key: string]: TranslationValue };
 type Translations = Record<string, TranslationValue>;
 
+export function detectDefaultLocale(): Locale {
+	const lang = typeof navigator !== 'undefined' ? (navigator.language?.toLowerCase() ?? '') : '';
+	// zh-Hans (Simplified) gets its own branch when those strings are shipped:
+	// if (lang.startsWith('zh-hans')) return 'zh-Hans';
+	if (lang.startsWith('zh')) return 'zh-Hant-HK';
+	return 'en';
+}
+
 let currentLocale = $state<Locale>('en');
 let translations = $state<Translations>({});
 
