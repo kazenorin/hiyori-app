@@ -36,6 +36,7 @@ Get Hiyori running in three simple steps:
 | **Online**        | Visit [GitHub Pages](https://kazenorin.github.io/hiyori-app/) or self-host | **No install needed**     |
 | **Dev server**    | `npm install && npm run dev`                                               | For web development       |
 | **Local desktop** | `npm install && npm run tauri dev` (requires Rust)                         | For app development       |
+| **Android**       | See [Building the Android APK](#building-the-android-apk) below            | For Android devices       |
 
 > **Note:** Running the locally-built executable directly without the installer is not recommended, as the local data cache is not automatically erased between versions and can cause stale data issues.
 > **Web App Note:** `localhost`/`127.0.0.1` is allowed on HTTP. All other hosts require HTTPS. An HTTPS web app can only call HTTPS providers or localhost providers. See the [WISP Proxy](#2-wisp-proxy--advanced-routing) section for CORS workarounds.
@@ -263,6 +264,34 @@ Build the `.exe`:
 npm run tauri build -- --target x86_64-pc-windows-gnu
 
 ```
+
+### Building the Android APK
+
+#### Debug APK
+
+```bash
+npx tauri android build --debug
+```
+
+Output: `src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk`
+
+For a specific device architecture:
+
+```bash
+npx tauri android build --debug --target aarch64
+```
+
+#### Signed release APK
+
+The release keystore and Gradle signing config are already set up. Ensure `src-tauri/gen/android/key.properties` points to your keystore, then:
+
+```bash
+npx tauri android build --target aarch64
+```
+
+APK output: `src-tauri/gen/android/app/build/outputs/apk/aarch64/release/app-aarch64-release.apk`
+
+Install via File Manager or `adb install -r <path-to-apk>`.
 
 ### License
 
