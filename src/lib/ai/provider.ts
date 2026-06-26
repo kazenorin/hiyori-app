@@ -6,7 +6,7 @@ import { resolveFetch } from '$lib/http/fetch';
 import { ERR_API_KEY_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 
 export async function createModel(config: ProviderConfig) {
-	const baseURL = config.baseURL || 'https://api.openai.com/v1';
+	const baseURL = (config.baseURL || 'https://api.openai.com/v1').replace(/\/+$/, '');
 	const providerFetch = await resolveFetch(config.corsBypassEnabled, config.wispProxyUrl);
 
 	if (config.provider === 'ollama') {
@@ -42,7 +42,7 @@ export async function createModel(config: ProviderConfig) {
 }
 
 export async function createEmbeddingModel(config: ProviderConfig) {
-	const baseURL = config.baseURL || 'https://api.openai.com/v1';
+	const baseURL = (config.baseURL || 'https://api.openai.com/v1').replace(/\/+$/, '');
 	const providerFetch = await resolveFetch(config.corsBypassEnabled, config.wispProxyUrl);
 
 	if (config.provider === 'ollama') {
