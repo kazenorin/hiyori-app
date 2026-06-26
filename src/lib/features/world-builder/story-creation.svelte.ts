@@ -10,6 +10,8 @@ import { settings, isDirectorModeEnabled } from '$lib/stores/settings.svelte';
 import {
 	getStoryName,
 	setStoryName,
+	getStoryLocale,
+	setStoryLocale,
 	getWorldContent as getWorldBuilderContent,
 	getReadyToCreate,
 	enterActPlotInterviewMode,
@@ -59,10 +61,11 @@ export function cancelCreateStoryOptions(): void {
  * two-option panel becomes available (gated by `getReadyToCreate()`).
  * On failure, surfaces the error from the world-builder module.
  */
-export async function handleStartFromWorldBuilder(name: string): Promise<void> {
+export async function handleStartFromWorldBuilder(name: string, locale: string): Promise<void> {
 	const trimmed = name.trim();
 	if (!trimmed) return;
 	setStoryName(trimmed);
+	setStoryLocale(locale);
 	await requestStart();
 	if (!getReadyToCreate() && !createStoryError) {
 		createStoryError = t('errors.failedToCreateStory');
@@ -75,7 +78,7 @@ async function ensureStoryCreated(): Promise<boolean> {
 	if (!name || !worldContent) return false;
 
 	if (!storyCreated) {
-		await createStoryFromWorldBuilder(name, worldContent, settings.locale || 'en', getSelectedTemplateId());
+		await createStoryFromWorldBuilder(name, worldContent, getStoryLocale() || settings.locale || 'en', getSelectedTemplateId());
 		storyCreated = true;
 	}
 	return true;

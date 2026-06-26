@@ -305,6 +305,7 @@
 			"startGame": "Start Game",
 			"startButton": "Start",
 			"storyNameLabel": "Story name",
+			"storyLocaleLabel": "Story locale",
 			"storyNamePlaceholder": "Enter the name of the story…",
 			"compilingWorld": "Compiling your world…",
 			"tryAgain": "Try Again",

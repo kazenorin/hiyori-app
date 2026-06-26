@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance for working with code in this project `hiyori-app`.
 
 ## Rules
 
@@ -42,26 +42,11 @@ Conformance > taste inside the codebase. If you genuinely think a convention is 
 ### Rule 12 — Fail loud
 "Completed" is wrong if anything was skipped silently. "Tests pass" is wrong if any were skipped. Default to surfacing uncertainty, not hiding it.
 
-## Workflow notes
-
-1. Worktrees must be created in `<project-root>/tmp/worktrees`
-2. Temporary files must be stored in `<project-root>/local-references`
-3. HTML-based plans must be created in `<project-root>/local-references`
-
 ## Architecture
 
-**Tauri v2 + SvelteKit 5 desktop app.** Two layers:
+Tauri v2 + SvelteKit 5 App
 
-- **Frontend** (`src/`): SvelteKit 5 with `adapter-static` in SPA fallback mode. SSR is disabled, prerender is enabled (`src/routes/+layout.ts`). Vite dev server runs on port 1420. Communicates with the Rust backend via `@tauri-apps/api/core` `invoke()`. Uses **Skeleton.dev** (v4) as the design system with Tailwind CSS v4 (`@tailwindcss/vite` plugin). Theme is set via `data-theme` attribute on `<html>` in `app.html`. Global styles are in `src/routes/+layout.css`.
-- **Backend** (`src-tauri/`): Rust/Tauri v2. Tauri commands are registered in `src/lib.rs` via `tauri::generate_handler![]`. Entry point is `main.rs` which calls `app_lib::run()`.
-
-### Key config files
-
-- `src-tauri/tauri.conf.json` — app metadata, window config, CSP, build commands
-- `src-tauri/Cargo.toml` — Rust dependencies
-- `src-tauri/capabilities/default.json` — Tauri permissions
-- `svelte.config.js` — adapter-static with `fallback: 'index.html'`
-- `vite.config.ts` — port 1420 (must match `tauri.conf.json` `devUrl`)
+Supports Desktop App, Web App and Android App.
 
 ## Styling Guidelines
 
@@ -75,10 +60,6 @@ Conformance > taste inside the codebase. If you genuinely think a convention is 
 ## Localization Architecture
 
 Three separate systems: **i18n** (`t()`) for UI, **locale-strings** (`ls()`) for LLM-facing strings, and **localized prompts/templates** for LLM I/O. Each uses a different locale source (settings vs story) and resolution strategy. See [`src/lib/localization/README.md`](src/lib/localization/README.md) for full details.
-
-## Reference Material
-
-Check `local-references/*` for local reference files (if any).
 
 ## Database Architecture
 
@@ -103,8 +84,6 @@ Act lines model branching narratives. Each act has one or more act lines (main l
 Multi-provider setup with role-based assignment. Each provider has an `id`, `provider` type, `apiType`, `baseURL`, `model`, and `apiKey`. Roles (plotPlanner, writer, reviewer, editor, gameMaster, summarizer, memory, embedding, minorTaskAgent) are assigned to provider configs via `roleAssignments`. Each role falls back to `main` if not explicitly configured. `get<X>ProviderConfig()` functions resolve role → provider config, returning `undefined` if no valid config with API key exists.
 
 `isPhraseHighlightingEnabled()` gates the feature on `settings.importantPhraseHighlighting && !!getMinorTaskAgentProviderConfig()`.
-
-`migrateFromFlatSettings()` detects old flat settings shape and converts to multi-provider.
 
 ## Prompt Loading System
 
@@ -172,6 +151,8 @@ Async chain (starts concurrently with sequential):
 **`src/lib/ai/tools/tools.ts`** — `buildTools(storyId, actLineId)` combines all tool sets.
 
 ## Memory System
+
+Supported on Desktop App mode only.
 
 Vector-based memory database per story using `sqlite-vec`. **`src/lib/memory/memory.ts`** manages vector storage and search with deduplication (cosine distance threshold). Memory extraction runs after streaming completion: `memory-extraction-pipeline.ts` orchestrates extraction, `memory-extract-parser.ts` parses markdown output into character memories and locations.
 

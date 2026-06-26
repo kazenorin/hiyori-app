@@ -305,6 +305,7 @@
 			"startGame": "開始遊戲",
 			"startButton": "開始",
 			"storyNameLabel": "故事名稱",
+			"storyLocaleLabel": "故事語言",
 			"storyNamePlaceholder": "輸入你的故事名稱…",
 			"compilingWorld": "正在編譯你的世界觀…",
 			"tryAgain": "重試",

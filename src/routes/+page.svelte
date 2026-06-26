@@ -67,7 +67,7 @@
 		saveEditWorldBuilderMessage,
 	} from '$lib/features/message-editor.svelte';
 	import { getActiveActLineId, getActiveStory, getIsSelectingStory } from '$lib/stores/stories.svelte';
-	import { isDirectorModeEnabled, isTTSEnabled, getTTSVoice, getTTSSpeed } from '$lib/stores/settings.svelte';
+	import { settings, isDirectorModeEnabled, isTTSEnabled, getTTSVoice, getTTSSpeed } from '$lib/stores/settings.svelte';
 	import { ttsPlayer } from '$lib/kokoro/player.svelte';
 	import { buildTTSPassage } from '$lib/kokoro/passage';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
@@ -142,6 +142,7 @@
 
 	let updateWorldCardChecked = $state(false);
 	let worldBuilderStoryNameDraft = $state('');
+	let worldBuilderStoryLocaleDraft = $state(settings.locale || 'en');
 
 	let forkPlotMode = $state<'guidance' | 'phaseEvent' | null>(null);
 	const wbShowPreStartBar = $derived(
@@ -431,6 +432,7 @@
 					isCompiling={getIsCompilingWorld() || getIsWorldBuilderStreaming()}
 					storyName={getWorldBuilderStoryName()}
 					bind:storyNameDraft={worldBuilderStoryNameDraft}
+					bind:storyLocaleDraft={worldBuilderStoryLocaleDraft}
 					isCreatingStory={getIsCreatingStory()}
 					createStoryError={getCreateStoryError()}
 					worldBuilderError={getWorldBuilderError()}
@@ -441,13 +443,15 @@
 					isPreTemplatePhase={getWbPhase() === 'pre-template'}
 					showUpdateWorldCardOption={getIsNextActInterview()}
 					bind:updateWorldCard={updateWorldCardChecked}
-					onStart={() => handleStartFromWorldBuilder(worldBuilderStoryNameDraft)}
+					onStart={() => handleStartFromWorldBuilder(worldBuilderStoryNameDraft, worldBuilderStoryLocaleDraft)}
 					onStartImmediate={() => handleCreateStoryImmediate()}
 					onStartInterview={handleCreateActPlotInterview}
 					onStartGame={handleStartGameAfterInterview}
 					onCancel={exitWorldBuilderMode}
 					onDismissOptions={cancelCreateStoryOptions}
-					onRetry={getReadyToCreate() ? () => handleCreateStoryImmediate() : () => handleStartFromWorldBuilder(worldBuilderStoryNameDraft)}
+					onRetry={getReadyToCreate()
+						? () => handleCreateStoryImmediate()
+						: () => handleStartFromWorldBuilder(worldBuilderStoryNameDraft, worldBuilderStoryLocaleDraft)}
 					chatContainer={wbChatContainer}
 				/>
 			</div>

@@ -60,6 +60,7 @@ let messages = $state<WorldBuilderMessage[]>([]);
 let isStreaming = $state(false);
 let error = $state<string | null>(null);
 let storyName = $state('');
+let storyLocale = $state('');
 let worldContent = $state<string | null>(null);
 let readyToCreate = $state(false);
 let isCompilingWorld = $state(false);
@@ -99,11 +100,17 @@ export function getError(): string | null {
 export function getStoryName(): string {
 	return storyName.trim() || 'Untitled Story';
 }
+export function getStoryLocale(): string {
+	return storyLocale;
+}
 export function getWorldContent(): string | null {
 	return actPlotInterview ? interviewWorldContent : worldContent;
 }
 export function setStoryName(name: string): void {
 	storyName = name;
+}
+export function setStoryLocale(locale: string): void {
+	storyLocale = locale;
 }
 export function getReadyToCreate(): boolean {
 	return readyToCreate;
@@ -142,6 +149,7 @@ function resetState(): void {
 	isStreaming = false;
 	error = null;
 	storyName = '';
+	storyLocale = '';
 	worldContent = null;
 	readyToCreate = false;
 	isCompilingWorld = false;

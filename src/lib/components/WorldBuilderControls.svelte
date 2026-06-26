@@ -4,12 +4,15 @@
 	import { scrollToBottom } from '$lib/utils/scroll';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
+	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
+	import { getLocaleItems } from '$lib/features/settings-options';
 
 	interface Props {
 		isReadyToStart: boolean;
 		isCompiling: boolean;
 		storyName: string | null;
 		storyNameDraft: string;
+		storyLocaleDraft: string;
 		isCreatingStory: boolean;
 		createStoryError: string | null;
 		worldBuilderError: string | null;
@@ -35,6 +38,7 @@
 		isCompiling,
 		storyName,
 		storyNameDraft = $bindable(''),
+		storyLocaleDraft = $bindable(''),
 		isCreatingStory,
 		createStoryError,
 		worldBuilderError,
@@ -79,6 +83,8 @@
 	let isMinimized = $derived(!isPinned && (!isNearBottom || isManuallyClosed) && !isUserExpanded);
 
 	const canStart = $derived(storyNameDraft.trim().length > 0 && !isCompiling && !isStreaming);
+
+	const localeItems = $derived(getLocaleItems());
 
 	let hasContent = $derived(
 		isReadyToStart || isCompiling || (isInterviewMode && !isStreaming) || createStoryError != null || worldBuilderError != null
@@ -188,7 +194,15 @@
 	<!-- Pre-start bar: name input + Start button -->
 	<div class="border-t border-surface-200-800 bg-surface-50-950 px-4 md:px-8 py-3">
 		<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-			<label class="flex-1 flex items-center gap-2">
+			<div class="order-1 sm:order-2 sm:w-56 flex items-center gap-2">
+				<span class="text-xs font-medium text-surface-500 uppercase tracking-wider whitespace-nowrap">
+					{t('components.worldBuilderControls.storyLocaleLabel')}
+				</span>
+				<div class="flex-1">
+					<ThemedSelect items={localeItems} value={storyLocaleDraft} onValueChange={(v) => (storyLocaleDraft = v)} disabled={isStreaming} />
+				</div>
+			</div>
+			<label class="order-2 sm:order-1 flex-1 flex items-center gap-2">
 				<span class="text-xs font-medium text-surface-500 uppercase tracking-wider whitespace-nowrap">
 					{t('components.worldBuilderControls.storyNameLabel')}
 				</span>
@@ -200,7 +214,7 @@
 					disabled={isStreaming}
 				/>
 			</label>
-			<button class="btn preset-filled-primary-500 sm:px-6" type="button" onclick={onStart} disabled={!canStart}>
+			<button class="btn preset-filled-primary-500 sm:px-6 order-3" type="button" onclick={onStart} disabled={!canStart}>
 				{t('components.worldBuilderControls.startButton')}
 			</button>
 		</div>
