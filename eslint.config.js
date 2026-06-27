@@ -7,7 +7,17 @@ import globals from 'globals';
 
 export default tseslint.config(
 	{
-		ignores: ['.svelte-kit/**', 'build/**', 'dist/**', 'node_modules/**', 'src-tauri/**', '.idea/**', '*.local', 'local-references/**', 'eslint.config.js'],
+		ignores: [
+			'.svelte-kit/**',
+			'build/**',
+			'dist/**',
+			'node_modules/**',
+			'src-tauri/**',
+			'.idea/**',
+			'*.local',
+			'local-references/**',
+			'eslint.config.js',
+		],
 	},
 
 	js.configs.recommended,
@@ -29,10 +39,24 @@ export default tseslint.config(
 	},
 
 	{
+		files: ['scripts/**/*.mjs'],
+		languageOptions: {
+			globals: globals.node,
+		},
+	},
+
+	{
 		languageOptions: {
 			parserOptions: {
 				projectService: {
-					allowDefaultProject: ['svelte.config.js', 'vitest.config.ts'],
+					allowDefaultProject: [
+						'svelte.config.js',
+						'vitest.config.ts',
+						'scripts/bump-version.mjs',
+						'scripts/clean-wasm.mjs',
+						'scripts/copy-wasm.mjs',
+						'scripts/update-config-manifest.mjs',
+					],
 				},
 			},
 		},

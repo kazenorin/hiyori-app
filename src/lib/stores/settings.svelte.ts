@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { omitBy } from 'lodash-es';
 import { getDatabase } from '$lib/db/database';
 import { fs } from '$lib/fs/file-system';
-import { detectDefaultLocale } from '$lib/i18n';
+import { detectDefaultLocale, setLocale } from '$lib/i18n';
 import type { CallSettings } from 'ai';
 import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
 
@@ -388,7 +388,6 @@ export async function updateSettings(partial: Partial<UpdatableSettings>): Promi
 	// Sync locale to i18n system and locale strings
 	if (partial.locale !== undefined && partial.locale !== prevLocale) {
 		try {
-			const { setLocale } = await import('$lib/i18n');
 			await setLocale(partial.locale);
 		} catch (err) {
 			console.error('Failed to sync locale to i18n:', err);

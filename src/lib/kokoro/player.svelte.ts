@@ -50,7 +50,9 @@ export class TTSPlayer {
 		if (this.audioContext && this.audioContext.state !== 'closed') {
 			try {
 				this.audioContext.close();
-			} catch {}
+			} catch {
+				// context may already be closed
+			}
 		}
 		this.audioContext = new AudioContext({ sampleRate: TTS_SAMPLE_RATE });
 	}
@@ -110,10 +112,14 @@ export class TTSPlayer {
 		if (this.currentSource) {
 			try {
 				this.currentSource.stop();
-			} catch {}
+			} catch {
+				// source may already be stopped
+			}
 			try {
 				this.currentSource.disconnect();
-			} catch {}
+			} catch {
+				// source may already be disconnected
+			}
 			this.currentSource = null;
 		}
 
@@ -193,10 +199,14 @@ export class TTSPlayer {
 		if (this.currentSource) {
 			try {
 				this.currentSource.stop();
-			} catch {}
+			} catch {
+				// source may already be stopped
+			}
 			try {
 				this.currentSource.disconnect();
-			} catch {}
+			} catch {
+				// source may already be disconnected
+			}
 			this.currentSource = null;
 		}
 
@@ -212,7 +222,9 @@ export class TTSPlayer {
 		if (this.audioContext && this.audioContext.state !== 'closed') {
 			try {
 				this.audioContext.close();
-			} catch {}
+			} catch {
+				// context may already be closed
+			}
 		}
 		this.audioContext = null;
 
@@ -325,7 +337,9 @@ export class TTSPlayer {
 		if (this.audioContext && this.audioContext.state !== 'closed') {
 			try {
 				this.audioContext.close();
-			} catch {}
+			} catch {
+				// context may already be closed
+			}
 			this.audioContext = null;
 		}
 	}
