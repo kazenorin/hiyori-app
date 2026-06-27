@@ -27,6 +27,7 @@ tauri-plugin-fs = "2"
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-http = "2"
 tauri-plugin-dialog = "2"
+tauri-plugin-os = "2"
 
 # Desktop-only deps — sqlite-vec + libsqlite3-sys are excluded from Android
 # (memory/vector search is desktop-only per D6 in the Android build plan)

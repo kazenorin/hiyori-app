@@ -106,6 +106,11 @@ export const ICONS = {
 	'volume-x': stroke(
 		'<polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" /><line x1="22" y1="9" x2="16" y2="15" /><line x1="16" y1="9" x2="22" y2="15" />'
 	),
+	'triangle-alert': stroke(
+		'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" />'
+	),
+	info: stroke('<circle cx="12" cy="12" r="10" /><path d="M12 16v-4" /><path d="M12 8h.01" />'),
+	'circle-check': stroke('<circle cx="12" cy="12" r="10" /><path d="m9 12 2 2 4-4" />'),
 } as const satisfies Record<string, IconDef>;
 
 export type IconName = keyof typeof ICONS;

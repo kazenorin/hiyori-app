@@ -1,0 +1,24 @@
+# Known Supported Providers — OpenAI-Compatible Base URLs known to work.
+# models: "*" means every model is verified; otherwise a list of model IDs.
+providers:
+  - baseUrl: https://api.neuralwatt.com/v1
+    models: '*'
+  - baseUrl: https://pass.wafer.ai/v1
+    models: '*'
+  - baseUrl: https://openrouter.ai/api/v1
+    models:
+      - z-ai/glm-5.2
+      - z-ai/glm-5.1
+      - z-ai/glm-5
+      - z-ai/glm-4.7-flash
+      - x-ai/grok-4.3
+      - x-ai/grok-4.20
+      - moonshotai/kimi-k2.6
+      - moonshotai/kimi-k2.5
+      - minimax/minimax-m3
+      - minimax/minimax-m2.7
+      - google/gemma-4-31b-it
+      - google/gemma-4-26b-a4b-it
+      - deepseek/deepseek-v4-pro
+      - deepseek/deepseek-v4-flash
+      - deepseek/deepseek-v3.2

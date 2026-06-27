@@ -1,12 +1,20 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
-	import { isTauriSync } from '$lib/runtime';
+	import { isTauriSync, getPlatformSync } from '$lib/runtime';
 	import type { ApiType, Provider, ProviderConfig } from '$lib/stores/settings.svelte';
 	import type { CallSettings } from 'ai';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
 	import TextField from '$lib/components/ui/TextField.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import ProviderTips from '$lib/components/chat/ProviderTips.svelte';
+	import {
+		evaluateProviderTip,
+		expandSuggestionTemplate,
+		applyStripSuffix,
+		type TipEvaluationInput,
+		type ProviderConfigTip,
+	} from '$lib/ai/provider-tips/evaluator';
 
 	interface Props {
 		mode: 'add' | 'edit';
@@ -134,6 +142,46 @@
 			callSettings: buildCallSettings(),
 		});
 	}
+
+	const tipInput = $derived<TipEvaluationInput>({
+		provider: formProvider,
+		baseURL: formBaseURL,
+		model: formModel,
+		apiType: formApiType,
+		corsBypassEnabled: formCorsBypassEnabled,
+		wispProxyUrl: formWispProxyUrl,
+		pageProtocol: typeof window !== 'undefined' ? (window.location.protocol.replace(':', '') as 'http' | 'https') : undefined,
+		platform: getPlatformSync(),
+		apiKey: formApiKey,
+	});
+
+	const tip = $derived<ProviderConfigTip | null>(evaluateProviderTip(tipInput));
+
+	function handleApplySuggestion(t: ProviderConfigTip) {
+		if (!t.suggest) return;
+		const input = tipInput;
+		switch (t.suggest.type) {
+			case 'rewriteBaseUrl': {
+				formBaseURL = expandSuggestionTemplate(t.suggest.value, input);
+				break;
+			}
+			case 'rewriteBaseUrlStripSuffix': {
+				formBaseURL = applyStripSuffix(formBaseURL, t.suggest.value);
+				break;
+			}
+			case 'rewriteBaseUrlScheme': {
+				formBaseURL = formBaseURL.replace(/^http:\/\//, 'https://');
+				break;
+			}
+			case 'switchProvider': {
+				formProvider = t.suggest.value;
+				if (t.suggest.rewriteBaseUrl) {
+					formBaseURL = expandSuggestionTemplate(t.suggest.rewriteBaseUrl, input);
+				}
+				break;
+			}
+		}
+	}
 </script>
 
 <div class="card p-3 md:p-4 space-y-3 border border-primary-500-300">
@@ -207,6 +255,8 @@
 					<p class="text-xs text-error-700-300 mt-1">{modelsError}</p>
 				{/if}
 			</div>
+
+			<ProviderTips {tip} onapply={handleApplySuggestion} />
 
 			<TextField
 				label={t('settings.apiKey')}

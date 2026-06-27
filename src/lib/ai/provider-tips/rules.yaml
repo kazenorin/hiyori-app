@@ -1,0 +1,208 @@
+# Rule definitions for provider configuration tips.
+# platform: all | web | desktop | android | desktop-android
+# kind: warning | note | verified
+# priority: integer, LOWER = stronger. When multiple rules match the current
+#           input, the single tip with the lowest priority number wins and is
+#           the only one rendered. Suggested bands:
+#             10 = hard warnings (known-broken configs)
+#             20 = soft warnings (likely-broken configs)
+#             25 = more-specific notes (override broader notes)
+#             30 = notes / caveats
+#             40 = verified-provider affirmations (weakest)
+#           Within the same band, stable order = declaration order in YAML.
+# when: condition object (see predicate DSL in evaluator.ts)
+# messageKey: i18n key (under settings.providerTips.rules.*)
+# suggest: optional fix affordance rendered as an Apply button
+#   - rewriteBaseUrl: string (may interpolate {{baseUrl}})
+#   - switchProvider: Provider ('openai' | 'openai-compatible' | 'ollama')
+#     rewriteBaseUrl?: string (optional, may interpolate {{baseUrl}})
+
+rules:
+  - id: A1-openai-non-official-base-url
+    platform: all
+    kind: warning
+    priority: 10
+    when:
+      provider: openai
+      baseURL:
+        notStartsWith: https://api.openai.com
+        isNonEmpty: true
+    messageKey: settings.providerTips.rules.A1
+    suggest:
+      rewriteBaseUrl: https://api.openai.com/v1
+
+  - id: A2-openai-compat-missing-v1
+    platform: all
+    kind: warning
+    priority: 20
+    when:
+      provider: openai-compatible
+      baseURL:
+        notEndsWith: /v1
+        isNonEmpty: true
+    messageKey: settings.providerTips.rules.A2
+
+  - id: A2b-openai-compat-chat-suffix
+    platform: all
+    kind: warning
+    priority: 10
+    when:
+      provider: openai-compatible
+      baseURL:
+        endsWithAny:
+          - /v1/chat
+          - /v1/chat/completions
+    messageKey: settings.providerTips.rules.A2b
+    suggest:
+      rewriteBaseUrlStripSuffix:
+        - /chat/completions
+        - /chat
+
+  - id: A3-ollama-base-url-non-default
+    platform: all
+    kind: note
+    priority: 30
+    when:
+      provider: ollama
+      baseURL:
+        notIn:
+          - https://ollama.com
+          - http://localhost:11434
+        isNonEmpty: true
+    messageKey: settings.providerTips.rules.A3
+
+  - id: A3b-ollama-base-url-has-path
+    platform: all
+    kind: note
+    priority: 25
+    when:
+      provider: ollama
+      baseURL:
+        hasNonRootPath: true
+        isNonEmpty: true
+    messageKey: settings.providerTips.rules.A3b
+
+  - id: A4-ollama-gemini-model
+    platform: all
+    kind: warning
+    priority: 10
+    when:
+      provider: ollama
+      model:
+        equals: gemini-3-flash-preview
+        isNonEmpty: true
+    messageKey: settings.providerTips.rules.A4
+    suggest:
+      switchProvider: openai-compatible
+      rewriteBaseUrl: '{{baseUrl}}/v1'
+
+  - id: A5-known-provider-verified
+    platform: all
+    kind: verified
+    priority: 40
+    when:
+      provider: openai-compatible
+      baseURL:
+        inKnownProviders: true
+      model:
+        inKnownProvidersForBaseUrl: true
+        isNonEmpty: true
+    messageKey: settings.providerTips.rules.A5_verified
+
+  - id: A5b-known-provider-model-unverified
+    platform: all
+    kind: note
+    priority: 30
+    when:
+      provider: openai-compatible
+      baseURL:
+        inKnownProviders: true
+      model:
+        inKnownProvidersForBaseUrl: false
+        isNonEmpty: true
+    messageKey: settings.providerTips.rules.A5_unverified
+
+  - id: A6-public-host-insecure-http
+    platform: all
+    kind: warning
+    priority: 20
+    when:
+      baseURL:
+        startsWith: http://
+        hostNotLocalNotLan: true
+        isNonEmpty: true
+    messageKey: settings.providerTips.rules.A6
+    suggest:
+      rewriteBaseUrlScheme: https
+
+  # --- WebApp-only ---
+  - id: B1-nvidia-no-proxy
+    platform: web
+    kind: warning
+    priority: 10
+    when:
+      provider: openai-compatible
+      baseURL:
+        hostEquals: integrate.api.nvidia.com
+      corsBypassEnabled: false
+    messageKey: settings.providerTips.rules.B1
+
+  - id: B2-ollama-host-no-proxy
+    platform: web
+    kind: warning
+    priority: 10
+    when:
+      provider: openai-compatible
+      baseURL:
+        hostEquals: ollama.com
+      corsBypassEnabled: false
+    messageKey: settings.providerTips.rules.B2
+
+  - id: B2b-ollama-provider-no-proxy
+    platform: web
+    kind: warning
+    priority: 10
+    when:
+      provider: ollama
+      baseURL:
+        hostEquals: ollama.com
+      corsBypassEnabled: false
+    messageKey: settings.providerTips.rules.B2b
+
+  - id: B3-https-page-insecure-api
+    platform: web
+    kind: warning
+    priority: 10
+    when:
+      pageProtocol: https
+      baseURL:
+        notStartsWithAny:
+          - https://
+          - http://localhost
+          - http://127.0.0.1
+        isNonEmpty: true
+    messageKey: settings.providerTips.rules.B3
+
+  # --- Desktop / Android only ---
+  - id: C1-ollama-default-verified
+    platform: desktop-android
+    kind: verified
+    priority: 40
+    when:
+      provider: ollama
+      baseURL:
+        equals: https://ollama.com
+      model:
+        isNonEmpty: true
+        notEquals: gemini-3-flash-preview
+    messageKey: settings.providerTips.rules.C1
+
+  - id: C2-ollama-v1-compat-verified
+    platform: desktop-android
+    kind: verified
+    priority: 40
+    when:
+      provider: openai-compatible
+      baseURL:
+        equals: https://ollama.com/v1
+    messageKey: settings.providerTips.rules.C2

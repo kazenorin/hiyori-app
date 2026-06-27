@@ -122,6 +122,7 @@
 		},
     "sql:default",
     "sql:allow-execute",
+    "os:default",
     "dialog:allow-save",
     {
       "identifier": "fs:allow-write-file",

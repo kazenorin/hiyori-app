@@ -21,7 +21,7 @@ import { loadLocaleStrings } from '$lib/localization';
 import { ensureAllLocaleStringConfigs } from '$lib/fs/locale-string-loader';
 import { initFileSystem } from '$lib/fs/file-system';
 import { initHttpClient } from '$lib/http/fetch';
-import { checkIsTauri } from '$lib/runtime';
+import { checkIsTauri, detectPlatform } from '$lib/runtime';
 
 let initialized = false;
 let initializing = false;
@@ -47,6 +47,10 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 		} catch {
 			// Rust backend unavailable
 		}
+
+		// Resolve and cache the current platform (web / desktop / android).
+		// Must run after checkIsTauri() so the Tauri cache is populated.
+		await detectPlatform();
 
 		await initHttpClient();
 		await log.info('init', 'Initialized HTTP Client...');
