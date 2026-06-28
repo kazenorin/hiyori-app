@@ -144,7 +144,7 @@ pipeline:
     summarizerFull: 'Generate a complete Act Summary covering all scenes in the transcript.'
     summarizerFallback: 'Update the Act Summary for Scene {{completedScenes}} based on the Player Response.'
     summarizer: 'Update the Act Summary adding information for the previous scene: "Scene {{completedScenes}}: {{sceneTitle}}"'
-    actSummaryIncrementalTemplate: |
+    actSummaryTemplate: |
       ## {{sceneSummariesHeader}}
       ### {{sceneWithNumber}}: {{sceneTitle}}
       {{locationLabel}}: [location of where the scene took place.]

@@ -82,19 +82,28 @@ export function toUserMessages(contents: string[]): MessageBase[] {
 
 // --- Act summary template ---
 
-export function buildActSummaryTemplate(): string {
-	const sceneLabel = sceneWithNumberLabel('{N}');
-	return [
-		sectionFormat(actSummaryHeader(), 1),
-		sectionFormat(sceneSummariesHeader()),
-		sectionFormat(`${sceneLabel}: [Scene title]`, 3),
-		`${locationLabel()}: [location of where the scene took place.]`,
-		`${summaryHeader()}: [summary, max 3 sentences]\n`,
-		sectionFormat(characterSummariesHeader()),
-		'### [Well-known name of the character]',
-		`- ${aliasesLabel()}: [aliases]`,
-		`- ${sceneLabel}: [summary if appeared, max 2 sentences. Optionally append one short, representative quote of dialogue or internal monologue.]`,
-	].join('\n');
+/**
+ * Apply label substitutions to an act-summary template LS-string.
+ * Handles: {{actSummaryHeader}} {{sceneSummariesHeader}} {{characterSummariesHeader}}
+ *          {{sceneWithNumber}} {{locationLabel}} {{summaryHeader}} {{aliasesLabel}}
+ *          {{sceneNumber}} {{sceneTitle}}
+ *
+ * `{{sceneWithNumber}}` is expanded via `sceneWithNumberLabel('{{sceneNumber}}')` so that the
+ * subsequent `{{sceneNumber}}` pass fills the scene number into the localized label.
+ */
+export function substituteActSummaryTemplate(
+	template: string,
+	{ sceneNumber, sceneTitle }: { sceneNumber: string; sceneTitle: string }
+): string {
+	return template
+		.replaceAll('{{actSummaryHeader}}', actSummaryHeader())
+		.replaceAll('{{sceneSummariesHeader}}', sceneSummariesHeader())
+		.replaceAll('{{characterSummariesHeader}}', characterSummariesHeader())
+		.replaceAll('{{sceneWithNumber}}', sceneWithNumberLabel(sceneNumber))
+		.replaceAll('{{locationLabel}}', locationLabel())
+		.replaceAll('{{summaryHeader}}', summaryHeader())
+		.replaceAll('{{aliasesLabel}}', aliasesLabel())
+		.replaceAll('{{sceneTitle}}', sceneTitle);
 }
 
 // --- Shared section builders ---

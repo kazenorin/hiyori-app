@@ -138,7 +138,7 @@ pipeline:
     summarizerFull: '根據文本記錄中的所有場景，生成完整的章節摘要。'
     summarizerFallback: '根據玩家回應，更新場景 {{completedScenes}} 的章節摘要。'
     summarizer: '更新章節摘要，加入上一個場景的資訊: 「場景 {{completedScenes}}: {{sceneTitle}}」'
-    actSummaryIncrementalTemplate: |
+    actSummaryTemplate: |
       ## {{sceneSummariesHeader}}
       ### {{sceneWithNumber}}: {{sceneTitle}}
       {{locationLabel}}: [場景發生的地點]

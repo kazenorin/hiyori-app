@@ -5,10 +5,10 @@ import type { NarrativeVariables } from '../narrative-types';
 import type { AsyncPhaseResults, CompressorResult, PipelineProviderConfigs, PlayerContext, SummarizerResult } from './types';
 import { runNonStreamingPhase } from './phase-executor';
 import {
-	buildActSummaryTemplate,
 	buildSummarizerMessages,
 	buildTranscriptSummarizerMessages,
 	formatActSummaryForCompressor,
+	substituteActSummaryTemplate,
 	toUserMessages,
 } from './message-builder';
 import {
@@ -19,14 +19,11 @@ import {
 	parseProfilesBody,
 	serializeActSummary,
 } from '../act-summary-parser';
-import { actSummaryHeader, summaryHeader } from '$lib/definitions/common-headers';
-import { aliasesLabel, locationLabel, sceneWithNumberLabel } from '$lib/definitions/common-labels';
+import { actSummaryHeader } from '$lib/definitions/common-headers';
 import { goalLabel, relationshipsLabel, stateLabel, voiceLabel } from '$lib/definitions/character-profile-labels';
 import {
-	actSummaryIncrementalTemplate,
+	actSummaryTemplate,
 	characterProfilesHeader,
-	characterSummariesHeader,
-	sceneSummariesHeader,
 	summarizerExtractionPromptTemplate,
 	summarizerFallbackExtractionPromptTemplate,
 } from '$lib/definitions/pipeline-prompts';
@@ -65,8 +62,12 @@ export interface CharacterProfileCompressorInput {
 export async function generateFullSummary(input: SummarizerInput, prompts: SummarizerPrompts): Promise<SummarizerResult> {
 	const { providerConfig, abortSignal } = input;
 
-	const actSummaryTemplate = buildActSummaryTemplate();
-	const summarizerSystemPrompt = prompts.summarizerPrompt.replaceAll('{{actSummaryTemplate}}', actSummaryTemplate);
+	const fullTemplate = `# {{actSummaryHeader}}\n\n${actSummaryTemplate()}`;
+	const actSummaryTemplateProcessed = substituteActSummaryTemplate(fullTemplate, {
+		sceneNumber: '{N}',
+		sceneTitle: '[Scene title]',
+	});
+	const summarizerSystemPrompt = prompts.summarizerPrompt.replaceAll('{{actSummaryTemplate}}', actSummaryTemplateProcessed);
 
 	let summarizerMessages: MessageBase[];
 
@@ -115,16 +116,7 @@ async function generateIncrementalSummary(input: SummarizerInput, prompts: Summa
 
 	const sceneNumber = String(completedScenes);
 	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
-	const processedTemplate = actSummaryIncrementalTemplate()
-		.replace(/{{sceneSummariesHeader}}/g, sceneSummariesHeader())
-		.replace(/{{characterSummariesHeader}}/g, characterSummariesHeader())
-		.replace(/{{sceneWithNumber}}/g, sceneWithNumberLabel('{{sceneNumber}}'))
-		.replace(/{{locationLabel}}/g, locationLabel())
-		.replace(/{{summaryHeader}}/g, summaryHeader())
-		.replace(/{{aliasesLabel}}/g, aliasesLabel())
-		.replaceAll('{{completedScenes}}', sceneNumber)
-		.replaceAll('{{sceneNumber}}', sceneNumber)
-		.replaceAll('{{sceneTitle}}', sceneTitle);
+	const processedTemplate = substituteActSummaryTemplate(actSummaryTemplate(), { sceneNumber, sceneTitle });
 
 	const incrementalSystemPrompt = prompts.summarizerIncrementalPrompt.replaceAll('{{actSummaryTemplate}}', processedTemplate);
 

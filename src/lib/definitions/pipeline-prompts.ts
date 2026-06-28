@@ -69,4 +69,4 @@ export const writerActEndGuidance = (params: { closingSceneRules: string; ending
 export const writerEpilogueExtractionPrompt = (endingType: string) => ls('pipeline.extraction.writer.epilogue', { endingType });
 export const writerGuidanceExtractionPrompt = () => ls('pipeline.extraction.writer.guidanceExtraction');
 export const writerPhaseEventExtractionPrompt = () => ls('pipeline.extraction.writer.phaseEventExtraction');
-export const actSummaryIncrementalTemplate = () => ls('pipeline.extraction.actSummaryIncrementalTemplate');
+export const actSummaryTemplate = () => ls('pipeline.extraction.actSummaryTemplate');
