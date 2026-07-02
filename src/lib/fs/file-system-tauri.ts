@@ -48,7 +48,7 @@ export class TauriFileSystem implements FileSystem {
 		} catch (error) {
 			if (error instanceof Error) {
 				const msg = error.message.toLowerCase();
-				if (msg.includes('not found') || msg.includes('no such file') || msg.includes('does not exist')) {
+				if (msg.includes('not found') || msg.includes('no such file') || msg.includes('does not exist') || msg.includes('cannot find')) {
 					return undefined;
 				}
 			}
