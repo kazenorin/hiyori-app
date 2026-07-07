@@ -1,6 +1,6 @@
 import type { ActPhase, GameDataFields, NarrativeVariables, PhaseName } from '../narrative-types';
 import type { StreamResultMetadata } from '../streaming';
-import type { ActSummary, CharacterProfile } from '../act-summary-parser';
+import type { ActSummary } from '../act-summary-parser';
 import type { ToolSet } from 'ai';
 import type { PhaseMetadata, RetryConfig } from '../chat-stream';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
@@ -49,19 +49,13 @@ export interface SummarizerResult {
 }
 
 export interface CompressorResult {
-	actSummary: ActSummary;
-	serializedSummary: string;
 	metadata: StreamResultMetadata;
-	characterProfiles: CharacterProfile[];
-	characterProfileLastScene: number;
 }
 
 export interface AsyncPhaseResults {
 	actSummary?: string;
 	summarizerMetadata?: StreamResultMetadata;
 	compressorMetadata?: StreamResultMetadata;
-	characterProfiles?: CharacterProfile[];
-	characterProfileLastScene?: number;
 }
 
 /** Player response context. Both fields are present together or both absent. */
@@ -104,6 +98,7 @@ export interface CommonPipelineInput {
 	worldContent: string;
 	actPlot: string;
 	actSummary: string;
+	characterProfiles: string[];
 	directorNotes: string;
 	previousNarrativeVariables: NarrativeVariables | undefined;
 	previousActSummaries: { actNumber: number; summary: string }[];
@@ -131,6 +126,7 @@ export interface PreEditorContext {
 	actPlot: string;
 	actPhase?: ActPhase | null;
 	actSummary: string;
+	characterProfiles: string[];
 	previousScenePlot: string | undefined;
 	previousNarrativeBody: string | undefined;
 	completedScenes: number;
@@ -146,6 +142,7 @@ export interface PostEditorContext {
 	actPlot: string;
 	actPhase?: ActPhase | null;
 	actSummary: string;
+	characterProfiles: string[];
 	previousScenePlot: string | undefined;
 	previousNarrativeBody: string | undefined;
 	completedScenes: number;

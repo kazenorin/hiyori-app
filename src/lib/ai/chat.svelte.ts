@@ -61,6 +61,8 @@ import { otherDirectorNotesHeader, sectionFormat } from '$lib/definitions/common
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { loadLocaleStrings, ls } from '$lib/localization';
 import { ensureWorldFile } from '$lib/ai/world-generator';
+import { getLatestProfilesByActLine } from '$lib/db/character-profiles';
+import { formatCharacterProfilesSection } from '$lib/definitions/pipeline-sections';
 
 // Re-exported for `+page.svelte` only
 export type { UIMessage };
@@ -352,6 +354,12 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 			}
 		}
 
+		const characterProfiles = formatCharacterProfilesSection(
+			await getLatestProfilesByActLine(actLine.id),
+			settings.characterProfileImportanceThreshold,
+			settings.characterProfileMaxIncluded
+		);
+
 		const pipelineCallbacks = createPipelineCallbacks({
 			getCurrentMessage,
 			setCurrentMessage,
@@ -367,6 +375,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 			worldContent,
 			actPlot,
 			actSummary,
+			characterProfiles,
 			previousNarrativeVariables,
 			previousScenePlot,
 			previousActSummaries,
@@ -478,6 +487,12 @@ export async function runEpilogueFlow(actLineId: string, rewriteDirectorNote?: s
 		const previousNarrativeVariables = getPreviousNarrativeMessage(messages);
 		const targetWordCount = parseActPlotTargetWordCount(actPlot) ?? settings.targetWordCount;
 
+		const characterProfiles = formatCharacterProfilesSection(
+			await getLatestProfilesByActLine(actLine.id),
+			settings.characterProfileImportanceThreshold,
+			settings.characterProfileMaxIncluded
+		);
+
 		const pipelineCallbacks = createPipelineCallbacks({
 			getCurrentMessage,
 			setCurrentMessage,
@@ -493,6 +508,7 @@ export async function runEpilogueFlow(actLineId: string, rewriteDirectorNote?: s
 			worldContent,
 			actPlot,
 			actSummary,
+			characterProfiles,
 			previousNarrativeVariables,
 			previousActSummaries: [],
 			endingType,
@@ -673,6 +689,7 @@ async function regenerateGameData(
 		actPlot,
 		actPhase: currentActPhase,
 		actSummary: _getLatestActSummary(messages),
+		characterProfiles: [], // not fetched for game-data regeneration
 		previousScenePlot,
 		previousNarrativeBody: assistantMsg.variables?.narrativeBody ?? undefined,
 		completedScenes: previousSceneNumber,

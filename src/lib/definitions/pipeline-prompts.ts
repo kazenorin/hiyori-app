@@ -15,9 +15,13 @@ export const stateLabel = () => ls('pipeline.labels.state');
 export const goalLabel = () => ls('pipeline.labels.goal');
 export const relationshipsLabel = () => ls('pipeline.labels.relationships');
 export const voiceLabel = () => ls('pipeline.labels.voice');
+export const importanceLabel = () => ls('pipeline.labels.importance');
+export const importanceLevelLabel = (level: 1 | 2 | 3 | 4) => ls(`pipeline.labels.importanceLevels.${level}`);
 export const sceneCountLabel = (n: number) =>
 	n === 1 ? ls('pipeline.labels.sceneCountSingular') : ls('pipeline.labels.sceneCountPlural', { count: n });
-export const characterSummariesSinceSceneLabel = (sceneNumber: number) => ls('pipeline.labels.characterSummaries', { sceneNumber });
+export const lastSeenLabel = (sceneNumber: number) => ls('pipeline.labels.lastSeen', { sceneNumber });
+export const noDescriptionLabel = () => ls('pipeline.labels.noDescription');
+export const sceneDetailsLabel = () => ls('pipeline.labels.sceneDetails');
 
 /** Localized display name for an act phase (e.g., 'rising-action' → 'Rising Action'). */
 export const getLocalizedActPhase = (phase: ActPhase): string => ls(`pipeline.labels.actPhases.${ACT_PHASE_LOCALE_KEYS[phase]}`);

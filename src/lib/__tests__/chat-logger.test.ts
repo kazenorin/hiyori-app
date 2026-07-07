@@ -86,6 +86,8 @@ function defaultSettings() {
 		directorModeEnabled: false,
 		targetWordCount: 400,
 		characterProfileCompressorInterval: 5,
+		characterProfileImportanceThreshold: 2,
+		characterProfileMaxIncluded: 5,
 		defaultPlotMode: 'phaseEvent' as const,
 		reevaluationFrequency: 10,
 		ttsEnabled: false,

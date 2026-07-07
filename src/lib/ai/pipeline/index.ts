@@ -176,6 +176,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		actPlot: input.actPlot,
 		actPhase: story.actLine.currentActPhase,
 		actSummary: input.actSummary,
+		characterProfiles: input.characterProfiles,
 		previousScenePlot,
 		previousNarrativeBody,
 		completedScenes,

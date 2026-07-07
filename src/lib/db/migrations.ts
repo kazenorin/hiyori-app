@@ -104,6 +104,24 @@ const migrationStatements: string[][] = [
 		`CREATE INDEX IF NOT EXISTS idx_act_line_events_line ON act_line_events(act_line_id)`,
 		`CREATE INDEX IF NOT EXISTS idx_act_line_events_message ON act_line_events(message_id)`,
 	],
+	[
+		`CREATE TABLE IF NOT EXISTS character_profiles (
+		id TEXT PRIMARY KEY,
+		act_line_id TEXT NOT NULL,
+		scene_number INTEGER,
+		canonical_name TEXT NOT NULL,
+		preferred_name TEXT NOT NULL,
+		aliases TEXT NOT NULL DEFAULT '[]',
+		profile TEXT NOT NULL DEFAULT '',
+		scene_details TEXT NOT NULL DEFAULT '',
+		importance INTEGER NOT NULL DEFAULT 4,
+		created_at INTEGER NOT NULL,
+		updated_at INTEGER NOT NULL
+	)`,
+		`CREATE INDEX IF NOT EXISTS idx_character_profiles_actline_scene ON character_profiles(act_line_id, scene_number DESC)`,
+		`CREATE INDEX IF NOT EXISTS idx_character_profiles_actline_canonical_scene ON character_profiles(act_line_id, canonical_name, scene_number DESC)`,
+		`CREATE INDEX IF NOT EXISTS idx_character_profiles_actline_preferred_scene ON character_profiles(act_line_id, preferred_name, scene_number DESC)`,
+	],
 ];
 
 interface ActLineMetaMigrateRow {

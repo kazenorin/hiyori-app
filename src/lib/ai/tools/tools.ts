@@ -5,6 +5,8 @@ import { buildSceneTools } from '$lib/ai/tools/read-scene';
 import { buildRiskTools } from '$lib/ai/tools/evaluate-risk';
 import { allowAdvancePhaseTools, buildAdvancePhaseTools } from '$lib/ai/tools/advance-phase';
 import { allowEndActTools, buildEndActTools } from '$lib/ai/tools/end-act';
+import { buildIntroduceCharacterTools } from '$lib/ai/tools/introduce-character';
+import { buildCharacterDetailsTools } from '$lib/ai/tools/character-details';
 import { getStory, type Story } from '$lib/db/stories';
 import type { ActLineContext, AssistantContext } from '$lib/ai/pipeline/types';
 import { isActLineEnded } from '$lib/db/act-lines';
@@ -21,12 +23,22 @@ export interface ToolContext {
 /** Maps each pipeline phase to the tool names it is allowed to use. */
 export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 	SUMMARIZER: [],
-	PLOT_PLANNER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory'],
-	WRITER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory', 'evaluate-risk', 'advance-phase', 'end-act'],
-	REVIEWER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory'],
+	PLOT_PLANNER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory', 'character-details'],
+	WRITER: [
+		'read-scene',
+		'read-distant-scene',
+		'query-memories',
+		'query-inventory',
+		'evaluate-risk',
+		'advance-phase',
+		'end-act',
+		'introduce-character',
+		'character-details',
+	],
+	REVIEWER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory', 'character-details'],
 	EDITOR: [],
 	TEMPLATE_FITTER: [],
-	GAME_MASTER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory'],
+	GAME_MASTER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory', 'character-details'],
 	CHARACTER_PROFILE_COMPRESSOR: [],
 };
 
@@ -61,6 +73,8 @@ export async function buildTools(storyId: string, actLine: ActLineContext, assis
 		...buildActPlotTools(ctx),
 		...buildSceneTools(ctx, includeDistantScene),
 		...buildRiskTools(ctx),
+		...buildIntroduceCharacterTools(ctx),
+		...buildCharacterDetailsTools(ctx),
 	};
 
 	const currentPhase: ActPhase | null = actLine.currentActPhase;

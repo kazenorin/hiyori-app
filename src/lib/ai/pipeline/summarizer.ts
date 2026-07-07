@@ -20,7 +20,7 @@ import {
 	serializeActSummary,
 } from '../act-summary-parser';
 import { actSummaryHeader } from '$lib/definitions/common-headers';
-import { goalLabel, relationshipsLabel, stateLabel, voiceLabel } from '$lib/definitions/character-profile-labels';
+import { goalLabel, importanceLabel, relationshipsLabel, stateLabel, voiceLabel } from '$lib/definitions/character-profile-labels';
 import {
 	actSummaryTemplate,
 	characterProfilesHeader,
@@ -31,6 +31,14 @@ import { isAbortLikeError } from '$lib/utils/async';
 import { log } from '$lib/logging/logger';
 import { runMemoryExtractionPipeline } from '$lib/features/memory/memory-extraction-pipeline';
 import { type LoadedPrompts } from './prompt-loader';
+import {
+	insertCharacterProfile,
+	getMaxSceneNumberForActLine,
+	getLatestProfileByAlias,
+	toCanonicalName,
+	ensurePreferredInAliases,
+	type CharacterImportance,
+} from '$lib/db/character-profiles';
 
 // --- Input interfaces ---
 
@@ -52,6 +60,7 @@ export interface SummarizerPrompts {
 
 export interface CharacterProfileCompressorInput {
 	actSummary: string;
+	actLineId: string;
 	completedScenes: number;
 	providerConfig: ProviderConfig | undefined;
 	abortSignal: AbortSignal;
@@ -179,8 +188,7 @@ export async function generateCharacterProfiles(
 	const interval = settings.characterProfileCompressorInterval;
 	if (interval <= 0) return null;
 
-	const existingActSummary = parseActSummary(compressorInput.actSummary);
-	const lastScene = existingActSummary.characterProfileLastScene ?? 0;
+	const lastScene = (await getMaxSceneNumberForActLine(compressorInput.actLineId)) ?? 0;
 
 	if (completedScenes - lastScene < interval) return null;
 
@@ -190,7 +198,8 @@ export async function generateCharacterProfiles(
 		.replaceAll('{{stateLabel}}', stateLabel())
 		.replaceAll('{{goalLabel}}', goalLabel())
 		.replaceAll('{{relationshipsLabel}}', relationshipsLabel())
-		.replaceAll('{{voiceLabel}}', voiceLabel());
+		.replaceAll('{{voiceLabel}}', voiceLabel())
+		.replaceAll('{{importanceLabel}}', importanceLabel());
 
 	const messages = toUserMessages(formatActSummaryForCompressor(completedScenes, newActSummary));
 
@@ -205,18 +214,42 @@ export async function generateCharacterProfiles(
 	try {
 		const profilesResult = parseProfilesBody(rawProfiles);
 		if (profilesResult.profiles.length === 0) return null;
-		const updatedFullSummary = { ...newActSummary, characterProfiles: profilesResult.profiles, characterProfileLastScene: completedScenes };
-		return {
-			characterProfiles: profilesResult.profiles,
-			characterProfileLastScene: completedScenes,
-			metadata,
-			actSummary: updatedFullSummary,
-			serializedSummary: serializeActSummary(updatedFullSummary),
-		};
+
+		for (const profile of profilesResult.profiles) {
+			const importance: CharacterImportance = resolveImportance(profile.importance);
+			const existing = await getLatestProfileByAlias(compressorInput.actLineId, profile.characterName);
+			const canonicalName = existing?.canonicalName ?? toCanonicalName(profile.characterName);
+			const aliases = ensurePreferredInAliases(profile.characterName, existing?.aliases ?? []);
+			await insertCharacterProfile({
+				id: crypto.randomUUID(),
+				actLineId: compressorInput.actLineId,
+				sceneNumber: completedScenes,
+				canonicalName,
+				preferredName: profile.characterName,
+				aliases,
+				profile: [profile.state, profile.goal, profile.relationships, profile.voice].filter(Boolean).join('\n\n'),
+				sceneDetails: serializeSceneDetails(newActSummary, profile.characterName),
+				importance,
+			});
+		}
+
+		return { metadata };
 	} catch (err) {
 		await log.warn('pipeline', `Character profile compressor parse failed: ${err}`);
 		return null;
 	}
+}
+
+function resolveImportance(parsed: number | null): CharacterImportance {
+	if (parsed !== null && parsed >= 1 && parsed <= 4) return parsed as CharacterImportance;
+	return 4;
+}
+
+function serializeSceneDetails(actSummary: ActSummary, characterName: string): string {
+	const character = actSummary.characters.find((c) => c.characterName === characterName || c.aliases.includes(characterName));
+	if (!character || character.sceneEntries.length === 0) return '';
+	const lines = character.sceneEntries.map((e) => `- ${e.sceneNumber}: ${e.summary}`);
+	return lines.join('\n');
 }
 
 // --- Async phases (Summarizer → Compressor → Memory) ---
@@ -275,9 +308,10 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 
 		let compressorResult: CompressorResult | null = null;
 		try {
-			if (result.actSummary) {
+			if (result.actSummary && actLineId) {
 				const compressorInput: CharacterProfileCompressorInput = {
 					actSummary,
+					actLineId,
 					completedScenes,
 					providerConfig: providerConfigs.summarizer,
 					abortSignal,
@@ -292,7 +326,7 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 			}
 		}
 
-		const serializedSummary = compressorResult?.serializedSummary ?? result?.serializedSummary;
+		const serializedSummary = result?.serializedSummary;
 		const playerMessageId = player.playerMessageId;
 		if (previousNarrativeBody && actLineId && playerMessageId && storyId && isMemoryAvailable()) {
 			try {
@@ -311,8 +345,6 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 			summarizerMetadata: result.metadata,
 			...(compressorResult
 				? {
-						characterProfiles: compressorResult.characterProfiles,
-						characterProfileLastScene: compressorResult.characterProfileLastScene,
 						compressorMetadata: compressorResult.metadata,
 					}
 				: {}),

@@ -14,7 +14,7 @@ const mockStateLabel = vi.fn(() => 'State');
 const mockGoalLabel = vi.fn(() => 'Goal');
 const mockRelationshipsLabel = vi.fn(() => 'Relationships');
 const mockVoiceLabel = vi.fn(() => 'Voice');
-const mockCharacterSummariesSinceSceneLabel = vi.fn((n: number) => `Summaries of each character for recent Scenes since Scene ${n}.`);
+const mockImportanceLabel = vi.fn(() => 'Importance');
 vi.mock('$lib/definitions/common-headers', () => ({
 	actSummaryHeader: () => mockActSummaryHeader(),
 	turnOfEventsHeader: () => mockTurnOfEventsHeader(),
@@ -34,13 +34,13 @@ vi.mock('$lib/definitions/character-profile-labels', () => ({
 	goalLabel: () => mockGoalLabel(),
 	relationshipsLabel: () => mockRelationshipsLabel(),
 	voiceLabel: () => mockVoiceLabel(),
+	importanceLabel: () => mockImportanceLabel(),
 }));
 
 vi.mock('$lib/definitions/pipeline-prompts', () => ({
 	sceneSummariesHeader: () => mockSceneSummariesHeader(),
 	characterSummariesHeader: () => mockCharacterSummariesHeader(),
 	characterProfilesHeader: () => mockCharacterProfilesHeader(),
-	characterSummariesSinceSceneLabel: (n: number) => mockCharacterSummariesSinceSceneLabel(n),
 }));
 
 vi.mock('$lib/logging/logger', () => ({
@@ -210,10 +210,7 @@ describe('serializeActSummary', () => {
 		expect(result).toContain('Location: A coastal village');
 		expect(result).toContain('Summary: The hero arrives.');
 		expect(result).toContain('### Scene 2: The Tavern');
-		expect(result).toContain('## Character Summaries');
-		expect(result).toContain('### Elena');
-		expect(result).toContain('- Aliases: [Elena, The Shadow]');
-		expect(result).toContain('- Scene 1: Elena watches.');
+		expect(result).not.toContain('## Character Summaries');
 	});
 
 	it('serializes an empty act summary', () => {
@@ -231,17 +228,16 @@ describe('serializeActSummary', () => {
 		const result = serializeActSummary(data);
 		expect(result).toContain('# Act Summary');
 		expect(result).toContain('## Scene Summaries');
-		expect(result).toContain('## Character Summaries');
+		expect(result).not.toContain('## Character Summaries');
 	});
 
-	it('roundtrips: parse → serialize → parse produces identical data', () => {
+	it('roundtrips: parse → serialize → parse produces identical scenes', () => {
 		const original = parseActSummary(SAMPLE_ACT_SUMMARY);
 		const serialized = serializeActSummary(original);
 		const reparsed = parseActSummary(serialized);
 
 		expect(reparsed.completedScenes).toBe(0);
 		expect(reparsed.scenes).toHaveLength(original.scenes.length);
-		expect(reparsed.characters).toHaveLength(original.characters.length);
 
 		for (let i = 0; i < original.scenes.length; i++) {
 			expect(reparsed.scenes[i].sceneNumber).toBe(original.scenes[i].sceneNumber);
@@ -250,15 +246,8 @@ describe('serializeActSummary', () => {
 			expect(reparsed.scenes[i].summary).toBe(original.scenes[i].summary);
 		}
 
-		for (let i = 0; i < original.characters.length; i++) {
-			expect(reparsed.characters[i].characterName).toBe(original.characters[i].characterName);
-			expect(reparsed.characters[i].aliases).toEqual(original.characters[i].aliases);
-			expect(reparsed.characters[i].sceneEntries).toHaveLength(original.characters[i].sceneEntries.length);
-			for (let j = 0; j < original.characters[i].sceneEntries.length; j++) {
-				expect(reparsed.characters[i].sceneEntries[j].sceneNumber).toBe(original.characters[i].sceneEntries[j].sceneNumber);
-				expect(reparsed.characters[i].sceneEntries[j].summary).toBe(original.characters[i].sceneEntries[j].summary);
-			}
-		}
+		// Character Summaries section is no longer serialized (subsumed by DB scene_details)
+		expect(reparsed.characters).toHaveLength(0);
 	});
 	it('serializes turnOfEvents section when present', () => {
 		const data: ActSummary = {
@@ -287,10 +276,8 @@ describe('serializeActSummary', () => {
 		expect(result).toContain('## Turn Of Events');
 		expect(result).toContain('### Scene 3: The Revelation');
 		expect(result).toContain('Shift the story toward uncovering the conspiracy.');
-		// Turn Of Events should appear after Character Summaries
-		const toeIdx = result.indexOf('## Turn Of Events');
-		const charIdx = result.indexOf('## Character Summaries');
-		expect(toeIdx).toBeGreaterThan(charIdx);
+		// Character Summaries section is no longer emitted
+		expect(result).not.toContain('## Character Summaries');
 	});
 });
 
@@ -531,7 +518,8 @@ Summary: The hero discovers a hidden path.
 		const reparsed = parseActSummary(serialized);
 		expect(reparsed.completedScenes).toBe(0);
 		expect(reparsed.scenes).toHaveLength(3);
-		expect(reparsed.characters).toHaveLength(3);
+		// Character Summaries no longer serialized
+		expect(reparsed.characters).toHaveLength(0);
 	});
 
 	it('preserves existing turnOfEvents during merge', () => {
@@ -561,7 +549,9 @@ Summary: The hero discovers a hidden path.
 			completedScenes: 5,
 			scenes: [],
 			characters: [],
-			characterProfiles: [{ characterName: 'Elena', state: 'Wounded', goal: 'Escape', relationships: 'Distrusts Voss', voice: 'Quiet' }],
+			characterProfiles: [
+				{ characterName: 'Elena', state: 'Wounded', goal: 'Escape', relationships: 'Distrusts Voss', voice: 'Quiet', importance: null },
+			],
 			characterProfileLastScene: 5,
 			turnOfEvents: null,
 			turnOfEventsSceneNumber: null,
@@ -602,6 +592,7 @@ describe('parseProfilesBody', () => {
 			goal: 'Escape the castle',
 			relationships: 'Distrusts Captain Voss, allied with the hero',
 			voice: 'Quiet and measured',
+			importance: null,
 		});
 		expect(result.profiles[1]).toEqual({
 			characterName: 'Captain Voss',
@@ -609,7 +600,29 @@ describe('parseProfilesBody', () => {
 			goal: 'Prevent the escape',
 			relationships: 'Hostile toward Elena',
 			voice: 'Gruff and commanding',
+			importance: null,
 		});
+	});
+
+	it('parses importance when present', () => {
+		const body = `### Elena
+- State: Determined
+- Goal: Escape
+- Relationships: Allied with hero
+- Voice: Quiet
+- Importance: 2
+
+### Voss
+- State: Desperate
+- Goal: Survive
+- Relationships: Hostile
+- Voice: Gruff
+- Importance: 4`;
+
+		const result = parseProfilesBody(body);
+		expect(result.profiles).toHaveLength(2);
+		expect(result.profiles[0].importance).toBe(2);
+		expect(result.profiles[1].importance).toBe(4);
 	});
 
 	it('parses profiles without Last update metadata', () => {
@@ -654,7 +667,7 @@ describe('pruneCharacterScenes', () => {
 					],
 				},
 			],
-			characterProfiles: [{ characterName: 'Elena', state: 'S', goal: 'G', relationships: 'R', voice: 'V' }],
+			characterProfiles: [{ characterName: 'Elena', state: 'S', goal: 'G', relationships: 'R', voice: 'V', importance: null }],
 			characterProfileLastScene: 5,
 			turnOfEvents: null,
 			turnOfEventsSceneNumber: null,
@@ -751,8 +764,8 @@ describe('compressed act summary (caller-side assembly)', () => {
 			},
 		],
 		characterProfiles: [
-			{ characterName: 'Elena', state: 'Determined', goal: 'Escape', relationships: 'Allied with hero', voice: 'Quiet' },
-			{ characterName: 'Voss', state: 'Desperate', goal: 'Survive', relationships: 'Hostile', voice: 'Gruff' },
+			{ characterName: 'Elena', state: 'Determined', goal: 'Escape', relationships: 'Allied with hero', voice: 'Quiet', importance: null },
+			{ characterName: 'Voss', state: 'Desperate', goal: 'Survive', relationships: 'Hostile', voice: 'Gruff', importance: null },
 		],
 		characterProfileLastScene: 5,
 		turnOfEvents: null,
@@ -762,19 +775,18 @@ describe('compressed act summary (caller-side assembly)', () => {
 
 	it('prunes character scene entries at or before characterProfileLastScene', () => {
 		const pruned = pruneCharacterScenes(dataWithProfiles);
-		const result = serializeActSummary(pruned);
 
 		// Elena: entries at 1, 3, 5 are pruned; 6 and 8 remain
-		expect(result).not.toContain('Scene 1: Elena watches.');
-		expect(result).not.toContain('Scene 3: Elena investigates.');
-		expect(result).not.toContain('Scene 5: Elena guides the hero.');
-		expect(result).toContain('Scene 6: Elena fights.');
-		expect(result).toContain('Scene 8: Elena escapes.');
+		const elena = pruned.characters[0];
+		expect(elena.sceneEntries).toHaveLength(2);
+		expect(elena.sceneEntries[0].sceneNumber).toBe(6);
+		expect(elena.sceneEntries[1].sceneNumber).toBe(8);
 
 		// Voss: entry at 5 is pruned; 7 and 8 remain
-		expect(result).not.toContain('Scene 5: Voss attacks.');
-		expect(result).toContain('Scene 7: Voss retreats.');
-		expect(result).toContain('Scene 8: Voss surrenders.');
+		const voss = pruned.characters[1];
+		expect(voss.sceneEntries).toHaveLength(2);
+		expect(voss.sceneEntries[0].sceneNumber).toBe(7);
+		expect(voss.sceneEntries[1].sceneNumber).toBe(8);
 	});
 
 	it('keeps all scene summaries unpruned', () => {
@@ -793,17 +805,16 @@ describe('compressed act summary (caller-side assembly)', () => {
 		expect(result).toContain('## Character Profiles');
 		expect(result).toContain('Last update: Scene 8');
 		expect(result).toContain('Last update: Scene 5');
-		expect(result).toContain('Summaries of each character for recent Scenes since Scene 5.');
+		expect(result).not.toContain('Summaries of each character for recent Scenes');
 	});
 
 	it('serializes without profiles when caller clears them', () => {
 		const withoutProfiles = { ...dataWithProfiles, characterProfiles: [], characterProfileLastScene: null };
 		const result = serializeActSummary(withoutProfiles);
 
-		// No pruning happened (lastScene is null), so all entries remain
-		expect(result).toContain('Scene 1: Elena watches.');
-		expect(result).toContain('Scene 5: Elena guides the hero.');
 		expect(result).not.toContain('Character Profiles');
+		expect(result).not.toContain('## Character Summaries');
+		expect(result).toContain('### Scene 1: The Arrival');
 	});
 
 	it('roundtrips pruned output through parseActSummary', () => {
@@ -812,8 +823,10 @@ describe('compressed act summary (caller-side assembly)', () => {
 		const reparsed = parseActSummary(serialized);
 
 		expect(reparsed.scenes).toHaveLength(3);
-		// Characters should only have pruned entries
-		const elena = reparsed.characters.find((c) => c.characterName === 'Elena');
+		// Characters are no longer serialized (subsumed by DB scene_details)
+		expect(reparsed.characters).toHaveLength(0);
+		// Pruned entries are verified in-memory
+		const elena = pruned.characters.find((c) => c.characterName === 'Elena');
 		expect(elena).toBeDefined();
 		expect(elena!.sceneEntries).toHaveLength(2);
 	});

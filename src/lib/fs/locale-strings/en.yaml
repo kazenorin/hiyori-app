@@ -44,10 +44,14 @@ common:
     otherDirectorNotes: Other Director's Notes
     actPhase: Act Phase
     storySoFar: Story So Far
+    characterProfiles: Character Profiles
     targetWordCountPerScene: Target Word Count per Scene
   descriptions:
     interviewTranscript: The following is an interview exchange about the story and premises.
     directorNotes: "The following notes represent the player's explicit creative direction. They override all other context including Act Plot and Act Summary. Honor them with the highest priority."
+    characterProfiles: 'Character profiles distributed the following way: full-body profiles have been inlined for important characters. Other characters are represented as a one-sentence reference (Name: importance — short description) and can be retrieved via the `character-details` tool.'
+    characterProfilesInline: 'The profiles below are ALREADY in your context. Do NOT call the `character-details` tool for these characters.'
+    characterProfilesOther: 'Other Characters'
     directorRewriteRequest: |
       This is a rewrite request for Scene {{sceneNumber}}:
       ### Original Narrative Body for Scene {{sceneNumber}}:
@@ -182,9 +186,17 @@ pipeline:
     goal: Goal
     relationships: Relationships
     voice: Voice
+    importance: Importance
+    importanceLevels:
+      1: Protagonist
+      2: Main
+      3: Supporting
+      4: Minor
     sceneCountSingular: '1 scene'
     sceneCountPlural: '{{count}} scenes'
-    characterSummaries: 'Summaries of each character for recent Scenes since Scene {{sceneNumber}}.'
+    sceneDetails: 'Scene Details'
+    lastSeen: 'last seen: scene {{sceneNumber}}'
+    noDescription: 'No description available.'
     actPhases:
       introduction: Introduction
       risingAction: Rising Action
@@ -508,6 +520,34 @@ tools:
       Use this to understand the planned narrative arc and guide the story accordingly.
     messages:
       noActPlot: 'No act plot has been generated for this act yet.'
+  introduceCharacter:
+    description: >
+      Introduce a new character by creating their baseline profile in the database.
+      Call this whenever a NEW character without an existing profile enters the story.
+      Before calling, ensure the character is not already known under their preferred name or any alias — the tool will reject duplicates.
+    parameters:
+      preferredName: "The character's primary name for this act line. Placeholder names such as 'Unknown' are not considered names."
+      aliases: "Additional names the character is known by. Placeholder names such as 'Unknown' are not considered aliases."
+      profile: 'Markdown body covering state, goal, relationships, and voice'
+      importance: '1=Protagonist, 2=Main, 3=Supporting, 4=Minor'
+      oneLineDescription: 'One-sentence description of the character'
+    messages:
+      exists: 'A character already exists with that name or alias. Use the `character-details` tool to retrieve the existing profile.'
+  characterDetails:
+    description: >
+      Retrieve the latest profile for a character by any of their known names or aliases.
+      Use this for characters whose full profile is NOT already inlined in your context (e.g. supporting and minor characters).
+      Do NOT call this for characters whose full profile is already present above.
+    parameters:
+      name: 'Any known name or alias of the character'
+      includeSceneDetails: 'If true (default), include per-scene detail. If false, return the compressed profile only.'
+    messages:
+      notFound: 'No character profile found for that name in this act line.'
+    output:
+      importance: 'Importance: {{importance}}'
+      aliases: 'Aliases: {{aliases}}'
+      lastUpdated: 'Last updated: Scene {{sceneNumber}}'
+      sceneDetails: 'Scene Details'
   advancePhase:
     description: >
       Advance the story to the next narrative phase (e.g., {{introduction}} → {{risingAction}} → {{climax}} → {{fallingAction}} → {{resolution}}).

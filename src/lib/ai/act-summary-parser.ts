@@ -1,22 +1,8 @@
-import {actSummaryHeader, turnOfEventsHeader, summaryHeader, sectionFormat} from '$lib/definitions/common-headers';
-import {
-	sceneWithNumberLabel,
-	locationLabel,
-	aliasesLabel,
-	lastUpdateLabel
-} from '$lib/definitions/common-labels';
-import {
-	stateLabel,
-	goalLabel,
-	relationshipsLabel,
-	voiceLabel
-} from '$lib/definitions/character-profile-labels';
-import {
-	sceneSummariesHeader,
-	characterSummariesHeader,
-	characterProfilesHeader,
-	characterSummariesSinceSceneLabel
-} from '$lib/definitions/pipeline-prompts';
+import { actSummaryHeader, turnOfEventsHeader, summaryHeader, sectionFormat } from '$lib/definitions/common-headers';
+import { sceneWithNumberLabel, locationLabel, aliasesLabel, lastUpdateLabel } from '$lib/definitions/common-labels';
+import { stateLabel, goalLabel, relationshipsLabel, voiceLabel, importanceLabel } from '$lib/definitions/character-profile-labels';
+import type { CharacterImportance } from '$lib/db/character-profiles';
+import { sceneSummariesHeader, characterSummariesHeader, characterProfilesHeader } from '$lib/definitions/pipeline-prompts';
 
 // === Types ===
 
@@ -49,6 +35,7 @@ export interface CharacterProfile {
 	goal: string;
 	relationships: string;
 	voice: string;
+	importance: number | null;
 }
 
 export interface ActSummary {
@@ -74,7 +61,7 @@ function escapeRegex(str: string): string {
 	return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-import {stripCodeFences} from '$lib/utils/strings';
+import { stripCodeFences } from '$lib/utils/strings';
 
 function stripListMarker(text: string): string {
 	return text.replace(/^[-*]\s+/, '');
@@ -138,8 +125,8 @@ function parseScenesBody(body: string): SceneSummary[] {
 			const headerText = h3Match[1];
 			const sceneMatch = headerText.match(sceneHeaderRegex);
 			currentScene = sceneMatch
-				? {sceneNumber: parseInt(sceneMatch[1], 10), title: sceneMatch[2].trim(), location: '', summary: ''}
-				: {sceneNumber: 0, title: headerText.trim(), location: '', summary: ''};
+				? { sceneNumber: parseInt(sceneMatch[1], 10), title: sceneMatch[2].trim(), location: '', summary: '' }
+				: { sceneNumber: 0, title: headerText.trim(), location: '', summary: '' };
 			continue;
 		}
 
@@ -182,7 +169,7 @@ function parseCharactersBody(body: string): CharacterSummary[] {
 		const h3Match = trimmed.match(/^###\s+(.+)$/);
 		if (h3Match) {
 			if (currentCharacter) characters.push(currentCharacter);
-			currentCharacter = {characterName: h3Match[1].trim(), aliases: [], sceneEntries: []};
+			currentCharacter = { characterName: h3Match[1].trim(), aliases: [], sceneEntries: [] };
 			continue;
 		}
 
@@ -205,7 +192,7 @@ function parseCharactersBody(body: string): CharacterSummary[] {
 		if (sceneMatch) {
 			currentCharacter.sceneEntries = [
 				...currentCharacter.sceneEntries,
-				{sceneNumber: parseInt(sceneMatch[1], 10), summary: sceneMatch[2].trim()},
+				{ sceneNumber: parseInt(sceneMatch[1], 10), summary: sceneMatch[2].trim() },
 			];
 		}
 	}
@@ -261,7 +248,7 @@ export function parseProfilesBody(rawBody: string): { profiles: CharacterProfile
 		const h3Match = trimmed.match(/^###\s+(.+)$/);
 		if (h3Match) {
 			if (currentProfile) profiles.push(currentProfile);
-			currentProfile = {characterName: h3Match[1].trim(), state: '', goal: '', relationships: '', voice: ''};
+			currentProfile = { characterName: h3Match[1].trim(), state: '', goal: '', relationships: '', voice: '', importance: null };
 			continue;
 		}
 
@@ -302,10 +289,19 @@ export function parseProfilesBody(rawBody: string): { profiles: CharacterProfile
 			currentProfile.voice = voice;
 			continue;
 		}
+
+		const importance = extractLabeledValue(text, importanceLabel());
+		if (importance !== null) {
+			const num = parseInt(importance, 10);
+			if (!isNaN(num) && num >= 1 && num <= 4) {
+				currentProfile.importance = num as CharacterImportance;
+			}
+			continue;
+		}
 	}
 
 	if (currentProfile) profiles.push(currentProfile);
-	return {profiles, lastScene};
+	return { profiles, lastScene };
 }
 
 // === Public API ===
@@ -328,7 +324,7 @@ export function parseCharacterAliases(actSummaryMarkdown: string): CharacterAlia
 		const headerMatch = line.match(/^###\s+(.+)$/);
 		if (headerMatch) {
 			if (currentName !== null) {
-				entries.push({characterName: currentName, aliases: currentAliases});
+				entries.push({ characterName: currentName, aliases: currentAliases });
 			}
 			currentName = headerMatch[1].trim();
 			currentAliases = [];
@@ -348,7 +344,7 @@ export function parseCharacterAliases(actSummaryMarkdown: string): CharacterAlia
 	}
 
 	if (currentName !== null) {
-		entries.push({characterName: currentName, aliases: currentAliases});
+		entries.push({ characterName: currentName, aliases: currentAliases });
 	}
 
 	return entries;
@@ -367,14 +363,14 @@ export function parseActSummary(markdown: string): ActSummary {
 	const characters = charactersBody ? parseCharactersBody(charactersBody) : [];
 	const profilesResult = profilesBody
 		? parseProfilesBody(profilesBody)
-		: {profiles: [] as CharacterProfile[], lastScene: null as number | null};
+		: { profiles: [] as CharacterProfile[], lastScene: null as number | null };
 	const toeResult = turnOfEventsBody
 		? parseTurnOfEventsBody(turnOfEventsBody)
 		: {
-			turnOfEvents: null as string | null,
-			turnOfEventsSceneNumber: null as number | null,
-			turnOfEventsSceneTitle: null as string | null,
-		};
+				turnOfEvents: null as string | null,
+				turnOfEventsSceneNumber: null as number | null,
+				turnOfEventsSceneTitle: null as string | null,
+			};
 
 	return {
 		completedScenes: 0,
@@ -421,25 +417,11 @@ export function serializeActSummary(data: ActSummary): string {
 			lines.push(`- ${goalLabel()}: ${profile.goal}`);
 			lines.push(`- ${relationshipsLabel()}: ${profile.relationships}`);
 			lines.push(`- ${voiceLabel()}: ${profile.voice}`);
+			if (profile.importance !== null) {
+				lines.push(`- ${importanceLabel()}: ${profile.importance}`);
+			}
 			lines.push('');
 		}
-	}
-
-	lines.push(sectionFormat(characterSummariesHeader()).trimEnd());
-
-	if (data.characterProfileLastScene != null) {
-		lines.push(characterSummariesSinceSceneLabel(data.characterProfileLastScene));
-	}
-
-	for (const character of data.characters) {
-		lines.push(`### ${character.characterName}`);
-		if (character.aliases.length > 0) {
-			lines.push(`- ${aliasesLabel()}: [${character.aliases.join(', ')}]`);
-		}
-		for (const entry of character.sceneEntries) {
-			lines.push(`- ${sceneWithNumberLabel(entry.sceneNumber)}: ${entry.summary}`);
-		}
-		lines.push('');
 	}
 
 	if (data.turnOfEvents && data.turnOfEvents.trim().length > 0) {
@@ -477,9 +459,7 @@ export function pruneCharacterScenes(data: ActSummary): ActSummary {
 		...data,
 		characters: data.characters.map((character) => ({
 			...character,
-			sceneEntries: character.sceneEntries.filter(
-				(entry) => entry.sceneNumber > data.characterProfileLastScene!
-			),
+			sceneEntries: character.sceneEntries.filter((entry) => entry.sceneNumber > data.characterProfileLastScene!),
 		})),
 	};
 }
@@ -488,8 +468,8 @@ export function mergeActSummary(existing: ActSummary, incremental: IncrementalUp
 	const result: ActSummary = {
 		completedScenes: incremental.completedScenes ?? existing.completedScenes,
 		scenes: incremental.newScene ? [...existing.scenes, incremental.newScene] : [...existing.scenes],
-		characters: [...existing.characters.map((c) => ({...c, aliases: [...c.aliases], sceneEntries: [...c.sceneEntries]}))],
-		characterProfiles: [...existing.characterProfiles.map((p) => ({...p}))],
+		characters: [...existing.characters.map((c) => ({ ...c, aliases: [...c.aliases], sceneEntries: [...c.sceneEntries] }))],
+		characterProfiles: [...existing.characterProfiles.map((p) => ({ ...p }))],
 		characterProfileLastScene: existing.characterProfileLastScene,
 		turnOfEvents: existing.turnOfEvents,
 		turnOfEventsSceneNumber: existing.turnOfEventsSceneNumber,
@@ -513,7 +493,7 @@ export function mergeActSummary(existing: ActSummary, incremental: IncrementalUp
 				sceneEntries: [...existingChar.sceneEntries, ...update.sceneEntries],
 			};
 		} else {
-			result.characters = [...result.characters, {...update, aliases: [...update.aliases], sceneEntries: [...update.sceneEntries]}];
+			result.characters = [...result.characters, { ...update, aliases: [...update.aliases], sceneEntries: [...update.sceneEntries] }];
 		}
 	}
 

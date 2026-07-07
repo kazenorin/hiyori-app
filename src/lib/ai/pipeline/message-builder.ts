@@ -147,6 +147,7 @@ function buildPreEditorSections(ctx: PreEditorContext): string[] {
 	return [
 		SECTION.WORLD_CONTENT + ctx.worldContent,
 		SECTION.ACT_PLOT + ctx.actPlot,
+		...ctx.characterProfiles,
 		...formatActPhaseSection(ctx.actPhase),
 		...formatStorySoFar(ctx.previousActSummaries, ctx.actNumber),
 		...formattedActSummary(ctx.actSummary),
@@ -162,6 +163,7 @@ function buildPreEditorSections(ctx: PreEditorContext): string[] {
 function buildPostEditorSections(ctx: PostEditorContext): string[] {
 	return [
 		SECTION.ACT_PLOT + ctx.actPlot,
+		...ctx.characterProfiles,
 		...formatActPhaseSection(ctx.actPhase),
 		...formatStorySoFar(ctx.previousActSummaries, ctx.actNumber),
 		...formattedActSummary(ctx.actSummary),
@@ -259,6 +261,7 @@ export abstract class AbstractPreEditorContext implements PreEditorContext {
 	actPlot: string;
 	actSummary: string;
 	actNumber: number;
+	characterProfiles: string[];
 	completedScenes: number;
 	directorNotes: string;
 	previousActSummaries: { actNumber: number; summary: string }[];
@@ -273,6 +276,7 @@ export abstract class AbstractPreEditorContext implements PreEditorContext {
 		worldContent,
 		actPlot,
 		actSummary,
+		characterProfiles,
 		completedScenes,
 		directorNotes,
 		previousActSummaries,
@@ -284,6 +288,7 @@ export abstract class AbstractPreEditorContext implements PreEditorContext {
 		this.actPhase = story.actLine.currentActPhase;
 		this.actSummary = actSummary;
 		this.actNumber = story.actLine.actNumber;
+		this.characterProfiles = characterProfiles;
 		this.completedScenes = completedScenes;
 		this.directorNotes = directorNotes;
 		this.previousActSummaries = previousActSummaries;

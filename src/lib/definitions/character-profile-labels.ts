@@ -1,1 +1,1 @@
-export { stateLabel, goalLabel, relationshipsLabel, voiceLabel, upToLabel } from './pipeline-prompts';
+export { stateLabel, goalLabel, relationshipsLabel, voiceLabel, importanceLabel, upToLabel } from './pipeline-prompts';

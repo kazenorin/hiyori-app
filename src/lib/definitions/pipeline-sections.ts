@@ -20,10 +20,12 @@ import {
 	templateHeader,
 	directorNotesHeader,
 	storySoFarHeader,
+	characterProfilesHeader,
 	sectionFormat,
 } from './common-headers';
-import { getLocalizedActPhase } from './pipeline-prompts';
-import { actWithNumberLabel } from '$lib/definitions/common-labels';
+import { getLocalizedActPhase, importanceLevelLabel, lastSeenLabel, noDescriptionLabel, sceneDetailsLabel } from './pipeline-prompts';
+import { actWithNumberLabel, aliasesLabel } from '$lib/definitions/common-labels';
+import type { CharacterProfileEntity } from '$lib/db/character-profiles';
 
 export const interviewTranscriptDescription = () => ls('common.descriptions.interviewTranscript');
 
@@ -70,6 +72,15 @@ export const SECTION = {
 	},
 	get STORY_SO_FAR() {
 		return sectionFormat(storySoFarHeader());
+	},
+	get CHARACTER_PROFILES() {
+		return sectionFormat(characterProfilesHeader()) + ls('common.descriptions.characterProfiles') + '\n\n';
+	},
+	get CHARACTER_PROFILES_INLINE() {
+		return ls('common.descriptions.characterProfilesInline');
+	},
+	get CHARACTER_PROFILES_OTHER() {
+		return ls('common.descriptions.characterProfilesOther');
 	},
 };
 
@@ -126,4 +137,69 @@ export function formatStorySoFar(summaries: { actNumber: number; summary: string
 	if (currentActNumber <= 1 || summaries.length === 0) return [];
 	const items = summaries.map((s) => `**${actWithNumberLabel(s.actNumber)}:** ${s.summary}`).join('\n\n');
 	return [SECTION.STORY_SO_FAR + items];
+}
+
+/**
+ * Format character profiles into an inline section for the writer/reviewer/editor/GM prompts.
+ * Characters with importance ≤ threshold are inlined in full, up to maxIncluded.
+ * Remaining characters get a one-line reference so the LLM can retrieve them via `character-details`.
+ *
+ * Returns ["## Character Profiles\n<description>\n\n<inline>\n\n<one-line refs>"] or [].
+ */
+export function formatCharacterProfilesSection(profiles: CharacterProfileEntity[], threshold: number, maxIncluded: number): string[] {
+	if (profiles.length === 0) return [];
+
+	const sortedByImportance = [...profiles].sort((a, b) => {
+		if (a.importance !== b.importance) return a.importance - b.importance;
+		const aScene = a.sceneNumber ?? -1;
+		const bScene = b.sceneNumber ?? -1;
+		return bScene - aScene;
+	});
+
+	const inline = sortedByImportance.filter((p) => p.importance <= threshold).slice(0, maxIncluded);
+	const inlineIds = new Set(inline.map((p) => p.id));
+	const other = sortedByImportance.filter((p) => !inlineIds.has(p.id));
+
+	const parts: string[] = [SECTION.CHARACTER_PROFILES];
+
+	if (inline.length > 0) {
+		parts.push(SECTION.CHARACTER_PROFILES_INLINE);
+		parts.push('');
+
+		for (const p of inline) {
+			parts.push(`### ${p.preferredName}`);
+			if (p.aliases.length > 0) {
+				parts.push(`- ${aliasesLabel()}: [${p.aliases.join(', ')}]`);
+			}
+			parts.push(`- ${importanceLevelLabel(p.importance)}`);
+			if (p.profile.trim()) {
+				parts.push('');
+				parts.push(p.profile.trim());
+			}
+			if (p.sceneDetails.trim()) {
+				parts.push('');
+				parts.push(`**${sceneDetailsLabel()}**:`);
+				parts.push(p.sceneDetails.trim());
+			}
+			parts.push('');
+		}
+	}
+
+	if (other.length > 0) {
+		parts.push(SECTION.CHARACTER_PROFILES_OTHER);
+		parts.push('');
+		for (const p of other) {
+			const sceneInfo = p.sceneNumber != null ? ` (${lastSeenLabel(p.sceneNumber)})` : '';
+			const oneLine = extractOneLineDescription(p);
+			parts.push(`- ${p.preferredName} [${importanceLevelLabel(p.importance)}]${sceneInfo}: ${oneLine}`);
+		}
+	}
+
+	return [parts.join('\n').trimEnd()];
+}
+
+function extractOneLineDescription(profile: CharacterProfileEntity): string {
+	const firstLine = profile.profile.split('\n').find((l) => l.trim().length > 0);
+	if (firstLine) return firstLine.trim().replace(/^[-*]\s+/, '');
+	return noDescriptionLabel();
 }

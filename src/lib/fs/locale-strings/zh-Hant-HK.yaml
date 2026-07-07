@@ -44,16 +44,20 @@ common:
     otherDirectorNotes: 其他導演備註
     actPhase: 章節階段
     storySoFar: 故事回顧
+    characterProfiles: 角色檔案
     targetWordCountPerScene: 每場景目標字數
   descriptions:
     interviewTranscript: 以下是有關此故事及設定的訪談內容。
     directorNotes: '以下備註代表玩家的明確創作方向。它們凌駕於所有其他脈絡之上，包含章節劇情和章節摘要。請以最高優先順序遵循。'
+    characterProfiles: '角色檔案以下列方式分佈: 重要角色會以完整檔案內嵌；其他角色僅以一句話參考（姓名: 重要性 — 簡短描述），可透過 `character-details` 工具取得。'
+    characterProfilesInline: '以下檔案已在你的脈絡中。請勿對這些角色呼叫 `character-details` 工具。'
+    characterProfilesOther: '其他角色'
     directorRewriteRequest: |
-      這是場景 {{sceneNumber}} 的改寫請求：
-      ### 場景 {{sceneNumber}} 的原始敘事正文：
+      這是場景 {{sceneNumber}} 的改寫請求:
+      ### 場景 {{sceneNumber}} 的原始敘事正文:
       {{originalNarrativeBody}}
 
-      ### 導演的要求：
+      ### 導演的要求:
       {{directorRewriteRequest}}
 
 pipeline:
@@ -62,7 +66,7 @@ pipeline:
     characterSummaries: 角色摘要
     characterProfiles: 角色檔案
   extraction:
-    actShortSummary: '你是一個敘事摘要者。你的任務是將提供的章節摘要濃縮為精確的 3 個簡潔句子，捕捉章節的關的關鍵事件、衝突和結果。專注於發生了什麼以及故事如何改變。以過去式撰寫。在 3 個句子之後，空一行，然後評估章節摘要中列出的角色。僅列出你判斷為重要且可能在未來章節中再次出現的角色，每行格式為：「名字（一句話描述其在此章節中的角色或弧線）」。按重要性由高到低排序。不要列出次要或僅出現一次的角色。僅輸出摘要和角色列表——不添加標籤、標題或評論。'
+    actShortSummary: '你是一個敘事摘要者。你的任務是將提供的章節摘要濃縮為精確的 3 個簡潔句子，捕捉章節的關的關鍵事件、衝突和結果。專注於發生了什麼以及故事如何改變。以過去式撰寫。在 3 個句子之後，空一行，然後評估章節摘要中列出的角色。僅列出你判斷為重要且可能在未來章節中再次出現的角色，每行格式為: 「名字（一句話描述其在此章節中的角色或弧線）」。按重要性由高到低排序。不要列出次要或僅出現一次的角色。僅輸出摘要和角色列表——不添加標籤、標題或評論。'
     actShortSummaryCharacterPrefix: '此章節中的角色'
     aliasFilter: |
       你是一個角色識別器。
@@ -93,7 +97,7 @@ pipeline:
         呼叫 `end-act` 之後，再將收尾場景作為你的敘事輸出撰寫。
         {{closingSceneRules}}
       closingSceneRules: >
-        撰寫收尾場景時，請確保：
+        撰寫收尾場景時，請確保:
           - 使敘事達到與所選結局相符的令人滿意且情感共鳴的結論
           - 解決章節的核心衝突
           - 反映玩家在整個章節中關鍵選擇的後果
@@ -174,9 +178,17 @@ pipeline:
     goal: 目標
     relationships: 關係
     voice: 語氣
+    importance: 重要性
+    importanceLevels:
+      1: 主角
+      2: 主要
+      3: 配角
+      4: 次要
     sceneCountSingular: 1 個場景
     sceneCountPlural: '{{count}} 個場景'
-    characterSummaries: '自場景 {{sceneNumber}} 以來每個角色的近期摘要。'
+    sceneDetails: '場景詳情'
+    lastSeen: '最後出現: 場景 {{sceneNumber}}'
+    noDescription: '無可用描述。'
     actPhases:
       introduction: 鋪陳
       risingAction: 發展
@@ -195,11 +207,11 @@ features:
 
         ## 規則
 
-        - **嚴格遵循原文：** 完全根據提供的文本記錄提取。不得捏造文本中未出現的角色。
-        - **完整性：** 包含每個出現、發言或被提及的具名角色。
-        - **包含被提及角色：** 包含被其他角色提及但未直接出現的角色。
-        - **排除泛稱：** 排除泛稱引用（如「守衛」、「士兵」），除非他們有具體名字。
-        - **評估重要性：** 「重要性」欄位應簡要說明此角色在此章節中扮演的角色。
+        - **嚴格遵循原文: ** 完全根據提供的文本記錄提取。不得捏造文本中未出現的角色。
+        - **完整性: ** 包含每個出現、發言或被提及的具名角色。
+        - **包含被提及角色: ** 包含被其他角色提及但未直接出現的角色。
+        - **排除泛稱: ** 排除泛稱引用（如「守衛」、「士兵」），除非他們有具體名字。
+        - **評估重要性: ** 「重要性」欄位應簡要說明此角色在此章節中扮演的角色。
       prefix: |
         我需要你協助從目前的章節中擷取所有角色。
         {{transcriptStart}}
@@ -243,12 +255,12 @@ features:
 
       ## 規則
 
-      - **嚴格遵循原文：** 完全根據提供的原文建構角色卡。不得捏造原文中未出現或未強烈暗示的細節。
-      - **目標聚焦：** 僅擷取與 {{characterName}} 相關的資訊。不要概述劇情或詳述世界觀，除非這直接解釋了該角色的行為或背景。
-      - **處理未知項：** 若某項具體資訊未明確提及或強烈暗示，請填寫「未知」。
-      - **標記推斷：** 若你根據角色的行為推斷某項特質或動機，請在該項細節前加上 [推斷]。
-      - **簡潔具體：** 使用項目符號和簡短的陳述句。聚焦於可操作的行為線索。
-      - **語聲捕捉：** 在「對話範例」區段中，擷取 2 至 3 句最能展現其獨特詞彙、句式和語調的原話。若該角色沒有對話，請填寫「未提供對話。」
+      - **嚴格遵循原文: ** 完全根據提供的原文建構角色卡。不得捏造原文中未出現或未強烈暗示的細節。
+      - **目標聚焦: ** 僅擷取與 {{characterName}} 相關的資訊。不要概述劇情或詳述世界觀，除非這直接解釋了該角色的行為或背景。
+      - **處理未知項: ** 若某項具體資訊未明確提及或強烈暗示，請填寫「未知」。
+      - **標記推斷: ** 若你根據角色的行為推斷某項特質或動機，請在該項細節前加上 [推斷]。
+      - **簡潔具體: ** 使用項目符號和簡短的陳述句。聚焦於可操作的行為線索。
+      - **語聲捕捉: ** 在「對話範例」區段中，擷取 2 至 3 句最能展現其獨特詞彙、句式和語調的原話。若該角色沒有對話，請填寫「未提供對話。」
     characterCardGeneration: |
       根據聊天記錄中的資訊，按照以下規則生成新的角色卡:
       {{extractionPrompt}}
@@ -284,18 +296,18 @@ features:
 
       ## 指示
 
-      1. **分析輸入：** 檢視世界觀設定（如有提供）、章節文本記錄及章節卡範本。
-      2. **提取事實：** 從文本記錄中識別關鍵事件、角色、衝突、情感弧線與啟示。
-      3. **填寫範本：** 根據提取的資訊填入章節卡範本的每個欄位。
-      4. **標記不確定性：** 在不確定的推論前加上 **推論：**。完全缺乏證據時使用 **未知**。
+      1. **分析輸入: ** 檢視世界觀設定（如有提供）、章節文本記錄及章節卡範本。
+      2. **提取事實: ** 從文本記錄中識別關鍵事件、角色、衝突、情感弧線與啟示。
+      3. **填寫範本: ** 根據提取的資訊填入章節卡範本的每個欄位。
+      4. **標記不確定性: ** 在不確定的推論前加上 **推論: **。完全缺乏證據時使用 **未知**。
 
       ## 規則
 
-      - **嚴格遵循原文：** 完全根據提供的原文提取。不得捏造文本記錄中未出現的事件、角色或互動。
-      - **不重複世界觀：** 除非直接影響本章節，不要重複世界卡已涵蓋的資訊。
-      - **務實取向：** 每個欄位保持簡潔、具體，並對未來的故事生成有實用價值。
-      - **因果關係：** 事件分解著重因果關係，而非單純摘要。
-      - **保留張力：** 保留未解決的張力、待揭露的謎團及升級結構。
+      - **嚴格遵循原文: ** 完全根據提供的原文提取。不得捏造文本記錄中未出現的事件、角色或互動。
+      - **不重複世界觀: ** 除非直接影響本章節，不要重複世界卡已涵蓋的資訊。
+      - **務實取向: ** 每個欄位保持簡潔、具體，並對未來的故事生成有實用價值。
+      - **因果關係: ** 事件分解著重因果關係，而非單純摘要。
+      - **保留張力: ** 保留未解決的張力、待揭露的謎團及升級結構。
 
       ## 輸出格式
 
@@ -323,7 +335,7 @@ features:
       sciFi: 科幻
       urbanFantasy: 都市奇幻
     templateClassifierSystemPrompt: |
-      將以下世界觀描述分類為以下類別 ID 之一：
+      將以下世界觀描述分類為以下類別 ID 之一:
       - high-fantasy
       - modern-slice-of-life
       - sci-fi
@@ -420,7 +432,7 @@ features:
     fromActPrompt: |
       根據上方提供的資訊，更新現有的世界設定文件。
 
-      **規則：**
+      **規則: **
 
       1. 這是**更新**，而非重寫。保留現有結構、標題和已建立的背景設定。僅在已完成章節或訪談中的新資訊引入變更或擴展時，修改相應章節。
       2. 專注於**較不固定、更具變動性的部分**——政治變動、新發現的地點、派系動態的變化、科技或魔法發展。與已建立的設定保持邏輯一致性。
@@ -453,10 +465,10 @@ tools:
     parameters:
       templateId: '所選世界觀模板的 ID'
     messages:
-      success: '已選擇模板：{{templateName}}。你現在可以使用此模板開始構建世界觀。'
+      success: '已選擇模板: {{templateName}}。你現在可以使用此模板開始構建世界觀。'
       errors:
         alreadySelected: '此工作階段已選擇了模板。'
-        invalidTemplateId: '無效的模板 ID。請從以下選擇：high-fantasy、modern-slice-of-life、sci-fi、urban-fantasy。'
+        invalidTemplateId: '無效的模板 ID。請從以下選擇: high-fantasy、modern-slice-of-life、sci-fi、urban-fantasy。'
   evaluateRisk:
     description: >
       透過擲骰來評估帶有風險的行動的結果。風險等級越高，壞結果的機率越大。
@@ -500,6 +512,34 @@ tools:
       使用此工具來了解已規劃的敘事走向，並依此引導故事發展。
     messages:
       noActPlot: '此章節尚未生成章節劇情。'
+  introduceCharacter:
+    description: >
+      透過在資料庫建立基準檔案來引入新角色。
+      當沒有現有檔案的新角色登場時呼叫此工具。
+      呼叫前請確認該角色並非已知名稱或別名下的既存角色 — 工具會拒絕重複項目。
+    parameters:
+      preferredName: '此章節路線中角色的主要名稱。「不明」等的佔位名稱不應當作名稱。'
+      aliases: '角色已知的其他名稱或別名。「不明」等的佔位名稱不應當作名稱或別名。'
+      profile: '涵蓋狀態、目標、關係與語氣的 Markdown 內容'
+      importance: '1=主角, 2=主要角色, 3=配角, 4=次要角色'
+      oneLineDescription: '角色的一句話描述'
+    messages:
+      exists: '此名稱或別名的角色已存在。請使用 `character-details` 工具取得現有檔案。'
+  characterDetails:
+    description: >
+      透過角色的任何已知名稱或別名取得最新檔案。
+      用於完整檔案尚未內嵌至脈絡中的角色（如配角和次要角色）。
+      請勿對完整檔案已顯示於上方的角色呼叫此工具。
+    parameters:
+      name: '角色的任何已知名稱或別名'
+      includeSceneDetails: '若為 true（預設），包含每場景詳情。若為 false，只回傳壓縮檔案。'
+    messages:
+      notFound: '此章節路線中找不到該名稱的角色檔案。'
+    output:
+      importance: '重要性: {{importance}}'
+      aliases: '別名: {{aliases}}'
+      lastUpdated: '最後更新: 場景 {{sceneNumber}}'
+      sceneDetails: '場景詳情'
   advancePhase:
     description: >
       將故事推進至下一個敘事階段 (例如: {{introduction}} → {{risingAction}} → {{climax}} → {{fallingAction}} → {{resolution}}) 。
@@ -516,11 +556,11 @@ tools:
       success: '階段已從 {{current}} 推進至 {{next}}，將於下一回合生效。'
       terminalPhase: '無法再推進——故事已達結局階段。'
       phaseMismatch:
-        current: '階段不符：故事目前處於 {{actual}}，而非 {{provided}}。階段未推進。'
-        next: '階段不符：故事目前處於 {{actual}}，下一個階段為 {{expected}}，而非 {{provided}}。階段未推進。'
+        current: '階段不符: 故事目前處於 {{actual}}，而非 {{provided}}。階段未推進。'
+        next: '階段不符: 故事目前處於 {{actual}}，下一個階段為 {{expected}}，而非 {{provided}}。階段未推進。'
   endAct:
     endingTypeInstructions: >
-      呼叫 `end-act` 時，請將 `endingType` 參數設為最符合敘事走向及玩家選擇的值：`good`(好結局)、`bad`(壞結局)、`bittersweet`(苦甜結局) 或 `alternative`(另類結局)。
+      呼叫 `end-act` 時，請將 `endingType` 參數設為最符合敘事走向及玩家選擇的值: `good`(好結局)、`bad`(壞結局)、`bittersweet`(苦甜結局) 或 `alternative`(另類結局)。
     description: >
       結束目前章節。當敘事已達到與章節劇情中定義的可能結局之一相符的自然結論時，呼叫此工具。
       指定故事已達到的結局: {{good}}、{{bad}}、{{bittersweet}} 或 {{alternative}}。

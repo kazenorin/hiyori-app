@@ -73,10 +73,10 @@ export function resolveAsyncPhaseMetadata(
 		metadataUpdates.metadata = JSON.stringify(baseMetadata);
 	}
 
-	if (asyncResults.characterProfiles) {
+	if (asyncResults.compressorMetadata) {
 		updatedPhases.push({
 			phaseName: 'CHARACTER_PROFILE_COMPRESSOR' as PhaseName,
-			content: asyncResults.characterProfiles.map((p) => p.characterName).join(', '),
+			content: 'compressed',
 		});
 	}
 
