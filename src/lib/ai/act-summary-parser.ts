@@ -2,7 +2,12 @@ import { actSummaryHeader, turnOfEventsHeader, summaryHeader, sectionFormat } fr
 import { sceneWithNumberLabel, locationLabel, aliasesLabel, lastUpdateLabel } from '$lib/definitions/common-labels';
 import { stateLabel, goalLabel, relationshipsLabel, voiceLabel, importanceLabel } from '$lib/definitions/character-profile-labels';
 import type { CharacterImportance } from '$lib/db/character-profiles';
-import { sceneSummariesHeader, characterSummariesHeader, characterProfilesHeader } from '$lib/definitions/pipeline-prompts';
+import {
+	sceneSummariesHeader,
+	characterSummariesHeader,
+	characterProfilesHeader,
+	characterSummariesSinceSceneLabel,
+} from '$lib/definitions/pipeline-prompts';
 
 // === Types ===
 
@@ -201,6 +206,16 @@ function parseCharactersBody(body: string): CharacterSummary[] {
 	return characters;
 }
 
+function parseLastSceneFromCharacterSummaries(body: string): number | null {
+	const sample = characterSummariesSinceSceneLabel(0);
+	const numMatch = sample.match(/^(.*?)0(.*?)$/s);
+	if (!numMatch) return null;
+	const [, prefix, suffix] = numMatch;
+	const regex = new RegExp(`${escapeRegex(prefix)}(\\d+)${escapeRegex(suffix)}`);
+	const match = body.match(regex);
+	return match ? parseInt(match[1], 10) : null;
+}
+
 function parseTurnOfEventsBody(body: string): {
 	turnOfEvents: string;
 	turnOfEventsSceneNumber: number | null;
@@ -364,6 +379,9 @@ export function parseActSummary(markdown: string): ActSummary {
 	const profilesResult = profilesBody
 		? parseProfilesBody(profilesBody)
 		: { profiles: [] as CharacterProfile[], lastScene: null as number | null };
+	if (profilesResult.lastScene === null && charactersBody) {
+		profilesResult.lastScene = parseLastSceneFromCharacterSummaries(charactersBody);
+	}
 	const toeResult = turnOfEventsBody
 		? parseTurnOfEventsBody(turnOfEventsBody)
 		: {
@@ -422,6 +440,23 @@ export function serializeActSummary(data: ActSummary): string {
 			}
 			lines.push('');
 		}
+	}
+
+	lines.push(sectionFormat(characterSummariesHeader()).trimEnd());
+
+	if (data.characterProfileLastScene != null) {
+		lines.push(characterSummariesSinceSceneLabel(data.characterProfileLastScene));
+	}
+
+	for (const character of data.characters) {
+		lines.push(`### ${character.characterName}`);
+		if (character.aliases.length > 0) {
+			lines.push(`- ${aliasesLabel()}: [${character.aliases.join(', ')}]`);
+		}
+		for (const entry of character.sceneEntries) {
+			lines.push(`- ${sceneWithNumberLabel(entry.sceneNumber)}: ${entry.summary}`);
+		}
+		lines.push('');
 	}
 
 	if (data.turnOfEvents && data.turnOfEvents.trim().length > 0) {

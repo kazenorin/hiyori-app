@@ -9,6 +9,9 @@ const mockSceneWithNumberLabel = vi.fn((n: number | string) => `Scene ${n}`);
 const mockSceneSummariesHeader = vi.fn(() => 'Scene Summaries');
 const mockCharacterSummariesHeader = vi.fn(() => 'Character Summaries');
 const mockCharacterProfilesHeader = vi.fn(() => 'Character Profiles');
+const mockCharacterSummariesSinceSceneLabel = vi.fn(
+	(sceneNumber: number) => `Summaries of each character for recent Scenes since Scene ${sceneNumber}.`
+);
 const mockLastUpdateLabel = vi.fn(() => 'Last update');
 const mockStateLabel = vi.fn(() => 'State');
 const mockGoalLabel = vi.fn(() => 'Goal');
@@ -41,6 +44,7 @@ vi.mock('$lib/definitions/pipeline-prompts', () => ({
 	sceneSummariesHeader: () => mockSceneSummariesHeader(),
 	characterSummariesHeader: () => mockCharacterSummariesHeader(),
 	characterProfilesHeader: () => mockCharacterProfilesHeader(),
+	characterSummariesSinceSceneLabel: (sceneNumber: number) => mockCharacterSummariesSinceSceneLabel(sceneNumber),
 }));
 
 vi.mock('$lib/logging/logger', () => ({
@@ -210,7 +214,11 @@ describe('serializeActSummary', () => {
 		expect(result).toContain('Location: A coastal village');
 		expect(result).toContain('Summary: The hero arrives.');
 		expect(result).toContain('### Scene 2: The Tavern');
-		expect(result).not.toContain('## Character Summaries');
+		expect(result).toContain('## Character Summaries');
+		expect(result).toContain('### Elena');
+		expect(result).toContain('- Aliases: [Elena, The Shadow]');
+		expect(result).toContain('- Scene 1: Elena watches.');
+		expect(result).toContain('- Scene 2: Elena reveals information.');
 	});
 
 	it('serializes an empty act summary', () => {
@@ -228,7 +236,7 @@ describe('serializeActSummary', () => {
 		const result = serializeActSummary(data);
 		expect(result).toContain('# Act Summary');
 		expect(result).toContain('## Scene Summaries');
-		expect(result).not.toContain('## Character Summaries');
+		expect(result).toContain('## Character Summaries');
 	});
 
 	it('roundtrips: parse → serialize → parse produces identical scenes', () => {
@@ -246,8 +254,9 @@ describe('serializeActSummary', () => {
 			expect(reparsed.scenes[i].summary).toBe(original.scenes[i].summary);
 		}
 
-		// Character Summaries section is no longer serialized (subsumed by DB scene_details)
-		expect(reparsed.characters).toHaveLength(0);
+		// Character Summaries section is serialized and re-parsed
+		expect(reparsed.characters).toHaveLength(original.characters.length);
+		expect(reparsed.characters[0].characterName).toBe(original.characters[0].characterName);
 	});
 	it('serializes turnOfEvents section when present', () => {
 		const data: ActSummary = {
@@ -276,8 +285,8 @@ describe('serializeActSummary', () => {
 		expect(result).toContain('## Turn Of Events');
 		expect(result).toContain('### Scene 3: The Revelation');
 		expect(result).toContain('Shift the story toward uncovering the conspiracy.');
-		// Character Summaries section is no longer emitted
-		expect(result).not.toContain('## Character Summaries');
+		// Character Summaries section is always emitted
+		expect(result).toContain('## Character Summaries');
 	});
 });
 
@@ -518,8 +527,8 @@ Summary: The hero discovers a hidden path.
 		const reparsed = parseActSummary(serialized);
 		expect(reparsed.completedScenes).toBe(0);
 		expect(reparsed.scenes).toHaveLength(3);
-		// Character Summaries no longer serialized
-		expect(reparsed.characters).toHaveLength(0);
+		// Character Summaries section is serialized and re-parsed
+		expect(reparsed.characters).toHaveLength(3);
 	});
 
 	it('preserves existing turnOfEvents during merge', () => {
@@ -805,7 +814,7 @@ describe('compressed act summary (caller-side assembly)', () => {
 		expect(result).toContain('## Character Profiles');
 		expect(result).toContain('Last update: Scene 8');
 		expect(result).toContain('Last update: Scene 5');
-		expect(result).not.toContain('Summaries of each character for recent Scenes');
+		expect(result).toContain('Summaries of each character for recent Scenes since Scene 5.');
 	});
 
 	it('serializes without profiles when caller clears them', () => {
@@ -813,7 +822,7 @@ describe('compressed act summary (caller-side assembly)', () => {
 		const result = serializeActSummary(withoutProfiles);
 
 		expect(result).not.toContain('Character Profiles');
-		expect(result).not.toContain('## Character Summaries');
+		expect(result).toContain('## Character Summaries');
 		expect(result).toContain('### Scene 1: The Arrival');
 	});
 
@@ -823,11 +832,60 @@ describe('compressed act summary (caller-side assembly)', () => {
 		const reparsed = parseActSummary(serialized);
 
 		expect(reparsed.scenes).toHaveLength(3);
-		// Characters are no longer serialized (subsumed by DB scene_details)
-		expect(reparsed.characters).toHaveLength(0);
+		// Characters are serialized and re-parsed
+		expect(reparsed.characters).toHaveLength(2);
 		// Pruned entries are verified in-memory
 		const elena = pruned.characters.find((c) => c.characterName === 'Elena');
 		expect(elena).toBeDefined();
 		expect(elena!.sceneEntries).toHaveLength(2);
+	});
+
+	it('roundtrips with empty profiles but characterProfileLastScene set (compressor output)', () => {
+		const data: ActSummary = {
+			...dataWithProfiles,
+			characterProfiles: [],
+			characterProfileLastScene: 5,
+		};
+		const serialized = serializeActSummary(data);
+
+		expect(serialized).not.toContain('## Character Profiles');
+		expect(serialized).toContain('Summaries of each character for recent Scenes since Scene 5.');
+		expect(serialized).toContain('## Character Summaries');
+
+		const reparsed = parseActSummary(serialized);
+		expect(reparsed.characterProfileLastScene).toBe(5);
+		expect(reparsed.characterProfiles).toHaveLength(0);
+	});
+
+	it('parses characterProfileLastScene from character summaries when profiles section is absent', () => {
+		const markdown = `## Scene Summaries
+### Scene 1: Start
+Location: Town
+Summary: Beginning.
+
+## Character Summaries
+Summaries of each character for recent Scenes since Scene 3.
+### Elena
+- Aliases: [Elena]
+- Scene 4: Elena does something.`;
+
+		const result = parseActSummary(markdown);
+		expect(result.characterProfileLastScene).toBe(3);
+		expect(result.characterProfiles).toHaveLength(0);
+		expect(result.characters).toHaveLength(1);
+	});
+
+	it('does not set characterProfileLastScene when neither profiles nor since-label is present', () => {
+		const markdown = `## Scene Summaries
+### Scene 1: Start
+Location: Town
+Summary: Beginning.
+
+## Character Summaries
+### Elena
+- Scene 1: Elena appears.`;
+
+		const result = parseActSummary(markdown);
+		expect(result.characterProfileLastScene).toBeNull();
 	});
 });

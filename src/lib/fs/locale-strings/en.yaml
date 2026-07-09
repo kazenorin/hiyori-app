@@ -197,6 +197,7 @@ pipeline:
     sceneDetails: 'Scene Details'
     lastSeen: 'last seen: scene {{sceneNumber}}'
     noDescription: 'No description available.'
+    characterSummaries: 'Summaries of each character for recent Scenes since Scene {{sceneNumber}}.'
     actPhases:
       introduction: Introduction
       risingAction: Rising Action

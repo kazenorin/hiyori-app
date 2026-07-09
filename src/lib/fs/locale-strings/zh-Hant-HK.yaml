@@ -189,6 +189,7 @@ pipeline:
     sceneDetails: '場景詳情'
     lastSeen: '最後出現: 場景 {{sceneNumber}}'
     noDescription: '無可用描述。'
+    characterSummaries: '自場景 {{sceneNumber}} 以來每個角色的近期摘要。'
     actPhases:
       introduction: 鋪陳
       risingAction: 發展

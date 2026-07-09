@@ -7,7 +7,6 @@ import { log } from './utils';
 import {
 	insertCharacterProfile,
 	areAnyCharacterNamesKnown,
-	resolveCanonicalName,
 	ensurePreferredInAliases,
 	type CharacterImportance,
 	toCanonicalName,
