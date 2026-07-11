@@ -38,8 +38,15 @@ describe('readDirectoryNodes — managedConfig classification', () => {
 	});
 
 	describe('classifyManagedConfig', () => {
-		it('returns null for non-.md files', () => {
+		it('returns null for unsupported file extensions', () => {
 			expect(classifyManagedConfig('config/test.json', 'config')).toBeNull();
+			expect(classifyManagedConfig('config/test.txt', 'config')).toBeNull();
+		});
+
+		it('classifies known config .yaml files as managed', () => {
+			// locale-strings.yaml exists in the bundled manifest
+			const result = classifyManagedConfig('config/en/locale-strings.yaml', 'config');
+			expect(result).toBe('managed');
 		});
 
 		it('returns null when folderType is undefined', () => {

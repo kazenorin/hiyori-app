@@ -32,7 +32,9 @@ export function isCriticalSystemFile(filePath: string, folderType: FolderType | 
 }
 
 export function classifyManagedConfig(filePath: string, folderType: FolderType | undefined): ManagedConfigKind | null {
-	if (!filePath.endsWith('.md')) return null;
+	if (!filePath.endsWith('.md') && !filePath.endsWith('.yaml') && !filePath.endsWith('.yml')) {
+		return null;
+	}
 
 	if (folderType === 'config') {
 		const configPath = filePath.slice('config/'.length);
