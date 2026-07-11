@@ -533,11 +533,16 @@ tools:
       透過角色的任何已知名稱或別名取得最新檔案。
       用於完整檔案尚未內嵌至脈絡中的角色（如配角和次要角色）。
       請勿對完整檔案已顯示於上方的角色呼叫此工具。
+      目前為第 {{currentActNumber}} 章；可選擇性地讀取當前章節路線譜系中先前章節的檔案。
     parameters:
       name: '角色的任何已知名稱或別名'
       includeSceneDetails: '若為 true（預設），包含每場景詳情。若為 false，只回傳壓縮檔案。'
+      actNumber: '要讀取的章節編號（必須在當前章節路線的譜系中）。省略則讀取當前章節。'
     messages:
       notFound: '此章節路線中找不到該名稱的角色檔案。'
+      notFoundInAct: '第 {{actNumber}} 章中找不到該名稱的角色檔案。'
+      futureAct: '無法讀取尚未發生的章節的角色檔案。'
+      actNotInLineage: '第 {{actNumber}} 章不在當前敘事路線的譜系中。'
     output:
       importance: '重要性: {{importance}}'
       aliases: '別名: {{aliases}}'
