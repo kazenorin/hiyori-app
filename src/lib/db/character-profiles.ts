@@ -10,7 +10,10 @@ export interface CharacterProfileEntity {
 	canonicalName: string;
 	preferredName: string;
 	aliases: string[];
-	profile: string;
+	state: string;
+	goal: string | null;
+	relationships: string | null;
+	voice: string | null;
 	sceneDetails: string;
 	importance: CharacterImportance;
 	createdAt: number;
@@ -24,7 +27,10 @@ interface CharacterProfileRow {
 	canonical_name: string;
 	preferred_name: string;
 	aliases: string;
-	profile: string;
+	state: string;
+	goal: string | null;
+	relationships: string | null;
+	voice: string | null;
 	scene_details: string;
 	importance: number;
 	created_at: number;
@@ -39,7 +45,10 @@ function mapRowToEntity(row: CharacterProfileRow): CharacterProfileEntity {
 		canonicalName: row.canonical_name,
 		preferredName: row.preferred_name,
 		aliases: parseAliases(row.aliases),
-		profile: row.profile,
+		state: row.state,
+		goal: row.goal,
+		relationships: row.relationships,
+		voice: row.voice,
 		sceneDetails: row.scene_details,
 		importance: row.importance as CharacterImportance,
 		createdAt: row.created_at,
@@ -86,7 +95,10 @@ export interface InsertCharacterProfileInput {
 	canonicalName: string;
 	preferredName: string;
 	aliases: string[];
-	profile: string;
+	state: string;
+	goal?: string | null;
+	relationships?: string | null;
+	voice?: string | null;
 	sceneDetails: string;
 	importance: CharacterImportance;
 }
@@ -105,8 +117,8 @@ export async function insertCharacterProfile(input: InsertCharacterProfileInput)
 	const db = getDatabase();
 	const now = Date.now();
 	await db.execute(
-		`INSERT INTO character_profiles (id, act_line_id, scene_number, canonical_name, preferred_name, aliases, profile, scene_details, importance, created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+		`INSERT INTO character_profiles (id, act_line_id, scene_number, canonical_name, preferred_name, aliases, state, goal, relationships, voice, scene_details, importance, created_at, updated_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
 		[
 			input.id,
 			input.actLineId,
@@ -114,7 +126,10 @@ export async function insertCharacterProfile(input: InsertCharacterProfileInput)
 			input.canonicalName,
 			input.preferredName,
 			serializeAliases(input.aliases),
-			input.profile,
+			input.state,
+			input.goal ?? null,
+			input.relationships ?? null,
+			input.voice ?? null,
 			input.sceneDetails,
 			input.importance,
 			now,
@@ -223,8 +238,8 @@ export async function cloneCharacterProfiles(fromActLineId: string, toActLineId:
 	);
 	for (const row of rows) {
 		await db.execute(
-			`INSERT INTO character_profiles (id, act_line_id, scene_number, canonical_name, preferred_name, aliases, profile, scene_details, importance, created_at, updated_at)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+			`INSERT INTO character_profiles (id, act_line_id, scene_number, canonical_name, preferred_name, aliases, state, goal, relationships, voice, scene_details, importance, created_at, updated_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
 			[
 				crypto.randomUUID(),
 				toActLineId,
@@ -232,7 +247,10 @@ export async function cloneCharacterProfiles(fromActLineId: string, toActLineId:
 				row.canonical_name,
 				row.preferred_name,
 				row.aliases,
-				row.profile,
+				row.state,
+				row.goal,
+				row.relationships,
+				row.voice,
 				row.scene_details,
 				row.importance,
 				now,
@@ -251,8 +269,19 @@ export async function cloneCharacterProfiles(fromActLineId: string, toActLineId:
 export async function inheritProfilesFromActLine(fromActLineId: string, toActLineId: string): Promise<void> {
 	const db = getDatabase();
 	const now = Date.now();
-	const rows = await db.select<{ canonical_name: string; preferred_name: string; aliases: string; profile: string; importance: number }[]>(
-		`SELECT canonical_name, preferred_name, aliases, profile, importance FROM character_profiles cp
+	const rows = await db.select<
+		{
+			canonical_name: string;
+			preferred_name: string;
+			aliases: string;
+			state: string;
+			goal: string | null;
+			relationships: string | null;
+			voice: string | null;
+			importance: number;
+		}[]
+	>(
+		`SELECT canonical_name, preferred_name, aliases, state, goal, relationships, voice, importance FROM character_profiles cp
 		 WHERE act_line_id = $1
 		 AND id = (
 		     SELECT id FROM character_profiles
@@ -264,8 +293,8 @@ export async function inheritProfilesFromActLine(fromActLineId: string, toActLin
 	for (const row of rows) {
 		const aliases = ensurePreferredInAliases(row.preferred_name, parseAliases(row.aliases));
 		await db.execute(
-			`INSERT INTO character_profiles (id, act_line_id, scene_number, canonical_name, preferred_name, aliases, profile, scene_details, importance, created_at, updated_at)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+			`INSERT INTO character_profiles (id, act_line_id, scene_number, canonical_name, preferred_name, aliases, state, goal, relationships, voice, scene_details, importance, created_at, updated_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)`,
 			[
 				crypto.randomUUID(),
 				toActLineId,
@@ -273,7 +302,10 @@ export async function inheritProfilesFromActLine(fromActLineId: string, toActLin
 				row.canonical_name,
 				row.preferred_name,
 				serializeAliases(aliases),
-				row.profile,
+				row.state,
+				row.goal,
+				row.relationships,
+				row.voice,
 				'',
 				row.importance,
 				now,

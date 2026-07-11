@@ -6,6 +6,7 @@ import type { ToolContext } from './tools';
 import { log } from './utils';
 import { getLatestProfileByAlias, type CharacterImportance } from '$lib/db/character-profiles';
 import { importanceLevelLabel } from '$lib/definitions/pipeline-prompts';
+import { formatProfileResponseBody } from '$lib/definitions/pipeline-sections';
 
 export function createCharacterDetailsTool(ctx: ToolContext) {
 	const { actLine } = ctx;
@@ -39,8 +40,9 @@ export function createCharacterDetailsTool(ctx: ToolContext) {
 			if (profile.sceneNumber != null) {
 				parts.push(`- ${ls('tools.characterDetails.output.lastUpdated', { sceneNumber: profile.sceneNumber })}`);
 			}
+			const body = formatProfileResponseBody(profile);
 			parts.push('');
-			parts.push(profile.profile);
+			parts.push(body);
 
 			if (includeSceneDetails && profile.sceneDetails.trim()) {
 				parts.push('');
@@ -48,7 +50,7 @@ export function createCharacterDetailsTool(ctx: ToolContext) {
 				parts.push(profile.sceneDetails.trim());
 			}
 
-			await log(`character-details returned ${profile.preferredName} (${profile.profile.length} chars)`);
+			await log(`character-details returned ${profile.preferredName} (${body.length} chars)`);
 			return parts.join('\n');
 		},
 	});

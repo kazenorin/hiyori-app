@@ -23,7 +23,17 @@ import {
 	characterProfilesHeader,
 	sectionFormat,
 } from './common-headers';
-import { getLocalizedActPhase, importanceLevelLabel, lastSeenLabel, noDescriptionLabel, sceneDetailsLabel } from './pipeline-prompts';
+import {
+	getLocalizedActPhase,
+	importanceLevelLabel,
+	lastSeenLabel,
+	noDescriptionLabel,
+	sceneDetailsLabel,
+	stateLabel,
+	goalLabel,
+	relationshipsLabel,
+	voiceLabel,
+} from './pipeline-prompts';
 import { actWithNumberLabel, aliasesLabel } from '$lib/definitions/common-labels';
 import type { CharacterProfileEntity } from '$lib/db/character-profiles';
 
@@ -172,9 +182,10 @@ export function formatCharacterProfilesSection(profiles: CharacterProfileEntity[
 				parts.push(`- ${aliasesLabel()}: [${p.aliases.join(', ')}]`);
 			}
 			parts.push(`- ${importanceLevelLabel(p.importance)}`);
-			if (p.profile.trim()) {
+			const body = formatProfileResponseBody(p);
+			if (body) {
 				parts.push('');
-				parts.push(p.profile.trim());
+				parts.push(body);
 			}
 			if (p.sceneDetails.trim()) {
 				parts.push('');
@@ -198,8 +209,32 @@ export function formatCharacterProfilesSection(profiles: CharacterProfileEntity[
 	return [parts.join('\n').trimEnd()];
 }
 
-function extractOneLineDescription(profile: CharacterProfileEntity): string {
-	const firstLine = profile.profile.split('\n').find((l) => l.trim().length > 0);
+/**
+ * Render the structured fields (state, goal, relationships, voice) of a character profile
+ * as labeled markdown lines. Null or blank fields are omitted. Returns empty string if all fields are blank.
+ * Shared by the pipeline inline section and the `character-details` tool.
+ */
+export function formatProfileResponseBody(p: CharacterProfileEntity): string {
+	const lines: string[] = [];
+	const push = (label: string, body: string | null) => {
+		const v = body?.trim();
+		if (v) lines.push(`**${label}:** ${v}`);
+	};
+	push(stateLabel(), p.state);
+	push(goalLabel(), p.goal);
+	push(relationshipsLabel(), p.relationships);
+	push(voiceLabel(), p.voice);
+	return lines.join('\n');
+}
+
+/**
+ * Extract a single-line description from a character profile for compact one-line references.
+ * Falls back to the first non-empty line of `state`, then `voice`, then a localized placeholder.
+ */
+export function extractOneLineDescription(profile: CharacterProfileEntity): string {
+	const source = profile.state?.trim() || profile.voice?.trim();
+	if (!source) return noDescriptionLabel();
+	const firstLine = source.split('\n').find((l) => l.trim().length > 0);
 	if (firstLine) return firstLine.trim().replace(/^[-*]\s+/, '');
 	return noDescriptionLabel();
 }

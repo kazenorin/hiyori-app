@@ -527,11 +527,13 @@ tools:
       Call this whenever a NEW character without an existing profile enters the story.
       Before calling, ensure the character is not already known under their preferred name or any alias — the tool will reject duplicates.
     parameters:
-      preferredName: "The character's primary name for this act line. Placeholder names such as 'Unknown' are not considered names."
-      aliases: "Additional names the character is known by. Placeholder names such as 'Unknown' are not considered aliases."
-      profile: 'Markdown body covering state, goal, relationships, and voice'
+      preferredName: "The character's primary name for this act line. Placeholder names such as 'Unknown' or 'None' are not considered names."
+      aliases: "Additional names the character are known by. Placeholder names such as 'Unknown' or 'None' are not considered aliases."
+      oneLineDescription: 'One-sentence description of who the character is.'
+      goal: "The character's immediate motive or drive based on the latest scenes."
+      relationships: "Brief notes on the character's current standing with other active characters."
+      voice: "A single representative quote capturing the character's mindset."
       importance: '1=Protagonist, 2=Main, 3=Supporting, 4=Minor'
-      oneLineDescription: 'One-sentence description of the character'
     messages:
       exists: 'A character already exists with that name or alias. Use the `character-details` tool to retrieve the existing profile.'
   characterDetails:

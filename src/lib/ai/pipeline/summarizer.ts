@@ -227,7 +227,10 @@ export async function generateCharacterProfiles(
 				canonicalName,
 				preferredName: profile.characterName,
 				aliases,
-				profile: [profile.state, profile.goal, profile.relationships, profile.voice].filter(Boolean).join('\n\n'),
+				state: profile.state,
+				goal: profile.goal || null,
+				relationships: profile.relationships || null,
+				voice: profile.voice || null,
 				sceneDetails: serializeSceneDetails(newActSummary, profile.characterName),
 				importance,
 			});

@@ -519,11 +519,13 @@ tools:
       當沒有現有檔案的新角色登場時呼叫此工具。
       呼叫前請確認該角色並非已知名稱或別名下的既存角色 — 工具會拒絕重複項目。
     parameters:
-      preferredName: '此章節路線中角色的主要名稱。「不明」等的佔位名稱不應當作名稱。'
-      aliases: '角色已知的其他名稱或別名。「不明」等的佔位名稱不應當作名稱或別名。'
-      profile: '涵蓋狀態、目標、關係與語氣的 Markdown 內容'
+      preferredName: '此章節路線中此角色的主要名稱。「不明」、「無」或「沒有」等的佔位名稱不應當作名稱。'
+      aliases: '此章節路線中此角色已知的其他名稱或別名。「不明」、「無」或「沒有」等佔位名稱不應當作名稱或別名。'
+      oneLineDescription: '用一個句子說明此角色是誰。'
+      goal: '此角色於現場景的即時動機或驅動力。'
+      relationships: '角色與其他活躍角色之間的當前關係簡述。'
+      voice: '引述一句能代表此角色的說話。'
       importance: '1=主角, 2=主要角色, 3=配角, 4=次要角色'
-      oneLineDescription: '角色的一句話描述'
     messages:
       exists: '此名稱或別名的角色已存在。請使用 `character-details` 工具取得現有檔案。'
   characterDetails:
