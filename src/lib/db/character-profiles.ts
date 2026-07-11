@@ -209,13 +209,18 @@ export async function deleteCharacterProfilesForActLine(actLineId: string): Prom
 }
 
 /**
- * Clone all character profiles from one act line to another.
+ * Clone character profiles from one act line to another, limited to profiles
+ * at or before maxSceneNumber. Baseline (NULL scene_number) rows are always
+ * included; scene-numbered rows beyond maxSceneNumber are excluded.
  * Canonical names and aliases are preserved as-is.
  */
-export async function cloneCharacterProfiles(fromActLineId: string, toActLineId: string): Promise<void> {
+export async function cloneCharacterProfiles(fromActLineId: string, toActLineId: string, maxSceneNumber: number): Promise<void> {
 	const db = getDatabase();
 	const now = Date.now();
-	const rows = await db.select<CharacterProfileRow[]>(`SELECT * FROM character_profiles WHERE act_line_id = $1`, [fromActLineId]);
+	const rows = await db.select<CharacterProfileRow[]>(
+		`SELECT * FROM character_profiles WHERE act_line_id = $1 AND (scene_number IS NULL OR scene_number <= $2)`,
+		[fromActLineId, maxSceneNumber]
+	);
 	for (const row of rows) {
 		await db.execute(
 			`INSERT INTO character_profiles (id, act_line_id, scene_number, canonical_name, preferred_name, aliases, profile, scene_details, importance, created_at, updated_at)

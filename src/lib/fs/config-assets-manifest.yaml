@@ -112,9 +112,10 @@ src:
           summarizer:
             character-profile-compressor.md:
               configPath: en/prompt-templates/summarizer/character-profile-compressor.md
-              hash: 2438a90b9599afc9f40d34fe3e466765eebbcd916ef3f1d2643fed9a031bfdae
-              oldHashes: []
-              updatedAt: "2026-05-30T16:51:23.217Z"
+              hash: 0af7ef7794c8fc15e972e9c871b17b7e705f3f1baba56dac1011f4aef527a8a8
+              oldHashes:
+                - 2438a90b9599afc9f40d34fe3e466765eebbcd916ef3f1d2643fed9a031bfdae
+              updatedAt: "2026-07-11T02:23:33.757Z"
             summarizer-incremental-prompt.md:
               configPath: en/prompt-templates/summarizer/summarizer-incremental-prompt.md
               hash: 1adea755ce3238373ed5176705bb0a34d5b186a29ea140bf746d2d16691ea273
@@ -293,9 +294,10 @@ src:
           summarizer:
             character-profile-compressor.md:
               configPath: zh-Hant-HK/prompt-templates/summarizer/character-profile-compressor.md
-              hash: 3a55e9df6531ed7f7f94156222dac4fe1de4b02c86704fcf1dd5aa340225ab69
-              oldHashes: []
-              updatedAt: "2026-05-30T16:51:23.217Z"
+              hash: 8986b27285021c2822af554c0d6bf159b594e8513c1dffd495480ea72f9dac1e
+              oldHashes:
+                - 3a55e9df6531ed7f7f94156222dac4fe1de4b02c86704fcf1dd5aa340225ab69
+              updatedAt: "2026-07-11T02:23:33.757Z"
             summarizer-incremental-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/summarizer/summarizer-incremental-prompt.md
               hash: 61f39151a50a0e03382a05c4b1ed57f425dc9899ad6a9bc3c6e5b762a50047af
@@ -365,23 +367,25 @@ src:
       locale-strings:
         en.yaml:
           configPath: en/locale-strings.yaml
-          hash: 5feee7d281ea6a4199ea97d386a8b39696130b98c49333b7250c8c8e4e3fafc7
+          hash: 57e351578056277658a39238bd26c5c770a43f2f20e97e2af04b0936e10874f7
           oldHashes:
+            - 5feee7d281ea6a4199ea97d386a8b39696130b98c49333b7250c8c8e4e3fafc7
             - a312d1d717bbdbe6c452986680100ce8d5c14dad450805e9708bd14a8ff49139
             - 38a851f6bd592d9b7f92b1b69ff17d2f43d3f2182fdebc8c579ad9cf3c08fd32
             - afe9257c4f97b75b5e4f7294d67a9ff969193ac9be8569cd7a728ac71b60cf91
             - 2dac94173236f1d91ad05073d7ac651ae1265c4182815041ba5663713dcdd799
             - 80d841aa000184d8604696b1f1877aebb1a348db16d2267e57b421c5eed4c959
             - 02c2f6c61d948f401f32cdd4eb656a574da0366b3a2809ee2ff3c42b47348649
-          updatedAt: "2026-06-19T09:54:51.230Z"
+          updatedAt: "2026-07-11T02:23:33.757Z"
         zh-Hant-HK.yaml:
           configPath: zh-Hant-HK/locale-strings.yaml
-          hash: 6727b1ff75ddca54c953db58817b2f8f07829a914a6f7e3ca5196a9a06460085
+          hash: d89d5492cd9bded39bffd43df4f9cf8e7126f564691396359143843020f2e211
           oldHashes:
+            - 6727b1ff75ddca54c953db58817b2f8f07829a914a6f7e3ca5196a9a06460085
             - dac345165f8da974296444d28cf9c1cd61a33cb9ea3421b7fc8370a3b2227104
             - ab58fe0db424d01c846a5a4ae9c6b9fa11c7d7ad86efbd60523c83fd85d661d7
             - 2aadfa9ae0247b5283af97356153fa20e5194db6f1c1c14ca8d60d9f443a4110
             - 0eda1a48149469d75b776af15e1b34a8510a948660818ad2f0047cb2c4e95f1c
             - c9bca07458a02fd17114e6456a4c281b2460dc392ffccd2bd103199af045c4cb
             - f7772bf027cfec167bdc5e5d85aa783fac24f47303072a00685d5d7b70b80b54
-          updatedAt: "2026-06-19T09:54:51.230Z"
+          updatedAt: "2026-07-11T02:23:33.757Z"

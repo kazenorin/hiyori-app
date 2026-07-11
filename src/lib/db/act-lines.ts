@@ -736,6 +736,18 @@ export async function getLastSceneNumber(actLineId: string): Promise<number | nu
 	return rows.length > 0 ? rows[0].scene_number : null;
 }
 
+export async function getSceneNumberAtSequence(actLineId: string, sequence: number): Promise<number | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ scene_number: number }[]>(
+		`SELECT MAX(m.scene_number) as scene_number
+		 FROM act_lines al
+		 JOIN messages m ON al.message_id = m.id
+		 WHERE al.act_line_id = $1 AND al.sequence <= $2 AND m.scene_number IS NOT NULL`,
+		[actLineId, sequence]
+	);
+	return rows.length > 0 ? rows[0].scene_number : null;
+}
+
 // === act_line_premises operations ===
 
 export async function addMessageToPremises(actLineId: string, messageId: string, sequence: number): Promise<void> {

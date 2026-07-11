@@ -384,7 +384,10 @@ export async function forkActLine(fromLineId: string, fromSequence: number, actI
 	// Copy act-plot file from source to forked line before selectActLine triggers ensureActPlot
 	await copyActPlotForFork(fromLineId, lineMeta.id);
 	await dbDirectorNotes.cloneDirectorNotes(fromLineId, lineMeta.id);
-	await cloneCharacterProfiles(fromLineId, lineMeta.id);
+	const forkSceneNumber = await dbActLines.getSceneNumberAtSequence(fromLineId, fromSequence);
+	if (forkSceneNumber !== null) {
+		await cloneCharacterProfiles(fromLineId, lineMeta.id, forkSceneNumber);
+	}
 
 	await selectActLine(lineMeta.id);
 
@@ -465,7 +468,10 @@ export async function forkActLineForInterview(
 
 	await copyMemoriesForFork(fromLineId, lineMeta.id, fromSequence, remappedMessageIds);
 	await dbDirectorNotes.cloneDirectorNotes(fromLineId, lineMeta.id);
-	await cloneCharacterProfiles(fromLineId, lineMeta.id);
+	const forkSceneNumber = await dbActLines.getSceneNumberAtSequence(fromLineId, fromSequence);
+	if (forkSceneNumber !== null) {
+		await cloneCharacterProfiles(fromLineId, lineMeta.id, forkSceneNumber);
+	}
 
 	return lineMeta;
 }

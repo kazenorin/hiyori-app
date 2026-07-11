@@ -385,7 +385,7 @@ describe('character-profiles DB layer', () => {
 				],
 			];
 
-			await cloneCharacterProfiles('src', 'dest');
+			await cloneCharacterProfiles('src', 'dest', 5);
 
 			expect(mockDb.execute).toHaveBeenCalledTimes(2);
 			const params1 = (mockDb.execute.mock.calls[0] as unknown as any[])[1];
@@ -397,8 +397,52 @@ describe('character-profiles DB layer', () => {
 
 		it('does nothing when source has no profiles', async () => {
 			mockDbSelectResults = [[]];
-			await cloneCharacterProfiles('src', 'dest');
+			await cloneCharacterProfiles('src', 'dest', 5);
 			expect(mockDb.execute).not.toHaveBeenCalled();
+		});
+
+		it('passes maxSceneNumber as second bind param', async () => {
+			mockDbSelectResults = [[]];
+			await cloneCharacterProfiles('src', 'dest', 7);
+			expect(mockDb.select).toHaveBeenCalledTimes(1);
+			const params = (mockDb.select.mock.calls[0] as unknown as any[])[1];
+			expect(params).toEqual(['src', 7]);
+		});
+
+		it('includes baseline (NULL scene_number) and scene rows up to maxSceneNumber', async () => {
+			const sceneRow = {
+				id: 'p1',
+				act_line_id: 'src',
+				scene_number: 3,
+				canonical_name: 'elena',
+				preferred_name: 'Elena',
+				aliases: '[]',
+				profile: 'P',
+				scene_details: '',
+				importance: 2,
+				created_at: 1000,
+				updated_at: 2000,
+			};
+			const baselineRow = {
+				id: 'p2',
+				act_line_id: 'src',
+				scene_number: null,
+				canonical_name: 'voss',
+				preferred_name: 'Voss',
+				aliases: '[]',
+				profile: 'P2',
+				scene_details: '',
+				importance: 4,
+				created_at: 3000,
+				updated_at: 3000,
+			};
+			mockDbSelectResults = [[sceneRow, baselineRow]];
+
+			await cloneCharacterProfiles('src', 'dest', 3);
+
+			expect(mockDb.execute).toHaveBeenCalledTimes(2);
+			const selectParams = (mockDb.select.mock.calls[0] as unknown as any[])[1];
+			expect(selectParams).toEqual(['src', 3]);
 		});
 	});
 
