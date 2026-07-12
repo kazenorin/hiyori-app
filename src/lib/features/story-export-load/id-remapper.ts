@@ -1,4 +1,5 @@
 import type { StoryExportData } from './archive-schema';
+import { CURRENT_ARCHIVE_VERSION } from './archive-schema';
 
 export interface RemappedData {
 	data: StoryExportData;
@@ -35,11 +36,17 @@ export function regenerateIds(data: StoryExportData): RemappedData {
 		idMap.set(note.id, crypto.randomUUID());
 	}
 
+	if (data.characterProfiles) {
+		for (const p of data.characterProfiles) {
+			idMap.set(p.id, crypto.randomUUID());
+		}
+	}
+
 	const shortId = newStoryId.slice(-8);
 	const newFolderName = `Story-${shortId}`;
 
 	const remapped: StoryExportData = {
-		version: 1,
+		version: CURRENT_ARCHIVE_VERSION,
 		story: {
 			...data.story,
 			id: newStoryId,
@@ -84,6 +91,11 @@ export function regenerateIds(data: StoryExportData): RemappedData {
 		messages: data.messages.map((msg) => ({
 			...msg,
 			id: idMap.get(msg.id) ?? msg.id,
+		})),
+		characterProfiles: data.characterProfiles?.map((p) => ({
+			...p,
+			id: idMap.get(p.id) ?? p.id,
+			actLineId: idMap.get(p.actLineId) ?? p.actLineId,
 		})),
 	};
 

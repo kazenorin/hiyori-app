@@ -101,6 +101,8 @@ export interface InsertCharacterProfileInput {
 	voice?: string | null;
 	sceneDetails: string;
 	importance: CharacterImportance;
+	createdAt?: number;
+	updatedAt?: number;
 }
 
 /**
@@ -132,10 +134,26 @@ export async function insertCharacterProfile(input: InsertCharacterProfileInput)
 			input.voice ?? null,
 			input.sceneDetails,
 			input.importance,
-			now,
-			now,
+			input.createdAt ?? now,
+			input.updatedAt ?? now,
 		]
 	);
+}
+
+/**
+ * Get all character profile rows for multiple act lines in a single query.
+ * Used by the story exporter to bundle every scene's profile (not just the latest)
+ * for faithful round-tripping.
+ */
+export async function getCharacterProfilesForActLines(actLineIds: string[]): Promise<CharacterProfileEntity[]> {
+	if (actLineIds.length === 0) return [];
+	const db = getDatabase();
+	const placeholders = actLineIds.map((_, i) => `$${i + 1}`).join(',');
+	const rows = await db.select<CharacterProfileRow[]>(
+		`SELECT * FROM character_profiles WHERE act_line_id IN (${placeholders})`,
+		actLineIds
+	);
+	return rows.map(mapRowToEntity);
 }
 
 /**

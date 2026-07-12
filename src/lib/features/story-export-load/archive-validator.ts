@@ -1,5 +1,6 @@
 import type JSZip from 'jszip';
 import type { StoryExportData } from './archive-schema';
+import { CURRENT_ARCHIVE_VERSION } from './archive-schema';
 
 export interface ValidationResult {
 	isValid: boolean;
@@ -17,8 +18,8 @@ export function validateStoryData(data: unknown): ValidationResult {
 
 	const d = data as Record<string, unknown>;
 
-	if (d.version !== 1) {
-		errors.push(`Unsupported archive version: ${d.version ?? 'missing'}. Only version 1 is supported.`);
+	if (typeof d.version !== 'number' || d.version < 1 || d.version > CURRENT_ARCHIVE_VERSION) {
+		errors.push(`Unsupported archive version: ${d.version ?? 'missing'}. Supported versions: 1–${CURRENT_ARCHIVE_VERSION}.`);
 		return { isValid: false, errors, warnings };
 	}
 

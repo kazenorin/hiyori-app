@@ -15,6 +15,7 @@ import {
 } from '$lib/db/act-lines';
 import { insertDirectorNote, type DirectorNote } from '$lib/db/director-notes';
 import { upsertMessage, insertMessage, type Message, parseVariables } from '$lib/db/messages';
+import { insertCharacterProfile, type InsertCharacterProfileInput, type CharacterImportance } from '$lib/db/character-profiles';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { fs } from '$lib/fs/file-system';
 import { loadStories, selectStory } from '$lib/stores/stories.svelte';
@@ -106,6 +107,30 @@ function toMessages(messages: StoryExportData['messages'], messageIds: Set<strin
 		}));
 }
 
+function toCharacterProfileInputs(
+	profiles: NonNullable<StoryExportData['characterProfiles']>,
+	selectedActLineIds: Set<string>
+): InsertCharacterProfileInput[] {
+	return profiles
+		.filter((p) => selectedActLineIds.has(p.actLineId))
+		.map((p) => ({
+			id: p.id,
+			actLineId: p.actLineId,
+			sceneNumber: p.sceneNumber,
+			canonicalName: p.canonicalName,
+			preferredName: p.preferredName,
+			aliases: p.aliases,
+			state: p.state,
+			goal: p.goal,
+			relationships: p.relationships,
+			voice: p.voice,
+			sceneDetails: p.sceneDetails,
+			importance: p.importance as CharacterImportance,
+			createdAt: p.createdAt,
+			updatedAt: p.updatedAt,
+		}));
+}
+
 export function collectMessageIds(entries: ActLineEntry[], premises: ActLineEntry[], events: ActLineEvent[]): Set<string> {
 	const ids = new Set<string>();
 	for (const e of entries) ids.add(e.messageId);
@@ -162,6 +187,13 @@ async function insertSelectedActLineData(data: StoryExportData, selectedActLineI
 			await upsertMessage(msg);
 		} else {
 			await insertMessage(msg);
+		}
+	}
+
+	if (data.characterProfiles) {
+		const selectedProfiles = toCharacterProfileInputs(data.characterProfiles, selectedActLineIds);
+		for (const profile of selectedProfiles) {
+			await insertCharacterProfile(profile);
 		}
 	}
 }
