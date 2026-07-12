@@ -130,6 +130,7 @@ export async function exportStory(storyId: string): Promise<void> {
 			canonicalName: p.canonicalName,
 			preferredName: p.preferredName,
 			aliases: p.aliases,
+			logline: p.logline,
 			state: p.state,
 			goal: p.goal,
 			relationships: p.relationships,
