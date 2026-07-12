@@ -30,6 +30,7 @@ import {
 	noDescriptionLabel,
 	sceneDetailsLabel,
 	stateLabel,
+	loglineLabel,
 	goalLabel,
 	relationshipsLabel,
 	voiceLabel,
@@ -220,6 +221,7 @@ export function formatProfileResponseBody(p: CharacterProfileEntity): string {
 		const v = body?.trim();
 		if (v) lines.push(`**${label}:** ${v}`);
 	};
+	push(loglineLabel(), p.logline);
 	push(stateLabel(), p.state);
 	push(goalLabel(), p.goal);
 	push(relationshipsLabel(), p.relationships);
@@ -229,10 +231,10 @@ export function formatProfileResponseBody(p: CharacterProfileEntity): string {
 
 /**
  * Extract a single-line description from a character profile for compact one-line references.
- * Falls back to the first non-empty line of `state`, then `voice`, then a localized placeholder.
+ * Falls back to logline, then the first non-empty line of `state`, then `voice`, then a localized placeholder.
  */
 export function extractOneLineDescription(profile: CharacterProfileEntity): string {
-	const source = profile.state?.trim() || profile.voice?.trim();
+	const source = profile.logline?.trim() || profile.state?.trim() || profile.voice?.trim();
 	if (!source) return noDescriptionLabel();
 	const firstLine = source.split('\n').find((l) => l.trim().length > 0);
 	if (firstLine) return firstLine.trim().replace(/^[-*]\s+/, '');

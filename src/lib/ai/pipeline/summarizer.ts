@@ -20,7 +20,14 @@ import {
 	serializeActSummary,
 } from '../act-summary-parser';
 import { actSummaryHeader } from '$lib/definitions/common-headers';
-import { goalLabel, importanceLabel, relationshipsLabel, stateLabel, voiceLabel } from '$lib/definitions/character-profile-labels';
+import {
+	goalLabel,
+	importanceLabel,
+	loglineLabel,
+	relationshipsLabel,
+	stateLabel,
+	voiceLabel,
+} from '$lib/definitions/character-profile-labels';
 import {
 	actSummaryTemplate,
 	characterProfilesHeader,
@@ -195,6 +202,7 @@ export async function generateCharacterProfiles(
 	const compressorSystemPrompt = prompts.characterProfileCompressorPrompt
 		.replaceAll('{{actSummaryHeader}}', actSummaryHeader())
 		.replaceAll('{{characterProfilesHeader}}', characterProfilesHeader())
+		.replaceAll('{{loglineLabel}}', loglineLabel())
 		.replaceAll('{{stateLabel}}', stateLabel())
 		.replaceAll('{{goalLabel}}', goalLabel())
 		.replaceAll('{{relationshipsLabel}}', relationshipsLabel())
@@ -227,7 +235,8 @@ export async function generateCharacterProfiles(
 				canonicalName,
 				preferredName: profile.characterName,
 				aliases,
-				state: profile.state,
+				logline: profile.logline,
+				state: profile.state || null,
 				goal: profile.goal || null,
 				relationships: profile.relationships || null,
 				voice: profile.voice || null,

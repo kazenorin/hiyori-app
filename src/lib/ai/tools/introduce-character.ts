@@ -18,7 +18,8 @@ export function createIntroduceCharacterTool(ctx: ToolContext) {
 	const inputSchema = z.object({
 		preferredName: z.string().min(1).describe(ls('tools.introduceCharacter.parameters.preferredName')),
 		aliases: z.array(z.string()).optional().default([]).describe(ls('tools.introduceCharacter.parameters.aliases')),
-		oneLineDescription: z.string().min(1).describe(ls('tools.introduceCharacter.parameters.oneLineDescription')),
+		logline: z.string().min(1).describe(ls('tools.introduceCharacter.parameters.logline')),
+		state: z.string().optional().describe(ls('tools.introduceCharacter.parameters.state')),
 		goal: z.string().optional().describe(ls('tools.introduceCharacter.parameters.goal')),
 		relationships: z.string().optional().describe(ls('tools.introduceCharacter.parameters.relationships')),
 		voice: z.string().optional().describe(ls('tools.introduceCharacter.parameters.voice')),
@@ -31,7 +32,7 @@ export function createIntroduceCharacterTool(ctx: ToolContext) {
 		description: ls('tools.introduceCharacter.description'),
 		inputSchema,
 		execute: async (input): Promise<string> => {
-			const { preferredName, aliases = [], oneLineDescription, goal, relationships, voice, importance } = input;
+			const { preferredName, aliases = [], logline, state, goal, relationships, voice, importance } = input;
 			await log(`introduce-character triggered for actLineId=${actLine.id}, name=${preferredName}`);
 
 			const allNames = [preferredName, ...aliases];
@@ -49,7 +50,8 @@ export function createIntroduceCharacterTool(ctx: ToolContext) {
 				canonicalName,
 				preferredName,
 				aliases: allAliases,
-				state: oneLineDescription,
+				logline,
+				state: state ?? null,
 				goal: goal ?? null,
 				relationships: relationships ?? null,
 				voice: voice ?? null,

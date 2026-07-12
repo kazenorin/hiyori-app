@@ -1,6 +1,13 @@
 import { actSummaryHeader, turnOfEventsHeader, summaryHeader, sectionFormat } from '$lib/definitions/common-headers';
 import { sceneWithNumberLabel, locationLabel, aliasesLabel, lastUpdateLabel } from '$lib/definitions/common-labels';
-import { stateLabel, goalLabel, relationshipsLabel, voiceLabel, importanceLabel } from '$lib/definitions/character-profile-labels';
+import {
+	stateLabel,
+	loglineLabel,
+	goalLabel,
+	relationshipsLabel,
+	voiceLabel,
+	importanceLabel,
+} from '$lib/definitions/character-profile-labels';
 import type { CharacterImportance } from '$lib/db/character-profiles';
 import {
 	sceneSummariesHeader,
@@ -36,6 +43,7 @@ export interface CharacterSummary {
 
 export interface CharacterProfile {
 	characterName: string;
+	logline: string;
 	state: string;
 	goal: string;
 	relationships: string;
@@ -263,7 +271,15 @@ export function parseProfilesBody(rawBody: string): { profiles: CharacterProfile
 		const h3Match = trimmed.match(/^###\s+(.+)$/);
 		if (h3Match) {
 			if (currentProfile) profiles.push(currentProfile);
-			currentProfile = { characterName: h3Match[1].trim(), state: '', goal: '', relationships: '', voice: '', importance: null };
+			currentProfile = {
+				characterName: h3Match[1].trim(),
+				logline: '',
+				state: '',
+				goal: '',
+				relationships: '',
+				voice: '',
+				importance: null,
+			};
 			continue;
 		}
 
@@ -280,6 +296,12 @@ export function parseProfilesBody(rawBody: string): { profiles: CharacterProfile
 
 		const text = stripListMarker(trimmed);
 		if (!text) continue;
+
+		const logline = extractLabeledValue(text, loglineLabel());
+		if (logline !== null) {
+			currentProfile.logline = logline;
+			continue;
+		}
 
 		const state = extractLabeledValue(text, stateLabel());
 		if (state !== null) {
@@ -431,6 +453,7 @@ export function serializeActSummary(data: ActSummary): string {
 		}
 		for (const profile of data.characterProfiles) {
 			lines.push(`### ${profile.characterName}`);
+			lines.push(`- ${loglineLabel()}: ${profile.logline}`);
 			lines.push(`- ${stateLabel()}: ${profile.state}`);
 			lines.push(`- ${goalLabel()}: ${profile.goal}`);
 			lines.push(`- ${relationshipsLabel()}: ${profile.relationships}`);

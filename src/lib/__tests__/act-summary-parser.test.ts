@@ -14,6 +14,7 @@ const mockCharacterSummariesSinceSceneLabel = vi.fn(
 );
 const mockLastUpdateLabel = vi.fn(() => 'Last update');
 const mockStateLabel = vi.fn(() => 'State');
+const mockLoglineLabel = vi.fn(() => 'Logline');
 const mockGoalLabel = vi.fn(() => 'Goal');
 const mockRelationshipsLabel = vi.fn(() => 'Relationships');
 const mockVoiceLabel = vi.fn(() => 'Voice');
@@ -34,6 +35,7 @@ vi.mock('$lib/definitions/common-labels', () => ({
 
 vi.mock('$lib/definitions/character-profile-labels', () => ({
 	stateLabel: () => mockStateLabel(),
+	loglineLabel: () => mockLoglineLabel(),
 	goalLabel: () => mockGoalLabel(),
 	relationshipsLabel: () => mockRelationshipsLabel(),
 	voiceLabel: () => mockVoiceLabel(),
@@ -559,7 +561,15 @@ Summary: The hero discovers a hidden path.
 			scenes: [],
 			characters: [],
 			characterProfiles: [
-				{ characterName: 'Elena', state: 'Wounded', goal: 'Escape', relationships: 'Distrusts Voss', voice: 'Quiet', importance: null },
+				{
+					characterName: 'Elena',
+					logline: 'A determined hero.',
+					state: 'Wounded',
+					goal: 'Escape',
+					relationships: 'Distrusts Voss',
+					voice: 'Quiet',
+					importance: null,
+				},
 			],
 			characterProfileLastScene: 5,
 			turnOfEvents: null,
@@ -581,12 +591,14 @@ describe('parseProfilesBody', () => {
 	it('parses character profiles with all fields', () => {
 		const body = `Last update: Scene 5
 ### Elena
+- Logline: A determined hero with a tragic past.
 - State: Wounded but determined
 - Goal: Escape the castle
 - Relationships: Distrusts Captain Voss, allied with the hero
 - Voice: Quiet and measured
 
 ### Captain Voss
+- Logline: A suspicious commander driven by duty.
 - State: Suspicious
 - Goal: Prevent the escape
 - Relationships: Hostile toward Elena
@@ -597,6 +609,7 @@ describe('parseProfilesBody', () => {
 		expect(result.profiles).toHaveLength(2);
 		expect(result.profiles[0]).toEqual({
 			characterName: 'Elena',
+			logline: 'A determined hero with a tragic past.',
 			state: 'Wounded but determined',
 			goal: 'Escape the castle',
 			relationships: 'Distrusts Captain Voss, allied with the hero',
@@ -605,6 +618,7 @@ describe('parseProfilesBody', () => {
 		});
 		expect(result.profiles[1]).toEqual({
 			characterName: 'Captain Voss',
+			logline: 'A suspicious commander driven by duty.',
 			state: 'Suspicious',
 			goal: 'Prevent the escape',
 			relationships: 'Hostile toward Elena',
@@ -615,6 +629,7 @@ describe('parseProfilesBody', () => {
 
 	it('parses importance when present', () => {
 		const body = `### Elena
+- Logline: A determined hero.
 - State: Determined
 - Goal: Escape
 - Relationships: Allied with hero
@@ -622,6 +637,7 @@ describe('parseProfilesBody', () => {
 - Importance: 2
 
 ### Voss
+- Logline: A desperate survivor.
 - State: Desperate
 - Goal: Survive
 - Relationships: Hostile
@@ -676,7 +692,9 @@ describe('pruneCharacterScenes', () => {
 					],
 				},
 			],
-			characterProfiles: [{ characterName: 'Elena', state: 'S', goal: 'G', relationships: 'R', voice: 'V', importance: null }],
+			characterProfiles: [
+				{ characterName: 'Elena', logline: 'A hero.', state: 'S', goal: 'G', relationships: 'R', voice: 'V', importance: null },
+			],
 			characterProfileLastScene: 5,
 			turnOfEvents: null,
 			turnOfEventsSceneNumber: null,
@@ -773,8 +791,24 @@ describe('compressed act summary (caller-side assembly)', () => {
 			},
 		],
 		characterProfiles: [
-			{ characterName: 'Elena', state: 'Determined', goal: 'Escape', relationships: 'Allied with hero', voice: 'Quiet', importance: null },
-			{ characterName: 'Voss', state: 'Desperate', goal: 'Survive', relationships: 'Hostile', voice: 'Gruff', importance: null },
+			{
+				characterName: 'Elena',
+				logline: 'A determined hero.',
+				state: 'Determined',
+				goal: 'Escape',
+				relationships: 'Allied with hero',
+				voice: 'Quiet',
+				importance: null,
+			},
+			{
+				characterName: 'Voss',
+				logline: 'A desperate survivor.',
+				state: 'Desperate',
+				goal: 'Survive',
+				relationships: 'Hostile',
+				voice: 'Gruff',
+				importance: null,
+			},
 		],
 		characterProfileLastScene: 5,
 		turnOfEvents: null,

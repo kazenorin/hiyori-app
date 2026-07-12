@@ -175,6 +175,7 @@ pipeline:
     totalViolations: 違規總數
     recommendation: 建議
     state: 狀態
+    logline: 概述
     goal: 目標
     relationships: 關係
     voice: 語氣
@@ -521,7 +522,8 @@ tools:
     parameters:
       preferredName: '此章節路線中此角色的主要名稱。「不明」、「無」或「沒有」等的佔位名稱不應當作名稱。'
       aliases: '此章節路線中此角色已知的其他名稱或別名。「不明」、「無」或「沒有」等佔位名稱不應當作名稱或別名。'
-      oneLineDescription: '用一個句子說明此角色是誰。'
+      logline: '用一句捕捉角色的氣質氛圍、原型、行為傾向和世界觀視角。'
+      state: '角色目前的身體狀況、位階、知識和活躍裝備。'
       goal: '此角色於現場景的即時動機或驅動力。'
       relationships: '角色與其他活躍角色之間的當前關係簡述。'
       voice: '引述一句能代表此角色的說話。'

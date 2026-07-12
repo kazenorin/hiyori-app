@@ -61,6 +61,7 @@ vi.mock('$lib/definitions/common-labels', () => ({
 
 vi.mock('$lib/definitions/character-profile-labels', () => ({
 	stateLabel: () => 'State',
+	loglineLabel: () => 'Logline',
 	goalLabel: () => 'Goal',
 	relationshipsLabel: () => 'Relationships',
 	voiceLabel: () => 'Voice',
@@ -78,6 +79,7 @@ function makeProfile(overrides: Partial<CharacterProfileEntity> = {}): Character
 		canonicalName: 'elena',
 		preferredName: 'Elena',
 		aliases: [],
+		logline: 'A determined hero.',
 		state: 'Determined hero.',
 		goal: null,
 		relationships: null,
@@ -145,7 +147,7 @@ describe('formatCharacterProfilesSection', () => {
 	it('renders referenced profiles as one-line entries with scene info', () => {
 		const profiles = [
 			makeProfile({ id: 'p1', preferredName: 'Elena', importance: 1, sceneNumber: 5 }),
-			makeProfile({ id: 'p2', preferredName: 'Voss', importance: 4, sceneNumber: 10, state: 'A gruff captain.' }),
+			makeProfile({ id: 'p2', preferredName: 'Voss', importance: 4, sceneNumber: 10, logline: '', state: 'A gruff captain.' }),
 		];
 
 		const result = formatCharacterProfilesSection(profiles, 2, 5);
@@ -155,7 +157,7 @@ describe('formatCharacterProfilesSection', () => {
 	it('renders referenced profiles without scene info when sceneNumber is null', () => {
 		const profiles = [
 			makeProfile({ id: 'p1', preferredName: 'Elena', importance: 1 }),
-			makeProfile({ id: 'p2', preferredName: 'Voss', importance: 4, sceneNumber: null, state: 'A captain.' }),
+			makeProfile({ id: 'p2', preferredName: 'Voss', importance: 4, sceneNumber: null, logline: '', state: 'A captain.' }),
 		];
 
 		const result = formatCharacterProfilesSection(profiles, 2, 5);
@@ -183,6 +185,7 @@ describe('formatCharacterProfilesSection', () => {
 			id: 'p2',
 			preferredName: 'Voss',
 			importance: 4,
+			logline: '',
 			state: '- A gruff captain\n\nMore detail.',
 		});
 		const result = formatCharacterProfilesSection([profile], 0, 0);
@@ -194,6 +197,7 @@ describe('formatCharacterProfilesSection', () => {
 			id: 'p2',
 			preferredName: 'Voss',
 			importance: 4,
+			logline: '',
 			state: '',
 		});
 		const result = formatCharacterProfilesSection([profile], 0, 0);

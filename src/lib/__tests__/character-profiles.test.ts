@@ -93,6 +93,7 @@ describe('character-profiles DB layer', () => {
 				canonicalName: 'elena',
 				preferredName: 'Elena',
 				aliases: ['E', 'Shadow'],
+				logline: 'A determined hero.',
 				state: 'Determined',
 				sceneDetails: 'Scene 5: Elena fights',
 				importance: 2,
@@ -106,12 +107,13 @@ describe('character-profiles DB layer', () => {
 			expect(params[3]).toBe('elena');
 			expect(params[4]).toBe('Elena');
 			expect(params[5]).toBe(JSON.stringify(['E', 'Shadow']));
-			expect(params[6]).toBe('Determined');
-			expect(params[7]).toBeNull();
+			expect(params[6]).toBe('A determined hero.');
+			expect(params[7]).toBe('Determined');
 			expect(params[8]).toBeNull();
 			expect(params[9]).toBeNull();
-			expect(params[10]).toBe('Scene 5: Elena fights');
-			expect(params[11]).toBe(2);
+			expect(params[10]).toBeNull();
+			expect(params[11]).toBe('Scene 5: Elena fights');
+			expect(params[12]).toBe(2);
 		});
 
 		it('serializes empty aliases as "[]"', async () => {
@@ -122,6 +124,7 @@ describe('character-profiles DB layer', () => {
 				canonicalName: 'voss',
 				preferredName: 'Voss',
 				aliases: [],
+				logline: 'A gruff captain.',
 				state: 'Gruff',
 				sceneDetails: '',
 				importance: 4,
@@ -143,6 +146,7 @@ describe('character-profiles DB layer', () => {
 						canonical_name: 'elena',
 						preferred_name: 'Elena',
 						aliases: '["E","Shadow"]',
+						logline: 'A determined hero.',
 						state: 'Determined',
 						goal: null,
 						relationships: null,
@@ -164,6 +168,7 @@ describe('character-profiles DB layer', () => {
 				canonicalName: 'elena',
 				preferredName: 'Elena',
 				aliases: ['E', 'Shadow'],
+				logline: 'A determined hero.',
 				state: 'Determined',
 				goal: null,
 				relationships: null,
@@ -191,6 +196,7 @@ describe('character-profiles DB layer', () => {
 						canonical_name: 'elena',
 						preferred_name: 'Elena',
 						aliases: 'not json',
+						logline: 'A hero.',
 						state: 'P',
 						goal: null,
 						relationships: null,
@@ -225,6 +231,7 @@ describe('character-profiles DB layer', () => {
 						canonical_name: 'elena',
 						preferred_name: 'Elena',
 						aliases: '["Shadow"]',
+						logline: 'A hero.',
 						state: 'P',
 						goal: null,
 						relationships: null,
@@ -253,6 +260,7 @@ describe('character-profiles DB layer', () => {
 						canonical_name: 'elena',
 						preferred_name: 'Elena',
 						aliases: '["Shadow"]',
+						logline: 'A hero.',
 						state: 'P',
 						goal: null,
 						relationships: null,
@@ -282,6 +290,7 @@ describe('character-profiles DB layer', () => {
 						canonical_name: 'elena-shadowcrest',
 						preferred_name: 'Elena',
 						aliases: '["Shadow"]',
+						logline: 'A hero.',
 						state: 'P',
 						goal: null,
 						relationships: null,
@@ -384,6 +393,7 @@ describe('character-profiles DB layer', () => {
 						canonical_name: 'elena',
 						preferred_name: 'Elena',
 						aliases: '["E"]',
+						logline: 'A hero.',
 						state: 'P',
 						goal: null,
 						relationships: null,
@@ -400,6 +410,7 @@ describe('character-profiles DB layer', () => {
 						canonical_name: 'voss',
 						preferred_name: 'Voss',
 						aliases: '[]',
+						logline: 'A gruff captain.',
 						state: 'P2',
 						goal: null,
 						relationships: null,
@@ -444,6 +455,7 @@ describe('character-profiles DB layer', () => {
 				canonical_name: 'elena',
 				preferred_name: 'Elena',
 				aliases: '[]',
+				logline: 'A hero.',
 				state: 'P',
 				goal: null,
 				relationships: null,
@@ -460,6 +472,7 @@ describe('character-profiles DB layer', () => {
 				canonical_name: 'voss',
 				preferred_name: 'Voss',
 				aliases: '[]',
+				logline: 'A gruff captain.',
 				state: 'P2',
 				goal: null,
 				relationships: null,
@@ -487,6 +500,7 @@ describe('character-profiles DB layer', () => {
 						canonical_name: 'elena',
 						preferred_name: 'Elena',
 						aliases: '["Shadow"]',
+						logline: 'A determined hero.',
 						state: 'Determined',
 						goal: null,
 						relationships: null,
@@ -516,6 +530,7 @@ describe('character-profiles DB layer', () => {
 						canonical_name: 'elena',
 						preferred_name: 'Elena',
 						aliases: '["Elena","Shadow"]',
+						logline: 'A hero.',
 						state: 'P',
 						goal: null,
 						relationships: null,

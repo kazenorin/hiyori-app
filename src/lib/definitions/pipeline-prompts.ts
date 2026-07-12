@@ -12,6 +12,7 @@ export const acceptAsIsLabel = () => ls('pipeline.labels.acceptAsIs');
 export const totalViolationsLabel = () => ls('pipeline.labels.totalViolations');
 export const recommendationLabel = () => ls('pipeline.labels.recommendation');
 export const stateLabel = () => ls('pipeline.labels.state');
+export const loglineLabel = () => ls('pipeline.labels.logline');
 export const goalLabel = () => ls('pipeline.labels.goal');
 export const relationshipsLabel = () => ls('pipeline.labels.relationships');
 export const voiceLabel = () => ls('pipeline.labels.voice');
