@@ -93,6 +93,9 @@ export const SECTION = {
 	get CHARACTER_PROFILES_OTHER() {
 		return ls('common.descriptions.characterProfilesOther');
 	},
+	get CHARACTER_CARDS() {
+		return sectionFormat(ls('pipeline.sections.characterCards')) + ls('pipeline.sections.characterCardsDescription') + '\n\n';
+	},
 };
 
 /** Section headings for act-plot generation phases (used by act-plot-generator). */
@@ -117,6 +120,15 @@ export const ACT_PLOT_SECTION = {
 	},
 	get TEMPLATE() {
 		return sectionFormat(templateHeader());
+	},
+	get CHARACTER_CARDS() {
+		return sectionFormat(ls('pipeline.sections.actPlotCharacterCards'));
+	},
+	get ACT_CARDS() {
+		return sectionFormat(ls('pipeline.sections.actPlotActCards'));
+	},
+	get CHARACTER_PROFILES() {
+		return sectionFormat(ls('pipeline.sections.actPlotCharacterProfiles'));
 	},
 };
 
@@ -239,4 +251,19 @@ export function extractOneLineDescription(profile: CharacterProfileEntity): stri
 	const firstLine = source.split('\n').find((l) => l.trim().length > 0);
 	if (firstLine) return firstLine.trim().replace(/^[-*]\s+/, '');
 	return noDescriptionLabel();
+}
+
+export interface CharacterCardInput {
+	preferredName: string;
+	content: string;
+}
+
+export function formatCharacterCardsSection(cards: CharacterCardInput[]): string {
+	if (cards.length === 0) return '';
+	const blocks = cards.map((c) => {
+		const body = c.content.trim();
+		const header = `### ${c.preferredName}`;
+		return body.length > 0 ? `${header}\n\n${body}` : header;
+	});
+	return blocks.join('\n\n---\n\n');
 }

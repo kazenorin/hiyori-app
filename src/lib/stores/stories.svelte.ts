@@ -17,6 +17,7 @@ import { deriveStoryName, renameStoryFolder, resolveStoryFolder } from '$lib/fs/
 import { fs } from '$lib/fs/file-system';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, getLineDir, resolveLineSubdir } from '$lib/ai/card-output-path';
+import { copyCharacterCardsToNewLine } from '$lib/features/character-card-generator';
 import { type ActPlotPhase } from '$lib/ai/act-plot';
 import type { PlotMode } from '$lib/ai/narrative-types';
 import { actWithNumberLabel, mainLineNameLabel } from '$lib/definitions/common-labels';
@@ -211,18 +212,37 @@ export async function createActLineContinuation(
 ): Promise<{ act: dbActs.Act; actLine: dbActLines.ActLineMeta }> {
 	const toActNumber = fromAct.actNumber + 1;
 	const toAct = await dbActs.getActByActNumber(story.id, toActNumber);
+	let result: { act: dbActs.Act; actLine: dbActLines.ActLineMeta };
 	if (toAct) {
 		const lineName = await determineMainLineNameForExistingAct(toAct.id, mainLineNameLabel());
 		const actLine = await createActLine(toAct.id, lineName, fromActLine.plotMode, true);
 		await inheritProfilesFromActLine(fromActLine.id, actLine.id);
-		return { act: toAct, actLine };
+		result = { act: toAct, actLine };
 	} else {
 		const actName = actWithNumberLabel(toActNumber);
 		const newAct = await insertAct(story.id, actName, toActNumber, fromActLine.id);
 		const actLine = await createActLine(newAct.id, mainLineNameLabel(), fromActLine.plotMode);
 		await inheritProfilesFromActLine(fromActLine.id, actLine.id);
-		return { act: newAct, actLine };
+		result = { act: newAct, actLine };
 	}
+
+	try {
+		const storyFolder = await resolveStoryFolder(story.id, story.name);
+		await copyCharacterCardsToNewLine({
+			fromStoryFolder: storyFolder,
+			fromActNumber: fromAct.actNumber,
+			fromIsMainLine: fromActLine.isMainLine ?? false,
+			fromActLineId: fromActLine.id,
+			toStoryFolder: storyFolder,
+			toActNumber: result.act.actNumber,
+			toIsMainLine: result.actLine.isMainLine ?? true,
+			toActLineId: result.actLine.id,
+		});
+	} catch (err) {
+		await log.warn('stories', `Failed to copy character cards on continuation: ${err}`);
+	}
+
+	return result;
 }
 
 export async function renameStory(id: string, newName: string): Promise<void> {

@@ -1,26 +1,18 @@
-import type { MessageBase } from '$lib/db/messages';
+import type { Message, MessageBase } from '$lib/db/messages';
+import type { ActLineMeta } from '$lib/db/act-lines';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { actCardTemplateLoader } from '$lib/fs/prompts';
 import { exportActLine } from '$lib/ai/act-line-export';
-import { getActLine, getMessagesForLine } from '$lib/db/act-lines';
-import { getAct } from '$lib/db/acts';
+import { getMessagesForLine } from '$lib/db/act-lines';
 import { ensureWorldFile } from '$lib/ai/world-generator';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
-import { getActiveActLineId } from '$lib/stores/stories.svelte';
 import { fs } from '$lib/fs/file-system';
 import { getLineDir } from '$lib/ai/card-output-path';
 import { logActCardActivity } from '$lib/logging/chat-logger';
 import { type RetryConfig, streamWithRetry } from '$lib/ai/chat-stream';
 import type { StreamState } from '$lib/ai/chat-callbacks';
 import { actCardExtractionPrompt, actCardSystemPrompt, actCardTranscriptEnd, actCardTranscriptStart, worldContextLabel } from './prompts';
-import {
-	ERR_ACT_NOT_FOUND,
-	ERR_NO_ACT_LINE_SELECTED,
-	ERR_NO_MAIN_PROVIDER,
-	ERR_NO_NARRATIVE_CONTENT,
-	ERR_STORY_NOT_FOUND,
-} from '$lib/definitions/error-messages';
-import { getStory } from '$lib/db/stories';
+import { ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT } from '$lib/definitions/error-messages';
 
 function buildUserMessages(contents: string[], template: string, extractionPrompt: string, world: string): string[] {
 	const worldPrompt = [worldContextLabel(), world];
@@ -36,63 +28,17 @@ interface ActCardContext {
 	systemPrompt: string;
 	userMessageContents: string[];
 	world: string;
+	messageIdSuffix: string | null;
 }
 
-async function resolveActCardContext(abortSignal?: AbortSignal): Promise<ActCardContext> {
-	const config = getMainProviderConfig();
-	if (!config?.model) {
-		throw new Error(ERR_NO_MAIN_PROVIDER);
-	}
-
-	const actLineId = getActiveActLineId();
-	const actLine = actLineId ? await getActLine(actLineId) : null;
-	if (!actLineId || !actLine) {
-		throw new Error(ERR_NO_ACT_LINE_SELECTED);
-	}
-
-	const allMessages = await getMessagesForLine(actLineId);
-	const contents = exportActLine(allMessages);
-	if (contents.length === 0) {
-		throw new Error(ERR_NO_NARRATIVE_CONTENT);
-	}
-
-	const act = await getAct(actLine.actId);
-	if (!act) {
-		throw new Error(ERR_ACT_NOT_FOUND);
-	}
-	const story = await getStory(act.storyId);
-	if (!story) {
-		throw new Error(ERR_STORY_NOT_FOUND);
-	}
-
-	const isMainLine = actLine.isMainLine ?? false;
-
-	const [template, world] = await Promise.all([
-		actCardTemplateLoader.loadByStory(story.id, story.name),
-		ensureWorldFile(story.id, story.name, abortSignal),
-	]);
-	const extractionPrompt = actCardExtractionPrompt();
-
-	return {
-		storyId: story.id,
-		actLineId,
-		isMainLine,
-		actNumber: act.actNumber,
-		storyName: story.name,
-		systemPrompt: actCardSystemPrompt(),
-		userMessageContents: buildUserMessages(contents, template, extractionPrompt, world),
-		world,
-	};
-}
-
-async function resolveAndWrite(ctx: ActCardContext, content: string): Promise<string> {
-	const storyFolder = await resolveStoryFolder(ctx.storyId, ctx.storyName);
-	const lineDir = await getLineDir(storyFolder, ctx.actNumber, ctx.isMainLine, ctx.actLineId);
-	const filePath = `${lineDir}/act-card.md`;
-
-	await fs.writeTextFileEnsuringDir(filePath, content);
-
-	return filePath;
+export interface StreamActCardParams {
+	storyId: string;
+	storyName: string;
+	actLineId: string;
+	actLine: ActLineMeta;
+	actNumber: number;
+	abortSignal?: AbortSignal;
+	preloadedMessages?: Message[];
 }
 
 export interface StreamActCardResult {
@@ -100,12 +46,62 @@ export interface StreamActCardResult {
 	content: string;
 }
 
+function computeActCardFilename(messageIdSuffix: string): string {
+	return `act-card-${messageIdSuffix}.md`;
+}
+
+async function resolveActCardContext(params: StreamActCardParams, abortSignal?: AbortSignal): Promise<ActCardContext> {
+	const config = getMainProviderConfig();
+	if (!config?.model) {
+		throw new Error(ERR_NO_MAIN_PROVIDER);
+	}
+
+	const allMessages = params.preloadedMessages ?? (await getMessagesForLine(params.actLineId));
+	const contents = exportActLine(allMessages);
+	if (contents.length === 0) {
+		throw new Error(ERR_NO_NARRATIVE_CONTENT);
+	}
+
+	const isMainLine = params.actLine.isMainLine ?? false;
+	const messageIdSuffix = allMessages.at(-1)?.id.slice(-8) ?? null;
+
+	const [template, world] = await Promise.all([
+		actCardTemplateLoader.loadByStory(params.storyId, params.storyName),
+		ensureWorldFile(params.storyId, params.storyName, abortSignal),
+	]);
+	const extractionPrompt = actCardExtractionPrompt();
+
+	return {
+		storyId: params.storyId,
+		actLineId: params.actLineId,
+		isMainLine,
+		actNumber: params.actNumber,
+		storyName: params.storyName,
+		systemPrompt: actCardSystemPrompt(),
+		userMessageContents: buildUserMessages(contents, template, extractionPrompt, world),
+		world,
+		messageIdSuffix,
+	};
+}
+
+async function resolveAndWrite(ctx: ActCardContext, content: string): Promise<string> {
+	const storyFolder = await resolveStoryFolder(ctx.storyId, ctx.storyName);
+	const lineDir = await getLineDir(storyFolder, ctx.actNumber, ctx.isMainLine, ctx.actLineId);
+	if (!ctx.messageIdSuffix) throw new Error(ERR_NO_NARRATIVE_CONTENT);
+	const filename = computeActCardFilename(ctx.messageIdSuffix);
+	const filePath = `${lineDir}/${filename}`;
+
+	await fs.writeTextFileEnsuringDir(filePath, content);
+
+	return filePath;
+}
+
 export async function streamActCard(
+	params: StreamActCardParams,
 	onProgress: (state: StreamState) => void,
-	retryConfig: RetryConfig = { retryCount: 3, backoffIntervalSeconds: 2 },
-	abortSignal?: AbortSignal
+	retryConfig: RetryConfig = { retryCount: 3, backoffIntervalSeconds: 2 }
 ): Promise<StreamActCardResult> {
-	const ctx = await resolveActCardContext(abortSignal);
+	const ctx = await resolveActCardContext(params, params.abortSignal);
 
 	const config = getMainProviderConfig()!;
 	const userMessages: MessageBase[] = ctx.userMessageContents.map((content) => ({
@@ -126,7 +122,7 @@ export async function streamActCard(
 			});
 		},
 		providerConfig: config,
-		abortSignal,
+		abortSignal: params.abortSignal,
 	});
 
 	const content = accumulator.state.content;
@@ -140,4 +136,70 @@ export async function streamActCard(
 
 	const filePath = await resolveAndWrite(ctx, content);
 	return { filePath, content };
+}
+
+async function resolveActCardPath(
+	messages: Message[],
+	storyFolder: string,
+	actNumber: number,
+	isMainLine: boolean,
+	actLineId: string
+): Promise<{ filePath: string; exists: boolean; messageIdSuffix: string | null }> {
+	const lastMessage = messages.at(-1);
+	const lineDir = await getLineDir(storyFolder, actNumber, isMainLine, actLineId);
+	if (!lastMessage) {
+		return { filePath: '', exists: false, messageIdSuffix: null };
+	}
+	const messageIdSuffix = lastMessage.id.slice(-8);
+	const filename = computeActCardFilename(messageIdSuffix);
+	const filePath = `${lineDir}/${filename}`;
+	const exists = await fs.exists(filePath);
+	return { filePath, exists, messageIdSuffix };
+}
+
+export interface EnsureActCardOptions {
+	storyId: string;
+	storyName: string;
+	actLineId: string;
+	actLine: ActLineMeta;
+	actNumber: number;
+	onProgress?: (state: StreamState) => void;
+	abortSignal?: AbortSignal;
+}
+
+export interface EnsureActCardResult {
+	filePath: string;
+	content: string;
+	generated: boolean;
+}
+
+export async function ensureActCard(opts: EnsureActCardOptions): Promise<EnsureActCardResult> {
+	const messages = await getMessagesForLine(opts.actLineId);
+	if (messages.length === 0) throw new Error(ERR_NO_NARRATIVE_CONTENT);
+
+	const storyFolder = await resolveStoryFolder(opts.storyId, opts.storyName);
+	const { filePath, exists, messageIdSuffix } = await resolveActCardPath(
+		messages,
+		storyFolder,
+		opts.actNumber,
+		opts.actLine.isMainLine ?? false,
+		opts.actLineId
+	);
+	if (messageIdSuffix === null) throw new Error(ERR_NO_NARRATIVE_CONTENT);
+	if (exists) {
+		return { filePath, content: await fs.readTextFile(filePath), generated: false };
+	}
+	const result = await streamActCard(
+		{
+			storyId: opts.storyId,
+			storyName: opts.storyName,
+			actLineId: opts.actLineId,
+			actLine: opts.actLine,
+			actNumber: opts.actNumber,
+			abortSignal: opts.abortSignal,
+			preloadedMessages: messages,
+		},
+		opts.onProgress ?? (() => {})
+	);
+	return { filePath: result.filePath, content: result.content, generated: true };
 }

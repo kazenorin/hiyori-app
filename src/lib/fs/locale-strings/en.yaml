@@ -65,6 +65,12 @@ pipeline:
     sceneSummaries: Scene Summaries
     characterSummaries: Character Summaries
     characterProfiles: Character Profiles
+  sections:
+    characterCards: Character Cards
+    characterCardsDescription: "Stable per-character context files for the current act line. Use these to keep characters' identity, history, and vibe consistent."
+    actPlotCharacterCards: Character Card
+    actPlotActCards: Act Card
+    actPlotCharacterProfiles: Character Profiles
   extraction:
     actShortSummary: 'You are a narrative summarizer. Your task is to distill the provided act summary into exactly 3 concise sentences that capture the key events, conflicts, and outcomes of the act. Focus on what happened and how the story changed. Write in past tense. After the 3 sentences, add a blank line then evaluate the characters listed in the act summary. List only those you judge to be important and likely to appear again in future acts, each on a new line, in the format: "Name (one-line description of their role or arc in this act)". Order them from most to least important. Do not list minor or one-off characters. Output only the summary and character list — no labels, no headings, no commentary.'
     actShortSummaryCharacterPrefix: 'Characters in this act'

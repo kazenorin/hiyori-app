@@ -40,6 +40,7 @@ export async function ensureActPlot(params: EnsureActPlotParams): Promise<string
 			actLine,
 			actNumber,
 			isResumeGame: params.isResumeGame,
+			useDetailedContext: params.useDetailedContext,
 			onPhaseChange: params.onPhaseChange,
 			abortSignal: params.abortSignal,
 		});

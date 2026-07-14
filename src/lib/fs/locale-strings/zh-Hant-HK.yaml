@@ -65,6 +65,12 @@ pipeline:
     sceneSummaries: 場景摘要
     characterSummaries: 角色摘要
     characterProfiles: 角色檔案
+  sections:
+    characterCards: 角色卡片
+    characterCardsDescription: '當前章節線的穩定角色背景檔案。用於保持角色的身份、歷史和風格一致性。'
+    actPlotCharacterCards: 角色卡片
+    actPlotActCards: 章節卡片
+    actPlotCharacterProfiles: 角色檔案
   extraction:
     actShortSummary: '你是一個敘事摘要者。你的任務是將提供的章節摘要濃縮為精確的 3 個簡潔句子，捕捉章節的關的關鍵事件、衝突和結果。專注於發生了什麼以及故事如何改變。以過去式撰寫。在 3 個句子之後，空一行，然後評估章節摘要中列出的角色。僅列出你判斷為重要且可能在未來章節中再次出現的角色，每行格式為: 「名字（一句話描述其在此章節中的角色或弧線）」。按重要性由高到低排序。不要列出次要或僅出現一次的角色。僅輸出摘要和角色列表——不添加標籤、標題或評論。'
     actShortSummaryCharacterPrefix: '此章節中的角色'

@@ -12,6 +12,7 @@ export interface EnsureActPlotParams {
 
 	worldContent?: string;
 	actNumber?: number;
+	useDetailedContext?: boolean;
 
 	abortSignal?: AbortSignal;
 }

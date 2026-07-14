@@ -1,5 +1,5 @@
 import { generateText, type ModelMessage } from 'ai';
-import { getMainProviderConfig, isReviewerEnabled } from '$lib/stores/settings.svelte';
+import { getMainProviderConfig, isReviewerEnabled, settings } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
 import {
 	actPlotEditorPromptLoader,
@@ -10,12 +10,25 @@ import {
 	phaseEventActPlotTemplateLoader,
 } from '$lib/fs/prompts';
 import { log } from '$lib/logging/logger';
-import { type ActLineMeta, getLastSceneNumber, getLatestTurnOfEvents, getPremisesMessages, getLatestActSummary } from '$lib/db/act-lines';
+import {
+	type ActLineMeta,
+	getLastSceneNumber,
+	getLatestTurnOfEvents,
+	getPremisesMessages,
+	getLatestActSummary,
+	getActLine,
+} from '$lib/db/act-lines';
+import { traceActLineChain } from '$lib/db/acts';
+import { ensureActCard } from '$lib/features/act-card-generator';
+import { ensureCharacterCard, loadCharacterCardsForActLine, type CharacterCardContext } from '$lib/features/character-card-generator';
+import { getLatestProfilesByActLine } from '$lib/db/character-profiles';
+import { formatCharacterProfilesSection } from '$lib/definitions/pipeline-sections';
 import { actPlotResumeNote } from '$lib/definitions/pipeline-prompts';
 import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';
 import { ACT_PLOT_SECTION } from '$lib/definitions/pipeline-sections';
 import { targetWordCountPerSceneHeader } from '$lib/definitions/common-headers';
 import { ERR_EMPTY_ACT_PLOT_WRITER, ERR_NO_MAIN_PROVIDER } from '$lib/definitions/error-messages';
+import { actWithNumberLabel } from '$lib/definitions/common-labels';
 
 const LOG_TAG = 'act-plot-generator';
 
@@ -49,17 +62,57 @@ interface BuildActPlotMessagesOptions {
 	writerOutput?: string;
 	reviewerOutput?: string;
 	template?: string;
+	characterCards?: { preferredName: string; content: string }[];
+	actCards?: { actNumber: number; content: string }[];
+	characterProfiles?: string;
+	useDetailedContext?: boolean;
 }
 
 function buildActPlotMessages(options: BuildActPlotMessagesOptions): ModelMessage[] {
-	const { worldContent, previousActSummary, turnOfEvents, interviewTranscript, writerOutput, reviewerOutput, prompt, template } = options;
+	const {
+		worldContent,
+		previousActSummary,
+		turnOfEvents,
+		interviewTranscript,
+		writerOutput,
+		reviewerOutput,
+		prompt,
+		template,
+		characterCards,
+		actCards,
+		characterProfiles,
+		useDetailedContext,
+	} = options;
 	const messages: ModelMessage[] = [];
+	const skipSummary = useDetailedContext === true;
 
 	if (worldContent) {
 		messages.push({ role: 'user', content: ACT_PLOT_SECTION.WORLD_CONTENT + worldContent });
 	}
 
-	if (previousActSummary) {
+	if (useDetailedContext && characterCards?.length) {
+		for (const card of characterCards) {
+			messages.push({
+				role: 'user',
+				content: ACT_PLOT_SECTION.CHARACTER_CARDS + `### ${card.preferredName}\n\n---\n\n${card.content}`,
+			});
+		}
+	}
+
+	if (useDetailedContext && actCards?.length) {
+		for (const card of actCards) {
+			messages.push({
+				role: 'user',
+				content: ACT_PLOT_SECTION.ACT_CARDS + `### ${actWithNumberLabel(card.actNumber)}\n\n---\n\n${card.content}`,
+			});
+		}
+	}
+
+	if (useDetailedContext && characterProfiles) {
+		messages.push({ role: 'user', content: ACT_PLOT_SECTION.CHARACTER_PROFILES + characterProfiles });
+	}
+
+	if (!skipSummary && previousActSummary) {
 		messages.push({ role: 'user', content: ACT_PLOT_SECTION.PREVIOUS_ACT_SUMMARY + previousActSummary });
 	}
 
@@ -99,6 +152,7 @@ export interface GenerateActPlotParams {
 	actLine: ActLineMeta;
 	actNumber: number;
 	isResumeGame?: boolean;
+	useDetailedContext?: boolean;
 	onPhaseChange?: (phase: ActPlotPhase) => void;
 	abortSignal?: AbortSignal;
 }
@@ -112,7 +166,17 @@ export interface GenerateActPlotParams {
  * If the reviewer or editor phase fails, falls back to writer output.
  */
 export async function generateActPlot(params: GenerateActPlotParams): Promise<string> {
-	const { storyId, storyName, worldContent, actLine, actNumber, isResumeGame = false, onPhaseChange, abortSignal } = params;
+	const {
+		storyId,
+		storyName,
+		worldContent,
+		actLine,
+		actNumber,
+		isResumeGame = false,
+		useDetailedContext,
+		onPhaseChange,
+		abortSignal,
+	} = params;
 	const config = getMainProviderConfig();
 	if (!config?.model) {
 		throw new Error(ERR_NO_MAIN_PROVIDER);
@@ -122,25 +186,35 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 
 	// Load prompts and context in parallel
 	const actPlotTemplateLoader = actLine.plotMode === 'phaseEvent' ? phaseEventActPlotTemplateLoader : guidanceActPlotTemplateLoader;
-	const [template, generationPrompt, systemPrompt, reviewerPrompt, editorPrompt, interviewTranscript, previousActSummary, turnOfEvents] =
-		await Promise.all([
-			actPlotTemplateLoader
-				.loadByStory(storyId, storyName)
-				.then((p) => p.replace('{{targetWordCountPerSceneLabel}}', targetWordCountPerSceneHeader())),
-			actPlotGenerationPromptLoader.loadByStory(storyId, storyName).then((p) => p.replace('{{actNumber}}', actNumber.toString())),
-			actPlotSystemPromptLoader.loadByStory(storyId, storyName),
-			actPlotReviewerPromptLoader.loadByStory(storyId, storyName),
-			actPlotEditorPromptLoader.loadByStory(storyId, storyName),
-			loadInterviewTranscript(actLineId),
-			getLatestActSummary(actLineId),
-			isResumeGame ? getLatestTurnOfEvents(actLineId) : Promise.resolve(null),
-		]);
+	const [
+		template,
+		generationPrompt,
+		systemPrompt,
+		reviewerPrompt,
+		editorPrompt,
+		interviewTranscript,
+		previousActSummary,
+		turnOfEvents,
+		detailedContext,
+	] = await Promise.all([
+		actPlotTemplateLoader
+			.loadByStory(storyId, storyName)
+			.then((p) => p.replace('{{targetWordCountPerSceneLabel}}', targetWordCountPerSceneHeader())),
+		actPlotGenerationPromptLoader.loadByStory(storyId, storyName).then((p) => p.replace('{{actNumber}}', actNumber.toString())),
+		actPlotSystemPromptLoader.loadByStory(storyId, storyName),
+		actPlotReviewerPromptLoader.loadByStory(storyId, storyName),
+		actPlotEditorPromptLoader.loadByStory(storyId, storyName),
+		loadInterviewTranscript(actLineId),
+		getLatestActSummary(actLineId),
+		isResumeGame ? getLatestTurnOfEvents(actLineId) : Promise.resolve(null),
+		useDetailedContext ? loadDetailedContextInputs(params) : Promise.resolve(null),
+	]);
 
 	const model = await createModel(config);
 
 	await log.info(
 		LOG_TAG,
-		`Starting act-plot pipeline for story: ${storyName} (interview: ${interviewTranscript.some((m) => m.role === 'user') ? 'yes' : 'no'}, prev-summary: ${previousActSummary ? 'yes' : 'no'}, turnOfEvents: ${turnOfEvents ? 'yes' : 'no'})`
+		`Starting act-plot pipeline for story: ${storyName} (interview: ${interviewTranscript.some((m) => m.role === 'user') ? 'yes' : 'no'}, prev-summary: ${previousActSummary ? 'yes' : 'no'}, turnOfEvents: ${turnOfEvents ? 'yes' : 'no'}, detailedContext: ${detailedContext ? 'yes' : 'no'})`
 	);
 
 	// Phase 1: WRITER
@@ -154,6 +228,10 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 		interviewTranscript,
 		prompt: generationPrompt,
 		template,
+		useDetailedContext,
+		characterCards: detailedContext?.characterCards,
+		actCards: detailedContext?.actCards,
+		characterProfiles: detailedContext?.characterProfiles,
 	});
 	const writerResult = await generateText({
 		model,
@@ -188,6 +266,10 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 				turnOfEvents,
 				writerOutput: writerText,
 				prompt: reviewerPrompt,
+				useDetailedContext,
+				characterCards: detailedContext?.characterCards,
+				actCards: detailedContext?.actCards,
+				characterProfiles: detailedContext?.characterProfiles,
 			});
 			const reviewerResult = await generateText({
 				model,
@@ -218,6 +300,10 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 					writerOutput: writerText,
 					reviewerOutput: reviewerText,
 					prompt: editorPrompt,
+					useDetailedContext,
+					characterCards: detailedContext?.characterCards,
+					actCards: detailedContext?.actCards,
+					characterProfiles: detailedContext?.characterProfiles,
 				});
 				const editorResult = await generateText({
 					model,
@@ -252,4 +338,76 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 	}
 
 	return finalText;
+}
+
+interface DetailedContext {
+	actCards: { actNumber: number; content: string }[];
+	characterCards: { preferredName: string; content: string }[];
+	characterProfiles: string;
+}
+
+async function loadDetailedContextInputs(params: GenerateActPlotParams): Promise<DetailedContext> {
+	const { storyId, storyName, actLine, actNumber } = params;
+
+	// --- Act cards: trace lineage, excluding current act number ---
+	const lineage = await traceActLineChain(actLine.id);
+	const actCards: { actNumber: number; content: string }[] = [];
+	for (const entry of lineage) {
+		if (entry.actNumber === actNumber) continue;
+		const lineageActLine = await getActLine(entry.actLineId);
+		if (!lineageActLine) continue;
+		const result = await ensureActCard({
+			storyId,
+			storyName,
+			actLineId: entry.actLineId,
+			actLine: lineageActLine,
+			actNumber: entry.actNumber,
+			abortSignal: params.abortSignal,
+		});
+		actCards.push({ actNumber: entry.actNumber, content: result.content });
+	}
+	actCards.sort((a, b) => a.actNumber - b.actNumber);
+
+	// --- Character cards: reuse settings thresholds ---
+	const profiles = await getLatestProfilesByActLine(actLine.id);
+	const threshold = settings.characterProfileImportanceThreshold;
+	const maxIncluded = settings.characterProfileMaxIncluded;
+	const included = profiles
+		.filter((p) => p.importance <= threshold)
+		.sort((a, b) => a.importance - b.importance)
+		.slice(0, maxIncluded);
+
+	const ctx: CharacterCardContext = {
+		storyId,
+		storyName,
+		actLineId: actLine.id,
+		actLine,
+		actNumber,
+	};
+	const characterCards: { preferredName: string; content: string }[] = [];
+	const includedCanonicals = new Set<string>();
+	for (const profile of included) {
+		const result = await ensureCharacterCard({
+			ctx,
+			canonicalName: profile.canonicalName,
+			preferredName: profile.preferredName,
+			abortSignal: params.abortSignal,
+		});
+		characterCards.push({ preferredName: profile.preferredName, content: result.content });
+		includedCanonicals.add(profile.canonicalName);
+	}
+
+	// Also include any existing cards whose canonical name matches a profile in this line
+	const existing = await loadCharacterCardsForActLine(ctx);
+	for (const card of existing) {
+		if (includedCanonicals.has(card.canonicalName)) continue;
+		const profile = profiles.find((p) => p.canonicalName === card.canonicalName);
+		if (!profile) continue;
+		characterCards.push({ preferredName: profile.preferredName, content: card.content });
+		includedCanonicals.add(card.canonicalName);
+	}
+
+	const characterProfiles = formatCharacterProfilesSection(profiles, threshold, maxIncluded)[0] ?? '';
+
+	return { actCards, characterCards, characterProfiles };
 }

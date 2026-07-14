@@ -1,6 +1,4 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { resolve } from '$app/paths';
 	import { Memory, type MemoryItem, type LocationItem, type AliasGroup } from '$lib/features/memory';
 	import type { InventoryItem } from '$lib/features/memory/inventory-types';
 	import { getEmbeddingProviderConfig, getMemoryProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
@@ -21,8 +19,6 @@
 		getRegenError,
 		getLastRegenResult,
 	} from '$lib/stores/memory-regeneration.svelte';
-	import { streamActCard } from '$lib/features/act-card-generator';
-	import { log } from '$lib/logging/logger';
 	import { traceActLineChain } from '$lib/db/acts';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
@@ -56,7 +52,6 @@
 	}
 
 	// Generation state
-	let isGeneratingAct = $state(false);
 	let consoleOutput = $state('');
 	let consoleRef = $state<HTMLPreElement | null>(null);
 	let progressUpdates = $state<Array<{ time: Date; message: string }>>([]);
@@ -119,47 +114,6 @@
 	function addProgress(message: string) {
 		progressUpdates = [...progressUpdates, { time: new Date(), message }];
 		appendConsole(message);
-	}
-
-	async function handleGenerateActCard() {
-		if (!activeActLineId) {
-			status = t('memoryManager.noActLineSelected');
-			return;
-		}
-		confirmDialog = {
-			title: t('memoryManager.generateActCard'),
-			message: t('memoryManager.actCardOverrideConfirm'),
-			onConfirm: doGenerateActCard,
-		};
-	}
-
-	async function doGenerateActCard() {
-		isGeneratingAct = true;
-		consoleOutput = '';
-		progressUpdates = [];
-		status = '';
-
-		try {
-			addProgress(t('memoryManager.generatingActCard'));
-			const result = await streamActCard((state) => {
-				const text = state.content || state.reasoning || '';
-				if (text) {
-					consoleOutput = text;
-					requestAnimationFrame(() => {
-						if (consoleRef) consoleRef.scrollTop = consoleRef.scrollHeight;
-					});
-				}
-			});
-			addProgress(t('memoryManager.actCardSaved', { file: result.filePath.split('/').pop() ?? 'unknown' }));
-			status = t('memoryManager.actCardGenerated');
-		} catch (err) {
-			const msg = err instanceof Error ? err.message : t('memoryManager.generationFailed');
-			addProgress(`${t('memoryManager.errorPrefix')} ${msg}`);
-			status = msg;
-			await log.error('memory-manager', 'Act card generation failed', err);
-		} finally {
-			isGeneratingAct = false;
-		}
 	}
 
 	async function handleRegenerateMemories() {
@@ -369,30 +323,10 @@
 
 				<div class="flex flex-wrap gap-2">
 					<button
-						class="btn preset-filled"
-						type="button"
-						onclick={handleGenerateActCard}
-						disabled={!activeActLineId || isGeneratingAct || getIsRegenerating()}
-					>
-						{#if isGeneratingAct}
-							{t('memoryManager.generating')}
-						{:else}
-							{t('memoryManager.generateActCard')}
-						{/if}
-					</button>
-					<button
-						class="btn preset-outlined"
-						type="button"
-						onclick={() => goto(resolve('/generate-character-cards'))}
-						disabled={!activeActLineId || isGeneratingAct || getIsRegenerating()}
-					>
-						{t('memoryManager.generateCharacterCards')}
-					</button>
-					<button
 						class="btn preset-tonal"
 						type="button"
 						onclick={handleRegenerateMemories}
-						disabled={!activeActLineId || isGeneratingAct || getIsRegenerating()}
+						disabled={!activeActLineId || getIsRegenerating()}
 					>
 						{#if getIsRegenerating()}
 							{t('memoryManager.regenerating')}

@@ -146,6 +146,7 @@ export function formatActSummaryForSummarizer(completedScenes: number, actSummar
 function buildPreEditorSections(ctx: PreEditorContext): string[] {
 	return [
 		SECTION.WORLD_CONTENT + ctx.worldContent,
+		...(ctx.characterCards ? [SECTION.CHARACTER_CARDS + ctx.characterCards] : []),
 		SECTION.ACT_PLOT + ctx.actPlot,
 		...ctx.characterProfiles,
 		...formatActPhaseSection(ctx.actPhase),
@@ -162,6 +163,7 @@ function buildPreEditorSections(ctx: PreEditorContext): string[] {
 /** Build the shared sections used by Game Master and Plot Planner. */
 function buildPostEditorSections(ctx: PostEditorContext): string[] {
 	return [
+		...(ctx.characterCards ? [SECTION.CHARACTER_CARDS + ctx.characterCards] : []),
 		SECTION.ACT_PLOT + ctx.actPlot,
 		...ctx.characterProfiles,
 		...formatActPhaseSection(ctx.actPhase),
@@ -262,6 +264,7 @@ export abstract class AbstractPreEditorContext implements PreEditorContext {
 	actSummary: string;
 	actNumber: number;
 	characterProfiles: string[];
+	characterCards: string | undefined;
 	completedScenes: number;
 	directorNotes: string;
 	previousActSummaries: { actNumber: number; summary: string }[];
@@ -277,6 +280,7 @@ export abstract class AbstractPreEditorContext implements PreEditorContext {
 		actPlot,
 		actSummary,
 		characterProfiles,
+		characterCards,
 		completedScenes,
 		directorNotes,
 		previousActSummaries,
@@ -289,6 +293,7 @@ export abstract class AbstractPreEditorContext implements PreEditorContext {
 		this.actSummary = actSummary;
 		this.actNumber = story.actLine.actNumber;
 		this.characterProfiles = characterProfiles;
+		this.characterCards = characterCards;
 		this.completedScenes = completedScenes;
 		this.directorNotes = directorNotes;
 		this.previousActSummaries = previousActSummaries;

@@ -23,10 +23,11 @@
 		isPreTemplatePhase: boolean;
 		showUpdateWorldCardOption: boolean;
 		updateWorldCard: boolean;
+		useDetailedContext: boolean;
 		onStart: () => void;
 		onStartImmediate: () => void;
 		onStartInterview: () => void;
-		onStartGame: (isGameResumeMode: boolean, updateWorld: boolean) => void;
+		onStartGame: (isGameResumeMode: boolean, updateWorld: boolean, useDetailedContext: boolean) => void;
 		onCancel: () => void;
 		onDismissOptions: () => void;
 		onRetry: () => void;
@@ -49,6 +50,7 @@
 		isPreTemplatePhase,
 		showUpdateWorldCardOption,
 		updateWorldCard = $bindable(false),
+		useDetailedContext = $bindable(false),
 		onStart,
 		onStartImmediate,
 		onStartInterview,
@@ -276,13 +278,23 @@
 							{@render spinnerCard('success', t('components.worldBuilderControls.generatingPlot'))}
 						{:else}
 							{#if showUpdateWorldCardOption}
-								<label class="flex items-center justify-center gap-2 text-sm text-surface-500">
-									<input type="checkbox" class="checkbox" bind:checked={updateWorldCard} />
-									{t('components.worldBuilderControls.updateWorldCard')}
-								</label>
+								<div class="flex items-center justify-center gap-4">
+									<label class="flex items-center gap-2 text-sm text-surface-500">
+										<input type="checkbox" class="checkbox" bind:checked={updateWorldCard} />
+										{t('components.worldBuilderControls.updateWorldCard')}
+									</label>
+									<label class="flex items-center gap-2 text-sm text-surface-500">
+										<input type="checkbox" class="checkbox" bind:checked={useDetailedContext} />
+										{t('components.worldBuilderControls.useDetailedContext')}
+									</label>
+								</div>
 							{/if}
 							<div class="flex justify-center">
-								<button class="btn preset-filled-success-500" type="button" onclick={() => onStartGame(isGameResumeMode, updateWorldCard)}>
+								<button
+									class="btn preset-filled-success-500"
+									type="button"
+									onclick={() => onStartGame(isGameResumeMode, updateWorldCard, useDetailedContext)}
+								>
 									{t('components.worldBuilderControls.startGame')}
 								</button>
 							</div>

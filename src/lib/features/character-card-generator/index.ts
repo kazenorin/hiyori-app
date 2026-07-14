@@ -4,10 +4,10 @@ import { createModel } from '$lib/ai/provider';
 import { characterCardTemplateLoader, generalInstructionsLoader } from '$lib/fs/prompts';
 import { exportActLine } from '$lib/ai/act-line-export';
 import { getMessagesForLine, getActLine } from '$lib/db/act-lines';
+import type { ActLineMeta } from '$lib/db/act-lines';
 import { getAct } from '$lib/db/acts';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
-import { getActiveStoryId, getActiveActId, getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
-import { fs } from '$lib/fs/file-system';
+import { fs, type DirEntry } from '$lib/fs/file-system';
 import { kebabCase } from 'lodash-es';
 import { log } from '$lib/logging/logger';
 import { logCharacterCardActivity } from '$lib/logging/chat-logger';
@@ -28,7 +28,13 @@ import { characterCardExtractionRules, characterCardCoreIdentityLabel } from '$l
 
 // === Types ===
 
-const ERR_NO_CONTEXT = 'No active story context.';
+export interface CharacterCardContext {
+	storyId: string;
+	storyName: string;
+	actLineId: string;
+	actLine: ActLineMeta;
+	actNumber: number;
+}
 
 export interface CharacterSummary {
 	character: string;
@@ -61,6 +67,11 @@ export interface GenerateProgress {
 	currentCharacter: string;
 }
 
+export interface LoadedCharacterCard {
+	canonicalName: string;
+	content: string;
+}
+
 // === Character Entry Helpers ===
 
 export function toCharacterEntries(summaries: CharacterSummary[]): CharacterEntry[] {
@@ -75,17 +86,11 @@ export function toCharacterEntries(summaries: CharacterSummary[]): CharacterEntr
 
 // === Extraction ===
 
-export async function extractCharactersFromActLine(): Promise<CharacterSummary[]> {
-	const actLineId = getActiveActLineId();
-	if (!actLineId) throw new Error(ERR_NO_CONTEXT);
-
-	const story = getActiveStory();
-	if (!story) throw new Error(ERR_NO_CONTEXT);
-
+export async function extractCharactersFromActLine(ctx: CharacterCardContext): Promise<CharacterSummary[]> {
 	const config = getMainProviderConfig();
 	if (!config?.model) throw new Error(ERR_NO_MAIN_PROVIDER);
 
-	const allMessages = await getMessagesForLine(actLineId);
+	const allMessages = await getMessagesForLine(ctx.actLineId);
 	const transcript: string[] = exportActLine(allMessages);
 	if (transcript.length === 0) throw new Error(ERR_NO_NARRATIVE_CONTENT);
 
@@ -95,7 +100,7 @@ export async function extractCharactersFromActLine(): Promise<CharacterSummary[]
 
 	await logCharacterCardActivity(
 		'extraction-start',
-		`Extracting characters from act line: ${actLineId}\n
+		`Extracting characters from act line: ${ctx.actLineId}\n
   System Prompt:\n${systemPrompt}\n
   Transcript:\n    ${transcript.join('\n    ')}`
 	);
@@ -160,20 +165,16 @@ export { parseCharacterJson as _parseCharacterJsonForTest };
 // === Lineage ===
 
 /**
- * Walk the act chain backwards from the current act line via `continuesFromActLineId`.
+ * Walk the act chain backwards from the given act line via `continuesFromActLineId`.
  * Returns entries sorted newest-first. A `visited` set prevents infinite loops
  * if the chain is somehow circular.
  */
-export async function buildActLineage(): Promise<ActLineageEntry[]> {
-	const actId = getActiveActId();
-	const actLineId = getActiveActLineId();
-	if (!actId || !actLineId) throw new Error(ERR_NO_CONTEXT);
-
+export async function buildActLineage(ctx: CharacterCardContext): Promise<ActLineageEntry[]> {
 	const lineage: ActLineageEntry[] = [];
 	const visited = new Set<string>();
 
-	let currentActId: string | null = actId;
-	let currentActLineId: string | null = actLineId;
+	let currentActId: string | null = ctx.actLine.actId;
+	let currentActLineId: string | null = ctx.actLineId;
 
 	while (currentActId && currentActLineId) {
 		if (visited.has(currentActId)) break;
@@ -213,13 +214,15 @@ export { computeCardFilename as _computeCardFilenameForTest };
 
 async function loadActCard(storyFolder: string, actNumber: number, isMainLine: boolean, actLineId: string): Promise<string | null> {
 	const lineDir = await getLineDir(storyFolder, actNumber, isMainLine, actLineId);
-	const path = `${lineDir}/act-card.md`;
 
 	try {
-		const content = await fs.readTextFileIfExists(path);
+		const entries = await fs.readDir(lineDir);
+		const actCardFile = entries.find((e: DirEntry) => !e.isDirectory && e.name.startsWith('act-card-') && e.name.endsWith('.md'));
+		if (!actCardFile) return null;
+		const content = await fs.readTextFileIfExists(`${lineDir}/${actCardFile.name}`);
 		return content ?? null;
 	} catch (err) {
-		await log.warn('character-card', `Failed to read act card at ${path}: ${err}`);
+		await log.warn('character-card', `Failed to read act card in ${lineDir}: ${err}`);
 		return null;
 	}
 }
@@ -297,20 +300,12 @@ function buildGenerationMessages(
 // === Card Generation ===
 
 export async function generateCharacterCard(
+	ctx: CharacterCardContext,
 	entry: CharacterEntry,
 	lineage: ActLineageEntry[],
 	onProgress?: (progress: GenerateProgress) => void,
 	progress?: GenerateProgress
 ): Promise<CharacterCardResult> {
-	const storyId = getActiveStoryId();
-	const story = getActiveStory();
-	const actId = getActiveActId();
-	const actLineId = getActiveActLineId();
-
-	if (!storyId || !story || !actId || !actLineId) {
-		throw new Error(ERR_NO_CONTEXT);
-	}
-
 	const config = getMainProviderConfig();
 	if (!config?.model) throw new Error(ERR_NO_MAIN_PROVIDER);
 
@@ -324,8 +319,8 @@ export async function generateCharacterCard(
 
 	// Load prompts
 	const [template, generalInstructions] = await Promise.all([
-		characterCardTemplateLoader.loadByStory(storyId, story.name),
-		generalInstructionsLoader.loadByStory(storyId, story.name),
+		characterCardTemplateLoader.loadByStory(ctx.storyId, ctx.storyName),
+		generalInstructionsLoader.loadByStory(ctx.storyId, ctx.storyName),
 	]);
 
 	const extractionPrompt = characterCardExtractionRules();
@@ -338,17 +333,15 @@ export async function generateCharacterCard(
 		.replaceAll('{{character name}}', entry.character);
 
 	// Load transcript and context
-	const allMessages = await getMessagesForLine(actLineId);
+	const allMessages = await getMessagesForLine(ctx.actLineId);
 	const transcript = exportActLine(allMessages);
 
-	const storyFolder = await resolveStoryFolder(storyId, story.name);
-	const currentAct = await getAct(actId);
-	if (!currentAct) throw new Error(ERR_NO_CONTEXT);
+	const storyFolder = await resolveStoryFolder(ctx.storyId, ctx.storyName);
 
-	const currentActNumber = currentAct.actNumber;
+	const currentActNumber = ctx.actNumber;
 
 	// Use lineage entry for isMainLine to avoid redundant DB query
-	const currentLineageEntry = lineage.find((l) => l.actLineId === actLineId);
+	const currentLineageEntry = lineage.find((l) => l.actLineId === ctx.actLineId);
 	const isMainLine = currentLineageEntry?.isMainLine ?? false;
 
 	const [previousActCards, existingCards] = await Promise.all([
@@ -375,7 +368,7 @@ export async function generateCharacterCard(
 	);
 
 	// Save file
-	const lineDir = await getLineDir(storyFolder, currentAct.actNumber, isMainLine, actLineId);
+	const lineDir = await getLineDir(storyFolder, currentActNumber, isMainLine, ctx.actLineId);
 	const charactersDir = `${lineDir}/characters`;
 	const filename = computeCardFilename(entry.canonicalName);
 	const filePath = `${charactersDir}/${filename}`;
@@ -390,6 +383,7 @@ export async function generateCharacterCard(
 }
 
 export async function generateCharacterCards(
+	ctx: CharacterCardContext,
 	entries: CharacterEntry[],
 	parallel: boolean,
 	onProgress?: (progress: GenerateProgress) => void
@@ -406,12 +400,12 @@ export async function generateCharacterCards(
 
 	if (selected.length === 0) throw new Error(ERR_NO_CHARACTERS_SELECTED);
 
-	const lineage = await buildActLineage();
+	const lineage = await buildActLineage(ctx);
 
 	const results: CharacterCardResult[] = [];
 
 	if (parallel) {
-		const promises = selected.map((entry) => generateCharacterCard(entry, lineage));
+		const promises = selected.map((entry) => generateCharacterCard(ctx, entry, lineage));
 		const settled = await Promise.allSettled(promises);
 
 		for (let i = 0; i < settled.length; i++) {
@@ -436,7 +430,7 @@ export async function generateCharacterCards(
 			};
 
 			try {
-				const result = await generateCharacterCard(entry, lineage, onProgress, progress);
+				const result = await generateCharacterCard(ctx, entry, lineage, onProgress, progress);
 				results.push(result);
 			} catch (err) {
 				await log.error('character-card', `Failed to generate card for ${entry.character}`, err);
@@ -465,4 +459,82 @@ function validateEntries(entries: CharacterEntry[]): { selected: CharacterEntry[
 
 function toUserModelMessage(content: string): ModelMessage {
 	return { role: 'user', content };
+}
+
+// === Ensure / Load / Copy Helpers ===
+
+export interface EnsureCharacterCardOptions {
+	ctx: CharacterCardContext;
+	canonicalName: string;
+	preferredName: string;
+	abortSignal?: AbortSignal;
+}
+
+export interface EnsureCharacterCardResult {
+	content: string;
+	generated: boolean;
+}
+
+export async function ensureCharacterCard(opts: EnsureCharacterCardOptions): Promise<EnsureCharacterCardResult> {
+	const storyFolder = await resolveStoryFolder(opts.ctx.storyId, opts.ctx.storyName);
+	const lineDir = await getLineDir(storyFolder, opts.ctx.actNumber, opts.ctx.actLine.isMainLine ?? false, opts.ctx.actLineId);
+	const cardPath = `${lineDir}/characters/${opts.canonicalName}.md`;
+	if (await fs.exists(cardPath)) {
+		return { content: await fs.readTextFile(cardPath), generated: false };
+	}
+	const lineage = await buildActLineage(opts.ctx);
+	const entry: CharacterEntry = {
+		character: opts.preferredName,
+		importance: '',
+		canonicalName: opts.canonicalName,
+		include: true,
+		isManual: true,
+	};
+	const result = await generateCharacterCard(opts.ctx, entry, lineage);
+	return { content: result.content, generated: true };
+}
+
+export async function loadCharacterCardsForActLine(ctx: CharacterCardContext): Promise<LoadedCharacterCard[]> {
+	const storyFolder = await resolveStoryFolder(ctx.storyId, ctx.storyName);
+	const lineDir = await getLineDir(storyFolder, ctx.actNumber, ctx.actLine.isMainLine ?? false, ctx.actLineId);
+	const charactersDir = `${lineDir}/characters`;
+	if (!(await fs.exists(charactersDir))) return [];
+	const entries = await fs.readDir(charactersDir);
+	const cards: LoadedCharacterCard[] = [];
+	for (const entry of entries) {
+		if (entry.isDirectory || !entry.name.endsWith('.md')) continue;
+		const canonicalName = entry.name.slice(0, -3);
+		const content = await fs.readTextFile(`${charactersDir}/${entry.name}`);
+		cards.push({ canonicalName, content });
+	}
+	return cards;
+}
+
+export async function copyCharacterCardsToNewLine(opts: {
+	fromStoryFolder: string;
+	fromActNumber: number;
+	fromIsMainLine: boolean;
+	fromActLineId: string;
+	toStoryFolder: string;
+	toActNumber: number;
+	toIsMainLine: boolean;
+	toActLineId: string;
+}): Promise<number> {
+	const fromLineDir = await getLineDir(opts.fromStoryFolder, opts.fromActNumber, opts.fromIsMainLine, opts.fromActLineId);
+	const fromCharactersDir = `${fromLineDir}/characters`;
+	if (!(await fs.exists(fromCharactersDir))) return 0;
+
+	const toLineDir = await getLineDir(opts.toStoryFolder, opts.toActNumber, opts.toIsMainLine, opts.toActLineId);
+	const toCharactersDir = `${toLineDir}/characters`;
+
+	const entries = await fs.readDir(fromCharactersDir);
+	let copiedCount = 0;
+	for (const entry of entries) {
+		if (entry.isDirectory || !entry.name.endsWith('.md')) continue;
+		const content = await fs.readTextFile(`${fromCharactersDir}/${entry.name}`);
+		const destPath = `${toCharactersDir}/${entry.name}`;
+		await fs.writeTextFileEnsuringDir(destPath, content);
+		copiedCount++;
+	}
+	return copiedCount;
 }

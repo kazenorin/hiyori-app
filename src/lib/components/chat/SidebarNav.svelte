@@ -414,5 +414,11 @@
 	>
 		{t('sidebar.fileManager')}
 	</a>
+	<a
+		href={resolve('/context-management')}
+		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+	>
+		{t('sidebar.contextManagement')}
+	</a>
 	<p class="text-center text-[10px] text-surface-400-600 select-none">{version}</p>
 </div>

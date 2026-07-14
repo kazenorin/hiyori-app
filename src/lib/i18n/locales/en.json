@@ -257,6 +257,7 @@
 		"settings": "Settings",
 		"memoryManager": "Memory Manager",
 		"fileManager": "File Manager",
+		"contextManagement": "Context Management",
 		"newAct": "+ New Act",
 		"newStory": "New Story",
 		"deleteConfirmTitle": "Delete {{type}}?",
@@ -338,7 +339,20 @@
 			"storyCreationOptions": "Story creation options",
 			"createStoryPrompt": "Create \"{{name}}\"?",
 			"createStoryDefault": "Create story?",
-			"updateWorldCard": "Update world card"
+			"updateWorldCard": "Update world card",
+			"useDetailedContext": "Use detailed context (act & character cards)"
+		}
+	},
+	"contextManagement": {
+		"title": "Context Management",
+		"subtitle": "Tools for managing detailed context used by the AI during generation.",
+		"actCard": {
+			"title": "Act Card Generation",
+			"description": "Generate a detailed realization of a concluded act line."
+		},
+		"characterCards": {
+			"title": "Character Card Generation",
+			"description": "Generate stable per-character context cards for an act line."
 		}
 	},
 	"characterCards": {

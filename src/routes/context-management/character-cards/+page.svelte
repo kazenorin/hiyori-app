@@ -3,6 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { getActiveStory, getActiveAct, getActiveActLine } from '$lib/stores/stories.svelte';
 	import { t } from '$lib/i18n';
+	import type { CharacterCardContext } from '$lib/features/character-card-generator';
 	import {
 		getCharacters,
 		getIsExtracting,
@@ -24,18 +25,34 @@
 
 	let concurrent = $state(false);
 
+	function buildContext(): CharacterCardContext | null {
+		const story = getActiveStory();
+		const act = getActiveAct();
+		const actLine = getActiveActLine();
+		if (!story || !act || !actLine) return null;
+		return {
+			storyId: story.id,
+			storyName: story.name,
+			actLineId: actLine.id,
+			actLine,
+			actNumber: act.actNumber,
+		};
+	}
+
 	onMount(() => {
 		resetState();
-		extractCharacters();
+		const ctx = buildContext();
+		if (ctx) extractCharacters(ctx);
 	});
 
 	function handleGenerate() {
-		generateCards(concurrent);
+		const ctx = buildContext();
+		if (ctx) generateCards(ctx, concurrent);
 	}
 
 	function handleBack() {
 		resetState();
-		goto(resolve('/'));
+		goto(resolve('/context-management'));
 	}
 
 	function updateCanonicalName(index: number, value: string) {

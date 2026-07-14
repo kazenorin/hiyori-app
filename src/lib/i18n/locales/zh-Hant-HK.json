@@ -257,6 +257,7 @@
 		"settings": "設定",
 		"memoryManager": "記憶管理員",
 		"fileManager": "檔案管理員",
+		"contextManagement": "背景管理",
 		"newAct": "+ 新章節",
 		"newStory": "新故事",
 		"deleteConfirmTitle": "刪除{{type}}？",
@@ -338,7 +339,20 @@
 			"storyCreationOptions": "故事建立選項",
 			"createStoryPrompt": "要建立「{{name}}」嗎？",
 			"createStoryDefault": "要建立故事嗎？",
-			"updateWorldCard": "更新世界卡"
+			"updateWorldCard": "更新世界卡",
+			"useDetailedContext": "使用詳細背景（章節卡片與角色卡片）"
+		}
+	},
+	"contextManagement": {
+		"title": "背景管理",
+		"subtitle": "管理 AI 生成時使用的詳細背景工具。",
+		"actCard": {
+			"title": "章節卡片生成",
+			"description": "為已完結的章節線生成詳細實現。"
+		},
+		"characterCards": {
+			"title": "角色卡片生成",
+			"description": "為章節線生成穩定的角色背景卡片。"
 		}
 	},
 	"characterCards": {
