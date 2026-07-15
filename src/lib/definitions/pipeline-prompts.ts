@@ -21,6 +21,9 @@ export const importanceLevelLabel = (level: 1 | 2 | 3 | 4) => ls(`pipeline.label
 export const sceneCountLabel = (n: number) =>
 	n === 1 ? ls('pipeline.labels.sceneCountSingular') : ls('pipeline.labels.sceneCountPlural', { count: n });
 export const lastSeenLabel = (sceneNumber: number) => ls('pipeline.labels.lastSeen', { sceneNumber });
+export const lastUpdatedLabel = (sceneNumber: number) => ls('pipeline.labels.lastUpdated', { sceneNumber });
+export const importanceValueLabel = (importance: string) => ls('pipeline.labels.importanceValue', { importance });
+export const aliasesValueLabel = (aliases: string) => ls('pipeline.labels.aliasesValue', { aliases });
 export const noDescriptionLabel = () => ls('pipeline.labels.noDescription');
 export const sceneDetailsLabel = () => ls('pipeline.labels.sceneDetails');
 export const characterSummariesSinceSceneLabel = (sceneNumber: number) => ls('pipeline.labels.characterSummaries', { sceneNumber });

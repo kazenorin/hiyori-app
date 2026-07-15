@@ -202,7 +202,10 @@ pipeline:
     sceneCountSingular: '1 scene'
     sceneCountPlural: '{{count}} scenes'
     sceneDetails: 'Scene Details'
+    importanceValue: 'Importance: {{importance}}'
+    aliasesValue: 'Aliases: {{aliases}}'
     lastSeen: 'last seen: scene {{sceneNumber}}'
+    lastUpdated: 'Last updated: Scene {{sceneNumber}}'
     noDescription: 'No description available.'
     characterSummaries: 'Summaries of each character for recent Scenes since Scene {{sceneNumber}}.'
     actPhases:
@@ -559,11 +562,6 @@ tools:
       notFoundInAct: 'No character profile found for that name in act {{actNumber}}.'
       futureAct: 'Cannot read character profiles from acts that have not happened yet.'
       actNotInLineage: 'Act {{actNumber}} is not in the lineage of the current narrative line.'
-    output:
-      importance: 'Importance: {{importance}}'
-      aliases: 'Aliases: {{aliases}}'
-      lastUpdated: 'Last updated: Scene {{sceneNumber}}'
-      sceneDetails: 'Scene Details'
   advancePhase:
     description: >
       Advance the story to the next narrative phase (e.g., {{introduction}} → {{risingAction}} → {{climax}} → {{fallingAction}} → {{resolution}}).

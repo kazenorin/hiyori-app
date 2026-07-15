@@ -4,8 +4,10 @@ vi.mock('$lib/localization', () => ({
 	ls: (key: string, opts?: Record<string, unknown>) => {
 		if (key === 'pipeline.labels.lastSeen' && opts) return `last seen: scene ${opts.sceneNumber}`;
 		if (key === 'pipeline.labels.noDescription') return 'No description available.';
-		if (key === 'tools.characterDetails.output.sceneDetails') return 'Scene Details';
 		if (key === 'pipeline.labels.sceneDetails') return 'Scene Details';
+		if (key === 'pipeline.labels.importanceValue' && opts) return `Importance: ${opts.importance}`;
+		if (key === 'pipeline.labels.aliasesValue' && opts) return `Aliases: ${opts.aliases}`;
+		if (key === 'pipeline.labels.lastUpdated' && opts) return `Last updated: Scene ${opts.sceneNumber}`;
 		const map: Record<string, string> = {
 			'common.descriptions.characterProfiles': 'Profiles of characters.',
 			'common.descriptions.characterProfilesInline': 'Inline profiles:',
@@ -15,6 +17,11 @@ vi.mock('$lib/localization', () => ({
 			'pipeline.labels.importanceLevels.2': 'Main',
 			'pipeline.labels.importanceLevels.3': 'Supporting',
 			'pipeline.labels.importanceLevels.4': 'Minor',
+			'pipeline.labels.logline': 'Logline',
+			'pipeline.labels.state': 'State',
+			'pipeline.labels.goal': 'Goal',
+			'pipeline.labels.relationships': 'Relationships',
+			'pipeline.labels.voice': 'Voice',
 		};
 		return map[key] ?? key;
 	},
@@ -68,7 +75,7 @@ vi.mock('$lib/definitions/character-profile-labels', () => ({
 	importanceLabel: () => 'Importance',
 }));
 
-import { formatCharacterProfilesSection } from '$lib/definitions/pipeline-sections';
+import { formatCharacterProfilesSection, formatCharacterProfileAsMessage } from '$lib/definitions/pipeline-sections';
 import type { CharacterProfileEntity } from '$lib/db/character-profiles';
 
 function makeProfile(overrides: Partial<CharacterProfileEntity> = {}): CharacterProfileEntity {
@@ -202,5 +209,52 @@ describe('formatCharacterProfilesSection', () => {
 		});
 		const result = formatCharacterProfilesSection([profile], 0, 0);
 		expect(result[0]).toContain('No description available.');
+	});
+});
+
+describe('formatCharacterProfileAsMessage', () => {
+	it('renders preferred name header and importance', () => {
+		const profile = makeProfile({ preferredName: 'Elena', importance: 1 });
+		const result = formatCharacterProfileAsMessage(profile);
+		expect(result).toContain('### Elena');
+		expect(result).toContain('- Importance: Protagonist');
+	});
+
+	it('includes aliases when present', () => {
+		const profile = makeProfile({ aliases: ['Shadow', 'E'] });
+		const result = formatCharacterProfileAsMessage(profile);
+		expect(result).toContain('- Aliases: Shadow, E');
+	});
+
+	it('includes last updated scene number when sceneNumber is set', () => {
+		const profile = makeProfile({ sceneNumber: 7 });
+		const result = formatCharacterProfileAsMessage(profile);
+		expect(result).toContain('- Last updated: Scene 7');
+	});
+
+	it('omits last updated line when sceneNumber is null', () => {
+		const profile = makeProfile({ sceneNumber: null });
+		const result = formatCharacterProfileAsMessage(profile);
+		expect(result).not.toContain('Last updated');
+	});
+
+	it('includes scene details when non-empty and includeSceneDetails is true', () => {
+		const profile = makeProfile({ sceneDetails: 'Scene 3: Elena fights.' });
+		const result = formatCharacterProfileAsMessage(profile);
+		expect(result).toContain('**Scene Details**:');
+		expect(result).toContain('Scene 3: Elena fights.');
+	});
+
+	it('omits scene details when includeSceneDetails is false', () => {
+		const profile = makeProfile({ sceneDetails: 'Scene 3: Elena fights.' });
+		const result = formatCharacterProfileAsMessage(profile, false);
+		expect(result).not.toContain('Scene Details');
+	});
+
+	it('always includes the structured body (state, logline, etc.)', () => {
+		const profile = makeProfile({ logline: 'A hero.', state: 'Determined.' });
+		const result = formatCharacterProfileAsMessage(profile);
+		expect(result).toContain('**Logline:** A hero.');
+		expect(result).toContain('**State:** Determined.');
 	});
 });

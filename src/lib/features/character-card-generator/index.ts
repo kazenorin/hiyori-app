@@ -25,6 +25,8 @@ import {
 import { ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT, ERR_NO_CHARACTERS_SELECTED } from '$lib/definitions/error-messages';
 import { nameLabel } from '$lib/definitions/common-labels';
 import { characterCardExtractionRules, characterCardCoreIdentityLabel } from '$lib/definitions/feature-prompts';
+import { getLatestProfileByAlias } from '$lib/db/character-profiles';
+import { formatCharacterProfileAsMessage } from '$lib/definitions/pipeline-sections';
 
 // === Types ===
 
@@ -285,6 +287,7 @@ function buildGenerationMessages(
 	transcript: string[],
 	previousActCards: string[],
 	existingCards: string[],
+	characterProfile: string | null,
 	userPrompt: string
 ): ModelMessage[] {
 	return [
@@ -293,6 +296,7 @@ function buildGenerationMessages(
 		{ role: 'user', content: transcriptEnd() },
 		...previousActCards.map(toUserModelMessage),
 		...existingCards.map(toUserModelMessage),
+		...(characterProfile ? [toUserModelMessage(characterProfile)] : []),
 		{ role: 'user', content: userPrompt },
 	];
 }
@@ -344,13 +348,15 @@ export async function generateCharacterCard(
 	const currentLineageEntry = lineage.find((l) => l.actLineId === ctx.actLineId);
 	const isMainLine = currentLineageEntry?.isMainLine ?? false;
 
-	const [previousActCards, existingCards] = await Promise.all([
+	const [previousActCards, existingCards, characterProfile] = await Promise.all([
 		loadPreviousActCards(storyFolder, lineage, currentActNumber),
 		loadPreviousCharacterCards(storyFolder, lineage, entry.canonicalName, entry.character),
+		getLatestProfileByAlias(ctx.actLineId, entry.canonicalName),
 	]);
 
+	const formattedCharacterProfile = characterProfile ? formatCharacterProfileAsMessage(characterProfile) : null;
 	const userPrompt = characterCardGenerationInstruction(namedExtractionPrompt, namedTemplate);
-	const messages = buildGenerationMessages(transcript, previousActCards, existingCards, userPrompt);
+	const messages = buildGenerationMessages(transcript, previousActCards, existingCards, formattedCharacterProfile, userPrompt);
 
 	const model = await createModel(config);
 

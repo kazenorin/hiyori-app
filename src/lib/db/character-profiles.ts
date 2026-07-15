@@ -184,7 +184,7 @@ export async function getLatestProfilesByActLine(actLineId: string): Promise<Cha
 
 /**
  * Get the most-recent profile for a single character, resolving any alias they are known by.
- * Matches on preferred_name OR aliases. Returns null if no match.
+ * Matches on canonical_name, preferred_name OR aliases. Returns null if no match.
  */
 export async function getLatestProfileByAlias(actLineId: string, nameOrAlias: string): Promise<CharacterProfileEntity | null> {
 	const db = getDatabase();
@@ -192,7 +192,8 @@ export async function getLatestProfileByAlias(actLineId: string, nameOrAlias: st
 		`SELECT cp.* FROM character_profiles cp
 		 WHERE act_line_id = $1
 		 AND (
-		     cp.preferred_name = $2
+			   cp.canonical_name = $2
+				 OR cp.preferred_name = $2
 		     OR EXISTS (
 		         SELECT 1 FROM json_each(cp.aliases) WHERE value = $2
 		     )

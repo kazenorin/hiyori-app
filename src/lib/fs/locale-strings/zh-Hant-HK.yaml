@@ -194,7 +194,10 @@ pipeline:
     sceneCountSingular: 1 個場景
     sceneCountPlural: '{{count}} 個場景'
     sceneDetails: '場景詳情'
+    importanceValue: '重要性: {{importance}}'
+    aliasesValue: '別名: {{aliases}}'
     lastSeen: '最後出現: 場景 {{sceneNumber}}'
+    lastUpdated: '最後更新: 場景 {{sceneNumber}}'
     noDescription: '無可用描述。'
     characterSummaries: '自場景 {{sceneNumber}} 以來每個角色的近期摘要。'
     actPhases:
@@ -551,11 +554,6 @@ tools:
       notFoundInAct: '第 {{actNumber}} 章中找不到該名稱的角色檔案。'
       futureAct: '無法讀取尚未發生的章節的角色檔案。'
       actNotInLineage: '第 {{actNumber}} 章不在當前敘事路線的譜系中。'
-    output:
-      importance: '重要性: {{importance}}'
-      aliases: '別名: {{aliases}}'
-      lastUpdated: '最後更新: 場景 {{sceneNumber}}'
-      sceneDetails: '場景詳情'
   advancePhase:
     description: >
       將故事推進至下一個敘事階段 (例如: {{introduction}} → {{risingAction}} → {{climax}} → {{fallingAction}} → {{resolution}}) 。

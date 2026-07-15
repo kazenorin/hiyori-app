@@ -29,6 +29,9 @@ import {
 	lastSeenLabel,
 	noDescriptionLabel,
 	sceneDetailsLabel,
+	importanceValueLabel,
+	aliasesValueLabel,
+	lastUpdatedLabel,
 	stateLabel,
 	loglineLabel,
 	goalLabel,
@@ -239,6 +242,36 @@ export function formatProfileResponseBody(p: CharacterProfileEntity): string {
 	push(relationshipsLabel(), p.relationships);
 	push(voiceLabel(), p.voice);
 	return lines.join('\n');
+}
+
+/**
+ * Format a single character profile as a self-contained message block (header + metadata + body).
+ * Shared by the `character-details` tool and the character-card generator.
+ *
+ * - `importance` is rendered as a localized "Importance: <level>" line.
+ * - `aliases` and `lastUpdated` (scene number) are rendered only when present.
+ * - The structured body (`formatProfileResponseBody`) is always appended.
+ * - `sceneDetails` is appended only when `includeSceneDetails` is true and non-empty.
+ */
+export function formatCharacterProfileAsMessage(profile: CharacterProfileEntity, includeSceneDetails = true): string {
+	const parts: string[] = [`### ${profile.preferredName}`, `- ${importanceValueLabel(importanceLevelLabel(profile.importance))}`];
+	if (profile.aliases.length > 0) {
+		parts.push(`- ${aliasesValueLabel(profile.aliases.join(', '))}`);
+	}
+	if (profile.sceneNumber != null) {
+		parts.push(`- ${lastUpdatedLabel(profile.sceneNumber)}`);
+	}
+	const body = formatProfileResponseBody(profile);
+	parts.push('');
+	parts.push(body);
+
+	if (includeSceneDetails && profile.sceneDetails.trim()) {
+		parts.push('');
+		parts.push(`**${sceneDetailsLabel()}**:`);
+		parts.push(profile.sceneDetails.trim());
+	}
+
+	return parts.join('\n');
 }
 
 /**
