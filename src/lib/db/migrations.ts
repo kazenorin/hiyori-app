@@ -1,3 +1,5 @@
+// noinspection SqlResolve
+
 import { getDatabase } from './database';
 
 interface SchemaVersion {
