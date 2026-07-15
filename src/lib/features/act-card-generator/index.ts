@@ -13,6 +13,7 @@ import { type RetryConfig, streamWithRetry } from '$lib/ai/chat-stream';
 import type { StreamState } from '$lib/ai/chat-callbacks';
 import { actCardExtractionPrompt, actCardSystemPrompt, actCardTranscriptEnd, actCardTranscriptStart, worldContextLabel } from './prompts';
 import { ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT } from '$lib/definitions/error-messages';
+import { actWithNumberLabel } from '$lib/definitions/common-labels';
 
 function buildUserMessages(contents: string[], template: string, extractionPrompt: string, world: string): string[] {
 	const worldPrompt = [worldContextLabel(), world];
@@ -71,6 +72,10 @@ async function resolveActCardContext(params: StreamActCardParams, abortSignal?: 
 	]);
 	const extractionPrompt = actCardExtractionPrompt();
 
+	const namedTemplate = template
+		.replaceAll('{{story title}}', params.storyName)
+		.replaceAll('{{act number}}', actWithNumberLabel(params.actNumber));
+
 	return {
 		storyId: params.storyId,
 		actLineId: params.actLineId,
@@ -78,7 +83,7 @@ async function resolveActCardContext(params: StreamActCardParams, abortSignal?: 
 		actNumber: params.actNumber,
 		storyName: params.storyName,
 		systemPrompt: actCardSystemPrompt(),
-		userMessageContents: buildUserMessages(contents, template, extractionPrompt, world),
+		userMessageContents: buildUserMessages(contents, namedTemplate, extractionPrompt, world),
 		world,
 		messageIdSuffix,
 	};
