@@ -448,6 +448,20 @@
 					<span class="text-xs text-surface-500 block">{t('settings.phraseHighlightingDescription')}</span>
 				</div>
 			</div>
+
+			<!-- Character Cards in Chat: full-width mini-card -->
+			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+				<label class="flex items-center gap-2">
+					<input
+						type="checkbox"
+						class="checkbox"
+						checked={settings.ignoreCharacterCardsInChat}
+						onchange={(e) => updateSettings({ ignoreCharacterCardsInChat: (e.currentTarget as HTMLInputElement).checked })}
+					/>
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.ignoreCharacterCardsInChat')}</h3>
+				</label>
+				<span class="text-xs text-surface-500 block">{t('settings.ignoreCharacterCardsInChatDescription')}</span>
+			</div>
 		</Card>
 
 		<!-- Pipeline Roles -->

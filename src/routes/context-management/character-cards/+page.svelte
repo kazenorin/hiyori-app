@@ -20,6 +20,7 @@
 		removeCharacter,
 		resetState,
 	} from '$lib/stores/character-card.svelte';
+	import { settings, updateSettings } from '$lib/stores/settings.svelte';
 	import { onMount } from 'svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
 
@@ -98,6 +99,20 @@
 				<span class="font-semibold text-surface-700-300">{t('characterCards.actLineId')}</span>
 				<span class="text-surface-500 text-xs font-mono">{getActiveActLine()?.id ?? '—'}</span>
 			</div>
+		</section>
+
+		<!-- Ignore in Main Chat Setting -->
+		<section class="card p-4 space-y-2 border border-secondary-500-300">
+			<label class="flex items-center gap-2">
+				<input
+					type="checkbox"
+					class="checkbox"
+					checked={settings.ignoreCharacterCardsInChat}
+					onchange={(e) => updateSettings({ ignoreCharacterCardsInChat: e.currentTarget.checked })}
+				/>
+				<h4 class="font-semibold text-secondary-700-300">{t('settings.ignoreCharacterCardsInChat')}</h4>
+			</label>
+			<p class="text-xs text-surface-500">{t('settings.ignoreCharacterCardsInChatDescription')}</p>
 		</section>
 
 		<!-- Extraction Loading -->

@@ -4,8 +4,9 @@
 	import { goto } from '$app/navigation';
 	import { getActiveStory, getActiveAct, getActiveActLine, getActiveActLineId } from '$lib/stores/stories.svelte';
 	import { ensureActCard } from '$lib/features/act-card-generator';
-	import { getActLine } from '$lib/db/act-lines';
+	import { getActLine, isActLineEnded } from '$lib/db/act-lines';
 	import { log } from '$lib/logging/logger';
+	import Icon from '$lib/components/ui/Icon.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
 
 	const activeStory = $derived(getActiveStory());
@@ -16,6 +17,23 @@
 	let isGenerating = $state(false);
 	let status = $state('');
 	let generatedContent = $state<string | null>(null);
+	let isActLineConcluded = $state<boolean | null>(null);
+
+	$effect(() => {
+		const id = activeActLineId;
+		if (!id) {
+			isActLineConcluded = null;
+			return;
+		}
+		let cancelled = false;
+		(async () => {
+			const ended = await isActLineEnded(id);
+			if (!cancelled) isActLineConcluded = ended;
+		})();
+		return () => {
+			cancelled = true;
+		};
+	});
 
 	async function handleGenerate() {
 		if (!activeStory || !activeAct || !activeActLineId) {
@@ -92,6 +110,15 @@
 				<p class="text-surface-500">{t('memoryManager.noActLineSelected')}</p>
 			</div>
 		{:else}
+			{#if isActLineConcluded === false}
+				<div class="card p-4 border border-secondary-500-300">
+					<div class="flex items-start gap-2">
+						<Icon name="triangle-alert" class="size-5 shrink-0 text-secondary-500 mt-0.5" />
+						<p class="text-sm text-surface-700-300">{t('contextManagement.actCard.notConcludedWarning')}</p>
+					</div>
+				</div>
+			{/if}
+
 			<div class="flex items-center gap-4">
 				{#if isGenerating}
 					<Spinner size="xs" />

@@ -90,6 +90,8 @@
 		"embeddingProviderDescription": "The provider used to generate embeddings for memory search.",
 		"phraseHighlighting": "Important phrase highlighting",
 		"phraseHighlightingDescription": "Automatically extract and highlight key phrases in narrative text. Requires Minor Task Agent.",
+		"ignoreCharacterCardsInChat": "Ignore character cards in main chat",
+		"ignoreCharacterCardsInChatDescription": "When enabled, character cards will not be loaded as context in the main chat pipeline. They will still be used by Act Plot and Plot Planner when detailed context is enabled.",
 		"directorMode": "Director Mode",
 		"directorModeDescription": "Add persistent notes that can override the story’s planned direction. Director Notes strongly influence the plot and may trigger cascading cause-and-effect changes depending on their content. Use them carefully.",
 		"pipelineRoles": "Pipeline Roles",
@@ -340,20 +342,29 @@
 			"createStoryPrompt": "Create \"{{name}}\"?",
 			"createStoryDefault": "Create story?",
 			"updateWorldCard": "Update world card",
-			"useDetailedContext": "Use detailed context (act & character cards)"
+			"useDetailedContext": "Use detailed context",
+			"detailedContextWarning": "Enabling detailed context will take longer and consume more tokens during generation. Missing cards will be auto-generated.",
+			"missingActCard": "No act card found for the current act line. It will be auto-generated — consider generating it manually via Context Management first.",
+			"missingCharacterCards": "Missing character cards for: {{names}}. They will be auto-generated — consider generating them manually via Context Management first.",
+			"checkingContext": "Checking for existing cards...",
+			"openContextManagement": "Open Context Management"
 		}
 	},
 	"contextManagement": {
 		"title": "Context Management",
 		"subtitle": "Tools for managing detailed context used by the AI during generation.",
 		"actCard": {
-			"title": "Act Card Generation",
-			"description": "Generate a detailed realization of a concluded act line."
+			"title": "Act Card Generator",
+			"description": "Optional additional detailed context for continuing from a concluded Act Line to a new act.",
+			"notConcludedWarning": "Act cards generated before an act is concluded will not be used by the system. The generated card will be for your reference only."
 		},
 		"characterCards": {
-			"title": "Character Card Generation",
-			"description": "Generate stable per-character context cards for an act line."
-		}
+			"title": "Character Card Generator",
+			"description": "Provides additional character context for continuing from a concluded Act Line to a new act. Also used by the main chat as additional context when present."
+		},
+		"costNote": "Both generators consume considerable tokens for both generation and usage, but will make the story more coherent.",
+		"advancedSectionTitle": "Advanced Context Management",
+		"advancedSectionDescription": "These tools provide extra details to the AI context at the expense of tokens."
 	},
 	"characterCards": {
 		"heading": "Generate Character Cards",

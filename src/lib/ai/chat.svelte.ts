@@ -361,7 +361,9 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 			settings.characterProfileMaxIncluded
 		);
 
-		const characterCards = await loadCharacterCardsString(story.id, story.name, actLine.id, actLine, actLine.actNumber);
+		const characterCards = settings.ignoreCharacterCardsInChat
+			? undefined
+			: await loadCharacterCardsString(story.id, story.name, actLine.id, actLine, actLine.actNumber);
 
 		const pipelineCallbacks = createPipelineCallbacks({
 			getCurrentMessage,
@@ -497,7 +499,9 @@ export async function runEpilogueFlow(actLineId: string, rewriteDirectorNote?: s
 			settings.characterProfileMaxIncluded
 		);
 
-		const characterCards = await loadCharacterCardsString(story.id, story.name, actLineId, actLine, actNumber);
+		const characterCards = settings.ignoreCharacterCardsInChat
+			? undefined
+			: await loadCharacterCardsString(story.id, story.name, actLineId, actLine, actNumber);
 
 		const pipelineCallbacks = createPipelineCallbacks({
 			getCurrentMessage,

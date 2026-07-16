@@ -178,6 +178,27 @@ export interface EnsureActCardResult {
 	generated: boolean;
 }
 
+export async function checkActCardExists(opts: {
+	storyId: string;
+	storyName: string;
+	actLineId: string;
+	actLine: ActLineMeta;
+	actNumber: number;
+}): Promise<boolean> {
+	const messages = await getMessagesForLine(opts.actLineId);
+	if (messages.length === 0) return false;
+
+	const storyFolder = await resolveStoryFolder(opts.storyId, opts.storyName);
+	const { exists, messageIdSuffix } = await resolveActCardPath(
+		messages,
+		storyFolder,
+		opts.actNumber,
+		opts.actLine.isMainLine ?? false,
+		opts.actLineId
+	);
+	return messageIdSuffix !== null && exists;
+}
+
 export async function ensureActCard(opts: EnsureActCardOptions): Promise<EnsureActCardResult> {
 	const messages = await getMessagesForLine(opts.actLineId);
 	if (messages.length === 0) throw new Error(ERR_NO_NARRATIVE_CONTENT);

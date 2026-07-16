@@ -88,6 +88,7 @@ function defaultSettings() {
 		characterProfileCompressorInterval: 5,
 		characterProfileImportanceThreshold: 2,
 		characterProfileMaxIncluded: 5,
+		ignoreCharacterCardsInChat: false,
 		defaultPlotMode: 'phaseEvent' as const,
 		reevaluationFrequency: 10,
 		ttsEnabled: false,
