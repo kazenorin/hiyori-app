@@ -10,8 +10,10 @@
 	import { getActiveStory, getActiveAct, getActiveActLine } from '$lib/stores/stories.svelte';
 	import { settings } from '$lib/stores/settings.svelte';
 	import { checkActCardExists } from '$lib/features/act-card-generator';
-	import { loadCharacterCardsForActLine } from '$lib/features/character-card-generator';
+	import { loadLatestCharacterCardsForActLine } from '$lib/features/character-card-generator';
 	import { getLatestProfilesByActLine } from '$lib/db/character-profiles';
+	import { traceActLineChain } from '$lib/db/acts';
+	import { getActLine } from '$lib/db/act-lines';
 
 	interface Props {
 		isReadyToStart: boolean;
@@ -208,15 +210,30 @@
 		(async () => {
 			const warnings: string[] = [];
 			try {
-				const actCardExists = await checkActCardExists({
-					storyId: story.id,
-					storyName: story.name,
-					actLineId: actLine.id,
-					actLine,
-					actNumber: act.actNumber,
-				});
-				if (!actCardExists) {
-					warnings.push(t('components.worldBuilderControls.missingActCard'));
+				// Check act cards across the lineage (excluding the current new act)
+				const lineage = await traceActLineChain(actLine.id);
+				const missingActCardNumbers: number[] = [];
+				for (const entry of lineage) {
+					if (entry.actNumber === act.actNumber) continue;
+					const lineageActLine = await getActLine(entry.actLineId);
+					if (!lineageActLine) continue;
+					const exists = await checkActCardExists({
+						storyId: story.id,
+						storyName: story.name,
+						actLineId: entry.actLineId,
+						actLine: lineageActLine,
+						actNumber: entry.actNumber,
+					});
+					if (!exists) {
+						missingActCardNumbers.push(entry.actNumber);
+					}
+				}
+				if (missingActCardNumbers.length > 0) {
+					warnings.push(
+						t('components.worldBuilderControls.missingActCard', {
+							numbers: missingActCardNumbers.sort((a, b) => a - b).join(', '),
+						})
+					);
 				}
 
 				const profiles = await getLatestProfilesByActLine(actLine.id);
@@ -228,7 +245,7 @@
 					.slice(0, maxIncluded);
 
 				if (included.length > 0) {
-					const existingCards = await loadCharacterCardsForActLine({
+					const existingCards = await loadLatestCharacterCardsForActLine({
 						storyId: story.id,
 						storyName: story.name,
 						actLineId: actLine.id,

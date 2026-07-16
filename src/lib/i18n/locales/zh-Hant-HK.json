@@ -344,7 +344,7 @@
 			"updateWorldCard": "更新世界卡",
 			"useDetailedContext": "啟用「詳細背景」",
 			"detailedContextWarning": "啟用「詳細背景」後，系統會自動生成缺失的角色卡片，但這也需要較長的生成時間及較高的 Token 消耗。",
-			"missingActCard": "目前章節線尚未建立章節卡片。雖然系統能自動補齊，但仍建議您先至「背景管理」手動生成。",
+			"missingActCard": "章節 {{numbers}} 缺少章節卡片。雖然系統能自動補齊，但仍建議您先至「背景管理」手動生成。",
 			"missingCharacterCards": "目前缺失以下角色卡片: {{names}}。系統雖會自動補齊，但建議先至「背景管理」手動生成。",
 			"checkingContext": "正在檢查現有卡片…",
 			"openContextManagement": "開啟「背景管理」"

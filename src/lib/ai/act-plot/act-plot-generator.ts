@@ -20,7 +20,7 @@ import {
 } from '$lib/db/act-lines';
 import { traceActLineChain } from '$lib/db/acts';
 import { ensureActCard } from '$lib/features/act-card-generator';
-import { ensureCharacterCard, loadCharacterCardsForActLine, type CharacterCardContext } from '$lib/features/character-card-generator';
+import { ensureCharacterCard, loadLatestCharacterCardsForActLine, type CharacterCardContext } from '$lib/features/character-card-generator';
 import { getLatestProfilesByActLine } from '$lib/db/character-profiles';
 import { formatCharacterProfilesSection } from '$lib/definitions/pipeline-sections';
 import { actPlotResumeNote } from '$lib/definitions/pipeline-prompts';
@@ -398,7 +398,7 @@ async function loadDetailedContextInputs(params: GenerateActPlotParams): Promise
 	}
 
 	// Also include any existing cards whose canonical name matches a profile in this line
-	const existing = await loadCharacterCardsForActLine(ctx);
+	const existing = await loadLatestCharacterCardsForActLine(ctx);
 	for (const card of existing) {
 		if (includedCanonicals.has(card.canonicalName)) continue;
 		const profile = profiles.find((p) => p.canonicalName === card.canonicalName);

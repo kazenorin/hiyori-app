@@ -483,12 +483,25 @@ export interface EnsureCharacterCardResult {
 
 export async function ensureCharacterCard(opts: EnsureCharacterCardOptions): Promise<EnsureCharacterCardResult> {
 	const storyFolder = await resolveStoryFolder(opts.ctx.storyId, opts.ctx.storyName);
+
+	// 1. Check current act line
 	const lineDir = await getLineDir(storyFolder, opts.ctx.actNumber, opts.ctx.actLine.isMainLine ?? false, opts.ctx.actLineId);
 	const cardPath = `${lineDir}/characters/${opts.canonicalName}.md`;
 	if (await fs.exists(cardPath)) {
 		return { content: await fs.readTextFile(cardPath), generated: false };
 	}
+
+	// 2. Walk lineage (excluding current act) for an existing card
 	const lineage = await buildActLineage(opts.ctx);
+	for (const entry of lineage) {
+		if (entry.actLineId === opts.ctx.actLineId) continue;
+		const existing = await loadExistingCharacterCard(storyFolder, entry.actNumber, opts.canonicalName, entry.isMainLine, entry.actLineId);
+		if (existing) {
+			return { content: existing, generated: false };
+		}
+	}
+
+	// 3. Not found anywhere in lineage — generate for current act line
 	const entry: CharacterEntry = {
 		character: opts.preferredName,
 		importance: '',
@@ -500,47 +513,24 @@ export async function ensureCharacterCard(opts: EnsureCharacterCardOptions): Pro
 	return { content: result.content, generated: true };
 }
 
-export async function loadCharacterCardsForActLine(ctx: CharacterCardContext): Promise<LoadedCharacterCard[]> {
+export async function loadLatestCharacterCardsForActLine(ctx: CharacterCardContext): Promise<LoadedCharacterCard[]> {
 	const storyFolder = await resolveStoryFolder(ctx.storyId, ctx.storyName);
-	const lineDir = await getLineDir(storyFolder, ctx.actNumber, ctx.actLine.isMainLine ?? false, ctx.actLineId);
-	const charactersDir = `${lineDir}/characters`;
-	if (!(await fs.exists(charactersDir))) return [];
-	const entries = await fs.readDir(charactersDir);
-	const cards: LoadedCharacterCard[] = [];
-	for (const entry of entries) {
-		if (entry.isDirectory || !entry.name.endsWith('.md')) continue;
-		const canonicalName = entry.name.slice(0, -3);
-		const content = await fs.readTextFile(`${charactersDir}/${entry.name}`);
-		cards.push({ canonicalName, content });
+	const lineage = await buildActLineage(ctx);
+	const found = new Map<string, LoadedCharacterCard>();
+
+	for (const entry of lineage) {
+		const lineDir = await getLineDir(storyFolder, entry.actNumber, entry.isMainLine, entry.actLineId);
+		const charactersDir = `${lineDir}/characters`;
+		if (!(await fs.exists(charactersDir))) continue;
+		const entries = await fs.readDir(charactersDir);
+		for (const file of entries) {
+			if (file.isDirectory || !file.name.endsWith('.md')) continue;
+			const canonicalName = file.name.slice(0, -3);
+			if (found.has(canonicalName)) continue;
+			const content = await fs.readTextFile(`${charactersDir}/${file.name}`);
+			found.set(canonicalName, { canonicalName, content });
+		}
 	}
-	return cards;
-}
 
-export async function copyCharacterCardsToNewLine(opts: {
-	fromStoryFolder: string;
-	fromActNumber: number;
-	fromIsMainLine: boolean;
-	fromActLineId: string;
-	toStoryFolder: string;
-	toActNumber: number;
-	toIsMainLine: boolean;
-	toActLineId: string;
-}): Promise<number> {
-	const fromLineDir = await getLineDir(opts.fromStoryFolder, opts.fromActNumber, opts.fromIsMainLine, opts.fromActLineId);
-	const fromCharactersDir = `${fromLineDir}/characters`;
-	if (!(await fs.exists(fromCharactersDir))) return 0;
-
-	const toLineDir = await getLineDir(opts.toStoryFolder, opts.toActNumber, opts.toIsMainLine, opts.toActLineId);
-	const toCharactersDir = `${toLineDir}/characters`;
-
-	const entries = await fs.readDir(fromCharactersDir);
-	let copiedCount = 0;
-	for (const entry of entries) {
-		if (entry.isDirectory || !entry.name.endsWith('.md')) continue;
-		const content = await fs.readTextFile(`${fromCharactersDir}/${entry.name}`);
-		const destPath = `${toCharactersDir}/${entry.name}`;
-		await fs.writeTextFileEnsuringDir(destPath, content);
-		copiedCount++;
-	}
-	return copiedCount;
+	return [...found.values()];
 }

@@ -344,7 +344,7 @@
 			"updateWorldCard": "Update world card",
 			"useDetailedContext": "Use detailed context",
 			"detailedContextWarning": "Enabling detailed context will take longer and consume more tokens during generation. Missing cards will be auto-generated.",
-			"missingActCard": "No act card found for the current act line. It will be auto-generated — consider generating it manually via Context Management first.",
+			"missingActCard": "Missing act cards for Act {{numbers}}. They will be auto-generated — consider generating them manually via Context Management first.",
 			"missingCharacterCards": "Missing character cards for: {{names}}. They will be auto-generated — consider generating them manually via Context Management first.",
 			"checkingContext": "Checking for existing cards...",
 			"openContextManagement": "Open Context Management"

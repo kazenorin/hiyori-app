@@ -17,7 +17,6 @@ import { deriveStoryName, renameStoryFolder, resolveStoryFolder } from '$lib/fs/
 import { fs } from '$lib/fs/file-system';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, getLineDir, resolveLineSubdir } from '$lib/ai/card-output-path';
-import { copyCharacterCardsToNewLine } from '$lib/features/character-card-generator';
 import { type ActPlotPhase } from '$lib/ai/act-plot';
 import type { PlotMode } from '$lib/ai/narrative-types';
 import { actWithNumberLabel, mainLineNameLabel } from '$lib/definitions/common-labels';
@@ -224,22 +223,6 @@ export async function createActLineContinuation(
 		const actLine = await createActLine(newAct.id, mainLineNameLabel(), fromActLine.plotMode);
 		await inheritProfilesFromActLine(fromActLine.id, actLine.id);
 		result = { act: newAct, actLine };
-	}
-
-	try {
-		const storyFolder = await resolveStoryFolder(story.id, story.name);
-		await copyCharacterCardsToNewLine({
-			fromStoryFolder: storyFolder,
-			fromActNumber: fromAct.actNumber,
-			fromIsMainLine: fromActLine.isMainLine ?? false,
-			fromActLineId: fromActLine.id,
-			toStoryFolder: storyFolder,
-			toActNumber: result.act.actNumber,
-			toIsMainLine: result.actLine.isMainLine ?? true,
-			toActLineId: result.actLine.id,
-		});
-	} catch (err) {
-		await log.warn('stories', `Failed to copy character cards on continuation: ${err}`);
 	}
 
 	return result;

@@ -62,7 +62,7 @@ import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { loadLocaleStrings, ls } from '$lib/localization';
 import { ensureWorldFile } from '$lib/ai/world-generator';
 import { getLatestProfilesByActLine } from '$lib/db/character-profiles';
-import { loadCharacterCardsForActLine, type CharacterCardContext } from '$lib/features/character-card-generator';
+import { loadLatestCharacterCardsForActLine, type CharacterCardContext } from '$lib/features/character-card-generator';
 import { formatCharacterProfilesSection, formatCharacterCardsSection, type CharacterCardInput } from '$lib/definitions/pipeline-sections';
 
 // Re-exported for `+page.svelte` only
@@ -859,7 +859,7 @@ async function loadCharacterCardsString(
 	actNumber: number
 ): Promise<string | undefined> {
 	const ctx: CharacterCardContext = { storyId, storyName, actLineId, actLine, actNumber };
-	const cards = await loadCharacterCardsForActLine(ctx);
+	const cards = await loadLatestCharacterCardsForActLine(ctx);
 	if (cards.length === 0) return undefined;
 	const profiles = await getLatestProfilesByActLine(actLineId);
 	const profileMap = new Map(profiles.map((p) => [p.canonicalName, p.preferredName]));
