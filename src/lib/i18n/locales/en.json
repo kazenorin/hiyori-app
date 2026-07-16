@@ -391,7 +391,8 @@
 		"actLine": "Act Line:",
 		"actLineId": "Act Line ID:",
 		"concurrentGeneration": "Concurrent Generation",
-		"lineageContextHint": "Cards are generated from the current act's content. If cards exist for the current act line and previous acts in the lineage, their content contributes to generation context."
+		"lineageContextHint": "Cards are generated from the current act's content. If cards exist for the current act line and previous acts in the lineage, their content contributes to generation context.",
+		"fallbackNotice": "No narrative content in the current act line. Showing character cards for Act {{number}} instead."
 	},
 	"importWorld": {
 		"heading": "Import World",

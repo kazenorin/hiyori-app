@@ -391,7 +391,8 @@
 		"actLine": "故事線：",
 		"actLineId": "故事線 ID：",
 		"concurrentGeneration": "並行生成",
-		"lineageContextHint": "角色卡將會以目前的章節內容生成。若目前故事線及先前章節的中已有角色卡，其內容將會在生成時作參考。"
+		"lineageContextHint": "角色卡將會以目前的章節內容生成。若目前故事線及先前章節的中已有角色卡，其內容將會在生成時作參考。",
+		"fallbackNotice": "目前章節線沒有敘事內容。改為顯示第 {{number}} 章的角色卡片。"
 	},
 	"importWorld": {
 		"heading": "匯入世界",

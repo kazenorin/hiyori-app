@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getActiveStory, getActiveAct, getActiveActLine } from '$lib/stores/stories.svelte';
+	import { getActiveStory, getActiveAct, getActiveActLine, getActiveActLineId } from '$lib/stores/stories.svelte';
 	import { t } from '$lib/i18n';
 	import type { CharacterCardContext } from '$lib/features/character-card-generator';
 	import {
@@ -21,33 +21,90 @@
 		resetState,
 	} from '$lib/stores/character-card.svelte';
 	import { settings, updateSettings } from '$lib/stores/settings.svelte';
-	import { onMount } from 'svelte';
+	import { traceActLineChain, getActByActLineId } from '$lib/db/acts';
+	import { getActLine, getMessagesForLine } from '$lib/db/act-lines';
+	import Icon from '$lib/components/ui/Icon.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
 
 	let concurrent = $state(false);
+	let fallbackActNumber = $state<number | null>(null);
+	let resolvedCtx = $state<CharacterCardContext | null>(null);
 
-	function buildContext(): CharacterCardContext | null {
+	let currentExtractionId = 0;
+
+	async function buildContext(): Promise<CharacterCardContext | null> {
 		const story = getActiveStory();
-		const act = getActiveAct();
-		const actLine = getActiveActLine();
-		if (!story || !act || !actLine) return null;
-		return {
-			storyId: story.id,
-			storyName: story.name,
-			actLineId: actLine.id,
-			actLine,
-			actNumber: act.actNumber,
-		};
+		if (!story) return null;
+		const activeActLine = getActiveActLine();
+		const activeActLineId = getActiveActLineId();
+		if (!activeActLine || !activeActLineId) return null;
+
+		const messages = await getMessagesForLine(activeActLine.id);
+		if (messages.length > 0) {
+			const act = getActiveAct();
+			if (!act) return null;
+			fallbackActNumber = null;
+			const ctx = {
+				storyId: story.id,
+				storyName: story.name,
+				actLineId: activeActLine.id,
+				actLine: activeActLine,
+				actNumber: act.actNumber,
+			};
+			resolvedCtx = ctx;
+			return ctx;
+		}
+
+		const lineage = await traceActLineChain(activeActLine.id);
+		for (const entry of lineage) {
+			if (entry.actLineId === activeActLine.id) continue;
+			const ancestorMessages = await getMessagesForLine(entry.actLineId);
+			if (ancestorMessages.length > 0) {
+				const ancestorAct = await getActByActLineId(entry.actLineId);
+				const ancestorActLine = await getActLine(entry.actLineId);
+				if (ancestorAct && ancestorActLine) {
+					fallbackActNumber = entry.actNumber;
+					const ctx = {
+						storyId: story.id,
+						storyName: story.name,
+						actLineId: entry.actLineId,
+						actLine: ancestorActLine,
+						actNumber: entry.actNumber,
+					};
+					resolvedCtx = ctx;
+					return ctx;
+				}
+			}
+		}
+
+		fallbackActNumber = null;
+		resolvedCtx = null;
+		return null;
 	}
 
-	onMount(() => {
-		resetState();
-		const ctx = buildContext();
-		if (ctx) extractCharacters(ctx);
+	$effect(() => {
+		const id = getActiveActLineId();
+		if (!id) {
+			resetState();
+			resolvedCtx = null;
+			fallbackActNumber = null;
+			return;
+		}
+		let cancelled = false;
+		const extractionId = ++currentExtractionId;
+		(async () => {
+			resetState();
+			const ctx = await buildContext();
+			if (cancelled || extractionId !== currentExtractionId) return;
+			if (ctx) extractCharacters(ctx);
+		})();
+		return () => {
+			cancelled = true;
+		};
 	});
 
-	function handleGenerate() {
-		const ctx = buildContext();
+	async function handleGenerate() {
+		const ctx = await buildContext();
 		if (ctx) generateCards(ctx, concurrent);
 	}
 
@@ -87,17 +144,27 @@
 			<h2 class="h2">{t('characterCards.heading')}</h2>
 		</div>
 
+		<!-- Fallback Notice -->
+		{#if fallbackActNumber !== null}
+			<section class="card p-4 flex items-start gap-3 border border-secondary-500-300">
+				<Icon name="info" class="size-5 shrink-0 text-secondary-500 mt-0.5" />
+				<p class="text-sm text-surface-700-300">
+					{t('characterCards.fallbackNotice', { number: fallbackActNumber })}
+				</p>
+			</section>
+		{/if}
+
 		<!-- Context Info -->
 		<section class="card p-4">
 			<div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
 				<span class="font-semibold text-surface-700-300">{t('characterCards.story')}</span>
-				<span class="text-surface-950-50">{getActiveStory()?.name ?? '—'}</span>
+				<span class="text-surface-950-50">{resolvedCtx?.storyName ?? '—'}</span>
 				<span class="font-semibold text-surface-700-300">{t('characterCards.act')}</span>
-				<span class="text-surface-950-50">{getActiveAct()?.actNumber ?? '—'}</span>
+				<span class="text-surface-950-50">{resolvedCtx?.actNumber ?? '—'}</span>
 				<span class="font-semibold text-surface-700-300">{t('characterCards.actLine')}</span>
-				<span class="text-surface-950-50">{getActiveActLine()?.name ?? '—'}</span>
+				<span class="text-surface-950-50">{resolvedCtx?.actLine.name ?? '—'}</span>
 				<span class="font-semibold text-surface-700-300">{t('characterCards.actLineId')}</span>
-				<span class="text-surface-500 text-xs font-mono">{getActiveActLine()?.id ?? '—'}</span>
+				<span class="text-surface-500 text-xs font-mono">{resolvedCtx?.actLine.id ?? '—'}</span>
 			</div>
 		</section>
 
