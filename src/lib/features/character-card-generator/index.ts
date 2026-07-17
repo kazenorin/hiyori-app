@@ -348,9 +348,18 @@ export async function generateCharacterCard(
 	const currentLineageEntry = lineage.find((l) => l.actLineId === ctx.actLineId);
 	const isMainLine = currentLineageEntry?.isMainLine ?? false;
 
+	const lineDir = await getLineDir(storyFolder, currentActNumber, isMainLine, ctx.actLineId);
+	const charactersDir = `${lineDir}/characters`;
+	const filename = computeCardFilename(entry.canonicalName);
+	const filePath = `${charactersDir}/${filename}`;
+
+	// Exclude current act line from character card context (the card being generated/regenerated
+	// should not be fed back as context)
+	const lineageExcludingCurrent = lineage.filter((l) => l.actLineId !== ctx.actLineId);
+
 	const [previousActCards, existingCards, characterProfile] = await Promise.all([
 		loadPreviousActCards(storyFolder, lineage, currentActNumber),
-		loadPreviousCharacterCards(storyFolder, lineage, entry.canonicalName, entry.character),
+		loadPreviousCharacterCards(storyFolder, lineageExcludingCurrent, entry.canonicalName, entry.character),
 		getLatestProfileByAlias(ctx.actLineId, entry.canonicalName),
 	]);
 
@@ -362,30 +371,39 @@ export async function generateCharacterCard(
 
 	await logCharacterCardActivity('generation-start', `Character: ${entry.character}\n\nMessages:\n${JSON.stringify(messages, null, 2)}`);
 
-	const result = await generateText({ model, system: combinedSystem, messages, ...(config.callSettings ?? {}) });
+	// Backup existing card before regeneration
+	let backupPath: string | null = null;
+	if (await fs.exists(filePath)) {
+		const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+		backupPath = `${charactersDir}/${entry.canonicalName}-${timestamp}.md`;
+		await fs.rename(filePath, backupPath);
+	}
 
-	await logCharacterCardActivity(
-		'generation-end',
-		`
+	try {
+		const result = await generateText({ model, system: combinedSystem, messages, ...(config.callSettings ?? {}) });
+
+		await logCharacterCardActivity(
+			'generation-end',
+			`
   Character: ${entry.character}
   Result: ${result.text}
   Usage: ${JSON.stringify(result.usage, null, 4)}
   Finish Reason: ${result.finishReason}`
-	);
+		);
 
-	// Save file
-	const lineDir = await getLineDir(storyFolder, currentActNumber, isMainLine, ctx.actLineId);
-	const charactersDir = `${lineDir}/characters`;
-	const filename = computeCardFilename(entry.canonicalName);
-	const filePath = `${charactersDir}/${filename}`;
+		await fs.writeTextFileEnsuringDir(filePath, result.text);
 
-	await fs.writeTextFileEnsuringDir(filePath, result.text);
-
-	return {
-		characterName: entry.character,
-		filePath,
-		content: result.text,
-	};
+		return {
+			characterName: entry.character,
+			filePath,
+			content: result.text,
+		};
+	} catch (err) {
+		if (backupPath && (await fs.exists(backupPath))) {
+			await fs.rename(backupPath, filePath);
+		}
+		throw err;
+	}
 }
 
 export async function generateCharacterCards(
@@ -537,4 +555,20 @@ export async function loadLatestCharacterCardsForActLine(ctx: CharacterCardConte
 	}
 
 	return [...found.values()];
+}
+
+export async function getExistingCardNamesForActLine(ctx: CharacterCardContext): Promise<Set<string>> {
+	const storyFolder = await resolveStoryFolder(ctx.storyId, ctx.storyName);
+	const lineDir = await getLineDir(storyFolder, ctx.actNumber, ctx.actLine.isMainLine ?? false, ctx.actLineId);
+	const charactersDir = `${lineDir}/characters`;
+	if (!(await fs.exists(charactersDir))) return new Set();
+	const entries = await fs.readDir(charactersDir);
+	const names = new Set<string>();
+	for (const file of entries) {
+		if (file.isDirectory || !file.name.endsWith('.md')) continue;
+		const name = file.name.slice(0, -3);
+		if (/-\d{14}$/.test(name)) continue;
+		names.add(name);
+	}
+	return names;
 }

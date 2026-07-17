@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { getActiveStory, getActiveActLineId } from '$lib/stores/stories.svelte';
-	import { ensureActCard, checkActCardExists } from '$lib/features/act-card-generator';
+	import { regenerateActCard, checkActCardExists } from '$lib/features/act-card-generator';
 	import { getActLine, getMessagesForLine, isActLineEnded } from '$lib/db/act-lines';
 	import { getActByActLineId, traceActLineChain } from '$lib/db/acts';
 	import type { ActLineMeta } from '$lib/db/act-lines';
@@ -111,12 +111,14 @@
 
 		for (const row of selectedRows) {
 			try {
-				generationStatus = `Generating act card for Act ${row.actNumber}...`;
+				generationStatus = row.hasActCard
+					? `Regenerating act card for Act ${row.actNumber}...`
+					: `Generating act card for Act ${row.actNumber}...`;
 				const actLine = row.actLine ?? (await getActLine(row.actLineId));
 				if (!actLine) {
 					throw new Error(`Act line not found for Act ${row.actNumber}`);
 				}
-				const result = await ensureActCard({
+				const result = await regenerateActCard({
 					storyId: story.id,
 					storyName: story.name,
 					actLineId: row.actLineId,
@@ -203,7 +205,6 @@
 											type="checkbox"
 											class="checkbox"
 											checked={selectedActLineIds.has(row.actLineId)}
-											disabled={row.hasActCard}
 											onchange={() => toggleRow(row.actLineId)}
 										/>
 									</span>
@@ -238,7 +239,6 @@
 											type="checkbox"
 											class="checkbox"
 											checked={selectedActLineIds.has(row.actLineId)}
-											disabled={row.hasActCard}
 											onchange={() => toggleRow(row.actLineId)}
 										/>
 										<span class="text-sm font-semibold text-surface-950-50">Act {row.actNumber}</span>

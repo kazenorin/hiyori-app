@@ -21,14 +21,16 @@
 		resetState,
 	} from '$lib/stores/character-card.svelte';
 	import { settings, updateSettings } from '$lib/stores/settings.svelte';
-	import { buildActLineage } from '$lib/features/character-card-generator';
+	import { buildActLineage, getExistingCardNamesForActLine } from '$lib/features/character-card-generator';
 	import { getActLine, getMessagesForLine } from '$lib/db/act-lines';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
+	import { log } from '$lib/logging/logger';
 
 	let concurrent = $state(false);
 	let fallbackActNumber = $state<number | null>(null);
 	let resolvedCtx = $state<CharacterCardContext | null>(null);
+	let existingCardNames = $state<Set<string>>(new Set());
 
 	let currentExtractionId = 0;
 
@@ -94,15 +96,26 @@
 			resetState();
 			resolvedCtx = null;
 			fallbackActNumber = null;
+			existingCardNames = new Set();
 			return;
 		}
 		let cancelled = false;
 		const extractionId = ++currentExtractionId;
 		(async () => {
 			resetState();
+			existingCardNames = new Set();
 			const ctx = await buildContext();
 			if (cancelled || extractionId !== currentExtractionId) return;
-			if (ctx) extractCharacters(ctx);
+			if (ctx) {
+				extractCharacters(ctx);
+				try {
+					const names = await getExistingCardNamesForActLine(ctx);
+					if (cancelled || extractionId !== currentExtractionId) return;
+					existingCardNames = names;
+				} catch (err) {
+					await log.error('context-management', 'Failed to load existing character card names', err);
+				}
+			}
 		})();
 		return () => {
 			cancelled = true;
@@ -257,12 +270,17 @@
 							{/if}
 
 							<span class="text-xs font-semibold text-surface-700-300 uppercase tracking-wide">{t('characterCards.canonicalName')}</span>
-							<input
-								type="text"
-								class="input text-sm"
-								value={char.canonicalName}
-								oninput={(e) => updateCanonicalName(i, e.currentTarget.value)}
-							/>
+							<div class="flex items-center gap-1.5">
+								<input
+									type="text"
+									class="input text-sm flex-1"
+									value={char.canonicalName}
+									oninput={(e) => updateCanonicalName(i, e.currentTarget.value)}
+								/>
+								{#if existingCardNames.has(char.canonicalName)}
+									<Icon name="check-circle" class="size-4 text-success-500 shrink-0" aria-label={t('characterCards.cardExists')} />
+								{/if}
+							</div>
 
 							<div class="flex items-center justify-between">
 								<span class="text-xs font-semibold text-surface-700-300 uppercase tracking-wide">{t('characterCards.include')}</span>
@@ -325,13 +343,16 @@
 										{char.importance}
 									{/if}
 								</span>
-								<span>
+								<span class="flex items-center gap-1.5">
 									<input
 										type="text"
 										class="input text-sm"
 										value={char.canonicalName}
 										oninput={(e) => updateCanonicalName(i, e.currentTarget.value)}
 									/>
+									{#if existingCardNames.has(char.canonicalName)}
+										<Icon name="check-circle" class="size-4 text-success-500 shrink-0" aria-label={t('characterCards.cardExists')} />
+									{/if}
 								</span>
 								<span class="text-center">
 									{#if char.isManual}

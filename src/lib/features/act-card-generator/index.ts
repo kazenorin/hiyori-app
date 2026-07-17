@@ -229,3 +229,37 @@ export async function ensureActCard(opts: EnsureActCardOptions): Promise<EnsureA
 	);
 	return { filePath: result.filePath, content: result.content, generated: true };
 }
+
+export async function regenerateActCard(opts: EnsureActCardOptions): Promise<EnsureActCardResult> {
+	const messages = await getMessagesForLine(opts.actLineId);
+	if (messages.length === 0) throw new Error(ERR_NO_NARRATIVE_CONTENT);
+
+	const storyFolder = await resolveStoryFolder(opts.storyId, opts.storyName);
+	const { filePath, exists, messageIdSuffix } = await resolveActCardPath(
+		messages,
+		storyFolder,
+		opts.actNumber,
+		opts.actLine.isMainLine ?? false,
+		opts.actLineId
+	);
+	if (messageIdSuffix === null) throw new Error(ERR_NO_NARRATIVE_CONTENT);
+
+	let backupPath: string | null = null;
+	if (exists && filePath) {
+		const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
+		const dir = filePath.substring(0, filePath.lastIndexOf('/'));
+		backupPath = `${dir}/act-card-${messageIdSuffix}-${timestamp}.md`;
+		await logActCardActivity('generation-start', `Backing up existing act card to ${backupPath}`);
+		await fs.rename(filePath, backupPath);
+	}
+
+	try {
+		return await ensureActCard(opts);
+	} catch (err) {
+		if (backupPath && filePath && (await fs.exists(backupPath))) {
+			await logActCardActivity('generation-end', 'Generation failed, restoring backup');
+			await fs.rename(backupPath, filePath);
+		}
+		throw err;
+	}
+}

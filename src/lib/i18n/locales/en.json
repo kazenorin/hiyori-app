@@ -374,7 +374,7 @@
 		"generatingProgress": "Generating {{current}} of {{total}} characters...",
 		"canonicalNamesHint": "Canonical names must remain consistent throughout the entire story.",
 		"perActLineHint": "Character cards are maintained per act line (not globally).",
-		"overwriteHint": "If a card for the current act line already exists, it will be overwritten",
+		"overwriteHint": "If a card for the current act line already exists, it will be backed up and regenerated",
 		"and": "and",
 		"character": "Character",
 		"canonicalName": "Canonical Name",
@@ -391,8 +391,9 @@
 		"actLine": "Act Line:",
 		"actLineId": "Act Line ID:",
 		"concurrentGeneration": "Concurrent Generation",
-		"lineageContextHint": "Cards are generated from the current act's content. If cards exist for the current act line and previous acts in the lineage, their content contributes to generation context.",
-		"fallbackNotice": "No narrative content in the current act line. Showing character cards for Act {{number}} instead."
+		"lineageContextHint": "Cards are generated from the current act's content. If cards exist for previous acts in the lineage, their content contributes to generation context.",
+		"fallbackNotice": "No narrative content in the current act line. Showing character cards for Act {{number}} instead.",
+		"cardExists": "Card exists — will be backed up and regenerated"
 	},
 	"importWorld": {
 		"heading": "Import World",

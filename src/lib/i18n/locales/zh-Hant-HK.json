@@ -374,7 +374,7 @@
 		"generatingProgress": "正在生成第 {{current}} / {{total}} 張角色卡…",
 		"canonicalNamesHint": "正規名稱在整個故事中必須保持一致。",
 		"perActLineHint": "角色卡只會按故事線生效（並非全故事線有效）。",
-		"overwriteHint": "若目前故事線已有該角色的卡，現有的角色卡將會被覆寫",
+		"overwriteHint": "若目前故事線已有該角色的卡，現有的角色卡將會被備份並重新生成",
 		"and": "及",
 		"character": "角色",
 		"canonicalName": "正規名稱",
@@ -391,8 +391,9 @@
 		"actLine": "故事線：",
 		"actLineId": "故事線 ID：",
 		"concurrentGeneration": "並行生成",
-		"lineageContextHint": "角色卡將會以目前的章節內容生成。若目前故事線及先前章節的中已有角色卡，其內容將會在生成時作參考。",
-		"fallbackNotice": "目前章節線沒有敘事內容。改為顯示第 {{number}} 章的角色卡片。"
+		"lineageContextHint": "角色卡將會以目前的章節內容生成。若先前章節中已有角色卡，其內容將會在生成時作參考。",
+		"fallbackNotice": "目前章節線沒有敘事內容。改為顯示第 {{number}} 章的角色卡片。",
+		"cardExists": "已有角色卡 — 將備份並重新生成"
 	},
 	"importWorld": {
 		"heading": "匯入世界",
