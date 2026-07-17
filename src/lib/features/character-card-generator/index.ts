@@ -405,6 +405,10 @@ export async function generateCharacterCards(
 	}
 
 	if (selected.length === 0) throw new Error(ERR_NO_CHARACTERS_SELECTED);
+	if (onProgress) {
+		// report initial progress
+		onProgress({ completed: 0, total: selected.length, currentCharacter: selected[0].character });
+	}
 
 	const lineage = await buildActLineage(ctx);
 

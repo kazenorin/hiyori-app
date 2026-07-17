@@ -21,7 +21,7 @@
 		resetState,
 	} from '$lib/stores/character-card.svelte';
 	import { settings, updateSettings } from '$lib/stores/settings.svelte';
-	import { traceActLineChain, getActByActLineId } from '$lib/db/acts';
+	import { buildActLineage } from '$lib/features/character-card-generator';
 	import { getActLine, getMessagesForLine } from '$lib/db/act-lines';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
@@ -35,36 +35,42 @@
 	async function buildContext(): Promise<CharacterCardContext | null> {
 		const story = getActiveStory();
 		if (!story) return null;
+		const activeAct = getActiveAct();
 		const activeActLine = getActiveActLine();
 		const activeActLineId = getActiveActLineId();
-		if (!activeActLine || !activeActLineId) return null;
+		if (!activeAct || !activeActLine || !activeActLineId) return null;
 
 		const messages = await getMessagesForLine(activeActLine.id);
 		if (messages.length > 0) {
-			const act = getActiveAct();
-			if (!act) return null;
 			fallbackActNumber = null;
-			const ctx = {
+			const ctx: CharacterCardContext = {
 				storyId: story.id,
 				storyName: story.name,
 				actLineId: activeActLine.id,
 				actLine: activeActLine,
-				actNumber: act.actNumber,
+				actNumber: activeAct.actNumber,
 			};
 			resolvedCtx = ctx;
 			return ctx;
 		}
 
-		const lineage = await traceActLineChain(activeActLine.id);
+		// No narrative content — walk lineage (newest-first) to find the closest ancestor with content
+		const seedCtx: CharacterCardContext = {
+			storyId: story.id,
+			storyName: story.name,
+			actLineId: activeActLine.id,
+			actLine: activeActLine,
+			actNumber: activeAct.actNumber,
+		};
+		const lineage = await buildActLineage(seedCtx);
 		for (const entry of lineage) {
 			if (entry.actLineId === activeActLine.id) continue;
 			const ancestorMessages = await getMessagesForLine(entry.actLineId);
 			if (ancestorMessages.length > 0) {
-				const ancestorAct = await getActByActLineId(entry.actLineId);
 				const ancestorActLine = await getActLine(entry.actLineId);
-				if (ancestorAct && ancestorActLine) {
+				if (ancestorActLine) {
 					fallbackActNumber = entry.actNumber;
-					const ctx = {
+					const ctx: CharacterCardContext = {
 						storyId: story.id,
 						storyName: story.name,
 						actLineId: entry.actLineId,
