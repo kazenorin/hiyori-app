@@ -10,8 +10,11 @@
 		saveFileContent,
 		isFolderTypeProtected,
 		isConfigUserModified,
+		listUserChangedConfigFiles,
+		classifyManagedConfig,
 		isCriticalSystemFile,
 		type FileNode,
+		type UserChangedConfigFile,
 	} from '$lib/fs/file-tree';
 	import {
 		type FileActionState,
@@ -74,6 +77,12 @@
 	let inlineCancelRef: HTMLButtonElement | null = $state(null);
 
 	let isConfigModified = $state<boolean | null>(null);
+	let changedConfigFiles = $state<UserChangedConfigFile[]>([]);
+	let isLoadingChangedFiles = $state(false);
+	let changedFilesError = $state<string | null>(null);
+	let changedFilesRequestId = 0;
+	let expandedValue = $state<string[]>([]);
+	let selectedValue = $state<string[]>([]);
 	let stories = $state<StoryFolderInfo[]>([]);
 	let selectedStoryFolder = $state<string>('');
 	let showCopyPanel = $state(false);
@@ -141,6 +150,9 @@
 		editContent = '';
 		saveError = null;
 		showDeleteConfirm = false;
+		changedConfigFiles = [];
+		changedFilesError = null;
+		isLoadingChangedFiles = false;
 		actions.actionError = null;
 		isConfigModified = null;
 		showCopyPanel = false;
@@ -151,6 +163,7 @@
 
 	async function handleSelectionChange(details: { selectedValue: string[]; selectedNodes: FileNode[] }) {
 		const node = details.selectedNodes[0];
+		selectedValue = details.selectedValue;
 		if (!node) {
 			clearPreview();
 			return;
@@ -168,6 +181,9 @@
 		isConfigModified = null;
 		showFileDeleteConfirm = false;
 		acknowledgeCriticalLoss = false;
+		changedConfigFiles = [];
+		changedFilesError = null;
+		isLoadingChangedFiles = false;
 
 		if (node.isDirectory) {
 			fileContent = null;
@@ -175,6 +191,24 @@
 			isBinary = false;
 			fileLang = '';
 			isFolderProtected = isFolderTypeProtected(node.folderType);
+
+			if (node.folderType === 'config') {
+				const myReqId = ++changedFilesRequestId;
+				isLoadingChangedFiles = true;
+				listUserChangedConfigFiles(node.id, 10)
+					.then((files) => {
+						if (myReqId !== changedFilesRequestId) return;
+						changedConfigFiles = files;
+					})
+					.catch(async (err) => {
+						if (myReqId !== changedFilesRequestId) return;
+						changedFilesError = err instanceof Error ? err.message : String(err);
+						await log.error('file-manager', 'Failed to list changed config files', err);
+					})
+					.finally(() => {
+						if (myReqId === changedFilesRequestId) isLoadingChangedFiles = false;
+					});
+			}
 			return;
 		}
 
@@ -213,6 +247,41 @@
 				isLoadingFile = false;
 			}
 		}
+	}
+
+	async function navigateToConfigFile(filePath: string): Promise<void> {
+		// Expand ancestors so the target file becomes visible in the lazy-loaded
+		// tree, then select it. The TreeView's `loadChildren` callback is invoked
+		// by zag-js for each newly-expanded branch, populating the collection.
+		const segments = filePath.split('/');
+		const ancestorIds: string[] = [];
+		let current = '';
+		for (let i = 0; i < segments.length - 1; i++) {
+			current = current ? `${current}/${segments[i]}` : segments[i];
+			ancestorIds.push(current);
+		}
+
+		const newExpanded = ancestorIds.filter((id) => !expandedValue.includes(id));
+		if (newExpanded.length > 0) expandedValue = [...expandedValue, ...newExpanded];
+
+		// Drive selection through controlled state — the TreeView's
+		// onSelectionChange does not fire when we set state programmatically,
+		// so invoke it directly to load the preview pane.
+		selectedValue = [filePath];
+
+		// The file node may not yet be loaded into the TreeView collection
+		// (elders still lazy-loading), so construct a synthetic node using
+		// classifyManagedConfig as the source of truth for managedConfig.
+		const fileName = segments[segments.length - 1];
+		const managedConfig = classifyManagedConfig(filePath, 'config') ?? undefined;
+		const syntheticNode: FileNode = {
+			id: filePath,
+			name: fileName,
+			isDirectory: false,
+			folderType: 'config',
+			managedConfig,
+		};
+		await handleSelectionChange({ selectedValue: [filePath], selectedNodes: [syntheticNode] });
 	}
 
 	function startEditing() {
@@ -367,7 +436,16 @@
 						<Spinner size="md" />
 					</div>
 				{:else}
-					<TreeView {collection} {loadChildren} {onLoadChildrenComplete} {onLoadChildrenError} onSelectionChange={handleSelectionChange}>
+					<TreeView
+						{collection}
+						{loadChildren}
+						{onLoadChildrenComplete}
+						{onLoadChildrenError}
+						{expandedValue}
+						{selectedValue}
+						onExpandedChange={(details) => (expandedValue = details.expandedValue)}
+						onSelectionChange={handleSelectionChange}
+					>
 						<TreeView.Label>{t('fileManager.treeLabel')}</TreeView.Label>
 						<TreeView.Tree>
 							{#each collection.rootNode.children || [] as node, index (node)}
@@ -481,6 +559,35 @@
 
 			{#if actions.actionError}
 				<p class="text-xs text-error-500">{actions.actionError}</p>
+			{/if}
+
+			{#if isFolderProtected && selectedNode?.folderType === 'config' && (isLoadingChangedFiles || changedFilesError || changedConfigFiles.length > 0)}
+				<div class="w-full max-w-md mx-auto mt-6 text-left">
+					<p class="text-xs text-surface-600-400 mb-2">{t('fileManager.changedFiles')}</p>
+					{#if isLoadingChangedFiles}
+						<div class="flex items-center gap-2 text-xs text-surface-600-400">
+							<Spinner class="size-3.5" />
+							{t('fileManager.loadingFiles')}
+						</div>
+					{:else if changedFilesError}
+						<p class="text-xs text-error-500">{changedFilesError}</p>
+					{:else}
+						<ul class="space-y-1">
+							{#each changedConfigFiles as f (f.path)}
+								<li>
+									<button
+										class="btn preset-tonal text-xs w-full justify-start gap-1"
+										type="button"
+										onclick={() => void navigateToConfigFile(f.path)}
+									>
+										<Icon name="document" class="size-3.5 shrink-0" />
+										<span class="truncate">{f.relativePath}</span>
+									</button>
+								</li>
+							{/each}
+						</ul>
+					{/if}
+				</div>
 			{/if}
 		</div>
 	</div>

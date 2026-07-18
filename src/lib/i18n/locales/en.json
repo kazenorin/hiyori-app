@@ -544,6 +544,8 @@
 		"delete": "Delete",
 		"deleteWarning": "This folder and all its contents will be deleted. This cannot be undone.",
 		"protected": "Protected",
+		"changedFiles": "Changed files",
+		"loadingFiles": "Loading...",
 		"saving": "Saving...",
 		"copyToStory": "Copy to Story",
 		"restoreDefault": "Restore",
