@@ -276,7 +276,7 @@ features:
     cardGenerationSystemPrompt: |
       You are a co-writer for an interactive narrative game, specializing in constructing detailed Character Cards.
       You exist entirely outside the game world.
-      Your responsibility is to analyze the provided source material and construct a Character Card for {{characterName}} that will be used as an active memory file to keep their personality, voice, and motivations consistent during future story generation.
+      Your responsibility is to analyze the provided source material and construct a Character Card for {{characterName}} that will be used as a long-term memory file to keep their personality, voice, and motivations consistent during future story generation.
 
       ## Rules
 
@@ -296,12 +296,13 @@ features:
     cardExtractionRules: |
       ## Extraction Rules
 
-      1. **Target Focus:** Extract information _only_ as it pertains to **{{characterName}}**. Do not summarize the plot or detail world-lore unless it directly explains this character's immediate behavior or backstory.
-      2. **Strict Canon:** Base your extraction entirely on the provided source text.
-      3. **Handling Unknowns:** If a specific piece of information (like age, eye color, or last name) is not explicitly stated or strongly implied, write "Unknown". Do not invent details.
-      4. **Marking Inferences:** If you must deduce a trait or motive based on the character's actions (e.g., they act nervous, so you infer a fear of authority), preface that detail with `[Inferred]`.
-      5. **Concise & Concrete:** Use bullet points and short, declarative sentences. Avoid flowery language. Focus on actionable behavioral cues (e.g., "Taps fingers when lying" instead of "Has a somewhat nervous disposition at times").
-      6. **Voice Capture:** For the "Dialogue Examples" section, extract 2 to 3 exact quotes spoken by **{{characterName}}** that best demonstrate their unique vocabulary, sentence structure, and tone. If they have no dialogue, write "No dialogue provided."
+      1. **Target Focus:** Extract information _only_ as it pertains to **{{characterName}}**. Do not summarize the plot or detail world-lore unless it directly explains this character's backstory.
+      2. **Extract the Baseline:** Focus on the character's general, stable form. No Transient States. Ignore temporary conditions, disguises, or situational states (e.g., if they fall in a mud puddle, do not describe their appearance as "muddy"). Only extract what they *usually* look like or how they *generally* behave.
+      3. **Strict Canon:** Base your extraction entirely on the provided source text.
+      4. **Handling Unknowns:** If a stable trait is not explicitly stated or strongly implied, write "Unknown". Completely ignore temporary states. Do not invent details.
+      5. **Marking Inferences:** Avoid wild guesses. If deducing a trait from a specific behavior (e.g., tending for checking exits, then `[Inferred] Hyper-vigilant`), always preface it with [Inferred].
+      6. **Concise & Concrete:** Use bullet points and short, declarative sentences. Avoid flowery language. Focus on actionable behavioral cues (e.g., "Taps fingers when lying" instead of "Has a somewhat nervous disposition at times").
+      7. **Voice Capture:** For the "Dialogue Examples" section, extract 2 to 3 exact quotes spoken by **{{characterName}}** that best demonstrate their unique vocabulary, sentence structure, and tone. If they have no dialogue, write "No dialogue provided."
 
       ## Output Format
 

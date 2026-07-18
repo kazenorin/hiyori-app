@@ -24,7 +24,7 @@ import {
 	transcriptStart,
 } from './extraction-prompts';
 import { ERR_NO_CHARACTERS_SELECTED, ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT } from '$lib/definitions/error-messages';
-import { nameLabel } from '$lib/definitions/common-labels';
+import { aliasesLabel, nameLabel } from '$lib/definitions/common-labels';
 import { characterCardCoreIdentityLabel, characterCardExtractionRules } from '$lib/definitions/feature-prompts';
 import { type CharacterProfileEntity, getLatestProfileByAlias, getLatestProfilesByActLine } from '$lib/db/character-profiles';
 import { formatCharacterProfileAsMessage } from '$lib/definitions/pipeline-sections';
@@ -483,14 +483,23 @@ async function loadPreviousCharacterCards(
 	return sections;
 }
 
-async function characterCardExtractionPrompt(entry: CharacterSummary, ctx: CharacterCardContext) {
-	const rules = characterCardExtractionRules(entry.character);
+async function characterCardExtractionPrompt(
+	entry: CharacterSummary,
+	ctx: CharacterCardContext,
+	characterProfile: CharacterProfileEntity | null
+) {
+	const characterName = entry.character;
+	const aliases = characterProfile?.aliases?.join(', ') ?? '';
+
+	const rules = characterCardExtractionRules(characterName);
 	const template = await characterCardTemplateLoader.loadByStory(ctx.storyId, ctx.storyName);
 
 	const namedTemplate = template
 		.replaceAll('{{coreIdentity}}', characterCardCoreIdentityLabel())
 		.replaceAll('{{name}}', nameLabel())
-		.replaceAll('{{character name}}', entry.character);
+		.replaceAll('{{aliases}}', aliasesLabel())
+		.replaceAll('{{character name}}', characterName)
+		.replaceAll('{{character aliases}}', aliases);
 
 	return characterCardGenerationInstruction(rules, namedTemplate);
 }
@@ -524,7 +533,7 @@ async function buildUserMessages(ctx: CharacterCardContext, entry: CharacterSumm
 
 	const allMessages = await getMessagesForLine(ctx.actLineId);
 	const transcript = exportActLine(allMessages);
-	const userPrompt = await characterCardExtractionPrompt(entry, ctx);
+	const userPrompt = await characterCardExtractionPrompt(entry, ctx, characterProfile);
 	const formattedCharacterProfile = characterProfile ? formatCharacterProfileAsMessage(characterProfile) : null;
 
 	return toMessages(transcript, previousActCards, existingCards, formattedCharacterProfile, userPrompt);

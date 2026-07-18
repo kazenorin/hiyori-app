@@ -3,14 +3,14 @@
 ## {{coreIdentity}}
 
 - {{name}}: {{character name}}
-- Aliases / nicknames:
+- {{aliases}}: {{character aliases}}
 - Age:
-- Gender / identity:
+- Gender:
+- Identity:
 - Species / type:
 - Occupation / role:
 - Social status / faction:
-- Current location:
-- Era / time period:
+- Primary locations: [ usual residence, frequent hangouts, or habitual environments ]
 
 ## Logline
 
