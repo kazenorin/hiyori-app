@@ -20,7 +20,12 @@ import {
 } from '$lib/db/act-lines';
 import { traceActLineChain } from '$lib/db/acts';
 import { ensureActCard } from '$lib/features/act-card-generator';
-import { ensureCharacterCard, loadLatestCharacterCardsForActLine, type CharacterCardContext } from '$lib/features/character-card-generator';
+import {
+	ensureCharacterCard,
+	loadLatestCharacterCardsForActLine,
+	type CharacterCardContext,
+	toCharacterSummary,
+} from '$lib/features/character-card-generator';
 import { getLatestProfilesByActLine } from '$lib/db/character-profiles';
 import { formatCharacterProfilesSection } from '$lib/definitions/pipeline-sections';
 import { actPlotResumeNote } from '$lib/definitions/pipeline-prompts';
@@ -389,8 +394,7 @@ async function loadDetailedContextInputs(params: GenerateActPlotParams): Promise
 	for (const profile of included) {
 		const result = await ensureCharacterCard({
 			ctx,
-			canonicalName: profile.canonicalName,
-			preferredName: profile.preferredName,
+			character: toCharacterSummary(profile),
 			abortSignal: params.abortSignal,
 		});
 		characterCards.push({ preferredName: profile.preferredName, content: result.content });

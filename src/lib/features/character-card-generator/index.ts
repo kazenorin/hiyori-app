@@ -26,8 +26,9 @@ import {
 import { ERR_NO_CHARACTERS_SELECTED, ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT } from '$lib/definitions/error-messages';
 import { nameLabel } from '$lib/definitions/common-labels';
 import { characterCardCoreIdentityLabel, characterCardExtractionRules } from '$lib/definitions/feature-prompts';
-import { getLatestProfileByAlias } from '$lib/db/character-profiles';
+import { type CharacterProfileEntity, getLatestProfileByAlias, getLatestProfilesByActLine } from '$lib/db/character-profiles';
 import { formatCharacterProfileAsMessage } from '$lib/definitions/pipeline-sections';
+import { importanceLevelLabel } from '$lib/definitions/pipeline-prompts';
 
 // === Types ===
 
@@ -41,13 +42,11 @@ export interface CharacterCardContext {
 
 export interface CharacterSummary {
 	character: string;
+	canonicalName: string;
 	importance: string;
 }
 
-export interface CharacterEntry {
-	character: string;
-	importance: string;
-	canonicalName: string;
+export interface CharacterEntry extends CharacterSummary {
 	include: boolean;
 	isManual: boolean;
 }
@@ -71,8 +70,7 @@ export interface LoadedCharacterCard {
 
 export interface EnsureCharacterCardParams {
 	ctx: CharacterCardContext;
-	canonicalName: string;
-	preferredName: string;
+	character: CharacterSummary;
 	abortSignal?: AbortSignal;
 }
 
@@ -85,67 +83,35 @@ export interface EnsureCharacterCardResult {
 
 export function toCharacterEntries(summaries: CharacterSummary[]): CharacterEntry[] {
 	return summaries.map((s) => ({
-		character: s.character,
-		importance: s.importance,
-		canonicalName: kebabCase(s.character),
+		...s,
 		include: true,
 		isManual: false,
 	}));
 }
 
+export function toCharacterSummary(profile: CharacterProfileEntity): CharacterSummary {
+	return {
+		character: profile.preferredName,
+		canonicalName: profile.canonicalName,
+		importance: `${importanceLevelLabel(profile.importance)}: ${profile.logline}`,
+	};
+}
+
 export async function extractCharactersFromActLine(ctx: CharacterCardContext): Promise<CharacterSummary[]> {
-	const config = getMainProviderConfig();
-	if (!config?.model) throw new Error(ERR_NO_MAIN_PROVIDER);
-
-	const allMessages = await getMessagesForLine(ctx.actLineId);
-	const transcript: string[] = exportActLine(allMessages);
-	if (transcript.length === 0) throw new Error(ERR_NO_NARRATIVE_CONTENT);
-
-	const systemPrompt = characterExtractionSystemPrompt();
-
-	const model = await createModel(config);
-
-	await logCharacterCardActivity(
-		'extraction-start',
-		`Extracting characters from act line: ${ctx.actLineId}\n
-  System Prompt:\n${systemPrompt}\n
-  Transcript:\n    ${transcript.join('\n    ')}`
-	);
-
-	const messages: ModelMessage[] = [
-		{
-			role: 'user',
-			content: characterExtractionPrefix(),
-		},
-		...transcript.map(toUserModelMessage),
-		{ role: 'user', content: transcriptEnd() },
-		{
-			role: 'user',
-			content: characterExtractionPrompt(),
-		},
-	];
-	const result = await generateText({ model, system: systemPrompt, messages, ...(config.callSettings ?? {}) });
-
-	await logCharacterCardActivity(
-		'extraction-end',
-		`
-  Result: ${result.text}
-  Usage: ${JSON.stringify(result.usage, null, 4)}
-  Finish Reason: ${result.finishReason}`
-	);
-
-	return parseCharacterJson(result.text);
+	const summaries = await extractCharactersFromActLineProfiles(ctx);
+	return summaries.length > 0 ? summaries : extractCharactersFromActLineMessages(ctx);
 }
 
 export async function generateCharacterCard(
 	ctx: CharacterCardContext,
-	entry: CharacterEntry,
+	entry: CharacterSummary,
 	lineage: ActChainEntry[]
 ): Promise<CharacterCardResult> {
 	const config = getMainProviderConfig();
 	if (!config?.model) throw new Error(ERR_NO_MAIN_PROVIDER);
 
-	if (!entry.canonicalName.trim()) {
+	const canonicalName = kebabCase(entry.canonicalName).trim();
+	if (!canonicalName) {
 		throw new Error(`Character name resolves to empty identifier: "${entry.character}"`);
 	}
 
@@ -153,11 +119,11 @@ export async function generateCharacterCard(
 
 	// Backup existing card before regeneration
 	const charactersDir = await resolveCharactersDir(storyFolder, ctx);
-	const filePath = `${charactersDir}/${computeCardFilename(entry.canonicalName)}`;
+	const filePath = `${charactersDir}/${computeCardFilename(canonicalName)}`;
 	let backupPath: string | null = null;
 	if (await fs.exists(filePath)) {
 		const timestamp = new Date().toISOString().replace(/[-:T]/g, '').slice(0, 14);
-		backupPath = `${charactersDir}/${entry.canonicalName}-${timestamp}.md`;
+		backupPath = `${charactersDir}/${canonicalName}-${timestamp}.md`;
 		await fs.rename(filePath, backupPath);
 	}
 
@@ -261,7 +227,7 @@ export async function ensureCharacterCard(params: EnsureCharacterCardParams): Pr
 	const current = await loadExistingCharacterCard(
 		storyFolder,
 		params.ctx.actNumber,
-		params.canonicalName,
+		params.character.canonicalName,
 		params.ctx.actLine.isMainLine ?? false,
 		params.ctx.actLineId
 	);
@@ -273,21 +239,20 @@ export async function ensureCharacterCard(params: EnsureCharacterCardParams): Pr
 	const lineage = await traceActLineChain(params.ctx.actLineId, true);
 	for (const entry of lineage) {
 		if (entry.actLineId === params.ctx.actLineId) continue;
-		const existing = await loadExistingCharacterCard(storyFolder, entry.actNumber, params.canonicalName, entry.isMainLine, entry.actLineId);
+		const existing = await loadExistingCharacterCard(
+			storyFolder,
+			entry.actNumber,
+			params.character.canonicalName,
+			entry.isMainLine,
+			entry.actLineId
+		);
 		if (existing) {
 			return { content: existing, generated: false };
 		}
 	}
 
 	// 3. Not found anywhere in lineage — generate for current act line
-	const entry: CharacterEntry = {
-		character: params.preferredName,
-		importance: '',
-		canonicalName: params.canonicalName,
-		include: true,
-		isManual: true,
-	};
-	const result = await generateCharacterCard(params.ctx, entry, lineage);
+	const result = await generateCharacterCard(params.ctx, params.character, lineage);
 	return { content: result.content, generated: true };
 }
 
@@ -336,6 +301,55 @@ async function readCardFiles(dir: string): Promise<{ name: string; content: stri
 	return out;
 }
 
+async function extractCharactersFromActLineProfiles(ctx: CharacterCardContext): Promise<CharacterSummary[]> {
+	const profiles = await getLatestProfilesByActLine(ctx.actLineId);
+	return profiles.map(toCharacterSummary);
+}
+
+async function extractCharactersFromActLineMessages(ctx: CharacterCardContext): Promise<CharacterSummary[]> {
+	const config = getMainProviderConfig();
+	if (!config?.model) throw new Error(ERR_NO_MAIN_PROVIDER);
+
+	const allMessages = await getMessagesForLine(ctx.actLineId);
+	const transcript: string[] = exportActLine(allMessages);
+	if (transcript.length === 0) throw new Error(ERR_NO_NARRATIVE_CONTENT);
+
+	const systemPrompt = characterExtractionSystemPrompt();
+
+	const model = await createModel(config);
+
+	await logCharacterCardActivity(
+		'extraction-start',
+		`Extracting characters from act line: ${ctx.actLineId}\n
+  System Prompt:\n${systemPrompt}\n
+  Transcript:\n    ${transcript.join('\n    ')}`
+	);
+
+	const messages: ModelMessage[] = [
+		{
+			role: 'user',
+			content: characterExtractionPrefix(),
+		},
+		...transcript.map(toUserModelMessage),
+		{ role: 'user', content: transcriptEnd() },
+		{
+			role: 'user',
+			content: characterExtractionPrompt(),
+		},
+	];
+	const result = await generateText({ model, system: systemPrompt, messages, ...(config.callSettings ?? {}) });
+
+	await logCharacterCardActivity(
+		'extraction-end',
+		`
+  Result: ${result.text}
+  Usage: ${JSON.stringify(result.usage, null, 4)}
+  Finish Reason: ${result.finishReason}`
+	);
+
+	return parseCharacterJson(result.text);
+}
+
 function parseCharacterJson(text: string): CharacterSummary[] {
 	let jsonStr = text.trim();
 
@@ -357,6 +371,7 @@ function parseCharacterJson(text: string): CharacterSummary[] {
 			})
 			.map((item: Record<string, unknown>) => ({
 				character: item.character as string,
+				canonicalName: kebabCase(item.character as string),
 				importance: item.importance as string,
 			}));
 	} catch (err) {
@@ -402,9 +417,15 @@ async function loadExistingCharacterCard(
 	isMainLine: boolean,
 	actLineId: string
 ): Promise<string | null> {
+	const sanitizedCanonicalName = kebabCase(canonicalName).trim();
+	if (!sanitizedCanonicalName) {
+		await log.warn('character-card', `canonicalName='${canonicalName}' resolved to empty string`);
+		return null;
+	}
+
 	const lineDir = await getLineDir(storyFolder, actNumber, isMainLine, actLineId);
 	const charactersDir = `${lineDir}/characters`;
-	const filename = computeCardFilename(canonicalName);
+	const filename = computeCardFilename(sanitizedCanonicalName);
 	const path = `${charactersDir}/${filename}`;
 
 	try {
@@ -462,7 +483,7 @@ async function loadPreviousCharacterCards(
 	return sections;
 }
 
-async function characterCardExtractionPrompt(entry: CharacterEntry, ctx: CharacterCardContext) {
+async function characterCardExtractionPrompt(entry: CharacterSummary, ctx: CharacterCardContext) {
 	const rules = characterCardExtractionRules(entry.character);
 	const template = await characterCardTemplateLoader.loadByStory(ctx.storyId, ctx.storyName);
 
@@ -492,7 +513,7 @@ function toMessages(
 	];
 }
 
-async function buildUserMessages(ctx: CharacterCardContext, entry: CharacterEntry, lineage: ActChainEntry[], storyFolder: string) {
+async function buildUserMessages(ctx: CharacterCardContext, entry: CharacterSummary, lineage: ActChainEntry[], storyFolder: string) {
 	// Exclude current act line from character card context (the card being generated/regenerated should not be fed back as context)
 	const lineageExcludingCurrent = lineage.filter((l) => l.actLineId !== ctx.actLineId);
 	const [previousActCards, existingCards, characterProfile] = await Promise.all([
