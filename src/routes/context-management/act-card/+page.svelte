@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import { getActiveStory, getActiveActLineId } from '$lib/stores/stories.svelte';
-	import { regenerateActCard, checkActCardExists } from '$lib/features/act-card-generator';
+	import { generateNewActCard, checkActCardExists } from '$lib/features/act-card-generator';
 	import { getActLine, getMessagesForLine, isActLineEnded } from '$lib/db/act-lines';
 	import { getActByActLineId, traceActLineChain } from '$lib/db/acts';
 	import type { ActLineMeta } from '$lib/db/act-lines';
@@ -118,7 +118,7 @@
 				if (!actLine) {
 					throw new Error(`Act line not found for Act ${row.actNumber}`);
 				}
-				const result = await regenerateActCard({
+				const result = await generateNewActCard({
 					storyId: story.id,
 					storyName: story.name,
 					actLineId: row.actLineId,
