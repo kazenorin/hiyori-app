@@ -229,8 +229,8 @@ export async function isConfigUserModified(configFilePath: string): Promise<bool
 	const entry = manifest.get(configPath);
 	if (!entry || entry.hash === null) return true;
 	const content = await fs.readTextFile(configFilePath);
-	const diskHash = await hashContent(content);
-	return diskHash !== entry.hash;
+	const { trimmed } = await hashContent(content);
+	return trimmed !== entry.hash;
 }
 
 export async function copyConfigToStory(configFilePath: string, storyFolderName: string): Promise<void> {

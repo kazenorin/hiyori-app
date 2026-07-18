@@ -10,30 +10,9 @@ export interface ConfigAssetEntry {
 	updatedAt: string;
 }
 
-function flattenManifestTree(node: unknown): ConfigAssetEntry[] {
-	const entries: ConfigAssetEntry[] = [];
-
-	function walk(current: unknown): void {
-		if (current == null || typeof current !== 'object') return;
-		const obj = current as Record<string, unknown>;
-		if (typeof obj.configPath === 'string') {
-			entries.push({
-				configPath: obj.configPath,
-				hash: typeof obj.hash === 'string' ? obj.hash : null,
-				oldHashes: Array.isArray(obj.oldHashes)
-					? (obj.oldHashes as string[]).filter((h): h is string => typeof h === 'string')
-					: [],
-				updatedAt: typeof obj.updatedAt === 'string' ? obj.updatedAt : '',
-			});
-			return;
-		}
-		for (const value of Object.values(obj)) {
-			walk(value);
-		}
-	}
-
-	walk(node);
-	return entries;
+export interface ContentHashes {
+	trimmed: string;
+	untrimmed: string;
 }
 
 export function loadManifest(): Map<string, ConfigAssetEntry> {
@@ -46,16 +25,18 @@ export function loadManifest(): Map<string, ConfigAssetEntry> {
 	return map;
 }
 
-export async function hashContent(content: string): Promise<string> {
+export async function hashContent(content: string): Promise<ContentHashes> {
 	const normalized = content.replaceAll('\r\n', '\n');
-	const encoder = new TextEncoder();
-	const data = encoder.encode(normalized);
-	const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-	const hashArray = Array.from(new Uint8Array(hashBuffer));
-	return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+	const trimmedContent = normalized.trim();
+	const untrimmed = await sha256Hex(normalized);
+	const trimmed = trimmedContent.length === normalized.length ? untrimmed : await sha256Hex(trimmedContent);
+	return { trimmed, untrimmed };
 }
 
-const bundledContentMap = new Map<string, string>();
+export function isContentUserEdited(hashes: ContentHashes, entry: ConfigAssetEntry): boolean {
+	const knownHashes = [...entry.oldHashes, entry.hash].filter((h): h is string => h !== null);
+	return !knownHashes.includes(hashes.untrimmed) && !knownHashes.includes(hashes.trimmed);
+}
 
 export function registerBundledContent(configPath: string, content: string): void {
 	bundledContentMap.set(configPath, content);
@@ -76,9 +57,8 @@ export async function syncConfigAssets(): Promise<void> {
 		if (!fileExists) continue;
 
 		const diskContent = await fs.readTextFile(fullPath);
-		const diskHash = await hashContent(diskContent);
-		const knownHashes = [...entry.oldHashes, entry.hash].filter((h): h is string => h !== null);
-		const isUserEdited = !knownHashes.includes(diskHash);
+		const hashes = await hashContent(diskContent);
+		const isUserEdited = isContentUserEdited(hashes, entry);
 
 		if (entry.hash === null) {
 			if (!isUserEdited) {
@@ -96,7 +76,7 @@ export async function syncConfigAssets(): Promise<void> {
 			continue;
 		}
 
-		if (diskHash !== entry.hash) {
+		if (hashes.trimmed !== entry.hash) {
 			const content = bundledContentMap.get(configPath);
 			if (content !== undefined) {
 				await fs.writeTextFileEnsuringDir(fullPath, content);
@@ -108,4 +88,37 @@ export async function syncConfigAssets(): Promise<void> {
 	if (updated) {
 		await log.info('config-sync', 'Config assets synchronized.');
 	}
+}
+
+const bundledContentMap = new Map<string, string>();
+
+function flattenManifestTree(node: unknown): ConfigAssetEntry[] {
+	const entries: ConfigAssetEntry[] = [];
+
+	function walk(current: unknown): void {
+		if (current == null || typeof current !== 'object') return;
+		const obj = current as Record<string, unknown>;
+		if (typeof obj.configPath === 'string') {
+			entries.push({
+				configPath: obj.configPath,
+				hash: typeof obj.hash === 'string' ? obj.hash : null,
+				oldHashes: Array.isArray(obj.oldHashes) ? (obj.oldHashes as string[]).filter((h): h is string => typeof h === 'string') : [],
+				updatedAt: typeof obj.updatedAt === 'string' ? obj.updatedAt : '',
+			});
+			return;
+		}
+		for (const value of Object.values(obj)) {
+			walk(value);
+		}
+	}
+
+	walk(node);
+	return entries;
+}
+
+async function sha256Hex(text: string): Promise<string> {
+	const data = new TextEncoder().encode(text);
+	const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+	const hashArray = Array.from(new Uint8Array(hashBuffer));
+	return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
