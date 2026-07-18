@@ -90,6 +90,8 @@
 		"embeddingProviderDescription": "用於產生 Embedding 以進行記憶搜尋的提供者。",
 		"phraseHighlighting": "標示重點",
 		"phraseHighlightingDescription": "自動擷取並標示敘事文字中的重點。會使用「小型作業用 Agent」。",
+		"ignoreCharacterCardsInChat": "在主聊天中不載入角色卡片",
+		"ignoreCharacterCardsInChatDescription": "啟用後，主聊天管線將不再載入角色卡片作為背景，但進行「章節劇情規劃」或在劇情規劃器中啟用「詳細背景」時仍會生效。",
 		"directorMode": "導演模式",
 		"directorModeDescription": "新增可改寫故事原定走向的常駐備註。「導演備註」會對劇情產生重大影響，並可能視乎內容觸發連鎖的因果效應。請謹慎使用。",
 		"pipelineRoles": "流程提供者角色",
@@ -257,6 +259,7 @@
 		"settings": "設定",
 		"memoryManager": "記憶管理員",
 		"fileManager": "檔案管理員",
+		"contextManagement": "背景管理",
 		"newAct": "+ 新章節",
 		"newStory": "新故事",
 		"deleteConfirmTitle": "刪除{{type}}？",
@@ -338,8 +341,30 @@
 			"storyCreationOptions": "故事建立選項",
 			"createStoryPrompt": "要建立「{{name}}」嗎？",
 			"createStoryDefault": "要建立故事嗎？",
-			"updateWorldCard": "更新世界卡"
+			"updateWorldCard": "更新世界卡",
+			"useDetailedContext": "啟用「詳細背景」",
+			"detailedContextWarning": "啟用「詳細背景」後，系統會自動生成缺失的角色卡片，但這也需要較長的生成時間及較高的 Token 消耗。",
+			"missingActCard": "章節 {{numbers}} 缺少章節卡片。雖然系統能自動補齊，但仍建議您先至「背景管理」手動生成。",
+			"missingCharacterCards": "目前缺失以下角色卡片: {{names}}。系統雖會自動補齊，但建議先至「背景管理」手動生成。",
+			"checkingContext": "正在檢查現有卡片…",
+			"openContextManagement": "開啟「背景管理」"
 		}
+	},
+	"contextManagement": {
+		"title": "背景管理",
+		"subtitle": "管理 AI 生成時使用的詳細背景工具。",
+		"actCard": {
+			"title": "章節卡片產生器",
+			"description": "在「繼續下一章節」編寫劇情時，「章節卡片」可為系統提供背景資料，但請注意，這僅在啟用「詳細背景」的狀態下才會被使用。",
+			"notConcludedWarning": "由於目前章節線尚未結束，此時生成的章節卡片將不會被系統直接使用，僅作為您的參考資料。"
+		},
+		"characterCards": {
+			"title": "角色卡片產生器",
+			"description": "系統會從目前章節擷取資訊生成角色卡片。當延續至新章節並選用「詳細背景」時會被載入，同時也能作為主聊天的額外背景。"
+		},
+		"costNote": "兩者生成與使用時都會消耗大量 Token，但能令故事更連貫。",
+		"advancedSectionTitle": "進階背景管理",
+		"advancedSectionDescription": "這些工具會以額外 Token 為代價，為 AI 提供更詳細的背景資訊。"
 	},
 	"characterCards": {
 		"heading": "角色卡生成",
@@ -349,7 +374,7 @@
 		"generatingProgress": "正在生成第 {{current}} / {{total}} 張角色卡…",
 		"canonicalNamesHint": "正規名稱在整個故事中必須保持一致。",
 		"perActLineHint": "角色卡只會按故事線生效（並非全故事線有效）。",
-		"overwriteHint": "若目前故事線已有該角色的卡，現有的角色卡將會被覆寫",
+		"overwriteHint": "若目前故事線已有該角色的卡，現有的角色卡將會被備份並重新生成",
 		"and": "及",
 		"character": "角色",
 		"canonicalName": "正規名稱",
@@ -366,7 +391,9 @@
 		"actLine": "故事線：",
 		"actLineId": "故事線 ID：",
 		"concurrentGeneration": "並行生成",
-		"lineageContextHint": "角色卡將會以目前的章節內容生成。若目前故事線及先前章節的中已有角色卡，其內容將會在生成時作參考。"
+		"lineageContextHint": "角色卡將會以目前的章節內容生成。若先前章節中已有角色卡，其內容將會在生成時作參考。",
+		"fallbackNotice": "目前章節線沒有敘事內容。改為顯示第 {{number}} 章的角色卡片。",
+		"cardExists": "已有角色卡 — 將備份並重新生成"
 	},
 	"importWorld": {
 		"heading": "匯入世界",
@@ -517,6 +544,8 @@
 		"delete": "刪除",
 		"deleteWarning": "此資料夾及其所有內容將被刪除。此操作無法復原。",
 		"protected": "受保護",
+		"changedFiles": "已更改的檔案",
+		"loadingFiles": "載入中...",
 		"saving": "儲存中...",
 		"copyToStory": "複製到故事",
 		"restoreDefault": "還原",

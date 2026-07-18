@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { validateStoryData } from '$lib/features/story-export-load/archive-validator';
-import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
+import { CURRENT_ARCHIVE_VERSION, type StoryExportData } from '$lib/features/story-export-load/archive-schema';
 
 function makeValidData(): StoryExportData {
 	return {
@@ -66,7 +66,7 @@ describe('validateStoryData', () => {
 
 	it('rejects wrong version', () => {
 		const data = makeValidData();
-		(data as any).version = 2;
+		(data as any).version = CURRENT_ARCHIVE_VERSION + 1;
 		const result = validateStoryData(data);
 		expect(result.isValid).toBe(false);
 		expect(result.errors[0]).toContain('Unsupported archive version');

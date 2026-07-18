@@ -263,10 +263,10 @@ export async function runWriterPhase(
 
 export function getEndingLabel(endingType: EndingType): string {
 	const labels: Record<EndingType, string> = {
-		good: ls('tools.endAct.endingGood'),
-		bad: ls('tools.endAct.endingBad'),
-		bittersweet: ls('tools.endAct.endingBittersweet'),
-		alternative: ls('tools.endAct.endingAlternative'),
+		good: ls('common.descriptions.endings.good'),
+		bad: ls('common.descriptions.endings.bad'),
+		bittersweet: ls('common.descriptions.endings.bittersweet'),
+		alternative: ls('common.descriptions.endings.alternative'),
 	};
 	return labels[endingType];
 }

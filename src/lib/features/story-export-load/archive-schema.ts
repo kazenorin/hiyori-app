@@ -1,5 +1,13 @@
+/**
+ * Archive schema version history:
+ *   1 — initial schema
+ *   2 — added `characterProfiles` field (optional; older archives without it still load).
+ *        Includes `logline` (NOT NULL); `state` is nullable.
+ */
+export const CURRENT_ARCHIVE_VERSION = 2;
+
 export interface StoryExportData {
-	version: 1;
+	version: number;
 	story: {
 		id: string;
 		name: string;
@@ -69,5 +77,22 @@ export interface StoryExportData {
 		importantPhrases: string | null;
 		sceneNumber: number | null;
 		createdAt: number;
+	}[];
+	characterProfiles?: {
+		id: string;
+		actLineId: string;
+		sceneNumber: number | null;
+		canonicalName: string;
+		preferredName: string;
+		aliases: string[];
+		logline: string;
+		state: string | null;
+		goal: string | null;
+		relationships: string | null;
+		voice: string | null;
+		sceneDetails: string;
+		importance: number;
+		createdAt: number;
+		updatedAt: number;
 	}[];
 }

@@ -4,6 +4,7 @@
 	import { clamp } from 'lodash-es';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { resolve } from '$app/paths';
+	import { page } from '$app/state';
 	import { initializeApp } from '$lib/app/init.svelte';
 	import { log } from '$lib/logging/logger';
 	import { registerSW } from 'virtual:pwa-register';
@@ -161,27 +162,37 @@
 		}
 	});
 
+	function isOnContextManagement(): boolean {
+		return page.url.pathname.startsWith(resolve('/context-management'));
+	}
+
 	async function handleSelectStory(id: string) {
 		suppressSidebarClose = true;
 		if (getIsWorldBuilderActive()) exitWorldBuilderMode();
 		await selectStory(id);
-		clearMessages();
-		goto(resolve('/'));
+		if (!isOnContextManagement()) {
+			clearMessages();
+			goto(resolve('/'));
+		}
 	}
 
 	async function handleSelectAct(id: string) {
 		suppressSidebarClose = true;
 		if (getIsWorldBuilderActive()) exitWorldBuilderMode();
 		await selectAct(id);
-		clearMessages();
-		goto(resolve('/'));
+		if (!isOnContextManagement()) {
+			clearMessages();
+			goto(resolve('/'));
+		}
 	}
 
 	async function handleSelectActLine(id: string) {
 		if (getIsWorldBuilderActive()) exitWorldBuilderMode();
 		await selectActLine(id);
-		await loadActLineMessages(id);
-		goto(resolve('/'));
+		if (!isOnContextManagement()) {
+			await loadActLineMessages(id);
+			goto(resolve('/'));
+		}
 	}
 
 	async function handleNewStory() {

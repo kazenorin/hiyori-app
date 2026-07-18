@@ -7,6 +7,8 @@ export const EMPTY_PRE_EDITOR_CONTEXT: PreEditorContext = {
 	worldContent: '',
 	actPlot: '',
 	actSummary: '',
+	characterProfiles: [],
+	characterCards: undefined,
 	previousScenePlot: undefined,
 	previousNarrativeBody: undefined,
 	completedScenes: 0,

@@ -2,7 +2,7 @@ import { generateText } from 'ai';
 import { createModel } from './provider';
 import { getSummarizerProviderConfig, getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { actShortSummaryExtractionPrompt, actShortSummaryCharacterPrefix, sceneCountLabel } from '$lib/definitions/pipeline-prompts';
-import { getLastSceneNumber, recordActShortSummary } from '$lib/db/act-lines';
+import { getLastSceneNumber, recordActShortSummary, hasEventForMessage } from '$lib/db/act-lines';
 import type { AssistantContext } from './pipeline/types';
 import { isAuthError, withRetry } from '$lib/utils/async';
 import { log } from '$lib/logging/logger';
@@ -24,7 +24,11 @@ function extractCharacterNames(actSummaryText: string): string[] {
 	}
 }
 
-export async function generateAndRecordActShortSummary(actLineId: string, actSummary: string, assistant: AssistantContext): Promise<void> {
+export async function ensureActShortSummary(actLineId: string, actSummary: string, assistant: AssistantContext): Promise<void> {
+	if (await hasEventForMessage(assistant.messageId, 'act-short-summary')) {
+		return;
+	}
+
 	const config = getSummarizerProviderConfig() ?? getMainProviderConfig();
 	if (!config?.model) {
 		await log.warn('act-short-summary', 'No provider configured, skipping');

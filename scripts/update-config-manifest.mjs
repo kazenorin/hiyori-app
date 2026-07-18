@@ -8,7 +8,7 @@ const SRC_ROOT = join(import.meta.dirname, '..', 'src', 'lib', 'fs');
 const MANIFEST_PATH = join(SRC_ROOT, 'config-assets-manifest.yaml');
 
 function hashFile(filePath) {
-	const content = readFileSync(filePath, 'utf-8').replaceAll('\r\n', '\n');
+	const content = readFileSync(filePath, 'utf-8').replaceAll('\r\n', '\n').trim();
 	return createHash('sha256').update(content).digest('hex');
 }
 

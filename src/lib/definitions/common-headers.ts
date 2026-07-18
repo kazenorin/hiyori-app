@@ -32,6 +32,7 @@ export const directorNotesHeader = () => ls('common.headers.directorNotes');
 export const otherDirectorNotesHeader = () => ls('common.headers.otherDirectorNotes');
 export const actPhaseHeader = () => ls('common.headers.actPhase');
 export const storySoFarHeader = () => ls('common.headers.storySoFar');
+export const characterProfilesHeader = () => ls('common.headers.characterProfiles');
 export const actInformationHeader = () => ls('common.headers.actInformation');
 export const charactersHeader = () => ls('common.headers.characters');
 export const characterHeader = () => ls('common.headers.character');

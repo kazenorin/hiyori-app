@@ -10,7 +10,7 @@ import {
 import { enterActPlotInterviewMode, type NewActInterviewContext } from '$lib/features/world-builder/world-builder.svelte';
 import { getActLine, getEndingType, getMessageSequence } from '$lib/db/act-lines';
 import { ensureWorldFile } from '$lib/ai/world-generator';
-import { generateAndRecordActShortSummary } from '$lib/ai/act-short-summary-generator';
+import { ensureActShortSummary } from '$lib/ai/act-short-summary-generator';
 import { log } from '$lib/logging/logger';
 
 export async function handleContinueToNextAct(): Promise<void> {
@@ -33,7 +33,7 @@ export async function handleContinueToNextAct(): Promise<void> {
 	const assistantMessageSequence = lastAssistantMsg?.id ? await getMessageSequence(endedActLineId, lastAssistantMsg.id) : null;
 
 	if (lastAssistantMsg && assistantMessageSequence != null && currentSummary) {
-		generateAndRecordActShortSummary(endedActLineId, currentSummary, {
+		ensureActShortSummary(endedActLineId, currentSummary, {
 			messageId: lastAssistantMsg.id,
 			messageSequence: assistantMessageSequence,
 		}).catch(() => {});

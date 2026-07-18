@@ -141,6 +141,7 @@
 	let lastWbMessageIdx = $derived(getWorldBuilderMessages().findLastIndex((m: WorldBuilderMessage) => m.role === 'assistant'));
 
 	let updateWorldCardChecked = $state(false);
+	let useDetailedContextChecked = $state(false);
 	let worldBuilderStoryNameDraft = $state('');
 	let worldBuilderStoryLocaleDraft = $state(settings.locale || 'en');
 
@@ -443,9 +444,14 @@
 					isPreTemplatePhase={getWbPhase() === 'pre-template'}
 					showUpdateWorldCardOption={getIsNextActInterview()}
 					bind:updateWorldCard={updateWorldCardChecked}
+					bind:useDetailedContext={useDetailedContextChecked}
 					onStart={() => handleStartFromWorldBuilder(worldBuilderStoryNameDraft, worldBuilderStoryLocaleDraft)}
 					onStartImmediate={() => handleCreateStoryImmediate()}
-					onStartInterview={handleCreateActPlotInterview}
+					onStartInterview={() => {
+						updateWorldCardChecked = false;
+						useDetailedContextChecked = false;
+						handleCreateActPlotInterview();
+					}}
 					onStartGame={handleStartGameAfterInterview}
 					onCancel={exitWorldBuilderMode}
 					onDismissOptions={cancelCreateStoryOptions}

@@ -3,6 +3,7 @@ import * as dbActs from '$lib/db/acts';
 import * as dbActLines from '$lib/db/act-lines';
 import * as dbAppState from '$lib/db/app-state';
 import * as dbDirectorNotes from '$lib/db/director-notes';
+import { cloneCharacterProfiles, inheritProfilesFromActLine } from '$lib/db/character-profiles';
 import { loadLocaleStrings } from '$lib/localization';
 import { log } from '$lib/logging/logger';
 import { moveWorldBuilderLog } from '$lib/logging/chat-logger';
@@ -210,16 +211,21 @@ export async function createActLineContinuation(
 ): Promise<{ act: dbActs.Act; actLine: dbActLines.ActLineMeta }> {
 	const toActNumber = fromAct.actNumber + 1;
 	const toAct = await dbActs.getActByActNumber(story.id, toActNumber);
+	let result: { act: dbActs.Act; actLine: dbActLines.ActLineMeta };
 	if (toAct) {
 		const lineName = await determineMainLineNameForExistingAct(toAct.id, mainLineNameLabel());
 		const actLine = await createActLine(toAct.id, lineName, fromActLine.plotMode, true);
-		return { act: toAct, actLine };
+		await inheritProfilesFromActLine(fromActLine.id, actLine.id);
+		result = { act: toAct, actLine };
 	} else {
 		const actName = actWithNumberLabel(toActNumber);
 		const newAct = await insertAct(story.id, actName, toActNumber, fromActLine.id);
 		const actLine = await createActLine(newAct.id, mainLineNameLabel(), fromActLine.plotMode);
-		return { act: newAct, actLine };
+		await inheritProfilesFromActLine(fromActLine.id, actLine.id);
+		result = { act: newAct, actLine };
 	}
+
+	return result;
 }
 
 export async function renameStory(id: string, newName: string): Promise<void> {
@@ -381,6 +387,10 @@ export async function forkActLine(fromLineId: string, fromSequence: number, actI
 	// Copy act-plot file from source to forked line before selectActLine triggers ensureActPlot
 	await copyActPlotForFork(fromLineId, lineMeta.id);
 	await dbDirectorNotes.cloneDirectorNotes(fromLineId, lineMeta.id);
+	const forkSceneNumber = await dbActLines.getSceneNumberAtSequence(fromLineId, fromSequence);
+	if (forkSceneNumber !== null) {
+		await cloneCharacterProfiles(fromLineId, lineMeta.id, forkSceneNumber);
+	}
 
 	await selectActLine(lineMeta.id);
 
@@ -461,6 +471,10 @@ export async function forkActLineForInterview(
 
 	await copyMemoriesForFork(fromLineId, lineMeta.id, fromSequence, remappedMessageIds);
 	await dbDirectorNotes.cloneDirectorNotes(fromLineId, lineMeta.id);
+	const forkSceneNumber = await dbActLines.getSceneNumberAtSequence(fromLineId, fromSequence);
+	if (forkSceneNumber !== null) {
+		await cloneCharacterProfiles(fromLineId, lineMeta.id, forkSceneNumber);
+	}
 
 	return lineMeta;
 }

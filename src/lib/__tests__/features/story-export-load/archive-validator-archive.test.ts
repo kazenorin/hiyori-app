@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import JSZip from 'jszip';
 import { validateArchive } from '$lib/features/story-export-load/archive-validator';
-import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
+import { CURRENT_ARCHIVE_VERSION, type StoryExportData } from '$lib/features/story-export-load/archive-schema';
 
 function makeValidData(): StoryExportData {
 	return {
@@ -79,7 +79,7 @@ describe('validateArchive', () => {
 
 	it('rejects archive with wrong version', async () => {
 		const data = makeValidData();
-		(data as any).version = 2;
+		(data as any).version = CURRENT_ARCHIVE_VERSION + 1;
 		const zip = await makeValidZip(data);
 		const result = await validateArchive(zip);
 		expect(result.isValid).toBe(false);

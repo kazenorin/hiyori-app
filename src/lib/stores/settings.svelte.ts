@@ -68,6 +68,9 @@ export interface Settings {
 	targetWordCount: number;
 	directorModeEnabled: boolean;
 	characterProfileCompressorInterval: number;
+	characterProfileImportanceThreshold: number;
+	characterProfileMaxIncluded: number;
+	ignoreCharacterCardsInChat: boolean;
 	defaultPlotMode: 'guidance' | 'phaseEvent';
 	reevaluationFrequency: number;
 	ttsEnabled: boolean;
@@ -102,6 +105,9 @@ const defaults: Settings = {
 	targetWordCount: 400,
 	directorModeEnabled: false,
 	characterProfileCompressorInterval: 5, // scenes between compressor runs; 0 = disabled
+	characterProfileImportanceThreshold: 2, // 1=Protagonist, 2=Main, 3=Supporting, 4=Minor
+	characterProfileMaxIncluded: 5, // hard cap on number of full-profile inlines
+	ignoreCharacterCardsInChat: false,
 	defaultPlotMode: 'phaseEvent',
 	reevaluationFrequency: 10,
 	ttsEnabled: false,

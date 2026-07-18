@@ -42,11 +42,11 @@ Runs the pre-editor chain only (Writer → Reviewer → Editor → Template Fitt
 
 ### Async Phases
 
-| Phase                            | Purpose                                                          | Provider Role          | Output in `AsyncPhaseResults`                                          | Mode                           |
-| -------------------------------- | ---------------------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------- | ------------------------------ |
-| **Summarizer**                   | Updates act summary (full or incremental)                        | `summarizer`           | `actSummary`, `summarizerMetadata`                                     | Non-streaming (`generateText`) |
-| **Character Profile Compressor** | Compresses character profiles when interval threshold is met     | `summarizer`           | `characterProfiles`, `characterProfileLastScene`, `compressorMetadata` | Non-streaming                  |
-| **Memory Extraction**            | Extracts character memories, locations, inventory into vector DB | `memory` + `embedding` | (persists directly)                                                    | Non-streaming                  |
+| Phase                            | Purpose                                                          | Provider Role          | Output in `AsyncPhaseResults`                          | Mode                           |
+| -------------------------------- | ---------------------------------------------------------------- | ---------------------- | ------------------------------------------------------ | ------------------------------ |
+| **Summarizer**                   | Updates act summary (full or incremental)                        | `summarizer`           | `actSummary`, `summarizerMetadata`                     | Non-streaming (`generateText`) |
+| **Character Profile Compressor** | Compresses character profiles when interval threshold is met     | `summarizer`           | `compressorMetadata` (profiles persist directly to DB) | Non-streaming                  |
+| **Memory Extraction**            | Extracts character memories, locations, inventory into vector DB | `memory` + `embedding` | (persists directly)                                    | Non-streaming                  |
 
 ## Conditional Phase Execution
 

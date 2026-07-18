@@ -26,6 +26,8 @@ import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { updateWorldCard } from '$lib/ai/world-generator';
 import { ensureActPlot } from '$lib/ai/act-plot';
 import { getActLine, getPrecedingActSummary, getPremisesMessages, getMessagesForLine } from '$lib/db/act-lines';
+import { getAct } from '$lib/db/acts';
+import { ensureActCard } from '$lib/features/act-card-generator';
 import { generateTurnOfEvents } from '$lib/features/turn-of-events-generator';
 import { updateMessageFields, type Message } from '$lib/db/messages';
 import { type GameDataRegenerationContext, regenerateGameData } from '$lib/ai/game-data-regenerator';
@@ -167,7 +169,35 @@ export async function handleCreateActPlotInterview(): Promise<void> {
 	}
 }
 
-export async function handleStartGameAfterInterview(isGameResumeMode: boolean, updateWorld: boolean = false): Promise<void> {
+async function loadActCardContentForPrecedingLine(refs: { actLineId: string; story: Story }): Promise<string> {
+	const actLine = await getActLine(refs.actLineId);
+	if (!actLine) return '';
+	const newAct = await getAct(actLine.actId);
+	if (!newAct?.continuesFromActLineId) {
+		return (await getPrecedingActSummary(refs.actLineId)) ?? '';
+	}
+	const precedingActLineId = newAct.continuesFromActLineId;
+	const precedingActLine = await getActLine(precedingActLineId);
+	if (!precedingActLine) {
+		return (await getPrecedingActSummary(refs.actLineId)) ?? '';
+	}
+	const precedingAct = await getAct(precedingActLine.actId);
+	const precedingActNumber = precedingAct?.actNumber ?? 1;
+	const result = await ensureActCard({
+		storyId: refs.story.id,
+		storyName: refs.story.name,
+		actLineId: precedingActLineId,
+		actLine: precedingActLine,
+		actNumber: precedingActNumber,
+	});
+	return result.content;
+}
+
+export async function handleStartGameAfterInterview(
+	isGameResumeMode: boolean,
+	updateWorld: boolean = false,
+	useDetailedContext: boolean = false
+): Promise<void> {
 	const refs = getActLineAndStory();
 	if (!refs) return;
 	const resolvedActNumber = getActiveAct()?.actNumber ?? 1;
@@ -186,7 +216,9 @@ export async function handleStartGameAfterInterview(isGameResumeMode: boolean, u
 		if (worldContent) {
 			if (updateWorld) {
 				const folderName = await resolveStoryFolder(refs.story.id, refs.story.name);
-				const actSummary = await getPrecedingActSummary(refs.actLineId);
+				const actSummary = useDetailedContext
+					? await loadActCardContentForPrecedingLine(refs)
+					: await getPrecedingActSummary(refs.actLineId);
 				const transcript = await getPremisesMessages(refs.actLineId);
 				const transcriptMessages = transcript
 					.filter((m) => m.role === 'user' || m.role === 'assistant')
@@ -211,6 +243,7 @@ export async function handleStartGameAfterInterview(isGameResumeMode: boolean, u
 				actNumber: resolvedActNumber,
 				actLine,
 				isResumeGame: isGameResumeMode,
+				useDetailedContext,
 				onPhaseChange: setActPlotGenerationPhase,
 				onGenerationComplete: () => setActPlotGenerationPhase(null),
 			});

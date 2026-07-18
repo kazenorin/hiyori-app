@@ -265,6 +265,7 @@ export async function deleteActLine(id: string): Promise<void> {
 	await db.execute('DELETE FROM act_line_premises WHERE act_line_id = $1', [id]);
 	await db.execute('DELETE FROM act_line_events WHERE act_line_id = $1', [id]);
 	await db.execute('DELETE FROM director_notes WHERE act_line_id = $1', [id]);
+	await db.execute('DELETE FROM character_profiles WHERE act_line_id = $1', [id]);
 	await db.execute('DELETE FROM act_line_meta WHERE id = $1', [id]);
 
 	await removeOrphanedMessages(db, messageIds);
@@ -385,7 +386,7 @@ export async function isEpilogueWritten(actLineId: string): Promise<boolean> {
 export async function getActShortSummary(actLineId: string): Promise<string | null> {
 	const db = getDatabase();
 	const rows = await db.select<{ value: string }[]>(
-		`SELECT value FROM act_line_events WHERE act_line_id = $1 AND event = 'act-short-summary' ORDER BY message_sequence DESC LIMIT 1`,
+		`SELECT value FROM act_line_events WHERE act_line_id = $1 AND event = 'act-short-summary' ORDER BY message_sequence DESC, created_at DESC LIMIT 1`,
 		[actLineId]
 	);
 	return rows.length > 0 ? rows[0].value : null;
@@ -394,7 +395,7 @@ export async function getActShortSummary(actLineId: string): Promise<string | nu
 export async function getEndingType(actLineId: string): Promise<EndingType | null> {
 	const db = getDatabase();
 	const rows = await db.select<{ value: string }[]>(
-		`SELECT value FROM act_line_events WHERE act_line_id = $1 AND event = 'ending' ORDER BY message_sequence DESC LIMIT 1`,
+		`SELECT value FROM act_line_events WHERE act_line_id = $1 AND event = 'ending' ORDER BY message_sequence DESC, created_at DESC LIMIT 1`,
 		[actLineId]
 	);
 	if (rows.length === 0) return null;
@@ -731,6 +732,18 @@ export async function getLastSceneNumber(actLineId: string): Promise<number | nu
 		 ORDER BY al.sequence DESC
 		 LIMIT 1`,
 		[actLineId]
+	);
+	return rows.length > 0 ? rows[0].scene_number : null;
+}
+
+export async function getSceneNumberAtSequence(actLineId: string, sequence: number): Promise<number | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ scene_number: number }[]>(
+		`SELECT MAX(m.scene_number) as scene_number
+		 FROM act_lines al
+		 JOIN messages m ON al.message_id = m.id
+		 WHERE al.act_line_id = $1 AND al.sequence <= $2 AND m.scene_number IS NOT NULL`,
+		[actLineId, sequence]
 	);
 	return rows.length > 0 ? rows[0].scene_number : null;
 }

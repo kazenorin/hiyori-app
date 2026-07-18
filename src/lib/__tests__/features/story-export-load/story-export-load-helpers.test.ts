@@ -1,10 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import JSZip from 'jszip';
 import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
+import { CURRENT_ARCHIVE_VERSION } from '$lib/features/story-export-load/archive-schema';
+import { validateStoryData } from '$lib/features/story-export-load/archive-validator';
 
 function makeValidExportData(): StoryExportData {
 	return {
-		version: 1,
+		version: CURRENT_ARCHIVE_VERSION,
 		story: { id: 'story-1', name: 'Test Story', locale: 'en', createdAt: 1000, updatedAt: 2000 },
 		storyFolder: { storyId: 'story-1', folderName: 'test-story', createdAt: 1000 },
 		acts: [
@@ -90,6 +92,25 @@ function makeValidExportData(): StoryExportData {
 				createdAt: 2000,
 			},
 		],
+		characterProfiles: [
+			{
+				id: 'cp-1',
+				actLineId: 'line-1',
+				sceneNumber: 1,
+				canonicalName: 'elena',
+				preferredName: 'Elena',
+				aliases: ['El'],
+				logline: 'A curious wanderer seeking truth',
+				state: null,
+				goal: 'find the truth',
+				relationships: null,
+				voice: 'soft',
+				sceneDetails: 'wears a blue cloak',
+				importance: 2,
+				createdAt: 1100,
+				updatedAt: 1100,
+			},
+		],
 	};
 }
 
@@ -105,12 +126,13 @@ describe('story-export-load integration helpers', () => {
 	describe('makeValidExportData', () => {
 		it('produces valid export data with all required fields', () => {
 			const data = makeValidExportData();
-			expect(data.version).toBe(1);
+			expect(data.version).toBe(CURRENT_ARCHIVE_VERSION);
 			expect(data.story.id).toBeTruthy();
 			expect(data.storyFolder.folderName).toBeTruthy();
 			expect(data.acts.length).toBeGreaterThan(0);
 			expect(data.actLineMeta.length).toBeGreaterThan(0);
 			expect(data.messages.length).toBeGreaterThan(0);
+			expect(data.characterProfiles?.length).toBeGreaterThan(0);
 
 			const lineIds = new Set(data.actLineMeta.map((m) => m.id));
 			for (const entry of data.actLineEntries) {
@@ -124,6 +146,9 @@ describe('story-export-load integration helpers', () => {
 			}
 			for (const note of data.directorNotes) {
 				expect(lineIds.has(note.actLineId)).toBe(true);
+			}
+			for (const cp of data.characterProfiles ?? []) {
+				expect(lineIds.has(cp.actLineId)).toBe(true);
 			}
 		});
 
@@ -170,11 +195,51 @@ describe('story-export-load integration helpers', () => {
 
 			const content = await storyDataFile!.async('string');
 			const parsed = JSON.parse(content);
-			expect(parsed.version).toBe(1);
+			expect(parsed.version).toBe(CURRENT_ARCHIVE_VERSION);
 			expect(parsed.story.name).toBe('Test Story');
+			expect(parsed.characterProfiles.length).toBeGreaterThan(0);
 
 			const worldFile = zip.file(`${data.storyFolder.folderName}/world.md`);
 			expect(worldFile).not.toBeNull();
+		});
+	});
+
+	describe('backward compatibility', () => {
+		it('validates legacy v1 archive (no characterProfiles field)', () => {
+			const data = makeValidExportData() as unknown as Record<string, unknown>;
+			data.version = 1;
+			delete data.characterProfiles;
+
+			const result = validateStoryData(data);
+			expect(result.isValid).toBe(true);
+			expect(result.errors).toHaveLength(0);
+		});
+
+		it('rejects unknown future version', () => {
+			const data = makeValidExportData() as unknown as Record<string, unknown>;
+			data.version = CURRENT_ARCHIVE_VERSION + 1;
+
+			const result = validateStoryData(data);
+			expect(result.isValid).toBe(false);
+			expect(result.errors[0]).toMatch(/version/i);
+		});
+
+		it('rejects archive with missing version', () => {
+			const data = makeValidExportData() as unknown as Record<string, unknown>;
+			delete data.version;
+
+			const result = validateStoryData(data);
+			expect(result.isValid).toBe(false);
+			expect(result.errors[0]).toMatch(/version/i);
+		});
+
+		it('rejects archive with non-number version', () => {
+			const data = makeValidExportData() as unknown as Record<string, unknown>;
+			data.version = '1.1.1';
+
+			const result = validateStoryData(data);
+			expect(result.isValid).toBe(false);
+			expect(result.errors[0]).toMatch(/version/i);
 		});
 	});
 });

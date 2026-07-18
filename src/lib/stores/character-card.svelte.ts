@@ -5,6 +5,7 @@ import {
 	type CharacterEntry,
 	type CharacterCardResult,
 	type GenerateProgress,
+	type CharacterCardContext,
 } from '$lib/features/character-card-generator';
 import { log } from '$lib/logging/logger';
 
@@ -49,14 +50,14 @@ export function getResults(): CharacterCardResult[] {
 	return results;
 }
 
-export async function extractCharacters(): Promise<void> {
+export async function extractCharacters(ctx: CharacterCardContext): Promise<void> {
 	isExtracting = true;
 	extractionError = null;
 	rawExtractionOutput = null;
 	characters = [];
 
 	try {
-		const summaries = await extractCharactersFromActLine();
+		const summaries = await extractCharactersFromActLine(ctx);
 		characters = toCharacterEntries(summaries);
 	} catch (err) {
 		const message = err instanceof Error ? err.message : 'Failed to extract characters.';
@@ -74,7 +75,7 @@ export async function extractCharacters(): Promise<void> {
 	}
 }
 
-export async function generateCards(parallel: boolean): Promise<void> {
+export async function generateCards(ctx: CharacterCardContext, parallel: boolean): Promise<void> {
 	if (isGenerating) return;
 
 	isGenerating = true;
@@ -83,7 +84,7 @@ export async function generateCards(parallel: boolean): Promise<void> {
 	results = [];
 
 	try {
-		results = await generateCharacterCards(characters, parallel, (p) => {
+		results = await generateCharacterCards(ctx, characters, parallel, (p) => {
 			progress = p;
 		});
 	} catch (err) {

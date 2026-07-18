@@ -1,10 +1,25 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+
+vi.mock('$lib/localization', () => ({
+	ls: (key: string, _opts?: Record<string, unknown>) => {
+		const levels: Record<string, string> = {
+			'pipeline.labels.importanceLevels.1': 'Protagonist',
+			'pipeline.labels.importanceLevels.2': 'Main',
+			'pipeline.labels.importanceLevels.3': 'Supporting',
+			'pipeline.labels.importanceLevels.4': 'Minor',
+		};
+		return levels[key] ?? key;
+	},
+}));
+
 import {
 	_parseCharacterJsonForTest as parseCharacterJson,
 	_computeCardFilenameForTest as computeCardFilename,
 	toCharacterEntries,
+	toCharacterSummary,
 	type CharacterSummary,
 } from '$lib/features/character-card-generator';
+import type { CharacterProfileEntity } from '$lib/db/character-profiles';
 
 describe('parseCharacterJson', () => {
 	it('parses simple JSON array', () => {
@@ -14,22 +29,22 @@ describe('parseCharacterJson', () => {
 		]);
 		const result = parseCharacterJson(input);
 		expect(result).toHaveLength(2);
-		expect(result[0]).toEqual({ character: 'John Doe', importance: 'Protagonist' });
-		expect(result[1]).toEqual({ character: 'Jane Smith', importance: 'Supporting role' });
+		expect(result[0]).toEqual({ character: 'John Doe', importance: 'Protagonist', canonicalName: 'john-doe' });
+		expect(result[1]).toEqual({ character: 'Jane Smith', importance: 'Supporting role', canonicalName: 'jane-smith' });
 	});
 
 	it('strips markdown code fences', () => {
 		const input = '```json\n' + JSON.stringify([{ character: 'Test', importance: 'Test role' }]) + '\n```';
 		const result = parseCharacterJson(input);
 		expect(result).toHaveLength(1);
-		expect(result[0]).toEqual({ character: 'Test', importance: 'Test role' });
+		expect(result[0]).toEqual({ character: 'Test', importance: 'Test role', canonicalName: 'test' });
 	});
 
 	it('strips plain code fences', () => {
 		const input = '```\n' + JSON.stringify([{ character: 'Test', importance: 'Test role' }]) + '\n```';
 		const result = parseCharacterJson(input);
 		expect(result).toHaveLength(1);
-		expect(result[0]).toEqual({ character: 'Test', importance: 'Test role' });
+		expect(result[0]).toEqual({ character: 'Test', importance: 'Test role', canonicalName: 'test' });
 	});
 
 	it('handles whitespace around content', () => {
@@ -119,10 +134,10 @@ describe('computeCardFilename', () => {
 });
 
 describe('toCharacterEntries', () => {
-	it('converts summaries to entries with auto-generated canonical names', () => {
+	it('spreads summaries and sets include=true, isManual=false', () => {
 		const summaries: CharacterSummary[] = [
-			{ character: 'John Doe', importance: 'Protagonist' },
-			{ character: 'Jane Smith', importance: 'Supporting' },
+			{ character: 'John Doe', importance: 'Protagonist', canonicalName: 'john-doe' },
+			{ character: 'Jane Smith', importance: 'Supporting', canonicalName: 'jane-smith' },
 		];
 		const result = toCharacterEntries(summaries);
 
@@ -148,21 +163,73 @@ describe('toCharacterEntries', () => {
 		expect(result).toHaveLength(0);
 	});
 
-	it('correctly kebab-cases complex names', () => {
-		const summaries: CharacterSummary[] = [{ character: 'Dr. John "The Doc" Smith', importance: 'Doctor' }];
+	it('preserves canonicalName from summary (does not re-derive)', () => {
+		const summaries: CharacterSummary[] = [
+			{ character: 'Dr. John "The Doc" Smith', importance: 'Doctor', canonicalName: 'dr-john-the-doc-smith' },
+		];
 		const result = toCharacterEntries(summaries);
 		expect(result[0].canonicalName).toBe('dr-john-the-doc-smith');
 	});
 
 	it('sets include to true and isManual to false for all entries', () => {
 		const summaries: CharacterSummary[] = [
-			{ character: 'A', importance: 'Role 1' },
-			{ character: 'B', importance: 'Role 2' },
+			{ character: 'A', importance: 'Role 1', canonicalName: 'a' },
+			{ character: 'B', importance: 'Role 2', canonicalName: 'b' },
 		];
 		const result = toCharacterEntries(summaries);
 		result.forEach((entry) => {
 			expect(entry.include).toBe(true);
 			expect(entry.isManual).toBe(false);
 		});
+	});
+});
+
+describe('toCharacterSummary', () => {
+	it('maps preferredName, canonicalName, and labels importance with logline', () => {
+		const profile: CharacterProfileEntity = {
+			id: 'p1',
+			actLineId: 'line-1',
+			sceneNumber: null,
+			canonicalName: 'elena',
+			preferredName: 'Elena',
+			aliases: [],
+			logline: 'Hero of the story',
+			state: null,
+			goal: null,
+			relationships: null,
+			voice: null,
+			sceneDetails: '',
+			importance: 1,
+			createdAt: 0,
+			updatedAt: 0,
+		};
+		const result = toCharacterSummary(profile);
+		expect(result.character).toBe('Elena');
+		expect(result.canonicalName).toBe('elena');
+		expect(result.importance).toBe('Protagonist: Hero of the story');
+	});
+
+	it('passes through canonicalName without re-deriving from preferredName', () => {
+		const profile: CharacterProfileEntity = {
+			id: 'p2',
+			actLineId: 'line-1',
+			sceneNumber: null,
+			canonicalName: 'voss',
+			preferredName: 'Dr. Voss',
+			aliases: [],
+			logline: 'Minor informant',
+			state: null,
+			goal: null,
+			relationships: null,
+			voice: null,
+			sceneDetails: '',
+			importance: 4,
+			createdAt: 0,
+			updatedAt: 0,
+		};
+		const result = toCharacterSummary(profile);
+		expect(result.canonicalName).toBe('voss');
+		expect(result.character).toBe('Dr. Voss');
+		expect(result.importance).toBe('Minor: Minor informant');
 	});
 });

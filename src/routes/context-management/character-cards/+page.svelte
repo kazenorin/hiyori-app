@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getActiveStory, getActiveAct, getActiveActLine } from '$lib/stores/stories.svelte';
+	import { getActiveStory, getActiveAct, getActiveActLine, getActiveActLineId } from '$lib/stores/stories.svelte';
 	import { t } from '$lib/i18n';
+	import type { CharacterCardContext } from '$lib/features/character-card-generator';
 	import {
 		getCharacters,
 		getIsExtracting,
@@ -19,23 +20,117 @@
 		removeCharacter,
 		resetState,
 	} from '$lib/stores/character-card.svelte';
-	import { onMount } from 'svelte';
+	import { settings, updateSettings } from '$lib/stores/settings.svelte';
+	import { getExistingCardNamesForActLine } from '$lib/features/character-card-generator';
+	import { getActLine, getMessagesForLine } from '$lib/db/act-lines';
+	import { traceActLineChain } from '$lib/db/acts';
+	import Icon from '$lib/components/ui/Icon.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
+	import { log } from '$lib/logging/logger';
 
 	let concurrent = $state(false);
+	let fallbackActNumber = $state<number | null>(null);
+	let resolvedCtx = $state<CharacterCardContext | null>(null);
+	let existingCardNames = $state<Set<string>>(new Set());
 
-	onMount(() => {
-		resetState();
-		extractCharacters();
+	let currentExtractionId = 0;
+
+	async function buildContext(): Promise<CharacterCardContext | null> {
+		const story = getActiveStory();
+		if (!story) return null;
+		const activeAct = getActiveAct();
+		const activeActLine = getActiveActLine();
+		const activeActLineId = getActiveActLineId();
+		if (!activeAct || !activeActLine || !activeActLineId) return null;
+
+		const messages = await getMessagesForLine(activeActLine.id);
+		if (messages.length > 0) {
+			fallbackActNumber = null;
+			const ctx: CharacterCardContext = {
+				storyId: story.id,
+				storyName: story.name,
+				actLineId: activeActLine.id,
+				actLine: activeActLine,
+				actNumber: activeAct.actNumber,
+			};
+			resolvedCtx = ctx;
+			return ctx;
+		}
+
+		// No narrative content — walk lineage (newest-first) to find the closest ancestor with content
+		const seedCtx: CharacterCardContext = {
+			storyId: story.id,
+			storyName: story.name,
+			actLineId: activeActLine.id,
+			actLine: activeActLine,
+			actNumber: activeAct.actNumber,
+		};
+		const lineage = await traceActLineChain(seedCtx.actLineId, true);
+		for (const entry of lineage) {
+			if (entry.actLineId === activeActLine.id) continue;
+			const ancestorMessages = await getMessagesForLine(entry.actLineId);
+			if (ancestorMessages.length > 0) {
+				const ancestorActLine = await getActLine(entry.actLineId);
+				if (ancestorActLine) {
+					fallbackActNumber = entry.actNumber;
+					const ctx: CharacterCardContext = {
+						storyId: story.id,
+						storyName: story.name,
+						actLineId: entry.actLineId,
+						actLine: ancestorActLine,
+						actNumber: entry.actNumber,
+					};
+					resolvedCtx = ctx;
+					return ctx;
+				}
+			}
+		}
+
+		fallbackActNumber = null;
+		resolvedCtx = null;
+		return null;
+	}
+
+	$effect(() => {
+		const id = getActiveActLineId();
+		if (!id) {
+			resetState();
+			resolvedCtx = null;
+			fallbackActNumber = null;
+			existingCardNames = new Set();
+			return;
+		}
+		let cancelled = false;
+		const extractionId = ++currentExtractionId;
+		(async () => {
+			resetState();
+			existingCardNames = new Set();
+			const ctx = await buildContext();
+			if (cancelled || extractionId !== currentExtractionId) return;
+			if (ctx) {
+				await extractCharacters(ctx);
+				try {
+					const names = await getExistingCardNamesForActLine(ctx);
+					if (cancelled || extractionId !== currentExtractionId) return;
+					existingCardNames = names;
+				} catch (err) {
+					await log.error('context-management', 'Failed to load existing character card names', err);
+				}
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
 	});
 
-	function handleGenerate() {
-		generateCards(concurrent);
+	async function handleGenerate() {
+		const ctx = await buildContext();
+		if (ctx) await generateCards(ctx, concurrent);
 	}
 
 	function handleBack() {
 		resetState();
-		goto(resolve('/'));
+		goto(resolve('/context-management'));
 	}
 
 	function updateCanonicalName(index: number, value: string) {
@@ -69,18 +164,42 @@
 			<h2 class="h2">{t('characterCards.heading')}</h2>
 		</div>
 
+		<!-- Fallback Notice -->
+		{#if fallbackActNumber !== null}
+			<section class="card p-4 flex items-start gap-3 border border-secondary-500-300">
+				<Icon name="info" class="size-5 shrink-0 text-secondary-500 mt-0.5" />
+				<p class="text-sm text-surface-700-300">
+					{t('characterCards.fallbackNotice', { number: fallbackActNumber })}
+				</p>
+			</section>
+		{/if}
+
 		<!-- Context Info -->
 		<section class="card p-4">
 			<div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
 				<span class="font-semibold text-surface-700-300">{t('characterCards.story')}</span>
-				<span class="text-surface-950-50">{getActiveStory()?.name ?? '—'}</span>
+				<span class="text-surface-950-50">{resolvedCtx?.storyName ?? '—'}</span>
 				<span class="font-semibold text-surface-700-300">{t('characterCards.act')}</span>
-				<span class="text-surface-950-50">{getActiveAct()?.actNumber ?? '—'}</span>
+				<span class="text-surface-950-50">{resolvedCtx?.actNumber ?? '—'}</span>
 				<span class="font-semibold text-surface-700-300">{t('characterCards.actLine')}</span>
-				<span class="text-surface-950-50">{getActiveActLine()?.name ?? '—'}</span>
+				<span class="text-surface-950-50">{resolvedCtx?.actLine.name ?? '—'}</span>
 				<span class="font-semibold text-surface-700-300">{t('characterCards.actLineId')}</span>
-				<span class="text-surface-500 text-xs font-mono">{getActiveActLine()?.id ?? '—'}</span>
+				<span class="text-surface-500 text-xs font-mono">{resolvedCtx?.actLine.id ?? '—'}</span>
 			</div>
+		</section>
+
+		<!-- Ignore in Main Chat Setting -->
+		<section class="card p-4 space-y-2 border border-secondary-500-300">
+			<label class="flex items-center gap-2">
+				<input
+					type="checkbox"
+					class="checkbox"
+					checked={settings.ignoreCharacterCardsInChat}
+					onchange={(e) => updateSettings({ ignoreCharacterCardsInChat: e.currentTarget.checked })}
+				/>
+				<h4 class="font-semibold text-secondary-700-300">{t('settings.ignoreCharacterCardsInChat')}</h4>
+			</label>
+			<p class="text-xs text-surface-500">{t('settings.ignoreCharacterCardsInChatDescription')}</p>
 		</section>
 
 		<!-- Extraction Loading -->
@@ -152,12 +271,17 @@
 							{/if}
 
 							<span class="text-xs font-semibold text-surface-700-300 uppercase tracking-wide">{t('characterCards.canonicalName')}</span>
-							<input
-								type="text"
-								class="input text-sm"
-								value={char.canonicalName}
-								oninput={(e) => updateCanonicalName(i, e.currentTarget.value)}
-							/>
+							<div class="flex items-center gap-1.5">
+								<input
+									type="text"
+									class="input text-sm flex-1"
+									value={char.canonicalName}
+									oninput={(e) => updateCanonicalName(i, e.currentTarget.value)}
+								/>
+								{#if existingCardNames.has(char.canonicalName)}
+									<Icon name="check-circle" class="size-4 text-success-500 shrink-0" aria-label={t('characterCards.cardExists')} />
+								{/if}
+							</div>
 
 							<div class="flex items-center justify-between">
 								<span class="text-xs font-semibold text-surface-700-300 uppercase tracking-wide">{t('characterCards.include')}</span>
@@ -220,13 +344,16 @@
 										{char.importance}
 									{/if}
 								</span>
-								<span>
+								<span class="flex items-center gap-1.5">
 									<input
 										type="text"
 										class="input text-sm"
 										value={char.canonicalName}
 										oninput={(e) => updateCanonicalName(i, e.currentTarget.value)}
 									/>
+									{#if existingCardNames.has(char.canonicalName)}
+										<Icon name="check-circle" class="size-4 text-success-500 shrink-0" aria-label={t('characterCards.cardExists')} />
+									{/if}
 								</span>
 								<span class="text-center">
 									{#if char.isManual}

@@ -44,10 +44,20 @@ common:
     otherDirectorNotes: Other Director's Notes
     actPhase: Act Phase
     storySoFar: Story So Far
+    characterProfiles: Character Profiles
     targetWordCountPerScene: Target Word Count per Scene
   descriptions:
     interviewTranscript: The following is an interview exchange about the story and premises.
     directorNotes: "The following notes represent the player's explicit creative direction. They override all other context including Act Plot and Act Summary. Honor them with the highest priority."
+    characterProfiles: 'Character profiles distributed the following way: full-body profiles have been inlined for important characters. Other characters are represented as a one-sentence reference (Name: importance — short description) and can be retrieved via the `character-details` tool.'
+    characterProfilesInline: 'The profiles below are ALREADY in your context. Do NOT call the `character-details` tool for these characters.'
+    characterProfilesOther: 'Other Characters'
+    endings:
+      good: Good
+      bad: Bad
+      bittersweet: Bittersweet
+      alternative: Alternative
+      notEnded: 'Not yet ended'
     directorRewriteRequest: |
       This is a rewrite request for Scene {{sceneNumber}}:
       ### Original Narrative Body for Scene {{sceneNumber}}:
@@ -61,6 +71,12 @@ pipeline:
     sceneSummaries: Scene Summaries
     characterSummaries: Character Summaries
     characterProfiles: Character Profiles
+  sections:
+    characterCards: Character Cards
+    characterCardsDescription: "Stable per-character context files for the current act line. Use these to keep characters' identity, history, and vibe consistent."
+    actPlotCharacterCards: Character Card
+    actPlotActCards: Act Card
+    actPlotCharacterProfiles: Character Profiles
   extraction:
     actShortSummary: 'You are a narrative summarizer. Your task is to distill the provided act summary into exactly 3 concise sentences that capture the key events, conflicts, and outcomes of the act. Focus on what happened and how the story changed. Write in past tense. After the 3 sentences, add a blank line then evaluate the characters listed in the act summary. List only those you judge to be important and likely to appear again in future acts, each on a new line, in the format: "Name (one-line description of their role or arc in this act)". Order them from most to least important. Do not list minor or one-off characters. Output only the summary and character list — no labels, no headings, no commentary.'
     actShortSummaryCharacterPrefix: 'Characters in this act'
@@ -179,11 +195,24 @@ pipeline:
     totalViolations: Total violations
     recommendation: Recommendation
     state: State
+    logline: Logline
     goal: Goal
     relationships: Relationships
     voice: Voice
+    importance: Importance
+    importanceLevels:
+      1: Protagonist
+      2: Main
+      3: Supporting
+      4: Minor
     sceneCountSingular: '1 scene'
     sceneCountPlural: '{{count}} scenes'
+    sceneDetails: 'Scene Details'
+    importanceValue: 'Importance: {{importance}}'
+    aliasesValue: 'Aliases: {{aliases}}'
+    lastSeen: 'last seen: scene {{sceneNumber}}'
+    lastUpdated: 'Last updated: Scene {{sceneNumber}}'
+    noDescription: 'No description available.'
     characterSummaries: 'Summaries of each character for recent Scenes since Scene {{sceneNumber}}.'
     actPhases:
       introduction: Introduction
@@ -247,7 +276,7 @@ features:
     cardGenerationSystemPrompt: |
       You are a co-writer for an interactive narrative game, specializing in constructing detailed Character Cards.
       You exist entirely outside the game world.
-      Your responsibility is to analyze the provided source material and construct a Character Card for {{characterName}} that will be used as an active memory file to keep their personality, voice, and motivations consistent during future story generation.
+      Your responsibility is to analyze the provided source material and construct a Character Card for {{characterName}} that will be used as a long-term memory file to keep their personality, voice, and motivations consistent during future story generation.
 
       ## Rules
 
@@ -259,7 +288,7 @@ features:
       - **Voice Capture:** For "Dialogue Examples", extract 2-3 exact quotes that best demonstrate their unique vocabulary, sentence structure, and tone. If no dialogue, write "No dialogue provided."
     characterCardGeneration: |
       Based on the information from the chat history, generate a new Character Card according to the following rules:
-      {{extractionPrompt}}
+      {{extractionRules}}
 
       ---
 
@@ -267,12 +296,13 @@ features:
     cardExtractionRules: |
       ## Extraction Rules
 
-      1. **Target Focus:** Extract information _only_ as it pertains to **{{character name}}**. Do not summarize the plot or detail world-lore unless it directly explains this character's immediate behavior or backstory.
-      2. **Strict Canon:** Base your extraction entirely on the provided source text.
-      3. **Handling Unknowns:** If a specific piece of information (like age, eye color, or last name) is not explicitly stated or strongly implied, write "Unknown". Do not invent details.
-      4. **Marking Inferences:** If you must deduce a trait or motive based on the character's actions (e.g., they act nervous, so you infer a fear of authority), preface that detail with `[Inferred]`.
-      5. **Concise & Concrete:** Use bullet points and short, declarative sentences. Avoid flowery language. Focus on actionable behavioral cues (e.g., "Taps fingers when lying" instead of "Has a somewhat nervous disposition at times").
-      6. **Voice Capture:** For the "Dialogue Examples" section, extract 2 to 3 exact quotes spoken by **{{character name}}** that best demonstrate their unique vocabulary, sentence structure, and tone. If they have no dialogue, write "No dialogue provided."
+      1. **Target Focus:** Extract information _only_ as it pertains to **{{characterName}}**. Do not summarize the plot or detail world-lore unless it directly explains this character's backstory.
+      2. **Extract the Baseline:** Focus on the character's general, stable form. No Transient States. Ignore temporary conditions, disguises, or situational states (e.g., if they fall in a mud puddle, do not describe their appearance as "muddy"). Only extract what they *usually* look like or how they *generally* behave.
+      3. **Strict Canon:** Base your extraction entirely on the provided source text.
+      4. **Handling Unknowns:** If a stable trait is not explicitly stated or strongly implied, write "Unknown". Completely ignore temporary states. Do not invent details.
+      5. **Marking Inferences:** Avoid wild guesses. If deducing a trait from a specific behavior (e.g., tending for checking exits, then `[Inferred] Hyper-vigilant`), always preface it with [Inferred].
+      6. **Concise & Concrete:** Use bullet points and short, declarative sentences. Avoid flowery language. Focus on actionable behavioral cues (e.g., "Taps fingers when lying" instead of "Has a somewhat nervous disposition at times").
+      7. **Voice Capture:** For the "Dialogue Examples" section, extract 2 to 3 exact quotes spoken by **{{characterName}}** that best demonstrate their unique vocabulary, sentence structure, and tone. If they have no dialogue, write "No dialogue provided."
 
       ## Output Format
 
@@ -508,6 +538,37 @@ tools:
       Use this to understand the planned narrative arc and guide the story accordingly.
     messages:
       noActPlot: 'No act plot has been generated for this act yet.'
+  introduceCharacter:
+    description: >
+      Introduce a new character by creating their baseline profile in the database.
+      Call this whenever a NEW character without an existing profile enters the story.
+      Before calling, ensure the character is not already known under their preferred name or any alias — the tool will reject duplicates.
+    parameters:
+      preferredName: "The character's primary name for this act line. Placeholder names such as 'Unknown' or 'None' are not considered names."
+      aliases: "Additional names the character are known by. Placeholder names such as 'Unknown' or 'None' are not considered aliases."
+      logline: "A one-line description capturing the character's vibe, archetype, behavioral tendencies, and worldview lens."
+      state: "The character's current physical condition, rank, knowledge, and active equipment."
+      goal: "The character's immediate motive or drive based on the latest scenes."
+      relationships: "Brief notes on the character's current standing with other active characters."
+      voice: "A single representative quote capturing the character's mindset."
+      importance: '1=Protagonist, 2=Main, 3=Supporting, 4=Minor'
+    messages:
+      exists: 'A character already exists with that name or alias. Use the `character-details` tool to retrieve the existing profile.'
+  characterDetails:
+    description: >
+      Retrieve the latest profile for a character by any of their known names or aliases.
+      Use this for characters whose full profile is NOT already inlined in your context (e.g. supporting and minor characters).
+      Do NOT call this for characters whose full profile is already present above.
+      The current act is act {{currentActNumber}}; you may optionally read from previous acts in the lineage of the current act line.
+    parameters:
+      name: 'Any known name or alias of the character'
+      includeSceneDetails: 'If true (default), include per-scene detail. If false, return the compressed profile only.'
+      actNumber: 'The act number to read from (must be in the lineage of the current act line). Omit to read from the current act.'
+    messages:
+      notFound: 'No character profile found for that name in this act line.'
+      notFoundInAct: 'No character profile found for that name in act {{actNumber}}.'
+      futureAct: 'Cannot read character profiles from acts that have not happened yet.'
+      actNotInLineage: 'Act {{actNumber}} is not in the lineage of the current narrative line.'
   advancePhase:
     description: >
       Advance the story to the next narrative phase (e.g., {{introduction}} → {{risingAction}} → {{climax}} → {{fallingAction}} → {{resolution}}).
@@ -535,10 +596,6 @@ tools:
       one of the Possible Endings defined in the Act Plot. Specify which ending the story has reached:
       {{good}}, {{bad}}, {{bittersweet}}, or {{alternative}}.
       This tool must be called during reasoning, before any narrative output is written. If any output has already been written, do not call this tool.
-    endingGood: Good
-    endingBad: Bad
-    endingBittersweet: Bittersweet
-    endingAlternative: Alternative
     alreadyEnded: 'The current act has already ended.'
     tooEarly: >
       The story has not reached a point where ending the act is appropriate.

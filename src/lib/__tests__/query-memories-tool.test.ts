@@ -42,8 +42,8 @@ vi.mock('$lib/ai/provider', () => ({
 }));
 
 const mockTraceActLineChain = vi.fn(async (_actLineId: string) => [
-	{ actLineId: 'line-1', actNumber: 1 },
-	{ actLineId: 'line-2', actNumber: 2 },
+	{ actLineId: 'line-1', actNumber: 1, isMainLine: true },
+	{ actLineId: 'line-2', actNumber: 2, isMainLine: false },
 ]);
 
 vi.mock('$lib/db/act-lines', () => ({

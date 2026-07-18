@@ -90,6 +90,8 @@
 		"embeddingProviderDescription": "The provider used to generate embeddings for memory search.",
 		"phraseHighlighting": "Important phrase highlighting",
 		"phraseHighlightingDescription": "Automatically extract and highlight key phrases in narrative text. Requires Minor Task Agent.",
+		"ignoreCharacterCardsInChat": "Ignore character cards in main chat",
+		"ignoreCharacterCardsInChatDescription": "When enabled, character cards will not be loaded as context in the main chat pipeline. They will still be used by Act Plot and Plot Planner when detailed context is enabled.",
 		"directorMode": "Director Mode",
 		"directorModeDescription": "Add persistent notes that can override the story’s planned direction. Director Notes strongly influence the plot and may trigger cascading cause-and-effect changes depending on their content. Use them carefully.",
 		"pipelineRoles": "Pipeline Roles",
@@ -257,6 +259,7 @@
 		"settings": "Settings",
 		"memoryManager": "Memory Manager",
 		"fileManager": "File Manager",
+		"contextManagement": "Context Management",
 		"newAct": "+ New Act",
 		"newStory": "New Story",
 		"deleteConfirmTitle": "Delete {{type}}?",
@@ -338,8 +341,30 @@
 			"storyCreationOptions": "Story creation options",
 			"createStoryPrompt": "Create \"{{name}}\"?",
 			"createStoryDefault": "Create story?",
-			"updateWorldCard": "Update world card"
+			"updateWorldCard": "Update world card",
+			"useDetailedContext": "Use detailed context",
+			"detailedContextWarning": "Enabling detailed context will take longer and consume more tokens during generation. Missing cards will be auto-generated.",
+			"missingActCard": "Missing act cards for Act {{numbers}}. They will be auto-generated — consider generating them manually via Context Management first.",
+			"missingCharacterCards": "Missing character cards for: {{names}}. They will be auto-generated — consider generating them manually via Context Management first.",
+			"checkingContext": "Checking for existing cards...",
+			"openContextManagement": "Open Context Management"
 		}
+	},
+	"contextManagement": {
+		"title": "Context Management",
+		"subtitle": "Tools for managing detailed context used by the AI during generation.",
+		"actCard": {
+			"title": "Act Card Generator",
+			"description": "Optional additional detailed context for continuing from a concluded Act Line to a new act.",
+			"notConcludedWarning": "Act cards generated before an act is concluded will not be used by the system. The generated card will be for your reference only."
+		},
+		"characterCards": {
+			"title": "Character Card Generator",
+			"description": "Provides additional character context for continuing from a concluded Act Line to a new act. Also used by the main chat as additional context when present."
+		},
+		"costNote": "Both generators consume considerable tokens for both generation and usage, but will make the story more coherent.",
+		"advancedSectionTitle": "Advanced Context Management",
+		"advancedSectionDescription": "These tools provide extra details to the AI context at the expense of tokens."
 	},
 	"characterCards": {
 		"heading": "Generate Character Cards",
@@ -349,7 +374,7 @@
 		"generatingProgress": "Generating {{current}} of {{total}} characters...",
 		"canonicalNamesHint": "Canonical names must remain consistent throughout the entire story.",
 		"perActLineHint": "Character cards are maintained per act line (not globally).",
-		"overwriteHint": "If a card for the current act line already exists, it will be overwritten",
+		"overwriteHint": "If a card for the current act line already exists, it will be backed up and regenerated",
 		"and": "and",
 		"character": "Character",
 		"canonicalName": "Canonical Name",
@@ -366,7 +391,9 @@
 		"actLine": "Act Line:",
 		"actLineId": "Act Line ID:",
 		"concurrentGeneration": "Concurrent Generation",
-		"lineageContextHint": "Cards are generated from the current act's content. If cards exist for the current act line and previous acts in the lineage, their content contributes to generation context."
+		"lineageContextHint": "Cards are generated from the current act's content. If cards exist for previous acts in the lineage, their content contributes to generation context.",
+		"fallbackNotice": "No narrative content in the current act line. Showing character cards for Act {{number}} instead.",
+		"cardExists": "Card exists — will be backed up and regenerated"
 	},
 	"importWorld": {
 		"heading": "Import World",
@@ -517,6 +544,8 @@
 		"delete": "Delete",
 		"deleteWarning": "This folder and all its contents will be deleted. This cannot be undone.",
 		"protected": "Protected",
+		"changedFiles": "Changed files",
+		"loadingFiles": "Loading...",
 		"saving": "Saving...",
 		"copyToStory": "Copy to Story",
 		"restoreDefault": "Restore",

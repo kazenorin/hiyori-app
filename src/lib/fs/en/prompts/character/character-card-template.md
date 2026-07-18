@@ -1,24 +1,18 @@
 # Character Card
 
-## Source
-
-- Based on: [ story title / interview / notes ]
-- Extraction mode: [ strict extraction | light inference | creative completion ]
-- Confidence note: [ high / medium / low ]
-
 ## {{coreIdentity}}
 
 - {{name}}: {{character name}}
-- Aliases / nicknames:
+- {{aliases}}: {{character aliases}}
 - Age:
-- Gender / identity:
+- Gender:
+- Identity:
 - Species / type:
 - Occupation / role:
 - Social status / faction:
-- Current location:
-- Era / time period:
+- Primary locations: [ usual residence, frequent hangouts, or habitual environments ]
 
-## One-Line Summary
+## Logline
 
 A concise sentence describing who this character is and why they matter.
 
@@ -42,7 +36,7 @@ A concise sentence describing who this character is and why they matter.
 ## Personality
 
 - Core traits:
-- Social style:
+- Vibe / social style:
 - Emotional tendencies:
 - Strengths:
 - Flaws:
@@ -53,14 +47,10 @@ A concise sentence describing who this character is and why they matter.
 
 ## Motivations
 
-- Primary goal:
-- Secondary goal:
-- Immediate need:
 - Long-term desire:
 - Fear:
 - Internal conflict:
 - External conflict:
-- Stakes if they fail:
 
 ## Backstory
 
@@ -124,7 +114,7 @@ A concise sentence describing who this character is and why they matter.
 - How they sound when angry:
 - How they sound when vulnerable:
 
-## Dialogue Examples
+### Dialogue Examples
 
 > "[ short example line 1 ]"
 
@@ -157,5 +147,4 @@ A concise sentence describing who this character is and why they matter.
 
 ## Short Writing Cue
 
-Write this character as:
-[ 2-4 sentences telling the LLM how to portray them consistently ]
+2-4 sentences telling the writer how to portray them consistently

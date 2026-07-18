@@ -1,11 +1,19 @@
 <script lang="ts">
 	import { slide as svelteSlide } from 'svelte/transition';
 	import { t } from '$lib/i18n';
+	import { resolve } from '$app/paths';
 	import { scrollToBottom } from '$lib/utils/scroll';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
 	import { getLocaleItems } from '$lib/features/settings-options';
+	import { getActiveStory, getActiveAct, getActiveActLine } from '$lib/stores/stories.svelte';
+	import { settings } from '$lib/stores/settings.svelte';
+	import { checkActCardExists } from '$lib/features/act-card-generator';
+	import { loadLatestCharacterCardsForActLine } from '$lib/features/character-card-generator';
+	import { getLatestProfilesByActLine } from '$lib/db/character-profiles';
+	import { traceActLineChain } from '$lib/db/acts';
+	import { getActLine } from '$lib/db/act-lines';
 
 	interface Props {
 		isReadyToStart: boolean;
@@ -23,10 +31,11 @@
 		isPreTemplatePhase: boolean;
 		showUpdateWorldCardOption: boolean;
 		updateWorldCard: boolean;
+		useDetailedContext: boolean;
 		onStart: () => void;
 		onStartImmediate: () => void;
 		onStartInterview: () => void;
-		onStartGame: (isGameResumeMode: boolean, updateWorld: boolean) => void;
+		onStartGame: (isGameResumeMode: boolean, updateWorld: boolean, useDetailedContext: boolean) => void;
 		onCancel: () => void;
 		onDismissOptions: () => void;
 		onRetry: () => void;
@@ -49,6 +58,7 @@
 		isPreTemplatePhase,
 		showUpdateWorldCardOption,
 		updateWorldCard = $bindable(false),
+		useDetailedContext = $bindable(false),
 		onStart,
 		onStartImmediate,
 		onStartInterview,
@@ -79,6 +89,9 @@
 	let isManuallyClosed = $state(false);
 	let layoutTransitioning = $state(false);
 	let layoutTimeout: ReturnType<typeof setTimeout> | undefined;
+
+	let isCheckingContext = $state(false);
+	let detailedContextWarning = $state<string | null>(null);
 
 	let isMinimized = $derived(!isPinned && (!isNearBottom || isManuallyClosed) && !isUserExpanded);
 
@@ -179,6 +192,87 @@
 			}
 		}
 	});
+
+	$effect(() => {
+		if (!useDetailedContext) {
+			detailedContextWarning = null;
+			return;
+		}
+		const story = getActiveStory();
+		const act = getActiveAct();
+		const actLine = getActiveActLine();
+		if (!story || !act || !actLine) return;
+
+		let cancelled = false;
+		isCheckingContext = true;
+		detailedContextWarning = null;
+
+		(async () => {
+			const warnings: string[] = [];
+			try {
+				// Check act cards across the lineage (excluding the current new act)
+				const lineage = await traceActLineChain(actLine.id);
+				const missingActCardNumbers: number[] = [];
+				for (const entry of lineage) {
+					if (entry.actNumber === act.actNumber) continue;
+					const lineageActLine = await getActLine(entry.actLineId);
+					if (!lineageActLine) continue;
+					const exists = await checkActCardExists({
+						storyId: story.id,
+						storyName: story.name,
+						actLineId: entry.actLineId,
+						actLine: lineageActLine,
+						actNumber: entry.actNumber,
+					});
+					if (!exists) {
+						missingActCardNumbers.push(entry.actNumber);
+					}
+				}
+				if (missingActCardNumbers.length > 0) {
+					warnings.push(
+						t('components.worldBuilderControls.missingActCard', {
+							numbers: missingActCardNumbers.sort((a, b) => a - b).join(', '),
+						})
+					);
+				}
+
+				const profiles = await getLatestProfilesByActLine(actLine.id);
+				const threshold = settings.characterProfileImportanceThreshold;
+				const maxIncluded = settings.characterProfileMaxIncluded;
+				const included = profiles
+					.filter((p) => p.importance <= threshold)
+					.sort((a, b) => a.importance - b.importance)
+					.slice(0, maxIncluded);
+
+				if (included.length > 0) {
+					const existingCards = await loadLatestCharacterCardsForActLine({
+						storyId: story.id,
+						storyName: story.name,
+						actLineId: actLine.id,
+						actLine,
+						actNumber: act.actNumber,
+					});
+					const existingNames = new Set(existingCards.map((c) => c.canonicalName));
+					const missing = included.filter((p) => !existingNames.has(p.canonicalName));
+					if (missing.length > 0) {
+						const names = missing.map((p) => p.preferredName).join(', ');
+						warnings.push(t('components.worldBuilderControls.missingCharacterCards', { names }));
+					}
+				}
+			} catch {
+				// errors are non-fatal — just skip the check
+			}
+			if (!cancelled) {
+				warnings.unshift(t('components.worldBuilderControls.detailedContextWarning'));
+				detailedContextWarning = warnings.join('\n\n');
+				isCheckingContext = false;
+			}
+		})();
+
+		return () => {
+			cancelled = true;
+		};
+	});
 </script>
 
 {#snippet spinnerCard(variant: 'primary' | 'success', message: string)}
@@ -276,13 +370,45 @@
 							{@render spinnerCard('success', t('components.worldBuilderControls.generatingPlot'))}
 						{:else}
 							{#if showUpdateWorldCardOption}
-								<label class="flex items-center justify-center gap-2 text-sm text-surface-500">
-									<input type="checkbox" class="checkbox" bind:checked={updateWorldCard} />
-									{t('components.worldBuilderControls.updateWorldCard')}
-								</label>
+								<div class="flex items-center justify-center gap-4">
+									<label class="flex items-center gap-2 text-sm text-surface-500">
+										<input type="checkbox" class="checkbox" bind:checked={updateWorldCard} />
+										{t('components.worldBuilderControls.updateWorldCard')}
+									</label>
+									<label class="flex items-center gap-2 text-sm text-surface-500">
+										<input type="checkbox" class="checkbox" bind:checked={useDetailedContext} />
+										{t('components.worldBuilderControls.useDetailedContext')}
+									</label>
+								</div>
+								{#if useDetailedContext}
+									{#if isCheckingContext}
+										<div class="flex items-center justify-center gap-2 py-1">
+											<Spinner size="xs" />
+											<span class="text-xs text-surface-500">{t('components.worldBuilderControls.checkingContext')}</span>
+										</div>
+									{:else if detailedContextWarning}
+										<div class="card p-3 border border-secondary-500-300">
+											<div class="flex items-start gap-2">
+												<Icon name="triangle-alert" class="size-5 shrink-0 text-secondary-500 mt-0.5" />
+												<div class="flex-1 space-y-1">
+													{#each detailedContextWarning.split('\n\n') as paragraph (paragraph)}
+														<p class="text-xs text-surface-700-300 whitespace-pre-wrap">{paragraph}</p>
+													{/each}
+													<a href={resolve('/context-management')} class="text-xs text-primary-500 hover:underline">
+														{t('components.worldBuilderControls.openContextManagement')} &rarr;
+													</a>
+												</div>
+											</div>
+										</div>
+									{/if}
+								{/if}
 							{/if}
 							<div class="flex justify-center">
-								<button class="btn preset-filled-success-500" type="button" onclick={() => onStartGame(isGameResumeMode, updateWorldCard)}>
+								<button
+									class="btn preset-filled-success-500"
+									type="button"
+									onclick={() => onStartGame(isGameResumeMode, updateWorldCard, useDetailedContext)}
+								>
 									{t('components.worldBuilderControls.startGame')}
 								</button>
 							</div>

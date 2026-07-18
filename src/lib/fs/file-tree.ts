@@ -32,7 +32,9 @@ export function isCriticalSystemFile(filePath: string, folderType: FolderType | 
 }
 
 export function classifyManagedConfig(filePath: string, folderType: FolderType | undefined): ManagedConfigKind | null {
-	if (!filePath.endsWith('.md')) return null;
+	if (!filePath.endsWith('.md') && !filePath.endsWith('.yaml') && !filePath.endsWith('.yml')) {
+		return null;
+	}
 
 	if (folderType === 'config') {
 		const configPath = filePath.slice('config/'.length);
@@ -227,8 +229,52 @@ export async function isConfigUserModified(configFilePath: string): Promise<bool
 	const entry = manifest.get(configPath);
 	if (!entry || entry.hash === null) return true;
 	const content = await fs.readTextFile(configFilePath);
-	const diskHash = await hashContent(content);
-	return diskHash !== entry.hash;
+	const { trimmed } = await hashContent(content);
+	return trimmed !== entry.hash;
+}
+
+export interface UserChangedConfigFile {
+	path: string;
+	relativePath: string;
+}
+
+export async function listUserChangedConfigFiles(dirPath: string, limit = 10): Promise<UserChangedConfigFile[]> {
+	if (getFolderType(dirPath) !== 'config') return [];
+
+	const results: UserChangedConfigFile[] = [];
+
+	async function walk(currentPath: string): Promise<void> {
+		if (results.length >= limit) return;
+		const entries = await fs.readDir(currentPath);
+		const dirs: string[] = [];
+		const files: string[] = [];
+		for (const e of entries) {
+			const childPath = currentPath ? `${currentPath}/${e.name}` : e.name;
+			if (e.isDirectory) dirs.push(childPath);
+			else files.push(childPath);
+		}
+		dirs.sort();
+		files.sort();
+
+		for (const filePath of files) {
+			if (results.length >= limit) return;
+			const configPath = filePath.slice('config/'.length);
+			const entry = manifest.get(configPath);
+			if (!entry || entry.hash === null) continue;
+			if (await isConfigUserModified(filePath)) {
+				const relativePath = filePath.slice(dirPath.length + 1);
+				results.push({ path: filePath, relativePath });
+			}
+		}
+
+		for (const dirPath of dirs) {
+			if (results.length >= limit) return;
+			await walk(dirPath);
+		}
+	}
+
+	await walk(dirPath);
+	return results;
 }
 
 export async function copyConfigToStory(configFilePath: string, storyFolderName: string): Promise<void> {

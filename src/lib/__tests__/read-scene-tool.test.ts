@@ -23,7 +23,9 @@ vi.mock('$lib/db/database', () => ({
 	getDatabase: () => mockDb,
 }));
 
-const mockTraceActLineChain = vi.fn(async (_actLineId: string): Promise<{ actLineId: string; actNumber: number }[]> => []);
+const mockTraceActLineChain = vi.fn(
+	async (_actLineId: string): Promise<{ actLineId: string; actNumber: number; isMainLine: boolean }[]> => []
+);
 
 vi.mock('$lib/db/act-lines', () => ({}));
 
@@ -132,9 +134,9 @@ describe('createReadDistantSceneTool', () => {
 
 	it('returns formatted scene from a previous act in lineage', async () => {
 		mockTraceActLineChain.mockResolvedValueOnce([
-			{ actLineId: 'line-1', actNumber: 1 },
-			{ actLineId: 'line-2', actNumber: 2 },
-			{ actLineId: 'line-current', actNumber: 3 },
+			{ actLineId: 'line-1', actNumber: 1, isMainLine: true },
+			{ actLineId: 'line-2', actNumber: 2, isMainLine: false },
+			{ actLineId: 'line-current', actNumber: 3, isMainLine: true },
 		]);
 		mockDb.select.mockResolvedValueOnce([sceneRowAssistant, sceneRowUser]);
 
@@ -162,8 +164,8 @@ describe('createReadDistantSceneTool', () => {
 
 	it('returns actNotInLineage when act is not in chain', async () => {
 		mockTraceActLineChain.mockResolvedValueOnce([
-			{ actLineId: 'line-1', actNumber: 1 },
-			{ actLineId: 'line-current', actNumber: 3 },
+			{ actLineId: 'line-1', actNumber: 1, isMainLine: true },
+			{ actLineId: 'line-current', actNumber: 3, isMainLine: true },
 		]);
 
 		const ctx = createMockContext(3);
@@ -176,8 +178,8 @@ describe('createReadDistantSceneTool', () => {
 
 	it('returns noSceneFound when scene does not exist in target act', async () => {
 		mockTraceActLineChain.mockResolvedValueOnce([
-			{ actLineId: 'line-1', actNumber: 1 },
-			{ actLineId: 'line-current', actNumber: 3 },
+			{ actLineId: 'line-1', actNumber: 1, isMainLine: true },
+			{ actLineId: 'line-current', actNumber: 3, isMainLine: true },
 		]);
 		mockDb.select.mockResolvedValueOnce([]);
 
@@ -191,8 +193,8 @@ describe('createReadDistantSceneTool', () => {
 
 	it('returns sceneNoContent when scene has no readable messages', async () => {
 		mockTraceActLineChain.mockResolvedValueOnce([
-			{ actLineId: 'line-1', actNumber: 1 },
-			{ actLineId: 'line-current', actNumber: 3 },
+			{ actLineId: 'line-1', actNumber: 1, isMainLine: true },
+			{ actLineId: 'line-current', actNumber: 3, isMainLine: true },
 		]);
 		mockDb.select.mockResolvedValueOnce([{ role: 'system', content: 'init', scene_number: 1 }]);
 
@@ -206,8 +208,8 @@ describe('createReadDistantSceneTool', () => {
 
 	it('can read from current act via lineage chain', async () => {
 		mockTraceActLineChain.mockResolvedValueOnce([
-			{ actLineId: 'line-1', actNumber: 1 },
-			{ actLineId: 'line-current', actNumber: 3 },
+			{ actLineId: 'line-1', actNumber: 1, isMainLine: true },
+			{ actLineId: 'line-current', actNumber: 3, isMainLine: true },
 		]);
 		mockDb.select.mockResolvedValueOnce([sceneRowAssistant]);
 

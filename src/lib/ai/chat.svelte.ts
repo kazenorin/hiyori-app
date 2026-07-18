@@ -61,6 +61,9 @@ import { otherDirectorNotesHeader, sectionFormat } from '$lib/definitions/common
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { loadLocaleStrings, ls } from '$lib/localization';
 import { ensureWorldFile } from '$lib/ai/world-generator';
+import { getLatestProfilesByActLine } from '$lib/db/character-profiles';
+import { loadLatestCharacterCardsForActLine, type CharacterCardContext } from '$lib/features/character-card-generator';
+import { formatCharacterProfilesSection, formatCharacterCardsSection, type CharacterCardInput } from '$lib/definitions/pipeline-sections';
 
 // Re-exported for `+page.svelte` only
 export type { UIMessage };
@@ -352,6 +355,16 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 			}
 		}
 
+		const characterProfiles = formatCharacterProfilesSection(
+			await getLatestProfilesByActLine(actLine.id),
+			settings.characterProfileImportanceThreshold,
+			settings.characterProfileMaxIncluded
+		);
+
+		const characterCards = settings.ignoreCharacterCardsInChat
+			? undefined
+			: await loadCharacterCardsString(story.id, story.name, actLine.id, actLine, actLine.actNumber);
+
 		const pipelineCallbacks = createPipelineCallbacks({
 			getCurrentMessage,
 			setCurrentMessage,
@@ -367,6 +380,8 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 			worldContent,
 			actPlot,
 			actSummary,
+			characterProfiles,
+			characterCards,
 			previousNarrativeVariables,
 			previousScenePlot,
 			previousActSummaries,
@@ -478,6 +493,16 @@ export async function runEpilogueFlow(actLineId: string, rewriteDirectorNote?: s
 		const previousNarrativeVariables = getPreviousNarrativeMessage(messages);
 		const targetWordCount = parseActPlotTargetWordCount(actPlot) ?? settings.targetWordCount;
 
+		const characterProfiles = formatCharacterProfilesSection(
+			await getLatestProfilesByActLine(actLine.id),
+			settings.characterProfileImportanceThreshold,
+			settings.characterProfileMaxIncluded
+		);
+
+		const characterCards = settings.ignoreCharacterCardsInChat
+			? undefined
+			: await loadCharacterCardsString(story.id, story.name, actLineId, actLine, actNumber);
+
 		const pipelineCallbacks = createPipelineCallbacks({
 			getCurrentMessage,
 			setCurrentMessage,
@@ -493,6 +518,8 @@ export async function runEpilogueFlow(actLineId: string, rewriteDirectorNote?: s
 			worldContent,
 			actPlot,
 			actSummary,
+			characterProfiles,
+			characterCards,
 			previousNarrativeVariables,
 			previousActSummaries: [],
 			endingType,
@@ -673,6 +700,8 @@ async function regenerateGameData(
 		actPlot,
 		actPhase: currentActPhase,
 		actSummary: _getLatestActSummary(messages),
+		characterProfiles: [], // not fetched for game-data regeneration
+		characterCards: undefined,
 		previousScenePlot,
 		previousNarrativeBody: assistantMsg.variables?.narrativeBody ?? undefined,
 		completedScenes: previousSceneNumber,
@@ -820,4 +849,23 @@ export async function deleteOrphanedUserMessages(actLineId: string): Promise<voi
 
 	const { success, remaining } = await removeMessagesFromIndex(actLineId, messages, lastUserMsgIdx);
 	if (success) setMessages(remaining);
+}
+
+async function loadCharacterCardsString(
+	storyId: string,
+	storyName: string,
+	actLineId: string,
+	actLine: ActLineMeta,
+	actNumber: number
+): Promise<string | undefined> {
+	const ctx: CharacterCardContext = { storyId, storyName, actLineId, actLine, actNumber };
+	const cards = await loadLatestCharacterCardsForActLine(ctx);
+	if (cards.length === 0) return undefined;
+	const profiles = await getLatestProfilesByActLine(actLineId);
+	const profileMap = new Map(profiles.map((p) => [p.canonicalName, p.preferredName]));
+	const inputs: CharacterCardInput[] = cards.map((c) => ({
+		preferredName: profileMap.get(c.canonicalName) ?? c.canonicalName,
+		content: c.content,
+	}));
+	return formatCharacterCardsSection(inputs);
 }

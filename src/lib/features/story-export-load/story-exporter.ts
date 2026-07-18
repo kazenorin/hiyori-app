@@ -12,10 +12,12 @@ import {
 import { getStoryFolderInfo } from '$lib/db/story-folders';
 import { getDirectorNotesForActLines, type DirectorNote } from '$lib/db/director-notes';
 import { getMessagesByIds, type Message } from '$lib/db/messages';
+import { getCharacterProfilesForActLines } from '$lib/db/character-profiles';
 import { fs } from '$lib/fs/file-system';
 import { collectFilesInDir, isBinaryData } from '$lib/fs/file-tree';
 import { downloadExport } from '$lib/db/data-portability';
 import type { StoryExportData } from './archive-schema';
+import { CURRENT_ARCHIVE_VERSION } from './archive-schema';
 import { collectMessageIds } from './story-loader';
 
 export async function exportStory(storyId: string): Promise<void> {
@@ -47,8 +49,10 @@ export async function exportStory(storyId: string): Promise<void> {
 		messages = await getMessagesByIds(msgIdList);
 	}
 
+	const characterProfiles = actLineIds.length > 0 ? await getCharacterProfilesForActLines(actLineIds) : [];
+
 	const exportData: StoryExportData = {
-		version: 1,
+		version: CURRENT_ARCHIVE_VERSION,
 		story: {
 			id: story.id,
 			name: story.name,
@@ -118,6 +122,23 @@ export async function exportStory(storyId: string): Promise<void> {
 			importantPhrases: m.importantPhrases ?? null,
 			sceneNumber: m.sceneNumber ?? null,
 			createdAt: m.createdAt,
+		})),
+		characterProfiles: characterProfiles.map((p) => ({
+			id: p.id,
+			actLineId: p.actLineId,
+			sceneNumber: p.sceneNumber,
+			canonicalName: p.canonicalName,
+			preferredName: p.preferredName,
+			aliases: p.aliases,
+			logline: p.logline,
+			state: p.state,
+			goal: p.goal,
+			relationships: p.relationships,
+			voice: p.voice,
+			sceneDetails: p.sceneDetails,
+			importance: p.importance,
+			createdAt: p.createdAt,
+			updatedAt: p.updatedAt,
 		})),
 	};
 
