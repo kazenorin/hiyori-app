@@ -1,5 +1,5 @@
 import { getDatabase } from './database';
-import { deleteActLine } from './act-lines';
+import { deleteActLine, getActLine } from './act-lines';
 
 export interface Act {
 	id: string;
@@ -9,6 +9,12 @@ export interface Act {
 	continuesFromActLineId: string | null;
 	createdAt: number;
 	updatedAt: number;
+}
+
+export interface ActChainEntry {
+	actLineId: string;
+	actNumber: number;
+	isMainLine: boolean;
 }
 
 interface ActRow {
@@ -132,8 +138,16 @@ export async function getActByActLineId(actLineId: string): Promise<Act | null> 
 	return rows.length > 0 ? rowToAct(rows[0]) : null;
 }
 
-export async function traceActLineChain(actLineId: string): Promise<{ actLineId: string; actNumber: number }[]> {
-	const result: { actLineId: string; actNumber: number }[] = [];
+/**
+ * Walk the act chain backwards from the given act line via `continuesFromActLineId`.
+ *
+ * @param actLineId The act line to walk from.
+ * @param descending Defaults to `false`, sorted ascending by `actNumber` (oldest act first).
+ *                   If `true`, returns entries sorted descending by `actNumber` (newest act first).
+ *
+ */
+export async function traceActLineChain(actLineId: string, descending?: boolean): Promise<ActChainEntry[]> {
+	const result: ActChainEntry[] = [];
 	let currentActLineId: string | null = actLineId;
 	const visited = new Set<string>();
 
@@ -141,9 +155,11 @@ export async function traceActLineChain(actLineId: string): Promise<{ actLineId:
 		visited.add(currentActLineId);
 		const act = await getActByActLineId(currentActLineId);
 		if (!act) break;
-		result.unshift({ actLineId: currentActLineId, actNumber: act.actNumber });
+		const actLine = await getActLine(currentActLineId);
+		result.unshift({ actLineId: currentActLineId, actNumber: act.actNumber, isMainLine: actLine?.isMainLine ?? false });
 		currentActLineId = act.continuesFromActLineId;
 	}
 
+	if (descending) result.reverse();
 	return result;
 }

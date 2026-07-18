@@ -21,8 +21,9 @@
 		resetState,
 	} from '$lib/stores/character-card.svelte';
 	import { settings, updateSettings } from '$lib/stores/settings.svelte';
-	import { buildActLineage, getExistingCardNamesForActLine } from '$lib/features/character-card-generator';
+	import { getExistingCardNamesForActLine } from '$lib/features/character-card-generator';
 	import { getActLine, getMessagesForLine } from '$lib/db/act-lines';
+	import { traceActLineChain } from '$lib/db/acts';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import { log } from '$lib/logging/logger';
@@ -64,7 +65,7 @@
 			actLine: activeActLine,
 			actNumber: activeAct.actNumber,
 		};
-		const lineage = await buildActLineage(seedCtx);
+		const lineage = await traceActLineChain(seedCtx.actLineId, true);
 		for (const entry of lineage) {
 			if (entry.actLineId === activeActLine.id) continue;
 			const ancestorMessages = await getMessagesForLine(entry.actLineId);
@@ -107,7 +108,7 @@
 			const ctx = await buildContext();
 			if (cancelled || extractionId !== currentExtractionId) return;
 			if (ctx) {
-				extractCharacters(ctx);
+				await extractCharacters(ctx);
 				try {
 					const names = await getExistingCardNamesForActLine(ctx);
 					if (cancelled || extractionId !== currentExtractionId) return;
@@ -124,7 +125,7 @@
 
 	async function handleGenerate() {
 		const ctx = await buildContext();
-		if (ctx) generateCards(ctx, concurrent);
+		if (ctx) await generateCards(ctx, concurrent);
 	}
 
 	function handleBack() {

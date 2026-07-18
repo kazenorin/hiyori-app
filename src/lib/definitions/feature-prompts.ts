@@ -4,7 +4,7 @@ import { ls } from '$lib/localization';
 
 export const characterCardCoreIdentityLabel = () => ls('features.characterCardGenerator.coreIdentity');
 
-export const characterCardExtractionRules = () => ls('features.characterCardGenerator.cardExtractionRules');
+export const characterCardExtractionRules = (characterName: string) => ls('features.characterCardGenerator.cardExtractionRules', { characterName });
 
 // === World Builder ===
 

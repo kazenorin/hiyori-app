@@ -15,8 +15,8 @@ vi.mock('$lib/logging/logger', () => ({
 }));
 
 const mockTraceActLineChain = vi.fn(async (actLineId: string) => [
-	{ actLineId: 'line-1', actNumber: 1 },
-	{ actLineId, actNumber: 2 },
+	{ actLineId: 'line-1', actNumber: 1, isMainLine: true },
+	{ actLineId, actNumber: 2, isMainLine: false },
 ]);
 
 vi.mock('$lib/db/act-lines', () => ({}));

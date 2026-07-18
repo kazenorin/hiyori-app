@@ -26,8 +26,8 @@ export const characterExtractionPrefix = () =>
 	});
 
 /** Instruction suffix for character card generation. */
-export const characterCardGenerationInstruction = (extractionPrompt: string, template: string) =>
-	ls('features.characterCardGenerator.characterCardGeneration', { extractionPrompt, template });
+export const characterCardGenerationInstruction = (extractionRules: string, template: string) =>
+	ls('features.characterCardGenerator.characterCardGeneration', { extractionRules, template });
 
 /** System prompt for character card generation (specific character). */
 export const characterCardGenerationSystemPrompt = (characterName: string) =>
