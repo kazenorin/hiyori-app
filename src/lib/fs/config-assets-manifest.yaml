@@ -8,8 +8,6 @@ src:
               configPath: en/prompt-templates/act/act-card-template.md
               hash: 87f352a9c6b6d104f24a56dce6596557368dd6c9e4e52a94406986515b7f02b0
               oldHashes:
-                - 89cae100ae35a1cc9d65770203e3b761b6fe161415aa5109311980b51b852858
-                - 077ddd978784ba0f1e93625cb861a472f4a1bad0e079d23acf013527cbb231c9
                 - 2216d5a3e4ec7bf5f1542736d3ba95d93916433a489bd77513b9e5fdec7dc511
               updatedAt: "2026-07-18T11:58:02.383Z"
             act-plot-editor-prompt.md:
@@ -68,8 +66,6 @@ src:
               configPath: en/prompt-templates/character/character-card-template.md
               hash: b9de08ee722a6a20b953501d951d249cb1cb3b8216fa2614b06be056bb73146a
               oldHashes:
-                - a1658bd079948737f078acdca952a3485d237d75943b4969ef1896d48370438b
-                - 85088721bde0be0e7423686eceb359508ee657c484781dcc8c0314b14f81a1d9
                 - f8af44bf8425d13365fdf6496453750514f2fcaf6a0b2b1eae27b6934dab63fc
               updatedAt: "2026-07-18T14:50:56.840Z"
           editor:
@@ -137,7 +133,6 @@ src:
               configPath: en/prompt-templates/summarizer/character-profile-compressor.md
               hash: 39510e58e34136a6335773375d1939bcb37c6ca074bd48d7907a0f6a8fd7ac5d
               oldHashes:
-                - d49b0c1465d52597d993becce1c4096c7863590e44b4534911a97cc0df6b2108
                 - 2438a90b9599afc9f40d34fe3e466765eebbcd916ef3f1d2643fed9a031bfdae
               updatedAt: "2026-07-18T08:56:38.701Z"
             summarizer-incremental-prompt.md:
@@ -224,8 +219,6 @@ src:
               configPath: zh-Hant-HK/prompt-templates/act/act-card-template.md
               hash: 393821a7cd7ae3f77f6551ee093b0015818794f7db8d69245f950c01411305a1
               oldHashes:
-                - 91da24816c740a64068d79fd2f94c419d578ed6044d2c10921e9cb4c43a88ad5
-                - fb0f2120be3d47a66c16d35f6bed892c48ac348a32d39cb4c79fda50ea81bf58
                 - d5bf1e4ec0e8572bcb4246b0e0de1c371b121160551fee00bf1bfa5fddee78ba
               updatedAt: "2026-07-18T11:58:02.383Z"
             act-plot-editor-prompt.md:
@@ -285,8 +278,6 @@ src:
               configPath: zh-Hant-HK/prompt-templates/character/character-card-template.md
               hash: 678951ae90bb00b9f374ccefd0e42bc2d188cfa7fe7253ae89580a3b09fe92c6
               oldHashes:
-                - 06e1cd329414ff93033e01d07c6933afd57156613da641fe46bb8338c0c2fc26
-                - e22cc9ea47dc38523667008df766776253740fdaf6396d6f43d17e09fb091d13
                 - 9bce6f314353e21aa708cdcd4f843b007af945b21050566d365e65479fdf3372
               updatedAt: "2026-07-18T14:50:56.840Z"
           editor:
@@ -354,7 +345,6 @@ src:
               configPath: zh-Hant-HK/prompt-templates/summarizer/character-profile-compressor.md
               hash: 3c68b796e31f834761bc6a4c41c3947937246de4522c7564f6254f8cfa55df3c
               oldHashes:
-                - cb2cd2923a146c57a24952833cb7cc0ae2dd8a21a9618cd5dc50d5ae0c45f953
                 - 3a55e9df6531ed7f7f94156222dac4fe1de4b02c86704fcf1dd5aa340225ab69
               updatedAt: "2026-07-18T08:56:38.701Z"
             summarizer-incremental-prompt.md:
@@ -439,12 +429,6 @@ src:
           configPath: en/locale-strings.yaml
           hash: cc4d77f752235f472a27490a080cf464203d00b17619b2ab6c32017ffc9698df
           oldHashes:
-            - bc396eba1be040eb49b937bd6a19d92feed49a8dc942497e9945ca365b2ccb0b
-            - a38a3df2c106ec61744afadb7dd3380e8f653f420ee2fd512e1892cbe382503d
-            - 6bb127ed9d723c43c261b5196ff6d6f90913efc8c8a6031964fe92553bf87dca
-            - c15b215448371af5931bfe7ebafb77425afb9c74b9c4ccdda6fd6ed7b04ecc22
-            - 2801a387585e3c6abe3b1403a1dc57550999acf54ccdb913a029eaec35150be8
-            - 375b17977bfb178a5f46644922e4074af8a3df0efac541cbfc6beff99af1ffbe
             - 5feee7d281ea6a4199ea97d386a8b39696130b98c49333b7250c8c8e4e3fafc7
             - a312d1d717bbdbe6c452986680100ce8d5c14dad450805e9708bd14a8ff49139
             - 38a851f6bd592d9b7f92b1b69ff17d2f43d3f2182fdebc8c579ad9cf3c08fd32
@@ -457,12 +441,6 @@ src:
           configPath: zh-Hant-HK/locale-strings.yaml
           hash: fc4c2f29eb33e8642271cec7e0005b7b770bb10dfb48bb7c6f944d433ffb7aaf
           oldHashes:
-            - e241dd36d541542ce3e8ba8458b56ac497eb96fb0546a718b441bf4be9a9fd2e
-            - 87b260a8a7c39c4ee759ae15a0d6c14ac92c59684aa74ae5a6ae8484627838b5
-            - a981f1642161bd8f023e0fb93abb8a2c675544c858d17c2d1b7af44246e1368e
-            - fdc3572fa97631cbba47ea280ffd7f1e4a4a8f0028698e9cc3a04fde0bffb185
-            - 3d6081b4ead3f4db47c1c9697ed35147133e02ebfc314672325eb8586a62065c
-            - 05f14b5ddcd25a0421b5a3835fd7fcef76fecd6a1109317d23e3a244c5ad9f2a
             - 6727b1ff75ddca54c953db58817b2f8f07829a914a6f7e3ca5196a9a06460085
             - dac345165f8da974296444d28cf9c1cd61a33cb9ea3421b7fc8370a3b2227104
             - ab58fe0db424d01c846a5a4ae9c6b9fa11c7d7ad86efbd60523c83fd85d661d7
