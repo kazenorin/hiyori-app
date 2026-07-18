@@ -9,10 +9,10 @@ import type { AssistantContext } from '$lib/ai/pipeline/types';
 import { log } from './utils';
 
 const ENDING_LABELS: Record<EndingType, string> = {
-	good: 'tools.endAct.endingGood',
-	bad: 'tools.endAct.endingBad',
-	bittersweet: 'tools.endAct.endingBittersweet',
-	alternative: 'tools.endAct.endingAlternative',
+	good: 'common.descriptions.endings.good',
+	bad: 'common.descriptions.endings.bad',
+	bittersweet: 'common.descriptions.endings.bittersweet',
+	alternative: 'common.descriptions.endings.alternative',
 };
 
 function getEndingLabel(endingType: EndingType): string {
@@ -24,10 +24,10 @@ export function createEndActTool(actLineId: string, plotMode: string, actPhase: 
 
 	return tool({
 		description: ls('tools.endAct.description', {
-			good: ls('tools.endAct.endingGood'),
-			bad: ls('tools.endAct.endingBad'),
-			bittersweet: ls('tools.endAct.endingBittersweet'),
-			alternative: ls('tools.endAct.endingAlternative'),
+			good: ls(ENDING_LABELS.good),
+			bad: ls(ENDING_LABELS.bad),
+			bittersweet: ls(ENDING_LABELS.bittersweet),
+			alternative: ls(ENDING_LABELS.alternative),
 		}),
 		inputSchema: z.object({
 			endingType: z

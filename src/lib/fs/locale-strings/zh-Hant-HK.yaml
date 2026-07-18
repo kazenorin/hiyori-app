@@ -52,6 +52,12 @@ common:
     characterProfiles: '角色檔案以下列方式分佈: 重要角色會以完整檔案內嵌；其他角色僅以一句話參考（姓名: 重要性 — 簡短描述），可透過 `character-details` 工具取得。'
     characterProfilesInline: '以下檔案已在你的脈絡中。請勿對這些角色呼叫 `character-details` 工具。'
     characterProfilesOther: '其他角色'
+    endings:
+      good: 好結局
+      bad: 壞結局
+      bittersweet: 苦甜結局
+      alternative: 另類結局
+      notEnded: 尚未完結
     directorRewriteRequest: |
       這是場景 {{sceneNumber}} 的改寫請求:
       ### 場景 {{sceneNumber}} 的原始敘事正文:
@@ -579,10 +585,6 @@ tools:
       結束目前章節。當敘事已達到與章節劇情中定義的可能結局之一相符的自然結論時，呼叫此工具。
       指定故事已達到的結局: {{good}}、{{bad}}、{{bittersweet}} 或 {{alternative}}。
       此工具必須在推理期間呼叫，且必須在任何敘事輸出撰寫之前。若已撰寫任何輸出，請勿呼叫此工具。
-    endingGood: 好結局
-    endingBad: 壞結局
-    endingBittersweet: 苦甜結局
-    endingAlternative: 另類結局
     alreadyEnded: '目前章節已經結束。'
     tooEarly: >
       故事尚未到達適合結束章節的階段。

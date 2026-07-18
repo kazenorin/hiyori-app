@@ -386,7 +386,7 @@ export async function isEpilogueWritten(actLineId: string): Promise<boolean> {
 export async function getActShortSummary(actLineId: string): Promise<string | null> {
 	const db = getDatabase();
 	const rows = await db.select<{ value: string }[]>(
-		`SELECT value FROM act_line_events WHERE act_line_id = $1 AND event = 'act-short-summary' ORDER BY message_sequence DESC LIMIT 1`,
+		`SELECT value FROM act_line_events WHERE act_line_id = $1 AND event = 'act-short-summary' ORDER BY message_sequence DESC, created_at DESC LIMIT 1`,
 		[actLineId]
 	);
 	return rows.length > 0 ? rows[0].value : null;
@@ -395,7 +395,7 @@ export async function getActShortSummary(actLineId: string): Promise<string | nu
 export async function getEndingType(actLineId: string): Promise<EndingType | null> {
 	const db = getDatabase();
 	const rows = await db.select<{ value: string }[]>(
-		`SELECT value FROM act_line_events WHERE act_line_id = $1 AND event = 'ending' ORDER BY message_sequence DESC LIMIT 1`,
+		`SELECT value FROM act_line_events WHERE act_line_id = $1 AND event = 'ending' ORDER BY message_sequence DESC, created_at DESC LIMIT 1`,
 		[actLineId]
 	);
 	if (rows.length === 0) return null;

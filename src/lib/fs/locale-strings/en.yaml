@@ -52,6 +52,12 @@ common:
     characterProfiles: 'Character profiles distributed the following way: full-body profiles have been inlined for important characters. Other characters are represented as a one-sentence reference (Name: importance — short description) and can be retrieved via the `character-details` tool.'
     characterProfilesInline: 'The profiles below are ALREADY in your context. Do NOT call the `character-details` tool for these characters.'
     characterProfilesOther: 'Other Characters'
+    endings:
+      good: Good
+      bad: Bad
+      bittersweet: Bittersweet
+      alternative: Alternative
+      notEnded: 'Not yet ended'
     directorRewriteRequest: |
       This is a rewrite request for Scene {{sceneNumber}}:
       ### Original Narrative Body for Scene {{sceneNumber}}:
@@ -589,10 +595,6 @@ tools:
       one of the Possible Endings defined in the Act Plot. Specify which ending the story has reached:
       {{good}}, {{bad}}, {{bittersweet}}, or {{alternative}}.
       This tool must be called during reasoning, before any narrative output is written. If any output has already been written, do not call this tool.
-    endingGood: Good
-    endingBad: Bad
-    endingBittersweet: Bittersweet
-    endingAlternative: Alternative
     alreadyEnded: 'The current act has already ended.'
     tooEarly: >
       The story has not reached a point where ending the act is appropriate.

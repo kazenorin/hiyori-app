@@ -1,5 +1,6 @@
 import type { Message, MessageBase } from '$lib/db/messages';
 import type { ActLineMeta } from '$lib/db/act-lines';
+import { getEndingType } from '$lib/db/act-lines';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { actCardTemplateLoader } from '$lib/fs/prompts';
 import { exportActLine } from '$lib/ai/act-line-export';
@@ -11,6 +12,8 @@ import { getLineDir } from '$lib/ai/card-output-path';
 import { logActCardActivity } from '$lib/logging/chat-logger';
 import { streamWithRetry } from '$lib/ai/chat-stream';
 import type { StreamState } from '$lib/ai/chat-callbacks';
+import { getEndingLabel } from '$lib/ai/pipeline/runners';
+import { ls } from '$lib/localization';
 import { actCardExtractionPrompt, actCardSystemPrompt, actCardTranscriptEnd, actCardTranscriptStart, worldContextLabel } from './prompts';
 import { ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT } from '$lib/definitions/error-messages';
 import { actWithNumberLabel } from '$lib/definitions/common-labels';
@@ -106,9 +109,13 @@ async function generateActCard(params: ActCardParams, resolved: ResolvedActCard)
 		ensureWorldFile(params.storyId, params.storyName, params.abortSignal),
 	]);
 
+	const endingType = await getEndingType(params.actLineId);
+	const endingLabel = endingType ? getEndingLabel(endingType) : ls('common.descriptions.endings.notEnded');
+
 	const namedTemplate = template
 		.replaceAll('{{story title}}', params.storyName)
-		.replaceAll('{{act number}}', actWithNumberLabel(params.actNumber));
+		.replaceAll('{{act number}}', actWithNumberLabel(params.actNumber))
+		.replaceAll('{{ending type}}', endingLabel);
 
 	const userMessages: MessageBase[] = buildUserMessages(contents, namedTemplate, actCardExtractionPrompt(), world);
 

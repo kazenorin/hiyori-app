@@ -56,6 +56,6 @@
 
 ## Act Ending
 
-**Ending type:** [Good / Bad / Bittersweet / Alternative]
-**Resolution:** [How the story concludes, what the protagonist achieves]
-**Emotional Tone:** [The feeling this ending should evoke]
+**Ending type:** {{ending type}}
+**Resolution:** [If the story concluded, how was the conclusion? What were the outcomes?]
+**Emotional Tone:** [If the story concluded, what feelings were evoked?]
