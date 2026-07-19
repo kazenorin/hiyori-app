@@ -11,10 +11,18 @@ export const WORLD_TEMPLATE_ID_FILE = 'world-template-id';
 const CLASSIFICATION_CHAR_LIMIT = 3000;
 
 export async function readWorldTemplateId(folderName: string): Promise<string | null> {
-	const content = await fs.readTextFileIfExists(`${folderName}/${WORLD_TEMPLATE_ID_FILE}`);
-	if (!content) return null;
-	const id = content.trim().toLowerCase();
-	return WORLD_TEMPLATES.some((t) => t.id === id) ? id : null;
+	try {
+		const content = await fs.readTextFileIfExists(`${folderName}/${WORLD_TEMPLATE_ID_FILE}`);
+		if (!content) return null;
+		const id = content.trim().toLowerCase();
+		return WORLD_TEMPLATES.some((t) => t.id === id) ? id : null;
+	} catch (err) {
+		await log.warn(
+			'template-resolution',
+			`Failed to read ${WORLD_TEMPLATE_ID_FILE}: ${err instanceof Error ? err.message : String(err)}.`
+		);
+		return null;
+	}
 }
 
 export async function writeWorldTemplateId(folderName: string, templateId: string | null): Promise<void> {

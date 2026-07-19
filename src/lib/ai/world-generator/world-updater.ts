@@ -30,36 +30,36 @@ export async function updateWorldCard(params: UpdateWorldCardParams): Promise<st
 		await fs.rename(worldPath, backupPath);
 	}
 
-	const [systemPrompt, extractionPrompt, worldTemplate] = await Promise.all([
-		Promise.resolve(worldFromActSystemPrompt()),
-		Promise.resolve(worldFromActPrompt()),
-		resolveTemplateForUpdate(params.folderName, params.currentWorldContent),
-	]);
-
-	const userInstruction = extractionPrompt + '\n\n---\n\n' + worldTemplate;
-
-	const messages: MessageBase[] = [
-		{ role: 'user', content: `## ${worldContentHeader()}\n\n${params.currentWorldContent}` },
-		{ role: 'user', content: `## ${actSummaryHeader()}\n\n${params.actSummary}` },
-	];
-
-	const validTranscript = params.interviewTranscript.filter((m) => m.content);
-	if (validTranscript.length > 0) {
-		messages.push({
-			role: 'user',
-			content: `## ${interviewTranscriptHeader()}\n\n${ls('common.descriptions.interviewTranscript')}`,
-		});
-		messages.push(...validTranscript);
-	}
-
-	messages.push({ role: 'user', content: userInstruction });
-
-	const config = getMainProviderConfig();
-	if (!config?.model) {
-		throw new Error(ERR_API_KEY_AND_MODEL_NOT_CONFIGURED);
-	}
-
 	try {
+		const [systemPrompt, extractionPrompt, worldTemplate] = await Promise.all([
+			Promise.resolve(worldFromActSystemPrompt()),
+			Promise.resolve(worldFromActPrompt()),
+			resolveTemplateForUpdate(params.folderName, params.currentWorldContent),
+		]);
+
+		const userInstruction = extractionPrompt + '\n\n---\n\n' + worldTemplate;
+
+		const messages: MessageBase[] = [
+			{ role: 'user', content: `## ${worldContentHeader()}\n\n${params.currentWorldContent}` },
+			{ role: 'user', content: `## ${actSummaryHeader()}\n\n${params.actSummary}` },
+		];
+
+		const validTranscript = params.interviewTranscript.filter((m) => m.content);
+		if (validTranscript.length > 0) {
+			messages.push({
+				role: 'user',
+				content: `## ${interviewTranscriptHeader()}\n\n${ls('common.descriptions.interviewTranscript')}`,
+			});
+			messages.push(...validTranscript);
+		}
+
+		messages.push({ role: 'user', content: userInstruction });
+
+		const config = getMainProviderConfig();
+		if (!config?.model) {
+			throw new Error(ERR_API_KEY_AND_MODEL_NOT_CONFIGURED);
+		}
+
 		await log.info(LOG_TAG, 'Starting world card update');
 
 		const model = await createModel(config);
@@ -78,7 +78,11 @@ export async function updateWorldCard(params: UpdateWorldCardParams): Promise<st
 	} catch (err) {
 		await log.error(LOG_TAG, 'World card update failed, restoring backup', err);
 		if (await fs.exists(backupPath)) {
-			await fs.rename(backupPath, worldPath);
+			try {
+				await fs.rename(backupPath, worldPath);
+			} catch (restoreErr) {
+				await log.error(LOG_TAG, `Failed to restore world.md from ${backupPath}`, restoreErr);
+			}
 		}
 		throw err;
 	}
