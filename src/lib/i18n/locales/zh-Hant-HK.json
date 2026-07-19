@@ -356,7 +356,11 @@
 		"actCard": {
 			"title": "章節卡片產生器",
 			"description": "在「繼續下一章節」編寫劇情時，「章節卡片」可為系統提供背景資料，但請注意，這僅在啟用「詳細背景」的狀態下才會被使用。",
-			"notConcludedWarning": "由於目前章節線尚未結束，此時生成的章節卡片將不會被系統直接使用，僅作為您的參考資料。"
+			"noNarrativeContentInLineage": "此故事線中並無章節記載任何敘事內容。",
+			"notConcludedWarning": "由於目前故事線尚未結束，此時生成的「章節卡片」將不會被系統直接使用，僅作為您的參考資料。",
+			"selectActsHint": "請選擇要生成「章節卡片」的章節。",
+			"concluded": "章節已結束",
+			"cardExists": "已有章節卡片"
 		},
 		"characterCards": {
 			"title": "角色卡片產生器",
@@ -372,13 +376,13 @@
 		"generateCards": "生成角色卡",
 		"generatedCards": "已生成 {{n}} 張角色卡：",
 		"generatingProgress": "正在生成第 {{current}} / {{total}} 張角色卡…",
-		"canonicalNamesHint": "正規名稱在整個故事中必須保持一致。",
-		"perActLineHint": "角色卡只會按故事線生效（並非全故事線有效）。",
+		"canonicalNamesHint": "「正規名稱」是全域參數，必須在全故事線中保持一致。",
+		"perActLineHint": "只有屬同一故事線的「角色卡」會同時生效，而非全或有效。",
 		"overwriteHint": "若目前故事線已有該角色的卡，現有的角色卡將會被備份並重新生成",
 		"and": "及",
 		"character": "角色",
 		"canonicalName": "正規名稱",
-		"include": "包含",
+		"generate": "生成",
 		"summary": "摘要",
 		"remarks": "備註",
 		"rawLlmOutput": "Raw 輸出",
@@ -387,13 +391,16 @@
 		"enterNamePlaceholder": "輸入名稱",
 		"back": "返回",
 		"story": "故事：",
-		"act": "章節：",
-		"actLine": "故事線：",
+		"act": "章節",
+		"actLine": "故事線",
 		"actLineId": "故事線 ID：",
 		"concurrentGeneration": "並行生成",
-		"lineageContextHint": "角色卡將會以目前的章節內容生成。若先前章節中已有角色卡，其內容將會在生成時作參考。",
-		"fallbackNotice": "目前章節線沒有敘事內容。改為顯示第 {{number}} 章的角色卡片。",
-		"cardExists": "已有角色卡 — 將備份並重新生成"
+		"lineageContextHint": "「角色卡」將會以目前的章節內容生成。若先前章節中已有「角色卡」，其內容將會在生成時用作參考。",
+		"fallbackNotice": "目前故事線沒有敘事內容。改為處理第 {{number}} 章的「角色卡」。",
+		"cardExists": "已有角色卡 — 將備份並重新生成",
+		"cardExistsHeader": "卡片已存在",
+		"canonicalNameNotFound": "並未出現在本章",
+		"omitInSettingsHint": "你可以在「設定」中選擇不在主聊天載入角色卡片。"
 	},
 	"importWorld": {
 		"heading": "匯入世界",

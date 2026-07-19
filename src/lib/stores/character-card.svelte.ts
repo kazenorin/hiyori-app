@@ -7,7 +7,9 @@ import {
 	type GenerateProgress,
 	type CharacterCardContext,
 } from '$lib/features/character-card-generator';
+import { toCanonicalName } from '$lib/db/character-profiles';
 import { log } from '$lib/logging/logger';
+import { SvelteSet } from 'svelte/reactivity';
 
 let characters = $state<CharacterEntry[]>([]);
 let isExtracting = $state(false);
@@ -17,6 +19,7 @@ let generationError = $state<string | null>(null);
 let rawExtractionOutput = $state<string | null>(null);
 let progress = $state<GenerateProgress | null>(null);
 let results = $state<CharacterCardResult[]>([]);
+const knownCanonicalNames = new SvelteSet<string>();
 
 export function getCharacters(): CharacterEntry[] {
 	return characters;
@@ -48,6 +51,17 @@ export function getProgress(): GenerateProgress | null {
 
 export function getResults(): CharacterCardResult[] {
 	return results;
+}
+
+export function getKnownCanonicalNames(): Set<string> {
+	return knownCanonicalNames;
+}
+
+export function setKnownCanonicalNames(names: string[]): void {
+	knownCanonicalNames.clear();
+	for (const name of names.map(toCanonicalName).filter(Boolean)) {
+		knownCanonicalNames.add(name);
+	}
 }
 
 export async function extractCharacters(ctx: CharacterCardContext): Promise<void> {
@@ -99,7 +113,11 @@ export async function generateCards(ctx: CharacterCardContext, parallel: boolean
 export function updateCharacter(index: number, updates: Partial<CharacterEntry>): void {
 	if (index < 0 || index >= characters.length) return;
 	const entry = characters[index];
-	characters[index] = { ...entry, ...updates };
+	const normalized: Partial<CharacterEntry> = { ...updates };
+	if (typeof updates.canonicalName === 'string') {
+		normalized.canonicalName = toCanonicalName(updates.canonicalName);
+	}
+	characters[index] = { ...entry, ...normalized };
 }
 
 export function addManualCharacter(): void {
@@ -128,4 +146,5 @@ export function resetState(): void {
 	rawExtractionOutput = null;
 	progress = null;
 	results = [];
+	knownCanonicalNames.clear();
 }
