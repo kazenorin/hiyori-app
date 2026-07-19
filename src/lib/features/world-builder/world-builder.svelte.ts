@@ -48,6 +48,9 @@ export interface ForkInterviewContext {
 	sceneTitle: string;
 }
 
+/**
+ * Used for continuing from an existing Act to a New Act
+ */
 export interface NewActInterviewContext {
 	endingType: string;
 	actSummary: string;
@@ -70,6 +73,7 @@ let logFilePath: string | null = null;
 // Act-plot interview state
 let actPlotInterview = $state(false);
 let gameResumeInterview = $state(false);
+let isNextActContinuation = $state(false);
 let interviewActLineId: string | null = null;
 let interviewHiddenContext: MessageBase[] = [];
 
@@ -134,7 +138,7 @@ export function getInterviewActLineId(): string | null {
 	return interviewActLineId;
 }
 export function getIsNextActInterview(): boolean {
-	return actPlotInterview && !gameResumeInterview;
+	return isNextActContinuation;
 }
 
 async function loadActiveLocales(storyLocale?: string, storyId?: string, storyName?: string) {
@@ -161,6 +165,7 @@ function resetState(): void {
 	selectedTemplateId = null;
 	actPlotInterview = false;
 	gameResumeInterview = false;
+	isNextActContinuation = false;
 	interviewActLineId = null;
 	interviewHiddenContext = [];
 	interviewWorldContent = null;
@@ -216,6 +221,7 @@ export async function enterActPlotInterviewMode(params: EnterActPlotInterviewMod
 	resetState();
 	isActive = true;
 	actPlotInterview = true;
+	isNextActContinuation = !!newActContext;
 	interviewActLineId = actLineId;
 	interviewWorldContent = worldContent;
 

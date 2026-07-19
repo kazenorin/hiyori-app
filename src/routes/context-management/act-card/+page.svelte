@@ -150,6 +150,13 @@
 	function handleBack() {
 		goto(resolve('/context-management'));
 	}
+
+	function formatActLineDisplay(row: ActCardTableRow): string {
+		if (row.actLine?.name && row.actLine.name !== row.actName) {
+			return `${row.actName} — ${row.actLine.name}`;
+		}
+		return row.actName;
+	}
 </script>
 
 <svelte:head>
@@ -159,8 +166,8 @@
 <div class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6">
 	<div class="max-w-4xl mx-auto space-y-6">
 		<!-- Header -->
-		<div class="flex items-center gap-4">
-			<button class="btn btn-sm preset-tonal min-h-11 hidden md:inline-flex" onclick={handleBack}>
+		<div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+			<button class="btn btn-sm preset-tonal min-h-11 inline-flex self-start" onclick={handleBack}>
 				&larr; {t('characterCards.back')}
 			</button>
 			<h2 class="h2">{t('contextManagement.actCard.title')}</h2>
@@ -181,24 +188,26 @@
 			<!-- Lineage Table -->
 			<section class="card p-3 md:p-4 space-y-3">
 				{#if tableRows.length === 0}
-					<p class="text-sm text-surface-500">No acts with narrative content found in the lineage.</p>
+					<p class="text-sm text-surface-500">{t('contextManagement.actCard.noNarrativeContentInLineage')}</p>
 				{:else}
+					<p class="text-sm text-surface-500">{t('contextManagement.actCard.selectActsHint')}</p>
+
 					<!-- Desktop table layout -->
 					<div class="hidden md:block overflow-x-auto">
-						<div class="min-w-[560px]">
+						<div class="min-w-[600px]">
 							<div
-								class="grid grid-cols-[40px_minmax(60px,auto)_minmax(160px,1fr)_120px_120px] gap-3 text-xs font-semibold text-surface-700-300 uppercase tracking-wide border-b border-surface-200-800 pb-2"
+								class="grid grid-cols-[80px_minmax(60px,auto)_minmax(160px,1fr)_100px_100px] gap-3 text-xs font-semibold text-surface-700-300 uppercase tracking-wide border-b border-surface-200-800 pb-2"
 							>
-								<span></span>
+								<span class="text-center">{t('characterCards.generate')}</span>
 								<span>{t('characterCards.act')}</span>
 								<span>{t('characterCards.actLine')}</span>
-								<span class="text-center">Concluded</span>
-								<span class="text-center">Act Card</span>
+								<span class="text-center">{t('contextManagement.actCard.concluded')}</span>
+								<span class="text-center">{t('contextManagement.actCard.cardExists')}</span>
 							</div>
 
 							{#each tableRows as row (row.actLineId)}
 								<div
-									class="grid grid-cols-[40px_minmax(60px,auto)_minmax(160px,1fr)_120px_120px] gap-3 items-center py-2 border-b border-surface-100-900"
+									class="grid grid-cols-[80px_minmax(60px,auto)_minmax(160px,1fr)_100px_100px] gap-3 items-center py-2 border-b border-surface-100-900"
 								>
 									<span class="flex justify-center">
 										<input
@@ -209,7 +218,7 @@
 										/>
 									</span>
 									<span class="text-surface-950-50">{row.actNumber}</span>
-									<span class="text-surface-950-50">{row.actName}</span>
+									<span class="text-surface-950-50">{formatActLineDisplay(row)}</span>
 									<span class="flex justify-center">
 										{#if row.isConcluded}
 											<Icon name="check-circle" class="size-5 text-success-500" />
@@ -241,22 +250,30 @@
 											checked={selectedActLineIds.has(row.actLineId)}
 											onchange={() => toggleRow(row.actLineId)}
 										/>
-										<span class="text-sm font-semibold text-surface-950-50">Act {row.actNumber}</span>
+										<span class="text-sm font-semibold text-surface-950-50">
+											{t('common.actLabel', { n: row.actNumber })}
+										</span>
 									</div>
-									<div class="flex items-center gap-2">
-										{#if row.isConcluded}
-											<Icon name="check-circle" class="size-5 text-success-500" />
-										{:else}
-											<Icon name="circle-check" class="size-5 text-surface-400" />
-										{/if}
-										{#if row.hasActCard}
-											<Icon name="check-circle" class="size-5 text-success-500" />
-										{:else}
-											<Icon name="x-circle" class="size-5 text-error-500" />
-										{/if}
+									<div class="flex flex-col items-end gap-1 text-xs text-surface-700-300">
+										<div class="flex items-center gap-1.5">
+											<span>{t('contextManagement.actCard.concluded')}</span>
+											{#if row.isConcluded}
+												<Icon name="check-circle" class="size-5 text-success-500" />
+											{:else}
+												<Icon name="circle-check" class="size-5 text-surface-400" />
+											{/if}
+										</div>
+										<div class="flex items-center gap-1.5">
+											<span>{t('contextManagement.actCard.cardExists')}</span>
+											{#if row.hasActCard}
+												<Icon name="check-circle" class="size-5 text-success-500" />
+											{:else}
+												<Icon name="x-circle" class="size-5 text-error-500" />
+											{/if}
+										</div>
 									</div>
 								</div>
-								<p class="text-sm text-surface-700-300">{row.actName}</p>
+								<p class="text-sm text-surface-700-300">{formatActLineDisplay(row)}</p>
 							</div>
 						{/each}
 					</div>

@@ -356,7 +356,11 @@
 		"actCard": {
 			"title": "Act Card Generator",
 			"description": "Optional additional detailed context for continuing from a concluded Act Line to a new act.",
-			"notConcludedWarning": "Act cards generated before an act is concluded will not be used by the system. The generated card will be for your reference only."
+			"noNarrativeContentInLineage": "No acts with narrative content found in the lineage.",
+			"notConcludedWarning": "Act cards generated before an act is concluded will not be used by the system. The generated card will be for your reference only.",
+			"selectActsHint": "Choose which acts to generate Act Cards for.",
+			"concluded": "Concluded",
+			"cardExists": "Card Exists"
 		},
 		"characterCards": {
 			"title": "Character Card Generator",
@@ -378,7 +382,7 @@
 		"and": "and",
 		"character": "Character",
 		"canonicalName": "Canonical Name",
-		"include": "Include",
+		"generate": "Generate",
 		"summary": "Summary",
 		"remarks": "Remarks",
 		"rawLlmOutput": "Raw LLM Output",
@@ -387,13 +391,16 @@
 		"enterNamePlaceholder": "Enter name",
 		"back": "Back",
 		"story": "Story:",
-		"act": "Act:",
-		"actLine": "Act Line:",
+		"act": "Act",
+		"actLine": "Act Line",
 		"actLineId": "Act Line ID:",
 		"concurrentGeneration": "Concurrent Generation",
 		"lineageContextHint": "Cards are generated from the current act's content. If cards exist for previous acts in the lineage, their content contributes to generation context.",
 		"fallbackNotice": "No narrative content in the current act line. Showing character cards for Act {{number}} instead.",
-		"cardExists": "Card exists — will be backed up and regenerated"
+		"cardExists": "Card exists — will be backed up and regenerated",
+		"cardExistsHeader": "Card Exists",
+		"canonicalNameNotFound": "Not found in current act line",
+		"omitInSettingsHint": "You can omit the loading of character cards in Settings."
 	},
 	"importWorld": {
 		"heading": "Import World",

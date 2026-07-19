@@ -13,6 +13,8 @@
 		getRawExtractionOutput,
 		getProgress,
 		getResults,
+		getKnownCanonicalNames,
+		setKnownCanonicalNames,
 		extractCharacters,
 		generateCards,
 		updateCharacter,
@@ -20,9 +22,9 @@
 		removeCharacter,
 		resetState,
 	} from '$lib/stores/character-card.svelte';
-	import { settings, updateSettings } from '$lib/stores/settings.svelte';
 	import { getExistingCardNamesForActLine } from '$lib/features/character-card-generator';
 	import { getActLine, getMessagesForLine } from '$lib/db/act-lines';
+	import { getLatestProfilesByActLine } from '$lib/db/character-profiles';
 	import { traceActLineChain } from '$lib/db/acts';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
@@ -108,6 +110,15 @@
 			const ctx = await buildContext();
 			if (cancelled || extractionId !== currentExtractionId) return;
 			if (ctx) {
+				try {
+					const profiles = await getLatestProfilesByActLine(ctx.actLineId);
+					if (cancelled || extractionId !== currentExtractionId) return;
+					setKnownCanonicalNames(profiles.map((p) => p.canonicalName));
+				} catch (err) {
+					await log.error('context-management', 'Failed to load character profiles for act line', err);
+					setKnownCanonicalNames([]);
+				}
+
 				await extractCharacters(ctx);
 				try {
 					const names = await getExistingCardNamesForActLine(ctx);
@@ -148,6 +159,12 @@
 	function handleRemoveRow(index: number) {
 		removeCharacter(index);
 	}
+
+	function isUnknownCanonicalName(canonicalName: string): boolean {
+		const normalized = canonicalName.trim();
+		if (!normalized) return false;
+		return !getKnownCanonicalNames().has(normalized);
+	}
 </script>
 
 <svelte:head>
@@ -157,8 +174,8 @@
 <div class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6">
 	<div class="max-w-4xl mx-auto space-y-6">
 		<!-- Header -->
-		<div class="flex items-center gap-4">
-			<button class="btn btn-sm preset-tonal min-h-11 hidden md:inline-flex" onclick={handleBack}>
+		<div class="flex flex-col md:flex-row md:items-center gap-3 md:gap-4">
+			<button class="btn btn-sm preset-tonal min-h-11 inline-flex self-start" onclick={handleBack}>
 				&larr; {t('characterCards.back')}
 			</button>
 			<h2 class="h2">{t('characterCards.heading')}</h2>
@@ -186,20 +203,6 @@
 				<span class="font-semibold text-surface-700-300">{t('characterCards.actLineId')}</span>
 				<span class="text-surface-500 text-xs font-mono">{resolvedCtx?.actLine.id ?? '—'}</span>
 			</div>
-		</section>
-
-		<!-- Ignore in Main Chat Setting -->
-		<section class="card p-4 space-y-2 border border-secondary-500-300">
-			<label class="flex items-center gap-2">
-				<input
-					type="checkbox"
-					class="checkbox"
-					checked={settings.ignoreCharacterCardsInChat}
-					onchange={(e) => updateSettings({ ignoreCharacterCardsInChat: e.currentTarget.checked })}
-				/>
-				<h4 class="font-semibold text-secondary-700-300">{t('settings.ignoreCharacterCardsInChat')}</h4>
-			</label>
-			<p class="text-xs text-surface-500">{t('settings.ignoreCharacterCardsInChatDescription')}</p>
 		</section>
 
 		<!-- Extraction Loading -->
@@ -282,9 +285,12 @@
 									<Icon name="check-circle" class="size-4 text-success-500 shrink-0" aria-label={t('characterCards.cardExists')} />
 								{/if}
 							</div>
+							{#if isUnknownCanonicalName(char.canonicalName)}
+								<p class="text-xs text-error-700-300">{t('characterCards.canonicalNameNotFound')}</p>
+							{/if}
 
 							<div class="flex items-center justify-between">
-								<span class="text-xs font-semibold text-surface-700-300 uppercase tracking-wide">{t('characterCards.include')}</span>
+								<span class="text-xs font-semibold text-surface-700-300 uppercase tracking-wide">{t('characterCards.generate')}</span>
 								{#if char.isManual}
 									<span class="text-xs text-surface-500">{t('characterCards.manual')}</span>
 								{:else}
@@ -296,6 +302,17 @@
 									/>
 								{/if}
 							</div>
+
+							<div class="flex items-center justify-between">
+								<span class="text-xs font-semibold text-surface-700-300 uppercase tracking-wide"
+									>{t('characterCards.cardExistsHeader')}</span
+								>
+								{#if existingCardNames.has(char.canonicalName)}
+									<Icon name="check-circle" class="size-4 text-success-500 shrink-0" aria-label={t('characterCards.cardExists')} />
+								{:else}
+									<span class="text-xs text-surface-500">—</span>
+								{/if}
+							</div>
 						</div>
 					{/each}
 					<button class="btn btn-sm preset-tonal w-full min-h-11" onclick={handleAddRow}>{t('characterCards.addRow')}</button>
@@ -303,20 +320,21 @@
 
 				<!-- Desktop table layout -->
 				<div class="hidden md:block overflow-x-auto">
-					<div class="min-w-[600px]">
+					<div class="min-w-[760px]">
 						<div
-							class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(100px,1fr)_60px_36px] gap-3 text-xs font-semibold text-surface-700-300 uppercase tracking-wide border-b border-surface-200-800 pb-2"
+							class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(140px,1.5fr)_80px_80px_36px] gap-3 text-xs font-semibold text-surface-700-300 uppercase tracking-wide border-b border-surface-200-800 pb-2"
 						>
 							<span>{t('characterCards.character')}</span>
 							<span>{t('characterCards.summary')}</span>
 							<span>{t('characterCards.canonicalName')}</span>
-							<span class="text-center">{t('characterCards.include')}</span>
+							<span class="text-center">{t('characterCards.generate')}</span>
+							<span class="text-center">{t('characterCards.cardExistsHeader')}</span>
 							<span></span>
 						</div>
 
 						{#each getCharacters() as char, i (i)}
 							<div
-								class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(100px,1fr)_60px_36px] gap-3 items-center py-2 border-b border-surface-100-900"
+								class="grid grid-cols-[minmax(120px,1.5fr)_minmax(160px,2fr)_minmax(140px,1.5fr)_80px_80px_36px] gap-3 items-start py-2 border-b border-surface-100-900"
 							>
 								<span class="text-surface-950-50">
 									{#if char.isManual}
@@ -344,15 +362,20 @@
 										{char.importance}
 									{/if}
 								</span>
-								<span class="flex items-center gap-1.5">
-									<input
-										type="text"
-										class="input text-sm"
-										value={char.canonicalName}
-										oninput={(e) => updateCanonicalName(i, e.currentTarget.value)}
-									/>
-									{#if existingCardNames.has(char.canonicalName)}
-										<Icon name="check-circle" class="size-4 text-success-500 shrink-0" aria-label={t('characterCards.cardExists')} />
+								<span class="flex flex-col gap-1">
+									<span class="flex items-center gap-1.5">
+										<input
+											type="text"
+											class="input text-sm flex-1"
+											value={char.canonicalName}
+											oninput={(e) => updateCanonicalName(i, e.currentTarget.value)}
+										/>
+										{#if existingCardNames.has(char.canonicalName)}
+											<Icon name="check-circle" class="size-4 text-success-500 shrink-0" aria-label={t('characterCards.cardExists')} />
+										{/if}
+									</span>
+									{#if isUnknownCanonicalName(char.canonicalName)}
+										<p class="text-xs text-error-700-300">{t('characterCards.canonicalNameNotFound')}</p>
 									{/if}
 								</span>
 								<span class="text-center">
@@ -365,6 +388,13 @@
 											checked={char.include}
 											onchange={(e) => updateInclude(i, e.currentTarget.checked)}
 										/>
+									{/if}
+								</span>
+								<span class="text-center">
+									{#if existingCardNames.has(char.canonicalName)}
+										<Icon name="check-circle" class="size-4 text-success-500 shrink-0" aria-label={t('characterCards.cardExists')} />
+									{:else}
+										<span class="text-xs text-surface-500">—</span>
 									{/if}
 								</span>
 								<span>
@@ -390,6 +420,7 @@
 					<li>{t('characterCards.perActLineHint')}</li>
 					<li>{t('characterCards.lineageContextHint')}</li>
 					<li>{t('characterCards.overwriteHint')}</li>
+					<li>{t('characterCards.omitInSettingsHint')}</li>
 				</ul>
 			</section>
 		{/if}

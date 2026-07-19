@@ -104,7 +104,7 @@
 	let wasChatStreaming = $state(false);
 	// eslint-disable-next-line svelte/prefer-writable-derived -- wasWbStreaming depends on its own previous value (stateful observer)
 	let wasWbStreaming = $state(false);
-	let rightPanelExpanded = $state(false);
+	let rightPanelExpanded = $state(true);
 	let latestDecisions = $derived(getLatestDecisions());
 	let latestActivePlotThreads = $derived(getLatestActivePlotThreads());
 	let latestDecisionContext = $derived(getLatestDecisionContext());
@@ -461,27 +461,13 @@
 					chatContainer={wbChatContainer}
 				/>
 			</div>
-
-			<!-- Mobile Input Sheet -->
-			<div class="md:hidden {wbHideMobileInput ? 'hidden' : ''}">
-				<MobileInputSheet
-					bind:value={input}
-					isStreaming={getIsWorldBuilderStreaming()}
-					isDisabled={getIsWorldBuilderStreaming() || (getReadyToCreate() && !getActPlotInterview())}
-					placeholder={t('chat.worldBuilderPlaceholder')}
-					showDirectorNotes={false}
-					onSubmit={handleSubmit}
-					onStop={stopWorldBuilderStreaming}
-					onKeydown={handleKeydown}
-				/>
-			</div>
 		</div>
 
-		<!-- Right-side input panel (tablet+ only) -->
+		<!-- Right-side input panel (accordion bar at XS/SM, full-height at lg+) -->
 		<aside
-			class="hidden md:flex lg:w-80 border-t lg:border-t-0 lg:border-l border-surface-200-800 flex-col bg-surface-50-950 shrink-0 {rightPanelExpanded
+			class="flex lg:w-80 border-t lg:border-t-0 lg:border-l border-surface-200-800 flex-col bg-surface-50-950 shrink-0 {rightPanelExpanded
 				? 'max-h-none'
-				: 'lg:max-h-none max-h-10'}"
+				: 'lg:max-h-none max-h-[40px]'}"
 		>
 			<!-- Mobile toggle bar -->
 			<button
