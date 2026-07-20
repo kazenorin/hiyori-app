@@ -587,13 +587,12 @@ tools:
       currentPhase: 'The current narrative phase the story is in.'
       nextPhase: 'The next narrative phase to advance to.'
       justification: >
-        You must justify why you wish to advance phase.
-        List out which goals of the current Act ({{actWithNumber}}) were achieved.
-        Also list goals that were not achieved.
-        Justify each item using a single sentence.
+        To advance the narrative phase, please provide the following in order:
+        1. Reason for Advancing: Explain why you want to move to the next phase.
+        2. Current Goals: List the three main goals of the current narrative phase.
+        3. Progress Updates: Based on the events in {{actWithNumber}}, summarize the progress of each goal in a single sentence.
       goalCompletionScore: >
-        Using a number from 0-10, rate goal completion progress with a score.
-        `0` means no progress at all, `10` means fully completed.
+        Rate the progress of each goal on a scale of 0 to 10, where 0 means no progress at all and 10 means fully completed.
     messages:
       alreadyAdvanced: 'Phase has already been advanced this scene. It will take effect next turn.'
       success: 'Phase advanced from {{current}} to {{next}}. Takes effect next turn.'
