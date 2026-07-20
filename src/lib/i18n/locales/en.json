@@ -92,6 +92,8 @@
 		"phraseHighlightingDescription": "Automatically extract and highlight key phrases in narrative text. Requires Minor Task Agent.",
 		"ignoreCharacterCardsInChat": "Ignore character cards in main chat",
 		"ignoreCharacterCardsInChatDescription": "When enabled, character cards will not be loaded as context in the main chat pipeline. They will still be used by Act Plot and Plot Planner when detailed context is enabled.",
+		"phaseAdvancementThreshold": "Phase advancement threshold",
+		"phaseAdvancementThresholdDescription": "The minimum goal-completion score the Writer must self-assess before advancing to the next narrative phase. Applies to Event-based plot planning only. Weaker non-reasoning models may advance the phase prematurely without thinking, rushing through the story. When enabled, the Writer must justify and rate its readiness to advance. Stronger models rarely advance prematurely and can disable this to save a few tokens. Default: 5, set to 0 to disable.",
 		"directorMode": "Director Mode",
 		"directorModeDescription": "Add persistent notes that can override the story’s planned direction. Director Notes strongly influence the plot and may trigger cascading cause-and-effect changes depending on their content. Use them carefully.",
 		"pipelineRoles": "Pipeline Roles",
