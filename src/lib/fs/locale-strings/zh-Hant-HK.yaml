@@ -563,19 +563,33 @@ tools:
       actNotInLineage: '第 {{actNumber}} 章不在當前敘事路線的譜系中。'
   advancePhase:
     description: >
-      將故事推進至下一個敘事階段 (例如: {{introduction}} → {{risingAction}} → {{climax}} → {{fallingAction}} → {{resolution}}) 。
+      若你認為故事的目前狀態已滿足現階段的目標，可調用此工具將故事推進至下一個敘事階段，階段的順序如下:
+      1. {{introduction}}
+      2. {{risingAction}}
+      3. {{climax}}
+      4. {{fallingAction}}
+      5. {{resolution}}
+
       你必須同時指定故事目前所處的階段以及要推進至的下一個階段。
       兩者必須與實際故事狀態相符——若不相符，工具將回傳錯誤訊息並顯示實際目前階段，且不會推進階段。
       此動作標誌著故事弧線的重大轉折，將於下一回合生效。
       每個場景只能使用一次。故事已達結局階段後無法再使用。
-      此工具必須在推理期間呼叫，且必須在任何敘事輸出撰寫之前。若已撰寫任何輸出，請勿呼叫此工具。
+      此工具必須在推理期間調用，且必須在任何敘事輸出撰寫之前。若已撰寫任何輸出，請勿調用此工具。
     parameters:
       currentPhase: '故事目前所處的敘事階段。'
       nextPhase: '要推進至的下一個敘事階段。'
+      justification: >
+        你必須說明為何想推進階段。
+        列出目前章節 ({{actWithNumber}}) 中哪些目標已達成、同時列出未達成的目標。
+        每個目標項目請以單一句子說明理由。
+      goalCompletionScore: >
+        使用 0-10 的數字為目標完成進度評分。
+        `0` 表示毫無進展，`10` 表示全部完成。
     messages:
       alreadyAdvanced: '此場景已推進過階段，將於下一回合生效。'
       success: '階段已從 {{current}} 推進至 {{next}}，將於下一回合生效。'
       terminalPhase: '無法再推進——故事已達結局階段。'
+      goalCompletionTooLow: '此章節尚未準備好推進階段 (目標完成度評分 {{score}})。階段未推進。'
       phaseMismatch:
         current: '階段不符: 故事目前處於 {{actual}}，而非 {{provided}}。階段未推進。'
         next: '階段不符: 故事目前處於 {{actual}}，下一個階段為 {{expected}}，而非 {{provided}}。階段未推進。'

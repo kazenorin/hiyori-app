@@ -571,7 +571,13 @@ tools:
       actNotInLineage: 'Act {{actNumber}} is not in the lineage of the current narrative line.'
   advancePhase:
     description: >
-      Advance the story to the next narrative phase (e.g., {{introduction}} → {{risingAction}} → {{climax}} → {{fallingAction}} → {{resolution}}).
+      If you believe the story's current state has satisfied the current phase's goals, you may call this tool to advance the story to the next narrative phase. The phase order is as follows:
+      1. {{introduction}}
+      2. {{risingAction}}
+      3. {{climax}}
+      4. {{fallingAction}}
+      5. {{resolution}}
+
       You must specify both the current phase the story is in and the next phase to advance to.
       Both must match the actual story state — if they don't, the tool will return an error with the actual current phase and the phase will not change.
       This signals a major shift in the story's arc. Takes effect starting next turn.
@@ -580,10 +586,19 @@ tools:
     parameters:
       currentPhase: 'The current narrative phase the story is in.'
       nextPhase: 'The next narrative phase to advance to.'
+      justification: >
+        You must justify why you wish to advance phase.
+        List out which goals of the current Act ({{actWithNumber}}) were achieved.
+        Also list goals that were not achieved.
+        Justify each item using a single sentence.
+      goalCompletionScore: >
+        Using a number from 0-10, rate goal completion progress with a score.
+        `0` means no progress at all, `10` means fully completed.
     messages:
       alreadyAdvanced: 'Phase has already been advanced this scene. It will take effect next turn.'
       success: 'Phase advanced from {{current}} to {{next}}. Takes effect next turn.'
       terminalPhase: 'Cannot advance further — the story is already at the resolution phase.'
+      goalCompletionTooLow: 'The act is not ready for advancement yet (goal completion score {{score}}). The phase has not been advanced.'
       phaseMismatch:
         current: 'Phase mismatch: the story is currently in {{actual}}, not {{provided}}. The phase has not been advanced.'
         next: 'Phase mismatch: the story is currently in {{actual}} and the next phase is {{expected}}, not {{provided}}. The phase has not been advanced.'

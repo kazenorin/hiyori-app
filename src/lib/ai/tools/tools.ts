@@ -81,7 +81,7 @@ export async function buildTools(storyId: string, actLine: ActLineContext, assis
 	const ended = await isActLineEnded(actLine.id);
 
 	if (allowAdvancePhaseTools(actLine.plotMode, currentPhase)) {
-		Object.assign(tools, buildAdvancePhaseTools(actLine.id, currentPhase, assistant));
+		Object.assign(tools, buildAdvancePhaseTools(actLine.id, currentPhase, act.actNumber, assistant));
 	}
 
 	if (allowEndActTools(ended)) {
