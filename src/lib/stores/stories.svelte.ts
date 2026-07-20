@@ -205,6 +205,27 @@ async function determineMainLineNameForExistingAct(targetActId: string, mainLine
 	return mainsCount > 0 ? `${mainLineName} (${mainsCount + 1})` : mainLineName;
 }
 
+async function determineActLineName(act: dbActs.Act, isMainLine: boolean) {
+	return isMainLine ? mainLineNameLabel() : await determineMainLineNameForExistingAct(act.id, mainLineNameLabel());
+}
+
+async function buildActLineDirectory(
+	storyId: string,
+	storyName: string,
+	actNumber: number,
+	actLineId: string,
+	lineName: string,
+	isMainLine: boolean
+) {
+	try {
+		const storyFolder = await resolveStoryFolder(storyId, storyName);
+		const lineDir = buildLineDir(storyFolder, actNumber, isMainLine, actLineId, buildLineSubdirSuffix(lineName));
+		await fs.mkdir(lineDir);
+	} catch (err) {
+		await log.error('act-line-continuation', 'Failed to pre-create forked line folder', err);
+	}
+}
+
 export async function createActLineContinuation(
 	fromAct: dbActs.Act,
 	fromActLine: dbActLines.ActLineMeta,
@@ -214,9 +235,12 @@ export async function createActLineContinuation(
 	const toAct = await dbActs.getActByActNumber(story.id, toActNumber);
 	let result: { act: dbActs.Act; actLine: dbActLines.ActLineMeta };
 	if (toAct) {
-		const lineName = await determineMainLineNameForExistingAct(toAct.id, mainLineNameLabel());
-		const actLine = await createActLine(toAct.id, lineName, fromActLine.plotMode, true);
+		const existingMainLine = await dbActLines.getMainLineForAct(toAct.id);
+		const isMainLine = !existingMainLine;
+		const lineName = await determineActLineName(toAct, isMainLine);
+		const actLine = await createActLine(toAct.id, lineName, fromActLine.plotMode, isMainLine);
 		await inheritProfilesFromActLine(fromActLine.id, actLine.id);
+		await buildActLineDirectory(story.id, story.name, toAct.actNumber, actLine.id, lineName, isMainLine);
 		result = { act: toAct, actLine };
 	} else {
 		const actName = actWithNumberLabel(toActNumber);
