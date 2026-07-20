@@ -27,19 +27,20 @@ import { runNarrativeFilling } from './narrative-filler';
 import { generateWorldFromCards } from '$lib/ai/world-generator';
 import { loadLocaleStrings } from '$lib/localization';
 import {
-	importWorldUnnamedCharacter,
-	importWorldCompleteWithInterview,
+	characterCardCoreIdentityLabel,
 	importWorldComplete,
 	importWorldCompletedSuccessfully,
+	importWorldCompleteWithInterview,
 	importWorldFailed,
-	importWorldProcessingAct,
-	importWorldFillingNarrativeVariables,
 	importWorldFillingNarrativeVariable,
-	characterCardCoreIdentityLabel,
+	importWorldFillingNarrativeVariables,
+	importWorldProcessingAct,
+	importWorldUnnamedCharacter,
 } from '$lib/definitions/feature-prompts';
 import { nameLabel } from '$lib/definitions/common-labels';
 import { type OutputDescriptor, parseContent } from '$lib/utils/chat-stream-parser';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
+import { WORLD_MD } from '$lib/ai/world-generator/constants';
 
 // === Progress Callback Type ===
 
@@ -92,7 +93,7 @@ export async function prepareImport(formData: ImportFormData, onProgress: Progre
 
 		if (formData.worldFile) {
 			worldContent = await formData.worldFile.text();
-			const worldPath = `${storyFolder}/world.md`;
+			const worldPath = `${storyFolder}/${WORLD_MD}`;
 			await fs.writeTextFileEnsuringDir(worldPath, worldContent);
 			log(`World file saved: ${formData.worldFile.name}`);
 		}

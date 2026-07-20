@@ -20,6 +20,7 @@ import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, getLineDir, res
 import { type ActPlotPhase } from '$lib/ai/act-plot';
 import type { PlotMode } from '$lib/ai/narrative-types';
 import { actWithNumberLabel, mainLineNameLabel } from '$lib/definitions/common-labels';
+import { WORLD_MD } from '$lib/ai/world-generator/constants';
 
 let stories = $state<dbStories.Story[]>([]);
 let acts = $state<dbActs.Act[]>([]);
@@ -546,7 +547,7 @@ export async function createStoryFromWorldBuilder(
 	// Write world.md to story folder before selectStory triggers ensureWorldFile
 	const effectiveName = deriveStoryName(story.name, story.id);
 	const folderName = await resolveStoryFolder(story.id, effectiveName);
-	const worldPath = `${folderName}/world.md`;
+	const worldPath = `${folderName}/${WORLD_MD}`;
 	await fs.writeTextFile(worldPath, worldContent);
 	await writeWorldTemplateId(folderName, templateId);
 

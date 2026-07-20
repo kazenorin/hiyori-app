@@ -9,17 +9,18 @@ import { fs } from '$lib/fs/file-system';
 import { resolveTemplateForGeneration } from './template-resolution';
 import { actDescriptionHeader, characterHeader } from '$lib/definitions/common-headers';
 import {
-	worldFromChatSystemPrompt,
-	worldFromChatPrompt,
-	worldFromCardsSystemPrompt,
-	worldFromCardsPrompt,
 	importWorldUnnamedCharacter,
+	worldFromCardsPrompt,
+	worldFromCardsSystemPrompt,
+	worldFromChatPrompt,
+	worldFromChatSystemPrompt,
 } from '$lib/definitions/feature-prompts';
 import {
 	ERR_API_KEY_AND_MODEL_NOT_CONFIGURED,
 	ERR_NO_AT_LEAST_ONE_CONTENT,
 	ERR_NO_MESSAGES_FOR_WORLD,
 } from '$lib/definitions/error-messages';
+import { WORLD_MD } from '$lib/ai/world-generator/constants';
 
 /**
  * Trace back through the act line chain to collect the full message history.
@@ -180,7 +181,7 @@ export async function generateWorldFromCards(
 
 	const generatedContent = contentParts.join('');
 
-	const worldPath = `${folderName}/world.md`;
+	const worldPath = `${folderName}/${WORLD_MD}`;
 	await fs.writeTextFile(worldPath, generatedContent);
 
 	return generatedContent;

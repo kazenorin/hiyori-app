@@ -1,15 +1,15 @@
 import {
-	readTextFile as tauriRead,
-	readFile as tauriReadBinary,
-	writeTextFile as tauriWrite,
-	writeFile as tauriWriteBinary,
-	mkdir as tauriMkdir,
+	BaseDirectory,
+	copyFile as tauriCopy,
 	exists as tauriExists,
+	mkdir as tauriMkdir,
+	readDir as tauriReadDir,
+	readFile as tauriReadBinary,
+	readTextFile as tauriRead,
 	remove as tauriRemove,
 	rename as tauriRename,
-	copyFile as tauriCopy,
-	readDir as tauriReadDir,
-	BaseDirectory,
+	writeFile as tauriWriteBinary,
+	writeTextFile as tauriWrite,
 } from '@tauri-apps/plugin-fs';
 
 import type { DirEntry, FileSystem } from './file-system';
@@ -17,20 +17,39 @@ import { FileSystemError } from './file-system';
 
 const BD = BaseDirectory.AppData;
 
+function isAlreadyExistMessage(msg: string) {
+	const m = msg.toLowerCase();
+	return m.includes('already exists');
+}
+
+function isPermissionDeniedMessage(msg: string) {
+	const m = msg.toLowerCase();
+	return m.includes('permission') || m.includes('denied') || m.includes('not allowed');
+}
+
+function isNotFoundMessage(message: string): boolean {
+	const msg = message.toLowerCase();
+	return msg.includes('not found') || msg.includes('no such file') || msg.includes('does not exist') || msg.includes('cannot find');
+}
+
+function resolveErrorMessage(error: unknown): string {
+	if (error instanceof Error) return error.message;
+	if (typeof error === 'string') return error;
+	return String(error);
+}
+
 function classifyTauriError(error: unknown): FileSystemError {
-	if (error instanceof Error) {
-		const msg = error.message.toLowerCase();
-		if (msg.includes('not found') || msg.includes('no such file') || msg.includes('does not exist')) {
-			return new FileSystemError(error.message, 'not_found', error);
-		}
-		if (msg.includes('already exists')) {
-			return new FileSystemError(error.message, 'already_exists', error);
-		}
-		if (msg.includes('permission') || msg.includes('denied') || msg.includes('not allowed')) {
-			return new FileSystemError(error.message, 'permission_denied', error);
-		}
+	const msg = resolveErrorMessage(error);
+	if (isNotFoundMessage(msg)) {
+		return new FileSystemError(msg, 'not_found', error);
 	}
-	return new FileSystemError(error instanceof Error ? error.message : String(error), 'unknown', error);
+	if (isAlreadyExistMessage(msg)) {
+		return new FileSystemError(msg, 'already_exists', error);
+	}
+	if (isPermissionDeniedMessage(msg)) {
+		return new FileSystemError(msg, 'permission_denied', error);
+	}
+	return new FileSystemError(msg, 'unknown', error);
 }
 
 export class TauriFileSystem implements FileSystem {
@@ -46,11 +65,8 @@ export class TauriFileSystem implements FileSystem {
 		try {
 			return await tauriRead(path, { baseDir: BD });
 		} catch (error) {
-			if (error instanceof Error) {
-				const msg = error.message.toLowerCase();
-				if (msg.includes('not found') || msg.includes('no such file') || msg.includes('does not exist') || msg.includes('cannot find')) {
-					return undefined;
-				}
+			if (isNotFoundMessage(resolveErrorMessage(error))) {
+				return undefined;
 			}
 			throw classifyTauriError(error);
 		}
