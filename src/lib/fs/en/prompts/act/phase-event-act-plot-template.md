@@ -1,5 +1,7 @@
 # Act Plot
 
+This document is a guide for narration. The actual story will emerge through player choices and game master improvisation within this framework.
+
 ## Story Structure
 
 - **Target Scenes:** [35-50 scenes recommended]
@@ -8,13 +10,13 @@
 
 ### Act Phases
 
-The story progresses from introducing the world and conflict, through rising tensions and escalating challenges, to a decisive climax, followed by the consequences of that climax in the falling action, and finally a sense of closure in the resolution.
+The narrative progresses through five distinct phases. Based on the overall target scene count above, allocate and estimate the number of scenes for each phase to establish clear pacing bounds:
 
-1. **Introduction phase:** Establish the setting, main characters, and the central conflict while hinting at what is at stake.
-2. **Rising-action phase:** Introduce escalating challenges, deepen tensions, and reveal complications that push the characters toward a major turning point.
-3. **Climax phase:** Present the story’s most intense moment, where the main conflict reaches a decisive confrontation or critical choice.
-4. **Falling-action phase:** Show the immediate consequences of the climax as tension begins to settle and the aftermath unfolds.
-5. **Resolution phase:** Tie up remaining loose ends, clarify the final state of the world and characters, and provide a sense of closure.
+1. **Introduction phase [Estimated: X scenes]:** [Establish the setting, main characters, and the central conflict while hinting at what is at stake.]
+2. **Rising-action phase [Estimated: X scenes]:** [Introduce escalating challenges, deepen tensions, and reveal complications that push the characters toward a major turning point.]
+3. **Climax phase [Estimated: X scenes]:** [Present the story’s most intense moment, where the main conflict reaches a decisive confrontation or critical choice.]
+4. **Falling-action phase [Estimated: X scenes]:** [Show the immediate consequences of the climax as tension begins to settle and the aftermath unfolds.]
+5. **Resolution phase [Estimated: X scenes]:** [Tie up remaining loose ends, clarify the final state of the world and characters, and provide a sense of closure.]
 
 ## Premise
 
@@ -56,8 +58,6 @@ The story progresses from introducing the world and conflict, through rising ten
 **Resolution:** [Unique outcome path - neither fully good nor bad]
 **Emotional Tone:** [Distinctive feeling]
 
-[Ensure at least one good and one bad ending from the world's perspective]
-
 ## Storytelling Style
 
 - **Narrative Voice:** [First person / Second person / Third person - recommend second person for interactive fiction]
@@ -71,7 +71,3 @@ The story progresses from introducing the world and conflict, through rising ten
 - **Dialogue Style:** [Naturalistic / Stylized / Formal]
 
 [Other notes that does not fit the above but important to the plot]
-
----
-
-[Note: This document is a guide for narration. The actual story will emerge through player choices and game master improvisation within this framework.]
