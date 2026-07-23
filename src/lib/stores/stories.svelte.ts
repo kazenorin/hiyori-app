@@ -319,7 +319,11 @@ export async function deleteStory(id: string, removeFolder: boolean = false): Pr
 	}
 }
 
-export async function deleteAct(id: string): Promise<void> {
+export async function deleteAct(id: string, removeFolder: boolean): Promise<void> {
+	const act = acts.find((a) => a.id === id);
+	const storyId = activeStoryId;
+	const storyName = activeStoryName;
+
 	await dbActs.deleteAct(id);
 	acts = acts.filter((a) => a.id !== id);
 	if (activeActId === id) {
@@ -327,6 +331,16 @@ export async function deleteAct(id: string): Promise<void> {
 		activeActLineId = null;
 		actLines = [];
 		await dbAppState.setActiveAct(null);
+	}
+
+	if (removeFolder && act && storyId && storyName) {
+		try {
+			const storyFolder = await resolveStoryFolder(storyId, storyName);
+			const actDir = `${storyFolder}/act-${act.actNumber}`;
+			await fs.remove(actDir);
+		} catch (err) {
+			await log.error('delete-act', 'Failed to remove act folder', err);
+		}
 	}
 }
 

@@ -236,7 +236,7 @@
 				await deleteStory(id, removeFolder);
 				clearMessages();
 			} else if (type === 'act') {
-				await deleteAct(id);
+				await deleteAct(id, removeFolder);
 				clearMessages();
 			} else if (type === 'line') {
 				await deleteActLine(id, removeFolder);
@@ -342,7 +342,7 @@
 		</p>
 	{/snippet}
 	{#snippet footer()}
-		{#if confirmDelete?.type === 'story' || confirmDelete?.type === 'line'}
+		{#if confirmDelete?.type === 'story' || confirmDelete?.type === 'act' || confirmDelete?.type === 'line'}
 			<div class="flex flex-col gap-2">
 				<button
 					class="w-full px-4 py-2 rounded-lg bg-error-500 hover:bg-error-600 text-white text-sm font-medium transition-colors"
