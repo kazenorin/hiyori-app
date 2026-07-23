@@ -24,6 +24,7 @@
 				"A5_verified": "已驗證提供者 — 此提供者與模型已知可正常運作。",
 				"A5_unverified": "此提供者可能可以運作，但所選模型不在已驗證清單中。",
 				"A6": "大多數 API 提供者需要 HTTPS。透過公用主機使用 HTTP 會在傳輸過程中暴露您的 API 金鑰。",
+				"A7": "模型「{{model}}」屬於小型模型，對複雜任務而言可能過於薄弱，可能導致不可預測的結果。建議僅將其指派至「小型作業用 Agent」角色。",
 				"B1": "integrate.api.nvidia.com 不支援 CORS，無法從網頁應用程式直接連線。請啟用 Wisp 代理（透過 Wisp 代理繞過 CORS）。",
 				"B2": "ollama.com 不支援 CORS，無法從網頁應用程式直接連線。請啟用 Wisp 代理（透過 Wisp 代理繞過 CORS）。",
 				"B2b": "ollama.com 不支援 CORS，無法從網頁應用程式直接連線。請啟用 Wisp 代理（透過 Wisp 代理繞過 CORS）。",

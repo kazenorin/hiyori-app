@@ -23,6 +23,7 @@ export type FieldCondition = {
 	startsWithAny?: string[];
 	notStartsWithAny?: string[];
 	endsWithAny?: string[];
+	containsWordAnyIgnoreCase?: string[];
 	hostEquals?: string;
 	hasNonRootPath?: true;
 	hostNotLocalNotLan?: true;
@@ -61,6 +62,10 @@ export function matchField(value: string, cond: FieldCondition, context: { baseU
 		return false;
 	}
 
+	if (cond.containsWordAnyIgnoreCase !== undefined && !matchesContainsWordAnyIgnoreCase(value, cond.containsWordAnyIgnoreCase)) {
+		return false;
+	}
+
 	if (cond.hostEquals !== undefined && !matchesHostEquals(value, cond.hostEquals)) return false;
 	if (cond.hasNonRootPath !== undefined && !matchesHasNonRootPath(value)) return false;
 	if (cond.hostNotLocalNotLan !== undefined && !matchesHostNotLocalNotLan(value)) return false;
@@ -83,6 +88,19 @@ function isNonEmpty(value: string): boolean {
 
 function matchesEquals(value: string, expected: string): boolean {
 	return value === expected;
+}
+
+/**
+ * Case-insensitive "contains any" with word-boundary check: the keyword must
+ * be preceded/followed by a non-alphanumeric character (or string start/end).
+ * Prevents `2b` from matching `32b`, `4b` from matching `A4b` (MoE active-param
+ * suffix), etc.
+ */
+function matchesContainsWordAnyIgnoreCase(value: string, keywords: string[]): boolean {
+	if (keywords.length === 0) return false;
+	const escaped = keywords.map((k) => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+	const pattern = `(?:^|[^a-z0-9])(?:${escaped.join('|')})(?:$|[^a-z0-9])`;
+	return new RegExp(pattern, 'i').test(value);
 }
 
 /**

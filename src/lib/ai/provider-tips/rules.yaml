@@ -135,6 +135,23 @@ rules:
     suggest:
       rewriteBaseUrlScheme: https
 
+  - id: A7-small-model-warning
+    platform: all
+    kind: warning
+    priority: 25
+    when:
+      model:
+        isNonEmpty: true
+        containsWordAnyIgnoreCase:
+          - 0.8b
+          - 2b
+          - 4b
+          - 9b
+          - e2b
+          - e4b
+          - 12b
+    messageKey: settings.providerTips.rules.A7
+
   # --- WebApp-only ---
   - id: B1-nvidia-no-proxy
     platform: web

@@ -24,6 +24,7 @@
 				"A5_verified": "Verified Provider — this provider and model are known to work.",
 				"A5_unverified": "This provider is likely to work, but the selected model is not in our verified list.",
 				"A6": "Most API providers require HTTPS. Using HTTP over a public host exposes your API key in transit.",
+				"A7": "The model \"{{model}}\" is a small model and may be too weak for demanding tasks, which can result in unpredictable output. Consider assigning it to the Minor Task Agent role only.",
 				"B1": "integrate.api.nvidia.com does not support CORS and cannot be reached directly from the web app. Enable the Wisp proxy (Bypass CORS via Wisp Proxy).",
 				"B2": "ollama.com does not support CORS and cannot be reached directly from the web app. Enable the Wisp proxy (Bypass CORS via Wisp Proxy).",
 				"B2b": "ollama.com does not support CORS and cannot be reached directly from the web app. Enable the Wisp proxy (Bypass CORS via Wisp Proxy).",

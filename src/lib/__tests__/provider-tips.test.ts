@@ -151,6 +151,69 @@ describe('predicates — matchField', () => {
 		expect(matchField('https://example.com/v1', cond, ctx)).toBe(false);
 	});
 
+	describe('containsWordAnyIgnoreCase', () => {
+		const cond: FieldCondition = { containsWordAnyIgnoreCase: ['0.8b', '2b', '4b', '9b', 'e2b', 'e4b', '12b'] };
+
+		it('matches small model names', () => {
+			expect(matchField('gemma-2b', cond, ctx)).toBe(true);
+			expect(matchField('qwen-4b', cond, ctx)).toBe(true);
+			expect(matchField('gemma-9b', cond, ctx)).toBe(true);
+			expect(matchField('qwen-12b', cond, ctx)).toBe(true);
+			expect(matchField('qwen-0.8b', cond, ctx)).toBe(true);
+			expect(matchField('gemma-3n-e2b', cond, ctx)).toBe(true);
+			expect(matchField('gemma-3n-e4b', cond, ctx)).toBe(true);
+		});
+
+		it('is case-insensitive', () => {
+			expect(matchField('QWEN-12B-IT', cond, ctx)).toBe(true);
+			expect(matchField('Gemma-2B', cond, ctx)).toBe(true);
+		});
+
+		it('matches with suffix after keyword', () => {
+			expect(matchField('gemma-2b-it', cond, ctx)).toBe(true);
+			expect(matchField('qwen2.5-0.5b', cond, ctx)).toBe(false);
+		});
+
+		it('does not match large models with digit boundaries', () => {
+			expect(matchField('yi-34b', cond, ctx)).toBe(false);
+			expect(matchField('mixtral-8x7b-32b', cond, ctx)).toBe(false);
+			expect(matchField('qwen-14b', cond, ctx)).toBe(false);
+			expect(matchField('google/gemma-4-31b', cond, ctx)).toBe(false);
+		});
+
+		it('does not match MoE active-param suffixes (A-prefixed)', () => {
+			expect(matchField('Qwen3.6-35B-A3B', cond, ctx)).toBe(false);
+			expect(matchField('26B-A4B', cond, ctx)).toBe(false);
+			expect(matchField('26B A4B', cond, ctx)).toBe(false);
+			expect(matchField('model-a4b-it', cond, ctx)).toBe(false);
+		});
+
+		it('does not match when keyword absent', () => {
+			expect(matchField('z-ai/glm-5.2', cond, ctx)).toBe(false);
+			expect(matchField('llama3', cond, ctx)).toBe(false);
+		});
+
+		it('returns false for empty keyword list', () => {
+			expect(matchField('anything', { containsWordAnyIgnoreCase: [] }, ctx)).toBe(false);
+		});
+
+		it('matches keyword at start of string', () => {
+			expect(matchField('2b-model', cond, ctx)).toBe(true);
+		});
+
+		it('matches keyword at end of string', () => {
+			expect(matchField('model-2b', cond, ctx)).toBe(true);
+		});
+
+		it('matches keyword with dot boundary', () => {
+			expect(matchField('model.2b', cond, ctx)).toBe(true);
+		});
+
+		it('matches second occurrence when first is digit-bound', () => {
+			expect(matchField('model2b-2b', cond, ctx)).toBe(true);
+		});
+	});
+
 	it('hostEquals matches hostname', () => {
 		expect(matchField('https://integrate.api.nvidia.com/v1', { hostEquals: 'integrate.api.nvidia.com' }, ctx)).toBe(true);
 		expect(matchField('https://other.host.com/v1', { hostEquals: 'integrate.api.nvidia.com' }, ctx)).toBe(false);
@@ -1040,6 +1103,110 @@ describe('evaluator — platform gating across all platforms', () => {
 		expect(tip!.id).not.toBe('C1-ollama-default-verified');
 		expect(tip!.id).not.toBe('C2-ollama-v1-compat-verified');
 	});
+});
+
+describe('evaluator — rule A7 (small model warning)', () => {
+	for (const model of ['gemma-2b', 'qwen-0.8b', 'qwen-4b', 'gemma-9b', 'gemma-3n-e2b', 'gemma-3n-e4b', 'qwen-12b']) {
+		it(`fires for ${model}`, () => {
+			const tip = evaluateProviderTip(
+				baseInput({ provider: 'openai-compatible', baseURL: 'https://api.neuralwatt.com/v1', model, platform: 'desktop' })
+			);
+			expect(tip).not.toBeNull();
+			expect(tip!.id).toBe('A7-small-model-warning');
+			expect(tip!.kind).toBe('warning');
+			expect(tip!.suggest).toBeUndefined();
+		});
+	}
+
+	it('is case-insensitive', () => {
+		const tip = evaluateProviderTip(
+			baseInput({ provider: 'openai-compatible', baseURL: 'https://api.neuralwatt.com/v1', model: 'QWEN-12B-IT', platform: 'desktop' })
+		);
+		expect(tip!.id).toBe('A7-small-model-warning');
+	});
+
+	it('does not fire for large models', () => {
+		for (const model of ['google/gemma-4-31b', 'z-ai/glm-5.2', 'yi-34b', 'mixtral-8x7b-32b', 'qwen-14b']) {
+			const tip = evaluateProviderTip(
+				baseInput({ provider: 'openai-compatible', baseURL: 'https://api.neuralwatt.com/v1', model, platform: 'desktop' })
+			);
+			expect(tip!.id).not.toBe('A7-small-model-warning');
+		}
+	});
+
+	it('does not fire for MoE models with A-prefixed active params', () => {
+		for (const model of ['Qwen3.6-35B-A3B', '26B-A4B', '26B A4B']) {
+			const tip = evaluateProviderTip(
+				baseInput({ provider: 'openai-compatible', baseURL: 'https://api.neuralwatt.com/v1', model, platform: 'desktop' })
+			);
+			expect(tip!.id).not.toBe('A7-small-model-warning');
+		}
+	});
+
+	it('does not fire for empty model', () => {
+		const tip = evaluateProviderTip(
+			baseInput({ provider: 'openai-compatible', baseURL: 'https://api.neuralwatt.com/v1', model: '', platform: 'desktop' })
+		);
+		expect(tip).toBeNull();
+	});
+
+	it('A7 beats A5 verified (priority 25 < 40)', () => {
+		const tip = evaluateProviderTip(
+			baseInput({ provider: 'openai-compatible', baseURL: 'https://api.neuralwatt.com/v1', model: 'gemma-2b', platform: 'desktop' })
+		);
+		expect(tip!.id).toBe('A7-small-model-warning');
+	});
+
+	it('A7 beats C1 verified on desktop (priority 25 < 40)', () => {
+		const tip = evaluateProviderTip(
+			baseInput({ provider: 'ollama', baseURL: 'https://ollama.com', model: 'qwen-2b', platform: 'desktop' })
+		);
+		expect(tip!.id).toBe('A7-small-model-warning');
+	});
+
+	it('A7 beats C2 verified on desktop (priority 25 < 40)', () => {
+		const tip = evaluateProviderTip(
+			baseInput({ provider: 'openai-compatible', baseURL: 'https://ollama.com/v1', model: 'qwen-2b', platform: 'desktop' })
+		);
+		expect(tip!.id).toBe('A7-small-model-warning');
+	});
+
+	it('A2 beats A7 (priority 20 < 25) — missing /v1 surfaces first', () => {
+		const tip = evaluateProviderTip(
+			baseInput({ provider: 'openai-compatible', baseURL: 'https://example.com', model: 'gemma-2b', platform: 'desktop' })
+		);
+		expect(tip!.id).toBe('A2-openai-compat-missing-v1');
+	});
+
+	it('A6 beats A7 (priority 20 < 25) — insecure HTTP surfaces first', () => {
+		const tip = evaluateProviderTip(
+			baseInput({ provider: 'openai-compatible', baseURL: 'http://api.example.com/v1', model: 'gemma-2b', platform: 'desktop' })
+		);
+		expect(tip!.id).toBe('A6-public-host-insecure-http');
+	});
+
+	it('A4 beats A7 (priority 10 < 25) — wrong-provider model surfaces first', () => {
+		const tip = evaluateProviderTip(
+			baseInput({ provider: 'ollama', baseURL: 'http://localhost:11434', model: 'gemini-3-flash-preview', platform: 'desktop' })
+		);
+		expect(tip!.id).toBe('A4-ollama-gemini-model');
+	});
+
+	it('includes model in messageParams', () => {
+		const tip = evaluateProviderTip(
+			baseInput({ provider: 'openai-compatible', baseURL: 'https://api.neuralwatt.com/v1', model: 'gemma-2b', platform: 'desktop' })
+		);
+		expect(tip!.messageParams?.model).toBe('gemma-2b');
+	});
+
+	for (const platform of ['web', 'desktop', 'android'] as const) {
+		it(`fires on ${platform}`, () => {
+			const tip = evaluateProviderTip(
+				baseInput({ provider: 'openai-compatible', baseURL: 'https://api.neuralwatt.com/v1', model: 'gemma-2b', platform })
+			);
+			expect(tip!.id).toBe('A7-small-model-warning');
+		});
+	}
 });
 
 // ---------------------------------------------------------------------------
