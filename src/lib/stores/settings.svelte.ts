@@ -70,7 +70,6 @@ export interface Settings {
 	characterProfileCompressorInterval: number;
 	characterProfileImportanceThreshold: number;
 	characterProfileMaxIncluded: number;
-	ignoreCharacterCardsInChat: boolean;
 	phaseAdvancementThreshold: number;
 	defaultPlotMode: 'guidance' | 'phaseEvent';
 	reevaluationFrequency: number;
@@ -108,7 +107,6 @@ const defaults: Settings = {
 	characterProfileCompressorInterval: 5, // scenes between compressor runs; 0 = disabled
 	characterProfileImportanceThreshold: 2, // 1=Protagonist, 2=Main, 3=Supporting, 4=Minor
 	characterProfileMaxIncluded: 5, // hard cap on number of full-profile inlines
-	ignoreCharacterCardsInChat: false,
 	phaseAdvancementThreshold: 5,
 	defaultPlotMode: 'phaseEvent',
 	reevaluationFrequency: 10,

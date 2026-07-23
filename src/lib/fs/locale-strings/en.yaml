@@ -72,8 +72,6 @@ pipeline:
     characterSummaries: Character Summaries
     characterProfiles: Character Profiles
   sections:
-    characterCards: Character Cards
-    characterCardsDescription: "Stable per-character context files for the current act line. Use these to keep characters' identity, history, and vibe consistent."
     actPlotCharacterCards: Character Card
     actPlotActCards: Act Card
     actPlotCharacterProfiles: Character Profiles
@@ -557,18 +555,22 @@ tools:
   characterDetails:
     description: >
       Retrieve the latest profile for a character by any of their known names or aliases.
+      The profile reflects the character's current dynamic state within the act (per-scene mood, situation, relationships).
       Use this for characters whose full profile is NOT already inlined in your context (e.g. supporting and minor characters).
       Do NOT call this for characters whose full profile is already present above.
       The current act is act {{currentActNumber}}; you may optionally read from previous acts in the lineage of the current act line.
     parameters:
       name: 'Any known name or alias of the character'
       includeSceneDetails: 'If true (default), include per-scene detail. If false, return the compressed profile only.'
+      includeCharacterCard: "If true, also return the character's character card — a stable per-character context file capturing the character's identity, history, and vibe (stable long-term state, as opposed to the dynamic per-scene profile returned by default). Use only when you need the full, stable character profile beyond the already-returned dynamic state."
       actNumber: 'The act number to read from (must be in the lineage of the current act line). Omit to read from the current act.'
     messages:
       notFound: 'No character profile found for that name in this act line.'
       notFoundInAct: 'No character profile found for that name in act {{actNumber}}.'
       futureAct: 'Cannot read character profiles from acts that have not happened yet.'
       actNotInLineage: 'Act {{actNumber}} is not in the lineage of the current narrative line.'
+      noCard: 'No character card found for this character in this act line.'
+    cardLabel: Character Card
   advancePhase:
     description: >
       If you believe the story's current state has satisfied the current phase's goals, you may call this tool to advance the story to the next narrative phase. The phase order is as follows:

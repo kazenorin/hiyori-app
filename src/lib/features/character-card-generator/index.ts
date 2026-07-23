@@ -272,6 +272,30 @@ export async function loadLatestCharacterCardsForActLine(ctx: CharacterCardConte
 	return [...found.values()];
 }
 
+export async function loadCharacterCardForActLine(
+	storyId: string,
+	storyName: string,
+	actLineId: string,
+	canonicalName: string
+): Promise<string | null> {
+	const storyFolder = await resolveStoryFolder(storyId, storyName);
+	const lineage = await traceActLineChain(actLineId, true);
+	const sanitizedCanonicalName = kebabCase(canonicalName).trim();
+	if (!sanitizedCanonicalName) {
+		await log.warn('character-card', `canonicalName='${canonicalName}' resolved to empty string`);
+		return null;
+	}
+	const filename = computeCardFilename(sanitizedCanonicalName);
+
+	for (const entry of lineage) {
+		const lineDir = await getLineDir(storyFolder, entry.actNumber, entry.isMainLine, entry.actLineId);
+		const path = `${lineDir}/characters/${filename}`;
+		const content = await fs.readTextFileIfExists(path);
+		if (content) return content;
+	}
+	return null;
+}
+
 export async function getExistingCardNamesForActLine(ctx: CharacterCardContext): Promise<Set<string>> {
 	const storyFolder = await resolveStoryFolder(ctx.storyId, ctx.storyName);
 	const charactersDir = await resolveCharactersDir(storyFolder, ctx);

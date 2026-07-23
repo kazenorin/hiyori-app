@@ -99,7 +99,6 @@ export interface CommonPipelineInput {
 	actPlot: string;
 	actSummary: string;
 	characterProfiles: string[];
-	characterCards: string | undefined;
 	directorNotes: string;
 	previousNarrativeVariables: NarrativeVariables | undefined;
 	previousActSummaries: { actNumber: number; summary: string }[];
@@ -128,7 +127,6 @@ export interface PreEditorContext {
 	actPhase?: ActPhase | null;
 	actSummary: string;
 	characterProfiles: string[];
-	characterCards: string | undefined;
 	previousScenePlot: string | undefined;
 	previousNarrativeBody: string | undefined;
 	completedScenes: number;
@@ -145,7 +143,6 @@ export interface PostEditorContext {
 	actPhase?: ActPhase | null;
 	actSummary: string;
 	characterProfiles: string[];
-	characterCards: string | undefined;
 	previousScenePlot: string | undefined;
 	previousNarrativeBody: string | undefined;
 	completedScenes: number;

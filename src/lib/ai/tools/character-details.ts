@@ -7,14 +7,17 @@ import { log } from './utils';
 import { getLatestProfileByAlias } from '$lib/db/character-profiles';
 import { traceActLineChain } from '$lib/db/acts';
 import { formatCharacterProfileAsMessage } from '$lib/definitions/pipeline-sections';
+import { sectionFormat } from '$lib/definitions/common-headers';
+import { loadCharacterCardForActLine } from '$lib/features/character-card-generator';
 
 export function createCharacterDetailsTool(ctx: ToolContext) {
-	const { actLine, act } = ctx;
+	const { story, actLine, act } = ctx;
 	const currentActNumber = act.actNumber;
 
 	const inputSchema = z.object({
 		name: z.string().min(1).describe(ls('tools.characterDetails.parameters.name')),
 		includeSceneDetails: z.boolean().optional().default(true).describe(ls('tools.characterDetails.parameters.includeSceneDetails')),
+		includeCharacterCard: z.boolean().optional().default(false).describe(ls('tools.characterDetails.parameters.includeCharacterCard')),
 		actNumber: z.number().int().min(1).optional().describe(ls('tools.characterDetails.parameters.actNumber')),
 	});
 
@@ -22,8 +25,10 @@ export function createCharacterDetailsTool(ctx: ToolContext) {
 		description: ls('tools.characterDetails.description', { currentActNumber }),
 		inputSchema,
 		execute: async (input): Promise<string> => {
-			const { name, includeSceneDetails = true, actNumber } = input;
-			await log(`character-details triggered for actLineId=${actLine.id}, name=${name}, actNumber=${actNumber ?? 'current'}`);
+			const { name, includeSceneDetails = true, includeCharacterCard = false, actNumber } = input;
+			await log(
+				`character-details triggered for actLineId=${actLine.id}, name=${name}, actNumber=${actNumber ?? 'current'}, includeCharacterCard=${includeCharacterCard}`
+			);
 
 			let targetActLineId = actLine.id;
 			let distantAct = false;
@@ -52,6 +57,18 @@ export function createCharacterDetailsTool(ctx: ToolContext) {
 			}
 
 			const body = formatCharacterProfileAsMessage(profile, includeSceneDetails);
+
+			if (includeCharacterCard) {
+				const card = await loadCharacterCardForActLine(story.id, story.name, targetActLineId, profile.canonicalName);
+				if (card) {
+					const cardSection = sectionFormat(ls('tools.characterDetails.cardLabel')) + card;
+					await log(`character-details returned ${profile.preferredName} (profile ${body.length} chars + card ${card.length} chars)`);
+					return `${body}\n\n${cardSection}`;
+				}
+				await log(`character-details returned ${profile.preferredName} (profile ${body.length} chars, no card found)`);
+				return `${body}\n\n${ls('tools.characterDetails.messages.noCard')}`;
+			}
+
 			await log(`character-details returned ${profile.preferredName} (${body.length} chars)`);
 			return body;
 		},

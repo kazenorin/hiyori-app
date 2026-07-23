@@ -90,8 +90,6 @@
 		"embeddingProviderDescription": "用於產生 Embedding 以進行記憶搜尋的提供者。",
 		"phraseHighlighting": "標示重點",
 		"phraseHighlightingDescription": "自動擷取並標示敘事文字中的重點。會使用「小型作業用 Agent」。",
-		"ignoreCharacterCardsInChat": "在主聊天中不載入角色卡片",
-		"ignoreCharacterCardsInChatDescription": "啟用後，主聊天管線將不再載入角色卡片作為背景，但進行「章節劇情規劃」或在劇情規劃器中啟用「詳細背景」時仍會生效。",
 		"phaseAdvancementThreshold": "階段推進門檻",
 		"phaseAdvancementThresholdDescription": "寫手在推進至下一敘事階段前須自我評估的最低目標完成度分數。僅適用於「事件式」模式。較弱的非推理模型可能在未推理的情況下過早推進階段，使故事節奏過快。啟用後，寫手必須說明原因並評估推進的準備程度。較強的模型通常不會過早推進，可停用此選項以節省 token。預設：5，設為 0 即停用。",
 		"directorMode": "導演模式",
