@@ -55,6 +55,8 @@
 	let isManuallyClosed = $state(false);
 	let layoutTransitioning = $state(false);
 	let layoutTimeout: ReturnType<typeof setTimeout> | undefined;
+	let autoOpenSuppressedUntil = 0;
+	const AUTO_OPEN_DEBOUNCE_MS = 10_000;
 
 	let isMinimized = $derived(!isPinned && (!isNearBottom || isManuallyClosed) && !isUserExpanded);
 	let hasContent = $derived(decisions.length > 0 || activePlotThreads.length > 0 || decisionContext !== null || actEnded || storyConcluded);
@@ -107,9 +109,12 @@
 				const wasNearBottom = isNearBottom;
 				isNearBottom = container.scrollHeight - container.scrollTop - container.clientHeight < SCROLL_BOTTOM_THRESHOLD_PX;
 				if (isNearBottom && !wasNearBottom) {
-					isUserExpanded = false;
-					startLayoutTransition(true);
-					isManuallyClosed = false;
+					if (Date.now() >= autoOpenSuppressedUntil) {
+						isUserExpanded = false;
+						startLayoutTransition(true);
+						isManuallyClosed = false;
+						autoOpenSuppressedUntil = Date.now() + AUTO_OPEN_DEBOUNCE_MS;
+					}
 				} else if (!isNearBottom && wasNearBottom) {
 					startLayoutTransition(false);
 				}
