@@ -1,4 +1,4 @@
-import { generateText, type ModelMessage } from 'ai';
+import { generateText, type ModelMessage, stepCountIs } from 'ai';
 import { getMainProviderConfig, isReviewerEnabled, settings } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
 import {
@@ -12,30 +12,34 @@ import {
 import { log } from '$lib/logging/logger';
 import {
 	type ActLineMeta,
+	getActLine,
 	getLastSceneNumber,
+	getLatestActSummary,
 	getLatestTurnOfEvents,
 	getPremisesMessages,
-	getLatestActSummary,
-	getActLine,
 } from '$lib/db/act-lines';
-import { traceActLineChain } from '$lib/db/acts';
+import { getAct, traceActLineChain } from '$lib/db/acts';
+import { getStory } from '$lib/db/stories';
 import { ensureActCard } from '$lib/features/act-card-generator';
 import {
+	type CharacterCardContext,
 	ensureCharacterCard,
 	loadLatestCharacterCardsForActLine,
-	type CharacterCardContext,
 	toCharacterSummary,
 } from '$lib/features/character-card-generator';
 import { getLatestProfilesByActLine } from '$lib/db/character-profiles';
-import { formatCharacterProfilesSection } from '$lib/definitions/pipeline-sections';
+import { ACT_PLOT_SECTION, formatCharacterProfilesSection } from '$lib/definitions/pipeline-sections';
 import { actPlotResumeNote } from '$lib/definitions/pipeline-prompts';
 import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';
-import { ACT_PLOT_SECTION } from '$lib/definitions/pipeline-sections';
 import { targetWordCountPerSceneHeader } from '$lib/definitions/common-headers';
 import { ERR_EMPTY_ACT_PLOT_WRITER, ERR_NO_MAIN_PROVIDER } from '$lib/definitions/error-messages';
 import { actWithNumberLabel } from '$lib/definitions/common-labels';
+import { buildActPlotTools, filterActPlotToolsForPhase } from './tools';
+import type { ActLineContext } from '$lib/ai/pipeline/types';
+import type { ToolContext } from '$lib/ai/tools/tools';
 
 const LOG_TAG = 'act-plot-generator';
+const TOOL_MAX_STEPS = 10;
 
 export type ActPlotPhase = 'writing' | 'reviewing' | 'editing';
 
@@ -201,6 +205,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 		previousActSummary,
 		turnOfEvents,
 		detailedContext,
+		toolContext,
 	] = await Promise.all([
 		actPlotTemplateLoader
 			.loadByStory(storyId, storyName)
@@ -213,9 +218,19 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 		getLatestActSummary(actLineId),
 		isResumeGame ? getLatestTurnOfEvents(actLineId) : Promise.resolve(null),
 		useDetailedContext ? loadDetailedContextInputs(params) : Promise.resolve(null),
+		loadActPlotToolContext(params),
 	]);
 
 	const model = await createModel(config);
+
+	const allTools = toolContext
+		? buildActPlotTools(toolContext, {
+				includeDistant: actNumber > 1,
+				includeCharacterDetails: !useDetailedContext,
+			})
+		: undefined;
+	const writerTools = filterActPlotToolsForPhase(allTools, 'writer');
+	const reviewerTools = filterActPlotToolsForPhase(allTools, 'reviewer');
 
 	await log.info(
 		LOG_TAG,
@@ -244,6 +259,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 		messages: writerMessages,
 		abortSignal,
 		...(config.callSettings ?? {}),
+		...(writerTools ? { tools: writerTools, stopWhen: stepCountIs(TOOL_MAX_STEPS) } : {}),
 	});
 	const writerText = writerResult.text.trim();
 
@@ -282,6 +298,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 				messages: reviewerMessages,
 				abortSignal,
 				...(config.callSettings ?? {}),
+				...(reviewerTools ? { tools: reviewerTools, stopWhen: stepCountIs(TOOL_MAX_STEPS) } : {}),
 			});
 			const reviewerText = reviewerResult.text.trim();
 
@@ -349,6 +366,21 @@ interface DetailedContext {
 	actCards: { actNumber: number; content: string }[];
 	characterCards: { preferredName: string; content: string }[];
 	characterProfiles: string;
+}
+
+async function loadActPlotToolContext(params: GenerateActPlotParams): Promise<ToolContext | undefined> {
+	const { storyId, actLine, actNumber } = params;
+	const story = await getStory(storyId);
+	if (!story) return undefined;
+	const act = await getAct(actLine.actId);
+	if (!act) return undefined;
+	const actLineContext: ActLineContext = {
+		...actLine,
+		currentActPhase: null,
+		lastPlotGeneration: null,
+		actNumber,
+	};
+	return { story, actLine: actLineContext, act };
 }
 
 async function loadDetailedContextInputs(params: GenerateActPlotParams): Promise<DetailedContext> {
