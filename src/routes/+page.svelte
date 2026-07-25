@@ -434,7 +434,7 @@
 				</div>
 			</div>
 
-			<ScrollToFAB chatContainer={wbChatContainer} isStreaming={getIsWorldBuilderStreaming()} />
+			<ScrollToFAB chatContainer={wbChatContainer} />
 
 			<!-- Pinned control section: desktop always, mobile when controls or pre-start bar needed -->
 			<div class="{wbShowPreStartBar || wbHideMobileInput ? 'block' : 'hidden'} md:block">
@@ -815,7 +815,7 @@
 				</div>
 			</div>
 
-			<ScrollToFAB {chatContainer} isStreaming={getIsStreaming()} />
+			<ScrollToFAB {chatContainer} />
 
 			<!-- Pinned control section -->
 			<div class="hidden md:block">

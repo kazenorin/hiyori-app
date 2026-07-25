@@ -4,11 +4,10 @@
 
 	interface Props {
 		chatContainer: HTMLDivElement | null;
-		isStreaming: boolean;
 		thresholdPx?: number;
 	}
 
-	let { chatContainer, isStreaming, thresholdPx = 150 }: Props = $props();
+	let { chatContainer, thresholdPx = 150 }: Props = $props();
 
 	let visible = $state(false);
 
@@ -16,14 +15,14 @@
 		const container = chatContainer;
 		if (!container) return;
 
-		visible = !isStreaming && !isNearBottom(container, thresholdPx);
+		visible = !isNearBottom(container, thresholdPx);
 
 		let rafId = 0;
 
 		const onScroll = () => {
 			cancelAnimationFrame(rafId);
 			rafId = requestAnimationFrame(() => {
-				visible = !isStreaming && !isNearBottom(container, thresholdPx);
+				visible = !isNearBottom(container, thresholdPx);
 			});
 		};
 
@@ -32,10 +31,6 @@
 			cancelAnimationFrame(rafId);
 			container.removeEventListener('scroll', onScroll);
 		};
-	});
-
-	$effect(() => {
-		if (isStreaming) visible = false;
 	});
 
 	function handleClick() {
