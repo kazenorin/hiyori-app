@@ -8,6 +8,7 @@ import { allowEndActTools, buildEndActTools } from '$lib/ai/tools/end-act';
 import { buildIntroduceCharacterTools } from '$lib/ai/tools/introduce-character';
 import { buildCharacterDetailsTools } from '$lib/ai/tools/character-details';
 import { buildSetSceneTitleTools } from '$lib/ai/tools/set-scene-title';
+import { buildSuggestCharacterNameTools } from '$lib/ai/tools/suggest-character-name';
 import { getStory, type Story } from '$lib/db/stories';
 import type { ActLineContext, AssistantContext } from '$lib/ai/pipeline/types';
 import { isActLineEnded } from '$lib/db/act-lines';
@@ -36,6 +37,7 @@ export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 		'introduce-character',
 		'character-details',
 		'set-scene-title',
+		'suggest-character-name',
 	],
 	REVIEWER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory', 'character-details'],
 	EDITOR: [],
@@ -83,6 +85,7 @@ export async function buildTools(
 		...buildIntroduceCharacterTools(ctx),
 		...buildCharacterDetailsTools(ctx),
 		...buildSetSceneTitleTools(ctx, overrides),
+		...buildSuggestCharacterNameTools(ctx),
 	};
 
 	const currentPhase: ActPhase | null = actLine.currentActPhase;

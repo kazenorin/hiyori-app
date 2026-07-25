@@ -581,7 +581,7 @@ tools:
       currentPhase: '故事目前所處的敘事階段。'
       nextPhase: '要推進至的下一個敘事階段。'
       justification: >
-        若要推進敘事階段，請依序完成以下說明：
+        若要推進敘事階段，請依序完成以下說明:
         1. 推進理由: 說明為何想進入下一階段。
         2. 當前目標: 列出目前敘事階段的三項主要目標。
         3. 達成進度: 根據 {{actWithNumber}} 的劇情發展，為每個目標各用一句話總結其達成程度。
@@ -642,3 +642,36 @@ tools:
       title: '場景標題 (簡潔、具表感染力)'
     messages:
       success: '場景標題已設為: {{title}}'
+  suggestCharacterName:
+    description: >
+      為新角色建議原創、契合且難忘的名稱。
+      當你需要引入具名角色、且希望名稱不與資料庫中既有角色衝突時呼叫此工具。
+      必須提供角色主題；其他參數可選，用以進一步收窄建議範圍。
+      回傳 3 至 5 個名稱選項，各附簡短理由。
+    parameters:
+      gender: '可選性別提示: 男性化、女性化或中性。省略則名稱不預設性別傾向。'
+      culture: '可選。簡短描述 (一句) 名稱應展現的文化出身或語氣。'
+      storyTheme: '可選。簡短描述 (至多三句) 故事主題與世界觀。'
+      characterTheme: '簡短描述 (至多三句) 名稱應反映的角色特質、定位與氣質。必填。'
+      includeAliases: '若為 true，每個建議名稱附帶 1-2 個匹配的別名/暱稱。預設 false。'
+    messages:
+      unavailable: '角色命名功能無法使用——尚未設定劇情規劃提供者。請自行挑選名稱。'
+    systemPrompt: |
+      # 角色命名
+
+      你是一位專業的創意寫作者與世界觀建構者。
+      你的目標是為故事中的角色構思原創、契合且難忘的名稱。
+    partials:
+      gender: "\n- **性別:** {{gender}}"
+      culture: "\n- **文化/出身:** {{culture}}"
+      storyTheme: "\n- **故事主題:** {{storyTheme}}"
+      characterTheme: "\n- **角色主題:** {{characterTheme}}"
+      aliases: "\n- **別名:** [1-2 個別名/暱稱，以逗號分隔]"
+      aliasesInstruction: '每個選項須附上 1 至 2 個匹配的別名/暱稱。'
+    constraints: |
+      ## 限制
+
+      **既存角色資料庫:** 為確保角色身份鮮明，請完全避免重複使用或過度模仿以下既有名稱及其已知別名:
+
+      {{knownCharacters}}
+    aka: '又名'

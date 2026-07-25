@@ -654,3 +654,36 @@ tools:
       title: 'The scene title (concise, evocative)'
     messages:
       success: 'Scene title set to: {{title}}'
+  suggestCharacterName:
+    description: >
+      Suggest original, fitting, and memorable names for a new character.
+      Call this when introducing a named character and you want naming options that do not collide with existing characters in the database.
+      Always provide a character theme; other parameters refine the suggestions but are optional.
+      Returns 3 to 5 name options with a short rationale for each.
+    parameters:
+      gender: 'Optional gender hint: masculine, feminine, or neutral. Omit if the name should be gender-agnostic.'
+      culture: 'Optional. A short description (one sentence) of the cultural origin or tone the name should evoke.'
+      storyTheme: 'Optional. A short description (up to three sentences) of the story themes and world.'
+      characterTheme: 'A short description (up to three sentences) of the character traits, role, and vibe the name should reflect. Required.'
+      includeAliases: 'If true, include 1-2 matching aliases/nicknames for each suggested name. Default false.'
+    messages:
+      unavailable: 'Character naming is unavailable — no plot planner provider is configured. Please pick a name yourself.'
+    systemPrompt: |
+      # Character Naming
+
+      You are an expert creative writer and world-builder.
+      Your objective is to invent original, fitting, and memorable names for a character in a story.
+    partials:
+      gender: "\n- **Gender:** {{gender}}"
+      culture: "\n- **Culture/Origin:** {{culture}}"
+      storyTheme: "\n- **Story Theme:** {{storyTheme}}"
+      characterTheme: "\n- **Character Theme:** {{characterTheme}}"
+      aliases: "\n- **Aliases:** [Comma-separated list of 1-2 aliases/nicknames]"
+      aliasesInstruction: ' Include 1 or 2 matching aliases/nicknames for each option.'
+    constraints: |
+      ## Constraints
+
+      **Existing Character Database:** To ensure distinct character identities, completely avoid reusing or closely mimicking the following existing names and their known aliases in our universe:
+
+      {{knownCharacters}}
+    aka: 'aka'

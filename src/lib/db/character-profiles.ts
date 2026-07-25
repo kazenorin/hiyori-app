@@ -81,14 +81,13 @@ export function toCanonicalName(name: string): string {
 }
 
 /**
- * Ensure preferredName is present in the aliases array (deduplicated).
- * This guarantees that if a future row changes preferredName, the old name
- * remains matchable via aliases.
+ * Ensure preferredName is present in the aliases array (deduplicated), with
+ * preferredName positioned as the first element when non-empty. This guarantees
+ * that if a future row changes preferredName, the old name remains matchable via
+ * aliases, and that consumers can rely on the first alias being the preferred name.
  */
 export function ensurePreferredInAliases(preferredName: string, aliases: string[]): string[] {
-	const set = new Set(aliases);
-	if (preferredName) set.add(preferredName);
-	return Array.from(set);
+	return preferredName ? [...new Set([preferredName, ...aliases])] : [...new Set(aliases)];
 }
 
 export interface InsertCharacterProfileInput {
@@ -240,6 +239,25 @@ export async function areAnyCharacterNamesKnown(actLineId: string, names: string
 	);
 
 	return rows.length > 0;
+}
+
+/**
+ * Fetch all character preferred names and their merged aliases across the entire
+ * app database (spanning all stories). Preferred name is folded into the alias
+ * set via `ensurePreferredInAliases` so callers can match against either field.
+ * Used by the `suggest-character-name` tool to avoid name collisions.
+ */
+export async function getAllCharacterNames(): Promise<{ preferredName: string; aliases: string[] }[]> {
+	const db = getDatabase();
+	const rows = await db.select<CharacterProfileRow[]>(`SELECT preferred_name, aliases FROM character_profiles`);
+	const merged = new Map<string, Set<string>>();
+	for (const row of rows) {
+		const aliases = ensurePreferredInAliases(row.preferred_name, parseAliases(row.aliases));
+		const existing = merged.get(row.preferred_name) ?? new Set<string>();
+		for (const a of aliases) existing.add(a);
+		merged.set(row.preferred_name, existing);
+	}
+	return Array.from(merged.entries()).map(([preferredName, set]) => ({ preferredName, aliases: Array.from(set) }));
 }
 
 export async function deleteCharacterProfilesForActLine(actLineId: string): Promise<void> {

@@ -96,6 +96,7 @@ export const actCardTemplateLoader = createLoader('act/act-card-template.md');
 // === Character cards ===
 
 export const characterCardTemplateLoader = createLoader('character/character-card-template.md');
+export const suggestCharacterNamePromptLoader = createLoader('character/suggest-character-name-prompt.md');
 
 // === Memory extraction ===
 

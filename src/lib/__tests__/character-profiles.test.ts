@@ -82,6 +82,34 @@ describe('character-profiles DB layer', () => {
 			const result = ensurePreferredInAliases('', ['Shadow']);
 			expect(result).toEqual(['Shadow']);
 		});
+
+		it('places preferredName as the first element when it was missing', () => {
+			const result = ensurePreferredInAliases('Elena', ['Shadow', 'E']);
+			expect(result[0]).toBe('Elena');
+			expect(result).toEqual(['Elena', 'Shadow', 'E']);
+		});
+
+		it('moves preferredName to the first position when it was already present', () => {
+			const result = ensurePreferredInAliases('Elena', ['Shadow', 'Elena', 'E']);
+			expect(result[0]).toBe('Elena');
+			expect(result).toEqual(['Elena', 'Shadow', 'E']);
+			expect(result).toHaveLength(3);
+		});
+
+		it('returns empty array for empty preferredName and empty aliases', () => {
+			const result = ensurePreferredInAliases('', []);
+			expect(result).toEqual([]);
+		});
+
+		it('deduplicates repeated aliases while keeping preferredName first', () => {
+			const result = ensurePreferredInAliases('Elena', ['Shadow', 'Shadow', 'E', 'E']);
+			expect(result).toEqual(['Elena', 'Shadow', 'E']);
+		});
+
+		it('preserves alias order after the preferredName when preferredName is absent from aliases', () => {
+			const result = ensurePreferredInAliases('Elena', ['Shadow', 'E', 'Captain']);
+			expect(result).toEqual(['Elena', 'Shadow', 'E', 'Captain']);
+		});
 	});
 
 	describe('insertCharacterProfile', () => {

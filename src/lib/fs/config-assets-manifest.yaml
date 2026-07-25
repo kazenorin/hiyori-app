@@ -69,6 +69,11 @@ src:
               oldHashes:
                 - f8af44bf8425d13365fdf6496453750514f2fcaf6a0b2b1eae27b6934dab63fc
               updatedAt: "2026-07-18T14:50:56.840Z"
+            suggest-character-name-prompt.md:
+              configPath: en/prompt-templates/character/suggest-character-name-prompt.md
+              hash: 04a085c90b8699027419f9050c4a5187290703bbb707efb5f89b947e00dc700b
+              oldHashes: []
+              updatedAt: "2026-07-25T09:25:27.789Z"
           editor:
             editor-prompt.md:
               configPath: en/prompt-templates/editor/editor-prompt.md
@@ -282,6 +287,11 @@ src:
               oldHashes:
                 - 9bce6f314353e21aa708cdcd4f843b007af945b21050566d365e65479fdf3372
               updatedAt: "2026-07-18T14:50:56.840Z"
+            suggest-character-name-prompt.md:
+              configPath: zh-Hant-HK/prompt-templates/character/suggest-character-name-prompt.md
+              hash: a9bbc48b25ebd09360d17785f88c946dee0c0724e4db92b1474e181f1c2c7946
+              oldHashes: []
+              updatedAt: "2026-07-25T09:25:27.789Z"
           editor:
             editor-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/editor/editor-prompt.md
@@ -429,8 +439,9 @@ src:
       locale-strings:
         en.yaml:
           configPath: en/locale-strings.yaml
-          hash: 8c89d8dc883781bb770db86b9e97ae54ce992260f370f46070dd965e9cf84a2e
+          hash: ba9cbdee4ae36e8ee5fca1d582a252ce982d950e579b07663358563f450016a4
           oldHashes:
+            - 8c89d8dc883781bb770db86b9e97ae54ce992260f370f46070dd965e9cf84a2e
             - cc4d77f752235f472a27490a080cf464203d00b17619b2ab6c32017ffc9698df
             - 5feee7d281ea6a4199ea97d386a8b39696130b98c49333b7250c8c8e4e3fafc7
             - a312d1d717bbdbe6c452986680100ce8d5c14dad450805e9708bd14a8ff49139
@@ -439,11 +450,12 @@ src:
             - 2dac94173236f1d91ad05073d7ac651ae1265c4182815041ba5663713dcdd799
             - 80d841aa000184d8604696b1f1877aebb1a348db16d2267e57b421c5eed4c959
             - 02c2f6c61d948f401f32cdd4eb656a574da0366b3a2809ee2ff3c42b47348649
-          updatedAt: "2026-07-23T14:20:35.640Z"
+          updatedAt: "2026-07-25T12:27:52.586Z"
         zh-Hant-HK.yaml:
           configPath: zh-Hant-HK/locale-strings.yaml
-          hash: 78054d983230282f19d1ee6491dbc457c9d8e00a6175bea3b21a5c04b113d085
+          hash: f9af8fd7e31b477e31f063b9cfd49d76d510eb14c43ad2d89efa5eab276d7fde
           oldHashes:
+            - 78054d983230282f19d1ee6491dbc457c9d8e00a6175bea3b21a5c04b113d085
             - fc4c2f29eb33e8642271cec7e0005b7b770bb10dfb48bb7c6f944d433ffb7aaf
             - 6727b1ff75ddca54c953db58817b2f8f07829a914a6f7e3ca5196a9a06460085
             - dac345165f8da974296444d28cf9c1cd61a33cb9ea3421b7fc8370a3b2227104
@@ -452,4 +464,4 @@ src:
             - 0eda1a48149469d75b776af15e1b34a8510a948660818ad2f0047cb2c4e95f1c
             - c9bca07458a02fd17114e6456a4c281b2460dc392ffccd2bd103199af045c4cb
             - f7772bf027cfec167bdc5e5d85aa783fac24f47303072a00685d5d7b70b80b54
-          updatedAt: "2026-07-23T14:20:35.640Z"
+          updatedAt: "2026-07-25T12:27:52.586Z"

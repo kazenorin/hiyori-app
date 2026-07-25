@@ -2,6 +2,7 @@ import { type ToolSet } from 'ai';
 import { buildSceneTools } from '$lib/ai/tools/read-scene';
 import { buildCharacterDetailsTools } from '$lib/ai/tools/character-details';
 import { buildIntroduceCharacterTools } from '$lib/ai/tools/introduce-character';
+import { buildSuggestCharacterNameTools } from '$lib/ai/tools/suggest-character-name';
 import type { ToolContext } from '$lib/ai/tools/tools';
 
 /** Phases that support tools within the act-plot pipeline. */
@@ -12,7 +13,7 @@ export type ActPlotToolPhase = 'writer' | 'reviewer';
  * Editor is intentionally omitted — it runs tool-free.
  */
 export const ACT_PLOT_PHASE_TOOLS: Record<ActPlotToolPhase, readonly string[]> = {
-	writer: ['read-scene', 'read-distant-scene', 'introduce-character', 'character-details'],
+	writer: ['read-scene', 'read-distant-scene', 'introduce-character', 'character-details', 'suggest-character-name'],
 	reviewer: ['read-scene', 'read-distant-scene', 'character-details'],
 };
 
@@ -47,6 +48,7 @@ export function buildActPlotTools(ctx: ToolContext, options: BuildActPlotToolsOp
 	const tools: ToolSet = {
 		...buildSceneTools(ctx, includeDistant),
 		...buildIntroduceCharacterTools(ctx),
+		...buildSuggestCharacterNameTools(ctx),
 	};
 
 	if (includeCharacterDetails) {
