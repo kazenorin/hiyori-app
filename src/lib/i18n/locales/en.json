@@ -190,7 +190,10 @@
 	},
 	"chat": {
 		"emptyState": "Create a story, add an act, then select or create an act line to start chatting.",
-		"emptyChat": "Type a message to start chatting with the AI.",
+		"emptyChat": "Your story is ready to unfold. Start the game to begin the narration.",
+		"startGame": "Start Game",
+		"discussPlot": "Discuss about the plot",
+		"generating": "Generating…",
 		"worldBuilderPrompt": "Answer questions to build your story's world. Say \"let's start\" when ready.",
 		"beginAdventure": "Begin Your Adventure",
 		"worldBuilder": "World Builder",
@@ -618,7 +621,8 @@
 		"failedToStartForkInterview": "Failed to start fork interview",
 		"failedToCreateStory": "Failed to create story",
 		"failedToStartInterview": "Failed to start interview",
-		"failedToStartGame": "Failed to start game"
+		"failedToStartGame": "Failed to start game",
+		"failedToResumeNextActInterview": "Failed to resume next-act interview: prior-act ending or summary is missing"
 	},
 	"tts": {
 		"read": "Read",

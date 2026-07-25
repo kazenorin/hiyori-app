@@ -47,6 +47,8 @@
 		handleCreateActPlotInterview,
 		handleStartFromWorldBuilder,
 		handleStartGameAfterInterview,
+		handleStartGameFromEmptyChat,
+		handleDiscussPlotFromEmptyChat,
 	} from '$lib/features/world-builder/story-creation.svelte';
 	import {
 		getIsForking,
@@ -77,6 +79,8 @@
 	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
 	import { formatPhaseName } from '$lib/ai/narrative-types';
 	import { loadStoryMessageTemplate, loadStoryMessageTemplateForStory } from '$lib/fs/view-templates';
+	import { actPlotExists as actPlotExistsHelper } from '$lib/ai/act-plot';
+	import { getActLine } from '$lib/db/act-lines';
 
 	import { t } from '$lib/i18n';
 
@@ -111,6 +115,7 @@
 	let lastMessageIdx = $derived(getMessages().findLastIndex((m: UIMessage) => m.role === 'assistant'));
 	let characterNames = $derived(getCharacterNames());
 	let storyMessageTemplate = $state<string>('');
+	let showDiscussButton = $state(false);
 
 	$effect(() => {
 		const story = getActiveStory();
@@ -134,6 +139,37 @@
 				if (!stale) storyMessageTemplate = loadedTemplate;
 			})
 			.catch(() => {});
+		return () => {
+			stale = true;
+		};
+	});
+
+	// Recompute act-plot existence for the active act line whenever the act line
+	// changes or the World Builder mode is entered/exited. Drives the visibility of
+	// the "Discuss about the plot" button on the empty-chat landing screen.
+	$effect(() => {
+		const actLineId = getActiveActLineId();
+		const wbActive = getIsWorldBuilderActive();
+		const msgCount = getMessages().length;
+		const story = getActiveStory();
+		if (!actLineId || wbActive || msgCount > 0 || !story) {
+			showDiscussButton = false;
+			return;
+		}
+		let stale = false;
+		void (async () => {
+			try {
+				const actLine = await getActLine(actLineId);
+				if (!actLine || stale) {
+					if (!stale) showDiscussButton = false;
+					return;
+				}
+				const exists = await actPlotExistsHelper(story, actLine);
+				if (!stale) showDiscussButton = !exists;
+			} catch {
+				if (!stale) showDiscussButton = false;
+			}
+		})();
 		return () => {
 			stale = true;
 		};
@@ -531,9 +567,41 @@
 			<div bind:this={chatContainer} class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6 min-w-0">
 				<div class="px-2 md:px-4 lg:px-8 space-y-3 md:space-y-4">
 					{#if getMessages().length === 0}
-						<div class="flex flex-col items-center justify-center py-24 text-center">
-							<h2 class="h2 font-display text-surface-700-300 mb-3">{t('chat.beginAdventure')}</h2>
-							<p class="text-surface-400-500 max-w-lg">{t('chat.emptyChat')}</p>
+						<div class="flex flex-col items-center justify-center py-24 text-center gap-6">
+							<div>
+								<h2 class="h2 font-display text-surface-700-300 mb-3">{t('chat.beginAdventure')}</h2>
+								<p class="text-surface-400-500 max-w-lg">{t('chat.emptyChat')}</p>
+							</div>
+							<div class="flex flex-wrap items-center justify-center gap-3">
+								<button
+									class="btn preset-filled-success-500"
+									type="button"
+									disabled={getIsCreatingStory()}
+									onclick={() => {
+										const id = getActiveActLineId();
+										if (id) handleStartGameFromEmptyChat(id);
+									}}
+								>
+									{#if getIsCreatingStory()}
+										{t('chat.generating')}
+									{:else}
+										{t('chat.startGame')}
+									{/if}
+								</button>
+								{#if showDiscussButton}
+									<button
+										class="btn preset-filled-secondary-500"
+										type="button"
+										disabled={getIsCreatingStory()}
+										onclick={() => {
+											const id = getActiveActLineId();
+											if (id) handleDiscussPlotFromEmptyChat(id);
+										}}
+									>
+										{t('chat.discussPlot')}
+									</button>
+								{/if}
+							</div>
 						</div>
 					{:else}
 						{#each getMessages() as message, i (message.id)}
@@ -817,97 +885,101 @@
 
 			<ScrollToFAB {chatContainer} />
 
-			<!-- Pinned control section -->
-			<div class="hidden md:block">
-				<ChatControls
+			{#if getMessages().length > 0}
+				<!-- Pinned control section -->
+				<div class="hidden md:block">
+					<ChatControls
+						decisions={latestDecisions}
+						activePlotThreads={latestActivePlotThreads}
+						decisionContext={latestDecisionContext}
+						isStreaming={getIsStreaming()}
+						isBusy={getIsBusy()}
+						actEnded={getActEnded()}
+						storyConcluded={getStoryConcluded()}
+						onDecisionClick={handleDecisionClick}
+						onAppendDecision={handleAppendDecision}
+						onContinueToNextAct={handleContinueToNextAct}
+						onEndStory={handleEndStory}
+						{chatContainer}
+					/>
+				</div>
+
+				<!-- Mobile Choices Sheet -->
+				<ChoicesSheet
 					decisions={latestDecisions}
 					activePlotThreads={latestActivePlotThreads}
 					decisionContext={latestDecisionContext}
-					isStreaming={getIsStreaming()}
-					isBusy={getIsBusy()}
 					actEnded={getActEnded()}
 					storyConcluded={getStoryConcluded()}
+					isBusy={getIsBusy()}
 					onDecisionClick={handleDecisionClick}
 					onAppendDecision={handleAppendDecision}
 					onContinueToNextAct={handleContinueToNextAct}
 					onEndStory={handleEndStory}
-					{chatContainer}
 				/>
-			</div>
 
-			<!-- Mobile Choices Sheet -->
-			<ChoicesSheet
-				decisions={latestDecisions}
-				activePlotThreads={latestActivePlotThreads}
-				decisionContext={latestDecisionContext}
-				actEnded={getActEnded()}
-				storyConcluded={getStoryConcluded()}
-				isBusy={getIsBusy()}
-				onDecisionClick={handleDecisionClick}
-				onAppendDecision={handleAppendDecision}
-				onContinueToNextAct={handleContinueToNextAct}
-				onEndStory={handleEndStory}
-			/>
-
-			<!-- Mobile Input Sheet -->
-			<div class="md:hidden">
-				<MobileInputSheet
-					bind:value={input}
-					isStreaming={getIsStreaming()}
-					isDisabled={getIsBusy() || getActEnded()}
-					placeholder={t('chat.chatPlaceholder')}
-					showDirectorNotes={isDirectorModeEnabled()}
-					onSubmit={handleSubmit}
-					onStop={stopStreaming}
-					onKeydown={handleKeydown}
-				/>
-			</div>
+				<!-- Mobile Input Sheet -->
+				<div class="md:hidden">
+					<MobileInputSheet
+						bind:value={input}
+						isStreaming={getIsStreaming()}
+						isDisabled={getIsBusy() || getActEnded()}
+						placeholder={t('chat.chatPlaceholder')}
+						showDirectorNotes={isDirectorModeEnabled()}
+						onSubmit={handleSubmit}
+						onStop={stopStreaming}
+						onKeydown={handleKeydown}
+					/>
+				</div>
+			{/if}
 		</div>
 
-		<!-- Right-side input panel (tablet+ only, desktop side panel) -->
-		<aside
-			class="hidden md:flex lg:w-80 border-t lg:border-t-0 lg:border-l border-surface-200-800 flex-col bg-surface-50-950 shrink-0 {rightPanelExpanded
-				? 'max-h-none'
-				: 'lg:max-h-none max-h-10'}"
-		>
-			<!-- Mobile toggle bar -->
-			<button
-				class="lg:hidden flex w-full items-center justify-between px-3 py-2 text-xs text-surface-500 hover:bg-surface-100-900 transition-colors"
-				type="button"
-				aria-expanded={rightPanelExpanded}
-				onclick={() => (rightPanelExpanded = !rightPanelExpanded)}
+		{#if getMessages().length > 0}
+			<!-- Right-side input panel (tablet+ only, desktop side panel) -->
+			<aside
+				class="hidden md:flex lg:w-80 border-t lg:border-t-0 lg:border-l border-surface-200-800 flex-col bg-surface-50-950 shrink-0 {rightPanelExpanded
+					? 'max-h-none'
+					: 'lg:max-h-none max-h-10'}"
 			>
-				<span class="font-medium text-surface-500 uppercase tracking-wider">{t('chat.message')}</span>
-				<Icon name="chevron-down" class="h-4 w-4 transition-transform {rightPanelExpanded ? 'rotate-180' : ''}" />
-			</button>
+				<!-- Mobile toggle bar -->
+				<button
+					class="lg:hidden flex w-full items-center justify-between px-3 py-2 text-xs text-surface-500 hover:bg-surface-100-900 transition-colors"
+					type="button"
+					aria-expanded={rightPanelExpanded}
+					onclick={() => (rightPanelExpanded = !rightPanelExpanded)}
+				>
+					<span class="font-medium text-surface-500 uppercase tracking-wider">{t('chat.message')}</span>
+					<Icon name="chevron-down" class="h-4 w-4 transition-transform {rightPanelExpanded ? 'rotate-180' : ''}" />
+				</button>
 
-			<div class="flex-1 flex flex-col min-h-0 p-3 lg:p-4">
-				<div class="hidden lg:flex items-center justify-between mb-3">
-					<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('chat.message')}</span>
-				</div>
-				{#if isDirectorModeEnabled()}
-					<DirectorNotesPanel />
-				{/if}
-
-				<textarea
-					class="input flex-1 resize-none text-sm leading-relaxed"
-					placeholder={t('chat.chatPlaceholder')}
-					aria-label="Message input"
-					bind:value={input}
-					onkeydown={handleKeydown}
-					disabled={getIsBusy() || getActEnded()}
-				></textarea>
-
-				<div class="mt-3">
-					{#if getIsStreaming()}
-						<Button variant="filled-error" fullWidth onclick={stopStreaming}>{t('chat.stop')}</Button>
-					{:else if getActEnded()}
-						<Button fullWidth disabled>{t('chat.send')}</Button>
-					{:else}
-						<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
+				<div class="flex-1 flex flex-col min-h-0 p-3 lg:p-4">
+					<div class="hidden lg:flex items-center justify-between mb-3">
+						<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('chat.message')}</span>
+					</div>
+					{#if isDirectorModeEnabled()}
+						<DirectorNotesPanel />
 					{/if}
+
+					<textarea
+						class="input flex-1 resize-none text-sm leading-relaxed"
+						placeholder={t('chat.chatPlaceholder')}
+						aria-label="Message input"
+						bind:value={input}
+						onkeydown={handleKeydown}
+						disabled={getIsBusy() || getActEnded()}
+					></textarea>
+
+					<div class="mt-3">
+						{#if getIsStreaming()}
+							<Button variant="filled-error" fullWidth onclick={stopStreaming}>{t('chat.stop')}</Button>
+						{:else if getActEnded()}
+							<Button fullWidth disabled>{t('chat.send')}</Button>
+						{:else}
+							<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
+						{/if}
+					</div>
 				</div>
-			</div>
-		</aside>
+			</aside>
+		{/if}
 	{/if}
 </div>

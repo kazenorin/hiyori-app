@@ -214,10 +214,11 @@ export interface EnterActPlotInterviewModeParams {
 	additionalContext?: InterviewAdditionalContext;
 	newActContext?: NewActInterviewContext;
 	story?: { id: string; name: string; locale: string };
+	resumeFromPremises?: boolean;
 }
 
 export async function enterActPlotInterviewMode(params: EnterActPlotInterviewModeParams): Promise<void> {
-	const { actLineId, worldContent, forkContext, additionalContext, newActContext, story } = params;
+	const { actLineId, worldContent, forkContext, additionalContext, newActContext, story, resumeFromPremises } = params;
 	resetState();
 	isActive = true;
 	actPlotInterview = true;
@@ -284,6 +285,14 @@ export async function enterActPlotInterviewMode(params: EnterActPlotInterviewMod
 
 			sections.push(resumeStoryActSuffix());
 			return await sendWorldBuilderMessage(sections.join(''));
+		}
+	}
+
+	if (resumeFromPremises) {
+		const premises = await dbActLines.getPremisesMessages(actLineId);
+		if (premises.length > 0) {
+			messages = premises.map((m) => ({ id: m.id, role: m.role, content: m.content }));
+			return;
 		}
 	}
 

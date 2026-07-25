@@ -60,3 +60,19 @@ export async function ensureActPlot(params: EnsureActPlotParams): Promise<string
 async function getActNumber(actId: string): Promise<number> {
 	return (await dbActs.getActNumber(actId)) ?? 1;
 }
+
+/**
+ * Check whether the act plot file already exists for the given act line (read-only).
+ * No generation. Returns true if `act-plot.md` is present on disk.
+ */
+export async function actPlotExists(
+	story: { id: string; name: string },
+	actLine: { actId: string; isMainLine: boolean; id: string },
+	actNumber?: number
+): Promise<boolean> {
+	const resolvedActNumber = actNumber ?? (await getActNumber(actLine.actId));
+	const storyFolder = await resolveStoryFolder(story.id, story.name);
+	const lineDir = await getLineDir(storyFolder, resolvedActNumber, actLine.isMainLine, actLine.id);
+	const plotPath = `${lineDir}/${ACT_PLOT_FILENAME}`;
+	return await fs.exists(plotPath);
+}

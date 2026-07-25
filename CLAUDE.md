@@ -75,7 +75,7 @@ Act lines model branching narratives. Each act has one or more act lines (main l
 
 **Tables:** `act_line_meta`, `act_lines` (junction), `act_line_premises`, `acts` (with `continues_from_act_line_id` for cross-act branching).
 
-**Key operations** (`src/lib/db/act-lines.ts`): `getMessagesForLine()`, `branchFromLine()`, `batchResolveActLineInfo()`, `getPreviousActSummary()`, `removeOrphanedMessages()`. `removeMessagesFromActLine()` only deletes `messages` rows when no other act line references them (prevents data loss on forked lines).
+**Key operations** (`src/lib/db/act-lines.ts`): `getMessagesForLine()`, `branchFromLine()`, `batchResolveActLineInfo()`, `getPrecedingActSummary()`, `removeOrphanedMessages()`. `removeMessagesFromActLine()` only deletes `messages` rows when no other act line references them (prevents data loss on forked lines).
 
 ## Settings Architecture
 

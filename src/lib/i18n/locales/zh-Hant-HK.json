@@ -190,7 +190,10 @@
 	},
 	"chat": {
 		"emptyState": "建立故事、加入章節，然後選擇或建立故事線即可開始聊天。",
-		"emptyChat": "輸入訊息即可開始與 AI 聊天。",
+		"emptyChat": "你的故事即將展開。按下「開始遊戲」即可展開敘事。",
+		"startGame": "開始遊戲",
+		"discussPlot": "討論劇情",
+		"generating": "生成中…",
 		"worldBuilderPrompt": "回答問題來構建你的故事世界觀。準備好時，請說「開始吧」、「Go!」等。",
 		"beginAdventure": "開始你的冒險",
 		"worldBuilder": "世界觀生成器",
@@ -618,7 +621,8 @@
 		"failedToStartForkInterview": "無法開始分支訪談",
 		"failedToCreateStory": "無法建立故事",
 		"failedToStartInterview": "無法開始訪談",
-		"failedToStartGame": "無法開始遊戲"
+		"failedToStartGame": "無法開始遊戲",
+		"failedToResumeNextActInterview": "無法續接下一章訪談：找不到上一章結局或摘要"
 	},
 	"tts": {
 		"read": "朗讀",

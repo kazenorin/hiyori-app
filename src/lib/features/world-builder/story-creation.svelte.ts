@@ -20,13 +20,14 @@ import {
 	getMessages as getWorldBuilderMessages,
 	requestStart,
 	getSelectedTemplateId,
+	type NewActInterviewContext,
 } from '$lib/features/world-builder/world-builder.svelte';
 import { loadActLineMessages, sendInitialNarration } from '$lib/ai/chat.svelte';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
-import { updateWorldCard } from '$lib/ai/world-generator';
+import { updateWorldCard, ensureWorldFile } from '$lib/ai/world-generator';
 import { ensureActPlot } from '$lib/ai/act-plot';
-import { getActLine, getPrecedingActSummary, getPremisesMessages, getMessagesForLine } from '$lib/db/act-lines';
-import { getAct } from '$lib/db/acts';
+import { getActLine, getPrecedingActSummary, getPremisesMessages, getMessagesForLine, getEndingType } from '$lib/db/act-lines';
+import { getAct, getActByActLineId } from '$lib/db/acts';
 import { ensureActCard } from '$lib/features/act-card-generator';
 import { generateTurnOfEvents } from '$lib/features/turn-of-events-generator';
 import { updateMessageFields, type Message } from '$lib/db/messages';
@@ -320,5 +321,99 @@ async function regenerateGameDataForForkedMessage(messageId: string, ctx: GameDa
 		await updateMessageFields(messageId, {
 			variables: JSON.stringify(updatedVariables),
 		});
+	}
+}
+
+/**
+ * Reconstruct `NewActInterviewContext` for an Act 2+ act line from persisted DB state.
+ * Walks back to the parent act line via `acts.continues_from_act_line_id`, reads the
+ * recorded ending event on the *parent* line, and the preceding act summary.
+ * Returns `null` (fail-loud) when the parent line or ending event is missing —
+ * entering a next-act interview without these would mislead the LLM.
+ */
+async function reconstructNewActContext(actLineId: string): Promise<NewActInterviewContext | null> {
+	const newAct = await getActByActLineId(actLineId);
+	const parentActLineId = newAct?.continuesFromActLineId ?? null;
+	if (!parentActLineId) return null;
+	const endingType = await getEndingType(parentActLineId);
+	if (!endingType) return null;
+	const actSummary = (await getPrecedingActSummary(actLineId)) ?? '';
+	return { endingType, actSummary };
+}
+
+/**
+ * "Start Game" handler invoked from the empty-chat state (no messages, World Builder
+ * not active). Loads the world doc from disk, ensures the act-plot file exists
+ * (generating if missing), then kicks off the first narration. Works uniformly for
+ * Act 1 (world doc only) and Act 2+ (uses premises + preceding summary if available).
+ */
+export async function handleStartGameFromEmptyChat(actLineId: string): Promise<void> {
+	const refs = getActLineAndStory();
+	if (!refs) return;
+	const actNumber = getActiveAct()?.actNumber ?? 1;
+	const actLine = await getActLine(actLineId);
+	if (!actLine) {
+		createStoryError = t('errors.storyCreationFailed');
+		return;
+	}
+	isCreatingStory = true;
+	createStoryError = null;
+	try {
+		const worldContent = await ensureWorldFile(refs.story.id, refs.story.name);
+		await ensureActPlot({
+			worldContent,
+			story: refs.story,
+			actNumber,
+			actLine,
+			isResumeGame: false,
+			onPhaseChange: setActPlotGenerationPhase,
+			onGenerationComplete: () => setActPlotGenerationPhase(null),
+		});
+		await sendInitialNarration(actLineId).then(() => log.debug('story-creation', 'initial narration sent from empty chat'));
+	} catch (err) {
+		createStoryError = err instanceof Error ? err.message : t('errors.failedToStartGame');
+	} finally {
+		setActPlotGenerationPhase(null);
+		isCreatingStory = false;
+	}
+}
+
+/**
+ * "Discuss about the plot" handler invoked from the empty-chat state. Enters the
+ * act-plot interview mode with `resumeFromPremises: true` — any previously persisted
+ * `act_line_premises` transcript is loaded as the visible history (no fresh opening);
+ * if no premises exist, a fresh opening is streamed.
+ * For Act 2+ act lines, faithfully reconstructs `NewActInterviewContext` (ending type
+ * + preceding act summary) from persisted state. Fail-loud if reconstruction fails
+ * (cannot safely proceed without prior-act context).
+ */
+export async function handleDiscussPlotFromEmptyChat(actLineId: string): Promise<void> {
+	const refs = getActLineAndStory();
+	if (!refs) return;
+	const actNumber = getActiveAct()?.actNumber ?? 1;
+	let newActContext: NewActInterviewContext | undefined;
+	if (actNumber > 1) {
+		const reconstructed = await reconstructNewActContext(actLineId);
+		if (!reconstructed) {
+			createStoryError = t('errors.failedToResumeNextActInterview');
+			return;
+		}
+		newActContext = reconstructed;
+	}
+	isCreatingStory = true;
+	createStoryError = null;
+	try {
+		const worldContent = await ensureWorldFile(refs.story.id, refs.story.name);
+		await enterActPlotInterviewMode({
+			actLineId,
+			worldContent,
+			story: { id: refs.story.id, name: refs.story.name, locale: refs.story.locale },
+			newActContext,
+			resumeFromPremises: true,
+		});
+	} catch (err) {
+		createStoryError = err instanceof Error ? err.message : t('errors.failedToStartInterview');
+	} finally {
+		isCreatingStory = false;
 	}
 }
