@@ -150,7 +150,7 @@ All interfaces are defined in [`types.ts`](./types.ts). Key types to know:
 - **`PipelineInput`** — Entry point parameters (extends `CommonPipelineInput` with `previousScenePlot` and `player`).
 - **`PipelineState`** — Mutable state accumulated across phases (writer/editor/GM output, variables, game data).
 - **`PipelineCallbacks`** — Lifecycle hooks: `onPhaseStart`, `onPhaseStream`, `onPhaseRetry`, `onPhaseComplete`, `onError`, `onPhrasesExtracted`, `onAllComplete`.
-- **`PipelineRunContext`** — Shared context passed to all phase runners (defined in [`runners.ts`](./runners.ts)). Contains `sharedParams`, `providerConfigs`, `preEditorCtx`, `prompts`, `effectiveTargetWordCount`, `currentScene`, `tools`, `story`, `assistant`.
+- **`PipelineRunContext`** — Shared context passed to all phase runners (defined in [`runners.ts`](./runners.ts)). Contains `sharedParams`, `providerConfigs`, `preEditorCtx`, `prompts`, `effectiveTargetWordCount`, `currentScene`, `tools`, `story`, `assistant`, `narrativeOverrides` (writer-tool overrides merged into writer variables, fill-when-missing).
 - **`PipelineProviderConfigs`** — Per-phase provider resolution. Built by `buildPipelineProviderConfigs()` ([`chat/pipeline-config.ts`](../chat/pipeline-config.ts)) which resolves role-specific configs with fallback to `main`. Roles: `plotPlanner`, `writer`, `reviewer`, `editor`, `gameMaster`, `summarizer`, `minorTaskAgent`.
 
 ## Streaming Architecture
@@ -216,18 +216,18 @@ Runs after the Summarizer when `characterProfileCompressorInterval` scenes have 
 
 ## AI Tools
 
-`buildTools(storyId, actLine, assistant)` assembles all available tools. `filterToolsForPhase(allTools, phase)` restricts which tools each phase can use:
+`buildTools(storyId, actLine, assistant, overrides)` assembles all available tools. `filterToolsForPhase(allTools, phase)` restricts which tools each phase can use:
 
-| Phase                        | Available Tools                                                                                                      |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| WRITER                       | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`, `evaluate-risk`, `advance-phase`, `end-act` |
-| REVIEWER                     | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`                                              |
-| EDITOR                       | (none)                                                                                                               |
-| GAME_MASTER                  | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`, `advance-phase`, `end-act`                  |
-| PLOT_PLANNER                 | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`                                              |
-| TEMPLATE_FITTER              | (none)                                                                                                               |
-| SUMMARIZER                   | (none)                                                                                                               |
-| CHARACTER_PROFILE_COMPRESSOR | (none)                                                                                                               |
+| Phase                        | Available Tools                                                                                                                                                                     |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| WRITER                       | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`, `evaluate-risk`, `advance-phase`, `end-act`, `introduce-character`, `character-details`, `set-scene-title` |
+| REVIEWER                     | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`                                                                                                             |
+| EDITOR                       | (none)                                                                                                                                                                              |
+| GAME_MASTER                  | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`, `advance-phase`, `end-act`                                                                                 |
+| PLOT_PLANNER                 | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`                                                                                                             |
+| TEMPLATE_FITTER              | (none)                                                                                                                                                                              |
+| SUMMARIZER                   | (none)                                                                                                                                                                              |
+| CHARACTER_PROFILE_COMPRESSOR | (none)                                                                                                                                                                              |
 
 ## Retry and Error Handling
 

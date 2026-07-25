@@ -119,6 +119,35 @@ export function emptyVariables(): NarrativeVariables {
 	};
 }
 
+// --- Narrative overrides ---
+
+/** NarrativeVariables text fields that writer tools may set explicitly. Excludes nested gameData. */
+export type WritableNarrativeField = 'sceneTitle' | 'background' | 'narrativeBody' | 'turnOfEvents' | 'cg';
+
+/**
+ * Mutable container of writer-set narrative variable overrides.
+ * Populated by writer tools (e.g. set-scene-title) during the writer stream,
+ * and merged into the writer's StreamState.variables (fill-when-missing) by
+ * the writer's buildStateUpdate wrapper. A null field means "no override".
+ */
+export type NarrativeOverrides = { [K in WritableNarrativeField]: string | null };
+
+/** Create a NarrativeOverrides with every field unset (null). */
+export function createNarrativeOverrides(): NarrativeOverrides {
+	return {
+		sceneTitle: null,
+		background: null,
+		narrativeBody: null,
+		turnOfEvents: null,
+		cg: null,
+	};
+}
+
+/** True if any override field is set (non-null). */
+export function hasNarrativeOverrides(overrides: NarrativeOverrides): boolean {
+	return (Object.values(overrides) as string[]).some((v) => v != null);
+}
+
 /** Format a PhaseName for display (e.g., 'PLOT_PLANNER' → 'Plot Planner'). */
 export function formatPhaseName(name: PhaseName): string {
 	return name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());

@@ -7,12 +7,13 @@ import { allowAdvancePhaseTools, buildAdvancePhaseTools } from '$lib/ai/tools/ad
 import { allowEndActTools, buildEndActTools } from '$lib/ai/tools/end-act';
 import { buildIntroduceCharacterTools } from '$lib/ai/tools/introduce-character';
 import { buildCharacterDetailsTools } from '$lib/ai/tools/character-details';
+import { buildSetSceneTitleTools } from '$lib/ai/tools/set-scene-title';
 import { getStory, type Story } from '$lib/db/stories';
 import type { ActLineContext, AssistantContext } from '$lib/ai/pipeline/types';
 import { isActLineEnded } from '$lib/db/act-lines';
 import { type Act, getAct } from '$lib/db/acts';
 import { type ToolSet } from 'ai';
-import type { PhaseName, ActPhase } from '$lib/ai/narrative-types';
+import type { NarrativeOverrides, PhaseName, ActPhase } from '$lib/ai/narrative-types';
 
 export interface ToolContext {
 	story: Story;
@@ -34,6 +35,7 @@ export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 		'end-act',
 		'introduce-character',
 		'character-details',
+		'set-scene-title',
 	],
 	REVIEWER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory', 'character-details'],
 	EDITOR: [],
@@ -55,7 +57,12 @@ export function filterToolsForPhase(allTools: ToolSet | undefined, phase: PhaseN
 	return Object.keys(filtered).length > 0 ? filtered : undefined;
 }
 
-export async function buildTools(storyId: string, actLine: ActLineContext, assistant: AssistantContext): Promise<ToolSet | undefined> {
+export async function buildTools(
+	storyId: string,
+	actLine: ActLineContext,
+	assistant: AssistantContext,
+	overrides: NarrativeOverrides
+): Promise<ToolSet | undefined> {
 	const story = await getStory(storyId);
 
 	if (!story) return undefined;
@@ -75,6 +82,7 @@ export async function buildTools(storyId: string, actLine: ActLineContext, assis
 		...buildRiskTools(ctx),
 		...buildIntroduceCharacterTools(ctx),
 		...buildCharacterDetailsTools(ctx),
+		...buildSetSceneTitleTools(ctx, overrides),
 	};
 
 	const currentPhase: ActPhase | null = actLine.currentActPhase;

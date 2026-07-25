@@ -635,3 +635,10 @@ tools:
     parameters:
       actNumber: '要閱讀的章節編號 (必須在目前章節線的傳承中)'
       sceneNumber: '要閱讀的場景編號 (從 1 開始)'
+  setSceneTitle:
+    description: >
+      設定目前場景的標題。標題應簡潔且富有感染力，並切合場景的情節。
+    parameters:
+      title: '場景標題 (簡潔、具表感染力)'
+    messages:
+      success: '場景標題已設為: {{title}}'

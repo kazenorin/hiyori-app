@@ -11,6 +11,7 @@ import {
 	fullOutput,
 	mergeGameData,
 	mergeVariables,
+	applyNarrativeOverrides,
 } from './message-builder';
 import {
 	getReevaluationFrequency,
@@ -19,7 +20,7 @@ import {
 	isQuickReview,
 	isReviewerEnabled,
 } from '$lib/stores/settings.svelte';
-import type { ActPhase, EndingType, GameDataFields, NarrativeVariables, PlotMode } from '../narrative-types';
+import type { ActPhase, EndingType, GameDataFields, NarrativeOverrides, NarrativeVariables, PlotMode } from '../narrative-types';
 import { getActPhaseIndex } from '../narrative-types';
 import { summaryHeader } from '$lib/definitions/common-headers';
 import {
@@ -126,18 +127,21 @@ function isActEndPhase(actPhase: ActPhase | null): boolean {
 
 // --- buildStateUpdate functions ---
 
-function buildWriterStateUpdate(ss: StreamState): Partial<PipelineState> {
-	const writerOutput = fullOutput(ss);
-	const writerVariables = ss.variables;
-	if (isReviewerEnabled()) {
-		return { writerOutput, writerVariables };
-	}
-	return {
-		writerOutput,
-		writerVariables,
-		editorOutput: writerOutput,
-		editorVariables: writerVariables,
-		editorReasoning: ss.reasoning,
+function buildWriterStateUpdate(overrides: NarrativeOverrides): (ss: StreamState) => Partial<PipelineState> {
+	return (ss: StreamState): Partial<PipelineState> => {
+		const effectiveSs: StreamState = { ...ss, variables: applyNarrativeOverrides(ss.variables, overrides) };
+		const writerOutput = fullOutput(effectiveSs);
+		const writerVariables = effectiveSs.variables;
+		if (isReviewerEnabled()) {
+			return { writerOutput, writerVariables };
+		}
+		return {
+			writerOutput,
+			writerVariables,
+			editorOutput: writerOutput,
+			editorVariables: writerVariables,
+			editorReasoning: effectiveSs.reasoning,
+		};
 	};
 }
 
@@ -204,6 +208,7 @@ export interface PipelineRunContext {
 	tools?: ToolSet;
 	story: StoryContext;
 	assistant: AssistantContext;
+	narrativeOverrides: NarrativeOverrides;
 }
 
 export type TrackPhase = (
@@ -254,7 +259,7 @@ export async function runWriterPhase(
 			descriptors: getNarrativeDescriptors(),
 			messages: buildWriterMessages(ctx.preEditorCtx, writerExtractionPrompt),
 			providerConfig: ctx.providerConfigs.writer,
-			buildStateUpdate: buildWriterStateUpdate,
+			buildStateUpdate: buildWriterStateUpdate(ctx.narrativeOverrides),
 		},
 		state
 	);

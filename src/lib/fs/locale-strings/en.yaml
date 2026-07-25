@@ -647,3 +647,10 @@ tools:
     parameters:
       actNumber: 'The act number to read from (must be in the lineage of the current act line)'
       sceneNumber: 'The scene number to read (1-based)'
+  setSceneTitle:
+    description: >
+      Sets the title of the current scene. The title should be concise and evocative, matching the events of the scene.
+    parameters:
+      title: 'The scene title (concise, evocative)'
+    messages:
+      success: 'Scene title set to: {{title}}'

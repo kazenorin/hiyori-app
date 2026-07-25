@@ -1,5 +1,6 @@
 import type { MessageBase } from '$lib/db/messages';
-import type { ActPhase, GameDataFields, NarrativeVariables } from '../narrative-types';
+import type { ActPhase, GameDataFields, NarrativeOverrides, NarrativeVariables } from '../narrative-types';
+import { hasNarrativeOverrides } from '../narrative-types';
 import type { CommonPipelineInput, PlayerContext, PostEditorContext, PreEditorContext } from './types';
 import type { StreamState } from '../chat-callbacks';
 import {
@@ -71,6 +72,17 @@ export function mergeGameData(original: GameDataFields | null, fitter: GameDataF
 /** Check whether editor variables have template metadata. */
 export function editorHasTemplateMetadata(variables: NarrativeVariables | null | undefined): boolean {
 	return hasTemplateMetadata(variables);
+}
+
+/**
+ * Apply writer-tool overrides onto parsed narrative variables, fill-when-missing.
+ * Returns the original variables unchanged when no override is set; otherwise
+ * merges overrides as the "fitter" via mergeVariables (original non-blank values win).
+ */
+export function applyNarrativeOverrides(variables: NarrativeVariables | null, overrides: NarrativeOverrides): NarrativeVariables | null {
+	if (!hasNarrativeOverrides(overrides)) return variables;
+	const fitter: NarrativeVariables = { ...overrides, gameData: null };
+	return mergeVariables(variables, fitter);
 }
 
 /**

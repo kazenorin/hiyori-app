@@ -2,6 +2,7 @@ import type { PipelineRunContext } from '$lib/ai/pipeline/runners';
 import { buildPipelineProviderConfigs } from '$lib/ai/chat/pipeline-config';
 import type { RetryConfig } from '$lib/ai/chat-stream';
 import type { AssistantContext, PreEditorContext, StoryContext } from '$lib/ai/pipeline/types';
+import { createNarrativeOverrides } from '$lib/ai/narrative-types';
 
 export const EMPTY_PRE_EDITOR_CONTEXT: PreEditorContext = {
 	worldContent: '',
@@ -69,5 +70,6 @@ export function buildImportRunContext(
 		tools: undefined,
 		story: IMPORT_STORY_CONTEXT,
 		assistant: IMPORT_ASSISTANT_CONTEXT,
+		narrativeOverrides: createNarrativeOverrides(),
 	};
 }

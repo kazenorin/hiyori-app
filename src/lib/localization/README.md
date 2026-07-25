@@ -105,16 +105,16 @@ AI tools also call `ls()` directly for their descriptions, parameters, and resul
 
 ### YAML Structure (Top-Level Keys)
 
-| Key                          | Purpose                                                                                                                                               |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `common`                     | Labels, headers, descriptions shared across the app (player, scene, location, etc.)                                                                   |
-| `pipeline`                   | Headers, extraction prompts, labels, system prompts for the narrative generation pipeline                                                             |
-| `pipeline.extraction`        | Writer/Reviewer/Editor/GM/PlotPlanner/Summarizer extraction prompts                                                                                   |
-| `pipeline.extraction.writer` | Writer sub-prompts (providedSummary, turnOfEvents, directorNotes, actEnd, epilogue, guidance/phaseEvent extraction)                                   |
-| `pipeline.labels`            | Display labels (acceptAsIs, totalViolations, actPhases, sceneCount, etc.)                                                                             |
-| `pipeline.system`            | System prompts (templateFitter)                                                                                                                       |
-| `features`                   | Character card generator, act card generator, world builder, interview, import, world generator/updater, important phrases                            |
-| `tools`                      | AI tool definitions: selectWorldTemplate, evaluateRisk, queryMemories, queryInventory, readActPlot, advancePhase, endAct, readScene, readDistantScene |
+| Key                          | Purpose                                                                                                                                                                                                    |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `common`                     | Labels, headers, descriptions shared across the app (player, scene, location, etc.)                                                                                                                        |
+| `pipeline`                   | Headers, extraction prompts, labels, system prompts for the narrative generation pipeline                                                                                                                  |
+| `pipeline.extraction`        | Writer/Reviewer/Editor/GM/PlotPlanner/Summarizer extraction prompts                                                                                                                                        |
+| `pipeline.extraction.writer` | Writer sub-prompts (providedSummary, turnOfEvents, directorNotes, actEnd, epilogue, guidance/phaseEvent extraction)                                                                                        |
+| `pipeline.labels`            | Display labels (acceptAsIs, totalViolations, actPhases, sceneCount, etc.)                                                                                                                                  |
+| `pipeline.system`            | System prompts (templateFitter)                                                                                                                                                                            |
+| `features`                   | Character card generator, act card generator, world builder, interview, import, world generator/updater, important phrases                                                                                 |
+| `tools`                      | AI tool definitions: selectWorldTemplate, evaluateRisk, queryMemories, queryInventory, readActPlot, advancePhase, endAct, readScene, readDistantScene, introduceCharacter, characterDetails, setSceneTitle |
 
 ---
 

@@ -33,6 +33,7 @@ import { loadPrompts } from './prompt-loader';
 import { runAsyncPhases } from './summarizer';
 import { buildPipelineProviderConfigs } from '$lib/ai/chat/pipeline-config';
 import { buildTools } from '$lib/ai/tools/tools';
+import { createNarrativeOverrides } from '$lib/ai/narrative-types';
 import { AbstractPreEditorContext } from '$lib/ai/pipeline/message-builder';
 
 class MainPreEditorContext extends AbstractPreEditorContext {
@@ -89,7 +90,8 @@ async function buildPipelineContext(
 
 	const preEditorCtx: PreEditorContext = new preEditorContextClass(input);
 
-	const tools = await buildTools(story.storyId, story.actLine, assistant);
+	const narrativeOverrides = createNarrativeOverrides();
+	const tools = await buildTools(story.storyId, story.actLine, assistant, narrativeOverrides);
 	const prompts = preparePipelinePrompts(loadedPrompts);
 
 	return {
@@ -102,6 +104,7 @@ async function buildPipelineContext(
 		tools,
 		story,
 		assistant,
+		narrativeOverrides,
 	};
 }
 
