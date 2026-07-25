@@ -573,7 +573,15 @@
 		"deleteFileWarning": "This file will be deleted. This cannot be undone.",
 		"toConfig": "To Config",
 		"unmanagedFileDescription": "This file is not part of the app configuration.",
-		"criticalDeleteAcknowledge": "I understand this will cause loss of story context."
+		"criticalDeleteAcknowledge": "I understand this will cause loss of story context.",
+		"criticalFileDescription": "This file is important memory to the story. Deleting or renaming it will result in inconsistent storytelling.",
+		"rename": "Rename",
+		"renaming": "Renaming...",
+		"renameLabel": "New file name",
+		"renameNameRequired": "File name is required.",
+		"renameNameNoSlash": "File name cannot contain '/' or be a path.",
+		"renameNameSame": "File name is the same as before.",
+		"renameNameExists": "A file with that name already exists."
 	},
 	"loadStory": {
 		"heading": "Load Story",

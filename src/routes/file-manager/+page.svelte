@@ -13,6 +13,7 @@
 		listUserChangedConfigFiles,
 		classifyManagedConfig,
 		isCriticalSystemFile,
+		getFolderType,
 		type FileNode,
 		type UserChangedConfigFile,
 	} from '$lib/fs/file-tree';
@@ -26,8 +27,9 @@
 		handleCopyToAnotherStory as doHandleCopyToAnotherStory,
 		handleRestoreDefault as doHandleRestoreDefault,
 		handleDeleteFile as doHandleDeleteFile,
+		handleRenameFile as doHandleRenameFile,
 	} from '$lib/features/file-actions';
-	import { getAllStoryFolderInfo, type StoryFolderInfo } from '$lib/db/story-folders';
+	import { getAllStoryFolderInfo, getAllFolderNames, type StoryFolderInfo } from '$lib/db/story-folders';
 	import { t } from '$lib/i18n';
 	import { log } from '$lib/logging/logger';
 	import { mobileFeatures } from '$lib/stores/mobile-nav.svelte';
@@ -88,6 +90,11 @@
 	let showCopyPanel = $state(false);
 	let showTreeOnMobile = $state(false);
 	let showFileDeleteConfirm = $state(false);
+
+	let showRenameModal = $state(false);
+	let renameValue = $state('');
+	let renameError = $state<string | null>(null);
+	let pendingRenamePath = $state<string | null>(null);
 
 	function focusInlineCancel() {
 		if (inlineCancelRef) inlineCancelRef.focus();
@@ -159,6 +166,10 @@
 		selectedStoryFolder = '';
 		showFileDeleteConfirm = false;
 		acknowledgeCriticalLoss = false;
+		showRenameModal = false;
+		renameValue = '';
+		renameError = null;
+		pendingRenamePath = null;
 	}
 
 	async function handleSelectionChange(details: { selectedValue: string[]; selectedNodes: FileNode[] }) {
@@ -184,6 +195,13 @@
 		changedConfigFiles = [];
 		changedFilesError = null;
 		isLoadingChangedFiles = false;
+		showRenameModal = false;
+		renameValue = '';
+		renameError = null;
+		pendingRenamePath = null;
+		renameValue = '';
+		renameError = null;
+		pendingRenamePath = null;
 
 		if (node.isDirectory) {
 			fileContent = null;
@@ -249,7 +267,7 @@
 		}
 	}
 
-	async function navigateToConfigFile(filePath: string): Promise<void> {
+	async function navigateToFile(filePath: string): Promise<void> {
 		// Expand ancestors so the target file becomes visible in the lazy-loaded
 		// tree, then select it. The TreeView's `loadChildren` callback is invoked
 		// by zag-js for each newly-expanded branch, populating the collection.
@@ -273,12 +291,18 @@
 		// (elders still lazy-loading), so construct a synthetic node using
 		// classifyManagedConfig as the source of truth for managedConfig.
 		const fileName = segments[segments.length - 1];
-		const managedConfig = classifyManagedConfig(filePath, 'config') ?? undefined;
+		let folderType = getFolderType(filePath);
+		if (folderType === 'default') {
+			const topSegment = segments[0];
+			const storyFolders = new Set(await getAllFolderNames());
+			if (storyFolders.has(topSegment)) folderType = 'story';
+		}
+		const managedConfig = classifyManagedConfig(filePath, folderType) ?? undefined;
 		const syntheticNode: FileNode = {
 			id: filePath,
 			name: fileName,
 			isDirectory: false,
-			folderType: 'config',
+			folderType,
 			managedConfig,
 		};
 		await handleSelectionChange({ selectedValue: [filePath], selectedNodes: [syntheticNode] });
@@ -378,6 +402,49 @@
 			clearPreview();
 			await loadRoot();
 		});
+	}
+
+	function openRenameModal() {
+		if (!selectedNode || selectedNode.managedConfig !== undefined) return;
+		pendingRenamePath = selectedFilePath;
+		renameValue = selectedNode.name;
+		renameError = null;
+		acknowledgeCriticalLoss = false;
+		showRenameModal = true;
+	}
+
+	function validateRenameValue(name: string): string | null {
+		const trimmed = name.trim();
+		if (trimmed === '') return t('fileManager.renameNameRequired');
+		if (trimmed.includes('/')) return t('fileManager.renameNameNoSlash');
+		if (trimmed === selectedNode?.name) return t('fileManager.renameNameSame');
+		return null;
+	}
+
+	async function handleRenameConfirm() {
+		if (!pendingRenamePath) return;
+		const isCriticalRename = isCriticalSystemFile(pendingRenamePath, selectedNode?.folderType);
+		if (isCriticalRename && !acknowledgeCriticalLoss) return;
+		const error = validateRenameValue(renameValue);
+		if (error) {
+			renameError = error;
+			return;
+		}
+		const oldPath = pendingRenamePath;
+		const newName = renameValue.trim();
+		await doHandleRenameFile(actions, oldPath, newName, async (newPath: string) => {
+			showRenameModal = false;
+			renameValue = '';
+			renameError = null;
+			pendingRenamePath = null;
+			acknowledgeCriticalLoss = false;
+			await loadRoot();
+			await navigateToFile(newPath);
+		});
+		if (actions.actionError) {
+			renameError = actions.actionError;
+			actions.actionError = null;
+		}
 	}
 
 	function openCopyPanel() {
@@ -578,7 +645,7 @@
 									<button
 										class="btn preset-tonal text-xs w-full justify-start gap-1"
 										type="button"
-										onclick={() => void navigateToConfigFile(f.path)}
+										onclick={() => void navigateToFile(f.path)}
 									>
 										<Icon name="document" class="size-3.5 shrink-0" />
 										<span class="truncate">{f.relativePath}</span>
@@ -675,7 +742,9 @@
 		{/if}
 		{#if mc === undefined}
 			{@const isCritical = selectedFilePath ? isCriticalSystemFile(selectedFilePath, selectedNode?.folderType) : false}
-			<p class="text-xs text-surface-600-400">{t('fileManager.unmanagedFileDescription')}</p>
+			<p class="text-xs {isCritical ? 'text-warning-500' : 'text-surface-600-400'}">
+				{isCritical ? t('fileManager.criticalFileDescription') : t('fileManager.unmanagedFileDescription')}
+			</p>
 			{#if showFileDeleteConfirm}
 				<p class="text-xs text-warning-500">{t('fileManager.deleteFileWarning')}</p>
 				{#if isCritical}
@@ -705,12 +774,17 @@
 					{t('fileManager.cancel')}
 				</button>
 			{:else}
+				<button class="btn preset-tonal text-xs gap-1" type="button" onclick={openRenameModal} disabled={actions.isRenaming}>
+					<Icon name="pencil" class="size-3.5" />
+					{actions.isRenaming ? t('fileManager.renaming') : t('fileManager.rename')}
+				</button>
 				<button
 					class="btn preset-filled-error text-xs gap-1"
 					type="button"
 					onclick={() => {
 						showFileDeleteConfirm = true;
 					}}
+					disabled={actions.isRenaming}
 				>
 					<Icon name="trash-can" class="size-3.5" />
 					{t('fileManager.delete')}
@@ -854,6 +928,64 @@
 				onclick={confirmDiscardEdits}
 			>
 				{t('fileManager.discard')}
+			</button>
+		</div>
+	{/snippet}
+</Modal>
+
+<Modal bind:open={showRenameModal} title={t('fileManager.rename')}>
+	{#snippet body()}
+		{@const isCriticalRename = pendingRenamePath ? isCriticalSystemFile(pendingRenamePath, selectedNode?.folderType) : false}
+		<div class="space-y-2">
+			{#if isCriticalRename}
+				<p class="text-xs text-warning-500">{t('fileManager.criticalFileDescription')}</p>
+			{/if}
+			<label class="text-xs text-surface-600-400" for="rename-input">{t('fileManager.renameLabel')}</label>
+			<input
+				id="rename-input"
+				class="w-full rounded border border-surface-200-800 bg-surface-50-950 px-3 py-1.5 text-sm text-surface-900-100"
+				bind:value={renameValue}
+				onkeydown={(e) => {
+					if (e.key === 'Enter' && !(isCriticalRename && !acknowledgeCriticalLoss)) handleRenameConfirm();
+				}}
+			/>
+			{#if isCriticalRename}
+				<label class="text-xs text-warning-500 flex items-center gap-2">
+					<input type="checkbox" bind:checked={acknowledgeCriticalLoss} />
+					{t('fileManager.criticalDeleteAcknowledge')}
+				</label>
+			{/if}
+			{#if renameError}
+				<p class="text-xs text-error-500">{renameError}</p>
+			{/if}
+		</div>
+	{/snippet}
+	{#snippet footer()}
+		{@const isCriticalRename = pendingRenamePath ? isCriticalSystemFile(pendingRenamePath, selectedNode?.folderType) : false}
+		<div class="flex justify-end gap-3">
+			<button
+				class="btn preset-tonal"
+				type="button"
+				onclick={() => {
+					showRenameModal = false;
+					renameError = null;
+					acknowledgeCriticalLoss = false;
+				}}
+				disabled={actions.isRenaming}
+			>
+				{t('fileManager.cancel')}
+			</button>
+			<button
+				class="btn preset-filled text-xs gap-1"
+				type="button"
+				onclick={handleRenameConfirm}
+				disabled={actions.isRenaming ||
+					renameValue.trim() === '' ||
+					renameValue.trim() === selectedNode?.name ||
+					(isCriticalRename && !acknowledgeCriticalLoss)}
+			>
+				<Icon name="check" class="size-3.5" />
+				{actions.isRenaming ? t('fileManager.renaming') : t('fileManager.rename')}
 			</button>
 		</div>
 	{/snippet}

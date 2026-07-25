@@ -315,3 +315,22 @@ export async function restoreConfigDefault(configFilePath: string): Promise<void
 export async function deleteFile(filePath: string): Promise<void> {
 	await fs.remove(filePath);
 }
+
+export function deriveRenamedPath(filePath: string, newName: string): string {
+	const trimmed = newName.trim();
+	if (trimmed === '' || trimmed.includes('/')) {
+		throw new Error('Invalid file name');
+	}
+	const idx = filePath.lastIndexOf('/');
+	return idx === -1 ? trimmed : `${filePath.slice(0, idx + 1)}${trimmed}`;
+}
+
+export async function renameFile(oldFilePath: string, newName: string): Promise<string> {
+	const newPath = deriveRenamedPath(oldFilePath, newName);
+	if (newPath === oldFilePath) return newPath;
+	if (await fs.exists(newPath)) {
+		throw new Error('A file with that name already exists.');
+	}
+	await fs.rename(oldFilePath, newPath);
+	return newPath;
+}

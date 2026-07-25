@@ -10,6 +10,8 @@ import {
 	copyStoryOverrideToStory,
 	isCriticalSystemFile,
 	CRITICAL_SYSTEM_FILENAMES,
+	renameFile,
+	deriveRenamedPath,
 } from '$lib/fs/file-tree';
 
 describe('readDirectoryNodes — managedConfig classification', () => {
@@ -327,5 +329,101 @@ describe('readDirectoryNodes — empty subdirectory filtering', () => {
 		const nodes = await readDirectoryNodes('my-story');
 		expect(nodes.find((n) => n.name === 'empty-branch')).toBeUndefined();
 		expect(nodes.find((n) => n.name === 'full-branch')).toBeDefined();
+	});
+});
+
+describe('deriveRenamedPath', () => {
+	it('replaces the basename with the new name', () => {
+		expect(deriveRenamedPath('story-a/act-1/file.md', 'renamed.md')).toBe('story-a/act-1/renamed.md');
+	});
+
+	it('handles top-level files without a directory segment', () => {
+		expect(deriveRenamedPath('notes.txt', 'todo.txt')).toBe('todo.txt');
+	});
+
+	it('trims whitespace from the new name', () => {
+		expect(deriveRenamedPath('a/b.md', '  c.md  ')).toBe('a/c.md');
+	});
+
+	it('throws when the new name is empty', () => {
+		expect(() => deriveRenamedPath('a/b.md', '   ')).toThrow();
+	});
+
+	it('throws when the new name contains a path separator', () => {
+		expect(() => deriveRenamedPath('a/b.md', 'sub/c.md')).toThrow();
+	});
+});
+
+describe('renameFile', () => {
+	let fs: InMemoryFileSystem;
+
+	beforeEach(() => {
+		fs = new InMemoryFileSystem();
+		fs.clear();
+		setFileSystem(fs);
+		vi.restoreAllMocks();
+	});
+
+	it('moves the file to the new name within the same directory', async () => {
+		const oldPath = 'my-story/act-1/notes.md';
+		const newPath = 'my-story/act-1/renamed.md';
+		await fs.writeTextFileEnsuringDir(oldPath, 'content');
+
+		const result = await renameFile(oldPath, 'renamed.md');
+
+		expect(result).toBe(newPath);
+		expect(await fs.exists(oldPath)).toBe(false);
+		expect(await fs.exists(newPath)).toBe(true);
+		expect(await fs.readTextFile(newPath)).toBe('content');
+	});
+
+	it('is a no-op when the new name matches the current name', async () => {
+		const path = 'top.md';
+		await fs.writeTextFileEnsuringDir(path, 'content');
+
+		const result = await renameFile(path, 'top.md');
+
+		expect(result).toBe(path);
+		expect(await fs.exists(path)).toBe(true);
+	});
+
+	it('rejects an empty new name without touching the file', async () => {
+		const path = 'my-story/act-1/notes.md';
+		await fs.writeTextFileEnsuringDir(path, 'content');
+
+		await expect(renameFile(path, '   ')).rejects.toThrow();
+		expect(await fs.exists(path)).toBe(true);
+	});
+
+	it('rejects a new name containing a path separator without touching the file', async () => {
+		const path = 'my-story/act-1/notes.md';
+		await fs.writeTextFileEnsuringDir(path, 'content');
+
+		await expect(renameFile(path, 'sub/notes.md')).rejects.toThrow();
+		expect(await fs.exists(path)).toBe(true);
+	});
+
+	it('refuses to overwrite when the destination name already exists', async () => {
+		const dir = 'my-story/act-1';
+		const oldPath = `${dir}/notes.md`;
+		const blockerPath = `${dir}/existing.md`;
+		await fs.writeTextFileEnsuringDir(oldPath, 'original');
+		await fs.writeTextFileEnsuringDir(blockerPath, 'blocker');
+
+		await expect(renameFile(oldPath, 'existing.md')).rejects.toThrow();
+
+		// Neither file was modified
+		expect(await fs.readTextFile(oldPath)).toBe('original');
+		expect(await fs.readTextFile(blockerPath)).toBe('blocker');
+	});
+
+	it('allow renaming when target name is free in a different directory', async () => {
+		const src = 'a/file.md';
+		await fs.writeTextFileEnsuringDir(src, 'content');
+
+		const result = await renameFile(src, 'renamed.md');
+
+		expect(result).toBe('a/renamed.md');
+		expect(await fs.exists('a/renamed.md')).toBe(true);
 	});
 });

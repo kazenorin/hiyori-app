@@ -6,6 +6,7 @@ import {
 	copyStoryOverrideToStory,
 	restoreConfigDefault,
 	deleteFile,
+	renameFile,
 } from '$lib/fs/file-tree';
 import { readFileData, getLanguageFromPath, decodeText } from '$lib/fs/file-tree';
 import { log } from '$lib/logging/logger';
@@ -15,6 +16,7 @@ export interface FileActionState {
 	isDeleting: boolean;
 	isCopying: boolean;
 	isRestoring: boolean;
+	isRenaming: boolean;
 	actionError: string | null;
 }
 
@@ -24,6 +26,7 @@ export function createFileActionState(): FileActionState {
 		isDeleting: false,
 		isCopying: false,
 		isRestoring: false,
+		isRenaming: false,
 		actionError: null,
 	};
 }
@@ -141,5 +144,24 @@ export async function handleDeleteFile(state: FileActionState, selectedFilePath:
 		await log.error('file-manager', 'Failed to delete file', err);
 	} finally {
 		state.isDeleting = false;
+	}
+}
+
+export async function handleRenameFile(
+	state: FileActionState,
+	selectedFilePath: string,
+	newName: string,
+	onComplete: (newPath: string) => Promise<void>
+): Promise<void> {
+	state.isRenaming = true;
+	state.actionError = null;
+	try {
+		const newPath = await renameFile(selectedFilePath, newName);
+		await onComplete(newPath);
+	} catch (err) {
+		state.actionError = err instanceof Error ? err.message : String(err);
+		await log.error('file-manager', 'Failed to rename file', err);
+	} finally {
+		state.isRenaming = false;
 	}
 }
