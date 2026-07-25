@@ -20,7 +20,9 @@ import {
 } from '$lib/db/act-lines';
 import { getAct, traceActLineChain } from '$lib/db/acts';
 import { getStory } from '$lib/db/stories';
-import { ensureActCard } from '$lib/features/act-card-generator';
+import { checkActCardExists, ensureActCard } from '$lib/features/act-card-generator';
+import { resolveStoryFolder } from '$lib/fs/story-folders';
+import { fs } from '$lib/fs/file-system';
 import {
 	type CharacterCardContext,
 	ensureCharacterCard,
@@ -35,6 +37,7 @@ import { targetWordCountPerSceneHeader } from '$lib/definitions/common-headers';
 import { ERR_EMPTY_ACT_PLOT_WRITER, ERR_NO_MAIN_PROVIDER } from '$lib/definitions/error-messages';
 import { actWithNumberLabel } from '$lib/definitions/common-labels';
 import { buildActPlotTools, filterActPlotToolsForPhase } from './tools';
+import { ACT_LEVEL_ACT_CARD } from './constants';
 import type { ActLineContext } from '$lib/ai/pipeline/types';
 import type { ToolContext } from '$lib/ai/tools/tools';
 
@@ -73,6 +76,7 @@ interface BuildActPlotMessagesOptions {
 	template?: string;
 	characterCards?: { preferredName: string; content: string }[];
 	actCards?: { actNumber: number; content: string }[];
+	currentActCard?: { actNumber: number; content: string } | null;
 	characterProfiles?: string;
 	useDetailedContext?: boolean;
 }
@@ -89,6 +93,7 @@ function buildActPlotMessages(options: BuildActPlotMessagesOptions): ModelMessag
 		template,
 		characterCards,
 		actCards,
+		currentActCard,
 		characterProfiles,
 		useDetailedContext,
 	} = options;
@@ -115,6 +120,13 @@ function buildActPlotMessages(options: BuildActPlotMessagesOptions): ModelMessag
 				content: ACT_PLOT_SECTION.ACT_CARDS + `### ${actWithNumberLabel(card.actNumber)}\n\n---\n\n${card.content}`,
 			});
 		}
+	}
+
+	if (currentActCard) {
+		messages.push({
+			role: 'user',
+			content: ACT_PLOT_SECTION.ACT_CARDS + `### ${actWithNumberLabel(currentActCard.actNumber)}\n\n---\n\n${currentActCard.content}`,
+		});
 	}
 
 	if (useDetailedContext && characterProfiles) {
@@ -206,6 +218,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 		turnOfEvents,
 		detailedContext,
 		toolContext,
+		storyFolder,
 	] = await Promise.all([
 		actPlotTemplateLoader
 			.loadByStory(storyId, storyName)
@@ -219,7 +232,10 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 		isResumeGame ? getLatestTurnOfEvents(actLineId) : Promise.resolve(null),
 		useDetailedContext ? loadDetailedContextInputs(params) : Promise.resolve(null),
 		loadActPlotToolContext(params),
+		resolveStoryFolder(storyId, storyName),
 	]);
+
+	const currentActCard = await loadCurrentActLevelActCard(params, storyFolder);
 
 	const model = await createModel(config);
 
@@ -234,7 +250,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 
 	await log.info(
 		LOG_TAG,
-		`Starting act-plot pipeline for story: ${storyName} (interview: ${interviewTranscript.some((m) => m.role === 'user') ? 'yes' : 'no'}, prev-summary: ${previousActSummary ? 'yes' : 'no'}, turnOfEvents: ${turnOfEvents ? 'yes' : 'no'}, detailedContext: ${detailedContext ? 'yes' : 'no'})`
+		`Starting act-plot pipeline for story: ${storyName} (interview: ${interviewTranscript.some((m) => m.role === 'user') ? 'yes' : 'no'}, prev-summary: ${previousActSummary ? 'yes' : 'no'}, turnOfEvents: ${turnOfEvents ? 'yes' : 'no'}, detailedContext: ${detailedContext ? 'yes' : 'no'}, currentActCard: ${currentActCard ? 'yes' : 'no'})`
 	);
 
 	// Phase 1: WRITER
@@ -251,6 +267,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 		useDetailedContext,
 		characterCards: detailedContext?.characterCards,
 		actCards: detailedContext?.actCards,
+		currentActCard,
 		characterProfiles: detailedContext?.characterProfiles,
 	});
 	const writerResult = await generateText({
@@ -290,6 +307,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 				useDetailedContext,
 				characterCards: detailedContext?.characterCards,
 				actCards: detailedContext?.actCards,
+				currentActCard,
 				characterProfiles: detailedContext?.characterProfiles,
 			});
 			const reviewerResult = await generateText({
@@ -325,6 +343,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 					useDetailedContext,
 					characterCards: detailedContext?.characterCards,
 					actCards: detailedContext?.actCards,
+					currentActCard,
 					characterProfiles: detailedContext?.characterProfiles,
 				});
 				const editorResult = await generateText({
@@ -446,4 +465,51 @@ async function loadDetailedContextInputs(params: GenerateActPlotParams): Promise
 	const characterProfiles = formatCharacterProfilesSection(profiles, threshold, maxIncluded)[0] ?? '';
 
 	return { actCards, characterCards, characterProfiles };
+}
+
+/**
+ * Load the act-level act card ({storyFolder}/act-{N}/{ACT_LEVEL_ACT_CARD}) for the current act.
+ * This card is user-supplied (e.g. via import-world) and treated as generic context.
+ * It is distinct from act-line-specific act cards (which hold message-id suffixes and
+ * are loaded via loadDetailedContextInputs).
+ *
+ * In detailed context, the act-level card is skipped when an act-line-specific card
+ * already exists for the current act line (the normal case), so current-act context
+ * is not doubled up. Lineage act-line cards always take precedence over this card.
+ */
+async function loadCurrentActLevelActCard(
+	params: GenerateActPlotParams,
+	storyFolder: string
+): Promise<{ actNumber: number; content: string } | null> {
+	const { actNumber, useDetailedContext } = params;
+	const filePath = `${storyFolder}/act-${actNumber}/${ACT_LEVEL_ACT_CARD}`;
+	const exists = await fs.exists(filePath);
+	if (!exists) return null;
+
+	if (useDetailedContext) {
+		const lineCardExists = await checkActCardExists({
+			storyId: params.storyId,
+			storyName: params.storyName,
+			actLineId: params.actLine.id,
+			actLine: params.actLine,
+			actNumber,
+			abortSignal: params.abortSignal,
+		});
+		if (lineCardExists) {
+			await log.info(LOG_TAG, `Act-line card exists for act ${actNumber}; skipping act-level ${ACT_LEVEL_ACT_CARD}`);
+			return null;
+		}
+	}
+
+	try {
+		const content = await fs.readTextFile(filePath);
+		if (!content.trim()) return null;
+		return { actNumber, content };
+	} catch (err) {
+		await log.warn(
+			LOG_TAG,
+			`Failed to read act-level ${ACT_LEVEL_ACT_CARD} for act ${actNumber}: ${err instanceof Error ? err.message : String(err)}`
+		);
+		return null;
+	}
 }
