@@ -315,7 +315,8 @@
 			"actEndDecisionContext": "章節已結束。接下來你想怎麼做？",
 			"continueToNextAct": "繼續下一章節",
 			"endTheStory": "在此結束故事",
-			"storyConcluded": "故事已完結"
+			"storyConcluded": "故事已完結",
+			"appendDecision": "將回應選項附加至聊天框"
 		},
 		"worldBuilderControls": {
 			"controls": "控制台",

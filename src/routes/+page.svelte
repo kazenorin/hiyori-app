@@ -90,7 +90,7 @@
 	import MessageEditForm from '$lib/components/chat/MessageEditForm.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-	import { mobileNav } from '$lib/stores/mobile-nav.svelte';
+	import { mobileNav, mobileFeatures } from '$lib/stores/mobile-nav.svelte';
 	import { scrollToBottom } from '$lib/utils/scroll';
 	import { setupScrollObservers, handleStreamEndScroll } from '$lib/features/auto-scroller.svelte';
 	import { handleContinueToNextAct, handleEndStory } from '$lib/features/act-transition.svelte';
@@ -279,6 +279,16 @@
 		const actLineId = getActiveActLineId();
 		if (!actLineId) return;
 		sendMessage(actLineId, decision);
+	}
+
+	function handleAppendDecision(decision: string) {
+		if (getIsBusy()) return;
+		const current = input.trim();
+		input = current ? `${current}\n${decision}` : decision;
+		if (mobileFeatures.isPhone) {
+			mobileNav.activeTab = 'chat';
+			mobileNav.inputSheetOpen = true;
+		}
 	}
 
 	$effect(() => {
@@ -818,6 +828,7 @@
 					actEnded={getActEnded()}
 					storyConcluded={getStoryConcluded()}
 					onDecisionClick={handleDecisionClick}
+					onAppendDecision={handleAppendDecision}
 					onContinueToNextAct={handleContinueToNextAct}
 					onEndStory={handleEndStory}
 					{chatContainer}
@@ -833,6 +844,7 @@
 				storyConcluded={getStoryConcluded()}
 				isBusy={getIsBusy()}
 				onDecisionClick={handleDecisionClick}
+				onAppendDecision={handleAppendDecision}
 				onContinueToNextAct={handleContinueToNextAct}
 				onEndStory={handleEndStory}
 			/>

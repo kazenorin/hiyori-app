@@ -315,7 +315,8 @@
 			"actEndDecisionContext": "The act has concluded. What would you like to do next?",
 			"continueToNextAct": "Continue to the next act",
 			"endTheStory": "End the story here",
-			"storyConcluded": "Story Concluded"
+			"storyConcluded": "Story Concluded",
+			"appendDecision": "Append decision to chat"
 		},
 		"worldBuilderControls": {
 			"controls": "Controls",

@@ -13,6 +13,7 @@
 		storyConcluded: boolean;
 		isBusy: boolean;
 		onDecisionClick: (decision: string) => void;
+		onAppendDecision?: (decision: string) => void;
 		onContinueToNextAct?: () => void;
 		onEndStory?: () => void;
 	}
@@ -25,6 +26,7 @@
 		storyConcluded,
 		isBusy,
 		onDecisionClick,
+		onAppendDecision,
 		onContinueToNextAct,
 		onEndStory,
 	}: Props = $props();
@@ -142,7 +144,33 @@
 									onclick={() => handleDecision(decision)}
 									disabled={isBusy}
 								>
-									{decision}
+									<span class="flex items-center gap-2">
+										<span class="flex-1 min-w-0">{decision}</span>
+										{#if onAppendDecision}
+											<span
+												class="shrink-0 opacity-80 hover:opacity-100"
+												role="button"
+												tabindex={isBusy ? -1 : 0}
+												aria-label={t('components.chatControls.appendDecision')}
+												onclick={(e) => {
+													e.stopPropagation();
+													e.preventDefault();
+													if (isBusy) return;
+													onAppendDecision(decision);
+												}}
+												onkeydown={(e) => {
+													if (e.key === 'Enter' || e.key === ' ') {
+														e.preventDefault();
+														e.stopPropagation();
+														if (isBusy) return;
+														onAppendDecision(decision);
+													}
+												}}
+											>
+												<Icon name="message-square-plus" class="h-4 w-4" />
+											</span>
+										{/if}
+									</span>
 								</button>
 							{/each}
 						</div>
