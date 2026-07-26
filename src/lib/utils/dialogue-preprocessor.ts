@@ -1,5 +1,5 @@
 /**
- * Preprocesses content to wrap dialogue (text in double quotes and Chinese brackets 「」)
+ * Preprocesses content to wrap dialogue (text in double quotes, curly double quotes “”, and Chinese brackets 「」)
  * and character names with highlighting spans.
  *
  * HTML protection strategy:
@@ -16,7 +16,7 @@ const HTML_BLOCK_TAGS = new Set(['div', 'header', 'aside', 'section', 'article',
 
 const INLINE_TAG_PATTERN = /<[^>]+>/g;
 
-const DIALOGUE_PATTERN = /"([^"\\]|\\.)*"|「[^」]*」/g;
+const DIALOGUE_PATTERN = /"([^"\\]|\\.)*"|「[^」]*」|“[^”]*”/g;
 
 const PLACEHOLDER_PREFIX = '\x00DIALOGUE_MASK_';
 const PLACEHOLDER_SUFFIX = '\x00';
@@ -107,7 +107,13 @@ function extractBlockRegion(content: string, start: number, tagName: string): { 
 	return null;
 }
 
-function highlightTerms(text: string, names: string[], spanClass: string, maskAfter?: (text: string) => string, wordBoundaries: boolean = true): string {
+function highlightTerms(
+	text: string,
+	names: string[],
+	spanClass: string,
+	maskAfter?: (text: string) => string,
+	wordBoundaries: boolean = true
+): string {
 	if (names.length === 0) return text;
 
 	const sorted = [...names].sort((a, b) => b.length - a.length);

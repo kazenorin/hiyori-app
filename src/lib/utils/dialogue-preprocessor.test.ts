@@ -160,77 +160,113 @@ describe('preprocessDialogue', () => {
 		});
 	});
 
-		describe('Chinese bracket dialogue 「」', () => {
-			it('wraps basic Chinese bracket dialogue in span.dialogue', () => {
-				expect(preprocessDialogue('他說「你好」')).toBe('他說<span class="dialogue">「你好」</span>');
-			});
-
-			it('wraps multiple Chinese bracket dialogues', () => {
-				expect(preprocessDialogue('「啊」和「嗯」')).toBe(
-					'<span class="dialogue">「啊」</span>和<span class="dialogue">「嗯」</span>'
-				);
-			});
-
-			it('wraps empty Chinese brackets', () => {
-				expect(preprocessDialogue('「」')).toBe('<span class="dialogue">「」</span>');
-			});
-
-			it('does not match unpaired opening bracket', () => {
-				expect(preprocessDialogue('他說「你好')).toBe('他說「你好');
-			});
-
-			it('does not match unpaired closing bracket', () => {
-				expect(preprocessDialogue('他說你好」')).toBe('他說你好」');
-			});
-
-			it('handles Chinese bracket dialogue with punctuation inside', () => {
-				expect(preprocessDialogue('她低聲說「你好，世界！」')).toBe(
-					'她低聲說<span class="dialogue">「你好，世界！」</span>'
-				);
-			});
-
-			it('protects Chinese bracket dialogue inside HTML blocks', () => {
-				expect(preprocessDialogue('<div class="foo">「跳過」</div>')).toBe('<div class="foo">「跳過」</div>');
-			});
-
-			it('processes Chinese brackets between HTML blocks', () => {
-				expect(preprocessDialogue('「開始」 <div>「跳過」</div> 「結束」')).toBe(
-					'<span class="dialogue">「開始」</span> <div>「跳過」</div> <span class="dialogue">「結束」</span>'
-				);
-			});
-
-			it('does not wrap character names inside Chinese bracket dialogue', () => {
-				expect(preprocessDialogue('「你好，Arthur！」', ['Arthur'])).toBe(
-					'<span class="dialogue">「你好，Arthur！」</span>'
-				);
-			});
-
-			it('wraps character names outside Chinese bracket dialogue', () => {
-				expect(preprocessDialogue('Arthur說「你好」', ['Arthur'])).toBe(
-					'<span class="character-name">Arthur</span>說<span class="dialogue">「你好」</span>'
-				);
-			});
-
-			it('does not wrap important phrases inside Chinese bracket dialogue', () => {
-				expect(preprocessDialogue('「古老的劍閃閃發光」', [], ['古老的劍'])).toBe(
-					'<span class="dialogue">「古老的劍閃閃發光」</span>'
-				);
-			});
-
-			it('mixes double-quoted and Chinese bracket dialogue on the same line', () => {
-				expect(preprocessDialogue('He said "hello" and 她說「你好」')).toBe(
-					'He said <span class="dialogue">"hello"</span> and 她說<span class="dialogue">「你好」</span>'
-				);
-			});
-
-			it('protects Chinese brackets in HTML attributes of inline tags', () => {
-				expect(preprocessDialogue('<span title="「text」">content</span>')).toBe(
-					'<span title="「text」">content</span>'
-				);
-			});
+	describe('Chinese bracket dialogue 「」', () => {
+		it('wraps basic Chinese bracket dialogue in span.dialogue', () => {
+			expect(preprocessDialogue('他說「你好」')).toBe('他說<span class="dialogue">「你好」</span>');
 		});
 
-		describe('important phrase highlighting', () => {
+		it('wraps multiple Chinese bracket dialogues', () => {
+			expect(preprocessDialogue('「啊」和「嗯」')).toBe('<span class="dialogue">「啊」</span>和<span class="dialogue">「嗯」</span>');
+		});
+
+		it('wraps empty Chinese brackets', () => {
+			expect(preprocessDialogue('「」')).toBe('<span class="dialogue">「」</span>');
+		});
+
+		it('does not match unpaired opening bracket', () => {
+			expect(preprocessDialogue('他說「你好')).toBe('他說「你好');
+		});
+
+		it('does not match unpaired closing bracket', () => {
+			expect(preprocessDialogue('他說你好」')).toBe('他說你好」');
+		});
+
+		it('handles Chinese bracket dialogue with punctuation inside', () => {
+			expect(preprocessDialogue('她低聲說「你好，世界！」')).toBe('她低聲說<span class="dialogue">「你好，世界！」</span>');
+		});
+
+		it('protects Chinese bracket dialogue inside HTML blocks', () => {
+			expect(preprocessDialogue('<div class="foo">「跳過」</div>')).toBe('<div class="foo">「跳過」</div>');
+		});
+
+		it('processes Chinese brackets between HTML blocks', () => {
+			expect(preprocessDialogue('「開始」 <div>「跳過」</div> 「結束」')).toBe(
+				'<span class="dialogue">「開始」</span> <div>「跳過」</div> <span class="dialogue">「結束」</span>'
+			);
+		});
+
+		it('does not wrap character names inside Chinese bracket dialogue', () => {
+			expect(preprocessDialogue('「你好，Arthur！」', ['Arthur'])).toBe('<span class="dialogue">「你好，Arthur！」</span>');
+		});
+
+		it('wraps character names outside Chinese bracket dialogue', () => {
+			expect(preprocessDialogue('Arthur說「你好」', ['Arthur'])).toBe(
+				'<span class="character-name">Arthur</span>說<span class="dialogue">「你好」</span>'
+			);
+		});
+
+		it('does not wrap important phrases inside Chinese bracket dialogue', () => {
+			expect(preprocessDialogue('「古老的劍閃閃發光」', [], ['古老的劍'])).toBe('<span class="dialogue">「古老的劍閃閃發光」</span>');
+		});
+
+		it('mixes double-quoted and Chinese bracket dialogue on the same line', () => {
+			expect(preprocessDialogue('He said "hello" and 她說「你好」')).toBe(
+				'He said <span class="dialogue">"hello"</span> and 她說<span class="dialogue">「你好」</span>'
+			);
+		});
+
+		it('protects Chinese brackets in HTML attributes of inline tags', () => {
+			expect(preprocessDialogue('<span title="「text」">content</span>')).toBe('<span title="「text」">content</span>');
+		});
+	});
+
+	describe('curly double-quote dialogue “”', () => {
+		it('wraps basic curly-quote dialogue in span.dialogue', () => {
+			expect(preprocessDialogue('她說“你好”')).toBe('她說<span class="dialogue">“你好”</span>');
+		});
+
+		it('wraps multiple curly-quote dialogues', () => {
+			expect(preprocessDialogue('“啊”和“嗯”')).toBe('<span class="dialogue">“啊”</span>和<span class="dialogue">“嗯”</span>');
+		});
+
+		it('wraps empty curly quotes', () => {
+			expect(preprocessDialogue('“”')).toBe('<span class="dialogue">“”</span>');
+		});
+
+		it('does not match unpaired opening curly quote', () => {
+			expect(preprocessDialogue('她說“你好')).toBe('她說“你好');
+		});
+
+		it('does not match unpaired closing curly quote', () => {
+			expect(preprocessDialogue('她說你好”')).toBe('她說你好”');
+		});
+
+		it('handles curly-quote dialogue with punctuation inside', () => {
+			expect(preprocessDialogue('她低聲說“你好，世界！”')).toBe('她低聲說<span class="dialogue">“你好，世界！”</span>');
+		});
+
+		it('protects curly-quote dialogue inside HTML blocks', () => {
+			expect(preprocessDialogue('<div class="foo">“跳過”</div>')).toBe('<div class="foo">“跳過”</div>');
+		});
+
+		it('does not wrap character names inside curly-quote dialogue', () => {
+			expect(preprocessDialogue('“你好，Arthur！”', ['Arthur'])).toBe('<span class="dialogue">“你好，Arthur！”</span>');
+		});
+
+		it('wraps character names outside curly-quote dialogue', () => {
+			expect(preprocessDialogue('Arthur說“你好”', ['Arthur'])).toBe(
+				'<span class="character-name">Arthur</span>說<span class="dialogue">“你好”</span>'
+			);
+		});
+
+		it('mixes all three dialogue styles on the same line', () => {
+			expect(preprocessDialogue('He said "hi" and 她說“你好” then 「嗯」')).toBe(
+				'He said <span class="dialogue">"hi"</span> and 她說<span class="dialogue">“你好”</span> then <span class="dialogue">「嗯」</span>'
+			);
+		});
+	});
+
+	describe('important phrase highlighting', () => {
 		it('wraps a single phrase', () => {
 			expect(preprocessDialogue('The ancient sword glowed.', [], ['ancient sword'])).toBe(
 				'The <span class="highlighted-phrase">ancient sword</span> glowed.'
@@ -268,9 +304,7 @@ describe('preprocessDialogue', () => {
 		});
 
 		it('does not wrap phrases inside HTML blocks', () => {
-			expect(preprocessDialogue('<div>ancient sword</div>', [], ['ancient sword'])).toBe(
-				'<div>ancient sword</div>'
-			);
+			expect(preprocessDialogue('<div>ancient sword</div>', [], ['ancient sword'])).toBe('<div>ancient sword</div>');
 		});
 
 		it('wraps phrases between HTML blocks', () => {
