@@ -36,6 +36,8 @@
 	}: Props = $props();
 
 	const SCROLL_BOTTOM_THRESHOLD_PX = 5;
+	const AUTO_OPEN_DEBOUNCE_MS = 5_000;
+	const AUTO_CLOSE_DEBOUNCE_MS = 3_000;
 
 	function slide(node: Element, opts: { duration?: number } = {}) {
 		const result = svelteSlide(node, opts);
@@ -56,9 +58,18 @@
 	let layoutTransitioning = $state(false);
 	let layoutTimeout: ReturnType<typeof setTimeout> | undefined;
 	let autoOpenSuppressedUntil = 0;
-	const AUTO_OPEN_DEBOUNCE_MS = 10_000;
+	let autoCloseSuppressed = $state(false);
+	let autoCloseTimeout: ReturnType<typeof setTimeout> | undefined;
 
-	let isMinimized = $derived(!isPinned && (!isNearBottom || isManuallyClosed) && !isUserExpanded);
+	let isMinimized = $derived(!isPinned && ((!isNearBottom && !autoCloseSuppressed) || isManuallyClosed) && !isUserExpanded);
+
+	function markOpened() {
+		clearTimeout(autoCloseTimeout);
+		autoCloseSuppressed = true;
+		autoCloseTimeout = setTimeout(() => {
+			autoCloseSuppressed = false;
+		}, AUTO_CLOSE_DEBOUNCE_MS);
+	}
 	let hasContent = $derived(decisions.length > 0 || activePlotThreads.length > 0 || decisionContext !== null || actEnded || storyConcluded);
 
 	let summaryText = $derived.by(() => {
@@ -114,6 +125,7 @@
 						startLayoutTransition(true);
 						isManuallyClosed = false;
 						autoOpenSuppressedUntil = Date.now() + AUTO_OPEN_DEBOUNCE_MS;
+						markOpened();
 					}
 				} else if (!isNearBottom && wasNearBottom) {
 					startLayoutTransition(false);
@@ -132,6 +144,7 @@
 		return () => {
 			cancelAnimationFrame(rafId);
 			clearTimeout(layoutTimeout);
+			clearTimeout(autoCloseTimeout);
 			layoutTransitioning = false;
 			container.removeEventListener('scroll', onScroll);
 			container.removeEventListener('click', onClick);
@@ -143,6 +156,8 @@
 			isUserExpanded = false;
 			layoutTransitioning = false;
 			clearTimeout(layoutTimeout);
+			clearTimeout(autoCloseTimeout);
+			autoCloseSuppressed = false;
 		}
 	});
 </script>
@@ -164,6 +179,7 @@
 					isUserExpanded = true;
 					isManuallyClosed = false;
 					startLayoutTransition(true);
+					markOpened();
 				}}
 			>
 				<span class="truncate">{summaryText}</span>
