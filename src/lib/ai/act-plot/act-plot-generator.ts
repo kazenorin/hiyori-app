@@ -3,7 +3,8 @@ import { getMainProviderConfig, isReviewerEnabled, settings } from '$lib/stores/
 import { createModel } from '$lib/ai/provider';
 import {
 	actPlotEditorPromptLoader,
-	actPlotGenerationPromptLoader,
+	guidanceActPlotGenerationPromptLoader,
+	phaseEventActPlotGenerationPromptLoader,
 	actPlotReviewerPromptLoader,
 	actPlotSystemPromptLoader,
 	guidanceActPlotTemplateLoader,
@@ -207,6 +208,8 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 
 	// Load prompts and context in parallel
 	const actPlotTemplateLoader = actLine.plotMode === 'phaseEvent' ? phaseEventActPlotTemplateLoader : guidanceActPlotTemplateLoader;
+	const actPlotGenerationPromptLoader =
+		actLine.plotMode === 'phaseEvent' ? phaseEventActPlotGenerationPromptLoader : guidanceActPlotGenerationPromptLoader;
 	const [
 		template,
 		generationPrompt,

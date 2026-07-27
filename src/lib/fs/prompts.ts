@@ -85,7 +85,8 @@ export const worldBuilderSystemPromptLoader = createLoader('world/world-builder-
 
 export const guidanceActPlotTemplateLoader = createLoader('act/guidance-act-plot-template.md');
 export const phaseEventActPlotTemplateLoader = createLoader('act/phase-event-act-plot-template.md');
-export const actPlotGenerationPromptLoader = createLoader('act/act-plot-generation-prompt.md');
+export const guidanceActPlotGenerationPromptLoader = createLoader('act/guidance-act-plot-generation-prompt.md');
+export const phaseEventActPlotGenerationPromptLoader = createLoader('act/phase-event-act-plot-generation-prompt.md');
 export const actPlotSystemPromptLoader = createLoader('act/act-plot-system-prompt.md');
 export const actPlotInterviewSystemPromptLoader = createLoader('act/act-plot-interview-system-prompt.md');
 export const actPlotReviewerPromptLoader = createLoader('act/act-plot-reviewer-prompt.md');
