@@ -55,7 +55,7 @@ common:
     endings:
       good: 好結局
       bad: 壞結局
-      bittersweet: 苦甜結局
+      bittersweet: 苦樂參半結局
       alternative: 另類結局
       notEnded: 尚未完結
     directorRewriteRequest: |
