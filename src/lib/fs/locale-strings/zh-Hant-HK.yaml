@@ -212,6 +212,8 @@ pipeline:
       climax: 高潮
       fallingAction: 收束
       resolution: 結局
+    plotPlanner:
+      estimatedLength: 預計長度
 
 features:
   characterCardGenerator:

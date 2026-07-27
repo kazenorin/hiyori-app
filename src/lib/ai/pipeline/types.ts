@@ -10,6 +10,7 @@ export interface ActLineContext extends ActLineMeta {
 	currentActPhase: ActPhase | null;
 	lastPlotGeneration: number | null;
 	actNumber: number;
+	currentActPhaseLengthEstimate: number | null;
 }
 
 export interface PipelineState {

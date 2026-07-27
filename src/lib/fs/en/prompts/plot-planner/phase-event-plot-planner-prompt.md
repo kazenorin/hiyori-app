@@ -47,4 +47,8 @@ Produce your Scene Plot using the following template:
   - **Ending Alignment:** [Explicitly state which of the four endings this pushes toward, noting if this event permanently locks the players into that trajectory. Limit to 3 sentences.]
 
 [ *Repeat the chain event block above until you have 3 to 6 distinct events. Ensure the total number of Standalone and Chain events combined equals between 5 and 10.* ]
+
+## Estimated length
+
+[Estimate the number of scenes this phase will span. A single integer.]
 ```

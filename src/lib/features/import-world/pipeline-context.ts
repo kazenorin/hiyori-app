@@ -32,6 +32,7 @@ const IMPORT_STORY_CONTEXT: StoryContext = {
 		currentActPhase: null,
 		lastPlotGeneration: null,
 		actNumber: 1,
+		currentActPhaseLengthEstimate: null,
 	},
 };
 

@@ -220,6 +220,8 @@ pipeline:
       climax: Climax
       fallingAction: Falling Action
       resolution: Resolution
+    plotPlanner:
+      estimatedLength: Estimated length
 
 features:
   characterCardGenerator:

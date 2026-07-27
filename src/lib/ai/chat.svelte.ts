@@ -18,6 +18,7 @@ import {
 import { getActiveDirectorNotesText } from '$lib/stores/stories.svelte';
 import { ensureActPlot } from '$lib/ai/act-plot';
 import { parseActPlotTargetWordCount } from '$lib/ai/act-plot/target-word-count-parser';
+import { parseActPhaseLengthEstimate } from '$lib/ai/plot-planner-output-parser';
 import { extractImportantPhrases } from './important-phrases-extractor';
 import {
 	findLastNonNullSceneNumber,
@@ -257,7 +258,7 @@ export async function sendMessage(actLineId: string, message: string, rewriteDir
 			message,
 			mainConfig,
 			story,
-			actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen, actNumber },
+			actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen, actNumber, currentActPhaseLengthEstimate: null },
 			previousSceneNumber: findLastNonNullSceneNumber(messages) ?? 0,
 			previousNarrativeVariables: getPreviousNarrativeMessage(messages),
 			rewriteDirectorNote,
@@ -283,7 +284,7 @@ export async function sendInitialNarration(actLineId: string, rewriteDirectorNot
 		const requestContext: RequestContext = {
 			mainConfig,
 			story,
-			actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen, actNumber },
+			actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen, actNumber, currentActPhaseLengthEstimate: null },
 			previousSceneNumber: 0,
 			previousNarrativeVariables: undefined,
 			rewriteDirectorNote,
@@ -341,6 +342,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 		const plotMode = actLine.plotMode ?? getDefaultPlotMode();
 		const previousScenePlot = getScenePlotForScene(previousSceneNumber, plotMode);
 		const targetWordCount = parseActPlotTargetWordCount(actPlot) ?? settings.targetWordCount;
+		const currentActPhaseLengthEstimate = plotMode === 'phaseEvent' ? parseActPhaseLengthEstimate(previousScenePlot) : null;
 
 		const previousActSummaries: { actNumber: number; summary: string }[] = [];
 		if (actLine.actNumber > 1) {
@@ -380,7 +382,7 @@ async function executeNarrativeRequest(requestContext: RequestContext): Promise<
 			previousScenePlot,
 			previousActSummaries,
 			player: playerContext,
-			story: { storyId: story.id, storyName: story.name, actLine },
+			story: { storyId: story.id, storyName: story.name, actLine: { ...actLine, currentActPhaseLengthEstimate } },
 			assistant,
 			completedScenes: previousSceneNumber,
 			directorNotes: composeDirectorNotes(requestContext.rewriteDirectorNote, previousSceneNumber + 1),
@@ -515,7 +517,7 @@ export async function runEpilogueFlow(actLineId: string, rewriteDirectorNote?: s
 			story: {
 				storyId: story.id,
 				storyName: story.name,
-				actLine: { ...actLine, currentActPhase: null, lastPlotGeneration: null, actNumber },
+				actLine: { ...actLine, currentActPhase: null, lastPlotGeneration: null, actNumber, currentActPhaseLengthEstimate: null },
 			},
 			assistant: epilogueAssistant,
 			completedScenes: previousSceneNumber,
