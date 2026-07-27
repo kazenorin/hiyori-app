@@ -174,6 +174,8 @@ pipeline:
       ## Important Note
 
       This Act Line is restarted from Scene {{sceneNumber}}, plot and events that happened at or prior to Scene {{sceneNumber}} may be have a different plot, or written from another perspective.
+    actPlotTailoredExperience: >-
+      - **Tailored Experience:** Analyze the interview exchange to identify the player's desired themes, premises, and narrative goals. Shape the plot's core conflicts, encounters, and pacing to fulfill these expectations.
     editorTemplateFitter: >
       The "Editor Output" does not follow the required template format. Restructure it to match the Writer Output Template
       by inserting the appropriate section headers defined by "Writer Output Template" without changing any content.

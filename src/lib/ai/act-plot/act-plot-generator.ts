@@ -7,6 +7,7 @@ import {
 	phaseEventActPlotGenerationPromptLoader,
 	actPlotReviewerPromptLoader,
 	actPlotSystemPromptLoader,
+	generalInstructionsLoader,
 	guidanceActPlotTemplateLoader,
 	phaseEventActPlotTemplateLoader,
 } from '$lib/fs/prompts';
@@ -32,7 +33,7 @@ import {
 } from '$lib/features/character-card-generator';
 import { getLatestProfilesByActLine } from '$lib/db/character-profiles';
 import { ACT_PLOT_SECTION, formatCharacterProfilesSection } from '$lib/definitions/pipeline-sections';
-import { actPlotResumeNote } from '$lib/definitions/pipeline-prompts';
+import { actPlotResumeNote, actPlotTailoredExperience } from '$lib/definitions/pipeline-prompts';
 import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';
 import { targetWordCountPerSceneHeader } from '$lib/definitions/common-headers';
 import { ERR_EMPTY_ACT_PLOT_WRITER, ERR_NO_MAIN_PROVIDER } from '$lib/definitions/error-messages';
@@ -213,7 +214,8 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 	const [
 		template,
 		generationPrompt,
-		systemPrompt,
+		systemPromptTemplate,
+		generalInstructions,
 		reviewerPrompt,
 		editorPrompt,
 		interviewTranscript,
@@ -228,6 +230,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 			.then((p) => p.replace('{{targetWordCountPerSceneLabel}}', targetWordCountPerSceneHeader())),
 		actPlotGenerationPromptLoader.loadByStory(storyId, storyName).then((p) => p.replace('{{actNumber}}', actNumber.toString())),
 		actPlotSystemPromptLoader.loadByStory(storyId, storyName),
+		generalInstructionsLoader.loadByStory(storyId, storyName),
 		actPlotReviewerPromptLoader.loadByStory(storyId, storyName),
 		actPlotEditorPromptLoader.loadByStory(storyId, storyName),
 		loadInterviewTranscript(actLineId),
@@ -237,6 +240,10 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 		loadActPlotToolContext(params),
 		resolveStoryFolder(storyId, storyName),
 	]);
+
+	const systemPrompt = systemPromptTemplate
+		.replace('{{generalInstructions}}', generalInstructions)
+		.replace('{{tailoredExperience}}', interviewTranscript.some((m) => m.role === 'user') ? '\n' + actPlotTailoredExperience() : '');
 
 	const currentActCard = await loadCurrentActLevelActCard(params, storyFolder);
 
@@ -305,6 +312,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 				worldContent,
 				previousActSummary,
 				turnOfEvents,
+				interviewTranscript,
 				writerOutput: writerText,
 				prompt: reviewerPrompt,
 				useDetailedContext,

@@ -43,6 +43,7 @@ export const aliasFilterExtractionPrompt = () => ls('pipeline.extraction.aliasFi
 export const actShortSummaryExtractionPrompt = () => ls('pipeline.extraction.actShortSummary');
 export const actShortSummaryCharacterPrefix = () => ls('pipeline.extraction.actShortSummaryCharacterPrefix');
 export const actPlotResumeNote = (sceneNumber: number | string) => ls('pipeline.extraction.actPlotResumeNote', { sceneNumber });
+export const actPlotTailoredExperience = () => ls('pipeline.extraction.actPlotTailoredExperience');
 
 export const reviewerExtractionPromptTemplate = (currentScene: number | string) => ls('pipeline.extraction.reviewer', { currentScene });
 export const quickReviewerExtractionPromptTemplate = (currentScene: number | string) =>
