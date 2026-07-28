@@ -98,8 +98,17 @@ export function createAdvancePhaseTool(actLineId: string, currentPhase: ActPhase
 	});
 }
 
-export function allowAdvancePhaseTools(plotMode: string, actPhase: ActPhase | null): boolean {
-	return plotMode === 'phaseEvent' && actPhase !== 'resolution';
+export function allowAdvancePhaseTools(
+	plotMode: string,
+	actPhase: ActPhase | null,
+	sceneCount: number | null,
+	lengthEstimate: number | null
+): boolean {
+	if (plotMode !== 'phaseEvent' || actPhase === 'resolution') return false;
+	if (sceneCount === null) return true;
+	const effectiveEstimate = lengthEstimate == null || lengthEstimate < 2 ? 2 : lengthEstimate;
+	const threshold = Math.max(2, Math.floor(effectiveEstimate / 2));
+	return sceneCount >= threshold;
 }
 
 export function buildAdvancePhaseTools(

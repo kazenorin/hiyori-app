@@ -365,6 +365,32 @@ export async function getLastPlotGeneration(actLineId: string): Promise<number |
 	return isNaN(parsed) ? null : parsed;
 }
 
+/**
+ * Count the number of distinct scenes that have occurred in the current act phase.
+ * Uses the latest `act-phase-transition` event as the phase-start watermark and counts
+ * distinct `scene_number` values on messages after that watermark.
+ * Returns 0 if no scenes have occurred in the current phase yet.
+ */
+export async function getSceneCountInCurrentPhase(actLineId: string): Promise<number> {
+	const db = getDatabase();
+	const rows = await db.select<{ scene_count: number }[]>(
+		`WITH last_phase_transition AS (
+				SELECT MAX(message_sequence) AS max_seq
+				FROM act_line_events
+				WHERE act_line_id = $1 AND event = 'act-phase-transition'
+			)
+			SELECT COUNT(DISTINCT m.scene_number) AS scene_count
+			FROM act_lines al
+			JOIN messages m ON al.message_id = m.id
+			CROSS JOIN last_phase_transition lpt
+			WHERE al.act_line_id = $1
+			  AND al.sequence >= COALESCE(lpt.max_seq, 0)
+			  AND m.scene_number IS NOT NULL`,
+		[actLineId]
+	);
+	return rows.length > 0 ? rows[0].scene_count : 0;
+}
+
 export async function isActLineEnded(actLineId: string): Promise<boolean> {
 	const db = getDatabase();
 	const rows = await db.select<{ cnt: number }[]>(

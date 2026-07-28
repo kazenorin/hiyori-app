@@ -11,7 +11,7 @@ import { buildSetSceneTitleTools } from '$lib/ai/tools/set-scene-title';
 import { buildSuggestCharacterNameTools } from '$lib/ai/tools/suggest-character-name';
 import { getStory, type Story } from '$lib/db/stories';
 import type { ActLineContext, AssistantContext } from '$lib/ai/pipeline/types';
-import { isActLineEnded } from '$lib/db/act-lines';
+import { getSceneCountInCurrentPhase, isActLineEnded } from '$lib/db/act-lines';
 import { type Act, getAct } from '$lib/db/acts';
 import { type ToolSet } from 'ai';
 import type { NarrativeOverrides, PhaseName, ActPhase } from '$lib/ai/narrative-types';
@@ -90,8 +90,9 @@ export async function buildTools(
 
 	const currentPhase: ActPhase | null = actLine.currentActPhase;
 	const ended = await isActLineEnded(actLine.id);
+	const currentPhaseSceneCount = await getSceneCountInCurrentPhase(actLine.id);
 
-	if (allowAdvancePhaseTools(actLine.plotMode, currentPhase)) {
+	if (allowAdvancePhaseTools(actLine.plotMode, currentPhase, currentPhaseSceneCount, actLine.currentActPhaseLengthEstimate)) {
 		Object.assign(tools, buildAdvancePhaseTools(actLine.id, currentPhase, act.actNumber, assistant));
 	}
 
