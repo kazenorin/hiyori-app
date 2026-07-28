@@ -12,3 +12,9 @@ Read the provided world setting document and generate a structured Act Plot that
 4. **Possible Endings** — Design four distinct earned endings matching the template's four ending slots.
 5. **Storytelling Style** — Determine narrative voice, tone, and pacing
 6. **Presentation Notes** — Set language complexity, onomatopoeia usage, emoji preferences, etc.
+
+## Output Discipline
+
+- Output **only** the filled Act Plot template
+- Include no preamble, explanation, or meta-commentary.
+- Begin your response directly with the `# Act Plot` heading.

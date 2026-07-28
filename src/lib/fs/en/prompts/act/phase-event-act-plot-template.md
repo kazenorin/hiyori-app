@@ -34,25 +34,25 @@ The narrative progresses through five distinct phases. Based on the overall targ
 
 ## Possible Endings
 
-### Ending 1: [Title] (Good)
+### Good ending: [Title]
 
 **Conditions:** [What choices/actions lead here]
 **Resolution:** [How the story concludes, what the protagonist achieves]
 **Emotional Tone:** [The feeling this ending should evoke]
 
-### Ending 2: [Title] (Bad)
+### Bad ending: [Title]
 
 **Conditions:** [What choices/actions or failures lead here]
 **Resolution:** [How the story concludes, what goes wrong]
 **Emotional Tone:** [The weight of this ending]
 
-### Ending 3: [Title] (Bittersweet)
+### Bittersweet ending: [Title]
 
 **Conditions:** [What choices/actions lead here]
 **Resolution:** [Mixed outcome - gains and losses]
 **Emotional Tone:** [Complex emotional landscape]
 
-### Ending 4: [Title] (Alternative)
+### Alternative ending: [Title]
 
 **Conditions:** [What choices/actions lead here]
 **Resolution:** [Unique outcome path - neither fully good nor bad]

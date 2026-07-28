@@ -1,5 +1,7 @@
 # Act Plot
 
+This document is a guide for narration. The actual story will emerge through player choices and game master improvisation within this framework.
+
 ## Story Structure
 
 - **Target Scenes:** [35-50 scenes recommended]
@@ -44,25 +46,25 @@
 
 ## Possible Endings (Target to happen at around 16 scenes after Climactic Event 3)
 
-### Ending 1: [Title] (Good)
+### Good ending: [Title]
 
 **Conditions:** [What choices/actions lead here]
 **Resolution:** [How the story concludes, what the protagonist achieves]
 **Emotional Tone:** [The feeling this ending should evoke]
 
-### Ending 2: [Title] (Bad)
+### Bad ending: [Title]
 
 **Conditions:** [What choices/actions or failures lead here]
 **Resolution:** [How the story concludes, what goes wrong]
 **Emotional Tone:** [The weight of this ending]
 
-### Ending 3: [Title] (Bittersweet)
+### Bittersweet ending: [Title]
 
 **Conditions:** [What choices/actions lead here]
 **Resolution:** [Mixed outcome - gains and losses]
 **Emotional Tone:** [Complex emotional landscape]
 
-### Ending 4: [Title] (Alternative)
+### Alternative ending: [Title]
 
 **Conditions:** [What choices/actions lead here]
 **Resolution:** [Unique outcome path - neither fully good nor bad]
