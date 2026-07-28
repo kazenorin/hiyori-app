@@ -50,6 +50,14 @@ For each horizon, concisely outline:
 - Potential Plot Hook
 - How this safely steers toward the enabling scene
 
+## Pre-Output Verification
+
+Before producing the Scene Plot, verify the following and correct your plan if any check fails:
+
+- The plan uses future/conditional phrasing throughout.
+- The plan respects the player's latest choice.
+- At least one unmet condition is addressed.
+
 ## Output Format
 
 Produce your Scene Plot using the following template:
@@ -69,11 +77,20 @@ Produce your Scene Plot using the following template:
 - Protagonist state: [mental/physical state]
 - Unmet conditions: [list of what still needs to happen]
 - Player choice impact: [how the most recent choice alters the upcoming plan]
+- Ending trend: [which of the four endings the player's accumulated choices are trending toward, with a one-line rationale]
 
 ## Pacing Decision
 
 - Status: [on track / within 6 scenes / past event]
 - Action: [specific steering action for the writer to focus on]
+
+## Open Threads
+
+List 1 to 3 unresolved narrative threads planted in earlier scenes that the writer should continue weaving. Each thread should be progressing toward resolution but not yet complete.
+
+- **Thread:** [description of the planted mystery, promise, or unresolved arc]
+  - **Status:** [planted / developing / ready to resolve]
+  - **This scene's role:** [how the writer should advance or reference this thread]
 
 ## Future Narrative Trajectory
 
@@ -97,10 +114,4 @@ Produce your Scene Plot using the following template:
 - Desired NPC Dynamics: [character arcs to push toward]
 - Potential Plot Hook: [the major catalyst needed before the climactic event]
 - Enabling Progress: [the bridge between current events and the climax]
-
-## Pre-Output Verification
-
-- Plan uses future/conditional phrasing: [yes/no]
-- Plan respects player's latest choice: [yes/no]
-- At least one unmet condition addressed: [yes/no]
 ```
