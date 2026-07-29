@@ -251,6 +251,7 @@ export async function sendMessage(actLineId: string, message: string, rewriteDir
 		const story = await dbActLines.getStoryForActLine(actLineId);
 		const actLine = await requireActLine(actLineId);
 		const currentActPhase = await dbActLines.getActPhase(actLineId);
+		const actPhaseBoundaries = await dbActLines.getActPhaseBoundaries(actLineId);
 		const currentLastPlotGen = await dbActLines.getLastPlotGeneration(actLineId);
 		const actNumber = (await dbActLines.getActNumberForActLine(actLineId)) ?? 1;
 		error = null;
@@ -258,7 +259,14 @@ export async function sendMessage(actLineId: string, message: string, rewriteDir
 			message,
 			mainConfig,
 			story,
-			actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen, actNumber, currentActPhaseLengthEstimate: null },
+			actLine: {
+				...actLine,
+				currentActPhase,
+				actPhaseBoundaries,
+				lastPlotGeneration: currentLastPlotGen,
+				actNumber,
+				currentActPhaseLengthEstimate: null,
+			},
 			previousSceneNumber: findLastNonNullSceneNumber(messages) ?? 0,
 			previousNarrativeVariables: getPreviousNarrativeMessage(messages),
 			rewriteDirectorNote,
@@ -278,13 +286,21 @@ export async function sendInitialNarration(actLineId: string, rewriteDirectorNot
 		const story = await dbActLines.getStoryForActLine(actLineId);
 		const actLine = await requireActLine(actLineId);
 		const currentActPhase = await dbActLines.getActPhase(actLineId);
+		const actPhaseBoundaries = await dbActLines.getActPhaseBoundaries(actLineId);
 		const currentLastPlotGen = await dbActLines.getLastPlotGeneration(actLineId);
 		const actNumber = (await dbActLines.getActNumberForActLine(actLineId)) ?? 1;
 		error = null;
 		const requestContext: RequestContext = {
 			mainConfig,
 			story,
-			actLine: { ...actLine, currentActPhase, lastPlotGeneration: currentLastPlotGen, actNumber, currentActPhaseLengthEstimate: null },
+			actLine: {
+				...actLine,
+				currentActPhase,
+				actPhaseBoundaries,
+				lastPlotGeneration: currentLastPlotGen,
+				actNumber,
+				currentActPhaseLengthEstimate: null,
+			},
 			previousSceneNumber: 0,
 			previousNarrativeVariables: undefined,
 			rewriteDirectorNote,
@@ -517,7 +533,14 @@ export async function runEpilogueFlow(actLineId: string, rewriteDirectorNote?: s
 			story: {
 				storyId: story.id,
 				storyName: story.name,
-				actLine: { ...actLine, currentActPhase: null, lastPlotGeneration: null, actNumber, currentActPhaseLengthEstimate: null },
+				actLine: {
+					...actLine,
+					currentActPhase: null,
+					actPhaseBoundaries: [],
+					lastPlotGeneration: null,
+					actNumber,
+					currentActPhaseLengthEstimate: null,
+				},
 			},
 			assistant: epilogueAssistant,
 			completedScenes: previousSceneNumber,
@@ -683,6 +706,7 @@ async function regenerateGameData(
 
 	const plotMode = actLine.plotMode ?? getDefaultPlotMode();
 	const currentActPhase = await dbActLines.getActPhase(actLine.id);
+	const actPhaseBoundaries = await dbActLines.getActPhaseBoundaries(actLine.id);
 	const previousSceneNumber = assistantMsg.sceneNumber ?? 0;
 	const previousScenePlot = getScenePlotForScene(previousSceneNumber, plotMode);
 	const actPlot = await ensureActPlot({ story, actLine });
@@ -690,6 +714,7 @@ async function regenerateGameData(
 	const postEditorCtx: PostEditorContext = {
 		actPlot,
 		actPhase: currentActPhase,
+		actPhaseBoundaries,
 		actSummary: _getLatestActSummary(messages),
 		characterProfiles: [], // not fetched for game-data regeneration
 		previousScenePlot,

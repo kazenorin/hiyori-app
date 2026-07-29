@@ -11,6 +11,11 @@ import type { AssistantContext } from '$lib/ai/pipeline/types';
 
 export type ActLineEventType = 'plot-generated' | 'act-phase-transition' | 'ending' | 'epilogue-written' | 'act-short-summary';
 
+export interface ActPhaseBoundary {
+	phase: ActPhase;
+	sceneNumber: number;
+}
+
 export interface ActLineEvent {
 	id: string;
 	actLineId: string;
@@ -340,6 +345,24 @@ export async function getActPhase(actLineId: string): Promise<ActPhase | null> {
 	if (rows.length === 0) return null;
 	const val = rows[0].value;
 	return val && getActPhaseIndex(val) >= 0 ? (val as ActPhase) : null;
+}
+
+export async function getActPhaseBoundaries(actLineId: string): Promise<ActPhaseBoundary[]> {
+	const db = getDatabase();
+	const rows = await db.select<{ value: string; scene_number: number | null }[]>(
+		`SELECT ale.value, m.scene_number
+		 FROM act_line_events ale
+		 LEFT JOIN messages m ON ale.message_id = m.id
+		 WHERE ale.act_line_id = $1 AND ale.event = 'act-phase-transition'
+		 ORDER BY ale.message_sequence ASC`,
+		[actLineId]
+	);
+	return rows
+		.filter((row) => row.value && getActPhaseIndex(row.value) >= 0)
+		.map((row) => ({
+			phase: row.value as ActPhase,
+			sceneNumber: row.scene_number ?? 1,
+		}));
 }
 
 export async function getLastPlotGeneration(actLineId: string): Promise<number | null> {

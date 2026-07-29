@@ -3,12 +3,14 @@ common:
     player: Player
     interviewer: Interviewer
     sceneWithNumber: 'Scene {{sceneNumber}}'
+    scenesRange: 'Scenes {{start}}–{{end}}'
     location: Location
     name: Name
     aliases: Aliases
     lastUpdate: Last update
     mainLineName: Main
     actWithNumber: 'Act {{actNumber}}'
+    currentPhase: '(current)'
   headers:
     worldContent: World Content
     actPlot: Act Plot
@@ -43,7 +45,7 @@ common:
     summary: Summary
     directorNotes: Director's Notes
     otherDirectorNotes: Other Director's Notes
-    actPhase: Act Phase
+    actPhases: Act Phases
     storySoFar: Story So Far
     characterProfiles: Character Profiles
     targetWordCountPerScene: Target Word Count per Scene

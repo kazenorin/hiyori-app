@@ -1,10 +1,11 @@
 import { ls } from '$lib/localization';
 import type { ActPhase } from '$lib/ai/narrative-types';
+import type { ActPhaseBoundary } from '$lib/db/act-lines';
 import {
 	worldContentHeader,
 	actPlotHeader,
 	actSummaryHeader,
-	actPhaseHeader,
+	actPhasesHeader,
 	interviewTranscriptHeader,
 	playerPreferencesHeader,
 	playerResponseHeader,
@@ -83,8 +84,8 @@ export const SECTION = {
 	get DIRECTOR_NOTES() {
 		return sectionFormat(directorNotesHeader()) + ls('common.descriptions.directorNotes') + '\n\n';
 	},
-	get ACT_PHASE() {
-		return sectionFormat(actPhaseHeader());
+	get ACT_PHASES() {
+		return sectionFormat(actPhasesHeader());
 	},
 	get STORY_SO_FAR() {
 		return sectionFormat(storySoFarHeader());
@@ -155,10 +156,25 @@ export function formatDirectorNotesSection(directorNotes: string | null | undefi
 	return [SECTION.DIRECTOR_NOTES + directorNotes];
 }
 
-/** Format act phase as a user message section. Returns empty array if no content. */
-export function formatActPhaseSection(actPhase: ActPhase | null | undefined): string[] {
-	if (!actPhase || actPhase.trim().length === 0) return [];
-	return [SECTION.ACT_PHASE + getLocalizedActPhase(actPhase)];
+/**
+ * Format act phase boundaries as a user message section showing which scenes belong to each phase.
+ * The last (current) phase is annotated with "(current)" and extends to `completedScenes`.
+ * Returns empty array if no boundaries exist (e.g. guidance plot mode).
+ */
+export function formatActPhaseBoundariesSection(boundaries: ActPhaseBoundary[], completedScenes: number): string[] {
+	if (boundaries.length === 0) return [];
+	const currentLabel = ls('common.labels.currentPhase');
+	const lines = boundaries.map((boundary, i) => {
+		const phaseLabel = getLocalizedActPhase(boundary.phase);
+		const start = boundary.sceneNumber;
+		const isLast = i === boundaries.length - 1;
+		const end = isLast ? completedScenes : boundaries[i + 1].sceneNumber - 1;
+		const range =
+			start === end ? ls('common.labels.sceneWithNumber', { sceneNumber: start }) : ls('common.labels.scenesRange', { start, end });
+		const marker = isLast ? ` ${currentLabel}` : '';
+		return `- ${phaseLabel}: ${range}${marker}`;
+	});
+	return [SECTION.ACT_PHASES + lines.join('\n')];
 }
 
 export function formatStorySoFar(summaries: { actNumber: number; summary: string }[], currentActNumber: number): string[] {

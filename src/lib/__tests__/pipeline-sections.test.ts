@@ -43,7 +43,7 @@ vi.mock('$lib/definitions/common-headers', () => {
 		gameDataHeader: stub,
 		storySoFarHeader: stub,
 		characterProfilesHeader: () => 'Character Profiles',
-		actPhaseHeader: stub,
+		actPhasesHeader: stub,
 		sceneTitleHeader: stub,
 		backgroundHeader: stub,
 		narrativeBodyHeader: stub,

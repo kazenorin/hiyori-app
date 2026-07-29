@@ -31,7 +31,7 @@ export const summaryHeader = () => ls('common.headers.summary');
 export const templateHeader = () => ls('common.headers.template');
 export const directorNotesHeader = () => ls('common.headers.directorNotes');
 export const otherDirectorNotesHeader = () => ls('common.headers.otherDirectorNotes');
-export const actPhaseHeader = () => ls('common.headers.actPhase');
+export const actPhasesHeader = () => ls('common.headers.actPhases');
 export const storySoFarHeader = () => ls('common.headers.storySoFar');
 export const characterProfilesHeader = () => ls('common.headers.characterProfiles');
 export const actInformationHeader = () => ls('common.headers.actInformation');

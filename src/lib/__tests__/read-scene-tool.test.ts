@@ -55,6 +55,7 @@ function createMockContext(actNumber = 3): ToolContext {
 			createdAt: 0,
 			plotMode: 'guidance',
 			currentActPhase: null,
+			actPhaseBoundaries: [],
 			lastPlotGeneration: null,
 			actNumber,
 			currentActPhaseLengthEstimate: null,

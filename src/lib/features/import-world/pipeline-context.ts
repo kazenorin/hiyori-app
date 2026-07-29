@@ -7,6 +7,8 @@ import { createNarrativeOverrides } from '$lib/ai/narrative-types';
 export const EMPTY_PRE_EDITOR_CONTEXT: PreEditorContext = {
 	worldContent: '',
 	actPlot: '',
+	actPhase: null,
+	actPhaseBoundaries: [],
 	actSummary: '',
 	characterProfiles: [],
 	previousScenePlot: undefined,
@@ -30,6 +32,7 @@ const IMPORT_STORY_CONTEXT: StoryContext = {
 		createdAt: 0,
 		plotMode: 'guidance',
 		currentActPhase: null,
+		actPhaseBoundaries: [],
 		lastPlotGeneration: null,
 		actNumber: 1,
 		currentActPhaseLengthEstimate: null,

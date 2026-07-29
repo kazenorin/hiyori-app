@@ -3,12 +3,14 @@ common:
     player: 玩家
     interviewer: 訪談者
     sceneWithNumber: '場景 {{sceneNumber}}'
+    scenesRange: '場景 {{start}}–{{end}}'
     location: 地點
     name: 姓名
     aliases: 別名
     lastUpdate: 最後更新
     mainLineName: 主線
     actWithNumber: 第 {{actNumber}} 章
+    currentPhase: '(目前)'
   headers:
     worldContent: 世界觀內容
     actPlot: 章節劇情
@@ -43,7 +45,7 @@ common:
     summary: 摘要
     directorNotes: 導演備註
     otherDirectorNotes: 其他導演備註
-    actPhase: 章節階段
+    actPhases: 章節階段
     storySoFar: 故事回顧
     characterProfiles: 角色檔案
     targetWordCountPerScene: 每場景目標字數

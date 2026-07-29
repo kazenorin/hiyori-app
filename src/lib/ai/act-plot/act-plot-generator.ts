@@ -503,6 +503,7 @@ async function loadActPlotToolContext(params: GenerateActPlotParams): Promise<To
 	const actLineContext: ActLineContext = {
 		...actLine,
 		currentActPhase: null,
+		actPhaseBoundaries: [],
 		lastPlotGeneration: null,
 		actNumber,
 		currentActPhaseLengthEstimate: null,

@@ -2,9 +2,10 @@ import type { MessageBase } from '$lib/db/messages';
 import type { ActPhase, GameDataFields, NarrativeOverrides, NarrativeVariables } from '../narrative-types';
 import { hasNarrativeOverrides } from '../narrative-types';
 import type { CommonPipelineInput, PlayerContext, PostEditorContext, PreEditorContext } from './types';
+import type { ActPhaseBoundary } from '$lib/db/act-lines';
 import type { StreamState } from '../chat-callbacks';
 import {
-	formatActPhaseSection,
+	formatActPhaseBoundariesSection,
 	formatDirectorNotesSection,
 	formatPreviousNarrativeBody,
 	formatStorySoFar,
@@ -160,9 +161,9 @@ function buildPreEditorSections(ctx: PreEditorContext): string[] {
 		SECTION.WORLD_CONTENT + ctx.worldContent,
 		SECTION.ACT_PLOT + ctx.actPlot,
 		...ctx.characterProfiles,
-		...formatActPhaseSection(ctx.actPhase),
 		...formatStorySoFar(ctx.previousActSummaries, ctx.actNumber),
 		...formattedActSummary(ctx.actSummary),
+		...formatActPhaseBoundariesSection(ctx.actPhaseBoundaries, ctx.completedScenes),
 		...(ctx.previousScenePlot ? [SECTION.SCENE_PLOT + ctx.previousScenePlot] : []),
 		...formatPreviousNarrativeBody(ctx.previousNarrativeBody, ctx.completedScenes),
 		...playerResponseSection(ctx.player),
@@ -176,9 +177,9 @@ function buildPostEditorSections(ctx: PostEditorContext): string[] {
 	return [
 		SECTION.ACT_PLOT + ctx.actPlot,
 		...ctx.characterProfiles,
-		...formatActPhaseSection(ctx.actPhase),
 		...formatStorySoFar(ctx.previousActSummaries, ctx.actNumber),
 		...formattedActSummary(ctx.actSummary),
+		...formatActPhaseBoundariesSection(ctx.actPhaseBoundaries, ctx.completedScenes),
 		...(ctx.previousScenePlot ? [SECTION.SCENE_PLOT + ctx.previousScenePlot] : []),
 		...formatPreviousNarrativeBody(ctx.previousNarrativeBody, ctx.completedScenes),
 		...playerResponseSection(ctx.player),
@@ -270,6 +271,7 @@ export function buildTranscriptSummarizerMessages(transcript: { role: 'user' | '
 
 export abstract class AbstractPreEditorContext implements PreEditorContext {
 	actPhase: ActPhase | null;
+	actPhaseBoundaries: ActPhaseBoundary[];
 	actPlot: string;
 	actSummary: string;
 	actNumber: number;
@@ -298,6 +300,7 @@ export abstract class AbstractPreEditorContext implements PreEditorContext {
 		this.worldContent = worldContent;
 		this.actPlot = actPlot;
 		this.actPhase = story.actLine.currentActPhase;
+		this.actPhaseBoundaries = story.actLine.actPhaseBoundaries;
 		this.actSummary = actSummary;
 		this.actNumber = story.actLine.actNumber;
 		this.characterProfiles = characterProfiles;

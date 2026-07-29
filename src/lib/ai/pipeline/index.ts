@@ -180,6 +180,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	const postEditorCtx: PostEditorContext = {
 		actPlot: input.actPlot,
 		actPhase: story.actLine.currentActPhase,
+		actPhaseBoundaries: story.actLine.actPhaseBoundaries,
 		actSummary: input.actSummary,
 		characterProfiles: input.characterProfiles,
 		previousScenePlot,
