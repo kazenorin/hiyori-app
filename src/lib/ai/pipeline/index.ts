@@ -70,6 +70,8 @@ function preparePipelinePrompts(loadedPrompts: LoadedPrompts) {
 		gameMasterSystemPrompt: loadedPrompts.gameMasterSystemPrompt,
 		plotPlannerSystemPrompt: loadedPrompts.plotPlannerSystemPrompt,
 		phaseEventPlotPlannerSystemPrompt: loadedPrompts.phaseEventPlotPlannerSystemPrompt,
+		guidanceWriterExtractionPrompt: loadedPrompts.guidanceWriterExtractionPrompt,
+		phaseEventWriterExtractionPrompt: loadedPrompts.phaseEventWriterExtractionPrompt,
 	};
 	return prompts;
 }

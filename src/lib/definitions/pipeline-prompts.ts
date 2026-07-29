@@ -77,6 +77,4 @@ export const writerActEndPhaseEvent = (params: { closingSceneRules: string; endi
 export const writerActEndGuidance = (params: { closingSceneRules: string; endingTypeInstructions: string }) =>
 	ls('pipeline.extraction.writer.actEndGuidance', params);
 export const writerEpilogueExtractionPrompt = (endingType: string) => ls('pipeline.extraction.writer.epilogue', { endingType });
-export const writerGuidanceExtractionPrompt = () => ls('pipeline.extraction.writer.guidanceExtraction');
-export const writerPhaseEventExtractionPrompt = () => ls('pipeline.extraction.writer.phaseEventExtraction');
 export const actSummaryTemplate = () => ls('pipeline.extraction.actSummaryTemplate');

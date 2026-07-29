@@ -32,8 +32,6 @@ import {
 	writerClosingSceneRules,
 	writerActEndPhaseEvent,
 	writerActEndGuidance,
-	writerGuidanceExtractionPrompt,
-	writerPhaseEventExtractionPrompt,
 } from '$lib/definitions/pipeline-prompts';
 import {
 	acceptAsIsLabel,
@@ -192,6 +190,8 @@ export interface PipelinePrompts {
 	gameMasterSystemPrompt: string;
 	plotPlannerSystemPrompt: string;
 	phaseEventPlotPlannerSystemPrompt: string;
+	guidanceWriterExtractionPrompt: string;
+	phaseEventWriterExtractionPrompt: string;
 }
 
 export interface PipelineRunContext {
@@ -231,7 +231,7 @@ export async function runWriterPhase(
 	const directorNotes = ctx.preEditorCtx.directorNotes;
 
 	const writerExtractionPromptTemplate =
-		ctx.story.actLine.plotMode === 'phaseEvent' ? writerPhaseEventExtractionPrompt() : writerGuidanceExtractionPrompt();
+		ctx.story.actLine.plotMode === 'phaseEvent' ? ctx.prompts.phaseEventWriterExtractionPrompt : ctx.prompts.guidanceWriterExtractionPrompt;
 
 	const writerExtractionPrompt =
 		extractionPromptOverride ??
