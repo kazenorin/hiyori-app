@@ -71,6 +71,7 @@ export interface Settings {
 	characterProfileImportanceThreshold: number;
 	characterProfileMaxIncluded: number;
 	phaseAdvancementThreshold: number;
+	playerDivergenceThreshold: number;
 	defaultPlotMode: 'guidance' | 'phaseEvent';
 	reevaluationFrequency: number;
 	ttsEnabled: boolean;
@@ -108,6 +109,7 @@ const defaults: Settings = {
 	characterProfileImportanceThreshold: 2, // 1=Protagonist, 2=Main, 3=Supporting, 4=Minor
 	characterProfileMaxIncluded: 5, // hard cap on number of full-profile inlines
 	phaseAdvancementThreshold: 5,
+	playerDivergenceThreshold: 8,
 	defaultPlotMode: 'phaseEvent',
 	reevaluationFrequency: 10,
 	ttsEnabled: false,

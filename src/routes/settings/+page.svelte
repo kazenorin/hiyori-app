@@ -447,21 +447,36 @@
 					</label>
 					<span class="text-xs text-surface-500 block">{t('settings.phraseHighlightingDescription')}</span>
 				</div>
-		</div>
+			</div>
 
-		<!-- Phase Advancement Threshold: full-width mini-card -->
-			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
-				<NumberField
-					label={t('settings.phaseAdvancementThreshold')}
-					hint={t('settings.phaseAdvancementThresholdDescription')}
-					min={0}
-					max={10}
-					step={1}
-					value={settings.phaseAdvancementThreshold}
-					onValueChange={(v) => {
-						if (v >= 0 && v <= 10) updateSettings({ phaseAdvancementThreshold: v });
-					}}
-				/>
+			<!-- Phase Advancement Thresholds: half-card grid -->
+			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<NumberField
+						label={t('settings.phaseAdvancementThreshold')}
+						hint={t('settings.phaseAdvancementThresholdDescription')}
+						min={0}
+						max={10}
+						step={1}
+						value={settings.phaseAdvancementThreshold}
+						onValueChange={(v) => {
+							if (v >= 0 && v <= 10) updateSettings({ phaseAdvancementThreshold: v });
+						}}
+					/>
+				</div>
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<NumberField
+						label={t('settings.playerDivergenceThreshold')}
+						hint={t('settings.playerDivergenceThresholdDescription')}
+						min={0}
+						max={10}
+						step={1}
+						value={settings.playerDivergenceThreshold}
+						onValueChange={(v) => {
+							if (v >= 0 && v <= 10) updateSettings({ playerDivergenceThreshold: v });
+						}}
+					/>
+				</div>
 			</div>
 		</Card>
 

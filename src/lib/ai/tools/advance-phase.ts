@@ -17,8 +17,9 @@ function formatActPhaseDescription(actPhase: ActPhase): string {
 
 export function createAdvancePhaseTool(actLineId: string, currentPhase: ActPhase | null, actNumber: number, assistant: AssistantContext) {
 	let hasAdvancedPhase = false;
-	const threshold = settings.phaseAdvancementThreshold;
-	const gatingEnabled = threshold > 0;
+	const milestoneThreshold = settings.phaseAdvancementThreshold;
+	const divergenceThreshold = settings.playerDivergenceThreshold;
+	const gatingEnabled = milestoneThreshold > 0;
 	return tool({
 		description: ls('tools.advancePhase.description', {
 			introduction: formatActPhaseDescription('introduction'),
@@ -35,7 +36,14 @@ export function createAdvancePhaseTool(actLineId: string, currentPhase: ActPhase
 						justification: z
 							.string()
 							.describe(ls('tools.advancePhase.parameters.justification', { actWithNumber: actWithNumberLabel(actNumber) })),
-						goalCompletionScore: z.number().min(0).max(10).describe(ls('tools.advancePhase.parameters.goalCompletionScore')),
+						numberOfPhaseEventsElaborated: z
+							.number()
+							.int()
+							.min(0)
+							.describe(ls('tools.advancePhase.parameters.numberOfPhaseEventsElaborated')),
+						furtherElaborationWouldCauseDrag: z.boolean().describe(ls('tools.advancePhase.parameters.furtherElaborationWouldCauseDrag')),
+						narrativeCompletionScore: z.number().min(0).max(10).describe(ls('tools.advancePhase.parameters.narrativeCompletionScore')),
+						playerDivergenceScore: z.number().min(0).max(10).describe(ls('tools.advancePhase.parameters.playerDivergenceScore')),
 					}
 				: {}),
 		}),
@@ -47,11 +55,28 @@ export function createAdvancePhaseTool(actLineId: string, currentPhase: ActPhase
 
 			if (gatingEnabled) {
 				const justification = rest.justification as string;
-				const goalCompletionScore = rest.goalCompletionScore as number;
-				await log(`advance-phase justification (score ${goalCompletionScore}): ${justification}`);
-				if (goalCompletionScore < threshold) {
-					await log(`advance-phase rejected: goalCompletionScore ${goalCompletionScore} below threshold ${threshold}`);
-					return { result: ls('tools.advancePhase.messages.goalCompletionTooLow', { score: goalCompletionScore }) };
+				const numberOfPhaseEventsElaborated = rest.numberOfPhaseEventsElaborated as number;
+				const furtherElaborationWouldCauseDrag = rest.furtherElaborationWouldCauseDrag as boolean;
+				const narrativeCompletionScore = rest.narrativeCompletionScore as number;
+				const playerDivergenceScore = rest.playerDivergenceScore as number;
+
+				const milestoneMet =
+					numberOfPhaseEventsElaborated >= 1 && furtherElaborationWouldCauseDrag && narrativeCompletionScore >= milestoneThreshold;
+				const playerDivergenceMet = playerDivergenceScore >= divergenceThreshold;
+				const shouldAdvance = milestoneMet || playerDivergenceMet;
+
+				await log(
+					`advance-phase assessment (justification: ${justification}) | ` +
+						`eventsElaborated=${numberOfPhaseEventsElaborated} drag=${furtherElaborationWouldCauseDrag} ` +
+						`narrativeScore=${narrativeCompletionScore}/${milestoneThreshold} ` +
+						`divergenceScore=${playerDivergenceScore}/${divergenceThreshold} ` +
+						`milestoneMet=${milestoneMet} playerDivergenceMet=${playerDivergenceMet} → ${shouldAdvance ? 'ADVANCE' : 'BLOCKED'}`
+				);
+
+				if (!shouldAdvance) {
+					return {
+						result: ls('tools.advancePhase.messages.advancementBlocked'),
+					};
 				}
 			}
 

@@ -552,7 +552,7 @@ tools:
     cardLabel: Character Card
   advancePhase:
     description: >
-      If you believe the story's current state has satisfied the current phase's goals, you may call this tool to advance the story to the next narrative phase. The phase order is as follows:
+      Call this tool to advance the story to the next narrative phase. The phase order is as follows:
       1. {{introduction}}
       2. {{risingAction}}
       3. {{climax}}
@@ -564,21 +564,35 @@ tools:
       This signals a major shift in the story's arc. Takes effect starting next turn.
       Can only be used once per scene. Cannot be used once the story has reached the resolution phase.
       This tool must be called during reasoning, before any narrative output is written. If any output has already been written, do not call this tool.
+
+      Call this tool **ONLY** when one of the following conditions is met:
+      (a) **Milestone Completion:** All 3 of the following conditions must be met:
+        i. At least one Phase Event has been elaborated on within the current phase.
+        ii. Further elaboration on remaining Phase Events would cause pacing drag.
+        iii. The narrative has clearly achieved the completion signal for the current phase.
+      (b) **Player Divergence:** The player's choices have permanently altered or bypassed the need for the current phase's milestone (e.g., resolving a conflict early or forcing a premature confrontation). Do not advance just because the player wandered off-topic—advance only if their actions push the overarching plot forward.
+
+      **Do NOT** call this tool simply because several scenes have passed in the same phase. High scene count is not a valid trigger; rely strictly on the narrative signals above.
+      **Do NOT** call this tool if you are still setting up or in the middle of elaborating on an active Phase Event.
     parameters:
       currentPhase: 'The current narrative phase the story is in.'
       nextPhase: 'The next narrative phase to advance to.'
       justification: >
-        To advance the narrative phase, please provide the following in order:
-        1. Reason for Advancing: Explain why you want to move to the next phase.
-        2. Current Goals: List the three main goals of the current narrative phase.
-        3. Progress Updates: Based on the events in {{actWithNumber}}, summarize the progress of each goal in a single sentence.
-      goalCompletionScore: >
-        Rate the progress of each goal on a scale of 0 to 10, where 0 means no progress at all and 10 means fully completed.
+        Walk through each milestone condition (a)(i)–(iii) and the player-divergence path (b) before calling this tool.
+        State which path you are invoking and why, referencing the events of {{actWithNumber}}.
+        For each condition, state whether it is met and briefly explain your reasoning.
+      numberOfPhaseEventsElaborated: 'Number of Phase Events elaborated on within the current phase (across all scenes in this phase, not per-scene).'
+      furtherElaborationWouldCauseDrag: 'Whether further elaboration on remaining Phase Events would cause pacing drag (true = yes, the story is ready to move on).'
+      narrativeCompletionScore: >
+        Rate how clearly the narrative has achieved the completion signal for the current phase on a scale of 0 to 10, where 0 means no progress at all and 10 means fully achieved.
+      playerDivergenceScore: >
+        Rate the degree to which the player's choices have permanently altered or bypassed the need for the current phase's milestone on a scale of 0 to 10, where 0 means the player is on-topic and 10 means their actions have permanently bypassed the milestone. Use this path only when the player has forced a premature confrontation or resolved the central conflict early.
     messages:
       alreadyAdvanced: 'Phase has already been advanced this scene. It will take effect next turn.'
       success: 'Phase advanced from {{current}} to {{next}}. Takes effect next turn.'
       terminalPhase: 'Cannot advance further — the story is already at the resolution phase.'
-      goalCompletionTooLow: 'The act is not ready for advancement yet (goal completion score {{score}}). The phase has not been advanced.'
+      advancementBlocked: >
+        The phase is not ready to advance. Continue elaborating on the active Phase Events and driving the narrative toward the current phase's completion signal.
       phaseMismatch:
         current: 'Phase mismatch: the story is currently in {{actual}}, not {{provided}}. The phase has not been advanced.'
         next: 'Phase mismatch: the story is currently in {{actual}} and the next phase is {{expected}}, not {{provided}}. The phase has not been advanced.'

@@ -89,6 +89,7 @@ function defaultSettings() {
 		characterProfileImportanceThreshold: 2,
 		characterProfileMaxIncluded: 5,
 		phaseAdvancementThreshold: 5,
+		playerDivergenceThreshold: 8,
 		defaultPlotMode: 'phaseEvent' as const,
 		reevaluationFrequency: 10,
 		ttsEnabled: false,
