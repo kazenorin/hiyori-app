@@ -32,7 +32,7 @@ export function createSuggestCharacterNameTool(ctx: ToolContext) {
 		execute: async (input): Promise<string> => {
 			const { gender, culture, storyTheme, characterTheme, includeAliases = false } = input;
 			await toolLog(
-				`${LOG_TAG} triggered: gender=${gender ?? '-'}, culture=${!!culture}, storyTheme=${!!storyTheme}, includeAliases=${includeAliases}`
+				`${LOG_TAG} triggered: gender=${gender ?? '-'}, culture=${culture ?? '-'}, storyTheme=${storyTheme ?? '-'}, characterTheme=${characterTheme ?? '-'}, includeAliases=${includeAliases}`
 			);
 
 			const config = getPlotPlannerProviderConfig();
@@ -65,9 +65,9 @@ export function createSuggestCharacterNameTool(ctx: ToolContext) {
 				.replaceAll('{{aliasesInstructionPartial}}', aliasesInstructionPartial)
 				.replaceAll('{{constraintsPartial}}', constraintsPartial);
 
-			const text = await generateWithRetry(prompt, config);
-			await toolLog(`${LOG_TAG} returned ${text.length} chars`);
-			return text;
+			const generatedSuggestion = await generateWithRetry(prompt, config);
+			await toolLog(`${LOG_TAG}:\n---\n${generatedSuggestion}\n---`);
+			return generatedSuggestion;
 		},
 	});
 }

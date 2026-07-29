@@ -29,9 +29,9 @@ Evaluate the current narrative state against the completion signals for the curr
 Call the `advance-phase` tool **at most once per scene**, and **ONLY** when one of the following conditions is met:
 
 (a) **Milestone Completion:** All 3 of the following conditions must be met:
-	i. At least one Phase Event has been elaborated on.
-	ii. Further elaboration on remaining Phase Events would cause pacing drag.
-	iii. The narrative has clearly achieved the completion signal for the current phase listed below.
+  i. At least one Phase Event has been elaborated on.
+  ii. Further elaboration on remaining Phase Events would cause pacing drag.
+  iii. The narrative has clearly achieved the completion signal for the current phase listed below.
 
 (b) **Player Divergence:** The player's choices have permanently altered or bypassed the need for the current phase's milestone (e.g., resolving a conflict early or forcing a premature confrontation). Do not advance just because the player wandered off-topic—advance only if their actions push the overarching plot forward.
 

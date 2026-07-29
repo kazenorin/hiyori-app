@@ -10,7 +10,8 @@ common:
     lastUpdate: Last update
     mainLineName: Main
     actWithNumber: 'Act {{actNumber}}'
-    currentPhase: '(current)'
+    ongoing: Ongoing
+    currentPhase: Current Phase
   headers:
     worldContent: World Content
     actPlot: Act Plot

@@ -1,5 +1,4 @@
 import { ls } from '$lib/localization';
-import type { ActPhase } from '$lib/ai/narrative-types';
 import type { ActPhaseBoundary } from '$lib/db/act-lines';
 import {
 	worldContentHeader,
@@ -161,18 +160,23 @@ export function formatDirectorNotesSection(directorNotes: string | null | undefi
  * The last (current) phase is annotated with "(current)" and extends to `completedScenes`.
  * Returns empty array if no boundaries exist (e.g. guidance plot mode).
  */
-export function formatActPhaseBoundariesSection(boundaries: ActPhaseBoundary[], completedScenes: number): string[] {
+export function formatActPhaseBoundariesSection(boundaries: ActPhaseBoundary[]): string[] {
 	if (boundaries.length === 0) return [];
-	const currentLabel = ls('common.labels.currentPhase');
+	const currentLabel = `${ls('common.labels.ongoing')} (${ls('common.labels.currentPhase')})`;
 	const lines = boundaries.map((boundary, i) => {
 		const phaseLabel = getLocalizedActPhase(boundary.phase);
 		const start = boundary.sceneNumber;
 		const isLast = i === boundaries.length - 1;
-		const end = isLast ? completedScenes : boundaries[i + 1].sceneNumber - 1;
-		const range =
-			start === end ? ls('common.labels.sceneWithNumber', { sceneNumber: start }) : ls('common.labels.scenesRange', { start, end });
-		const marker = isLast ? ` ${currentLabel}` : '';
-		return `- ${phaseLabel}: ${range}${marker}`;
+
+		let range: string;
+		if (isLast) {
+			range = ls('common.labels.scenesRange', { start, end: currentLabel });
+		} else {
+			const end = boundaries[i + 1].sceneNumber - 1;
+			range = start === end ? ls('common.labels.sceneWithNumber', { sceneNumber: start }) : ls('common.labels.scenesRange', { start, end });
+		}
+
+		return `- ${phaseLabel}: ${range}`;
 	});
 	return [SECTION.ACT_PHASES + lines.join('\n')];
 }
