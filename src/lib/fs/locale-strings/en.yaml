@@ -137,6 +137,7 @@ pipeline:
         Your job is to a craft vivid, engaging, and immersive narrative based on the provided information.
         You are instructed to prioritize on developing the events as directed by the Scene Plot. {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
         Use the pacing decision from the Scene Plot. If the plot planner allows an expanded word count, you may write up to double the usual length.
+        If a new named character enters the scene, register them via the `introduce-character` tool (call `suggest-character-name` first if you need naming options).
         {{directorNotesReinforcementPhrase}}
       phaseEventExtraction: |
         You are now responsible for writing the story prose for Scene {{currentScene}}, the upcoming scene. You have been provided with:
@@ -151,7 +152,16 @@ pipeline:
         You are required to evaluate the current state of events, and see if any Phase Events can be triggered or already triggered.
         For triggered events that have not been elaborated on, you are instructed elaborate on them.
         If no events are triggered, or all triggered events have reasonable elaboration, drive the story to the most suitable next event.
-        If you believe the story's current state have fulfilled the goals of the {{currentActPhase}} Phase, use the `advance-phase` tool **exactly once** to move the story forward. {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
+        Only call the `advance-phase` tool **exactly once** when one of these conditions is met:
+        (a) the completion signals for the current phase (listed below) are substantially fulfilled, OR
+        (b) the player's choices have organically driven the story past those signals — a genuine divergence is itself a valid reason, but scene fatigue alone is not.
+        Phase completion signals:
+        - Introduction: the world, protagonist, and central conflict are established; the stakes are hinted.
+        - Rising-action: the protagonist has committed to the central conflict and faced at least one major obstacle that remains unresolved.
+        - Climax: the peak confrontation or critical choice has been reached (it need not be fully resolved yet).
+        - Falling-action: the immediate fallout of the climax is being dealt with.
+        Do not advance solely because the scene count feels high — check the signals first. {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
+        If a new named character enters the scene, register them via the `introduce-character` tool (call `suggest-character-name` first if you need naming options).
         {{directorNotesReinforcementPhrase}}
     plotPlanner:
       guidance: 'The current scene is Scene {{currentScene}}. Plan a Scene Plot for the Immediate Next Scene, Near-Term Beat (Flexible), and Mid-Term Goal (Flexible) based on the available information in the chat history.'

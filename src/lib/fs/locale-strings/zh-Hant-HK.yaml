@@ -131,6 +131,7 @@ pipeline:
         你的工作是根據所提供的資訊，創作生動、引人入勝且沉浸式的敘事。
         你被指示優先發展場景劇情所引導的事件。 {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
         使用場景劇情中的節奏決定。若編劇允許擴展字數，你可以寫到平常長度的兩倍。
+        若新的具名角色登場，請使用 `introduce-character` 工具註冊該角色 (若需要命名建議可先呼叫 `suggest-character-name`)。
         {{directorNotesReinforcementPhrase}}
       phaseEventExtraction: |
         你現在負責撰寫場景 {{currentScene}} 的故事散文，即即將到來的場景。你已獲得以下資訊:
@@ -145,7 +146,16 @@ pipeline:
         你需要評估目前的事件狀態，看看是否有階段事件可以被觸發或已經被觸發。
         對於已觸發但尚未詳細描述的事件，你被指示詳細闡述它們。
         若沒有事件被觸發，或所有已觸發的事件已有合理的闡述，請將故事推向最適合的下一個事件。
-        若你認為故事的目前狀態已滿足 {{currentActPhase}} 階段的目標，請使用 `advance-phase` 工具**精確一次**來推進故事。 {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
+        僅在以下任一條件成立時，才使用 `advance-phase` 工具**精確一次**:
+        (a) 目前階段的完成信號 (如下所列) 已實質滿足，或
+        (b) 玩家的選擇已自然地推動故事超越這些信號 —— 真正的偏離本身就是合理理由，但僅僅場景數累積不算。
+        各階段完成信號:
+        - Introduction (介紹): 世界、主角和核心衝突已建立；利害關係已暗示。
+        - Rising-action (上升行動): 主角已投入核心衝突，並面對至少一個仍未解決的重大障礙。
+        - Climax (高潮): 巔峰對峙或關鍵抉擇已到達 (尚不需完全解決)。
+        - Falling-action (下降行動): 高潮的立即後果正在被處理。
+        不要僅因為場景數感覺偏多就推進 —— 請先檢查信號。 {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
+        若新的具名角色登場，請使用 `introduce-character` 工具註冊該角色 (若需要命名建議可先呼叫 `suggest-character-name`)。
         {{directorNotesReinforcementPhrase}}
     plotPlanner:
       guidance: '目前場景為場景 {{currentScene}}。請根據聊天記錄中的可用資訊，為緊接的下一場景、近期的情節節奏 (可彈性處理) 以及中期目標 (可彈性處理) 規劃場景劇情。'
