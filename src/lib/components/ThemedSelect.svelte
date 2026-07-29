@@ -16,7 +16,7 @@
 			items,
 			itemToString: (item: { label: string; value: string }) => item.label,
 			itemToValue: (item: { label: string; value: string }) => item.value,
-		}),
+		})
 	);
 
 	const comboboxValue = $derived(value ? [value] : []);
@@ -28,15 +28,7 @@
 	}
 </script>
 
-<Combobox
-	class="mt-1"
-	{collection}
-	value={comboboxValue}
-	onValueChange={handleValueChange}
-	{disabled}
-	{placeholder}
-	openOnClick
->
+<Combobox class="mt-1" {collection} value={comboboxValue} onValueChange={handleValueChange} {disabled} {placeholder} openOnClick>
 	<Combobox.Control>
 		<Combobox.Input readonly tabindex={-1} />
 		<Combobox.Trigger />

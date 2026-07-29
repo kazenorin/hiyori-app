@@ -3,11 +3,7 @@
 	import { createJavaScriptRegexEngine } from 'shiki/engine/javascript';
 
 	const highlighter = await createHighlighterCore({
-		langs: [
-			import('@shikijs/langs/json'),
-			import('@shikijs/langs/markdown'),
-			import('@shikijs/langs/yaml'),
-		],
+		langs: [import('@shikijs/langs/json'), import('@shikijs/langs/markdown'), import('@shikijs/langs/yaml')],
 		themes: [import('@shikijs/themes/github-dark'), import('@shikijs/themes/github-light')],
 		engine: createJavaScriptRegexEngine(),
 	});
@@ -35,9 +31,7 @@
 	const generatedHtml = $derived(
 		lang && supportedLangs.has(lang)
 			? DOMPurify.sanitize(highlighter.codeToHtml(code, { lang, theme: isDark ? 'github-dark' : 'github-light' }))
-			: DOMPurify.sanitize(
-					`<pre class="p-4 overflow-x-auto rounded-(--radius-base) text-xs leading-relaxed">${code}</pre>`,
-				),
+			: DOMPurify.sanitize(`<pre class="p-4 overflow-x-auto rounded-(--radius-base) text-xs leading-relaxed">${code}</pre>`)
 	);
 </script>
 

@@ -11,7 +11,9 @@
 
 	let { content, characterNames = [], importantPhrases = [] }: Props = $props();
 
-	let html = $derived(DOMPurify.sanitize(marked.parse(preprocessDialogue(content, characterNames, importantPhrases), { async: false }) as string));
+	let html = $derived(
+		DOMPurify.sanitize(marked.parse(preprocessDialogue(content, characterNames, importantPhrases), { async: false }) as string)
+	);
 </script>
 
 <div class="markdown-content">

@@ -26,11 +26,7 @@
 		return parts.join(' / ');
 	}
 
-	const maxPhaseTokens = $derived(
-		metadata.phases?.length
-			? Math.max(...metadata.phases.map((p) => p.totalTokens), 1)
-			: 0
-	);
+	const maxPhaseTokens = $derived(metadata.phases?.length ? Math.max(...metadata.phases.map((p) => p.totalTokens), 1) : 0);
 </script>
 
 <div class="mt-3 pt-2 border-t border-surface-200-800 select-none">
@@ -61,10 +57,7 @@
 						{formatPhaseName(phase.phaseName as PhaseName)}
 					</span>
 					<div class="flex-1 h-1 bg-surface-100-800 rounded-full overflow-hidden">
-						<div
-							class="h-full rounded-full bg-primary-500/40 transition-all duration-300"
-							style="width: {barWidth}%"
-						></div>
+						<div class="h-full rounded-full bg-primary-500/40 transition-all duration-300" style="width: {barWidth}%"></div>
 					</div>
 					<span class="w-20 text-right tabular-nums">{tokenSummary(phase)}</span>
 					<span class="w-10 text-right tabular-nums opacity-60">{formatDuration(phase.durationMs)}</span>

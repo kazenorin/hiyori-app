@@ -259,9 +259,7 @@ Some analysis text
 		});
 
 		it('unmatched multi-headers returns empty array', () => {
-			const descriptors: OutputDescriptor[] = [
-				{ outputPath: 'result', match: { type: 'multi-headers', headerLevel: 2 } },
-			];
+			const descriptors: OutputDescriptor[] = [{ outputPath: 'result', match: { type: 'multi-headers', headerLevel: 2 } }];
 			const output = parseContent('# Only H1\nno H2s here', descriptors);
 			expect(output.result).toEqual([]);
 		});
@@ -281,9 +279,7 @@ Some analysis text
 	describe('Header selfContentOnly examples', () => {
 		it('header text only (selfContentOnly)', () => {
 			const inputContent = '## Blue\nrgb(0,0,255)';
-			const descriptors: OutputDescriptor[] = [
-				{ outputPath: 'name', match: { type: 'header', headerLevel: 2 }, selfContentOnly: true },
-			];
+			const descriptors: OutputDescriptor[] = [{ outputPath: 'name', match: { type: 'header', headerLevel: 2 }, selfContentOnly: true }];
 			const output = parseContent(inputContent, descriptors);
 			expect(output.name).toBe('Blue');
 		});
@@ -317,9 +313,7 @@ Some analysis text
 rgb(0,0,255)
 ## Red
 rgb(255,0,0)`;
-			const descriptors: OutputDescriptor[] = [
-				{ outputPath: 'sections', match: { type: 'multi-headers', headerLevel: 2 } },
-			];
+			const descriptors: OutputDescriptor[] = [{ outputPath: 'sections', match: { type: 'multi-headers', headerLevel: 2 } }];
 			const output = parseContent(inputContent, descriptors);
 			expect(output.sections).toEqual(['## Blue\nrgb(0,0,255)', '## Red\nrgb(255,0,0)']);
 		});
@@ -329,9 +323,7 @@ rgb(255,0,0)`;
 rgb(0,0,255)
 ## Red
 rgb(255,0,0)`;
-			const descriptors: OutputDescriptor[] = [
-				{ outputPath: 'bodies', match: { type: 'multi-headers', headerLevel: 2 }, bodyOnly: true },
-			];
+			const descriptors: OutputDescriptor[] = [{ outputPath: 'bodies', match: { type: 'multi-headers', headerLevel: 2 }, bodyOnly: true }];
 			const output = parseContent(inputContent, descriptors);
 			expect(output.bodies).toEqual(['rgb(0,0,255)', 'rgb(255,0,0)']);
 		});

@@ -19,6 +19,7 @@ Your task is to generate, review, or edit Act Plot documents that serve as roadm
 ## Ending Requirements
 
 Design exactly four distinct endings that feel like earned, natural consequences of player choices:
+
 1. **Good Ending:** The protagonist largely succeeds in their goals.
 2. **Bad Ending:** Things go significantly wrong; a major failure or tragic outcome.
 3. **Bittersweet Ending:** A mixed outcome with both gains and painful losses, offering a complex emotional landscape.

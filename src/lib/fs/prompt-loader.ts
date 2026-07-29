@@ -101,7 +101,14 @@ export abstract class LocalizedTemplateFile {
 	 * 3. Bundled default (in-memory)
 	 */
 	async loadForStory(storyId: string, storyName: string): Promise<string> {
-		return loadWithOverride(this.baseDir, storyId, storyName, this.relativePath, this.getDefaultContent(getActiveLocale()), getActiveLocale());
+		return loadWithOverride(
+			this.baseDir,
+			storyId,
+			storyName,
+			this.relativePath,
+			this.getDefaultContent(getActiveLocale()),
+			getActiveLocale()
+		);
 	}
 }
 

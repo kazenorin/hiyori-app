@@ -17,10 +17,7 @@ export async function readWorldTemplateId(folderName: string): Promise<string | 
 		const id = content.trim().toLowerCase();
 		return WORLD_TEMPLATES.some((t) => t.id === id) ? id : null;
 	} catch (err) {
-		await log.warn(
-			'template-resolution',
-			`Failed to read ${WORLD_TEMPLATE_ID_FILE}: ${err instanceof Error ? err.message : String(err)}.`
-		);
+		await log.warn('template-resolution', `Failed to read ${WORLD_TEMPLATE_ID_FILE}: ${err instanceof Error ? err.message : String(err)}.`);
 		return null;
 	}
 }

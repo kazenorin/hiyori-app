@@ -200,7 +200,15 @@
 					/>
 				</label>
 
-				<FileField label={t('importWorld.worldBuildingFile')} hint={t('importWorld.mdOrTxtHint')} accept=".md,.txt" disabled={store.isImporting || store.importComplete} onFileChange={(file) => { store.worldFile = file }} />
+				<FileField
+					label={t('importWorld.worldBuildingFile')}
+					hint={t('importWorld.mdOrTxtHint')}
+					accept=".md,.txt"
+					disabled={store.isImporting || store.importComplete}
+					onFileChange={(file) => {
+						store.worldFile = file;
+					}}
+				/>
 			</Card>
 
 			<!-- Acts -->
@@ -248,9 +256,25 @@
 							/>
 						</label>
 
-						<FileField label={t('importWorld.actChapterFile')} hint={t('importWorld.mdOrTxtHint')} accept=".md,.txt" disabled={store.isImporting || store.importComplete} onFileChange={(file) => { store.updateActFile(act.id, file) }} />
+						<FileField
+							label={t('importWorld.actChapterFile')}
+							hint={t('importWorld.mdOrTxtHint')}
+							accept=".md,.txt"
+							disabled={store.isImporting || store.importComplete}
+							onFileChange={(file) => {
+								store.updateActFile(act.id, file);
+							}}
+						/>
 
-						<FileField label={t('importWorld.transcript')} hint={t('importWorld.jsonHint')} accept=".json" disabled={store.isImporting || store.importComplete} onFileChange={(file) => { store.updateActTranscript(act.id, file) }} />
+						<FileField
+							label={t('importWorld.transcript')}
+							hint={t('importWorld.jsonHint')}
+							accept=".json"
+							disabled={store.isImporting || store.importComplete}
+							onFileChange={(file) => {
+								store.updateActTranscript(act.id, file);
+							}}
+						/>
 					</div>
 				{/each}
 			</Card>
@@ -300,7 +324,15 @@
 							/>
 						</label>
 
-						<FileField label={t('importWorld.characterCard')} hint={t('importWorld.mdOrTxtRequiredHint')} accept=".md,.txt" disabled={store.isImporting || store.importComplete} onFileChange={(file) => { store.updateCharacterFile(character.id, file) }} />
+						<FileField
+							label={t('importWorld.characterCard')}
+							hint={t('importWorld.mdOrTxtRequiredHint')}
+							accept=".md,.txt"
+							disabled={store.isImporting || store.importComplete}
+							onFileChange={(file) => {
+								store.updateCharacterFile(character.id, file);
+							}}
+						/>
 					</div>
 				{/each}
 			</Card>
@@ -320,9 +352,21 @@
 				</label>
 
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-					<NumberField label={t('importWorld.llmRetryCount')} min={0} max={20} bind:value={store.retryCount} disabled={store.isImporting || store.importComplete} />
+					<NumberField
+						label={t('importWorld.llmRetryCount')}
+						min={0}
+						max={20}
+						bind:value={store.retryCount}
+						disabled={store.isImporting || store.importComplete}
+					/>
 
-					<NumberField label={t('importWorld.backoffInterval')} min={1} max={60} bind:value={store.backoffIntervalSeconds} disabled={store.isImporting || store.importComplete} />
+					<NumberField
+						label={t('importWorld.backoffInterval')}
+						min={1}
+						max={60}
+						bind:value={store.backoffIntervalSeconds}
+						disabled={store.isImporting || store.importComplete}
+					/>
 				</div>
 			</Card>
 		{/if}

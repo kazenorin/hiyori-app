@@ -337,8 +337,8 @@ Character: Elena - important, named.
 		expect(elena.locations['The Tavern']).toEqual(['Elena sat by the fire.']);
 	});
 
-		it('parses inventory changes under #### Inventory Changes heading', () => {
-			const markdown = `
+	it('parses inventory changes under #### Inventory Changes heading', () => {
+		const markdown = `
 ## elena-shadowcrest
 
 ### The Ruins
@@ -356,31 +356,31 @@ Character: Elena - important, named.
 - **equipped**: Iron Sword - Drew from its scabbard
 `;
 
-			const result = parseMemoryExtract(markdown);
-			const elena = result['elena-shadowcrest'];
-			expect(elena.inventory).toBeDefined();
-			expect(elena.inventory!.items).toHaveLength(1);
-			expect(elena.inventory!.changes).toBeDefined();
-			expect(elena.inventory!.changes!).toHaveLength(3);
-			expect(elena.inventory!.changes![0]).toEqual({
-				itemName: 'Ancient Amulet',
-				changeType: 'acquired',
-				description: 'Found in the stone pedestal',
-			});
-			expect(elena.inventory!.changes![1]).toEqual({
-				itemName: 'Wooden Shield',
-				changeType: 'lost',
-				description: 'Shattered by the golem',
-			});
-			expect(elena.inventory!.changes![2]).toEqual({
-				itemName: 'Iron Sword',
-				changeType: 'equipped',
-				description: 'Drew from its scabbard',
-			});
+		const result = parseMemoryExtract(markdown);
+		const elena = result['elena-shadowcrest'];
+		expect(elena.inventory).toBeDefined();
+		expect(elena.inventory!.items).toHaveLength(1);
+		expect(elena.inventory!.changes).toBeDefined();
+		expect(elena.inventory!.changes!).toHaveLength(3);
+		expect(elena.inventory!.changes![0]).toEqual({
+			itemName: 'Ancient Amulet',
+			changeType: 'acquired',
+			description: 'Found in the stone pedestal',
 		});
+		expect(elena.inventory!.changes![1]).toEqual({
+			itemName: 'Wooden Shield',
+			changeType: 'lost',
+			description: 'Shattered by the golem',
+		});
+		expect(elena.inventory!.changes![2]).toEqual({
+			itemName: 'Iron Sword',
+			changeType: 'equipped',
+			description: 'Drew from its scabbard',
+		});
+	});
 
-		it('parses inventory changes without description', () => {
-			const markdown = `
+	it('parses inventory changes without description', () => {
+		const markdown = `
 ## marcus-thorne
 
 ### The Market
@@ -393,24 +393,24 @@ Character: Elena - important, named.
 - **used**: Healing Potion
 `;
 
-			const result = parseMemoryExtract(markdown);
-			const marcus = result['marcus-thorne'];
-			expect(marcus.inventory).toBeDefined();
-			expect(marcus.inventory!.changes).toHaveLength(2);
-			expect(marcus.inventory!.changes![0]).toEqual({
-				itemName: 'Healing Potion',
-				changeType: 'acquired',
-				description: undefined,
-			});
-			expect(marcus.inventory!.changes![1]).toEqual({
-				itemName: 'Healing Potion',
-				changeType: 'used',
-				description: undefined,
-			});
+		const result = parseMemoryExtract(markdown);
+		const marcus = result['marcus-thorne'];
+		expect(marcus.inventory).toBeDefined();
+		expect(marcus.inventory!.changes).toHaveLength(2);
+		expect(marcus.inventory!.changes![0]).toEqual({
+			itemName: 'Healing Potion',
+			changeType: 'acquired',
+			description: undefined,
 		});
+		expect(marcus.inventory!.changes![1]).toEqual({
+			itemName: 'Healing Potion',
+			changeType: 'used',
+			description: undefined,
+		});
+	});
 
-		it('ignores invalid change types in inventory changes', () => {
-			const markdown = `
+	it('ignores invalid change types in inventory changes', () => {
+		const markdown = `
 ## elena
 
 ### The Tower
@@ -423,14 +423,14 @@ Character: Elena - important, named.
 - **acquired**: Health Potion - Received from the healer
 `;
 
-			const result = parseMemoryExtract(markdown);
-			const elena = result['elena'];
-			expect(elena.inventory!.changes).toHaveLength(1);
-			expect(elena.inventory!.changes![0].changeType).toBe('acquired');
-		});
+		const result = parseMemoryExtract(markdown);
+		const elena = result['elena'];
+		expect(elena.inventory!.changes).toHaveLength(1);
+		expect(elena.inventory!.changes![0].changeType).toBe('acquired');
+	});
 
-		it('handles inventory changes without inventory section', () => {
-			const markdown = `
+	it('handles inventory changes without inventory section', () => {
+		const markdown = `
 ## elena
 
 ### The Cave
@@ -442,15 +442,15 @@ Character: Elena - important, named.
 - **acquired**: Torch - Lit from the entrance brazier
 `;
 
-			const result = parseMemoryExtract(markdown);
-			const elena = result['elena'];
-			expect(elena.inventory).toBeDefined();
-			expect(elena.inventory!.items).toHaveLength(0);
-			expect(elena.inventory!.changes).toHaveLength(1);
-		});
+		const result = parseMemoryExtract(markdown);
+		const elena = result['elena'];
+		expect(elena.inventory).toBeDefined();
+		expect(elena.inventory!.items).toHaveLength(0);
+		expect(elena.inventory!.changes).toHaveLength(1);
+	});
 
-		it('handles character without inventory changes section', () => {
-			const markdown = `
+	it('handles character without inventory changes section', () => {
+		const markdown = `
 ## elena
 
 ### The Tavern
@@ -462,15 +462,15 @@ Character: Elena - important, named.
 - **item**: Iron Sword [carried]
 `;
 
-			const result = parseMemoryExtract(markdown);
-			const elena = result['elena'];
-			expect(elena.inventory).toBeDefined();
-			expect(elena.inventory!.items).toHaveLength(1);
-			expect(elena.inventory!.changes).toBeUndefined();
-		});
+		const result = parseMemoryExtract(markdown);
+		const elena = result['elena'];
+		expect(elena.inventory).toBeDefined();
+		expect(elena.inventory!.items).toHaveLength(1);
+		expect(elena.inventory!.changes).toBeUndefined();
+	});
 
-		it('parses all six change types', () => {
-			const markdown = `
+	it('parses all six change types', () => {
+		const markdown = `
 ## elena
 
 ### The Armory
@@ -487,10 +487,10 @@ Character: Elena - important, named.
 - **modified**: Enchanted Ring - Absorbed a new enchantment
 `;
 
-			const result = parseMemoryExtract(markdown);
-			const elena = result['elena'];
-			expect(elena.inventory!.changes).toHaveLength(6);
-			const types = elena.inventory!.changes!.map((c) => c.changeType);
-			expect(types).toEqual(['acquired', 'lost', 'equipped', 'unequipped', 'used', 'modified']);
-		});
+		const result = parseMemoryExtract(markdown);
+		const elena = result['elena'];
+		expect(elena.inventory!.changes).toHaveLength(6);
+		const types = elena.inventory!.changes!.map((c) => c.changeType);
+		expect(types).toEqual(['acquired', 'lost', 'equipped', 'unequipped', 'used', 'modified']);
+	});
 });
