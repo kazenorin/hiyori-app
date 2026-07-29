@@ -9,6 +9,7 @@ export const actPlotHeader = () => ls('common.headers.actPlot');
 export const actSummaryHeader = () => ls('common.headers.actSummary');
 export const currentSceneHeader = () => ls('common.headers.currentScene');
 export const interviewTranscriptHeader = () => ls('common.headers.interviewTranscript');
+export const playerPreferencesHeader = () => ls('common.headers.playerPreferences');
 export const playerResponseHeader = () => ls('common.headers.playerResponse');
 export const scenePlotHeader = () => ls('common.headers.scenePlot');
 export const writerOutputTemplateHeader = () => ls('common.headers.writerOutputTemplate');

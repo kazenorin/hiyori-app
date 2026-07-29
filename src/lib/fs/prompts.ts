@@ -92,6 +92,7 @@ export const actPlotInterviewSystemPromptLoader = createLoader('act/act-plot-int
 export const actPlotReviewerPromptLoader = createLoader('act/act-plot-reviewer-prompt.md');
 export const actPlotEditorPromptLoader = createLoader('act/act-plot-editor-prompt.md');
 export const actPlotInterviewTurnOfEventsPromptLoader = createLoader('act/act-plot-interview-turn-of-events-prompt.md');
+export const interviewSummaryPromptLoader = createLoader('act/interview-summary-prompt.md');
 export const actCardTemplateLoader = createLoader('act/act-card-template.md');
 
 // === Character cards ===

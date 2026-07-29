@@ -22,6 +22,7 @@ Your task is to check the provided Act Plot document from the Writer Output agai
 - **Rule 3 (Escalation):** Flag major events that do not escalate naturally. Each climactic event should raise stakes or change the story direction. Flag events that feel flat, repetitive, or anticlimactic.
 - **Rule 4 (Tone Match):** Flag elements that clash with the world's established tone and themes.
 - **Rule 5 (Word Count):** Flag if the Act Plot exceeds 2000 words or is so brief that it lacks substance.
+- **Rule 6 (Player Preference Alignment):** If a **Player Preferences** section is provided, verify that each preference listed there is reflected in the matching template section. Flag any preference that is missing, contradicted, or only superficially acknowledged. Reference the specific preference and the template section where it should appear.
 
 ## Output Format
 

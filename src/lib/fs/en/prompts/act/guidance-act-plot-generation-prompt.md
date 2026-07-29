@@ -4,6 +4,8 @@
 
 Read the provided world setting document and generate a structured Act Plot that guides the narrative. The Act Plot should be created **specifically for Act {{actNumber}}** of the story.
 
+If a **Player Preferences** section is provided, consult it and ensure each preference is reflected in the matching template section.
+
 ## Template Sections
 
 1. **Story Structure** — Define scene count, establishing the story's scope

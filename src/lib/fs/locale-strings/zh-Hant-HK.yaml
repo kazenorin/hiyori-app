@@ -19,6 +19,7 @@ common:
     character: 角色
     characters: 角色
     interviewTranscript: 訪談記錄
+    playerPreferences: 玩家偏好
     playerResponse: 玩家回應
     scenePlot: 場景劇情
     writerOutputTemplate: 寫手輸出範本
@@ -48,6 +49,7 @@ common:
     targetWordCountPerScene: 每場景目標字數
   descriptions:
     interviewTranscript: 以下是有關此故事及設定的訪談內容。
+    playerPreferences: '以下萃取自上方訪談的玩家偏好結構化摘要。每一項偏好都必須反映在對應的章節劇情範本區段中。'
     directorNotes: '以下備註代表玩家的明確創作方向。它們凌駕於所有其他脈絡之上，包含章節劇情和章節摘要。請以最高優先順序遵循。'
     characterProfiles: '角色檔案以下列方式分佈: 重要角色會以完整檔案內嵌；其他角色僅以一句話參考 (姓名: 重要性 — 簡短描述)，可透過 `character-details` 工具取得。'
     characterProfilesInline: '以下檔案已在你的脈絡中。請勿對這些角色呼叫 `character-details` 工具。'
@@ -75,6 +77,7 @@ pipeline:
     actPlotCharacterCards: 角色卡片
     actPlotActCards: 章節卡片
     actPlotCharacterProfiles: 角色檔案
+    actPlotPlayerPreferences: 玩家偏好
   extraction:
     actShortSummary: '你是一個敘事摘要者。你的任務是將提供的章節摘要濃縮為精確的 3 個簡潔句子，捕捉章節的關的關鍵事件、衝突和結果。專注於發生了什麼以及故事如何改變。以過去式撰寫。在 3 個句子之後，空一行，然後評估章節摘要中列出的角色。僅列出你判斷為重要且可能在未來章節中再次出現的角色，每行格式為:「名字 (一句話描述其在此章節中的角色或弧線) 」。按重要性由高到低排序。不要列出次要或僅出現一次的角色。僅輸出摘要和角色列表——不添加標籤、標題或評論。'
     actShortSummaryCharacterPrefix: '此章節中的角色'
@@ -169,7 +172,7 @@ pipeline:
 
       此章節線從場景 {{sceneNumber}} 重新開始，在場景 {{sceneNumber}} 或之前發生的情節和事件可能有不同的劇情，或是從另一個視角撰寫。
     actPlotTailoredExperience: >-
-      - **定制體驗:** 分析訪談內容以識別玩家想要的主題、故事前置和敘事目標。塑造劇情的核心衝突、遭遇和節奏來滿足這些期望。
+      - **定制體驗:** 已提供**玩家偏好**區段作為玩家訪談的結構化摘要。你必須確保其中列出的每一項偏好都反映在對應的範本區段中: 主題與語調 → 敘事風格；主角原型 → 故事前置；衝突偏好 → 故事前置/主要事件；劇情事件 → 主要事件；節奏與規模 → 故事結構；結局偏好 → 可能的結局；明確約束 → 其所針對的適用區段。不要悄悄丟棄已陳述的偏好。若兩項偏好衝突，優先採用較新近陳述的偏好，並在最接近的相關區段中標註衝突。
     editorTemplateFitter: >
       「編輯輸出」未符合所需的範本格式。請根據「寫手輸出範本」中所定義的區段標題重新調整結構，
       插入適當的標題而不更改任何內容。若內容缺少「場景標題」區段，請根據敘事生成一個簡短貼切的標題。

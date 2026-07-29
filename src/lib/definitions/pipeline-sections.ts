@@ -6,6 +6,7 @@ import {
 	actSummaryHeader,
 	actPhaseHeader,
 	interviewTranscriptHeader,
+	playerPreferencesHeader,
 	playerResponseHeader,
 	scenePlotHeader,
 	writerOutputTemplateHeader,
@@ -42,6 +43,7 @@ import { actWithNumberLabel, aliasesLabel } from '$lib/definitions/common-labels
 import type { CharacterProfileEntity } from '$lib/db/character-profiles';
 
 export const interviewTranscriptDescription = () => ls('common.descriptions.interviewTranscript');
+export const playerPreferencesDescription = () => ls('common.descriptions.playerPreferences');
 
 /** Markdown section headings used in LLM message construction. */
 export const SECTION = {
@@ -108,6 +110,9 @@ export const ACT_PLOT_SECTION = {
 	},
 	get TURN_OF_EVENTS() {
 		return sectionFormat(turnOfEventsHeader());
+	},
+	get PLAYER_PREFERENCES() {
+		return sectionFormat(playerPreferencesHeader()) + playerPreferencesDescription() + '\n\n';
 	},
 	get INTERVIEW_TRANSCRIPT() {
 		return sectionFormat(interviewTranscriptHeader()) + interviewTranscriptDescription();

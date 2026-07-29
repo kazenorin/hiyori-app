@@ -10,6 +10,7 @@ import {
 	generalInstructionsLoader,
 	guidanceActPlotTemplateLoader,
 	phaseEventActPlotTemplateLoader,
+	interviewSummaryPromptLoader,
 } from '$lib/fs/prompts';
 import { log } from '$lib/logging/logger';
 import {
@@ -46,7 +47,7 @@ import type { ToolContext } from '$lib/ai/tools/tools';
 const LOG_TAG = 'act-plot-generator';
 const TOOL_MAX_STEPS = 10;
 
-export type ActPlotPhase = 'writing' | 'reviewing' | 'editing';
+export type ActPlotPhase = 'summarizing' | 'writing' | 'reviewing' | 'editing';
 
 /**
  * Load interview transcript from act_line_premises for a given act line.
@@ -67,12 +68,79 @@ async function loadInterviewTranscript(actLineId: string): Promise<ModelMessage[
 	}
 }
 
+/**
+ * Summarize the interview transcript into a structured "Player Preferences" digest.
+ * Fed into all act-plot phases (writer/reviewer/editor) as an explicit section so
+ * small models can consume a compact, reviewable artifact instead of re-deriving
+ * preferences from the raw brainstorming exchange each time.
+ *
+ * Returns null on any failure — non-blocking: the pipeline proceeds without the digest.
+ */
+async function summarizePlayerPreferences(params: {
+	storyId: string;
+	storyName: string;
+	interviewTranscript: ModelMessage[];
+	worldContent: string | null;
+	previousActSummary: string | null;
+	generalInstructions: string;
+	model: Awaited<ReturnType<typeof createModel>>;
+	callSettings: Record<string, unknown> | undefined;
+	abortSignal?: AbortSignal;
+}): Promise<string | null> {
+	const {
+		storyId,
+		storyName,
+		interviewTranscript,
+		worldContent,
+		previousActSummary,
+		generalInstructions,
+		model,
+		callSettings,
+		abortSignal,
+	} = params;
+	try {
+		const promptTemplate = await interviewSummaryPromptLoader.loadByStory(storyId, storyName);
+		const resolvedTemplate = promptTemplate.replace('{{generalInstructions}}', generalInstructions);
+		const contextParts: string[] = [];
+		if (worldContent) {
+			contextParts.push(`${ACT_PLOT_SECTION.WORLD_CONTENT}${worldContent}`);
+		}
+		if (previousActSummary) {
+			contextParts.push(`${ACT_PLOT_SECTION.PREVIOUS_ACT_SUMMARY}${previousActSummary}`);
+		}
+		const transcriptText = interviewTranscript.map((m) => `**${m.role === 'user' ? 'Player' : 'Interviewer'}**: ${m.content}`).join('\n\n');
+		contextParts.push(`${ACT_PLOT_SECTION.INTERVIEW_TRANSCRIPT}${transcriptText}`);
+		const userMessage = `${resolvedTemplate}\n\n${contextParts.join('\n\n')}`;
+
+		const result = await generateText({
+			model,
+			messages: [{ role: 'user', content: userMessage }],
+			abortSignal,
+			...(callSettings ?? {}),
+		});
+		const text = result.text.trim();
+		if (!text) {
+			await log.warn(LOG_TAG, 'Player preferences summarization returned empty response');
+			return null;
+		}
+		await log.info(LOG_TAG, `Player preferences digest complete. Tokens: ${result.usage.totalTokens}, Length: ${text.length} chars`);
+		return text;
+	} catch (err) {
+		await log.warn(
+			LOG_TAG,
+			`Player preferences summarization failed, continuing without digest: ${err instanceof Error ? err.message : String(err)}`
+		);
+		return null;
+	}
+}
+
 interface BuildActPlotMessagesOptions {
 	prompt: string;
 	worldContent: string | null;
 	previousActSummary: string | null;
 	turnOfEvents: string | null;
 	interviewTranscript?: ModelMessage[];
+	playerPreferences?: string | null;
 	writerOutput?: string;
 	reviewerOutput?: string;
 	template?: string;
@@ -89,6 +157,7 @@ function buildActPlotMessages(options: BuildActPlotMessagesOptions): ModelMessag
 		previousActSummary,
 		turnOfEvents,
 		interviewTranscript,
+		playerPreferences,
 		writerOutput,
 		reviewerOutput,
 		prompt,
@@ -145,6 +214,10 @@ function buildActPlotMessages(options: BuildActPlotMessagesOptions): ModelMessag
 			messages.push({ role: 'user', content: ACT_PLOT_SECTION.INTERVIEW_TRANSCRIPT });
 			messages.push(...interviewTranscript);
 		}
+	}
+
+	if (playerPreferences && playerPreferences.trim()) {
+		messages.push({ role: 'user', content: ACT_PLOT_SECTION.PLAYER_PREFERENCES + playerPreferences });
 	}
 
 	if (turnOfEvents) {
@@ -263,15 +336,36 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 		`Starting act-plot pipeline for story: ${storyName} (interview: ${interviewTranscript.some((m) => m.role === 'user') ? 'yes' : 'no'}, prev-summary: ${previousActSummary ? 'yes' : 'no'}, turnOfEvents: ${turnOfEvents ? 'yes' : 'no'}, detailedContext: ${detailedContext ? 'yes' : 'no'}, currentActCard: ${currentActCard ? 'yes' : 'no'})`
 	);
 
-	// Phase 1: WRITER
+	// Phase 1: Summarize interview into a structured Player Preferences digest.
+	// Runs only when an interview with user turns exists. Non-blocking on failure.
+	const hasInterview = interviewTranscript.some((m) => m.role === 'user');
+	let playerPreferences: string | null = null;
+	if (hasInterview) {
+		onPhaseChange?.('summarizing');
+		await log.info(LOG_TAG, 'Phase 1: INTERVIEW SUMMARY');
+		playerPreferences = await summarizePlayerPreferences({
+			storyId,
+			storyName,
+			interviewTranscript,
+			worldContent,
+			previousActSummary,
+			generalInstructions,
+			model,
+			callSettings: config.callSettings,
+			abortSignal,
+		});
+	}
+
+	// Phase 2: WRITER
 	onPhaseChange?.('writing');
-	await log.info(LOG_TAG, 'Phase 1: WRITER');
+	await log.info(LOG_TAG, 'Phase 2: WRITER');
 
 	const writerMessages = buildActPlotMessages({
 		worldContent,
 		previousActSummary,
 		turnOfEvents,
 		interviewTranscript,
+		playerPreferences,
 		prompt: generationPrompt,
 		template,
 		useDetailedContext,
@@ -304,15 +398,16 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 		finalText = writerText;
 	} else {
 		try {
-			// Phase 2: REVIEWER
+			// Phase 3: REVIEWER
 			onPhaseChange?.('reviewing');
-			await log.info(LOG_TAG, 'Phase 2: REVIEWER');
+			await log.info(LOG_TAG, 'Phase 3: REVIEWER');
 
 			const reviewerMessages = buildActPlotMessages({
 				worldContent,
 				previousActSummary,
 				turnOfEvents,
 				interviewTranscript,
+				playerPreferences,
 				writerOutput: writerText,
 				prompt: reviewerPrompt,
 				useDetailedContext,
@@ -340,14 +435,15 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 				await log.info(LOG_TAG, 'Editor phase skipped — reviewer accepted as-is');
 				finalText = writerText;
 			} else {
-				// Phase 3: EDITOR
+				// Phase 4: EDITOR
 				onPhaseChange?.('editing');
-				await log.info(LOG_TAG, 'Phase 3: EDITOR');
+				await log.info(LOG_TAG, 'Phase 4: EDITOR');
 
 				const editorMessages = buildActPlotMessages({
 					worldContent,
 					previousActSummary,
 					turnOfEvents,
+					playerPreferences,
 					writerOutput: writerText,
 					reviewerOutput: reviewerText,
 					prompt: editorPrompt,

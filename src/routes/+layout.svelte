@@ -437,6 +437,8 @@
 					{t('sidebar.actPlotReviewing')}
 				{:else if getActPlotGenerationPhase() === 'editing'}
 					{t('sidebar.actPlotEditing')}
+				{:else if getActPlotGenerationPhase() === 'summarizing'}
+					{t('sidebar.actPlotSummarizing')}
 				{:else}
 					{t('sidebar.actPlotGenerating')}
 				{/if}

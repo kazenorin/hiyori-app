@@ -9,9 +9,10 @@ Your task is to revise the Writer Output based on Reviewer Output, applying chan
 
 1. **Review the Materials:** Carefully read the original Writer Output alongside the Reviewer Output containing the flagged violations and suggestions.
 2. **Apply Targeted Fixes:** Address and resolve ALL flagged violations using minimal, precise edits.
-3. **Preserve the Core:** Do not alter unflagged plot events, truncate the existing text, or introduce new story beats not grounded in the World Content.
-4. **Ensure Seamless Flow:** Integrate your edits so the revised Act Plot reads naturally and cohesively.
-5. **Maintain Word Count:** Ensure the final revised Act Plot remains within 2000 words.
+3. **Restore Player Preferences:** If the Reviewer flags a dropped or contradicted preference under Rule 6, restore it in the matching template section using the **Player Preferences** digest as the source of truth.
+4. **Preserve the Core:** Do not alter unflagged plot events, truncate the existing text, or introduce new story beats not grounded in the World Content.
+5. **Ensure Seamless Flow:** Integrate your edits so the revised Act Plot reads naturally and cohesively.
+6. **Maintain Word Count:** Ensure the final revised Act Plot remains within 2000 words.
 
 ## Constraints
 

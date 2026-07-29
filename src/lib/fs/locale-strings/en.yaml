@@ -19,6 +19,7 @@ common:
     character: Character
     characters: Characters
     interviewTranscript: Interview Transcript
+    playerPreferences: Player Preferences
     playerResponse: Player Response
     scenePlot: Scene Plot
     writerOutputTemplate: Writer Output Template
@@ -48,6 +49,7 @@ common:
     targetWordCountPerScene: Target Word Count per Scene
   descriptions:
     interviewTranscript: The following is an interview exchange about the story and premises.
+    playerPreferences: "A structured digest of the player's preferences extracted from the interview above. Each preference must be reflected in the matching Act Plot template section."
     directorNotes: "The following notes represent the player's explicit creative direction. They override all other context including Act Plot and Act Summary. Honor them with the highest priority."
     characterProfiles: 'Character profiles distributed the following way: full-body profiles have been inlined for important characters. Other characters are represented as a one-sentence reference (Name: importance — short description) and can be retrieved via the `character-details` tool.'
     characterProfilesInline: 'The profiles below are ALREADY in your context. Do NOT call the `character-details` tool for these characters.'
@@ -75,6 +77,7 @@ pipeline:
     actPlotCharacterCards: Character Card
     actPlotActCards: Act Card
     actPlotCharacterProfiles: Character Profiles
+    actPlotPlayerPreferences: Player Preferences
   extraction:
     actShortSummary: 'You are a narrative summarizer. Your task is to distill the provided act summary into exactly 3 concise sentences that capture the key events, conflicts, and outcomes of the act. Focus on what happened and how the story changed. Write in past tense. After the 3 sentences, add a blank line then evaluate the characters listed in the act summary. List only those you judge to be important and likely to appear again in future acts, each on a new line, in the format: "Name (one-line description of their role or arc in this act)". Order them from most to least important. Do not list minor or one-off characters. Output only the summary and character list — no labels, no headings, no commentary.'
     actShortSummaryCharacterPrefix: 'Characters in this act'
@@ -175,7 +178,7 @@ pipeline:
 
       This Act Line is restarted from Scene {{sceneNumber}}, plot and events that happened at or prior to Scene {{sceneNumber}} may be have a different plot, or written from another perspective.
     actPlotTailoredExperience: >-
-      - **Tailored Experience:** Analyze the interview exchange to identify the player's desired themes, premises, and narrative goals. Shape the plot's core conflicts, encounters, and pacing to fulfill these expectations.
+      - **Tailored Experience:** A **Player Preferences** section is provided as a structured digest of the player's interview. You must ensure every preference listed there is reflected in the matching template section: themes & tone → Storytelling Style; protagonist archetype → Premise; conflict preferences → Premise/Major Events; incidents & events → Major Events; pacing & scope → Story Structure; ending preferences → Possible Endings; explicit constraints → the applicable sections they target. Do not silently drop a stated preference. If two preferences conflict, prioritize the more recently stated one and flag the conflict in the closest relevant section.
     editorTemplateFitter: >
       The "Editor Output" does not follow the required template format. Restructure it to match the Writer Output Template
       by inserting the appropriate section headers defined by "Writer Output Template" without changing any content.
