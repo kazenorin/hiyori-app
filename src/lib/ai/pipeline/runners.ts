@@ -76,6 +76,9 @@ import {
 
 export const defaultTargetWordCount = 400;
 
+const earlyPhaseFactor = 0.3;
+const latePhaseFactor = 1 - earlyPhaseFactor;
+
 function resolveGmSystemPrompt(ctx: PipelineRunContext): string {
 	return ctx.prompts.gameMasterSystemPrompt.replaceAll('{{additionalRules}}', '');
 }
@@ -102,6 +105,45 @@ function resolveDirectorNotesReinforcementPhrase(directorNotes: string) {
 
 function resolveCurrentActPhase(ctx: PipelineRunContext) {
 	return ctx.story.actLine.currentActPhase ? getLocalizedActPhase(ctx.story.actLine.currentActPhase) : '';
+}
+
+function resolveCurrentActPhaseProgress(ctx: PipelineRunContext): number {
+	const currentSceneNumber = parseInt(ctx.currentScene, 10);
+	if (Number.isNaN(currentSceneNumber)) {
+		return 0;
+	}
+
+	const { actPhaseBoundaries, currentActPhase } = ctx.story.actLine;
+	const phaseBoundary = actPhaseBoundaries.find((p) => p.phase === currentActPhase);
+
+	if (phaseBoundary?.sceneNumber !== undefined && phaseBoundary.sceneNumber <= currentSceneNumber) {
+		return currentSceneNumber - phaseBoundary.sceneNumber;
+	}
+
+	return currentSceneNumber;
+}
+
+function calculatePhaseThreshold(ctx: PipelineRunContext, factor: number, minThreshold: number): number {
+	const phaseLengthEstimate = resolveEstimatedPhaseLength(ctx);
+
+	if (phaseLengthEstimate > 2) {
+		const threshold = Math.floor(phaseLengthEstimate * factor);
+		return Math.max(minThreshold, threshold);
+	}
+
+	return minThreshold;
+}
+
+function resolveEarlyPhaseThreshold(ctx: PipelineRunContext) {
+	return calculatePhaseThreshold(ctx, earlyPhaseFactor, 1);
+}
+
+function resolveLatePhaseThreshold(ctx: PipelineRunContext) {
+	return calculatePhaseThreshold(ctx, latePhaseFactor, 2);
+}
+
+function resolveEstimatedPhaseLength(ctx: PipelineRunContext) {
+	return ctx.story.actLine.currentActPhaseLengthEstimate ?? 2;
 }
 
 function resolveActEndInstruction(plotMode: PlotMode, actPhase: ActPhase | null): string {
@@ -238,13 +280,16 @@ export async function runWriterPhase(
 		writerExtractionPromptTemplate
 			.replaceAll('{{previousScene}}', String(previousSceneNumber))
 			.replaceAll('{{currentScene}}', ctx.currentScene)
-			.replaceAll('{{summarizedScenes}}', String(summarizedScenes))
 			.replaceAll('{{providedSummary}}', resolveSummarizedScenes(summarizedScenes))
 			.replaceAll('{{providedTurnOfEvents}}', resolveTurnOfEvents(previousTurnOfEvents))
 			.replaceAll('{{providedDirectorNotes}}', resolveDirectorNotes(directorNotes))
 			.replaceAll('{{turnOfEventsReinforcementPhrase}}', resolveTurnOfEventsReinforcementPhrase(previousTurnOfEvents))
 			.replaceAll('{{directorNotesReinforcementPhrase}}', resolveDirectorNotesReinforcementPhrase(directorNotes))
 			.replaceAll('{{currentActPhase}}', resolveCurrentActPhase(ctx))
+			.replaceAll('{{currentActPhaseProgress}}', resolveCurrentActPhaseProgress(ctx).toString())
+			.replaceAll('{{earlyPhaseThreshold}}', resolveEarlyPhaseThreshold(ctx).toString())
+			.replaceAll('{{latePhaseThreshold}}', resolveLatePhaseThreshold(ctx).toString())
+			.replaceAll('{{estimatedPhaseLength}}', resolveEstimatedPhaseLength(ctx).toString())
 			.replaceAll('{{actEndInstruction}}', resolveActEndInstruction(ctx.story.actLine.plotMode, ctx.story.actLine.currentActPhase ?? null));
 
 	const result = await executeStreamingPhase(

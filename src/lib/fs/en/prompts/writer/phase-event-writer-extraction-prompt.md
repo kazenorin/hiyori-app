@@ -1,6 +1,6 @@
 ## Writing task
 
-You are now responsible for writing the story prose for Scene {{currentScene}}, the upcoming scene. You have been provided with:
+You are responsible for writing the narrative prose for Scene {{currentScene}}. You have been provided with:
 
 - the World Setting
 - the Act Plot
@@ -9,42 +9,51 @@ You are now responsible for writing the story prose for Scene {{currentScene}}, 
 - the full narrative body of the most recent scene, Scene {{previousScene}}
 - the player's response to the most recent scene {{providedTurnOfEvents}}{{providedDirectorNotes}}
 
-Your job is to craft vivid, engaging, and immersive narrative based on the provided information.
-You are required to evaluate the current state of events, and see if any Phase Events can be triggered or already triggered.
-For triggered events that have not been elaborated on, you are instructed elaborate on them.
-If no events are triggered, or all triggered events have reasonable elaboration, drive the story to the most suitable next event.
-Focus on a single event, avoid simultaneously narrating multiple events before the active events conclude.
+Your task is to craft a vivid, engaging, and immersive narrative by evaluating the current state of Phase Events:
+
+- **The active event:** If a Phase Event has been triggered but not fully elaborated, continue developing it.
+- **Next events:** If no events are currently active—or if all triggered events have been sufficiently elaborated—transition naturally to the most suitable next event.
+- **Focus:** Develop only **one** event at a time. Never narrate multiple events simultaneously before concluding the active one.
 
 ### Introducing Characters
 
-Whenever a new named character needs to be introduced, you must do the following:
+Whenever a new named character needs to be introduced, you must do the following in order:
 
-- Call the `suggest-character-name` tool for name suggestions.
-- After introduction, always call the `introduce-character` tool to register the new character.
+1. Call the `suggest-character-name` tool to generate appropriate name suggestions.
+2. Call the `introduce-character` tool immediately after their introduction to register them in the story.
+
+### Phase Progress & Pacing
+
+- Current phase: {{currentActPhase}}
+- Scene count in current phase: {{currentActPhaseProgress}} scenes
+- Loose target for phase length: {{estimatedPhaseLength}} scenes
+
+**Pacing Guidance:**
+
+- **Early Phase (`scene count < {{earlyPhaseThreshold}}`):** Focus on developing Phase Events organically. Do not rush toward resolution.
+- **Late Phase (`scene count >= {{latePhaseThreshold}}`):** Actively steer the narrative toward resolving the currently active Phase Event. **Once resolved, prioritize phase advancement over triggering new events.**
 
 ### Phase Advancement & Tool Usage
 
-Evaluate the current narrative state against the completion signals for the current phase ({{currentActPhase}}).
+Call the `advance-phase` tool **at most once per scene**, and **ONLY** when the narrative is ready to transition under one of these triggers:
 
-Call the `advance-phase` tool **at most once per scene**, and **ONLY** when one of the following conditions is met:
+- **Primary Trigger:** You are approaching or exceeding `{{estimatedPhaseLength}}` scenes **AND** the core narrative purpose of {{currentActPhase}} has been established or resolved.
+- **Divergence Trigger:** The player's choices have permanently altered or bypassed the need for the current phase's milestone (e.g., resolving a conflict early or forcing a premature confrontation).
 
-(a) **Milestone Completion:** All 3 of the following conditions must be met:
-  i. At least one Phase Event has been elaborated on.
-  ii. Further elaboration on remaining Phase Events would cause pacing drag.
-  iii. The narrative has clearly achieved the completion signal for the current phase listed below.
+**Phase Core Purposes for Reference:**
 
-(b) **Player Divergence:** The player's choices have permanently altered or bypassed the need for the current phase's milestone (e.g., resolving a conflict early or forcing a premature confrontation). Do not advance just because the player wandered off-topic—advance only if their actions push the overarching plot forward.
-
-**Phase Completion Signals:**
-
-- **Introduction:** The protagonist, core setting, and central conflict have been introduced, and the stakes of the Act are clear to the player.
-- **Rising-action:** The protagonist has actively engaged with the central conflict and confronted at least one significant obstacle or complication.
-- **Climax:** The primary confrontation, revelation, or point of no return for this Act has occurred.
-- **Falling-action:** The immediate consequences of the climax have settled, establishing the new status quo or bridging to the next Act.
+| Phase              | Core Purpose                                                                                                                |
+|--------------------|-----------------------------------------------------------------------------------------------------------------------------|
+| **Introduction**   | The protagonist, core setting, and central conflict are established, and the stakes of the Act are clear to the player.     |
+| **Rising-action**  | The protagonist actively engages with the central conflict and confronts at least one significant obstacle or complication. |
+| **Climax**         | The primary confrontation, revelation, or point of no return for this Act takes place.                                      |
+| **Falling-action** | The immediate consequences of the climax settle, establishing a new status quo or bridging to the next Act.                 |
 
 **Negative Constraints:**
 
-- **Do NOT** call `advance-phase` simply because several scenes have passed in the same phase. High scene count is not a valid trigger; rely strictly on the narrative signals above.
-- **Do NOT** call `advance-phase` if you are still setting up or in the middle of elaborating on an active Phase Event.
-  {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
-  {{directorNotesReinforcementPhrase}}
+- **Do NOT** call `advance-phase` simply because the player wandered off-topic—advance only if their actions push the overarching plot forward.
+- **Do NOT** call `advance-phase` while still setting up or mid-way through elaborating on an active Phase Event; bring the immediate action to a natural resting point first.
+
+### Other instructions
+{{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
+{{directorNotesReinforcementPhrase}}
