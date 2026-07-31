@@ -93,7 +93,7 @@ export async function buildTools(
 	const currentPhaseSceneCount = await getSceneCountInCurrentPhase(actLine.id);
 
 	if (allowAdvancePhaseTools(actLine.plotMode, currentPhase, currentPhaseSceneCount, actLine.currentActPhaseLengthEstimate)) {
-		Object.assign(tools, buildAdvancePhaseTools(actLine.id, currentPhase, act.actNumber, assistant));
+		Object.assign(tools, buildAdvancePhaseTools(actLine, assistant));
 	}
 
 	if (allowEndActTools(ended)) {

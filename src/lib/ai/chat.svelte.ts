@@ -254,6 +254,8 @@ export async function sendMessage(actLineId: string, message: string, rewriteDir
 		const actPhaseBoundaries = await dbActLines.getActPhaseBoundaries(actLineId);
 		const currentLastPlotGen = await dbActLines.getLastPlotGeneration(actLineId);
 		const actNumber = (await dbActLines.getActNumberForActLine(actLineId)) ?? 1;
+		const previousSceneNumber = findLastNonNullSceneNumber(messages) ?? 0;
+		const currentScene = previousSceneNumber + 1;
 		error = null;
 		const requestContext: RequestContext = {
 			message,
@@ -266,8 +268,9 @@ export async function sendMessage(actLineId: string, message: string, rewriteDir
 				lastPlotGeneration: currentLastPlotGen,
 				actNumber,
 				currentActPhaseLengthEstimate: null,
+				currentScene,
 			},
-			previousSceneNumber: findLastNonNullSceneNumber(messages) ?? 0,
+			previousSceneNumber,
 			previousNarrativeVariables: getPreviousNarrativeMessage(messages),
 			rewriteDirectorNote,
 		};
@@ -289,6 +292,8 @@ export async function sendInitialNarration(actLineId: string, rewriteDirectorNot
 		const actPhaseBoundaries = await dbActLines.getActPhaseBoundaries(actLineId);
 		const currentLastPlotGen = await dbActLines.getLastPlotGeneration(actLineId);
 		const actNumber = (await dbActLines.getActNumberForActLine(actLineId)) ?? 1;
+		const previousSceneNumber = 0;
+		const currentScene = previousSceneNumber + 1;
 		error = null;
 		const requestContext: RequestContext = {
 			mainConfig,
@@ -300,8 +305,9 @@ export async function sendInitialNarration(actLineId: string, rewriteDirectorNot
 				lastPlotGeneration: currentLastPlotGen,
 				actNumber,
 				currentActPhaseLengthEstimate: null,
+				currentScene,
 			},
-			previousSceneNumber: 0,
+			previousSceneNumber,
 			previousNarrativeVariables: undefined,
 			rewriteDirectorNote,
 		};
@@ -540,6 +546,7 @@ export async function runEpilogueFlow(actLineId: string, rewriteDirectorNote?: s
 					lastPlotGeneration: null,
 					actNumber,
 					currentActPhaseLengthEstimate: null,
+					currentScene: previousSceneNumber + 1,
 				},
 			},
 			assistant: epilogueAssistant,

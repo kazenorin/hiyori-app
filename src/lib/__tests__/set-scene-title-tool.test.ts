@@ -41,6 +41,7 @@ function createMockContext(): ToolContext {
 			lastPlotGeneration: null,
 			actNumber: 1,
 			currentActPhaseLengthEstimate: null,
+			currentScene: null,
 		},
 		act: {
 			id: 'act-1',

@@ -251,8 +251,8 @@ describe('listUserChangedConfigFiles (file-tree.ts)', () => {
 		const { loadManifest } = await import('$lib/fs/config-manifest');
 		const manifest = loadManifest();
 		const paths: string[] = [];
-		for (const configPath of manifest.keys()) {
-			if (configPath.startsWith('en/prompt-templates/act/') && !configPath.endsWith('/')) {
+		for (const [configPath, entry] of manifest) {
+			if (configPath.startsWith('en/prompt-templates/act/') && !configPath.endsWith('/') && entry.hash !== null) {
 				paths.push(`config/${configPath}`);
 			}
 		}

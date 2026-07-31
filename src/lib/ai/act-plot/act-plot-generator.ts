@@ -507,6 +507,7 @@ async function loadActPlotToolContext(params: GenerateActPlotParams): Promise<To
 		lastPlotGeneration: null,
 		actNumber,
 		currentActPhaseLengthEstimate: null,
+		currentScene: null,
 	};
 	return { story, actLine: actLineContext, act };
 }
