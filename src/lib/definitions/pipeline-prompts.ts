@@ -78,3 +78,9 @@ export const writerActEndGuidance = (params: { closingSceneRules: string; ending
 	ls('pipeline.extraction.writer.actEndGuidance', params);
 export const writerEpilogueExtractionPrompt = (endingType: string) => ls('pipeline.extraction.writer.epilogue', { endingType });
 export const actSummaryTemplate = () => ls('pipeline.extraction.actSummaryTemplate');
+
+// Memory tools conditional instructions
+export const writerMemoryToolsInstruction = () => ls('pipeline.memoryTools.writer');
+export const reviewerMemoryToolsInstruction = () => ls('pipeline.memoryTools.reviewer');
+export const quickReviewerMemoryToolsInstruction = () => ls('pipeline.memoryTools.quickReviewer');
+export const plotPlannerMemoryToolsInstruction = () => ls('pipeline.memoryTools.plotPlanner');

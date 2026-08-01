@@ -15,6 +15,7 @@ import {
 } from './message-builder';
 import {
 	getReevaluationFrequency,
+	isMemoryAvailable,
 	isPhraseHighlightingEnabled,
 	isPlotPlannerEnabled,
 	isQuickReview,
@@ -41,11 +42,15 @@ import {
 	getLocalizedActPhase,
 	gmTemplateFitterExtractionPrompt,
 	plotPlannerExtractionPrompt,
+	plotPlannerMemoryToolsInstruction,
 	quickReviewerExtractionPromptTemplate,
+	quickReviewerMemoryToolsInstruction,
 	recommendationLabel,
 	reviewerExtractionPromptTemplate,
+	reviewerMemoryToolsInstruction,
 	templateFitterSystemPrompt,
 	totalViolationsLabel,
+	writerMemoryToolsInstruction,
 } from '$lib/definitions/pipeline-prompts';
 import type {
 	AssistantContext,
@@ -75,6 +80,17 @@ import {
 } from '../descriptors';
 
 export const defaultTargetWordCount = 400;
+
+function indentLines(text: string, prefix: string): string {
+	return text
+		.split('\n')
+		.map((line) => (line ? prefix + line : line))
+		.join('\n');
+}
+
+function memoryToolsPartial(value: string): string {
+	return isMemoryAvailable() ? value.trimEnd() + '\n' : '';
+}
 
 const earlyPhaseFactor = 0.3;
 const latePhaseFactor = 1 - earlyPhaseFactor;
@@ -298,7 +314,8 @@ export async function runWriterPhase(
 			systemPrompt: ctx.prompts.writerSystemPrompt
 				.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
 				.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
-				.replaceAll('{{writerOutputTemplate}}', ctx.prompts.writerOutputTemplate),
+				.replaceAll('{{writerOutputTemplate}}', ctx.prompts.writerOutputTemplate)
+				.replaceAll('{{memoryToolsInstruction}}\n', memoryToolsPartial(indentLines(writerMemoryToolsInstruction(), '   '))),
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'WRITER'),
 			descriptors: getNarrativeDescriptors(),
@@ -340,7 +357,11 @@ export async function runReviewerEditorPhases(
 				.replaceAll('{{acceptAsIs}}', acceptAsIsLabel())
 				.replaceAll('{{summary}}', summaryHeader())
 				.replaceAll('{{totalViolations}}', totalViolationsLabel())
-				.replaceAll('{{recommendation}}', recommendationLabel()),
+				.replaceAll('{{recommendation}}', recommendationLabel())
+				.replaceAll(
+					'{{memoryToolsInstruction}}\n',
+					memoryToolsPartial(isQuickReview() ? quickReviewerMemoryToolsInstruction() : reviewerMemoryToolsInstruction())
+				),
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'REVIEWER'),
 			descriptors: getReviewerDescriptors(),
@@ -514,7 +535,8 @@ function executePlotPlannerPhase(
 			phaseName: 'PLOT_PLANNER',
 			systemPrompt: plotPlannerPrompt
 				.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
-				.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount),
+				.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
+				.replaceAll('{{memoryToolsInstruction}}\n', memoryToolsPartial(plotPlannerMemoryToolsInstruction())),
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'PLOT_PLANNER'),
 			descriptors: getPlotPlannerDescriptors(),

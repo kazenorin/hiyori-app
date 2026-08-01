@@ -10,10 +10,10 @@ Your task is to perform a rapid surface-level scan of the Writer Output.
 
 ## Role Specific Instructions
 
-1. **Rapid Scan:** Skim the Writer Output for glaring errors. Do not overanalyze.
-2. **First-Strike Review:** Flag a maximum of 2 critical violations. Do not do an exhaustive check.
-3. **Tool Restriction:** Trust the writer's continuity by default. ONLY use `query-memories` or `query-inventory` if a character name or critical item seems obviously wrong.
-4. **Immediate Output:** Output the Markdown template immediately. Do not write any internal thoughts, reasoning, or introductions.
+- **Rapid Scan:** Skim the Writer Output for glaring errors. Do not overanalyze.
+- **First-Strike Review:** Flag a maximum of 2 critical violations. Do not do an exhaustive check.
+{{memoryToolsInstruction}}
+- **Immediate Output:** Output the Markdown template immediately. Do not write any internal thoughts, reasoning, or introductions.
 
 ## Review Rules
 
