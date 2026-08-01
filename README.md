@@ -26,7 +26,7 @@ Get Hiyori running in three simple steps:
    - **Download:** Grab the latest release for Windows (`.exe` NSIS installer) from the Releases page, or
    - **Online:** Go to [GitHub Pages](https://kazenorin.github.io/hiyori-app/) for the web app version. No data is stored in the server. Or,
    - One of the other options below.
-2. **Connect AI:** Open the app, go to **Settings → AI Providers**, and add your preferred provider (OpenAI, Anthropic, Ollama, etc.).
+2. **Connect AI:** Open the app, go to **Settings → AI Providers**, and add your preferred provider (OpenAI, OpenAI-compatible, Ollama, etc.).
 3. **Play:** Click **New Story → World Builder** to generate your first universe!
 
 | Option            | How to Run                                                                 | Recommendation            |
@@ -47,32 +47,39 @@ Get Hiyori running in three simple steps:
 
 ### Narrative Engine
 
-- **Multi-Phase Pipeline:** A sequential orchestration of Writer → Reviewer → Editor → Game Master + Plot Planner, accompanied by an async Summarizer, Character Profile Compressor, and Memory extraction.
-- **Write-Review-Edit Loop:** An optional feedback cycle to guarantee writing quality and narrative consistency.
+- **Multi-Phase Pipeline:** A sequential orchestration of Writer → Reviewer → Editor → Template Fitter → Game Master ‖ Plot Planner, accompanied by an async Summarizer → Character Profile Compressor → Memory extraction chain.
+- **Write-Review-Edit Loop:** An optional feedback cycle (with detailed or quick review modes) to guarantee writing quality and narrative consistency.
 - **Branching Narratives:** Fork storylines at any point. Each branch is an independent act line sharing messages up to the fork point.
 - **Act Plots:** AI-generated scene-by-scene plot outlines with guided interview creation that drives the storytelling.
+- **Act Phase System:** Event-based plot mode structures stories through narrative phases (introduction → rising action → climax → falling action → resolution) with milestone gating and configurable advancement thresholds.
 - **Director Notes:** Player-initiated directorial guidance to shift the narrative direction dynamically.
 - **Act Transitions:** AI-assisted bridging between acts with strict continuity checks.
+- **Epilogue Generation:** A dedicated pipeline for story-ending epilogues with multiple ending types (good, bad, bittersweet, alternative).
 - **Risk Evaluation:** A dice-roll risk model for determining the outcome of risky actions.
+- **AI Tools:** Pipeline agents have access to tools including scene reading, memory/inventory queries, character introduction, risk evaluation, phase advancement, and act ending.
 
 ### World Building & Content
 
-- **World Builder:** An AI-guided interview that generates a comprehensive world document.
+- **World Builder:** An AI-guided interview that generates a comprehensive world document. Supports updating existing world documents via the World Builder.
 - **Import World:** Import chat transcripts (JSON, Markdown, text) as new stories with automatic act and character extraction.
-- **Character & Act Cards:** Extract characters from acts; generate cards detailing personality, appearance, and story arcs.
+- **Character & Act Cards:** Extract characters from acts; generate cards detailing personality, appearance, and story arcs. Manageable via the Context Management page.
 
 ### AI & Memory
 
 - **Memory System:** Vector-based memory with semantic search (`sqlite-vec`). The AI recalls past events, locations, and character interactions via the `query-memories` tool.
+- **Inventory Tracking:** Per-character item, equipment, skill, clothing, and status tracking with change history, queryable by AI agents via the `query-inventory` tool.
+- **Character Profiles:** Compressed per-character profiles with configurable importance thresholds, maintained by the Character Profile Compressor.
 - **Important Phrase Highlighting:** Background LLM extraction of key narrative phrases, visually emphasized in the prose (gated by Minor Task Agent setting).
-- **Editor Mode:** An optional AI reviewer that validates continuity, character consistency, and narrative quality.
+- **Reviewer:** An optional AI reviewer (detailed or quick mode) that validates continuity, character consistency, and narrative quality before the Editor runs.
 
 ### Configuration & Data
 
-- **Wide API Support:** Supports OpenAI, OpenAI-compatible, Anthropic, Ollama, and local endpoints via `chat-completions` or `responses` API formats.
+- **Wide API Support:** Supports OpenAI, OpenAI-compatible, and Ollama endpoints via `chat-completions` or `responses` API formats.
 - **Multi-Provider Assignment:** Assign different models to specific pipeline roles (e.g., a fast model for the Reviewer, a creative model for the Writer).
+- **Per-Provider CORS Bypass:** Configure WISP proxy or libcurl-based CORS bypass on a per-provider basis for web app usage.
 - **Fully User-Customizable Prompts:** Edit bundled default prompts or create story-specific overrides via the File Manager. Every AI-facing instruction can be tailored.
 - **Story Export/Load:** Per-story `.zip` export with selective act line import (overwrite or load as a new story with remapped IDs). Full app data backup/restore is available via Settings.
+- **Context Management:** Generate and manage act cards and character cards for controlling what context is fed to the AI pipeline.
 
 ---
 
@@ -88,6 +95,7 @@ Nothing works without an AI provider.
 2. Choose a provider type: **OpenAI Compatible**, **OpenAI**, or **Ollama**.
 3. Fill in the **Base URL** and **Model** (use the **Fetch Models** button to auto-populate if supported).
 4. Select the correct **API type**: `chat-completions` for most providers, `responses` only for OpenAI's `responses` API.
+5. Optionally configure a **CORS bypass** (WISP proxy or libcurl) for web app usage.
 
 > **Ollama (Local) Users:** Set `OLLAMA_ORIGINS=*` on your Ollama server to allow browser CORS requests.
 
@@ -95,6 +103,7 @@ Nothing works without an AI provider.
 
 Since some API providers do not support CORS, API requests from the web app directly to those providers will fail.
 
+- **Per-Provider CORS Bypass:** Each provider can be individually configured with a WISP proxy URL or the built-in libcurl-based CORS bypass.
 - **WISP Protocol:** This app supports the [WISP-protocol proxy](https://github.com/MercuryWorkshop/wisp-protocol). You can easily proxy web app requests by setting up a local server using [wisp-server-python](https://github.com/MercuryWorkshop/wisp-server-python).
 - **Advanced Usage (Cost & Token Management):** For power users managing multiple APIs, consider routing your Hiyori requests through an intermediate gateway. Deploying a self-contained Docker Compose stack running LiteLLM on a local NAS is an excellent strategy to bypass CORS restrictions, unify your endpoints, and monitor your overall token usage without relying on a host-machine database.
 
@@ -104,7 +113,7 @@ Since some API providers do not support CORS, API requests from the web app dire
 
 All pipeline roles default to your **Main Provider**. To optimize speed and cost, assign smaller/faster models to minor roles in **Settings → Pipeline Roles**. Each role is an independent agent that does not share much context with the others, and you can mix providers and models freely across roles.
 
-- Enable the **Reviewer** to unlock the **Editor** role.
+- Enable the **Reviewer** to unlock the **Editor** role. Choose between **detailed** (thorough analysis) and **quick** (fast pass/fail) review modes.
 - You must assign a **Minor Task Agent** to enable phrase extraction and template fitting.
 
 #### Role Recommendations
@@ -132,7 +141,7 @@ Using open weight/open source frontier models (e.g. DeepSeek V4 Pro, GLM-5, Kimi
 
 The core loop: send a message → AI generates narrative → you choose a decision (or enter your own) → repeat.
 
-- **Concluding Acts:** When an act ends, choosing "Continue to Next Act" creates a new act line. Choosing "End the story here" writes a concluding Epilogue.
+- **Concluding Acts:** When an act ends (via the `end-act` tool or player choice), choosing "Continue to Next Act" creates a new act line. Choosing "End the story here" writes a concluding Epilogue with a selectable ending type (good, bad, bittersweet, or alternative).
 
   ![Act conclusion options showing Continue and End](docs/concluding-act.png)
 
@@ -151,7 +160,7 @@ Forking lets you explore "what if" scenarios. Click **Fork** on any assistant me
 
 Enable the Plot Planner in **Settings → Pipeline Roles** to shape narrative direction before the Writer runs.
 
-- **Event-based mode (Recommended):** Structures the story through narrative phases, prepares potential events/triggers, and runs at a configurable frequency (default is every 10 scenes).
+- **Event-based mode (Recommended):** Structures the story through narrative phases (introduction → rising action → climax → falling action → resolution). The Writer uses the `advance-phase` tool to progress through phases based on milestone gating (narrative completion score, player divergence score, goal completion). Runs at a configurable reevaluation frequency (default every 10 scenes).
 - **Guidance-based mode:** Runs every turn with strong, Bethesda-style directional guidance.
 
 ### 7. Import Existing Content
@@ -235,7 +244,7 @@ npm run build
 
 ```
 
-The resulting `build/` directory can be deployed to any static host (Netlify, Vercel, GitHub Pages) or served locally. App data is stored in the browser via OPFS (Origin Private File System).
+The resulting `build/` directory can be deployed to any static host (Netlify, Vercel, GitHub Pages) or served locally. App data is stored in the browser via OPFS (Origin Private File System). The web app is PWA-enabled and can be installed as a standalone application.
 
 ### Feature Internals
 
