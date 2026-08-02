@@ -449,6 +449,27 @@
 				</div>
 			</div>
 
+			<!-- Character Name Engine: mode select -->
+			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+				<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.characterNameEngine')}</h3>
+				<div class="flex items-center gap-2">
+					<span class="text-xs font-medium text-surface-500">{t('settings.characterNameEngineMode')}</span>
+					<ThemedSelect
+						items={[
+							{ label: t('settings.characterNameEngineAi'), value: 'ai' },
+							{ label: t('settings.characterNameEngineAnalytic'), value: 'analytic' },
+						]}
+						value={settings.characterNameSuggestionMode}
+						onValueChange={(v) => updateSettings({ characterNameSuggestionMode: v as 'ai' | 'analytic' })}
+					/>
+				</div>
+				<span class="text-xs text-surface-500 block"
+					>{settings.characterNameSuggestionMode === 'ai'
+						? t('settings.characterNameEngineAiDescription')
+						: t('settings.characterNameEngineAnalyticDescription')}</span
+				>
+			</div>
+
 			<!-- Phase Advancement Thresholds: half-card grid -->
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">

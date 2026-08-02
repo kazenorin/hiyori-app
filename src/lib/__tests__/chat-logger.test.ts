@@ -95,6 +95,7 @@ function defaultSettings() {
 		ttsEnabled: false,
 		ttsVoice: 'af_heart',
 		ttsSpeed: 1,
+		characterNameSuggestionMode: 'ai' as const,
 	};
 }
 

@@ -10,6 +10,7 @@ export type Provider = 'openai' | 'openai-compatible' | 'ollama';
 export type ApiType = 'chat-completions' | 'responses';
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 export type ThemeMode = 'system' | 'light' | 'dark';
+export type CharacterNameSuggestionMode = 'ai' | 'analytic';
 
 export const LOG_LEVEL_VALUES: Record<LogLevel, number> = {
 	error: 1,
@@ -77,6 +78,7 @@ export interface Settings {
 	ttsEnabled: boolean;
 	ttsVoice: string;
 	ttsSpeed: number;
+	characterNameSuggestionMode: CharacterNameSuggestionMode;
 }
 
 const STORAGE_KEY = 'hiyori-settings';
@@ -115,6 +117,7 @@ const defaults: Settings = {
 	ttsEnabled: false,
 	ttsVoice: 'af_heart',
 	ttsSpeed: 1,
+	characterNameSuggestionMode: 'analytic',
 };
 
 /**
@@ -325,6 +328,10 @@ export function getReevaluationFrequency(): number {
 
 export function getDefaultPlotMode(): 'guidance' | 'phaseEvent' {
 	return settings.defaultPlotMode;
+}
+
+export function getCharacterNameSuggestionMode(): CharacterNameSuggestionMode {
+	return settings.characterNameSuggestionMode;
 }
 
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
