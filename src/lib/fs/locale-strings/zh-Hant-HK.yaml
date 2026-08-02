@@ -677,3 +677,19 @@ tools:
 
       {{knownCharacters}}
     aka: '又名'
+    analytic:
+      description: >
+        透過篩選預設名字資料庫（無需 AI 呼叫）為新角色建議名字。
+        可任意組合性別、主題、文化與名字類型篩選條件；省略的條件視為符合全部。
+        回傳一組名字，每個名字附上意涵標籤。指定名字類型「full」時會組合一個名字與一個姓氏。
+        可用 avoidanceLevel 控制迴避既有角色名字的程度，并用 count 控制回傳數量。
+      parameters:
+        genders: '選填。要符合的性別：masculine（男性）、feminine（女性）、neutral（中性）。名字符合任一指定性別即匹配。省略則符合全部。'
+        themes: '選填。要符合的世界主題（如 high-fantasy、modern-slice-of-life、sci-fi、urban-fantasy）。名字符合任一指定主題即匹配。省略則符合全部。'
+        cultures: '選填。要符合的文化來源（如 european、japanese、chinese、elven、dwarven）。名字符合任一指定文化即匹配。省略則符合全部。'
+        nameTypes: '選填。要回傳的名字形式：full（全名）、family（姓氏）、given（名字）、nickname（暱稱）。「full」會組合名字與姓氏（依文化排序）；其餘形式直接回傳符合的條目。省略則回傳直接形式（given/family/nickname），不組合全名。'
+        avoidanceLevel: '選填，整數 0-5，控制迴避既有角色名字的程度：0 完全不迴避，5 一律迴避（預設 3）。重要角色建議用較高等級，次要或背景角色可用較低等級。'
+        count: '選填。要回傳的名字數量（1-20）。預設 5。'
+      tagsLabel: '標籤'
+      messages:
+        empty: '沒有符合條件的未使用名字。請嘗試放寬篩選條件（省略一或多項），或自行取名。'

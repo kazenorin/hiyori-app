@@ -689,3 +689,19 @@ tools:
 
       {{knownCharacters}}
     aka: 'aka'
+    analytic:
+      description: >
+        Suggest names for a new character by filtering a curated name database (no AI call).
+        Provide any combination of gender, theme, culture, and name type filters; an omitted filter matches everything.
+        Returns a list of names, each with connotation tags. Requesting name type "full" composes a given name and a family name.
+        Use avoidanceLevel to control how strongly existing character names are avoided, and count to control how many names are returned.
+      parameters:
+        genders: 'Optional. Genders to match: masculine, feminine, neutral. A name matches if it suits any of the given genders. Omit to match all.'
+        themes: 'Optional. World themes to match (e.g. high-fantasy, modern-slice-of-life, sci-fi, urban-fantasy). A name matches if it fits any given theme. Omit to match all.'
+        cultures: 'Optional. Cultural origins to match (e.g. european, japanese, chinese, elven, dwarven). A name matches if it fits any given culture. Omit to match all.'
+        nameTypes: 'Optional. Name forms to return: full, family, given, nickname. "full" composes a given name plus a family name (ordered per culture); the others return matching entries directly. Omit to return direct forms (given/family/nickname) without composing full names.'
+        avoidanceLevel: 'Optional integer 0-5 controlling how strongly existing character names are avoided: 0 never avoids, 5 always avoids (default 3). Use a higher level for important characters and a lower level for minor or background characters.'
+        count: 'Optional. Number of names to return (1-20). Default 5.'
+      tagsLabel: 'Tags'
+      messages:
+        empty: 'No unused names match the given criteria. Try broadening the filters (omit one or more), or pick a name yourself.'

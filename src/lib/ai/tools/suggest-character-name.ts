@@ -3,8 +3,9 @@ import { z } from 'zod';
 import { type ToolSet, tool } from 'ai';
 import { ls } from '$lib/localization';
 import { createModel } from '$lib/ai/provider';
-import { getPlotPlannerProviderConfig, type PlotPlannerProviderConfig } from '$lib/stores/settings.svelte';
+import { getCharacterNameSuggestionMode, getPlotPlannerProviderConfig, type PlotPlannerProviderConfig } from '$lib/stores/settings.svelte';
 import { suggestCharacterNamePromptLoader } from '$lib/fs/prompts';
+import { createSuggestCharacterNameAnalyticTool } from './suggest-character-name-analytic';
 import { getAllCharacterNames } from '$lib/db/character-profiles';
 import { isAuthError, withRetry } from '$lib/utils/async';
 import { log as toolLog } from './utils';
@@ -101,8 +102,14 @@ function buildConstraintsPartial(known: { preferredName: string; aliases: string
 	return template.replaceAll('{{knownCharacters}}', lines.join('\n'));
 }
 
+/**
+ * Build the `suggest-character-name` tool for the configured engine mode. Both
+ * modes share this single tool identifier; the active variant is swapped here
+ * rather than via a dynamic schema (unlike `advance-phase`).
+ */
 export function buildSuggestCharacterNameTools(ctx: ToolContext): ToolSet {
+	const mode = getCharacterNameSuggestionMode();
 	return {
-		'suggest-character-name': createSuggestCharacterNameTool(ctx),
+		'suggest-character-name': mode === 'analytic' ? createSuggestCharacterNameAnalyticTool() : createSuggestCharacterNameTool(ctx),
 	};
 }

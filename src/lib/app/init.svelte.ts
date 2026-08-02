@@ -13,6 +13,7 @@ import {
 	memoryExtractionSystemPromptLoader,
 	memoryExtractionPromptLoader,
 } from '$lib/fs/prompts';
+import { registerNameDefaults } from '$lib/fs/names';
 import { ensureAllBaseConfigs, setActiveLocale } from '$lib/fs/prompt-loader';
 import { initLogging, log } from '$lib/logging/logger';
 import { getSettings } from '$lib/stores/settings.svelte';
@@ -87,6 +88,7 @@ export async function initializeApp(onStatus?: (status: string) => void): Promis
 
 		await log.info('init', 'Ensuring base configs...');
 		onStatus?.('Ensuring base configs...');
+		registerNameDefaults();
 		await ensureAllBaseConfigs();
 
 		await log.info('init', 'Ensuring locale string configs...');
