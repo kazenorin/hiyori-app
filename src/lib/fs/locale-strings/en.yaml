@@ -164,11 +164,15 @@ pipeline:
       template by inserting the appropriate section headers defined by the "Game Data" template without changing any content.
       If a section is missing from the content, add the header with no body.
   memoryTools:
-    writer: "- Use the `query-memories` tool for background information\n- Use the `query-inventory` tool to verify the character's current possessions or statuses before referencing them"
-    reviewer: '- **Verify Continuity:** Use the `query-memories` and `query-inventory` tool as needed to fact-check character details, past events, and location consistency.'
-    quickReviewer: "- **Tool Restriction:** Trust the writer's continuity by default. ONLY use `query-memories` or `query-inventory` if a character name or critical item seems obviously wrong."
+    writer: '- Use the `query-memories` tool for background information'
+    reviewer: '- **Verify Continuity:** Use the `query-memories` tool as needed to fact-check character details, past events, and location consistency.'
+    quickReviewer: "- **Tool Restriction:** Trust the writer's continuity by default. ONLY use `query-memories` if a character name seems obviously wrong."
+    plotPlanner: '- **Leverage Memory:** Use the `query-memories` tool to retrieve relevant background information, including character memories and previously visited locations.'
+  inventoryTools:
+    writer: "- Use the `query-inventory` tool to verify the character's current possessions or statuses before referencing them\n- Use the `update-inventory` tool when a character acquires, loses, equips, or uses an item, or when their status changes"
+    reviewer: '- **Verify Inventory:** Use the `query-inventory` tool as needed to fact-check character possessions and status effects.'
+    quickReviewer: "- **Inventory Restriction:** Trust the writer's inventory by default. ONLY use `query-inventory` if a critical item seems obviously wrong."
     plotPlanner: |
-      - **Leverage Memory:** Use the `query-memories` tool to retrieve relevant background information, including character memories and previously visited locations.
       - **Consider Inventory**: Use the `query-inventory` tool to check what a character currently has in their inventory (items, equipment, skills, clothing, status effects) that may play a role in the upcoming events.
   system:
     templateFitter: >
@@ -518,6 +522,23 @@ tools:
       characterName: "The character's name (canonical name or alias)"
       itemCategory: 'Optional filter to return only one category'
       includeHistory: 'If true, also return the inventory change event history for this character'
+  updateInventory:
+    description: >
+      Update a character's inventory when items are acquired, lost, equipped, used, or modified during the scene.
+      Call this tool whenever a character's possessions, equipment, skills, clothing, or status effects change.
+      Provide the current state of affected items and/or the changes that occurred.
+    parameters:
+      characterName: "The character's name whose inventory is being updated"
+      itemName: 'Name of the item'
+      category: 'Category of the item'
+      equipStatus: 'How the item is held (default: carried)'
+      itemDescription: 'Optional description of the item'
+      changeType: 'Type of change that occurred'
+      changeDescription: 'Optional description of the change'
+      items: 'Current state of items to add or update (upserts by item name)'
+      changes: 'Change events to record in the history log'
+    messages:
+      empty: 'No items or changes provided. Nothing was updated.'
   readActPlot:
     description: >
       Read the act plot document for the current act. The act plot contains the story's planned structure: premise,

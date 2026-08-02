@@ -7,6 +7,7 @@
 - **快速掃描:** 略讀寫手輸出以尋找明顯錯誤。不要過度分析。
 - **首擊審閱:** 最多標記 2 項嚴重違規。不要進行詳盡檢查。
 {{memoryToolsInstruction}}
+{{inventoryToolsInstruction}}
 - **立即輸出:** 立即輸出 Markdown 範本。不要撰寫任何內部思考、推理或前言。
 
 ## 審閱規則

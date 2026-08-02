@@ -84,3 +84,9 @@ export const writerMemoryToolsInstruction = () => ls('pipeline.memoryTools.write
 export const reviewerMemoryToolsInstruction = () => ls('pipeline.memoryTools.reviewer');
 export const quickReviewerMemoryToolsInstruction = () => ls('pipeline.memoryTools.quickReviewer');
 export const plotPlannerMemoryToolsInstruction = () => ls('pipeline.memoryTools.plotPlanner');
+
+// Inventory tools conditional instructions
+export const writerInventoryToolsInstruction = () => ls('pipeline.inventoryTools.writer');
+export const reviewerInventoryToolsInstruction = () => ls('pipeline.inventoryTools.reviewer');
+export const quickReviewerInventoryToolsInstruction = () => ls('pipeline.inventoryTools.quickReviewer');
+export const plotPlannerInventoryToolsInstruction = () => ls('pipeline.inventoryTools.plotPlanner');

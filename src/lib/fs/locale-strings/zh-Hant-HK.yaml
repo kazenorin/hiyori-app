@@ -156,11 +156,15 @@ pipeline:
       「GM 輸出」未符合所需的遊戲資料格式。請根據遊戲資料範本重新調整結構，
       插入適當的標題而不更改任何內容。若缺少某個區段，請加上標題並留空內容。
   memoryTools:
-    writer: "- 使用 `query-memories` 工具擷取相關的背景資訊\n- 使用 `query-inventory` 工具查看角色目前的物品或狀態，再描述角色使用物品或能力"
-    reviewer: '- **驗證連貫性:** 視需要使用 `query-memories` 和 `query-inventory` 工具來核實角色細節、過往事件和地點一致性。'
-    quickReviewer: '- **工具限制:** 預設信任寫手的連貫性。僅在角色名稱或關鍵物品明顯有誤時才使用 `query-memories` 或 `query-inventory`。'
+    writer: '- 使用 `query-memories` 工具擷取相關的背景資訊'
+    reviewer: '- **驗證連貫性:** 視需要使用 `query-memories` 工具來核實角色細節、過往事件和地點一致性。'
+    quickReviewer: '- **工具限制:** 預設信任寫手的連貫性。僅在角色名稱明顯有誤時才使用 `query-memories`。'
+    plotPlanner: '- **善用記憶:** 使用 `query-memories` 工具擷取相關的背景資訊，包括角色記憶和曾經到訪的地點。'
+  inventoryTools:
+    writer: "- 使用 `query-inventory` 工具查看角色目前的物品或狀態，再描述角色使用物品或能力\n- 當角色獲得、失去、裝備或使用物品，或其狀態發生變化時，使用 `update-inventory` 工具"
+    reviewer: '- **驗證物品欄:** 視需要使用 `query-inventory` 工具來核實角色持有物和狀態效果。'
+    quickReviewer: '- **物品欄限制:** 預設信任寫手的物品欄。僅在關鍵物品明顯有誤時才使用 `query-inventory`。'
     plotPlanner: |
-      - **善用記憶:** 使用 `query-memories` 工具擷取相關的背景資訊，包括角色記憶和曾經到訪的地點。
       - **考慮物品欄:** 使用 `query-inventory` 工具查看角色目前物品欄中的內容 (物品、裝備、技能、服裝、狀態效果) ，這些可能在接下來的事件中發揮作用。
   system:
     templateFitter: >
@@ -510,6 +514,23 @@ tools:
       characterName: '角色名稱 (正規名稱或別名) '
       itemCategory: '選填篩選條件，僅回傳指定類別'
       includeHistory: '若為 true，同時回傳物品欄變更事件歷史'
+  updateInventory:
+    description: >
+      當場景中發生物品獲得、失去、裝備、使用或修改時，更新角色的物品欄。
+      當角色的持有物、裝備、技能、服裝或狀態效果發生變化時呼叫此工具。
+      提供受影響物品的當前狀態和/或發生的變更。
+    parameters:
+      characterName: '要更新物品欄的角色名稱'
+      itemName: '物品名稱'
+      category: '物品類別'
+      equipStatus: '物品的持有方式 (預設: carried)'
+      itemDescription: '選填的物品描述'
+      changeType: '發生的變更類型'
+      changeDescription: '選填的變更描述'
+      items: '要新增或更新的物品當前狀態 (依物品名稱進行 upsert)'
+      changes: '要記錄在歷史日誌中的變更事件'
+    messages:
+      empty: '未提供物品或變更。未更新任何內容。'
   readActPlot:
     description: >
       閱讀目前章節的章節劇情文件。章節劇情包含故事已規劃的結構: 故事前置、目標場景數目、

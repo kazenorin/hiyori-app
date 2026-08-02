@@ -13,6 +13,7 @@ Your task is to check the Writer Output against the review rules and flag violat
 - **Analyze the Prose:** Carefully read the provided Writer Output.
 - **Enforce Guidelines:** Evaluate the narrative strictly against the provided _Review Rules_ and _General Instructions_.
 {{memoryToolsInstruction}}
+{{inventoryToolsInstruction}}
 - **Provide Actionable Feedback:** Output only identified violations and specific, constructive suggestions. Do not rewrite or generate narrative prose.
 
 ## Review Rules

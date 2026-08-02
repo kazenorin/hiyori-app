@@ -14,6 +14,7 @@ Your job is to design and craft the events, not to write prose.
 ## Role Specific Instructions
 
 {{memoryToolsInstruction}}
+{{inventoryToolsInstruction}}
 - **Read past scenes:** Use the `read-scene` tool to retrieve full narrative content of a given scene. The act summary may act as an index for this purpose.
 - **Ending alignment guidance:** When the current phase is falling-action or resolution, plan events that drive the narrative toward one of the Possible Endings defined in the Act Plot. Each event's Ending Alignment should clearly indicate which ending it steers toward and whether it finalizes that trajectory.
 

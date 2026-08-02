@@ -15,6 +15,7 @@ import {
 } from './message-builder';
 import {
 	getReevaluationFrequency,
+	isInventoryAvailable,
 	isMemoryAvailable,
 	isPhraseHighlightingEnabled,
 	isPlotPlannerEnabled,
@@ -42,14 +43,18 @@ import {
 	getLocalizedActPhase,
 	gmTemplateFitterExtractionPrompt,
 	plotPlannerExtractionPrompt,
+	plotPlannerInventoryToolsInstruction,
 	plotPlannerMemoryToolsInstruction,
 	quickReviewerExtractionPromptTemplate,
+	quickReviewerInventoryToolsInstruction,
 	quickReviewerMemoryToolsInstruction,
 	recommendationLabel,
 	reviewerExtractionPromptTemplate,
+	reviewerInventoryToolsInstruction,
 	reviewerMemoryToolsInstruction,
 	templateFitterSystemPrompt,
 	totalViolationsLabel,
+	writerInventoryToolsInstruction,
 	writerMemoryToolsInstruction,
 } from '$lib/definitions/pipeline-prompts';
 import type {
@@ -90,6 +95,10 @@ function indentLines(text: string, prefix: string): string {
 
 function memoryToolsPartial(value: string): string {
 	return isMemoryAvailable() ? value.trimEnd() + '\n' : '';
+}
+
+function inventoryToolsPartial(value: string): string {
+	return isInventoryAvailable() ? value.trimEnd() + '\n' : '';
 }
 
 const earlyPhaseFactor = 0.3;
@@ -315,7 +324,8 @@ export async function runWriterPhase(
 				.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
 				.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
 				.replaceAll('{{writerOutputTemplate}}', ctx.prompts.writerOutputTemplate)
-				.replaceAll('{{memoryToolsInstruction}}\n', memoryToolsPartial(indentLines(writerMemoryToolsInstruction(), '   '))),
+				.replaceAll('{{memoryToolsInstruction}}\n', memoryToolsPartial(indentLines(writerMemoryToolsInstruction(), '   ')))
+				.replaceAll('{{inventoryToolsInstruction}}\n', inventoryToolsPartial(indentLines(writerInventoryToolsInstruction(), '   '))),
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'WRITER'),
 			descriptors: getNarrativeDescriptors(),
@@ -361,6 +371,10 @@ export async function runReviewerEditorPhases(
 				.replaceAll(
 					'{{memoryToolsInstruction}}\n',
 					memoryToolsPartial(isQuickReview() ? quickReviewerMemoryToolsInstruction() : reviewerMemoryToolsInstruction())
+				)
+				.replaceAll(
+					'{{inventoryToolsInstruction}}\n',
+					inventoryToolsPartial(isQuickReview() ? quickReviewerInventoryToolsInstruction() : reviewerInventoryToolsInstruction())
 				),
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'REVIEWER'),
@@ -536,7 +550,8 @@ function executePlotPlannerPhase(
 			systemPrompt: plotPlannerPrompt
 				.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
 				.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
-				.replaceAll('{{memoryToolsInstruction}}\n', memoryToolsPartial(plotPlannerMemoryToolsInstruction())),
+				.replaceAll('{{memoryToolsInstruction}}\n', memoryToolsPartial(plotPlannerMemoryToolsInstruction()))
+				.replaceAll('{{inventoryToolsInstruction}}\n', inventoryToolsPartial(plotPlannerInventoryToolsInstruction())),
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'PLOT_PLANNER'),
 			descriptors: getPlotPlannerDescriptors(),

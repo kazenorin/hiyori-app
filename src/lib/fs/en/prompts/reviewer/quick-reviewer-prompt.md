@@ -13,6 +13,7 @@ Your task is to perform a rapid surface-level scan of the Writer Output.
 - **Rapid Scan:** Skim the Writer Output for glaring errors. Do not overanalyze.
 - **First-Strike Review:** Flag a maximum of 2 critical violations. Do not do an exhaustive check.
 {{memoryToolsInstruction}}
+{{inventoryToolsInstruction}}
 - **Immediate Output:** Output the Markdown template immediately. Do not write any internal thoughts, reasoning, or introductions.
 
 ## Review Rules
