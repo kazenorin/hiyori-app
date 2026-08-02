@@ -6,13 +6,13 @@ export type InventoryCategory = 'item' | 'equipment' | 'skill' | 'clothing' | 's
 
 export type EquipStatus = 'equipped' | 'carried' | 'owned' | 'known';
 
-export type InventoryChangeType = 'acquired' | 'lost' | 'equipped' | 'unequipped' | 'used' | 'modified';
+export type InventoryEventType = 'acquired' | 'lost' | 'equipped' | 'unequipped' | 'used' | 'modified';
 
 export const INVENTORY_CATEGORIES: readonly InventoryCategory[] = ['item', 'equipment', 'skill', 'clothing', 'status'] as const;
 
 export const EQUIP_STATUSES: readonly EquipStatus[] = ['equipped', 'carried', 'owned', 'known'] as const;
 
-export const INVENTORY_CHANGE_TYPES: readonly InventoryChangeType[] = [
+export const INVENTORY_EVENT_TYPES: readonly InventoryEventType[] = [
 	'acquired',
 	'lost',
 	'equipped',
@@ -21,172 +21,188 @@ export const INVENTORY_CHANGE_TYPES: readonly InventoryChangeType[] = [
 	'modified',
 ] as const;
 
+export interface InventoryRow {
+	id: string;
+	story_id: string;
+	act_line_id: string;
+	message_id: string;
+	scene_number: number | null;
+	character_canonical_name: string;
+	item_name: string;
+	event_type: string;
+	category: string | null;
+	equip_status: string | null;
+	description: string | null;
+	created_at: string | null;
+}
+
 export interface InventoryItem {
-	id: string;
-	storyId: string;
-	actLineId: string;
-	characterCanonicalName: string;
 	itemName: string;
-	category: InventoryCategory;
-	equipStatus: EquipStatus;
+	category: string | null;
+	equipStatus: string | null;
+	description: string | null;
+	eventType: string;
+	messageId: string;
+	sceneNumber: number | null;
+}
+
+export interface InventoryEvent {
+	itemName: string;
+	eventType: string;
 	description: string | null;
 	messageId: string;
+	sceneNumber: number | null;
 	createdAt: string | null;
 }
 
-export interface InventoryChange {
-	id: string;
-	storyId: string;
-	actLineId: string;
-	characterCanonicalName: string;
+export interface AppendInventoryEventInput {
+	characterName: string;
 	itemName: string;
-	changeType: InventoryChangeType;
-	description: string | null;
-	messageId: string;
-	createdAt: string | null;
-}
-
-interface InventoryRow {
-	id: string;
-	story_id: string;
-	act_line_id: string;
-	character_canonical_name: string;
-	item_name: string;
-	category: string;
-	equip_status: string;
-	description: string | null;
-	message_id: string;
-	created_at: string | null;
-}
-
-interface InventoryChangeRow {
-	id: string;
-	story_id: string;
-	act_line_id: string;
-	character_canonical_name: string;
-	item_name: string;
-	change_type: string;
-	description: string | null;
-	message_id: string;
-	created_at: string | null;
+	eventType: InventoryEventType;
+	category?: InventoryCategory;
+	equipStatus?: EquipStatus;
+	description?: string;
 }
 
 function mapRowToItem(row: InventoryRow): InventoryItem {
 	return {
-		id: row.id,
-		storyId: row.story_id,
-		actLineId: row.act_line_id,
-		characterCanonicalName: row.character_canonical_name,
 		itemName: row.item_name,
-		category: row.category as InventoryCategory,
-		equipStatus: row.equip_status as EquipStatus,
+		category: row.category,
+		equipStatus: row.equip_status,
 		description: row.description,
+		eventType: row.event_type,
 		messageId: row.message_id,
-		createdAt: row.created_at,
+		sceneNumber: row.scene_number,
 	};
 }
 
-function mapRowToChange(row: InventoryChangeRow): InventoryChange {
+function mapRowToEvent(row: InventoryRow): InventoryEvent {
 	return {
-		id: row.id,
-		storyId: row.story_id,
-		actLineId: row.act_line_id,
-		characterCanonicalName: row.character_canonical_name,
 		itemName: row.item_name,
-		changeType: row.change_type as InventoryChangeType,
+		eventType: row.event_type,
 		description: row.description,
 		messageId: row.message_id,
+		sceneNumber: row.scene_number,
 		createdAt: row.created_at,
 	};
 }
 
-export interface UpsertInventoryItemInput {
-	characterName: string;
-	itemName: string;
-	category: InventoryCategory;
-	equipStatus: EquipStatus;
-	description?: string;
-}
-
-export interface InsertInventoryChangeInput {
-	characterName: string;
-	itemName: string;
-	changeType: InventoryChangeType;
-	description?: string;
-}
-
-export async function upsertInventoryItems(
+export async function appendInventoryEvents(
 	storyId: string,
 	actLineId: string,
 	messageId: string,
-	items: UpsertInventoryItemInput[]
+	sceneNumber: number | null,
+	events: AppendInventoryEventInput[]
 ): Promise<void> {
 	const db = getDatabase();
-	for (const item of items) {
-		const canonical = toCanonicalName(item.characterName);
+	for (const event of events) {
+		const canonical = toCanonicalName(event.characterName);
+
+		let category: string | null = event.category ?? null;
+		let equipStatus: string | null = event.equipStatus ?? null;
+
+		if (event.eventType !== 'acquired') {
+			const prior = await getLatestRowForItem(actLineId, canonical, event.itemName);
+			if (prior) {
+				category = category ?? prior.category;
+				equipStatus = equipStatus ?? prior.equip_status;
+			}
+		}
+
+		if (event.eventType === 'equipped') {
+			equipStatus = 'equipped';
+		} else if (event.eventType === 'unequipped') {
+			equipStatus = 'carried';
+		}
+
+		if (event.eventType === 'acquired' && !equipStatus) {
+			equipStatus = 'carried';
+		}
+
 		await db.execute(
-			`INSERT INTO inventory (id, story_id, act_line_id, character_canonical_name, item_name, category, equip_status, description, message_id)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-			 ON CONFLICT(act_line_id, character_canonical_name, item_name)
-			 DO UPDATE SET category = $6, equip_status = $7, description = $8, message_id = $9`,
-			[crypto.randomUUID(), storyId, actLineId, canonical, item.itemName, item.category, item.equipStatus, item.description ?? null, messageId]
+			`INSERT INTO inventory (id, story_id, act_line_id, message_id, scene_number, character_canonical_name, item_name, event_type, category, equip_status, description)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+			[
+				crypto.randomUUID(),
+				storyId,
+				actLineId,
+				messageId,
+				sceneNumber,
+				canonical,
+				event.itemName,
+				event.eventType,
+				category,
+				equipStatus,
+				event.description ?? null,
+			]
 		);
 	}
 }
 
-export async function insertInventoryChanges(
-	storyId: string,
+async function getLatestRowForItem(
 	actLineId: string,
-	messageId: string,
-	changes: InsertInventoryChangeInput[]
-): Promise<void> {
-	const db = getDatabase();
-	for (const change of changes) {
-		const canonical = toCanonicalName(change.characterName);
-		await db.execute(
-			`INSERT INTO inventory_changes (id, story_id, act_line_id, character_canonical_name, item_name, change_type, description, message_id)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-			[crypto.randomUUID(), storyId, actLineId, canonical, change.itemName, change.changeType, change.description ?? null, messageId]
-		);
-	}
-}
-
-export async function getInventory(
 	characterCanonicalName: string,
-	opts: { storyId: string; actLineIds: string[]; category?: InventoryCategory }
+	itemName: string
+): Promise<InventoryRow | null> {
+	const db = getDatabase();
+	const rows = await db.select<InventoryRow[]>(
+		`SELECT * FROM inventory
+		 WHERE act_line_id = $1 AND character_canonical_name = $2 AND item_name = $3
+		 ORDER BY created_at DESC LIMIT 1`,
+		[actLineId, characterCanonicalName, itemName]
+	);
+	return rows.length > 0 ? rows[0] : null;
+}
+
+export async function getLatestPerItem(
+	actLineId: string,
+	characterNames: string[],
+	category?: InventoryCategory
 ): Promise<InventoryItem[]> {
 	const db = getDatabase();
-	const placeholders = opts.actLineIds.map((_, i) => `$${i + 3}`).join(',');
-	const params: (string | number)[] = [opts.storyId, characterCanonicalName, ...opts.actLineIds];
-
-	let query = `SELECT * FROM inventory WHERE story_id = $1 AND character_canonical_name = $2 AND act_line_id IN (${placeholders})`;
-	if (opts.category) {
-		params.push(opts.category);
+	const namePlaceholders = characterNames.map((_, i) => `$${i + 2}`).join(',');
+	let query = `SELECT * FROM inventory WHERE act_line_id = $1 AND character_canonical_name IN (${namePlaceholders})`;
+	const params: (string | number)[] = [actLineId, ...characterNames];
+	if (category) {
+		params.push(category);
 		query += ` AND category = $${params.length}`;
 	}
 	query += ' ORDER BY created_at ASC';
 
 	const rows = await db.select<InventoryRow[]>(query, params);
 
-	const seen = new Map<string, InventoryItem>();
+	const seen = new Map<string, InventoryRow>();
 	for (const row of rows) {
-		const key = `${row.character_canonical_name}|${row.item_name}`;
-		seen.set(key, mapRowToItem(row));
+		seen.set(row.item_name, row);
 	}
-	return [...seen.values()];
+
+	return [...seen.values()].filter((r) => r.event_type !== 'lost').map(mapRowToItem);
 }
 
-export async function getInventoryChanges(
-	characterCanonicalName: string,
+export async function getInventoryEvents(
+	characterNames: string[],
 	opts: { storyId: string; actLineIds: string[] }
-): Promise<InventoryChange[]> {
+): Promise<InventoryEvent[]> {
 	const db = getDatabase();
-	const placeholders = opts.actLineIds.map((_, i) => `$${i + 3}`).join(',');
-	const rows = await db.select<InventoryChangeRow[]>(
-		`SELECT * FROM inventory_changes WHERE story_id = $1 AND character_canonical_name = $2 AND act_line_id IN (${placeholders}) ORDER BY created_at ASC`,
-		[opts.storyId, characterCanonicalName, ...opts.actLineIds]
+	const linePlaceholders = opts.actLineIds.map((_, i) => `$${i + 3}`).join(',');
+	const namePlaceholders = characterNames.map((_, i) => `$${i + 3 + opts.actLineIds.length}`).join(',');
+	const rows = await db.select<InventoryRow[]>(
+		`SELECT * FROM inventory
+		 WHERE story_id = $1 AND act_line_id IN (${linePlaceholders}) AND character_canonical_name IN (${namePlaceholders})
+		 ORDER BY created_at ASC`,
+		[opts.storyId, ...opts.actLineIds, ...characterNames]
 	);
-	return rows.map(mapRowToChange);
+
+	const seen = new Set<string>();
+	const events: InventoryEvent[] = [];
+	for (const row of rows) {
+		const key = `${row.message_id}|${row.item_name}|${row.event_type}`;
+		if (!seen.has(key)) {
+			seen.add(key);
+			events.push(mapRowToEvent(row));
+		}
+	}
+	return events;
 }
 
 export async function resolveCharacterNames(actLineId: string, name: string): Promise<string[]> {
@@ -206,35 +222,33 @@ export async function resolveCharacterNames(actLineId: string, name: string): Pr
 export async function deleteInventoryByMessages(actLineId: string, messageIds: string[]): Promise<void> {
 	const db = getDatabase();
 	const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(',');
-	await db.execute(`DELETE FROM inventory WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [actLineId, ...messageIds]);
-	await db.execute(`DELETE FROM inventory_changes WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [
+	await db.execute(`DELETE FROM inventory WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [
 		actLineId,
 		...messageIds,
 	]);
 }
 
-export async function deleteInventoryByActLine(actLineId: string): Promise<void> {
-	const db = getDatabase();
-	await db.execute('DELETE FROM inventory WHERE act_line_id = $1', [actLineId]);
-	await db.execute('DELETE FROM inventory_changes WHERE act_line_id = $1', [actLineId]);
-}
-
 export async function cloneInventory(fromActLineId: string, toActLineId: string): Promise<void> {
 	const db = getDatabase();
-	const items = await db.select<InventoryRow[]>('SELECT * FROM inventory WHERE act_line_id = $1', [fromActLineId]);
-	for (const row of items) {
+	const rows = await db.select<InventoryRow[]>('SELECT * FROM inventory WHERE act_line_id = $1', [fromActLineId]);
+	for (const row of rows) {
 		await db.execute(
-			`INSERT INTO inventory (id, story_id, act_line_id, character_canonical_name, item_name, category, equip_status, description, message_id, created_at)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`,
-			[crypto.randomUUID(), row.story_id, toActLineId, row.character_canonical_name, row.item_name, row.category, row.equip_status, row.description, row.message_id, row.created_at]
-		);
-	}
-	const changes = await db.select<InventoryChangeRow[]>('SELECT * FROM inventory_changes WHERE act_line_id = $1', [fromActLineId]);
-	for (const row of changes) {
-		await db.execute(
-			`INSERT INTO inventory_changes (id, story_id, act_line_id, character_canonical_name, item_name, change_type, description, message_id, created_at)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-			[crypto.randomUUID(), row.story_id, toActLineId, row.character_canonical_name, row.item_name, row.change_type, row.description, row.message_id, row.created_at]
+			`INSERT INTO inventory (id, story_id, act_line_id, message_id, scene_number, character_canonical_name, item_name, event_type, category, equip_status, description, created_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+			[
+				crypto.randomUUID(),
+				row.story_id,
+				toActLineId,
+				row.message_id,
+				row.scene_number,
+				row.character_canonical_name,
+				row.item_name,
+				row.event_type,
+				row.category,
+				row.equip_status,
+				row.description,
+				row.created_at,
+			]
 		);
 	}
 }
