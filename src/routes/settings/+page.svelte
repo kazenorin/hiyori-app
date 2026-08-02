@@ -859,6 +859,19 @@
 			</Card>
 		{/if}
 
+		<!-- Inventory -->
+		<Card title={t('settings.inventory')} description={t('settings.enableInventoryDescription')}>
+			<label class="flex items-center gap-2">
+				<input
+					type="checkbox"
+					class="checkbox"
+					checked={settings.inventoryEnabled}
+					onchange={(e) => updateSettings({ inventoryEnabled: (e.currentTarget as HTMLInputElement).checked })}
+				/>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.enableInventory')}</span>
+			</label>
+		</Card>
+
 		<!-- Developer -->
 		<Card title={t('settings.developer')}>
 			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">

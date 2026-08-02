@@ -53,6 +53,7 @@ export interface Settings {
 	logLevel: LogLevel;
 	fontSize: number;
 	memoryEnabled: boolean;
+	inventoryEnabled: boolean;
 	memoryProviderRole: string;
 	embeddingProviderRole: string;
 	plotPlannerProviderRole: string;
@@ -92,6 +93,7 @@ const defaults: Settings = {
 	logLevel: 'info',
 	fontSize: 1.0,
 	memoryEnabled: false,
+	inventoryEnabled: false,
 	memoryProviderRole: 'main',
 	embeddingProviderRole: 'main',
 	plotPlannerProviderRole: 'main',
@@ -304,6 +306,10 @@ export function isMemoryCapable(): boolean {
 
 export function isMemoryAvailable(): boolean {
 	return settings.memoryEnabled && isMemoryCapable();
+}
+
+export function isInventoryAvailable(): boolean {
+	return settings.inventoryEnabled;
 }
 
 export function isPlotPlannerEnabled(): boolean {
