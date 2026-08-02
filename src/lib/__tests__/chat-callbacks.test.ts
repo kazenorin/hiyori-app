@@ -12,8 +12,8 @@ vi.mock('$lib/definitions/common-headers', () => ({
 	sectionFormat: (text: string, headerLevel: number = 2) => '#'.repeat(headerLevel) + ' ' + text + '\n\n',
 }));
 
-import { createStreamAccumulator, type StreamState } from '../ai/chat-callbacks';
-import type { GameDataFields } from '../ai/narrative-types';
+import { createStreamAccumulator, type StreamState } from '$lib/ai/chat-callbacks';
+import type { GameDataFields } from '$lib/ai/narrative-types';
 
 const T = 'think';
 const emptyMetadata = {

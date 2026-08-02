@@ -68,7 +68,7 @@ import {
 	serializeActSummary,
 	type ActSummary,
 	type IncrementalUpdate,
-} from '../ai/act-summary-parser';
+} from '$lib/ai/act-summary-parser';
 
 const SAMPLE_ACT_SUMMARY = `## Scene Summaries
 ### Scene 1: The Arrival

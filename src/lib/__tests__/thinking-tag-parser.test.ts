@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createThinkingTagParser } from '../ai/thinking-tag-parser';
+import { createThinkingTagParser } from '$lib/ai/thinking-tag-parser';
 
 const THINK_TAG_NAME = 'think';
 

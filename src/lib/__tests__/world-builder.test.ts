@@ -6,8 +6,8 @@ import {
 	getStoryName,
 	getWbPhase,
 	getSelectedTemplateId,
-} from '../features/world-builder/world-builder.svelte';
-import { WORLD_TEMPLATES } from '../features/world-builder/template-registry';
+} from '$lib/features/world-builder/world-builder.svelte';
+import { WORLD_TEMPLATES } from '$lib/features/world-builder/template-registry';
 
 describe('world-builder state', () => {
 	beforeEach(() => {

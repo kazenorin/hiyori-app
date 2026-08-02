@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { canonicalName, deriveStoryName } from '../fs/story-folders';
+import { canonicalName, deriveStoryName } from '$lib/fs/story-folders';
 
 describe('canonicalName', () => {
 	it('returns unchanged name for safe characters', () => {

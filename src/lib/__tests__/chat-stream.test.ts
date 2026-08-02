@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { streamWithRetry, DEFAULT_RETRY_CONFIG } from '../ai/chat-stream';
-import type { StreamResultMetadata } from '../ai/streaming';
-import type { ProviderConfig } from '../stores/settings.svelte';
+import { streamWithRetry, DEFAULT_RETRY_CONFIG } from '$lib/ai/chat-stream';
+import type { StreamResultMetadata } from '$lib/ai/streaming';
+import type { ProviderConfig } from '$lib/stores/settings.svelte';
 
 // Mock Tauri invoke (not available in test environment)
 vi.mock('@tauri-apps/api/core', () => ({
@@ -20,17 +20,17 @@ vi.mock('$lib/logging/logger', () => ({
 }));
 
 // Mock executeStream so streamChatResponse works without a real LLM
-vi.mock('../ai/streaming', () => ({
+vi.mock('$lib/ai/streaming', () => ({
 	executeStream: vi.fn(),
 }));
 
 // Mock createModel so streamChatResponse doesn't need real provider config
-vi.mock('../ai/provider', () => ({
+vi.mock('$lib/ai/provider', () => ({
 	createModel: vi.fn(),
 }));
 
 // Mock getMainProviderConfig and getProviderOptions
-vi.mock('../stores/settings.svelte', () => ({
+vi.mock('$lib/stores/settings.svelte', () => ({
 	getMainProviderConfig: vi.fn(() => ({
 		provider: 'openai',
 		apiKey: 'test-key',
@@ -39,7 +39,7 @@ vi.mock('../stores/settings.svelte', () => ({
 	getProviderOptions: vi.fn(() => ({})),
 }));
 
-const { executeStream } = vi.mocked(await import('../ai/streaming'));
+const { executeStream } = vi.mocked(await import('$lib/ai/streaming'));
 
 const defaultMetadata: StreamResultMetadata = {
 	finishReason: 'stop',
