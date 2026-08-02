@@ -20,7 +20,6 @@ describe('character-profiles DB layer', () => {
 	let getLatestProfilesByActLine: typeof import('$lib/db/character-profiles').getLatestProfilesByActLine;
 	let getLatestProfileByAlias: typeof import('$lib/db/character-profiles').getLatestProfileByAlias;
 	let areAnyCharacterNamesKnown: typeof import('$lib/db/character-profiles').areAnyCharacterNamesKnown;
-	let getMaxSceneNumberForActLine: typeof import('$lib/db/character-profiles').getMaxSceneNumberForActLine;
 	let deleteCharacterProfilesForActLine: typeof import('$lib/db/character-profiles').deleteCharacterProfilesForActLine;
 	let cloneCharacterProfiles: typeof import('$lib/db/character-profiles').cloneCharacterProfiles;
 	let inheritProfilesFromActLine: typeof import('$lib/db/character-profiles').inheritProfilesFromActLine;
@@ -39,7 +38,6 @@ describe('character-profiles DB layer', () => {
 		getLatestProfilesByActLine = mod.getLatestProfilesByActLine;
 		getLatestProfileByAlias = mod.getLatestProfileByAlias;
 		areAnyCharacterNamesKnown = mod.areAnyCharacterNamesKnown;
-		getMaxSceneNumberForActLine = mod.getMaxSceneNumberForActLine;
 		deleteCharacterProfilesForActLine = mod.deleteCharacterProfilesForActLine;
 		cloneCharacterProfiles = mod.cloneCharacterProfiles;
 		inheritProfilesFromActLine = mod.inheritProfilesFromActLine;
@@ -372,32 +370,6 @@ describe('character-profiles DB layer', () => {
 			mockDbSelectResults = [[{ found: 1 }]];
 			const result = await areAnyCharacterNamesKnown('line-1', ['Shadow']);
 			expect(result).toBe(true);
-		});
-	});
-
-	describe('getMaxSceneNumberForActLine', () => {
-		it('returns max scene number when profiles with scene numbers exist', async () => {
-			mockDbSelectResults = [[{ max_scene: 10 }]];
-			const result = await getMaxSceneNumberForActLine('line-1');
-			expect(result).toBe(10);
-		});
-
-		it('returns null when no profiles exist', async () => {
-			mockDbSelectResults = [[{ max_scene: null }]];
-			const result = await getMaxSceneNumberForActLine('line-1');
-			expect(result).toBeNull();
-		});
-
-		it('returns null when only baseline (null scene_number) profiles exist', async () => {
-			mockDbSelectResults = [[{ max_scene: -1 }]];
-			const result = await getMaxSceneNumberForActLine('line-1');
-			expect(result).toBeNull();
-		});
-
-		it('returns null when no rows returned', async () => {
-			mockDbSelectResults = [[]];
-			const result = await getMaxSceneNumberForActLine('line-1');
-			expect(result).toBeNull();
 		});
 	});
 

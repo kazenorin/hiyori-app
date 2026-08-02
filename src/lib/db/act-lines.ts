@@ -9,7 +9,13 @@ import type { AssistantContext } from '$lib/ai/pipeline/types';
 
 // --- Act line event types ---
 
-export type ActLineEventType = 'plot-generated' | 'act-phase-transition' | 'ending' | 'epilogue-written' | 'act-short-summary';
+export type ActLineEventType =
+	| 'plot-generated'
+	| 'act-phase-transition'
+	| 'ending'
+	| 'epilogue-written'
+	| 'act-short-summary'
+	| 'character-profiles-compressed';
 
 export interface ActPhaseBoundary {
 	phase: ActPhase;
@@ -319,6 +325,26 @@ export async function recordActShortSummary(actLineId: string, assistant: Assist
 	);
 }
 
+export async function recordCharacterProfileCompression(
+	actLineId: string,
+	assistant: AssistantContext,
+	sceneNumber: number
+): Promise<void> {
+	const db = getDatabase();
+	await db.execute(
+		'INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+		[
+			crypto.randomUUID(),
+			actLineId,
+			assistant.messageId,
+			assistant.messageSequence,
+			'character-profiles-compressed',
+			String(sceneNumber),
+			Date.now(),
+		]
+	);
+}
+
 export async function deleteEventsForMessage(messageId: string): Promise<void> {
 	const db = getDatabase();
 	await db.execute('DELETE FROM act_line_events WHERE message_id = $1', [messageId]);
@@ -382,6 +408,17 @@ export async function getLastPlotGeneration(actLineId: string): Promise<number |
 			  AND ale.message_sequence > COALESCE(lpt.max_seq, 0)
 			ORDER BY ale.message_sequence DESC
 			LIMIT 1`,
+		[actLineId]
+	);
+	if (rows.length === 0 || rows[0].value == null) return null;
+	const parsed = parseInt(rows[0].value, 10);
+	return isNaN(parsed) ? null : parsed;
+}
+
+export async function getLastCompressionScene(actLineId: string): Promise<number | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ value: string }[]>(
+		`SELECT value FROM act_line_events WHERE act_line_id = $1 AND event = 'character-profiles-compressed' ORDER BY message_sequence DESC, created_at DESC LIMIT 1`,
 		[actLineId]
 	);
 	if (rows.length === 0 || rows[0].value == null) return null;

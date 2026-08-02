@@ -2,7 +2,14 @@ import type { ProviderConfig } from '$lib/stores/settings.svelte';
 import { getSettings, isMemoryAvailable } from '$lib/stores/settings.svelte';
 import type { MessageBase } from '$lib/db/messages';
 import type { NarrativeVariables } from '../narrative-types';
-import type { AsyncPhaseResults, CompressorResult, PipelineProviderConfigs, PlayerContext, SummarizerResult } from './types';
+import type {
+	AssistantContext,
+	AsyncPhaseResults,
+	CompressorResult,
+	PipelineProviderConfigs,
+	PlayerContext,
+	SummarizerResult,
+} from './types';
 import { runNonStreamingPhase } from './phase-executor';
 import {
 	buildSummarizerMessages,
@@ -40,12 +47,12 @@ import { runMemoryExtractionPipeline } from '$lib/features/memory/memory-extract
 import { type LoadedPrompts } from './prompt-loader';
 import {
 	insertCharacterProfile,
-	getMaxSceneNumberForActLine,
 	getLatestProfileByAlias,
 	toCanonicalName,
 	ensurePreferredInAliases,
 	type CharacterImportance,
 } from '$lib/db/character-profiles';
+import { getLastCompressionScene, recordCharacterProfileCompression } from '$lib/db/act-lines';
 
 // --- Input interfaces ---
 
@@ -69,6 +76,7 @@ export interface CharacterProfileCompressorInput {
 	actSummary: string;
 	actLineId: string;
 	completedScenes: number;
+	assistant: AssistantContext;
 	providerConfig: ProviderConfig | undefined;
 	abortSignal: AbortSignal;
 }
@@ -195,7 +203,7 @@ export async function generateCharacterProfiles(
 	const interval = settings.characterProfileCompressorInterval;
 	if (interval <= 0) return null;
 
-	const lastScene = (await getMaxSceneNumberForActLine(compressorInput.actLineId)) ?? 0;
+	const lastScene = (await getLastCompressionScene(compressorInput.actLineId)) ?? 0;
 
 	if (completedScenes - lastScene < interval) return null;
 
@@ -245,6 +253,8 @@ export async function generateCharacterProfiles(
 			});
 		}
 
+		await recordCharacterProfileCompression(compressorInput.actLineId, compressorInput.assistant, completedScenes);
+
 		return { metadata };
 	} catch (err) {
 		await log.warn('pipeline', `Character profile compressor parse failed: ${err}`);
@@ -276,6 +286,7 @@ export interface AsyncPhasesContext {
 	abortSignal: AbortSignal;
 	storyId: string | undefined;
 	actLineId: string | undefined;
+	assistant: AssistantContext;
 	loadedPrompts: LoadedPrompts;
 }
 
@@ -290,6 +301,7 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 		abortSignal,
 		storyId,
 		actLineId,
+		assistant,
 		loadedPrompts,
 	} = ctx;
 	if (player?.playerResponse && completedScenes > 0) {
@@ -325,6 +337,7 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 					actSummary,
 					actLineId,
 					completedScenes,
+					assistant,
 					providerConfig: providerConfigs.summarizer,
 					abortSignal,
 				};

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // Shared mock state
 let mockDbSelectResults: unknown[] = [];
 const mockDb = {
-	execute: vi.fn(async () => ({ rowsAffected: 0 })),
+	execute: vi.fn(async (_sql: string, _params?: unknown[]) => ({ rowsAffected: 0 })),
 	select: vi.fn(async (_query: string, _params?: unknown[]) => {
 		if (mockDbSelectResults.length > 0) {
 			return mockDbSelectResults.shift();
@@ -20,6 +20,8 @@ describe('act-lines helpers', () => {
 	let getActNumberForActLine: typeof import('$lib/db/act-lines').getActNumberForActLine;
 	let getStoryForActLine: typeof import('$lib/db/act-lines').getStoryForActLine;
 	let batchResolveActLineInfo: typeof import('$lib/db/act-lines').batchResolveActLineInfo;
+	let recordCharacterProfileCompression: typeof import('$lib/db/act-lines').recordCharacterProfileCompression;
+	let getLastCompressionScene: typeof import('$lib/db/act-lines').getLastCompressionScene;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
@@ -33,6 +35,8 @@ describe('act-lines helpers', () => {
 		getActNumberForActLine = mod.getActNumberForActLine;
 		getStoryForActLine = mod.getStoryForActLine;
 		batchResolveActLineInfo = mod.batchResolveActLineInfo;
+		recordCharacterProfileCompression = mod.recordCharacterProfileCompression;
+		getLastCompressionScene = mod.getLastCompressionScene;
 	});
 
 	describe('getActNumberForActLine', () => {
@@ -107,6 +111,44 @@ describe('act-lines helpers', () => {
 			expect(result.get('line-1')?.actNumber).toBe(1);
 			expect(result.get('line-1')?.messages.get('msg-1')).toBe(1);
 			expect(result.get('line-1')?.messages.get('msg-2')).toBe(2);
+		});
+	});
+
+	describe('character-profile compression events', () => {
+		it('records a compression event tagged with the scene number and message context', async () => {
+			await recordCharacterProfileCompression('line-1', { messageId: 'msg-1', messageSequence: 7 }, 5);
+
+			expect(mockDb.execute).toHaveBeenCalledTimes(1);
+			expect(mockDb.execute.mock.calls[0][0]).toContain('INSERT INTO act_line_events');
+			expect(mockDb.execute.mock.calls[0][1]).toEqual([
+				expect.any(String),
+				'line-1',
+				'msg-1',
+				7,
+				'character-profiles-compressed',
+				'5',
+				expect.any(Number),
+			]);
+		});
+
+		it('reads the latest compression scene, scoped to compression events', async () => {
+			mockDbSelectResults = [[{ value: '5' }]];
+			const result = await getLastCompressionScene('line-1');
+			expect(result).toBe(5);
+			expect(mockDb.select.mock.calls[0][0]).toContain('character-profiles-compressed');
+		});
+
+		it('returns null when no compression event exists', async () => {
+			mockDbSelectResults = [[]];
+			expect(await getLastCompressionScene('line-1')).toBeNull();
+		});
+
+		it('returns null when the stored value is null or non-numeric', async () => {
+			mockDbSelectResults = [[{ value: null }]];
+			expect(await getLastCompressionScene('line-1')).toBeNull();
+
+			mockDbSelectResults = [[{ value: 'abc' }]];
+			expect(await getLastCompressionScene('line-1')).toBeNull();
 		});
 	});
 });

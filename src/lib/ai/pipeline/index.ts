@@ -167,6 +167,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		abortSignal: execution.abortSignal,
 		storyId: story.storyId,
 		actLineId: story.actLine.id,
+		assistant: input.assistant,
 		loadedPrompts,
 	});
 

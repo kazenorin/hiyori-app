@@ -204,22 +204,6 @@ export async function getLatestProfileByAlias(actLineId: string, nameOrAlias: st
 	return rows.length > 0 ? mapRowToEntity(rows[0]) : null;
 }
 
-/**
- * Get the highest scene_number among character profiles for an act line.
- * Returns null if no scene-numbered profiles exist.
- * Used by the compressor to determine the interval without relying on the act-summary blob.
- */
-export async function getMaxSceneNumberForActLine(actLineId: string): Promise<number | null> {
-	const db = getDatabase();
-	const rows = await db.select<{ max_scene: number | null }[]>(
-		`SELECT MAX(COALESCE(scene_number, -1)) as max_scene FROM character_profiles WHERE act_line_id = $1`,
-		[actLineId]
-	);
-	if (rows.length === 0 || rows[0].max_scene === null) return null;
-	const max = rows[0].max_scene;
-	return max < 0 ? null : max;
-}
-
 /** Check whether any of the given names (preferred or alias) exists in the act line. */
 export async function areAnyCharacterNamesKnown(actLineId: string, names: string[]): Promise<boolean> {
 	if (names.length === 0) return false;

@@ -46,7 +46,7 @@ export function createIntroduceCharacterTool(ctx: ToolContext) {
 			await insertCharacterProfile({
 				id: crypto.randomUUID(),
 				actLineId: actLine.id,
-				sceneNumber: null,
+				sceneNumber: actLine.currentScene,
 				canonicalName,
 				preferredName,
 				aliases: allAliases,
