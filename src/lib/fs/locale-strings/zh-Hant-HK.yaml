@@ -518,19 +518,17 @@ tools:
     description: >
       當場景中發生物品獲得、失去、裝備、使用或修改時，更新角色的物品欄。
       當角色的持有物、裝備、技能、服裝或狀態效果發生變化時呼叫此工具。
-      提供受影響物品的當前狀態和/或發生的變更。
+      將每個變更回報為事件——系統會自動維護當前狀態。
     parameters:
       characterName: '要更新物品欄的角色名稱'
       itemName: '物品名稱'
-      category: '物品類別'
+      eventType: '物品發生了什麼事 (acquired, lost, equipped, unequipped, used, modified)'
+      category: '物品類別 (acquired 時必填)'
       equipStatus: '物品的持有方式 (預設: carried)'
-      itemDescription: '選填的物品描述'
-      changeType: '發生的變更類型'
-      changeDescription: '選填的變更描述'
-      items: '要新增或更新的物品當前狀態 (依物品名稱進行 upsert)'
-      changes: '要記錄在歷史日誌中的變更事件'
+      description: '選填的敘事描述'
+      events: '此場景中發生的物品欄事件列表'
     messages:
-      empty: '未提供物品或變更。未更新任何內容。'
+      empty: '未提供事件。未更新任何內容。'
   readActPlot:
     description: >
       閱讀目前章節的章節劇情文件。章節劇情包含故事已規劃的結構: 故事前置、目標場景數目、

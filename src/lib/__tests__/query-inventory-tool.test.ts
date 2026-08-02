@@ -14,85 +14,79 @@ vi.mock('$lib/logging/logger', () => ({
 	fileLog: vi.fn(async () => {}),
 }));
 
-const mockTraceActLineChain = vi.fn(async (actLineId: string) => [
-	{ actLineId: 'line-1', actNumber: 1, isMainLine: true },
+const mockTraceActLineChain = vi.fn(async (actLineId: string, _descending?: boolean) => [
 	{ actLineId, actNumber: 2, isMainLine: false },
+	{ actLineId: 'line-1', actNumber: 1, isMainLine: true },
 ]);
 
 vi.mock('$lib/db/act-lines', () => ({}));
 
 vi.mock('$lib/db/acts', () => ({
-	traceActLineChain: (actLineId: string) => mockTraceActLineChain(actLineId),
+	traceActLineChain: (actLineId: string, descending?: boolean) => mockTraceActLineChain(actLineId, descending),
 }));
 
-const mockGetInventory = vi.fn(async (_name: string, _opts: unknown): Promise<InventoryItem[]> => []);
-const mockGetInventoryChanges = vi.fn(async (_name: string, _opts: unknown): Promise<InventoryChange[]> => []);
+const mockGetLatestPerItem = vi.fn(async (_actLineId: string, _names: string[], _category?: unknown): Promise<InventoryItem[]> => []);
+const mockGetInventoryEvents = vi.fn(async (_names: string[], _opts: unknown): Promise<InventoryEvent[]> => []);
 const mockResolveCharacterNames = vi.fn(async (_actLineId: string, name: string): Promise<string[]> => [name]);
 
 vi.mock('$lib/db/inventory', () => ({
-	getInventory: (...args: unknown[]) => mockGetInventory(...(args as [string, unknown])),
-	getInventoryChanges: (...args: unknown[]) => mockGetInventoryChanges(...(args as [string, unknown])),
+	getLatestPerItem: (...args: unknown[]) => mockGetLatestPerItem(...(args as [string, string[], unknown])),
+	getInventoryEvents: (...args: unknown[]) => mockGetInventoryEvents(...(args as [string[], unknown])),
 	resolveCharacterNames: (...args: unknown[]) => mockResolveCharacterNames(...(args as [string, string])),
 }));
 
 import { createQueryInventoryTool } from '$lib/ai/tools/query-inventory';
-import type { InventoryItem, InventoryChange } from '$lib/db/inventory';
+import type { InventoryItem, InventoryEvent } from '$lib/db/inventory';
 
 interface InventoryResult {
 	name: string;
-	category: string;
-	equipStatus: string;
+	category: string | null;
+	equipStatus: string | null;
 	description: string | null;
 }
 
-interface InventoryChangeResult {
+interface InventoryEventResult {
 	itemName: string;
-	changeType: string;
+	eventType: string;
 	description: string | null;
 }
 
 interface QueryInventoryOutput {
 	inventory: InventoryResult[];
-	changes?: InventoryChangeResult[];
+	events?: InventoryEventResult[];
 }
 
 const sampleItems: InventoryItem[] = [
 	{
-		id: '1',
-		storyId: 'story-1',
-		actLineId: 'line-1',
-		characterCanonicalName: 'elena',
 		itemName: 'Iron Sword',
 		category: 'item',
 		equipStatus: 'carried',
 		description: 'A battered blade',
+		eventType: 'acquired',
 		messageId: 'msg-1',
-		createdAt: null,
+		sceneNumber: 1,
 	},
 	{
-		id: '2',
-		storyId: 'story-1',
-		actLineId: 'line-1',
-		characterCanonicalName: 'elena',
 		itemName: 'Leather Armor',
 		category: 'equipment',
 		equipStatus: 'equipped',
 		description: null,
-		messageId: 'msg-1',
-		createdAt: null,
+		eventType: 'equipped',
+		messageId: 'msg-2',
+		sceneNumber: 2,
 	},
 ];
 
 describe('createQueryInventoryTool', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockGetInventory.mockResolvedValue([]);
-		mockGetInventoryChanges.mockResolvedValue([]);
+		mockGetLatestPerItem.mockResolvedValue([]);
+		mockGetInventoryEvents.mockResolvedValue([]);
 		mockResolveCharacterNames.mockImplementation(async (_actLineId: string, name: string) => [name]);
 	});
 
 	it('returns inventory items for a character', async () => {
-		mockGetInventory.mockResolvedValue(sampleItems);
+		mockGetLatestPerItem.mockResolvedValue(sampleItems);
 		const tool = createQueryInventoryTool({
 			storyId: 'story-1',
 			actLineId: 'line-2',
@@ -115,33 +109,27 @@ describe('createQueryInventoryTool', () => {
 	it('resolves aliases and combines results', async () => {
 		const items: InventoryItem[] = [
 			{
-				id: '1',
-				storyId: 'story-1',
-				actLineId: 'line-1',
-				characterCanonicalName: 'elena-shadowcrest',
 				itemName: 'Iron Sword',
 				category: 'item',
 				equipStatus: 'carried',
 				description: null,
+				eventType: 'acquired',
 				messageId: 'msg-1',
-				createdAt: null,
+				sceneNumber: 1,
 			},
 			{
-				id: '2',
-				storyId: 'story-1',
-				actLineId: 'line-1',
-				characterCanonicalName: 'Elena',
 				itemName: 'Healing Potion',
 				category: 'item',
 				equipStatus: 'carried',
 				description: null,
+				eventType: 'acquired',
 				messageId: 'msg-2',
-				createdAt: null,
+				sceneNumber: 2,
 			},
 		];
 		mockResolveCharacterNames.mockResolvedValue(['elena-shadowcrest', 'Elena']);
-		mockGetInventory.mockImplementation(async (name: string) =>
-			items.filter((item) => item.characterCanonicalName === name)
+		mockGetLatestPerItem.mockImplementation(async (_actLineId: string, names: string[]) =>
+			items.filter((item) => names.includes(item.itemName === 'Iron Sword' ? 'elena-shadowcrest' : 'Elena'))
 		);
 
 		const tool = createQueryInventoryTool({
@@ -173,6 +161,61 @@ describe('createQueryInventoryTool', () => {
 		expect(result.inventory).toHaveLength(0);
 	});
 
+	it('child act line items take precedence over parent', async () => {
+		const childItems: InventoryItem[] = [
+			{
+				itemName: 'Iron Sword',
+				category: 'equipment',
+				equipStatus: 'equipped',
+				description: 'Now enchanted',
+				eventType: 'modified',
+				messageId: 'msg-5',
+				sceneNumber: 5,
+			},
+		];
+		const parentItems: InventoryItem[] = [
+			{
+				itemName: 'Iron Sword',
+				category: 'item',
+				equipStatus: 'carried',
+				description: 'A battered blade',
+				eventType: 'acquired',
+				messageId: 'msg-1',
+				sceneNumber: 1,
+			},
+			{
+				itemName: 'Shield',
+				category: 'equipment',
+				equipStatus: 'carried',
+				description: null,
+				eventType: 'acquired',
+				messageId: 'msg-2',
+				sceneNumber: 2,
+			},
+		];
+
+		mockGetLatestPerItem.mockImplementation(async (actLineId: string) =>
+			actLineId === 'line-2' ? childItems : parentItems
+		);
+
+		const tool = createQueryInventoryTool({
+			storyId: 'story-1',
+			actLineId: 'line-2',
+			actNumber: 2,
+		});
+
+		const result = (await tool.execute!(
+			{ characterName: 'elena' },
+			{ toolCallId: 'test', messages: [], abortSignal: undefined }
+		)) as unknown as QueryInventoryOutput;
+
+		expect(result.inventory).toHaveLength(2);
+		const sword = result.inventory.find((i) => i.name === 'Iron Sword');
+		expect(sword?.equipStatus).toBe('equipped');
+		expect(sword?.description).toBe('Now enchanted');
+		expect(result.inventory.find((i) => i.name === 'Shield')).toBeDefined();
+	});
+
 	it('filters by category when provided', async () => {
 		const tool = createQueryInventoryTool({
 			storyId: 'story-1',
@@ -181,55 +224,30 @@ describe('createQueryInventoryTool', () => {
 		});
 
 		await tool.execute!({ characterName: 'elena', itemCategory: 'skill' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
-		expect(mockGetInventory).toHaveBeenCalledWith('elena', {
-			storyId: 'story-1',
-			actLineIds: ['line-1', 'line-2'],
-			category: 'skill',
-		});
+		expect(mockGetLatestPerItem).toHaveBeenCalledWith('line-2', ['elena'], 'skill');
 	});
 
-	it('does not pass category filter when omitted', async () => {
-		const tool = createQueryInventoryTool({
-			storyId: 'story-1',
-			actLineId: 'line-2',
-			actNumber: 2,
-		});
-
-		await tool.execute!({ characterName: 'elena' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
-		expect(mockGetInventory).toHaveBeenCalledWith('elena', {
-			storyId: 'story-1',
-			actLineIds: ['line-1', 'line-2'],
-			category: undefined,
-		});
-	});
-
-	it('returns inventory changes when includeHistory is true', async () => {
-		const changes: InventoryChange[] = [
+	it('returns events when includeHistory is true', async () => {
+		const events: InventoryEvent[] = [
 			{
-				id: 'c1',
-				storyId: 'story-1',
-				actLineId: 'line-1',
-				characterCanonicalName: 'elena',
 				itemName: 'Iron Sword',
-				changeType: 'acquired',
+				eventType: 'acquired',
 				description: 'Found in the ruins',
 				messageId: 'msg-1',
+				sceneNumber: 1,
 				createdAt: null,
 			},
 			{
-				id: 'c2',
-				storyId: 'story-1',
-				actLineId: 'line-1',
-				characterCanonicalName: 'elena',
 				itemName: 'Wooden Shield',
-				changeType: 'lost',
+				eventType: 'lost',
 				description: 'Shattered by the golem',
 				messageId: 'msg-2',
+				sceneNumber: 2,
 				createdAt: null,
 			},
 		];
-		mockGetInventory.mockResolvedValue(sampleItems);
-		mockGetInventoryChanges.mockResolvedValue(changes);
+		mockGetLatestPerItem.mockResolvedValue(sampleItems);
+		mockGetInventoryEvents.mockResolvedValue(events);
 		const tool = createQueryInventoryTool({
 			storyId: 'story-1',
 			actLineId: 'line-2',
@@ -241,15 +259,15 @@ describe('createQueryInventoryTool', () => {
 			{ toolCallId: 'test', messages: [], abortSignal: undefined }
 		)) as unknown as QueryInventoryOutput;
 		expect(result.inventory).toHaveLength(2);
-		expect(result.changes).toBeDefined();
-		expect(result.changes).toHaveLength(2);
-		expect(result.changes![0].itemName).toBe('Iron Sword');
-		expect(result.changes![0].changeType).toBe('acquired');
-		expect(result.changes![0].description).toBe('Found in the ruins');
+		expect(result.events).toBeDefined();
+		expect(result.events).toHaveLength(2);
+		expect(result.events![0].itemName).toBe('Iron Sword');
+		expect(result.events![0].eventType).toBe('acquired');
+		expect(result.events![0].description).toBe('Found in the ruins');
 	});
 
-	it('omits changes when includeHistory is not set', async () => {
-		mockGetInventory.mockResolvedValue(sampleItems);
+	it('omits events when includeHistory is not set', async () => {
+		mockGetLatestPerItem.mockResolvedValue(sampleItems);
 		const tool = createQueryInventoryTool({
 			storyId: 'story-1',
 			actLineId: 'line-2',
@@ -261,11 +279,11 @@ describe('createQueryInventoryTool', () => {
 			{ toolCallId: 'test', messages: [], abortSignal: undefined }
 		)) as unknown as QueryInventoryOutput;
 		expect(result.inventory).toHaveLength(2);
-		expect(result.changes).toBeUndefined();
-		expect(mockGetInventoryChanges).not.toHaveBeenCalled();
+		expect(result.events).toBeUndefined();
+		expect(mockGetInventoryEvents).not.toHaveBeenCalled();
 	});
 
-	it('calls traceActLineChain and passes lineage actLineIds', async () => {
+	it('calls traceActLineChain for act > 1', async () => {
 		const tool = createQueryInventoryTool({
 			storyId: 'story-1',
 			actLineId: 'line-2',
@@ -274,7 +292,7 @@ describe('createQueryInventoryTool', () => {
 
 		await tool.execute!({ characterName: 'elena' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
 
-		expect(mockTraceActLineChain).toHaveBeenCalledWith('line-2');
+		expect(mockTraceActLineChain).toHaveBeenCalledWith('line-2', true);
 		expect(mockResolveCharacterNames).toHaveBeenCalledWith('line-2', 'elena');
 	});
 
@@ -288,6 +306,6 @@ describe('createQueryInventoryTool', () => {
 		await tool.execute!({ characterName: 'elena' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
 
 		expect(mockTraceActLineChain).not.toHaveBeenCalled();
-		expect(mockResolveCharacterNames).toHaveBeenCalledWith('line-1', 'elena');
+		expect(mockGetLatestPerItem).toHaveBeenCalledWith('line-1', ['elena'], undefined);
 	});
 });

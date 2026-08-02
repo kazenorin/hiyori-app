@@ -553,8 +553,9 @@ src:
       locale-strings:
         en.yaml:
           configPath: en/locale-strings.yaml
-          hash: f03a667b03130ed4f7c7426c08726b5fd76187c99594c8123ea7714e768bbeb6
+          hash: 0e96fd1ddd495728a3f1d59c46fed6f9e4c586c6e4fe061a79a311412bdefd8a
           oldHashes:
+            - f03a667b03130ed4f7c7426c08726b5fd76187c99594c8123ea7714e768bbeb6
             - ee684157248de5c152d847e1dea3f337c026a8e25c43f18e010377ccb2cc9c52
             - ba9cbdee4ae36e8ee5fca1d582a252ce982d950e579b07663358563f450016a4
             - 8c89d8dc883781bb770db86b9e97ae54ce992260f370f46070dd965e9cf84a2e
@@ -566,11 +567,12 @@ src:
             - 2dac94173236f1d91ad05073d7ac651ae1265c4182815041ba5663713dcdd799
             - 80d841aa000184d8604696b1f1877aebb1a348db16d2267e57b421c5eed4c959
             - 02c2f6c61d948f401f32cdd4eb656a574da0366b3a2809ee2ff3c42b47348649
-          updatedAt: "2026-08-02T12:24:48.783Z"
+          updatedAt: "2026-08-02T14:46:47.419Z"
         zh-Hant-HK.yaml:
           configPath: zh-Hant-HK/locale-strings.yaml
-          hash: 017223f61e3392b7da0afdfc19de8f7fba951525058a76ea114623a648a47817
+          hash: 834d92eb3a0bfaaaf0cf9f9e58c7b50de8dea6f21b59f40455b2eda65995824b
           oldHashes:
+            - 017223f61e3392b7da0afdfc19de8f7fba951525058a76ea114623a648a47817
             - dbb6cf3c5ba89eb69834b403da4e7ab1cc5411f58f298287d8b5a7c10cf645e1
             - f9af8fd7e31b477e31f063b9cfd49d76d510eb14c43ad2d89efa5eab276d7fde
             - 78054d983230282f19d1ee6491dbc457c9d8e00a6175bea3b21a5c04b113d085
@@ -582,4 +584,4 @@ src:
             - 0eda1a48149469d75b776af15e1b34a8510a948660818ad2f0047cb2c4e95f1c
             - c9bca07458a02fd17114e6456a4c281b2460dc392ffccd2bd103199af045c4cb
             - f7772bf027cfec167bdc5e5d85aa783fac24f47303072a00685d5d7b70b80b54
-          updatedAt: "2026-08-02T12:24:48.783Z"
+          updatedAt: "2026-08-02T14:46:47.419Z"
