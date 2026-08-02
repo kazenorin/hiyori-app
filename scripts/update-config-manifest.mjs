@@ -68,6 +68,14 @@ function collectSourceFiles() {
 			const treeKeys = pathToTreeKeys(locale, 'view-templates', relFromViewTemplates);
 			entries.push({ filePath, configPath, treeKeys });
 		}
+
+		const namesDir = join(SRC_ROOT, locale, 'names');
+		for (const filePath of walkDir(namesDir)) {
+			const relFromNames = relative(namesDir, filePath).split(sep).join('/');
+			const configPath = `${locale}/names/${relFromNames}`;
+			const treeKeys = pathToTreeKeys(locale, 'names', relFromNames);
+			entries.push({ filePath, configPath, treeKeys });
+		}
 	}
 
 	const localeStringsDir = join(SRC_ROOT, 'locale-strings');

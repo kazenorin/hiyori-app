@@ -32,6 +32,10 @@ export function getViewTemplatesDir(locale?: string): string {
 	return `config/${locale ?? activeLocale}/view-templates`;
 }
 
+export function getNamesDir(locale?: string): string {
+	return `config/${locale ?? activeLocale}/names`;
+}
+
 /**
  * Build a locale-keyed default content map from glob results.
  * Logs a warning if the relativePath isn't found in any locale's glob output.
@@ -93,6 +97,14 @@ export abstract class LocalizedTemplateFile {
 	}
 
 	/**
+	 * Load this template's content for a specific locale (no story override).
+	 * Ensures the base file exists in AppData, then returns its content.
+	 */
+	async loadForLocale(locale: string): Promise<string> {
+		return loadTemplate(this.getBaseDirForLocale(locale), this.relativePath, this.getDefaultContent(locale));
+	}
+
+	/**
 	 * Load this template with story-specific override for the active locale.
 	 *
 	 * Resolution order:
@@ -127,6 +139,15 @@ export class LocalizedViewTemplateFile extends LocalizedTemplateFile {
 	}
 	protected getDirForLocale(locale: string): string {
 		return getViewTemplatesDir(locale);
+	}
+}
+
+export class LocalizedNameFile extends LocalizedTemplateFile {
+	constructor(globResults: Record<string, Record<string, string>>, relativePath: string) {
+		super(globResults, 'names', relativePath);
+	}
+	protected getDirForLocale(locale: string): string {
+		return getNamesDir(locale);
 	}
 }
 
