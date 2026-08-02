@@ -128,6 +128,37 @@ const migrationStatements: string[][] = [
 		`CREATE INDEX IF NOT EXISTS idx_character_profiles_actline_canonical_scene ON character_profiles(act_line_id, canonical_name, scene_number DESC)`,
 		`CREATE INDEX IF NOT EXISTS idx_character_profiles_actline_preferred_scene ON character_profiles(act_line_id, preferred_name, scene_number DESC)`,
 	],
+	[
+		`CREATE TABLE IF NOT EXISTS inventory (
+			id TEXT PRIMARY KEY,
+			story_id TEXT NOT NULL,
+			act_line_id TEXT NOT NULL,
+			character_canonical_name TEXT NOT NULL,
+			item_name TEXT NOT NULL,
+			category TEXT NOT NULL,
+			equip_status TEXT NOT NULL DEFAULT 'carried',
+			description TEXT,
+			message_id TEXT NOT NULL,
+			created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+			UNIQUE(act_line_id, character_canonical_name, item_name)
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_inventory_character ON inventory(character_canonical_name)`,
+		`CREATE INDEX IF NOT EXISTS idx_inventory_act_line ON inventory(act_line_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_inventory_story ON inventory(story_id)`,
+		`CREATE TABLE IF NOT EXISTS inventory_changes (
+			id TEXT PRIMARY KEY,
+			story_id TEXT NOT NULL,
+			act_line_id TEXT NOT NULL,
+			character_canonical_name TEXT NOT NULL,
+			item_name TEXT NOT NULL,
+			change_type TEXT NOT NULL,
+			description TEXT,
+			message_id TEXT NOT NULL,
+			created_at TEXT DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_inventory_changes_character ON inventory_changes(character_canonical_name)`,
+		`CREATE INDEX IF NOT EXISTS idx_inventory_changes_act_line ON inventory_changes(act_line_id)`,
+	],
 ];
 
 interface ActLineMetaMigrateRow {
