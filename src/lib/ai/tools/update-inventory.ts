@@ -5,14 +5,13 @@ import type { ToolSet } from 'ai';
 import type { ToolContext } from './tools';
 import { log } from './utils';
 import {
-	upsertInventoryItems,
-	insertInventoryChanges,
+	appendInventoryEvents,
 	INVENTORY_CATEGORIES,
 	EQUIP_STATUSES,
-	INVENTORY_CHANGE_TYPES,
+	INVENTORY_EVENT_TYPES,
 	type InventoryCategory,
 	type EquipStatus,
-	type InventoryChangeType,
+	type InventoryEventType,
 } from '$lib/db/inventory';
 
 export interface UpdateInventoryContext extends ToolContext {
@@ -22,64 +21,40 @@ export interface UpdateInventoryContext extends ToolContext {
 export function createUpdateInventoryTool(ctx: UpdateInventoryContext) {
 	const { story, actLine, messageId } = ctx;
 
-	const itemSchema = z.object({
+	const eventSchema = z.object({
 		itemName: z.string().min(1).describe(ls('tools.updateInventory.parameters.itemName')),
-		category: z.enum(INVENTORY_CATEGORIES).describe(ls('tools.updateInventory.parameters.category')),
-		equipStatus: z.enum(EQUIP_STATUSES).optional().default('carried').describe(ls('tools.updateInventory.parameters.equipStatus')),
-		description: z.string().optional().describe(ls('tools.updateInventory.parameters.itemDescription')),
-	});
-
-	const changeSchema = z.object({
-		itemName: z.string().min(1).describe(ls('tools.updateInventory.parameters.itemName')),
-		changeType: z.enum(INVENTORY_CHANGE_TYPES).describe(ls('tools.updateInventory.parameters.changeType')),
-		description: z.string().optional().describe(ls('tools.updateInventory.parameters.changeDescription')),
+		eventType: z.enum(INVENTORY_EVENT_TYPES).describe(ls('tools.updateInventory.parameters.eventType')),
+		category: z.enum(INVENTORY_CATEGORIES).optional().describe(ls('tools.updateInventory.parameters.category')),
+		equipStatus: z.enum(EQUIP_STATUSES).optional().describe(ls('tools.updateInventory.parameters.equipStatus')),
+		description: z.string().optional().describe(ls('tools.updateInventory.parameters.description')),
 	});
 
 	const inputSchema = z.object({
 		characterName: z.string().min(1).describe(ls('tools.updateInventory.parameters.characterName')),
-		items: z.array(itemSchema).optional().describe(ls('tools.updateInventory.parameters.items')),
-		changes: z.array(changeSchema).optional().describe(ls('tools.updateInventory.parameters.changes')),
+		events: z.array(eventSchema).min(1).describe(ls('tools.updateInventory.parameters.events')),
 	});
 
 	return tool({
 		description: ls('tools.updateInventory.description'),
 		inputSchema,
 		execute: async (input): Promise<string> => {
-			const { characterName, items = [], changes = [] } = input;
-			await log(`update-inventory triggered: character=${characterName}, items=${items.length}, changes=${changes.length}`);
+			const { characterName, events } = input;
+			await log(`update-inventory triggered: character=${characterName}, events=${events.length}`);
 
-			if (items.length === 0 && changes.length === 0) {
-				return ls('tools.updateInventory.messages.empty');
-			}
-
-			if (items.length > 0) {
-				await upsertInventoryItems(
-					story.id,
-					actLine.id,
-					messageId,
-					items.map((i) => ({
-						characterName,
-						itemName: i.itemName,
-						category: i.category as InventoryCategory,
-						equipStatus: i.equipStatus as EquipStatus,
-						description: i.description,
-					}))
-				);
-			}
-
-			if (changes.length > 0) {
-				await insertInventoryChanges(
-					story.id,
-					actLine.id,
-					messageId,
-					changes.map((c) => ({
-						characterName,
-						itemName: c.itemName,
-						changeType: c.changeType as InventoryChangeType,
-						description: c.description,
-					}))
-				);
-			}
+			await appendInventoryEvents(
+				story.id,
+				actLine.id,
+				messageId,
+				actLine.currentScene,
+				events.map((e) => ({
+					characterName,
+					itemName: e.itemName,
+					eventType: e.eventType as InventoryEventType,
+					category: e.category as InventoryCategory | undefined,
+					equipStatus: e.equipStatus as EquipStatus | undefined,
+					description: e.description,
+				}))
+			);
 
 			await log(`update-inventory persisted for ${characterName}`);
 			return `Inventory updated for ${characterName}.`;

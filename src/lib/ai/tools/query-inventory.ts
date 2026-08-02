@@ -1,7 +1,7 @@
 import { ls } from '$lib/localization';
 import { tool } from 'ai';
 import { z } from 'zod';
-import { getInventory, getInventoryChanges, resolveCharacterNames, type InventoryCategory } from '$lib/db/inventory';
+import { getLatestPerItem, getInventoryEvents, resolveCharacterNames, type InventoryCategory } from '$lib/db/inventory';
 import { traceActLineChain } from '$lib/db/acts';
 import { isInventoryAvailable } from '$lib/stores/settings.svelte';
 import type { ToolSet } from 'ai';
@@ -15,20 +15,20 @@ export interface QueryInventoryContext {
 
 interface InventoryResult {
 	name: string;
-	category: InventoryCategory;
-	equipStatus: string;
+	category: string | null;
+	equipStatus: string | null;
 	description: string | null;
 }
 
-interface InventoryChangeResult {
+interface InventoryEventResult {
 	itemName: string;
-	changeType: string;
+	eventType: string;
 	description: string | null;
 }
 
 interface QueryInventoryOutput {
 	inventory: InventoryResult[];
-	changes?: InventoryChangeResult[];
+	events?: InventoryEventResult[];
 }
 
 export function createQueryInventoryTool(context: QueryInventoryContext) {
@@ -52,42 +52,34 @@ export function createQueryInventoryTool(context: QueryInventoryContext) {
 				`query-inventory triggered: character=${characterName}, category=${itemCategory ?? 'all'}, includeHistory=${includeHistory}`
 			);
 
-			const actLineIds = actNumber > 1 ? (await traceActLineChain(actLineId)).map((l) => l.actLineId) : [actLineId];
-
+			const chain = actNumber > 1 ? await traceActLineChain(actLineId, true) : [{ actLineId }];
 			const resolvedNames = await resolveCharacterNames(actLineId, characterName);
 
-			const allItems: InventoryResult[] = [];
-			for (const name of resolvedNames) {
-				const items = await getInventory(name, {
-					storyId,
-					actLineIds,
-					category: itemCategory as InventoryCategory | undefined,
-				});
-				allItems.push(
-					...items.map((item) => ({
-						name: item.itemName,
-						category: item.category,
-						equipStatus: item.equipStatus,
-						description: item.description,
-					}))
-				);
+			const seen = new Map<string, InventoryResult>();
+			for (const link of chain) {
+				const items = await getLatestPerItem(link.actLineId, resolvedNames, itemCategory as InventoryCategory | undefined);
+				for (const item of items) {
+					if (!seen.has(item.itemName)) {
+						seen.set(item.itemName, {
+							name: item.itemName,
+							category: item.category,
+							equipStatus: item.equipStatus,
+							description: item.description,
+						});
+					}
+				}
 			}
 
-			const output: QueryInventoryOutput = { inventory: allItems };
+			const output: QueryInventoryOutput = { inventory: [...seen.values()] };
 
 			if (includeHistory) {
-				const allChanges: InventoryChangeResult[] = [];
-				for (const name of resolvedNames) {
-					const changes = await getInventoryChanges(name, { storyId, actLineIds });
-					allChanges.push(
-						...changes.map((change) => ({
-							itemName: change.itemName,
-							changeType: change.changeType,
-							description: change.description,
-						}))
-					);
-				}
-				output.changes = allChanges;
+				const actLineIds = chain.map((l) => l.actLineId);
+				const events = await getInventoryEvents(resolvedNames, { storyId, actLineIds });
+				output.events = events.map((e) => ({
+					itemName: e.itemName,
+					eventType: e.eventType,
+					description: e.description,
+				}));
 			}
 
 			return output;
