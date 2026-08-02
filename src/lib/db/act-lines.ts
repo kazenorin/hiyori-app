@@ -271,6 +271,8 @@ export async function deleteActLine(id: string): Promise<void> {
 	await db.execute('DELETE FROM act_line_events WHERE act_line_id = $1', [id]);
 	await db.execute('DELETE FROM director_notes WHERE act_line_id = $1', [id]);
 	await db.execute('DELETE FROM character_profiles WHERE act_line_id = $1', [id]);
+	await db.execute('DELETE FROM inventory WHERE act_line_id = $1', [id]);
+	await db.execute('DELETE FROM inventory_changes WHERE act_line_id = $1', [id]);
 	await db.execute('DELETE FROM act_line_meta WHERE id = $1', [id]);
 
 	await removeOrphanedMessages(db, messageIds);

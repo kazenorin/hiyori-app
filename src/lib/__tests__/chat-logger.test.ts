@@ -37,6 +37,7 @@ vi.mock('$lib/stores/settings.svelte', () => ({
 		logLevel: 'debug',
 		fontSize: 1.0,
 		memoryEnabled: true,
+		inventoryEnabled: false,
 		memoryProviderRole: 'main',
 	})),
 }));
@@ -70,6 +71,7 @@ function defaultSettings() {
 		logLevel: 'debug' as const,
 		fontSize: 1.0,
 		memoryEnabled: true,
+		inventoryEnabled: false,
 		memoryProviderRole: 'main',
 		embeddingProviderRole: 'main',
 		plotPlannerProviderRole: 'main',

@@ -4,6 +4,7 @@ import * as dbActLines from '$lib/db/act-lines';
 import * as dbAppState from '$lib/db/app-state';
 import * as dbDirectorNotes from '$lib/db/director-notes';
 import { cloneCharacterProfiles, inheritProfilesFromActLine } from '$lib/db/character-profiles';
+import { cloneInventory } from '$lib/db/inventory';
 import { loadLocaleStrings } from '$lib/localization';
 import { log } from '$lib/logging/logger';
 import { moveWorldBuilderLog } from '$lib/logging/chat-logger';
@@ -430,6 +431,7 @@ export async function forkActLine(fromLineId: string, fromSequence: number, actI
 	if (forkSceneNumber !== null) {
 		await cloneCharacterProfiles(fromLineId, lineMeta.id, forkSceneNumber);
 	}
+	await cloneInventory(fromLineId, lineMeta.id);
 
 	await selectActLine(lineMeta.id);
 
@@ -514,6 +516,7 @@ export async function forkActLineForInterview(
 	if (forkSceneNumber !== null) {
 		await cloneCharacterProfiles(fromLineId, lineMeta.id, forkSceneNumber);
 	}
+	await cloneInventory(fromLineId, lineMeta.id);
 
 	return lineMeta;
 }

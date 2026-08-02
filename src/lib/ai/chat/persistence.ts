@@ -4,9 +4,10 @@ import { parseImportantPhrases, serializeImportantPhrases } from '$lib/db/messag
 export { serializeImportantPhrases };
 import { Memory } from '$lib/features/memory';
 import { log } from '$lib/logging/logger';
-import { getMemoryProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
+import { getMemoryProviderConfig, isMemoryAvailable, isInventoryAvailable } from '$lib/stores/settings.svelte';
 import { getActiveStoryId } from '$lib/stores/stories.svelte';
 import { getErrorMessage } from '$lib/utils/error-handling';
+import { deleteInventoryByMessages } from '$lib/db/inventory';
 import type { MessageMetadata, PhaseMetadata } from '../chat-stream';
 import type { AssistantContext } from '$lib/ai/pipeline/types';
 import type { UIMessage } from './types';
@@ -130,6 +131,13 @@ export async function removeMessagesById(actLineId: string, messageIds: string[]
 			await removeMemoriesFromActLine(actLineId, removedIds);
 		} catch (err) {
 			await log.error('remove-messages-from-index', 'Memory cleanup failed', err);
+		}
+		if (isInventoryAvailable()) {
+			try {
+				await deleteInventoryByMessages(actLineId, removedIds);
+			} catch (err) {
+				await log.error('remove-messages-from-index', 'Inventory cleanup failed', err);
+			}
 		}
 	}
 	return true;
