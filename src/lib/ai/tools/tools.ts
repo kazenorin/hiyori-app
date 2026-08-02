@@ -1,5 +1,6 @@
 import { buildMemoryTools } from '$lib/ai/tools/query-memories';
 import { buildInventoryTools } from '$lib/ai/tools/query-inventory';
+import { buildUpdateInventoryTools } from '$lib/ai/tools/update-inventory';
 import { buildActPlotTools } from '$lib/ai/tools/read-act-plot';
 import { buildSceneTools } from '$lib/ai/tools/read-scene';
 import { buildRiskTools } from '$lib/ai/tools/evaluate-risk';
@@ -15,6 +16,7 @@ import { getSceneCountInCurrentPhase, isActLineEnded } from '$lib/db/act-lines';
 import { type Act, getAct } from '$lib/db/acts';
 import { type ToolSet } from 'ai';
 import type { NarrativeOverrides, PhaseName, ActPhase } from '$lib/ai/narrative-types';
+import { isInventoryAvailable } from '$lib/stores/settings.svelte';
 
 export interface ToolContext {
 	story: Story;
@@ -31,6 +33,7 @@ export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 		'read-distant-scene',
 		'query-memories',
 		'query-inventory',
+		'update-inventory',
 		'evaluate-risk',
 		'advance-phase',
 		'end-act',
@@ -87,6 +90,10 @@ export async function buildTools(
 		...buildSetSceneTitleTools(ctx, overrides),
 		...buildSuggestCharacterNameTools(ctx),
 	};
+
+	if (isInventoryAvailable()) {
+		Object.assign(tools, buildUpdateInventoryTools({ ...ctx, messageId: assistant.messageId }));
+	}
 
 	const currentPhase: ActPhase | null = actLine.currentActPhase;
 	const ended = await isActLineEnded(actLine.id);

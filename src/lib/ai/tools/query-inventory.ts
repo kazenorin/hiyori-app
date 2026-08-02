@@ -1,15 +1,13 @@
 import { ls } from '$lib/localization';
 import { tool } from 'ai';
 import { z } from 'zod';
-import { Memory } from '$lib/features/memory';
-import type { InventoryCategory } from '$lib/features/memory/inventory-types';
+import { getInventory, getInventoryChanges, resolveCharacterNames, type InventoryCategory } from '$lib/db/inventory';
 import { traceActLineChain } from '$lib/db/acts';
-import { getEmbeddingProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
+import { isInventoryAvailable } from '$lib/stores/settings.svelte';
 import type { ToolSet } from 'ai';
 import { log } from './utils';
 
 export interface QueryInventoryContext {
-	memory: Memory;
 	storyId: string;
 	actLineId: string;
 	actNumber: number;
@@ -34,7 +32,7 @@ interface QueryInventoryOutput {
 }
 
 export function createQueryInventoryTool(context: QueryInventoryContext) {
-	const { memory, storyId, actLineId, actNumber } = context;
+	const { storyId, actLineId, actNumber } = context;
 
 	const inputSchema = z.object({
 		characterName: z.string().describe(ls('tools.queryInventory.parameters.characterName')),
@@ -56,11 +54,11 @@ export function createQueryInventoryTool(context: QueryInventoryContext) {
 
 			const actLineIds = actNumber > 1 ? (await traceActLineChain(actLineId)).map((l) => l.actLineId) : [actLineId];
 
-			const resolvedNames = await memory.resolveAliases(storyId, actLineIds, characterName);
+			const resolvedNames = await resolveCharacterNames(actLineId, characterName);
 
 			const allItems: InventoryResult[] = [];
 			for (const name of resolvedNames) {
-				const items = await memory.getInventory(name, {
+				const items = await getInventory(name, {
 					storyId,
 					actLineIds,
 					category: itemCategory as InventoryCategory | undefined,
@@ -80,7 +78,7 @@ export function createQueryInventoryTool(context: QueryInventoryContext) {
 			if (includeHistory) {
 				const allChanges: InventoryChangeResult[] = [];
 				for (const name of resolvedNames) {
-					const changes = await memory.getInventoryChanges(name, { storyId, actLineIds });
+					const changes = await getInventoryChanges(name, { storyId, actLineIds });
 					allChanges.push(
 						...changes.map((change) => ({
 							itemName: change.itemName,
@@ -98,18 +96,10 @@ export function createQueryInventoryTool(context: QueryInventoryContext) {
 }
 
 export function buildInventoryTools(storyId: string | null, actLineId: string, actNumber: number): ToolSet {
-	if (!isMemoryAvailable()) return {};
+	if (!isInventoryAvailable()) return {};
 	if (!storyId || !actLineId) return {};
 
-	const memConfig = getEmbeddingProviderConfig();
-	if (!memConfig) return {};
-
 	return {
-		'query-inventory': createQueryInventoryTool({
-			memory: new Memory(memConfig),
-			storyId,
-			actLineId,
-			actNumber,
-		}),
+		'query-inventory': createQueryInventoryTool({ storyId, actLineId, actNumber }),
 	};
 }
