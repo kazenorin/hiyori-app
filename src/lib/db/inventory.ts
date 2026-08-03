@@ -4,22 +4,34 @@ import { traceActLineChain } from './acts';
 
 export type InventoryCategory = 'item' | 'equipment' | 'skill' | 'clothing' | 'status';
 
-export type EquipStatus = 'equipped' | 'carried' | 'owned' | 'known';
+export type EquipStatus = 'equipped' | 'unequipped' | 'carried' | 'owned' | 'known' | 'lost' | 'consumed';
 
-export type InventoryEventType = 'acquired' | 'lost' | 'equipped' | 'unequipped' | 'used' | 'modified';
+export type InventoryEventType = 'acquired' | 'lost' | 'consumed' | 'equipped' | 'unequipped' | 'used' | 'modified';
 
 export const INVENTORY_CATEGORIES: readonly InventoryCategory[] = ['item', 'equipment', 'skill', 'clothing', 'status'] as const;
 
-export const EQUIP_STATUSES: readonly EquipStatus[] = ['equipped', 'carried', 'owned', 'known'] as const;
+export const EQUIP_STATUSES: readonly EquipStatus[] = [
+	'equipped',
+	'unequipped',
+	'carried',
+	'owned',
+	'known',
+	'lost',
+	'consumed',
+] as const;
 
 export const INVENTORY_EVENT_TYPES: readonly InventoryEventType[] = [
 	'acquired',
 	'lost',
+	'consumed',
 	'equipped',
 	'unequipped',
 	'used',
 	'modified',
 ] as const;
+
+/** Statuses that mean the character no longer has the item. */
+export const EXCLUDED_STATUSES: readonly EquipStatus[] = ['lost', 'consumed'];
 
 export interface InventoryRow {
 	id: string;
@@ -31,24 +43,24 @@ export interface InventoryRow {
 	item_name: string;
 	event_type: string;
 	category: string | null;
-	equip_status: string | null;
+	equip_status: string;
 	description: string | null;
 	created_at: string | null;
 }
 
 export interface InventoryItem {
 	itemName: string;
-	category: string | null;
-	equipStatus: string | null;
+	category: InventoryCategory | null;
+	equipStatus: EquipStatus;
 	description: string | null;
-	eventType: string;
+	eventType: InventoryEventType;
 	messageId: string;
 	sceneNumber: number | null;
 }
 
 export interface InventoryEvent {
 	itemName: string;
-	eventType: string;
+	eventType: InventoryEventType;
 	description: string | null;
 	messageId: string;
 	sceneNumber: number | null;
@@ -67,10 +79,10 @@ export interface AppendInventoryEventInput {
 function mapRowToItem(row: InventoryRow): InventoryItem {
 	return {
 		itemName: row.item_name,
-		category: row.category,
-		equipStatus: row.equip_status,
+		category: row.category as InventoryCategory | null,
+		equipStatus: row.equip_status as EquipStatus,
 		description: row.description,
-		eventType: row.event_type,
+		eventType: row.event_type as InventoryEventType,
 		messageId: row.message_id,
 		sceneNumber: row.scene_number,
 	};
@@ -79,7 +91,7 @@ function mapRowToItem(row: InventoryRow): InventoryItem {
 function mapRowToEvent(row: InventoryRow): InventoryEvent {
 	return {
 		itemName: row.item_name,
-		eventType: row.event_type,
+		eventType: row.event_type as InventoryEventType,
 		description: row.description,
 		messageId: row.message_id,
 		sceneNumber: row.scene_number,
@@ -98,25 +110,36 @@ export async function appendInventoryEvents(
 	for (const event of events) {
 		const canonical = toCanonicalName(event.characterName);
 
-		let category: string | null = event.category ?? null;
-		let equipStatus: string | null = event.equipStatus ?? null;
+		let category: InventoryCategory | null = event.category ?? null;
+		let priorEquipStatus: EquipStatus | undefined;
 
 		if (event.eventType !== 'acquired') {
 			const prior = await getLatestRowForItem(actLineId, canonical, event.itemName);
 			if (prior) {
-				category = category ?? prior.category;
-				equipStatus = equipStatus ?? prior.equip_status;
+				category = category ?? (prior.category as InventoryCategory | null);
+				priorEquipStatus = prior.equip_status as EquipStatus;
 			}
 		}
 
-		if (event.eventType === 'equipped') {
-			equipStatus = 'equipped';
-		} else if (event.eventType === 'unequipped') {
-			equipStatus = 'carried';
-		}
-
-		if (event.eventType === 'acquired' && !equipStatus) {
-			equipStatus = 'carried';
+		let equipStatus: EquipStatus;
+		switch (event.eventType) {
+			case 'equipped':
+				equipStatus = 'equipped';
+				break;
+			case 'unequipped':
+				equipStatus = 'unequipped';
+				break;
+			case 'lost':
+				equipStatus = 'lost';
+				break;
+			case 'consumed':
+				equipStatus = 'consumed';
+				break;
+			case 'acquired':
+				equipStatus = event.equipStatus ?? 'carried';
+				break;
+			default:
+				equipStatus = event.equipStatus ?? priorEquipStatus ?? 'carried';
 		}
 
 		await db.execute(
@@ -148,7 +171,7 @@ async function getLatestRowForItem(
 	const rows = await db.select<InventoryRow[]>(
 		`SELECT * FROM inventory
 		 WHERE act_line_id = $1 AND character_canonical_name = $2 AND item_name = $3
-		 ORDER BY created_at DESC LIMIT 1`,
+		 ORDER BY COALESCE(scene_number, -1) DESC, rowid DESC LIMIT 1`,
 		[actLineId, characterCanonicalName, itemName]
 	);
 	return rows.length > 0 ? rows[0] : null;
@@ -161,22 +184,19 @@ export async function getLatestPerItem(
 ): Promise<InventoryItem[]> {
 	const db = getDatabase();
 	const namePlaceholders = characterNames.map((_, i) => `$${i + 2}`).join(',');
-	let query = `SELECT * FROM inventory WHERE act_line_id = $1 AND character_canonical_name IN (${namePlaceholders})`;
-	const params: (string | number)[] = [actLineId, ...characterNames];
-	if (category) {
-		params.push(category);
-		query += ` AND category = $${params.length}`;
-	}
-	query += ' ORDER BY created_at ASC';
-
-	const rows = await db.select<InventoryRow[]>(query, params);
+	const query = `SELECT * FROM inventory WHERE act_line_id = $1 AND character_canonical_name IN (${namePlaceholders})
+	 ORDER BY COALESCE(scene_number, -1) ASC, rowid ASC`;
+	const rows = await db.select<InventoryRow[]>(query, [actLineId, ...characterNames]);
 
 	const seen = new Map<string, InventoryRow>();
 	for (const row of rows) {
 		seen.set(row.item_name, row);
 	}
 
-	return [...seen.values()].filter((r) => r.event_type !== 'lost').map(mapRowToItem);
+	return [...seen.values()]
+		.filter((r) => !EXCLUDED_STATUSES.includes(r.equip_status as EquipStatus))
+		.filter((r) => !category || r.category === category)
+		.map(mapRowToItem);
 }
 
 export async function getInventoryEvents(
@@ -189,7 +209,7 @@ export async function getInventoryEvents(
 	const rows = await db.select<InventoryRow[]>(
 		`SELECT * FROM inventory
 		 WHERE story_id = $1 AND act_line_id IN (${linePlaceholders}) AND character_canonical_name IN (${namePlaceholders})
-		 ORDER BY created_at ASC`,
+		 ORDER BY COALESCE(scene_number, -1) ASC, rowid ASC`,
 		[opts.storyId, ...opts.actLineIds, ...characterNames]
 	);
 
@@ -205,10 +225,14 @@ export async function getInventoryEvents(
 	return events;
 }
 
-export async function resolveCharacterNames(actLineId: string, name: string): Promise<string[]> {
+export async function resolveCharacterNames(
+	actLineId: string,
+	name: string,
+	chain?: { actLineId: string }[]
+): Promise<string[]> {
 	const canonical = toCanonicalName(name);
-	const chain = await traceActLineChain(actLineId, true);
-	for (const link of chain) {
+	const resolvedChain = chain ?? (await traceActLineChain(actLineId, true));
+	for (const link of resolvedChain) {
 		const profile = await getLatestProfileByAlias(link.actLineId, name);
 		if (profile) {
 			return [profile.canonicalName, canonical, ...profile.aliases.map(toCanonicalName)].filter(

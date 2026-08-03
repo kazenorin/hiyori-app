@@ -139,7 +139,7 @@ const migrationStatements: string[][] = [
 			item_name TEXT NOT NULL,
 			event_type TEXT NOT NULL,
 			category TEXT,
-			equip_status TEXT,
+			equip_status TEXT NOT NULL DEFAULT 'carried',
 			description TEXT,
 			created_at TEXT DEFAULT CURRENT_TIMESTAMP
 		)`,
