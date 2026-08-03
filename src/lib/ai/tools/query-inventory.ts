@@ -1,7 +1,14 @@
 import { ls } from '$lib/localization';
 import { tool } from 'ai';
 import { z } from 'zod';
-import { getLatestPerItem, getInventoryEvents, resolveCharacterNames, type InventoryCategory } from '$lib/db/inventory';
+import {
+	getLatestPerItem,
+	getInventoryEvents,
+	resolveCharacterNames,
+	type InventoryCategory,
+	type EquipStatus,
+	type InventoryEventType,
+} from '$lib/db/inventory';
 import { traceActLineChain } from '$lib/db/acts';
 import { isInventoryAvailable } from '$lib/stores/settings.svelte';
 import type { ToolSet } from 'ai';
@@ -15,15 +22,16 @@ export interface QueryInventoryContext {
 
 interface InventoryResult {
 	name: string;
-	category: string | null;
-	equipStatus: string | null;
+	category: InventoryCategory | null;
+	equipStatus: EquipStatus;
 	description: string | null;
 }
 
 interface InventoryEventResult {
 	itemName: string;
-	eventType: string;
+	eventType: InventoryEventType;
 	description: string | null;
+	sceneNumber: number | null;
 }
 
 interface QueryInventoryOutput {
@@ -53,7 +61,7 @@ export function createQueryInventoryTool(context: QueryInventoryContext) {
 			);
 
 			const chain = actNumber > 1 ? await traceActLineChain(actLineId, true) : [{ actLineId }];
-			const resolvedNames = await resolveCharacterNames(actLineId, characterName);
+			const resolvedNames = await resolveCharacterNames(actLineId, characterName, chain);
 
 			const seen = new Map<string, InventoryResult>();
 			for (const link of chain) {
@@ -79,6 +87,7 @@ export function createQueryInventoryTool(context: QueryInventoryContext) {
 					itemName: e.itemName,
 					eventType: e.eventType,
 					description: e.description,
+					sceneNumber: e.sceneNumber,
 				}));
 			}
 
