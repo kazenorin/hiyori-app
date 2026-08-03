@@ -509,22 +509,38 @@ tools:
 
       在描述角色使用物品或能力之前，請先使用此工具以確保一致性。
 
-      設 includeHistory 為 true 可同時查看角色的物品欄變更事件記錄 (獲得、失去、裝備、卸下、使用、修改) 。
+      設 includeHistory 為 true 可同時查看角色的物品欄變更事件記錄 (獲得、失去、消耗、裝備、卸下、使用、修改) 。
     parameters:
       characterName: '角色名稱 (正規名稱或別名) '
       itemCategory: '選填篩選條件，僅回傳指定類別'
       includeHistory: '若為 true，同時回傳物品欄變更事件歷史'
   updateInventory:
     description: >
-      當場景中發生物品獲得、失去、裝備、使用或修改時，更新角色的物品欄。
+      當場景中發生物品獲得、失去、消耗、裝備、使用或修改時，更新角色的物品欄。
       當角色的持有物、裝備、技能、服裝或狀態效果發生變化時呼叫此工具。
       將每個變更回報為事件——系統會自動維護當前狀態。
     parameters:
       characterName: '要更新物品欄的角色名稱'
       itemName: '物品名稱'
-      eventType: '物品發生了什麼事 (acquired, lost, equipped, unequipped, used, modified)'
+      eventType: >-
+        物品發生了什麼事。
+        acquired: 角色取得了物品。
+        lost: 不再持有(丟棄、被偷、贈送)但物品仍存在於世界中。
+        consumed: 消耗殆盡、不復存在(喝掉藥水、吃掉食物、燒掉卷軸)。
+        equipped: 裝備或持用。
+        unequipped: 卸下但仍持有。
+        used: 使用但物品仍完好。
+        modified: 改造、修理或升級。
       category: '物品類別 (acquired 時必填)'
-      equipStatus: '物品的持有方式 (預設: carried)'
+      equipStatus: >-
+        物品的持有方式 (預設: carried)。
+        equipped: 正裝備或持用中。
+        unequipped: 已從裝備卸下但仍持有。
+        carried: 隨身攜帶。
+        owned: 擁有但不在身上(存放於他處)。
+        known: 用於技能與知識，非實體持有。
+        lost: 已不再持有。
+        consumed: 已消耗殆盡。
       description: '選填的敘事描述'
       events: '此場景中發生的物品欄事件列表'
     messages:

@@ -517,22 +517,36 @@ tools:
 
       Use this tool before describing a character using an item or ability to ensure consistency.
 
-      Set includeHistory to true to also see the log of inventory change events (acquired, lost, equipped, unequipped, used, modified) for the character.
+      Set includeHistory to true to also see the log of inventory change events (acquired, lost, consumed, equipped, unequipped, used, modified) for the character.
     parameters:
       characterName: "The character's name (canonical name or alias)"
       itemCategory: 'Optional filter to return only one category'
       includeHistory: 'If true, also return the inventory change event history for this character'
   updateInventory:
     description: >
-      Update a character's inventory when items are acquired, lost, equipped, used, or modified during the scene.
+      Update a character's inventory when items are acquired, lost, consumed, equipped, used, or modified during the scene.
       Call this tool whenever a character's possessions, equipment, skills, clothing, or status effects change.
       Report each change as an event — the system maintains current state automatically.
     parameters:
       characterName: "The character's name whose inventory is being updated"
       itemName: 'Name of the item'
-      eventType: 'What happened to the item (acquired, lost, equipped, unequipped, used, modified)'
+      eventType: >-
+        What happened to the item. acquired: the character obtained it.
+        lost: no longer in the character's possession (dropped, stolen, given away) but still exists in the world.
+        consumed: used up and no longer exists (drank a potion, ate food, burned a scroll).
+        equipped: put on or wielded.
+        unequipped: removed from equipment but still held.
+        used: utilized but still intact.
+        modified: altered, repaired, or upgraded.
       category: 'Category of the item (required for acquired)'
-      equipStatus: 'How the item is held (default: carried)'
+      equipStatus: >-
+        How the item is held (default: carried).
+        equipped: actively worn or wielded.
+        unequipped: explicitly removed from equipment but still held.
+        carried: on the character's person.
+        owned: possessed but not on the person (stored elsewhere).
+        known: for skills and knowledge, not physically held.
+        lost: no longer in possession. consumed: used up and gone.
       description: 'Optional narrative description of what happened'
       events: 'List of inventory events that occurred during this scene'
     messages:
