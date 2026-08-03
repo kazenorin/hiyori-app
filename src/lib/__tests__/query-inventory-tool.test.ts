@@ -27,28 +27,32 @@ vi.mock('$lib/db/acts', () => ({
 
 const mockGetLatestPerItem = vi.fn(async (_actLineId: string, _names: string[], _category?: unknown): Promise<InventoryItem[]> => []);
 const mockGetInventoryEvents = vi.fn(async (_names: string[], _opts: unknown): Promise<InventoryEvent[]> => []);
-const mockResolveCharacterNames = vi.fn(async (_actLineId: string, name: string): Promise<string[]> => [name]);
+const mockResolveCharacterNames = vi.fn(
+	async (_actLineId: string, name: string, _chain?: { actLineId: string }[]): Promise<string[]> => [name]
+);
 
 vi.mock('$lib/db/inventory', () => ({
 	getLatestPerItem: (...args: unknown[]) => mockGetLatestPerItem(...(args as [string, string[], unknown])),
 	getInventoryEvents: (...args: unknown[]) => mockGetInventoryEvents(...(args as [string[], unknown])),
-	resolveCharacterNames: (...args: unknown[]) => mockResolveCharacterNames(...(args as [string, string])),
+	resolveCharacterNames: (...args: unknown[]) =>
+		mockResolveCharacterNames(...(args as [string, string, { actLineId: string }[]?])),
 }));
 
 import { createQueryInventoryTool } from '$lib/ai/tools/query-inventory';
-import type { InventoryItem, InventoryEvent } from '$lib/db/inventory';
+import type { InventoryItem, InventoryEvent, InventoryCategory, EquipStatus, InventoryEventType } from '$lib/db/inventory';
 
 interface InventoryResult {
 	name: string;
-	category: string | null;
-	equipStatus: string | null;
+	category: InventoryCategory | null;
+	equipStatus: EquipStatus;
 	description: string | null;
 }
 
 interface InventoryEventResult {
 	itemName: string;
-	eventType: string;
+	eventType: InventoryEventType;
 	description: string | null;
+	sceneNumber: number | null;
 }
 
 interface QueryInventoryOutput {
@@ -293,7 +297,10 @@ describe('createQueryInventoryTool', () => {
 		await tool.execute!({ characterName: 'elena' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
 
 		expect(mockTraceActLineChain).toHaveBeenCalledWith('line-2', true);
-		expect(mockResolveCharacterNames).toHaveBeenCalledWith('line-2', 'elena');
+		expect(mockResolveCharacterNames).toHaveBeenCalledWith('line-2', 'elena', [
+			{ actLineId: 'line-2', actNumber: 2, isMainLine: false },
+			{ actLineId: 'line-1', actNumber: 1, isMainLine: true },
+		]);
 	});
 
 	it('skips traceActLineChain in act 1 and uses only current actLineId', async () => {
@@ -306,6 +313,7 @@ describe('createQueryInventoryTool', () => {
 		await tool.execute!({ characterName: 'elena' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
 
 		expect(mockTraceActLineChain).not.toHaveBeenCalled();
+		expect(mockResolveCharacterNames).toHaveBeenCalledWith('line-1', 'elena', [{ actLineId: 'line-1' }]);
 		expect(mockGetLatestPerItem).toHaveBeenCalledWith('line-1', ['elena'], undefined);
 	});
 });
