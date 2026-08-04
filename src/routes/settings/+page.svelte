@@ -16,6 +16,7 @@
 	} from '$lib/stores/settings.svelte';
 	import { deleteStory, getStories } from '$lib/stores/stories.svelte';
 	import * as dbAppState from '$lib/db/app-state';
+	import { resolve } from '$app/paths';
 	import { t } from '$lib/i18n';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
@@ -468,6 +469,11 @@
 						? t('settings.characterNameEngineAiDescription')
 						: t('settings.characterNameEngineAnalyticDescription')}</span
 				>
+				{#if settings.characterNameSuggestionMode === 'analytic'}
+					<a href={resolve('/settings/name-suggestion')} class="text-sm text-primary-500 hover:underline">
+						{t('settings.characterNameEngineConfigure')}
+					</a>
+				{/if}
 			</div>
 
 			<!-- Phase Advancement Thresholds: half-card grid -->
