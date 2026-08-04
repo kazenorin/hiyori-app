@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { omitBy } from 'lodash-es';
 import { getDatabase } from '$lib/db/database';
+import { DEFAULT_NAME_QUOTAS, type NameQuotaConfig } from '$lib/features/name-suggestion/quota';
 import { fs } from '$lib/fs/file-system';
 import { detectDefaultLocale, setLocale } from '$lib/i18n';
 import type { CallSettings } from 'ai';
@@ -80,6 +81,7 @@ export interface Settings {
 	ttsVoice: string;
 	ttsSpeed: number;
 	characterNameSuggestionMode: CharacterNameSuggestionMode;
+	nameSuggestionQuotas: NameQuotaConfig;
 }
 
 const STORAGE_KEY = 'hiyori-settings';
@@ -120,6 +122,7 @@ const defaults: Settings = {
 	ttsVoice: 'af_heart',
 	ttsSpeed: 1,
 	characterNameSuggestionMode: 'analytic',
+	nameSuggestionQuotas: DEFAULT_NAME_QUOTAS,
 };
 
 /**
@@ -338,6 +341,12 @@ export function getDefaultPlotMode(): 'guidance' | 'phaseEvent' {
 
 export function getCharacterNameSuggestionMode(): CharacterNameSuggestionMode {
 	return settings.characterNameSuggestionMode;
+}
+
+export function getNameSuggestionQuotas(): NameQuotaConfig {
+	const quotas = settings.nameSuggestionQuotas;
+	if (!quotas) return DEFAULT_NAME_QUOTAS;
+	return { budgets: quotas.budgets ?? {}, ratio: quotas.ratio ?? DEFAULT_NAME_QUOTAS.ratio };
 }
 
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {

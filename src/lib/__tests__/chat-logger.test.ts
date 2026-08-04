@@ -98,6 +98,7 @@ function defaultSettings() {
 		ttsVoice: 'af_heart',
 		ttsSpeed: 1,
 		characterNameSuggestionMode: 'ai' as const,
+		nameSuggestionQuotas: { budgets: {}, ratio: { given: 60, family: 30, nickname: 10 } },
 	};
 }
 

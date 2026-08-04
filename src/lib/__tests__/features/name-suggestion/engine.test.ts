@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { buildExistingNameSet, formatFullName, normalizeName, suggestNames } from '$lib/features/name-suggestion/engine';
-import type { NameEntry } from '$lib/features/name-suggestion/types';
+import { toNameThemes, type NameEntry } from '$lib/features/name-suggestion/types';
 
 function entry(overrides: Partial<NameEntry> & { name: string }): NameEntry {
 	return {
 		genders: ['masculine'],
-		themes: ['high-fantasy'],
+		themes: ['fantasy'],
 		cultures: ['european'],
 		nameTypes: ['given'],
 		meaningTags: [],
@@ -50,6 +50,23 @@ describe('formatFullName', () => {
 	});
 });
 
+describe('toNameThemes', () => {
+	it('maps story themes onto the consolidated name themes', () => {
+		expect(toNameThemes(['high-fantasy'])).toEqual(['fantasy']);
+		expect(toNameThemes(['modern-slice-of-life'])).toEqual(['modern']);
+		expect(toNameThemes(['urban-fantasy'])).toEqual(['modern']);
+		expect(toNameThemes(['sci-fi'])).toEqual(['sci-fi']);
+	});
+
+	it('deduplicates story themes that converge on one name theme', () => {
+		expect(toNameThemes(['modern-slice-of-life', 'urban-fantasy'])).toEqual(['modern']);
+	});
+
+	it('drops unmapped ids so a new world template cannot match by accident', () => {
+		expect(toNameThemes(['not-a-theme'])).toEqual([]);
+	});
+});
+
 describe('suggestNames — direct filtering', () => {
 	it('returns every unused direct name when no filters are given', () => {
 		const data = [entry({ name: 'A' }), entry({ name: 'B' })];
@@ -59,11 +76,11 @@ describe('suggestNames — direct filtering', () => {
 
 	it('matches a dimension when the entry intersects the query (ANY-of)', () => {
 		const data = [
-			entry({ name: 'Fantasy', themes: ['high-fantasy'] }),
-			entry({ name: 'Modern', themes: ['modern-slice-of-life'] }),
-			entry({ name: 'Both', themes: ['high-fantasy', 'urban-fantasy'] }),
+			entry({ name: 'Fantasy', themes: ['fantasy'] }),
+			entry({ name: 'Modern', themes: ['modern'] }),
+			entry({ name: 'Both', themes: ['fantasy', 'modern'] }),
 		];
-		const names = suggestNames(data, { themes: ['high-fantasy', 'urban-fantasy'], count: 20 }, new Set(), EN, rng)
+		const names = suggestNames(data, { themes: ['fantasy', 'sci-fi'], count: 20 }, new Set(), EN, rng)
 			.map((e) => e.name)
 			.sort();
 		expect(names).toEqual(['Both', 'Fantasy']);

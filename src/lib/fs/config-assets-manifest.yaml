@@ -258,21 +258,71 @@ src:
               - 69b842b1a1dba04da41621d7e61ed78c10c7c90034e860a9c71d015fb12882f1
             updatedAt: "2026-07-18T08:56:38.701Z"
         names:
-          feminine.csv:
-            configPath: en/names/feminine.csv
-            hash: 2346e72c5e31d4c5b78591276c2c3eb708e8f78e7537cc2bc128dd583206b47d
+          african.json:
+            configPath: en/names/african.json
+            hash: f550faa50f6c2457897c9516aaa37e7241690dc037e0f439c511172a533b8ca9
             oldHashes: []
-            updatedAt: "2026-08-02T12:24:48.783Z"
-          masculine.csv:
-            configPath: en/names/masculine.csv
-            hash: ec455da3d2b9e3d936b791daafe1d64ea1033dc9a0f5ddcb26743e8666589572
+            updatedAt: "2026-08-04T16:55:55.761Z"
+          celestial.json:
+            configPath: en/names/celestial.json
+            hash: ee28dffa45921ba7e8962badb1ef1de3bd0fc63545316d33546778f1220f82bb
             oldHashes: []
-            updatedAt: "2026-08-02T12:24:48.783Z"
-          neutral.csv:
-            configPath: en/names/neutral.csv
-            hash: f58ae8b017b48635103cb5c802c74f38c8d10fa9510b24e7614a2358c5acd9d2
+            updatedAt: "2026-08-04T16:55:55.761Z"
+          chinese.json:
+            configPath: en/names/chinese.json
+            hash: 75d495d3a9b1fbadd5865802dcae86d55793e85028ce08dfed499c5bb2068281
             oldHashes: []
-            updatedAt: "2026-08-02T12:24:48.783Z"
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          draconic.json:
+            configPath: en/names/draconic.json
+            hash: 32fc6437fa14d2d2a5decd31f5a84e8d3eb992a5c346041ec1c3b9b3cc326fc1
+            oldHashes: []
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          dwarven.json:
+            configPath: en/names/dwarven.json
+            hash: b38c911aa824fe78a86c9af9c152ab910d156d97ae666186cd6374887ac0f78d
+            oldHashes: []
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          elven.json:
+            configPath: en/names/elven.json
+            hash: 383c9ddb612c8a5cd67f2b33f43a65a379b224af1ce1073ae71ab1355745b255
+            oldHashes: []
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          european.json:
+            configPath: en/names/european.json
+            hash: c1a5fc3fd1aa3a675fd852730d2499ce003664b7ecd6de14282f806adda78382
+            oldHashes: []
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          infernal.json:
+            configPath: en/names/infernal.json
+            hash: 5b802af2863a25b3bb8bd66b3ad615be0e4f14f5705ab3dd9c972a7cfa73bfea
+            oldHashes: []
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          japanese.json:
+            configPath: en/names/japanese.json
+            hash: d0b7b9b1dcc4c41f3513e9b5605127ae036fdc18b654f8908a3207d72d5c9277
+            oldHashes: []
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          latin.json:
+            configPath: en/names/latin.json
+            hash: 9fb6149dc409583f5f360d930ccabaa7e1c5119b037e54f1a45b25a92a3d2471
+            oldHashes: []
+            updatedAt: "2026-08-04T16:55:55.761Z"
+          middle-eastern.json:
+            configPath: en/names/middle-eastern.json
+            hash: d40d5254c9b10d0b1180997558199b42ab69342cff63776990a07ecf16c927ea
+            oldHashes: []
+            updatedAt: "2026-08-04T16:55:55.761Z"
+          orcish.json:
+            configPath: en/names/orcish.json
+            hash: cea7f290a2510276d7c40e7a6b87246d1fab5fe158810fc01c03f55089e2b324
+            oldHashes: []
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          south-asian.json:
+            configPath: en/names/south-asian.json
+            hash: 708abd8e34f98531a2a3403127b8f673b19e2d007ba677ef46dce7c7e1bab7b9
+            oldHashes: []
+            updatedAt: "2026-08-04T16:55:55.761Z"
       zh-Hant-HK:
         prompts:
           act:
@@ -535,29 +585,76 @@ src:
               - 85a0e66842ce68133d064185eca05d0241a6271f3aed3110f6e562958fa15599
             updatedAt: "2026-07-18T08:56:38.701Z"
         names:
-          feminine.csv:
-            configPath: zh-Hant-HK/names/feminine.csv
-            hash: 228a89621811c54406d596040192c8aecb6c2b8228101c35a8e8bcaf67019206
+          african.json:
+            configPath: zh-Hant-HK/names/african.json
+            hash: e88cc380ee1a4b648064efa75c2d692fdf3a9dfe6b621384fc3f04d1e8b4965c
             oldHashes: []
-            updatedAt: "2026-08-02T12:24:48.783Z"
-          masculine.csv:
-            configPath: zh-Hant-HK/names/masculine.csv
-            hash: 779d82c6af749b402da8c9ff4607b87fd95dc16d2d9e861e050139c6306a9bdd
+            updatedAt: "2026-08-04T16:55:55.761Z"
+          celestial.json:
+            configPath: zh-Hant-HK/names/celestial.json
+            hash: 70c858bb24f8506a35c74ecde9624d3c039ad86631dbadc7930a2c82f89e1a53
             oldHashes: []
-            updatedAt: "2026-08-02T12:24:48.783Z"
-          neutral.csv:
-            configPath: zh-Hant-HK/names/neutral.csv
-            hash: 882ad4db92fabeefe0e236fd520e1e16eb582a988a92d1371f9417d1e839fc84
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          chinese.json:
+            configPath: zh-Hant-HK/names/chinese.json
+            hash: 3629556199890135929e97a8cb1bcf81885606332f6ffa7b0468f466a5662312
             oldHashes: []
-            updatedAt: "2026-08-02T12:24:48.783Z"
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          draconic.json:
+            configPath: zh-Hant-HK/names/draconic.json
+            hash: 5dc8c803c2fe41676bfcca4bf6cda3231406851ed3acdf337ade04c38468f21d
+            oldHashes: []
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          dwarven.json:
+            configPath: zh-Hant-HK/names/dwarven.json
+            hash: 1e532b15aa15e98765ae0468513df22ad492b6104c44a793f7bcdbb6f5494d07
+            oldHashes: []
+            updatedAt: "2026-08-04T16:55:55.761Z"
+          elven.json:
+            configPath: zh-Hant-HK/names/elven.json
+            hash: 08fc5e755ce2e6e04e20be427bf0a79e70ce7242004f8c82a13249e9d1f6d726
+            oldHashes: []
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          european.json:
+            configPath: zh-Hant-HK/names/european.json
+            hash: 4a9f76240ceac7f95a9e8597085a7d308ae81d96abd6acd7c4490c3bca150a8a
+            oldHashes: []
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          infernal.json:
+            configPath: zh-Hant-HK/names/infernal.json
+            hash: 706a3cc30fe25957a07a6326adb5ec096a3770a7e78b4262018261271f2f5b3a
+            oldHashes: []
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          japanese.json:
+            configPath: zh-Hant-HK/names/japanese.json
+            hash: 0d5e52c038e0b7094fd5f329f7d9f1346eb1f597fb543cbe01bbcc4d7569e17c
+            oldHashes: []
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          latin.json:
+            configPath: zh-Hant-HK/names/latin.json
+            hash: cc044998df7e62b6557ecd6deeb639c17b34890a2a61f50095e286af7b285aaf
+            oldHashes: []
+            updatedAt: "2026-08-04T16:55:55.761Z"
+          middle-eastern.json:
+            configPath: zh-Hant-HK/names/middle-eastern.json
+            hash: 5f3bbd89c29d0cd9b79773c0bd7dc226152fedfe0254a816252a20d4bb231c0b
+            oldHashes: []
+            updatedAt: "2026-08-04T16:55:55.761Z"
+          orcish.json:
+            configPath: zh-Hant-HK/names/orcish.json
+            hash: 5bb805da51a9d454e21d23277e2d285909ad0ff18626890f0872c73f66841f43
+            oldHashes: []
+            updatedAt: "2026-08-05T15:23:43.298Z"
+          south-asian.json:
+            configPath: zh-Hant-HK/names/south-asian.json
+            hash: 29a95d3f5a3c9ccfaae02dde6c1f31d8c29fff97a8b9912f0e9ee00485ed40d3
+            oldHashes: []
+            updatedAt: "2026-08-04T16:55:55.761Z"
       locale-strings:
         en.yaml:
           configPath: en/locale-strings.yaml
-          hash: 98e2d0b6ca295fb7294616b59a6341ebf698123a0ff5e736bd5afbd81834a866
+          hash: 18374b9c953581836a9a7474550058cb7a1482e0ba2cb7c70c29905d0bc31d87
           oldHashes:
-            - 1e0326748171a5bfafc6d84c82015f060611c2411c099e252a0c07b15ea2b84c
-            - 0e96fd1ddd495728a3f1d59c46fed6f9e4c586c6e4fe061a79a311412bdefd8a
-            - f03a667b03130ed4f7c7426c08726b5fd76187c99594c8123ea7714e768bbeb6
             - ee684157248de5c152d847e1dea3f337c026a8e25c43f18e010377ccb2cc9c52
             - ba9cbdee4ae36e8ee5fca1d582a252ce982d950e579b07663358563f450016a4
             - 8c89d8dc883781bb770db86b9e97ae54ce992260f370f46070dd965e9cf84a2e
@@ -569,14 +666,11 @@ src:
             - 2dac94173236f1d91ad05073d7ac651ae1265c4182815041ba5663713dcdd799
             - 80d841aa000184d8604696b1f1877aebb1a348db16d2267e57b421c5eed4c959
             - 02c2f6c61d948f401f32cdd4eb656a574da0366b3a2809ee2ff3c42b47348649
-          updatedAt: "2026-08-03T12:52:00.934Z"
+          updatedAt: "2026-08-04T15:51:16.574Z"
         zh-Hant-HK.yaml:
           configPath: zh-Hant-HK/locale-strings.yaml
-          hash: a061d898f5e62f25f6fc69d3e93413cd37247dffe4c69e79cbda9aad084ac1cb
+          hash: 7485783a6ac9fb9159503dc45c8f30ed2321aa9fa7fe8891bf42ad24ea685521
           oldHashes:
-            - 47c08eb7c7d746b5a613eff0a65c839f00a27d0cf20254966fccaa7f591fabc3
-            - 834d92eb3a0bfaaaf0cf9f9e58c7b50de8dea6f21b59f40455b2eda65995824b
-            - 017223f61e3392b7da0afdfc19de8f7fba951525058a76ea114623a648a47817
             - dbb6cf3c5ba89eb69834b403da4e7ab1cc5411f58f298287d8b5a7c10cf645e1
             - f9af8fd7e31b477e31f063b9cfd49d76d510eb14c43ad2d89efa5eab276d7fde
             - 78054d983230282f19d1ee6491dbc457c9d8e00a6175bea3b21a5c04b113d085
@@ -588,4 +682,4 @@ src:
             - 0eda1a48149469d75b776af15e1b34a8510a948660818ad2f0047cb2c4e95f1c
             - c9bca07458a02fd17114e6456a4c281b2460dc392ffccd2bd103199af045c4cb
             - f7772bf027cfec167bdc5e5d85aa783fac24f47303072a00685d5d7b70b80b54
-          updatedAt: "2026-08-03T12:52:00.934Z"
+          updatedAt: "2026-08-04T15:51:16.574Z"

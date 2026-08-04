@@ -6,7 +6,7 @@ import { getAllCharacterNames } from '$lib/db/character-profiles';
 import { WORLD_TEMPLATES } from '$lib/features/world-builder/template-registry';
 import { getNameDataset } from '$lib/features/name-suggestion/dataset';
 import { buildExistingNameSet, suggestNames } from '$lib/features/name-suggestion/engine';
-import { CULTURES, DEFAULT_AVOIDANCE, DEFAULT_COUNT, GENDERS, MAX_AVOIDANCE, MAX_COUNT, TOOL_NAME_TYPES } from '$lib/features/name-suggestion/types';
+import { CULTURES, DEFAULT_AVOIDANCE, DEFAULT_COUNT, GENDERS, MAX_AVOIDANCE, MAX_COUNT, TOOL_NAME_TYPES, toNameThemes } from '$lib/features/name-suggestion/types';
 import { log as toolLog } from './utils';
 
 const LOG_TAG = 'suggest-character-name';
@@ -56,7 +56,15 @@ export function createSuggestCharacterNameAnalyticTool() {
 			const locale = getActiveLocale();
 			const dataset = await getNameDataset(locale);
 			const existing = await getAllCharacterNames();
-			const results = suggestNames(dataset, { genders, themes, cultures, nameTypes, avoidanceLevel, count }, buildExistingNameSet(existing), locale);
+			// Story themes (world-template ids) map onto the consolidated name-theme
+			// vocabulary; unmapped ids drop out, and an empty result lifts the filter.
+			const nameThemes = themes ? toNameThemes(themes) : undefined;
+			const results = suggestNames(
+				dataset,
+				{ genders, themes: nameThemes?.length ? nameThemes : undefined, cultures, nameTypes, avoidanceLevel, count },
+				buildExistingNameSet(existing),
+				locale
+			);
 
 			if (results.length === 0) {
 				await toolLog(`${LOG_TAG} (analytic): no matching unused names`);

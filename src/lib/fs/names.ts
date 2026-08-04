@@ -1,31 +1,35 @@
 import { LocalizedNameFile, registerDefaults, SUPPORTED_LOCALES, type SupportedLocale } from './prompt-loader';
 import { registerBundledContent } from './config-manifest';
-import enMasculine from './en/names/masculine.csv?raw';
-import enFeminine from './en/names/feminine.csv?raw';
-import enNeutral from './en/names/neutral.csv?raw';
-import zhMasculine from './zh-Hant-HK/names/masculine.csv?raw';
-import zhFeminine from './zh-Hant-HK/names/feminine.csv?raw';
-import zhNeutral from './zh-Hant-HK/names/neutral.csv?raw';
-
-/** The fixed set of name files loaded and merged per locale. */
-export const NAME_FILES = ['masculine.csv', 'feminine.csv', 'neutral.csv'] as const;
 
 const nameDefaults: Record<SupportedLocale, Record<string, string>> = {
-	en: {
-		'./en/names/masculine.csv': enMasculine,
-		'./en/names/feminine.csv': enFeminine,
-		'./en/names/neutral.csv': enNeutral,
-	},
-	'zh-Hant-HK': {
-		'./zh-Hant-HK/names/masculine.csv': zhMasculine,
-		'./zh-Hant-HK/names/feminine.csv': zhFeminine,
-		'./zh-Hant-HK/names/neutral.csv': zhNeutral,
-	},
+	en: import.meta.glob('./en/names/*.json', {
+		eager: true,
+		query: '?raw',
+		import: 'default' as const,
+	}) as Record<string, string>,
+	'zh-Hant-HK': import.meta.glob('./zh-Hant-HK/names/*.json', {
+		eager: true,
+		query: '?raw',
+		import: 'default' as const,
+	}) as Record<string, string>,
 };
 
-export interface NameFileContent {
-	relativePath: string;
-	content: string;
+function toRelativePath(globKey: string): string {
+	return globKey.replace(/^\.\//, '').replace(/^.*?names\//, '');
+}
+
+/** Union of name files (relative to the names dir) across all locales, e.g. `chinese.json`. */
+export const NAME_FILES: string[] = Array.from(
+	new Set(SUPPORTED_LOCALES.flatMap((locale) => Object.keys(nameDefaults[locale]).map(toRelativePath)))
+).sort();
+
+// Locales missing a file that exists in another locale get an empty array so
+// every seeded config file is valid JSON and users have a place to add names.
+for (const locale of SUPPORTED_LOCALES) {
+	for (const relativePath of NAME_FILES) {
+		const key = `./${locale}/names/${relativePath}`;
+		if (nameDefaults[locale][key] === undefined) nameDefaults[locale][key] = '[]';
+	}
 }
 
 const nameFileByRel = new Map<string, LocalizedNameFile>();
@@ -44,18 +48,23 @@ let registered = false;
 export function registerNameDefaults(): void {
 	if (registered) return;
 	registered = true;
-	for (const relativePath of NAME_FILES) {
-		for (const locale of SUPPORTED_LOCALES) {
+	for (const locale of SUPPORTED_LOCALES) {
+		for (const relativePath of NAME_FILES) {
 			registerBundledContent(`${locale}/names/${relativePath}`, nameDefaults[locale][`./${locale}/names/${relativePath}`]);
 		}
 	}
 	registerDefaults(Array.from(nameFileByRel.values()));
 }
 
+export interface NameFileContent {
+	relativePath: string;
+	content: string;
+}
+
 /**
- * Load the fixed name files for a locale, resolving AppData overrides
- * (`config/<locale>/names/<file>` → bundled default). Returns raw file contents;
- * parsing and merging are the caller's responsibility.
+ * Load all name files for a locale, resolving AppData overrides
+ * (`config/<locale>/names/<culture>.json` → bundled default). Returns raw file
+ * contents; parsing and merging are the caller's responsibility.
  */
 export async function loadNameFiles(locale: string): Promise<NameFileContent[]> {
 	const results: NameFileContent[] = [];

@@ -26,6 +26,30 @@ export const CULTURES = [
 ] as const;
 export type Culture = (typeof CULTURES)[number];
 
+/**
+ * Theme vocabulary of the name dataset, consolidated from the world-template
+ * themes: `fantasy` (from high-fantasy), `modern` (from modern-slice-of-life
+ * and urban-fantasy; the fantastical side of urban names is carried by
+ * meaningTags), and `sci-fi`. Story themes are converted via
+ * `STORY_THEME_TO_NAME_THEME`.
+ */
+export const NAME_THEMES = ['fantasy', 'modern', 'sci-fi'] as const;
+export type NameTheme = (typeof NAME_THEMES)[number];
+
+/** Maps world-template theme ids (story themes) to name-dataset themes. */
+export const STORY_THEME_TO_NAME_THEME: Record<string, NameTheme> = {
+	'high-fantasy': 'fantasy',
+	'modern-slice-of-life': 'modern',
+	'urban-fantasy': 'modern',
+	'sci-fi': 'sci-fi',
+};
+
+/** Map story themes to name themes, deduplicated, dropping unmapped ids. */
+export function toNameThemes(storyThemes: readonly string[]): NameTheme[] {
+	const mapped = storyThemes.map((theme) => STORY_THEME_TO_NAME_THEME[theme]).filter((theme): theme is NameTheme => theme !== undefined);
+	return [...new Set(mapped)];
+}
+
 export const MEANING_TAGS = [
 	'noble',
 	'nature',
@@ -69,13 +93,12 @@ export const MAX_AVOIDANCE = 5;
 /**
  * A single curated name entry. Multi-valued dimensions (genders, themes,
  * cultures, nameTypes, meaningTags) let one name satisfy several criteria.
- * `themes` are world-template ids (see template-registry); kept as strings so
- * this module stays decoupled from the prompt-loading system.
+ * `themes` use the consolidated name-theme vocabulary (`NAME_THEMES`).
  */
 export interface NameEntry {
 	name: string;
 	genders: Gender[];
-	themes: string[];
+	themes: NameTheme[];
 	cultures: Culture[];
 	nameTypes: DataNameType[];
 	meaningTags: MeaningTag[];
@@ -96,7 +119,7 @@ export interface SuggestedName {
  */
 export interface NameQuery {
 	genders?: Gender[];
-	themes?: string[];
+	themes?: NameTheme[];
 	cultures?: Culture[];
 	nameTypes?: ToolNameType[];
 	count?: number;
