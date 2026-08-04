@@ -1,0 +1,23 @@
+[
+	{"name":"阿爾維斯","genders":["masculine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":["cunning"]},
+	{"name":"布洛克","genders":["masculine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":["nature","wild"]},
+	{"name":"辛德里","genders":["masculine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":["cunning","heroic"]},
+	{"name":"安德瓦利","genders":["masculine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":[]},
+	{"name":"法夫納","genders":["masculine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":[]},
+	{"name":"艾特里","genders":["masculine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":[]},
+	{"name":"索格林","genders":["masculine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":["martial","heroic"]},
+	{"name":"布拉克莫","genders":["masculine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":["martial","wild"]},
+	{"name":"奧西坎","genders":["masculine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":["noble","heroic"]},
+	{"name":"馮德魯爾","genders":["masculine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":["cunning","arcane"]},
+	{"name":"卡德拉克","genders":["masculine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":["martial","dark"]},
+	{"name":"赫羅德加夫","genders":["masculine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":["noble","martial"]},
+	{"name":"布琳雅爾","genders":["feminine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":["martial","noble"]},
+	{"name":"索迪希爾","genders":["feminine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":["cunning","arcane"]},
+	{"name":"達格妮拉","genders":["feminine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":["heroic","nature"]},
+	{"name":"露娜沃拉","genders":["feminine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":["arcane","mysterious"]},
+	{"name":"凱爾德拉","genders":["feminine"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["given"],"meaningTags":["martial","cunning"]},
+	{"name":"碎石","genders":["neutral"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["family"],"meaningTags":["martial","heroic"]},
+	{"name":"深砧","genders":["neutral"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["family"],"meaningTags":["noble","cunning"]},
+	{"name":"霜幔","genders":["neutral"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["family"],"meaningTags":["nature","heroic"]},
+	{"name":"餘燼爐","genders":["neutral"],"themes":["fantasy"],"cultures":["dwarven"],"nameTypes":["family"],"meaningTags":["nature","noble"]}
+]

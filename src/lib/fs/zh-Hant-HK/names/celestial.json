@@ -1,0 +1,23 @@
+[
+	{"name":"米迦勒","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["martial","heroic"]},
+	{"name":"加百列","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["heroic","noble"]},
+	{"name":"拉斐爾","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["serene","heroic"]},
+	{"name":"烏列爾","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["heroic","arcane"]},
+	{"name":"梅塔特隆","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["arcane","mysterious"]},
+	{"name":"亞茲拉爾","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["dark","mysterious"]},
+	{"name":"卡麥爾","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["martial","heroic"]},
+	{"name":"漢尼爾","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["serene","noble"]},
+	{"name":"約斐爾","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["serene","noble"]},
+	{"name":"薩基爾","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["noble","serene"]},
+	{"name":"拉貴爾","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["noble","serene"]},
+	{"name":"聖德芬","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["serene","arcane"]},
+	{"name":"卡西爾","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["mysterious","arcane"]},
+	{"name":"卡斯提奧","genders":["masculine"],"themes":["fantasy","modern"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["mysterious","heroic"]},
+	{"name":"伊斯拉菲爾","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["royal","heroic"]},
+	{"name":"拉結爾","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["mysterious","arcane"]},
+	{"name":"薩邁爾","genders":["masculine"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["dark","martial"]},
+	{"name":"路西法","genders":["masculine"],"themes":["fantasy","modern"],"cultures":["celestial"],"nameTypes":["given"],"meaningTags":["dark","mysterious"]},
+	{"name":"卡斯","genders":["masculine"],"themes":["fantasy","modern"],"cultures":["celestial"],"nameTypes":["nickname"],"meaningTags":["mysterious","heroic"]},
+	{"name":"撒拉弗","genders":["neutral"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["family"],"meaningTags":["arcane","royal"]},
+	{"name":"基路伯","genders":["neutral"],"themes":["fantasy"],"cultures":["celestial"],"nameTypes":["family"],"meaningTags":["arcane","mysterious"]}
+]
