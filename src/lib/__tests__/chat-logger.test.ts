@@ -95,7 +95,7 @@ function defaultSettings() {
 		defaultPlotMode: 'phaseEvent' as const,
 		reevaluationFrequency: 10,
 		ttsEnabled: false,
-		ttsVoice: 'af_heart',
+		ttsVoice: 'af_heart' as const,
 		ttsSpeed: 1,
 		characterNameSuggestionMode: 'ai' as const,
 		nameSuggestionQuotas: { budgets: {}, ratio: { given: 60, family: 30, nickname: 10 } },

@@ -6,3 +6,4 @@ export const TTS_BACKPRESSURE_TIMEOUT_SECONDS = 30;
 export const TTS_SPEED_MIN = 0.5;
 export const TTS_SPEED_MAX = 2;
 export const TTS_SPEED_STEP = 0.1;
+export const TTS_VOICE_DATA_URL = `https://huggingface.co/${TTS_MODEL_ID}/resolve/main/voices`;

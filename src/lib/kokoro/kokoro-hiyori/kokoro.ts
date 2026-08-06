@@ -1,9 +1,8 @@
 import { env as transformersEnv, StyleTextToSpeech2Model, AutoTokenizer, Tensor, RawAudio } from '@huggingface/transformers';
 import type { DataType, DeviceType, PreTrainedTokenizer, PretrainedModelOptions } from '@huggingface/transformers';
 import { phonemize } from './phonemize';
-import type { KokoroLanguage } from './phonemize';
 import { TextSplitterStream } from './splitter';
-import { getVoiceData, VOICES } from './voices';
+import { getVoiceData, type VoiceLanguage, VOICES } from './voices';
 import type { VoiceId } from './voices';
 
 const STYLE_DIM = 256;
@@ -75,13 +74,13 @@ export class KokoroTTS {
 		console.table(VOICES);
 	}
 
-	private validateVoice(voice: string): KokoroLanguage {
+	private validateVoice(voice: string): VoiceLanguage {
 		if (!Object.hasOwn(VOICES, voice)) {
 			console.error(`Voice "${voice}" not found. Available voices:`);
 			console.table(VOICES);
 			throw new Error(`Voice "${voice}" not found. Should be one of: ${Object.keys(VOICES).join(', ')}.`);
 		}
-		return voice.at(0) === 'b' ? 'b' : 'a';
+		return VOICES[voice as VoiceId].language;
 	}
 
 	/**

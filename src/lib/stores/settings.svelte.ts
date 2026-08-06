@@ -6,6 +6,7 @@ import { fs } from '$lib/fs/file-system';
 import { detectDefaultLocale, setLocale } from '$lib/i18n';
 import type { CallSettings } from 'ai';
 import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
+import type { VoiceId } from '$lib/kokoro/kokoro-hiyori';
 
 export type Provider = 'openai' | 'openai-compatible' | 'ollama';
 export type ApiType = 'chat-completions' | 'responses';
@@ -78,7 +79,7 @@ export interface Settings {
 	defaultPlotMode: 'guidance' | 'phaseEvent';
 	reevaluationFrequency: number;
 	ttsEnabled: boolean;
-	ttsVoice: string;
+	ttsVoice: VoiceId;
 	ttsSpeed: number;
 	characterNameSuggestionMode: CharacterNameSuggestionMode;
 	nameSuggestionQuotas: NameQuotaConfig;

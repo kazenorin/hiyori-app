@@ -1,3 +1,5 @@
+import { TTS_VOICE_DATA_URL } from '$lib/kokoro/constants';
+
 export type VoiceQuality = 'A' | 'A-' | 'B' | 'B-' | 'C+' | 'C' | 'C-' | 'D+' | 'D' | 'D-' | 'F+';
 export type VoiceLanguage = 'en-us' | 'en-gb';
 export type VoiceGender = 'Female' | 'Male';
@@ -228,32 +230,8 @@ export const VOICES = Object.freeze({
 
 export type VoiceId = keyof typeof VOICES;
 
-/**
- * The base URL for fetching voice data files.
- */
-let voiceDataUrl = 'https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX/resolve/main/voices';
-
-/**
- * Retrieves the current voice data URL.
- */
-export function getVoiceDataUrl(): string {
-	return voiceDataUrl;
-}
-
-/**
- * Sets a new voice data URL.
- * @throws Will throw an error if the URL is not a valid non-empty string.
- */
-export function setVoiceDataUrl(url: string): void {
-	if (typeof url === 'string' && url.trim() !== '') {
-		voiceDataUrl = url;
-	} else {
-		throw new Error('Invalid URL');
-	}
-}
-
 async function getVoiceFile(id: VoiceId): Promise<ArrayBuffer> {
-	const url = `${voiceDataUrl}/${id}.bin`;
+	const url = `${TTS_VOICE_DATA_URL}/${id}.bin`;
 
 	let cache: Cache | undefined;
 	try {

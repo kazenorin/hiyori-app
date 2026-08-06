@@ -1,6 +1,6 @@
 import { t } from '$lib/i18n';
 import { settings } from '$lib/stores/settings.svelte';
-import { VOICE_LIST, getVoiceLabel } from '$lib/kokoro/voices';
+import { getVoiceLabel, getVoiceList } from '$lib/kokoro/voices';
 
 export function getProviderItems(): { label: string; value: string }[] {
 	return [
@@ -84,5 +84,5 @@ export function getRoleItems(includeMain: boolean = true): { label: string; valu
 }
 
 export function getVoiceItems(): { label: string; value: string }[] {
-	return VOICE_LIST.map((v) => ({ label: getVoiceLabel(v), value: v.id }));
+	return Object.entries(getVoiceList()).map(([id, voice]) => ({ label: getVoiceLabel(voice), value: id }));
 }

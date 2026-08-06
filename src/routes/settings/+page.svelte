@@ -51,6 +51,7 @@
 	import { ensureAllBaseConfigs } from '$lib/fs/prompt-loader';
 	import { getDatabase } from '$lib/db/database';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
+	import type { VoiceId } from '$lib/kokoro/kokoro-hiyori';
 
 	// Editing state
 	let editingId = $state<string | null>(null);
@@ -802,7 +803,7 @@
 					<ThemedSelect
 						items={voiceItems}
 						value={settings.ttsVoice}
-						onValueChange={(v) => updateSettings({ ttsVoice: v })}
+						onValueChange={(v) => updateSettings({ ttsVoice: v as VoiceId })}
 						disabled={!settings.ttsEnabled}
 					/>
 					<span class="text-xs text-surface-500 block">{t('tts.voiceDescription')}</span>
