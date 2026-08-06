@@ -59,7 +59,7 @@
 	{"name":"Ah","genders":["masculine","feminine"],"themes":["modern"],"cultures":["chinese"],"nameTypes":["nickname"],"meaningTags":[]},
 	{"name":"Wei","genders":["masculine","feminine"],"themes":["modern","fantasy"],"cultures":["chinese"],"nameTypes":["given"],"meaningTags":["heroic"]},
 	{"name":"Ming","genders":["masculine","feminine"],"themes":["modern","fantasy"],"cultures":["chinese"],"nameTypes":["given"],"meaningTags":["noble","serene"]},
-	{"name":"Chan","genders":["neutral"],"themes":["modern","fantasy"],"cultures":["chinese"],"nameTypes":["family"],"meaningTags":["noble","ancient"]},
+	{"name":"Chan","genders":["neutral"],"themes":["modern","fantasy"],"cultures":["chinese"],"nameTypes":["family"],"meaningTags":["noble","arcane"]},
 	{"name":"Wong","genders":["neutral"],"themes":["modern","fantasy"],"cultures":["chinese"],"nameTypes":["family"],"meaningTags":["royal"]},
 	{"name":"Li","genders":["neutral"],"themes":["modern","fantasy"],"cultures":["chinese"],"nameTypes":["family"],"meaningTags":["royal"]},
 	{"name":"Cheung","genders":["neutral"],"themes":["modern","fantasy"],"cultures":["chinese"],"nameTypes":["family"],"meaningTags":["martial","heroic"]},
