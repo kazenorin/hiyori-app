@@ -90,3 +90,4 @@ export const writerInventoryToolsInstruction = () => ls('pipeline.inventoryTools
 export const reviewerInventoryToolsInstruction = () => ls('pipeline.inventoryTools.reviewer');
 export const quickReviewerInventoryToolsInstruction = () => ls('pipeline.inventoryTools.quickReviewer');
 export const plotPlannerInventoryToolsInstruction = () => ls('pipeline.inventoryTools.plotPlanner');
+export const gameMasterInventoryToolsInstruction = () => ls('pipeline.inventoryTools.gameMaster');

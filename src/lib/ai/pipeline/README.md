@@ -218,16 +218,16 @@ Runs after the Summarizer when `characterProfileCompressorInterval` scenes have 
 
 `buildTools(storyId, actLine, assistant, overrides)` assembles all available tools. `filterToolsForPhase(allTools, phase)` restricts which tools each phase can use:
 
-| Phase                        | Available Tools                                                                                                                                                                     |
-| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| WRITER                       | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`, `evaluate-risk`, `advance-phase`, `end-act`, `introduce-character`, `character-details`, `set-scene-title` |
-| REVIEWER                     | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`                                                                                                             |
-| EDITOR                       | (none)                                                                                                                                                                              |
-| GAME_MASTER                  | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`, `advance-phase`, `end-act`                                                                                 |
-| PLOT_PLANNER                 | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`                                                                                                             |
-| TEMPLATE_FITTER              | (none)                                                                                                                                                                              |
-| SUMMARIZER                   | (none)                                                                                                                                                                              |
-| CHARACTER_PROFILE_COMPRESSOR | (none)                                                                                                                                                                              |
+| Phase                        | Available Tools                                                                                                                                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| WRITER                       | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`, `evaluate-risk`, `advance-phase`, `end-act`, `introduce-character`, `character-details`, `set-scene-title`, `suggest-character-name` |
+| REVIEWER                     | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`                                                                                                                                       |
+| EDITOR                       | (none)                                                                                                                                                                                                        |
+| GAME_MASTER                  | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`, `update-inventory`, `character-details`                                                                                              |
+| PLOT_PLANNER                 | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`                                                                                                                                       |
+| TEMPLATE_FITTER              | (none)                                                                                                                                                                                                        |
+| SUMMARIZER                   | (none)                                                                                                                                                                                                        |
+| CHARACTER_PROFILE_COMPRESSOR | (none)                                                                                                                                                                                                        |
 
 ## Retry and Error Handling
 

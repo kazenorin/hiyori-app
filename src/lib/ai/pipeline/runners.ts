@@ -40,6 +40,7 @@ import {
 	editorExtractionPrompt,
 	editorTemplateFitterExtractionPrompt,
 	gameMasterExtractionPrompt,
+	gameMasterInventoryToolsInstruction,
 	getLocalizedActPhase,
 	gmTemplateFitterExtractionPrompt,
 	plotPlannerExtractionPrompt,
@@ -105,7 +106,9 @@ const earlyPhaseFactor = 0.3;
 const latePhaseFactor = 1 - earlyPhaseFactor;
 
 function resolveGmSystemPrompt(ctx: PipelineRunContext): string {
-	return ctx.prompts.gameMasterSystemPrompt.replaceAll('{{additionalRules}}', '');
+	return ctx.prompts.gameMasterSystemPrompt
+		.replaceAll('{{additionalRules}}', '')
+		.replaceAll('{{inventoryToolsInstruction}}\n', inventoryToolsPartial(indentLines(gameMasterInventoryToolsInstruction(), '   ')));
 }
 
 function resolveSummarizedScenes(summarizedScenes: number) {

@@ -33,7 +33,6 @@ export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 		'read-distant-scene',
 		'query-memories',
 		'query-inventory',
-		'update-inventory',
 		'evaluate-risk',
 		'advance-phase',
 		'end-act',
@@ -45,7 +44,7 @@ export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 	REVIEWER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory', 'character-details'],
 	EDITOR: [],
 	TEMPLATE_FITTER: [],
-	GAME_MASTER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory', 'character-details'],
+	GAME_MASTER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory', 'update-inventory', 'character-details'],
 	CHARACTER_PROFILE_COMPRESSOR: [],
 };
 
