@@ -26,6 +26,7 @@ import * as actLines from '$lib/db/act-lines';
 import * as messages from '$lib/db/messages';
 import * as appState from '$lib/db/app-state';
 import * as storyFolders from '$lib/db/story-folders';
+import * as characterProfiles from '$lib/db/character-profiles';
 
 describe('migrations', () => {
 	beforeEach(() => {
@@ -145,6 +146,25 @@ describe('act-lines operations', () => {
 		testDb.close();
 	});
 
+	async function insertProfile(actLineId: string, sceneNumber: number, canonicalName: string) {
+		await characterProfiles.insertCharacterProfile({
+			id: crypto.randomUUID(),
+			actLineId,
+			sceneNumber,
+			canonicalName,
+			preferredName: canonicalName,
+			aliases: [],
+			logline: 'logline',
+			sceneDetails: '',
+			importance: 4,
+		});
+	}
+
+	async function hasProfileForScene(actLineId: string, sceneNumber: number): Promise<boolean> {
+		const profiles = await characterProfiles.getCharacterProfilesForActLines([actLineId]);
+		return profiles.some((p) => p.sceneNumber === sceneNumber);
+	}
+
 	it('creates an act line with isMainLine', async () => {
 		const line = await actLines.createActLine('line-1', 'act-1', 'main', true);
 		expect(line.isMainLine).toBe(true);
@@ -247,6 +267,64 @@ describe('act-lines operations', () => {
 		await actLines.removeMessagesFromActLine('line-1', ['msg-1']);
 
 		expect(await messages.getMessage('msg-1')).toBeNull();
+	});
+
+	it('deletes character profiles for scenes of removed messages', async () => {
+		await messages.createMessage({ id: 'msg-1', role: 'user', content: 'Q1', sceneNumber: 1 });
+		await messages.createMessage({ id: 'msg-2', role: 'assistant', content: 'A1', sceneNumber: 2 });
+		await actLines.addMessageToLine('line-1', 'msg-1', 1);
+		await actLines.addMessageToLine('line-1', 'msg-2', 2);
+
+		await insertProfile('line-1', 1, 'hero');
+		await insertProfile('line-1', 2, 'hero');
+		await insertProfile('line-1', 3, 'hero');
+
+		await actLines.removeMessagesFromActLine('line-1', ['msg-1', 'msg-2']);
+
+		expect(await hasProfileForScene('line-1', 1)).toBe(false);
+		expect(await hasProfileForScene('line-1', 2)).toBe(false);
+		expect(await hasProfileForScene('line-1', 3)).toBe(true);
+	});
+
+	it('preserves character profiles for scenes not being removed', async () => {
+		await messages.createMessage({ id: 'msg-1', role: 'user', content: 'Q1', sceneNumber: 1 });
+		await messages.createMessage({ id: 'msg-2', role: 'assistant', content: 'A1', sceneNumber: 2 });
+		await actLines.addMessageToLine('line-1', 'msg-1', 1);
+		await actLines.addMessageToLine('line-1', 'msg-2', 2);
+
+		await insertProfile('line-1', 1, 'hero');
+		await insertProfile('line-1', 2, 'hero');
+
+		await actLines.removeMessagesFromActLine('line-1', ['msg-2']);
+
+		expect(await hasProfileForScene('line-1', 1)).toBe(true);
+		expect(await hasProfileForScene('line-1', 2)).toBe(false);
+	});
+
+	it('does not delete character profiles on other act lines at the same scene', async () => {
+		await messages.createMessage({ id: 'msg-1', role: 'assistant', content: 'A', sceneNumber: 1 });
+		await messages.createMessage({ id: 'msg-2', role: 'assistant', content: 'B', sceneNumber: 1 });
+		await actLines.addMessageToLine('line-1', 'msg-1', 1);
+		await actLines.addMessageToLine('line-2', 'msg-2', 1);
+
+		await insertProfile('line-1', 1, 'hero');
+		await insertProfile('line-2', 1, 'hero');
+
+		await actLines.removeMessagesFromActLine('line-1', ['msg-1']);
+
+		expect(await hasProfileForScene('line-1', 1)).toBe(false);
+		expect(await hasProfileForScene('line-2', 1)).toBe(true);
+	});
+
+	it('does nothing for messages with no scene number', async () => {
+		await messages.createMessage({ id: 'msg-1', role: 'assistant', content: 'A' });
+		await actLines.addMessageToLine('line-1', 'msg-1', 1);
+
+		await insertProfile('line-1', 1, 'hero');
+
+		await actLines.removeMessagesFromActLine('line-1', ['msg-1']);
+
+		expect(await hasProfileForScene('line-1', 1)).toBe(true);
 	});
 
 	it('branches from a line copying messages up to sequence with cloned fork-point message', async () => {

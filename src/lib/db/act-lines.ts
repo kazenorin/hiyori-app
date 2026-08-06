@@ -2,6 +2,7 @@ import type { Database } from './types';
 import { getDatabase } from './database';
 import type { Message } from './messages';
 import { cloneMessage, mapRowToMessage, type MessageRow } from './messages';
+import { deleteCharacterProfilesForScenes } from './character-profiles';
 import type { Story } from './stories';
 import type { ActPhase, EndingType, PlotMode } from '$lib/ai/narrative-types';
 import { getActPhaseIndex, isValidEndingType, isValidPlotMode } from '$lib/ai/narrative-types';
@@ -586,6 +587,17 @@ export async function removeMessagesFromActLine(actLineId: string, messageIds: s
 
 	const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
 
+	// Collect the scene numbers of the messages being removed (scoped to this act line)
+	// so their character profiles can be cleaned up alongside the messages.
+	const sceneRows = await db.select<{ scene_number: number | null }[]>(
+		`SELECT DISTINCT m.scene_number
+		 FROM act_lines al
+		   JOIN messages m ON m.id = al.message_id
+		 WHERE al.act_line_id = $1 AND al.message_id IN (${placeholders})`,
+		[actLineId, ...messageIds]
+	);
+	const sceneNumbers = [...new Set(sceneRows.map((r) => r.scene_number).filter((n): n is number => n != null))];
+
 	const seqRows = await db.select<{ min_seq: number }[]>(
 		`SELECT MIN(sequence) AS min_seq FROM act_lines WHERE act_line_id = $1 AND message_id IN (${placeholders})`,
 		[actLineId, ...messageIds]
@@ -599,6 +611,11 @@ export async function removeMessagesFromActLine(actLineId: string, messageIds: s
 	}
 
 	await removeOrphanedMessages(db, messageIds);
+
+	if (sceneNumbers.length > 0) {
+		await deleteCharacterProfilesForScenes(actLineId, sceneNumbers);
+	}
+
 	return messageIds;
 }
 

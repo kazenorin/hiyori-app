@@ -250,6 +250,22 @@ export async function deleteCharacterProfilesForActLine(actLineId: string): Prom
 }
 
 /**
+ * Delete character profile rows for a set of scene numbers in an act line.
+ * Used to clean up profiles generated for scenes that are being rewound
+ * (e.g. when regenerating or deleting the last chat exchange).
+ * No-op when sceneNumbers is empty.
+ */
+export async function deleteCharacterProfilesForScenes(actLineId: string, sceneNumbers: number[]): Promise<void> {
+	if (sceneNumbers.length === 0) return;
+	const db = getDatabase();
+	const placeholders = sceneNumbers.map((_, i) => `$${i + 2}`).join(', ');
+	await db.execute(`DELETE FROM character_profiles WHERE act_line_id = $1 AND scene_number IN (${placeholders})`, [
+		actLineId,
+		...sceneNumbers,
+	]);
+}
+
+/**
  * Clone character profiles from one act line to another, limited to profiles
  * at or before maxSceneNumber. Baseline (NULL scene_number) rows are always
  * included; scene-numbered rows beyond maxSceneNumber are excluded.
