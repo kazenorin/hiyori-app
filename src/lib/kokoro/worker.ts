@@ -1,4 +1,4 @@
-import { KokoroTTS } from 'kokoro-js';
+import { KokoroTTS } from './kokoro-hiyori';
 import { splitTextSmart } from './semantic-split';
 import { TTS_MODEL_ID, TTS_MAX_QUEUE_SIZE, TTS_BACKPRESSURE_TIMEOUT_SECONDS } from './constants';
 
@@ -24,14 +24,14 @@ async function ensureModel(): Promise<void> {
 	const device = await detectDevice();
 	ctx.postMessage({ status: 'loading_model_start', device });
 
-	tts = await KokoroTTS.from_pretrained(TTS_MODEL_ID, {
+	tts = await KokoroTTS.fromPretrained(TTS_MODEL_ID, {
 		dtype: device === 'wasm' ? 'q8' : 'fp32',
 		device,
-		progress_callback: (progress: { status?: string; progress?: number; file?: string }) => {
+		progressCallback: (progress) => {
 			ctx.postMessage({
 				status: 'loading_model_progress',
-				progress: progress.progress ?? 0,
-				file: progress.file ?? '',
+				progress: 'progress' in progress ? progress.progress : 0,
+				file: 'file' in progress ? progress.file : '',
 			});
 		},
 	});
