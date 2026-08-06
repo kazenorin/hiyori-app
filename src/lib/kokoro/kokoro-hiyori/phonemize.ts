@@ -1,9 +1,20 @@
-import { phonemize as espeakng } from 'phonemizer';
+import ESpeakNg from 'espeak-ng';
+import type { VoiceLanguage } from '$lib/kokoro/kokoro-hiyori/voices';
 
 /**
- * Kokoro language code: "a" = American English, "b" = British English.
+ * Runs ESpeakNg with the given arguments and returns the phonemized text.
+ * The text is wrapped in double quotes so that inputs starting with "-" are
+ * not parsed as CLI options. Note: "--sep" must not be used here — espeak-ng
+ * takes its first character as the phoneme separator, which would inject
+ * literal quote marks into diphthongs.
  */
-export type KokoroLanguage = 'a' | 'b';
+async function espeakRun(text: string, lang: VoiceLanguage): Promise<string> {
+	const espeakResult = await ESpeakNg({
+		arguments: ['-v', lang, '--ipa=3', '--phonout', 'generated', '-q', `"${text}"`],
+	});
+	const phonemes = espeakResult.FS.readFile('generated', { encoding: 'utf8' });
+	return phonemes.replace(/(\r\n|\n|\r)/g, ' ').trim();
+}
 
 interface SplitSection {
 	match: boolean;
@@ -164,7 +175,7 @@ const PUNCTUATION_PATTERN = new RegExp(`(\\s*[${escapeRegExp(PUNCTUATION)}]+\\s*
 /**
  * Phonemize text using the eSpeak-NG phonemizer
  */
-export async function phonemize(text: string, language: KokoroLanguage = 'a', norm = true): Promise<string> {
+export async function phonemize(text: string, language: VoiceLanguage, norm = true): Promise<string> {
 	// 1. Normalize text
 	if (norm) {
 		text = normalizeText(text);
@@ -174,15 +185,23 @@ export async function phonemize(text: string, language: KokoroLanguage = 'a', no
 	const sections = split(text, PUNCTUATION_PATTERN);
 
 	// 3. Convert each section to phonemes
-	const lang = language === 'a' ? 'en-us' : 'en';
+	// Trailing punctuation is re-attached to the espeak input (and a period is appended when
+	// there is none) so that espeak-ng treats each section as clause-final, matching the
+	// behavior of the espeak-ng library API. The punctuation itself produces no phonemes.
 	const ps = (
 		await Promise.all(
-			sections.map(async ({ match, text: sectionText }) => (match ? sectionText : (await espeakng(sectionText, lang)).join(' ')))
+			sections.map(async (section, i) => {
+				if (section.match) return section.text;
+				const trailing = i + 1 < sections.length ? sections[i + 1].text : '.';
+				return espeakRun(section.text + trailing, language);
+			})
 		)
 	).join('');
 
 	// 4. Post-process phonemes
 	let processed = ps
+		// --ipa=3 joins diphthong components with U+200D (zero-width joiner), which Kokoro does not expect
+		.replace(/\u200d/g, '')
 		// https://en.wiktionary.org/wiki/kokoro#English
 		.replace(/kəkˈoːɹoʊ/g, 'kˈoʊkəɹoʊ')
 		.replace(/kəkˈɔːɹəʊ/g, 'kˈəʊkəɹəʊ')
@@ -194,7 +213,7 @@ export async function phonemize(text: string, language: KokoroLanguage = 'a', no
 		.replace(/ z(?=[;:,.!?¡¿—…"«»“” ]|$)/g, 'z');
 
 	// 5. Additional post-processing for American English
-	if (language === 'a') {
+	if (language === 'en-us') {
 		processed = processed.replace(/(?<=nˈaɪn)ti(?!ː)/g, 'di');
 	}
 	return processed.trim();

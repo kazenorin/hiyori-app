@@ -1,5 +1,5 @@
 // @vitest-environment node
-// The espeak-ng WASM data is gunzipped via DecompressionStream, which jsdom does not provide.
+// The espeak-ng package loads its .wasm from disk via its import.meta.url, which only works in the node environment.
 import { describe, test, expect } from 'vitest';
 import { phonemize } from '../phonemize';
 
@@ -89,14 +89,14 @@ describe('phonemize', () => {
 	describe('en-us', () => {
 		for (const [input, expected] of A_TEST_CASES) {
 			test(`phonemize("${input}")`, async () => {
-				expect(await phonemize(input)).toEqual(expected);
+				expect(await phonemize(input, 'en-us')).toEqual(expected);
 			});
 		}
 	});
 	describe('en-gb', () => {
 		for (const [input, expected] of B_TEST_CASES) {
 			test(`phonemize("${input}")`, async () => {
-				expect(await phonemize(input, 'b')).toEqual(expected);
+				expect(await phonemize(input, 'en-gb')).toEqual(expected);
 			});
 		}
 	});

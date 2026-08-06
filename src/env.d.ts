@@ -27,3 +27,18 @@ declare module 'libcurl.js' {
 	}
 	export const libcurl: Libcurl;
 }
+declare module 'espeak-ng' {
+	interface ESpeakNgFS {
+		readFile(path: string, options: { encoding: 'utf8' }): string;
+		readFile(path: string): Uint8Array;
+	}
+	interface ESpeakNgModule {
+		FS: ESpeakNgFS;
+	}
+	interface ESpeakNgOptions {
+		arguments?: string[];
+		print?: (text: string) => void;
+		printErr?: (text: string) => void;
+	}
+	export default function ESpeakNg(options?: ESpeakNgOptions): Promise<ESpeakNgModule>;
+}
