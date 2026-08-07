@@ -10,6 +10,7 @@ const LANGUAGE_LABELS: Record<VoiceLanguage, string> = {
 	'en-gb': 'British English',
 	ja: '日本語',
 	zh: '中文',
+	yue: '粵語',
 	es: 'Español',
 	'fr-fr': 'Français',
 	hi: 'हिन्दी',
