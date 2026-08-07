@@ -25,9 +25,7 @@
 		exitWorldBuilderMode,
 		getIsActive as getIsWorldBuilderActive,
 	} from '$lib/features/world-builder/world-builder.svelte';
-	import { getSettings, updateSettings, settings } from '$lib/stores/settings.svelte';
-	import { isTTSModelCached } from '$lib/kokoro/model';
-	import { ttsPlayer } from '$lib/kokoro/player.svelte';
+	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
 	import { t } from '$lib/i18n';
 
 	import BottomTabBar from '$lib/components/BottomTabBar.svelte';
@@ -141,21 +139,6 @@
 				await loadActLineMessages(lineId);
 			}
 			appReady = true;
-
-			if (settings.ttsEnabled) {
-				if (ttsPlayer.isModelLoaded) {
-					// Model already in memory, no need to check cache
-				} else {
-					const cached = await isTTSModelCached();
-					if (!cached) {
-						await updateSettings({ ttsEnabled: false });
-					}
-				}
-			}
-
-			if (!settings.ttsEnabled && ttsPlayer.isModelLoaded) {
-				ttsPlayer.shutdownModel();
-			}
 		} catch (err) {
 			await log.error('init', 'Failed', err);
 			appError = err instanceof Error ? err.message : String(err);

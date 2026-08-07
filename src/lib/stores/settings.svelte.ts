@@ -78,8 +78,7 @@ export interface Settings {
 	playerDivergenceThreshold: number;
 	defaultPlotMode: 'guidance' | 'phaseEvent';
 	reevaluationFrequency: number;
-	ttsEnabled: boolean;
-	ttsVoices: Record<Locale, VoiceId>;
+	ttsVoices: Record<Locale, VoiceId | null>;
 	ttsSpeed: number;
 	characterNameSuggestionMode: CharacterNameSuggestionMode;
 	nameSuggestionQuotas: NameQuotaConfig;
@@ -119,8 +118,7 @@ const defaults: Settings = {
 	playerDivergenceThreshold: 8,
 	defaultPlotMode: 'phaseEvent',
 	reevaluationFrequency: 10,
-	ttsEnabled: false,
-	ttsVoices: { en: 'af_heart', 'zh-Hant-HK': 'zf_xiaoxiao' },
+	ttsVoices: { en: null, 'zh-Hant-HK': null },
 	ttsSpeed: 1,
 	characterNameSuggestionMode: 'analytic',
 	nameSuggestionQuotas: DEFAULT_NAME_QUOTAS,
@@ -288,12 +286,8 @@ export function isPhraseHighlightingEnabled(): boolean {
 	return settings.importantPhraseHighlighting && !!getMinorTaskAgentProviderConfig();
 }
 
-export function isTTSEnabled(): boolean {
-	return settings.ttsEnabled;
-}
-
-export function getTTSVoiceByLocale(locale: Locale): VoiceId {
-	return settings.ttsVoices[locale] ?? settings.ttsVoices['en'];
+export function getTTSVoiceByLocale(locale: Locale): VoiceId | null {
+	return settings.ttsVoices[locale] ?? null;
 }
 
 export function getTTSSpeed(): number {

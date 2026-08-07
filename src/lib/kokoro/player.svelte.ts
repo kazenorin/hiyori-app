@@ -1,4 +1,5 @@
 import { TTS_SAMPLE_RATE } from './constants';
+import type { TTSModelKey } from './constants';
 
 export type PlaybackState = 'idle' | 'loading' | 'playing' | 'error';
 
@@ -28,13 +29,13 @@ export class TTSPlayer {
 	playingState: PlaybackState = $state('idle');
 	lastError: string | null = $state(null);
 
-	async loadModel(callbacks: LoadModelCallbacks = {}): Promise<void> {
+	async loadModel(modelKey: TTSModelKey, callbacks: LoadModelCallbacks = {}): Promise<void> {
 		this.loadCallbacks = callbacks;
 		this.playingState = 'loading';
 		this.lastError = null;
 
 		this.ensureWorker();
-		this.worker!.postMessage({ type: 'init_model' });
+		this.worker!.postMessage({ type: 'init_model', modelKey });
 	}
 
 	cancelLoad(): void {

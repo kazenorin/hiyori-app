@@ -1,8 +1,10 @@
 import { KokoroTTS } from './kokoro-hiyori';
 import { splitTextSmart } from './semantic-split';
-import { TTS_MODEL_ID, TTS_MAX_QUEUE_SIZE, TTS_BACKPRESSURE_TIMEOUT_SECONDS } from './constants';
+import { TTS_MODELS, TTS_MAX_QUEUE_SIZE, TTS_BACKPRESSURE_TIMEOUT_SECONDS, type TTSModelKey } from './constants';
+import { VOICES, type VoiceId } from './kokoro-hiyori/voices';
 
 let tts: KokoroTTS | null = null;
+let loadedModelKey: TTSModelKey | null = null;
 let bufferQueueSize = 0;
 let activeGenerationId = 0;
 const STOPPED_SENTINEL = -1;
@@ -18,13 +20,13 @@ async function detectDevice(): Promise<'webgpu' | 'wasm'> {
 	}
 }
 
-async function ensureModel(): Promise<void> {
-	if (tts) return;
+async function ensureModel(modelKey: TTSModelKey): Promise<void> {
+	if (tts && loadedModelKey === modelKey) return;
 
 	const device = await detectDevice();
-	ctx.postMessage({ status: 'loading_model_start', device });
+	ctx.postMessage({ status: 'loading_model_start', device, modelKey });
 
-	tts = await KokoroTTS.fromPretrained(TTS_MODEL_ID, {
+	tts = await KokoroTTS.fromPretrained(TTS_MODELS[modelKey].id, {
 		dtype: device === 'wasm' ? 'q8' : 'fp32',
 		device,
 		progressCallback: (progress) => {
@@ -32,11 +34,17 @@ async function ensureModel(): Promise<void> {
 				status: 'loading_model_progress',
 				progress: 'progress' in progress ? progress.progress : 0,
 				file: 'file' in progress ? progress.file : '',
+				modelKey,
 			});
 		},
 	});
+	loadedModelKey = modelKey;
 
-	ctx.postMessage({ status: 'loading_model_ready', voices: tts.voices });
+	ctx.postMessage({ status: 'loading_model_ready', voices: tts.voices, modelKey });
+}
+
+function modelKeyForVoice(voice: string): TTSModelKey {
+	return VOICES[voice as VoiceId]?.model ?? 'v1.0';
 }
 
 function isStopped(genId: number): boolean {
@@ -44,11 +52,11 @@ function isStopped(genId: number): boolean {
 }
 
 ctx.addEventListener('message', async (e: MessageEvent) => {
-	const { type, text, voice, speed, generationId } = e.data;
+	const { type, text, voice, speed, generationId, modelKey } = e.data;
 
 	if (type === 'init_model') {
 		try {
-			await ensureModel();
+			await ensureModel((modelKey as TTSModelKey) ?? 'v1.0');
 		} catch (error) {
 			ctx.postMessage({ status: 'error', error: String(error) });
 		}
@@ -56,7 +64,7 @@ ctx.addEventListener('message', async (e: MessageEvent) => {
 	}
 
 	if (type === 'check_model') {
-		ctx.postMessage({ status: 'model_status', loaded: !!tts });
+		ctx.postMessage({ status: 'model_status', loaded: !!tts, modelKey: loadedModelKey });
 		return;
 	}
 
@@ -76,13 +84,11 @@ ctx.addEventListener('message', async (e: MessageEvent) => {
 		activeGenerationId = currentGenId;
 		bufferQueueSize = 0;
 
-		if (!tts) {
-			try {
-				await ensureModel();
-			} catch (error) {
-				ctx.postMessage({ status: 'error', error: String(error), generationId: currentGenId });
-				return;
-			}
+		try {
+			await ensureModel(modelKeyForVoice(voice));
+		} catch (error) {
+			ctx.postMessage({ status: 'error', error: String(error), generationId: currentGenId });
+			return;
 		}
 
 		const chunks = splitTextSmart(text, 300);

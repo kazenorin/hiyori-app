@@ -95,7 +95,7 @@ function defaultSettings() {
 		defaultPlotMode: 'phaseEvent' as const,
 		reevaluationFrequency: 10,
 		ttsEnabled: false,
-		ttsVoices: { en: 'af_heart', 'zh-Hant-HK': 'zf_xiaoxiao' } as const,
+		ttsVoices: { en: null, 'zh-Hant-HK': null } as const,
 		ttsSpeed: 1,
 		characterNameSuggestionMode: 'ai' as const,
 		nameSuggestionQuotas: { budgets: {}, ratio: { given: 60, family: 30, nickname: 10 } },
