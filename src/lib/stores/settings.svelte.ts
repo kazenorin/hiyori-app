@@ -3,7 +3,7 @@ import { omitBy } from 'lodash-es';
 import { getDatabase } from '$lib/db/database';
 import { DEFAULT_NAME_QUOTAS, type NameQuotaConfig } from '$lib/features/name-suggestion/quota';
 import { fs } from '$lib/fs/file-system';
-import { detectDefaultLocale, setLocale } from '$lib/i18n';
+import { detectDefaultLocale, setLocale, type Locale } from '$lib/i18n';
 import type { CallSettings } from 'ai';
 import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
 import type { VoiceId } from '$lib/kokoro/kokoro-hiyori';
@@ -79,7 +79,7 @@ export interface Settings {
 	defaultPlotMode: 'guidance' | 'phaseEvent';
 	reevaluationFrequency: number;
 	ttsEnabled: boolean;
-	ttsVoice: VoiceId;
+	ttsVoices: Record<Locale, VoiceId>;
 	ttsSpeed: number;
 	characterNameSuggestionMode: CharacterNameSuggestionMode;
 	nameSuggestionQuotas: NameQuotaConfig;
@@ -120,7 +120,7 @@ const defaults: Settings = {
 	defaultPlotMode: 'phaseEvent',
 	reevaluationFrequency: 10,
 	ttsEnabled: false,
-	ttsVoice: 'af_heart',
+	ttsVoices: { en: 'af_heart', 'zh-Hant-HK': 'zf_xiaoxiao' },
 	ttsSpeed: 1,
 	characterNameSuggestionMode: 'analytic',
 	nameSuggestionQuotas: DEFAULT_NAME_QUOTAS,
@@ -292,8 +292,8 @@ export function isTTSEnabled(): boolean {
 	return settings.ttsEnabled;
 }
 
-export function getTTSVoice(): string {
-	return settings.ttsVoice;
+export function getTTSVoiceByLocale(locale: Locale): VoiceId {
+	return settings.ttsVoices[locale] ?? settings.ttsVoices['en'];
 }
 
 export function getTTSSpeed(): number {

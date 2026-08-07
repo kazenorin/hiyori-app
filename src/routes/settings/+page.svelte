@@ -13,6 +13,7 @@
 		settings,
 		updateProviderConfig,
 		updateSettings,
+		getTTSVoiceByLocale,
 	} from '$lib/stores/settings.svelte';
 	import { deleteStory, getStories } from '$lib/stores/stories.svelte';
 	import * as dbAppState from '$lib/db/app-state';
@@ -31,7 +32,8 @@
 		getLogLevelItems,
 		getReviewerModeItems,
 		getRoleItems,
-		getVoiceItems,
+		getEnglishVoiceItems,
+		getMandarinVoiceItems,
 		getThemeModeItems,
 		getColorThemeItems,
 	} from '$lib/features/settings-options';
@@ -188,15 +190,15 @@
 
 	const reviewerModeItems = $derived(getReviewerModeItems());
 
-	const voiceItems = $derived(getVoiceItems());
+	const englishVoiceItems = $derived(getEnglishVoiceItems());
+
+	const mandarinVoiceItems = $derived(getMandarinVoiceItems());
 
 	let showTTSDownloadModal = $state(false);
 	let ttsDownloadProgress = $state<number | null>(null);
 	let ttsDownloading = $state(false);
 	let ttsDownloadError = $state<string | null>(null);
 	let ttsPreviewPlaying = $state(false);
-
-	const TTS_PREVIEW_TEXT = `The Tortoise and the Hare\n\nA Hare was making fun of the Tortoise one day for being so slow. "Do you ever get anywhere?" he asked with a mocking laugh. "Yes," replied the Tortoise, "and I get there sooner than you think. I'll run you a race and prove it." The Hare was much amused at the idea of running a race with the Tortoise, but for the fun of the thing he agreed. So the Fox, who had consented to act as judge, marked the distance and started them off. The Hare was soon far out of sight, and to make the Tortoise feel very deeply how ridiculous it was for him to try a race with a Hare, he lay down beside the road to have a nap. The Tortoise meanwhile kept going slowly but steadily, and, after a time, passed the place where the Hare was sleeping. When the Hare awoke from his nap, he saw the Tortoise was near the winning-post, and could not run up in time to save the race.`;
 
 	function handleTTSPreview(): void {
 		if (ttsPreviewPlaying) {
@@ -205,9 +207,9 @@
 			return;
 		}
 		ttsPreviewPlaying = true;
-		const voice = settings.ttsVoice;
+		const voice = getTTSVoiceByLocale(settings.locale);
 		const speed = settings.ttsSpeed;
-		ttsPlayer.play(TTS_PREVIEW_TEXT, '__tts_preview__', voice, speed);
+		ttsPlayer.play(t('tts.previewText'), '__tts_preview__', voice, speed);
 	}
 
 	$effect(() => {
@@ -781,32 +783,46 @@
 				<span class="text-xs text-surface-500 block">{t('tts.ttsLanguageNote')}</span>
 			</div>
 			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
-				<h3 class="text-sm font-semibold text-surface-700-300">{t('tts.speed')}</h3>
-				<span class="text-xs text-surface-500 block">{t('tts.speedDescription')}</span>
-				<div class="flex items-center gap-3">
-					<input
-						type="range"
-						class="flex-1 cursor-pointer"
-						min={TTS_SPEED_MIN}
-						max={TTS_SPEED_MAX}
-						step={TTS_SPEED_STEP}
-						value={settings.ttsSpeed}
-						disabled={!settings.ttsEnabled}
-						oninput={(e) => updateSettings({ ttsSpeed: parseFloat((e.target as HTMLInputElement).value) })}
-					/>
-					<span class="text-sm tabular-nums min-w-[3ch] text-surface-700-300">{settings.ttsSpeed.toFixed(1)}×</span>
+				<h3 class="text-sm font-semibold text-surface-700-300">{t('tts.voice')}</h3>
+				<span class="text-xs text-surface-500 block">{t('tts.voiceDescription')}</span>
+				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+					<label class="block">
+						<span class="text-sm font-medium text-surface-700-300">{t('tts.voiceLanguageEnglish')}</span>
+						<ThemedSelect
+							items={englishVoiceItems}
+							value={settings.ttsVoices['en']}
+							onValueChange={(v) => updateSettings({ ttsVoices: { ...settings.ttsVoices, en: v as VoiceId } })}
+							disabled={!settings.ttsEnabled}
+						/>
+					</label>
+					<label class="block">
+						<span class="text-sm font-medium text-surface-700-300">{t('tts.voiceLanguageMandarin')}</span>
+						<ThemedSelect
+							items={mandarinVoiceItems}
+							value={settings.ttsVoices['zh-Hant-HK']}
+							onValueChange={(v) => updateSettings({ ttsVoices: { ...settings.ttsVoices, 'zh-Hant-HK': v as VoiceId } })}
+							disabled={!settings.ttsEnabled}
+						/>
+					</label>
 				</div>
 			</div>
 			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
-					<h3 class="text-sm font-semibold text-surface-700-300">{t('tts.voice')}</h3>
-					<ThemedSelect
-						items={voiceItems}
-						value={settings.ttsVoice}
-						onValueChange={(v) => updateSettings({ ttsVoice: v as VoiceId })}
-						disabled={!settings.ttsEnabled}
-					/>
-					<span class="text-xs text-surface-500 block">{t('tts.voiceDescription')}</span>
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('tts.speed')}</h3>
+					<span class="text-xs text-surface-500 block">{t('tts.speedDescription')}</span>
+					<div class="flex items-center gap-3">
+						<input
+							type="range"
+							class="flex-1 cursor-pointer"
+							min={TTS_SPEED_MIN}
+							max={TTS_SPEED_MAX}
+							step={TTS_SPEED_STEP}
+							value={settings.ttsSpeed}
+							disabled={!settings.ttsEnabled}
+							oninput={(e) => updateSettings({ ttsSpeed: parseFloat((e.target as HTMLInputElement).value) })}
+						/>
+						<span class="text-sm tabular-nums min-w-[3ch] text-surface-700-300">{settings.ttsSpeed.toFixed(1)}×</span>
+					</div>
 				</div>
 				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
 					<h3 class="text-sm font-semibold text-surface-700-300">{t('tts.preview')}</h3>
