@@ -8,6 +8,13 @@ export function getVoiceList(): Readonly<Record<VoiceId, VoiceInfo>> {
 const LANGUAGE_LABELS: Record<VoiceLanguage, string> = {
 	'en-us': 'American English',
 	'en-gb': 'British English',
+	ja: '日本語',
+	zh: '中文',
+	es: 'Español',
+	'fr-fr': 'Français',
+	hi: 'हिन्दी',
+	it: 'Italiano',
+	'pt-br': 'Português (Brasil)',
 };
 
 export function getVoiceLabel(voice: VoiceInfo): string {

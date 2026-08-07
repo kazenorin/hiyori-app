@@ -1,7 +1,7 @@
 import { TTS_VOICE_DATA_URL } from '$lib/kokoro/constants';
 
 export type VoiceQuality = 'A' | 'A-' | 'B' | 'B-' | 'C+' | 'C' | 'C-' | 'D+' | 'D' | 'D-' | 'F+';
-export type VoiceLanguage = 'en-us' | 'en-gb';
+export type VoiceLanguage = 'en-us' | 'en-gb' | 'ja' | 'zh' | 'es' | 'fr-fr' | 'hi' | 'it' | 'pt-br';
 export type VoiceGender = 'Female' | 'Male';
 
 export interface VoiceInfo {
@@ -218,14 +218,214 @@ export const VOICES = Object.freeze({
 		targetQuality: 'B',
 		overallGrade: 'C',
 	},
-
-	// TODO: Add support for other languages:
-	// jf_alpha, jf_gongitsune, jf_nezumi, jf_tebukuro, jm_kumo (ja)
-	// zf_xiaobei, zf_xiaoni, zf_xiaoxiao, zf_xiaoyi, zm_yunjian, zm_yunxi, zm_yunxia, zm_yunyang (zh)
-	// ef_dora, em_alex, em_santa, ff_siwis (es)
-	// hf_alpha, hf_beta, hm_omega, hm_psi (hi)
-	// if_sara, im_nicola (it)
-	// pf_dora, pm_alex, pm_santa (pt-br)
+	jf_alpha: {
+		name: 'alpha',
+		language: 'ja',
+		gender: 'Female',
+		traits: '🚺',
+		targetQuality: 'B',
+		overallGrade: 'C+',
+	},
+	jf_gongitsune: {
+		name: 'gongitsune',
+		language: 'ja',
+		gender: 'Female',
+		traits: '🚺',
+		targetQuality: 'B',
+		overallGrade: 'C',
+	},
+	jf_nezumi: {
+		name: 'nezumi',
+		language: 'ja',
+		gender: 'Female',
+		traits: '🚺',
+		targetQuality: 'B',
+		overallGrade: 'C-',
+	},
+	jf_tebukuro: {
+		name: 'tebukuro',
+		language: 'ja',
+		gender: 'Female',
+		traits: '🚺',
+		targetQuality: 'B',
+		overallGrade: 'C',
+	},
+	jm_kumo: {
+		name: 'kumo',
+		language: 'ja',
+		gender: 'Male',
+		traits: '🚹',
+		targetQuality: 'B',
+		overallGrade: 'C-',
+	},
+	zf_xiaobei: {
+		name: 'xiaobei',
+		language: 'zh',
+		gender: 'Female',
+		traits: '🚺',
+		targetQuality: 'C',
+		overallGrade: 'D',
+	},
+	zf_xiaoni: {
+		name: 'xiaoni',
+		language: 'zh',
+		gender: 'Female',
+		traits: '🚺',
+		targetQuality: 'C',
+		overallGrade: 'D',
+	},
+	zf_xiaoxiao: {
+		name: 'xiaoxiao',
+		language: 'zh',
+		gender: 'Female',
+		traits: '🚺',
+		targetQuality: 'C',
+		overallGrade: 'D',
+	},
+	zf_xiaoyi: {
+		name: 'xiaoyi',
+		language: 'zh',
+		gender: 'Female',
+		traits: '🚺',
+		targetQuality: 'C',
+		overallGrade: 'D',
+	},
+	zm_yunjian: {
+		name: 'yunjian',
+		language: 'zh',
+		gender: 'Male',
+		traits: '🚹',
+		targetQuality: 'C',
+		overallGrade: 'D',
+	},
+	zm_yunxi: {
+		name: 'yunxi',
+		language: 'zh',
+		gender: 'Male',
+		traits: '🚹',
+		targetQuality: 'C',
+		overallGrade: 'D',
+	},
+	zm_yunxia: {
+		name: 'yunxia',
+		language: 'zh',
+		gender: 'Male',
+		traits: '🚹',
+		targetQuality: 'C',
+		overallGrade: 'D',
+	},
+	zm_yunyang: {
+		name: 'yunyang',
+		language: 'zh',
+		gender: 'Male',
+		traits: '🚹',
+		targetQuality: 'C',
+		overallGrade: 'D',
+	},
+	ef_dora: {
+		name: 'dora',
+		language: 'es',
+		gender: 'Female',
+		traits: '🚺',
+		targetQuality: 'C',
+		overallGrade: 'D',
+	},
+	em_alex: {
+		name: 'alex',
+		language: 'es',
+		gender: 'Male',
+		traits: '🚹',
+		targetQuality: 'C',
+		overallGrade: 'D',
+	},
+	em_santa: {
+		name: 'santa',
+		language: 'es',
+		gender: 'Male',
+		traits: '🚹',
+		targetQuality: 'C',
+		overallGrade: 'D',
+	},
+	ff_siwis: {
+		name: 'siwis',
+		language: 'fr-fr',
+		gender: 'Female',
+		traits: '🚺',
+		targetQuality: 'B',
+		overallGrade: 'B-',
+	},
+	hf_alpha: {
+		name: 'alpha',
+		language: 'hi',
+		gender: 'Female',
+		traits: '🚺',
+		targetQuality: 'B',
+		overallGrade: 'C',
+	},
+	hf_beta: {
+		name: 'beta',
+		language: 'hi',
+		gender: 'Female',
+		traits: '🚺',
+		targetQuality: 'B',
+		overallGrade: 'C',
+	},
+	hm_omega: {
+		name: 'omega',
+		language: 'hi',
+		gender: 'Male',
+		traits: '🚹',
+		targetQuality: 'B',
+		overallGrade: 'C',
+	},
+	hm_psi: {
+		name: 'psi',
+		language: 'hi',
+		gender: 'Male',
+		traits: '🚹',
+		targetQuality: 'B',
+		overallGrade: 'C',
+	},
+	if_sara: {
+		name: 'sara',
+		language: 'it',
+		gender: 'Female',
+		traits: '🚺',
+		targetQuality: 'B',
+		overallGrade: 'C',
+	},
+	im_nicola: {
+		name: 'nicola',
+		language: 'it',
+		gender: 'Male',
+		traits: '🚹',
+		targetQuality: 'B',
+		overallGrade: 'C',
+	},
+	pf_dora: {
+		name: 'dora',
+		language: 'pt-br',
+		gender: 'Female',
+		traits: '🚺',
+		targetQuality: 'C',
+		overallGrade: 'D',
+	},
+	pm_alex: {
+		name: 'alex',
+		language: 'pt-br',
+		gender: 'Male',
+		traits: '🚹',
+		targetQuality: 'C',
+		overallGrade: 'D',
+	},
+	pm_santa: {
+		name: 'santa',
+		language: 'pt-br',
+		gender: 'Male',
+		traits: '🚹',
+		targetQuality: 'C',
+		overallGrade: 'D',
+	},
 } as const satisfies Record<string, VoiceInfo>);
 
 export type VoiceId = keyof typeof VOICES;
