@@ -108,6 +108,14 @@
 		"characterNameEngineAnalyticDescription": "Pick names from a curated, tagged database — no AI call, works without any provider configured.",
 		"characterNameEngineConfigure": "Configure name database quotas",
 		"back": "Back",
+		"ttsConfig": {
+			"title": "Text-to-Speech Configuration",
+			"description": "Choose a voice for each story locale. Select a voice to enable text-to-speech for that locale, or set it to Disabled to turn it off.",
+			"locale": {
+				"en": "English",
+				"zh-Hant-HK": "Mandarin Chinese"
+			}
+		},
 		"nameQuotas": {
 			"title": "Character Name Database Quotas",
 			"description": "Control how many names the analytic engine keeps per culture, and how each culture's budget is split between name types. Names beyond the quota are randomly sampled at load time.",
@@ -684,8 +692,16 @@
 		"enableTtsInSettings": "Enable TTS in Settings",
 		"tts": "Text-to-Speech",
 		"enableTts": "Enable Text-to-Speech",
-		"ttsDescription": "Allow the app to read narrative messages aloud in English and Mandarin Chinese.",
-		"ttsLanguageNote": "TTS is available for English and Mandarin Chinese stories.",
+		"ttsDescription": "Allow the app to read narrative messages aloud.",
+		"ttsLanguageNote": "TTS is available for English and Chinese stories.",
+		"configure": "Configure…",
+		"configuredSummary": "Text-to-speech is configured for {count} locale(s).",
+		"notConfigured": "Text-to-speech is not yet configured.",
+		"disabled": "Disabled",
+		"chooseVoice": "Choose a voice",
+		"select": "Select",
+		"modelDownloaded": "Model downloaded",
+		"voiceDownloaded": "Voice file downloaded",
 		"voice": "Voice",
 		"voiceDescription": "Choose a voice for text-to-speech playback. English and Mandarin Chinese voices are available.",
 		"voiceLanguageEnglish": "English",
@@ -697,7 +713,7 @@
 		"previewPlaying": "Playing preview...",
 		"previewText": "The Tortoise and the Hare\n\nA Hare was making fun of the Tortoise one day for being so slow. \"Do you ever get anywhere?\" he asked with a mocking laugh. \"Yes,\" replied the Tortoise, \"and I get there sooner than you think. I'll run you a race and prove it.\" The Hare was much amused at the idea of running a race with the Tortoise, but for the fun of the thing he agreed. So the Fox, who had consented to act as judge, marked the distance and started them off. The Hare was soon far out of sight, and to make the Tortoise feel very deeply how ridiculous it was for him to try a race with a Hare, he lay down beside the road to have a nap. The Tortoise meanwhile kept going slowly but steadily, and, after a time, passed the place where the Hare was sleeping. When the Hare awoke from his nap, he saw the Tortoise was near the winning-post, and could not run up in time to save the race.",
 		"downloadModelTitle": "Download TTS Model",
-		"downloadModelDescription": "The TTS model needs to be downloaded before text-to-speech can be used. This is approximately 300 MB.",
+		"downloadModelDescription": "The {model} model needs to be downloaded before text-to-speech can be used. This is approximately 300 MB.",
 		"startDownload": "Download",
 		"cancelDownload": "Cancel",
 		"downloading": "Downloading model...",

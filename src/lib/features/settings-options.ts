@@ -1,25 +1,5 @@
 import { t } from '$lib/i18n';
 import { settings } from '$lib/stores/settings.svelte';
-import { getVoiceLabel, getVoiceList } from '$lib/kokoro/voices';
-import type { VoiceLanguage } from '$lib/kokoro/kokoro-hiyori';
-
-function getVoiceItemsByLanguage(predicate: (language: VoiceLanguage) => boolean): { label: string; value: string }[] {
-	return Object.entries(getVoiceList())
-		.filter(([, voice]) => predicate(voice.language))
-		.map(([id, voice]) => ({ label: getVoiceLabel(voice), value: id }));
-}
-
-export function getEnglishVoiceItems(): { label: string; value: string }[] {
-	return getVoiceItemsByLanguage((language) => language.startsWith('en'));
-}
-
-export function getMandarinVoiceItems(): { label: string; value: string }[] {
-	return getVoiceItemsByLanguage((language) => language === 'zh');
-}
-
-export function isTTSSupportedLocale(locale: string | undefined | null): boolean {
-	return locale === 'en' || locale?.startsWith('zh') === true;
-}
 
 export function getProviderItems(): { label: string; value: string }[] {
 	return [

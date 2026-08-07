@@ -13,7 +13,6 @@
 		settings,
 		updateProviderConfig,
 		updateSettings,
-		getTTSVoiceByLocale,
 	} from '$lib/stores/settings.svelte';
 	import { deleteStory, getStories } from '$lib/stores/stories.svelte';
 	import * as dbAppState from '$lib/db/app-state';
@@ -32,14 +31,9 @@
 		getLogLevelItems,
 		getReviewerModeItems,
 		getRoleItems,
-		getEnglishVoiceItems,
-		getMandarinVoiceItems,
 		getThemeModeItems,
 		getColorThemeItems,
 	} from '$lib/features/settings-options';
-	import { isTTSModelCached } from '$lib/kokoro/model';
-	import { ttsPlayer } from '$lib/kokoro/player.svelte';
-	import { TTS_SPEED_MIN, TTS_SPEED_MAX, TTS_SPEED_STEP } from '$lib/kokoro/constants';
 	import {
 		type DataImportExportState,
 		createDataImportExportState,
@@ -53,7 +47,6 @@
 	import { ensureAllBaseConfigs } from '$lib/fs/prompt-loader';
 	import { getDatabase } from '$lib/db/database';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
-	import type { VoiceId } from '$lib/kokoro/kokoro-hiyori';
 
 	// Editing state
 	let editingId = $state<string | null>(null);
@@ -190,84 +183,7 @@
 
 	const reviewerModeItems = $derived(getReviewerModeItems());
 
-	const englishVoiceItems = $derived(getEnglishVoiceItems());
-
-	const mandarinVoiceItems = $derived(getMandarinVoiceItems());
-
-	let showTTSDownloadModal = $state(false);
-	let ttsDownloadProgress = $state<number | null>(null);
-	let ttsDownloading = $state(false);
-	let ttsDownloadError = $state<string | null>(null);
-	let ttsPreviewPlaying = $state(false);
-
-	function handleTTSPreview(): void {
-		if (ttsPreviewPlaying) {
-			ttsPlayer.stop();
-			ttsPreviewPlaying = false;
-			return;
-		}
-		ttsPreviewPlaying = true;
-		const voice = getTTSVoiceByLocale(settings.locale);
-		const speed = settings.ttsSpeed;
-		ttsPlayer.play(t('tts.previewText'), '__tts_preview__', voice, speed);
-	}
-
-	$effect(() => {
-		if (ttsPreviewPlaying && ttsPlayer.playingMessageId !== '__tts_preview__') {
-			ttsPreviewPlaying = false;
-		}
-	});
-
-	async function handleToggleTTS(): Promise<void> {
-		if (settings.ttsEnabled) {
-			await updateSettings({ ttsEnabled: false });
-			ttsPlayer.shutdownModel();
-			return;
-		}
-
-		if (ttsPlayer.isModelLoaded) {
-			await updateSettings({ ttsEnabled: true });
-			return;
-		}
-
-		ttsDownloadError = null;
-		const cached = await isTTSModelCached();
-		if (cached) {
-			await updateSettings({ ttsEnabled: true });
-		} else {
-			showTTSDownloadModal = true;
-		}
-	}
-
-	function handleTTSDownload(): void {
-		ttsDownloading = true;
-		ttsDownloadProgress = 0;
-		ttsDownloadError = null;
-
-		ttsPlayer.loadModel({
-			onProgress: (progress: number) => {
-				ttsDownloadProgress = progress;
-			},
-			onError: (error: string) => {
-				ttsDownloadError = error;
-				ttsDownloading = false;
-			},
-			onReady: () => {
-				ttsDownloading = false;
-				showTTSDownloadModal = false;
-				ttsDownloadProgress = null;
-				updateSettings({ ttsEnabled: true });
-			},
-		});
-	}
-
-	function handleTTSDownloadCancel(): void {
-		ttsPlayer.cancelLoad();
-		showTTSDownloadModal = false;
-		ttsDownloadProgress = null;
-		ttsDownloadError = null;
-		ttsDownloading = false;
-	}
+	const ttsConfiguredCount = $derived(Object.values(settings.ttsVoices).filter((v) => v !== null).length);
 </script>
 
 <div class="flex-1 overflow-y-auto p-3 md:p-4 lg:p-6">
@@ -776,69 +692,12 @@
 		<!-- Text-to-Speech -->
 		<Card title={t('tts.tts')} description={t('tts.ttsDescription')}>
 			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
-				<label class="flex items-center gap-2">
-					<input type="checkbox" class="checkbox" checked={settings.ttsEnabled} onchange={handleToggleTTS} />
-					<h3 class="text-sm font-semibold text-surface-700-300">{t('tts.enableTts')}</h3>
-				</label>
-				<span class="text-xs text-surface-500 block">{t('tts.ttsLanguageNote')}</span>
-			</div>
-			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
-				<h3 class="text-sm font-semibold text-surface-700-300">{t('tts.voice')}</h3>
-				<span class="text-xs text-surface-500 block">{t('tts.voiceDescription')}</span>
-				<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-					<label class="block">
-						<span class="text-sm font-medium text-surface-700-300">{t('tts.voiceLanguageEnglish')}</span>
-						<ThemedSelect
-							items={englishVoiceItems}
-							value={settings.ttsVoices['en']}
-							onValueChange={(v) => updateSettings({ ttsVoices: { ...settings.ttsVoices, en: v as VoiceId } })}
-							disabled={!settings.ttsEnabled}
-						/>
-					</label>
-					<label class="block">
-						<span class="text-sm font-medium text-surface-700-300">{t('tts.voiceLanguageMandarin')}</span>
-						<ThemedSelect
-							items={mandarinVoiceItems}
-							value={settings.ttsVoices['zh-Hant-HK']}
-							onValueChange={(v) => updateSettings({ ttsVoices: { ...settings.ttsVoices, 'zh-Hant-HK': v as VoiceId } })}
-							disabled={!settings.ttsEnabled}
-						/>
-					</label>
-				</div>
-			</div>
-			<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
-					<h3 class="text-sm font-semibold text-surface-700-300">{t('tts.speed')}</h3>
-					<span class="text-xs text-surface-500 block">{t('tts.speedDescription')}</span>
-					<div class="flex items-center gap-3">
-						<input
-							type="range"
-							class="flex-1 cursor-pointer"
-							min={TTS_SPEED_MIN}
-							max={TTS_SPEED_MAX}
-							step={TTS_SPEED_STEP}
-							value={settings.ttsSpeed}
-							disabled={!settings.ttsEnabled}
-							oninput={(e) => updateSettings({ ttsSpeed: parseFloat((e.target as HTMLInputElement).value) })}
-						/>
-						<span class="text-sm tabular-nums min-w-[3ch] text-surface-700-300">{settings.ttsSpeed.toFixed(1)}×</span>
-					</div>
-				</div>
-				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
-					<h3 class="text-sm font-semibold text-surface-700-300">{t('tts.preview')}</h3>
-					<span class="text-xs text-surface-500 block">{t('tts.previewDescription')}</span>
-					<button
-						type="button"
-						class="px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium transition-colors min-h-11"
-						onclick={handleTTSPreview}
-						disabled={!settings.ttsEnabled}
-					>
-						{ttsPreviewPlaying ? t('tts.stop') : t('tts.preview')}
-					</button>
-					{#if ttsPreviewPlaying}
-						<span class="text-xs text-surface-500 block">{t('tts.previewPlaying')}</span>
-					{/if}
-				</div>
+				<span class="text-sm text-surface-700-300">
+					{ttsConfiguredCount > 0 ? t('tts.configuredSummary', { count: ttsConfiguredCount }) : t('tts.notConfigured')}
+				</span>
+				<a href={resolve('/settings/tts')} class="text-sm text-primary-500 hover:underline">
+					{t('tts.configure')}
+				</a>
 			</div>
 		</Card>
 
@@ -999,38 +858,6 @@
 				onclick={handleDeleteAllGameDataConfirm}
 			>
 				{t('settings.deleteAllGameData')}
-			</button>
-		</div>
-	{/snippet}
-</Modal>
-
-<Modal bind:open={showTTSDownloadModal} title={t('tts.downloadModelTitle')}>
-	{#snippet body()}
-		<p class="text-sm text-surface-700-300">{t('tts.downloadModelDescription')}</p>
-		{#if ttsDownloadProgress !== null}
-			<ProgressField value={ttsDownloadProgress} label={`${ttsDownloadProgress}%`} visible={true} />
-		{/if}
-		{#if ttsDownloadError}
-			<p class="text-sm text-error-500 mt-2">{ttsDownloadError}</p>
-		{/if}
-	{/snippet}
-	{#snippet footer()}
-		<div class="flex gap-2">
-			<button
-				class="flex-1 px-4 py-2 rounded-lg bg-surface-200-800 hover:bg-surface-300-700 text-surface-700-300 text-sm transition-colors min-h-11"
-				type="button"
-				disabled={ttsDownloading}
-				onclick={handleTTSDownloadCancel}
-			>
-				{t('tts.cancelDownload')}
-			</button>
-			<button
-				class="flex-1 px-4 py-2 rounded-lg bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium transition-colors min-h-11"
-				type="button"
-				disabled={ttsDownloading}
-				onclick={handleTTSDownload}
-			>
-				{ttsDownloading ? t('tts.downloading') : t('tts.startDownload')}
 			</button>
 		</div>
 	{/snippet}

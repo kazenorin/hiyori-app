@@ -69,8 +69,8 @@
 		saveEditWorldBuilderMessage,
 	} from '$lib/features/message-editor.svelte';
 	import { getActiveActLineId, getActiveStory, getIsSelectingStory } from '$lib/stores/stories.svelte';
-	import { settings, isDirectorModeEnabled, isTTSEnabled, getTTSVoiceByLocale, getTTSSpeed } from '$lib/stores/settings.svelte';
-	import { isTTSSupportedLocale } from '$lib/features/settings-options';
+	import { settings, isDirectorModeEnabled, getTTSVoiceByLocale, getTTSSpeed } from '$lib/stores/settings.svelte';
+	import { isTTSSupportedLocale } from '$lib/kokoro/locale-mapping';
 	import { ttsPlayer } from '$lib/kokoro/player.svelte';
 	import { buildTTSPassage } from '$lib/kokoro/passage';
 	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
@@ -211,11 +211,13 @@
 		const passage = buildTTSPassage(message.variables, message.content);
 		if (!passage) return;
 		const voice = getTTSVoiceByLocale(getActiveStory()?.locale ?? settings.locale);
+		if (!voice) return;
 		const speed = getTTSSpeed();
 		ttsPlayer.play(passage, message.id, voice, speed);
 	}
 
 	const ttsVisible = $derived(isTTSSupportedLocale(getActiveStory()?.locale));
+	const ttsHasVoice = $derived(Boolean(getTTSVoiceByLocale(getActiveStory()?.locale ?? settings.locale)));
 
 	async function handleRegenerate(messageId: string) {
 		const actLineId = getActiveActLineId();
@@ -719,7 +721,7 @@
 														<Icon name="volume-x" class="w-3.5 h-3.5" />
 														{t('tts.stop')}
 													</button>
-												{:else if isTTSEnabled()}
+												{:else if ttsHasVoice}
 													<button
 														class="flex items-center gap-1 text-xs text-surface-400-500 hover:text-surface-700-300 transition-colors"
 														title={t('tts.readAloud')}
@@ -821,7 +823,7 @@
 												showCopy={!!message.content}
 												showRead={!!(ttsVisible && message.role === 'assistant' && message.content)}
 												isPlaying={ttsPlayer.playingMessageId === message.id}
-												ttsEnabled={isTTSEnabled()}
+												ttsEnabled={ttsHasVoice}
 												showEdit={!!(message.variables && hasTemplateMetadata(message.variables) && i === lastMessageIdx)}
 												showFork={!!(message.variables && hasTemplateMetadata(message.variables))}
 												showRegenerate={i === lastMessageIdx}
