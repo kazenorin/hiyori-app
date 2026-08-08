@@ -145,6 +145,23 @@
 			<p class="text-sm text-surface-500">{t('settings.ttsConfig.description')}</p>
 		</div>
 
+		<Card title={t('tts.speed')} description={t('tts.speedDescription')}>
+			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4">
+				<div class="flex items-center gap-3">
+					<input
+						type="range"
+						class="flex-1 cursor-pointer"
+						min={TTS_SPEED_MIN}
+						max={TTS_SPEED_MAX}
+						step={TTS_SPEED_STEP}
+						value={settings.ttsSpeed}
+						oninput={(e) => updateSettings({ ttsSpeed: parseFloat((e.target as HTMLInputElement).value) })}
+					/>
+					<span class="text-sm tabular-nums min-w-[3ch] text-surface-700-300">{settings.ttsSpeed.toFixed(1)}×</span>
+				</div>
+			</div>
+		</Card>
+
 		{#each TTS_LOCALES as locale (locale)}
 			<Card title={t(`settings.ttsConfig.locale.${locale}`)}>
 				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
@@ -175,23 +192,6 @@
 				</div>
 			</Card>
 		{/each}
-
-		<Card title={t('tts.speed')} description={t('tts.speedDescription')}>
-			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4">
-				<div class="flex items-center gap-3">
-					<input
-						type="range"
-						class="flex-1 cursor-pointer"
-						min={TTS_SPEED_MIN}
-						max={TTS_SPEED_MAX}
-						step={TTS_SPEED_STEP}
-						value={settings.ttsSpeed}
-						oninput={(e) => updateSettings({ ttsSpeed: parseFloat((e.target as HTMLInputElement).value) })}
-					/>
-					<span class="text-sm tabular-nums min-w-[3ch] text-surface-700-300">{settings.ttsSpeed.toFixed(1)}×</span>
-				</div>
-			</div>
-		</Card>
 	</div>
 </div>
 

@@ -113,7 +113,11 @@
 			"description": "為每個故事語言選擇語音。選擇語音即可為該語言啟用文字語音，或設定為「停用」。",
 			"locale": {
 				"en": "英文",
-				"zh-Hant-HK": "國語"
+				"zh-Hant-HK": "中文"
+			},
+			"voiceGender": {
+				"Male": "男聲",
+				"Female": "女聲"
 			}
 		},
 		"nameQuotas": {
@@ -695,7 +699,7 @@
 		"ttsDescription": "允許本應用程式朗讀敘事訊息。",
 		"ttsLanguageNote": "語音朗讀適用於英文及中文故事。",
 		"configure": "設定…",
-		"configuredSummary": "已為 {count} 個語言設定文字語音。",
+		"configuredSummary": "已為 {{count}} 個語言設定文字語音。",
 		"notConfigured": "尚未設定文字語音。",
 		"disabled": "停用",
 		"chooseVoice": "選擇語音",
@@ -712,7 +716,7 @@
 		"previewDescription": "使用目前的語音和速度設定聆聽範例段落。",
 		"previewPlaying": "正在播放預覽...",
 		"downloadModelTitle": "下載語音模型",
-		"downloadModelDescription": "使用語音朗讀前需先下載 {model} 模型，大小約 300 MB。",
+		"downloadModelDescription": "使用語音朗讀前需先下載 {{model}} 模型，大小約 300 MB。",
 		"startDownload": "下載",
 		"cancelDownload": "取消",
 		"downloading": "正在下載模型...",

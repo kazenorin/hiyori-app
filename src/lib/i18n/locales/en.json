@@ -113,7 +113,11 @@
 			"description": "Choose a voice for each story locale. Select a voice to enable text-to-speech for that locale, or set it to Disabled to turn it off.",
 			"locale": {
 				"en": "English",
-				"zh-Hant-HK": "Mandarin Chinese"
+				"zh-Hant-HK": "Chinese"
+			},
+			"voiceGender": {
+				"Male": "Male",
+				"Female": "Female"
 			}
 		},
 		"nameQuotas": {
@@ -695,7 +699,7 @@
 		"ttsDescription": "Allow the app to read narrative messages aloud.",
 		"ttsLanguageNote": "TTS is available for English and Chinese stories.",
 		"configure": "Configure…",
-		"configuredSummary": "Text-to-speech is configured for {count} locale(s).",
+		"configuredSummary": "Text-to-speech is configured for {{count}} locale(s).",
 		"notConfigured": "Text-to-speech is not yet configured.",
 		"disabled": "Disabled",
 		"chooseVoice": "Choose a voice",
@@ -712,7 +716,7 @@
 		"previewDescription": "Listen to a sample passage with the current voice and speed settings.",
 		"previewPlaying": "Playing preview...",
 		"downloadModelTitle": "Download TTS Model",
-		"downloadModelDescription": "The {model} model needs to be downloaded before text-to-speech can be used. This is approximately 300 MB.",
+		"downloadModelDescription": "The {{model}} model needs to be downloaded before text-to-speech can be used. This is approximately 300 MB.",
 		"startDownload": "Download",
 		"cancelDownload": "Cancel",
 		"downloading": "Downloading model...",

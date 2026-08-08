@@ -42,18 +42,24 @@
 	<Modal bind:open title={t('tts.chooseVoice')} width="lg" onclose={() => (open = false)}>
 		{#snippet body()}
 			<div class="max-h-[60vh] overflow-y-auto space-y-2 pr-1">
-				<button
-					type="button"
+				<div
 					class="w-full px-3 py-2 rounded-lg text-left text-sm transition-colors flex items-center justify-between gap-2 {selected === null
-						? 'bg-primary-500/10 text-primary-500'
-						: 'hover:bg-surface-200-800'}"
-					onclick={() => handleSelect(null)}
+							? 'bg-primary-500/10 text-primary-500'
+							: 'hover:bg-surface-200-800'}"
 				>
-					<span>{t('tts.disabled')}</span>
-					{#if selected === null}
-						<Icon name="check" class="w-4 h-4 shrink-0" />
-					{/if}
-				</button>
+					<div class="min-w-0">
+						<div class="font-medium truncate">{t('tts.disabled')}</div>
+					</div>
+					<div class="flex items-center gap-1 shrink-0">
+						<button
+							type="button"
+							class="p-2 rounded-lg hover:bg-surface-200-800 text-primary-500 transition-colors"
+							onclick={() => handleSelect(null)}
+						>
+							<Icon name={selected === null ? 'circle-dot' : 'circle'} class="w-4 h-4" />
+						</button>
+					</div>
+				</div>
 				{#each voices as [id, voice] (id)}
 					<div
 						class="w-full px-3 py-2 rounded-lg text-left text-sm transition-colors flex items-center justify-between gap-2 {selected === id
