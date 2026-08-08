@@ -9,13 +9,14 @@
 	interface Props {
 		voices: [VoiceId, VoiceInfo][];
 		selected: VoiceId | null;
+		previewing: VoiceId | null;
 		modelCached: Record<TTSModelKey, boolean>;
 		voiceCached: Record<string, boolean>;
 		onSelect: (id: VoiceId | null) => void;
 		onPreview: (id: VoiceId) => void;
 	}
 
-	let { voices, selected, modelCached, voiceCached, onSelect, onPreview }: Props = $props();
+	let { voices, selected, previewing, modelCached, voiceCached, onSelect, onPreview }: Props = $props();
 
 	let open = $state(false);
 
@@ -62,29 +63,38 @@
 						<div class="min-w-0">
 							<div class="font-medium truncate">{getVoiceLabel(voice)}</div>
 							<div class="flex items-center gap-2 mt-0.5">
-								{#if modelCached[voice.model]}
-									<span class="inline-flex items-center gap-0.5 text-xs text-success-500">
-										<Icon name="download" class="w-3 h-3" />
-										{t('tts.modelDownloaded')}
+								{#if previewing === id}
+									<span class="inline-flex items-center gap-0.5 text-xs text-primary-500">
+										<Icon name="sparkles" class="w-3 h-3" />
+										{t('tts.previewPlaying')}
 									</span>
-								{/if}
-								{#if voiceCached[id]}
-									<span class="inline-flex items-center gap-0.5 text-xs text-success-500">
-										<Icon name="check" class="w-3 h-3" />
-										{t('tts.voiceDownloaded')}
-									</span>
+								{:else}
+									{#if modelCached[voice.model]}
+										<span class="inline-flex items-center gap-0.5 text-xs text-success-500">
+											<Icon name="file-box" class="w-3 h-3" />
+											{t('tts.modelDownloaded')}
+										</span>
+									{/if}
+									{#if voiceCached[id]}
+										<span class="inline-flex items-center gap-0.5 text-xs text-success-500">
+											<Icon name="file-volume" class="w-3 h-3" />
+											{t('tts.voiceDownloaded')}
+										</span>
+									{/if}
 								{/if}
 							</div>
 						</div>
 						<div class="flex items-center gap-1 shrink-0">
 							<button
 								type="button"
-								class="p-2 rounded-lg hover:bg-surface-200-800 text-surface-500 hover:text-primary-500 transition-colors"
-								title={t('tts.preview')}
-								aria-label={t('tts.preview')}
+								class="p-2 rounded-lg hover:bg-surface-200-800 {previewing === id
+									? 'text-primary-500'
+									: 'text-surface-500 hover:text-primary-500'} transition-colors"
+								title={previewing === id ? t('tts.stop') : t('tts.preview')}
+								aria-label={previewing === id ? t('tts.stop') : t('tts.preview')}
 								onclick={() => onPreview(id)}
 							>
-								<Icon name="sparkles" class="w-4 h-4" />
+								<Icon name={previewing === id ? 'stop' : 'play'} class="w-4 h-4" />
 							</button>
 							<button
 								type="button"
@@ -93,7 +103,7 @@
 								aria-label={t('tts.select')}
 								onclick={() => handleSelect(id)}
 							>
-								<Icon name="check" class="w-4 h-4" />
+								<Icon name={selected === id ? 'circle-dot' : 'circle'} class="w-4 h-4" />
 							</button>
 						</div>
 					</div>

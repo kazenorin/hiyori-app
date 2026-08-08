@@ -114,6 +114,16 @@ export const ICONS = {
 	'message-square-plus': stroke(
 		'<path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z" /><path d="M12 8v6" /><path d="M9 11h6" />'
 	),
+	play: stroke('<path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z" />'),
+	stop: stroke('<rect width="18" height="18" x="3" y="3" rx="2" />'),
+	circle: stroke('<circle cx="12" cy="12" r="10" />'),
+	'circle-dot': stroke('<circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="1" />'),
+	'file-box': stroke(
+		'<path d="M14.5 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v3.8" /><path d="M14 2v5a1 1 0 0 0 1 1h5" /><path d="M11.7 14.2 7 17l-4.7-2.8" /><path d="M3 13.1a2 2 0 0 0-.999 1.76v3.24a2 2 0 0 0 .969 1.78L6 21.7a2 2 0 0 0 2.03.01L11 19.9a2 2 0 0 0 1-1.76V14.9a2 2 0 0 0-.97-1.78L8 11.3a2 2 0 0 0-2.03-.01z" /><path d="M7 17v5" />'
+	),
+	'file-volume': stroke(
+		'<path d="M4 11.55V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.706.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2h-1.95" /><path d="M14 2v5a1 1 0 0 0 1 1h5" /><path d="M12 15a5 5 0 0 1 0 6" /><path d="M8 14.502a.5.5 0 0 0-.826-.381l-1.893 1.631a1 1 0 0 1-.651.243H3.5a.5.5 0 0 0-.5.501v3.006a.5.5 0 0 0 .5.501h1.129a1 1 0 0 1 .652.243l1.893 1.633a.5.5 0 0 0 .826-.38z" />'
+	),
 } as const satisfies Record<string, IconDef>;
 
 export type IconName = keyof typeof ICONS;

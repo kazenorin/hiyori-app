@@ -6,7 +6,7 @@
 	import { getVoicesForLocale } from '$lib/kokoro/locale-mapping';
 	import { isModelCached } from '$lib/kokoro/model';
 	import { isVoiceFileCached } from '$lib/kokoro/kokoro-hiyori/voices';
-	import { TTS_MODELS, TTS_SPEED_MAX, TTS_SPEED_MIN, TTS_SPEED_STEP, type TTSModelKey } from '$lib/kokoro/constants';
+	import { TTS_MODELS, TTS_PREVIEW_TEXT, TTS_SPEED_MAX, TTS_SPEED_MIN, TTS_SPEED_STEP, type TTSModelKey } from '$lib/kokoro/constants';
 	import { ttsPlayer } from '$lib/kokoro/player.svelte';
 	import VoiceSelector from '$lib/components/tts/VoiceSelector.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
@@ -26,7 +26,7 @@
 
 	let downloadModalOpen = $state(false);
 	let pendingDownloadModel = $state<TTSModelKey | null>(null);
-	let pendingPreviewVoice = $state<VoiceId | null>(null);
+	let pendingPreviewVoice = $state<{ locale: string; id: VoiceId } | null>(null);
 	let pendingSelect = $state<{ locale: string; id: VoiceId } | null>(null);
 	let downloadProgress = $state<number | null>(null);
 	let downloadError = $state<string | null>(null);
@@ -55,7 +55,7 @@
 		updateSettings({ ttsVoices: { ...settings.ttsVoices, [locale]: id } });
 	}
 
-	function handlePreview(id: VoiceId): void {
+	function handlePreview(locale: string, id: VoiceId): void {
 		if (previewingVoice === id) {
 			ttsPlayer.stop();
 			previewingVoice = null;
@@ -63,7 +63,7 @@
 		}
 		ttsPlayer.stop();
 		previewingVoice = id;
-		ttsPlayer.play(t('tts.previewText'), 'tts-preview', id, settings.ttsSpeed);
+		ttsPlayer.play(TTS_PREVIEW_TEXT[locale] ?? '', 'tts-preview', id, settings.ttsSpeed);
 	}
 
 	$effect(() => {
@@ -72,7 +72,11 @@
 		}
 	});
 
-	function requestDownload(model: TTSModelKey, previewVoice: VoiceId | null, select: { locale: string; id: VoiceId } | null = null): void {
+	function requestDownload(
+		model: TTSModelKey,
+		previewVoice: { locale: string; id: VoiceId } | null,
+		select: { locale: string; id: VoiceId } | null = null
+	): void {
 		pendingDownloadModel = model;
 		pendingPreviewVoice = previewVoice;
 		pendingSelect = select;
@@ -106,7 +110,7 @@
 				const applySelect = pendingSelect;
 				pendingSelect = null;
 				if (applySelect) handleSelect(applySelect.locale, applySelect.id);
-				if (preview) handlePreview(preview);
+				if (preview) handlePreview(preview.locale, preview.id);
 			},
 		});
 	}
@@ -147,6 +151,7 @@
 					<VoiceSelector
 						voices={localeVoices[locale]}
 						selected={settings.ttsVoices[locale]}
+						previewing={previewingVoice}
 						{modelCached}
 						{voiceCached}
 						onSelect={(id) => {
@@ -161,10 +166,10 @@
 						onPreview={(id) => {
 							const voice = getVoicesForLocale(locale).find(([vid]) => vid === id)?.[1];
 							if (voice && !modelCached[voice.model]) {
-								requestDownload(voice.model, id);
+								requestDownload(voice.model, { locale, id });
 								return;
 							}
-							handlePreview(id);
+							handlePreview(locale, id);
 						}}
 					/>
 				</div>
