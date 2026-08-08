@@ -105,11 +105,12 @@ src:
           game-master:
             game-master-prompt.md:
               configPath: en/prompt-templates/game-master/game-master-prompt.md
-              hash: 85b85ddc374405290137ff4fcc250b54251edc1e86ac4b83f70cddd678534458
+              hash: 10ffe2548ccd3fc54431b802c319a4ef8b3600618aee46e4a9e58780e467b0bb
               oldHashes:
+                - 85b85ddc374405290137ff4fcc250b54251edc1e86ac4b83f70cddd678534458
                 - 0b67ab460f9bd625a0519a3c8a6282d21ea1086228dfae2ba1a741a72386f770
                 - 8cb3434931b97a804103de914fbb0604716e279b9e893e7b6a41ea6d3b6bac21
-              updatedAt: "2026-07-18T08:56:38.701Z"
+              updatedAt: "2026-08-08T03:10:14.094Z"
           general-instructions.md:
             configPath: en/prompt-templates/general-instructions.md
             hash: 1737fc28a400844b926494f96437230545809e42229bfe0ce70fc324fb6116cd
@@ -270,9 +271,9 @@ src:
             updatedAt: "2026-08-04T16:55:55.761Z"
           chinese.json:
             configPath: en/names/chinese.json
-            hash: 75d495d3a9b1fbadd5865802dcae86d55793e85028ce08dfed499c5bb2068281
+            hash: 1574bb2efd979a8c15330afa4c041072b949e36525e2393f6e695fa5b0fa3f5e
             oldHashes: []
-            updatedAt: "2026-08-05T15:23:43.298Z"
+            updatedAt: "2026-08-08T03:10:14.094Z"
           draconic.json:
             configPath: en/names/draconic.json
             hash: 32fc6437fa14d2d2a5decd31f5a84e8d3eb992a5c346041ec1c3b9b3cc326fc1
@@ -429,11 +430,12 @@ src:
           game-master:
             game-master-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/game-master/game-master-prompt.md
-              hash: f649149f36d9a1e8909f2deae7ead8ac50465eff0061bae3310fdefea39d3745
+              hash: 97395085c6f070a3087677f72230d98e443f9b8cc1fe15893a49c4cd95b471c7
               oldHashes:
+                - f649149f36d9a1e8909f2deae7ead8ac50465eff0061bae3310fdefea39d3745
                 - c61cd6f9212c30a031f59cdc1af9c34e32abe4697414e54424775229046272bd
                 - 9774d2d3bf12be4e492d0bf553af669bb91703cd4ed1dc322eeaa5245630f58c
-              updatedAt: "2026-07-18T08:56:38.701Z"
+              updatedAt: "2026-08-08T03:10:14.094Z"
           general-instructions.md:
             configPath: zh-Hant-HK/prompt-templates/general-instructions.md
             hash: cf6af787e5d80f992a401b19e5b4eb5f5a5ee51136a782c9d462ad378ddd5fcf
@@ -653,7 +655,7 @@ src:
       locale-strings:
         en.yaml:
           configPath: en/locale-strings.yaml
-          hash: 18374b9c953581836a9a7474550058cb7a1482e0ba2cb7c70c29905d0bc31d87
+          hash: 920a6f586b01805b94964b55e1846c8837f9035acc70017977024226f6d0968b
           oldHashes:
             - ee684157248de5c152d847e1dea3f337c026a8e25c43f18e010377ccb2cc9c52
             - ba9cbdee4ae36e8ee5fca1d582a252ce982d950e579b07663358563f450016a4
@@ -666,10 +668,10 @@ src:
             - 2dac94173236f1d91ad05073d7ac651ae1265c4182815041ba5663713dcdd799
             - 80d841aa000184d8604696b1f1877aebb1a348db16d2267e57b421c5eed4c959
             - 02c2f6c61d948f401f32cdd4eb656a574da0366b3a2809ee2ff3c42b47348649
-          updatedAt: "2026-08-04T15:51:16.574Z"
+          updatedAt: "2026-08-08T03:10:14.094Z"
         zh-Hant-HK.yaml:
           configPath: zh-Hant-HK/locale-strings.yaml
-          hash: 7485783a6ac9fb9159503dc45c8f30ed2321aa9fa7fe8891bf42ad24ea685521
+          hash: 8c7fef38425fa9e18c81e9d86f12f6193ed627893899038733103b962bb1e528
           oldHashes:
             - dbb6cf3c5ba89eb69834b403da4e7ab1cc5411f58f298287d8b5a7c10cf645e1
             - f9af8fd7e31b477e31f063b9cfd49d76d510eb14c43ad2d89efa5eab276d7fde
@@ -682,4 +684,4 @@ src:
             - 0eda1a48149469d75b776af15e1b34a8510a948660818ad2f0047cb2c4e95f1c
             - c9bca07458a02fd17114e6456a4c281b2460dc392ffccd2bd103199af045c4cb
             - f7772bf027cfec167bdc5e5d85aa783fac24f47303072a00685d5d7b70b80b54
-          updatedAt: "2026-08-04T15:51:16.574Z"
+          updatedAt: "2026-08-08T03:10:14.094Z"
