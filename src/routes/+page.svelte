@@ -100,6 +100,7 @@
 	import { setupScrollObservers, handleStreamEndScroll } from '$lib/features/auto-scroller.svelte';
 	import { handleContinueToNextAct, handleEndStory } from '$lib/features/act-transition.svelte';
 	import { toaster } from '$lib/stores/toaster.svelte';
+	import type { VoiceId } from '$lib/kokoro/kokoro-hiyori';
 
 	let input = $state('');
 	let chatContainer = $state<HTMLDivElement | null>(null);
@@ -119,8 +120,8 @@
 	let showDiscussButton = $state(false);
 
 	$effect(() => {
-		const story = getActiveStory();
-		if (story?.locale !== 'en' && ttsPlayer.playingMessageId) {
+		const currentTtsVoice = getCurrentTtsVoice();
+		if (!currentTtsVoice && ttsPlayer.playingMessageId) {
 			ttsPlayer.stop();
 		}
 	});
@@ -207,17 +208,21 @@
 		}
 	}
 
+	function getCurrentTtsVoice(): VoiceId | null {
+		return getTTSVoiceByLocale(getActiveStory()?.locale ?? settings.locale);
+	}
+
 	function handleTTS(message: UIMessage): void {
 		const passage = buildTTSPassage(message.variables, message.content);
 		if (!passage) return;
-		const voice = getTTSVoiceByLocale(getActiveStory()?.locale ?? settings.locale);
+		const voice = getCurrentTtsVoice();
 		if (!voice) return;
 		const speed = getTTSSpeed();
 		ttsPlayer.play(passage, message.id, voice, speed);
 	}
 
 	const ttsVisible = $derived(isTTSSupportedLocale(getActiveStory()?.locale));
-	const ttsHasVoice = $derived(Boolean(getTTSVoiceByLocale(getActiveStory()?.locale ?? settings.locale)));
+	const ttsHasVoice = $derived(Boolean(getCurrentTtsVoice()));
 
 	async function handleRegenerate(messageId: string) {
 		const actLineId = getActiveActLineId();
