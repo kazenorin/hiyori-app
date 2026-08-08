@@ -1,4 +1,4 @@
-export type TTSModelKey = 'v1.0' | 'v1.1-zh';
+export type TTSModelKey = 'v1.0';
 
 export interface TTSModelInfo {
 	id: string;
@@ -7,7 +7,6 @@ export interface TTSModelInfo {
 
 export const TTS_MODELS: Record<TTSModelKey, TTSModelInfo> = {
 	'v1.0': { id: 'onnx-community/Kokoro-82M-v1.0-ONNX', label: 'Kokoro v1.0' },
-	'v1.1-zh': { id: 'onnx-community/Kokoro-82M-v1.1-zh-ONNX', label: 'Kokoro v1.1 (zh)' },
 };
 
 /**
