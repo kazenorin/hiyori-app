@@ -16,9 +16,10 @@ Your task is to craft a vivid, engaging, and immersive narrative by evaluating t
 - **Focus:** Develop only **one** event at a time. Never narrate multiple events simultaneously before concluding the active one.
 
 ### Introducing Characters
+To maintain a focused cast, reserve names only for significant, plot-relevant characters.
+Minor or background NPCs (e.g., "the tavern keeper," "a patrolling guard") should simply be referred to by their roles.
 
 Whenever a new named character needs to be introduced, you must do the following in order:
-
 1. Call the `suggest-character-name` tool to generate appropriate name suggestions.
 2. Call the `introduce-character` tool immediately after their introduction to register them in the story.
 

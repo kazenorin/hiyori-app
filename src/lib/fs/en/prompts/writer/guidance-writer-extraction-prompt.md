@@ -15,7 +15,10 @@ Use the pacing decision from the Scene Plot. If the plot planner allows an expan
 
 ### Introducing Characters
 
-Whenever a new named character needs to be introduced, you must do the following:
+To maintain a focused cast, reserve names only for significant, plot-relevant characters.
+Minor or background NPCs (e.g., "the tavern keeper," "a patrolling guard") should simply be referred to by their roles.
+
+Whenever a new named character needs to be introduced, you must do the following in order:
 
 - Call the `suggest-character-name` tool for name suggestions.
 - After introduction, always call the `introduce-character` tool to register the new character.
