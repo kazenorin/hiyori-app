@@ -89,7 +89,7 @@ export const defaultTargetWordCount = 400;
 
 function indentLines(text: string, prefix: string): string {
 	return text
-		.split('\n')
+		.split(/\r?\n/)
 		.map((line) => (line ? prefix + line : line))
 		.join('\n');
 }
@@ -108,7 +108,7 @@ const latePhaseFactor = 1 - earlyPhaseFactor;
 function resolveGmSystemPrompt(ctx: PipelineRunContext): string {
 	return ctx.prompts.gameMasterSystemPrompt
 		.replaceAll('{{additionalRules}}', '')
-		.replaceAll('{{inventoryToolsInstruction}}\n', inventoryToolsPartial(indentLines(gameMasterInventoryToolsInstruction(), '   ')));
+		.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, inventoryToolsPartial(indentLines(gameMasterInventoryToolsInstruction(), '   ')));
 }
 
 function resolveSummarizedScenes(summarizedScenes: number) {
@@ -327,8 +327,8 @@ export async function runWriterPhase(
 				.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
 				.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
 				.replaceAll('{{writerOutputTemplate}}', ctx.prompts.writerOutputTemplate)
-				.replaceAll('{{memoryToolsInstruction}}\n', memoryToolsPartial(indentLines(writerMemoryToolsInstruction(), '   ')))
-				.replaceAll('{{inventoryToolsInstruction}}\n', inventoryToolsPartial(indentLines(writerInventoryToolsInstruction(), '   '))),
+				.replaceAll(/{{memoryToolsInstruction}}\r?\n/g, memoryToolsPartial(indentLines(writerMemoryToolsInstruction(), '   ')))
+				.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, inventoryToolsPartial(indentLines(writerInventoryToolsInstruction(), '   '))),
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'WRITER'),
 			descriptors: getNarrativeDescriptors(),
@@ -372,11 +372,11 @@ export async function runReviewerEditorPhases(
 				.replaceAll('{{totalViolations}}', totalViolationsLabel())
 				.replaceAll('{{recommendation}}', recommendationLabel())
 				.replaceAll(
-					'{{memoryToolsInstruction}}\n',
+					/{{memoryToolsInstruction}}\r?\n/g,
 					memoryToolsPartial(isQuickReview() ? quickReviewerMemoryToolsInstruction() : reviewerMemoryToolsInstruction())
 				)
 				.replaceAll(
-					'{{inventoryToolsInstruction}}\n',
+					/{{inventoryToolsInstruction}}\r?\n/g,
 					inventoryToolsPartial(isQuickReview() ? quickReviewerInventoryToolsInstruction() : reviewerInventoryToolsInstruction())
 				),
 			...ctx.sharedParams,
@@ -553,8 +553,8 @@ function executePlotPlannerPhase(
 			systemPrompt: plotPlannerPrompt
 				.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
 				.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
-				.replaceAll('{{memoryToolsInstruction}}\n', memoryToolsPartial(plotPlannerMemoryToolsInstruction()))
-				.replaceAll('{{inventoryToolsInstruction}}\n', inventoryToolsPartial(plotPlannerInventoryToolsInstruction())),
+				.replaceAll(/{{memoryToolsInstruction}}\r?\n/g, memoryToolsPartial(plotPlannerMemoryToolsInstruction()))
+				.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, inventoryToolsPartial(plotPlannerInventoryToolsInstruction())),
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'PLOT_PLANNER'),
 			descriptors: getPlotPlannerDescriptors(),
