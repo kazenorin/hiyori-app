@@ -91,6 +91,7 @@ pipeline:
       不要修改任何字串。
       只回傳 JSON 陣列。
     gameMaster: 根據聊天記錄中的可用資訊，生成遊戲資料。
+    gameMasterInventory: 使用 `update-inventory` 工具記錄場景中發生的物品欄變化 (獲得、失去、消耗、裝備、卸下、使用或修改物品，以及狀態效果)。
     editor: 根據審閱者輸出的建議，修改寫手輸出。請根據聊天記錄中的可用資訊，判斷這些建議是否有必要採納。
     reviewer: '根據聊天記錄中的可用資訊，審閱寫手對場景 {{currentScene}} 的輸出。'
     reviewerQuick: '快速審閱寫手對場景 {{currentScene}} 的輸出。僅略讀明顯錯誤——立即輸出審閱範本，不附帶推理過程。'

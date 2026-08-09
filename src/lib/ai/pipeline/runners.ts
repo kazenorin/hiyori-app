@@ -40,6 +40,7 @@ import {
 	editorExtractionPrompt,
 	editorTemplateFitterExtractionPrompt,
 	gameMasterExtractionPrompt,
+	gameMasterInventoryExtractionPrompt,
 	gameMasterInventoryToolsInstruction,
 	getLocalizedActPhase,
 	gmTemplateFitterExtractionPrompt,
@@ -109,6 +110,11 @@ function resolveGmSystemPrompt(ctx: PipelineRunContext): string {
 	return ctx.prompts.gameMasterSystemPrompt
 		.replaceAll('{{additionalRules}}', '')
 		.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, inventoryToolsPartial(indentLines(gameMasterInventoryToolsInstruction(), '   ')));
+}
+
+function resolveGmExtractionPrompt(): string {
+	const base = gameMasterExtractionPrompt();
+	return isInventoryAvailable() ? `${base} ${gameMasterInventoryExtractionPrompt()}` : base;
 }
 
 function resolveSummarizedScenes(summarizedScenes: number) {
@@ -533,7 +539,7 @@ export function executeGmPhase(ctx: PipelineRunContext, state: PipelineState, po
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'GAME_MASTER'),
 			descriptors: getGameMasterDescriptors(),
-			messages: buildGamePhaseMessages(postEditorCtx, gameMasterExtractionPrompt()),
+			messages: buildGamePhaseMessages(postEditorCtx, resolveGmExtractionPrompt()),
 			providerConfig: ctx.providerConfigs.gameMaster,
 			buildStateUpdate: buildGmStateUpdate,
 		},
