@@ -20,7 +20,11 @@
 		Object.fromEntries(TTS_LOCALES.map((locale) => [locale, getVoicesForLocale(locale)])) as Record<string, [VoiceId, VoiceInfo][]>
 	);
 
-	let modelCached = $state<Record<TTSModelKey, boolean>>({ 'v1.0': false, 'v1.1-zh': false });
+	function emptyModelCache(): Record<TTSModelKey, boolean> {
+		return Object.fromEntries(Object.keys(TTS_MODELS).map((key) => [key, false])) as Record<TTSModelKey, boolean>;
+	}
+
+	let modelCached = $state<Record<TTSModelKey, boolean>>(emptyModelCache());
 	let voiceCached = $state<Record<string, boolean>>({});
 	let previewingVoice = $state<VoiceId | null>(null);
 
@@ -33,9 +37,10 @@
 	let downloading = $state(false);
 
 	async function refreshStatus(): Promise<void> {
-		const nextModel: Record<TTSModelKey, boolean> = { 'v1.0': false, 'v1.1-zh': false };
-		nextModel['v1.0'] = await isModelCached('v1.0');
-		nextModel['v1.1-zh'] = await isModelCached('v1.1-zh');
+		const nextModel = emptyModelCache();
+		for (const key of Object.keys(TTS_MODELS) as TTSModelKey[]) {
+			nextModel[key] = await isModelCached(key);
+		}
 		modelCached = nextModel;
 
 		const nextVoice: Record<string, boolean> = {};
