@@ -92,7 +92,7 @@ async function generateMemoriesWithRetry(response: string, config: MemoryProvide
 	const userPrompt = extractionPromptTemplate + '\n' + response;
 
 	return await withRetry(
-		() => generateText({ model, system: systemPrompt, prompt: userPrompt, ...(config.callSettings ?? {}) }).then((r) => r.text),
+		() => generateText({ model, instructions: systemPrompt, prompt: userPrompt, ...(config.callSettings ?? {}) }).then((r) => r.text),
 		{
 			maxAttempts: RETRY_COUNT + 1,
 			backoffMs: BACKOFF_SECONDS * 1000,
@@ -108,7 +108,7 @@ async function filterAliasesWithRetry(flatAliases: string[], config: MemoryProvi
 	const userPrompt = JSON.stringify(flatAliases);
 
 	const result = await withRetry(
-		() => generateText({ model, system: systemPrompt, prompt: userPrompt, ...(config.callSettings ?? {}) }).then((r) => r.text),
+		() => generateText({ model, instructions: systemPrompt, prompt: userPrompt, ...(config.callSettings ?? {}) }).then((r) => r.text),
 		{
 			maxAttempts: RETRY_COUNT + 1,
 			backoffMs: BACKOFF_SECONDS * 1000,

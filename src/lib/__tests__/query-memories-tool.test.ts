@@ -139,7 +139,7 @@ describe('createQueryMemoriesTool', () => {
 				timeAndLocation: undefined,
 				currentActOnly: true,
 			},
-			{ toolCallId: 'test', messages: [] }
+			{ toolCallId: 'test', messages: [], context: {} }
 		);
 
 		expect(result).toEqual([]);
@@ -164,7 +164,7 @@ describe('createQueryMemoriesTool', () => {
 				timeAndLocation: undefined,
 				currentActOnly: true,
 			},
-			{ toolCallId: 'test', messages: [] }
+			{ toolCallId: 'test', messages: [], context: {} }
 		);
 
 		expect(searchSpy).toHaveBeenCalledWith('Elena', {
@@ -191,7 +191,7 @@ describe('createQueryMemoriesTool', () => {
 				timeAndLocation: undefined,
 				currentActOnly: false,
 			},
-			{ toolCallId: 'test', messages: [] }
+			{ toolCallId: 'test', messages: [], context: {} }
 		);
 
 		expect(mockTraceActLineChain).toHaveBeenCalledWith('line-2');
@@ -229,7 +229,7 @@ describe('createQueryMemoriesTool', () => {
 				timeAndLocation: 'Night at the Tavern',
 				currentActOnly: true,
 			},
-			{ toolCallId: 'test', messages: [] }
+			{ toolCallId: 'test', messages: [], context: {} }
 		);
 
 		expect(searchLocationsSpy).toHaveBeenCalledWith('Night at the Tavern', {
@@ -258,7 +258,7 @@ describe('createQueryMemoriesTool', () => {
 				timeAndLocation: 'Cave',
 				currentActOnly: false,
 			},
-			{ toolCallId: 'test', messages: [] }
+			{ toolCallId: 'test', messages: [], context: {} }
 		);
 
 		expect(mockTraceActLineChain).toHaveBeenCalledWith('line-2');
@@ -294,7 +294,7 @@ describe('createQueryMemoriesTool', () => {
 				timeAndLocation: undefined,
 				currentActOnly: true,
 			},
-			{ toolCallId: 'test', messages: [] }
+			{ toolCallId: 'test', messages: [], context: {} }
 		);
 
 		expect((result as any).length).toBe(10);
@@ -318,7 +318,7 @@ describe('createQueryMemoriesTool', () => {
 				timeAndLocation: undefined,
 				currentActOnly: true,
 			},
-			{ toolCallId: 'test', messages: [] }
+			{ toolCallId: 'test', messages: [], context: {} }
 		);
 
 		expect((result as any).length).toBe(2);
@@ -369,7 +369,7 @@ describe('createQueryMemoriesTool', () => {
 				timeAndLocation: 'Night at the Tavern',
 				currentActOnly: true,
 			},
-			{ toolCallId: 'test', messages: [] }
+			{ toolCallId: 'test', messages: [], context: {} }
 		);
 
 		expect((result as any).length).toBe(10);

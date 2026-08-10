@@ -81,13 +81,13 @@ export async function updateWorldCard(params: UpdateWorldCardParams): Promise<st
 	const result = streamText({
 		model,
 		messages,
-		system: systemPrompt,
+		instructions: systemPrompt,
 		abortSignal: params.abortSignal,
 		...(config.callSettings ?? {}),
 	});
 
 	const contentParts: string[] = [];
-	for await (const part of result.fullStream) {
+	for await (const part of result.stream) {
 		if (part.type === 'text-delta') contentParts.push(part.text);
 	}
 

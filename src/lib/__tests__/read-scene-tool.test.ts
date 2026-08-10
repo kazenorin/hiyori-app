@@ -87,7 +87,7 @@ describe('createReadSceneTool', () => {
 		const ctx = createMockContext();
 		const toolDef = createReadSceneTool(ctx);
 
-		const result = await toolDef.execute!({ sceneNumber: 1 }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		const result = await toolDef.execute!({ sceneNumber: 1 }, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
 
 		expect(result).toContain('The hero entered the cave.');
 		expect(result).toContain('I follow the path deeper.');
@@ -101,7 +101,7 @@ describe('createReadSceneTool', () => {
 		const ctx = createMockContext();
 		const toolDef = createReadSceneTool(ctx);
 
-		const result = await toolDef.execute!({ sceneNumber: 99 }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		const result = await toolDef.execute!({ sceneNumber: 99 }, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
 
 		expect(result).toBe('tools.readScene.messages.noSceneFound');
 	});
@@ -112,7 +112,7 @@ describe('createReadSceneTool', () => {
 		const ctx = createMockContext();
 		const toolDef = createReadSceneTool(ctx);
 
-		const result = await toolDef.execute!({ sceneNumber: 1 }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		const result = await toolDef.execute!({ sceneNumber: 1 }, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
 
 		expect(result).toBe('tools.readScene.messages.sceneNoContent');
 	});
@@ -123,7 +123,7 @@ describe('createReadSceneTool', () => {
 		const ctx = createMockContext();
 		const toolDef = createReadSceneTool(ctx);
 
-		const result = await toolDef.execute!({ sceneNumber: 1 }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		const result = await toolDef.execute!({ sceneNumber: 1 }, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
 
 		expect(result).toContain('The hero entered the cave.');
 		expect(result).not.toContain('I follow the path deeper.');
@@ -146,7 +146,10 @@ describe('createReadDistantSceneTool', () => {
 		const ctx = createMockContext(3);
 		const toolDef = createReadDistantSceneTool(ctx);
 
-		const result = await toolDef.execute!({ actNumber: 2, sceneNumber: 1 }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		const result = await toolDef.execute!(
+			{ actNumber: 2, sceneNumber: 1 },
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
+		);
 
 		expect(mockTraceActLineChain).toHaveBeenCalledWith('line-current');
 		expect(mockDb.select).toHaveBeenCalledWith(expect.any(String), ['line-2', 1]);
@@ -160,7 +163,10 @@ describe('createReadDistantSceneTool', () => {
 		const ctx = createMockContext(3);
 		const toolDef = createReadDistantSceneTool(ctx);
 
-		const result = await toolDef.execute!({ actNumber: 5, sceneNumber: 1 }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		const result = await toolDef.execute!(
+			{ actNumber: 5, sceneNumber: 1 },
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
+		);
 
 		expect(result).toBe('tools.readDistantScene.messages.futureAct');
 	});
@@ -174,7 +180,10 @@ describe('createReadDistantSceneTool', () => {
 		const ctx = createMockContext(3);
 		const toolDef = createReadDistantSceneTool(ctx);
 
-		const result = await toolDef.execute!({ actNumber: 2, sceneNumber: 1 }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		const result = await toolDef.execute!(
+			{ actNumber: 2, sceneNumber: 1 },
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
+		);
 
 		expect(result).toBe('tools.readDistantScene.messages.actNotInLineage');
 	});
@@ -189,7 +198,10 @@ describe('createReadDistantSceneTool', () => {
 		const ctx = createMockContext(3);
 		const toolDef = createReadDistantSceneTool(ctx);
 
-		const result = await toolDef.execute!({ actNumber: 1, sceneNumber: 99 }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		const result = await toolDef.execute!(
+			{ actNumber: 1, sceneNumber: 99 },
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
+		);
 
 		expect(result).toBe('tools.readDistantScene.messages.noSceneFound');
 	});
@@ -204,7 +216,10 @@ describe('createReadDistantSceneTool', () => {
 		const ctx = createMockContext(3);
 		const toolDef = createReadDistantSceneTool(ctx);
 
-		const result = await toolDef.execute!({ actNumber: 1, sceneNumber: 1 }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		const result = await toolDef.execute!(
+			{ actNumber: 1, sceneNumber: 1 },
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
+		);
 
 		expect(result).toBe('tools.readDistantScene.messages.sceneNoContent');
 	});
@@ -219,7 +234,10 @@ describe('createReadDistantSceneTool', () => {
 		const ctx = createMockContext(3);
 		const toolDef = createReadDistantSceneTool(ctx);
 
-		const result = await toolDef.execute!({ actNumber: 3, sceneNumber: 1 }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		const result = await toolDef.execute!(
+			{ actNumber: 3, sceneNumber: 1 },
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
+		);
 
 		expect(mockDb.select).toHaveBeenCalledWith(expect.any(String), ['line-current', 1]);
 		expect(result).toContain('The hero entered the cave.');

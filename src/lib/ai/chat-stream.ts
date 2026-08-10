@@ -171,7 +171,7 @@ export async function streamWithRetry(
 
 			// Don't retry on auth errors
 			if (isAuthError(lastError)) {
-				throw new Error(ERR_AUTH_FAILED);
+				throw new Error(ERR_AUTH_FAILED, { cause: e });
 			}
 
 			// Don't retry on user-initiated abort

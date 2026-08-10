@@ -55,7 +55,7 @@ async function classifyWorldTemplate(content: string): Promise<string | null> {
 	const truncated = content.slice(0, CLASSIFICATION_CHAR_LIMIT);
 
 	try {
-		const result = await generateText({ model, system: systemPrompt, prompt: truncated, ...(config.callSettings ?? {}) });
+		const result = await generateText({ model, instructions: systemPrompt, prompt: truncated, ...(config.callSettings ?? {}) });
 		const response = result.text.trim().toLowerCase();
 		for (const entry of WORLD_TEMPLATES) {
 			if (response.includes(entry.id)) {

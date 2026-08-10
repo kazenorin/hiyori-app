@@ -165,7 +165,7 @@ export const env = {
 		transformersEnv.cacheDir = value;
 	},
 	get cacheDir(): string {
-		return transformersEnv.cacheDir;
+		return transformersEnv.cacheDir ?? '';
 	},
 	set wasmPaths(value: NonNullable<typeof transformersEnv.backends.onnx.wasm>['wasmPaths']) {
 		transformersEnv.backends.onnx.wasm!.wasmPaths = value;

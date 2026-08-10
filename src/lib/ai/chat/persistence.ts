@@ -118,7 +118,7 @@ export async function removeMessagesFromIndex(
 }
 
 export async function removeMessagesById(actLineId: string, messageIds: string[]): Promise<boolean> {
-	let removedIds: string[] = [];
+	let removedIds: string[];
 	try {
 		removedIds = await dbActLines.removeMessagesFromActLine(actLineId, messageIds);
 	} catch (err) {

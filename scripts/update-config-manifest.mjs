@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync, readdirSync, existsSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { createHash } from 'node:crypto';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 
 const LOCALES = ['en', 'zh-Hant-HK'];
 const SRC_ROOT = join(import.meta.dirname, '..', 'src', 'lib', 'fs');

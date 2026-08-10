@@ -65,7 +65,10 @@ describe('createSetSceneTitleTool', () => {
 		const overrides = createNarrativeOverrides();
 		const toolDef = createSetSceneTitleTool(ctx, overrides);
 
-		const result = await toolDef.execute!({ title: 'The Cave Entrance' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		const result = await toolDef.execute!(
+			{ title: 'The Cave Entrance' },
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
+		);
 
 		expect(overrides.sceneTitle).toBe('The Cave Entrance');
 		expect(result).toEqual({ result: 'tools.setSceneTitle.messages.success' });
@@ -76,7 +79,7 @@ describe('createSetSceneTitleTool', () => {
 		const overrides = createNarrativeOverrides();
 		const toolDef = createSetSceneTitleTool(ctx, overrides);
 
-		await toolDef.execute!({ title: '  Whitespace Title  ' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		await toolDef.execute!({ title: '  Whitespace Title  ' }, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
 
 		expect(overrides.sceneTitle).toBe('Whitespace Title');
 	});
@@ -87,7 +90,7 @@ describe('createSetSceneTitleTool', () => {
 		overrides.sceneTitle = 'Old Title';
 		const toolDef = createSetSceneTitleTool(ctx, overrides);
 
-		await toolDef.execute!({ title: 'New Title' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		await toolDef.execute!({ title: 'New Title' }, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
 
 		expect(overrides.sceneTitle).toBe('New Title');
 	});
@@ -97,7 +100,7 @@ describe('createSetSceneTitleTool', () => {
 		const overrides = createNarrativeOverrides();
 		const toolDef = createSetSceneTitleTool(ctx, overrides);
 
-		await toolDef.execute!({ title: 'Only Title' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		await toolDef.execute!({ title: 'Only Title' }, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
 
 		expect(overrides.sceneTitle).toBe('Only Title');
 		expect(overrides.background).toBeNull();

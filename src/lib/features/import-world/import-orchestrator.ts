@@ -73,9 +73,9 @@ export async function prepareImport(formData: ImportFormData, onProgress: Progre
 	};
 
 	let worldContent: string | null = null;
-	let storyFolder = '';
-	let storyId = '';
-	let storyName = '';
+	let storyFolder: string;
+	let storyId: string;
+	let storyName: string;
 
 	try {
 		log('Creating story...');

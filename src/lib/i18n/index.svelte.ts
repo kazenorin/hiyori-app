@@ -1,7 +1,12 @@
 import en from './locales/en.json';
 import zhHantHK from './locales/zh-Hant-HK.json';
 import { SvelteSet } from 'svelte/reactivity';
-import { log } from '$lib/logging/logger';
+
+// Lazy import to break circular init: i18n -> logger -> settings -> i18n
+// (settings runs loadSettings() at module load, which needs detectDefaultLocale).
+async function logger() {
+	return (await import('$lib/logging/logger')).log;
+}
 
 export type Locale = string;
 
@@ -47,7 +52,7 @@ export async function loadLocale(locale: Locale): Promise<void> {
 
 	const loader = localeLoaders[locale];
 	if (!loader) {
-		log.warn('i18n', `No loader registered for locale: ${locale}`);
+		void logger().then((log) => log.warn('i18n', `No loader registered for locale: ${locale}`));
 		return;
 	}
 
@@ -56,7 +61,7 @@ export async function loadLocale(locale: Locale): Promise<void> {
 		currentLocale = locale;
 		loadedLocales.add(locale);
 	} catch (err) {
-		log.error('i18n', `Failed to load locale ${locale}`, err);
+		void logger().then((log) => log.error('i18n', `Failed to load locale ${locale}`, err));
 	}
 }
 
@@ -71,7 +76,7 @@ export function getLocale(): Locale {
 export function t(key: string, params?: Record<string, string | number>): string {
 	let value = flatTranslations[key];
 	if (value === undefined) {
-		log.warn('i18n', `Missing translation key: ${key}`);
+		void logger().then((log) => log.warn('i18n', `Missing translation key: ${key}`));
 		return key;
 	}
 	if (params) {

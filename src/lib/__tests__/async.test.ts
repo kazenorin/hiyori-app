@@ -51,7 +51,8 @@ describe('async utilities', () => {
 			const start = Date.now();
 			await sleep(0);
 			const elapsed = Date.now() - start;
-			expect(elapsed).toBeLessThan(10);
+			// 50ms bound: "next tick", tolerant of OS timer coalescing (Windows ~15ms).
+			expect(elapsed).toBeLessThan(50);
 		});
 	});
 

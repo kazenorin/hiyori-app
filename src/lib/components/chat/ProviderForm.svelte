@@ -3,7 +3,7 @@
 	import { fetchModels, type ModelInfo } from '$lib/ai/models';
 	import { isTauriSync, getPlatformSync } from '$lib/runtime';
 	import type { ApiType, Provider, ProviderConfig } from '$lib/stores/settings.svelte';
-	import type { CallSettings } from 'ai';
+	import type { LanguageModelCallOptions } from 'ai';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
 	import TextField from '$lib/components/ui/TextField.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -119,8 +119,8 @@
 		}
 	}
 
-	function buildCallSettings(): CallSettings | undefined {
-		const cs: CallSettings = {};
+	function buildCallSettings(): LanguageModelCallOptions | undefined {
+		const cs: LanguageModelCallOptions = {};
 		if (formTemperatureEnabled) cs.temperature = formTemperature;
 		if (formTopPEnabled) cs.topP = formTopP;
 		if (formTopKEnabled) cs.topK = formTopK;

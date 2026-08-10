@@ -83,7 +83,7 @@ export async function generateTurnOfEvents(params: GenerateTurnOfEventsParams): 
 
 	const result = await generateText({
 		model,
-		system: fullSystemPrompt,
+		instructions: fullSystemPrompt,
 		messages: [{ role: 'user', content: userMessage }],
 		...(config.callSettings ?? {}),
 	});

@@ -1,7 +1,13 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeAll } from 'vitest';
 import { getVoiceList, getVoiceLabel } from '$lib/kokoro/voices';
+import { loadLocale } from '$lib/i18n';
 
 describe('getVoiceLabel', () => {
+	beforeAll(async () => {
+		// getVoiceLabel formats gender via t(); translations must be loaded first.
+		await loadLocale('en');
+	});
+
 	it('formats American female voice', () => {
 		const heart = getVoiceList().af_heart;
 		expect(getVoiceLabel(heart)).toBe('Heart (Female, American English)');

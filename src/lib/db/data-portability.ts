@@ -140,7 +140,7 @@ export async function exportConfigData(onProgress?: (percent: number) => void): 
 
 async function exportConfigFiles(zip: JSZip, manifest: Map<string, ConfigAssetEntry>): Promise<void> {
 	const configDir = 'config';
-	let configExists = false;
+	let configExists: boolean;
 	try {
 		configExists = await fs.exists(configDir);
 	} catch {
@@ -165,7 +165,7 @@ async function exportConfigFiles(zip: JSZip, manifest: Map<string, ConfigAssetEn
 
 async function exportLogFiles(zip: JSZip): Promise<void> {
 	const logsDir = 'logs';
-	let logsExists = false;
+	let logsExists: boolean;
 	try {
 		logsExists = await fs.exists(logsDir);
 	} catch {
@@ -188,7 +188,7 @@ async function exportStoryFolders(zip: JSZip): Promise<void> {
 	const folderNames = await getStoryFolderNames();
 
 	for (const folderName of folderNames) {
-		let exists = false;
+		let exists: boolean;
 		try {
 			exists = await fs.exists(folderName);
 		} catch {

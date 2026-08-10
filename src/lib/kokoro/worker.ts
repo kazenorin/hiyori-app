@@ -116,7 +116,8 @@ ctx.addEventListener('message', async (e: MessageEvent) => {
 				}
 
 				const audio = await tts!.generate(chunk, { voice, speed: speed ?? 1 });
-				const ab = audio.audio.buffer;
+				const samples = Array.isArray(audio.audio) ? audio.audio[0] : audio.audio;
+				const ab = samples.buffer;
 				bufferQueueSize++;
 				ctx.postMessage({ status: 'stream_audio_data', audio: ab, text: chunk, generationId: currentGenId }, [ab]);
 			}

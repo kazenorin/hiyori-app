@@ -27,15 +27,14 @@ vi.mock('$lib/db/acts', () => ({
 
 const mockGetLatestPerItem = vi.fn(async (_actLineId: string, _names: string[], _category?: unknown): Promise<InventoryItem[]> => []);
 const mockGetInventoryEvents = vi.fn(async (_names: string[], _opts: unknown): Promise<InventoryEvent[]> => []);
-const mockResolveCharacterNames = vi.fn(
-	async (_actLineId: string, name: string, _chain?: { actLineId: string }[]): Promise<string[]> => [name]
-);
+const mockResolveCharacterNames = vi.fn(async (_actLineId: string, name: string, _chain?: { actLineId: string }[]): Promise<string[]> => [
+	name,
+]);
 
 vi.mock('$lib/db/inventory', () => ({
 	getLatestPerItem: (...args: unknown[]) => mockGetLatestPerItem(...(args as [string, string[], unknown])),
 	getInventoryEvents: (...args: unknown[]) => mockGetInventoryEvents(...(args as [string[], unknown])),
-	resolveCharacterNames: (...args: unknown[]) =>
-		mockResolveCharacterNames(...(args as [string, string, { actLineId: string }[]?])),
+	resolveCharacterNames: (...args: unknown[]) => mockResolveCharacterNames(...(args as [string, string, { actLineId: string }[]?])),
 }));
 
 import { createQueryInventoryTool } from '$lib/ai/tools/query-inventory';
@@ -99,7 +98,7 @@ describe('createQueryInventoryTool', () => {
 
 		const result = (await tool.execute!(
 			{ characterName: 'elena' },
-			{ toolCallId: 'test', messages: [], abortSignal: undefined }
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
 		)) as unknown as QueryInventoryOutput;
 		expect(result.inventory).toHaveLength(2);
 		expect(result.inventory[0].name).toBe('Iron Sword');
@@ -144,7 +143,7 @@ describe('createQueryInventoryTool', () => {
 
 		const result = (await tool.execute!(
 			{ characterName: 'Elena' },
-			{ toolCallId: 'test', messages: [], abortSignal: undefined }
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
 		)) as unknown as QueryInventoryOutput;
 		expect(result.inventory).toHaveLength(2);
 		expect(result.inventory[0].name).toBe('Iron Sword');
@@ -160,7 +159,7 @@ describe('createQueryInventoryTool', () => {
 
 		const result = (await tool.execute!(
 			{ characterName: 'unknown' },
-			{ toolCallId: 'test', messages: [], abortSignal: undefined }
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
 		)) as unknown as QueryInventoryOutput;
 		expect(result.inventory).toHaveLength(0);
 	});
@@ -198,9 +197,7 @@ describe('createQueryInventoryTool', () => {
 			},
 		];
 
-		mockGetLatestPerItem.mockImplementation(async (actLineId: string) =>
-			actLineId === 'line-2' ? childItems : parentItems
-		);
+		mockGetLatestPerItem.mockImplementation(async (actLineId: string) => (actLineId === 'line-2' ? childItems : parentItems));
 
 		const tool = createQueryInventoryTool({
 			storyId: 'story-1',
@@ -210,7 +207,7 @@ describe('createQueryInventoryTool', () => {
 
 		const result = (await tool.execute!(
 			{ characterName: 'elena' },
-			{ toolCallId: 'test', messages: [], abortSignal: undefined }
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
 		)) as unknown as QueryInventoryOutput;
 
 		expect(result.inventory).toHaveLength(2);
@@ -227,7 +224,10 @@ describe('createQueryInventoryTool', () => {
 			actNumber: 2,
 		});
 
-		await tool.execute!({ characterName: 'elena', itemCategory: 'skill' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		await tool.execute!(
+			{ characterName: 'elena', itemCategory: 'skill' },
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
+		);
 		expect(mockGetLatestPerItem).toHaveBeenCalledWith('line-2', ['elena'], 'skill');
 	});
 
@@ -260,7 +260,7 @@ describe('createQueryInventoryTool', () => {
 
 		const result = (await tool.execute!(
 			{ characterName: 'elena', includeHistory: true },
-			{ toolCallId: 'test', messages: [], abortSignal: undefined }
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
 		)) as unknown as QueryInventoryOutput;
 		expect(result.inventory).toHaveLength(2);
 		expect(result.events).toBeDefined();
@@ -280,7 +280,7 @@ describe('createQueryInventoryTool', () => {
 
 		const result = (await tool.execute!(
 			{ characterName: 'elena' },
-			{ toolCallId: 'test', messages: [], abortSignal: undefined }
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
 		)) as unknown as QueryInventoryOutput;
 		expect(result.inventory).toHaveLength(2);
 		expect(result.events).toBeUndefined();
@@ -294,7 +294,7 @@ describe('createQueryInventoryTool', () => {
 			actNumber: 2,
 		});
 
-		await tool.execute!({ characterName: 'elena' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		await tool.execute!({ characterName: 'elena' }, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
 
 		expect(mockTraceActLineChain).toHaveBeenCalledWith('line-2', true);
 		expect(mockResolveCharacterNames).toHaveBeenCalledWith('line-2', 'elena', [
@@ -310,7 +310,7 @@ describe('createQueryInventoryTool', () => {
 			actNumber: 1,
 		});
 
-		await tool.execute!({ characterName: 'elena' }, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		await tool.execute!({ characterName: 'elena' }, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
 
 		expect(mockTraceActLineChain).not.toHaveBeenCalled();
 		expect(mockResolveCharacterNames).toHaveBeenCalledWith('line-1', 'elena', [{ actLineId: 'line-1' }]);

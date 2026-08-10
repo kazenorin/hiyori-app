@@ -1,5 +1,5 @@
 import { fs } from '$lib/fs/file-system';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import { log } from '$lib/logging/logger';
 
 const LOCALE_STRINGS_FILENAME = 'locale-strings.yaml';

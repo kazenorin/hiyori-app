@@ -133,7 +133,7 @@ export async function generateCharacterCard(
 		const model = await createModel(config);
 		const generalInstructions = await generalInstructionsLoader.loadByStory(ctx.storyId, ctx.storyName);
 		const combinedSystem = `${characterCardGenerationSystemPrompt(entry.character)}\n\n---\n\n${generalInstructions}`;
-		const result = await generateText({ model, system: combinedSystem, messages, ...(config.callSettings ?? {}) });
+		const result = await generateText({ model, instructions: combinedSystem, messages, ...(config.callSettings ?? {}) });
 
 		await logCharacterCardActivity(
 			'generation-end',
@@ -361,7 +361,7 @@ async function extractCharactersFromActLineMessages(ctx: CharacterCardContext): 
 			content: characterExtractionPrompt(),
 		},
 	];
-	const result = await generateText({ model, system: systemPrompt, messages, ...(config.callSettings ?? {}) });
+	const result = await generateText({ model, instructions: systemPrompt, messages, ...(config.callSettings ?? {}) });
 
 	await logCharacterCardActivity(
 		'extraction-end',
@@ -400,7 +400,7 @@ function parseCharacterJson(text: string): CharacterSummary[] {
 			}));
 	} catch (err) {
 		const msg = err instanceof Error ? err.message : String(err);
-		throw new Error(`PARSE_FAILED:${msg}\n${text}`);
+		throw new Error(`PARSE_FAILED:${msg}\n${text}`, { cause: err });
 	}
 }
 

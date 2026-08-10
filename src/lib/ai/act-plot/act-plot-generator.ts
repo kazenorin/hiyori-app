@@ -1,4 +1,4 @@
-import { generateText, type ModelMessage, stepCountIs } from 'ai';
+import { generateText, type ModelMessage, isStepCount } from 'ai';
 import { getMainProviderConfig, isReviewerEnabled, settings } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider';
 import {
@@ -376,11 +376,11 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 	});
 	const writerResult = await generateText({
 		model,
-		system: systemPrompt,
+		instructions: systemPrompt,
 		messages: writerMessages,
 		abortSignal,
 		...(config.callSettings ?? {}),
-		...(writerTools ? { tools: writerTools, stopWhen: stepCountIs(TOOL_MAX_STEPS) } : {}),
+		...(writerTools ? { tools: writerTools, stopWhen: isStepCount(TOOL_MAX_STEPS) } : {}),
 	});
 	const writerText = writerResult.text.trim();
 
@@ -418,11 +418,11 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 			});
 			const reviewerResult = await generateText({
 				model,
-				system: systemPrompt,
+				instructions: systemPrompt,
 				messages: reviewerMessages,
 				abortSignal,
 				...(config.callSettings ?? {}),
-				...(reviewerTools ? { tools: reviewerTools, stopWhen: stepCountIs(TOOL_MAX_STEPS) } : {}),
+				...(reviewerTools ? { tools: reviewerTools, stopWhen: isStepCount(TOOL_MAX_STEPS) } : {}),
 			});
 			const reviewerText = reviewerResult.text.trim();
 
@@ -455,7 +455,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 				});
 				const editorResult = await generateText({
 					model,
-					system: systemPrompt,
+					instructions: systemPrompt,
 					messages: editorMessages,
 					abortSignal,
 					...(config.callSettings ?? {}),

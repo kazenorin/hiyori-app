@@ -362,7 +362,7 @@ export async function parseTranscriptFile(file: File, skipOptionalMalformed: boo
 		json = JSON.parse(text);
 	} catch (e) {
 		const errorMsg = e instanceof Error ? e.message : 'unknown error';
-		throw new Error(`File is not valid JSON: ${errorMsg}`);
+		throw new Error(`File is not valid JSON: ${errorMsg}`, { cause: e });
 	}
 
 	const format = detectTranscriptFormat(json);

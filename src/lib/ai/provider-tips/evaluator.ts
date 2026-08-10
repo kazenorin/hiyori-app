@@ -1,4 +1,4 @@
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import type { ApiType, Provider } from '$lib/stores/settings.svelte';
 import type { Platform } from '$lib/runtime';
 import rawRules from './rules.yaml?raw';

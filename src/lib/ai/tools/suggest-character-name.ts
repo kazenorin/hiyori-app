@@ -77,7 +77,7 @@ async function generateWithRetry(prompt: string, config: PlotPlannerProviderConf
 	const model = await createModel(config);
 	const systemPrompt = ls('tools.suggestCharacterName.systemPrompt');
 
-	return withRetry(() => generateText({ model, system: systemPrompt, prompt, ...(config.callSettings ?? {}) }).then((r) => r.text), {
+	return withRetry(() => generateText({ model, instructions: systemPrompt, prompt, ...(config.callSettings ?? {}) }).then((r) => r.text), {
 		maxAttempts: RETRY_COUNT + 1,
 		backoffMs: BACKOFF_MS,
 		shouldRetry: (err) => !isAuthError(err),

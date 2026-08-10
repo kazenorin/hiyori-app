@@ -1,6 +1,6 @@
 import { fs } from '$lib/fs/file-system';
 import { log } from '$lib/logging/logger';
-import yaml from 'js-yaml';
+import * as yaml from 'js-yaml';
 import rawManifest from './config-assets-manifest.yaml?raw';
 
 export interface ConfigAssetEntry {

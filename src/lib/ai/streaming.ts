@@ -1,7 +1,7 @@
 import type { MessageBase } from '$lib/db/messages';
-import { stepCountIs, streamText, type ToolSet, type CallSettings } from 'ai';
+import { isStepCount, streamText, type ToolSet, type LanguageModelCallOptions } from 'ai';
 import type { LanguageModel } from 'ai';
-import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
+import type { SharedV4ProviderOptions } from '@ai-sdk/provider';
 import { fileLog } from '$lib/logging/logger';
 import { ERR_EMPTY_STREAM } from '$lib/definitions/error-messages';
 
@@ -13,8 +13,8 @@ export interface StreamConfig {
 	messages: MessageBase[];
 	systemPrompt: string;
 	abortSignal: AbortSignal;
-	providerOptions?: SharedV3ProviderOptions;
-	callSettings?: CallSettings;
+	providerOptions?: SharedV4ProviderOptions;
+	callSettings?: LanguageModelCallOptions;
 	tools?: ToolSet;
 	maxSteps?: number;
 }
@@ -62,7 +62,7 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 		const baseConfig = {
 			model: config.model,
 			messages: config.messages,
-			system: config.systemPrompt,
+			instructions: config.systemPrompt,
 			abortSignal: config.abortSignal,
 			providerOptions: config.providerOptions,
 		};
@@ -75,12 +75,12 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 			...(hasTools
 				? {
 						tools: config.tools,
-						stopWhen: stepCountIs(!!config.maxSteps && config.maxSteps > 0 ? config.maxSteps : DEFAULT_MAX_STEPS),
+						stopWhen: isStepCount(!!config.maxSteps && config.maxSteps > 0 ? config.maxSteps : DEFAULT_MAX_STEPS),
 					}
 				: {}),
 		});
 
-		for await (const part of result.fullStream) {
+		for await (const part of result.stream) {
 			switch (part.type) {
 				case 'text-delta':
 					callbacks.onTextDelta(part.text);

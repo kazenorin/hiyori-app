@@ -145,7 +145,7 @@ describe('memory-extraction-pipeline', () => {
 
 			expect(mockGenerateText).toHaveBeenCalledWith(
 				expect.objectContaining({
-					system: 'System prompt',
+					instructions: 'System prompt',
 					prompt: expect.stringContaining('User prompt'),
 				})
 			);

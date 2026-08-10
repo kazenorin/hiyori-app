@@ -30,7 +30,7 @@ async function generateWithRetry(narrativeBody: string, config: MinorTaskAgentPr
 	const systemPrompt = importantPhrasesSystemPrompt();
 
 	return withRetry(
-		() => generateText({ model, system: systemPrompt, prompt: narrativeBody, ...(config.callSettings ?? {}) }).then((r) => r.text),
+		() => generateText({ model, instructions: systemPrompt, prompt: narrativeBody, ...(config.callSettings ?? {}) }).then((r) => r.text),
 		{
 			maxAttempts: RETRY_COUNT + 1,
 			backoffMs: BACKOFF_MS,

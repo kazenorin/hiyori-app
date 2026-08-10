@@ -4,8 +4,8 @@ import { getDatabase } from '$lib/db/database';
 import { DEFAULT_NAME_QUOTAS, type NameQuotaConfig } from '$lib/features/name-suggestion/quota';
 import { fs } from '$lib/fs/file-system';
 import { detectDefaultLocale, setLocale, type Locale } from '$lib/i18n';
-import type { CallSettings } from 'ai';
-import type { SharedV3ProviderOptions } from '@ai-sdk/provider';
+import type { LanguageModelCallOptions } from 'ai';
+import type { SharedV4ProviderOptions } from '@ai-sdk/provider';
 import type { VoiceId } from '$lib/kokoro/kokoro-hiyori';
 
 export type Provider = 'openai' | 'openai-compatible' | 'ollama';
@@ -31,10 +31,10 @@ export interface ProviderConfig {
 	apiKey?: string;
 	corsBypassEnabled: boolean;
 	wispProxyUrl: string;
-	callSettings?: CallSettings;
+	callSettings?: LanguageModelCallOptions;
 }
 
-export function getProviderOptions(config: ProviderConfig): SharedV3ProviderOptions {
+export function getProviderOptions(config: ProviderConfig): SharedV4ProviderOptions {
 	if (config.provider === 'openai') {
 		return {
 			openai: {
@@ -86,43 +86,47 @@ export interface Settings {
 
 const STORAGE_KEY = 'hiyori-settings';
 
-const defaults: Settings = {
-	providers: [],
-	roleAssignments: {},
-	locale: detectDefaultLocale(),
-	themeMode: 'system',
-	colorTheme: 'hiyori',
-	logLevel: 'info',
-	fontSize: 1.0,
-	memoryEnabled: false,
-	inventoryEnabled: false,
-	memoryProviderRole: 'main',
-	embeddingProviderRole: 'main',
-	plotPlannerProviderRole: 'main',
-	plotPlannerEnabled: true,
-	writerProviderRole: 'main',
-	reviewerProviderRole: 'main',
-	reviewerEnabled: true,
-	reviewerMode: 'detailed',
-	editorProviderRole: 'main',
-	gameMasterProviderRole: 'main',
-	summarizerProviderRole: 'main',
-	minorTaskAgentProviderRole: 'main',
-	importantPhraseHighlighting: false,
-	targetWordCount: 400,
-	directorModeEnabled: false,
-	characterProfileCompressorInterval: 5, // scenes between compressor runs; 0 = disabled
-	characterProfileImportanceThreshold: 2, // 1=Protagonist, 2=Main, 3=Supporting, 4=Minor
-	characterProfileMaxIncluded: 5, // hard cap on number of full-profile inlines
-	phaseAdvancementThreshold: 5,
-	playerDivergenceThreshold: 8,
-	defaultPlotMode: 'phaseEvent',
-	reevaluationFrequency: 10,
-	ttsVoices: { en: null, 'zh-Hant-HK': null },
-	ttsSpeed: 1,
-	characterNameSuggestionMode: 'analytic',
-	nameSuggestionQuotas: DEFAULT_NAME_QUOTAS,
-};
+// Factory (not a module-level const) so detectDefaultLocale() runs lazily,
+// avoiding a circular-init crash when i18n -> logger -> settings loads first.
+function createDefaults(): Settings {
+	return {
+		providers: [],
+		roleAssignments: {},
+		locale: detectDefaultLocale(),
+		themeMode: 'system',
+		colorTheme: 'hiyori',
+		logLevel: 'info',
+		fontSize: 1.0,
+		memoryEnabled: false,
+		inventoryEnabled: false,
+		memoryProviderRole: 'main',
+		embeddingProviderRole: 'main',
+		plotPlannerProviderRole: 'main',
+		plotPlannerEnabled: true,
+		writerProviderRole: 'main',
+		reviewerProviderRole: 'main',
+		reviewerEnabled: true,
+		reviewerMode: 'detailed',
+		editorProviderRole: 'main',
+		gameMasterProviderRole: 'main',
+		summarizerProviderRole: 'main',
+		minorTaskAgentProviderRole: 'main',
+		importantPhraseHighlighting: false,
+		targetWordCount: 400,
+		directorModeEnabled: false,
+		characterProfileCompressorInterval: 5, // scenes between compressor runs; 0 = disabled
+		characterProfileImportanceThreshold: 2, // 1=Protagonist, 2=Main, 3=Supporting, 4=Minor
+		characterProfileMaxIncluded: 5, // hard cap on number of full-profile inlines
+		phaseAdvancementThreshold: 5,
+		playerDivergenceThreshold: 8,
+		defaultPlotMode: 'phaseEvent',
+		reevaluationFrequency: 10,
+		ttsVoices: { en: null, 'zh-Hant-HK': null },
+		ttsSpeed: 1,
+		characterNameSuggestionMode: 'analytic',
+		nameSuggestionQuotas: DEFAULT_NAME_QUOTAS,
+	};
+}
 
 /**
  * Apply font size preference by setting the --text-scaling CSS variable.
@@ -145,7 +149,7 @@ function loadSettings(): Settings {
 		const stored = localStorage.getItem(STORAGE_KEY);
 		if (stored) {
 			const raw = JSON.parse(stored);
-			const merged = { ...defaults, ...raw };
+			const merged = { ...createDefaults(), ...raw };
 			if (merged.providers) {
 				merged.providers = merged.providers.map((p: Record<string, unknown>) => ({
 					corsBypassEnabled: false,
@@ -158,7 +162,7 @@ function loadSettings(): Settings {
 	} catch {
 		// Invalid JSON or localStorage unavailable — use defaults
 	}
-	return { ...defaults };
+	return { ...createDefaults() };
 }
 
 function persist(): void {
@@ -440,6 +444,6 @@ export async function resetConfiguration(): Promise<void> {
 		// config/ may not exist — that's fine
 	}
 	localStorage.removeItem(STORAGE_KEY);
-	Object.assign(settings, { ...defaults });
+	Object.assign(settings, { ...createDefaults() });
 	persist();
 }

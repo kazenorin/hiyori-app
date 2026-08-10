@@ -104,13 +104,13 @@ export async function generateWorld(storyId: string, folderName?: string | null,
 	const result = streamText({
 		model,
 		messages: allMessages,
-		system: systemPrompt,
+		instructions: systemPrompt,
 		abortSignal,
 		...(config!.callSettings ?? {}),
 	});
 
 	const contentParts: string[] = [];
-	for await (const part of result.fullStream) {
+	for await (const part of result.stream) {
 		if (part.type === 'text-delta') {
 			contentParts.push(part.text);
 		}
@@ -167,13 +167,13 @@ export async function generateWorldFromCards(
 	const result = streamText({
 		model,
 		messages,
-		system: systemPrompt,
+		instructions: systemPrompt,
 		abortSignal,
 		...(config!.callSettings ?? {}),
 	});
 
 	const contentParts: string[] = [];
-	for await (const part of result.fullStream) {
+	for await (const part of result.stream) {
 		if (part.type === 'text-delta') {
 			contentParts.push(part.text);
 		}

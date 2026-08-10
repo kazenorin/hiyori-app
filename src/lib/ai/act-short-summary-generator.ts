@@ -51,7 +51,7 @@ export async function ensureActShortSummary(actLineId: string, actSummary: strin
 		}
 
 		const text = await withRetry(
-			() => generateText({ model, system: systemPrompt, prompt: promptText, ...(config.callSettings ?? {}) }).then((r) => r.text),
+			() => generateText({ model, instructions: systemPrompt, prompt: promptText, ...(config.callSettings ?? {}) }).then((r) => r.text),
 			{
 				maxAttempts: RETRY_COUNT + 1,
 				backoffMs: BACKOFF_MS,

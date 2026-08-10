@@ -1,4 +1,4 @@
-import { generateText, stepCountIs, type ToolSet } from 'ai';
+import { generateText, isStepCount, type ToolSet } from 'ai';
 import type { MessageBase } from '$lib/db/messages';
 import { type RetryConfig, streamWithRetry } from '../chat-stream';
 import { createModel } from '../provider';
@@ -165,10 +165,10 @@ export async function runNonStreamingPhase(
 	const result = await generateText({
 		model,
 		messages,
-		system: systemPrompt,
+		instructions: systemPrompt,
 		abortSignal,
 		...(tools && Object.keys(tools).length > 0 ? { tools } : {}),
-		stopWhen: stepCountIs(maxSteps),
+		stopWhen: isStepCount(maxSteps),
 		...(providerConfig.callSettings ?? {}),
 	});
 

@@ -78,7 +78,7 @@ describe('createIntroduceCharacterTool', () => {
 	it('tags the profile with the current scene number from context', async () => {
 		const toolDef = createIntroduceCharacterTool(createMockContext(5));
 
-		const result = await toolDef.execute!(validInput, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		const result = await toolDef.execute!(validInput, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
 
 		expect(result).toBe('Character profile created for Elena.');
 		expect(insertCharacterProfile).toHaveBeenCalledTimes(1);
@@ -91,7 +91,7 @@ describe('createIntroduceCharacterTool', () => {
 	it('writes a baseline (null scene) profile when there is no current scene (act-plot context)', async () => {
 		const toolDef = createIntroduceCharacterTool(createMockContext(null));
 
-		await toolDef.execute!(validInput, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		await toolDef.execute!(validInput, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
 
 		expect(vi.mocked(insertCharacterProfile).mock.calls[0][0].sceneNumber).toBeNull();
 	});
@@ -100,7 +100,7 @@ describe('createIntroduceCharacterTool', () => {
 		vi.mocked(areAnyCharacterNamesKnown).mockResolvedValue(true);
 		const toolDef = createIntroduceCharacterTool(createMockContext(5));
 
-		const result = await toolDef.execute!(validInput, { toolCallId: 'test', messages: [], abortSignal: undefined });
+		const result = await toolDef.execute!(validInput, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
 
 		expect(result).toBe('tools.introduceCharacter.messages.exists');
 		expect(insertCharacterProfile).not.toHaveBeenCalled();

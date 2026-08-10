@@ -160,7 +160,7 @@ describe('syncConfigAssets — line-ending / trimming tolerance (integration)', 
 
 	it('does not overwrite when content differs only by CRLF vs LF (regression guard for normalization)', async () => {
 		const bundled = await importRealBundle();
-		await memfs.writeTextFile(`config/${testConfigPath}`, bundled.replaceAll('\n', '\r\n'));
+		await memfs.writeTextFile(`config/${testConfigPath}`, bundled.replaceAll('\r\n', '\n').replaceAll('\n', '\r\n'));
 		const { syncConfigAssets } = await import('$lib/fs/config-manifest');
 
 		await syncConfigAssets();
@@ -224,7 +224,7 @@ describe('isConfigUserModified — freshness check (file-tree.ts)', () => {
 	it('returns false when content differs only by CRLF vs LF', async () => {
 		const bundled = await importRealBundle();
 		const { isConfigUserModified } = await import('$lib/fs/file-tree');
-		await memfs.writeTextFile(`config/${testConfigPath}`, bundled.replaceAll('\n', '\r\n'));
+		await memfs.writeTextFile(`config/${testConfigPath}`, bundled.replaceAll('\r\n', '\n').replaceAll('\n', '\r\n'));
 
 		expect(await isConfigUserModified(`config/${testConfigPath}`)).toBe(false);
 	});

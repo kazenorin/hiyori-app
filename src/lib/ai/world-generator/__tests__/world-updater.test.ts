@@ -52,9 +52,9 @@ vi.mock('../template-resolution', () => ({
 
 import { updateWorldCard } from '../world-updater';
 
-function makeFullStream(parts: Array<{ type: string; text: string }>) {
+function makeStream(parts: Array<{ type: string; text: string }>) {
 	return {
-		fullStream: (async function* () {
+		stream: (async function* () {
 			for (const part of parts) yield part;
 		})(),
 	};
@@ -79,7 +79,7 @@ describe('updateWorldCard — backup restoration', () => {
 		mockGetMainProviderConfig.mockReturnValue({ id: 'p1', model: 'test-model' });
 		mockCreateModel.mockResolvedValue({});
 		mockResolveTemplateForUpdate.mockResolvedValue('TEMPLATE');
-		mockStreamText.mockReturnValue(makeFullStream([{ type: 'text-delta', text: 'new content' }]));
+		mockStreamText.mockReturnValue(makeStream([{ type: 'text-delta', text: 'new content' }]));
 	});
 
 	it('writes new content on success and retains the backup file', async () => {
@@ -118,10 +118,10 @@ describe('updateWorldCard — backup restoration', () => {
 		expect(await fs.readTextFile('story-folder/world.md')).toBe('original content');
 	});
 
-	it('restores world.md from backup when fullStream iteration throws mid-stream', async () => {
+	it('restores world.md from backup when stream iteration throws mid-stream', async () => {
 		await fs.writeTextFile('story-folder/world.md', 'original content');
 		mockStreamText.mockReturnValue({
-			fullStream: (async function* () {
+			stream: (async function* () {
 				yield { type: 'text-delta', text: 'partial' };
 				throw new Error('mid-stream error');
 			})(),
