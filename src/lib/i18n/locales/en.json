@@ -54,6 +54,8 @@
 			"high": "High",
 			"xhigh": "XHigh"
 		},
+		"overrideAdvancedSettings": "Override Advanced Settings",
+		"advancedSettingsFollowHint": "When disabled, follows the assigned provider's Advanced Settings.",
 		"baseUrl": "Base URL",
 		"baseUrlHint": {
 			"openai": "Only for the official OpenAI API. OpenAI-Compatible APIs will not work with this provider.",

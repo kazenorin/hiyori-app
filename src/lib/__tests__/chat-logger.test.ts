@@ -65,6 +65,7 @@ function defaultSettings() {
 	return {
 		providers: [],
 		roleAssignments: {},
+		roleCallSettings: {},
 		locale: 'en',
 		themeMode: 'system' as const,
 		colorTheme: 'hiyori',

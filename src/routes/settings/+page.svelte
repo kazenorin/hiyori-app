@@ -25,6 +25,7 @@
 	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import ProviderForm from '$lib/components/chat/ProviderForm.svelte';
+	import RoleCallSettingsOverride from '$lib/components/chat/RoleCallSettingsOverride.svelte';
 	import NumberField from '$lib/components/ui/NumberField.svelte';
 	import {
 		getLocaleItems,
@@ -290,6 +291,7 @@
 						placeholder={t('settings.noProvidersConfigured')}
 					/>
 					<span class="text-xs text-surface-500 block">{t('settings.mainProviderDescription')}</span>
+					<RoleCallSettingsOverride role="main" />
 				</div>
 
 				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
@@ -302,6 +304,7 @@
 						placeholder={t('settings.noProvidersConfigured')}
 					/>
 					<span class="text-xs text-surface-500 block">{t('settings.minorTaskAgentDescription')}</span>
+					<RoleCallSettingsOverride role="minorTaskAgent" />
 				</div>
 			</div>
 		</Card>
@@ -480,6 +483,7 @@
 					/>
 				</div>
 				<span class="text-xs text-surface-500 block">{t('settings.reevaluationFrequencyDescription')}</span>
+				<RoleCallSettingsOverride role="plotPlanner" />
 			</div>
 
 			<!-- Reviewer: full-width mini-card -->
@@ -519,6 +523,7 @@
 							: t('settings.reviewerModeQuickDescription')}</span
 					>
 				</div>
+				<RoleCallSettingsOverride role="reviewer" />
 			</div>
 
 			<!-- 2x2 grid: Writer, Editor, Game Master, Summarizer -->
@@ -534,6 +539,7 @@
 						placeholder={t('settings.noProvidersConfigured')}
 					/>
 					<span class="text-xs text-surface-500 block">{t('settings.writerDescription')}</span>
+					<RoleCallSettingsOverride role="writer" />
 				</div>
 
 				<!-- Editor -->
@@ -550,6 +556,7 @@
 					{#if !settings.reviewerEnabled}
 						<span class="text-xs text-surface-500">{t('settings.editorRequiresReviewer')}</span>
 					{/if}
+					<RoleCallSettingsOverride role="editor" />
 				</div>
 
 				<!-- Game Master -->
@@ -563,6 +570,7 @@
 						placeholder={t('settings.noProvidersConfigured')}
 					/>
 					<span class="text-xs text-surface-500 block">{t('settings.gameMasterDescription')}</span>
+					<RoleCallSettingsOverride role="gameMaster" />
 				</div>
 
 				<!-- Summarizer -->
@@ -576,6 +584,7 @@
 						placeholder={t('settings.noProvidersConfigured')}
 					/>
 					<span class="text-xs text-surface-500 block">{t('settings.summarizerDescription')}</span>
+					<RoleCallSettingsOverride role="summarizer" />
 				</div>
 			</div>
 		</Card>
@@ -715,7 +724,7 @@
 					<span class="text-sm font-medium text-surface-700-300">{t('settings.enableMemory')}</span>
 				</label>
 
-				<label class="block">
+				<div class="block">
 					<span class="text-sm font-medium text-surface-700-300">{t('settings.memoryProvider')}</span>
 					<ThemedSelect
 						items={getRoleItems()}
@@ -725,9 +734,10 @@
 						placeholder={t('settings.noProvidersConfigured')}
 					/>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.memoryProviderDescription')}</span>
-				</label>
+					<RoleCallSettingsOverride role="memory" />
+				</div>
 
-				<label class="block">
+				<div class="block">
 					<span class="text-sm font-medium text-surface-700-300">{t('settings.embeddingProvider')}</span>
 					<ThemedSelect
 						items={getRoleItems()}
@@ -737,7 +747,8 @@
 						placeholder={t('settings.noProvidersConfigured')}
 					/>
 					<span class="text-xs text-surface-500 mt-1 block">{t('settings.embeddingProviderDescription')}</span>
-				</label>
+					<RoleCallSettingsOverride role="embedding" />
+				</div>
 			</Card>
 		{/if}
 

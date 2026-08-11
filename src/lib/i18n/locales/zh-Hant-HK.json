@@ -54,6 +54,8 @@
 			"high": "高",
 			"xhigh": "極高"
 		},
+		"overrideAdvancedSettings": "覆寫進階設定",
+		"advancedSettingsFollowHint": "停用時，跟隨所指派提供者的進階設定。",
 		"baseUrl": "基礎 URL",
 		"baseUrlHint": {
 			"openai": "僅適用於官方 OpenAI API。OpenAI-Compatible API 不適用於此提供者。",

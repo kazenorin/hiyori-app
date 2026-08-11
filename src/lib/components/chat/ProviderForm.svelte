@@ -8,6 +8,7 @@
 	import TextField from '$lib/components/ui/TextField.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import ProviderTips from '$lib/components/chat/ProviderTips.svelte';
+	import AdvancedSettingsEditor from '$lib/components/chat/AdvancedSettingsEditor.svelte';
 	import {
 		evaluateProviderTip,
 		expandSuggestionTemplate,
@@ -45,27 +46,7 @@
 	let formWispProxyUrl = $state(config?.wispProxyUrl ?? 'ws://localhost:6001');
 
 	// svelte-ignore state_referenced_locally
-	let formTemperatureEnabled = $state(config?.callSettings?.temperature !== undefined);
-	// svelte-ignore state_referenced_locally
-	let formTemperature = $state(config?.callSettings?.temperature ?? 0.7);
-	// svelte-ignore state_referenced_locally
-	let formTopPEnabled = $state(config?.callSettings?.topP !== undefined);
-	// svelte-ignore state_referenced_locally
-	let formTopP = $state(config?.callSettings?.topP ?? 1);
-	// svelte-ignore state_referenced_locally
-	let formTopKEnabled = $state(config?.callSettings?.topK !== undefined);
-	// svelte-ignore state_referenced_locally
-	let formTopK = $state(config?.callSettings?.topK ?? 0);
-	// svelte-ignore state_referenced_locally
-	let formPresencePenaltyEnabled = $state(config?.callSettings?.presencePenalty !== undefined);
-	// svelte-ignore state_referenced_locally
-	let formPresencePenalty = $state(config?.callSettings?.presencePenalty ?? 0);
-	// svelte-ignore state_referenced_locally
-	let formFrequencyPenaltyEnabled = $state(config?.callSettings?.frequencyPenalty !== undefined);
-	// svelte-ignore state_referenced_locally
-	let formFrequencyPenalty = $state(config?.callSettings?.frequencyPenalty ?? 0);
-	// svelte-ignore state_referenced_locally
-	let formReasoningEffort = $state<ReasoningEffort>(config?.callSettings?.reasoning ?? 'provider-default');
+	let formCallSettings = $state<LanguageModelCallOptions | undefined>(config?.callSettings);
 
 	let baseUrlHint = $derived(
 		formProvider === 'openai'
@@ -89,22 +70,6 @@
 		{ label: t('settings.apiTypes.responses'), value: 'responses' },
 		{ label: t('settings.apiTypes.chatCompletions'), value: 'chat-completions' },
 	];
-
-	type ReasoningEffort = NonNullable<LanguageModelCallOptions['reasoning']>;
-
-	const REASONING_EFFORT_OPTIONS: readonly ReasoningEffort[] = ['provider-default', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
-
-	const REASONING_EFFORT_LABEL_KEYS: Record<ReasoningEffort, string> = {
-		'provider-default': 'settings.reasoningEfforts.providerDefault',
-		none: 'settings.reasoningEfforts.none',
-		minimal: 'settings.reasoningEfforts.minimal',
-		low: 'settings.reasoningEfforts.low',
-		medium: 'settings.reasoningEfforts.medium',
-		high: 'settings.reasoningEfforts.high',
-		xhigh: 'settings.reasoningEfforts.xhigh',
-	};
-
-	const reasoningEffortItems = REASONING_EFFORT_OPTIONS.map((value) => ({ label: t(REASONING_EFFORT_LABEL_KEYS[value]), value }));
 
 	function handleProviderChange() {
 		if (formProvider === 'openai-compatible') {
@@ -137,18 +102,6 @@
 		}
 	}
 
-	function buildCallSettings(): LanguageModelCallOptions | undefined {
-		const cs: LanguageModelCallOptions = {};
-		if (formTemperatureEnabled) cs.temperature = formTemperature;
-		if (formTopPEnabled) cs.topP = formTopP;
-		if (formTopKEnabled) cs.topK = formTopK;
-		if (formPresencePenaltyEnabled) cs.presencePenalty = formPresencePenalty;
-		if (formFrequencyPenaltyEnabled) cs.frequencyPenalty = formFrequencyPenalty;
-		// 'provider-default' means no override, so it is not persisted
-		if (formReasoningEffort !== 'provider-default') cs.reasoning = formReasoningEffort;
-		return Object.keys(cs).length > 0 ? cs : undefined;
-	}
-
 	function handleSave() {
 		onsave({
 			name: formName || t('settings.untitledProvider'),
@@ -159,7 +112,7 @@
 			apiKey: formApiKey,
 			corsBypassEnabled: formCorsBypassEnabled,
 			wispProxyUrl: formWispProxyUrl,
-			callSettings: buildCallSettings(),
+			callSettings: formCallSettings,
 		});
 	}
 
@@ -304,51 +257,8 @@
 
 			<details class="mt-2">
 				<summary class="text-sm font-medium cursor-pointer">{t('settings.advanced')}</summary>
-				<div class="mt-2 space-y-2">
-					<label class="flex items-center gap-2">
-						<input type="checkbox" class="checkbox" bind:checked={formTemperatureEnabled} />
-						<span class="text-sm font-medium text-surface-700-300">Temperature</span>
-					</label>
-					{#if formTemperatureEnabled}
-						<input class="input" type="number" step="0.01" min="0" max="1" bind:value={formTemperature} />
-					{/if}
-
-					<label class="flex items-center gap-2">
-						<input type="checkbox" class="checkbox" bind:checked={formTopPEnabled} />
-						<span class="text-sm font-medium text-surface-700-300">Top P</span>
-					</label>
-					{#if formTopPEnabled}
-						<input class="input" type="number" step="0.01" min="0" max="1" bind:value={formTopP} />
-					{/if}
-
-					<label class="flex items-center gap-2">
-						<input type="checkbox" class="checkbox" bind:checked={formTopKEnabled} />
-						<span class="text-sm font-medium text-surface-700-300">Top K</span>
-					</label>
-					{#if formTopKEnabled}
-						<input class="input" type="number" step="1" min="0" max="100" bind:value={formTopK} />
-					{/if}
-
-					<label class="flex items-center gap-2">
-						<input type="checkbox" class="checkbox" bind:checked={formPresencePenaltyEnabled} />
-						<span class="text-sm font-medium text-surface-700-300">Presence Penalty</span>
-					</label>
-					{#if formPresencePenaltyEnabled}
-						<input class="input" type="number" step="0.01" min="-1" max="1" bind:value={formPresencePenalty} />
-					{/if}
-
-					<label class="flex items-center gap-2">
-						<input type="checkbox" class="checkbox" bind:checked={formFrequencyPenaltyEnabled} />
-						<span class="text-sm font-medium text-surface-700-300">Frequency Penalty</span>
-					</label>
-					{#if formFrequencyPenaltyEnabled}
-						<input class="input" type="number" step="0.01" min="-1" max="1" bind:value={formFrequencyPenalty} />
-					{/if}
-
-					<label class="block">
-						<span class="text-sm font-medium text-surface-700-300">{t('settings.reasoningEffort')}</span>
-						<ThemedSelect items={reasoningEffortItems} value={formReasoningEffort} onValueChange={(v) => (formReasoningEffort = v)} />
-					</label>
+				<div class="mt-2">
+					<AdvancedSettingsEditor callSettings={formCallSettings} onValueChange={(cs) => (formCallSettings = cs)} />
 				</div>
 			</details>
 		</div>

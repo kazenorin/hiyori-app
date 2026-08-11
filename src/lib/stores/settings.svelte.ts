@@ -36,6 +36,8 @@ export interface ProviderConfig {
 export interface Settings {
 	providers: ProviderConfig[];
 	roleAssignments: Record<string, string>;
+	/** Per-role Advanced Settings overrides; presence of an entry means the role overrides its provider's callSettings */
+	roleCallSettings: Record<string, LanguageModelCallOptions>;
 	locale: string;
 	themeMode: ThemeMode;
 	colorTheme: string;
@@ -79,6 +81,7 @@ function createDefaults(): Settings {
 	return {
 		providers: [],
 		roleAssignments: {},
+		roleCallSettings: {},
 		locale: detectDefaultLocale(),
 		themeMode: 'system',
 		colorTheme: 'hiyori',
@@ -175,100 +178,85 @@ export function getProviderConfig(id: string): ProviderConfig | undefined {
 	return settings.providers.find((p) => p.id === id);
 }
 
+/** Returns the config with the role's Advanced Settings override applied, if any */
+function applyRoleCallSettings(config: ProviderConfig, roleKey: string): ProviderConfig {
+	const override = settings.roleCallSettings[roleKey];
+	return override !== undefined ? { ...config, callSettings: override } : config;
+}
+
 export function getMainProviderConfig(): ProviderConfig | undefined {
 	const id = settings.roleAssignments['main'];
 	if (!id) return undefined;
-	return getProviderConfig(id);
+	const config = getProviderConfig(id);
+	if (!config) return undefined;
+	return applyRoleCallSettings(config, 'main');
 }
 
-export function getMemoryProviderConfig(): ProviderConfig | undefined {
-	const role = settings.memoryProviderRole || 'main';
-	// If it's a named role (like "main"), resolve through roleAssignments
+/**
+ * Resolves a pipeline role's provider config.
+ * Advanced Settings precedence: the role's own override > the selected provider role's
+ * override (e.g. 'main') > the provider config's own callSettings.
+ */
+function resolvePipelineRoleProviderConfig(roleKey: string, providerRole: string): ProviderConfig | undefined {
+	const role = providerRole || 'main';
 	const id = settings.roleAssignments[role];
 	const config = id ? getProviderConfig(id) : getProviderConfig(role);
 	if (!config?.model) return undefined;
-	return config;
+	const override = settings.roleCallSettings[roleKey] ?? settings.roleCallSettings[role];
+	return override !== undefined ? { ...config, callSettings: override } : config;
+}
+
+export function getMemoryProviderConfig(): ProviderConfig | undefined {
+	return resolvePipelineRoleProviderConfig('memory', settings.memoryProviderRole);
 }
 
 /** Resolved memory provider config type (non-nullable after successful resolution) */
 export type MemoryProviderConfig = NonNullable<ReturnType<typeof getMemoryProviderConfig>>;
 
 export function getEmbeddingProviderConfig(): ProviderConfig | undefined {
-	const role = settings.embeddingProviderRole || 'main';
-	const id = settings.roleAssignments[role];
-	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.model) return undefined;
-	return config;
+	return resolvePipelineRoleProviderConfig('embedding', settings.embeddingProviderRole);
 }
 
 export type EmbeddingProviderConfig = NonNullable<ReturnType<typeof getEmbeddingProviderConfig>>;
 
 export function getReviewerProviderConfig(): ProviderConfig | undefined {
-	const role = settings.reviewerProviderRole || 'main';
-	const id = settings.roleAssignments[role];
-	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.model) return undefined;
-	return config;
+	return resolvePipelineRoleProviderConfig('reviewer', settings.reviewerProviderRole);
 }
 
 export type ReviewerProviderConfig = NonNullable<ReturnType<typeof getReviewerProviderConfig>>;
 
 export function getPlotPlannerProviderConfig(): ProviderConfig | undefined {
-	const role = settings.plotPlannerProviderRole || 'main';
-	const id = settings.roleAssignments[role];
-	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.model) return undefined;
-	return config;
+	return resolvePipelineRoleProviderConfig('plotPlanner', settings.plotPlannerProviderRole);
 }
 
 export type PlotPlannerProviderConfig = NonNullable<ReturnType<typeof getPlotPlannerProviderConfig>>;
 
 export function getWriterProviderConfig(): ProviderConfig | undefined {
-	const role = settings.writerProviderRole || 'main';
-	const id = settings.roleAssignments[role];
-	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.model) return undefined;
-	return config;
+	return resolvePipelineRoleProviderConfig('writer', settings.writerProviderRole);
 }
 
 export type WriterProviderConfig = NonNullable<ReturnType<typeof getWriterProviderConfig>>;
 
 export function getEditorProviderConfig(): ProviderConfig | undefined {
-	const role = settings.editorProviderRole || 'main';
-	const id = settings.roleAssignments[role];
-	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.model) return undefined;
-	return config;
+	return resolvePipelineRoleProviderConfig('editor', settings.editorProviderRole);
 }
 
 export type EditorProviderConfig = NonNullable<ReturnType<typeof getEditorProviderConfig>>;
 
 export function getGameMasterProviderConfig(): ProviderConfig | undefined {
-	const role = settings.gameMasterProviderRole || 'main';
-	const id = settings.roleAssignments[role];
-	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.model) return undefined;
-	return config;
+	return resolvePipelineRoleProviderConfig('gameMaster', settings.gameMasterProviderRole);
 }
 
 export type GameMasterProviderConfig = NonNullable<ReturnType<typeof getGameMasterProviderConfig>>;
 
 export function getSummarizerProviderConfig(): ProviderConfig | undefined {
-	const role = settings.summarizerProviderRole || 'main';
-	const id = settings.roleAssignments[role];
-	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.model) return undefined;
-	return config;
+	return resolvePipelineRoleProviderConfig('summarizer', settings.summarizerProviderRole);
 }
 
 export type SummarizerProviderConfig = NonNullable<ReturnType<typeof getSummarizerProviderConfig>>;
 
 export function getMinorTaskAgentProviderConfig(): ProviderConfig | undefined {
-	const role = settings.minorTaskAgentProviderRole || 'main';
-	const id = settings.roleAssignments[role];
-	const config = id ? getProviderConfig(id) : getProviderConfig(role);
-	if (!config?.model) return undefined;
-	return config;
+	return resolvePipelineRoleProviderConfig('minorTaskAgent', settings.minorTaskAgentProviderRole);
 }
 
 export type MinorTaskAgentProviderConfig = NonNullable<ReturnType<typeof getMinorTaskAgentProviderConfig>>;
@@ -338,7 +326,9 @@ export function getNameSuggestionQuotas(): NameQuotaConfig {
 export function getProviderConfigForRole(role: string): ProviderConfig | undefined {
 	const id = settings.roleAssignments[role];
 	if (!id) return undefined;
-	return getProviderConfig(id);
+	const config = getProviderConfig(id);
+	if (!config) return undefined;
+	return applyRoleCallSettings(config, role);
 }
 
 export function addProviderConfig(partial: Omit<ProviderConfig, 'id'>): ProviderConfig {
@@ -365,7 +355,21 @@ export function assignRole(role: string, providerConfigId: string): void {
 	persist();
 }
 
-type UpdatableSettings = Omit<Settings, 'providers' | 'roleAssignments'>;
+export function getRoleCallSettings(role: string): LanguageModelCallOptions | undefined {
+	return settings.roleCallSettings[role];
+}
+
+/** Pass `undefined` to remove the override (role falls back to its provider's settings) */
+export function setRoleCallSettings(role: string, callSettings: LanguageModelCallOptions | undefined): void {
+	if (callSettings === undefined) {
+		delete settings.roleCallSettings[role];
+	} else {
+		settings.roleCallSettings[role] = callSettings;
+	}
+	persist();
+}
+
+type UpdatableSettings = Omit<Settings, 'providers' | 'roleAssignments' | 'roleCallSettings'>;
 
 // --- Global Settings ---
 

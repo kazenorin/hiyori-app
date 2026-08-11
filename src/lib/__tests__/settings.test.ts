@@ -232,4 +232,79 @@ describe('settings', () => {
 		expect(copy.apiKey).toBe('sk-test');
 		expect(getSettings().providers).toHaveLength(2);
 	});
+
+	describe('role Advanced Settings overrides', () => {
+		async function setup() {
+			vi.resetModules();
+			const mod = await import('$lib/stores/settings.svelte');
+			const config = mod.addProviderConfig({
+				name: 'Main',
+				provider: 'openai',
+				apiType: 'responses',
+				baseURL: '',
+				model: 'gpt-4o',
+				apiKey: 'sk-test',
+				corsBypassEnabled: false,
+				wispProxyUrl: 'ws://localhost:6001',
+				callSettings: { temperature: 0.5, reasoning: 'high' },
+			});
+			mod.assignRole('main', config.id);
+			return mod;
+		}
+
+		it('pipeline role without override follows the provider callSettings', async () => {
+			const mod = await setup();
+			expect(mod.getWriterProviderConfig()?.callSettings).toEqual({ temperature: 0.5, reasoning: 'high' });
+		});
+
+		it('pipeline role override replaces the provider callSettings entirely', async () => {
+			const mod = await setup();
+			mod.setRoleCallSettings('writer', { reasoning: 'low' });
+			// Block-replace semantics: the provider's temperature must not leak through
+			expect(mod.getWriterProviderConfig()?.callSettings).toEqual({ reasoning: 'low' });
+		});
+
+		it('an enabled but empty override disables all advanced settings', async () => {
+			const mod = await setup();
+			mod.setRoleCallSettings('writer', {});
+			expect(mod.getWriterProviderConfig()?.callSettings).toEqual({});
+		});
+
+		it('pipeline role assigned to main inherits the main role override', async () => {
+			const mod = await setup();
+			mod.setRoleCallSettings('main', { temperature: 0.9 });
+			expect(mod.getWriterProviderConfig()?.callSettings).toEqual({ temperature: 0.9 });
+		});
+
+		it('pipeline role own override takes precedence over the main role override', async () => {
+			const mod = await setup();
+			mod.setRoleCallSettings('main', { temperature: 0.9 });
+			mod.setRoleCallSettings('writer', { topP: 0.5 });
+			expect(mod.getWriterProviderConfig()?.callSettings).toEqual({ topP: 0.5 });
+		});
+
+		it('getMainProviderConfig applies the main role override', async () => {
+			const mod = await setup();
+			mod.setRoleCallSettings('main', { reasoning: 'minimal' });
+			expect(mod.getMainProviderConfig()?.callSettings).toEqual({ reasoning: 'minimal' });
+		});
+
+		it('removing an override restores fallback to provider settings', async () => {
+			const mod = await setup();
+			mod.setRoleCallSettings('writer', { topK: 5 });
+			mod.setRoleCallSettings('writer', undefined);
+			expect(mod.getWriterProviderConfig()?.callSettings).toEqual({ temperature: 0.5, reasoning: 'high' });
+
+			const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+			expect(stored.roleCallSettings.writer).toBeUndefined();
+		});
+
+		it('persists roleCallSettings to localStorage', async () => {
+			const mod = await setup();
+			mod.setRoleCallSettings('reviewer', { reasoning: 'high' });
+
+			const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+			expect(stored.roleCallSettings.reviewer).toEqual({ reasoning: 'high' });
+		});
+	});
 });
