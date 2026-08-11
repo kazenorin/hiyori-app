@@ -1,10 +1,10 @@
-<script lang="ts">
+<script lang="ts" generics="T extends string">
 	import { Combobox, Portal, useListCollection } from '@skeletonlabs/skeleton-svelte';
 
 	interface Props {
-		items: { label: string; value: string }[];
-		value: string;
-		onValueChange: (value: string) => void;
+		items: { label: string; value: T }[];
+		value: T;
+		onValueChange: (value: T) => void;
 		disabled?: boolean;
 		placeholder?: string;
 	}
@@ -14,16 +14,18 @@
 	const collection = $derived(
 		useListCollection({
 			items,
-			itemToString: (item: { label: string; value: string }) => item.label,
-			itemToValue: (item: { label: string; value: string }) => item.value,
+			itemToString: (item: { label: string; value: T }) => item.label,
+			itemToValue: (item: { label: string; value: T }) => item.value,
 		})
 	);
 
 	const comboboxValue = $derived(value ? [value] : []);
 
 	function handleValueChange(details: { value: string[] }) {
-		if (details.value.length > 0) {
-			onValueChange(details.value[0]);
+		// Resolve back to the typed item value; the combobox only emits values from `items`
+		const selected = items.find((item) => item.value === details.value[0]);
+		if (selected) {
+			onValueChange(selected.value);
 		}
 	}
 </script>

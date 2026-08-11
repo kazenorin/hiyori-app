@@ -5,7 +5,6 @@ import { DEFAULT_NAME_QUOTAS, type NameQuotaConfig } from '$lib/features/name-su
 import { fs } from '$lib/fs/file-system';
 import { detectDefaultLocale, setLocale, type Locale } from '$lib/i18n';
 import type { LanguageModelCallOptions } from 'ai';
-import type { SharedV4ProviderOptions } from '@ai-sdk/provider';
 import type { VoiceId } from '$lib/kokoro/kokoro-hiyori';
 
 export type Provider = 'openai' | 'openai-compatible' | 'ollama';
@@ -32,18 +31,6 @@ export interface ProviderConfig {
 	corsBypassEnabled: boolean;
 	wispProxyUrl: string;
 	callSettings?: LanguageModelCallOptions;
-}
-
-export function getProviderOptions(config: ProviderConfig): SharedV4ProviderOptions {
-	if (config.provider === 'openai') {
-		return {
-			openai: {
-				reasoningEffort: 'medium',
-				reasoningSummary: 'detailed',
-			},
-		};
-	}
-	return {};
 }
 
 export interface Settings {

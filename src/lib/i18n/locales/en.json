@@ -44,6 +44,16 @@
 			"chatCompletions": "Chat Completions"
 		},
 		"apiTypeHint": "Responses uses the OpenAI Responses API. Chat Completions uses /chat/completions.",
+		"reasoningEffort": "Reasoning Effort",
+		"reasoningEfforts": {
+			"providerDefault": "Default",
+			"none": "None",
+			"minimal": "Minimal",
+			"low": "Low",
+			"medium": "Medium",
+			"high": "High",
+			"xhigh": "XHigh"
+		},
 		"baseUrl": "Base URL",
 		"baseUrlHint": {
 			"openai": "Only for the official OpenAI API. OpenAI-Compatible APIs will not work with this provider.",

@@ -64,6 +64,8 @@
 	let formFrequencyPenaltyEnabled = $state(config?.callSettings?.frequencyPenalty !== undefined);
 	// svelte-ignore state_referenced_locally
 	let formFrequencyPenalty = $state(config?.callSettings?.frequencyPenalty ?? 0);
+	// svelte-ignore state_referenced_locally
+	let formReasoningEffort = $state<ReasoningEffort>(config?.callSettings?.reasoning ?? 'provider-default');
 
 	let baseUrlHint = $derived(
 		formProvider === 'openai'
@@ -87,6 +89,22 @@
 		{ label: t('settings.apiTypes.responses'), value: 'responses' },
 		{ label: t('settings.apiTypes.chatCompletions'), value: 'chat-completions' },
 	];
+
+	type ReasoningEffort = NonNullable<LanguageModelCallOptions['reasoning']>;
+
+	const REASONING_EFFORT_OPTIONS: readonly ReasoningEffort[] = ['provider-default', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
+
+	const REASONING_EFFORT_LABEL_KEYS: Record<ReasoningEffort, string> = {
+		'provider-default': 'settings.reasoningEfforts.providerDefault',
+		none: 'settings.reasoningEfforts.none',
+		minimal: 'settings.reasoningEfforts.minimal',
+		low: 'settings.reasoningEfforts.low',
+		medium: 'settings.reasoningEfforts.medium',
+		high: 'settings.reasoningEfforts.high',
+		xhigh: 'settings.reasoningEfforts.xhigh',
+	};
+
+	const reasoningEffortItems = REASONING_EFFORT_OPTIONS.map((value) => ({ label: t(REASONING_EFFORT_LABEL_KEYS[value]), value }));
 
 	function handleProviderChange() {
 		if (formProvider === 'openai-compatible') {
@@ -126,6 +144,8 @@
 		if (formTopKEnabled) cs.topK = formTopK;
 		if (formPresencePenaltyEnabled) cs.presencePenalty = formPresencePenalty;
 		if (formFrequencyPenaltyEnabled) cs.frequencyPenalty = formFrequencyPenalty;
+		// 'provider-default' means no override, so it is not persisted
+		if (formReasoningEffort !== 'provider-default') cs.reasoning = formReasoningEffort;
 		return Object.keys(cs).length > 0 ? cs : undefined;
 	}
 
@@ -324,6 +344,11 @@
 					{#if formFrequencyPenaltyEnabled}
 						<input class="input" type="number" step="0.01" min="-1" max="1" bind:value={formFrequencyPenalty} />
 					{/if}
+
+					<label class="block">
+						<span class="text-sm font-medium text-surface-700-300">{t('settings.reasoningEffort')}</span>
+						<ThemedSelect items={reasoningEffortItems} value={formReasoningEffort} onValueChange={(v) => (formReasoningEffort = v)} />
+					</label>
 				</div>
 			</details>
 		</div>

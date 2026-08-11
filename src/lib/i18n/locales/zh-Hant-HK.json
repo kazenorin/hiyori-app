@@ -44,6 +44,16 @@
 			"chatCompletions": "Chat Completions"
 		},
 		"apiTypeHint": "'Responses' 會 call 'OpenAI Responses API'; 而 Chat Completions 則會 call '/chat/completions'",
+		"reasoningEffort": "推理強度",
+		"reasoningEfforts": {
+			"providerDefault": "預設",
+			"none": "無",
+			"minimal": "最低",
+			"low": "低",
+			"medium": "中",
+			"high": "高",
+			"xhigh": "極高"
+		},
 		"baseUrl": "基礎 URL",
 		"baseUrlHint": {
 			"openai": "僅適用於官方 OpenAI API。OpenAI-Compatible API 不適用於此提供者。",

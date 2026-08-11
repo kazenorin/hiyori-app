@@ -1,7 +1,6 @@
 import type { MessageBase } from '$lib/db/messages';
 import { isStepCount, streamText, type ToolSet, type LanguageModelCallOptions } from 'ai';
 import type { LanguageModel } from 'ai';
-import type { SharedV4ProviderOptions } from '@ai-sdk/provider';
 import { fileLog } from '$lib/logging/logger';
 import { ERR_EMPTY_STREAM } from '$lib/definitions/error-messages';
 
@@ -13,7 +12,6 @@ export interface StreamConfig {
 	messages: MessageBase[];
 	systemPrompt: string;
 	abortSignal: AbortSignal;
-	providerOptions?: SharedV4ProviderOptions;
 	callSettings?: LanguageModelCallOptions;
 	tools?: ToolSet;
 	maxSteps?: number;
@@ -64,7 +62,6 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 			messages: config.messages,
 			instructions: config.systemPrompt,
 			abortSignal: config.abortSignal,
-			providerOptions: config.providerOptions,
 		};
 
 		const hasTools = config.tools && Object.keys(config.tools).length > 0;

@@ -29,14 +29,13 @@ vi.mock('$lib/ai/provider', () => ({
 	createModel: vi.fn(),
 }));
 
-// Mock getMainProviderConfig and getProviderOptions
+// Mock getMainProviderConfig
 vi.mock('$lib/stores/settings.svelte', () => ({
 	getMainProviderConfig: vi.fn(() => ({
 		provider: 'openai',
 		apiKey: 'test-key',
 		model: 'gpt-4',
 	})),
-	getProviderOptions: vi.fn(() => ({})),
 }));
 
 const { executeStream } = vi.mocked(await import('$lib/ai/streaming'));
