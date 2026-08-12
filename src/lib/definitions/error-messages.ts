@@ -7,6 +7,8 @@ export const ERR_NO_PROVIDER_FOR_PHASE = (phase: string) => `No provider configu
 export const ERR_API_KEY_NOT_CONFIGURED = 'API key not configured. Please set it in Settings.';
 export const ERR_API_KEY_AND_MODEL_NOT_CONFIGURED = 'API key and model must be configured in Settings.';
 export const ERR_AUTH_FAILED = 'Authentication failed. Please check your API key in Settings.';
+export const ERR_PROVIDER_UNREACHABLE =
+	'The AI provider could not be reached. Please configure a different provider or select another model in Settings.';
 export const ERR_MEMORY_PROVIDER_NOT_CONFIGURED = 'Memory provider not configured';
 export const ERR_EMBEDDING_PROVIDER_NOT_CONFIGURED = 'Embedding provider not configured';
 

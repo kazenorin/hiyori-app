@@ -286,7 +286,12 @@
 
 {#if !isReadyToStart && !isInterviewMode && !isCompiling && !isPreTemplatePhase}
 	<!-- Pre-start bar: name input + Start button -->
-	<div class="border-t border-surface-200-800 bg-surface-50-950 px-4 md:px-8 py-3">
+	<div class="border-t border-surface-200-800 bg-surface-50-950 px-4 md:px-8 py-3 space-y-2">
+		{#if worldBuilderError}
+			<div class="rounded-(--radius-container) bg-error-100-900 p-4">
+				<p class="text-sm text-error-700-300">{worldBuilderError}</p>
+			</div>
+		{/if}
 		<div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
 			<div class="order-1 sm:order-2 sm:w-56 flex items-center gap-2">
 				<span class="text-xs font-medium text-surface-500 uppercase tracking-wider whitespace-nowrap">

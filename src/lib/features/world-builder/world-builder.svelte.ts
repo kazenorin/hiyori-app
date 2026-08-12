@@ -31,6 +31,8 @@ import type { MessageBase } from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
 import * as dbActLines from '$lib/db/act-lines';
 import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED } from '$lib/definitions/error-messages';
+import { isAbortLikeError } from '$lib/utils/async';
+import { getUserFacingErrorMessage } from '$lib/utils/error-handling';
 import { ls } from '$lib/localization';
 import { WORLD_TEMPLATES } from '$lib/features/world-builder/template-registry';
 import { buildWorldBuilderTools } from '$lib/ai/tools/select-world-template';
@@ -399,10 +401,10 @@ async function runHiddenCompileTurn(): Promise<string | null> {
 		);
 		return captured.trim() || null;
 	} catch (err: unknown) {
-		if (err instanceof DOMException && err.name === 'AbortError') {
+		if (isAbortLikeError(err)) {
 			return null;
 		}
-		error = err instanceof Error ? err.message : 'An unexpected error occurred.';
+		error = getUserFacingErrorMessage(err);
 		return null;
 	} finally {
 		isStreaming = false;
@@ -489,7 +491,7 @@ async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<vo
 			await persistInterviewMessages(userMessage, getCurrentMessage());
 		}
 	} catch (err: unknown) {
-		if (err instanceof DOMException && err.name === 'AbortError') {
+		if (isAbortLikeError(err)) {
 			// Persist partial content on abort in interview mode
 			if (actPlotInterview && interviewActLineId) {
 				const partial = getCurrentMessage();
@@ -499,7 +501,7 @@ async function streamNextResponse(userMessage?: WorldBuilderMessage): Promise<vo
 			}
 			return;
 		}
-		error = err instanceof Error ? err.message : 'An unexpected error occurred.';
+		error = getUserFacingErrorMessage(err);
 		messages = messages.filter((m) => m.id !== responseMessage.id);
 	} finally {
 		isStreaming = false;
@@ -556,7 +558,7 @@ async function streamWorldBuilderChat(
 
 	const tools = !actPlotInterview && wbPhase === 'pre-template' ? buildWorldBuilderTools(handleTemplateSelected) : undefined;
 
-	const result = await Promise.all([
+	const [, accumulator] = await Promise.all([
 		logWorldBuilderChat({
 			systemPrompt: fullSystemPrompt,
 			messages: llmHistory,
@@ -564,5 +566,8 @@ async function streamWorldBuilderChat(
 		}),
 		streamChatResponse(fullSystemPrompt, llmHistory, abortSignal, onUpdate, () => {}, providerConfig, tools),
 	]);
-	return result[1];
+	// executeStream never throws — errors reject resultMetadata. Await it so
+	// connection failures propagate to the caller instead of leaving an empty message.
+	await accumulator.resultMetadata;
+	return accumulator;
 }
