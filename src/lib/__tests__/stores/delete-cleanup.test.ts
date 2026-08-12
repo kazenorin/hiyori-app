@@ -24,6 +24,7 @@ vi.mock('$lib/logging/logger', () => ({
 		debug: vi.fn(async () => {}),
 	},
 	fileLog: vi.fn(async () => {}),
+	setLogLevel: vi.fn(),
 }));
 
 describe('stories store filesystem cleanup', () => {

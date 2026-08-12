@@ -1,7 +1,28 @@
 import { checkIsTauri } from '$lib/runtime';
 import { fs } from '$lib/fs/file-system';
 import { kebabCase } from 'lodash-es';
-import { getSettings, LOG_LEVEL_VALUES, type LogLevel } from '$lib/stores/settings.svelte';
+
+export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
+
+export const LOG_LEVEL_VALUES: Record<LogLevel, number> = {
+	error: 1,
+	warn: 2,
+	info: 3,
+	debug: 4,
+};
+
+// Runtime log level, pushed by the settings store on init and on change.
+// The logging layer must not depend on the settings store (it is lower-level
+// infrastructure), so it holds no reference to it.
+let configuredLogLevel: LogLevel = 'info';
+
+export function setLogLevel(level: LogLevel): void {
+	configuredLogLevel = level;
+}
+
+export function getLogLevel(): LogLevel {
+	return configuredLogLevel;
+}
 
 let logInfo = (msg: string) => logWeb('info', msg);
 let logError = (msg: string) => logWeb('error', msg);
@@ -67,9 +88,9 @@ export const log = {
 };
 
 export async function fileLog(level: LogLevel, loggerTag: string, message: string | (() => string)): Promise<void> {
-	const settingsLevel = LOG_LEVEL_VALUES[getSettings().logLevel];
+	const configuredLevel = LOG_LEVEL_VALUES[configuredLogLevel];
 	const incomingLevel = LOG_LEVEL_VALUES[level];
-	if (incomingLevel > settingsLevel) return;
+	if (incomingLevel > configuredLevel) return;
 
 	const resolvedMessage = typeof message === 'function' ? message() : message;
 	const line = `[${fileLogTimestamp()}] [${level.toUpperCase()}] ${resolvedMessage}\n`;

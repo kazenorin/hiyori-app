@@ -4,21 +4,16 @@ import { getDatabase } from '$lib/db/database';
 import { DEFAULT_NAME_QUOTAS, type NameQuotaConfig } from '$lib/features/name-suggestion/quota';
 import { fs } from '$lib/fs/file-system';
 import { detectDefaultLocale, setLocale, type Locale } from '$lib/i18n';
+import { setLogLevel, type LogLevel } from '$lib/logging/logger';
 import type { LanguageModelCallOptions } from 'ai';
 import type { VoiceId } from '$lib/kokoro/kokoro-hiyori';
 
+export type { LogLevel };
+
 export type Provider = 'openai' | 'openai-compatible' | 'ollama';
 export type ApiType = 'chat-completions' | 'responses';
-export type LogLevel = 'error' | 'warn' | 'info' | 'debug';
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type CharacterNameSuggestionMode = 'ai' | 'analytic';
-
-export const LOG_LEVEL_VALUES: Record<LogLevel, number> = {
-	error: 1,
-	warn: 2,
-	info: 3,
-	debug: 4,
-};
 
 export interface ProviderConfig {
 	id: string;
@@ -164,9 +159,10 @@ function persist(): void {
 // eslint-disable-next-line prefer-const -- $state requires let
 export let settings = $state<Settings>(loadSettings());
 
-/** Apply initial font size preference when store is initialized */
+/** Apply initial preferences when store is initialized */
 applyFontSizePreference(settings.fontSize);
 applyTheme(settings.themeMode, settings.colorTheme);
+setLogLevel(settings.logLevel);
 
 export function getSettings(): Settings {
 	return settings;
@@ -395,8 +391,9 @@ export async function updateSettings(partial: Partial<UpdatableSettings>): Promi
 		applyTheme(settings.themeMode, settings.colorTheme);
 	}
 
-	// Sync log level to Rust backend
+	// Sync log level to the logging layer and Rust backend
 	if (partial.logLevel !== undefined && partial.logLevel !== prevLogLevel) {
+		setLogLevel(partial.logLevel);
 		try {
 			const { invoke } = await import('@tauri-apps/api/core');
 			await invoke('set_log_level', { level: partial.logLevel });
@@ -436,5 +433,6 @@ export async function resetConfiguration(): Promise<void> {
 	}
 	localStorage.removeItem(STORAGE_KEY);
 	Object.assign(settings, { ...createDefaults() });
+	setLogLevel(settings.logLevel);
 	persist();
 }

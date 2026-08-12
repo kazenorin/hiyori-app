@@ -13,6 +13,7 @@ vi.mock('$lib/logging/logger', () => ({
 		debug: vi.fn(async () => {}),
 	},
 	fileLog: vi.fn(async () => {}),
+	setLogLevel: vi.fn(),
 }));
 
 const mockDb = {
@@ -95,6 +96,7 @@ describe('createQueryMemoriesTool', () => {
 				debug: vi.fn(async () => {}),
 			},
 			fileLog: vi.fn(async () => {}),
+			setLogLevel: vi.fn(),
 		}));
 		vi.doMock('$lib/db/database', () => ({ getDatabase: () => mockDb }));
 		vi.doMock('$lib/db/memory-database', () => ({

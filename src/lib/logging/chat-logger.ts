@@ -1,8 +1,7 @@
 import { fs } from '$lib/fs/file-system';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { getActiveStory } from '$lib/stores/stories.svelte';
-import { getSettings } from '$lib/stores/settings.svelte';
-import { log } from './logger';
+import { getLogLevel, log } from './logger';
 import type { NarrativeVariables } from '$lib/ai/narrative-types';
 import type { MessageBase } from '$lib/db/messages';
 
@@ -11,7 +10,7 @@ interface ChatLogMessage extends MessageBase {
 }
 
 function isDebugEnabled(): boolean {
-	return getSettings().logLevel === 'debug';
+	return getLogLevel() === 'debug';
 }
 
 function timestamp(): string {

@@ -12,6 +12,7 @@ vi.mock('$lib/logging/logger', () => ({
 		debug: vi.fn(async () => {}),
 	},
 	fileLog: vi.fn(async () => {}),
+	setLogLevel: vi.fn(),
 }));
 
 const mockTraceActLineChain = vi.fn(async (actLineId: string, _descending?: boolean) => [

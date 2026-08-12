@@ -4,7 +4,6 @@ import { loadLocale } from '$lib/i18n';
 
 describe('getVoiceLabel', () => {
 	beforeAll(async () => {
-		// getVoiceLabel formats gender via t(); translations must be loaded first.
 		await loadLocale('en');
 	});
 

@@ -30,18 +30,6 @@ vi.mock('$lib/stores/stories.svelte', () => ({
 	getActiveStory: vi.fn(() => ({ id: 'story-1', name: 'Test Story' })),
 }));
 
-vi.mock('$lib/stores/settings.svelte', () => ({
-	getSettings: vi.fn(() => ({
-		providers: [],
-		roleAssignments: {},
-		logLevel: 'debug',
-		fontSize: 1.0,
-		memoryEnabled: true,
-		inventoryEnabled: false,
-		memoryProviderRole: 'main',
-	})),
-}));
-
 vi.mock('$lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
@@ -50,63 +38,22 @@ vi.mock('$lib/logging/logger', () => ({
 		debug: vi.fn(async () => {}),
 	},
 	fileLog: vi.fn(async () => {}),
+	getLogLevel: vi.fn(() => 'debug'),
 }));
 
 import { logMainChat, logWorldBuilderChat } from '$lib/logging/chat-logger';
-import { getSettings } from '$lib/stores/settings.svelte';
+import { getLogLevel } from '$lib/logging/logger';
 import { getActiveStory } from '$lib/stores/stories.svelte';
 import type { Story } from '$lib/db/stories';
 
 const mockWriteTextFile = vi.mocked(mockFs.writeTextFile);
-const mockGetSettings = vi.mocked(getSettings);
+const mockGetLogLevel = vi.mocked(getLogLevel);
 const mockGetActiveStory = vi.mocked(getActiveStory);
-
-function defaultSettings() {
-	return {
-		providers: [],
-		roleAssignments: {},
-		roleCallSettings: {},
-		locale: 'en',
-		themeMode: 'system' as const,
-		colorTheme: 'hiyori',
-		logLevel: 'debug' as const,
-		fontSize: 1.0,
-		memoryEnabled: true,
-		inventoryEnabled: false,
-		memoryProviderRole: 'main',
-		embeddingProviderRole: 'main',
-		plotPlannerProviderRole: 'main',
-		plotPlannerEnabled: true,
-		writerProviderRole: 'main',
-		editorProviderRole: 'main',
-		gameMasterProviderRole: 'main',
-		summarizerProviderRole: 'main',
-		reviewerEnabled: true,
-		reviewerMode: 'detailed' as const,
-		reviewerProviderRole: 'main',
-		minorTaskAgentProviderRole: 'main',
-		importantPhraseHighlighting: false,
-		directorModeEnabled: false,
-		targetWordCount: 400,
-		characterProfileCompressorInterval: 5,
-		characterProfileImportanceThreshold: 2,
-		characterProfileMaxIncluded: 5,
-		phaseAdvancementThreshold: 5,
-		playerDivergenceThreshold: 8,
-		defaultPlotMode: 'phaseEvent' as const,
-		reevaluationFrequency: 10,
-		ttsEnabled: false,
-		ttsVoices: { en: null, 'zh-Hant-HK': null } as const,
-		ttsSpeed: 1,
-		characterNameSuggestionMode: 'ai' as const,
-		nameSuggestionQuotas: { budgets: {}, ratio: { given: 60, family: 30, nickname: 10 } },
-	};
-}
 
 describe('chat-logger', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		mockGetSettings.mockReturnValue(defaultSettings());
+		mockGetLogLevel.mockReturnValue('debug');
 		mockGetActiveStory.mockReturnValue({ id: 'story-1', name: 'Test Story' } as Story);
 	});
 
@@ -162,7 +109,7 @@ describe('chat-logger', () => {
 		});
 
 		it('skips writing when logLevel is not debug', async () => {
-			mockGetSettings.mockReturnValue({ ...defaultSettings(), logLevel: 'info' });
+			mockGetLogLevel.mockReturnValue('info');
 
 			await logMainChat({
 				systemPrompt: 'prompt',
@@ -212,7 +159,7 @@ describe('chat-logger', () => {
 		});
 
 		it('skips writing when logLevel is not debug', async () => {
-			mockGetSettings.mockReturnValue({ ...defaultSettings(), logLevel: 'warn' });
+			mockGetLogLevel.mockReturnValue('warn');
 
 			await logWorldBuilderChat({
 				systemPrompt: 'prompt',

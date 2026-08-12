@@ -14,6 +14,7 @@ vi.mock('$lib/logging/logger', () => ({
 		debug: vi.fn(async () => {}),
 	},
 	fileLog: vi.fn(async () => {}),
+	setLogLevel: vi.fn(),
 }));
 
 // Mock uuid to return predictable values
@@ -189,14 +190,18 @@ describe('settings', () => {
 		expect(stored.roleAssignments.main).toBe(config.id);
 	});
 
-	it('syncs logLevel to Rust backend on change', async () => {
+	it('syncs logLevel to logging layer and Rust backend on change', async () => {
 		vi.resetModules();
 		const { updateSettings } = await import('$lib/stores/settings.svelte');
 		const { invoke } = await import('@tauri-apps/api/core');
+		const { setLogLevel } = await import('$lib/logging/logger');
 		const mockInvoke = vi.mocked(invoke);
+		const mockSetLogLevel = vi.mocked(setLogLevel);
 		mockInvoke.mockClear();
+		mockSetLogLevel.mockClear();
 
 		await updateSettings({ logLevel: 'debug' });
+		expect(mockSetLogLevel).toHaveBeenCalledWith('debug');
 		expect(mockInvoke).toHaveBeenCalledWith('set_log_level', { level: 'debug' });
 	});
 

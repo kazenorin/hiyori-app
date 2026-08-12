@@ -5,6 +5,7 @@ import { setFileSystem } from '$lib/fs/file-system';
 vi.mock('$lib/logging/logger', () => ({
 	log: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 	fileLog: vi.fn(),
+	setLogLevel: vi.fn(),
 }));
 
 import { parseNameDataset } from '$lib/features/name-suggestion/json';
