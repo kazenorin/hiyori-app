@@ -55,28 +55,43 @@ export class S3Backend implements SyncBackend {
 	}
 
 	async list(prefix: string): Promise<SyncEntry[]> {
-		const query = `list-type=2&prefix=${encodeURIComponent(this.key(prefix))}`;
-		const res = await this.signedFetch('', { method: 'GET' }, query);
-		if (!res.ok) throw new Error(`S3 list failed: HTTP ${res.status}`);
-
-		const xml = new DOMParser().parseFromString(await res.text(), 'application/xml');
 		const keyPrefix = this.key('');
-		return [...xml.getElementsByTagName('Contents')].map((node) => {
-			const fullKey = node.getElementsByTagName('Key')[0]?.textContent ?? '';
-			return {
-				// key('') yields 'prefix/' (with trailing slash), so a plain slice
-				// strips exactly the config prefix from the full S3 key.
-				path: keyPrefix ? fullKey.slice(keyPrefix.length) : fullKey,
-				size: Number(node.getElementsByTagName('Size')[0]?.textContent ?? 0),
-				modifiedAt: new Date(node.getElementsByTagName('LastModified')[0]?.textContent ?? 0),
-			};
-		});
+		const entries: SyncEntry[] = [];
+		let continuationToken: string | undefined;
+		// ListObjectsV2 caps at 1000 keys per page; a truncated listing would make
+		// the sync engine treat unlisted stories as absent, so we must page fully.
+		do {
+			let query = `list-type=2&prefix=${encodeURIComponent(this.key(prefix))}`;
+			if (continuationToken) query += `&continuation-token=${encodeURIComponent(continuationToken)}`;
+			const res = await this.signedFetch('', { method: 'GET' }, query);
+			if (!res.ok) throw new Error(`S3 list failed: HTTP ${res.status}`);
+
+			const xml = new DOMParser().parseFromString(await res.text(), 'application/xml');
+			for (const node of xml.getElementsByTagName('Contents')) {
+				const fullKey = node.getElementsByTagName('Key')[0]?.textContent ?? '';
+				entries.push({
+					// key('') yields 'prefix/' (with trailing slash), so a plain slice
+					// strips exactly the config prefix from the full S3 key.
+					path: keyPrefix ? fullKey.slice(keyPrefix.length) : fullKey,
+					size: Number(node.getElementsByTagName('Size')[0]?.textContent ?? 0),
+					modifiedAt: new Date(node.getElementsByTagName('LastModified')[0]?.textContent ?? 0),
+				});
+			}
+			const truncated = xml.getElementsByTagName('IsTruncated')[0]?.textContent === 'true';
+			continuationToken = truncated
+				? xml.getElementsByTagName('NextContinuationToken')[0]?.textContent
+				: undefined;
+		} while (continuationToken);
+		return entries;
 	}
 
 	async upload(path: string, data: Uint8Array): Promise<void> {
 		// Copy into an ArrayBuffer-backed view: Uint8Array<ArrayBufferLike> is not
 		// assignable to BlobPart/BodyInit under the project's TS lib version.
-		const res = await this.signedFetch(path, { method: 'PUT', body: new Blob([data.slice()]) });
+		// The explicit type is load-bearing: aws4fetch drops the request body
+		// during signing when no Content-Type header is present.
+		const body = new Blob([data.slice()], { type: 'application/octet-stream' });
+		const res = await this.signedFetch(path, { method: 'PUT', body });
 		if (!res.ok) throw new Error(`S3 upload failed: HTTP ${res.status}`);
 	}
 

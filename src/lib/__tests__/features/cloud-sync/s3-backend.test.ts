@@ -36,6 +36,29 @@ describe('S3Backend', () => {
 		const request = mockedFetch.mock.calls[0][0] as Request;
 		expect(request.method).toBe('PUT');
 		expect(request.url).toBe('https://account.r2.cloudflarestorage.com/hiyori/sync/stories/x.zip');
+		// WHY: aws4fetch silently drops the request body during signing when no
+		// Content-Type header exists — uploads would write 0-byte objects.
+		expect(request.headers.get('Content-Type')).toContain('application/octet-stream');
+	});
+
+	it('follows ListObjectsV2 pagination until IsTruncated is false', async () => {
+		mockedFetch
+			.mockResolvedValueOnce(
+				xmlResponse(`<ListBucketResult><IsTruncated>true</IsTruncated><NextContinuationToken>tok1</NextContinuationToken>
+  <Contents><Key>sync/stories/a.zip</Key><Size>1</Size><LastModified>2026-08-14T10:00:00.000Z</LastModified></Contents>
+</ListBucketResult>`)
+			)
+			.mockResolvedValueOnce(
+				xmlResponse(`<ListBucketResult><IsTruncated>false</IsTruncated>
+  <Contents><Key>sync/stories/b.zip</Key><Size>2</Size><LastModified>2026-08-15T10:00:00.000Z</LastModified></Contents>
+</ListBucketResult>`)
+			);
+		const backend = new S3Backend(config);
+		const entries = await backend.list('');
+
+		expect(mockedFetch).toHaveBeenCalledTimes(2);
+		expect((mockedFetch.mock.calls[1][0] as Request).url).toContain('continuation-token=tok1');
+		expect(entries.map((e) => e.path)).toEqual(['stories/a.zip', 'stories/b.zip']);
 	});
 
 	it('parses ListObjectsV2 XML into SyncEntry list', async () => {
