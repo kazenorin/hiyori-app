@@ -353,6 +353,9 @@
 		"exporting": "匯出中…",
 		"exportSuccess": "故事已匯出",
 		"exportFailed": "故事匯出失敗",
+		"syncToCloud": "同步至雲端",
+		"cloudSyncSuccess": "雲端同步完成",
+		"cloudSyncFailed": "雲端同步失敗",
 		"loadStory": "載入故事"
 	},
 	"bottomNav": {

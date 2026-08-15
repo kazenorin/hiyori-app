@@ -18,6 +18,12 @@
 	import { getActEnded, getStoryConcluded } from '$lib/ai/chat.svelte';
 	import { getSettings, isMemoryAvailable, updateSettings } from '$lib/stores/settings.svelte';
 	import { exportStory } from '$lib/features/story-export-load/story-exporter';
+	import {
+		getCloudSyncStatus,
+		runCloudSync,
+		getCloudSyncError
+	} from '$lib/features/cloud-sync/cloud-sync.svelte';
+	import { createBackendFromSettings } from '$lib/features/cloud-sync/backend-factory';
 	import { toaster } from '$lib/stores/toaster.svelte';
 	import { type SwipeEndEventDetail } from '@svelte-put/swipeable';
 	import { resolve } from '$app/paths';
@@ -189,6 +195,24 @@
 			toaster.error({ title: t('sidebar.exportFailed') });
 		} finally {
 			exportingStory = false;
+		}
+	}
+
+	function isCloudSyncConfigured(): boolean {
+		return !!createBackendFromSettings(getSettings());
+	}
+
+	async function handleCloudSync() {
+		if (!getActiveStoryId() || getCloudSyncStatus() === 'syncing') return;
+		try {
+			await runCloudSync();
+			if (getCloudSyncError()) {
+				toaster.error({ title: t('sidebar.cloudSyncFailed') });
+			} else {
+				toaster.success({ title: t('sidebar.cloudSyncSuccess') });
+			}
+		} catch {
+			toaster.error({ title: t('sidebar.cloudSyncFailed') });
 		}
 	}
 
@@ -400,6 +424,16 @@
 	>
 		{exportingStory ? t('sidebar.exporting') : t('sidebar.exportStory')}
 	</button>
+	{#if isCloudSyncConfigured()}
+		<button
+			class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500 w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
+			type="button"
+			onclick={handleCloudSync}
+			disabled={!getActiveStoryId() || getCloudSyncStatus() === 'syncing'}
+		>
+			{getCloudSyncStatus() === 'syncing' ? t('cloudSync.syncing') : t('sidebar.syncToCloud')}
+		</button>
+	{/if}
 	{#if isMemoryAvailable()}
 		<a
 			href={resolve('/memory-manager')}

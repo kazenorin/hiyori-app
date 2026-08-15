@@ -353,6 +353,9 @@
 		"exporting": "Exporting...",
 		"exportSuccess": "Story exported",
 		"exportFailed": "Failed to export story",
+		"syncToCloud": "Sync to Cloud",
+		"cloudSyncSuccess": "Cloud sync complete",
+		"cloudSyncFailed": "Cloud sync failed",
 		"loadStory": "Load Story"
 	},
 	"bottomNav": {
