@@ -710,6 +710,18 @@
 			</div>
 		</Card>
 
+		<!-- Cloud Sync -->
+		<Card title={t('cloudSync.title')} description={t('cloudSync.description')}>
+			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+				<span class="text-sm text-surface-700-300">
+					{settings.cloudSync?.enabled ? t('cloudSync.enabled') : t('cloudSync.unconfigured')}
+				</span>
+				<a href={resolve('/settings/cloud-sync')} class="text-sm text-primary-500 hover:underline">
+					{t('cloudSync.title')}
+				</a>
+			</div>
+		</Card>
+
 		{#if isMemoryCapable()}
 			<!-- Memory -->
 			<Card title={t('settings.memory')} description={t('settings.enableMemoryDescription')}>

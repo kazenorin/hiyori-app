@@ -734,5 +734,33 @@
 		"downloading": "正在下載模型...",
 		"downloadError": "語音模型下載失敗，請重試。",
 		"modelReady": "語音模型已就緒。"
+	},
+	"cloudSync": {
+		"title": "雲端同步",
+		"description": "使用你自己的 S3 相容或 WebDAV 儲存空間，在各裝置間同步故事。",
+		"enabled": "啟用雲端同步",
+		"backend": "儲存類型",
+		"backendS3": "S3 相容（R2、B2、MinIO…）",
+		"backendWebdav": "WebDAV（Nextcloud、NAS…）",
+		"s3Endpoint": "端點 URL",
+		"s3Region": "區域",
+		"s3Bucket": "Bucket",
+		"s3Prefix": "路徑前綴（可選）",
+		"s3AccessKeyId": "Access key ID",
+		"s3SecretAccessKey": "Secret access key",
+		"webdavUrl": "伺服器 URL",
+		"webdavUsername": "使用者名稱",
+		"webdavPassword": "密碼（建議使用應用程式密碼）",
+		"testConnection": "測試連線",
+		"connectionOk": "連線成功",
+		"syncNow": "立即同步",
+		"syncing": "同步中…",
+		"lastSynced": "上次同步：{{time}}",
+		"neverSynced": "尚未同步",
+		"reportPushed": "已上傳：{{name}}",
+		"reportPulledNew": "已下載新故事：{{name}}",
+		"reportMerged": "已合併遠端變更：{{name}}",
+		"reportSkipped": "已是最新：{{name}}",
+		"unconfigured": "請設定儲存空間憑證以啟用同步。"
 	}
 }

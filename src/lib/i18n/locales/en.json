@@ -734,5 +734,33 @@
 		"downloading": "Downloading model...",
 		"downloadError": "Failed to download TTS model. Please try again.",
 		"modelReady": "TTS model is ready."
+	},
+	"cloudSync": {
+		"title": "Cloud Sync",
+		"description": "Sync your stories across devices using your own S3-compatible or WebDAV storage.",
+		"enabled": "Enable cloud sync",
+		"backend": "Storage type",
+		"backendS3": "S3-compatible (R2, B2, MinIO…)",
+		"backendWebdav": "WebDAV (Nextcloud, NAS…)",
+		"s3Endpoint": "Endpoint URL",
+		"s3Region": "Region",
+		"s3Bucket": "Bucket",
+		"s3Prefix": "Path prefix (optional)",
+		"s3AccessKeyId": "Access key ID",
+		"s3SecretAccessKey": "Secret access key",
+		"webdavUrl": "Server URL",
+		"webdavUsername": "Username",
+		"webdavPassword": "Password (app password recommended)",
+		"testConnection": "Test connection",
+		"connectionOk": "Connection successful",
+		"syncNow": "Sync now",
+		"syncing": "Syncing…",
+		"lastSynced": "Last synced {{time}}",
+		"neverSynced": "Not synced yet",
+		"reportPushed": "Uploaded: {{name}}",
+		"reportPulledNew": "Downloaded new story: {{name}}",
+		"reportMerged": "Merged incoming changes: {{name}}",
+		"reportSkipped": "Up to date: {{name}}",
+		"unconfigured": "Configure storage credentials to enable sync."
 	}
 }
