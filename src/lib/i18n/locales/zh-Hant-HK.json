@@ -356,6 +356,8 @@
 		"syncToCloud": "同步至雲端",
 		"cloudSyncSuccess": "雲端同步完成",
 		"cloudSyncFailed": "雲端同步失敗",
+		"deleteAlsoFromCloud": "同時從雲端儲存刪除",
+		"cloudRemoveFailed": "故事已在本機刪除，但雲端刪除失敗",
 		"loadStory": "載入故事"
 	},
 	"bottomNav": {

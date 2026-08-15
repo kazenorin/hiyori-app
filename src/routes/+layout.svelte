@@ -26,6 +26,8 @@
 		getIsActive as getIsWorldBuilderActive,
 	} from '$lib/features/world-builder/world-builder.svelte';
 	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
+	import { removeStoryFromCloudById } from '$lib/features/cloud-sync/cloud-sync.svelte';
+	import { createBackendFromSettings } from '$lib/features/cloud-sync/backend-factory';
 	import { t } from '$lib/i18n';
 
 	import BottomTabBar from '$lib/components/BottomTabBar.svelte';
@@ -98,6 +100,7 @@
 	// Delete confirmation state
 	type DeleteTarget = { type: 'story' | 'act' | 'line'; id: string; name: string };
 	let confirmDelete = $state<DeleteTarget | null>(null);
+	let removeFromCloud = $state(false);
 
 	// New story mode selection
 	let showNewStoryModal = $state(false);
@@ -203,21 +206,38 @@
 
 	function requestDelete(type: 'story' | 'act' | 'line', id: string, name: string) {
 		confirmDelete = { type, id, name };
+		removeFromCloud = false;
 	}
 
 	function cancelDelete() {
 		confirmDelete = null;
+		removeFromCloud = false;
+	}
+
+	function isCloudSyncConfigured(): boolean {
+		return !!createBackendFromSettings(getSettings());
 	}
 
 	async function confirmDeleteAction(removeFolder: boolean = false) {
 		if (!confirmDelete) return;
 		const { type, id } = confirmDelete;
+		const alsoFromCloud = type === 'story' && removeFromCloud;
 		confirmDelete = null;
+		removeFromCloud = false;
 
 		try {
 			if (type === 'story') {
 				await deleteStory(id, removeFolder);
 				clearMessages();
+				if (alsoFromCloud) {
+					try {
+						await removeStoryFromCloudById(id);
+					} catch (err) {
+						// Local deletion already succeeded — surface the cloud failure, don't hide it.
+						toaster.error({ title: t('sidebar.cloudRemoveFailed') });
+						console.error('Failed to remove story from cloud:', err);
+					}
+				}
 			} else if (type === 'act') {
 				await deleteAct(id, removeFolder);
 				clearMessages();
@@ -323,6 +343,12 @@
 				{t('sidebar.deleteGenericConfirm', { name: confirmDelete?.name ?? '' })}
 			{/if}
 		</p>
+		{#if confirmDelete?.type === 'story' && isCloudSyncConfigured()}
+			<label class="flex items-center gap-2 mt-3">
+				<input type="checkbox" class="checkbox" bind:checked={removeFromCloud} />
+				<span class="text-sm text-surface-600-400">{t('sidebar.deleteAlsoFromCloud')}</span>
+			</label>
+		{/if}
 	{/snippet}
 	{#snippet footer()}
 		{#if confirmDelete?.type === 'story' || confirmDelete?.type === 'act' || confirmDelete?.type === 'line'}

@@ -356,6 +356,8 @@
 		"syncToCloud": "Sync to Cloud",
 		"cloudSyncSuccess": "Cloud sync complete",
 		"cloudSyncFailed": "Cloud sync failed",
+		"deleteAlsoFromCloud": "Also remove from cloud storage",
+		"cloudRemoveFailed": "Story deleted locally, but cloud removal failed",
 		"loadStory": "Load Story"
 	},
 	"bottomNav": {
