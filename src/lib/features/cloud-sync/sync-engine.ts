@@ -1,4 +1,4 @@
-import type { SyncBackend } from './sync-backend';
+import { NotFoundError, type SyncBackend } from './sync-backend';
 import { emptyManifest, parseManifest, computeContentHash, hashBytes, type SyncManifest } from './sync-manifest';
 import { buildStoryArchive, buildStoryExportData } from '$lib/features/story-export-load/story-exporter';
 import { getAllStories } from '$lib/db/stories';
@@ -23,6 +23,9 @@ export interface SyncReport {
 
 async function computeLocalStoryHash(storyId: string): Promise<string> {
 	const exportData = await buildStoryExportData(storyId);
+	// storyFolder.createdAt falls back to Date.now() when no folder row exists,
+	// which would make the hash differ on every call and across devices.
+	const { storyFolder: _storyFolder, ...hashable } = exportData;
 	const folder = await getStoryFolderInfo(storyId);
 	const files: { path: string; hash: string }[] = [];
 	if (folder?.folderName && (await fs.exists(folder.folderName).catch(() => false))) {
@@ -30,7 +33,7 @@ async function computeLocalStoryHash(storyId: string): Promise<string> {
 			files.push({ path: filePath, hash: await hashBytes(await fs.readBinaryFile(filePath)) });
 		}
 	}
-	return computeContentHash(JSON.stringify(exportData), files);
+	return computeContentHash(JSON.stringify(hashable), files);
 }
 
 export async function syncNow(backend: SyncBackend): Promise<SyncReport> {
@@ -39,8 +42,15 @@ export async function syncNow(backend: SyncBackend): Promise<SyncReport> {
 	let remote: SyncManifest = emptyManifest();
 	try {
 		remote = parseManifest(new TextDecoder().decode(await backend.download(MANIFEST_PATH)));
-	} catch {
-		// No manifest yet — treat remote as empty (first sync from this account).
+	} catch (err) {
+		if (!(err instanceof NotFoundError)) {
+			// A transient network failure or corrupt manifest must not be treated
+			// as "remote is empty" — the push pass would overwrite newer remote
+			// archives with stale local ones.
+			report.errors.push(`Sync aborted: could not read cloud manifest: ${err}`);
+			return report;
+		}
+		// No manifest yet — first sync from this account.
 	}
 
 	const localStories = await getAllStories();

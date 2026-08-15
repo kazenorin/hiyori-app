@@ -1,5 +1,5 @@
 import { AwsClient } from 'aws4fetch';
-import type { SyncBackend, SyncEntry } from './sync-backend';
+import { NotFoundError, type SyncBackend, type SyncEntry } from './sync-backend';
 import { syncFetch, withRetry } from './http-client';
 
 export interface S3Config {
@@ -40,9 +40,12 @@ export class S3Backend implements SyncBackend {
 	}
 
 	private async signedFetch(path: string, init: RequestInit, query?: string): Promise<Response> {
-		const request = new Request(this.url(path, query), init);
-		const signed = await this.aws.sign(request);
-		return withRetry(() => syncFetch(signed), RETRY);
+		// Build and sign inside the retried closure: a Request body is single-use,
+		// so reusing one signed Request across retries breaks body-bearing PUTs.
+		return withRetry(async () => {
+			const request = new Request(this.url(path, query), init);
+			return syncFetch(await this.aws.sign(request));
+		}, RETRY);
 	}
 
 	async testConnection(): Promise<void> {
@@ -97,6 +100,7 @@ export class S3Backend implements SyncBackend {
 
 	async download(path: string): Promise<Uint8Array> {
 		const res = await this.signedFetch(path, { method: 'GET' });
+		if (res.status === 404) throw new NotFoundError(path);
 		if (!res.ok) throw new Error(`S3 download failed: HTTP ${res.status}`);
 		return new Uint8Array(await res.arrayBuffer());
 	}

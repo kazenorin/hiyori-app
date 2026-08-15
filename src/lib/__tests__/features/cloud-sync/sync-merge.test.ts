@@ -36,8 +36,10 @@ function messageRow(id: string, content: string): Message {
 async function seedLine(messageIds: string[]) {
 	await createActLine('line-1', 'act-1', 'Main', true);
 	for (const id of messageIds) await insertMessage(messageRow(id, `content ${id}`));
+	// Production sequences are 1-based and dense (getNextSequence = MAX+1);
+	// seeding 0-based here masked a fast-forward primary-key collision.
 	await insertActLineEntries(
-		messageIds.map((messageId, sequence) => ({ actLineId: 'line-1', messageId, sequence }))
+		messageIds.map((messageId, index) => ({ actLineId: 'line-1', messageId, sequence: index + 1 }))
 	);
 }
 
@@ -100,14 +102,20 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 	// Seed: line-1 with m1 -> m2 -> m3 -> m4 -> m5; incoming diverged at m3 to m6.
 	it('divergent merge preserves local lineage as a new act line', async () => {
 		await seedLine(['m1', 'm2', 'm3', 'm4', 'm5']);
+		// Local-branch event must survive the yield (regression: the truncation
+		// cleanup used here cascaded and deleted the line's events and profiles).
+		await testDb.execute(
+			'INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+			['evt-1', 'line-1', 'm2', 2, 'phase', 'rising', Date.now()]
+		);
 
 		const result = await mergeIncomingActLine({
 			actLineId: 'line-1',
 			incomingEntries: [
-				{ actLineId: 'line-1', messageId: 'm1', sequence: 0 },
-				{ actLineId: 'line-1', messageId: 'm2', sequence: 1 },
-				{ actLineId: 'line-1', messageId: 'm3', sequence: 2 },
-				{ actLineId: 'line-1', messageId: 'm6', sequence: 3 },
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm3', sequence: 3 },
+				{ actLineId: 'line-1', messageId: 'm6', sequence: 4 },
 			],
 			incomingMessages: [messageRow('m6', 'incoming content')],
 			forkNameSuffix: '(local branch)',
@@ -123,6 +131,21 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		const forkIds = (await getMessagesForLine(result.forkActLineId!)).map((m) => m.id);
 		expect(forkIds).toEqual(['m1', 'm2', 'm3', 'm4', 'm5']);
 
+		// The fork keeps the 1-based sequences of the yielded line.
+		const forkRows = await testDb.select<{ sequence: number }[]>(
+			'SELECT sequence FROM act_lines WHERE act_line_id = $1 ORDER BY sequence',
+			[result.forkActLineId!]
+		);
+		expect(forkRows.map((r) => r.sequence)).toEqual([1, 2, 3, 4, 5]);
+
+		// The event moved to the fork instead of being cascade-deleted.
+		const eventRows = await testDb.select<{ act_line_id: string }[]>(
+			'SELECT act_line_id FROM act_line_events WHERE id = $1',
+			['evt-1']
+		);
+		expect(eventRows).toHaveLength(1);
+		expect(eventRows[0].act_line_id).toBe(result.forkActLineId);
+
 		// WHY: reference-count protection — no message row may be deleted by a merge.
 		const allMessages = await getMessagesByIds(['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
 		expect(allMessages).toHaveLength(6);
@@ -133,9 +156,9 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		const result = await mergeIncomingActLine({
 			actLineId: 'line-1',
 			incomingEntries: [
-				{ actLineId: 'line-1', messageId: 'm1', sequence: 0 },
-				{ actLineId: 'line-1', messageId: 'm2', sequence: 1 },
-				{ actLineId: 'line-1', messageId: 'm3', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm3', sequence: 3 },
 			],
 			incomingMessages: [],
 			forkNameSuffix: '(local branch)',
@@ -143,15 +166,18 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		expect(result.action).toBe('no-op');
 	});
 
+	// Regression for the primary "continue from another device" case: with
+	// 1-based sequences the boundary entry shares sequence === local length,
+	// which sequence-math tail selection re-inserts (primary-key violation).
 	it('local-stale merge fast-forwards by appending incoming messages', async () => {
 		await seedLine(['m1', 'm2', 'm3']);
 		const result = await mergeIncomingActLine({
 			actLineId: 'line-1',
 			incomingEntries: [
-				{ actLineId: 'line-1', messageId: 'm1', sequence: 0 },
-				{ actLineId: 'line-1', messageId: 'm2', sequence: 1 },
-				{ actLineId: 'line-1', messageId: 'm3', sequence: 2 },
-				{ actLineId: 'line-1', messageId: 'm6', sequence: 3 },
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm3', sequence: 3 },
+				{ actLineId: 'line-1', messageId: 'm6', sequence: 4 },
 			],
 			incomingMessages: [messageRow('m6', 'incoming content')],
 			forkNameSuffix: '(local branch)',
@@ -168,9 +194,9 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		const result = await mergeIncomingActLine({
 			actLineId: 'line-1',
 			incomingEntries: [
-				{ actLineId: 'line-1', messageId: 'm1', sequence: 0 },
-				{ actLineId: 'line-1', messageId: 'm2', sequence: 1 },
-				{ actLineId: 'line-1', messageId: 'm3', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm3', sequence: 3 },
 			],
 			incomingMessages: [messageRow('m3', 'ATTEMPTED OVERWRITE')],
 			forkNameSuffix: '(local branch)',

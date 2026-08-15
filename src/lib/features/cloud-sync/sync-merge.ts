@@ -4,14 +4,17 @@ import {
 	getMessagesForLine,
 	insertActLineEntries,
 	insertActLineMeta,
-	removeMessagesFromActLine,
+	removeActLineJunctionRows,
 	type ActLineMeta,
 } from '$lib/db/act-lines';
 import { getMessagesByIds, insertMessage, parseVariables, type Message } from '$lib/db/messages';
 import { getStory } from '$lib/db/stories';
+import { getAct, upsertAct, type Act } from '$lib/db/acts';
+import { getDatabase } from '$lib/db/database';
+import { getStoryFolderInfo } from '$lib/db/story-folders';
 import JSZip from 'jszip';
 import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
-import { loadStoryOverwrite } from '$lib/features/story-export-load/story-loader';
+import { loadStoryOverwrite, writeFilesFromZip } from '$lib/features/story-export-load/story-loader';
 
 export type LineageDecision = 'identical' | 'remote-stale' | 'local-stale' | 'divergent';
 
@@ -66,7 +69,7 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 	const incomingSorted = [...input.incomingEntries].sort((a, b) => a.sequence - b.sequence);
 	const incomingIds = incomingSorted.map((e) => e.messageId);
 
-	const { decision } = compareLineages(localIds, incomingIds);
+	const { decision, commonPrefixLength } = compareLineages(localIds, incomingIds);
 	if (decision === 'identical' || decision === 'remote-stale') {
 		return { action: 'no-op' };
 	}
@@ -78,8 +81,11 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 	}
 
 	if (decision === 'local-stale') {
+		// Slice by the shared prefix length, not sequence numbers: sequences are
+		// 1-based and dense in production, so any sequence math here would
+		// re-select the boundary entry and violate the junction primary key.
 		const newEntries = incomingSorted
-			.filter((e) => e.sequence >= localIds.length)
+			.slice(commonPrefixLength)
 			.map((e) => ({ actLineId: input.actLineId, messageId: e.messageId, sequence: e.sequence }));
 		await insertActLineEntries(newEntries);
 		return { action: 'fast-forward' };
@@ -90,6 +96,13 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 	const meta = await getActLine(input.actLineId);
 	if (!meta) throw new Error(`Act line ${input.actLineId} not found during merge`);
 
+	// Preserve the local line's 1-based sequences when forking.
+	const db = getDatabase();
+	const localRows = await db.select<{ message_id: string; sequence: number }[]>(
+		'SELECT message_id, sequence FROM act_lines WHERE act_line_id = $1 ORDER BY sequence',
+		[input.actLineId]
+	);
+
 	const fork = await createActLine(
 		crypto.randomUUID(),
 		meta.actId,
@@ -98,9 +111,16 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 		meta.plotMode
 	);
 	await insertActLineEntries(
-		localIds.map((messageId, sequence) => ({ actLineId: fork.id, messageId, sequence }))
+		localRows.map((row) => ({ actLineId: fork.id, messageId: row.message_id, sequence: row.sequence }))
 	);
-	await removeMessagesFromActLine(input.actLineId, localIds);
+	// Junction rows only: the truncation cleanup in removeMessagesFromActLine
+	// would cascade-delete this line's events and scene character profiles,
+	// which must survive the yield on the forked local branch.
+	await removeActLineJunctionRows(input.actLineId, localIds);
+	// The fork carries the local branch's state: sequences are preserved above,
+	// so events and profiles move across with a plain act-line-id rewrite.
+	await db.execute('UPDATE act_line_events SET act_line_id = $1 WHERE act_line_id = $2', [fork.id, input.actLineId]);
+	await db.execute('UPDATE character_profiles SET act_line_id = $1 WHERE act_line_id = $2', [fork.id, input.actLineId]);
 	await insertActLineEntries(
 		incomingSorted.map((e) => ({ actLineId: input.actLineId, messageId: e.messageId, sequence: e.sequence }))
 	);
@@ -109,6 +129,18 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 }
 
 export type StoryMergeResult = 'new-story' | 'merged' | 'up-to-date';
+
+function toIncomingAct(act: StoryExportData['acts'][number]): Act {
+	return {
+		id: act.id,
+		storyId: act.storyId,
+		name: act.name,
+		actNumber: act.actNumber,
+		continuesFromActLineId: act.continuesFromActLineId,
+		createdAt: act.createdAt,
+		updatedAt: act.updatedAt,
+	};
+}
 
 function toIncomingMessage(m: StoryExportData['messages'][number]): Message {
 	return {
@@ -163,6 +195,12 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 			// Line created on the other device (e.g. a fork made there): import whole.
 			const meta = data.actLineMeta.find((m) => m.id === actLineId);
 			if (!meta) continue;
+			// Lines of acts created on the other device would otherwise point at
+			// a missing act row and become unreachable in the UI.
+			if (!(await getAct(meta.actId))) {
+				const act = data.acts.find((a) => a.id === meta.actId);
+				if (act) await upsertAct(toIncomingAct(act));
+			}
 			await insertActLineMeta({
 				id: meta.id,
 				actId: meta.actId,
@@ -191,5 +229,16 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 		});
 		if (result.action !== 'no-op') anyChange = true;
 	}
+
+	// Story-folder files (prompts, world.md, …) are part of the archive and of
+	// dirty detection; without applying them, folder-only changes would churn
+	// forever and clobber the remote copy on the next push. No idMap: synced
+	// stories keep their IDs, so internal references are already valid.
+	const folder = await getStoryFolderInfo(data.story.id);
+	if (folder?.folderName) {
+		await writeFilesFromZip(zip, data.storyFolder.folderName, folder.folderName);
+		anyChange = true;
+	}
+
 	return anyChange ? 'merged' : 'up-to-date';
 }

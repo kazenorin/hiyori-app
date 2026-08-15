@@ -79,7 +79,7 @@ Incoming progress takes over the original act-line ID (so references, UI selecti
 Steps in `mergeIncomingActLine`:
 1. Incoming-only messages (`m5`, `m6`) are inserted (add-only rule skips `m1`, `m2`).
 2. A new fork act line is created for the same act.
-3. The local divergent messages (`m3`, `m4`) are re-linked to the fork line (junction rows moved; message rows survive because `removeMessagesFromActLine` only deletes when no other line references them).
+3. The local divergent messages (`m3`, `m4`) are re-linked to the fork line (junction rows moved; message rows survive because reference counting keeps them alive). Events and scene character profiles move to the fork with it; act-line premises are not carried over.
 4. The incoming entries (`m1, m2, m5, m6`) are linked to the original act line.
 
 Fork insertion happens **before** removing entries from the yielded line so shared messages are never momentarily orphaned.
@@ -112,6 +112,6 @@ Credentials are stored in `settings.cloudSync` (localStorage / settings persiste
 
 ## Known limitations
 
-- Act-line premises and event metadata are not carried over when a divergent line is forked; the fork preserves messages and junction ordering only.
+- Act-line premises are not carried over when a divergent line is forked (events and scene character profiles relocate with the local branch; premises do not).
 - Sync is manual (Sync now / sidebar button); there is no background or automatic sync.
 - A story deleted locally without "Also remove from cloud" will reappear on the next pull from another device's manifest only if that device re-pushes it; its archive stays in the cloud until removed explicitly.

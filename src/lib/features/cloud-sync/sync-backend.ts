@@ -5,6 +5,19 @@ export interface SyncEntry {
 }
 
 /**
+ * Thrown by backends when a requested object does not exist (HTTP 404).
+ * The sync engine distinguishes "remote is empty" (benign) from other
+ * download failures, which must abort the sync instead of being treated
+ * as an empty remote.
+ */
+export class NotFoundError extends Error {
+	constructor(path: string) {
+		super(`Not found: ${path}`);
+		this.name = 'NotFoundError';
+	}
+}
+
+/**
  * Transport abstraction for cloud sync. Implementations know nothing about
  * stories; the sync engine (sync-engine.ts) owns all story semantics.
  * Paths are relative to the backend's configured root/prefix and use '/' separators.

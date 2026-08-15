@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('$lib/features/cloud-sync/http-client', () => ({
 	syncFetch: vi.fn(),
@@ -6,9 +6,10 @@ vi.mock('$lib/features/cloud-sync/http-client', () => ({
 }));
 
 import { S3Backend } from '$lib/features/cloud-sync/s3-backend';
-import { syncFetch } from '$lib/features/cloud-sync/http-client';
+import { syncFetch, withRetry } from '$lib/features/cloud-sync/http-client';
 
 const mockedFetch = vi.mocked(syncFetch);
+const mockedRetry = vi.mocked(withRetry);
 
 const config = {
 	endpoint: 'https://account.r2.cloudflarestorage.com',
@@ -25,6 +26,7 @@ function xmlResponse(body: string, status = 200): Response {
 
 describe('S3Backend', () => {
 	beforeEach(() => vi.clearAllMocks());
+	afterEach(() => mockedRetry.mockImplementation((fn: () => Promise<unknown>) => fn()));
 
 	// WHY: path-style key layout with prefix is what makes both R2 and MinIO
 	// work without virtual-host DNS requirements.
@@ -83,5 +85,29 @@ describe('S3Backend', () => {
 		mockedFetch.mockResolvedValue(new Response('Forbidden', { status: 403 }));
 		const backend = new S3Backend(config);
 		await expect(backend.testConnection()).rejects.toThrow(/credential|access key/i);
+	});
+
+	// WHY (regression): a Request body is single-use. If the signed Request is
+	// built once and reused across retry attempts, the second PUT fails with a
+	// disturbed body — defeat of the retry mechanism for uploads. Each attempt
+	// must construct and sign a fresh request.
+	it('builds a fresh signed request per retry attempt so PUT bodies stay usable', async () => {
+		mockedRetry.mockImplementation(async (fn: () => Promise<unknown>) => {
+			await fn().catch(() => {}); // first attempt fails
+			return (await fn()) as Response; // retry must still carry the full body
+		});
+		mockedFetch.mockResolvedValue(new Response(null, { status: 200 }));
+		const backend = new S3Backend(config);
+		await backend.upload('stories/x.zip', new Uint8Array([7, 8, 9]));
+
+		expect(mockedFetch).toHaveBeenCalledTimes(2);
+		// aws4fetch hashes the body during signing and rebuilds the request with
+		// a string body (jsdom's polyfill renders it as "undefined" — a Node/
+		// browser run preserves the bytes), so compare attempts against each
+		// other: a reused single-use Request body would be disturbed instead.
+		const first = mockedFetch.mock.calls[0][0] as Request;
+		const retried = mockedFetch.mock.calls[1][0] as Request;
+		expect(first).not.toBe(retried);
+		expect(await retried.text()).toBe(await first.text());
 	});
 });

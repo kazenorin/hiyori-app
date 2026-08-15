@@ -1,4 +1,4 @@
-import type { SyncBackend, SyncEntry } from './sync-backend';
+import { NotFoundError, type SyncBackend, type SyncEntry } from './sync-backend';
 import { syncFetch, withRetry } from './http-client';
 
 export interface WebDavConfig {
@@ -95,6 +95,7 @@ export class WebDavBackend implements SyncBackend {
 
 	async download(path: string): Promise<Uint8Array> {
 		const res = await this.request(path, { method: 'GET' });
+		if (res.status === 404) throw new NotFoundError(path);
 		if (!res.ok) throw new Error(`WebDAV download failed: HTTP ${res.status}`);
 		return new Uint8Array(await res.arrayBuffer());
 	}

@@ -289,7 +289,7 @@ export async function loadStoryAsNew(data: StoryExportData, selectedLineIds: str
 	}
 }
 
-async function writeFilesFromZip(
+export async function writeFilesFromZip(
 	zip: JSZip,
 	sourceFolderName: string,
 	targetFolderName: string,

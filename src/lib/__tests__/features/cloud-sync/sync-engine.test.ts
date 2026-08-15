@@ -25,7 +25,7 @@ vi.mock('$lib/fs/file-system', () => ({
 	fs: { exists: vi.fn(async () => false), readBinaryFile: vi.fn() },
 }));
 
-import type { SyncBackend } from '$lib/features/cloud-sync/sync-backend';
+import { NotFoundError, type SyncBackend } from '$lib/features/cloud-sync/sync-backend';
 import { syncNow, MANIFEST_PATH } from '$lib/features/cloud-sync/sync-engine';
 import { computeContentHash } from '$lib/features/cloud-sync/sync-manifest';
 import { getAllStories, type Story } from '$lib/db/stories';
@@ -62,7 +62,7 @@ function fakeBackend(files: Record<string, Uint8Array>): SyncBackend & {
 		}),
 		download: vi.fn(async (path) => {
 			const data = store[path];
-			if (!data) throw new Error(`404: ${path}`);
+			if (!data) throw new NotFoundError(path);
 			return data;
 		}),
 		delete: vi.fn(async (path) => void delete store[path]),
@@ -151,5 +151,22 @@ describe('syncNow', () => {
 		// WHY: manifest-last ordering means an interrupted sync re-detects the
 		// dirty story next run instead of believing a stale archive is current.
 		expect(backend.uploadOrder[backend.uploadOrder.length - 1]).toBe(MANIFEST_PATH);
+	});
+
+	// WHY (W2 regression): a transient manifest download failure must not be
+	// treated as "remote is empty" — the push pass would silently overwrite
+	// newer remote archives with stale local ones.
+	it('aborts without uploading when the manifest download fails for a non-404 reason', async () => {
+		mockedStories.mockResolvedValue([story('s1', 'Story 1')]);
+		mockedExportData.mockResolvedValue({ marker: 'dirty' } as never);
+		mockedArchive.mockResolvedValue({ data: new Uint8Array([5, 5]), filename: 'x.zip' } as never);
+		const backend = fakeBackend({});
+		(backend.download as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error('network down'));
+
+		const report = await syncNow(backend);
+
+		expect(report.errors).toHaveLength(1);
+		expect(report.errors[0]).toContain('Sync aborted');
+		expect(backend.upload).not.toHaveBeenCalled();
 	});
 });
