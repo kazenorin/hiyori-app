@@ -83,6 +83,7 @@
 		"@tauri-apps/plugin-sql": "^2.4.0",
 		"ai": "^7.0.58",
 		"ai-sdk-ollama": "^4.1.0",
+		"aws4fetch": "^1.0.20",
 		"dompurify": "^3.4.13",
 		"espeak-ng": "^1.0.2",
 		"js-yaml": "^5.2.3",
