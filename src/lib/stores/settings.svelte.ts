@@ -66,6 +66,19 @@ export interface Settings {
 	ttsSpeed: number;
 	characterNameSuggestionMode: CharacterNameSuggestionMode;
 	nameSuggestionQuotas: NameQuotaConfig;
+	cloudSync?: {
+		enabled: boolean;
+		backend: 's3' | 'webdav';
+		s3?: {
+			endpoint: string;
+			region: string;
+			bucket: string;
+			prefix?: string;
+			accessKeyId: string;
+			secretAccessKey: string;
+		};
+		webdav?: { url: string; username: string; password: string };
+	};
 }
 
 const STORAGE_KEY = 'hiyori-settings';
