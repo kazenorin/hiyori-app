@@ -230,14 +230,16 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 		if (result.action !== 'no-op') anyChange = true;
 	}
 
-	// Story-folder files (prompts, world.md, …) are part of the archive and of
-	// dirty detection; without applying them, folder-only changes would churn
-	// forever and clobber the remote copy on the next push. No idMap: synced
-	// stories keep their IDs, so internal references are already valid.
-	const folder = await getStoryFolderInfo(data.story.id);
-	if (folder?.folderName) {
-		await writeFilesFromZip(zip, data.storyFolder.folderName, folder.folderName);
-		anyChange = true;
+	// Story-folder files (prompts, world.md, …) travel with the archive, but
+	// only apply them when this merge took incoming DB changes: pull fires on
+	// any hash difference, and unconditional application would let a stale
+	// remote archive overwrite newer local file edits. File-only remote
+	// changes are a documented limitation (see README).
+	if (anyChange) {
+		const folder = await getStoryFolderInfo(data.story.id);
+		if (folder?.folderName) {
+			await writeFilesFromZip(zip, data.storyFolder.folderName, folder.folderName);
+		}
 	}
 
 	return anyChange ? 'merged' : 'up-to-date';

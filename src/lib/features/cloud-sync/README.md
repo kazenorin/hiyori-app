@@ -113,5 +113,7 @@ Credentials are stored in `settings.cloudSync` (localStorage / settings persiste
 ## Known limitations
 
 - Act-line premises are not carried over when a divergent line is forked (events and scene character profiles relocate with the local branch; premises do not).
+- Story-folder files sync only alongside database changes: when a pull merges incoming messages, the archive's folder files are applied locally. Folder-file-only edits on one device are detected as dirty and pushed, but a receiving device applies them only on its next pull that also carries DB changes — protecting newer local file edits from stale archives.
+- Act lines created on another device are imported with their messages and junction entries only — their events, premises, director notes, and character profiles are not imported (the new-story path imports them in full). Known follow-up.
 - Sync is manual (Sync now / sidebar button); there is no background or automatic sync.
-- A story deleted locally without "Also remove from cloud" will reappear on the next pull from another device's manifest only if that device re-pushes it; its archive stays in the cloud until removed explicitly.
+- Deleting a story locally without "Also remove from cloud" leaves its archive and manifest entry in the cloud; the next sync on this device will pull it back. Use the delete-dialog checkbox to remove it permanently.
