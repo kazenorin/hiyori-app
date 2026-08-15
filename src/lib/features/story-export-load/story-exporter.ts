@@ -20,7 +20,7 @@ import type { StoryExportData } from './archive-schema';
 import { CURRENT_ARCHIVE_VERSION } from './archive-schema';
 import { collectMessageIds } from './story-loader';
 
-export async function exportStory(storyId: string): Promise<void> {
+export async function buildStoryExportData(storyId: string): Promise<StoryExportData> {
 	const story = await getStory(storyId);
 	if (!story) throw new Error('Story not found');
 
@@ -51,7 +51,7 @@ export async function exportStory(storyId: string): Promise<void> {
 
 	const characterProfiles = actLineIds.length > 0 ? await getCharacterProfilesForActLines(actLineIds) : [];
 
-	const exportData: StoryExportData = {
+	return {
 		version: CURRENT_ARCHIVE_VERSION,
 		story: {
 			id: story.id,
@@ -141,6 +141,11 @@ export async function exportStory(storyId: string): Promise<void> {
 			updatedAt: p.updatedAt,
 		})),
 	};
+}
+
+export async function buildStoryArchive(storyId: string): Promise<{ data: Uint8Array; filename: string }> {
+	const exportData = await buildStoryExportData(storyId);
+	const storyFolder = await getStoryFolderInfo(storyId);
 
 	const zip = new JSZip();
 	zip.file('story-data.json', JSON.stringify(exportData, null, 2));
@@ -168,7 +173,12 @@ export async function exportStory(storyId: string): Promise<void> {
 		}
 	}
 
-	const zipData = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
-	const filename = `${folderName || `story-${story.id.slice(0, 8)}`}.zip`;
-	await downloadExport(zipData, filename);
+	const data = await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' });
+	const filename = `${folderName || `story-${storyId.slice(0, 8)}`}.zip`;
+	return { data, filename };
+}
+
+export async function exportStory(storyId: string): Promise<void> {
+	const { data, filename } = await buildStoryArchive(storyId);
+	await downloadExport(data, filename);
 }
