@@ -3,9 +3,15 @@ import {
 	getActLine,
 	getMessagesForLine,
 	insertActLineEntries,
+	insertActLineMeta,
 	removeMessagesFromActLine,
+	type ActLineMeta,
 } from '$lib/db/act-lines';
-import { getMessagesByIds, insertMessage, type Message } from '$lib/db/messages';
+import { getMessagesByIds, insertMessage, parseVariables, type Message } from '$lib/db/messages';
+import { getStory } from '$lib/db/stories';
+import JSZip from 'jszip';
+import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
+import { loadStoryOverwrite } from '$lib/features/story-export-load/story-loader';
 
 export type LineageDecision = 'identical' | 'remote-stale' | 'local-stale' | 'divergent';
 
@@ -100,4 +106,90 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 	);
 
 	return { action: 'forked', forkActLineId: fork.id };
+}
+
+export type StoryMergeResult = 'new-story' | 'merged' | 'up-to-date';
+
+function toIncomingMessage(m: StoryExportData['messages'][number]): Message {
+	return {
+		id: m.id,
+		role: m.role as Message['role'],
+		content: m.content,
+		reasoning: m.reasoning ?? undefined,
+		metadata: m.metadata ?? undefined,
+		variables: parseVariables(m.variables),
+		actSummary: m.actSummary ?? undefined,
+		scenePlot: m.scenePlot ?? undefined,
+		importantPhrases: m.importantPhrases ?? undefined,
+		sceneNumber: m.sceneNumber ?? undefined,
+		createdAt: m.createdAt,
+	};
+}
+
+export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMergeResult> {
+	const zip = await JSZip.loadAsync(zipData);
+	const dataFile = zip.file('story-data.json');
+	if (!dataFile) throw new Error('Invalid cloud archive: missing story-data.json');
+	const data = JSON.parse(await dataFile.async('string')) as StoryExportData;
+
+	const localStory = await getStory(data.story.id);
+	if (!localStory) {
+		// New story: load with IDs preserved. NEVER remap — story identity by
+		// storyId is what makes lineage comparison work on later syncs.
+		const allLineIds = data.actLineMeta.map((m) => m.id);
+		const result = await loadStoryOverwrite(data, allLineIds, zip);
+		if (!result.success) throw new Error(`Failed to import synced story: ${result.error}`);
+		return 'new-story';
+	}
+
+	const messageById = new Map(data.messages.map((m) => [m.id, m]));
+	const incomingByLine = new Map<string, typeof data.actLineEntries>();
+	for (const entry of data.actLineEntries) {
+		const list = incomingByLine.get(entry.actLineId) ?? [];
+		list.push(entry);
+		incomingByLine.set(entry.actLineId, list);
+	}
+
+	let anyChange = false;
+	for (const [actLineId, entries] of incomingByLine) {
+		const ids = [...new Set(entries.map((e) => e.messageId))];
+		const incomingMessages = ids
+			.map((id) => messageById.get(id))
+			.filter((m): m is NonNullable<typeof m> => !!m)
+			.map(toIncomingMessage);
+
+		const localLine = await getActLine(actLineId);
+		if (!localLine) {
+			// Line created on the other device (e.g. a fork made there): import whole.
+			const meta = data.actLineMeta.find((m) => m.id === actLineId);
+			if (!meta) continue;
+			await insertActLineMeta({
+				id: meta.id,
+				actId: meta.actId,
+				name: meta.name,
+				isMainLine: meta.isMainLine,
+				createdAt: meta.createdAt,
+				plotMode: meta.plotMode as ActLineMeta['plotMode'],
+			});
+			// Add-only rule applies here too: shared-prefix messages may exist already.
+			const existing = new Set((await getMessagesByIds(ids)).map((m) => m.id));
+			for (const message of incomingMessages) {
+				if (!existing.has(message.id)) await insertMessage(message);
+			}
+			await insertActLineEntries(
+				entries.map((e) => ({ actLineId: e.actLineId, messageId: e.messageId, sequence: e.sequence }))
+			);
+			anyChange = true;
+			continue;
+		}
+
+		const result = await mergeIncomingActLine({
+			actLineId,
+			incomingEntries: entries,
+			incomingMessages,
+			forkNameSuffix: '(local branch)',
+		});
+		if (result.action !== 'no-op') anyChange = true;
+	}
+	return anyChange ? 'merged' : 'up-to-date';
 }

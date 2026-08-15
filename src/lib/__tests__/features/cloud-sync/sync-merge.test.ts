@@ -16,6 +16,9 @@ vi.mock('$lib/logging/logger', () => ({
 		warn: vi.fn(async () => {}),
 		debug: vi.fn(async () => {}),
 	},
+	// settings.svelte.ts (pulled in via story-loader's store imports) calls this
+	// at module load time.
+	setLogLevel: vi.fn(),
 }));
 
 import { createTestDatabase } from '../../helpers/test-database';
