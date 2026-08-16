@@ -120,6 +120,16 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 			.slice(commonPrefixLength)
 			.map((e) => ({ actLineId: input.actLineId, messageId: e.messageId, sequence: e.sequence }));
 		await insertActLineEntries(newEntries);
+		// Tail-only line-local import: the local line keeps its shared-prefix
+		// state, so only incoming rows anchored to messages it lacks can be
+		// added. messageId-less events (line-creation markers) already exist
+		// locally — skip. Notes/profiles aren't message-keyed, so importing them
+		// here would duplicate the local copies; they stay local.
+		const localIdSet = new Set(localIds);
+		await insertActLineEvents(
+			(input.incomingEvents ?? []).filter((e) => e.messageId !== null && !localIdSet.has(e.messageId))
+		);
+		await insertActLinePremises((input.incomingPremises ?? []).filter((p) => !localIdSet.has(p.messageId)));
 		return { action: 'fast-forward' };
 	}
 

@@ -406,6 +406,91 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		expect(ids).toEqual(['m1', 'm2', 'm3', 'm6']);
 	});
 
+	// WHY (tail-only import): fast-forward keeps the local line's shared-prefix
+	// state, so incoming line-local rows may only be added when anchored to
+	// messages the local line lacks. Rows on shared messages would duplicate
+	// existing state (or collide on the junction-style primary keys), and
+	// messageId-less creation markers already exist locally.
+	it('local-stale imports tail events/premises but never duplicates shared state', async () => {
+		await seedLine(['m1', 'm2', 'm3']);
+		// Local shared-prefix state that must survive untouched.
+		await testDb.execute(
+			'INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+			['evt-local-shared', 'line-1', 'm2', 2, 'act-phase-transition', 'rising', Date.now()]
+		);
+
+		const result = await mergeIncomingActLine({
+			actLineId: 'line-1',
+			storyId: 'story-1',
+			incomingMeta: { id: 'line-1', actId: 'act-1', name: 'Main', isMainLine: true, createdAt: 1000, plotMode: 'guidance' },
+			incomingEntries: [
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm3', sequence: 3 },
+				{ actLineId: 'line-1', messageId: 'm6', sequence: 4 },
+			],
+			incomingMessages: [messageRow('m6', 'incoming content')],
+			incomingEvents: [
+				{
+					id: 'evt-remote-shared',
+					actLineId: 'line-1',
+					messageId: 'm2',
+					messageSequence: 2,
+					event: 'act-phase-transition',
+					value: 'duplicate',
+					createdAt: 1,
+				},
+				{
+					id: 'evt-remote-creation',
+					actLineId: 'line-1',
+					messageId: null,
+					messageSequence: 0,
+					event: 'plot-generated',
+					value: null,
+					createdAt: 2,
+				},
+				{
+					id: 'evt-remote-tail',
+					actLineId: 'line-1',
+					messageId: 'm6',
+					messageSequence: 4,
+					event: 'plot-generated',
+					value: '4',
+					createdAt: 3,
+				},
+			],
+			incomingPremises: [
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm6', sequence: 4 },
+			],
+			forkNameSuffix: '(local branch)',
+		});
+
+		expect(result.action).toBe('fast-forward');
+
+		// The local shared-prefix event stays; the incoming duplicate on m2 and
+		// the messageId-less marker are skipped; only the tail event anchored to
+		// the new message m6 lands.
+		const events = await testDb.select<{ id: string; event: string }[]>(
+			'SELECT id, event FROM act_line_events WHERE act_line_id = $1 ORDER BY id',
+			['line-1']
+		);
+		const eventIds = events.map((e) => e.id);
+		expect(eventIds).toContain('evt-local-shared');
+		expect(eventIds).toContain('evt-remote-tail');
+		expect(eventIds).not.toContain('evt-remote-shared');
+		expect(eventIds).not.toContain('evt-remote-creation');
+		expect(events.map((e) => e.event).sort()).toEqual(['act-phase-transition', 'plot-generated']);
+
+		// Only the tail premise is imported; premises anchored to shared-prefix
+		// messages are skipped.
+		const premises = await testDb.select<{ message_id: string }[]>(
+			'SELECT message_id FROM act_line_premises WHERE act_line_id = $1',
+			['line-1']
+		);
+		expect(premises.map((p) => p.message_id)).toEqual(['m6']);
+	});
+
 	// WHY (add-only message rule): a message ID that exists locally is never
 	// overwritten — sync must not clobber locally associated data.
 	it('never overwrites existing message rows', async () => {
