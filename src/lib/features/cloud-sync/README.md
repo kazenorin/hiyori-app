@@ -62,12 +62,12 @@ Incoming messages whose IDs already exist locally are never overwritten. Merge o
 
 Each act line's lineage is the chain of message IDs. `compareLineages(local, incoming)` decides:
 
-| Case | Condition | Action |
-| --- | --- | --- |
-| `identical` | same sequence | no-op |
-| `remote-stale` | incoming is a strict prefix of local | silent no-op |
-| `local-stale` | local is a strict prefix of incoming | fast-forward (append incoming tail) |
-| `divergent` | neither is a prefix of the other | fork-and-yield |
+| Case           | Condition                            | Action                              |
+| -------------- | ------------------------------------ | ----------------------------------- |
+| `identical`    | same sequence                        | no-op                               |
+| `remote-stale` | incoming is a strict prefix of local | silent no-op                        |
+| `local-stale`  | local is a strict prefix of incoming | fast-forward (append incoming tail) |
+| `divergent`    | neither is a prefix of the other     | fork-and-yield                      |
 
 ### Fork-and-yield (divergent case)
 
@@ -77,12 +77,17 @@ Incoming progress takes over the original act-line ID (so references, UI selecti
 - Incoming lineage: `m1, m2, m5, m6`
 
 Steps in `mergeIncomingActLine`:
+
 1. Incoming-only messages (`m5`, `m6`) are inserted (add-only rule skips `m1`, `m2`).
 2. The local line is forked with the app's canonical `branchFromLine()`: junction entries are copied with their original sequences, the fork-point message is cloned (new id, same content — matching in-app forks so metadata writes on either line can't pollute the other), and premises and events are carried over. The rest of the in-app `forkActLine()` workflow then runs: director notes, character profiles (up to the fork scene) and inventory are cloned onto the fork; on desktop, memory indices are copied too (same `isMemoryAvailable()` guard as in-app forks).
 3. The original line is deleted wholesale with `deleteActLine()` — junction rows, premises, events, notes, profiles, inventory and metadata. Message rows no longer referenced by any line are orphan-cleansed; the fork's junction rows keep the local-branch messages alive (and the fork-point message's content survives in its clone).
-4. The original line's metadata is recreated under the same ID and the incoming entries (`m1, m2, m5, m6`) are linked to it — references, UI selection and downstream acts keep pointing at the canonical line.
+4. The incoming act line is imported onto the original line ID (`insertSelectedActLineData` semantics): the incoming metadata replaces the local meta (whose name survives, renamed, on the fork), the incoming entries (`m1, m2, m5, m6`) are linked, and the incoming line-local state — events, premises, director notes, character profiles — is inserted. References, UI selection and downstream acts keep pointing at the canonical line. Message rows stay add-only: they are shared with the fork, and overwriting them would corrupt the fork's view of the same rows.
 
 Fork insertion happens **before** removing entries from the yielded line so shared messages are never momentarily orphaned.
+
+### Fast-forward (local-stale case)
+
+The incoming tail is appended to the local line. Line-local incoming state is imported tail-filtered: only events and premises anchored to messages the local line lacks are inserted (messageId-less creation markers are skipped — they already exist locally). Director notes and character profiles are not message-keyed, so they stay local to avoid duplicating the local copies.
 
 New stories absent locally are imported whole via `loadStoryOverwrite` — IDs are preserved deliberately; synced stories must never pass through the ID remapper (`loadStoryAsNew`/`regenerateIds`) or cross-device identity breaks.
 
@@ -114,6 +119,7 @@ Credentials are stored in `settings.cloudSync` (localStorage / settings persiste
 
 - Synced-story forks reuse `branchFromLine()`, so the fork's fork-point message is a clone with a new id (same as in-app forks); any external tooling that assumes the fork shares every message id with the original line will see one differing id at the fork point.
 - Story-folder files sync only alongside database changes: when a pull merges incoming messages, the archive's folder files are applied locally. Folder-file-only edits on one device are detected as dirty and pushed, but a receiving device applies them only on its next pull that also carries DB changes — protecting newer local file edits from stale archives.
+- Fast-forward merges import only tail events/premises; incoming director notes and character profiles are not imported (they aren't message-keyed, so importing them would duplicate the local copies) — local notes/profiles remain authoritative on the fast-forwarded line.
 - Act lines created on another device are imported with their messages and junction entries only — their events, premises, director notes, and character profiles are not imported (the new-story path imports them in full). Known follow-up.
 - Sync is manual (Sync now / sidebar button); there is no background or automatic sync.
 - Deleting a story locally without "Also remove from cloud" leaves its archive and manifest entry in the cloud; the next sync on this device will pull it back. Use the delete-dialog checkbox to remove it permanently.

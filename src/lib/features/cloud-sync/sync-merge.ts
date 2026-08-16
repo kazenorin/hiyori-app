@@ -126,9 +126,7 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 		// locally — skip. Notes/profiles aren't message-keyed, so importing them
 		// here would duplicate the local copies; they stay local.
 		const localIdSet = new Set(localIds);
-		await insertActLineEvents(
-			(input.incomingEvents ?? []).filter((e) => e.messageId !== null && !localIdSet.has(e.messageId))
-		);
+		await insertActLineEvents((input.incomingEvents ?? []).filter((e) => e.messageId !== null && !localIdSet.has(e.messageId)));
 		await insertActLinePremises((input.incomingPremises ?? []).filter((p) => !localIdSet.has(p.messageId)));
 		return { action: 'fast-forward' };
 	}
@@ -212,9 +210,7 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 		createdAt: input.incomingMeta.createdAt,
 		plotMode: input.incomingMeta.plotMode,
 	});
-	await insertActLineEntries(
-		incomingSorted.map((e) => ({ actLineId: input.actLineId, messageId: e.messageId, sequence: e.sequence }))
-	);
+	await insertActLineEntries(incomingSorted.map((e) => ({ actLineId: input.actLineId, messageId: e.messageId, sequence: e.sequence })));
 	// Line-local incoming state: the delete above wiped the original line's
 	// rows, so the incoming rows below cannot collide. Message rows stay
 	// add-only (inserted earlier): they are shared with the fork, and
@@ -320,9 +316,7 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 			for (const message of incomingMessages) {
 				if (!existing.has(message.id)) await insertMessage(message);
 			}
-			await insertActLineEntries(
-				entries.map((e) => ({ actLineId: e.actLineId, messageId: e.messageId, sequence: e.sequence }))
-			);
+			await insertActLineEntries(entries.map((e) => ({ actLineId: e.actLineId, messageId: e.messageId, sequence: e.sequence })));
 			anyChange = true;
 			continue;
 		}

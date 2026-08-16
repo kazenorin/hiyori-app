@@ -41,9 +41,7 @@ async function seedLine(messageIds: string[]) {
 	for (const id of messageIds) await insertMessage(messageRow(id, `content ${id}`));
 	// Production sequences are 1-based and dense (getNextSequence = MAX+1);
 	// seeding 0-based here masked a fast-forward primary-key collision.
-	await insertActLineEntries(
-		messageIds.map((messageId, index) => ({ actLineId: 'line-1', messageId, sequence: index + 1 }))
-	);
+	await insertActLineEntries(messageIds.map((messageId, index) => ({ actLineId: 'line-1', messageId, sequence: index + 1 })));
 }
 
 describe('compareLineages', () => {
@@ -113,10 +111,7 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 			['evt-1', 'line-1', 'm2', 2, 'phase', 'rising', Date.now()]
 		);
 		// Premises must carry over to the fork (branchFromLine copies them).
-		await testDb.execute(
-			'INSERT INTO act_line_premises (act_line_id, message_id, sequence) VALUES ($1, $2, $3)',
-			['line-1', 'm1', 1]
-		);
+		await testDb.execute('INSERT INTO act_line_premises (act_line_id, message_id, sequence) VALUES ($1, $2, $3)', ['line-1', 'm1', 1]);
 		// Line-local state follows the forkActLine() workflow: director notes,
 		// character profiles and inventory are cloned to the fork before the
 		// original line is deleted. Give m2 a scene number so the profile
@@ -137,10 +132,11 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		);
 		// The fork is a mirror copy: seed the on-disk story-folder mapping and a
 		// source act-plot so the merge mirrors it to the fork (like forkActLine).
-		await testDb.execute(
-			'INSERT INTO story_folders (story_id, folder_name, created_at) VALUES ($1, $2, $3)',
-			['story-1', 'Test', Date.now()]
-		);
+		await testDb.execute('INSERT INTO story_folders (story_id, folder_name, created_at) VALUES ($1, $2, $3)', [
+			'story-1',
+			'Test',
+			Date.now(),
+		]);
 		await fs.writeTextFile('Test/act-1/main-line/act-plot.md', 'the plot');
 
 		const result = await mergeIncomingActLine({
@@ -191,17 +187,13 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 			[result.forkActLineId!]
 		);
 		expect(forkEvents).toEqual([{ event: 'phase', value: 'rising' }]);
-		const yieldedEvents = await testDb.select<{ id: string }[]>(
-			'SELECT id FROM act_line_events WHERE act_line_id = $1',
-			['line-1']
-		);
+		const yieldedEvents = await testDb.select<{ id: string }[]>('SELECT id FROM act_line_events WHERE act_line_id = $1', ['line-1']);
 		expect(yieldedEvents).toHaveLength(0);
 
 		// Premises carry over to the fork.
-		const forkPremises = await testDb.select<{ message_id: string }[]>(
-			'SELECT message_id FROM act_line_premises WHERE act_line_id = $1',
-			[result.forkActLineId!]
-		);
+		const forkPremises = await testDb.select<{ message_id: string }[]>('SELECT message_id FROM act_line_premises WHERE act_line_id = $1', [
+			result.forkActLineId!,
+		]);
 		expect(forkPremises.map((r) => r.message_id)).toEqual(['m1']);
 
 		// Director notes, character profiles and inventory follow the fork —
@@ -342,10 +334,7 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 			['line-1']
 		);
 		expect(yieldedPremises.map((r) => r.message_id)).toEqual(['m6']);
-		const yieldedNotes = await testDb.select<{ text: string }[]>(
-			'SELECT text FROM director_notes WHERE act_line_id = $1',
-			['line-1']
-		);
+		const yieldedNotes = await testDb.select<{ text: string }[]>('SELECT text FROM director_notes WHERE act_line_id = $1', ['line-1']);
 		expect(yieldedNotes.map((r) => r.text)).toEqual(['incoming note']);
 		const yieldedProfiles = await testDb.select<{ canonical_name: string }[]>(
 			'SELECT canonical_name FROM character_profiles WHERE act_line_id = $1',
@@ -354,15 +343,13 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		expect(yieldedProfiles.map((r) => r.canonical_name)).toEqual(['Bob']);
 
 		// None of the incoming line-local rows leak onto the fork.
-		const forkEvents = await testDb.select<{ id: string }[]>(
-			'SELECT id FROM act_line_events WHERE act_line_id = $1',
-			[result.forkActLineId!]
-		);
+		const forkEvents = await testDb.select<{ id: string }[]>('SELECT id FROM act_line_events WHERE act_line_id = $1', [
+			result.forkActLineId!,
+		]);
 		expect(forkEvents).toHaveLength(0);
-		const forkNotes = await testDb.select<{ id: string }[]>(
-			'SELECT id FROM director_notes WHERE act_line_id = $1',
-			[result.forkActLineId!]
-		);
+		const forkNotes = await testDb.select<{ id: string }[]>('SELECT id FROM director_notes WHERE act_line_id = $1', [
+			result.forkActLineId!,
+		]);
 		expect(forkNotes).toHaveLength(0);
 	});
 
@@ -484,10 +471,9 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 
 		// Only the tail premise is imported; premises anchored to shared-prefix
 		// messages are skipped.
-		const premises = await testDb.select<{ message_id: string }[]>(
-			'SELECT message_id FROM act_line_premises WHERE act_line_id = $1',
-			['line-1']
-		);
+		const premises = await testDb.select<{ message_id: string }[]>('SELECT message_id FROM act_line_premises WHERE act_line_id = $1', [
+			'line-1',
+		]);
 		expect(premises.map((p) => p.message_id)).toEqual(['m6']);
 	});
 
