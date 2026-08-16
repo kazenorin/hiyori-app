@@ -108,6 +108,11 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 			'INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
 			['evt-1', 'line-1', 'm2', 2, 'phase', 'rising', Date.now()]
 		);
+		// Premises must carry over to the fork (branchFromLine copies them).
+		await testDb.execute(
+			'INSERT INTO act_line_premises (act_line_id, message_id, sequence) VALUES ($1, $2, $3)',
+			['line-1', 'm1', 1]
+		);
 
 		const result = await mergeIncomingActLine({
 			actLineId: 'line-1',
@@ -127,9 +132,14 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		const originalIds = (await getMessagesForLine('line-1')).map((m) => m.id);
 		expect(originalIds).toEqual(['m1', 'm2', 'm3', 'm6']);
 
-		// The local progress survives as a new act line — full lineage, shared message rows.
-		const forkIds = (await getMessagesForLine(result.forkActLineId!)).map((m) => m.id);
-		expect(forkIds).toEqual(['m1', 'm2', 'm3', 'm4', 'm5']);
+		// The local progress survives as a new act line. Reusing branchFromLine
+		// means the fork-point message (m5) is CLONED — same content, new id —
+		// so metadata writes on either line can't pollute the other.
+		const forkMessages = await getMessagesForLine(result.forkActLineId!);
+		const forkIds = forkMessages.map((m) => m.id);
+		expect(forkIds.slice(0, 4)).toEqual(['m1', 'm2', 'm3', 'm4']);
+		expect(forkIds[4]).not.toBe('m5');
+		expect(forkMessages[4].content).toBe('content m5');
 
 		// The fork keeps the 1-based sequences of the yielded line.
 		const forkRows = await testDb.select<{ sequence: number }[]>(
@@ -138,13 +148,25 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		);
 		expect(forkRows.map((r) => r.sequence)).toEqual([1, 2, 3, 4, 5]);
 
-		// The event moved to the fork instead of being cascade-deleted.
-		const eventRows = await testDb.select<{ act_line_id: string }[]>(
-			'SELECT act_line_id FROM act_line_events WHERE id = $1',
-			['evt-1']
+		// The event survives on the fork (branchFromLine copies it with a new id)
+		// and no longer clings to the yielded line.
+		const forkEvents = await testDb.select<{ event: string; value: string }[]>(
+			'SELECT event, value FROM act_line_events WHERE act_line_id = $1',
+			[result.forkActLineId!]
 		);
-		expect(eventRows).toHaveLength(1);
-		expect(eventRows[0].act_line_id).toBe(result.forkActLineId);
+		expect(forkEvents).toEqual([{ event: 'phase', value: 'rising' }]);
+		const yieldedEvents = await testDb.select<{ id: string }[]>(
+			'SELECT id FROM act_line_events WHERE act_line_id = $1',
+			['line-1']
+		);
+		expect(yieldedEvents).toHaveLength(0);
+
+		// Premises carry over to the fork.
+		const forkPremises = await testDb.select<{ message_id: string }[]>(
+			'SELECT message_id FROM act_line_premises WHERE act_line_id = $1',
+			[result.forkActLineId!]
+		);
+		expect(forkPremises.map((r) => r.message_id)).toEqual(['m1']);
 
 		// WHY: reference-count protection — no message row may be deleted by a merge.
 		const allMessages = await getMessagesByIds(['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);

@@ -1,6 +1,7 @@
 import {
-	createActLine,
+	branchFromLine,
 	getActLine,
+	getNextSequence,
 	getMessagesForLine,
 	insertActLineEntries,
 	insertActLineMeta,
@@ -96,30 +97,29 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 	const meta = await getActLine(input.actLineId);
 	if (!meta) throw new Error(`Act line ${input.actLineId} not found during merge`);
 
-	// Preserve the local line's 1-based sequences when forking.
 	const db = getDatabase();
-	const localRows = await db.select<{ message_id: string; sequence: number }[]>(
-		'SELECT message_id, sequence FROM act_lines WHERE act_line_id = $1 ORDER BY sequence',
-		[input.actLineId]
-	);
 
-	const fork = await createActLine(
+	// Reuse the app's canonical forking logic: it clones the fork-point message
+	// (so later metadata writes don't pollute the yielded line) and carries
+	// premises and events over to the fork.
+	const forkSequence = (await getNextSequence(input.actLineId)) - 1;
+	const { lineMeta: fork } = await branchFromLine(
 		crypto.randomUUID(),
+		input.actLineId,
+		forkSequence,
 		meta.actId,
 		`${meta.name} ${input.forkNameSuffix}`,
-		false,
 		meta.plotMode
-	);
-	await insertActLineEntries(
-		localRows.map((row) => ({ actLineId: fork.id, messageId: row.message_id, sequence: row.sequence }))
 	);
 	// Junction rows only: the truncation cleanup in removeMessagesFromActLine
 	// would cascade-delete this line's events and scene character profiles,
 	// which must survive the yield on the forked local branch.
 	await removeActLineJunctionRows(input.actLineId, localIds);
-	// The fork carries the local branch's state: sequences are preserved above,
-	// so events and profiles move across with a plain act-line-id rewrite.
-	await db.execute('UPDATE act_line_events SET act_line_id = $1 WHERE act_line_id = $2', [fork.id, input.actLineId]);
+	// branchFromLine copied the events into the fork with new ids; drop the
+	// originals so they don't stay attached to the now-incoming lineage.
+	await db.execute('DELETE FROM act_line_events WHERE act_line_id = $1', [input.actLineId]);
+	// branchFromLine does not carry scene character profiles across, so
+	// relocate them to the fork with a plain act-line-id rewrite.
 	await db.execute('UPDATE character_profiles SET act_line_id = $1 WHERE act_line_id = $2', [fork.id, input.actLineId]);
 	await insertActLineEntries(
 		incomingSorted.map((e) => ({ actLineId: input.actLineId, messageId: e.messageId, sequence: e.sequence }))

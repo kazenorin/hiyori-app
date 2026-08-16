@@ -78,8 +78,8 @@ Incoming progress takes over the original act-line ID (so references, UI selecti
 
 Steps in `mergeIncomingActLine`:
 1. Incoming-only messages (`m5`, `m6`) are inserted (add-only rule skips `m1`, `m2`).
-2. A new fork act line is created for the same act.
-3. The local divergent messages (`m3`, `m4`) are re-linked to the fork line (junction rows moved; message rows survive because reference counting keeps them alive). Events and scene character profiles move to the fork with it; act-line premises are not carried over.
+2. A new fork act line is created via the app's canonical `branchFromLine()`: junction entries are copied with their original sequences, the fork-point message is cloned (new id, same content — matching the in-app fork convention so metadata writes on either line can't pollute the other), and premises and events are carried over.
+3. The yielded line's junction rows, leftover events, and scene character profiles are detached/relocated (profiles are moved to the fork with an act-line-id rewrite, since `branchFromLine` does not copy them).
 4. The incoming entries (`m1, m2, m5, m6`) are linked to the original act line.
 
 Fork insertion happens **before** removing entries from the yielded line so shared messages are never momentarily orphaned.
@@ -112,7 +112,7 @@ Credentials are stored in `settings.cloudSync` (localStorage / settings persiste
 
 ## Known limitations
 
-- Act-line premises are not carried over when a divergent line is forked (events and scene character profiles relocate with the local branch; premises do not).
+- Synced-story forks reuse `branchFromLine()`, so the fork's fork-point message is a clone with a new id (same as in-app forks); any external tooling that assumes the fork shares every message id with the original line will see one differing id at the fork point.
 - Story-folder files sync only alongside database changes: when a pull merges incoming messages, the archive's folder files are applied locally. Folder-file-only edits on one device are detected as dirty and pushed, but a receiving device applies them only on its next pull that also carries DB changes — protecting newer local file edits from stale archives.
 - Act lines created on another device are imported with their messages and junction entries only — their events, premises, director notes, and character profiles are not imported (the new-story path imports them in full). Known follow-up.
 - Sync is manual (Sync now / sidebar button); there is no background or automatic sync.
