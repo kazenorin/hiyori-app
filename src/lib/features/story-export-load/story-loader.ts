@@ -30,7 +30,7 @@ export interface LoadResult {
 	error?: string;
 }
 
-function toActLineMeta(meta: StoryExportData['actLineMeta'][number]): ActLineMeta {
+export function toActLineMeta(meta: StoryExportData['actLineMeta'][number]): ActLineMeta {
 	return {
 		id: meta.id,
 		actId: meta.actId,
@@ -41,7 +41,7 @@ function toActLineMeta(meta: StoryExportData['actLineMeta'][number]): ActLineMet
 	};
 }
 
-function toActLineEvents(events: StoryExportData['actLineEvents'], selectedActLineIds: Set<string>): ActLineEvent[] {
+export function toActLineEvents(events: StoryExportData['actLineEvents'], selectedActLineIds: Set<string>): ActLineEvent[] {
 	return events
 		.filter((e) => selectedActLineIds.has(e.actLineId))
 		.map((e) => ({
@@ -65,7 +65,7 @@ function toActLineEntries(entries: StoryExportData['actLineEntries'], selectedAc
 		}));
 }
 
-function toActLinePremises(premises: StoryExportData['actLinePremises'], selectedActLineIds: Set<string>): ActLineEntry[] {
+export function toActLinePremises(premises: StoryExportData['actLinePremises'], selectedActLineIds: Set<string>): ActLineEntry[] {
 	return premises
 		.filter((p) => selectedActLineIds.has(p.actLineId))
 		.map((p) => ({
@@ -75,7 +75,7 @@ function toActLinePremises(premises: StoryExportData['actLinePremises'], selecte
 		}));
 }
 
-function toDirectorNotes(notes: StoryExportData['directorNotes'], selectedActLineIds: Set<string>): DirectorNote[] {
+export function toDirectorNotes(notes: StoryExportData['directorNotes'], selectedActLineIds: Set<string>): DirectorNote[] {
 	return notes
 		.filter((n) => selectedActLineIds.has(n.actLineId))
 		.map((n) => ({
@@ -107,7 +107,7 @@ function toMessages(messages: StoryExportData['messages'], messageIds: Set<strin
 		}));
 }
 
-function toCharacterProfileInputs(
+export function toCharacterProfileInputs(
 	profiles: NonNullable<StoryExportData['characterProfiles']>,
 	selectedActLineIds: Set<string>
 ): InsertCharacterProfileInput[] {
