@@ -242,6 +242,130 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		expect(allMessages).toHaveLength(5);
 	});
 
+	// WHY (save incoming): the yielded line is an import of the incoming act
+	// line — its metadata and line-local state (events, premises, director
+	// notes, character profiles) come from the incoming archive, mirroring
+	// insertSelectedActLineData. Local state survives on the fork instead.
+	it('divergent merge imports incoming meta and line-local state onto the yielded line', async () => {
+		await seedLine(['m1', 'm2', 'm3', 'm4', 'm5']);
+		const result = await mergeIncomingActLine({
+			actLineId: 'line-1',
+			storyId: 'story-1',
+			incomingMeta: {
+				id: 'line-1',
+				actId: 'act-1',
+				name: 'Main (remote)',
+				isMainLine: true,
+				createdAt: 500,
+				plotMode: 'phaseEvent',
+			},
+			incomingEntries: [
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm3', sequence: 3 },
+				{ actLineId: 'line-1', messageId: 'm6', sequence: 4 },
+			],
+			incomingMessages: [messageRow('m6', 'incoming content')],
+			incomingEvents: [
+				{
+					id: 'evt-remote-shared',
+					actLineId: 'line-1',
+					messageId: 'm3',
+					messageSequence: 3,
+					event: 'act-phase-transition',
+					value: 'rising',
+					createdAt: 1,
+				},
+				{
+					id: 'evt-remote-tail',
+					actLineId: 'line-1',
+					messageId: 'm6',
+					messageSequence: 4,
+					event: 'plot-generated',
+					value: '4',
+					createdAt: 2,
+				},
+			],
+			incomingPremises: [{ actLineId: 'line-1', messageId: 'm6', sequence: 4 }],
+			incomingNotes: [
+				{
+					id: 'note-remote',
+					actLineId: 'line-1',
+					text: 'incoming note',
+					isActive: true,
+					effectiveFromScene: null,
+					effectiveToScene: null,
+					createdAt: 3,
+				},
+			],
+			incomingProfiles: [
+				{
+					id: 'profile-remote',
+					actLineId: 'line-1',
+					sceneNumber: 1,
+					canonicalName: 'Bob',
+					preferredName: 'Bob',
+					aliases: [],
+					logline: 'side',
+					state: null,
+					goal: null,
+					relationships: null,
+					voice: null,
+					sceneDetails: '',
+					importance: 4,
+					createdAt: 4,
+					updatedAt: 4,
+				},
+			],
+			forkNameSuffix: '(local branch)',
+		});
+
+		expect(result.action).toBe('forked');
+
+		// Incoming metadata wins on the yielded line; the local name lives on the fork.
+		const line1 = await getActLine('line-1');
+		expect(line1?.name).toBe('Main (remote)');
+		expect(line1?.plotMode).toBe('phaseEvent');
+		expect(line1?.createdAt).toBe(500);
+		const fork = await getActLine(result.forkActLineId!);
+		expect(fork?.name).toBe('Main (local branch)');
+
+		// Incoming events/premises/notes/profiles land on the yielded line — the
+		// line was wiped by the yield, so nothing collides.
+		const yieldedEvents = await testDb.select<{ id: string }[]>(
+			'SELECT id FROM act_line_events WHERE act_line_id = $1 ORDER BY message_sequence',
+			['line-1']
+		);
+		expect(yieldedEvents.map((e) => e.id)).toEqual(['evt-remote-shared', 'evt-remote-tail']);
+		const yieldedPremises = await testDb.select<{ message_id: string }[]>(
+			'SELECT message_id FROM act_line_premises WHERE act_line_id = $1',
+			['line-1']
+		);
+		expect(yieldedPremises.map((r) => r.message_id)).toEqual(['m6']);
+		const yieldedNotes = await testDb.select<{ text: string }[]>(
+			'SELECT text FROM director_notes WHERE act_line_id = $1',
+			['line-1']
+		);
+		expect(yieldedNotes.map((r) => r.text)).toEqual(['incoming note']);
+		const yieldedProfiles = await testDb.select<{ canonical_name: string }[]>(
+			'SELECT canonical_name FROM character_profiles WHERE act_line_id = $1',
+			['line-1']
+		);
+		expect(yieldedProfiles.map((r) => r.canonical_name)).toEqual(['Bob']);
+
+		// None of the incoming line-local rows leak onto the fork.
+		const forkEvents = await testDb.select<{ id: string }[]>(
+			'SELECT id FROM act_line_events WHERE act_line_id = $1',
+			[result.forkActLineId!]
+		);
+		expect(forkEvents).toHaveLength(0);
+		const forkNotes = await testDb.select<{ id: string }[]>(
+			'SELECT id FROM director_notes WHERE act_line_id = $1',
+			[result.forkActLineId!]
+		);
+		expect(forkNotes).toHaveLength(0);
+	});
+
 	it('remote-stale merge is a no-op', async () => {
 		await seedLine(['m1', 'm2', 'm3', 'm4', 'm5']);
 		const result = await mergeIncomingActLine({

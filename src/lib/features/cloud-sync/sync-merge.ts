@@ -7,7 +7,9 @@ import {
 	getNextSequence,
 	getSceneNumberAtSequence,
 	insertActLineEntries,
+	insertActLineEvents,
 	insertActLineMeta,
+	insertActLinePremises,
 	type ActLineEntry,
 	type ActLineEvent,
 	type ActLineMeta,
@@ -16,8 +18,8 @@ import { getMessagesByIds, insertMessage, parseVariables, type Message } from '$
 import { getStory } from '$lib/db/stories';
 import { getAct, upsertAct, type Act } from '$lib/db/acts';
 import { getStoryFolderInfo } from '$lib/db/story-folders';
-import { cloneCharacterProfiles, type InsertCharacterProfileInput } from '$lib/db/character-profiles';
-import { cloneDirectorNotes, type DirectorNote } from '$lib/db/director-notes';
+import { cloneCharacterProfiles, insertCharacterProfile, type InsertCharacterProfileInput } from '$lib/db/character-profiles';
+import { cloneDirectorNotes, insertDirectorNote, type DirectorNote } from '$lib/db/director-notes';
 import { cloneInventory } from '$lib/db/inventory';
 import { getMemoryProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
 import { log } from '$lib/logging/logger';
@@ -188,19 +190,33 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 	// message's content survives in its clone.
 	await deleteActLine(input.actLineId);
 
-	// The incoming lineage takes over the original line ID, so its metadata
-	// is recreated (deleteActLine removed it) before linking the incoming entries.
+	// "Save incoming": the incoming lineage takes over the original line ID as
+	// an import of the incoming act line (insertSelectedActLineData semantics).
+	// The incoming metadata replaces the local meta, whose name survives,
+	// renamed, on the fork.
 	await insertActLineMeta({
-		id: meta.id,
-		actId: meta.actId,
-		name: meta.name,
-		isMainLine: meta.isMainLine,
-		createdAt: meta.createdAt,
-		plotMode: meta.plotMode,
+		id: input.incomingMeta.id,
+		actId: input.incomingMeta.actId,
+		name: input.incomingMeta.name,
+		isMainLine: input.incomingMeta.isMainLine,
+		createdAt: input.incomingMeta.createdAt,
+		plotMode: input.incomingMeta.plotMode,
 	});
 	await insertActLineEntries(
 		incomingSorted.map((e) => ({ actLineId: input.actLineId, messageId: e.messageId, sequence: e.sequence }))
 	);
+	// Line-local incoming state: the delete above wiped the original line's
+	// rows, so the incoming rows below cannot collide. Message rows stay
+	// add-only (inserted earlier): they are shared with the fork, and
+	// overwriting them would corrupt the fork's view of the same rows.
+	await insertActLineEvents(input.incomingEvents ?? []);
+	await insertActLinePremises(input.incomingPremises ?? []);
+	for (const note of input.incomingNotes ?? []) {
+		await insertDirectorNote(note);
+	}
+	for (const profile of input.incomingProfiles ?? []) {
+		await insertCharacterProfile(profile);
+	}
 
 	return { action: 'forked', forkActLineId: fork.id };
 }
