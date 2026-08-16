@@ -8,21 +8,31 @@ import {
 	getSceneNumberAtSequence,
 	insertActLineEntries,
 	insertActLineMeta,
+	type ActLineEntry,
+	type ActLineEvent,
 	type ActLineMeta,
 } from '$lib/db/act-lines';
 import { getMessagesByIds, insertMessage, parseVariables, type Message } from '$lib/db/messages';
 import { getStory } from '$lib/db/stories';
 import { getAct, upsertAct, type Act } from '$lib/db/acts';
 import { getStoryFolderInfo } from '$lib/db/story-folders';
-import { cloneCharacterProfiles } from '$lib/db/character-profiles';
-import { cloneDirectorNotes } from '$lib/db/director-notes';
+import { cloneCharacterProfiles, type InsertCharacterProfileInput } from '$lib/db/character-profiles';
+import { cloneDirectorNotes, type DirectorNote } from '$lib/db/director-notes';
 import { cloneInventory } from '$lib/db/inventory';
 import { getMemoryProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
 import { log } from '$lib/logging/logger';
 import { copyActPlotFileBetweenLines } from '$lib/ai/card-output-path';
 import JSZip from 'jszip';
 import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
-import { loadStoryOverwrite, writeFilesFromZip } from '$lib/features/story-export-load/story-loader';
+import {
+	loadStoryOverwrite,
+	writeFilesFromZip,
+	toActLineMeta,
+	toActLineEvents,
+	toActLinePremises,
+	toDirectorNotes,
+	toCharacterProfileInputs,
+} from '$lib/features/story-export-load/story-loader';
 
 export type LineageDecision = 'identical' | 'remote-stale' | 'local-stale' | 'divergent';
 
@@ -65,8 +75,17 @@ export interface MergeIncomingInput {
 	storyId: string;
 	/** On-disk story folder name, used to mirror line files (e.g. act-plot). */
 	storyFolder?: string;
+	/** Incoming metadata for this act line — guaranteed to exist: the caller only
+	 * merges conflicting lines (present on both sides). "Save incoming": the
+	 * yielded line is an import of the incoming act line, so its metadata wins. */
+	incomingMeta: ActLineMeta;
 	incomingEntries: { actLineId: string; messageId: string; sequence: number }[];
 	incomingMessages: Message[];
+	/** Line-local incoming state, mirroring insertSelectedActLineData's per-line imports. */
+	incomingEvents?: ActLineEvent[];
+	incomingPremises?: ActLineEntry[];
+	incomingNotes?: DirectorNote[];
+	incomingProfiles?: InsertCharacterProfileInput[];
 	forkNameSuffix: string;
 }
 
@@ -282,12 +301,23 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 			continue;
 		}
 
+		// Conflict: the line exists on both sides, so the archive also carries its
+		// metadata (the exporter emits actLineMeta for every referenced line).
+		const lineMeta = data.actLineMeta.find((m) => m.id === actLineId);
+		if (!lineMeta) continue; // malformed archive
+
+		const lineSet = new Set([actLineId]);
 		const result = await mergeIncomingActLine({
 			actLineId,
 			storyId: data.story.id,
 			storyFolder,
+			incomingMeta: toActLineMeta(lineMeta),
 			incomingEntries: entries,
 			incomingMessages,
+			incomingEvents: toActLineEvents(data.actLineEvents, lineSet),
+			incomingPremises: toActLinePremises(data.actLinePremises, lineSet),
+			incomingNotes: toDirectorNotes(data.directorNotes, lineSet),
+			incomingProfiles: data.characterProfiles ? toCharacterProfileInputs(data.characterProfiles, lineSet) : [],
 			forkNameSuffix: '(local branch)',
 		});
 		if (result.action !== 'no-op') anyChange = true;

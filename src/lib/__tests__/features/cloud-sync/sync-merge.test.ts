@@ -147,6 +147,7 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 			actLineId: 'line-1',
 			storyId: 'story-1',
 			storyFolder: 'Test',
+			incomingMeta: { id: 'line-1', actId: 'act-1', name: 'Main', isMainLine: true, createdAt: 1000, plotMode: 'guidance' },
 			incomingEntries: [
 				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
 				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
@@ -246,6 +247,7 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		const result = await mergeIncomingActLine({
 			actLineId: 'line-1',
 			storyId: 'story-1',
+			incomingMeta: { id: 'line-1', actId: 'act-1', name: 'Main', isMainLine: true, createdAt: 1000, plotMode: 'guidance' },
 			incomingEntries: [
 				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
 				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
@@ -265,6 +267,7 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		const result = await mergeIncomingActLine({
 			actLineId: 'line-1',
 			storyId: 'story-1',
+			incomingMeta: { id: 'line-1', actId: 'act-1', name: 'Main', isMainLine: true, createdAt: 1000, plotMode: 'guidance' },
 			incomingEntries: [
 				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
 				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
@@ -286,6 +289,7 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		const result = await mergeIncomingActLine({
 			actLineId: 'line-1',
 			storyId: 'story-1',
+			incomingMeta: { id: 'line-1', actId: 'act-1', name: 'Main', isMainLine: true, createdAt: 1000, plotMode: 'guidance' },
 			incomingEntries: [
 				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
 				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
