@@ -28,6 +28,9 @@ import * as acts from '$lib/db/acts';
 import { createActLine, getActLine, getMessagesForLine, insertActLineEntries } from '$lib/db/act-lines';
 import { insertMessage, getMessagesByIds, type Message } from '$lib/db/messages';
 import { compareLineages, mergeIncomingActLine } from '$lib/features/cloud-sync/sync-merge';
+import { setFileSystem, fs } from '$lib/fs/file-system';
+import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
+import { buildLineDir, buildLineSubdirSuffix } from '$lib/ai/card-output-path';
 
 function messageRow(id: string, content: string): Message {
 	return { id, role: 'assistant', content, createdAt: Date.now() };
@@ -93,6 +96,7 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		await runMigrations();
 		await stories.createStory('story-1', 'Test', 'en');
 		await acts.createAct('act-1', 'story-1', 'Act 1', 1);
+		setFileSystem(new InMemoryFileSystem());
 	});
 
 	afterEach(() => {
@@ -131,10 +135,18 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 			'INSERT INTO inventory (id, story_id, act_line_id, message_id, scene_number, character_canonical_name, item_name, event_type, category, equip_status, description, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
 			['inv-1', 'story-1', 'line-1', 'm2', 1, 'Alice', 'Key', 'acquired', 'item', 'carried', null, '2024-01-01 00:00:00']
 		);
+		// The fork is a mirror copy: seed the on-disk story-folder mapping and a
+		// source act-plot so the merge mirrors it to the fork (like forkActLine).
+		await testDb.execute(
+			'INSERT INTO story_folders (story_id, folder_name, created_at) VALUES ($1, $2, $3)',
+			['story-1', 'Test', Date.now()]
+		);
+		await fs.writeTextFile('Test/act-1/main-line/act-plot.md', 'the plot');
 
 		const result = await mergeIncomingActLine({
 			actLineId: 'line-1',
 			storyId: 'story-1',
+			storyFolder: 'Test',
 			incomingEntries: [
 				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
 				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
@@ -215,6 +227,11 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		expect(forkInventory.map((r) => r.item_name)).toEqual(['Key']);
 		const yieldedInventory = await testDb.select('SELECT id FROM inventory WHERE act_line_id = $1', ['line-1']);
 		expect(yieldedInventory).toHaveLength(0);
+
+		// The act-plot file is mirrored onto the fork's directory (forked lines
+		// are mirror copies; only interview forks intentionally diverge).
+		const forkPlotDir = buildLineDir('Test', 1, false, result.forkActLineId!, buildLineSubdirSuffix('Main (local branch)'));
+		expect(await fs.readTextFileIfExists(`${forkPlotDir}/act-plot.md`)).toBe('the plot');
 
 		// WHY: reference-count protection — messages survive only while some
 		// line or premises reference them. The fork references m1-m4 and a

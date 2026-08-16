@@ -19,6 +19,7 @@ import { cloneDirectorNotes } from '$lib/db/director-notes';
 import { cloneInventory } from '$lib/db/inventory';
 import { getMemoryProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
 import { log } from '$lib/logging/logger';
+import { copyActPlotFileBetweenLines } from '$lib/ai/card-output-path';
 import JSZip from 'jszip';
 import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
 import { loadStoryOverwrite, writeFilesFromZip } from '$lib/features/story-export-load/story-loader';
@@ -62,6 +63,8 @@ export type MergeAction = 'no-op' | 'fast-forward' | 'forked';
 export interface MergeIncomingInput {
 	actLineId: string;
 	storyId: string;
+	/** On-disk story folder name, used to mirror line files (e.g. act-plot). */
+	storyFolder?: string;
 	incomingEntries: { actLineId: string; messageId: string; sequence: number }[];
 	incomingMessages: Message[];
 	forkNameSuffix: string;
@@ -128,6 +131,21 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 		await cloneCharacterProfiles(input.actLineId, fork.id, forkSceneNumber);
 	}
 	await cloneInventory(input.actLineId, fork.id);
+	// The fork is a mirror copy of the local line: carry the act-plot file
+	// over like forkActLine() does, so opening the fork later doesn't
+	// regenerate it through the LLM. Interview forks skip this because they're
+	// meant to diverge; sync forks are not.
+	const actForFork = await getAct(meta.actId);
+	if (input.storyFolder && actForFork) {
+		await copyActPlotFileBetweenLines({
+			storyFolder: input.storyFolder,
+			actNumber: actForFork.actNumber,
+			sourceLineId: input.actLineId,
+			sourceIsMainLine: meta.isMainLine,
+			targetLineId: fork.id,
+			targetName: fork.name,
+		});
+	}
 	// Memory indices are desktop-only; guard exactly like the store's fork path.
 	if (input.storyId && isMemoryAvailable()) {
 		const config = getMemoryProviderConfig();
@@ -223,6 +241,9 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 	}
 
 	let anyChange = false;
+	// Resolved once so the act-plot fork copy and the folder-file application
+	// below share the same on-disk mapping.
+	const storyFolder = (await getStoryFolderInfo(data.story.id))?.folderName;
 	for (const [actLineId, entries] of incomingByLine) {
 		const ids = [...new Set(entries.map((e) => e.messageId))];
 		const incomingMessages = ids
@@ -264,6 +285,7 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 		const result = await mergeIncomingActLine({
 			actLineId,
 			storyId: data.story.id,
+			storyFolder,
 			incomingEntries: entries,
 			incomingMessages,
 			forkNameSuffix: '(local branch)',
@@ -276,11 +298,8 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 	// any hash difference, and unconditional application would let a stale
 	// remote archive overwrite newer local file edits. File-only remote
 	// changes are a documented limitation (see README).
-	if (anyChange) {
-		const folder = await getStoryFolderInfo(data.story.id);
-		if (folder?.folderName) {
-			await writeFilesFromZip(zip, data.storyFolder.folderName, folder.folderName);
-		}
+	if (anyChange && storyFolder) {
+		await writeFilesFromZip(zip, data.storyFolder.folderName, storyFolder);
 	}
 
 	return anyChange ? 'merged' : 'up-to-date';

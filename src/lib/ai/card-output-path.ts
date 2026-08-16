@@ -1,5 +1,6 @@
 import { kebabCase } from 'lodash-es';
 import { fs, type DirEntry } from '$lib/fs/file-system';
+import { log } from '$lib/logging/logger';
 
 /**
  * Convert an act line name into a kebab-case suffix for the folder name.
@@ -69,6 +70,38 @@ export async function resolveLineDir(storyFolder: string, actNumber: number, act
 export async function getLineDir(storyFolder: string, actNumber: number, isMainLine: boolean, actLineId: string): Promise<string> {
 	if (isMainLine) return buildLineDir(storyFolder, actNumber, true, actLineId);
 	return resolveLineDir(storyFolder, actNumber, actLineId);
+}
+
+/**
+ * Copy the act-plot.md file from one act line's directory to another's,
+ * creating the target directory as needed. Forked lines are mirror copies, so
+ * opening a fork later must not regenerate the act plot via the LLM — except
+ * interview forks, which are meant to diverge and don't call this.
+ * Filesystem errors (missing source file, unready folders) are swallowed and
+ * logged, same as the store's fork path.
+ */
+export async function copyActPlotFileBetweenLines(options: {
+	storyFolder: string;
+	actNumber: number;
+	sourceLineId: string;
+	sourceIsMainLine: boolean;
+	targetLineId: string;
+	targetName: string;
+}): Promise<void> {
+	const { storyFolder, actNumber, sourceLineId, sourceIsMainLine, targetLineId, targetName } = options;
+	try {
+		const fromDir = await getLineDir(storyFolder, actNumber, sourceIsMainLine, sourceLineId);
+		const toDir = buildLineDir(storyFolder, actNumber, false, targetLineId, buildLineSubdirSuffix(targetName));
+		const fromPath = `${fromDir}/act-plot.md`;
+		const toPath = `${toDir}/act-plot.md`;
+
+		if (await fs.exists(fromPath)) {
+			await fs.mkdir(toDir);
+			await fs.copyFile(fromPath, toPath);
+		}
+	} catch (err) {
+		await log.error('fork', 'Failed to copy act-plot for fork', err);
+	}
 }
 
 export { computeLineSubdir as _computeLineSubdirForTest, buildLineSubdirSuffix as _buildLineSubdirSuffixForTest };

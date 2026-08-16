@@ -17,7 +17,14 @@ import { writeWorldTemplateId } from '$lib/ai/world-generator/template-resolutio
 import { deriveStoryName, renameStoryFolder, resolveStoryFolder } from '$lib/fs/story-folders';
 import { fs } from '$lib/fs/file-system';
 import * as dbStoryFolders from '$lib/db/story-folders';
-import { buildLineDir, buildLineSubdirSuffix, computeLineSubdir, getLineDir, resolveLineSubdir } from '$lib/ai/card-output-path';
+import {
+	buildLineDir,
+	buildLineSubdirSuffix,
+	computeLineSubdir,
+	copyActPlotFileBetweenLines,
+	getLineDir,
+	resolveLineSubdir,
+} from '$lib/ai/card-output-path';
 import { type ActPlotPhase } from '$lib/ai/act-plot';
 import type { PlotMode } from '$lib/ai/narrative-types';
 import { actWithNumberLabel, mainLineNameLabel } from '$lib/definitions/common-labels';
@@ -458,15 +465,14 @@ async function copyActPlotForFork(fromLineId: string, toLineId: string): Promise
 
 	try {
 		const storyFolder = await resolveStoryFolder(storyId, storyName);
-		const fromDir = await getLineDir(storyFolder, act.actNumber, fromLine.isMainLine, fromLineId);
-		const toDir = buildLineDir(storyFolder, act.actNumber, false, toLineId, buildLineSubdirSuffix(toLine.name));
-		const fromPath = `${fromDir}/act-plot.md`;
-		const toPath = `${toDir}/act-plot.md`;
-
-		if (await fs.exists(fromPath)) {
-			await fs.mkdir(toDir);
-			await fs.copyFile(fromPath, toPath);
-		}
+		await copyActPlotFileBetweenLines({
+			storyFolder,
+			actNumber: act.actNumber,
+			sourceLineId: fromLineId,
+			sourceIsMainLine: fromLine.isMainLine,
+			targetLineId: toLineId,
+			targetName: toLine.name,
+		});
 	} catch (err) {
 		await log.error('fork', 'Failed to copy act-plot for fork', err);
 	}
