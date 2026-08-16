@@ -2,6 +2,8 @@ import {
 	branchFromLine,
 	deleteActLine,
 	getActLine,
+	getActLineEventsForLines,
+	getActLinePremisesForLines,
 	getMessageIdsUpToSequence,
 	getMessagesForLine,
 	getNextSequence,
@@ -18,8 +20,13 @@ import { getMessagesByIds, insertMessage, parseVariables, type Message } from '$
 import { getStory } from '$lib/db/stories';
 import { getAct, upsertAct, type Act } from '$lib/db/acts';
 import { getStoryFolderInfo } from '$lib/db/story-folders';
-import { cloneCharacterProfiles, insertCharacterProfile, type InsertCharacterProfileInput } from '$lib/db/character-profiles';
-import { cloneDirectorNotes, insertDirectorNote, type DirectorNote } from '$lib/db/director-notes';
+import {
+	cloneCharacterProfiles,
+	getCharacterProfilesForActLines,
+	insertCharacterProfile,
+	type InsertCharacterProfileInput,
+} from '$lib/db/character-profiles';
+import { cloneDirectorNotes, getDirectorNotesForActLines, insertDirectorNote, type DirectorNote } from '$lib/db/director-notes';
 import { cloneInventory } from '$lib/db/inventory';
 import { getMemoryProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
 import { log } from '$lib/logging/logger';
@@ -70,7 +77,7 @@ export function compareLineages(local: string[], incoming: string[]): LineageCom
 	return { decision: 'divergent', commonPrefixLength };
 }
 
-export type MergeAction = 'no-op' | 'fast-forward' | 'forked';
+export type MergeAction = 'no-op' | 'fast-forward' | 'forked' | 'merged';
 
 export interface MergeIncomingInput {
 	actLineId: string;
@@ -96,112 +103,204 @@ export interface MergeResult {
 	forkActLineId?: string;
 }
 
+/**
+ * Whether every piece of the local line's line-local state exists in the
+ * incoming archive: events by id, premises by (messageId, sequence), notes by
+ * content tuple, profiles by (id, updatedAt). compareLineages only sees
+ * message chains, so a local-stale lineage alone doesn't prove the incoming
+ * copy can take over the line — a note added locally after the last sync is a
+ * deviation the prefix can't express. When this fails, the merge escalates to
+ * fork-and-yield so local state survives on the fork instead of being
+ * destroyed by delete-and-import. Undefined incoming arrays are treated as
+ * empty, so any local state escalates (conservative).
+ */
+async function localStateSubsetOfIncoming(
+	actLineId: string,
+	incomingEvents: ActLineEvent[] | undefined,
+	incomingPremises: ActLineEntry[] | undefined,
+	incomingNotes: DirectorNote[] | undefined,
+	incomingProfiles: InsertCharacterProfileInput[] | undefined
+): Promise<boolean> {
+	const [localEvents, localPremises, localNotes, localProfiles] = await Promise.all([
+		getActLineEventsForLines([actLineId]),
+		getActLinePremisesForLines([actLineId]),
+		getDirectorNotesForActLines([actLineId]),
+		getCharacterProfilesForActLines([actLineId]),
+	]);
+
+	// Events are append-only records — same id implies same content.
+	const incomingEventIds = new Set((incomingEvents ?? []).map((e) => e.id));
+	for (const event of localEvents) {
+		if (!incomingEventIds.has(event.id)) return false;
+	}
+
+	const incomingPremiseKeys = new Set((incomingPremises ?? []).map((p) => `${p.messageId}:${p.sequence}`));
+	for (const premise of localPremises) {
+		if (!incomingPremiseKeys.has(`${premise.messageId}:${premise.sequence}`)) return false;
+	}
+
+	// Notes have no version field — compare the content tuple to catch edits.
+	const incomingNoteFingerprints = new Set(
+		(incomingNotes ?? []).map((n) => `${n.id}|${n.text}|${n.isActive}|${n.effectiveFromScene}|${n.effectiveToScene}`)
+	);
+	for (const note of localNotes) {
+		if (!incomingNoteFingerprints.has(`${note.id}|${note.text}|${note.isActive}|${note.effectiveFromScene}|${note.effectiveToScene}`)) {
+			return false;
+		}
+	}
+
+	// Profiles are versioned: updatedAt is the mutation clock.
+	const incomingProfileVersions = new Set((incomingProfiles ?? []).map((p) => `${p.id}:${p.updatedAt}`));
+	for (const profile of localProfiles) {
+		if (!incomingProfileVersions.has(`${profile.id}:${profile.updatedAt}`)) return false;
+	}
+
+	return true;
+}
+
+/**
+ * Identical-lineage overlay: equal message chains mean neither side supersedes
+ * the other, so incoming line-local state is unioned in by row identity.
+ * Message rows are never touched (add-only rule). Returns whether anything was
+ * imported.
+ */
+async function overlayIncomingLineState(input: MergeIncomingInput): Promise<boolean> {
+	let imported = false;
+
+	const eventIds = new Set((await getActLineEventsForLines([input.actLineId])).map((e) => e.id));
+	for (const event of input.incomingEvents ?? []) {
+		if (!eventIds.has(event.id)) {
+			await insertActLineEvents([event]);
+			imported = true;
+		}
+	}
+
+	const premiseKeys = new Set((await getActLinePremisesForLines([input.actLineId])).map((p) => `${p.messageId}:${p.sequence}`));
+	for (const premise of input.incomingPremises ?? []) {
+		if (!premiseKeys.has(`${premise.messageId}:${premise.sequence}`)) {
+			await insertActLinePremises([premise]);
+			imported = true;
+		}
+	}
+
+	const noteIds = new Set((await getDirectorNotesForActLines([input.actLineId])).map((n) => n.id));
+	for (const note of input.incomingNotes ?? []) {
+		if (!noteIds.has(note.id)) {
+			await insertDirectorNote(note);
+			imported = true;
+		}
+	}
+
+	const profileIds = new Set((await getCharacterProfilesForActLines([input.actLineId])).map((p) => p.id));
+	for (const profile of input.incomingProfiles ?? []) {
+		if (!profileIds.has(profile.id)) {
+			await insertCharacterProfile(profile);
+			imported = true;
+		}
+	}
+
+	return imported;
+}
+
 export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<MergeResult> {
 	const localIds = (await getMessagesForLine(input.actLineId)).map((m) => m.id);
 	const incomingSorted = [...input.incomingEntries].sort((a, b) => a.sequence - b.sequence);
 	const incomingIds = incomingSorted.map((e) => e.messageId);
 
-	const { decision, commonPrefixLength } = compareLineages(localIds, incomingIds);
-	if (decision === 'identical' || decision === 'remote-stale') {
+	const { decision } = compareLineages(localIds, incomingIds);
+	if (decision === 'remote-stale') {
 		return { action: 'no-op' };
 	}
 
-	// Add-only message rule: only insert IDs missing locally; never overwrite.
+	if (decision === 'identical') {
+		// Equal message chains: no winner, so union the line-local state.
+		const imported = await overlayIncomingLineState(input);
+		return { action: imported ? 'merged' : 'no-op' };
+	}
+
+	// local-stale or divergent. A prefix lineage alone doesn't prove the
+	// incoming copy can take over the line: line-local state added locally
+	// after the last sync is invisible to compareLineages, so escalate to the
+	// fork path — the fork preserves it, the main line becomes the import.
+	const forkNeeded =
+		decision === 'divergent' ||
+		!(await localStateSubsetOfIncoming(
+			input.actLineId,
+			input.incomingEvents,
+			input.incomingPremises,
+			input.incomingNotes,
+			input.incomingProfiles
+		));
+
+	let forkActLineId: string | null = null;
+	if (forkNeeded) {
+		const meta = await getActLine(input.actLineId);
+		if (!meta) throw new Error(`Act line ${input.actLineId} not found during merge`);
+
+		// branchFromLine clones the fork-point message (so later metadata writes
+		// don't pollute the yielded line) and carries junction entries, premises
+		// and events over to the fork.
+		const forkSequence = (await getNextSequence(input.actLineId)) - 1;
+		const { lineMeta: fork, remappedMessageIds } = await branchFromLine(
+			crypto.randomUUID(),
+			input.actLineId,
+			forkSequence,
+			meta.actId,
+			`${meta.name} ${input.forkNameSuffix}`,
+			meta.plotMode
+		);
+		forkActLineId = fork.id;
+
+		// Rest of the forkActLine() workflow: carry the remaining line-local
+		// state to the fork before the original line is deleted.
+		await cloneDirectorNotes(input.actLineId, fork.id);
+		const forkSceneNumber = await getSceneNumberAtSequence(input.actLineId, forkSequence);
+		if (forkSceneNumber !== null) {
+			await cloneCharacterProfiles(input.actLineId, fork.id, forkSceneNumber);
+		}
+		await cloneInventory(input.actLineId, fork.id);
+		// Mirror the act-plot file onto the fork (forkActLine does the same;
+		// only interview forks diverge and skip the copy).
+		const actForFork = await getAct(meta.actId);
+		if (input.storyFolder && actForFork) {
+			await copyActPlotFileBetweenLines({
+				storyFolder: input.storyFolder,
+				actNumber: actForFork.actNumber,
+				sourceLineId: input.actLineId,
+				sourceIsMainLine: meta.isMainLine,
+				targetLineId: fork.id,
+				targetName: fork.name,
+			});
+		}
+		// Memory indices are desktop-only; guard exactly like the store's fork path.
+		if (input.storyId && isMemoryAvailable()) {
+			const config = getMemoryProviderConfig();
+			if (config) {
+				try {
+					const { Memory } = await import('$lib/features/memory');
+					const messageIds = await getMessageIdsUpToSequence(input.actLineId, forkSequence);
+					// The fork-point clone carries a new id; keep memory refs aligned.
+					const remappedIds = messageIds.map((id) => remappedMessageIds.get(id) ?? id);
+					await new Memory(config).copyMemoriesForFork(input.storyId, input.actLineId, fork.id, remappedIds);
+				} catch (err) {
+					await log.error('cloud-sync', 'Failed to copy memories for forked line', err);
+				}
+			}
+		}
+	}
+
+	// Delete the local copy, then import the incoming act line under the same
+	// ID (save incoming). Fast-forward and divergent converge here.
+	await deleteActLine(input.actLineId);
+
+	// Add-only AFTER the delete: rows the delete orphan-cleansed are re-created
+	// from the archive; rows referenced by another local line are untouched
+	// (add-only holds wherever a global reference exists).
 	const existing = new Set((await getMessagesByIds(incomingIds)).map((m) => m.id));
 	for (const message of input.incomingMessages) {
 		if (!existing.has(message.id)) await insertMessage(message);
 	}
 
-	if (decision === 'local-stale') {
-		// Slice by the shared prefix length, not sequence numbers: sequences are
-		// 1-based and dense in production, so any sequence math here would
-		// re-select the boundary entry and violate the junction primary key.
-		const newEntries = incomingSorted
-			.slice(commonPrefixLength)
-			.map((e) => ({ actLineId: input.actLineId, messageId: e.messageId, sequence: e.sequence }));
-		await insertActLineEntries(newEntries);
-		// Tail-only line-local import: the local line keeps its shared-prefix
-		// state, so only incoming rows anchored to messages it lacks can be
-		// added. messageId-less events (line-creation markers) already exist
-		// locally — skip. Notes/profiles aren't message-keyed, so importing them
-		// here would duplicate the local copies; they stay local.
-		const localIdSet = new Set(localIds);
-		await insertActLineEvents((input.incomingEvents ?? []).filter((e) => e.messageId !== null && !localIdSet.has(e.messageId)));
-		await insertActLinePremises((input.incomingPremises ?? []).filter((p) => !localIdSet.has(p.messageId)));
-		return { action: 'fast-forward' };
-	}
-
-	// Divergent: fork local first so message reference counts stay > 0, then
-	// yield the original act-line ID to the incoming lineage. The merge IS a
-	// fork of the conflicting line followed by a delete of the original —
-	// mirroring forkActLine()/deleteActLine() — so the local branch keeps all
-	// line-local state instead of hand-rolled SQL relocations.
-	const meta = await getActLine(input.actLineId);
-	if (!meta) throw new Error(`Act line ${input.actLineId} not found during merge`);
-
-	// branchFromLine clones the fork-point message (so later metadata writes
-	// don't pollute the yielded line) and carries junction entries, premises
-	// and events over to the fork.
-	const forkSequence = (await getNextSequence(input.actLineId)) - 1;
-	const { lineMeta: fork, remappedMessageIds } = await branchFromLine(
-		crypto.randomUUID(),
-		input.actLineId,
-		forkSequence,
-		meta.actId,
-		`${meta.name} ${input.forkNameSuffix}`,
-		meta.plotMode
-	);
-
-	// Rest of the forkActLine() workflow: carry the remaining line-local state
-	// to the fork before the original line is deleted.
-	await cloneDirectorNotes(input.actLineId, fork.id);
-	const forkSceneNumber = await getSceneNumberAtSequence(input.actLineId, forkSequence);
-	if (forkSceneNumber !== null) {
-		await cloneCharacterProfiles(input.actLineId, fork.id, forkSceneNumber);
-	}
-	await cloneInventory(input.actLineId, fork.id);
-	// The fork is a mirror copy of the local line: carry the act-plot file
-	// over like forkActLine() does, so opening the fork later doesn't
-	// regenerate it through the LLM. Interview forks skip this because they're
-	// meant to diverge; sync forks are not.
-	const actForFork = await getAct(meta.actId);
-	if (input.storyFolder && actForFork) {
-		await copyActPlotFileBetweenLines({
-			storyFolder: input.storyFolder,
-			actNumber: actForFork.actNumber,
-			sourceLineId: input.actLineId,
-			sourceIsMainLine: meta.isMainLine,
-			targetLineId: fork.id,
-			targetName: fork.name,
-		});
-	}
-	// Memory indices are desktop-only; guard exactly like the store's fork path.
-	if (input.storyId && isMemoryAvailable()) {
-		const config = getMemoryProviderConfig();
-		if (config) {
-			try {
-				const { Memory } = await import('$lib/features/memory');
-				const messageIds = await getMessageIdsUpToSequence(input.actLineId, forkSequence);
-				// The fork-point clone carries a new id; keep memory refs aligned.
-				const remappedIds = messageIds.map((id) => remappedMessageIds.get(id) ?? id);
-				await new Memory(config).copyMemoriesForFork(input.storyId, input.actLineId, fork.id, remappedIds);
-			} catch (err) {
-				await log.error('cloud-sync', 'Failed to copy memories for forked line', err);
-			}
-		}
-	}
-
-	// Yield: remove the original line wholesale (junction rows, premises,
-	// events, notes, profiles, inventory, metadata). deleteActLine also
-	// orphan-cleans message rows no longer referenced by any line — the fork's
-	// junction rows keep the local-branch messages alive, and the fork-point
-	// message's content survives in its clone.
-	await deleteActLine(input.actLineId);
-
-	// "Save incoming": the incoming lineage takes over the original line ID as
-	// an import of the incoming act line (insertSelectedActLineData semantics).
-	// The incoming metadata replaces the local meta, whose name survives,
-	// renamed, on the fork.
 	await insertActLineMeta({
 		id: input.incomingMeta.id,
 		actId: input.incomingMeta.actId,
@@ -211,10 +310,7 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 		plotMode: input.incomingMeta.plotMode,
 	});
 	await insertActLineEntries(incomingSorted.map((e) => ({ actLineId: input.actLineId, messageId: e.messageId, sequence: e.sequence })));
-	// Line-local incoming state: the delete above wiped the original line's
-	// rows, so the incoming rows below cannot collide. Message rows stay
-	// add-only (inserted earlier): they are shared with the fork, and
-	// overwriting them would corrupt the fork's view of the same rows.
+	// The delete wiped the original rows, so the incoming rows cannot collide.
 	await insertActLineEvents(input.incomingEvents ?? []);
 	await insertActLinePremises(input.incomingPremises ?? []);
 	for (const note of input.incomingNotes ?? []) {
@@ -224,7 +320,7 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 		await insertCharacterProfile(profile);
 	}
 
-	return { action: 'forked', forkActLineId: fork.id };
+	return forkNeeded ? { action: 'forked', forkActLineId: forkActLineId! } : { action: 'fast-forward' };
 }
 
 export type StoryMergeResult = 'new-story' | 'merged' | 'up-to-date';

@@ -373,37 +373,52 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 	// Regression for the primary "continue from another device" case: with
 	// 1-based sequences the boundary entry shares sequence === local length,
 	// which sequence-math tail selection re-inserts (primary-key violation).
-	it('local-stale merge fast-forwards by appending incoming messages', async () => {
+	it('local-stale merge fast-forwards by replacing the line with the incoming copy', async () => {
 		await seedLine(['m1', 'm2', 'm3']);
 		const result = await mergeIncomingActLine({
 			actLineId: 'line-1',
 			storyId: 'story-1',
-			incomingMeta: { id: 'line-1', actId: 'act-1', name: 'Main', isMainLine: true, createdAt: 1000, plotMode: 'guidance' },
+			incomingMeta: { id: 'line-1', actId: 'act-1', name: 'Main (remote)', isMainLine: true, createdAt: 1000, plotMode: 'guidance' },
 			incomingEntries: [
 				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
 				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
 				{ actLineId: 'line-1', messageId: 'm3', sequence: 3 },
 				{ actLineId: 'line-1', messageId: 'm6', sequence: 4 },
 			],
-			incomingMessages: [messageRow('m6', 'incoming content')],
+			// Real archives carry the full referenced message set: the delete
+			// orphan-cleanses the shared-prefix rows, so they are re-created from
+			// the archive (the add-only insert runs after the delete).
+			incomingMessages: [
+				messageRow('m1', 'content m1'),
+				messageRow('m2', 'content m2'),
+				messageRow('m3', 'content m3'),
+				messageRow('m6', 'incoming content'),
+			],
 			forkNameSuffix: '(local branch)',
 		});
 		expect(result.action).toBe('fast-forward');
 		const ids = (await getMessagesForLine('line-1')).map((m) => m.id);
 		expect(ids).toEqual(['m1', 'm2', 'm3', 'm6']);
+		// The shared-prefix rows survive with their archive content.
+		const m3 = (await getMessagesByIds(['m3']))[0];
+		expect(m3.content).toBe('content m3');
+		// Incoming metadata wins on the line.
+		const line1 = await getActLine('line-1');
+		expect(line1?.name).toBe('Main (remote)');
 	});
 
-	// WHY (tail-only import): fast-forward keeps the local line's shared-prefix
-	// state, so incoming line-local rows may only be added when anchored to
-	// messages the local line lacks. Rows on shared messages would duplicate
-	// existing state (or collide on the junction-style primary keys), and
-	// messageId-less creation markers already exist locally.
-	it('local-stale imports tail events/premises but never duplicates shared state', async () => {
+	// WHY (delete-and-import): after the state-subset check passes, the local
+	// copy contains nothing the incoming archive lacks, so the line is replaced
+	// wholesale by the incoming act line — including its line-local state.
+	// Notes/profiles now propagate on fast-forward (the wipe removes the local
+	// rows first, so importing the full set can't duplicate them).
+	it('local-stale fast-forwards importing the full incoming line-local state', async () => {
 		await seedLine(['m1', 'm2', 'm3']);
-		// Local shared-prefix state that must survive untouched.
+		// Local shared-prefix state that the incoming copy also carries — the
+		// subset check matches it by id, so no fork is needed.
 		await testDb.execute(
 			'INSERT INTO act_line_events (id, act_line_id, message_id, message_sequence, event, value, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
-			['evt-local-shared', 'line-1', 'm2', 2, 'act-phase-transition', 'rising', Date.now()]
+			['evt-shared', 'line-1', 'm2', 2, 'act-phase-transition', 'rising', 10]
 		);
 
 		const result = await mergeIncomingActLine({
@@ -416,65 +431,151 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 				{ actLineId: 'line-1', messageId: 'm3', sequence: 3 },
 				{ actLineId: 'line-1', messageId: 'm6', sequence: 4 },
 			],
-			incomingMessages: [messageRow('m6', 'incoming content')],
-			incomingEvents: [
-				{
-					id: 'evt-remote-shared',
-					actLineId: 'line-1',
-					messageId: 'm2',
-					messageSequence: 2,
-					event: 'act-phase-transition',
-					value: 'duplicate',
-					createdAt: 1,
-				},
-				{
-					id: 'evt-remote-creation',
-					actLineId: 'line-1',
-					messageId: null,
-					messageSequence: 0,
-					event: 'plot-generated',
-					value: null,
-					createdAt: 2,
-				},
-				{
-					id: 'evt-remote-tail',
-					actLineId: 'line-1',
-					messageId: 'm6',
-					messageSequence: 4,
-					event: 'plot-generated',
-					value: '4',
-					createdAt: 3,
-				},
+			incomingMessages: [
+				messageRow('m1', 'content m1'),
+				messageRow('m2', 'content m2'),
+				messageRow('m3', 'content m3'),
+				messageRow('m6', 'incoming content'),
 			],
-			incomingPremises: [
-				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
-				{ actLineId: 'line-1', messageId: 'm6', sequence: 4 },
+			incomingEvents: [
+				{ id: 'evt-shared', actLineId: 'line-1', messageId: 'm2', messageSequence: 2, event: 'act-phase-transition', value: 'rising', createdAt: 10 },
+				{ id: 'evt-remote-tail', actLineId: 'line-1', messageId: 'm6', messageSequence: 4, event: 'plot-generated', value: '4', createdAt: 20 },
+			],
+			incomingPremises: [{ actLineId: 'line-1', messageId: 'm6', sequence: 4 }],
+			incomingNotes: [
+				{ id: 'note-remote', actLineId: 'line-1', text: 'incoming note', isActive: true, effectiveFromScene: null, effectiveToScene: null, createdAt: 30 },
+			],
+			incomingProfiles: [
+				{
+					id: 'profile-remote',
+					actLineId: 'line-1',
+					sceneNumber: 1,
+					canonicalName: 'Bob',
+					preferredName: 'Bob',
+					aliases: [],
+					logline: 'side',
+					state: null,
+					goal: null,
+					relationships: null,
+					voice: null,
+					sceneDetails: '',
+					importance: 4,
+					createdAt: 40,
+					updatedAt: 40,
+				},
 			],
 			forkNameSuffix: '(local branch)',
 		});
 
 		expect(result.action).toBe('fast-forward');
 
-		// The local shared-prefix event stays; the incoming duplicate on m2 and
-		// the messageId-less marker are skipped; only the tail event anchored to
-		// the new message m6 lands.
-		const events = await testDb.select<{ id: string; event: string }[]>(
-			'SELECT id, event FROM act_line_events WHERE act_line_id = $1 ORDER BY id',
+		// The whole incoming line-local state lands on the line: the shared
+		// event (wiped with the delete, re-imported), the tail event, the tail
+		// premise, the note and the profile.
+		const events = await testDb.select<{ id: string }[]>(
+			'SELECT id FROM act_line_events WHERE act_line_id = $1 ORDER BY id',
 			['line-1']
 		);
-		const eventIds = events.map((e) => e.id);
-		expect(eventIds).toContain('evt-local-shared');
-		expect(eventIds).toContain('evt-remote-tail');
-		expect(eventIds).not.toContain('evt-remote-shared');
-		expect(eventIds).not.toContain('evt-remote-creation');
-		expect(events.map((e) => e.event).sort()).toEqual(['act-phase-transition', 'plot-generated']);
-
-		// Only the tail premise is imported; premises anchored to shared-prefix
-		// messages are skipped.
-		const premises = await testDb.select<{ message_id: string }[]>('SELECT message_id FROM act_line_premises WHERE act_line_id = $1', [
-			'line-1',
-		]);
+		expect(events.map((e) => e.id)).toEqual(['evt-remote-tail', 'evt-shared']);
+		const premises = await testDb.select<{ message_id: string }[]>(
+			'SELECT message_id FROM act_line_premises WHERE act_line_id = $1',
+			['line-1']
+		);
 		expect(premises.map((p) => p.message_id)).toEqual(['m6']);
+		const notes = await testDb.select<{ text: string }[]>('SELECT text FROM director_notes WHERE act_line_id = $1', ['line-1']);
+		expect(notes.map((n) => n.text)).toEqual(['incoming note']);
+		const profiles = await testDb.select<{ canonical_name: string }[]>(
+			'SELECT canonical_name FROM character_profiles WHERE act_line_id = $1',
+			['line-1']
+		);
+		expect(profiles.map((p) => p.canonical_name)).toEqual(['Bob']);
+	});
+
+	// WHY (state-subset upgrade rule): fast-forward erases the local copy, so it
+	// must only run when the incoming archive supersedes the local state. A note
+	// added locally after the last sync is invisible to compareLineages (it
+	// compares message chains only) — but it IS a deviation, so the line is
+	// escalated to fork-and-yield: the note survives on the fork and the main
+	// line becomes the incoming import.
+	it('local-stale lineage with local-extra line-local state escalates to fork-and-yield', async () => {
+		await seedLine(['m1', 'm2', 'm3']);
+		await testDb.execute(
+			'INSERT INTO director_notes (id, act_line_id, text, is_active, effective_from_scene, effective_to_scene, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+			['note-local-extra', 'line-1', 'state the incoming lacks', 1, null, null, Date.now()]
+		);
+
+		const result = await mergeIncomingActLine({
+			actLineId: 'line-1',
+			storyId: 'story-1',
+			incomingMeta: { id: 'line-1', actId: 'act-1', name: 'Main (remote)', isMainLine: true, createdAt: 1000, plotMode: 'guidance' },
+			incomingEntries: [
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm3', sequence: 3 },
+				{ actLineId: 'line-1', messageId: 'm6', sequence: 4 },
+			],
+			// Real archives carry the full referenced message set. The fork-point
+			// message m3 is replaced by a clone on the fork, so its original row is
+			// orphan-cleansed and must be re-created from the archive.
+			incomingMessages: [
+				messageRow('m1', 'content m1'),
+				messageRow('m2', 'content m2'),
+				messageRow('m3', 'content m3'),
+				messageRow('m6', 'incoming content'),
+			],
+			incomingNotes: [
+				{ id: 'note-remote', actLineId: 'line-1', text: 'incoming note', isActive: true, effectiveFromScene: null, effectiveToScene: null, createdAt: 50 },
+			],
+			forkNameSuffix: '(local branch)',
+		});
+
+		expect(result.action).toBe('forked');
+		const forkNotes = await testDb.select<{ text: string }[]>('SELECT text FROM director_notes WHERE act_line_id = $1', [
+			result.forkActLineId!,
+		]);
+		expect(forkNotes.map((n) => n.text)).toEqual(['state the incoming lacks']);
+		const lineNotes = await testDb.select<{ text: string }[]>('SELECT text FROM director_notes WHERE act_line_id = $1', ['line-1']);
+		expect(lineNotes.map((n) => n.text)).toEqual(['incoming note']);
+
+		// The main line carries the full incoming lineage.
+		const ids = (await getMessagesForLine('line-1')).map((m) => m.id);
+		expect(ids).toEqual(['m1', 'm2', 'm3', 'm6']);
+	});
+
+	// WHY (identical-lineage overlay): equal message chains mean neither side
+	// supersedes the other, so line-local state is unioned rather than
+	// replaced. The incoming-only note is imported; the existing local note is
+	// kept (not re-inserted, not overwritten); messages stay add-only.
+	it('identical lineage overlays incoming-only line-local state', async () => {
+		await seedLine(['m1', 'm2', 'm3']);
+		await testDb.execute(
+			'INSERT INTO director_notes (id, act_line_id, text, is_active, effective_from_scene, effective_to_scene, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+			['note-local', 'line-1', 'local note', 1, null, null, Date.now()]
+		);
+
+		const result = await mergeIncomingActLine({
+			actLineId: 'line-1',
+			storyId: 'story-1',
+			incomingMeta: { id: 'line-1', actId: 'act-1', name: 'Main', isMainLine: true, createdAt: 1000, plotMode: 'guidance' },
+			incomingEntries: [
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm3', sequence: 3 },
+			],
+			incomingMessages: [],
+			incomingNotes: [
+				{ id: 'note-local', actLineId: 'line-1', text: 'local note', isActive: true, effectiveFromScene: null, effectiveToScene: null, createdAt: 10 },
+				{ id: 'note-remote', actLineId: 'line-1', text: 'remote note', isActive: true, effectiveFromScene: null, effectiveToScene: null, createdAt: 20 },
+			],
+			forkNameSuffix: '(local branch)',
+		});
+
+		expect(result.action).toBe('merged');
+		const notes = await testDb.select<{ text: string }[]>('SELECT text FROM director_notes WHERE act_line_id = $1', ['line-1']);
+		expect(notes.map((n) => n.text).sort()).toEqual(['local note', 'remote note']);
+		// Messages untouched.
+		const m3 = (await getMessagesByIds(['m3']))[0];
+		expect(m3.content).toBe('content m3');
 	});
 
 	// WHY (add-only message rule): a message ID that exists locally is never

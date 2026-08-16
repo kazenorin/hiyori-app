@@ -64,9 +64,9 @@ Each act line's lineage is the chain of message IDs. `compareLineages(local, inc
 
 | Case           | Condition                            | Action                              |
 | -------------- | ------------------------------------ | ----------------------------------- |
-| `identical`    | same sequence                        | no-op                               |
+| `identical`    | same sequence                        | overlay incoming line-local state (no-op when nothing to import) |
 | `remote-stale` | incoming is a strict prefix of local | silent no-op                        |
-| `local-stale`  | local is a strict prefix of incoming | fast-forward (append incoming tail) |
+| `local-stale`  | local is a strict prefix of incoming | fast-forward (delete local copy, import incoming) |
 | `divergent`    | neither is a prefix of the other     | fork-and-yield                      |
 
 ### Fork-and-yield (divergent case)
@@ -87,7 +87,13 @@ Fork insertion happens **before** removing entries from the yielded line so shar
 
 ### Fast-forward (local-stale case)
 
-The incoming tail is appended to the local line. Line-local incoming state is imported tail-filtered: only events and premises anchored to messages the local line lacks are inserted (messageId-less creation markers are skipped — they already exist locally). Director notes and character profiles are not message-keyed, so they stay local to avoid duplicating the local copies.
+The local copy of the line is deleted via `deleteActLine()` and the incoming act line is imported wholesale onto the same line ID — the same delete-and-import the divergent case performs, minus the fork. Add-only message insertion runs **after** the delete, so rows referenced only by the deleted line are re-created from the archive; rows still referenced by another local line are untouched. All incoming line-local state (events, premises, director notes, character profiles) lands on the line.
+
+Fast-forward only runs when the incoming archive is a true superset: besides the message-chain prefix check, the local line's line-local state (events, premises, director notes, character profiles) must all exist in the incoming archive. `compareLineages` only sees message IDs, so a note added locally after the last sync is an invisible deviation — when the subset check fails, the merge **escalates to fork-and-yield** and the local state survives on the fork instead of being destroyed.
+
+### Identical lineage
+
+Equal message chains mean neither side supersedes the other, so incoming line-local state is unioned into the line by row identity (nothing is deleted or overwritten; messages stay add-only). A pull with nothing to import is a no-op.
 
 New stories absent locally are imported whole via `loadStoryOverwrite` — IDs are preserved deliberately; synced stories must never pass through the ID remapper (`loadStoryAsNew`/`regenerateIds`) or cross-device identity breaks.
 
@@ -119,7 +125,7 @@ Credentials are stored in `settings.cloudSync` (localStorage / settings persiste
 
 - Synced-story forks reuse `branchFromLine()`, so the fork's fork-point message is a clone with a new id (same as in-app forks); any external tooling that assumes the fork shares every message id with the original line will see one differing id at the fork point.
 - Story-folder files sync only alongside database changes: when a pull merges incoming messages, the archive's folder files are applied locally. Folder-file-only edits on one device are detected as dirty and pushed, but a receiving device applies them only on its next pull that also carries DB changes — protecting newer local file edits from stale archives.
-- Fast-forward merges import only tail events/premises; incoming director notes and character profiles are not imported (they aren't message-keyed, so importing them would duplicate the local copies) — local notes/profiles remain authoritative on the fast-forwarded line.
+- Fast-forward is gated by a state-subset check: any local line-local state the incoming archive lacks escalates the merge to fork-and-yield. Message *content* edits on the shared prefix are not compared — when rows are orphan-cleansed they are re-created from the archive's copy (rows shared with other local lines remain add-only).
 - Act lines created on another device are imported with their messages and junction entries only — their events, premises, director notes, and character profiles are not imported (the new-story path imports them in full). Known follow-up.
 - Sync is manual (Sync now / sidebar button); there is no background or automatic sync.
 - Deleting a story locally without "Also remove from cloud" leaves its archive and manifest entry in the cloud; the next sync on this device will pull it back. Use the delete-dialog checkbox to remove it permanently.
