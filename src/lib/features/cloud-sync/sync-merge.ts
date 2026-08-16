@@ -1,18 +1,24 @@
 import {
 	branchFromLine,
+	deleteActLine,
 	getActLine,
-	getNextSequence,
+	getMessageIdsUpToSequence,
 	getMessagesForLine,
+	getNextSequence,
+	getSceneNumberAtSequence,
 	insertActLineEntries,
 	insertActLineMeta,
-	removeActLineJunctionRows,
 	type ActLineMeta,
 } from '$lib/db/act-lines';
 import { getMessagesByIds, insertMessage, parseVariables, type Message } from '$lib/db/messages';
 import { getStory } from '$lib/db/stories';
 import { getAct, upsertAct, type Act } from '$lib/db/acts';
-import { getDatabase } from '$lib/db/database';
 import { getStoryFolderInfo } from '$lib/db/story-folders';
+import { cloneCharacterProfiles } from '$lib/db/character-profiles';
+import { cloneDirectorNotes } from '$lib/db/director-notes';
+import { cloneInventory } from '$lib/db/inventory';
+import { getMemoryProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
+import { log } from '$lib/logging/logger';
 import JSZip from 'jszip';
 import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
 import { loadStoryOverwrite, writeFilesFromZip } from '$lib/features/story-export-load/story-loader';
@@ -55,6 +61,7 @@ export type MergeAction = 'no-op' | 'fast-forward' | 'forked';
 
 export interface MergeIncomingInput {
 	actLineId: string;
+	storyId: string;
 	incomingEntries: { actLineId: string; messageId: string; sequence: number }[];
 	incomingMessages: Message[];
 	forkNameSuffix: string;
@@ -93,17 +100,18 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 	}
 
 	// Divergent: fork local first so message reference counts stay > 0, then
-	// yield the original act-line ID to the incoming lineage.
+	// yield the original act-line ID to the incoming lineage. The merge IS a
+	// fork of the conflicting line followed by a delete of the original —
+	// mirroring forkActLine()/deleteActLine() — so the local branch keeps all
+	// line-local state instead of hand-rolled SQL relocations.
 	const meta = await getActLine(input.actLineId);
 	if (!meta) throw new Error(`Act line ${input.actLineId} not found during merge`);
 
-	const db = getDatabase();
-
-	// Reuse the app's canonical forking logic: it clones the fork-point message
-	// (so later metadata writes don't pollute the yielded line) and carries
-	// premises and events over to the fork.
+	// branchFromLine clones the fork-point message (so later metadata writes
+	// don't pollute the yielded line) and carries junction entries, premises
+	// and events over to the fork.
 	const forkSequence = (await getNextSequence(input.actLineId)) - 1;
-	const { lineMeta: fork } = await branchFromLine(
+	const { lineMeta: fork, remappedMessageIds } = await branchFromLine(
 		crypto.randomUUID(),
 		input.actLineId,
 		forkSequence,
@@ -111,16 +119,48 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 		`${meta.name} ${input.forkNameSuffix}`,
 		meta.plotMode
 	);
-	// Junction rows only: the truncation cleanup in removeMessagesFromActLine
-	// would cascade-delete this line's events and scene character profiles,
-	// which must survive the yield on the forked local branch.
-	await removeActLineJunctionRows(input.actLineId, localIds);
-	// branchFromLine copied the events into the fork with new ids; drop the
-	// originals so they don't stay attached to the now-incoming lineage.
-	await db.execute('DELETE FROM act_line_events WHERE act_line_id = $1', [input.actLineId]);
-	// branchFromLine does not carry scene character profiles across, so
-	// relocate them to the fork with a plain act-line-id rewrite.
-	await db.execute('UPDATE character_profiles SET act_line_id = $1 WHERE act_line_id = $2', [fork.id, input.actLineId]);
+
+	// Rest of the forkActLine() workflow: carry the remaining line-local state
+	// to the fork before the original line is deleted.
+	await cloneDirectorNotes(input.actLineId, fork.id);
+	const forkSceneNumber = await getSceneNumberAtSequence(input.actLineId, forkSequence);
+	if (forkSceneNumber !== null) {
+		await cloneCharacterProfiles(input.actLineId, fork.id, forkSceneNumber);
+	}
+	await cloneInventory(input.actLineId, fork.id);
+	// Memory indices are desktop-only; guard exactly like the store's fork path.
+	if (input.storyId && isMemoryAvailable()) {
+		const config = getMemoryProviderConfig();
+		if (config) {
+			try {
+				const { Memory } = await import('$lib/features/memory');
+				const messageIds = await getMessageIdsUpToSequence(input.actLineId, forkSequence);
+				// The fork-point clone carries a new id; keep memory refs aligned.
+				const remappedIds = messageIds.map((id) => remappedMessageIds.get(id) ?? id);
+				await new Memory(config).copyMemoriesForFork(input.storyId, input.actLineId, fork.id, remappedIds);
+			} catch (err) {
+				await log.error('cloud-sync', 'Failed to copy memories for forked line', err);
+			}
+		}
+	}
+
+	// Yield: remove the original line wholesale (junction rows, premises,
+	// events, notes, profiles, inventory, metadata). deleteActLine also
+	// orphan-cleans message rows no longer referenced by any line — the fork's
+	// junction rows keep the local-branch messages alive, and the fork-point
+	// message's content survives in its clone.
+	await deleteActLine(input.actLineId);
+
+	// The incoming lineage takes over the original line ID, so its metadata
+	// is recreated (deleteActLine removed it) before linking the incoming entries.
+	await insertActLineMeta({
+		id: meta.id,
+		actId: meta.actId,
+		name: meta.name,
+		isMainLine: meta.isMainLine,
+		createdAt: meta.createdAt,
+		plotMode: meta.plotMode,
+	});
 	await insertActLineEntries(
 		incomingSorted.map((e) => ({ actLineId: input.actLineId, messageId: e.messageId, sequence: e.sequence }))
 	);
@@ -223,6 +263,7 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 
 		const result = await mergeIncomingActLine({
 			actLineId,
+			storyId: data.story.id,
 			incomingEntries: entries,
 			incomingMessages,
 			forkNameSuffix: '(local branch)',

@@ -78,9 +78,9 @@ Incoming progress takes over the original act-line ID (so references, UI selecti
 
 Steps in `mergeIncomingActLine`:
 1. Incoming-only messages (`m5`, `m6`) are inserted (add-only rule skips `m1`, `m2`).
-2. A new fork act line is created via the app's canonical `branchFromLine()`: junction entries are copied with their original sequences, the fork-point message is cloned (new id, same content — matching the in-app fork convention so metadata writes on either line can't pollute the other), and premises and events are carried over.
-3. The yielded line's junction rows, leftover events, and scene character profiles are detached/relocated (profiles are moved to the fork with an act-line-id rewrite, since `branchFromLine` does not copy them).
-4. The incoming entries (`m1, m2, m5, m6`) are linked to the original act line.
+2. The local line is forked with the app's canonical `branchFromLine()`: junction entries are copied with their original sequences, the fork-point message is cloned (new id, same content — matching in-app forks so metadata writes on either line can't pollute the other), and premises and events are carried over. The rest of the in-app `forkActLine()` workflow then runs: director notes, character profiles (up to the fork scene) and inventory are cloned onto the fork; on desktop, memory indices are copied too (same `isMemoryAvailable()` guard as in-app forks).
+3. The original line is deleted wholesale with `deleteActLine()` — junction rows, premises, events, notes, profiles, inventory and metadata. Message rows no longer referenced by any line are orphan-cleansed; the fork's junction rows keep the local-branch messages alive (and the fork-point message's content survives in its clone).
+4. The original line's metadata is recreated under the same ID and the incoming entries (`m1, m2, m5, m6`) are linked to it — references, UI selection and downstream acts keep pointing at the canonical line.
 
 Fork insertion happens **before** removing entries from the yielded line so shared messages are never momentarily orphaned.
 

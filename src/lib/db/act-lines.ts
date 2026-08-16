@@ -619,19 +619,6 @@ export async function removeMessagesFromActLine(actLineId: string, messageIds: s
 	return messageIds;
 }
 
-/**
- * Deletes only the junction rows for the given messages on a line, with no
- * truncation cascade (events and scene character profiles are preserved) and
- * no orphaned-message cleanup. Used by cloud-sync fork-and-yield, where the
- * same messages stay referenced by the fork line.
- */
-export async function removeActLineJunctionRows(actLineId: string, messageIds: string[]): Promise<void> {
-	if (messageIds.length === 0) return;
-	const db = getDatabase();
-	const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(', ');
-	await db.execute(`DELETE FROM act_lines WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [actLineId, ...messageIds]);
-}
-
 export async function getNextSequence(actLineId: string): Promise<number> {
 	const db = getDatabase();
 	const rows = await db.select<{ max: number | null }[]>('SELECT MAX(sequence) as max FROM act_lines WHERE act_line_id = $1', [actLineId]);

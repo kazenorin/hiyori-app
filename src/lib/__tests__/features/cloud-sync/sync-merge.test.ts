@@ -25,7 +25,7 @@ import { createTestDatabase } from '../../helpers/test-database';
 import { runMigrations } from '$lib/db/migrations';
 import * as stories from '$lib/db/stories';
 import * as acts from '$lib/db/acts';
-import { createActLine, getMessagesForLine, insertActLineEntries } from '$lib/db/act-lines';
+import { createActLine, getActLine, getMessagesForLine, insertActLineEntries } from '$lib/db/act-lines';
 import { insertMessage, getMessagesByIds, type Message } from '$lib/db/messages';
 import { compareLineages, mergeIncomingActLine } from '$lib/features/cloud-sync/sync-merge';
 
@@ -113,9 +113,28 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 			'INSERT INTO act_line_premises (act_line_id, message_id, sequence) VALUES ($1, $2, $3)',
 			['line-1', 'm1', 1]
 		);
+		// Line-local state follows the forkActLine() workflow: director notes,
+		// character profiles and inventory are cloned to the fork before the
+		// original line is deleted. Give m2 a scene number so the profile
+		// clone (which is scene-bound) has a fork scene to reference.
+		await testDb.execute('UPDATE messages SET scene_number = 1 WHERE id = $1', ['m2']);
+		await testDb.execute(
+			'INSERT INTO director_notes (id, act_line_id, text, is_active, effective_from_scene, effective_to_scene, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+			['note-1', 'line-1', 'keep the tone', 1, null, null, Date.now()]
+		);
+		await testDb.execute(
+			`INSERT INTO character_profiles (id, act_line_id, scene_number, canonical_name, preferred_name, aliases, logline, state, goal, relationships, voice, scene_details, importance, created_at, updated_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
+			['profile-1', 'line-1', 1, 'Alice', 'Alice', '[]', 'hero', 'ok', 'learn the truth', '', '', '', 4, Date.now(), Date.now()]
+		);
+		await testDb.execute(
+			'INSERT INTO inventory (id, story_id, act_line_id, message_id, scene_number, character_canonical_name, item_name, event_type, category, equip_status, description, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
+			['inv-1', 'story-1', 'line-1', 'm2', 1, 'Alice', 'Key', 'acquired', 'item', 'carried', null, '2024-01-01 00:00:00']
+		);
 
 		const result = await mergeIncomingActLine({
 			actLineId: 'line-1',
+			storyId: 'story-1',
 			incomingEntries: [
 				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
 				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
@@ -128,9 +147,13 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 
 		expect(result.action).toBe('forked');
 
-		// The original act line now carries the incoming lineage.
+		// The original act line now carries the incoming lineage, with its
+		// metadata recreated under the same ID (deleteActLine removed it).
 		const originalIds = (await getMessagesForLine('line-1')).map((m) => m.id);
 		expect(originalIds).toEqual(['m1', 'm2', 'm3', 'm6']);
+		const yieldedMeta = await getActLine('line-1');
+		expect(yieldedMeta?.name).toBe('Main');
+		expect(yieldedMeta?.isMainLine).toBe(true);
 
 		// The local progress survives as a new act line. Reusing branchFromLine
 		// means the fork-point message (m5) is CLONED — same content, new id —
@@ -168,15 +191,44 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		);
 		expect(forkPremises.map((r) => r.message_id)).toEqual(['m1']);
 
-		// WHY: reference-count protection — no message row may be deleted by a merge.
+		// Director notes, character profiles and inventory follow the fork —
+		// the workflow of forkActLine(): cloned to the fork, and the delete of
+		// the original line removes them from the yielded lineage entirely.
+		const forkNotes = await testDb.select<{ text: string }[]>('SELECT text FROM director_notes WHERE act_line_id = $1', [
+			result.forkActLineId!,
+		]);
+		expect(forkNotes.map((r) => r.text)).toEqual(['keep the tone']);
+		const yieldedNotes = await testDb.select('SELECT id FROM director_notes WHERE act_line_id = $1', ['line-1']);
+		expect(yieldedNotes).toHaveLength(0);
+
+		const forkProfiles = await testDb.select<{ canonical_name: string }[]>(
+			'SELECT canonical_name FROM character_profiles WHERE act_line_id = $1',
+			[result.forkActLineId!]
+		);
+		expect(forkProfiles.map((r) => r.canonical_name)).toEqual(['Alice']);
+		const yieldedProfiles = await testDb.select('SELECT id FROM character_profiles WHERE act_line_id = $1', ['line-1']);
+		expect(yieldedProfiles).toHaveLength(0);
+
+		const forkInventory = await testDb.select<{ item_name: string }[]>('SELECT item_name FROM inventory WHERE act_line_id = $1', [
+			result.forkActLineId!,
+		]);
+		expect(forkInventory.map((r) => r.item_name)).toEqual(['Key']);
+		const yieldedInventory = await testDb.select('SELECT id FROM inventory WHERE act_line_id = $1', ['line-1']);
+		expect(yieldedInventory).toHaveLength(0);
+
+		// WHY: reference-count protection — messages survive only while some
+		// line or premises reference them. The fork references m1-m4 and a
+		// clone of m5, so the original m5 is orphan-cleansed together with the
+		// delete of the yielded line (its content survives in the clone).
 		const allMessages = await getMessagesByIds(['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
-		expect(allMessages).toHaveLength(6);
+		expect(allMessages).toHaveLength(5);
 	});
 
 	it('remote-stale merge is a no-op', async () => {
 		await seedLine(['m1', 'm2', 'm3', 'm4', 'm5']);
 		const result = await mergeIncomingActLine({
 			actLineId: 'line-1',
+			storyId: 'story-1',
 			incomingEntries: [
 				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
 				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
@@ -195,6 +247,7 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		await seedLine(['m1', 'm2', 'm3']);
 		const result = await mergeIncomingActLine({
 			actLineId: 'line-1',
+			storyId: 'story-1',
 			incomingEntries: [
 				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
 				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
@@ -215,6 +268,7 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		await seedLine(['m1', 'm2', 'm3']);
 		const result = await mergeIncomingActLine({
 			actLineId: 'line-1',
+			storyId: 'story-1',
 			incomingEntries: [
 				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
 				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
