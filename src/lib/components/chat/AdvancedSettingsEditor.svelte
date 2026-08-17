@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
 	import { t } from '$lib/i18n';
 	import type { LanguageModelCallOptions } from 'ai';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
@@ -59,7 +60,8 @@
 		if (frequencyPenaltyEnabled) cs.frequencyPenalty = frequencyPenalty;
 		// 'provider-default' means no override, so it is not persisted
 		if (reasoningEffort !== 'provider-default') cs.reasoning = reasoningEffort;
-		onValueChange?.(Object.keys(cs).length > 0 ? cs : undefined);
+		// untrack: the parent recreates the callback prop on re-render, which would re-trigger this effect
+		untrack(() => onValueChange?.(Object.keys(cs).length > 0 ? cs : undefined));
 	});
 </script>
 

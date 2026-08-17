@@ -311,5 +311,18 @@ describe('settings', () => {
 			const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
 			expect(stored.roleCallSettings.reviewer).toEqual({ reasoning: 'high' });
 		});
+
+		it('equal-value writes keep the same reference so reactive readers are not re-triggered', async () => {
+			const mod = await setup();
+			mod.setRoleCallSettings('main', {});
+			const before = mod.getRoleCallSettings('main');
+			mod.setRoleCallSettings('main', {});
+			expect(mod.getRoleCallSettings('main')).toBe(before);
+
+			mod.setRoleCallSettings('main', { temperature: 0.5 });
+			const withTemp = mod.getRoleCallSettings('main');
+			mod.setRoleCallSettings('main', { temperature: 0.5 });
+			expect(mod.getRoleCallSettings('main')).toBe(withTemp);
+		});
 	});
 });

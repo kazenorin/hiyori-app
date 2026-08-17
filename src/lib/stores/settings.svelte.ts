@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { omitBy } from 'lodash-es';
+import { isEqual, omitBy } from 'lodash-es';
 import { getDatabase } from '$lib/db/database';
 import { DEFAULT_NAME_QUOTAS, type NameQuotaConfig } from '$lib/features/name-suggestion/quota';
 import { fs } from '$lib/fs/file-system';
@@ -370,9 +370,13 @@ export function getRoleCallSettings(role: string): LanguageModelCallOptions | un
 
 /** Pass `undefined` to remove the override (role falls back to its provider's settings) */
 export function setRoleCallSettings(role: string, callSettings: LanguageModelCallOptions | undefined): void {
+	const current = settings.roleCallSettings[role];
 	if (callSettings === undefined) {
+		if (current === undefined) return;
 		delete settings.roleCallSettings[role];
 	} else {
+		// Skip no-op writes: a fresh reference would re-trigger reactive readers
+		if (isEqual(current, callSettings)) return;
 		settings.roleCallSettings[role] = callSettings;
 	}
 	persist();
