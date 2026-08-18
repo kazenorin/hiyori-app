@@ -302,6 +302,8 @@
 	}
 
 	function handleKeydown(e: KeyboardEvent) {
+		// On phones, Enter inserts a newline instead of sending; use the Send button.
+		if (mobileFeatures.isPhone) return;
 		if (e.key === 'Enter' && !e.shiftKey) {
 			e.preventDefault();
 			handleSubmit();

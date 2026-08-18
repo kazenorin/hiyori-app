@@ -233,6 +233,8 @@
 		"resetConfiguration": "Reset Configuration",
 		"resetConfigurationDescription": "Remove all configuration files and restore settings to their defaults. Stories are not affected.",
 		"resetConfigurationWarning": "This will delete all customized prompts, locale strings, and settings. Story data will be preserved. This cannot be undone.",
+		"export": "Export",
+		"import": "Import",
 		"gameData": "Game Data",
 		"gameDataDescription": "Your stories, messages, and databases. Does not include configuration.",
 		"exportGameData": "Export Game Data",
@@ -742,7 +744,7 @@
 	},
 	"cloudSync": {
 		"title": "Cloud Sync",
-		"description": "Sync your stories across devices using your own S3-compatible or WebDAV storage.",
+		"description": "Sync your stories across devices using your own S3-compatible or WebDAV storage. Sync never removes local stories, acts, or act lines, but may overwrite story configuration.",
 		"enabled": "Enable cloud sync",
 		"backend": "Storage type",
 		"backendS3": "S3-compatible (R2, B2, MinIO…)",
@@ -755,7 +757,7 @@
 		"s3SecretAccessKey": "Secret access key",
 		"webdavUrl": "Server URL",
 		"webdavUsername": "Username",
-		"webdavPassword": "Password (app password recommended)",
+		"webdavPassword": "Password",
 		"testConnection": "Test connection",
 		"connectionOk": "Connection successful",
 		"syncNow": "Sync now",
@@ -766,6 +768,8 @@
 		"reportPulledNew": "Downloaded new story: {{name}}",
 		"reportMerged": "Merged incoming changes: {{name}}",
 		"reportSkipped": "Up to date: {{name}}",
-		"unconfigured": "Configure storage credentials to enable sync."
+		"unconfigured": "Configure storage credentials to enable sync.",
+		"corsWarning": "Web app mode: your server must allow CORS requests from this app's origin, or sync will fail.",
+		"insecureTransportWarning": "Insecure connection: this URL uses plain HTTP and is not on your local network. Credentials may be intercepted."
 	}
 }

@@ -608,10 +608,10 @@
 							disabled={gameIO.isExporting}
 							onclick={handleExportGameData}
 						>
-							{gameIO.isExporting ? '...' : t('settings.exportGameData')}
+							{gameIO.isExporting ? '...' : t('settings.export')}
 						</button>
 						<label class="btn preset-outlined cursor-pointer text-xs px-3 py-1 min-h-9">
-							{gameIO.isImporting ? '...' : t('settings.importGameData')}
+							{gameIO.isImporting ? '...' : t('settings.import')}
 							<input type="file" accept=".zip" class="sr-only" disabled={gameIO.isImporting} onchange={handleImportGameData} />
 						</label>
 					</div>
@@ -633,10 +633,10 @@
 							disabled={configIO.isExporting}
 							onclick={handleExportConfigData}
 						>
-							{configIO.isExporting ? '...' : t('settings.exportConfigData')}
+							{configIO.isExporting ? '...' : t('settings.export')}
 						</button>
 						<label class="btn preset-outlined cursor-pointer text-xs px-3 py-1 min-h-9">
-							{configIO.isImporting ? '...' : t('settings.importConfigData')}
+							{configIO.isImporting ? '...' : t('settings.import')}
 							<input type="file" accept=".zip" class="sr-only" disabled={configIO.isImporting} onchange={handleImportConfigData} />
 						</label>
 					</div>

@@ -5,6 +5,8 @@
 	import { settings, updateSettings, type Settings } from '$lib/stores/settings.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
+	import { isTauriSync } from '$lib/runtime';
+	import { getUrlWarnings } from '$lib/utils/url-security';
 	import {
 		getCloudSyncStatus,
 		getCloudSyncError,
@@ -68,6 +70,8 @@
 	const sync = $derived(currentSync());
 	const s3 = $derived(sync.s3 ?? EMPTY_S3);
 	const webdav = $derived(sync.webdav ?? EMPTY_WEBDAV);
+	const s3Warnings = $derived(getUrlWarnings(s3.endpoint, !isTauriSync()));
+	const webdavWarnings = $derived(getUrlWarnings(webdav.url, !isTauriSync()));
 </script>
 
 <svelte:head>
@@ -120,11 +124,17 @@
 						<input
 							class="input mt-1"
 							type="url"
-							placeholder="https://<account>.r2.cloudflarestorage.com"
+							placeholder="e.g. https://<account>.r2.cloudflarestorage.com"
 							value={s3.endpoint}
 							onchange={(e) => updateS3({ endpoint: (e.currentTarget as HTMLInputElement).value })}
 						/>
 					</label>
+					{#if s3Warnings.cors}
+						<p class="text-xs text-warning-500">{t('cloudSync.corsWarning')}</p>
+					{/if}
+					{#if s3Warnings.insecure}
+						<p class="text-xs text-warning-500">{t('cloudSync.insecureTransportWarning')}</p>
+					{/if}
 					<label class="block">
 						<span class="text-sm font-medium text-surface-700-300">{t('cloudSync.s3Region')}</span>
 						<input
@@ -171,11 +181,17 @@
 						<input
 							class="input mt-1"
 							type="url"
-							placeholder="https://cloud.example.com/remote.php/dav/files/user/Hiyori"
+							placeholder="e.g. http://192.168.1.100:5005/home/user/hiyori"
 							value={webdav.url}
 							onchange={(e) => updateWebdav({ url: (e.currentTarget as HTMLInputElement).value })}
 						/>
 					</label>
+					{#if webdavWarnings.cors}
+						<p class="text-xs text-warning-500">{t('cloudSync.corsWarning')}</p>
+					{/if}
+					{#if webdavWarnings.insecure}
+						<p class="text-xs text-warning-500">{t('cloudSync.insecureTransportWarning')}</p>
+					{/if}
 					<label class="block">
 						<span class="text-sm font-medium text-surface-700-300">{t('cloudSync.webdavUsername')}</span>
 						<input

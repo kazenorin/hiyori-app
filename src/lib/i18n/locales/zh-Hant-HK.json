@@ -233,6 +233,8 @@
 		"resetConfiguration": "重設設定",
 		"resetConfigurationDescription": "移除所有設定檔並將設定還原為預設值。故事資料不受影響。",
 		"resetConfigurationWarning": "這將刪除所有自訂的提示詞、語言字串和設定。故事資料將會保留。此操作無法復原。",
+		"export": "匯出",
+		"import": "匯入",
 		"gameData": "遊戲資料",
 		"gameDataDescription": "你的故事、訊息和資料庫。不包含設定。",
 		"exportGameData": "匯出遊戲資料",
@@ -742,7 +744,7 @@
 	},
 	"cloudSync": {
 		"title": "雲端同步",
-		"description": "使用你自己的 S3 相容或 WebDAV 儲存空間，在各裝置間同步故事。",
+		"description": "使用你自己的 S3 相容或 WebDAV 儲存空間，在各裝置間同步故事。同步不會移除本機的故事、章節或故事線，但可能會覆寫故事設定。",
 		"enabled": "啟用雲端同步",
 		"backend": "儲存類型",
 		"backendS3": "S3 相容（R2、B2、MinIO…）",
@@ -755,7 +757,7 @@
 		"s3SecretAccessKey": "Secret access key",
 		"webdavUrl": "伺服器 URL",
 		"webdavUsername": "使用者名稱",
-		"webdavPassword": "密碼（建議使用應用程式密碼）",
+		"webdavPassword": "密碼",
 		"testConnection": "測試連線",
 		"connectionOk": "連線成功",
 		"syncNow": "立即同步",
@@ -766,6 +768,8 @@
 		"reportPulledNew": "已下載新故事：{{name}}",
 		"reportMerged": "已合併遠端變更：{{name}}",
 		"reportSkipped": "已是最新：{{name}}",
-		"unconfigured": "請設定儲存空間憑證以啟用同步。"
+		"unconfigured": "請設定儲存空間憑證以啟用同步。",
+		"corsWarning": "網頁版模式：你的伺服器必須允許來自此應用程式來源的 CORS 請求，否則同步會失敗。",
+		"insecureTransportWarning": "不安全的連線：此 URL 使用未加密的 HTTP 且不在你的區域網路內。憑證可能會被攔截。"
 	}
 }

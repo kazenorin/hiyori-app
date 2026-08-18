@@ -93,12 +93,8 @@
 			{placeholder}
 			disabled={isDisabled}
 			onkeydown={(e) => {
-				if (e.key === 'Enter' && !e.shiftKey) {
-					e.preventDefault();
-					handleSubmit();
-				} else {
-					onKeydown(e);
-				}
+				// Enter inserts a newline on mobile; sending is done via the Send button.
+				if (e.key !== 'Enter') onKeydown(e);
 			}}
 			aria-label={placeholder}
 		></textarea>

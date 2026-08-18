@@ -417,7 +417,7 @@
 		{t('sidebar.settings')}
 	</a>
 	<button
-		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500 w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
+		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500 w-full text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 		type="button"
 		onclick={handleExportStory}
 		disabled={!getActiveStoryId() || exportingStory}
@@ -426,7 +426,7 @@
 	</button>
 	{#if isCloudSyncConfigured()}
 		<button
-			class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500 w-full text-left disabled:opacity-50 disabled:cursor-not-allowed"
+			class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500 w-full text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 			type="button"
 			onclick={handleCloudSync}
 			disabled={!getActiveStoryId() || getCloudSyncStatus() === 'syncing'}
