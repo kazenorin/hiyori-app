@@ -13,7 +13,7 @@ const ARCHIVE_DIR = 'stories';
 export interface SyncReportEntry {
 	storyId: string;
 	storyName: string;
-	action: 'skipped' | 'pushed' | 'pulled-new' | 'merged' | 'up-to-date';
+	action: 'skipped' | 'pushed' | 'pulled-new' | 'merged' | 'up-to-date' | 'removed';
 }
 
 export interface SyncReport {
@@ -71,7 +71,12 @@ export async function syncNow(backend: SyncBackend, options: SyncOptions = {}): 
 
 	const pullCandidates = Object.entries(remote.stories).filter(([storyId]) => !excluded.has(storyId));
 	const pushCandidates = localStories.filter((story) => !excluded.has(story.id));
-	const progress: SyncProgress = { total: pullCandidates.length + pushCandidates.length, done: 0, current: '' };
+	const removalCandidates = Object.entries(remote.stories).filter(([storyId]) => excluded.has(storyId));
+	const progress: SyncProgress = {
+		total: pullCandidates.length + pushCandidates.length + removalCandidates.length,
+		done: 0,
+		current: '',
+	};
 	options.onProgress?.({ ...progress });
 
 	// Pull pass: remote entries that differ from local state.
@@ -133,10 +138,28 @@ export async function syncNow(backend: SyncBackend, options: SyncOptions = {}): 
 		}
 	}
 
-	// Carry over remote entries for excluded stories so other devices keep
-	// seeing them; dropping them from the manifest would orphan the archives.
+	// Removal pass: excluding a story from sync also removes it from cloud
+	// storage. Backend deletes tolerate 404, so already-removed archives are fine.
+	const removedIds = new Set<string>();
+	for (const [storyId, entry] of removalCandidates) {
+		progress.current = entry.name;
+		options.onProgress?.({ ...progress });
+		try {
+			await backend.delete(`${ARCHIVE_DIR}/${storyId}.hiyori.zip`);
+			removedIds.add(storyId);
+			report.entries.push({ storyId, storyName: entry.name, action: 'removed' });
+		} catch (err) {
+			report.errors.push(`Removal failed for "${entry.name}": ${err}`);
+		} finally {
+			progress.done++;
+			options.onProgress?.({ ...progress });
+		}
+	}
+
+	// Carry over entries whose removal failed so the archive stays discoverable
+	// and the removal is retried on the next sync.
 	for (const [storyId, entry] of Object.entries(remote.stories)) {
-		if (excluded.has(storyId) && !manifest.stories[storyId]) {
+		if (excluded.has(storyId) && !removedIds.has(storyId) && !manifest.stories[storyId]) {
 			manifest.stories[storyId] = entry;
 		}
 	}

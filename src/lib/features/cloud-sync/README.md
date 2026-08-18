@@ -51,7 +51,7 @@ Dirty detection: local hash = `computeContentHash(JSON.stringify(exportData), st
 3. **Push pass**: for each local story whose hash differs from the (post-pull) manifest, build and upload the archive.
 4. Upload the merged manifest last.
 
-Stories listed in `settings.cloudSync.excludedStoryIds` are skipped in both passes (opt-out; new stories sync by default). Their remote manifest entries are carried over into the rewritten manifest so other devices keep seeing them — dropping the entries would orphan the archives. `syncNow()` reports progress per story via an optional `onProgress` callback (`CloudSyncOverlay` displays it).
+Stories listed in `settings.cloudSync.excludedStoryIds` are skipped in both pull and push passes (opt-out; new stories sync by default) and removed from cloud storage in a removal pass — exclusion means "not in the cloud". If a removal fails, the story's manifest entry is carried over so the removal is retried on the next sync. Conversely, deleting a story with "Also remove from cloud" adds its id to `excludedStoryIds` so another device pushing it cannot resurrect it locally. `syncNow()` reports progress per story via an optional `onProgress` callback (`CloudSyncOverlay` displays it).
 
 `removeStoryFromCloud()` deletes the archive object and its manifest entry.
 
@@ -131,4 +131,4 @@ Credentials are stored in `settings.cloudSync` (localStorage / settings persiste
 - Fast-forward is gated by a state-subset check: any local line-local state the incoming archive lacks escalates the merge to fork-and-yield. Message *content* edits on the shared prefix are not compared — when rows are orphan-cleansed they are re-created from the archive's copy (rows shared with other local lines remain add-only).
 - Act lines created on another device are imported with their messages and junction entries only — their events, premises, director notes, and character profiles are not imported (the new-story path imports them in full). Known follow-up.
 - Sync is manual (Sync now / sidebar button); there is no background or automatic sync.
-- Deleting a story locally without "Also remove from cloud" leaves its archive and manifest entry in the cloud; the next sync on this device will pull it back. Use the delete-dialog checkbox to remove it permanently.
+- Deleting a story locally without "Also remove from cloud" leaves its archive and manifest entry in the cloud; the next sync on this device will pull it back. Use the delete-dialog checkbox to remove it permanently — it also excludes the story id from future syncs, so another device cannot resurrect it here.

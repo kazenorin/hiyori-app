@@ -93,6 +93,7 @@
 		merged: 'cloudSync.reportMerged',
 		skipped: 'cloudSync.reportSkipped',
 		'up-to-date': 'cloudSync.reportSkipped',
+		removed: 'cloudSync.reportRemoved',
 	};
 
 	const sync = $derived(currentSync());
@@ -321,6 +322,7 @@
 							<p class="text-sm text-surface-500">{t('cloudSync.noStories')}</p>
 						{/each}
 					</div>
+					<p class="text-xs text-surface-500">{t('cloudSync.storiesExclusionHint')}</p>
 				</div>
 			</Card>
 		{/if}

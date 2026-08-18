@@ -26,7 +26,7 @@
 		getIsActive as getIsWorldBuilderActive,
 	} from '$lib/features/world-builder/world-builder.svelte';
 	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
-	import { removeStoryFromCloudById } from '$lib/features/cloud-sync/cloud-sync.svelte';
+	import { removeStoryFromCloudById, excludeStoryFromSync } from '$lib/features/cloud-sync/cloud-sync.svelte';
 	import { createBackendFromSettings } from '$lib/features/cloud-sync/backend-factory';
 	import CloudSyncOverlay from '$lib/features/cloud-sync/CloudSyncOverlay.svelte';
 	import { t } from '$lib/i18n';
@@ -231,6 +231,9 @@
 				await deleteStory(id, removeFolder);
 				clearMessages();
 				if (alsoFromCloud) {
+					// Exclude from future syncs even if the removal below fails, so a
+					// later pull from another device can't resurrect the story here.
+					await excludeStoryFromSync(id);
 					try {
 						await removeStoryFromCloudById(id);
 					} catch (err) {

@@ -1,4 +1,4 @@
-import { getSettings } from '$lib/stores/settings.svelte';
+import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
 import { createBackendFromSettings } from './backend-factory';
 import { syncNow, removeStoryFromCloud, type SyncReport, type SyncProgress } from './sync-engine';
 import { log } from '$lib/logging/logger';
@@ -75,4 +75,16 @@ export async function removeStoryFromCloudById(storyId: string): Promise<void> {
 	const backend = createBackendFromSettings(getSettings());
 	if (!backend) return;
 	await removeStoryFromCloud(backend, storyId);
+}
+
+/**
+ * Persistently exclude a story from future syncs (e.g. after deleting it with
+ * "also remove from cloud") so another device pushing it won't resurrect it here.
+ */
+export async function excludeStoryFromSync(storyId: string): Promise<void> {
+	const sync = getSettings().cloudSync;
+	if (!sync || sync.excludedStoryIds?.includes(storyId)) return;
+	await updateSettings({
+		cloudSync: { ...sync, excludedStoryIds: [...(sync.excludedStoryIds ?? []), storyId] },
+	});
 }

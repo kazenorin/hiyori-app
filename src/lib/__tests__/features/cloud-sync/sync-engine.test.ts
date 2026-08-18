@@ -236,17 +236,37 @@ describe('syncNow story exclusion', () => {
 		expect(report.errors).toEqual([]);
 	});
 
-	// WHY: other devices read the manifest to discover stories; dropping excluded
-	// entries would orphan their archives and hide them from every other device.
-	it('keeps excluded stories in the rewritten manifest', async () => {
+	// WHY: exclusion means "not in the cloud" — leaving archives behind would
+	// keep syncing them to other devices against the user's opt-out.
+	it('removes excluded stories from cloud storage', async () => {
 		const backend = excludedBackend();
 
-		await syncNow(backend, { excludedStoryIds: ['s2', 's3'] });
+		const report = await syncNow(backend, { excludedStoryIds: ['s2', 's3'] });
+
+		expect(backend.delete).toHaveBeenCalledWith('stories/s2.hiyori.zip');
+		expect(backend.delete).toHaveBeenCalledWith('stories/s3.hiyori.zip');
+		const uploaded = JSON.parse(new TextDecoder().decode(backend.store[MANIFEST_PATH]));
+		expect(uploaded.stories.s2).toBeUndefined();
+		expect(uploaded.stories.s3).toBeUndefined();
+		expect(report.entries.filter((e) => e.action === 'removed').map((e) => e.storyId).sort()).toEqual([
+			's2',
+			's3',
+		]);
+	});
+
+	// WHY: a failed removal must keep the manifest entry — dropping it would
+	// leave the archive invisible yet still present, with no retry on next sync.
+	it('keeps the manifest entry when removal fails', async () => {
+		const backend = excludedBackend();
+		(backend.delete as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('network down'));
+
+		const report = await syncNow(backend, { excludedStoryIds: ['s2', 's3'] });
 
 		const uploaded = JSON.parse(new TextDecoder().decode(backend.store[MANIFEST_PATH]));
 		expect(uploaded.stories.s2.archiveHash).toBe('remote-2');
 		expect(uploaded.stories.s3.archiveHash).toBe('remote-3');
-		expect(uploaded.stories.s1.archiveHash).not.toBe('stale-1');
+		expect(report.errors).toHaveLength(2);
+		expect(report.entries.some((e) => e.action === 'removed')).toBe(false);
 	});
 
 	it('reports progress for every processed story', async () => {
