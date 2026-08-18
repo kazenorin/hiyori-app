@@ -1,6 +1,6 @@
 import { getSettings } from '$lib/stores/settings.svelte';
 import { createBackendFromSettings } from './backend-factory';
-import { syncNow, removeStoryFromCloud, type SyncReport } from './sync-engine';
+import { syncNow, removeStoryFromCloud, type SyncReport, type SyncProgress } from './sync-engine';
 import { log } from '$lib/logging/logger';
 
 export type CloudSyncStatus = 'unconfigured' | 'idle' | 'syncing' | 'testing';
@@ -9,6 +9,7 @@ let status = $state<CloudSyncStatus>('unconfigured');
 let lastReport = $state<SyncReport | null>(null);
 let lastSyncedAt = $state<number | null>(null);
 let errorMessage = $state<string | null>(null);
+let syncProgress = $state<SyncProgress | null>(null);
 
 export function getCloudSyncStatus(): CloudSyncStatus {
 	return status;
@@ -21,6 +22,9 @@ export function getLastSyncedAt(): number | null {
 }
 export function getCloudSyncError(): string | null {
 	return errorMessage;
+}
+export function getSyncProgress(): SyncProgress | null {
+	return syncProgress;
 }
 
 export function refreshCloudSyncStatus(): void {
@@ -47,8 +51,12 @@ export async function runCloudSync(): Promise<void> {
 	if (!backend || status === 'syncing') return;
 	status = 'syncing';
 	errorMessage = null;
+	syncProgress = { total: 0, done: 0, current: '' };
 	try {
-		lastReport = await syncNow(backend);
+		lastReport = await syncNow(backend, {
+			excludedStoryIds: getSettings().cloudSync?.excludedStoryIds,
+			onProgress: (progress) => (syncProgress = progress),
+		});
 		lastSyncedAt = Date.now();
 		if (lastReport.errors.length > 0) {
 			errorMessage = lastReport.errors.join('\n');
@@ -58,6 +66,7 @@ export async function runCloudSync(): Promise<void> {
 		errorMessage = String(err instanceof Error ? err.message : err);
 		await log.error('cloud-sync', `Sync failed: ${errorMessage}`);
 	} finally {
+		syncProgress = null;
 		refreshCloudSyncStatus();
 	}
 }

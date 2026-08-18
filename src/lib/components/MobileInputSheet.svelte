@@ -96,8 +96,7 @@
 				// Enter inserts a newline on mobile; sending is done via the Send button.
 				if (e.key !== 'Enter') onKeydown(e);
 			}}
-			aria-label={placeholder}
-		></textarea>
+			aria-label={placeholder}></textarea>
 
 		<!-- Send / Stop button -->
 		<div class="mt-2">

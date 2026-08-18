@@ -6,8 +6,9 @@ Sequential-use story synchronization across a user's own devices (Desktop App, W
 
 ```
 UI layer
-  settings/cloud-sync subpage   — configure backend + credentials, test, sync now
+  settings/cloud-sync subpage   — configure backend + credentials, story selection, test, sync now
   SidebarNav.svelte             — "Sync to Cloud" button (visible when configured)
+  CloudSyncOverlay.svelte       — blocking progress overlay while a sync runs (mounted in +layout.svelte)
   +layout.svelte                — "Also remove from cloud" on story deletion
 State layer
   cloud-sync.svelte.ts          — reactive status/report/error store; entry points
@@ -49,6 +50,8 @@ Dirty detection: local hash = `computeContentHash(JSON.stringify(exportData), st
 2. **Pull pass**: for each manifest entry whose hash differs from local, download the archive and `mergeIncomingStory()`.
 3. **Push pass**: for each local story whose hash differs from the (post-pull) manifest, build and upload the archive.
 4. Upload the merged manifest last.
+
+Stories listed in `settings.cloudSync.excludedStoryIds` are skipped in both passes (opt-out; new stories sync by default). Their remote manifest entries are carried over into the rewritten manifest so other devices keep seeing them — dropping the entries would orphan the archives. `syncNow()` reports progress per story via an optional `onProgress` callback (`CloudSyncOverlay` displays it).
 
 `removeStoryFromCloud()` deletes the archive object and its manifest entry.
 
@@ -115,7 +118,7 @@ New stories absent locally are imported whole via `loadStoryOverwrite` — IDs a
 ## Platform differences (`http-client.ts`)
 
 - **Tauri (desktop/Android):** requests go through `@tauri-apps/plugin-http`, which bypasses webview CORS — user-configured WebDAV/S3 servers cannot be expected to send CORS headers for desktop apps.
-- **Web:** plain `fetch`. The deployment must allow the backend origin in CSP `connect-src`, and the remote server must send CORS headers for the web origin. This is a documented deployment requirement, not handled in code.
+- **Web:** plain `fetch` by default. The deployment must allow the backend origin in CSP `connect-src`, and the remote server must send CORS headers for the web origin. Alternatively, `settings.cloudSync.corsBypassEnabled` routes requests through a WISP proxy (`wispProxyUrl`) using the libcurl fetch from `$lib/http/fetch.ts` — the same mechanism provider API calls use. The libcurl fetch is cached after first init, so a changed proxy URL takes effect after reload.
 
 ## Security notes
 

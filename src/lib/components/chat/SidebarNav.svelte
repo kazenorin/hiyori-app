@@ -18,11 +18,7 @@
 	import { getActEnded, getStoryConcluded } from '$lib/ai/chat.svelte';
 	import { getSettings, isMemoryAvailable, updateSettings } from '$lib/stores/settings.svelte';
 	import { exportStory } from '$lib/features/story-export-load/story-exporter';
-	import {
-		getCloudSyncStatus,
-		runCloudSync,
-		getCloudSyncError
-	} from '$lib/features/cloud-sync/cloud-sync.svelte';
+	import { getCloudSyncStatus, runCloudSync, getCloudSyncError } from '$lib/features/cloud-sync/cloud-sync.svelte';
 	import { createBackendFromSettings } from '$lib/features/cloud-sync/backend-factory';
 	import { toaster } from '$lib/stores/toaster.svelte';
 	import { type SwipeEndEventDetail } from '@svelte-put/swipeable';

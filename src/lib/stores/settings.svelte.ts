@@ -69,6 +69,9 @@ export interface Settings {
 	cloudSync?: {
 		enabled: boolean;
 		backend: 's3' | 'webdav';
+		excludedStoryIds?: string[];
+		corsBypassEnabled?: boolean;
+		wispProxyUrl?: string;
 		s3?: {
 			endpoint: string;
 			region: string;
@@ -154,6 +157,13 @@ function loadSettings(): Settings {
 					wispProxyUrl: 'ws://localhost:6001',
 					...p,
 				}));
+			}
+			if (merged.cloudSync) {
+				merged.cloudSync = {
+					corsBypassEnabled: false,
+					wispProxyUrl: 'ws://localhost:6001',
+					...merged.cloudSync,
+				};
 			}
 			return merged;
 		}

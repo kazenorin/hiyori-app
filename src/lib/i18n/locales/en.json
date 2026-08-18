@@ -769,6 +769,13 @@
 		"reportMerged": "Merged incoming changes: {{name}}",
 		"reportSkipped": "Up to date: {{name}}",
 		"unconfigured": "Configure storage credentials to enable sync.",
+		"storiesTitle": "Stories to sync",
+		"storiesSearch": "Search stories…",
+		"selectAll": "Sync all",
+		"deselectAll": "Sync none",
+		"storiesCount": "{{count}} of {{total}} stories synced",
+		"noStories": "No stories found",
+		"wispProxyTitle": "Wisp Proxy (Web app)",
 		"corsWarning": "Web app mode: your server must allow CORS requests from this app's origin, or sync will fail.",
 		"insecureTransportWarning": "Insecure connection: this URL uses plain HTTP and is not on your local network. Credentials may be intercepted."
 	}

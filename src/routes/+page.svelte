@@ -550,8 +550,7 @@
 					aria-label="World builder input"
 					bind:value={input}
 					onkeydown={handleKeydown}
-					disabled={getIsWorldBuilderStreaming() || (getReadyToCreate() && !getActPlotInterview())}
-				></textarea>
+					disabled={getIsWorldBuilderStreaming() || (getReadyToCreate() && !getActPlotInterview())}></textarea>
 
 				<div class="mt-3">
 					{#if getIsWorldBuilderStreaming()}
@@ -976,8 +975,7 @@
 						aria-label="Message input"
 						bind:value={input}
 						onkeydown={handleKeydown}
-						disabled={getIsBusy() || getActEnded()}
-					></textarea>
+						disabled={getIsBusy() || getActEnded()}></textarea>
 
 					<div class="mt-3">
 						{#if getIsStreaming()}

@@ -769,6 +769,13 @@
 		"reportMerged": "已合併遠端變更：{{name}}",
 		"reportSkipped": "已是最新：{{name}}",
 		"unconfigured": "請設定儲存空間憑證以啟用同步。",
+		"storiesTitle": "要同步的故事",
+		"storiesSearch": "搜尋故事…",
+		"selectAll": "全部同步",
+		"deselectAll": "全部不同步",
+		"storiesCount": "已同步 {{count}} / {{total}} 個故事",
+		"noStories": "找不到故事",
+		"wispProxyTitle": "Wisp Proxy（網頁版）",
 		"corsWarning": "網頁版模式：你的伺服器必須允許來自此應用程式來源的 CORS 請求，否則同步會失敗。",
 		"insecureTransportWarning": "不安全的連線：此 URL 使用未加密的 HTTP 且不在你的區域網路內。憑證可能會被攔截。"
 	}

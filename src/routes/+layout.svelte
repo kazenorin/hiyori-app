@@ -28,6 +28,7 @@
 	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
 	import { removeStoryFromCloudById } from '$lib/features/cloud-sync/cloud-sync.svelte';
 	import { createBackendFromSettings } from '$lib/features/cloud-sync/backend-factory';
+	import CloudSyncOverlay from '$lib/features/cloud-sync/CloudSyncOverlay.svelte';
 	import { t } from '$lib/i18n';
 
 	import BottomTabBar from '$lib/components/BottomTabBar.svelte';
@@ -455,6 +456,9 @@
 		</div>
 	</div>
 {/if}
+
+<!-- Cloud Sync Overlay -->
+<CloudSyncOverlay />
 
 <!-- App-wide Toast container -->
 <Toast.Group {toaster}>

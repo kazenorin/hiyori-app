@@ -7,6 +7,7 @@
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
 	import { isTauriSync } from '$lib/runtime';
 	import { getUrlWarnings } from '$lib/utils/url-security';
+	import { getAllStories, type Story } from '$lib/db/stories';
 	import {
 		getCloudSyncStatus,
 		getCloudSyncError,
@@ -39,6 +40,8 @@
 	}
 
 	let testOk = $state(false);
+	let stories = $state<Story[]>([]);
+	let storyFilter = $state('');
 
 	async function handleTestConnection(): Promise<void> {
 		testOk = false;
@@ -59,6 +62,31 @@
 		refreshCloudSyncStatus();
 	});
 
+	$effect(() => {
+		if (sync.enabled) {
+			// Depend on the last-sync timestamp so stories pulled by a sync
+			// show up in the selection list without leaving the page.
+			getLastSyncedAt();
+			getAllStories()
+				.then((s) => (stories = s))
+				.catch(() => (stories = []));
+		}
+	});
+
+	function setStoryExcluded(id: string, excluded: boolean): void {
+		const current = sync.excludedStoryIds ?? [];
+		const ids = excluded ? [...current, id] : current.filter((x) => x !== id);
+		updateSync({ excludedStoryIds: ids });
+	}
+
+	function includeAllStories(): void {
+		updateSync({ excludedStoryIds: [] });
+	}
+
+	function excludeAllStories(): void {
+		updateSync({ excludedStoryIds: stories.map((s) => s.id) });
+	}
+
 	const REPORT_KEYS: Record<string, string> = {
 		pushed: 'cloudSync.reportPushed',
 		'pulled-new': 'cloudSync.reportPulledNew',
@@ -72,6 +100,12 @@
 	const webdav = $derived(sync.webdav ?? EMPTY_WEBDAV);
 	const s3Warnings = $derived(getUrlWarnings(s3.endpoint, !isTauriSync()));
 	const webdavWarnings = $derived(getUrlWarnings(webdav.url, !isTauriSync()));
+	const excludedIds = $derived(new Set(sync.excludedStoryIds ?? []));
+	const filteredStories = $derived(
+		storyFilter ? stories.filter((s) => s.name.toLowerCase().includes(storyFilter.toLowerCase())) : stories
+	);
+	const includedCount = $derived(stories.reduce((n, s) => (excludedIds.has(s.id) ? n : n + 1), 0));
+	const corsBypassActive = $derived(!!sync.corsBypassEnabled && !!sync.wispProxyUrl?.trim());
 </script>
 
 <svelte:head>
@@ -129,7 +163,7 @@
 							onchange={(e) => updateS3({ endpoint: (e.currentTarget as HTMLInputElement).value })}
 						/>
 					</label>
-					{#if s3Warnings.cors}
+					{#if s3Warnings.cors && !corsBypassActive}
 						<p class="text-xs text-warning-500">{t('cloudSync.corsWarning')}</p>
 					{/if}
 					{#if s3Warnings.insecure}
@@ -146,11 +180,19 @@
 					</label>
 					<label class="block">
 						<span class="text-sm font-medium text-surface-700-300">{t('cloudSync.s3Bucket')}</span>
-						<input class="input mt-1" value={s3.bucket} onchange={(e) => updateS3({ bucket: (e.currentTarget as HTMLInputElement).value })} />
+						<input
+							class="input mt-1"
+							value={s3.bucket}
+							onchange={(e) => updateS3({ bucket: (e.currentTarget as HTMLInputElement).value })}
+						/>
 					</label>
 					<label class="block">
 						<span class="text-sm font-medium text-surface-700-300">{t('cloudSync.s3Prefix')}</span>
-						<input class="input mt-1" value={s3.prefix} onchange={(e) => updateS3({ prefix: (e.currentTarget as HTMLInputElement).value })} />
+						<input
+							class="input mt-1"
+							value={s3.prefix}
+							onchange={(e) => updateS3({ prefix: (e.currentTarget as HTMLInputElement).value })}
+						/>
 					</label>
 					<label class="block">
 						<span class="text-sm font-medium text-surface-700-300">{t('cloudSync.s3AccessKeyId')}</span>
@@ -186,7 +228,7 @@
 							onchange={(e) => updateWebdav({ url: (e.currentTarget as HTMLInputElement).value })}
 						/>
 					</label>
-					{#if webdavWarnings.cors}
+					{#if webdavWarnings.cors && !corsBypassActive}
 						<p class="text-xs text-warning-500">{t('cloudSync.corsWarning')}</p>
 					{/if}
 					{#if webdavWarnings.insecure}
@@ -209,6 +251,76 @@
 							onchange={(e) => updateWebdav({ password: (e.currentTarget as HTMLInputElement).value })}
 						/>
 					</label>
+				</div>
+			</Card>
+		{/if}
+
+		{#if sync.enabled && !isTauriSync()}
+			<Card title={t('cloudSync.wispProxyTitle')}>
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<label class="flex items-center gap-2">
+						<input
+							type="checkbox"
+							class="checkbox"
+							checked={sync.corsBypassEnabled ?? false}
+							onchange={(e) => updateSync({ corsBypassEnabled: (e.currentTarget as HTMLInputElement).checked })}
+						/>
+						<span class="text-sm text-surface-700-300">{t('settings.bypassCorsViaWispProxy')}</span>
+					</label>
+					{#if sync.corsBypassEnabled}
+						<label class="block">
+							<span class="text-sm font-medium text-surface-700-300">{t('settings.wispProxyUrl')}</span>
+							<input
+								class="input mt-1"
+								type="url"
+								placeholder="ws://localhost:6001"
+								value={sync.wispProxyUrl ?? ''}
+								onchange={(e) => updateSync({ wispProxyUrl: (e.currentTarget as HTMLInputElement).value })}
+							/>
+						</label>
+						<p class="text-xs text-surface-500">{t('settings.wispProxyUrlHint')}</p>
+					{/if}
+				</div>
+			</Card>
+		{/if}
+
+		{#if sync.enabled}
+			<Card title={t('cloudSync.storiesTitle')}>
+				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+					<div class="flex flex-wrap items-center justify-between gap-2">
+						<span class="text-xs text-surface-500">
+							{t('cloudSync.storiesCount', { count: includedCount, total: stories.length })}
+						</span>
+						<div class="flex gap-2">
+							<button class="btn btn-sm preset-tonal min-h-8" type="button" onclick={includeAllStories}>
+								{t('cloudSync.selectAll')}
+							</button>
+							<button class="btn btn-sm preset-tonal min-h-8" type="button" onclick={excludeAllStories}>
+								{t('cloudSync.deselectAll')}
+							</button>
+						</div>
+					</div>
+					<input
+						class="input"
+						type="search"
+						placeholder={t('cloudSync.storiesSearch')}
+						bind:value={storyFilter}
+					/>
+					<div class="max-h-64 overflow-y-auto space-y-1">
+						{#each filteredStories as story (story.id)}
+							<label class="flex items-center gap-2 p-1 rounded hover:bg-surface-200-800 cursor-pointer">
+								<input
+									type="checkbox"
+									class="checkbox"
+									checked={!excludedIds.has(story.id)}
+									onchange={(e) => setStoryExcluded(story.id, !(e.currentTarget as HTMLInputElement).checked)}
+								/>
+								<span class="text-sm text-surface-700-300 truncate">{story.name}</span>
+							</label>
+						{:else}
+							<p class="text-sm text-surface-500">{t('cloudSync.noStories')}</p>
+						{/each}
+					</div>
 				</div>
 			</Card>
 		{/if}
@@ -253,7 +365,9 @@
 					{#if getLastSyncReport()?.entries.length}
 						<ul class="space-y-1">
 							{#each getLastSyncReport()!.entries as entry (entry.storyId + entry.action)}
-								<li class="text-sm text-surface-700-300">{t(REPORT_KEYS[entry.action] ?? 'cloudSync.reportSkipped', { name: entry.storyName })}</li>
+								<li class="text-sm text-surface-700-300">
+									{t(REPORT_KEYS[entry.action] ?? 'cloudSync.reportSkipped', { name: entry.storyName })}
+								</li>
 							{/each}
 						</ul>
 					{/if}

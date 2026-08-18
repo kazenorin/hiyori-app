@@ -26,7 +26,7 @@ vi.mock('$lib/fs/file-system', () => ({
 }));
 
 import { NotFoundError, type SyncBackend } from '$lib/features/cloud-sync/sync-backend';
-import { syncNow, MANIFEST_PATH } from '$lib/features/cloud-sync/sync-engine';
+import { syncNow, MANIFEST_PATH, type SyncProgress } from '$lib/features/cloud-sync/sync-engine';
 import { computeContentHash } from '$lib/features/cloud-sync/sync-manifest';
 import { getAllStories, type Story } from '$lib/db/stories';
 import { buildStoryExportData, buildStoryArchive } from '$lib/features/story-export-load/story-exporter';
@@ -168,5 +168,74 @@ describe('syncNow', () => {
 		expect(report.errors).toHaveLength(1);
 		expect(report.errors[0]).toContain('Sync aborted');
 		expect(backend.upload).not.toHaveBeenCalled();
+	});
+});
+
+describe('syncNow story exclusion', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	function excludedBackend() {
+		mockedStories.mockResolvedValue([story('s1', 'Synced'), story('s2', 'Excluded Local')]);
+		mockedExportData.mockResolvedValue({ marker: 'dirty' } as never);
+		mockedArchive.mockResolvedValue({ data: new Uint8Array([1]), filename: 'x.zip' } as never);
+		mockedMerge.mockResolvedValue('merged');
+		return fakeBackend({
+			[MANIFEST_PATH]: manifestJson({
+				s1: { name: 'Synced', archiveHash: 'stale-1' },
+				s2: { name: 'Excluded Local', archiveHash: 'remote-2' },
+				s3: { name: 'Excluded Remote', archiveHash: 'remote-3' },
+			}),
+			'stories/s1.hiyori.zip': new Uint8Array([1]),
+			'stories/s2.hiyori.zip': new Uint8Array([2]),
+			'stories/s3.hiyori.zip': new Uint8Array([3]),
+		});
+	}
+
+	// WHY: exclusion is a user opt-out and must hold in both directions —
+	// pulling an excluded story would overwrite local state against the user's intent.
+	it('excludes stories from both pull and push passes', async () => {
+		const backend = excludedBackend();
+
+		const report = await syncNow(backend, { excludedStoryIds: ['s2', 's3'] });
+
+		expect(mockedArchive).toHaveBeenCalledWith('s1');
+		expect(mockedArchive).not.toHaveBeenCalledWith('s2');
+		expect(backend.download).toHaveBeenCalledWith('stories/s1.hiyori.zip');
+		expect(backend.download).not.toHaveBeenCalledWith('stories/s2.hiyori.zip');
+		expect(backend.download).not.toHaveBeenCalledWith('stories/s3.hiyori.zip');
+		expect(mockedMerge).toHaveBeenCalledTimes(1); // s1 only
+		expect(report.errors).toEqual([]);
+	});
+
+	// WHY: other devices read the manifest to discover stories; dropping excluded
+	// entries would orphan their archives and hide them from every other device.
+	it('keeps excluded stories in the rewritten manifest', async () => {
+		const backend = excludedBackend();
+
+		await syncNow(backend, { excludedStoryIds: ['s2', 's3'] });
+
+		const uploaded = JSON.parse(new TextDecoder().decode(backend.store[MANIFEST_PATH]));
+		expect(uploaded.stories.s2.archiveHash).toBe('remote-2');
+		expect(uploaded.stories.s3.archiveHash).toBe('remote-3');
+		expect(uploaded.stories.s1.archiveHash).not.toBe('stale-1');
+	});
+
+	it('reports progress for every processed story', async () => {
+		const exportData = { marker: 'stable' };
+		const matchingHash = await computeContentHash(JSON.stringify(exportData), []);
+		mockedStories.mockResolvedValue([story('s1', 'Story 1')]);
+		mockedExportData.mockResolvedValue(exportData as never);
+		const backend = fakeBackend({
+			[MANIFEST_PATH]: manifestJson({ s1: { name: 'Story 1', archiveHash: matchingHash } }),
+		});
+		const updates: SyncProgress[] = [];
+
+		await syncNow(backend, { onProgress: (p) => updates.push(p) });
+
+		// 1 pull candidate + 1 push candidate
+		expect(updates[0]).toEqual({ total: 2, done: 0, current: '' });
+		expect(updates.at(-1)).toEqual({ total: 2, done: 2, current: 'Story 1' });
 	});
 });

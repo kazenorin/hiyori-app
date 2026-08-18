@@ -1,17 +1,23 @@
 import { checkIsTauri } from '$lib/runtime';
+import { getSettings } from '$lib/stores/settings.svelte';
+import { resolveFetch } from '$lib/http/fetch';
 
 /**
  * Platform-aware fetch. Under Tauri, routes through @tauri-apps/plugin-http
  * (capability already granted) which bypasses webview CORS — user-configured
  * WebDAV/S3 servers cannot be expected to send CORS headers for desktop apps.
- * On web, plain fetch; the deployment CSP and server CORS are documented requirements.
+ * On web, routes through the WISP proxy (libcurl fetch) when the CORS bypass
+ * is enabled in cloud sync settings; otherwise plain fetch — the deployment
+ * CSP and server CORS are documented requirements.
  */
 export async function syncFetch(input: string | Request, init?: RequestInit): Promise<Response> {
 	if (await checkIsTauri()) {
 		const { fetch: tauriFetch } = await import('@tauri-apps/plugin-http');
 		return tauriFetch(input, init);
 	}
-	return fetch(input, init);
+	const sync = getSettings().cloudSync;
+	const fetchImpl = await resolveFetch(sync?.corsBypassEnabled, sync?.wispProxyUrl?.trim());
+	return fetchImpl(input, init);
 }
 
 export interface RetryOptions {

@@ -21,6 +21,18 @@ export interface SyncReport {
 	errors: string[];
 }
 
+export interface SyncProgress {
+	total: number;
+	done: number;
+	current: string;
+}
+
+export interface SyncOptions {
+	/** Story ids excluded from both pull and push passes */
+	excludedStoryIds?: string[];
+	onProgress?: (progress: SyncProgress) => void;
+}
+
 async function computeLocalStoryHash(storyId: string): Promise<string> {
 	const exportData = await buildStoryExportData(storyId);
 	// storyFolder.createdAt falls back to Date.now() when no folder row exists,
@@ -36,8 +48,9 @@ async function computeLocalStoryHash(storyId: string): Promise<string> {
 	return computeContentHash(JSON.stringify(hashable), files);
 }
 
-export async function syncNow(backend: SyncBackend): Promise<SyncReport> {
+export async function syncNow(backend: SyncBackend, options: SyncOptions = {}): Promise<SyncReport> {
 	const report: SyncReport = { entries: [], errors: [] };
+	const excluded = new Set(options.excludedStoryIds ?? []);
 
 	let remote: SyncManifest = emptyManifest();
 	try {
@@ -56,8 +69,15 @@ export async function syncNow(backend: SyncBackend): Promise<SyncReport> {
 	const localStories = await getAllStories();
 	const localHashes = new Map<string, string>();
 
+	const pullCandidates = Object.entries(remote.stories).filter(([storyId]) => !excluded.has(storyId));
+	const pushCandidates = localStories.filter((story) => !excluded.has(story.id));
+	const progress: SyncProgress = { total: pullCandidates.length + pushCandidates.length, done: 0, current: '' };
+	options.onProgress?.({ ...progress });
+
 	// Pull pass: remote entries that differ from local state.
-	for (const [storyId, entry] of Object.entries(remote.stories)) {
+	for (const [storyId, entry] of pullCandidates) {
+		progress.current = entry.name;
+		options.onProgress?.({ ...progress });
 		try {
 			const localExists = localStories.some((s) => s.id === storyId);
 			const localHash = localExists ? await computeLocalStoryHash(storyId) : undefined;
@@ -76,12 +96,17 @@ export async function syncNow(backend: SyncBackend): Promise<SyncReport> {
 			});
 		} catch (err) {
 			report.errors.push(`Pull failed for "${entry.name}": ${err}`);
+		} finally {
+			progress.done++;
+			options.onProgress?.({ ...progress });
 		}
 	}
 
 	// Push pass: local stories whose hash differs from the (now merged) remote entry.
 	const manifest: SyncManifest = { version: 1, stories: {} };
-	for (const story of localStories) {
+	for (const story of pushCandidates) {
+		progress.current = story.name;
+		options.onProgress?.({ ...progress });
 		try {
 			const localHash = localHashes.get(story.id) ?? (await computeLocalStoryHash(story.id));
 			const remoteHash = remote.stories[story.id]?.archiveHash;
@@ -97,6 +122,17 @@ export async function syncNow(backend: SyncBackend): Promise<SyncReport> {
 			report.entries.push({ storyId: story.id, storyName: story.name, action: 'pushed' });
 		} catch (err) {
 			report.errors.push(`Push failed for "${story.name}": ${err}`);
+		} finally {
+			progress.done++;
+			options.onProgress?.({ ...progress });
+		}
+	}
+
+	// Carry over remote entries for excluded stories so other devices keep
+	// seeing them; dropping them from the manifest would orphan the archives.
+	for (const [storyId, entry] of Object.entries(remote.stories)) {
+		if (excluded.has(storyId) && !manifest.stories[storyId]) {
+			manifest.stories[storyId] = entry;
 		}
 	}
 
