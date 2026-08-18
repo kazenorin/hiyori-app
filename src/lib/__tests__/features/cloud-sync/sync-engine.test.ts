@@ -133,7 +133,34 @@ describe('syncNow', () => {
 		expect(backend.download).toHaveBeenCalledTimes(1); // manifest only
 		expect(mockedMerge).not.toHaveBeenCalled();
 		expect(mockedArchive).not.toHaveBeenCalled();
+		// WHY (regression): the story was once reported 'skipped' by both passes;
+		// the duplicate crashed the keyed report list (each_key_duplicate).
+		expect(report.entries).toHaveLength(1);
 		expect(report.entries.every((e) => e.action === 'skipped')).toBe(true);
+	});
+
+	// WHY (regression): the report list is keyed by story+action, so no story
+	// may appear twice with the same action — duplicates crash the UI and
+	// freeze the sync overlay.
+	it('reports each story at most once per action', async () => {
+		const exportData = { marker: 'stable' };
+		const matchingHash = await computeContentHash(JSON.stringify(exportData), []);
+		mockedStories.mockResolvedValue([story('s1', 'Story 1')]);
+		mockedExportData.mockResolvedValue(exportData as never);
+		mockedMerge.mockResolvedValue('new-story');
+		const backend = fakeBackend({
+			[MANIFEST_PATH]: manifestJson({
+				s1: { name: 'Story 1', archiveHash: matchingHash },
+				s2: { name: 'Story 2', archiveHash: 'stale' },
+			}),
+			'stories/s2.hiyori.zip': new Uint8Array([3]),
+		});
+
+		const report = await syncNow(backend);
+
+		const keys = report.entries.map((e) => e.storyId + e.action);
+		expect(new Set(keys).size).toBe(keys.length);
+		expect(report.entries.filter((e) => e.storyId === 's1')).toHaveLength(1);
 	});
 
 	it('pushes locally dirty stories and uploads the manifest last', async () => {

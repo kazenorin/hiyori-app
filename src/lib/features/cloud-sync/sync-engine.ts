@@ -83,7 +83,8 @@ export async function syncNow(backend: SyncBackend, options: SyncOptions = {}): 
 			const localHash = localExists ? await computeLocalStoryHash(storyId) : undefined;
 			if (localHash === entry.archiveHash) {
 				localHashes.set(storyId, entry.archiveHash);
-				report.entries.push({ storyId, storyName: entry.name, action: 'skipped' });
+				// No report entry here: the push pass reports the story once as
+				// 'skipped' — duplicate entries would crash the keyed report list.
 				continue;
 			}
 			const archive = await backend.download(`${ARCHIVE_DIR}/${storyId}.hiyori.zip`);
@@ -112,7 +113,11 @@ export async function syncNow(backend: SyncBackend, options: SyncOptions = {}): 
 			const remoteHash = remote.stories[story.id]?.archiveHash;
 			if (localHash === remoteHash) {
 				manifest.stories[story.id] = { name: story.name, archiveHash: localHash, updatedAt: Date.now() };
-				report.entries.push({ storyId: story.id, storyName: story.name, action: 'skipped' });
+				// Stories merged/pulled earlier this run already have a report entry;
+				// keep entries unique per story (the report list is keyed by story+action).
+				if (!report.entries.some((e) => e.storyId === story.id)) {
+					report.entries.push({ storyId: story.id, storyName: story.name, action: 'skipped' });
+				}
 				continue;
 			}
 			const { data } = await buildStoryArchive(story.id);
