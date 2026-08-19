@@ -92,3 +92,11 @@ body {
 .animate-indeterminate-bar {
 	animation: indeterminate-bar 1.5s ease-in-out infinite;
 }
+
+/* Portaled Skeleton combobox dropdowns land on <body> with an inline z-index,
+   which puts them under overlays like the settings dialog (z-50). Raise them
+   above overlays but below confirm modals (z-[70]). !important is required to
+   beat zag's inline style. */
+[data-scope='combobox'][data-part='positioner'] {
+	z-index: 60 !important;
+}

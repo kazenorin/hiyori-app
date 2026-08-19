@@ -36,8 +36,7 @@
 		<Combobox.Trigger />
 	</Combobox.Control>
 	<Portal>
-		<!-- z-60: portaled to body, must sit above overlays like the settings dialog (z-50) -->
-		<Combobox.Positioner class="z-60">
+		<Combobox.Positioner>
 			<Combobox.Content>
 				{#each items as item (item.value)}
 					<Combobox.Item {item}>
