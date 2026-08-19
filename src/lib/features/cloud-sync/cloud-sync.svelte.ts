@@ -54,7 +54,7 @@ export async function runCloudSync(): Promise<void> {
 	syncProgress = { total: 0, done: 0, current: '' };
 	try {
 		lastReport = await syncNow(backend, {
-			excludedStoryIds: getSettings().cloudSync?.excludedStoryIds,
+			excludedStoryIds: getSettings().cloudSync?.excludedStories?.map((s) => s.id),
 			onProgress: (progress) => (syncProgress = progress),
 		});
 		lastSyncedAt = Date.now();
@@ -81,10 +81,13 @@ export async function removeStoryFromCloudById(storyId: string): Promise<void> {
  * Persistently exclude a story from future syncs (e.g. after deleting it with
  * "also remove from cloud") so another device pushing it won't resurrect it here.
  */
-export async function excludeStoryFromSync(storyId: string): Promise<void> {
+export async function excludeStoryFromSync(storyId: string, storyName: string): Promise<void> {
 	const sync = getSettings().cloudSync;
-	if (!sync || sync.excludedStoryIds?.includes(storyId)) return;
+	if (!sync || sync.excludedStories?.some((s) => s.id === storyId)) return;
 	await updateSettings({
-		cloudSync: { ...sync, excludedStoryIds: [...(sync.excludedStoryIds ?? []), storyId] },
+		cloudSync: {
+			...sync,
+			excludedStories: [...(sync.excludedStories ?? []), { id: storyId, name: storyName }],
+		},
 	});
 }

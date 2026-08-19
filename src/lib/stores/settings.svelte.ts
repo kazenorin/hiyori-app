@@ -69,7 +69,7 @@ export interface Settings {
 	cloudSync?: {
 		enabled: boolean;
 		backend: 's3' | 'webdav';
-		excludedStoryIds?: string[];
+		excludedStories?: { id: string; name: string }[];
 		corsBypassEnabled?: boolean;
 		wispProxyUrl?: string;
 		s3?: {

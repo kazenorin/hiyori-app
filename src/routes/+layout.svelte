@@ -221,7 +221,7 @@
 
 	async function confirmDeleteAction(removeFolder: boolean = false) {
 		if (!confirmDelete) return;
-		const { type, id } = confirmDelete;
+		const { type, id, name } = confirmDelete;
 		const alsoFromCloud = type === 'story' && removeFromCloud;
 		confirmDelete = null;
 		removeFromCloud = false;
@@ -233,7 +233,7 @@
 				if (alsoFromCloud) {
 					// Exclude from future syncs even if the removal below fails, so a
 					// later pull from another device can't resurrect the story here.
-					await excludeStoryFromSync(id);
+					await excludeStoryFromSync(id, name);
 					try {
 						await removeStoryFromCloudById(id);
 					} catch (err) {

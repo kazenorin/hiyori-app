@@ -51,7 +51,7 @@ Dirty detection: local hash = `computeContentHash(JSON.stringify(exportData), st
 3. **Push pass**: for each local story whose hash differs from the (post-pull) manifest, build and upload the archive.
 4. Upload the merged manifest last.
 
-Stories listed in `settings.cloudSync.excludedStoryIds` are skipped in both pull and push passes (opt-out; new stories sync by default) and removed from cloud storage in a removal pass — exclusion means "not in the cloud". If a removal fails, the story's manifest entry is carried over so the removal is retried on the next sync. Conversely, deleting a story with "Also remove from cloud" adds its id to `excludedStoryIds` so another device pushing it cannot resurrect it locally. `syncNow()` reports progress per story via an optional `onProgress` callback (`CloudSyncOverlay` displays it).
+Stories listed in `settings.cloudSync.excludedStories` are skipped in both pull and push passes (opt-out; new stories sync by default) and removed from cloud storage in a removal pass — exclusion means "not in the cloud". Entries store both `id` and `name` so the sync page can keep listing a story after it was deleted locally. If a removal fails, the story's manifest entry is carried over so the removal is retried on the next sync. Conversely, deleting a story with "Also remove from cloud" adds it to `excludedStories` so another device pushing it cannot resurrect it locally. `syncNow()` reports progress per story via an optional `onProgress` callback (`CloudSyncOverlay` displays it).
 
 `removeStoryFromCloud()` deletes the archive object and its manifest entry.
 

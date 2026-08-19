@@ -73,18 +73,23 @@
 		}
 	});
 
-	function setStoryExcluded(id: string, excluded: boolean): void {
-		const current = sync.excludedStoryIds ?? [];
-		const ids = excluded ? [...current, id] : current.filter((x) => x !== id);
-		updateSync({ excludedStoryIds: ids });
+	function setStoryExcluded(id: string, name: string, excluded: boolean): void {
+		const current = sync.excludedStories ?? [];
+		const entries = excluded ? [...current, { id, name }] : current.filter((x) => x.id !== id);
+		updateSync({ excludedStories: entries });
 	}
 
 	function includeAllStories(): void {
-		updateSync({ excludedStoryIds: [] });
+		updateSync({ excludedStories: [] });
 	}
 
 	function excludeAllStories(): void {
-		updateSync({ excludedStoryIds: stories.map((s) => s.id) });
+		const current = sync.excludedStories ?? [];
+		const excludedIdSet = new Set(current.map((s) => s.id));
+		const newEntries = stories
+			.filter((s) => !excludedIdSet.has(s.id))
+			.map((s) => ({ id: s.id, name: s.name }));
+		updateSync({ excludedStories: [...current, ...newEntries] });
 	}
 
 	const REPORT_KEYS: Record<string, string> = {
@@ -101,11 +106,18 @@
 	const webdav = $derived(sync.webdav ?? EMPTY_WEBDAV);
 	const s3Warnings = $derived(getUrlWarnings(s3.endpoint, !isTauriSync()));
 	const webdavWarnings = $derived(getUrlWarnings(webdav.url, !isTauriSync()));
-	const excludedIds = $derived(new Set(sync.excludedStoryIds ?? []));
+	const excludedIds = $derived(new Set((sync.excludedStories ?? []).map((s) => s.id)));
+	const localIds = $derived(new Set(stories.map((s) => s.id)));
+	const displayStories = $derived([
+		...stories,
+		...(sync.excludedStories ?? []).filter((s) => !localIds.has(s.id)),
+	]);
 	const filteredStories = $derived(
-		storyFilter ? stories.filter((s) => s.name.toLowerCase().includes(storyFilter.toLowerCase())) : stories
+		storyFilter
+			? displayStories.filter((s) => s.name.toLowerCase().includes(storyFilter.toLowerCase()))
+			: displayStories
 	);
-	const includedCount = $derived(stories.reduce((n, s) => (excludedIds.has(s.id) ? n : n + 1), 0));
+	const includedCount = $derived(displayStories.reduce((n, s) => (excludedIds.has(s.id) ? n : n + 1), 0));
 	const corsBypassActive = $derived(!!sync.corsBypassEnabled && !!sync.wispProxyUrl?.trim());
 </script>
 
@@ -290,7 +302,7 @@
 				<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
 					<div class="flex flex-wrap items-center justify-between gap-2">
 						<span class="text-xs text-surface-500">
-							{t('cloudSync.storiesCount', { count: includedCount, total: stories.length })}
+							{t('cloudSync.storiesCount', { count: includedCount, total: displayStories.length })}
 						</span>
 						<div class="flex gap-2">
 							<button class="btn btn-sm preset-tonal min-h-8" type="button" onclick={includeAllStories}>
@@ -314,7 +326,8 @@
 									type="checkbox"
 									class="checkbox"
 									checked={!excludedIds.has(story.id)}
-									onchange={(e) => setStoryExcluded(story.id, !(e.currentTarget as HTMLInputElement).checked)}
+									onchange={(e) =>
+										setStoryExcluded(story.id, story.name, !(e.currentTarget as HTMLInputElement).checked)}
 								/>
 								<span class="text-sm text-surface-700-300 truncate">{story.name}</span>
 							</label>
