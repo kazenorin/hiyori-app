@@ -46,6 +46,7 @@
 								? 'bg-primary-500 text-white'
 								: 'text-surface-500 hover:bg-surface-200-800'}"
 							type="button"
+							aria-current={section.id === active?.id ? 'true' : undefined}
 							onclick={() => select(section.id)}
 						>
 							<section.icon size={16} />
@@ -65,6 +66,7 @@
 								? 'bg-surface-200-800 text-primary-600-400 font-medium'
 								: 'text-surface-500 hover:bg-surface-200-800'}"
 							type="button"
+							aria-current={section.id === active?.id ? 'true' : undefined}
 							onclick={() => select(section.id)}
 						>
 							<section.icon size={16} class="shrink-0" />
@@ -83,7 +85,12 @@
 								<Dialog.Description class="text-sm text-surface-500 mt-1">{t(active.descriptionKey)}</Dialog.Description>
 							{/if}
 						</div>
-						<button class="hidden md:inline-flex btn btn-sm preset-tonal shrink-0" type="button" onclick={closeSettingsDialog}>
+						<button
+							class="hidden md:inline-flex btn btn-sm preset-tonal shrink-0"
+							type="button"
+							aria-label={t('settings.close')}
+							onclick={closeSettingsDialog}
+						>
 							<X size={16} />
 						</button>
 					</header>

@@ -62,6 +62,8 @@
 
 	$effect(() => {
 		if (settings.characterNameSuggestionMode === 'analytic') {
+			// Read quotas synchronously so auto-applied edits re-trigger the count refresh.
+			getNameSuggestionQuotas();
 			void refreshCounts(selectedLocale);
 		}
 	});

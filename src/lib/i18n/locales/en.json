@@ -123,6 +123,7 @@
 		"characterNameEngineAiDescription": "Generate names with an LLM (uses the Plot Planner provider). Produces original names with a short rationale.",
 		"characterNameEngineAnalyticDescription": "Pick names from a curated, tagged database — no AI call, works without any provider configured.",
 		"back": "Back",
+		"close": "Close",
 		"ttsConfig": {
 			"locale": {
 				"en": "English",
@@ -134,8 +135,6 @@
 			}
 		},
 		"nameQuotas": {
-			"title": "Character Name Database Quotas",
-			"description": "Control how many names the analytic engine keeps per culture, and how each culture's budget is split between name types. Names beyond the quota are randomly sampled at load time.",
 			"localeSection": "Locale",
 			"budgetsSection": "Per-culture budgets",
 			"budgetsDescription": "Total number of names kept for each culture in the selected locale.",
@@ -717,9 +716,6 @@
 		"enableTts": "Enable Text-to-Speech",
 		"ttsDescription": "Allow the app to read narrative messages aloud.",
 		"ttsLanguageNote": "TTS is available for English and Chinese stories.",
-		"configure": "Configure…",
-		"configuredSummary": "Text-to-speech is configured for {{count}} locale(s).",
-		"notConfigured": "Text-to-speech is not yet configured.",
 		"disabled": "Disabled",
 		"chooseVoice": "Choose a voice",
 		"select": "Select",

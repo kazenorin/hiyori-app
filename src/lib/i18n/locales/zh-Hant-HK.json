@@ -123,6 +123,7 @@
 		"characterNameEngineAiDescription": "以 LLM 產生名字 (使用「劇情規劃」提供者) 。產生原創名字並附簡短理由。",
 		"characterNameEngineAnalyticDescription": "從預設、已標籤的名字資料庫中挑選——無需 AI 呼叫，未設定任何提供者亦可使用。",
 		"back": "返回",
+		"close": "關閉",
 		"ttsConfig": {
 			"locale": {
 				"en": "英文",
@@ -134,8 +135,6 @@
 			}
 		},
 		"nameQuotas": {
-			"title": "角色名字資料庫配額",
-			"description": "控制分析式引擎每個文化保留多少名字，以及每個文化的預算如何在名字類型之間分配。超出配額的名字會在載入時隨機抽樣。",
 			"localeSection": "語言",
 			"budgetsSection": "各文化預算",
 			"budgetsDescription": "所選語言中每個文化保留的名字總數。",
@@ -717,9 +716,6 @@
 		"enableTts": "啟用文字語音",
 		"ttsDescription": "允許本應用程式朗讀敘事訊息。",
 		"ttsLanguageNote": "語音朗讀適用於英文及中文故事。",
-		"configure": "設定…",
-		"configuredSummary": "已為 {{count}} 個語言設定文字語音。",
-		"notConfigured": "尚未設定文字語音。",
 		"disabled": "停用",
 		"chooseVoice": "選擇語音",
 		"select": "選擇",
