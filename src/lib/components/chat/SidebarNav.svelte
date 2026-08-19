@@ -23,6 +23,7 @@
 	import { toaster } from '$lib/stores/toaster.svelte';
 	import { type SwipeEndEventDetail } from '@svelte-put/swipeable';
 	import { resolve } from '$app/paths';
+	import { openSettingsDialog } from '$lib/features/settings/settings-dialog-state.svelte';
 	import SidebarRow from './SidebarRow.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
@@ -406,12 +407,13 @@
 	>
 		{t('sidebar.chat')}
 	</a>
-	<a
-		href={resolve('/settings')}
-		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
+	<button
+		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500 w-full text-left cursor-pointer"
+		type="button"
+		onclick={() => openSettingsDialog()}
 	>
 		{t('sidebar.settings')}
-	</a>
+	</button>
 	<button
 		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500 w-full text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
 		type="button"
