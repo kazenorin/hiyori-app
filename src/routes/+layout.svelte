@@ -30,6 +30,7 @@
 	import { createBackendFromSettings } from '$lib/features/cloud-sync/backend-factory';
 	import CloudSyncOverlay from '$lib/features/cloud-sync/CloudSyncOverlay.svelte';
 	import SettingsDialog from '$lib/features/settings/SettingsDialog.svelte';
+	import { isSettingsDialogOpen } from '$lib/features/settings/settings-dialog-state.svelte';
 	import { t } from '$lib/i18n';
 
 	import BottomTabBar from '$lib/components/BottomTabBar.svelte';
@@ -59,6 +60,12 @@
 		};
 		mql.addEventListener('change', handler);
 		return () => mql.removeEventListener('change', handler);
+	});
+
+	// Close sidebar drawer when the settings dialog opens (the drawer's z-60
+	// overlay would otherwise sit above the dialog and block it on mobile)
+	$effect(() => {
+		if (isSettingsDialogOpen()) sidebarOpen = false;
 	});
 
 	// Swipe right from left edge to open sidebar (phone)
