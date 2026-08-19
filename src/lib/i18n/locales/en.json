@@ -7,6 +7,11 @@
 	},
 	"settings": {
 		"heading": "Settings",
+		"section": {
+			"general": "General",
+			"roles": "Roles",
+			"characterNames": "Character Names"
+		},
 		"aiProviders": "AI Providers",
 		"addProvider": "+ Add Provider",
 		"advanced": "Advanced",

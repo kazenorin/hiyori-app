@@ -7,6 +7,11 @@
 	},
 	"settings": {
 		"heading": "設定",
+		"section": {
+			"general": "一般",
+			"roles": "角色分工",
+			"characterNames": "角色名稱"
+		},
 		"aiProviders": "AI 提供者",
 		"addProvider": "+ 新增提供者",
 		"advanced": "進階",
