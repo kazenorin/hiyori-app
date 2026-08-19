@@ -93,9 +93,7 @@
 			/>
 		{:else}
 			<!-- Provider Card -->
-			<div
-				class="flex items-center justify-between p-3 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150"
-			>
+			<div class="flex items-center justify-between p-3 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150">
 				<div class="min-w-0">
 					<p class="text-sm font-medium truncate">{config.name}</p>
 					<p class="text-xs text-surface-500 truncate">

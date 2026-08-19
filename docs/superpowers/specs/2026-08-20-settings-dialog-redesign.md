@@ -37,12 +37,12 @@ Icons come from `@lucide/svelte` (already a dependency).
 New feature module `src/lib/features/settings/` (requires a `README.md` per the
 project's feature-directory convention):
 
-| File | Responsibility |
-|---|---|
-| `settings-dialog-state.svelte.ts` | Module-level `$state`: `isOpen`, `activeSection`; exports `openSettingsDialog(section?)` and `closeSettingsDialog()` |
-| `SettingsDialog.svelte` | Dialog shell: Skeleton v4 `Dialog` primitive (`@skeletonlabs/skeleton-svelte`), nav pane, content pane, responsive layout |
-| `settings-sections.ts` | Declarative registry: `{ id, labelKey, icon, component, visible? }` |
-| `sections/<Name>Section.svelte` | One component per section (10 total) |
+| File                              | Responsibility                                                                                                            |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `settings-dialog-state.svelte.ts` | Module-level `$state`: `isOpen`, `activeSection`; exports `openSettingsDialog(section?)` and `closeSettingsDialog()`      |
+| `SettingsDialog.svelte`           | Dialog shell: Skeleton v4 `Dialog` primitive (`@skeletonlabs/skeleton-svelte`), nav pane, content pane, responsive layout |
+| `settings-sections.ts`            | Declarative registry: `{ id, labelKey, icon, component, visible? }`                                                       |
+| `sections/<Name>Section.svelte`   | One component per section (10 total)                                                                                      |
 
 ### Mounting & entry points
 
@@ -70,18 +70,18 @@ project's feature-directory convention):
 
 ## Menu Structure
 
-| # | Menu item | Lucide icon | Content (source) |
-|---|---|---|---|
-| 1 | General | `Palette` | Locale, color theme, theme mode (current Appearance card) |
-| 2 | AI Providers *(landing)* | `Plug` | Provider list; add/edit/copy/delete via existing `ProviderForm` |
-| 3 | Roles | `Users` | Main provider + minor task agent (internal subheader), then Plot Planner, Reviewer, Writer, Editor, Game Master, Summarizer; each keeps `RoleCallSettingsOverride` |
-| 4 | Narrative | `BookOpen` | Target word count, compressor interval, director mode, phrase highlighting, phase/divergence thresholds, Inventory toggle (moved in) |
-| 5 | Character Names | `Sparkles` | AI/Analytic mode select; Analytic shows inline quota editor (auto-applied) |
-| 6 | Text-to-Speech | `AudioLines` | Full current `/settings/tts` content: speed slider, per-locale `VoiceSelector`, model download modal |
-| 7 | Cloud Sync | `CloudUpload` | Full current `/settings/cloud-sync` content: backend config, WISP proxy, story exclusion, sync now/report |
-| 8 | Memory | `Brain` | Enable + memory/embedding providers; menu item hidden unless `isMemoryCapable()` |
-| 9 | Data | `Database` | Game data & config import/export, danger zone accordion |
-| 10 | Developer | `Bug` | Log level |
+| #   | Menu item                | Lucide icon   | Content (source)                                                                                                                                                   |
+| --- | ------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | General                  | `Palette`     | Locale, color theme, theme mode (current Appearance card)                                                                                                          |
+| 2   | AI Providers _(landing)_ | `Plug`        | Provider list; add/edit/copy/delete via existing `ProviderForm`                                                                                                    |
+| 3   | Roles                    | `Users`       | Main provider + minor task agent (internal subheader), then Plot Planner, Reviewer, Writer, Editor, Game Master, Summarizer; each keeps `RoleCallSettingsOverride` |
+| 4   | Narrative                | `BookOpen`    | Target word count, compressor interval, director mode, phrase highlighting, phase/divergence thresholds, Inventory toggle (moved in)                               |
+| 5   | Character Names          | `Sparkles`    | AI/Analytic mode select; Analytic shows inline quota editor (auto-applied)                                                                                         |
+| 6   | Text-to-Speech           | `AudioLines`  | Full current `/settings/tts` content: speed slider, per-locale `VoiceSelector`, model download modal                                                               |
+| 7   | Cloud Sync               | `CloudUpload` | Full current `/settings/cloud-sync` content: backend config, WISP proxy, story exclusion, sync now/report                                                          |
+| 8   | Memory                   | `Brain`       | Enable + memory/embedding providers; menu item hidden unless `isMemoryCapable()`                                                                                   |
+| 9   | Data                     | `Database`    | Game data & config import/export, danger zone accordion                                                                                                            |
+| 10  | Developer                | `Bug`         | Log level                                                                                                                                                          |
 
 Notes:
 

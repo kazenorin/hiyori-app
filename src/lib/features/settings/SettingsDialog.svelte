@@ -60,7 +60,8 @@
 				<nav class="hidden md:flex flex-col w-56 shrink-0 border-r border-surface-200-800 p-3 gap-1 overflow-y-auto">
 					{#each sections as section (section.id)}
 						<button
-							class="flex items-center gap-2 px-3 py-2 rounded-(--radius-base) text-sm text-left transition-colors {section.id === active?.id
+							class="flex items-center gap-2 px-3 py-2 rounded-(--radius-base) text-sm text-left transition-colors {section.id ===
+							active?.id
 								? 'bg-surface-200-800 text-primary-600-400 font-medium'
 								: 'text-surface-500 hover:bg-surface-200-800'}"
 							type="button"

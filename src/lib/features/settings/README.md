@@ -6,12 +6,12 @@ current page.
 
 ## Module responsibilities
 
-| File | Responsibility |
-|---|---|
-| `settings-dialog-state.svelte.ts` | Module-level `$state` for `isOpen` / `activeSection`; `openSettingsDialog(section?)` / `closeSettingsDialog()`. AI Providers (`DEFAULT_SECTION`) is the landing section. The last-visited section is remembered in memory across close/reopen. |
-| `settings-sections.ts` | Declarative registry (`SETTINGS_SECTIONS`): `{ id, labelKey, descriptionKey?, icon, component, visible? }`. `getVisibleSections()` filters by `visible` (Memory is hidden unless `isMemoryCapable()`). |
-| `SettingsDialog.svelte` | Dialog shell built on Skeleton's `Dialog` (portal, focus trap, Escape). Responsive: master-detail (left nav + scrollable content pane) at `md` and up; back button + horizontally scrollable pill tabs below `md`. |
-| `sections/` | One component per section (General, Providers, Roles, Narrative, CharacterNames, Tts, CloudSync, Memory, Data, Developer). Each owns its own state and reuses shared UI components (`Card`, `ThemedSelect`, `NumberField`, `ProviderForm`, `RoleCallSettingsOverride`, `VoiceSelector`, `Modal`). |
+| File                              | Responsibility                                                                                                                                                                                                                                                                                    |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `settings-dialog-state.svelte.ts` | Module-level `$state` for `isOpen` / `activeSection`; `openSettingsDialog(section?)` / `closeSettingsDialog()`. AI Providers (`DEFAULT_SECTION`) is the landing section. The last-visited section is remembered in memory across close/reopen.                                                    |
+| `settings-sections.ts`            | Declarative registry (`SETTINGS_SECTIONS`): `{ id, labelKey, descriptionKey?, icon, component, visible? }`. `getVisibleSections()` filters by `visible` (Memory is hidden unless `isMemoryCapable()`).                                                                                            |
+| `SettingsDialog.svelte`           | Dialog shell built on Skeleton's `Dialog` (portal, focus trap, Escape). Responsive: master-detail (left nav + scrollable content pane) at `md` and up; back button + horizontally scrollable pill tabs below `md`.                                                                                |
+| `sections/`                       | One component per section (General, Providers, Roles, Narrative, CharacterNames, Tts, CloudSync, Memory, Data, Developer). Each owns its own state and reuses shared UI components (`Card`, `ThemedSelect`, `NumberField`, `ProviderForm`, `RoleCallSettingsOverride`, `VoiceSelector`, `Modal`). |
 
 ## Adding a new section
 

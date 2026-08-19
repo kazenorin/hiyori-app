@@ -80,9 +80,7 @@
 	function excludeAllStories(): void {
 		const current = sync.excludedStories ?? [];
 		const excludedIdSet = new Set(current.map((s) => s.id));
-		const newEntries = stories
-			.filter((s) => !excludedIdSet.has(s.id))
-			.map((s) => ({ id: s.id, name: s.name }));
+		const newEntries = stories.filter((s) => !excludedIdSet.has(s.id)).map((s) => ({ id: s.id, name: s.name }));
 		updateSync({ excludedStories: [...current, ...newEntries] });
 	}
 
@@ -102,14 +100,9 @@
 	const webdavWarnings = $derived(getUrlWarnings(webdav.url, !isTauriSync()));
 	const excludedIds = $derived(new Set((sync.excludedStories ?? []).map((s) => s.id)));
 	const localIds = $derived(new Set(stories.map((s) => s.id)));
-	const displayStories = $derived([
-		...stories,
-		...(sync.excludedStories ?? []).filter((s) => !localIds.has(s.id)),
-	]);
+	const displayStories = $derived([...stories, ...(sync.excludedStories ?? []).filter((s) => !localIds.has(s.id))]);
 	const filteredStories = $derived(
-		storyFilter
-			? displayStories.filter((s) => s.name.toLowerCase().includes(storyFilter.toLowerCase()))
-			: displayStories
+		storyFilter ? displayStories.filter((s) => s.name.toLowerCase().includes(storyFilter.toLowerCase())) : displayStories
 	);
 	const includedCount = $derived(displayStories.reduce((n, s) => (excludedIds.has(s.id) ? n : n + 1), 0));
 	const corsBypassActive = $derived(!!sync.corsBypassEnabled && !!sync.wispProxyUrl?.trim());
@@ -174,19 +167,11 @@
 				</label>
 				<label class="block">
 					<span class="text-sm font-medium text-surface-700-300">{t('cloudSync.s3Bucket')}</span>
-					<input
-						class="input mt-1"
-						value={s3.bucket}
-						onchange={(e) => updateS3({ bucket: (e.currentTarget as HTMLInputElement).value })}
-					/>
+					<input class="input mt-1" value={s3.bucket} onchange={(e) => updateS3({ bucket: (e.currentTarget as HTMLInputElement).value })} />
 				</label>
 				<label class="block">
 					<span class="text-sm font-medium text-surface-700-300">{t('cloudSync.s3Prefix')}</span>
-					<input
-						class="input mt-1"
-						value={s3.prefix}
-						onchange={(e) => updateS3({ prefix: (e.currentTarget as HTMLInputElement).value })}
-					/>
+					<input class="input mt-1" value={s3.prefix} onchange={(e) => updateS3({ prefix: (e.currentTarget as HTMLInputElement).value })} />
 				</label>
 				<label class="block">
 					<span class="text-sm font-medium text-surface-700-300">{t('cloudSync.s3AccessKeyId')}</span>
@@ -294,12 +279,7 @@
 						</button>
 					</div>
 				</div>
-				<input
-					class="input"
-					type="search"
-					placeholder={t('cloudSync.storiesSearch')}
-					bind:value={storyFilter}
-				/>
+				<input class="input" type="search" placeholder={t('cloudSync.storiesSearch')} bind:value={storyFilter} />
 				<div class="max-h-64 overflow-y-auto space-y-1">
 					{#each filteredStories as story (story.id)}
 						<label class="flex items-center gap-2 p-1 rounded hover:bg-surface-200-800 cursor-pointer">
@@ -307,8 +287,7 @@
 								type="checkbox"
 								class="checkbox"
 								checked={!excludedIds.has(story.id)}
-								onchange={(e) =>
-									setStoryExcluded(story.id, story.name, !(e.currentTarget as HTMLInputElement).checked)}
+								onchange={(e) => setStoryExcluded(story.id, story.name, !(e.currentTarget as HTMLInputElement).checked)}
 							/>
 							<span class="text-sm text-surface-700-300 truncate">{story.name}</span>
 						</label>

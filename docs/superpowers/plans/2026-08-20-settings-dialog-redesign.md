@@ -13,6 +13,7 @@
 **Working branch:** `feature/settings-redesign` (already checked out).
 
 **Conventions to follow:**
+
 - LF line endings + trailing newline on new files (Prettier).
 - Minimal comments — only intent/reasoning that isn't obvious from code.
 - Tests use explicit `it()` blocks (no `it.each`).
@@ -24,6 +25,7 @@
 ### Task 1: Dialog state module (TDD)
 
 **Files:**
+
 - Create: `src/lib/features/settings/settings-dialog-state.svelte.ts`
 - Test: `src/lib/__tests__/features/settings/settings-dialog-state.test.ts`
 
@@ -90,16 +92,7 @@ Expected: FAIL — module `$lib/features/settings/settings-dialog-state.svelte` 
 ```ts
 // src/lib/features/settings/settings-dialog-state.svelte.ts
 export type SectionId =
-	| 'general'
-	| 'providers'
-	| 'roles'
-	| 'narrative'
-	| 'characterNames'
-	| 'tts'
-	| 'cloudSync'
-	| 'memory'
-	| 'data'
-	| 'developer';
+	'general' | 'providers' | 'roles' | 'narrative' | 'characterNames' | 'tts' | 'cloudSync' | 'memory' | 'data' | 'developer';
 
 // AI Providers is the landing section: it's the most important setting
 // (nothing works without a provider), even though General lists first.
@@ -147,6 +140,7 @@ git commit -m "feat(settings): add dialog open/section state module"
 ### Task 2: i18n keys for new menu labels
 
 **Files:**
+
 - Modify: `src/lib/i18n/locales/en.json`
 - Modify: `src/lib/i18n/locales/zh-Hant-HK.json`
 
@@ -195,6 +189,7 @@ git commit -m "feat(settings): add i18n keys for dialog section labels"
 Establish the section component pattern with the three smallest sections. All content is lifted verbatim from `src/routes/settings/+page.svelte` — only the wrapping `Card` context changes; markup and classes stay identical.
 
 **Files:**
+
 - Create: `src/lib/features/settings/sections/GeneralSection.svelte`
 - Create: `src/lib/features/settings/sections/DeveloperSection.svelte`
 - Create: `src/lib/features/settings/sections/MemorySection.svelte`
@@ -286,6 +281,7 @@ git commit -m "feat(settings): add General, Developer and Memory dialog sections
 ### Task 4: Narrative section (+ Inventory toggle move)
 
 **Files:**
+
 - Create: `src/lib/features/settings/sections/NarrativeSection.svelte`
 
 - [ ] **Step 1: Create the section**
@@ -339,11 +335,13 @@ git commit -m "feat(settings): add Narrative dialog section with inventory toggl
 ### Task 5: AI Providers section
 
 **Files:**
+
 - Create: `src/lib/features/settings/sections/ProvidersSection.svelte`
 
 - [ ] **Step 1: Create the section**
 
 Lift from `src/routes/settings/+page.svelte`:
+
 - All provider editing state and handlers (lines ~53-54, 122-175): `editingId`, `isAddingNew`, `startEdit`, `startAdd`, `cancelEdit`, `handleSaveFromForm`, `handleSaveNewFromForm`, `handleDelete`, `handleDuplicate`, `isEditing`, `mainProviderId`.
 - The AI Providers card markup (lines ~220-279): header with Add Provider button, empty state, provider list with edit/copy/delete, `ProviderForm` for edit/add.
 
@@ -391,6 +389,7 @@ git commit -m "feat(settings): add AI Providers dialog section"
 ### Task 6: Roles section (merge Provider Roles + Pipeline Roles)
 
 **Files:**
+
 - Create: `src/lib/features/settings/sections/RolesSection.svelte`
 
 - [ ] **Step 1: Create the section**
@@ -438,6 +437,7 @@ git commit -m "feat(settings): add merged Roles dialog section"
 ### Task 7: Character Names section (redesign, auto-apply)
 
 **Files:**
+
 - Create: `src/lib/features/settings/sections/CharacterNamesSection.svelte`
 
 Redesign per spec: one section combining the mode select (from the old Narrative block) and the quota editor (from the old `/settings/name-suggestion` page). Quota changes auto-apply via `updateSettings()` — the old local draft + Save button is removed.
@@ -629,11 +629,13 @@ git commit -m "feat(settings): add Character Names section with inline auto-appl
 ### Task 8: Text-to-Speech section (lift)
 
 **Files:**
+
 - Create: `src/lib/features/settings/sections/TtsSection.svelte`
 
 - [ ] **Step 1: Create the section**
 
 Copy `src/routes/settings/tts/+page.svelte` script + markup with these removals:
+
 - Remove `goto` / `resolve` imports and `handleBack()`.
 - Remove the `<svelte:head>` block.
 - Remove the back button and the `h1`/description header block (the dialog header shows the title).
@@ -655,11 +657,13 @@ git commit -m "feat(settings): add Text-to-Speech dialog section"
 ### Task 9: Cloud Sync section (lift)
 
 **Files:**
+
 - Create: `src/lib/features/settings/sections/CloudSyncSection.svelte`
 
 - [ ] **Step 1: Create the section**
 
 Copy `src/routes/settings/cloud-sync/+page.svelte` script + markup with these removals:
+
 - Remove `goto` / `resolve` imports and `handleBack()`.
 - Remove the `<svelte:head>` block.
 - Remove the back button and the `h1`/description header block.
@@ -681,11 +685,13 @@ git commit -m "feat(settings): add Cloud Sync dialog section"
 ### Task 10: Data section (lift, includes confirm modals)
 
 **Files:**
+
 - Create: `src/lib/features/settings/sections/DataSection.svelte`
 
 - [ ] **Step 1: Create the section**
 
 Lift from `src/routes/settings/+page.svelte`:
+
 - All data import/export state and handlers (lines ~56-120): `gameIO`, `configIO`, `exportProgress`, `isImporting`, the eight `handle*` functions, `handleResetConfirm`, `handleDeleteAllGameDataConfirm`, `showResetConfirm`, `isResetting`, `showDeleteAllGameDataConfirm`, `isDeletingAllGameData`.
 - The Data card markup (lines ~593-699): web notice, game data + config export/import grids, danger zone accordion.
 - The four confirm `Modal`s (import game data, import config, reset configuration, delete all game data — lines ~791-887) and the importing spinner overlay (lines ~889-896).
@@ -724,6 +730,7 @@ git commit -m "feat(settings): add Data dialog section with danger zone"
 ### Task 11: Section registry
 
 **Files:**
+
 - Create: `src/lib/features/settings/settings-sections.ts`
 
 - [ ] **Step 1: Create the registry**
@@ -755,14 +762,33 @@ export interface SettingsSection {
 }
 
 export const SETTINGS_SECTIONS: SettingsSection[] = [
-	{ id: 'general', labelKey: 'settings.section.general', descriptionKey: 'settings.appearanceDescription', icon: Palette, component: GeneralSection },
+	{
+		id: 'general',
+		labelKey: 'settings.section.general',
+		descriptionKey: 'settings.appearanceDescription',
+		icon: Palette,
+		component: GeneralSection,
+	},
 	{ id: 'providers', labelKey: 'settings.aiProviders', icon: Plug, component: ProvidersSection },
-	{ id: 'roles', labelKey: 'settings.section.roles', descriptionKey: 'settings.providerRolesDescription', icon: Users, component: RolesSection },
+	{
+		id: 'roles',
+		labelKey: 'settings.section.roles',
+		descriptionKey: 'settings.providerRolesDescription',
+		icon: Users,
+		component: RolesSection,
+	},
 	{ id: 'narrative', labelKey: 'settings.narrative', icon: BookOpen, component: NarrativeSection },
 	{ id: 'characterNames', labelKey: 'settings.section.characterNames', icon: Sparkles, component: CharacterNamesSection },
 	{ id: 'tts', labelKey: 'tts.tts', descriptionKey: 'tts.ttsDescription', icon: AudioLines, component: TtsSection },
 	{ id: 'cloudSync', labelKey: 'cloudSync.title', descriptionKey: 'cloudSync.description', icon: CloudUpload, component: CloudSyncSection },
-	{ id: 'memory', labelKey: 'settings.memory', descriptionKey: 'settings.enableMemoryDescription', icon: Brain, component: MemorySection, visible: () => isMemoryCapable() },
+	{
+		id: 'memory',
+		labelKey: 'settings.memory',
+		descriptionKey: 'settings.enableMemoryDescription',
+		icon: Brain,
+		component: MemorySection,
+		visible: () => isMemoryCapable(),
+	},
 	{ id: 'data', labelKey: 'settings.data', descriptionKey: 'settings.dataDescription', icon: Database, component: DataSection },
 	{ id: 'developer', labelKey: 'settings.developer', icon: Bug, component: DeveloperSection },
 ];
@@ -786,6 +812,7 @@ git commit -m "feat(settings): add declarative section registry"
 ### Task 12: Dialog shell
 
 **Files:**
+
 - Create: `src/lib/features/settings/SettingsDialog.svelte`
 
 Skeleton v5 `Dialog` anatomy (zag-based): `Dialog.Root` accepts `open` + `onOpenChange` (details `{ open: boolean }`); `Dialog.Backdrop`, `Dialog.Positioner`, `Dialog.Content`, `Dialog.Title`, `Dialog.Description` provide the structure, portal, focus trap, and Escape handling.
@@ -855,7 +882,8 @@ Skeleton v5 `Dialog` anatomy (zag-based): `Dialog.Root` accepts `open` + `onOpen
 				<nav class="hidden md:flex flex-col w-56 shrink-0 border-r border-surface-200-800 p-3 gap-1 overflow-y-auto">
 					{#each sections as section (section.id)}
 						<button
-							class="flex items-center gap-2 px-3 py-2 rounded-(--radius-base) text-sm text-left transition-colors {section.id === active?.id
+							class="flex items-center gap-2 px-3 py-2 rounded-(--radius-base) text-sm text-left transition-colors {section.id ===
+							active?.id
 								? 'bg-surface-200-800 text-primary-600-400 font-medium'
 								: 'text-surface-500 hover:bg-surface-200-800'}"
 							type="button"
@@ -909,6 +937,7 @@ git commit -m "feat(settings): add responsive dialog shell"
 ### Task 13: Mount dialog and rewire entry points
 
 **Files:**
+
 - Modify: `src/routes/+layout.svelte`
 - Modify: `src/lib/components/chat/SidebarNav.svelte`
 
@@ -974,6 +1003,7 @@ git commit -m "feat(settings): mount settings dialog and open it from sidebar"
 ### Task 14: Delete old routes and clean up i18n
 
 **Files:**
+
 - Delete: `src/routes/settings/+page.svelte`
 - Delete: `src/routes/settings/tts/+page.svelte`
 - Delete: `src/routes/settings/cloud-sync/+page.svelte`
@@ -1020,6 +1050,7 @@ git commit -m "refactor(settings): remove settings routes and unused i18n keys"
 ### Task 15: Feature README
 
 **Files:**
+
 - Create: `src/lib/features/settings/README.md`
 
 - [ ] **Step 1: Write the README**
