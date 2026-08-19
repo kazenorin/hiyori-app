@@ -6,7 +6,6 @@
 		"actLabel": "Act {{n}}"
 	},
 	"settings": {
-		"heading": "Settings",
 		"section": {
 			"general": "General",
 			"roles": "Roles",
@@ -123,11 +122,8 @@
 		"characterNameEngineAnalytic": "Analytic",
 		"characterNameEngineAiDescription": "Generate names with an LLM (uses the Plot Planner provider). Produces original names with a short rationale.",
 		"characterNameEngineAnalyticDescription": "Pick names from a curated, tagged database — no AI call, works without any provider configured.",
-		"characterNameEngineConfigure": "Configure name database quotas",
 		"back": "Back",
 		"ttsConfig": {
-			"title": "Text-to-Speech Configuration",
-			"description": "Choose a voice for each story locale. Select a voice to enable text-to-speech for that locale, or set it to Disabled to turn it off.",
 			"locale": {
 				"en": "English",
 				"zh-Hant-HK": "Chinese"
@@ -150,7 +146,6 @@
 			"ratioGiven": "Given names",
 			"ratioFamily": "Family names",
 			"ratioNickname": "Nicknames",
-			"save": "Save & Apply",
 			"cultures": {
 				"european": "European",
 				"japanese": "Japanese",

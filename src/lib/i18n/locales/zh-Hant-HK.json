@@ -6,7 +6,6 @@
 		"actLabel": "第 {{n}} 章"
 	},
 	"settings": {
-		"heading": "設定",
 		"section": {
 			"general": "一般",
 			"roles": "角色分工",
@@ -123,11 +122,8 @@
 		"characterNameEngineAnalytic": "分析式",
 		"characterNameEngineAiDescription": "以 LLM 產生名字 (使用「劇情規劃」提供者) 。產生原創名字並附簡短理由。",
 		"characterNameEngineAnalyticDescription": "從預設、已標籤的名字資料庫中挑選——無需 AI 呼叫，未設定任何提供者亦可使用。",
-		"characterNameEngineConfigure": "設定名字資料庫配額",
 		"back": "返回",
 		"ttsConfig": {
-			"title": "文字語音設定",
-			"description": "為每個故事語言選擇語音。選擇語音即可為該語言啟用文字語音，或設定為「停用」。",
 			"locale": {
 				"en": "英文",
 				"zh-Hant-HK": "中文"
@@ -150,7 +146,6 @@
 			"ratioGiven": "名字",
 			"ratioFamily": "姓氏",
 			"ratioNickname": "綽號",
-			"save": "儲存並套用",
 			"cultures": {
 				"european": "歐洲",
 				"japanese": "日本",
