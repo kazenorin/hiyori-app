@@ -11,12 +11,7 @@ import type { AssistantContext } from '$lib/ai/pipeline/types';
 // --- Act line event types ---
 
 export type ActLineEventType =
-	| 'plot-generated'
-	| 'act-phase-transition'
-	| 'ending'
-	| 'epilogue-written'
-	| 'act-short-summary'
-	| 'character-profiles-compressed';
+	'plot-generated' | 'act-phase-transition' | 'ending' | 'epilogue-written' | 'act-short-summary' | 'character-profiles-compressed';
 
 export interface ActPhaseBoundary {
 	phase: ActPhase;
@@ -143,6 +138,18 @@ export async function getActLine(id: string): Promise<ActLineMeta | null> {
 export async function getActLinesForAct(actId: string): Promise<ActLineMeta[]> {
 	const db = getDatabase();
 	const rows = await db.select<ActLineMetaRow[]>('SELECT * FROM act_line_meta WHERE act_id = $1 ORDER BY created_at', [actId]);
+	return rows.map(rowToActLineMeta);
+}
+
+export async function getActLinesForStory(storyId: string): Promise<ActLineMeta[]> {
+	const db = getDatabase();
+	const rows = await db.select<ActLineMetaRow[]>(
+		`SELECT alm.* FROM act_line_meta alm
+		 JOIN acts a ON a.id = alm.act_id
+		 WHERE a.story_id = $1
+		 ORDER BY alm.created_at`,
+		[storyId]
+	);
 	return rows.map(rowToActLineMeta);
 }
 

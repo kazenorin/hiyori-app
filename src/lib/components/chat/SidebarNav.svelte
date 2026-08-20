@@ -14,7 +14,8 @@
 		renameActLine,
 	} from '$lib/stores/stories.svelte';
 	import { getIsActive as getIsWorldBuilderActive } from '$lib/features/world-builder/world-builder.svelte';
-	import { batchGetActLineEventSummary, type ActLineEventSummary } from '$lib/db/act-lines';
+	import { batchGetActLineEventSummary, getActLinesForStory, type ActLineEventSummary, type ActLineMeta } from '$lib/db/act-lines';
+	import { canActBeDeleted } from '$lib/db/acts';
 	import { getActEnded, getStoryConcluded } from '$lib/ai/chat.svelte';
 	import { getSettings, isMemoryAvailable, updateSettings } from '$lib/stores/settings.svelte';
 	import { exportStory } from '$lib/features/story-export-load/story-exporter';
@@ -55,6 +56,9 @@
 	let editingName = $state('');
 	let renameSubmitting = $state(false);
 	let actLineEventSummaries = $state<Map<string, ActLineEventSummary>>(new Map());
+	// Act lines of every act in the active story, needed to decide whether an
+	// act can be deleted (getActLines() only covers the active act).
+	let storyActLines = $state<ActLineMeta[]>([]);
 	let sidebarBlocked = $derived(getIsWorldBuilderActive());
 
 	// --- Mobile swipe state ---
@@ -147,6 +151,19 @@
 		const ids = lines.map((l) => l.id);
 		batchGetActLineEventSummary(ids).then((map) => {
 			actLineEventSummaries = map;
+		});
+	});
+
+	$effect(() => {
+		const storyId = getActiveStoryId();
+		getActs(); // reactive dep: re-run when acts are added/removed
+		getActLines(); // reactive dep: re-run when the active act's lines change
+		if (!storyId) {
+			storyActLines = [];
+			return;
+		}
+		getActLinesForStory(storyId).then((lines) => {
+			storyActLines = lines;
 		});
 	});
 
@@ -287,7 +304,7 @@
 							indent="pl-4"
 							activeClass="bg-surface-200-800"
 							bind:renameValue={editingName}
-							canDelete={getActs().length > 1 && getActs().at(-1)?.id === act.id}
+							canDelete={canActBeDeleted(act, getActs(), storyActLines)}
 							{swipeConfig}
 							isOpen={openSwipeRowId === act.id}
 							openOffset={openSwipeOffset}

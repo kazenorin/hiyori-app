@@ -1,5 +1,5 @@
 import { getDatabase } from './database';
-import { deleteActLine, getActLine } from './act-lines';
+import { deleteActLine, getActLine, type ActLineMeta } from './act-lines';
 
 export interface Act {
 	id: string;
@@ -125,6 +125,19 @@ export async function getActsContinuingFrom(actLineId: string): Promise<Act[]> {
 	const db = getDatabase();
 	const rows = await db.select<ActRow[]>('SELECT * FROM acts WHERE continues_from_act_line_id = $1', [actLineId]);
 	return rows.map(rowToAct);
+}
+
+/**
+ * An act is deletable only if the story has more than one act and no other
+ * act continues from any of its act lines (deleting it would orphan those acts).
+ * `storyActLines` must contain the act lines of every act in the story.
+ */
+export function canActBeDeleted(act: Act, acts: Act[], storyActLines: Pick<ActLineMeta, 'id' | 'actId'>[]): boolean {
+	if (acts.length <= 1) return false;
+	const ownLineIds = new Set(storyActLines.filter((line) => line.actId === act.id).map((line) => line.id));
+	return !acts.some(
+		(other) => other.id !== act.id && other.continuesFromActLineId !== null && ownLineIds.has(other.continuesFromActLineId)
+	);
 }
 
 export async function getActByActLineId(actLineId: string): Promise<Act | null> {
