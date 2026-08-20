@@ -140,6 +140,14 @@ export function canActBeDeleted(act: Act, acts: Act[], storyActLines: Pick<ActLi
 	);
 }
 
+/**
+ * An act line is not deletable while any act continues from it
+ * (deleting it would orphan that act's `continuesFromActLineId`).
+ */
+export function canActLineBeDeleted(actLineId: string, acts: Act[]): boolean {
+	return !acts.some((act) => act.continuesFromActLineId === actLineId);
+}
+
 export async function getActByActLineId(actLineId: string): Promise<Act | null> {
 	const db = getDatabase();
 	const rows = await db.select<ActRow[]>(

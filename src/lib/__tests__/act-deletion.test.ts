@@ -102,6 +102,45 @@ describe('canActBeDeleted', () => {
 	});
 });
 
+describe('canActLineBeDeleted', () => {
+	let canActLineBeDeleted: typeof import('$lib/db/acts').canActLineBeDeleted;
+
+	beforeEach(async () => {
+		vi.clearAllMocks();
+		mockDbSelectResults = [];
+
+		vi.resetModules();
+		vi.doMock('$lib/db/database', () => ({ getDatabase: () => mockDb }));
+
+		const mod = await import('$lib/db/acts');
+		canActLineBeDeleted = mod.canActLineBeDeleted;
+	});
+
+	it('returns true when no act continues from the act line', () => {
+		const acts = [makeAct(), makeAct({ id: 'act-2', actNumber: 2, continuesFromActLineId: 'line-1' })];
+		expect(canActLineBeDeleted('line-2', acts)).toBe(true);
+	});
+
+	it('returns false when another act continues from the act line', () => {
+		const acts = [makeAct(), makeAct({ id: 'act-2', actNumber: 2, continuesFromActLineId: 'line-1' })];
+		expect(canActLineBeDeleted('line-1', acts)).toBe(false);
+	});
+
+	it('returns false when multiple acts continue from the act line', () => {
+		const acts = [
+			makeAct(),
+			makeAct({ id: 'act-2', actNumber: 2, continuesFromActLineId: 'line-1' }),
+			makeAct({ id: 'act-3', actNumber: 3, continuesFromActLineId: 'line-1' }),
+		];
+		expect(canActLineBeDeleted('line-1', acts)).toBe(false);
+	});
+
+	it('returns true when all acts have null continuesFromActLineId', () => {
+		const acts = [makeAct(), makeAct({ id: 'act-2', actNumber: 2, continuesFromActLineId: null })];
+		expect(canActLineBeDeleted('line-1', acts)).toBe(true);
+	});
+});
+
 describe('getActLinesForStory', () => {
 	let getActLinesForStory: typeof import('$lib/db/act-lines').getActLinesForStory;
 

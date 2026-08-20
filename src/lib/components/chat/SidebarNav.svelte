@@ -15,7 +15,7 @@
 	} from '$lib/stores/stories.svelte';
 	import { getIsActive as getIsWorldBuilderActive } from '$lib/features/world-builder/world-builder.svelte';
 	import { batchGetActLineEventSummary, getActLinesForStory, type ActLineEventSummary, type ActLineMeta } from '$lib/db/act-lines';
-	import { canActBeDeleted } from '$lib/db/acts';
+	import { canActBeDeleted, canActLineBeDeleted } from '$lib/db/acts';
 	import { getActEnded, getStoryConcluded } from '$lib/ai/chat.svelte';
 	import { getSettings, isMemoryAvailable, updateSettings } from '$lib/stores/settings.svelte';
 	import { exportStory } from '$lib/features/story-export-load/story-exporter';
@@ -337,7 +337,7 @@
 									indent="pl-8"
 									activeClass="bg-primary-100-900 text-primary-700-300"
 									bind:renameValue={editingName}
-									canDelete={getActiveAct()?.actNumber !== 1 || getActLines().length > 1}
+									canDelete={(getActiveAct()?.actNumber !== 1 || getActLines().length > 1) && canActLineBeDeleted(line.id, getActs())}
 									{swipeConfig}
 									isOpen={openSwipeRowId === line.id}
 									openOffset={openSwipeOffset}
