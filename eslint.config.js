@@ -31,7 +31,6 @@ export default tseslint.config(
 		languageOptions: {
 			globals: globals.browser,
 			parserOptions: {
-				projectService: true,
 				extraFileExtensions: ['.svelte'],
 				parser: tseslint.parser,
 			},
@@ -46,20 +45,6 @@ export default tseslint.config(
 	},
 
 	{
-		languageOptions: {
-			parserOptions: {
-				projectService: {
-					allowDefaultProject: [
-						'svelte.config.js',
-						'vitest.config.ts',
-						'scripts/bump-version.mjs',
-						'scripts/clean-wasm.mjs',
-						'scripts/copy-wasm.mjs',
-						'scripts/update-config-manifest.mjs',
-					],
-				},
-			},
-		},
 		rules: {
 			'@typescript-eslint/no-unused-vars': [
 				'error',
