@@ -9,6 +9,7 @@ import { variablesToMarkdown } from './template-renderer';
 import { getGameMasterDescriptors } from './descriptors';
 import { gameMasterSystemPromptLoader, guidanceGameMasterExtractionPromptLoader } from '$lib/fs/prompts';
 import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection, formatDirectorNotesSection } from '$lib/definitions/pipeline-sections';
+import { resolveGmExtractionPrompt, resolveGmSystemPrompt } from '$lib/ai/pipeline/runners';
 
 export interface GameDataRegenerationContext {
 	worldContent: string;
@@ -29,10 +30,11 @@ export async function regenerateGameData(params: GameDataRegenerationContext): P
 	const config = getMainProviderConfig();
 	if (!config?.model) return null;
 
-	const gameMasterSystemPrompt = (await gameMasterSystemPromptLoader.loadDefault()).replaceAll('{{additionalRules}}', '');
-	const gmExtractionPrompt = (await guidanceGameMasterExtractionPromptLoader.loadDefault())
-		.replaceAll('{{currentScene}}', String(sceneNumber))
-		.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, '');
+	const gameMasterSystemPrompt = resolveGmSystemPrompt(await gameMasterSystemPromptLoader.loadDefault());
+	const gmExtractionPrompt = resolveGmExtractionPrompt(await guidanceGameMasterExtractionPromptLoader.loadDefault(), {
+		currentScene: String(sceneNumber),
+		inventoryToolsInstruction: '',
+	});
 
 	const model = await createModel(config);
 	const editorOutput = variablesToMarkdown(narrativeVariables);

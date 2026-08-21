@@ -104,19 +104,33 @@ function inventoryToolsPartial(value: string): string {
 const earlyPhaseFactor = 0.3;
 const latePhaseFactor = 1 - earlyPhaseFactor;
 
-function resolveGmSystemPrompt(ctx: PipelineRunContext): string {
-	return ctx.prompts.gameMasterSystemPrompt.replaceAll('{{additionalRules}}', '');
+export function resolveGmSystemPrompt(systemPrompt: string): string {
+	return systemPrompt.replaceAll('{{additionalRules}}', '');
 }
 
-function resolveGmExtractionPrompt(ctx: PipelineRunContext): string {
+export interface GmExtractionTemplateParams {
+	currentScene: string;
+	currentActPhase?: string;
+	inventoryToolsInstruction: string;
+}
+
+export function resolveGmExtractionPrompt(base: string, params: GmExtractionTemplateParams): string {
+	return base
+		.replaceAll('{{currentScene}}', params.currentScene)
+		.replaceAll('{{currentActPhase}}', params.currentActPhase ?? '')
+		.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, params.inventoryToolsInstruction);
+}
+
+function resolveGmExtractionPromptForContext(ctx: PipelineRunContext): string {
 	const base =
 		ctx.story.actLine.plotMode === 'phaseEvent'
 			? ctx.prompts.phaseEventGameMasterExtractionPrompt
 			: ctx.prompts.guidanceGameMasterExtractionPrompt;
-	return base
-		.replaceAll('{{currentScene}}', ctx.currentScene)
-		.replaceAll('{{currentActPhase}}', resolveCurrentActPhase(ctx))
-		.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, inventoryToolsPartial(indentLines(gameMasterInventoryToolsInstruction(), '   ')));
+	return resolveGmExtractionPrompt(base, {
+		currentScene: ctx.currentScene,
+		currentActPhase: resolveCurrentActPhase(ctx),
+		inventoryToolsInstruction: inventoryToolsPartial(indentLines(gameMasterInventoryToolsInstruction(), '   ')),
+	});
 }
 
 function resolveSummarizedScenes(summarizedScenes: number) {
@@ -539,11 +553,11 @@ export function executeGmPhase(ctx: PipelineRunContext, state: PipelineState, po
 	return executeStreamingPhase(
 		{
 			phaseName: 'GAME_MASTER',
-			systemPrompt: resolveGmSystemPrompt(ctx),
+			systemPrompt: resolveGmSystemPrompt(ctx.prompts.gameMasterSystemPrompt),
 			...ctx.sharedParams,
 			tools: filterToolsForPhase(ctx.tools, 'GAME_MASTER'),
 			descriptors: getGameMasterDescriptors(),
-			messages: buildGamePhaseMessages(postEditorCtx, resolveGmExtractionPrompt(ctx)),
+			messages: buildGamePhaseMessages(postEditorCtx, resolveGmExtractionPromptForContext(ctx)),
 			providerConfig: ctx.providerConfigs.gameMaster,
 			buildStateUpdate: buildGmStateUpdate,
 		},
