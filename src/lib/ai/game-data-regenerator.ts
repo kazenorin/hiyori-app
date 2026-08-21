@@ -7,14 +7,8 @@ import { emptyGameDataFields } from './narrative-types';
 import { parseContent } from '$lib/utils/chat-stream-parser';
 import { variablesToMarkdown } from './template-renderer';
 import { getGameMasterDescriptors } from './descriptors';
-import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
-import {
-	SECTION,
-	formatPreviousNarrativeBody,
-	formatTurnOfEventsSection,
-	formatDirectorNotesSection,
-} from '$lib/definitions/pipeline-sections';
-import { gameMasterExtractionPrompt } from '$lib/definitions/pipeline-prompts';
+import { gameMasterSystemPromptLoader, guidanceGameMasterExtractionPromptLoader } from '$lib/fs/prompts';
+import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection, formatDirectorNotesSection } from '$lib/definitions/pipeline-sections';
 
 export interface GameDataRegenerationContext {
 	worldContent: string;
@@ -35,7 +29,10 @@ export async function regenerateGameData(params: GameDataRegenerationContext): P
 	const config = getMainProviderConfig();
 	if (!config?.model) return null;
 
-	const gameMasterSystemPrompt = await gameMasterSystemPromptLoader.loadDefault();
+	const gameMasterSystemPrompt = (await gameMasterSystemPromptLoader.loadDefault()).replaceAll('{{additionalRules}}', '');
+	const gmExtractionPrompt = (await guidanceGameMasterExtractionPromptLoader.loadDefault())
+		.replaceAll('{{currentScene}}', String(sceneNumber))
+		.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, '');
 
 	const model = await createModel(config);
 	const editorOutput = variablesToMarkdown(narrativeVariables);
@@ -49,7 +46,7 @@ export async function regenerateGameData(params: GameDataRegenerationContext): P
 		...formatTurnOfEventsSection(narrativeVariables.turnOfEvents),
 		SECTION.EDITOR_OUTPUT + editorOutput,
 		...formatDirectorNotesSection(directorNotes),
-		gameMasterExtractionPrompt(),
+		gmExtractionPrompt,
 	];
 
 	const messages: MessageBase[] = contents.map((content) => ({ role: 'user' as const, content }));

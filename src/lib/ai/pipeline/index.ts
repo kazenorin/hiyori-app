@@ -72,6 +72,8 @@ function preparePipelinePrompts(loadedPrompts: LoadedPrompts) {
 		phaseEventPlotPlannerSystemPrompt: loadedPrompts.phaseEventPlotPlannerSystemPrompt,
 		guidanceWriterExtractionPrompt: loadedPrompts.guidanceWriterExtractionPrompt,
 		phaseEventWriterExtractionPrompt: loadedPrompts.phaseEventWriterExtractionPrompt,
+		guidanceGameMasterExtractionPrompt: loadedPrompts.guidanceGameMasterExtractionPrompt,
+		phaseEventGameMasterExtractionPrompt: loadedPrompts.phaseEventGameMasterExtractionPrompt,
 	};
 	return prompts;
 }

@@ -91,8 +91,6 @@ pipeline:
 
       Do not make changes to the strings.
       Return only the JSON array.
-    gameMaster: Generate the game data based on the available information in the chat history.
-    gameMasterInventory: Use the `update-inventory` tool to record any inventory changes that occurred during the scene (items acquired, lost, consumed, equipped, unequipped, used, or modified, and status effects).
     editor: Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history.
     reviewer: "Perform a review on the writer's output for Scene {{currentScene}} based on the available information in the chat history."
     reviewerQuick: "Quick-review the writer's output for Scene {{currentScene}}. Skim for glaring errors only — output the review template immediately with no reasoning."

@@ -99,7 +99,7 @@ ls('pipeline.labels.sceneCountPlural', { count: 3 }); // parameterized
 Most `ls()` calls are mediated through two bridge modules rather than called directly:
 
 - **`src/lib/definitions/common-headers.ts`** — 30+ header functions (e.g., `worldContentHeader()`, `playerResponseHeader()`)
-- **`src/lib/definitions/pipeline-prompts.ts`** — 60+ extraction prompt, label, and sub-prompt functions (e.g., `gameMasterExtractionPrompt()`, `writerGuidanceExtractionPrompt()`)
+- **`src/lib/definitions/pipeline-prompts.ts`** — 60+ extraction prompt, label, and sub-prompt functions (e.g., `reviewerExtractionPromptTemplate(currentScene)`, `plotPlannerExtractionPrompt(plotMode, currentScene, actPhase)`)
 
 AI tools also call `ls()` directly for their descriptions, parameters, and result messages (see `src/lib/ai/tools/`).
 
@@ -109,7 +109,7 @@ AI tools also call `ls()` directly for their descriptions, parameters, and resul
 | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `common`                     | Labels, headers, descriptions shared across the app (player, scene, location, etc.)                                                                                                                        |
 | `pipeline`                   | Headers, extraction prompts, labels, system prompts for the narrative generation pipeline                                                                                                                  |
-| `pipeline.extraction`        | Writer/Reviewer/Editor/GM/PlotPlanner/Summarizer extraction prompts                                                                                                                                        |
+| `pipeline.extraction`        | Writer/Reviewer/Editor/PlotPlanner/Summarizer extraction prompts (Game Master extraction prompts live in fs prompt files under `prompts/game-master/`)                                             |
 | `pipeline.extraction.writer` | Writer sub-prompts (providedSummary, turnOfEvents, directorNotes, actEnd, epilogue, guidance/phaseEvent extraction)                                                                                        |
 | `pipeline.labels`            | Display labels (acceptAsIs, totalViolations, actPhases, sceneCount, etc.)                                                                                                                                  |
 | `pipeline.system`            | System prompts (templateFitter)                                                                                                                                                                            |

@@ -70,6 +70,8 @@ export function buildImportRunContext(
 			phaseEventPlotPlannerSystemPrompt: '',
 			guidanceWriterExtractionPrompt: '',
 			phaseEventWriterExtractionPrompt: '',
+			guidanceGameMasterExtractionPrompt: '',
+			phaseEventGameMasterExtractionPrompt: '',
 			...prompts,
 		},
 		effectiveTargetWordCount: '400',

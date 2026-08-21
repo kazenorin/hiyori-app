@@ -63,6 +63,8 @@ export const phaseEventPlotPlannerSystemPromptLoader = createLoader('plot-planne
 // === Game master ===
 
 export const gameMasterSystemPromptLoader = createLoader('game-master/game-master-prompt.md');
+export const guidanceGameMasterExtractionPromptLoader = createLoader('game-master/guidance-game-master-extraction-prompt.md');
+export const phaseEventGameMasterExtractionPromptLoader = createLoader('game-master/phase-event-game-master-extraction-prompt.md');
 
 // === Summarizer ===
 
