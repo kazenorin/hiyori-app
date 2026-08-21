@@ -23,3 +23,9 @@ Whenever a new named character needs to be introduced, you must do the following
 - Call the `suggest-character-name` tool for name suggestions.
 - After introduction, always call the `introduce-character` tool to register the new character.
   {{directorNotesReinforcementPhrase}}
+
+### Other instructions
+
+- Use the `read-scene` tool to retrieve full narrative content of a given past scene
+  - Do not use `read-scene` on Scene {{previousScene}}, as you already have the full narrative body
+  - Use `read-distant-scene` to retrieve contents of scenes from past Acts

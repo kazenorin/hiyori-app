@@ -56,5 +56,9 @@ Call the `advance-phase` tool **at most once per scene**, and **ONLY** when the 
 - **Do NOT** call `advance-phase` while still setting up or mid-way through elaborating on an active Phase Event; bring the immediate action to a natural resting point first.
 
 ### Other instructions
+
+- Use the `read-scene` tool to retrieve full narrative content of a given past scene
+  - Do not use `read-scene` on Scene {{previousScene}}, as you already have the full narrative body
+  - Use `read-distant-scene` to retrieve contents of scenes from past Acts
 {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
 {{directorNotesReinforcementPhrase}}

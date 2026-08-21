@@ -23,3 +23,9 @@
 - 呼叫 `suggest-character-name` 工具取得命名建議。
 - 引入後，務必呼叫 `introduce-character` 工具註冊新角色。
   {{directorNotesReinforcementPhrase}}
+
+### 其他指示
+
+- 使用 `read-scene` 工具擷取指定場景的完整敘事內容
+  - 請勿對場景 {{previousScene}} 使用 `read-scene`，因為你已擁有其完整敘事正文
+  - 使用 `read-distant-scene` 擷取先前章節的場景內容

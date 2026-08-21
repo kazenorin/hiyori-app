@@ -178,10 +178,9 @@ function main() {
 
 	if (changed) {
 		const output = yaml.dump(manifest, {
-			quotingType: '"',
+			quoteStyle: 'double',
 			forceQuotes: false,
 			lineWidth: -1,
-			noCompatMode: true,
 			sortKeys: false,
 		});
 		writeFileSync(MANIFEST_PATH, output, 'utf-8');

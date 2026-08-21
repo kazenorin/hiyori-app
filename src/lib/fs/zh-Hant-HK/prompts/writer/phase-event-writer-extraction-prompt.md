@@ -56,5 +56,9 @@
 - **不要**在仍在佈局或正在闡述進行中的階段事件時呼叫 `advance-phase`; 請先讓目前的行動達到一個自然的暫停點。
 
 ### 其他指示
+
+- 使用 `read-scene` 工具擷取指定場景的完整敘事內容
+  - 請勿對場景 {{previousScene}} 使用 `read-scene`，因為你已擁有其完整敘事正文
+  - 使用 `read-distant-scene` 擷取先前章節的場景內容
 {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
 {{directorNotesReinforcementPhrase}}
