@@ -105,23 +105,23 @@ src:
           game-master:
             game-master-prompt.md:
               configPath: en/prompt-templates/game-master/game-master-prompt.md
-              hash: 7a67051887dc6f12eb6165bd15496ecdca7caab144b739932ffc3be5e58fbbb5
+              hash: a49ac2215a20a081a0e0097ed8564d13853b60e0575bca3d8b7309b5bda9d834
               oldHashes:
                 - 10ffe2548ccd3fc54431b802c319a4ef8b3600618aee46e4a9e58780e467b0bb
                 - 85b85ddc374405290137ff4fcc250b54251edc1e86ac4b83f70cddd678534458
                 - 0b67ab460f9bd625a0519a3c8a6282d21ea1086228dfae2ba1a741a72386f770
                 - 8cb3434931b97a804103de914fbb0604716e279b9e893e7b6a41ea6d3b6bac21
-              updatedAt: "2026-08-21T11:25:24.477Z"
+              updatedAt: "2026-08-21T12:57:30.294Z"
             guidance-game-master-extraction-prompt.md:
               configPath: en/prompt-templates/game-master/guidance-game-master-extraction-prompt.md
-              hash: 8f2aa2538697a17c1a7e98c63acb70bb75835fec9d14392e30687f4aa584966a
+              hash: df4950592ef7a9e09b18fec6062cdb2150630dd8602bc890d8a5e15f29e6b7f3
               oldHashes: []
-              updatedAt: "2026-08-21T11:25:24.477Z"
+              updatedAt: "2026-08-21T12:57:30.294Z"
             phase-event-game-master-extraction-prompt.md:
               configPath: en/prompt-templates/game-master/phase-event-game-master-extraction-prompt.md
-              hash: 7e45d52130be042c040c9c7b126f169bea05e82c3b87b07340c500ecfbaeb86d
+              hash: 9f84efe94e606ec18b9d2a52e2e6fd9d994911f31ad8fb0d382194d41428cece
               oldHashes: []
-              updatedAt: "2026-08-21T11:25:24.477Z"
+              updatedAt: "2026-08-21T12:57:30.294Z"
           general-instructions.md:
             configPath: en/prompt-templates/general-instructions.md
             hash: 1737fc28a400844b926494f96437230545809e42229bfe0ce70fc324fb6116cd
@@ -445,23 +445,23 @@ src:
           game-master:
             game-master-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/game-master/game-master-prompt.md
-              hash: dd6a491270ce8ae7187fa1fc062cee4f7fe6de7f1ec49716494c6c777a2e23b8
+              hash: 4e30192431da474800972445960b755b0b6982deaaf7f96e5cb92e2ff5d0fb35
               oldHashes:
                 - 97395085c6f070a3087677f72230d98e443f9b8cc1fe15893a49c4cd95b471c7
                 - f649149f36d9a1e8909f2deae7ead8ac50465eff0061bae3310fdefea39d3745
                 - c61cd6f9212c30a031f59cdc1af9c34e32abe4697414e54424775229046272bd
                 - 9774d2d3bf12be4e492d0bf553af669bb91703cd4ed1dc322eeaa5245630f58c
-              updatedAt: "2026-08-21T11:25:24.477Z"
+              updatedAt: "2026-08-21T12:57:30.294Z"
             guidance-game-master-extraction-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/game-master/guidance-game-master-extraction-prompt.md
-              hash: ccf845ea2082e4a70e355635cb3ccc6a64d3465dfc2ac73010c84cc610bacc21
+              hash: a41d136837d196d5b169c427b64960e29c836290797f1328c03a936981578d34
               oldHashes: []
-              updatedAt: "2026-08-21T11:25:24.477Z"
+              updatedAt: "2026-08-21T12:57:30.294Z"
             phase-event-game-master-extraction-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/game-master/phase-event-game-master-extraction-prompt.md
-              hash: a9085fa021246ea0c5413e922c14f04a7636658e79df4eb97efb2aa876ce12a7
+              hash: 49fa8c48f2febeacb6bf4359b0630a4b6f9f382f95edd3bb5681a3783fb43ffd
               oldHashes: []
-              updatedAt: "2026-08-21T11:25:24.477Z"
+              updatedAt: "2026-08-21T12:57:30.294Z"
           general-instructions.md:
             configPath: zh-Hant-HK/prompt-templates/general-instructions.md
             hash: cf6af787e5d80f992a401b19e5b4eb5f5a5ee51136a782c9d462ad378ddd5fcf

@@ -118,7 +118,8 @@ export function resolveGmExtractionPrompt(base: string, params: GmExtractionTemp
 	return base
 		.replaceAll('{{currentScene}}', params.currentScene)
 		.replaceAll('{{currentActPhase}}', params.currentActPhase ?? '')
-		.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, params.inventoryToolsInstruction);
+		.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, params.inventoryToolsInstruction)
+		.replaceAll('{{additionalRules}}', '');
 }
 
 function resolveGmExtractionPromptForContext(ctx: PipelineRunContext): string {
