@@ -332,6 +332,8 @@
 		"memoryManager": "記憶管理員",
 		"fileManager": "檔案管理員",
 		"contextManagement": "背景管理",
+		"groupByActLine": "按故事線分組",
+		"moreActions": "更多操作",
 		"newAct": "+ 新章節",
 		"newStory": "新故事",
 		"deleteConfirmTitle": "刪除{{type}}？",

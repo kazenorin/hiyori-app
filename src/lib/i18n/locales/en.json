@@ -332,6 +332,8 @@
 		"memoryManager": "Memory Manager",
 		"fileManager": "File Manager",
 		"contextManagement": "Context Management",
+		"groupByActLine": "Group by Act Line",
+		"moreActions": "More actions",
 		"newAct": "+ New Act",
 		"newStory": "New Story",
 		"deleteConfirmTitle": "Delete {{type}}?",

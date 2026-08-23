@@ -66,6 +66,10 @@ export interface Settings {
 	ttsSpeed: number;
 	characterNameSuggestionMode: CharacterNameSuggestionMode;
 	nameSuggestionQuotas: NameQuotaConfig;
+	/** Manual sidebar story order; stories not listed sort first by updated_at DESC */
+	storySortOrder: string[];
+	/** Per-story "Group by Act Line" sidebar toggle (keyed by story id; absent = off) */
+	groupByActLine: Record<string, boolean>;
 	cloudSync?: {
 		enabled: boolean;
 		backend: 's3' | 'webdav';
@@ -126,6 +130,8 @@ function createDefaults(): Settings {
 		ttsSpeed: 1,
 		characterNameSuggestionMode: 'analytic',
 		nameSuggestionQuotas: DEFAULT_NAME_QUOTAS,
+		storySortOrder: [],
+		groupByActLine: {},
 	};
 }
 
