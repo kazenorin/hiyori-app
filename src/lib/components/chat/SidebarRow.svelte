@@ -8,35 +8,36 @@
 		rowId: string;
 		variant: 'desktop' | 'mobile';
 		isActive: boolean;
-		isEditing: boolean;
+		isEditing?: boolean;
 		size: 'sm' | 'xs';
 		indent?: 'none' | 'pl-4' | 'pl-8';
 		activeClass: string;
 		// Value of the inline rename input. Ignored when isEditing is false.
-		renameValue: string;
-		// Whether to show the delete button (desktop hover button + mobile swipe).
+		renameValue?: string;
 		// Some rows (e.g. non-last acts) cannot be deleted.
-		canDelete: boolean;
+		canDelete?: boolean;
 		// Mobile-only
 		swipeConfig: Parameters<typeof swipeable>[1];
-		isOpen: boolean;
-		openOffset: number;
+		isOpen?: boolean;
+		openOffset?: number;
 		// Labels
-		renameAriaLabel: string;
-		deleteAriaLabel: string;
+		renameAriaLabel?: string;
+		deleteAriaLabel?: string;
 		// Callbacks
 		onSelect: () => void;
-		onRequestDelete: () => void;
-		onStartRename: () => void;
-		onSubmitRename: () => void;
-		onCancelRename: () => void;
-		onSwipeEnd: (e: CustomEvent<SwipeEndEventDetail>) => void;
-		onContentClick: (e: Event) => void;
-		onMobileAction: (rowId: string, action: () => void) => (e: Event) => void;
-		onDismissOpen: () => void;
+		onRequestDelete?: () => void;
+		onStartRename?: () => void;
+		onSubmitRename?: () => void;
+		onCancelRename?: () => void;
+		onSwipeEnd?: (e: CustomEvent<SwipeEndEventDetail>) => void;
+		onContentClick?: (e: Event) => void;
+		onMobileAction?: (rowId: string, action: () => void) => (e: Event) => void;
+		onDismissOpen?: () => void;
 		// Trailing-click suppression
-		justSwipedRowId: string | null;
-		setJustSwiped: (id: string | null) => void;
+		justSwipedRowId?: string | null;
+		setJustSwiped?: (id: string | null) => void;
+		// Right-edge sub-menu ("...") rendered on desktop and inside the mobile sliding content.
+		menu?: Snippet;
 		// Body
 		children: Snippet;
 	}
@@ -45,28 +46,29 @@
 		rowId,
 		variant,
 		isActive,
-		isEditing,
+		isEditing = false,
 		size,
 		indent = 'none',
 		activeClass,
 		renameValue = $bindable(''),
 		canDelete = true,
 		swipeConfig,
-		isOpen,
-		openOffset,
-		renameAriaLabel,
-		deleteAriaLabel,
+		isOpen = false,
+		openOffset = 0,
+		renameAriaLabel = '',
+		deleteAriaLabel = '',
 		onSelect,
-		onRequestDelete,
-		onStartRename,
-		onSubmitRename,
-		onCancelRename,
-		onSwipeEnd,
-		onContentClick,
-		onMobileAction,
-		onDismissOpen,
-		justSwipedRowId,
-		setJustSwiped,
+		onRequestDelete = () => {},
+		onStartRename = () => {},
+		onSubmitRename = () => {},
+		onCancelRename = () => {},
+		onSwipeEnd = () => {},
+		onContentClick = () => {},
+		onMobileAction = () => () => {},
+		onDismissOpen = () => {},
+		justSwipedRowId = null,
+		setJustSwiped = () => {},
+		menu,
 		children,
 	}: Props = $props();
 
@@ -99,31 +101,8 @@
 			<RenameInput bind:value={renameValue} {size} onSubmit={onSubmitRename} onCancel={onCancelRename} />
 		{:else}
 			{@render children()}
-			<button
-				class="text-surface-500 hover:text-surface-700-300 ml-3 md:ml-2 transition-opacity text-xs shrink-0 w-9 h-9 md:w-auto md:h-auto flex items-center justify-center rounded-md {isActive
-					? 'opacity-100'
-					: 'opacity-0 group-hover:opacity-100'}"
-				type="button"
-				onclick={(e) => {
-					e.stopPropagation();
-					onStartRename();
-				}}
-				title={renameAriaLabel}>&#9998;</button
-			>
 		{/if}
-		<button
-			class="text-surface-500 hover:text-error-500 ml-2 md:ml-1 transition-opacity text-xs shrink-0 w-9 h-9 md:w-auto md:h-auto flex items-center justify-center rounded-md {isActive
-				? 'opacity-100'
-				: 'opacity-0 group-hover:opacity-100'} disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:text-surface-500"
-			type="button"
-			disabled={!canDelete}
-			aria-label={deleteAriaLabel}
-			onclick={(e) => {
-				e.stopPropagation();
-				onRequestDelete();
-			}}
-			title={deleteAriaLabel}>&times;</button
-		>
+		{@render menu?.()}
 	</div>
 {:else}
 	<div
@@ -193,6 +172,7 @@
 					<RenameInput bind:value={renameValue} {size} onSubmit={onSubmitRename} onCancel={onCancelRename} />
 				{:else}
 					{@render children()}
+					{@render menu?.()}
 				{/if}
 			</div>
 		</div>

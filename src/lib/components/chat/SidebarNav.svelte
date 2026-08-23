@@ -12,6 +12,7 @@
 		renameStory,
 		renameAct,
 		renameActLine,
+		setStoryOrder,
 	} from '$lib/stores/stories.svelte';
 	import { getIsActive as getIsWorldBuilderActive } from '$lib/features/world-builder/world-builder.svelte';
 	import { batchGetActLineEventSummary, getActLinesForStory, type ActLineEventSummary, type ActLineMeta } from '$lib/db/act-lines';
@@ -23,9 +24,13 @@
 	import { createBackendFromSettings } from '$lib/features/cloud-sync/backend-factory';
 	import { toaster } from '$lib/stores/toaster.svelte';
 	import { type SwipeEndEventDetail } from '@svelte-put/swipeable';
+	import Sortable from 'sortablejs';
+	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { openSettingsDialog } from '$lib/features/settings/settings-dialog-state.svelte';
 	import SidebarRow from './SidebarRow.svelte';
+	import SidebarRowMenu from './SidebarRowMenu.svelte';
+	import { getLineageGroupsForStory, type LineageGroupsResult } from '$lib/db/lineage-groups';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 
@@ -60,6 +65,33 @@
 	// act can be deleted (getActLines() only covers the active act).
 	let storyActLines = $state<ActLineMeta[]>([]);
 	let sidebarBlocked = $derived(getIsWorldBuilderActive());
+
+	// --- Drag reordering of stories ---
+	let storyListEl: HTMLDivElement | null = null;
+	let sortable: Sortable | null = null;
+
+	$effect(() => {
+		if (storyListEl && !sortable) {
+			sortable = Sortable.create(storyListEl, {
+				animation: 150,
+				delay: 300,
+				delayOnTouchOnly: true,
+				onEnd: () => {
+					if (!storyListEl) return;
+					const order = [...storyListEl.querySelectorAll<HTMLElement>('[data-story-id]')].map((el) => el.dataset.storyId!);
+					setStoryOrder(order);
+				},
+			});
+		}
+		return () => {
+			sortable?.destroy();
+			sortable = null;
+		};
+	});
+
+	$effect(() => {
+		sortable?.option('disabled', sidebarBlocked || editingId !== null);
+	});
 
 	// --- Mobile swipe state ---
 	// `openSwipeRowId` identifies the row currently revealed by a swipe.
@@ -141,9 +173,11 @@
 	// --------------------------
 
 	$effect(() => {
-		const lines = getActLines();
+		getActLines(); // reactive dep: re-run when the active act's lines change
 		getActEnded(); // reactive dep: triggers re-run when actEnded changes
 		getStoryConcluded(); // reactive dep: triggers re-run when storyConcluded changes
+		// Summarize every line of the active story so badges also work in lineage mode.
+		const lines = storyActLines.length > 0 ? storyActLines : getActLines();
 		if (lines.length === 0) {
 			actLineEventSummaries = new Map();
 			return;
@@ -166,6 +200,32 @@
 			storyActLines = lines;
 		});
 	});
+
+	// Lineage groups per story, for the "Group by Act Line" mode and toggle visibility.
+	let lineageByStory = $state<Map<string, LineageGroupsResult>>(new Map());
+
+	$effect(() => {
+		const ids = getStories().map((s) => s.id);
+		getActs(); // reactive dep: acts/lines changes re-run this
+		getActLines();
+		if (ids.length === 0) {
+			lineageByStory = new Map();
+			return;
+		}
+		Promise.all(ids.map((id) => getLineageGroupsForStory(id))).then((results) => {
+			lineageByStory = new Map(ids.map((id, i) => [id, results[i]]));
+		});
+	});
+
+	function handleToggleGroup(storyId: string, value: boolean) {
+		const current = { ...(getSettings().groupByActLine ?? {}) };
+		current[storyId] = value;
+		updateSettings({ groupByActLine: current });
+	}
+
+	function handleContextManagement() {
+		goto(resolve('/context-management'));
+	}
 
 	function startRename(type: 'story' | 'act' | 'line', id: string, currentName: string) {
 		editingId = id;
@@ -197,8 +257,7 @@
 	let fontSizeSlider = $derived(getSettings().fontSize);
 	let exportingStory = $state(false);
 
-	async function handleExportStory() {
-		const storyId = getActiveStoryId();
+	async function handleExportStory(storyId: string | null = getActiveStoryId()) {
 		if (!storyId || exportingStory) return;
 		exportingStory = true;
 		try {
@@ -260,113 +319,243 @@
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <nav class="flex-1 overflow-y-auto p-2 pt-4 space-y-1 relative" onclick={handleGlobalTap}>
-	{#each getStories() as story (story.id)}
-		<div class="space-y-0.5">
-			<SidebarRow
-				rowId={story.id}
-				variant={isDesktop ? 'desktop' : 'mobile'}
-				isActive={getActiveStoryId() === story.id}
-				isEditing={editingId === story.id && editingType === 'story'}
-				size="sm"
-				activeClass="bg-surface-200-800"
-				bind:renameValue={editingName}
-				canDelete
-				{swipeConfig}
-				isOpen={openSwipeRowId === story.id}
-				openOffset={openSwipeOffset}
-				renameAriaLabel={t('sidebar.renameStory')}
-				deleteAriaLabel={t('sidebar.deleteStory')}
-				onSelect={() => onSelectStory(story.id)}
-				onRequestDelete={() => onRequestDeleteStory(story.id, story.name)}
-				onStartRename={() => startRename('story', story.id, story.name)}
-				onSubmitRename={submitRename}
-				onCancelRename={cancelRename}
-				onSwipeEnd={handleSwipeEnd(story.id)}
-				onContentClick={handleContentClick(story.id)}
-				onMobileAction={handleMobileAction}
-				onDismissOpen={() => closeSwipe(story.id)}
-				{justSwipedRowId}
-				setJustSwiped={(id) => (justSwipedRowId = id)}
-			>
-				<span class="text-sm font-medium truncate flex-1">{story.name}</span>
-			</SidebarRow>
+	<div bind:this={storyListEl} class="space-y-0.5">
+		{#each getStories() as story (story.id)}
+			<div class="space-y-0.5" data-story-id={story.id}>
+				<SidebarRow
+					rowId={story.id}
+					variant={isDesktop ? 'desktop' : 'mobile'}
+					isActive={getActiveStoryId() === story.id}
+					isEditing={editingId === story.id && editingType === 'story'}
+					size="sm"
+					activeClass="bg-surface-200-800"
+					bind:renameValue={editingName}
+					canDelete
+					{swipeConfig}
+					isOpen={openSwipeRowId === story.id}
+					openOffset={openSwipeOffset}
+					renameAriaLabel={t('sidebar.renameStory')}
+					deleteAriaLabel={t('sidebar.deleteStory')}
+					onSelect={() => onSelectStory(story.id)}
+					onRequestDelete={() => onRequestDeleteStory(story.id, story.name)}
+					onStartRename={() => startRename('story', story.id, story.name)}
+					onSubmitRename={submitRename}
+					onCancelRename={cancelRename}
+					onSwipeEnd={handleSwipeEnd(story.id)}
+					onContentClick={handleContentClick(story.id)}
+					onMobileAction={handleMobileAction}
+					onDismissOpen={() => closeSwipe(story.id)}
+					{justSwipedRowId}
+					setJustSwiped={(id) => (justSwipedRowId = id)}
+				>
+					<span class="text-sm font-medium truncate flex-1">{story.name}</span>
+					{#snippet menu()}
+						<SidebarRowMenu
+							kind="story"
+							canDelete
+							showGroupToggle={lineageByStory.get(story.id)?.toggleVisible ?? false}
+							groupByLine={getSettings().groupByActLine[story.id] ?? false}
+							onEdit={() => startRename('story', story.id, story.name)}
+							onDelete={() => onRequestDeleteStory(story.id, story.name)}
+							onExport={() => handleExportStory(story.id)}
+							onContextManagement={handleContextManagement}
+							onToggleGroup={(v) => handleToggleGroup(story.id, v)}
+						/>
+					{/snippet}
+				</SidebarRow>
 
-			<!-- Acts (only show for active story) -->
-			{#if getActiveStoryId() === story.id}
-				{#each getActs() as act (act.id)}
-					<div class="ml-3 space-y-0.5">
-						<SidebarRow
-							rowId={act.id}
-							variant={isDesktop ? 'desktop' : 'mobile'}
-							isActive={getActiveActId() === act.id}
-							isEditing={editingId === act.id && editingType === 'act'}
-							size="sm"
-							indent="pl-4"
-							activeClass="bg-surface-200-800"
-							bind:renameValue={editingName}
-							canDelete={canActBeDeleted(act, getActs(), storyActLines)}
-							{swipeConfig}
-							isOpen={openSwipeRowId === act.id}
-							openOffset={openSwipeOffset}
-							renameAriaLabel={t('sidebar.renameAct')}
-							deleteAriaLabel={t('sidebar.deleteAct')}
-							onSelect={() => onSelectAct(act.id)}
-							onRequestDelete={() => onRequestDeleteAct(act.id, act.name)}
-							onStartRename={() => startRename('act', act.id, act.name)}
-							onSubmitRename={submitRename}
-							onCancelRename={cancelRename}
-							onSwipeEnd={handleSwipeEnd(act.id)}
-							onContentClick={handleContentClick(act.id)}
-							onMobileAction={handleMobileAction}
-							onDismissOpen={() => closeSwipe(act.id)}
-							{justSwipedRowId}
-							setJustSwiped={(id) => (justSwipedRowId = id)}
-						>
-							<span class="truncate flex-1 text-surface-700-300">{t('common.actLabel', { n: act.actNumber })}: {act.name}</span>
-						</SidebarRow>
-
-						<!-- Act Lines -->
-						{#if getActiveActId() === act.id}
-							{#each getActLines() as line (line.id)}
+				<!-- Lineage groups if toggled, else acts -->
+				{#if getActiveStoryId() === story.id}
+					{@const lineage = lineageByStory.get(story.id)}
+					{@const groupOn = (getSettings().groupByActLine[story.id] ?? false) && (lineage?.toggleVisible ?? false)}
+					{#if groupOn && lineage}
+						{#each lineage.groups as group (group.leafId)}
+							{@const expanded = group.items.some((i) => i.lineId === getActiveActLineId())}
+							<div class="ml-3 space-y-0.5">
 								<SidebarRow
-									rowId={line.id}
+									rowId={'group-' + group.leafId}
 									variant={isDesktop ? 'desktop' : 'mobile'}
-									isActive={getActiveActLineId() === line.id}
-									isEditing={editingId === line.id && editingType === 'line'}
-									size="xs"
-									indent="pl-8"
-									activeClass="bg-primary-100-900 text-primary-700-300"
-									bind:renameValue={editingName}
-									canDelete={(getActiveAct()?.actNumber !== 1 || getActLines().length > 1) && canActLineBeDeleted(line.id, getActs())}
+									isActive={expanded}
+									size="sm"
+									indent="pl-4"
+									activeClass="bg-surface-200-800"
 									{swipeConfig}
-									isOpen={openSwipeRowId === line.id}
+									onSelect={() => onSelectActLine(group.leafId)}
+								>
+									<span class="truncate flex-1 text-surface-700-300"
+										>{t('common.actLabel', { n: group.leafActNumber })}: {group.leafName}</span
+									>
+									{#snippet menu()}
+										<SidebarRowMenu
+											kind="group"
+											canDelete={false}
+											showGroupToggle
+											groupByLine={getSettings().groupByActLine[story.id] ?? false}
+											onEdit={() => {}}
+											onDelete={() => {}}
+											onExport={() => handleExportStory()}
+											onContextManagement={handleContextManagement}
+											onToggleGroup={(v) => handleToggleGroup(story.id, v)}
+										/>
+									{/snippet}
+								</SidebarRow>
+								{#if expanded}
+									{#each group.items as item (item.lineId)}
+										<SidebarRow
+											rowId={item.lineId}
+											variant={isDesktop ? 'desktop' : 'mobile'}
+											isActive={getActiveActLineId() === item.lineId}
+											isEditing={editingId === item.lineId && editingType === 'line'}
+											size="xs"
+											indent="pl-8"
+											activeClass="bg-primary-100-900 text-primary-700-300"
+											bind:renameValue={editingName}
+											canDelete={(item.actNumber !== 1 || storyActLines.filter((l) => l.actId === item.actId).length > 1) &&
+												canActLineBeDeleted(item.lineId, getActs())}
+											{swipeConfig}
+											isOpen={openSwipeRowId === item.lineId}
+											openOffset={openSwipeOffset}
+											renameAriaLabel={t('sidebar.renameLine')}
+											deleteAriaLabel={t('sidebar.deleteLine')}
+											onSelect={() => onSelectActLine(item.lineId)}
+											onRequestDelete={() => onRequestDeleteActLine(item.lineId, item.name)}
+											onStartRename={() => startRename('line', item.lineId, item.name)}
+											onSubmitRename={submitRename}
+											onCancelRename={cancelRename}
+											onSwipeEnd={handleSwipeEnd(item.lineId)}
+											onContentClick={handleContentClick(item.lineId)}
+											onMobileAction={handleMobileAction}
+											onDismissOpen={() => closeSwipe(item.lineId)}
+											{justSwipedRowId}
+											setJustSwiped={(id) => (justSwipedRowId = id)}
+										>
+											<span class="truncate flex-1">{t('common.actLabel', { n: item.actNumber })}: {item.name}</span>
+											{#if actLineEventSummaries.get(item.lineId)?.endedAt != null}
+												<span class="text-[10px] font-medium text-surface-400-600 ml-1 shrink-0">{t('sidebar.actConcluded')}</span>
+											{/if}
+											{#snippet menu()}
+												<SidebarRowMenu
+													kind="line"
+													canDelete={(item.actNumber !== 1 || storyActLines.filter((l) => l.actId === item.actId).length > 1) &&
+														canActLineBeDeleted(item.lineId, getActs())}
+													showGroupToggle={lineage?.toggleVisible ?? false}
+													groupByLine={getSettings().groupByActLine[story.id] ?? false}
+													onEdit={() => startRename('line', item.lineId, item.name)}
+													onDelete={() => onRequestDeleteActLine(item.lineId, item.name)}
+													onExport={() => handleExportStory()}
+													onContextManagement={handleContextManagement}
+													onToggleGroup={(v) => handleToggleGroup(story.id, v)}
+												/>
+											{/snippet}
+										</SidebarRow>
+									{/each}
+								{/if}
+							</div>
+						{/each}
+					{:else}
+						{#each getActs() as act (act.id)}
+							<div class="ml-3 space-y-0.5">
+								<SidebarRow
+									rowId={act.id}
+									variant={isDesktop ? 'desktop' : 'mobile'}
+									isActive={getActiveActId() === act.id}
+									isEditing={editingId === act.id && editingType === 'act'}
+									size="sm"
+									indent="pl-4"
+									activeClass="bg-surface-200-800"
+									bind:renameValue={editingName}
+									canDelete={canActBeDeleted(act, getActs(), storyActLines)}
+									{swipeConfig}
+									isOpen={openSwipeRowId === act.id}
 									openOffset={openSwipeOffset}
-									renameAriaLabel={t('sidebar.renameLine')}
-									deleteAriaLabel={t('sidebar.deleteLine')}
-									onSelect={() => onSelectActLine(line.id)}
-									onRequestDelete={() => onRequestDeleteActLine(line.id, line.name)}
-									onStartRename={() => startRename('line', line.id, line.name)}
+									renameAriaLabel={t('sidebar.renameAct')}
+									deleteAriaLabel={t('sidebar.deleteAct')}
+									onSelect={() => onSelectAct(act.id)}
+									onRequestDelete={() => onRequestDeleteAct(act.id, act.name)}
+									onStartRename={() => startRename('act', act.id, act.name)}
 									onSubmitRename={submitRename}
 									onCancelRename={cancelRename}
-									onSwipeEnd={handleSwipeEnd(line.id)}
-									onContentClick={handleContentClick(line.id)}
+									onSwipeEnd={handleSwipeEnd(act.id)}
+									onContentClick={handleContentClick(act.id)}
 									onMobileAction={handleMobileAction}
-									onDismissOpen={() => closeSwipe(line.id)}
+									onDismissOpen={() => closeSwipe(act.id)}
 									{justSwipedRowId}
 									setJustSwiped={(id) => (justSwipedRowId = id)}
 								>
-									<span class="truncate flex-1">{line.name}</span>
-									{#if actLineEventSummaries.get(line.id)?.endedAt != null}
-										<span class="text-[10px] font-medium text-surface-400-600 ml-1 shrink-0">{t('sidebar.actConcluded')}</span>
-									{/if}
+									<span class="truncate flex-1 text-surface-700-300">{t('common.actLabel', { n: act.actNumber })}: {act.name}</span>
+									{#snippet menu()}
+										<SidebarRowMenu
+											kind="act"
+											canDelete={canActBeDeleted(act, getActs(), storyActLines)}
+											showGroupToggle={lineageByStory.get(story.id)?.toggleVisible ?? false}
+											groupByLine={getSettings().groupByActLine[story.id] ?? false}
+											onEdit={() => startRename('act', act.id, act.name)}
+											onDelete={() => onRequestDeleteAct(act.id, act.name)}
+											onExport={() => handleExportStory()}
+											onContextManagement={handleContextManagement}
+											onToggleGroup={(v) => handleToggleGroup(story.id, v)}
+										/>
+									{/snippet}
 								</SidebarRow>
-							{/each}
-						{/if}
-					</div>
-				{/each}
-			{/if}
-		</div>
-	{/each}
+
+								<!-- Act Lines -->
+								{#if getActiveActId() === act.id}
+									{#each getActLines() as line (line.id)}
+										<SidebarRow
+											rowId={line.id}
+											variant={isDesktop ? 'desktop' : 'mobile'}
+											isActive={getActiveActLineId() === line.id}
+											isEditing={editingId === line.id && editingType === 'line'}
+											size="xs"
+											indent="pl-8"
+											activeClass="bg-primary-100-900 text-primary-700-300"
+											bind:renameValue={editingName}
+											canDelete={(getActiveAct()?.actNumber !== 1 || getActLines().length > 1) && canActLineBeDeleted(line.id, getActs())}
+											{swipeConfig}
+											isOpen={openSwipeRowId === line.id}
+											openOffset={openSwipeOffset}
+											renameAriaLabel={t('sidebar.renameLine')}
+											deleteAriaLabel={t('sidebar.deleteLine')}
+											onSelect={() => onSelectActLine(line.id)}
+											onRequestDelete={() => onRequestDeleteActLine(line.id, line.name)}
+											onStartRename={() => startRename('line', line.id, line.name)}
+											onSubmitRename={submitRename}
+											onCancelRename={cancelRename}
+											onSwipeEnd={handleSwipeEnd(line.id)}
+											onContentClick={handleContentClick(line.id)}
+											onMobileAction={handleMobileAction}
+											onDismissOpen={() => closeSwipe(line.id)}
+											{justSwipedRowId}
+											setJustSwiped={(id) => (justSwipedRowId = id)}
+										>
+											<span class="truncate flex-1">{line.name}</span>
+											{#if actLineEventSummaries.get(line.id)?.endedAt != null}
+												<span class="text-[10px] font-medium text-surface-400-600 ml-1 shrink-0">{t('sidebar.actConcluded')}</span>
+											{/if}
+											{#snippet menu()}
+												<SidebarRowMenu
+													kind="line"
+													canDelete={(getActiveAct()?.actNumber !== 1 || getActLines().length > 1) &&
+														canActLineBeDeleted(line.id, getActs())}
+													showGroupToggle={lineageByStory.get(story.id)?.toggleVisible ?? false}
+													groupByLine={getSettings().groupByActLine[story.id] ?? false}
+													onEdit={() => startRename('line', line.id, line.name)}
+													onDelete={() => onRequestDeleteActLine(line.id, line.name)}
+													onExport={() => handleExportStory()}
+													onContextManagement={handleContextManagement}
+													onToggleGroup={(v) => handleToggleGroup(story.id, v)}
+												/>
+											{/snippet}
+										</SidebarRow>
+									{/each}
+								{/if}
+							</div>
+						{/each}
+					{/if}
+				{/if}
+			</div>
+		{/each}
+	</div>
 
 	<!-- New + Load Story buttons -->
 	<div class="flex gap-1">
@@ -418,26 +607,12 @@
 		/>
 		<span class="shrink-0 w-8 text-right tabular-nums">{(fontSizeSlider * 100).toFixed(0)}%</span>
 	</label>
-	<a
-		href={resolve('/')}
-		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
-	>
-		{t('sidebar.chat')}
-	</a>
 	<button
 		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500 w-full text-left cursor-pointer"
 		type="button"
 		onclick={() => openSettingsDialog()}
 	>
 		{t('sidebar.settings')}
-	</button>
-	<button
-		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500 w-full text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-		type="button"
-		onclick={handleExportStory}
-		disabled={!getActiveStoryId() || exportingStory}
-	>
-		{exportingStory ? t('sidebar.exporting') : t('sidebar.exportStory')}
 	</button>
 	{#if isCloudSyncConfigured()}
 		<button
@@ -462,12 +637,6 @@
 		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 	>
 		{t('sidebar.fileManager')}
-	</a>
-	<a
-		href={resolve('/context-management')}
-		class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
-	>
-		{t('sidebar.contextManagement')}
 	</a>
 	<p class="text-center text-[10px] text-surface-400-600 select-none">{version}</p>
 </div>
