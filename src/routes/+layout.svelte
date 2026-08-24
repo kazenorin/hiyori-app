@@ -11,6 +11,7 @@
 	import {
 		getActiveStoryName,
 		getActiveActLineId,
+		getActiveActId,
 		getActPlotGenerationPhase,
 		selectStory,
 		selectAct,
@@ -19,6 +20,7 @@
 		deleteAct,
 		deleteActLine,
 	} from '$lib/stores/stories.svelte';
+	import { getActByActLineId } from '$lib/db/acts';
 	import { loadActLineMessages, clearMessages } from '$lib/ai/chat.svelte';
 	import {
 		enterWorldBuilderMode,
@@ -183,6 +185,11 @@
 
 	async function handleSelectActLine(id: string) {
 		if (getIsWorldBuilderActive()) exitWorldBuilderMode();
+		// Lineage mode can select lines of a non-active act; keep activeActId in sync.
+		const act = await getActByActLineId(id);
+		if (act && act.id !== getActiveActId()) {
+			await selectAct(act.id);
+		}
 		await selectActLine(id);
 		if (!isOnContextManagement()) {
 			await loadActLineMessages(id);

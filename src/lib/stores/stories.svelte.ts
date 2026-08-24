@@ -10,7 +10,7 @@ import { log } from '$lib/logging/logger';
 import { moveWorldBuilderLog } from '$lib/logging/chat-logger';
 import { getLogFilePath } from '$lib/features/world-builder/world-builder.svelte';
 import { Memory } from '$lib/features/memory';
-import { getDefaultPlotMode, getMemoryProviderConfig, isMemoryAvailable, settings } from '$lib/stores/settings.svelte';
+import { getDefaultPlotMode, getMemoryProviderConfig, isMemoryAvailable, settings, updateSettings } from '$lib/stores/settings.svelte';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
 import { ensureWorldFile } from '$lib/ai/world-generator';
 import { writeWorldTemplateId } from '$lib/ai/world-generator/template-resolution';
@@ -102,7 +102,23 @@ export function getActiveActLine(): dbActLines.ActLineMeta | null {
 }
 
 export async function loadStories(): Promise<void> {
-	stories = await dbStories.getAllStories();
+	stories = orderStories(await dbStories.getAllStories(), settings.storySortOrder ?? []);
+}
+
+/**
+ * Merge DB order (updated_at DESC) with the manual sidebar order: stories
+ * listed in `order` follow it; unlisted stories (new/imported) come first.
+ */
+export function orderStories(loaded: dbStories.Story[], order: string[]): dbStories.Story[] {
+	if (order.length === 0) return loaded;
+	const listed = loaded.filter((s) => order.includes(s.id)).sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
+	const unlisted = loaded.filter((s) => !order.includes(s.id));
+	return [...unlisted, ...listed];
+}
+
+export async function setStoryOrder(order: string[]): Promise<void> {
+	await updateSettings({ storySortOrder: order });
+	stories = orderStories(stories, order);
 }
 
 export async function loadActs(storyId: string): Promise<void> {
@@ -304,6 +320,9 @@ export async function renameActLine(id: string, newName: string): Promise<void> 
 export async function deleteStory(id: string, removeFolder: boolean = false): Promise<void> {
 	await dbStories.deleteStory(id);
 	stories = stories.filter((s) => s.id !== id);
+	const prunedGroups = { ...(settings.groupByActLine ?? {}) };
+	delete prunedGroups[id];
+	await updateSettings({ storySortOrder: (settings.storySortOrder ?? []).filter((sid) => sid !== id), groupByActLine: prunedGroups });
 	if (removeFolder) {
 		const folderName = await dbStoryFolders.getStoryFolder(id);
 		if (folderName) {
