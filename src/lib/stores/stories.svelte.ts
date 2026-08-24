@@ -217,20 +217,26 @@ export async function createActLine(
 	isMainLine?: boolean
 ): Promise<dbActLines.ActLineMeta> {
 	const existingLines = await dbActLines.getActLinesForAct(actId);
-	const resolvedIsMainLine = isMainLine || existingLines.length === 0;
+	const resolvedIsMainLine = isMainLine ?? existingLines.length === 0;
 	const line = await dbActLines.createActLine(crypto.randomUUID(), actId, name, resolvedIsMainLine, plotMode);
 	actLines = [...actLines, line];
 	return line;
 }
 
-async function determineMainLineNameForExistingAct(targetActId: string, mainLineName: string): Promise<string> {
-	const existingLines = await dbActLines.getActLinesForAct(targetActId);
-	const mainsCount = existingLines.filter((l) => l.name.startsWith(mainLineName)).length;
-	return mainsCount > 0 ? `${mainLineName} (${mainsCount + 1})` : mainLineName;
-}
-
-async function determineActLineName(act: dbActs.Act, isMainLine: boolean) {
-	return isMainLine ? mainLineNameLabel() : await determineMainLineNameForExistingAct(act.id, mainLineNameLabel());
+/**
+ * Resolve the identity of a continuation's first line. The main-line folder
+ * ('act-N/main-line') is shared across all acts of the same number, so only
+ * the first continuation at a given act number may be the main line; later
+ * ones get a disambiguated name like 'Main Line (2)'.
+ */
+async function resolveContinuationLineIdentity(storyId: string, actNumber: number): Promise<{ isMainLine: boolean; lineName: string }> {
+	const [storyActs, storyLines] = await Promise.all([dbActs.getActsForStory(storyId), dbActLines.getActLinesForStory(storyId)]);
+	const sameNumberActIds = new Set(storyActs.filter((a) => a.actNumber === actNumber).map((a) => a.id));
+	const siblingLines = storyLines.filter((l) => sameNumberActIds.has(l.actId));
+	const isMainLine = !siblingLines.some((l) => l.isMainLine);
+	const mainLineName = mainLineNameLabel();
+	const mainsCount = siblingLines.filter((l) => l.name.startsWith(mainLineName)).length;
+	return { isMainLine, lineName: mainsCount > 0 ? `${mainLineName} (${mainsCount + 1})` : mainLineName };
 }
 
 async function buildActLineDirectory(
@@ -256,25 +262,19 @@ export async function createActLineContinuation(
 	story: dbStories.Story
 ): Promise<{ act: dbActs.Act; actLine: dbActLines.ActLineMeta }> {
 	const toActNumber = fromAct.actNumber + 1;
-	const toAct = await dbActs.getActByActNumber(story.id, toActNumber);
-	let result: { act: dbActs.Act; actLine: dbActLines.ActLineMeta };
-	if (toAct) {
-		const existingMainLine = await dbActLines.getMainLineForAct(toAct.id);
-		const isMainLine = !existingMainLine;
-		const lineName = await determineActLineName(toAct, isMainLine);
-		const actLine = await createActLine(toAct.id, lineName, fromActLine.plotMode, isMainLine);
-		await inheritProfilesFromActLine(fromActLine.id, actLine.id);
-		await buildActLineDirectory(story.id, story.name, toAct.actNumber, actLine.id, lineName, isMainLine);
-		result = { act: toAct, actLine };
-	} else {
-		const actName = actWithNumberLabel(toActNumber);
-		const newAct = await insertAct(story.id, actName, toActNumber, fromActLine.id);
-		const actLine = await createActLine(newAct.id, mainLineNameLabel(), fromActLine.plotMode);
-		await inheritProfilesFromActLine(fromActLine.id, actLine.id);
-		result = { act: newAct, actLine };
+
+	// Acts are forward-looking and bound to exactly one source act line via
+	// `continuesFromActLineId`, so every continuation starts a fresh act —
+	// an existing act must never be reused by a diverging continuation.
+	const newAct = await insertAct(story.id, actWithNumberLabel(toActNumber), toActNumber, fromActLine.id);
+	const { isMainLine, lineName } = await resolveContinuationLineIdentity(story.id, toActNumber);
+	const actLine = await createActLine(newAct.id, lineName, fromActLine.plotMode, isMainLine);
+	await inheritProfilesFromActLine(fromActLine.id, actLine.id);
+	if (!isMainLine) {
+		await buildActLineDirectory(story.id, story.name, toActNumber, actLine.id, lineName, isMainLine);
 	}
 
-	return result;
+	return { act: newAct, actLine };
 }
 
 export async function renameStory(id: string, newName: string): Promise<void> {
