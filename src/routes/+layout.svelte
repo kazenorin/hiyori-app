@@ -40,6 +40,7 @@
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import SidebarNav from '$lib/components/chat/SidebarNav.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
+	import Icon from '$lib/components/ui/Icon.svelte';
 	import { SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from '$lib/components/chat/panel-limits';
 	import { Toast } from '@skeletonlabs/skeleton-svelte';
 	import { toaster } from '$lib/stores/toaster.svelte';
@@ -326,6 +327,15 @@
 				onNewStory={handleNewStory}
 			/>
 			{#if !sidebarCollapsed}
+				<button
+					class="absolute top-16 -right-3 z-20 flex h-10 w-6 items-center justify-center rounded-r-md border border-surface-200-800 bg-surface-100-900 text-surface-500 hover:text-surface-700-300 shadow-sm cursor-pointer"
+					type="button"
+					aria-label={t('sidebar.collapseSidebar')}
+					title={t('sidebar.collapseSidebar')}
+					onclick={() => updateSettings({ sidebarCollapsed: true })}
+				>
+					<Icon name="chevron-left" class="h-3.5 w-3.5" />
+				</button>
 				<div
 					class="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize hover:bg-primary-500/30"
 					role="separator"
