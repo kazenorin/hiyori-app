@@ -67,6 +67,12 @@ export const ICONS = {
 	fork: stroke(
 		'<line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M18 9a9 9 0 01-9 9" />'
 	),
+	'chevron-left': stroke('<path d="m15 18-6-6 6-6" />'),
+	'panel-left-open': stroke('<rect width="18" height="18" x="3" y="3" rx="2" /><path d="M9 3v18" /><path d="m14 9 3 3-3 3" />'),
+	'panel-left-close': stroke('<rect width="18" height="18" x="3" y="3" rx="2" /><path d="M9 3v18" /><path d="m16 15-3-3 3-3" />'),
+	'panel-right-open': stroke('<rect width="18" height="18" x="3" y="3" rx="2" /><path d="M15 3v18" /><path d="m10 15-3-3 3-3" />'),
+	'panel-right-close': stroke('<rect width="18" height="18" x="3" y="3" rx="2" /><path d="M15 3v18" /><path d="m8 9 3 3-3 3" />'),
+	'sticky-note': stroke('<path d="M16 3H5a2 2 0 00-2 2v14a2 2 0 002 2h11l5-5V5a2 2 0 00-2-2z" /><path d="M15 3v4a2 2 0 002 2h4" />'),
 	'keep-plot': stroke('<circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="3" fill="currentColor" />'),
 	guidance: stroke('<circle cx="12" cy="12" r="10" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" />'),
 	'phase-event': stroke('<path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" /><line x1="4" y1="22" x2="4" y2="15" />'),

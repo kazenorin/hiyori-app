@@ -70,6 +70,14 @@ export interface Settings {
 	storySortOrder: string[];
 	/** Per-story "Group by Act Line" sidebar toggle (keyed by story id; absent = off) */
 	groupByActLine: Record<string, boolean>;
+	/** Desktop left sidebar width in px (md+ only) */
+	sidebarWidth: number;
+	/** Desktop left sidebar collapsed to icon strip (md+ only) */
+	sidebarCollapsed: boolean;
+	/** Desktop right input panel width in px (lg+ only) */
+	rightPanelWidth: number;
+	/** Desktop right input panel collapsed to icon strip (lg+ only) */
+	rightPanelCollapsed: boolean;
 	cloudSync?: {
 		enabled: boolean;
 		backend: 's3' | 'webdav';
@@ -132,6 +140,10 @@ function createDefaults(): Settings {
 		nameSuggestionQuotas: DEFAULT_NAME_QUOTAS,
 		storySortOrder: [],
 		groupByActLine: {},
+		sidebarWidth: 288,
+		sidebarCollapsed: false,
+		rightPanelWidth: 320,
+		rightPanelCollapsed: false,
 	};
 }
 
