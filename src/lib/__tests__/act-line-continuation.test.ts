@@ -81,10 +81,9 @@ import * as dbActLines from '$lib/db/act-lines';
 import { createActLineContinuation, createActLine } from '$lib/stores/stories.svelte';
 import { getLineDir, buildLineSubdirSuffix } from '$lib/ai/card-output-path';
 
-describe('createActLineContinuation — main-line fork detection', () => {
+describe('createActLineContinuation — always creates a fresh act', () => {
 	let story: dbStories.Story;
 	let act1: dbActs.Act;
-	let act2: dbActs.Act;
 	let fromLine: dbActLines.ActLineMeta;
 
 	beforeEach(async () => {
@@ -95,7 +94,6 @@ describe('createActLineContinuation — main-line fork detection', () => {
 
 		story = await dbStories.createStory(crypto.randomUUID(), 'Story', 'en');
 		act1 = await dbActs.createAct(crypto.randomUUID(), story.id, 'Act 1', 1, null);
-		act2 = await dbActs.createAct(crypto.randomUUID(), story.id, 'Act 2', 2, null);
 		fromLine = await createActLine(act1.id, 'Main Line', 'guidance', true);
 	});
 
@@ -103,25 +101,53 @@ describe('createActLineContinuation — main-line fork detection', () => {
 		testDb.close();
 	});
 
-	it('continuation into an act with no existing main line becomes the main line', async () => {
+	it('creates a fresh act bound to the source act line', async () => {
 		const { act, actLine } = await createActLineContinuation(act1, fromLine, story);
 
-		expect(act.id).toBe(act2.id);
-		expect(actLine.actId).toBe(act2.id);
+		expect(act.id).not.toBe(act1.id);
+		expect(act.actNumber).toBe(2);
+		expect(act.name).toBe('Act 2');
+		expect(act.continuesFromActLineId).toBe(fromLine.id);
+		expect(actLine.actId).toBe(act.id);
 		expect(actLine.isMainLine).toBe(true);
 		expect(actLine.name).toBe('Main Line');
 	});
 
-	it('second continuation into an act with an existing main line is treated as a fork', async () => {
-		await createActLineContinuation(act1, fromLine, story);
-		const { actLine: second } = await createActLineContinuation(act1, fromLine, story);
+	it('never reuses an existing act at the same act number', async () => {
+		const trunkAct2 = await dbActs.createAct(crypto.randomUUID(), story.id, 'Act 2', 2, fromLine.id);
+		await createActLine(trunkAct2.id, 'Main Line', 'guidance', true);
 
-		expect(second.actId).toBe(act2.id);
-		expect(second.isMainLine).toBe(false);
-		expect(second.name).toBe('Main Line (2)');
+		const { act, actLine } = await createActLineContinuation(act1, fromLine, story);
+
+		expect(act.id).not.toBe(trunkAct2.id);
+		expect(act.continuesFromActLineId).toBe(fromLine.id);
+		// The main-line folder ('act-2/main-line') already belongs to the trunk act's line
+		expect(actLine.isMainLine).toBe(false);
+		expect(actLine.name).toBe('Main Line (2)');
 	});
 
-	it('produces divergent on-disk folders for first main line vs second forked line', async () => {
+	it('continuing from a fork creates a separate act pointing at the fork', async () => {
+		const trunkAct2 = await dbActs.createAct(crypto.randomUUID(), story.id, 'Act 2', 2, fromLine.id);
+		await createActLine(trunkAct2.id, 'Main Line', 'guidance', true);
+		const forkLine = await createActLine(act1.id, 'Main Line (2)', 'guidance', false);
+
+		const { act } = await createActLineContinuation(act1, forkLine, story);
+
+		expect(act.id).not.toBe(trunkAct2.id);
+		expect(act.continuesFromActLineId).toBe(forkLine.id);
+	});
+
+	it('repeated continuations from the same line produce distinct acts', async () => {
+		const first = await createActLineContinuation(act1, fromLine, story);
+		const second = await createActLineContinuation(act1, fromLine, story);
+
+		expect(second.act.id).not.toBe(first.act.id);
+		expect(second.act.continuesFromActLineId).toBe(fromLine.id);
+		expect(second.actLine.isMainLine).toBe(false);
+		expect(second.actLine.name).toBe('Main Line (2)');
+	});
+
+	it('produces divergent on-disk folders for the first main line vs a later continuation', async () => {
 		const { actLine: first } = await createActLineContinuation(act1, fromLine, story);
 		const { actLine: second } = await createActLineContinuation(act1, fromLine, story);
 
@@ -133,7 +159,14 @@ describe('createActLineContinuation — main-line fork detection', () => {
 		expect(firstDir).not.toBe(secondDir);
 		// Forked-line convention: {idLast8}-{kebabCaseName}, not the shared 'main-line' folder
 		const expectedSuffix = buildLineSubdirSuffix(second.name);
-		expect(secondDir).not.toBe(`${storyFolder}/act-2/main-line`);
 		expect(secondDir).toBe(`${storyFolder}/act-2/${second.id.slice(-8)}-${expectedSuffix}`);
+	});
+
+	it('inherits the plot mode from the source act line', async () => {
+		const eventsLine = await createActLine(act1.id, 'Events Line', 'phaseEvent', false);
+
+		const { actLine } = await createActLineContinuation(act1, eventsLine, story);
+
+		expect(actLine.plotMode).toBe('phaseEvent');
 	});
 });

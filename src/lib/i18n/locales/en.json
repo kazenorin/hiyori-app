@@ -334,6 +334,11 @@
 		"contextManagement": "Context Management",
 		"groupByActLine": "Group by Act Line",
 		"moreActions": "More actions",
+		"collapseSidebar": "Collapse sidebar",
+		"expandSidebar": "Expand sidebar",
+		"collapsePanel": "Collapse panel",
+		"expandPanel": "Expand panel",
+		"directorNotes": "Director notes",
 		"newAct": "+ New Act",
 		"newStory": "New Story",
 		"deleteConfirmTitle": "Delete {{type}}?",
@@ -356,12 +361,14 @@
 		"exporting": "Exporting...",
 		"exportSuccess": "Story exported",
 		"exportFailed": "Failed to export story",
-		"syncToCloud": "Sync to Cloud",
+		"syncToCloud": "Cloud Sync",
 		"cloudSyncSuccess": "Cloud sync complete",
 		"cloudSyncFailed": "Cloud sync failed",
 		"deleteAlsoFromCloud": "Also remove from cloud storage",
 		"cloudRemoveFailed": "Story deleted locally, but cloud removal failed",
-		"loadStory": "Load Story"
+		"loadStory": "Load Story",
+		"zoomIn": "Increase font size",
+		"zoomOut": "Decrease font size"
 	},
 	"bottomNav": {
 		"chat": "Chat",

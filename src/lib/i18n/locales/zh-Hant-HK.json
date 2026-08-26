@@ -334,6 +334,11 @@
 		"contextManagement": "背景管理",
 		"groupByActLine": "按故事線分組",
 		"moreActions": "更多操作",
+		"collapseSidebar": "收合側邊欄",
+		"expandSidebar": "展開側邊欄",
+		"collapsePanel": "收合面板",
+		"expandPanel": "展開面板",
+		"directorNotes": "導演備註",
 		"newAct": "+ 新章節",
 		"newStory": "新故事",
 		"deleteConfirmTitle": "刪除{{type}}？",
@@ -356,12 +361,14 @@
 		"exporting": "匯出中…",
 		"exportSuccess": "故事已匯出",
 		"exportFailed": "故事匯出失敗",
-		"syncToCloud": "同步至雲端",
+		"syncToCloud": "雲端同步",
 		"cloudSyncSuccess": "雲端同步完成",
 		"cloudSyncFailed": "雲端同步失敗",
 		"deleteAlsoFromCloud": "同時從雲端儲存刪除",
 		"cloudRemoveFailed": "故事已在本機刪除，但雲端刪除失敗",
-		"loadStory": "載入故事"
+		"loadStory": "載入故事",
+		"zoomIn": "放大字體",
+		"zoomOut": "縮小字體"
 	},
 	"bottomNav": {
 		"chat": "聊天",
