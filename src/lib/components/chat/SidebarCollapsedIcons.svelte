@@ -3,7 +3,7 @@
 	import { version } from '$lib/app/version';
 	import Sortable from 'sortablejs';
 	import { setStoryOrder } from '$lib/stores/stories.svelte';
-	import { updateSettings } from '$lib/stores/settings.svelte';
+	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
 	import type { Act } from '$lib/db/acts';
 	import type { ActLineMeta } from '$lib/db/act-lines';
 	import type { LineageGroupsResult } from '$lib/db/lineage-groups';
@@ -12,6 +12,7 @@
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import { resolve } from '$app/paths';
 	import { canActBeDeleted, canActLineBeDeleted } from '$lib/db/acts';
+	import { openSettingsDialog } from '$lib/features/settings/settings-dialog-state.svelte';
 
 	interface Props {
 		stories: { id: string; name: string }[];
@@ -33,6 +34,9 @@
 		onStartRenameAct: (id: string, name: string) => void;
 		onStartRenameLine: (id: string, name: string) => void;
 		groupByLine: boolean;
+		onCloudSync: () => void;
+		cloudSyncAvailable: boolean;
+		cloudSyncBusy: boolean;
 	}
 
 	let {
@@ -55,12 +59,56 @@
 		onStartRenameAct,
 		onStartRenameLine,
 		groupByLine,
+		onCloudSync,
+		cloudSyncAvailable,
+		cloudSyncBusy,
 	}: Props = $props();
 
 	let expandedGroupId = $state<string | null>(null);
 	let menuStoryId = $state<string | null>(null);
 	let menuGroupId = $state<string | null>(null);
 	let menuLineId = $state<string | null>(null);
+
+	const FONT_SIZE_MIN = 0.7;
+	const FONT_SIZE_MAX = 1.5;
+	const FONT_SIZE_STEP = 0.05;
+
+	const fontSize = $derived(getSettings().fontSize);
+
+	function stepFontSize(delta: number) {
+		const next = Math.min(FONT_SIZE_MAX, Math.max(FONT_SIZE_MIN, Math.round((fontSize + delta) * 100) / 100));
+		updateSettings({ fontSize: next });
+	}
+
+	let tip = $state<{ text: string; x: number; y: number } | null>(null);
+
+	function showTip(target: EventTarget | null) {
+		const el = target instanceof Element ? target.closest<HTMLElement>('[data-tip]') : null;
+		if (!el?.dataset.tip) {
+			tip = null;
+			return;
+		}
+		const r = el.getBoundingClientRect();
+		tip = {
+			text: el.dataset.tip,
+			x: r.right,
+			y: Math.min(Math.max(r.top + r.height / 2, 14), window.innerHeight - 14),
+		};
+	}
+
+	function handlePointerOver(e: PointerEvent) {
+		showTip(e.target);
+	}
+
+	function handlePointerOut(e: PointerEvent) {
+		const from = e.target instanceof Element ? e.target.closest('[data-tip]') : null;
+		const to = e.relatedTarget instanceof Element ? e.relatedTarget.closest('[data-tip]') : null;
+		if (from !== to) tip = null;
+	}
+
+	function handleFocusIn(e: FocusEvent) {
+		showTip(e.target);
+	}
 
 	const collapsedGroups = $derived(
 		deriveCollapsedGroups({ acts, lines: storyActLines, lineage, groupByLine: groupByLine && (lineage?.toggleVisible ?? false) })
@@ -102,12 +150,32 @@
 	});
 </script>
 
-<div class="flex-1 overflow-y-auto py-2">
+<svelte:window
+	onpointerover={handlePointerOver}
+	onpointerout={handlePointerOut}
+	onpointerdown={() => (tip = null)}
+	onfocusin={handleFocusIn}
+	onfocusout={() => (tip = null)}
+/>
+
+{#if tip}
+	<div
+		class="pointer-events-none fixed z-50 max-w-60 -translate-y-1/2 rounded-lg border border-surface-200-800 bg-surface-100-900 px-2 py-1 text-xs text-surface-700-300 shadow-md"
+		style:left="{tip.x + 12}px"
+		style:top="{tip.y}px"
+	>
+		<span class="absolute -left-1 top-1/2 h-2 w-2 -translate-y-1/2 rotate-45 border-b border-l border-surface-200-800 bg-surface-100-900"
+		></span>
+		{tip.text}
+	</div>
+{/if}
+
+<div class="flex-1 overflow-y-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
 	<button
 		class="mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-lg text-surface-500 hover:bg-surface-200-800 hover:text-surface-700-300 cursor-pointer"
 		type="button"
 		aria-label={t('sidebar.expandSidebar')}
-		title={t('sidebar.expandSidebar')}
+		data-tip={t('sidebar.expandSidebar')}
 		onclick={() => updateSettings({ sidebarCollapsed: false })}
 	>
 		<Icon name="panel-left-open" class="h-5 w-5" />
@@ -117,7 +185,7 @@
 		class="mx-auto mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-surface-500 hover:bg-surface-200-800 hover:text-surface-700-300 cursor-pointer"
 		type="button"
 		aria-label={t('sidebar.newStory')}
-		title={t('sidebar.newStory')}
+		data-tip={t('sidebar.newStory')}
 		onclick={onNewStory}
 	>
 		<Icon name="plus" class="h-5 w-5" />
@@ -126,7 +194,7 @@
 		class="mx-auto mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-surface-500 hover:bg-surface-200-800 hover:text-surface-700-300"
 		href={resolve('/load-story')}
 		aria-label={t('sidebar.loadStory')}
-		title={t('sidebar.loadStory')}
+		data-tip={t('sidebar.loadStory')}
 	>
 		<Icon name="hard-drive-upload" class="h-5 w-5" />
 	</a>
@@ -140,8 +208,8 @@
 						? 'border-primary-500 bg-primary-100-900 text-primary-700-300'
 						: 'border-surface-200-800 bg-surface-100-900 text-surface-700-300'} hover:bg-surface-200-800"
 					type="button"
-					title={story.name}
 					aria-label={story.name}
+					data-tip={story.name}
 					onclick={() => onSelectStory(story.id)}
 					oncontextmenu={(e) => {
 						e.preventDefault();
@@ -177,7 +245,8 @@
 								<button
 									class="relative flex h-7 w-7 items-center justify-center rounded-md text-xs font-medium text-surface-700-300 hover:bg-surface-300-700 cursor-pointer"
 									type="button"
-									title={group.label}
+									aria-label={group.tooltip}
+									data-tip={group.tooltip}
 									onclick={() => (expandedGroupId = expandedGroupId === group.id ? null : group.id)}
 									oncontextmenu={(e) => {
 										e.preventDefault();
@@ -257,7 +326,8 @@
 														? 'bg-primary-100-900 font-semibold text-primary-700-300'
 														: 'text-surface-600-400 hover:bg-surface-200-800'}"
 													type="button"
-													title={line.label}
+													aria-label={line.tooltip}
+													data-tip={line.tooltip}
 													onclick={() => onSelectActLine(line.lineId)}
 													oncontextmenu={(e) => {
 														e.preventDefault();
@@ -301,6 +371,55 @@
 	</div>
 </div>
 
-<div class="border-t border-surface-200-800 p-1">
+<div class="flex flex-col items-center gap-1 border-t border-surface-200-800 p-1">
+	<button
+		class="flex h-10 w-10 items-center justify-center rounded-lg text-surface-500 hover:bg-surface-200-800 hover:text-surface-700-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed [@media(max-height:519px)]:hidden"
+		type="button"
+		aria-label={t('sidebar.zoomIn')}
+		data-tip={t('sidebar.zoomIn')}
+		disabled={fontSize >= FONT_SIZE_MAX}
+		onclick={() => stepFontSize(FONT_SIZE_STEP)}
+	>
+		<Icon name="zoom-in" class="h-5 w-5" />
+	</button>
+	<button
+		class="flex h-10 w-10 items-center justify-center rounded-lg text-surface-500 hover:bg-surface-200-800 hover:text-surface-700-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed [@media(max-height:519px)]:hidden"
+		type="button"
+		aria-label={t('sidebar.zoomOut')}
+		data-tip={t('sidebar.zoomOut')}
+		disabled={fontSize <= FONT_SIZE_MIN}
+		onclick={() => stepFontSize(-FONT_SIZE_STEP)}
+	>
+		<Icon name="zoom-out" class="h-5 w-5" />
+	</button>
+	{#if cloudSyncAvailable}
+		<button
+			class="flex h-10 w-10 items-center justify-center rounded-lg text-surface-500 hover:bg-surface-200-800 hover:text-surface-700-300 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+			type="button"
+			aria-label={t('sidebar.syncToCloud')}
+			data-tip={cloudSyncBusy ? t('cloudSync.syncing') : t('sidebar.syncToCloud')}
+			disabled={!activeStoryId || cloudSyncBusy}
+			onclick={onCloudSync}
+		>
+			<Icon name="cloud-sync" class="h-5 w-5" />
+		</button>
+	{/if}
+	<a
+		class="flex h-10 w-10 items-center justify-center rounded-lg text-surface-500 hover:bg-surface-200-800 hover:text-surface-700-300 [@media(max-height:431px)]:hidden"
+		href={resolve('/file-manager')}
+		aria-label={t('sidebar.fileManager')}
+		data-tip={t('sidebar.fileManager')}
+	>
+		<Icon name="folder-cog" class="h-5 w-5" />
+	</a>
+	<button
+		class="flex h-10 w-10 items-center justify-center rounded-lg text-surface-500 hover:bg-surface-200-800 hover:text-surface-700-300 cursor-pointer [@media(max-height:431px)]:hidden"
+		type="button"
+		aria-label={t('sidebar.settings')}
+		data-tip={t('sidebar.settings')}
+		onclick={() => openSettingsDialog()}
+	>
+		<Icon name="settings" class="h-5 w-5" />
+	</button>
 	<p class="text-center text-[10px] text-surface-400-600 select-none">{version}</p>
 </div>

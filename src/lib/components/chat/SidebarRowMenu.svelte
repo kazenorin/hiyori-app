@@ -62,7 +62,7 @@
 		<Popover.Trigger class="absolute top-0 right-0 h-px w-px opacity-0 pointer-events-none" tabindex={-1} aria-hidden="true" />
 	{:else}
 		<Popover.Trigger
-			class="p-1 rounded-md text-surface-500 hover:text-surface-700-300 group-hover:text-surface-700-300 shrink-0 cursor-pointer"
+			class="p-1 rounded-md text-surface-500 hover:text-surface-700-300 group-hover:text-surface-700-300 shrink-0 cursor-pointer transition-opacity duration-150 focus-visible:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
 			aria-label={t('sidebar.moreActions')}
 			title={t('sidebar.moreActions')}
 			onclick={(e) => e.stopPropagation()}

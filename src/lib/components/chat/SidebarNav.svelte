@@ -356,6 +356,9 @@
 		onContextManagement={handleContextManagement}
 		{onNewStory}
 		onToggleGroup={handleToggleGroup}
+		onCloudSync={handleCloudSync}
+		cloudSyncAvailable={isCloudSyncConfigured()}
+		cloudSyncBusy={getCloudSyncStatus() === 'syncing'}
 	/>
 {:else}
 	<!-- Toolbar: New/Load Story + collapse button (pinned above the scroll area) -->
@@ -366,14 +369,14 @@
 				type="button"
 				onclick={onNewStory}
 			>
-				<Icon name="sparkles" class="w-3.5 h-3.5" />
+				<Icon name="plus" class="w-3.5 h-3.5" />
 				{t('sidebar.newStory')}
 			</button>
 			<a
 				href={resolve('/load-story')}
 				class="flex-1 flex items-center justify-center gap-1 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-xs text-surface-500 whitespace-nowrap"
 			>
-				<Icon name="book-open-text" class="w-3.5 h-3.5" />
+				<Icon name="hard-drive-upload" class="w-3.5 h-3.5" />
 				{t('sidebar.loadStory')}
 			</a>
 			{#if isDesktop}
@@ -662,13 +665,6 @@
 			/>
 			<span class="shrink-0 w-8 text-right tabular-nums">{(fontSizeSlider * 100).toFixed(0)}%</span>
 		</label>
-		<button
-			class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500 w-full text-left cursor-pointer"
-			type="button"
-			onclick={() => openSettingsDialog()}
-		>
-			{t('sidebar.settings')}
-		</button>
 		{#if isCloudSyncConfigured()}
 			<button
 				class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500 w-full text-left cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
@@ -676,6 +672,7 @@
 				onclick={handleCloudSync}
 				disabled={!getActiveStoryId() || getCloudSyncStatus() === 'syncing'}
 			>
+				<Icon name="cloud-sync" class="w-4 h-4 shrink-0" />
 				{getCloudSyncStatus() === 'syncing' ? t('cloudSync.syncing') : t('sidebar.syncToCloud')}
 			</button>
 		{/if}
@@ -684,6 +681,7 @@
 				href={resolve('/memory-manager')}
 				class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 			>
+				<Icon name="message-square-more" class="w-4 h-4 shrink-0" />
 				{t('sidebar.memoryManager')}
 			</a>
 		{/if}
@@ -691,8 +689,17 @@
 			href={resolve('/file-manager')}
 			class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500"
 		>
+			<Icon name="folder-cog" class="w-4 h-4 shrink-0" />
 			{t('sidebar.fileManager')}
 		</a>
+		<button
+			class="flex items-center gap-2 p-2 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150 text-sm text-surface-500 w-full text-left cursor-pointer"
+			type="button"
+			onclick={() => openSettingsDialog()}
+		>
+			<Icon name="settings" class="w-4 h-4 shrink-0" />
+			{t('sidebar.settings')}
+		</button>
 		<p class="text-center text-[10px] text-surface-400-600 select-none">{version}</p>
 	</div>
 {/if}

@@ -4,8 +4,8 @@ import type { Act } from '$lib/db/acts';
 import type { ActLineMeta } from '$lib/db/act-lines';
 import type { LineageGroupsResult } from '$lib/db/lineage-groups';
 
-function act(id: string, actNumber: number, continuesFromActLineId: string | null = null): Act {
-	return { id, actNumber, continuesFromActLineId } as Act;
+function act(id: string, actNumber: number, continuesFromActLineId: string | null = null, name = `Act ${actNumber}`): Act {
+	return { id, actNumber, continuesFromActLineId, name } as Act;
 }
 
 function line(id: string, actId: string, name: string): ActLineMeta {
@@ -20,8 +20,15 @@ describe('deriveCollapsedGroups', () => {
 		const result = deriveCollapsedGroups({ acts, lines, lineage: undefined, groupByLine: false });
 		expect(result.map((g) => g.label)).toEqual(['1', '2']);
 		expect(result[0].id).toBe('a1');
-		expect(result[0].lines).toEqual([{ lineId: 'l1', label: 'M' }]);
-		expect(result[1].lines).toEqual([{ lineId: 'l2', label: 'B' }]);
+		expect(result[0].lines).toEqual([{ lineId: 'l1', label: 'M', tooltip: 'Main Line' }]);
+		expect(result[1].lines).toEqual([{ lineId: 'l2', label: 'B', tooltip: 'Branch' }]);
+	});
+
+	// Collapsed icons are single characters, so tooltips must reveal the full
+	// names the expanded tree shows — not the abbreviated labels.
+	it('off mode: tooltips carry full act and line names', () => {
+		const result = deriveCollapsedGroups({ acts, lines, lineage: undefined, groupByLine: false });
+		expect(result.map((g) => g.tooltip)).toEqual(['Act 1', 'Act 2']);
 	});
 
 	it('on mode: groups are lineages labeled with the latest line first char plus act-count badge', () => {
@@ -47,9 +54,32 @@ describe('deriveCollapsedGroups', () => {
 		expect(result[0].label).toBe('B');
 		expect(result[0].badge).toBe(2);
 		expect(result[0].lines).toEqual([
-			{ lineId: 'l2', label: '2' },
-			{ lineId: 'l1', label: '1' },
+			{ lineId: 'l2', label: '2', tooltip: 'Act 2' },
+			{ lineId: 'l1', label: '1', tooltip: 'Act 1' },
 		]);
+	});
+
+	// items are ordered latest-first (leaf → root); "the last act line" is the
+	// branch's latest (leaf) line, matching its name in the expanded tree.
+	it('on mode: group tooltip is the latest (leaf) line name, lines show act names', () => {
+		const lineage: LineageGroupsResult = {
+			toggleVisible: true,
+			groups: [
+				{
+					leafId: 'l2',
+					leafActId: 'a2',
+					leafActNumber: 2,
+					leafName: 'Branch',
+					leafCreatedAt: 0,
+					items: [
+						{ lineId: 'l2', actId: 'a2', actNumber: 2, name: 'Branch' },
+						{ lineId: 'l1', actId: 'a1', actNumber: 1, name: 'Main Line' },
+					],
+				},
+			],
+		};
+		const result = deriveCollapsedGroups({ acts, lines, lineage, groupByLine: true });
+		expect(result[0].tooltip).toBe('Branch');
 	});
 
 	it('on mode without lineage falls back to acts grouping', () => {
