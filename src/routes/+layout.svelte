@@ -40,6 +40,7 @@
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import SidebarNav from '$lib/components/chat/SidebarNav.svelte';
 	import Spinner from '$lib/components/ui/Spinner.svelte';
+	import { SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from '$lib/components/chat/panel-limits';
 	import { Toast } from '@skeletonlabs/skeleton-svelte';
 	import { toaster } from '$lib/stores/toaster.svelte';
 
@@ -49,6 +50,28 @@
 	let appReady = $state(false);
 	let sidebarOpen = $state(false);
 	let suppressSidebarClose = $state(false);
+
+	// --- Left sidebar resize/collapse (md+) ---
+	let liveSidebarWidth = $state<number | null>(null);
+	const sidebarCollapsed = $derived(getSettings().sidebarCollapsed);
+	const sidebarWidthPx = $derived(liveSidebarWidth ?? getSettings().sidebarWidth);
+
+	function handleSidebarResizeStart(e: PointerEvent) {
+		e.preventDefault();
+		const startX = e.clientX;
+		const startWidth = sidebarWidthPx;
+		const onMove = (ev: PointerEvent) => {
+			liveSidebarWidth = clamp(startWidth + ev.clientX - startX, SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH);
+		};
+		const onUp = () => {
+			window.removeEventListener('pointermove', onMove);
+			window.removeEventListener('pointerup', onUp);
+			if (liveSidebarWidth !== null) updateSettings({ sidebarWidth: liveSidebarWidth });
+			liveSidebarWidth = null;
+		};
+		window.addEventListener('pointermove', onMove);
+		window.addEventListener('pointerup', onUp);
+	}
 
 	// Mobile detection
 	$effect(() => {
@@ -288,7 +311,10 @@
 		</div>
 	{:else}
 		<!-- Desktop Sidebar -->
-		<aside class="hidden md:flex lg:w-72 border-r border-surface-200-800 flex-col">
+		<aside
+			class="relative hidden md:flex border-r border-surface-200-800 flex-col shrink-0"
+			style="width: {sidebarCollapsed ? SIDEBAR_COLLAPSED_WIDTH : sidebarWidthPx}px"
+		>
 			<SidebarNav
 				variant="desktop"
 				onSelectStory={handleSelectStory}
@@ -299,6 +325,14 @@
 				onRequestDeleteActLine={(id, name) => requestDelete('line', id, name)}
 				onNewStory={handleNewStory}
 			/>
+			{#if !sidebarCollapsed}
+				<div
+					class="absolute inset-y-0 right-0 z-10 w-1.5 cursor-col-resize hover:bg-primary-500/30"
+					role="separator"
+					aria-orientation="vertical"
+					onpointerdown={handleSidebarResizeStart}
+				></div>
+			{/if}
 		</aside>
 
 		<!-- Mobile Sidebar Drawer -->

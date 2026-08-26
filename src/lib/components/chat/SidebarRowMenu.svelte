@@ -49,9 +49,7 @@
 	);
 
 	const positioning = $derived(
-		placement === 'bottom-start'
-			? { placement: 'bottom-start' as const, gutter: 4, offset: { crossAxis: -8 } }
-			: { placement, gutter: 4 }
+		placement === 'bottom-start' ? { placement: 'bottom-start' as const, gutter: 4, offset: { crossAxis: -8 } } : { placement, gutter: 4 }
 	);
 	// zag reports open changes as a details object; adapt to this component's boolean callback.
 	const popoverControl = $derived(
@@ -75,51 +73,51 @@
 	{/if}
 	<Portal>
 		<Popover.Positioner class="z-50">
-		<Popover.Content class="w-56 py-1 rounded-lg bg-surface-100-900 border border-surface-200-800 shadow-xl">
-		{#if showGroupToggle}
-			<Switch
-				checked={groupByLine}
-				onCheckedChange={({ checked }) => onToggleGroup(checked)}
-				class="flex items-center justify-between w-full px-3 py-2 cursor-pointer outline-none! has-[:focus-visible]:[&>[data-part=control]]:ring-2 has-[:focus-visible]:[&>[data-part=control]]:ring-primary-500"
-			>
-				<Switch.Label class="flex items-center gap-2 text-sm text-surface-700-300">
-					<Icon name="fork" class="w-4 h-4" />
-					{t('sidebar.groupByActLine')}
-				</Switch.Label>
-				<Switch.Control class="data-[state=checked]:bg-primary-500 h-4! w-7!">
-					<Switch.Thumb class="data-[state=checked]:[transform:translateX(12px)]!" />
-				</Switch.Control>
-				<Switch.HiddenInput />
-			</Switch>
-		{/if}
-		<Popover.CloseTrigger class={ITEM_CLASS} type="button" onclick={onExport}>
-			<Icon name="download" class="w-4 h-4" />
-			<span>{t('sidebar.exportStory')}</span>
-		</Popover.CloseTrigger>
-		{#if kind !== 'group'}
-			<Popover.CloseTrigger class={ITEM_CLASS} type="button" onclick={onEdit}>
-				<Icon name="edit" class="w-4 h-4" />
-				<span>{editLabel}</span>
-			</Popover.CloseTrigger>
-		{/if}
-		{#if kind === 'line'}
-			<Popover.CloseTrigger class={ITEM_CLASS} type="button" onclick={onContextManagement}>
-				<Icon name="file-box" class="w-4 h-4" />
-				<span>{t('sidebar.contextManagement')}</span>
-			</Popover.CloseTrigger>
-		{/if}
-		{#if kind !== 'group'}
-			<Popover.CloseTrigger
-				class="{ITEM_CLASS} text-error-500 disabled:opacity-30 disabled:cursor-not-allowed"
-				type="button"
-				disabled={!canDelete}
-				onclick={onDelete}
-			>
-				<Icon name="trash" class="w-4 h-4" />
-				<span>{deleteLabel}</span>
-			</Popover.CloseTrigger>
-		{/if}
-	</Popover.Content>
+			<Popover.Content class="w-56 py-1 rounded-lg bg-surface-100-900 border border-surface-200-800 shadow-xl">
+				{#if showGroupToggle}
+					<Switch
+						checked={groupByLine}
+						onCheckedChange={({ checked }) => onToggleGroup(checked)}
+						class="flex items-center justify-between w-full px-3 py-2 cursor-pointer outline-none! has-[:focus-visible]:[&>[data-part=control]]:ring-2 has-[:focus-visible]:[&>[data-part=control]]:ring-primary-500"
+					>
+						<Switch.Label class="flex items-center gap-2 text-sm text-surface-700-300">
+							<Icon name="fork" class="w-4 h-4" />
+							{t('sidebar.groupByActLine')}
+						</Switch.Label>
+						<Switch.Control class="data-[state=checked]:bg-primary-500 h-4! w-7!">
+							<Switch.Thumb class="data-[state=checked]:[transform:translateX(12px)]!" />
+						</Switch.Control>
+						<Switch.HiddenInput />
+					</Switch>
+				{/if}
+				<Popover.CloseTrigger class={ITEM_CLASS} type="button" onclick={onExport}>
+					<Icon name="download" class="w-4 h-4" />
+					<span>{t('sidebar.exportStory')}</span>
+				</Popover.CloseTrigger>
+				{#if kind !== 'group'}
+					<Popover.CloseTrigger class={ITEM_CLASS} type="button" onclick={onEdit}>
+						<Icon name="edit" class="w-4 h-4" />
+						<span>{editLabel}</span>
+					</Popover.CloseTrigger>
+				{/if}
+				{#if kind === 'line'}
+					<Popover.CloseTrigger class={ITEM_CLASS} type="button" onclick={onContextManagement}>
+						<Icon name="file-box" class="w-4 h-4" />
+						<span>{t('sidebar.contextManagement')}</span>
+					</Popover.CloseTrigger>
+				{/if}
+				{#if kind !== 'group'}
+					<Popover.CloseTrigger
+						class="{ITEM_CLASS} text-error-500 disabled:opacity-30 disabled:cursor-not-allowed"
+						type="button"
+						disabled={!canDelete}
+						onclick={onDelete}
+					>
+						<Icon name="trash" class="w-4 h-4" />
+						<span>{deleteLabel}</span>
+					</Popover.CloseTrigger>
+				{/if}
+			</Popover.Content>
 		</Popover.Positioner>
 	</Portal>
 </Popover>

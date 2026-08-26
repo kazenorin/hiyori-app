@@ -68,7 +68,7 @@
 		saveEditMainChatMessage,
 		saveEditWorldBuilderMessage,
 	} from '$lib/features/message-editor.svelte';
-	import { getActiveActLineId, getActiveStory, getIsSelectingStory } from '$lib/stores/stories.svelte';
+	import { getActiveActLineId, getActiveDirectorNotes, getActiveStory, getIsSelectingStory } from '$lib/stores/stories.svelte';
 	import { settings, isDirectorModeEnabled, getTTSVoiceByLocale, getTTSSpeed } from '$lib/stores/settings.svelte';
 	import { isTTSSupportedLocale } from '$lib/kokoro/locale-mapping';
 	import { ttsPlayer } from '$lib/kokoro/player.svelte';
@@ -89,6 +89,7 @@
 	import MobileInputSheet from '$lib/components/MobileInputSheet.svelte';
 	import ChoicesSheet from '$lib/components/ChoicesSheet.svelte';
 	import ReasoningAccordion from '$lib/components/chat/ReasoningAccordion.svelte';
+	import RightPanelShell from '$lib/components/chat/RightPanelShell.svelte';
 	import MessageActions from '$lib/components/chat/MessageActions.svelte';
 	import ForkChoicePanel from '$lib/components/chat/ForkChoicePanel.svelte';
 	import RegenerateChoicePanel from '$lib/components/chat/RegenerateChoicePanel.svelte';
@@ -110,7 +111,6 @@
 	let wasChatStreaming = $state(false);
 	// eslint-disable-next-line svelte/prefer-writable-derived -- wasWbStreaming depends on its own previous value (stateful observer)
 	let wasWbStreaming = $state(false);
-	let rightPanelExpanded = $state(true);
 	let latestDecisions = $derived(getLatestDecisions());
 	let latestActivePlotThreads = $derived(getLatestActivePlotThreads());
 	let latestDecisionContext = $derived(getLatestDecisionContext());
@@ -520,47 +520,29 @@
 		</div>
 
 		<!-- Right-side input panel (accordion bar at XS/SM, full-height at lg+) -->
-		<aside
-			class="flex lg:w-80 border-t lg:border-t-0 lg:border-l border-surface-200-800 flex-col bg-surface-50-950 shrink-0 {rightPanelExpanded
-				? 'max-h-none'
-				: 'lg:max-h-none max-h-[40px]'}"
-		>
-			<!-- Mobile toggle bar -->
-			<button
-				class="lg:hidden flex w-full items-center justify-between px-3 py-2 text-xs text-surface-500 hover:bg-surface-100-900 transition-colors"
-				type="button"
-				aria-expanded={rightPanelExpanded}
-				onclick={() => (rightPanelExpanded = !rightPanelExpanded)}
-			>
-				<span class="font-medium text-surface-500 uppercase tracking-wider">{t('chat.worldBuilder')}</span>
-				<Icon name="chevron-down" class="h-4 w-4 transition-transform {rightPanelExpanded ? 'rotate-180' : ''}" />
-			</button>
+		<RightPanelShell label={t('chat.worldBuilder')} mobileHidden={false}>
+			{#snippet headerExtra()}
+				<button class="text-xs text-surface-500 hover:text-error-500 transition-colors" type="button" onclick={exitWorldBuilderMode}>
+					{t('chat.exit')}
+				</button>
+			{/snippet}
 
-			<div class="flex-1 flex flex-col min-h-0 p-3 lg:p-4">
-				<div class="hidden lg:flex items-center justify-between mb-3">
-					<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('chat.worldBuilder')}</span>
-					<button class="text-xs text-surface-500 hover:text-error-500 transition-colors" type="button" onclick={exitWorldBuilderMode}>
-						{t('chat.exit')}
-					</button>
-				</div>
+			<textarea
+				class="input flex-1 resize-none text-sm leading-relaxed"
+				placeholder={t('chat.worldBuilderPlaceholder')}
+				aria-label="World builder input"
+				bind:value={input}
+				onkeydown={handleKeydown}
+				disabled={getIsWorldBuilderStreaming() || (getReadyToCreate() && !getActPlotInterview())}></textarea>
 
-				<textarea
-					class="input flex-1 resize-none text-sm leading-relaxed"
-					placeholder={t('chat.worldBuilderPlaceholder')}
-					aria-label="World builder input"
-					bind:value={input}
-					onkeydown={handleKeydown}
-					disabled={getIsWorldBuilderStreaming() || (getReadyToCreate() && !getActPlotInterview())}></textarea>
-
-				<div class="mt-3">
-					{#if getIsWorldBuilderStreaming()}
-						<Button variant="filled-error" fullWidth onclick={stopWorldBuilderStreaming}>{t('chat.stop')}</Button>
-					{:else if !getReadyToCreate() || getActPlotInterview()}
-						<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
-					{/if}
-				</div>
+			<div class="mt-3">
+				{#if getIsWorldBuilderStreaming()}
+					<Button variant="filled-error" fullWidth onclick={stopWorldBuilderStreaming}>{t('chat.stop')}</Button>
+				{:else if !getReadyToCreate() || getActPlotInterview()}
+					<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
+				{/if}
 			</div>
-		</aside>
+		</RightPanelShell>
 	{:else if !getActiveActLineId()}
 		<!-- Empty state — no act line selected -->
 		<div class="flex-1 flex items-center justify-center">
@@ -945,49 +927,29 @@
 
 		{#if getMessages().length > 0}
 			<!-- Right-side input panel (tablet+ only, desktop side panel) -->
-			<aside
-				class="hidden md:flex lg:w-80 border-t lg:border-t-0 lg:border-l border-surface-200-800 flex-col bg-surface-50-950 shrink-0 {rightPanelExpanded
-					? 'max-h-none'
-					: 'lg:max-h-none max-h-10'}"
-			>
-				<!-- Mobile toggle bar -->
-				<button
-					class="lg:hidden flex w-full items-center justify-between px-3 py-2 text-xs text-surface-500 hover:bg-surface-100-900 transition-colors"
-					type="button"
-					aria-expanded={rightPanelExpanded}
-					onclick={() => (rightPanelExpanded = !rightPanelExpanded)}
-				>
-					<span class="font-medium text-surface-500 uppercase tracking-wider">{t('chat.message')}</span>
-					<Icon name="chevron-down" class="h-4 w-4 transition-transform {rightPanelExpanded ? 'rotate-180' : ''}" />
-				</button>
+			<RightPanelShell label={t('chat.message')} notesCount={isDirectorModeEnabled() ? getActiveDirectorNotes().length : 0}>
+				{#if isDirectorModeEnabled()}
+					<DirectorNotesPanel />
+				{/if}
 
-				<div class="flex-1 flex flex-col min-h-0 p-3 lg:p-4">
-					<div class="hidden lg:flex items-center justify-between mb-3">
-						<span class="text-xs font-medium text-surface-500 uppercase tracking-wider">{t('chat.message')}</span>
-					</div>
-					{#if isDirectorModeEnabled()}
-						<DirectorNotesPanel />
+				<textarea
+					class="input flex-1 resize-none text-sm leading-relaxed"
+					placeholder={t('chat.chatPlaceholder')}
+					aria-label="Message input"
+					bind:value={input}
+					onkeydown={handleKeydown}
+					disabled={getIsBusy() || getActEnded()}></textarea>
+
+				<div class="mt-3">
+					{#if getIsStreaming()}
+						<Button variant="filled-error" fullWidth onclick={stopStreaming}>{t('chat.stop')}</Button>
+					{:else if getActEnded()}
+						<Button fullWidth disabled>{t('chat.send')}</Button>
+					{:else}
+						<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
 					{/if}
-
-					<textarea
-						class="input flex-1 resize-none text-sm leading-relaxed"
-						placeholder={t('chat.chatPlaceholder')}
-						aria-label="Message input"
-						bind:value={input}
-						onkeydown={handleKeydown}
-						disabled={getIsBusy() || getActEnded()}></textarea>
-
-					<div class="mt-3">
-						{#if getIsStreaming()}
-							<Button variant="filled-error" fullWidth onclick={stopStreaming}>{t('chat.stop')}</Button>
-						{:else if getActEnded()}
-							<Button fullWidth disabled>{t('chat.send')}</Button>
-						{:else}
-							<button class="btn preset-filled-primary-500 w-full" type="button" onclick={handleSubmit}> {t('chat.send')} </button>
-						{/if}
-					</div>
 				</div>
-			</aside>
+			</RightPanelShell>
 		{/if}
 	{/if}
 </div>
