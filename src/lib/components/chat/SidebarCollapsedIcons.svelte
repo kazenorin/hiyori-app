@@ -10,6 +10,8 @@
 	import { deriveCollapsedGroups } from './collapsed-icons';
 	import SidebarRowMenu from './SidebarRowMenu.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
+	import { resolve } from '$app/paths';
+	import { canActBeDeleted, canActLineBeDeleted } from '$lib/db/acts';
 
 	interface Props {
 		stories: { id: string; name: string }[];
@@ -24,7 +26,12 @@
 		onStartRenameStory: (id: string, name: string) => void;
 		onExportStory: (id: string) => void;
 		onContextManagement: () => void;
+		onNewStory: () => void;
 		onToggleGroup: (storyId: string, value: boolean) => void;
+		onRequestDeleteAct: (id: string, name: string) => void;
+		onRequestDeleteActLine: (id: string, name: string) => void;
+		onStartRenameAct: (id: string, name: string) => void;
+		onStartRenameLine: (id: string, name: string) => void;
 		groupByLine: boolean;
 	}
 
@@ -41,16 +48,25 @@
 		onStartRenameStory,
 		onExportStory,
 		onContextManagement,
+		onNewStory,
 		onToggleGroup,
+		onRequestDeleteAct,
+		onRequestDeleteActLine,
+		onStartRenameAct,
+		onStartRenameLine,
 		groupByLine,
 	}: Props = $props();
 
 	let expandedGroupId = $state<string | null>(null);
 	let menuStoryId = $state<string | null>(null);
+	let menuGroupId = $state<string | null>(null);
+	let menuLineId = $state<string | null>(null);
 
 	const collapsedGroups = $derived(
 		deriveCollapsedGroups({ acts, lines: storyActLines, lineage, groupByLine: groupByLine && (lineage?.toggleVisible ?? false) })
 	);
+	// Effective group-by-line state — same expression deriveCollapsedGroups consumes.
+	const effectiveGroupByLine = $derived(groupByLine && (lineage?.toggleVisible ?? false));
 
 	// Auto-expand the group containing the active act line; resets when the
 	// story's data changes (collapsedGroups recomputes from props).
@@ -58,6 +74,8 @@
 		const auto = collapsedGroups.find((g) => g.lines.some((l) => l.lineId === activeActLineId))?.id ?? null;
 		expandedGroupId = auto;
 		menuStoryId = null;
+		menuGroupId = null;
+		menuLineId = null;
 	});
 
 	// --- Drag reordering of story icons (same persistence as expanded mode) ---
@@ -95,6 +113,24 @@
 		<Icon name="panel-left-open" class="h-5 w-5" />
 	</button>
 
+	<button
+		class="mx-auto mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-surface-500 hover:bg-surface-200-800 hover:text-surface-700-300 cursor-pointer"
+		type="button"
+		aria-label={t('sidebar.newStory')}
+		title={t('sidebar.newStory')}
+		onclick={onNewStory}
+	>
+		<Icon name="plus" class="h-5 w-5" />
+	</button>
+	<a
+		class="mx-auto mb-1 flex h-10 w-10 items-center justify-center rounded-lg text-surface-500 hover:bg-surface-200-800 hover:text-surface-700-300"
+		href={resolve('/load-story')}
+		aria-label={t('sidebar.loadStory')}
+		title={t('sidebar.loadStory')}
+	>
+		<Icon name="hard-drive-upload" class="h-5 w-5" />
+	</a>
+
 	<div bind:this={storyListEl} class="space-y-1">
 		{#each stories as story (story.id)}
 			{@const isActiveStory = activeStoryId === story.id}
@@ -109,6 +145,9 @@
 					onclick={() => onSelectStory(story.id)}
 					oncontextmenu={(e) => {
 						e.preventDefault();
+						// Only one context menu at a time across story/group/line slots.
+						menuGroupId = null;
+						menuLineId = null;
 						menuStoryId = story.id;
 					}}
 				>
@@ -134,12 +173,19 @@
 					<!-- Selected-story bounding rectangle -->
 					<div class="mx-auto mt-1 w-11 rounded-lg bg-surface-200-800 p-1">
 						{#each collapsedGroups as group (group.id)}
-							<div class="flex flex-col items-center gap-1 py-0.5">
+							<div class="relative flex flex-col items-center gap-1 py-0.5">
 								<button
 									class="relative flex h-7 w-7 items-center justify-center rounded-md text-xs font-medium text-surface-700-300 hover:bg-surface-300-700 cursor-pointer"
 									type="button"
 									title={group.label}
 									onclick={() => (expandedGroupId = expandedGroupId === group.id ? null : group.id)}
+									oncontextmenu={(e) => {
+										e.preventDefault();
+										// Only one context menu at a time across story/group/line slots.
+										menuStoryId = null;
+										menuLineId = null;
+										menuGroupId = group.id;
+									}}
 								>
 									{group.label}
 									{#if group.badge !== undefined}
@@ -150,20 +196,99 @@
 										</span>
 									{/if}
 								</button>
+								{#if !effectiveGroupByLine}
+									{@const act = acts.find((a) => a.id === group.id)}
+									{#if act}
+										<SidebarRowMenu
+											kind="act"
+											canDelete={canActBeDeleted(act, acts, storyActLines)}
+											hiddenTrigger
+											placement="right-start"
+											open={menuGroupId === group.id}
+											onOpenChange={(o) => (menuGroupId = o ? group.id : null)}
+											showGroupToggle={lineage?.toggleVisible ?? false}
+											{groupByLine}
+											onEdit={() => onStartRenameAct(act.id, act.name)}
+											onDelete={() => onRequestDeleteAct(act.id, act.name)}
+											onExport={() => {
+												if (activeStoryId) onExportStory(activeStoryId);
+											}}
+											{onContextManagement}
+											onToggleGroup={(v) => {
+												if (activeStoryId) onToggleGroup(activeStoryId, v);
+											}}
+										/>
+									{/if}
+								{:else}
+									<SidebarRowMenu
+										kind="group"
+										canDelete={false}
+										hiddenTrigger
+										placement="right-start"
+										open={menuGroupId === group.id}
+										onOpenChange={(o) => (menuGroupId = o ? group.id : null)}
+										showGroupToggle={lineage?.toggleVisible ?? false}
+										{groupByLine}
+										onEdit={() => {}}
+										onDelete={() => {}}
+										onExport={() => {
+											if (activeStoryId) onExportStory(activeStoryId);
+										}}
+										{onContextManagement}
+										onToggleGroup={(v) => {
+											if (activeStoryId) onToggleGroup(activeStoryId, v);
+										}}
+									/>
+								{/if}
 								{#if expandedGroupId === group.id}
 									<!-- Selected-group bounding rectangle -->
 									<div class="flex flex-col items-center gap-1 rounded-md bg-surface-300-700 p-1">
 										{#each group.lines as line (line.lineId)}
-											<button
-												class="flex h-7 w-7 items-center justify-center rounded-md text-xs cursor-pointer {activeActLineId === line.lineId
-													? 'bg-primary-100-900 font-semibold text-primary-700-300'
-													: 'text-surface-600-400 hover:bg-surface-200-800'}"
-												type="button"
-												title={line.label}
-												onclick={() => onSelectActLine(line.lineId)}
-											>
-												{line.label}
-											</button>
+											{@const lineMeta = storyActLines.find((l) => l.id === line.lineId)}
+											{@const lineAct = lineMeta ? acts.find((a) => a.id === lineMeta.actId) : undefined}
+											{@const canDeleteLine =
+												lineMeta && lineAct
+													? (lineAct.actNumber !== 1 || storyActLines.filter((l) => l.actId === lineMeta.actId).length > 1) &&
+														canActLineBeDeleted(line.lineId, acts)
+													: false}
+											<div class="relative">
+												<button
+													class="flex h-7 w-7 items-center justify-center rounded-md text-xs cursor-pointer {activeActLineId === line.lineId
+														? 'bg-primary-100-900 font-semibold text-primary-700-300'
+														: 'text-surface-600-400 hover:bg-surface-200-800'}"
+													type="button"
+													title={line.label}
+													onclick={() => onSelectActLine(line.lineId)}
+													oncontextmenu={(e) => {
+														e.preventDefault();
+														// Only one context menu at a time across story/group/line slots.
+														menuStoryId = null;
+														menuGroupId = null;
+														menuLineId = line.lineId;
+													}}
+												>
+													{line.label}
+												</button>
+												<SidebarRowMenu
+													kind="line"
+													canDelete={canDeleteLine}
+													hiddenTrigger
+													placement="right-start"
+													open={menuLineId === line.lineId}
+													onOpenChange={(o) => (menuLineId = o ? line.lineId : null)}
+													showGroupToggle={lineage?.toggleVisible ?? false}
+													{groupByLine}
+													onEdit={() => onStartRenameLine(line.lineId, lineMeta?.name ?? '')}
+													onDelete={() => onRequestDeleteActLine(line.lineId, lineMeta?.name ?? '')}
+													onExport={() => {
+														if (activeStoryId) onExportStory(activeStoryId);
+													}}
+													{onContextManagement}
+													onToggleGroup={(v) => {
+														if (activeStoryId) onToggleGroup(activeStoryId, v);
+													}}
+												/>
+											</div>
 										{/each}
 									</div>
 								{/if}
