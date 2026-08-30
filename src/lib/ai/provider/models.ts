@@ -1,5 +1,6 @@
 import { resolveFetch } from '$lib/http/fetch';
 import type { Provider } from '$lib/stores/settings.svelte';
+import { OLLAMA_BASE_URL, OPENAI_BASE_URL } from './constants';
 
 export interface ModelInfo {
 	id: string;
@@ -22,7 +23,7 @@ export async function fetchModels(settings: {
 		return fetchOllamaModels(settings, resolvedFetch);
 	}
 
-	const baseURL = (settings.baseURL || 'https://api.openai.com/v1').replace(/\/+$/, '');
+	const baseURL = (settings.baseURL || OPENAI_BASE_URL).replace(/\/+$/, '');
 	const url = `${baseURL}/models`;
 
 	const headers: Record<string, string> = {};
@@ -56,7 +57,7 @@ async function fetchOllamaModels(
 	settings: { baseURL: string; apiKey: string },
 	resolvedFetch: typeof globalThis.fetch
 ): Promise<ModelInfo[]> {
-	const baseURL = (settings.baseURL || 'https://ollama.com').replace(/\/+$/, '');
+	const baseURL = (settings.baseURL || OLLAMA_BASE_URL).replace(/\/+$/, '');
 	const url = `${baseURL}/api/tags`;
 
 	const headers: Record<string, string> = {};

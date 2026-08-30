@@ -63,7 +63,38 @@ describe('createModel — openrouter app attribution headers', () => {
 		const model = (await createModel(openrouterConfig())) as unknown as ModelWithConfigHeaders;
 		const headers = model.config?.headers?.() ?? {};
 		expect(headers['X-OpenRouter-Title']).toBe('Hiyori App');
-		expect(headers['HTTP-Referer']).toBe('https://github.com/kazenorin/hiyori-app');
+		expect(headers['HTTP-Referer']).toBe('https://kazenorin.github.io/hiyori-app');
 		expect(headers['X-OpenRouter-Categories']).toBe('roleplay,creative-writing');
+	});
+});
+
+describe('createModel — openai-compatible pointed at OpenRouter', () => {
+	// Users can reach OpenRouter via the openai-compatible type; only calls whose host is
+	// openrouter.ai should carry the attribution headers.
+	type ModelWithConfigHeaders = { config?: { headers?: () => Record<string, string | undefined> } };
+
+	function compatConfig(overrides: Partial<ProviderConfig> = {}): ProviderConfig {
+		return openrouterConfig({ provider: 'openai-compatible', name: 'OpenRouter via Compat', ...overrides });
+	}
+
+	async function requestHeaders(config: ProviderConfig): Promise<Record<string, string | undefined>> {
+		const model = (await createModel(config)) as unknown as ModelWithConfigHeaders;
+		const raw = model.config?.headers?.() ?? {};
+		// Header names are case-insensitive and the compatible SDK lowercases them, so normalize before asserting.
+		return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k.toLowerCase(), v]));
+	}
+
+	it('attaches attribution headers when the host is openrouter.ai', async () => {
+		const headers = await requestHeaders(compatConfig({ baseURL: 'https://openrouter.ai/api/v1' }));
+		expect(headers['x-openrouter-title']).toBe('Hiyori App');
+		expect(headers['http-referer']).toBe('https://kazenorin.github.io/hiyori-app');
+		expect(headers['x-openrouter-categories']).toBe('roleplay,creative-writing');
+	});
+
+	it('sends no attribution headers for a third-party compatible host', async () => {
+		const headers = await requestHeaders(compatConfig({ baseURL: 'https://api.example.com/v1' }));
+		expect(headers['x-openrouter-title']).toBeUndefined();
+		expect(headers['http-referer']).toBeUndefined();
+		expect(headers['x-openrouter-categories']).toBeUndefined();
 	});
 });

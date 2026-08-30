@@ -8,7 +8,12 @@ import { parseContent } from '$lib/utils/chat-stream-parser';
 import { variablesToMarkdown } from './template-renderer';
 import { getGameMasterDescriptors } from './descriptors';
 import { gameMasterSystemPromptLoader, guidanceGameMasterExtractionPromptLoader } from '$lib/fs/prompts';
-import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection, formatDirectorNotesSection } from '$lib/definitions/pipeline-sections';
+import {
+	SECTION,
+	formatPreviousNarrativeBody,
+	formatTurnOfEventsSection,
+	formatDirectorNotesSection,
+} from '$lib/definitions/pipeline-sections';
 import { resolveGmExtractionPrompt, resolveGmSystemPrompt } from '$lib/ai/pipeline/runners';
 
 export interface GameDataRegenerationContext {

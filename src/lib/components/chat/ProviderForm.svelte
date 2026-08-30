@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
 	import { fetchModels, type ModelInfo } from '$lib/ai/provider/models';
+	import { LMSTUDIO_BASE_URL, OLLAMA_BASE_URL, OPENAI_BASE_URL, OPENROUTER_BASE_URL } from '$lib/ai/provider/constants';
 	import { isTauriSync, getPlatformSync } from '$lib/runtime';
 	import type { ApiType, Provider, ProviderConfig } from '$lib/stores/settings.svelte';
 	import type { LanguageModelCallOptions } from 'ai';
@@ -37,7 +38,7 @@
 	// svelte-ignore state_referenced_locally
 	let formApiType = $state<ApiType>(config?.apiType ?? 'chat-completions');
 	// svelte-ignore state_referenced_locally
-	let formBaseURL = $state(config?.baseURL ?? 'http://localhost:1234/v1');
+	let formBaseURL = $state(config?.baseURL ?? LMSTUDIO_BASE_URL);
 	// svelte-ignore state_referenced_locally
 	let formModel = $state(config?.model ?? '');
 	// svelte-ignore state_referenced_locally
@@ -99,13 +100,13 @@
 
 	function handleProviderChange() {
 		if (formProvider === 'openai-compatible') {
-			formBaseURL = 'http://localhost:1234/v1';
+			formBaseURL = LMSTUDIO_BASE_URL;
 		} else if (formProvider === 'ollama') {
-			formBaseURL = 'https://ollama.com';
+			formBaseURL = OLLAMA_BASE_URL;
 		} else if (formProvider === 'openrouter') {
-			formBaseURL = 'https://openrouter.ai/api/v1';
+			formBaseURL = OPENROUTER_BASE_URL;
 		} else if (formProvider === 'openai') {
-			formBaseURL = 'https://api.openai.com/v1';
+			formBaseURL = OPENAI_BASE_URL;
 		} else {
 			formBaseURL = '';
 		}
@@ -223,7 +224,7 @@
 			<TextField
 				label={t('settings.baseUrl')}
 				type="url"
-				placeholder="https://api.openai.com/v1"
+				placeholder={OPENAI_BASE_URL}
 				bind:value={formBaseURL}
 				hint={baseUrlHint}
 			/>
