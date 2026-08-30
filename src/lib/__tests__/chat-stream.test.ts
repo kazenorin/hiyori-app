@@ -25,7 +25,7 @@ vi.mock('$lib/ai/streaming', () => ({
 }));
 
 // Mock createModel so streamChatResponse doesn't need real provider config
-vi.mock('$lib/ai/provider', () => ({
+vi.mock('$lib/ai/provider/provider', () => ({
 	createModel: vi.fn(),
 }));
 

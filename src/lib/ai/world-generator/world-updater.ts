@@ -1,7 +1,7 @@
 import type { MessageBase } from '$lib/db/messages';
 import { streamText } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { createModel } from '$lib/ai/provider';
+import { createModel } from '$lib/ai/provider/provider';
 import { fs } from '$lib/fs/file-system';
 import { worldFromActPrompt, worldFromActSystemPrompt } from '$lib/definitions/feature-prompts';
 import { ls } from '$lib/localization';

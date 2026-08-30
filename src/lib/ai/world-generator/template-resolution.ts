@@ -1,5 +1,5 @@
 import { generateText } from 'ai';
-import { createModel } from '$lib/ai/provider';
+import { createModel } from '$lib/ai/provider/provider';
 import { getMinorTaskAgentProviderConfig } from '$lib/stores/settings.svelte';
 import { ls } from '$lib/localization';
 import { log } from '$lib/logging/logger';

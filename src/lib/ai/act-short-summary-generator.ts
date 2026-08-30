@@ -1,5 +1,5 @@
 import { generateText } from 'ai';
-import { createModel } from './provider';
+import { createModel } from './provider/provider';
 import { getSummarizerProviderConfig, getMainProviderConfig } from '$lib/stores/settings.svelte';
 import { actShortSummaryExtractionPrompt, actShortSummaryCharacterPrefix, sceneCountLabel } from '$lib/definitions/pipeline-prompts';
 import { getLastSceneNumber, recordActShortSummary, hasEventForMessage } from '$lib/db/act-lines';

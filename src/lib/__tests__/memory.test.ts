@@ -34,7 +34,7 @@ vi.mock('ai', () => ({
 }));
 
 // Mock provider
-vi.mock('$lib/ai/provider', () => ({
+vi.mock('$lib/ai/provider/provider', () => ({
 	createEmbeddingModel: vi.fn(() => ({})),
 }));
 
@@ -105,7 +105,7 @@ describe('Memory', () => {
 				],
 			})),
 		}));
-		vi.doMock('$lib/ai/provider', () => ({
+		vi.doMock('$lib/ai/provider/provider', () => ({
 			createEmbeddingModel: vi.fn(() => ({})),
 		}));
 		vi.stubGlobal('crypto', {

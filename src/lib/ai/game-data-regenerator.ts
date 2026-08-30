@@ -1,7 +1,7 @@
 import { generateText } from 'ai';
 import type { MessageBase } from '$lib/db/messages';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { createModel } from './provider';
+import { createModel } from './provider/provider';
 import type { GameDataFields, NarrativeVariables } from './narrative-types';
 import { emptyGameDataFields } from './narrative-types';
 import { parseContent } from '$lib/utils/chat-stream-parser';

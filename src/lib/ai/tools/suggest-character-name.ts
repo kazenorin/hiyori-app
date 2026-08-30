@@ -2,7 +2,7 @@ import { generateText } from 'ai';
 import { z } from 'zod';
 import { type ToolSet, tool } from 'ai';
 import { ls } from '$lib/localization';
-import { createModel } from '$lib/ai/provider';
+import { createModel } from '$lib/ai/provider/provider';
 import { getCharacterNameSuggestionMode, getPlotPlannerProviderConfig, type PlotPlannerProviderConfig } from '$lib/stores/settings.svelte';
 import { suggestCharacterNamePromptLoader } from '$lib/fs/prompts';
 import { createSuggestCharacterNameAnalyticTool } from './suggest-character-name-analytic';

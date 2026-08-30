@@ -38,7 +38,7 @@ vi.mock('ai', () => ({
 	tool: vi.fn((def) => def),
 }));
 
-vi.mock('$lib/ai/provider', () => ({
+vi.mock('$lib/ai/provider/provider', () => ({
 	createEmbeddingModel: vi.fn(() => ({})),
 }));
 
@@ -110,7 +110,7 @@ describe('createQueryMemoriesTool', () => {
 			embedMany: vi.fn(async () => ({ embeddings: [[0.1, 0.2]] })),
 			tool: vi.fn((def) => def),
 		}));
-		vi.doMock('$lib/ai/provider', () => ({
+		vi.doMock('$lib/ai/provider/provider', () => ({
 			createEmbeddingModel: vi.fn(() => ({})),
 		}));
 		vi.doMock('$lib/db/act-lines', () => ({

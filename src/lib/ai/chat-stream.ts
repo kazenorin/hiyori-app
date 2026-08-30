@@ -5,7 +5,7 @@ import { getMainProviderConfig, type ProviderConfig } from '../stores/settings.s
 import { createStreamAccumulator, type StreamAccumulator, type StreamState } from './chat-callbacks';
 import { ERR_NO_MAIN_PROVIDER, ERR_AUTH_FAILED } from '$lib/definitions/error-messages';
 import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
-import { createModel } from './provider';
+import { createModel } from './provider/provider';
 import { isAbortError, isAuthError, sleepOrAbort } from '$lib/utils/async';
 
 export interface RetryConfig {

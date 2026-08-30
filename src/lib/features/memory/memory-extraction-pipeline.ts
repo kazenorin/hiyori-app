@@ -1,5 +1,5 @@
 import { generateText } from 'ai';
-import { createModel } from '$lib/ai/provider';
+import { createModel } from '$lib/ai/provider/provider';
 import {
 	type EmbeddingProviderConfig,
 	getEmbeddingProviderConfig,

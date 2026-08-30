@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { createModel } from '$lib/ai/provider';
+import { createModel } from '$lib/ai/provider/provider';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
 
 /** Minimal OpenRouter config; only the fields relevant to the reasoning bridge vary per test. */

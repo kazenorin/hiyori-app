@@ -1,6 +1,6 @@
 import { generateText } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { createModel } from '$lib/ai/provider';
+import { createModel } from '$lib/ai/provider/provider';
 import { actPlotInterviewSystemPromptLoader, generalInstructionsLoader, actPlotInterviewTurnOfEventsPromptLoader } from '$lib/fs/prompts';
 import { log } from '$lib/logging/logger';
 import type { WorldBuilderMessage } from '$lib/features/world-builder/world-builder.svelte';

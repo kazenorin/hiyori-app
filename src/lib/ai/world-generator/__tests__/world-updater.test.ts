@@ -27,7 +27,7 @@ vi.mock('$lib/stores/settings.svelte', () => ({
 	getMainProviderConfig: mockGetMainProviderConfig,
 }));
 
-vi.mock('$lib/ai/provider', () => ({
+vi.mock('$lib/ai/provider/provider', () => ({
 	createModel: mockCreateModel,
 }));
 

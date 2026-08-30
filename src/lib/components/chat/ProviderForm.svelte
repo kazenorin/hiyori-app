@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
-	import { fetchModels, type ModelInfo } from '$lib/ai/models';
+	import { fetchModels, type ModelInfo } from '$lib/ai/provider/models';
 	import { isTauriSync, getPlatformSync } from '$lib/runtime';
 	import type { ApiType, Provider, ProviderConfig } from '$lib/stores/settings.svelte';
 	import type { LanguageModelCallOptions } from 'ai';
