@@ -73,7 +73,10 @@
 		</Popover.Trigger>
 	{/if}
 	<Portal>
-		<Popover.Positioner class="z-50">
+		<!-- !important needed: zag sets `z-index: var(--z-index)` inline, which
+			would otherwise win. z-65 sits above the mobile sidebar drawer (z-60)
+			since the popover is portaled to body, and below modals (z-70). -->
+		<Popover.Positioner class="z-[65]!">
 			<Popover.Content class="w-56 py-1 rounded-lg bg-surface-100-900 border border-surface-200-800 shadow-xl">
 				{#if showGroupToggle}
 					<Switch
