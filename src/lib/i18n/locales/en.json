@@ -40,7 +40,8 @@
 		"providers": {
 			"openai": "OpenAI",
 			"openaiCompatible": "OpenAI-Compatible",
-			"ollama": "Ollama"
+			"ollama": "Ollama",
+			"openrouter": "OpenRouter"
 		},
 		"apiType": "API Type",
 		"apiTypes": {

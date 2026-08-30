@@ -1,7 +1,7 @@
 import { generateText, isStepCount, type ToolSet } from 'ai';
 import type { MessageBase } from '$lib/db/messages';
 import { type RetryConfig, streamWithRetry } from '../chat-stream';
-import { createModel } from '../provider';
+import { createModel } from '../provider/provider';
 import type { ProviderConfig } from '$lib/stores/settings.svelte';
 import type { PhaseName } from '../narrative-types';
 import type { PipelineCallbacks, PipelineState } from './types';

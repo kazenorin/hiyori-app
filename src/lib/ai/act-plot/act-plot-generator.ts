@@ -1,6 +1,6 @@
 import { generateText, type ModelMessage, isStepCount } from 'ai';
 import { getMainProviderConfig, isReviewerEnabled, settings } from '$lib/stores/settings.svelte';
-import { createModel } from '$lib/ai/provider';
+import { createModel } from '$lib/ai/provider/provider';
 import {
 	actPlotEditorPromptLoader,
 	guidanceActPlotGenerationPromptLoader,

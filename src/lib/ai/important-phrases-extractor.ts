@@ -1,5 +1,5 @@
 import { generateText } from 'ai';
-import { createModel } from './provider';
+import { createModel } from './provider/provider';
 import { getMinorTaskAgentProviderConfig, type MinorTaskAgentProviderConfig } from '$lib/stores/settings.svelte';
 import { importantPhrasesSystemPrompt } from '$lib/definitions/feature-prompts';
 import { isAuthError, withRetry } from '$lib/utils/async';

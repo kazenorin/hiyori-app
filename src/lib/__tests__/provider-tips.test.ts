@@ -1436,3 +1436,59 @@ describe('runtime — platform detection', () => {
 		expect(getPlatformSync()).toBe('web');
 	});
 });
+
+// ---------------------------------------------------------------------------
+// openrouter provider — no provider-specific rules fire
+// ---------------------------------------------------------------------------
+
+describe('evaluator — openrouter provider has no provider-specific rules', () => {
+	it('fires no rule on desktop with the canonical base URL', () => {
+		const tip = evaluateProviderTip(
+			baseInput({
+				provider: 'openrouter',
+				baseURL: 'https://openrouter.ai/api/v1',
+				model: 'anthropic/claude-sonnet-4',
+				platform: 'desktop',
+			})
+		);
+		expect(tip).toBeNull();
+	});
+
+	it('fires no rule on android with the canonical base URL', () => {
+		const tip = evaluateProviderTip(
+			baseInput({
+				provider: 'openrouter',
+				baseURL: 'https://openrouter.ai/api/v1',
+				model: 'anthropic/claude-sonnet-4',
+				platform: 'android',
+			})
+		);
+		expect(tip).toBeNull();
+	});
+
+	it('fires no web CORS rule when corsBypassEnabled is false (OpenRouter supports browser CORS)', () => {
+		const tip = evaluateProviderTip(
+			baseInput({
+				provider: 'openrouter',
+				baseURL: 'https://openrouter.ai/api/v1',
+				model: 'anthropic/claude-sonnet-4',
+				platform: 'web',
+				corsBypassEnabled: false,
+			})
+		);
+		expect(tip).toBeNull();
+	});
+
+	it('still fires the provider-agnostic small-model warning A7', () => {
+		const tip = evaluateProviderTip(
+			baseInput({
+				provider: 'openrouter',
+				baseURL: 'https://openrouter.ai/api/v1',
+				model: 'meta-llama/llama-3.2-9b-instruct',
+				platform: 'desktop',
+			})
+		);
+		expect(tip).not.toBeNull();
+		expect(tip!.id).toBe('A7-small-model-warning');
+	});
+});

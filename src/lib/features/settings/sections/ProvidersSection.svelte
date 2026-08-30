@@ -101,7 +101,9 @@
 							? t('settings.providers.openai')
 							: config.provider === 'ollama'
 								? t('settings.providers.ollama')
-								: t('settings.providers.openaiCompatible')} · {config.model}
+								: config.provider === 'openrouter'
+									? t('settings.providers.openrouter')
+									: t('settings.providers.openaiCompatible')} · {config.model}
 					</p>
 				</div>
 				<div class="flex items-center gap-1 shrink-0">

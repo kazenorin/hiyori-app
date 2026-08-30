@@ -10,7 +10,7 @@ import type { VoiceId } from '$lib/kokoro/kokoro-hiyori';
 
 export type { LogLevel };
 
-export type Provider = 'openai' | 'openai-compatible' | 'ollama';
+export type Provider = 'openai' | 'openai-compatible' | 'ollama' | 'openrouter';
 export type ApiType = 'chat-completions' | 'responses';
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type CharacterNameSuggestionMode = 'ai' | 'analytic';

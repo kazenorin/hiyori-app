@@ -20,7 +20,7 @@ vi.mock('ai', () => ({
 }));
 
 // Mock provider
-vi.mock('$lib/ai/provider', () => ({
+vi.mock('$lib/ai/provider/provider', () => ({
 	createModel: vi.fn(() => ({})),
 }));
 

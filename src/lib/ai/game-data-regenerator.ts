@@ -1,14 +1,19 @@
 import { generateText } from 'ai';
 import type { MessageBase } from '$lib/db/messages';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { createModel } from './provider';
+import { createModel } from './provider/provider';
 import type { GameDataFields, NarrativeVariables } from './narrative-types';
 import { emptyGameDataFields } from './narrative-types';
 import { parseContent } from '$lib/utils/chat-stream-parser';
 import { variablesToMarkdown } from './template-renderer';
 import { getGameMasterDescriptors } from './descriptors';
 import { gameMasterSystemPromptLoader, guidanceGameMasterExtractionPromptLoader } from '$lib/fs/prompts';
-import { SECTION, formatPreviousNarrativeBody, formatTurnOfEventsSection, formatDirectorNotesSection } from '$lib/definitions/pipeline-sections';
+import {
+	SECTION,
+	formatPreviousNarrativeBody,
+	formatTurnOfEventsSection,
+	formatDirectorNotesSection,
+} from '$lib/definitions/pipeline-sections';
 import { resolveGmExtractionPrompt, resolveGmSystemPrompt } from '$lib/ai/pipeline/runners';
 
 export interface GameDataRegenerationContext {

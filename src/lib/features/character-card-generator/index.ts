@@ -1,6 +1,6 @@
 import { generateText, type ModelMessage } from 'ai';
 import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { createModel } from '$lib/ai/provider';
+import { createModel } from '$lib/ai/provider/provider';
 import { characterCardTemplateLoader, generalInstructionsLoader } from '$lib/fs/prompts';
 import { exportActLine } from '$lib/ai/act-line-export';
 import type { ActLineMeta } from '$lib/db/act-lines';
