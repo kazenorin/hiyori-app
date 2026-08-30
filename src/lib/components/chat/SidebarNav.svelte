@@ -63,6 +63,16 @@
 	let editingType = $state<'story' | 'act' | 'line' | null>(null);
 	let editingName = $state('');
 	let renameSubmitting = $state(false);
+	// Only one row sub-menu may be open at a time; the key identifies the row
+	// owning the open menu (uncontrolled popovers never close each other).
+	let openRowMenuId = $state<string | null>(null);
+
+	function rowMenuControl(key: string) {
+		return {
+			open: openRowMenuId === key,
+			onOpenChange: (open: boolean) => (openRowMenuId = open ? key : null),
+		};
+	}
 	let actLineEventSummaries = $state<Map<string, ActLineEventSummary>>(new Map());
 	// Act lines of every act in the active story, needed to decide whether an
 	// act can be deleted (getActLines() only covers the active act).
@@ -79,6 +89,10 @@
 				animation: 150,
 				delay: 300,
 				delayOnTouchOnly: true,
+				// Mobile: drag starts immediately from the grip handle. Whole-row
+				// long-press is unreliable on touch (finger jitter during the delay
+				// cancels the drag), so desktop keeps it and mobile uses the handle.
+				...(variant === 'desktop' ? {} : { handle: '[data-story-drag-handle]', delay: 0 }),
 				onEnd: () => {
 					if (!storyListEl) return;
 					const order = [...storyListEl.querySelectorAll<HTMLElement>('[data-story-id]')].map((el) => el.dataset.storyId!);
@@ -423,11 +437,18 @@
 							{justSwipedRowId}
 							setJustSwiped={(id) => (justSwipedRowId = id)}
 						>
+							{#if !isDesktop}
+								<!-- Mobile drag-to-reorder handle (touch-none so the browser never claims the gesture) -->
+								<span data-story-drag-handle class="shrink-0 text-surface-400-600 touch-none cursor-grab" aria-hidden="true">
+									<Icon name="grip-vertical" class="w-4 h-4" />
+								</span>
+							{/if}
 							<span class="text-sm font-medium truncate flex-1">{story.name}</span>
 							{#snippet menu()}
 								<SidebarRowMenu
 									kind="story"
 									canDelete
+									{...rowMenuControl('story-' + story.id)}
 									showGroupToggle={lineageByStory.get(story.id)?.toggleVisible ?? false}
 									groupByLine={getSettings().groupByActLine[story.id] ?? false}
 									onEdit={() => startRename('story', story.id, story.name)}
@@ -464,6 +485,7 @@
 												<SidebarRowMenu
 													kind="group"
 													canDelete={false}
+													{...rowMenuControl('group-' + group.leafId)}
 													showGroupToggle
 													groupByLine={getSettings().groupByActLine[story.id] ?? false}
 													onEdit={() => {}}
@@ -513,6 +535,7 @@
 															kind="line"
 															canDelete={(item.actNumber !== 1 || storyActLines.filter((l) => l.actId === item.actId).length > 1) &&
 																canActLineBeDeleted(item.lineId, getActs())}
+															{...rowMenuControl('line-' + item.lineId)}
 															showGroupToggle={lineage?.toggleVisible ?? false}
 															groupByLine={getSettings().groupByActLine[story.id] ?? false}
 															onEdit={() => startRename('line', item.lineId, item.name)}
@@ -562,6 +585,7 @@
 												<SidebarRowMenu
 													kind="act"
 													canDelete={canActBeDeleted(act, getActs(), storyActLines)}
+													{...rowMenuControl('act-' + act.id)}
 													showGroupToggle={lineageByStory.get(story.id)?.toggleVisible ?? false}
 													groupByLine={getSettings().groupByActLine[story.id] ?? false}
 													onEdit={() => startRename('act', act.id, act.name)}
@@ -613,6 +637,7 @@
 															kind="line"
 															canDelete={(getActiveAct()?.actNumber !== 1 || getActLines().length > 1) &&
 																canActLineBeDeleted(line.id, getActs())}
+															{...rowMenuControl('line-' + line.id)}
 															showGroupToggle={lineageByStory.get(story.id)?.toggleVisible ?? false}
 															groupByLine={getSettings().groupByActLine[story.id] ?? false}
 															onEdit={() => startRename('line', line.id, line.name)}
