@@ -88,6 +88,14 @@
 	<div
 		class="{HOVER_CLASS} {isActive ? activeClass : 'hover:bg-surface-200-800'}"
 		onclick={onSelect}
+		oncontextmenu={(e) => {
+			if (isEditing) return;
+			const trigger = e.currentTarget.querySelector<HTMLElement>('[data-sidebar-menu-trigger]');
+			if (trigger) {
+				e.preventDefault();
+				trigger.click();
+			}
+		}}
 		role="button"
 		tabindex="0"
 		onkeydown={(e) => {
