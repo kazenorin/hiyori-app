@@ -89,6 +89,7 @@
 		{ label: t('settings.providers.openaiCompatible'), value: 'openai-compatible' },
 		{ label: t('settings.providers.openai'), value: 'openai' },
 		{ label: t('settings.providers.ollama'), value: 'ollama' },
+		{ label: t('settings.providers.openrouter'), value: 'openrouter' },
 	];
 
 	const apiTypeItems: { label: string; value: string }[] = [
@@ -101,6 +102,8 @@
 			formBaseURL = 'http://localhost:1234/v1';
 		} else if (formProvider === 'ollama') {
 			formBaseURL = 'https://ollama.com';
+		} else if (formProvider === 'openrouter') {
+			formBaseURL = 'https://openrouter.ai/api/v1';
 		} else if (formProvider === 'openai') {
 			formBaseURL = 'https://api.openai.com/v1';
 		} else {

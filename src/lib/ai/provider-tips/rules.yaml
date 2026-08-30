@@ -14,7 +14,7 @@
 # messageKey: i18n key (under settings.providerTips.rules.*)
 # suggest: optional fix affordance rendered as an Apply button
 #   - rewriteBaseUrl: string (may interpolate {{baseUrl}})
-#   - switchProvider: Provider ('openai' | 'openai-compatible' | 'ollama')
+#   - switchProvider: Provider ('openai' | 'openai-compatible' | 'ollama' | 'openrouter')
 #     rewriteBaseUrl?: string (optional, may interpolate {{baseUrl}})
 
 rules:
