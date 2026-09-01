@@ -147,6 +147,20 @@ const migrationStatements: string[][] = [
 		`CREATE INDEX IF NOT EXISTS idx_inventory_actline_character ON inventory(act_line_id, character_canonical_name)`,
 		`CREATE INDEX IF NOT EXISTS idx_inventory_story ON inventory(story_id)`,
 	],
+	[
+		`CREATE TABLE IF NOT EXISTS pipeline_runs (
+			message_id TEXT PRIMARY KEY,
+			act_line_id TEXT NOT NULL,
+			story_id TEXT NOT NULL,
+			kind TEXT NOT NULL,
+			state TEXT NOT NULL,
+			phase_metadata TEXT,
+			input_snapshot TEXT NOT NULL,
+			created_at INTEGER NOT NULL,
+			updated_at INTEGER NOT NULL
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_pipeline_runs_line ON pipeline_runs(act_line_id)`,
+	],
 ];
 
 interface ActLineMetaMigrateRow {
