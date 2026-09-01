@@ -17,6 +17,7 @@ import { writeWorldTemplateId } from '$lib/ai/world-generator/template-resolutio
 import { deriveStoryName, renameStoryFolder, resolveStoryFolder } from '$lib/fs/story-folders';
 import { fs } from '$lib/fs/file-system';
 import * as dbStoryFolders from '$lib/db/story-folders';
+import { cleanupAct, cleanupActLine, cleanupStory } from '$lib/ai/chat/run-manager';
 import {
 	buildLineDir,
 	buildLineSubdirSuffix,
@@ -318,6 +319,7 @@ export async function renameActLine(id: string, newName: string): Promise<void> 
 }
 
 export async function deleteStory(id: string, removeFolder: boolean = false): Promise<void> {
+	await cleanupStory(id);
 	await dbStories.deleteStory(id);
 	stories = stories.filter((s) => s.id !== id);
 	const prunedGroups = { ...(settings.groupByActLine ?? {}) };
@@ -351,6 +353,7 @@ export async function deleteAct(id: string, removeFolder: boolean): Promise<void
 	const storyId = activeStoryId;
 	const storyName = activeStoryName;
 
+	await cleanupAct(id);
 	await dbActs.deleteAct(id);
 	acts = acts.filter((a) => a.id !== id);
 	if (activeActId === id) {
@@ -378,6 +381,7 @@ export async function deleteActLine(id: string, removeFolder: boolean = false): 
 	const storyId = activeStoryId;
 	const storyName = activeStoryName;
 
+	await cleanupActLine(id);
 	await dbActLines.deleteActLine(id);
 
 	// Remove folder if requested

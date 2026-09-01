@@ -31,6 +31,7 @@ import { cloneInventory } from '$lib/db/inventory';
 import { getMemoryProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
 import { log } from '$lib/logging/logger';
 import { copyActPlotFileBetweenLines } from '$lib/ai/card-output-path';
+import { cleanupActLine } from '$lib/ai/chat/run-manager';
 import JSZip from 'jszip';
 import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
 import {
@@ -291,6 +292,7 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 
 	// Delete the local copy, then import the incoming act line under the same
 	// ID (save incoming). Fast-forward and divergent converge here.
+	await cleanupActLine(input.actLineId);
 	await deleteActLine(input.actLineId);
 
 	// Add-only AFTER the delete: rows the delete orphan-cleansed are re-created
