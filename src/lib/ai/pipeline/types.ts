@@ -94,6 +94,12 @@ export interface PipelineExecution {
 	abortSignal: AbortSignal;
 	tools?: ToolSet;
 	callbacks: PipelineCallbacks;
+	/**
+	 * Called after every completed phase step with the latest accumulated
+	 * state and phase metadata entries. Used to persist a resumable phase
+	 * cache. Failures are logged by the pipeline and never fatal.
+	 */
+	onPhaseCommit?: (state: PipelineState, phases: PhaseMetadata[]) => void | Promise<void>;
 }
 
 export interface CommonPipelineInput {
@@ -110,6 +116,14 @@ export interface CommonPipelineInput {
 	completedScenes: number;
 	targetWordCount?: number;
 	retryConfig?: RetryConfig;
+	/**
+	 * Resume support: outputs of phases completed by an earlier (interrupted)
+	 * run. Phases whose output already exists are skipped; see the resume
+	 * gates in the pipeline README.
+	 */
+	initialState?: PipelineState;
+	/** Phase metadata entries from the earlier run, seeded into the tracker. */
+	initialPhases?: PhaseMetadata[];
 }
 
 export interface PipelineInput extends CommonPipelineInput {
