@@ -628,5 +628,6 @@ export async function createStoryFromWorldBuilder(
 	}
 
 	await selectStory(story.id);
+	await selectAct(act.id);
 	await selectActLine(actLine.id);
 }
