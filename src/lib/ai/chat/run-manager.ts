@@ -10,6 +10,7 @@ import {
 	getMainProviderConfig,
 	isDirectorModeEnabled,
 	isInventoryAvailable,
+	isReviewerEnabled,
 	settings,
 	type ProviderConfig,
 } from '$lib/stores/settings.svelte';
@@ -189,6 +190,37 @@ export function draftMessageFromRecord(record: PipelineRunRecord): UIMessage {
 export interface InterruptedRunInfo {
 	record: PipelineRunRecord;
 	message: UIMessage;
+}
+
+/**
+ * Live message for a resumed run — follows the same display rules as a fresh run:
+ * the narrative body shows editor output only, and cached phases appear as accordions.
+ * The WRITER accordion is shown only when the reviewer is enabled (mirroring
+ * `phasesOfMainChat`); with the reviewer disabled the writer output IS the final
+ * prose (deterministic editor-from-writer seed), so it goes to the body instead.
+ */
+export function resumedSessionMessage(record: PipelineRunRecord): UIMessage {
+	const state = record.state;
+	const reviewerEnabled = isReviewerEnabled();
+	const phases: UIScenePhase[] = [];
+	if (state.writerOutput !== undefined && reviewerEnabled) phases.push({ phaseName: 'WRITER', content: state.writerOutput });
+	if (state.reviewerOutput !== undefined) phases.push({ phaseName: 'REVIEWER', content: state.reviewerOutput });
+	if (state.gameMasterOutput !== undefined) phases.push({ phaseName: 'GAME_MASTER', content: state.gameMasterOutput });
+	if (state.scenePlot) phases.push({ phaseName: 'PLOT_PLANNER', content: state.scenePlot });
+
+	const editorVariables = state.editorVariables ?? (reviewerEnabled ? null : (state.writerVariables ?? null));
+	const editorOutput = state.editorOutput ?? (reviewerEnabled ? '' : (state.writerOutput ?? ''));
+	const variables = buildFinalVariables(editorVariables, state.gameData);
+
+	return {
+		id: record.messageId,
+		role: 'assistant',
+		content: editorOutput,
+		reasoning: state.editorReasoning ?? '',
+		sceneNumber: record.inputSnapshot.completedScenes + 1,
+		phases,
+		...(variables && { variables }),
+	};
 }
 
 /** Interrupted run for an act line, if a cache row exists and no live session covers it. */
@@ -413,7 +445,7 @@ async function prepareRun(params: PrepareRunParams): Promise<{ session: Internal
 		storyId: story.id,
 		kind,
 		status: 'running',
-		message: resumeRecord ? draftMessageFromRecord(resumeRecord) : newAssistantMessage(messageId, sceneNumber),
+		message: resumeRecord ? resumedSessionMessage(resumeRecord) : newAssistantMessage(messageId, sceneNumber),
 		abortController: new AbortController(),
 		record,
 		mainConfig,

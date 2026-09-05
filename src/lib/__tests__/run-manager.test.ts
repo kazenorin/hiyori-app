@@ -1,4 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+
+const settingsMock = vi.hoisted(() => ({ reviewerEnabled: false }));
 
 vi.mock('$lib/stores/settings.svelte', () => ({
 	settings: { targetWordCount: 400, importantPhraseHighlighting: false },
@@ -6,6 +8,8 @@ vi.mock('$lib/stores/settings.svelte', () => ({
 	getMainProviderConfig: () => ({ id: 'main', model: 'test-model', apiKey: 'k' }),
 	getSummarizerProviderConfig: () => ({ id: 'sum', model: 'sum-model', apiKey: 'k' }),
 	isDirectorModeEnabled: () => false,
+	isInventoryAvailable: () => false,
+	isReviewerEnabled: () => settingsMock.reviewerEnabled,
 }));
 
 vi.mock('$lib/logging/logger', () => ({
@@ -27,7 +31,7 @@ vi.mock('$lib/ai/chat/persistence', () => ({
 	updatePersistentMessageMetadata: vi.fn(async () => {}),
 }));
 
-import { draftMessageFromRecord } from '$lib/ai/chat/run-manager';
+import { draftMessageFromRecord, resumedSessionMessage } from '$lib/ai/chat/run-manager';
 import type { PipelineRunRecord } from '$lib/db/pipeline-runs';
 import type { GameDataFields, NarrativeVariables } from '$lib/ai/narrative-types';
 
@@ -126,5 +130,64 @@ describe('draftMessageFromRecord', () => {
 		expect(draft.content).toBe('');
 		expect(draft.phases).toEqual([]);
 		expect(draft.variables).toBeUndefined();
+	});
+});
+
+describe('resumedSessionMessage', () => {
+	beforeEach(() => {
+		settingsMock.reviewerEnabled = false;
+	});
+
+	it('keeps the body empty and shows the writer accordion when only the writer completed with the reviewer enabled', () => {
+		settingsMock.reviewerEnabled = true;
+		const message = resumedSessionMessage(makeRecord({ writerOutput: 'rough draft', writerVariables: vars({ narrativeBody: 'Body' }) }));
+		// A fresh run renders writer output inside the WRITER accordion, never as the narrative body.
+		expect(message.content).toBe('');
+		expect(message.phases).toEqual([{ phaseName: 'WRITER', content: 'rough draft' }]);
+		expect(message.variables).toBeUndefined();
+	});
+
+	it('puts writer output in the body without an accordion when the reviewer is disabled (editor-from-writer seed)', () => {
+		const message = resumedSessionMessage(
+			makeRecord({ writerOutput: 'final prose', writerVariables: vars({ sceneTitle: 'Title', narrativeBody: 'Body' }) })
+		);
+		expect(message.content).toBe('final prose');
+		expect(message.phases).toEqual([]);
+		expect(message.variables?.sceneTitle).toBe('Title');
+	});
+
+	it('renders cached editor output as the body with merged game data and accordions for completed phases', () => {
+		settingsMock.reviewerEnabled = true;
+		const message = resumedSessionMessage(
+			makeRecord({
+				writerOutput: 'rough',
+				reviewerOutput: 'notes',
+				editorOutput: 'polished',
+				editorReasoning: 'thoughts',
+				editorVariables: vars({ sceneTitle: 'Title', narrativeBody: 'Body' }),
+				gameData: gameData({ decisions: ['Go left'] }),
+				gameMasterOutput: 'gm output',
+				scenePlot: 'next plan',
+			})
+		);
+		expect(message.content).toBe('polished');
+		expect(message.reasoning).toBe('thoughts');
+		expect(message.phases?.map((p) => p.phaseName)).toEqual(['WRITER', 'REVIEWER', 'GAME_MASTER', 'PLOT_PLANNER']);
+		expect(message.variables?.sceneTitle).toBe('Title');
+		expect(message.variables?.gameData?.decisions).toEqual(['Go left']);
+	});
+
+	it('derives the scene number from completedScenes', () => {
+		const message = resumedSessionMessage(makeRecord({ editorOutput: 'x' }, 4));
+		expect(message.sceneNumber).toBe(5);
+		expect(message.id).toBe('msg-1');
+		expect(message.role).toBe('assistant');
+	});
+
+	it('returns an empty body for an empty state (interrupted before the first phase)', () => {
+		const message = resumedSessionMessage(makeRecord({}));
+		expect(message.content).toBe('');
+		expect(message.phases).toEqual([]);
+		expect(message.variables).toBeUndefined();
 	});
 });

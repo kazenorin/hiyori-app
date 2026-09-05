@@ -34,6 +34,7 @@ import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
 import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
 import * as runManager from './chat/run-manager';
 import type { InterruptedRunInfo } from './chat/run-manager';
+import type { PipelineRunKind } from '$lib/db/pipeline-runs';
 import type { PipelineState, PostEditorContext } from './pipeline/types';
 import { getErrorMessage } from '$lib/utils/error-handling';
 import { ensureActPlot } from '$lib/ai/act-plot';
@@ -46,6 +47,9 @@ export type { UIMessage };
 
 let messages = $state<UIMessage[]>([]);
 let displayedActLineId: string | null = null;
+/** Reactive mirror of the displayed line's run state — the run-manager registry itself is not reactive. */
+let displayedRunStatus = $state<'running' | null>(null);
+let displayedRunKind = $state<PipelineRunKind | null>(null);
 let error = $state<string | null>(null);
 let actEnded = $state(false);
 let storyConcluded = $state(false);
@@ -59,12 +63,15 @@ export function getMessages(): UIMessage[] {
 	return messages;
 }
 
-function displayedSession() {
-	return displayedActLineId ? runManager.getActiveSession(displayedActLineId) : undefined;
+/** Re-reads the run registry for the displayed line into reactive state. */
+function syncDisplayedRun(): void {
+	const session = displayedActLineId ? runManager.getActiveSession(displayedActLineId) : undefined;
+	displayedRunStatus = session?.status === 'running' ? 'running' : null;
+	displayedRunKind = session?.kind ?? null;
 }
 
 export function getIsStreaming(): boolean {
-	return displayedSession()?.status === 'running' || isBackfilling;
+	return displayedRunStatus === 'running' || isBackfilling;
 }
 
 export function getIsProcessingAsync(): boolean {
@@ -72,8 +79,7 @@ export function getIsProcessingAsync(): boolean {
 }
 
 export function getIsConcludingStory(): boolean {
-	const session = displayedSession();
-	return isConcludingStoryOverride || (session?.status === 'running' && session.kind === 'epilogue');
+	return isConcludingStoryOverride || (displayedRunStatus === 'running' && displayedRunKind === 'epilogue');
 }
 
 export function setIsConcludingStory(value: boolean): void {
@@ -140,6 +146,7 @@ runManager.subscribeRuns((event) => {
 	}
 	const { session } = event;
 	if (session.actLineId !== displayedActLineId) return;
+	syncDisplayedRun();
 
 	if (event.type === 'update') {
 		mirrorSessionMessage(session.message);
@@ -176,24 +183,34 @@ export async function sendMessage(actLineId: string, message: string, rewriteDir
 		await log.warn('send-message', 'Called with no message body.');
 		return;
 	}
+	displayedActLineId = actLineId;
+	displayedRunStatus = 'running';
+	displayedRunKind = 'main';
 	error = null;
 	try {
 		const { userMessage, assistantMessage } = await runManager.startMainRun({ actLineId, message, rewriteDirectorNote });
 		setMessages(userMessage ? [...messages, userMessage, assistantMessage] : [...messages, assistantMessage]);
+		syncDisplayedRun();
 	} catch (err) {
 		error = getErrorMessage(err);
+		syncDisplayedRun();
 		await log.error('send-message', 'Failed to start run', err);
 	}
 }
 
 export async function sendInitialNarration(actLineId: string, rewriteDirectorNote?: string): Promise<void> {
+	displayedActLineId = actLineId;
+	displayedRunStatus = 'running';
+	displayedRunKind = 'main';
 	setMessages([]);
 	error = null;
 	try {
 		const { assistantMessage } = await runManager.startMainRun({ actLineId, rewriteDirectorNote });
 		setMessages([assistantMessage]);
+		syncDisplayedRun();
 	} catch (err) {
 		error = getErrorMessage(err);
+		syncDisplayedRun();
 		await log.error('send-message', 'Failed to start initial narration', err);
 	}
 }
@@ -206,13 +223,18 @@ export function stopStreaming(): void {
 export async function continueInterruptedRun(): Promise<void> {
 	const actLineId = displayedActLineId;
 	if (!actLineId || !interruptedRun) return;
+	displayedRunStatus = 'running';
+	displayedRunKind = interruptedRun.record.kind;
 	interruptedRun = null;
 	error = null;
 	try {
 		const draftMessage = await runManager.resumeInterruptedRun(actLineId);
 		if (draftMessage) setMessages([...messages, draftMessage]);
+		// Resume may be a no-op (stale cache auto-discarded) — re-read the registry either way.
+		syncDisplayedRun();
 	} catch (err) {
 		error = getErrorMessage(err);
+		syncDisplayedRun();
 		// The cache row is still there — keep offering Continue/Discard.
 		interruptedRun = await runManager.getInterruptedRunInfo(actLineId);
 		await log.error('resume-run', 'Failed to resume interrupted run', err);
@@ -228,12 +250,17 @@ export async function discardInterruptedRun(): Promise<void> {
 }
 
 export async function runEpilogueFlow(actLineId: string, rewriteDirectorNote?: string): Promise<void> {
+	displayedActLineId = actLineId;
+	displayedRunStatus = 'running';
+	displayedRunKind = 'epilogue';
 	error = null;
 	try {
 		const { assistantMessage } = await runManager.startEpilogueRun({ actLineId, rewriteDirectorNote });
 		setMessages([...messages, assistantMessage]);
+		syncDisplayedRun();
 	} catch (err) {
 		error = getErrorMessage(err);
+		syncDisplayedRun();
 		await log.error('epilogue', 'Failed to start epilogue run', err);
 	}
 }
@@ -245,6 +272,7 @@ export function resetActEnded(): void {
 
 export async function loadActLineMessages(actLineId: string): Promise<void> {
 	displayedActLineId = actLineId;
+	syncDisplayedRun();
 	interruptedRun = null;
 	error = null;
 	isAsyncPending = runManager.isProcessingAsyncPhases(actLineId);
@@ -284,6 +312,7 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 
 export async function clearMessages(): Promise<void> {
 	displayedActLineId = null;
+	syncDisplayedRun();
 	setMessages([]);
 	error = null;
 	interruptedRun = null;
