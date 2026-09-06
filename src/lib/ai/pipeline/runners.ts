@@ -306,11 +306,16 @@ export interface PipelineRunContext {
 	narrativeOverrides: NarrativeOverrides;
 }
 
+/**
+ * Records a completed phase (metadata aggregation) and returns the new state.
+ * May be async: the pipeline wraps this to persist the phase cache after
+ * every completed phase.
+ */
 export type TrackPhase = (
 	phaseName: string,
 	result: { state: PipelineState; metadata: StreamResultMetadata },
 	model?: string
-) => PipelineState;
+) => PipelineState | Promise<PipelineState>;
 
 // --- Phase runner functions ---
 
@@ -376,58 +381,71 @@ export function getEndingLabel(endingType: EndingType): string {
 	return labels[endingType];
 }
 
+/**
+ * Seed editor output from writer output (reviewer disabled or "accept as-is").
+ * On a fresh run the writer's buildStateUpdate already did this; on resume the
+ * writer output may come from the phase cache, so seed defensively.
+ */
+function seedEditorFromWriter(state: PipelineState): PipelineState {
+	if (state.editorOutput !== undefined) return state;
+	return updateState(state, {
+		editorOutput: state.writerOutput,
+		editorVariables: state.writerVariables ?? null,
+		editorReasoning: null,
+	});
+}
+
 export async function runReviewerEditorPhases(
 	ctx: PipelineRunContext,
 	state: PipelineState,
 	trackPhase: TrackPhase
 ): Promise<PipelineState> {
 	if (!isReviewerEnabled()) {
+		state = seedEditorFromWriter(state);
 		ctx.sharedParams.callbacks.onPhaseStart('EDITOR');
 		ctx.sharedParams.callbacks.onPhaseComplete('EDITOR', state);
 		return state;
 	}
 
-	const reviewerResult = await executeStreamingPhase(
-		{
-			phaseName: 'REVIEWER',
-			systemPrompt: ctx.prompts.reviewerPrompt
-				.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
-				.replaceAll('{{acceptAsIs}}', acceptAsIsLabel())
-				.replaceAll('{{summary}}', summaryHeader())
-				.replaceAll('{{totalViolations}}', totalViolationsLabel())
-				.replaceAll('{{recommendation}}', recommendationLabel())
-				.replaceAll(
-					/{{memoryToolsInstruction}}\r?\n/g,
-					memoryToolsPartial(isQuickReview() ? quickReviewerMemoryToolsInstruction() : reviewerMemoryToolsInstruction())
-				)
-				.replaceAll(
-					/{{inventoryToolsInstruction}}\r?\n/g,
-					inventoryToolsPartial(isQuickReview() ? quickReviewerInventoryToolsInstruction() : reviewerInventoryToolsInstruction())
+	if (state.reviewerOutput === undefined) {
+		const reviewerResult = await executeStreamingPhase(
+			{
+				phaseName: 'REVIEWER',
+				systemPrompt: ctx.prompts.reviewerPrompt
+					.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
+					.replaceAll('{{acceptAsIs}}', acceptAsIsLabel())
+					.replaceAll('{{summary}}', summaryHeader())
+					.replaceAll('{{totalViolations}}', totalViolationsLabel())
+					.replaceAll('{{recommendation}}', recommendationLabel())
+					.replaceAll(
+						/{{memoryToolsInstruction}}\r?\n/g,
+						memoryToolsPartial(isQuickReview() ? quickReviewerMemoryToolsInstruction() : reviewerMemoryToolsInstruction())
+					)
+					.replaceAll(
+						/{{inventoryToolsInstruction}}\r?\n/g,
+						inventoryToolsPartial(isQuickReview() ? quickReviewerInventoryToolsInstruction() : reviewerInventoryToolsInstruction())
+					),
+				...ctx.sharedParams,
+				tools: filterToolsForPhase(ctx.tools, 'REVIEWER'),
+				descriptors: getReviewerDescriptors(),
+				messages: buildReviewerMessages(
+					ctx.preEditorCtx,
+					state.writerOutput,
+					isQuickReview() ? quickReviewerExtractionPromptTemplate(ctx.currentScene) : reviewerExtractionPromptTemplate(ctx.currentScene)
 				),
-			...ctx.sharedParams,
-			tools: filterToolsForPhase(ctx.tools, 'REVIEWER'),
-			descriptors: getReviewerDescriptors(),
-			messages: buildReviewerMessages(
-				ctx.preEditorCtx,
-				state.writerOutput,
-				isQuickReview() ? quickReviewerExtractionPromptTemplate(ctx.currentScene) : reviewerExtractionPromptTemplate(ctx.currentScene)
-			),
-			providerConfig: ctx.providerConfigs.reviewer,
-			buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),
-		},
-		state
-	);
-	state = trackPhase('REVIEWER', reviewerResult, ctx.providerConfigs.reviewer?.model);
+				providerConfig: ctx.providerConfigs.reviewer,
+				buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),
+			},
+			state
+		);
+		state = await trackPhase('REVIEWER', reviewerResult, ctx.providerConfigs.reviewer?.model);
+	}
 
 	if (reviewerAcceptsAsIs(state.reviewerOutput)) {
-		state = updateState(state, {
-			editorOutput: state.writerOutput,
-			editorVariables: state.writerVariables ?? null,
-			editorReasoning: null,
-		});
+		state = seedEditorFromWriter(state);
 		ctx.sharedParams.callbacks.onPhaseStart('EDITOR');
 		ctx.sharedParams.callbacks.onPhaseComplete('EDITOR', state);
-	} else {
+	} else if (state.editorOutput === undefined) {
 		const editorResult = await executeStreamingPhase(
 			{
 				phaseName: 'EDITOR',
@@ -444,7 +462,7 @@ export async function runReviewerEditorPhases(
 			},
 			state
 		);
-		state = trackPhase('EDITOR', editorResult, ctx.providerConfigs.editor?.model);
+		state = await trackPhase('EDITOR', editorResult, ctx.providerConfigs.editor?.model);
 	}
 
 	return state;
@@ -493,42 +511,67 @@ export function maybeExtractImportantPhrases(state: PipelineState, callbacks: Pi
 		});
 }
 
+function resolvePlotPlannerPrompt(ctx: PipelineRunContext): string {
+	return ctx.story.actLine.plotMode === 'phaseEvent' ? ctx.prompts.phaseEventPlotPlannerSystemPrompt : ctx.prompts.plotPlannerSystemPrompt;
+}
+
 export async function runGamePhases(
 	ctx: PipelineRunContext,
 	state: PipelineState,
 	postEditorCtx: PostEditorContext,
 	trackPhase: TrackPhase
 ): Promise<PipelineState> {
-	if (isPlotPlannerEnabled()) {
-		const shouldRunPlotPlanner =
-			ctx.story.actLine.plotMode === 'guidance' ||
+	// Resume gates: outputs already present in state (fresh or cached) are skipped.
+	const gmPending = state.gameMasterOutput === undefined;
+	const plotPlannerPending = state.scenePlot === undefined;
+	if (!gmPending && !plotPlannerPending) return state;
+
+	const plotPlannerShouldRun =
+		isPlotPlannerEnabled() &&
+		(ctx.story.actLine.plotMode === 'guidance' ||
 			ctx.story.actLine.lastPlotGeneration == null ||
-			postEditorCtx.completedScenes - ctx.story.actLine.lastPlotGeneration >= getReevaluationFrequency();
+			postEditorCtx.completedScenes - ctx.story.actLine.lastPlotGeneration >= getReevaluationFrequency());
 
-		if (shouldRunPlotPlanner) {
-			const plotPlannerPrompt =
-				ctx.story.actLine.plotMode === 'phaseEvent' ? ctx.prompts.phaseEventPlotPlannerSystemPrompt : ctx.prompts.plotPlannerSystemPrompt;
+	const runPlotPlanner = plotPlannerPending && plotPlannerShouldRun;
 
-			const [gmResult, plotResult] = await Promise.all([
-				executeGmPhase(ctx, state, postEditorCtx),
-				executePlotPlannerPhase(plotPlannerPrompt, ctx, postEditorCtx, state),
-			]);
+	if (gmPending && runPlotPlanner) {
+		const gmPromise = executeGmPhase(ctx, state, postEditorCtx);
+		const plotPromise = executePlotPlannerPhase(resolvePlotPlannerPrompt(ctx), ctx, postEditorCtx, state);
 
-			state = trackPhase('GAME_MASTER', gmResult, ctx.providerConfigs.gameMaster?.model);
-			state = updateState(state, { scenePlot: plotResult.state.scenePlot });
-			trackPhase('PLOT_PLANNER', plotResult, ctx.providerConfigs.plotPlanner?.model);
-			return state;
+		// Track each phase as soon as it completes so an interruption or failure
+		// of the sibling phase cannot lose the completed one's cached output.
+		const gmSettled = gmPromise.then((r) => trackPhase('GAME_MASTER', r, ctx.providerConfigs.gameMaster?.model)).catch(() => {});
+		const plotSettled = plotPromise.then((r) => trackPhase('PLOT_PLANNER', r, ctx.providerConfigs.plotPlanner?.model)).catch(() => {});
+
+		try {
+			const [gmResult, plotResult] = await Promise.all([gmPromise, plotPromise]);
+			await gmSettled;
+			await plotSettled;
+			return updateState(gmResult.state, { scenePlot: plotResult.state.scenePlot });
+		} catch (err) {
+			// Let the successful sibling's cache commit finish before propagating.
+			await Promise.allSettled([gmSettled, plotSettled]);
+			throw err;
 		}
+	}
 
-		// GM only, carry forward previous scene plot
+	if (gmPending) {
 		const gmResult = await executeGmPhase(ctx, state, postEditorCtx);
-		state = trackPhase('GAME_MASTER', gmResult, ctx.providerConfigs.gameMaster?.model);
-		state = updateState(state, { scenePlot: postEditorCtx.previousScenePlot ?? '' });
+		state = await trackPhase('GAME_MASTER', gmResult, ctx.providerConfigs.gameMaster?.model);
+	} else if (runPlotPlanner) {
+		// GM already completed (resumed from cache); only the Plot Planner remains
+		const plotResult = await executePlotPlannerPhase(resolvePlotPlannerPrompt(ctx), ctx, postEditorCtx, state);
+		state = updateState(state, { scenePlot: plotResult.state.scenePlot });
+		await trackPhase('PLOT_PLANNER', plotResult, ctx.providerConfigs.plotPlanner?.model);
 		return state;
 	}
 
-	const gmResult = await executeGmPhase(ctx, state, postEditorCtx);
-	return trackPhase('GAME_MASTER', gmResult, ctx.providerConfigs.gameMaster?.model);
+	// Plot Planner does not run (disabled, or re-evaluation frequency not elapsed):
+	// when the feature is enabled, carry forward the previous scene plot.
+	if (plotPlannerPending && isPlotPlannerEnabled()) {
+		state = updateState(state, { scenePlot: postEditorCtx.previousScenePlot ?? '' });
+	}
+	return state;
 }
 
 export async function runGmTemplateFitter(ctx: PipelineRunContext, state: PipelineState, trackPhase: TrackPhase): Promise<PipelineState> {

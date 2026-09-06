@@ -1,10 +1,13 @@
 <script lang="ts">
 	import {
+		continueInterruptedRun,
 		deleteLastExchange,
 		deleteOrphanedUserMessages,
+		discardInterruptedRun,
 		getActEnded,
 		getCharacterNames,
 		getError,
+		getInterruptedRun,
 		getIsBusy,
 		getIsStreaming,
 		getLatestActivePlotThreads,
@@ -864,6 +867,29 @@
 								</div>
 							{/if}
 						{/each}
+					{/if}
+
+					{#if getInterruptedRun()}
+						{@const interrupted = getInterruptedRun()}
+						{#if interrupted}
+							<div class="rounded-(--radius-container) border border-warning-500/50 bg-warning-100-900 p-4 space-y-3">
+								<div>
+									<p class="font-medium text-warning-600-400">{t('chat.interruptedTitle')}</p>
+									<p class="text-sm text-surface-600-400 mt-1">{t('chat.interruptedDescription')}</p>
+								</div>
+								{#if interrupted.message.content}
+									<div
+										class="rounded-(--radius-container) border border-surface-200-800 bg-surface-50-950 p-3 max-h-40 overflow-y-auto text-sm text-surface-700-300"
+									>
+										<MarkdownContent content={interrupted.message.content} />
+									</div>
+								{/if}
+								<div class="flex flex-wrap gap-2">
+									<Button variant="filled" onclick={() => continueInterruptedRun()}>{t('chat.continueGeneration')}</Button>
+									<Button variant="outline" onclick={() => discardInterruptedRun()}>{t('chat.discardGeneration')}</Button>
+								</div>
+							</div>
+						{/if}
 					{/if}
 
 					{#if getError()}

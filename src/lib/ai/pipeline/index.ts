@@ -13,8 +13,9 @@ import {
 	type PreEditorContext,
 	type PreEditorContextFactory,
 } from './types';
-import { aggregateMetadata } from './phase-executor';
+import { aggregateMetadata, aggregateMetadataFromPhases } from './phase-executor';
 import { type StreamResultMetadata } from '../streaming';
+import { log } from '$lib/logging/logger';
 import {
 	defaultTargetWordCount,
 	getEndingLabel,
@@ -112,9 +113,15 @@ async function buildPipelineContext(
 	};
 }
 
-function buildTrackPhase() {
-	let aggregatedMetadata: StreamResultMetadata | null = null;
-	const phaseEntries: PhaseMetadata[] = [];
+/**
+ * Build the phase tracker. When resuming an interrupted run, cached phase
+ * entries are seeded so token stats and phase lists span both sessions.
+ */
+function buildTrackPhase(initialEntries?: PhaseMetadata[]) {
+	let aggregatedMetadata: StreamResultMetadata | null = initialEntries?.length
+		? (aggregateMetadataFromPhases(initialEntries) ?? null)
+		: null;
+	const phaseEntries: PhaseMetadata[] = initialEntries ? [...initialEntries] : [];
 
 	const trackPhase: TrackPhase = (phaseName, result, model) => {
 		aggregatedMetadata = aggregateMetadata(aggregatedMetadata, result.metadata, model);
@@ -126,6 +133,34 @@ function buildTrackPhase() {
 		trackPhase,
 		getAggregatedMetadata: () => aggregatedMetadata ?? undefined,
 		getPhaseEntries: () => (phaseEntries.length > 0 ? phaseEntries : undefined),
+	};
+}
+
+/**
+ * Wrap the tracker's trackPhase so the phase cache is persisted after every
+ * completed phase. Commit failures are logged and never fatal to the run.
+ *
+ * `cacheState` accumulates outputs across phases because concurrent phases
+ * (Game Master ‖ Plot Planner) both start from the same base state: merging
+ * each result into the accumulated cache keeps the committed snapshot whole.
+ */
+function buildCommittingTrackPhase(
+	tracker: ReturnType<typeof buildTrackPhase>,
+	initialState: PipelineState,
+	onPhaseCommit: ((state: PipelineState, phases: PhaseMetadata[]) => void | Promise<void>) | undefined
+): TrackPhase {
+	let cacheState: PipelineState = { ...initialState };
+	return async (phaseName, result, model) => {
+		const newState = tracker.trackPhase(phaseName, result, model);
+		cacheState = { ...cacheState, ...result.state };
+		if (onPhaseCommit) {
+			try {
+				await onPhaseCommit(cacheState, tracker.getPhaseEntries() ?? []);
+			} catch (err) {
+				await log.error('pipeline', 'Failed to persist phase cache', err);
+			}
+		}
+		return newState;
 	};
 }
 
@@ -156,7 +191,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	const ctx = await buildPipelineContext(input, loadedPrompts, providerConfigs, MainPreEditorContext);
 
 	const { callbacks } = execution;
-	const tracker = buildTrackPhase();
+	const tracker = buildTrackPhase(input.initialPhases);
+	const trackPhase = buildCommittingTrackPhase(tracker, input.initialState ?? {}, execution.onPhaseCommit);
 
 	// --- Async phases (Summarizer → Character Profile Compressor → Memory) ---
 	const asyncPhases = runAsyncPhases({
@@ -173,11 +209,13 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		loadedPrompts,
 	});
 
-	// --- Sequential phases ---
-	let state: PipelineState = {};
-	state = await runWriterPhase(ctx, state, tracker.trackPhase);
-	state = await runReviewerEditorPhases(ctx, state, tracker.trackPhase);
-	state = await runEditorTemplateFitter(ctx, state, tracker.trackPhase);
+	// --- Sequential phases (resume gates: cached outputs are skipped) ---
+	let state: PipelineState = { ...input.initialState };
+	if (state.writerOutput === undefined) {
+		state = await runWriterPhase(ctx, state, trackPhase);
+	}
+	state = await runReviewerEditorPhases(ctx, state, trackPhase);
+	state = await runEditorTemplateFitter(ctx, state, trackPhase);
 	maybeExtractImportantPhrases(state, callbacks);
 
 	const postEditorCtx: PostEditorContext = {
@@ -196,8 +234,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		previousActSummaries: input.previousActSummaries,
 		actNumber: story.actLine.actNumber,
 	};
-	state = await runGamePhases(ctx, state, postEditorCtx, tracker.trackPhase);
-	state = await runGmTemplateFitter(ctx, state, tracker.trackPhase);
+	state = await runGamePhases(ctx, state, postEditorCtx, trackPhase);
+	state = await runGmTemplateFitter(ctx, state, trackPhase);
 
 	const result = finalizePipelineResult(state, tracker);
 	callbacks.onAllComplete(state);
@@ -212,13 +250,16 @@ export async function runEpiloguePipeline(input: EpiloguePipelineInput): Promise
 	const providerConfigs: PipelineProviderConfigs = buildPipelineProviderConfigs();
 	const ctx = await buildPipelineContext(input, loadedPrompts, providerConfigs, EpiloguePreEditorContext);
 
-	const tracker = buildTrackPhase();
+	const tracker = buildTrackPhase(input.initialPhases);
+	const trackPhase = buildCommittingTrackPhase(tracker, input.initialState ?? {}, execution.onPhaseCommit);
 	const epilogueExtractionPrompt = writerEpilogueExtractionPrompt(getEndingLabel(endingType));
 
-	let state: PipelineState = {};
-	state = await runWriterPhase(ctx, state, tracker.trackPhase, epilogueExtractionPrompt);
-	state = await runReviewerEditorPhases(ctx, state, tracker.trackPhase);
-	state = await runEditorTemplateFitter(ctx, state, tracker.trackPhase);
+	let state: PipelineState = { ...input.initialState };
+	if (state.writerOutput === undefined) {
+		state = await runWriterPhase(ctx, state, trackPhase, epilogueExtractionPrompt);
+	}
+	state = await runReviewerEditorPhases(ctx, state, trackPhase);
+	state = await runEditorTemplateFitter(ctx, state, trackPhase);
 	maybeExtractImportantPhrases(state, callbacks);
 
 	const result = finalizePipelineResult(state, tracker);

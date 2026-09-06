@@ -1,8 +1,52 @@
 # Narrative Generation Pipeline
 
-> **Last updated:** 2026-06-13 | **Version:** 0.5.0
+> **Last updated:** 2026-08-31 | **Version:** 1.7.0
 
 Multi-phase LLM pipeline that generates narrative prose, game data, and scene plots for interactive fiction.
+
+## Resumability and Background Runs
+
+Runs survive interruptions at two levels:
+
+1. **Background completion** — As long as the app stays open, navigating away (switching story/act line) does not stop a run. Execution is owned by the **run manager** ([`chat/run-manager.ts`](../chat/run-manager.ts)), not by the visible chat UI, so a run keeps going in the background and the UI re-attaches when the act line is opened again.
+2. **Phase-level persistence** — After each completed phase, the accumulated `PipelineState` and phase metadata are written to the `pipeline_runs` SQLite table. If the app is quit mid-run, the next launch finds the cached row and offers **Continue** (resume from the first incomplete phase) or **Discard**.
+
+A **run** is identified by a pre-created assistant `message_id` and is scoped to one act line (at most one run per line). The cache row exists ⇔ the run is incomplete; it is deleted on completion or discard.
+
+### Resume gates
+
+Resuming seeds `PipelineState` from the cache (`PipelineInput.initialState`) and re-enters the same orchestration. Each step short-circuits when its output already exists, so no completed LLM phase is re-run:
+
+| Step                   | Skipped when                                                                                        |
+| ---------------------- | --------------------------------------------------------------------------------------------------- |
+| Writer                 | `state.writerOutput !== undefined`                                                                  |
+| Reviewer               | `state.reviewerOutput !== undefined`                                                                |
+| Editor                 | `state.editorOutput !== undefined` (seeded from Writer when Reviewer is disabled or "accept as-is") |
+| Editor Template Fitter | existing gate re-evaluated (`editorHasTemplateMetadata(...)` or no `editorOutput`)                  |
+| Game Master            | `state.gameMasterOutput !== undefined`                                                              |
+| Plot Planner           | `state.scenePlot !== undefined` (GM-only carry-forward stores `''`)                                 |
+| GM Template Fitter     | existing gate re-evaluated                                                                          |
+
+Deterministic, non-LLM state updates (editor-from-writer seeding, GM-only plot carry-forward) are **not** cached; they are recomputed identically on resume.
+
+### Phase commit hook
+
+`runPipeline` / `runEpiloguePipeline` wrap the phase tracker with `buildCommittingTrackPhase`, which invokes `PipelineExecution.onPhaseCommit(state, phases)` after **every** completed streaming phase. The run manager implements this hook as an upsert into `pipeline_runs` (plus a flush for the web/OPFS backend). Commit failures are logged and never fatal. Because Game Master ‖ Plot Planner run concurrently from the same base state, each is tracked (and thus committed) as soon as it resolves — an interruption or failure of one sibling cannot lose the other's output — and the wrapper merges each phase result into an accumulated `cacheState` before committing so the snapshot stays whole.
+
+When resuming, `buildTrackPhase(initialPhases)` seeds the tracker with cached `PhaseMetadata[]`, and `aggregateMetadataFromPhases()` (in [`phase-executor.ts`](./phase-executor.ts)) recomputes the aggregate usage, so token stats span both sessions.
+
+### Interruption behavior
+
+| Interruption                        | Outcome                                                                         |
+| ----------------------------------- | ------------------------------------------------------------------------------- |
+| Switch story / act line (app open)  | Run continues in the background; UI re-attaches on return                       |
+| Stop button                         | Run aborts; completed phases stay cached → Continue/Discard                     |
+| App quit mid-phase                  | That phase is lost; resume re-runs it from cached predecessors                  |
+| App quit between phases             | Resume skips cached phases                                                      |
+| Non-abort error (e.g. auth failure) | Run fails but cache is kept → user can fix the cause and Continue               |
+| Story / act / act-line deleted      | Cache row deleted; a live run detects the missing row on next commit and aborts |
+
+Tool side effects of cached phases (act-line events such as phase transitions or endings, inventory updates) are kept while a run is interrupted or failed so that Continue sees a consistent state. When a run is **discarded** before its message is ever persisted, the run manager purges those side effects along with the cache row.
 
 ## Execution Flow
 
@@ -58,6 +102,8 @@ Runs the pre-editor chain only (Writer → Reviewer → Editor → Template Fitt
 - **Important Phrases Extraction** — fire-and-forget, gated by `isPhraseHighlightingEnabled()`.
 - **Async phases** — only run when `player.playerResponse` exists and `completedScenes > 0`.
 - **Character Profile Compressor** — only runs when `characterProfileCompressorInterval > 0` and enough scenes have elapsed since the last compression.
+
+On resume these conditions are re-evaluated with current settings, but cached outputs always win: a phase whose output is present in the seeded `PipelineState` never re-runs (see [Resume gates](#resume-gates)).
 
 ## Plot Modes
 
@@ -115,15 +161,23 @@ Same as PreEditor but:
 
 ## Module Structure
 
-| File                 | Responsibility                                                                                                                                                                                       |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`           | Orchestrator. `runPipeline()` and `runEpiloguePipeline()` entry points. Wires phases together, builds `PipelineRunContext`, tracks phase metadata.                                                   |
-| `types.ts`           | Shared types: `PipelineState`, `PipelineInput`, `PipelineResult`, `PipelineCallbacks`, provider configs, context interfaces.                                                                         |
-| `runners.ts`         | Phase runner functions (`runWriterPhase`, `runReviewerEditorPhases`, `runGamePhases`, etc.), `PipelineRunContext`, `PipelinePrompts`, `buildStateUpdate` closures, phase-specific prompt resolution. |
-| `phase-executor.ts`  | Generic phase execution engine. `executeStreamingPhase()` with retry logic, `runNonStreamingPhase()` for Summarizer/Compressor, metadata aggregation (`aggregateMetadata`).                          |
-| `message-builder.ts` | Per-phase message construction. `PreEditorContext`/`PostEditorContext` section builders, `AbstractPreEditorContext`, act summary formatters, `mergeVariables`/`mergeGameData` for template fitters.  |
-| `summarizer.ts`      | Summarizer sub-pipeline (full/incremental), Character Profile Compressor, `runAsyncPhases()` orchestrator.                                                                                           |
-| `prompt-loader.ts`   | Prompt loading via `PromptLoader` instances. `loadPrompts()` resolves story-specific overrides or bundled defaults.                                                                                  |
+| File                 | Responsibility                                                                                                                                                                                             |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `index.ts`           | Orchestrator. `runPipeline()` and `runEpiloguePipeline()` entry points. Wires phases together, builds `PipelineRunContext`, tracks phase metadata, applies resume gates, commits the phase cache.          |
+| `types.ts`           | Shared types: `PipelineState`, `PipelineInput`, `PipelineResult`, `PipelineCallbacks`, provider configs, context interfaces. Includes resume seeds (`initialState`, `initialPhases`).                      |
+| `runners.ts`         | Phase runner functions (`runWriterPhase`, `runReviewerEditorPhases`, `runGamePhases`, etc.), `PipelineRunContext`, `PipelinePrompts`, `buildStateUpdate` closures, phase-specific prompt resolution.       |
+| `phase-executor.ts`  | Generic phase execution engine. `executeStreamingPhase()` with retry logic, `runNonStreamingPhase()` for Summarizer/Compressor, metadata aggregation (`aggregateMetadata`, `aggregateMetadataFromPhases`). |
+| `message-builder.ts` | Per-phase message construction. `PreEditorContext`/`PostEditorContext` section builders, `AbstractPreEditorContext`, act summary formatters, `mergeVariables`/`mergeGameData` for template fitters.        |
+| `summarizer.ts`      | Summarizer sub-pipeline (full/incremental), Character Profile Compressor, `runAsyncPhases()` orchestrator.                                                                                                 |
+| `prompt-loader.ts`   | Prompt loading via `PromptLoader` instances. `loadPrompts()` resolves story-specific overrides or bundled defaults.                                                                                        |
+
+### Related modules outside `pipeline/`
+
+| Module                                             | Responsibility                                                                                                                                                                                                                                                        |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`chat/run-manager.ts`](../chat/run-manager.ts)    | Run lifecycle owner. Keeps one `RunSession` per act line, drives background completion, persists/loads the phase cache, and exposes `startMainRun`, `startEpilogueRun`, `resumeInterruptedRun`, `discardRun`, `abortRun`, and cleanup hooks used by the delete flows. |
+| [`db/pipeline-runs.ts`](../../db/pipeline-runs.ts) | CRUD for the `pipeline_runs` phase-cache table (upsert, load by act line/message, `updatePipelineRunIfExists`, scoped deletes).                                                                                                                                       |
+| [`chat.svelte.ts`](../chat.svelte.ts)              | Chat UI state. Subscribes to run-manager events and mirrors only the _displayed_ act line's run into the visible message list; renders the Continue/Discard prompt for interrupted runs.                                                                              |
 
 ## Import Graph (acyclic)
 
@@ -147,9 +201,10 @@ index.ts ← runners, phase-executor, message-builder, summarizer, prompt-loader
 
 All interfaces are defined in [`types.ts`](./types.ts). Key types to know:
 
-- **`PipelineInput`** — Entry point parameters (extends `CommonPipelineInput` with `previousScenePlot` and `player`).
-- **`PipelineState`** — Mutable state accumulated across phases (writer/editor/GM output, variables, game data).
+- **`PipelineInput`** — Entry point parameters (extends `CommonPipelineInput` with `previousScenePlot` and `player`). Also carries the resume seeds `initialState` and `initialPhases`.
+- **`PipelineState`** — Mutable state accumulated across phases (writer/editor/GM output, variables, game data). This is what gets cached in `pipeline_runs.state`.
 - **`PipelineCallbacks`** — Lifecycle hooks: `onPhaseStart`, `onPhaseStream`, `onPhaseRetry`, `onPhaseComplete`, `onError`, `onPhrasesExtracted`, `onAllComplete`.
+- **`PipelineExecution`** — Holds `abortSignal`, `callbacks`, optional `tools`, and `onPhaseCommit(state, phases)` for persisting the phase cache after each phase.
 - **`PipelineRunContext`** — Shared context passed to all phase runners (defined in [`runners.ts`](./runners.ts)). Contains `sharedParams`, `providerConfigs`, `preEditorCtx`, `prompts`, `effectiveTargetWordCount`, `currentScene`, `tools`, `story`, `assistant`, `narrativeOverrides` (writer-tool overrides merged into writer variables, fill-when-missing).
 - **`PipelineProviderConfigs`** — Per-phase provider resolution. Built by `buildPipelineProviderConfigs()` ([`chat/pipeline-config.ts`](../chat/pipeline-config.ts)) which resolves role-specific configs with fallback to `main`. Roles: `plotPlanner`, `writer`, `reviewer`, `editor`, `gameMaster`, `summarizer`, `minorTaskAgent`.
 
@@ -173,7 +228,10 @@ executeStreamingPhase (phase-executor.ts)
   → streamWithRetry (chat-stream.ts) — retry with linear backoff, abort-aware
     → streamChatResponse — creates model, accumulator, calls executeStream
   → buildStateUpdate — maps StreamState → Partial<PipelineState>
-  → trackPhase — aggregates metadata, records phase entry
+  → trackPhase (committing wrapper, index.ts)
+      — aggregates metadata, records phase entry
+      — merges the phase output into the accumulated cache state
+      — invokes execution.onPhaseCommit(state, phases) to persist the cache
 ```
 
 ### Descriptors
@@ -261,6 +319,11 @@ Each uses a `PromptLoader` instance that checks for a story-specific override fi
 6. Write the runner function in `runners.ts` — follow the pattern of `runWriterPhase`:
    - Build system prompt with variable replacement
    - Call `executeStreamingPhase()` with descriptors, messages, provider config, and `buildStateUpdate`
-   - Return the tracked state
+   - Return the state via `trackPhase(...)` (this is what triggers `onPhaseCommit`, so the phase is cached automatically)
 7. Wire the runner into `runPipeline()` in `index.ts`, deciding whether it's sequential or concurrent.
-8. Add the phase to `PipelineCallbacks.onPhaseStart`/`onPhaseStream`/`onPhaseComplete` handling in `chat.svelte.ts`.
+8. Add a resume gate so a cached output for the new phase is skipped (check the relevant `state` field before running).
+9. Add the phase to `PipelineCallbacks.onPhaseStart`/`onPhaseStream`/`onPhaseComplete` handling in `chat.svelte.ts`.
+
+## Note: Act Plot Generator
+
+The act plot generator ([`act-plot/`](../act-plot/)) has its own three-phase Writer → Reviewer → Editor flow and does **not** use this module's phase cache. Its earlier phase results are therefore still lost if generation is interrupted. This is out of scope for the narrative pipeline's resumability, but the same pattern (persist each phase's output and gate re-runs on cached state) could be applied there later if desired. No cross-module coupling is introduced.

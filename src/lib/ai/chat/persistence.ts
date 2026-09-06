@@ -6,7 +6,6 @@ import { Memory } from '$lib/features/memory';
 import { log } from '$lib/logging/logger';
 import { getMemoryProviderConfig, isMemoryAvailable, isInventoryAvailable } from '$lib/stores/settings.svelte';
 import { getActiveStoryId } from '$lib/stores/stories.svelte';
-import { getErrorMessage } from '$lib/utils/error-handling';
 import { deleteInventoryByMessages } from '$lib/db/inventory';
 import type { MessageMetadata, PhaseMetadata } from '../chat-stream';
 import type { AssistantContext } from '$lib/ai/pipeline/types';
@@ -155,30 +154,6 @@ export async function removeMemoriesFromActLine(actLineId: string, messageIdsToR
 			await memory.deleteInventoryByMessages(storyId, actLineId, messageIdsToRemove);
 		}
 	}
-}
-
-/**
- * Handle errors from streaming: persist partial on abort, remove message on other errors.
- * Returns updated messages and error string instead of mutating module state.
- */
-export async function handleStreamError(
-	err: unknown,
-	responseMsg: UIMessage,
-	actLineId: string,
-	msgs: UIMessage[]
-): Promise<{ messages: UIMessage[]; error: string | null }> {
-	if (err instanceof DOMException && err.name === 'AbortError') {
-		if (responseMsg && responseMsg.content) {
-			const seq = await dbActLines.getNextSequence(actLineId);
-			await persistMessage(actLineId, responseMsg, seq);
-		}
-		await log.warn('send-message', 'User aborted.');
-		return { messages: msgs, error: null };
-	}
-	const errorMessage = getErrorMessage(err);
-	await log.error('send-message', errorMessage, err);
-	await dbActLines.deleteEventsForMessage(responseMsg.id);
-	return { messages: msgs.filter((m) => m.id !== responseMsg.id), error: errorMessage };
 }
 
 export async function updateLastPlotGeneration(

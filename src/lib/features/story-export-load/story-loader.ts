@@ -19,6 +19,7 @@ import { insertCharacterProfile, type InsertCharacterProfileInput, type Characte
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { fs } from '$lib/fs/file-system';
 import { loadStories, selectStory } from '$lib/stores/stories.svelte';
+import { cleanupActLine } from '$lib/ai/chat/run-manager';
 import type { StoryExportData } from './archive-schema';
 import { regenerateIds } from './id-remapper';
 
@@ -161,6 +162,7 @@ async function insertSelectedActLineData(data: StoryExportData, selectedActLineI
 		if (overwrite) {
 			const existingLine = await getActLine(meta.id);
 			if (existingLine) {
+				await cleanupActLine(meta.id);
 				await deleteActLine(meta.id);
 			}
 		}

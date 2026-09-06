@@ -10,6 +10,7 @@ import { extractCacheTokens, type StreamResultMetadata } from '../streaming';
 import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
 import { ERR_NO_PROVIDER_FOR_PHASE } from '$lib/definitions/error-messages';
 import { isAbortLikeError } from '$lib/utils/async';
+import type { PhaseMetadata } from '../chat-stream';
 
 export interface StreamingPhaseParams {
 	phaseName: PhaseName;
@@ -47,6 +48,38 @@ export function aggregateMetadata(
 		},
 		durationMs: acc.durationMs + phase.durationMs,
 		models: new Set([...acc.models, ...(modelId ? [modelId] : [])]),
+	};
+}
+
+/**
+ * Reconstruct aggregated metadata from a list of phase entries.
+ * Used when resuming an interrupted run: the tracker is seeded from cached
+ * phase metadata, and the aggregate is recomputed rather than stored.
+ * Mirrors the accumulation semantics of {@link aggregateMetadata}.
+ */
+export function aggregateMetadataFromPhases(entries: PhaseMetadata[]): StreamResultMetadata | undefined {
+	if (entries.length === 0) return undefined;
+	const usage = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
+	let cacheReadTokens: number | undefined;
+	let cacheWriteTokens: number | undefined;
+	let durationMs = 0;
+	const models = new Set<string>();
+	let finishReason = 'unknown';
+	for (const entry of entries) {
+		usage.inputTokens += entry.inputTokens;
+		usage.outputTokens += entry.outputTokens;
+		usage.totalTokens += entry.totalTokens;
+		cacheReadTokens = (cacheReadTokens ?? 0) + (entry.cacheReadTokens ?? 0) || undefined;
+		cacheWriteTokens = (cacheWriteTokens ?? 0) + (entry.cacheWriteTokens ?? 0) || undefined;
+		durationMs += entry.durationMs;
+		if (entry.model && entry.model !== 'unknown') models.add(entry.model);
+		finishReason = entry.finishReason;
+	}
+	return {
+		finishReason,
+		usage: { ...usage, cacheReadTokens, cacheWriteTokens },
+		durationMs,
+		models,
 	};
 }
 
