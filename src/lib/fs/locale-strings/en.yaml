@@ -12,7 +12,14 @@ common:
     actWithNumber: 'Act {{actNumber}}'
     ongoing: Ongoing
     currentPhase: Current Phase
+    requirementCategories:
+      must: Must
+      should: Should
+      may: May
+      mustNot: Must not
+      will: Will
   headers:
+    requirements: Requirements
     worldContent: World Content
     actPlot: Act Plot
     actSummary: Act Summary
@@ -51,6 +58,7 @@ common:
     characterProfiles: Character Profiles
     targetWordCountPerScene: Target Word Count per Scene
   descriptions:
+    requirements: 'The following are explicit requirements stated by the user. Honor every one of them in your output.'
     interviewTranscript: The following is an interview exchange about the story and premises.
     playerPreferences: "A structured digest of the player's preferences extracted from the interview above. Each preference must be reflected in the matching Act Plot template section."
     directorNotes: "The following notes represent the player's explicit creative direction. They override all other context including Act Plot and Act Summary. Honor them with the highest priority."
@@ -488,6 +496,19 @@ tools:
       errors:
         alreadySelected: 'A template has already been selected for this session.'
         invalidTemplateId: 'Invalid template ID. Please choose from: high-fantasy, modern-slice-of-life, sci-fi, urban-fantasy.'
+  recordRequirement:
+    description: >
+      Record a single explicit requirement stated by the user, categorized by modal verb.
+      Call this once per requirement whenever the user states an explicit, binding requirement
+      or hard constraint — not a vague preference and not your own suggestion. Choose the
+      category matching the user's phrasing: must (shall/must), should (should/recommended),
+      may (may/optional), mustNot (shall not/must not), or will (will).
+      This call is invisible to the user; never announce it.
+    parameters:
+      category: 'The modal-verb category of the requirement: must, should, may, mustNot, or will'
+      requirement: 'The requirement text, phrased as a single concise line'
+    messages:
+      success: 'Requirement recorded.'
   evaluateRisk:
     description: >
       Evaluates the outcome of taking a risk by rolling a dice. The higher the risk level, the more likely a bad outcome.
