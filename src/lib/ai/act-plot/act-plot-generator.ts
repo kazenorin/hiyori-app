@@ -39,6 +39,7 @@ import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';
 import { targetWordCountPerSceneHeader } from '$lib/definitions/common-headers';
 import { ERR_EMPTY_ACT_PLOT_WRITER, ERR_NO_MAIN_PROVIDER } from '$lib/definitions/error-messages';
 import { actWithNumberLabel } from '$lib/definitions/common-labels';
+import { formatRequirementsBlockFromLines } from '$lib/definitions/requirements';
 import { buildActPlotTools, filterActPlotToolsForPhase } from './tools';
 import { ACT_LEVEL_ACT_CARD } from './constants';
 import type { ActLineContext } from '$lib/ai/pipeline/types';
@@ -141,6 +142,7 @@ interface BuildActPlotMessagesOptions {
 	turnOfEvents: string | null;
 	interviewTranscript?: ModelMessage[];
 	playerPreferences?: string | null;
+	requirements?: string;
 	writerOutput?: string;
 	reviewerOutput?: string;
 	template?: string;
@@ -158,6 +160,7 @@ function buildActPlotMessages(options: BuildActPlotMessagesOptions): ModelMessag
 		turnOfEvents,
 		interviewTranscript,
 		playerPreferences,
+		requirements,
 		writerOutput,
 		reviewerOutput,
 		prompt,
@@ -220,6 +223,10 @@ function buildActPlotMessages(options: BuildActPlotMessagesOptions): ModelMessag
 		messages.push({ role: 'user', content: ACT_PLOT_SECTION.PLAYER_PREFERENCES + playerPreferences });
 	}
 
+	if (requirements && requirements.trim()) {
+		messages.push({ role: 'user', content: ACT_PLOT_SECTION.REQUIREMENTS + requirements });
+	}
+
 	if (turnOfEvents) {
 		messages.push({ role: 'user', content: ACT_PLOT_SECTION.TURN_OF_EVENTS + turnOfEvents });
 	}
@@ -245,6 +252,7 @@ export interface GenerateActPlotParams {
 	storyId: string;
 	storyName: string;
 	worldContent: string | null;
+	requirements?: string;
 	actLine: ActLineMeta;
 	actNumber: number;
 	isResumeGame?: boolean;
@@ -266,6 +274,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 		storyId,
 		storyName,
 		worldContent,
+		requirements,
 		actLine,
 		actNumber,
 		isResumeGame = false,
@@ -366,6 +375,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 		turnOfEvents,
 		interviewTranscript,
 		playerPreferences,
+		requirements,
 		prompt: generationPrompt,
 		template,
 		useDetailedContext,
@@ -408,6 +418,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 				turnOfEvents,
 				interviewTranscript,
 				playerPreferences,
+				requirements,
 				writerOutput: writerText,
 				prompt: reviewerPrompt,
 				useDetailedContext,
@@ -444,6 +455,7 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 					previousActSummary,
 					turnOfEvents,
 					playerPreferences,
+					requirements,
 					writerOutput: writerText,
 					reviewerOutput: reviewerText,
 					prompt: editorPrompt,
@@ -483,6 +495,11 @@ export async function generateActPlot(params: GenerateActPlotParams): Promise<st
 	if (isResumeGame) {
 		const lastSceneNumber = (await getLastSceneNumber(actLineId)) ?? 1;
 		finalText = finalText + '\n\n' + actPlotResumeNote(lastSceneNumber.toString());
+	}
+
+	// Append explicit user requirements last (verbatim, headed block)
+	if (requirements && requirements.trim()) {
+		finalText = finalText + '\n\n' + formatRequirementsBlockFromLines(requirements);
 	}
 
 	return finalText;
