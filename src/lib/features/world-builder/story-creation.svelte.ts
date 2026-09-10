@@ -20,8 +20,10 @@ import {
 	getMessages as getWorldBuilderMessages,
 	requestStart,
 	getSelectedTemplateId,
+	getRecordedRequirements,
 	type NewActInterviewContext,
 } from '$lib/features/world-builder/world-builder.svelte';
+import { formatRequirementsBlock } from '$lib/definitions/requirements';
 import { loadActLineMessages, sendInitialNarration } from '$lib/ai/chat.svelte';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { updateWorldCard, ensureWorldFile } from '$lib/ai/world-generator';
@@ -81,7 +83,14 @@ async function ensureStoryCreated(): Promise<boolean> {
 	if (!name || !worldContent) return false;
 
 	if (!storyCreated) {
-		await createStoryFromWorldBuilder(name, worldContent, getStoryLocale() || settings.locale || 'en', getSelectedTemplateId());
+		const requirementsBlock = formatRequirementsBlock(getRecordedRequirements());
+		await createStoryFromWorldBuilder(
+			name,
+			worldContent,
+			getStoryLocale() || settings.locale || 'en',
+			getSelectedTemplateId(),
+			requirementsBlock
+		);
 		storyCreated = true;
 	}
 	return true;

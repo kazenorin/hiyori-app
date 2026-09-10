@@ -16,6 +16,7 @@ import { ensureWorldFile } from '$lib/ai/world-generator';
 import { writeWorldTemplateId } from '$lib/ai/world-generator/template-resolution';
 import { deriveStoryName, renameStoryFolder, resolveStoryFolder } from '$lib/fs/story-folders';
 import { fs } from '$lib/fs/file-system';
+import { writeRequirementsBlock } from '$lib/fs/requirements-files';
 import * as dbStoryFolders from '$lib/db/story-folders';
 import { cleanupAct, cleanupActLine, cleanupStory } from '$lib/ai/chat/run-manager';
 import {
@@ -608,7 +609,8 @@ export async function createStoryFromWorldBuilder(
 	name: string,
 	worldContent: string,
 	locale: string,
-	templateId: string | null = null
+	templateId: string | null = null,
+	requirementsBlock: string = ''
 ): Promise<void> {
 	const story = await createStory(name, locale);
 	const act = await insertAct(story.id, actWithNumberLabel(1), 1);
@@ -620,6 +622,10 @@ export async function createStoryFromWorldBuilder(
 	const worldPath = `${folderName}/${WORLD_MD}`;
 	await fs.writeTextFile(worldPath, worldContent);
 	await writeWorldTemplateId(folderName, templateId);
+
+	if (requirementsBlock) {
+		await writeRequirementsBlock(folderName, requirementsBlock);
+	}
 
 	// Move world builder log from AppData/logs/ to story folder
 	const logFile = getLogFilePath();
