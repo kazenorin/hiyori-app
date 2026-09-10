@@ -3,6 +3,7 @@ import { getLineDir } from '$lib/ai/card-output-path';
 import { ensureWorldFile } from '$lib/ai/world-generator';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { fs } from '$lib/fs/file-system';
+import { readRequirementsBlock, deleteRequirements } from '$lib/fs/requirements-files';
 import type { EnsureActPlotParams } from '$lib/ai/act-plot/types';
 import { log } from '$lib/logging/logger';
 import * as dbActs from '$lib/db/acts';
@@ -33,10 +34,13 @@ export async function ensureActPlot(params: EnsureActPlotParams): Promise<string
 
 		params.onStartGenerate?.();
 
+		const requirements = await readRequirementsBlock(lineDir);
+
 		const result = await generateActPlot({
 			storyId: story.id,
 			storyName: story.name,
 			worldContent,
+			requirements: requirements || undefined,
 			actLine,
 			actNumber,
 			isResumeGame: params.isResumeGame,
@@ -50,6 +54,11 @@ export async function ensureActPlot(params: EnsureActPlotParams): Promise<string
 		// Write output file
 
 		await fs.writeTextFileEnsuringDir(plotPath, result);
+
+		// Requirements are now folded into act-plot.md; drop the transient sidecar.
+		if (requirements) {
+			await deleteRequirements(lineDir);
+		}
 
 		await log.info(LOG_TAG, `Act-plot pipeline complete for actLine: ${actLine.id.slice(-8)} of story: ${story.id}`);
 
