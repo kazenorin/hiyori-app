@@ -110,6 +110,11 @@ let recordedRequirements = $state<Requirement[]>([]);
 let interviewStory: { id: string; name: string } | null = null;
 let cachedInterviewLineDir: string | null = null;
 
+// Serializes act-plot sidecar read-modify-write. The AI SDK runs multiple tool calls from a
+// single assistant turn concurrently, so without this chain two `record-requirement` calls
+// would both read the same body and the second write would drop the first requirement.
+let sidecarWriteChain: Promise<void> = Promise.resolve();
+
 export function getIsActive(): boolean {
 	return isActive;
 }
@@ -414,6 +419,24 @@ async function resolveInterviewLineDir(): Promise<string | null> {
 }
 
 /**
+ * Append one requirement line to the act-plot sidecar, serialized against other in-flight
+ * appends so concurrent `record-requirement` calls in a single turn can't drop a line.
+ * The chain swallows each link's outcome so one failed write can't permanently block later
+ * appends, while `await run` still propagates this call's own error to the caller.
+ */
+export async function appendRequirementToSidecar(lineDir: string, req: Requirement): Promise<void> {
+	const run = sidecarWriteChain.then(async () => {
+		const existing = await readRequirementsBlock(lineDir);
+		await writeRequirementsBlock(lineDir, appendRequirementLine(existing, req));
+	});
+	sidecarWriteChain = run.then(
+		() => {},
+		() => {}
+	);
+	await run;
+}
+
+/**
  * Tool handler for `record-requirement`. In the act-plot interview the requirement is
  * appended to `{lineDir}/requirements.md` (durable source of truth, deduped against the
  * file). In the world-builder interview it is held in memory (deduped against the list)
@@ -425,8 +448,7 @@ export async function handleRecordRequirement(category: RequirementCategory, req
 	if (actPlotInterview) {
 		const lineDir = await resolveInterviewLineDir();
 		if (lineDir) {
-			const existing = await readRequirementsBlock(lineDir);
-			await writeRequirementsBlock(lineDir, appendRequirementLine(existing, req));
+			await appendRequirementToSidecar(lineDir, req);
 		} else {
 			await log.error('interview', 'Cannot resolve act-line directory; requirement not persisted to sidecar');
 		}
