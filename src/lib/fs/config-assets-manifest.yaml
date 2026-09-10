@@ -26,11 +26,12 @@ src:
               updatedAt: "2026-08-01T11:28:19.674Z"
             act-plot-interview-system-prompt.md:
               configPath: en/prompt-templates/act/act-plot-interview-system-prompt.md
-              hash: 46a1b81099f044cd6dc71612a9332763cbb00c769c68e042b6923f1a296c5714
+              hash: 5b5b78559fbe5d20d1bb0a8af56ea6efbf826327b17e7efb78dbcbf2f4e8187f
               oldHashes:
+                - 46a1b81099f044cd6dc71612a9332763cbb00c769c68e042b6923f1a296c5714
                 - c5704f97ef451750d57e153ffe4eb4b55acbea4460757f2a7ffc4908bab8dec8
                 - 44050c41986740153ae8abd917834c3e033eca6502bb9bb633b78c655024f46f
-              updatedAt: "2026-07-18T08:56:38.701Z"
+              updatedAt: "2026-09-10T14:55:51.569Z"
             act-plot-interview-turn-of-events-prompt.md:
               configPath: en/prompt-templates/act/act-plot-interview-turn-of-events-prompt.md
               hash: 3a396127708bf203f1e08a58887febbc32031155af44d1cdb154b45b348252d2
@@ -195,12 +196,13 @@ src:
           world:
             world-builder-system-prompt.md:
               configPath: en/prompt-templates/world/world-builder-system-prompt.md
-              hash: bb9d6a25700bbd3771e230798536f5d822c82c6c02e101e9778cb074b1bc082a
+              hash: 4f658626d5eda1eb0aa93a9e784e7ba418e869f5da31b728fab2eb69e1ee5902
               oldHashes:
+                - bb9d6a25700bbd3771e230798536f5d822c82c6c02e101e9778cb074b1bc082a
                 - e6c44422f30d157fa9240567389b0d5a16a55c18c9f21403a4bbe601d85347b8
                 - df84cfd9f963b198aa953a5b6bab1667191306b171e382a994af8129b019ff90
                 - 724187bfef83065b2f4c58007fa74695669dfe5eaa0b088d0a60665eab27f0a2
-              updatedAt: "2026-07-18T08:56:38.701Z"
+              updatedAt: "2026-09-10T14:55:51.569Z"
             world-template.md:
               configPath: en/prompt-templates/world/world-template.md
               hash: null
@@ -365,11 +367,12 @@ src:
               updatedAt: "2026-08-01T11:28:19.674Z"
             act-plot-interview-system-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/act/act-plot-interview-system-prompt.md
-              hash: 176c1a97b4374458a66381d1ab0ce9b5890bb804f363fa045cd6c9c363908aee
+              hash: dba8abae9204070fd22969fff9e9285df9ea06e55b7ed41c82b679f81db55312
               oldHashes:
+                - 176c1a97b4374458a66381d1ab0ce9b5890bb804f363fa045cd6c9c363908aee
                 - 6bee8a8603276e52393219ee7020462f709ac2976ec5dbedde4036674068efcc
                 - f9d144fe8a80e3da9512cdbdd084e7ff80cf0351614003cd11d1a5c2be70a496
-              updatedAt: "2026-07-18T08:56:38.701Z"
+              updatedAt: "2026-09-10T14:55:51.569Z"
             act-plot-interview-turn-of-events-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/act/act-plot-interview-turn-of-events-prompt.md
               hash: 6932c22d9dd7be88d1468bdff0411efc4938e11ba54e2a33b7dd9114cfa2bbc6
@@ -537,12 +540,13 @@ src:
           world:
             world-builder-system-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/world/world-builder-system-prompt.md
-              hash: 0aab7f966eede92a2dcd9e73fc2aa53f5c4caa504a2389a36523c7b05ea07b64
+              hash: 10998ec92aca3728913994bab4ad3ef4c786f06959ebd61acdfd43420a6041bd
               oldHashes:
+                - 0aab7f966eede92a2dcd9e73fc2aa53f5c4caa504a2389a36523c7b05ea07b64
                 - acc41bbf4fdf8239c2f651c4c1109aad0bb14dffd9c14da1ae4e92536dc70abc
                 - fd76496e067ac51f7e568acf90f21f796937c84f284d9a6abdf62decd7219b73
                 - 4809cd56814e0a301c18668dbd6543e3da99d212bea8ea51d49c857bd47cdfb5
-              updatedAt: "2026-07-18T08:56:38.701Z"
+              updatedAt: "2026-09-10T14:55:51.569Z"
             world-template.md:
               configPath: zh-Hant-HK/prompt-templates/world/world-template.md
               hash: null
