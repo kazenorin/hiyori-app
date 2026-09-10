@@ -22,6 +22,7 @@ import {
 	directorNotesHeader,
 	storySoFarHeader,
 	characterProfilesHeader,
+	requirementsHeader,
 	sectionFormat,
 } from './common-headers';
 import {
@@ -113,6 +114,9 @@ export const ACT_PLOT_SECTION = {
 	},
 	get PLAYER_PREFERENCES() {
 		return sectionFormat(playerPreferencesHeader()) + playerPreferencesDescription() + '\n\n';
+	},
+	get REQUIREMENTS() {
+		return sectionFormat(requirementsHeader()) + ls('common.descriptions.requirements') + '\n\n';
 	},
 	get INTERVIEW_TRANSCRIPT() {
 		return sectionFormat(interviewTranscriptHeader()) + interviewTranscriptDescription();
