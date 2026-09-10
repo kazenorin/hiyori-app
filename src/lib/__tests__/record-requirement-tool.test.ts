@@ -13,6 +13,11 @@ import type { RequirementCategory } from '$lib/definitions/requirements';
 
 const callCtx = { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} } as never;
 
+// The `ai` mock returns the raw tool def, so `inputSchema` is the real zod schema at runtime;
+// the static `FlexibleSchema` type just doesn't expose `safeParse`.
+const schemaOf = (toolDef: ReturnType<typeof createRecordRequirementTool>) =>
+	toolDef.inputSchema as unknown as { safeParse: (value: unknown) => { success: boolean } };
+
 describe('createRecordRequirementTool', () => {
 	const onRecord = vi.fn(async (_category: RequirementCategory, _requirement: string) => 'tools.recordRequirement.messages.success');
 
@@ -29,7 +34,7 @@ describe('createRecordRequirementTool', () => {
 
 	it('accepts every valid modal-verb category', () => {
 		const toolDef = createRecordRequirementTool(onRecord);
-		const parse = (cat: string) => toolDef.inputSchema.safeParse({ category: cat, requirement: 'x' });
+		const parse = (cat: string) => schemaOf(toolDef).safeParse({ category: cat, requirement: 'x' });
 		for (const cat of ['must', 'should', 'may', 'mustNot', 'will']) {
 			expect(parse(cat).success).toBe(true);
 		}
@@ -37,7 +42,7 @@ describe('createRecordRequirementTool', () => {
 
 	it('rejects an unknown category via the zod schema', () => {
 		const toolDef = createRecordRequirementTool(onRecord);
-		expect(toolDef.inputSchema.safeParse({ category: 'might', requirement: 'x' }).success).toBe(false);
+		expect(schemaOf(toolDef).safeParse({ category: 'might', requirement: 'x' }).success).toBe(false);
 	});
 });
 
