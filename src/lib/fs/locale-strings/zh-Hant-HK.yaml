@@ -12,7 +12,14 @@ common:
     actWithNumber: 第 {{actNumber}} 章
     ongoing: 進行中
     currentPhase: 當前階段
+    requirementCategories:
+      must: 必須
+      should: 應該
+      may: 可以
+      mustNot: 禁止
+      will: 將會
   headers:
+    requirements: 需求
     worldContent: 世界觀內容
     actPlot: 章節劇情
     actSummary: 章節摘要
@@ -51,6 +58,7 @@ common:
     characterProfiles: 角色檔案
     targetWordCountPerScene: 每場景目標字數
   descriptions:
+    requirements: '以下是使用者明確提出的需求。請在輸出中遵循每一項需求。'
     interviewTranscript: 以下是有關此故事及設定的訪談內容。
     playerPreferences: '以下萃取自上方訪談的玩家偏好結構化摘要。每一項偏好都必須反映在對應的章節劇情範本區段中。'
     directorNotes: '以下備註代表玩家的明確創作方向。它們凌駕於所有其他脈絡之上，包含章節劇情和章節摘要。請以最高優先順序遵循。'
@@ -480,6 +488,18 @@ tools:
       errors:
         alreadySelected: '此工作階段已選擇了模板。'
         invalidTemplateId: '無效的模板 ID。請從以下選擇: high-fantasy、modern-slice-of-life、sci-fi、urban-fantasy。'
+  recordRequirement:
+    description: >
+      記錄使用者提出的單一明確需求，並依情態動詞分類。
+      每當使用者陳述明確、具約束力的需求或硬性限制時（而非模糊的偏好，也不是你自己的建議），
+      每次呼叫記錄一項需求。選擇符合使用者措辭的類別：must（必須）、should（應該）、
+      may（可以）、mustNot（禁止）、或 will（將會）。
+      此呼叫對使用者不可見；切勿主動提及。
+    parameters:
+      category: '需求的情態動詞類別：must、should、may、mustNot 或 will'
+      requirement: '需求文字，以單一行簡潔措辭表達'
+    messages:
+      success: '已記錄需求。'
   evaluateRisk:
     description: >
       透過擲骰來評估帶有風險的行動的結果。風險等級越高，壞結果的機率越大。

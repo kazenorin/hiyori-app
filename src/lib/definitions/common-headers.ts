@@ -39,6 +39,7 @@ export const charactersHeader = () => ls('common.headers.characters');
 export const characterHeader = () => ls('common.headers.character');
 export const actDescriptionHeader = () => ls('common.headers.actDescription');
 export const targetWordCountPerSceneHeader = () => ls('common.headers.targetWordCountPerScene');
+export const requirementsHeader = () => ls('common.headers.requirements');
 
 export function sectionFormat(text: string, headerLevel: number = 2): string {
 	return `${'#'.repeat(headerLevel)} ${text}\n\n`;

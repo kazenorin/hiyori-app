@@ -36,6 +36,19 @@ import { getUserFacingErrorMessage } from '$lib/utils/error-handling';
 import { ls } from '$lib/localization';
 import { WORLD_TEMPLATES } from '$lib/features/world-builder/template-registry';
 import { buildWorldBuilderTools } from '$lib/ai/tools/select-world-template';
+import type { ToolSet } from 'ai';
+import { getLineDir } from '$lib/ai/card-output-path';
+import { resolveStoryFolder } from '$lib/fs/story-folders';
+import { getActNumber } from '$lib/db/acts';
+import { buildRequirementTools } from '$lib/ai/tools/record-requirement';
+import { readRequirementsBlock, writeRequirementsBlock } from '$lib/fs/requirements-files';
+import {
+	appendRequirementLine,
+	formatRequirementsContext,
+	isDuplicateRequirement,
+	type Requirement,
+	type RequirementCategory,
+} from '$lib/definitions/requirements';
 
 export interface WorldBuilderMessage {
 	id: string;
@@ -90,6 +103,17 @@ let cachedInterviewSystemPrompt: string | null = null;
 type WorldBuilderPhase = 'pre-template' | 'post-template';
 let wbPhase: WorldBuilderPhase = $state('pre-template');
 let selectedTemplateId: string | null = $state(null);
+
+// Explicit requirements recorded via the record-requirement tool.
+// World-builder set lives in memory; the act-plot set lives in a per-line sidecar.
+let recordedRequirements = $state<Requirement[]>([]);
+let interviewStory: { id: string; name: string } | null = null;
+let cachedInterviewLineDir: string | null = null;
+
+// Serializes act-plot sidecar read-modify-write. The AI SDK runs multiple tool calls from a
+// single assistant turn concurrently, so without this chain two `record-requirement` calls
+// would both read the same body and the second write would drop the first requirement.
+let sidecarWriteChain: Promise<void> = Promise.resolve();
 
 export function getIsActive(): boolean {
 	return isActive;
@@ -171,6 +195,9 @@ function resetState(): void {
 	interviewActLineId = null;
 	interviewHiddenContext = [];
 	interviewWorldContent = null;
+	recordedRequirements = [];
+	interviewStory = null;
+	cachedInterviewLineDir = null;
 }
 
 export function exitWorldBuilderMode(): void {
@@ -227,6 +254,7 @@ export async function enterActPlotInterviewMode(params: EnterActPlotInterviewMod
 	isNextActContinuation = !!newActContext;
 	interviewActLineId = actLineId;
 	interviewWorldContent = worldContent;
+	interviewStory = story ? { id: story.id, name: story.name } : null;
 
 	await loadActiveLocales(story?.locale, story?.id, story?.name);
 
@@ -374,6 +402,62 @@ export function getSelectedTemplateId(): string | null {
 	return selectedTemplateId;
 }
 
+export function getRecordedRequirements(): Requirement[] {
+	return recordedRequirements;
+}
+
+/** Lazily resolve and cache the act-line directory for the act-plot requirements sidecar. */
+async function resolveInterviewLineDir(): Promise<string | null> {
+	if (cachedInterviewLineDir) return cachedInterviewLineDir;
+	if (!interviewActLineId || !interviewStory) return null;
+	const actLine = await dbActLines.getActLine(interviewActLineId);
+	if (!actLine) return null;
+	const storyFolder = await resolveStoryFolder(interviewStory.id, interviewStory.name);
+	const actNumber = (await getActNumber(actLine.actId)) ?? 1;
+	cachedInterviewLineDir = await getLineDir(storyFolder, actNumber, actLine.isMainLine, actLine.id);
+	return cachedInterviewLineDir;
+}
+
+/**
+ * Append one requirement line to the act-plot sidecar, serialized against other in-flight
+ * appends so concurrent `record-requirement` calls in a single turn can't drop a line.
+ * The chain swallows each link's outcome so one failed write can't permanently block later
+ * appends, while `await run` still propagates this call's own error to the caller.
+ */
+export async function appendRequirementToSidecar(lineDir: string, req: Requirement): Promise<void> {
+	const run = sidecarWriteChain.then(async () => {
+		const existing = await readRequirementsBlock(lineDir);
+		await writeRequirementsBlock(lineDir, appendRequirementLine(existing, req));
+	});
+	sidecarWriteChain = run.catch(() => {});
+	await run;
+}
+
+/**
+ * Tool handler for `record-requirement`. In the act-plot interview the requirement is
+ * appended to `{lineDir}/requirements.md` (durable source of truth, deduped against the
+ * file). In the world-builder interview it is held in memory (deduped against the list)
+ * and later injected into the compile turn + written to the story-level sidecar.
+ */
+export async function handleRecordRequirement(category: RequirementCategory, requirement: string): Promise<string> {
+	const req: Requirement = { category, requirement };
+
+	if (actPlotInterview) {
+		const lineDir = await resolveInterviewLineDir();
+		if (lineDir) {
+			await appendRequirementToSidecar(lineDir, req);
+		} else {
+			await log.error('interview', 'Cannot resolve act-line directory; requirement not persisted to sidecar');
+		}
+		return ls('tools.recordRequirement.messages.success');
+	}
+
+	if (!isDuplicateRequirement(recordedRequirements, req)) {
+		recordedRequirements = [...recordedRequirements, req];
+	}
+	return ls('tools.recordRequirement.messages.success');
+}
+
 async function runHiddenCompileTurn(): Promise<string | null> {
 	if (isStreaming) return null;
 
@@ -383,9 +467,15 @@ async function runHiddenCompileTurn(): Promise<string | null> {
 		return null;
 	}
 	const existingMsgs: MessageBase[] = messages.map((m) => ({ role: m.role, content: m.content }));
+	const requirementContext = formatRequirementsContext(recordedRequirements);
 	const history: MessageBase[] = actPlotInterview
 		? existingMsgs
-		: [seedMsg(), ...existingMsgs, { role: 'user', content: worldBuilderExtractionPrompt() }];
+		: [
+				seedMsg(),
+				...existingMsgs,
+				...(requirementContext ? [{ role: 'user' as const, content: requirementContext }] : []),
+				{ role: 'user', content: worldBuilderExtractionPrompt() },
+			];
 	let captured = '';
 	isStreaming = true;
 	abortController = new AbortController();
@@ -556,7 +646,11 @@ async function streamWorldBuilderChat(
 		actPlotInterview && cachedInterviewSystemPrompt ? cachedInterviewSystemPrompt : await buildFullWorldBuildPrompt();
 	const llmHistory = actPlotInterview ? [...interviewHiddenContext, ...history] : history;
 
-	const tools = !actPlotInterview && wbPhase === 'pre-template' ? buildWorldBuilderTools(handleTemplateSelected) : undefined;
+	const requirementTools = buildRequirementTools(handleRecordRequirement);
+	const tools: ToolSet =
+		!actPlotInterview && wbPhase === 'pre-template'
+			? { ...buildWorldBuilderTools(handleTemplateSelected), ...requirementTools }
+			: requirementTools;
 
 	const [, accumulator] = await Promise.all([
 		logWorldBuilderChat({

@@ -28,6 +28,7 @@ Beyond those technical points, listen for clues and preferences regarding:
 - Follow their lead and build on their responses without forcing answers or pressuring them for details.
 - Read between the lines to pick up on their preferred genres.
 - Maintain the illusion of a creative chat. Never explicitly mention that you are gathering data for a plot document.
+- When the player states an explicit requirement or hard constraint for this act, silently record it with the `record-requirement` tool — one requirement per call, using the matching category.
 
 ### Ending the Interview
 
