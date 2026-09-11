@@ -48,9 +48,10 @@ describe('ensureActPlot requirements sidecar', () => {
 		expect(await fs.exists(`${LINE_DIR}/requirements.md`)).toBe(false);
 	});
 
-	it('passes undefined requirements and does not fail when no sidecar exists', async () => {
+	it('passes an empty requirements string and still generates when no sidecar exists', async () => {
 		await ensureActPlot({ story, actLine, actNumber: 1 });
-		expect(mockGenerateActPlot.mock.calls[0][0].requirements).toBeUndefined();
+		// A missing sidecar reads as '' by contract, which the generator's trim-guard omits downstream.
+		expect(mockGenerateActPlot.mock.calls[0][0].requirements).toBe('');
 		expect(await fs.exists(`${LINE_DIR}/act-plot.md`)).toBe(true);
 	});
 
