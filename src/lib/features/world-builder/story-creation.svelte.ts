@@ -170,7 +170,7 @@ export async function handleCreateActPlotInterview(): Promise<void> {
 		await enterActPlotInterviewMode({
 			actLineId: refs.actLineId,
 			worldContent,
-			story: { id: refs.story.id, name: refs.story.name, locale: refs.story.locale },
+			story: refs.story,
 		});
 	} catch (err) {
 		createStoryError = err instanceof Error ? err.message : t('errors.failedToStartInterview');
@@ -416,7 +416,7 @@ export async function handleDiscussPlotFromEmptyChat(actLineId: string): Promise
 		await enterActPlotInterviewMode({
 			actLineId,
 			worldContent,
-			story: { id: refs.story.id, name: refs.story.name, locale: refs.story.locale },
+			story: refs.story,
 			newActContext,
 			resumeFromPremises: true,
 		});

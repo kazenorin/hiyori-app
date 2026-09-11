@@ -29,6 +29,7 @@ import { streamChatResponse } from '$lib/ai/chat-stream';
 import { computeTargetWordCountRange } from '$lib/ai/act-plot/target-word-count-parser';
 import type { MessageBase } from '$lib/db/messages';
 import * as dbMessages from '$lib/db/messages';
+import type { Story } from '$lib/db/stories';
 import * as dbActLines from '$lib/db/act-lines';
 import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED } from '$lib/definitions/error-messages';
 import { isAbortLikeError } from '$lib/utils/async';
@@ -41,6 +42,7 @@ import { getLineDir } from '$lib/ai/card-output-path';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { getActNumber } from '$lib/db/acts';
 import { buildRequirementTools } from '$lib/ai/tools/record-requirement';
+import { buildSuggestCharacterNameTools } from '$lib/ai/tools/suggest-character-name';
 import { readRequirementsBlock, writeRequirementsBlock } from '$lib/fs/requirements-files';
 import {
 	appendRequirementLine,
@@ -107,7 +109,7 @@ let selectedTemplateId: string | null = $state(null);
 // Explicit requirements recorded via the record-requirement tool.
 // World-builder set lives in memory; the act-plot set lives in a per-line sidecar.
 let recordedRequirements = $state<Requirement[]>([]);
-let interviewStory: { id: string; name: string } | null = null;
+let interviewStory: Story | null = null;
 let cachedInterviewLineDir: string | null = null;
 
 // Serializes act-plot sidecar read-modify-write. The AI SDK runs multiple tool calls from a
@@ -242,7 +244,7 @@ export interface EnterActPlotInterviewModeParams {
 	forkContext?: ForkInterviewContext;
 	additionalContext?: InterviewAdditionalContext;
 	newActContext?: NewActInterviewContext;
-	story?: { id: string; name: string; locale: string };
+	story?: Story;
 	resumeFromPremises?: boolean;
 }
 
@@ -254,7 +256,7 @@ export async function enterActPlotInterviewMode(params: EnterActPlotInterviewMod
 	isNextActContinuation = !!newActContext;
 	interviewActLineId = actLineId;
 	interviewWorldContent = worldContent;
-	interviewStory = story ? { id: story.id, name: story.name } : null;
+	interviewStory = story ?? null;
 
 	await loadActiveLocales(story?.locale, story?.id, story?.name);
 
@@ -647,10 +649,11 @@ async function streamWorldBuilderChat(
 	const llmHistory = actPlotInterview ? [...interviewHiddenContext, ...history] : history;
 
 	const requirementTools = buildRequirementTools(handleRecordRequirement);
+	const interviewNameTools = actPlotInterview && interviewStory ? buildSuggestCharacterNameTools({ story: interviewStory }) : {};
 	const tools: ToolSet =
 		!actPlotInterview && wbPhase === 'pre-template'
 			? { ...buildWorldBuilderTools(handleTemplateSelected), ...requirementTools }
-			: requirementTools;
+			: { ...requirementTools, ...interviewNameTools };
 
 	const [, accumulator] = await Promise.all([
 		logWorldBuilderChat({

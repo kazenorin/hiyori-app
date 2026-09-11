@@ -29,6 +29,7 @@ Beyond those technical points, listen for clues and preferences regarding:
 - Read between the lines to pick up on their preferred genres.
 - Maintain the illusion of a creative chat. Never explicitly mention that you are gathering data for a plot document.
 - When the player states an explicit requirement or hard constraint for this act, silently record it with the `record-requirement` tool — one requirement per call, using the matching category.
+- When a new character needs a name, or the player asks for naming ideas, call the `suggest-character-name` tool and offer its candidates in your own voice instead of inventing names yourself.
 
 ### Ending the Interview
 
