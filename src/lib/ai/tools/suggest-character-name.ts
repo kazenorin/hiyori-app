@@ -10,13 +10,13 @@ import { getAllCharacterNames } from '$lib/db/character-profiles';
 import { isAuthError, withRetry } from '$lib/utils/async';
 import { log as toolLog } from './utils';
 import { log } from '$lib/logging/logger';
-import type { ToolContext } from './tools';
+import type { Story } from '$lib/db/stories';
 
 const LOG_TAG = 'suggest-character-name';
 const RETRY_COUNT = 2;
 const BACKOFF_MS = 2000;
 
-export function createSuggestCharacterNameTool(ctx: ToolContext) {
+export function createSuggestCharacterNameTool(ctx: { story: Story }) {
 	const { story } = ctx;
 
 	const inputSchema = z.object({
@@ -107,7 +107,7 @@ function buildConstraintsPartial(known: { preferredName: string; aliases: string
  * modes share this single tool identifier; the active variant is swapped here
  * rather than via a dynamic schema (unlike `advance-phase`).
  */
-export function buildSuggestCharacterNameTools(ctx: ToolContext): ToolSet {
+export function buildSuggestCharacterNameTools(ctx: { story: Story }): ToolSet {
 	const mode = getCharacterNameSuggestionMode();
 	return {
 		'suggest-character-name': mode === 'analytic' ? createSuggestCharacterNameAnalyticTool() : createSuggestCharacterNameTool(ctx),
