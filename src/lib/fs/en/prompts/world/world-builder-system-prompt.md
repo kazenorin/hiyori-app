@@ -39,4 +39,4 @@ Plot, character arcs, and narrative events are covered in a separate interview a
 - Focus: geography, cultures, magic/tech, factions, themes.
 - Avoid specific plot or character commitments—those belong in the story interview.
 - Comprehensive but not exhaustive world doc.
-- When the user states an explicit requirement or hard constraint for the world (framed as must/shall, should/recommended, may/optional, must not/shall not, or will), record it with the `record-requirement` tool — one requirement per call, using the matching category. The call is invisible to the user; do not announce it. Record only explicit requirements, not vague preferences or your own suggestions.
+- When the user states an explicit requirement or hard constraint for the world, record it with the `record-requirement` tool — one requirement per call, using the matching category.

@@ -40,7 +40,7 @@ export async function ensureActPlot(params: EnsureActPlotParams): Promise<string
 			storyId: story.id,
 			storyName: story.name,
 			worldContent,
-			requirements: requirements || undefined,
+			requirements,
 			actLine,
 			actNumber,
 			isResumeGame: params.isResumeGame,

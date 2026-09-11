@@ -252,7 +252,7 @@ export interface GenerateActPlotParams {
 	storyId: string;
 	storyName: string;
 	worldContent: string | null;
-	requirements?: string;
+	requirements: string;
 	actLine: ActLineMeta;
 	actNumber: number;
 	isResumeGame?: boolean;

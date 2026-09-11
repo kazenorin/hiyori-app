@@ -429,10 +429,7 @@ export async function appendRequirementToSidecar(lineDir: string, req: Requireme
 		const existing = await readRequirementsBlock(lineDir);
 		await writeRequirementsBlock(lineDir, appendRequirementLine(existing, req));
 	});
-	sidecarWriteChain = run.then(
-		() => {},
-		() => {}
-	);
+	sidecarWriteChain = run.catch(() => {});
 	await run;
 }
 

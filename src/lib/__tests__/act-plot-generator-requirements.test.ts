@@ -121,6 +121,7 @@ describe('generateActPlot requirements', () => {
 			worldContent: null,
 			actLine,
 			actNumber: 1,
+			requirements: '',
 		});
 		expect(result).toBe('PLOT BODY');
 	});
