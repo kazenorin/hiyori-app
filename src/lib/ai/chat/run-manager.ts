@@ -15,6 +15,7 @@ import {
 	type ProviderConfig,
 } from '$lib/stores/settings.svelte';
 import { runPipeline, runEpiloguePipeline, type EpiloguePipelineInput } from '$lib/ai/pipeline';
+import { formatCacheEfficiency, summarizeCacheEfficiency } from '$lib/ai/pipeline/cache-metrics';
 import type {
 	ActLineContext,
 	AsyncPhaseResults,
@@ -38,7 +39,7 @@ import { formatCharacterProfilesSection } from '$lib/definitions/pipeline-sectio
 import { otherDirectorNotesHeader, sectionFormat } from '$lib/definitions/common-headers';
 import { loadLocaleStrings } from '$lib/localization';
 import { setActiveLocale } from '$lib/fs/prompt-loader';
-import { log } from '$lib/logging/logger';
+import { log, fileLog } from '$lib/logging/logger';
 import { logMainChat } from '$lib/logging/chat-logger';
 import { isAbortLikeError } from '$lib/utils/async';
 import { getErrorMessage } from '$lib/utils/error-handling';
@@ -674,6 +675,14 @@ async function finalizeRun(session: InternalSession, plan: RunPlan, result: Pipe
 
 	session.message = { ...session.message, metadata: updateMetaData(result.aggregatedMetadata, result.phases) };
 	emitUpdate(session);
+
+	// Measurement harness: per-turn prompt-cache report (debug level only).
+	// Skip resumed runs — their `result.phases` also carries prior-session metadata
+	// seeded from the phase cache, which would mix stale cache tokens into this
+	// turn's totals. The baseline measurement targets clean, non-resumed turns.
+	if (!plan.resumeRecord) {
+		await fileLog('debug', 'pipeline-cache', () => formatCacheEfficiency(summarizeCacheEfficiency(result.phases ?? [])));
+	}
 
 	// Idempotency guard: if the app was quit after the message was persisted
 	// but before the cache row was deleted, resume reaches this point with all
