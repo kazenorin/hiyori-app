@@ -1,6 +1,6 @@
 # Narrative Generation Pipeline
 
-> **Last updated:** 2026-08-31 | **Version:** 1.7.0
+> **Last updated:** 2026-09-11 | **Version:** 1.8.0
 
 Multi-phase LLM pipeline that generates narrative prose, game data, and scene plots for interactive fiction.
 
@@ -116,16 +116,20 @@ The pipeline supports two plot modes stored on `ActLineMeta.plotMode`:
 
 All system prompts use `{{variable}}` placeholders resolved at runtime:
 
-| Placeholder                                                | Used By                          | Source                                                  |
-| ---------------------------------------------------------- | -------------------------------- | ------------------------------------------------------- |
-| `{{generalInstructions}}`                                  | Writer, Editor, GM, Plot Planner | `LoadedPrompts.generalInstructions`                     |
-| `{{targetWordCount}}`                                      | Writer, Editor, Plot Planner     | `settings.targetWordCount ?? 400`                       |
-| `{{writerOutputTemplate}}`                                 | Writer, Editor                   | `LoadedPrompts.writerOutputTemplate`                    |
-| `{{acceptAsIs}}`                                           | Reviewer                         | Localized label                                         |
-| `{{summary}}`, `{{totalViolations}}`, `{{recommendation}}` | Reviewer                         | Localized labels                                        |
-| `{{additionalRules}}`                                      | Game Master                      | Currently always empty; placeholder kept for future use |
+| Placeholder                                                | Used By                                | Source                                                      |
+| ---------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------- |
+| `{{generalInstructions}}`                                  | Writer, Reviewer, Editor, Plot Planner | `LoadedPrompts.generalInstructions`                         |
+| `{{targetWordCount}}`                                      | Writer, Editor, Plot Planner           | `settings.targetWordCount ?? 400`                           |
+| `{{writerOutputTemplate}}`                                 | Writer, Editor                         | `LoadedPrompts.writerOutputTemplate`                        |
+| `{{memoryToolsInstruction}}`                               | Writer, Reviewer, Plot Planner         | Emitted only when `isMemoryAvailable()`; else blank line    |
+| `{{inventoryToolsInstruction}}`                            | Writer, Reviewer, Plot Planner, GM     | Emitted only when `isInventoryAvailable()`; else blank line |
+| `{{acceptAsIs}}`                                           | Reviewer                               | Localized label                                             |
+| `{{summary}}`, `{{totalViolations}}`, `{{recommendation}}` | Reviewer                               | Localized labels                                            |
+| `{{additionalRules}}`                                      | Game Master (system + extraction)      | Currently always empty; placeholder kept for future use     |
 
-Writer extraction prompts also use: `{{previousScene}}`, `{{currentScene}}`, `{{summarizedScenes}}`, `{{providedSummary}}`, `{{providedTurnOfEvents}}`, `{{providedDirectorNotes}}`, `{{turnOfEventsReinforcementPhrase}}`, `{{directorNotesReinforcementPhrase}}`, `{{currentActPhase}}`, `{{actEndInstruction}}`.
+The Game Master **system** prompt resolves only `{{additionalRules}}`; the GM **extraction** prompt additionally resolves `{{currentScene}}`, `{{inventoryToolsInstruction}}`, and (in `phaseEvent` mode) `{{currentActPhase}}`.
+
+Writer extraction prompts resolve: `{{previousScene}}`, `{{currentScene}}`, `{{providedSummary}}`, `{{providedTurnOfEvents}}`, `{{providedDirectorNotes}}`, `{{turnOfEventsReinforcementPhrase}}`, `{{directorNotesReinforcementPhrase}}`, `{{actEndInstruction}}`. The `phaseEvent` variant additionally resolves `{{currentActPhase}}`, `{{currentActPhaseProgress}}`, `{{estimatedPhaseLength}}`, `{{earlyPhaseThreshold}}`, and `{{latePhaseThreshold}}`.
 
 ## Context Passing
 
@@ -133,31 +137,38 @@ Narrative context is passed as **user messages** (not system prompts). Two conte
 
 ### `PreEditorContext` (Writer, Reviewer, Editor)
 
-Sections in order:
+Sections in order (built by `buildPreEditorSections`):
 
 1. World Content
 2. Act Plot
-3. Act Phase (if `phaseEvent` mode)
+3. Character Profiles (inline for important cast, one-line refs for the rest)
 4. Story So Far (previous act summaries, if act > 1)
 5. Act Summary (pruned)
-6. Previous Scene Plot
-7. Previous Narrative Body
-8. Player Response
-9. Turn of Events
-10. Director Notes
-11. Extraction prompt
+6. Act Phase Boundaries (only when boundaries exist, i.e. `phaseEvent` mode)
+7. Previous Scene Plot
+8. Previous Narrative Body
+9. Player Response
+10. Turn of Events
+11. Director Notes
+12. Extraction prompt (appended last by the per-phase builder)
 
-Additional sections per phase:
+Additional sections inserted before the extraction prompt:
 
-- **Reviewer**: Writer Output section
-- **Editor**: Writer Output + Reviewer Output sections
+- **Reviewer**: Writer Output
+- **Editor**: Writer Output + Reviewer Output
 
 ### `PostEditorContext` (Game Master, Plot Planner)
 
-Same as PreEditor but:
+Same ordering as PreEditor but (built by `buildPostEditorSections`):
 
 - **No** World Content section
 - **Adds** Editor Output section (between Turn of Events and Director Notes)
+
+### Prompt caching (current behavior)
+
+The app relies on **implicit provider prefix caching only** — no explicit `cache_control`/`providerOptions` breakpoints are set anywhere in the streaming path ([`streaming.ts`](../streaming.ts), [`chat-stream.ts`](../chat-stream.ts)). `extractCacheTokens()` records `cacheReadTokens`/`cacheWriteTokens` when a provider reports them, so cache hits are visible in per-phase metadata but never engineered for.
+
+Each phase is an independent one-shot call: a **phase-specific system prompt** (`instructions`) plus a **freshly re-serialized** list of context user messages, plus a **phase-filtered tool set**. Because implicit caching matches the longest common token prefix and the system prompt is rendered first, two phases diverge at (or near) the start of the prompt even though their context sections overlap heavily. Cross-phase prefix reuse is therefore minimal today; the only reliable reuse is the stable head of a single phase's prompt across consecutive scenes (system prompt + World Content + Act Plot, up to the first section that changes each turn — typically the growing Act Summary). Caching is also strictly **per model**, so phases assigned to different provider roles can never share a cache regardless of layout.
 
 ## Module Structure
 
@@ -296,18 +307,20 @@ Runs after the Summarizer when `characterProfileCompressorInterval` scenes have 
 
 ## Prompt Loading
 
-`loadPrompts(storyId, storyName)` resolves all 12 prompt templates:
+`loadPrompts(storyId, storyName)` resolves all 16 prompt templates:
 
 - `generalInstructions` — story-specific general instructions
 - `writerSystemPrompt`, `writerOutputTemplate` — Writer
+- `guidanceWriterExtractionPrompt`, `phaseEventWriterExtractionPrompt` — Writer extraction task (selected by `plotMode`)
 - `reviewerSystemPromptTemplate`, `quickReviewerSystemPromptTemplate` — Reviewer
 - `editorSystemPrompt` — Editor
 - `gameMasterSystemPrompt` — Game Master
+- `guidanceGameMasterExtractionPrompt`, `phaseEventGameMasterExtractionPrompt` — Game Master extraction task (selected by `plotMode`)
 - `plotPlannerSystemPrompt`, `phaseEventPlotPlannerSystemPrompt` — Plot Planner
 - `summarizerPrompt`, `summarizerIncrementalPrompt` — Summarizer
 - `characterProfileCompressorPrompt` — Character Profile Compressor
 
-Each uses a `PromptLoader` instance that checks for a story-specific override file before falling back to the bundled default.
+Each uses a `PromptLoader` instance that checks for a story-specific override file before falling back to the bundled default. `preparePipelinePrompts()` then narrows these into the `PipelinePrompts` struct used at runtime (collapsing the two Reviewer templates into a single `reviewerPrompt` based on `isQuickReview()`).
 
 ## Adding a New Phase
 
