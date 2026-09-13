@@ -123,6 +123,16 @@ src:
               hash: 9f84efe94e606ec18b9d2a52e2e6fd9d994911f31ad8fb0d382194d41428cece
               oldHashes: []
               updatedAt: "2026-08-21T12:57:30.294Z"
+            guidance-game-master-extraction-prompt-v2.md:
+              configPath: en/prompt-templates/game-master/guidance-game-master-extraction-prompt-v2.md
+              hash: 26f6d71f73359d7688d38a8cea587dcfc17f20a42d449c7ce2f73f7f28665a6c
+              oldHashes: []
+              updatedAt: "2026-09-13T16:51:11.603Z"
+            phase-event-game-master-extraction-prompt-v2.md:
+              configPath: en/prompt-templates/game-master/phase-event-game-master-extraction-prompt-v2.md
+              hash: 36f9c8a3008f33d2b3c6ab50606b58bcfe7f6d073795a190fe4c8eb5f1fe480c
+              oldHashes: []
+              updatedAt: "2026-09-13T16:51:11.603Z"
           general-instructions.md:
             configPath: en/prompt-templates/general-instructions.md
             hash: 1737fc28a400844b926494f96437230545809e42229bfe0ce70fc324fb6116cd
@@ -268,6 +278,16 @@ src:
                 - d51bbe7118a367180b54a117faa0dc56fac7f7302801e008792226ecfbbd58c7
                 - 8e1c308cb8d49da36ea6aa1e5dc6720d63392cce9d32b0b2b9ed316e27a85871
               updatedAt: "2026-08-21T11:00:27.346Z"
+            guidance-writer-extraction-prompt-v2.md:
+              configPath: en/prompt-templates/writer/guidance-writer-extraction-prompt-v2.md
+              hash: aec16c36ebfc7a27ed2fb9fb663913958a30316649353e5da485742402168ac7
+              oldHashes: []
+              updatedAt: "2026-09-13T16:51:11.603Z"
+            phase-event-writer-extraction-prompt-v2.md:
+              configPath: en/prompt-templates/writer/phase-event-writer-extraction-prompt-v2.md
+              hash: a57c8f95b2096026125140c0571c95933791d0e927a0965f8e6fcff185b2b571
+              oldHashes: []
+              updatedAt: "2026-09-13T16:51:11.603Z"
           main-chat-system-prompt.md:
             configPath: en/prompt-templates/main-chat-system-prompt.md
             hash: 0f25f4e7da4a4594eeb776e3b1874028f82785f975660c398fb9eda7e1e3dc18
@@ -470,6 +490,16 @@ src:
               hash: 49fa8c48f2febeacb6bf4359b0630a4b6f9f382f95edd3bb5681a3783fb43ffd
               oldHashes: []
               updatedAt: "2026-08-21T12:57:30.294Z"
+            guidance-game-master-extraction-prompt-v2.md:
+              configPath: zh-Hant-HK/prompt-templates/game-master/guidance-game-master-extraction-prompt-v2.md
+              hash: 62963da53001c6722332d4b8a2a0b5d9e2f2c091dcf0399236f9f0fdadfc1dd5
+              oldHashes: []
+              updatedAt: "2026-09-13T16:51:11.603Z"
+            phase-event-game-master-extraction-prompt-v2.md:
+              configPath: zh-Hant-HK/prompt-templates/game-master/phase-event-game-master-extraction-prompt-v2.md
+              hash: 6e735ba8ae1dbc42fbb62eecaf97a5abae4b23b2c30d18989b71747df21e7e5b
+              oldHashes: []
+              updatedAt: "2026-09-13T16:51:11.603Z"
           general-instructions.md:
             configPath: zh-Hant-HK/prompt-templates/general-instructions.md
             hash: cf6af787e5d80f992a401b19e5b4eb5f5a5ee51136a782c9d462ad378ddd5fcf
@@ -618,6 +648,16 @@ src:
                 - e4936d2212d62621967aa3382769d2f8c35362a9198eb0926caa33fd9897a60a
                 - 5f744f34fe1ccf41fe1b55dec77717369b0baf6d6fc81b09faf9eeb6c5407671
               updatedAt: "2026-08-21T11:00:27.346Z"
+            guidance-writer-extraction-prompt-v2.md:
+              configPath: zh-Hant-HK/prompt-templates/writer/guidance-writer-extraction-prompt-v2.md
+              hash: 865fb6e615f36773c3da4b0bdef89afc2d81ae46dc7c919664e3327668a945d3
+              oldHashes: []
+              updatedAt: "2026-09-13T16:51:11.603Z"
+            phase-event-writer-extraction-prompt-v2.md:
+              configPath: zh-Hant-HK/prompt-templates/writer/phase-event-writer-extraction-prompt-v2.md
+              hash: f705be2119c4f1091fd8b4e337a270dc772b6dff19f3c3092a7d0fb59ed6d9e3
+              oldHashes: []
+              updatedAt: "2026-09-13T16:51:11.603Z"
           main-chat-system-prompt.md:
             configPath: zh-Hant-HK/prompt-templates/main-chat-system-prompt.md
             hash: bd4ce2ade4c884514d442ee819c22381574fbf09146b1f9f5561416c0b0164da

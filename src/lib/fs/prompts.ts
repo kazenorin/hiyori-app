@@ -45,6 +45,8 @@ export const writerSystemPromptLoader = createLoader('writer/writer-prompt.md');
 export const writerOutputTemplateLoader = createLoader('writer/writer-output-template.md');
 export const guidanceWriterExtractionPromptLoader = createLoader('writer/guidance-writer-extraction-prompt.md');
 export const phaseEventWriterExtractionPromptLoader = createLoader('writer/phase-event-writer-extraction-prompt.md');
+export const guidanceWriterExtractionPromptV2Loader = createLoader('writer/guidance-writer-extraction-prompt-v2.md');
+export const phaseEventWriterExtractionPromptV2Loader = createLoader('writer/phase-event-writer-extraction-prompt-v2.md');
 
 // === Review pipeline ===
 
@@ -65,6 +67,8 @@ export const phaseEventPlotPlannerSystemPromptLoader = createLoader('plot-planne
 export const gameMasterSystemPromptLoader = createLoader('game-master/game-master-prompt.md');
 export const guidanceGameMasterExtractionPromptLoader = createLoader('game-master/guidance-game-master-extraction-prompt.md');
 export const phaseEventGameMasterExtractionPromptLoader = createLoader('game-master/phase-event-game-master-extraction-prompt.md');
+export const guidanceGameMasterExtractionPromptV2Loader = createLoader('game-master/guidance-game-master-extraction-prompt-v2.md');
+export const phaseEventGameMasterExtractionPromptV2Loader = createLoader('game-master/phase-event-game-master-extraction-prompt-v2.md');
 
 // === Summarizer ===
 
