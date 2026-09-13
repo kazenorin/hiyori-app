@@ -1,6 +1,23 @@
-import { describe, it, expect } from 'vitest';
-import { applyNarrativeOverrides, mergeVariables } from '$lib/ai/pipeline/message-builder';
+import { describe, it, expect, vi } from 'vitest';
+import { applyNarrativeOverrides, buildMainContextMessage, buildSummariesMessage, mergeVariables } from '$lib/ai/pipeline/message-builder';
 import { createNarrativeOverrides, type NarrativeVariables } from '$lib/ai/narrative-types';
+
+// Override only the headers these builders assert on; importOriginal keeps every other real
+// export so message-builder's transitive graph (narrative-types, pipeline-sections) still links.
+// sectionFormat mirrors the real impl; ls() would otherwise return raw keys (locale strings are
+// not loaded in the test env), so the stubs give deterministic header text.
+vi.mock('$lib/definitions/common-headers', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('$lib/definitions/common-headers')>();
+	return {
+		...actual,
+		sectionFormat: (text: string, headerLevel = 2) => `${'#'.repeat(headerLevel)} ${text}\n\n`,
+		mainContextHeader: () => 'Main Context',
+		summariesHeader: () => 'Summaries',
+		worldContentHeader: () => 'World Content',
+		actPlotHeader: () => 'Act Plot',
+		storySoFarHeader: () => 'Story So Far',
+	};
+});
 
 const vars = (over: Partial<NarrativeVariables>): NarrativeVariables => ({
 	sceneTitle: null,
@@ -74,5 +91,50 @@ describe('applyNarrativeOverrides', () => {
 		const viaApply = applyNarrativeOverrides(v, overrides);
 
 		expect(viaApply).toEqual(direct);
+	});
+});
+
+describe('buildSummariesMessage', () => {
+	it('returns undefined when there is no summarization point', () => {
+		expect(
+			buildSummariesMessage({ summarizationPoint: 0, characterProfiles: ['## Character Profiles\n\nX'], actSummary: 'S' })
+		).toBeUndefined();
+	});
+
+	it('returns undefined when an SP exists but neither snapshot has content', () => {
+		expect(buildSummariesMessage({ summarizationPoint: 8, characterProfiles: [], actSummary: '' })).toBeUndefined();
+	});
+
+	it('includes the profiles when present', () => {
+		const msg = buildSummariesMessage({ summarizationPoint: 8, characterProfiles: ['## Character Profiles\n\nElena'], actSummary: '' });
+		expect(msg).toContain('# Summaries');
+		expect(msg).toContain('Elena');
+	});
+});
+
+describe('buildMainContextMessage', () => {
+	it('emits World Content, Story so Far (act > 1), and Act Plot in order', () => {
+		const msg = buildMainContextMessage({
+			worldContent: 'WORLD',
+			actPlot: 'PLOT',
+			previousActSummaries: [{ actNumber: 1, summary: 'Act1' }],
+			actNumber: 2,
+		});
+		expect(msg).toContain('# Main Context');
+		expect(msg.indexOf('WORLD')).toBeLessThan(msg.indexOf('PLOT'));
+		expect(msg).toContain('Act1');
+	});
+
+	it('omits Story so Far in act 1 even when prior-act summaries exist', () => {
+		// Why: formatStorySoFar guards on actNumber <= 1. Passing non-empty summaries proves
+		// the act-number guard (not an empty array) is what suppresses the Story so Far section.
+		const msg = buildMainContextMessage({
+			worldContent: 'W',
+			actPlot: 'P',
+			previousActSummaries: [{ actNumber: 1, summary: 'Act1' }],
+			actNumber: 1,
+		});
+		expect(msg).not.toContain('Story So Far');
+		expect(msg).not.toContain('Act1');
 	});
 });

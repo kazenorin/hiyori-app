@@ -12,7 +12,14 @@ import {
 	formatTurnOfEventsSection,
 	SECTION,
 } from '$lib/definitions/pipeline-sections';
-import { actSummaryForScenesHeader, actSummaryHeader, sectionFormat, summaryHeader } from '$lib/definitions/common-headers';
+import {
+	actSummaryForScenesHeader,
+	actSummaryHeader,
+	mainContextHeader,
+	sectionFormat,
+	summariesHeader,
+	summaryHeader,
+} from '$lib/definitions/common-headers';
 import { aliasesLabel, locationLabel, sceneWithNumberLabel } from '$lib/definitions/common-labels';
 import { hasTemplateMetadata, variablesToMarkdown } from '../template-renderer';
 import { type ActSummary, parseActSummary, pruneCharacterScenes, serializeActSummary } from '../act-summary-parser';
@@ -151,6 +158,40 @@ export function formatActSummaryForSummarizer(completedScenes: number, actSummar
 	);
 	const summarizerActSummary = serializeActSummary({ ...actSummary, characterProfiles: [], characterProfileLastScene: null });
 	return summarizerActSummary ? [actSummaryHeading + summarizerActSummary] : [];
+}
+
+// --- Stage-2 shared-prefix message builders (Tiers 0–1) ---
+
+/** Assemble the Tier-0 Main Context message: World Content · Story so Far · Act Plot. */
+export function buildMainContextMessage(input: {
+	worldContent: string;
+	actPlot: string;
+	previousActSummaries: { actNumber: number; summary: string }[];
+	actNumber: number;
+}): string {
+	const parts: string[] = [
+		sectionFormat(mainContextHeader(), 1),
+		SECTION.WORLD_CONTENT + input.worldContent,
+		...formatStorySoFar(input.previousActSummaries, input.actNumber),
+		SECTION.ACT_PLOT + input.actPlot,
+	];
+	return parts.join('\n').trimEnd();
+}
+
+/**
+ * Assemble the Tier-1 Summaries message (Profiles@SP · Act Summary@SP), or `undefined`
+ * when there is no summarization point yet / neither snapshot has content — callers
+ * then omit the message entirely and start Scenes from the act's first scene.
+ */
+export function buildSummariesMessage(input: {
+	summarizationPoint: number;
+	characterProfiles: string[];
+	actSummary: string;
+}): string | undefined {
+	if (input.summarizationPoint <= 0) return undefined;
+	const summary = formattedActSummary(input.actSummary);
+	if (input.characterProfiles.length === 0 && summary.length === 0) return undefined;
+	return [sectionFormat(summariesHeader(), 1), ...input.characterProfiles, ...summary].join('\n').trimEnd();
 }
 
 // --- Context interfaces ---

@@ -173,4 +173,23 @@ export interface PostEditorContext {
 	actNumber: number;
 }
 
+/**
+ * Stage-2 shared context (Tiers 0–2), assembled once per run and reused by every
+ * phase so their request prefixes are byte-identical. Additive: the legacy
+ * PreEditorContext/PostEditorContext remain until 2F switches call sites over.
+ */
+export interface PipelineContext {
+	// Tier 0 — Main Context (frozen for the act)
+	worldContent: string;
+	actPlot: string;
+	previousActSummaries: { actNumber: number; summary: string }[];
+	actNumber: number;
+	// Tier 1 — Summaries (frozen until the SP advances)
+	summarizationPoint: number;
+	characterProfiles: string[]; // formatted, as of SP
+	actSummary: string; // as of SP
+	// Tier 2 — Scenes (append-only)
+	scenesSections: string[];
+}
+
 export type PreEditorContextFactory = new (input: CommonPipelineInput) => PreEditorContext;
