@@ -57,6 +57,10 @@ common:
     storySoFar: Story So Far
     characterProfiles: Character Profiles
     targetWordCountPerScene: Target Word Count per Scene
+    mainContext: 'Main Context'
+    summaries: 'Summaries'
+    scenes: 'Scenes'
+    upcomingScenePlot: 'Upcoming Scene Plot'
   descriptions:
     requirements: 'The following are explicit requirements stated by the user. Honor every one of them in your output.'
     interviewTranscript: The following is an interview exchange about the story and premises.
