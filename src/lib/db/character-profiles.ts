@@ -162,21 +162,29 @@ export async function getCharacterProfilesForActLines(actLineIds: string[]): Pro
 
 /**
  * Get the most-recent profile per character in an act line, grouped by canonical_name.
- * "Most recent" = highest scene_number; baseline rows (NULL scene_number, treated as -1) lose to any scene-numbered row.
- * Ties broken by created_at.
+ * "Most recent" = highest scene_number; baseline rows (NULL scene_number, treated as -1)
+ * lose to any scene-numbered row. Ties broken by created_at.
+ *
+ * When `upToScene` is provided, restricts candidates AND the latest-per-character pick
+ * to `scene_number IS NULL OR scene_number <= upToScene` — yielding the profile snapshot
+ * as of a summarization point (baseline rows always included).
  */
-export async function getLatestProfilesByActLine(actLineId: string): Promise<CharacterProfileEntity[]> {
+export async function getLatestProfilesByActLine(actLineId: string, upToScene?: number): Promise<CharacterProfileEntity[]> {
 	const db = getDatabase();
+	const bounded = upToScene !== undefined;
+	const sceneFilter = bounded ? 'AND (scene_number IS NULL OR scene_number <= $2)' : '';
 	const rows = await db.select<CharacterProfileRow[]>(
 		`SELECT cp.* FROM character_profiles cp
 		 WHERE act_line_id = $1
+		 ${sceneFilter}
 		 AND id = (
 		     SELECT id FROM character_profiles
 		     WHERE act_line_id = cp.act_line_id AND canonical_name = cp.canonical_name
+		     ${sceneFilter}
 		     ORDER BY COALESCE(scene_number, -1) DESC, created_at DESC LIMIT 1
 		 )
 		 ORDER BY importance ASC, COALESCE(scene_number, -1) DESC`,
-		[actLineId]
+		bounded ? [actLineId, upToScene] : [actLineId]
 	);
 	return rows.map(mapRowToEntity);
 }
