@@ -7,35 +7,55 @@
 
 <div class="space-y-4">
 	<Card title={t('settings.narrative')}>
-		<!-- Word Count & Compressor: side-by-side mini-cards -->
-		<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
-				<NumberField
-					label={t('settings.targetWordCount')}
-					hint={t('settings.targetWordCountDescription')}
-					min={50}
-					max={2000}
-					step={50}
-					value={settings.targetWordCount}
-					onValueChange={(v) => {
-						if (v >= 50 && v <= 2000) updateSettings({ targetWordCount: v });
-					}}
-				/>
-			</div>
+		<!-- Word Count, Compressor & Summarization Point: full-width card -->
+		<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-4">
+			<NumberField
+				label={t('settings.targetWordCount')}
+				hint={t('settings.targetWordCountDescription')}
+				min={50}
+				max={2000}
+				step={50}
+				value={settings.targetWordCount}
+				onValueChange={(v) => {
+					if (v >= 50 && v <= 2000) updateSettings({ targetWordCount: v });
+				}}
+			/>
+			<NumberField
+				label={t('settings.compressorInterval')}
+				hint={t('settings.compressorIntervalDescription')}
+				min={0}
+				max={50}
+				step={1}
+				value={settings.characterProfileCompressorInterval}
+				onValueChange={(v) => {
+					if (v >= 0 && v <= 50) updateSettings({ characterProfileCompressorInterval: v });
+				}}
+			/>
+			<NumberField
+				label={t('settings.summarizationPointInterval')}
+				hint={t('settings.summarizationPointIntervalDescription')}
+				min={0}
+				max={50}
+				step={1}
+				value={settings.summarizationPointInterval}
+				onValueChange={(v) => {
+					if (v >= 0 && v <= 50) updateSettings({ summarizationPointInterval: v });
+				}}
+			/>
+		</div>
 
-			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
-				<NumberField
-					label={t('settings.compressorInterval')}
-					hint={t('settings.compressorIntervalDescription')}
-					min={0}
-					max={50}
-					step={1}
-					value={settings.characterProfileCompressorInterval}
-					onValueChange={(v) => {
-						if (v >= 0 && v <= 50) updateSettings({ characterProfileCompressorInterval: v });
-					}}
+		<!-- Experimental: stage-2 shared-prefix context (A/B flag) -->
+		<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+			<label class="flex items-center gap-2">
+				<input
+					type="checkbox"
+					class="checkbox"
+					checked={settings.pipelineContextV2}
+					onchange={(e) => updateSettings({ pipelineContextV2: (e.currentTarget as HTMLInputElement).checked })}
 				/>
-			</div>
+				<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.pipelineContextV2')}</h3>
+			</label>
+			<span class="text-xs text-surface-500 block">{t('settings.pipelineContextV2Description')}</span>
 		</div>
 
 		<!-- Director Mode & Phrase Highlighting: side-by-side mini-cards -->
