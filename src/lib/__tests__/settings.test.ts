@@ -43,6 +43,20 @@ describe('settings', () => {
 		expect(settings.fontSize).toBe(1.0);
 	});
 
+	it('defaults summarizationPointInterval to 8 and pipelineContextV2 to false', async () => {
+		vi.resetModules();
+		const { settings } = await import('$lib/stores/settings.svelte');
+		expect(settings.summarizationPointInterval).toBe(8);
+		expect(settings.pipelineContextV2).toBe(false);
+	});
+
+	it('persists summarizationPointInterval via updateSettings', async () => {
+		vi.resetModules();
+		const { settings, updateSettings } = await import('$lib/stores/settings.svelte');
+		await updateSettings({ summarizationPointInterval: 12 });
+		expect(settings.summarizationPointInterval).toBe(12);
+	});
+
 	it('addProviderConfig creates a config with UUID', async () => {
 		vi.resetModules();
 		const { addProviderConfig, getSettings } = await import('$lib/stores/settings.svelte');

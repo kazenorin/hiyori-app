@@ -56,6 +56,10 @@ export interface Settings {
 	targetWordCount: number;
 	directorModeEnabled: boolean;
 	characterProfileCompressorInterval: number;
+	/** Scenes between summarization points; the Summaries snapshot is frozen for this many scenes. 0 = disabled. */
+	summarizationPointInterval: number;
+	/** Stage-2 feature flag: use the redesigned tiered shared-prefix context. Off = current per-phase context. */
+	pipelineContextV2: boolean;
 	characterProfileImportanceThreshold: number;
 	characterProfileMaxIncluded: number;
 	phaseAdvancementThreshold: number;
@@ -128,6 +132,8 @@ function createDefaults(): Settings {
 		targetWordCount: 400,
 		directorModeEnabled: false,
 		characterProfileCompressorInterval: 5, // scenes between compressor runs; 0 = disabled
+		summarizationPointInterval: 8, // scenes between summarization points; 0 = disabled
+		pipelineContextV2: false, // stage-2 shared-prefix context; off until measurement-gated rollout
 		characterProfileImportanceThreshold: 2, // 1=Protagonist, 2=Main, 3=Supporting, 4=Minor
 		characterProfileMaxIncluded: 5, // hard cap on number of full-profile inlines
 		phaseAdvancementThreshold: 5,
