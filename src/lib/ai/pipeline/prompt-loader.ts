@@ -5,6 +5,7 @@ import {
 	guidanceGameMasterExtractionPromptLoader,
 	gameMasterSystemPromptLoader,
 	generalInstructionsLoader,
+	mainChatSystemPromptLoader,
 	phaseEventGameMasterExtractionPromptLoader,
 	phaseEventPlotPlannerSystemPromptLoader,
 	phaseEventWriterExtractionPromptLoader,
@@ -20,6 +21,7 @@ import {
 
 const promptLoaderDefinitions = {
 	generalInstructions: generalInstructionsLoader,
+	mainChatSystemPrompt: mainChatSystemPromptLoader,
 	plotPlannerSystemPrompt: plotPlannerSystemPromptLoader,
 	phaseEventPlotPlannerSystemPrompt: phaseEventPlotPlannerSystemPromptLoader,
 	writerSystemPrompt: writerSystemPromptLoader,

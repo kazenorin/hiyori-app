@@ -75,6 +75,7 @@ export const characterProfileCompressorPromptLoader = createLoader('summarizer/c
 // === General instructions ===
 
 export const generalInstructionsLoader = createLoader('general-instructions.md');
+export const mainChatSystemPromptLoader = createLoader('main-chat-system-prompt.md');
 
 // === World builder ===
 
