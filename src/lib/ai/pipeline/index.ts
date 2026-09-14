@@ -64,6 +64,7 @@ function preparePipelinePrompts(loadedPrompts: LoadedPrompts) {
 	const reviewerPrompt = isQuickReview() ? loadedPrompts.quickReviewerSystemPromptTemplate : loadedPrompts.reviewerSystemPromptTemplate;
 	const prompts: PipelinePrompts = {
 		generalInstructions: loadedPrompts.generalInstructions,
+		mainChatSystemPrompt: loadedPrompts.mainChatSystemPrompt,
 		writerOutputTemplate: loadedPrompts.writerOutputTemplate,
 		reviewerPrompt,
 		writerSystemPrompt: loadedPrompts.writerSystemPrompt,
@@ -73,8 +74,12 @@ function preparePipelinePrompts(loadedPrompts: LoadedPrompts) {
 		phaseEventPlotPlannerSystemPrompt: loadedPrompts.phaseEventPlotPlannerSystemPrompt,
 		guidanceWriterExtractionPrompt: loadedPrompts.guidanceWriterExtractionPrompt,
 		phaseEventWriterExtractionPrompt: loadedPrompts.phaseEventWriterExtractionPrompt,
+		guidanceWriterExtractionPromptV2: loadedPrompts.guidanceWriterExtractionPromptV2,
+		phaseEventWriterExtractionPromptV2: loadedPrompts.phaseEventWriterExtractionPromptV2,
 		guidanceGameMasterExtractionPrompt: loadedPrompts.guidanceGameMasterExtractionPrompt,
 		phaseEventGameMasterExtractionPrompt: loadedPrompts.phaseEventGameMasterExtractionPrompt,
+		guidanceGameMasterExtractionPromptV2: loadedPrompts.guidanceGameMasterExtractionPromptV2,
+		phaseEventGameMasterExtractionPromptV2: loadedPrompts.phaseEventGameMasterExtractionPromptV2,
 	};
 	return prompts;
 }

@@ -276,6 +276,7 @@ function buildGmFitterStateUpdate(originalGameData: GameDataFields | null) {
 
 export interface PipelinePrompts {
 	generalInstructions: string;
+	mainChatSystemPrompt: string;
 	writerOutputTemplate: string;
 	reviewerPrompt: string;
 	writerSystemPrompt: string;
@@ -285,8 +286,12 @@ export interface PipelinePrompts {
 	phaseEventPlotPlannerSystemPrompt: string;
 	guidanceWriterExtractionPrompt: string;
 	phaseEventWriterExtractionPrompt: string;
+	guidanceWriterExtractionPromptV2: string;
+	phaseEventWriterExtractionPromptV2: string;
 	guidanceGameMasterExtractionPrompt: string;
 	phaseEventGameMasterExtractionPrompt: string;
+	guidanceGameMasterExtractionPromptV2: string;
+	phaseEventGameMasterExtractionPromptV2: string;
 }
 
 export interface PipelineRunContext {
