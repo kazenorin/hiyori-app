@@ -240,6 +240,8 @@ pipeline:
 
         ## Task
 
+        {{actPhaseBoundaries}}
+
         Perform a review on the writer's output for Scene {{currentScene}} based on the available information in the chat history.
       reviewerQuick: |
         ## Your Role
@@ -306,6 +308,8 @@ pipeline:
 
         ## Task
 
+        {{actPhaseBoundaries}}
+
         Quick-review the writer's output for Scene {{currentScene}}. Skim for glaring errors only — output the review template immediately with no reasoning.
       editor: |
         ## Your Role
@@ -350,6 +354,8 @@ pipeline:
         **CRITICAL RULE:** Your entire response must be the markdown template above. Do not output a single word of meta-commentary, editorial marks, or explanations. If the Reviewer Output found no violations, reproduce the Writer Output unchanged without commenting on it.
 
         ## Task
+
+        {{actPhaseBoundaries}}
 
         You are editing Scene {{currentScene}}. Apply suggestions from the reviewer output to the writer output. Judge whether the suggestions are necessary based on the available information in the chat history.
 

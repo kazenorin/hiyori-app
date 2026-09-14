@@ -233,6 +233,8 @@ pipeline:
 
         ## 任務
 
+        {{actPhaseBoundaries}}
+
         根據聊天記錄中的可用資訊，審閱寫手對場景 {{currentScene}} 的輸出。
       reviewerQuick: |
         ## 你的角色
@@ -297,6 +299,8 @@ pipeline:
 
         ## 任務
 
+        {{actPhaseBoundaries}}
+
         快速審閱寫手對場景 {{currentScene}} 的輸出。僅略讀明顯錯誤——立即輸出審閱範本，不附帶推理過程。
       editor: |
         ## 你的角色
@@ -341,6 +345,8 @@ pipeline:
         **關鍵規則: ** 你的整個回應必須是上方的 Markdown 範本。不要輸出任何一個字的後設評論、編輯標記或解釋。若審閱者輸出未發現違規，請原樣重現寫手輸出，不加任何評論。
 
         ## 任務
+
+        {{actPhaseBoundaries}}
 
         你正在編輯場景 {{currentScene}}。根據審閱者輸出的建議，修改寫手輸出。請根據聊天記錄中的可用資訊，判斷這些建議是否有必要採納。
 
