@@ -124,6 +124,8 @@ export interface CommonPipelineInput {
 	initialState?: PipelineState;
 	/** Phase metadata entries from the earlier run, seeded into the tracker. */
 	initialPhases?: PhaseMetadata[];
+	/** Stage-2 shared-prefix context; present only when `settings.pipelineContextV2` is on (main runs only). */
+	contextV2?: PipelineContext;
 }
 
 export interface PipelineInput extends CommonPipelineInput {

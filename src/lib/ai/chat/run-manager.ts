@@ -16,10 +16,13 @@ import {
 } from '$lib/stores/settings.svelte';
 import { runPipeline, runEpiloguePipeline, type EpiloguePipelineInput } from '$lib/ai/pipeline';
 import { formatCacheEfficiency, summarizeCacheEfficiency } from '$lib/ai/pipeline/cache-metrics';
+import { resolveSummarizationPoint } from '$lib/ai/pipeline/summarization-point';
+import { buildScenesSections } from '$lib/ai/pipeline/scenes-builder';
 import type {
 	ActLineContext,
 	AsyncPhaseResults,
 	CommonPipelineInput,
+	PipelineContext,
 	PipelineInput,
 	PipelineResult,
 	PipelineState,
@@ -44,6 +47,7 @@ import { logMainChat } from '$lib/logging/chat-logger';
 import { isAbortLikeError } from '$lib/utils/async';
 import { getErrorMessage } from '$lib/utils/error-handling';
 import {
+	getActSummaryAtScene as _getActSummaryAtScene,
 	getLatestActSummary as _getLatestActSummary,
 	getPlayerContext,
 	getPreviousNarrativeMessage,
@@ -586,6 +590,38 @@ async function buildPipelineInput(session: InternalSession, plan: RunPlan): Prom
 		},
 	});
 
+	let contextV2: PipelineContext | undefined;
+	if (isMain && settings.pipelineContextV2) {
+		const sp = resolveSummarizationPoint(completedScenes + 1, settings.summarizationPointInterval);
+		const actSummaryV2 = sp > 0 ? _getActSummaryAtScene(lineMessages, sp) : '';
+		const profilesV2 =
+			sp > 0
+				? formatCharacterProfilesSection(
+						await getLatestProfilesByActLine(actLine.id, sp),
+						settings.characterProfileImportanceThreshold,
+						settings.characterProfileMaxIncluded
+					)
+				: [];
+		// Summaries are injected only when an SP resolved AND at least one snapshot has
+		// content; otherwise Scenes must start from the act's first scene (design §SP-resolution).
+		const hasSummaries = sp > 0 && (profilesV2.length > 0 || actSummaryV2.trim().length > 0);
+		// Scenes run from SP+1, clamped so the last completed scene is always included: it carries
+		// the current player response folded into its block (see buildScenesSections). Without the
+		// clamp, on boundary turns (SP >= completedScenes) that scene — and the player response
+		// triggering this generation — would fall below the range and be dropped.
+		const scenesSections = buildScenesSections(lineMessages, hasSummaries ? Math.min(sp + 1, completedScenes) : 1, previousScenePlot);
+		contextV2 = {
+			worldContent,
+			actPlot,
+			previousActSummaries,
+			actNumber,
+			summarizationPoint: hasSummaries ? sp : 0,
+			characterProfiles: profilesV2,
+			actSummary: actSummaryV2,
+			scenesSections,
+		};
+	}
+
 	const common: CommonPipelineInput = {
 		execution: {
 			abortSignal,
@@ -605,6 +641,7 @@ async function buildPipelineInput(session: InternalSession, plan: RunPlan): Prom
 		targetWordCount,
 		initialState: resumeRecord?.state,
 		initialPhases: resumeRecord?.phaseMetadata,
+		contextV2,
 	};
 
 	if (isMain) return { ...common, previousScenePlot, player };
