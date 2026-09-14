@@ -1,5 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
-import { applyNarrativeOverrides, buildMainContextMessage, buildSummariesMessage, mergeVariables } from '$lib/ai/pipeline/message-builder';
+import {
+	applyNarrativeOverrides,
+	buildMainContextMessage,
+	buildPhaseMessagesV2,
+	buildSummariesMessage,
+	mergeVariables,
+} from '$lib/ai/pipeline/message-builder';
 import { createNarrativeOverrides, type NarrativeVariables } from '$lib/ai/narrative-types';
 
 // Override only the headers these builders assert on; importOriginal keeps every other real
@@ -13,6 +19,7 @@ vi.mock('$lib/definitions/common-headers', async (importOriginal) => {
 		sectionFormat: (text: string, headerLevel = 2) => `${'#'.repeat(headerLevel)} ${text}\n\n`,
 		mainContextHeader: () => 'Main Context',
 		summariesHeader: () => 'Summaries',
+		scenesHeader: () => 'Scenes',
 		worldContentHeader: () => 'World Content',
 		actPlotHeader: () => 'Act Plot',
 		storySoFarHeader: () => 'Story So Far',
@@ -136,5 +143,40 @@ describe('buildMainContextMessage', () => {
 		});
 		expect(msg).not.toContain('Story So Far');
 		expect(msg).not.toContain('Act1');
+	});
+});
+
+describe('buildPhaseMessagesV2', () => {
+	const ctx = {
+		worldContent: 'W',
+		actPlot: 'P',
+		previousActSummaries: [],
+		actNumber: 1,
+		summarizationPoint: 8,
+		characterProfiles: ['## Character Profiles\n\nElena'],
+		actSummary: 'SUM',
+		scenesSections: ['## Scene 9\n\n### Narrative Body\n\nnine'],
+	};
+	it('orders Main Context → Summaries → Scenes → prior outputs → extraction prompt → Director Notes', () => {
+		// Why: the tier order is the cache-stability contract — Tiers 0–2 (Main Context,
+		// Summaries, Scenes) must precede the per-phase tail so the shared prefix is byte-identical.
+		const msgs = buildPhaseMessagesV2(ctx, ['## Writer Output\n\nDRAFT'], 'DO THE TASK', 'be concise');
+		const joined = msgs.map((m) => m.content).join('\n');
+		const idx = (s: string) => joined.indexOf(s);
+		expect(idx('# Main Context')).toBeLessThan(idx('# Summaries'));
+		expect(idx('# Summaries')).toBeLessThan(idx('# Scenes'));
+		expect(idx('# Scenes')).toBeLessThan(idx('DRAFT'));
+		expect(idx('DRAFT')).toBeLessThan(idx('DO THE TASK'));
+		expect(idx('DO THE TASK')).toBeLessThan(idx('be concise'));
+	});
+	it('omits the Summaries message when there is no SP', () => {
+		const msgs = buildPhaseMessagesV2({ ...ctx, summarizationPoint: 0 }, [], 'TASK', '');
+		expect(msgs.map((m) => m.content).join('\n')).not.toContain('# Summaries');
+	});
+	it('omits the Scenes message when there are no scene sections', () => {
+		// Why: a header-only "# Scenes" message would sit in the shared prefix of every phase
+		// carrying no information (e.g. the first scene of an act), so it must be dropped.
+		const msgs = buildPhaseMessagesV2({ ...ctx, scenesSections: [] }, [], 'TASK', '');
+		expect(msgs.map((m) => m.content).join('\n')).not.toContain('# Scenes');
 	});
 });

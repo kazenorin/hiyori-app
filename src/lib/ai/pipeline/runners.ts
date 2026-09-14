@@ -109,6 +109,11 @@ export function resolveGmSystemPrompt(systemPrompt: string): string {
 	return systemPrompt.replaceAll('{{additionalRules}}', '');
 }
 
+/** Resolve the single shared system prompt (persona + general instructions + tools note). */
+export function resolveSharedSystemPrompt(prompts: PipelinePrompts): string {
+	return prompts.mainChatSystemPrompt.replaceAll('{{generalInstructions}}', prompts.generalInstructions);
+}
+
 export interface GmExtractionTemplateParams {
 	currentScene: string;
 	currentActPhase?: string;

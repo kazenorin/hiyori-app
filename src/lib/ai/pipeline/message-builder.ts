@@ -1,7 +1,7 @@
 import type { MessageBase } from '$lib/db/messages';
 import type { ActPhase, GameDataFields, NarrativeOverrides, NarrativeVariables } from '../narrative-types';
 import { hasNarrativeOverrides } from '../narrative-types';
-import type { CommonPipelineInput, PlayerContext, PostEditorContext, PreEditorContext } from './types';
+import type { CommonPipelineInput, PipelineContext, PlayerContext, PostEditorContext, PreEditorContext } from './types';
 import type { ActPhaseBoundary } from '$lib/db/act-lines';
 import type { StreamState } from '../chat-callbacks';
 import {
@@ -16,6 +16,7 @@ import {
 	actSummaryForScenesHeader,
 	actSummaryHeader,
 	mainContextHeader,
+	scenesHeader,
 	sectionFormat,
 	summariesHeader,
 	summaryHeader,
@@ -192,6 +193,24 @@ export function buildSummariesMessage(input: {
 	const summary = formattedActSummary(input.actSummary);
 	if (input.characterProfiles.length === 0 && summary.length === 0) return undefined;
 	return [sectionFormat(summariesHeader(), 1), ...input.characterProfiles, ...summary].join('\n').trimEnd();
+}
+
+/**
+ * Assemble a phase's messages under the redesigned prefix:
+ * [Main Context][Summaries?][Scenes] (Tiers 0–2, byte-identical across phases) then
+ * [prior outputs…][extraction prompt][Director's Notes] (Tier 3 tail, per phase).
+ */
+export function buildPhaseMessagesV2(
+	ctx: PipelineContext,
+	priorOutputs: string[],
+	extractionPrompt: string,
+	directorNotes: string
+): MessageBase[] {
+	const scenesMessage =
+		ctx.scenesSections.length > 0 ? (sectionFormat(scenesHeader(), 1) + ctx.scenesSections.join('\n')).trimEnd() : undefined;
+	const shared = [buildMainContextMessage(ctx), buildSummariesMessage(ctx), scenesMessage].filter(hasContent);
+	const tail = [...priorOutputs.filter(hasContent), extractionPrompt, ...formatDirectorNotesSection(directorNotes)];
+	return toUserMessages([...shared, ...tail]);
 }
 
 // --- Context interfaces ---
