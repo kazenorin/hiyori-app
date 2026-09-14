@@ -15,8 +15,10 @@ import type { ActLineContext, AssistantContext } from '$lib/ai/pipeline/types';
 import { getSceneCountInCurrentPhase, isActLineEnded } from '$lib/db/act-lines';
 import { type Act, getAct } from '$lib/db/acts';
 import { type ToolSet } from 'ai';
-import type { NarrativeOverrides, PhaseName, ActPhase } from '$lib/ai/narrative-types';
+import { formatPhaseName, type NarrativeOverrides, type PhaseName, type ActPhase } from '$lib/ai/narrative-types';
 import { isInventoryAvailable } from '$lib/stores/settings.svelte';
+import { ls } from '$lib/localization';
+import { withPhaseGuards } from './phase-guard';
 
 export interface ToolContext {
 	story: Story;
@@ -59,6 +61,23 @@ export function filterToolsForPhase(allTools: ToolSet | undefined, phase: PhaseN
 		}
 	}
 	return Object.keys(filtered).length > 0 ? filtered : undefined;
+}
+
+/** Side-effecting tools whose no-op result is `{ result }` rather than a bare string. */
+const RESULT_SHAPED_TOOLS: ReadonlySet<string> = new Set(['advance-phase', 'end-act', 'set-scene-title']);
+
+/**
+ * Phase-gated view of the full tool superset: identical schema for every phase (so the
+ * tool block stays inside the cacheable prefix), but side-effecting tools outside their
+ * allowed phase no-op with a short explanatory message. Replaces `filterToolsForPhase`
+ * as the availability gate under pipelineContextV2.
+ */
+export function guardToolsForPhase(allTools: ToolSet | undefined, phase: PhaseName): ToolSet | undefined {
+	if (!allTools) return undefined;
+	return withPhaseGuards(allTools, PHASE_TOOLS[phase], (name) => {
+		const msg = ls('tools.guarded.notAllowed', { tool: name, phase: formatPhaseName(phase) });
+		return RESULT_SHAPED_TOOLS.has(name) ? { result: msg } : msg;
+	});
 }
 
 export async function buildTools(

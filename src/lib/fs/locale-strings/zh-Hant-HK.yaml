@@ -867,6 +867,8 @@ features:
       每行僅一個短語。
 
 tools:
+  guarded:
+    notAllowed: '「{{tool}}」工具在 {{phase}} 階段不可用；未執行任何動作。'
   selectWorldTemplate:
     description: >
       選擇最符合使用者故事想法的世界觀模板。

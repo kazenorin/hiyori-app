@@ -878,6 +878,8 @@ features:
       One phrase per line only.
 
 tools:
+  guarded:
+    notAllowed: 'The "{{tool}}" tool is not available during the {{phase}} phase; no action was performed.'
   selectWorldTemplate:
     description: >
       Select the world template that best matches the user's story idea.
