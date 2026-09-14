@@ -60,6 +60,7 @@ import {
 import type {
 	AssistantContext,
 	PipelineCallbacks,
+	PipelineContext,
 	PipelineProviderConfigs,
 	PipelineState,
 	PostEditorContext,
@@ -309,6 +310,8 @@ export interface PipelineRunContext {
 	story: StoryContext;
 	assistant: AssistantContext;
 	narrativeOverrides: NarrativeOverrides;
+	/** Stage-2 shared-prefix context; when present, phases use the v2 assembly path. */
+	contextV2?: PipelineContext;
 }
 
 /**

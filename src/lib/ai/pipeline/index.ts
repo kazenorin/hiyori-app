@@ -115,6 +115,7 @@ async function buildPipelineContext(
 		story,
 		assistant,
 		narrativeOverrides,
+		contextV2: input.contextV2,
 	};
 }
 
