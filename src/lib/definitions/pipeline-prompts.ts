@@ -55,6 +55,21 @@ export const plotPlannerExtractionPrompt = (plotMode: PlotMode, currentScene: nu
 	plotMode === 'phaseEvent'
 		? phaseEventPlotPlannerExtractionPromptTemplate(actPhase ?? 'introduction')
 		: guidancePlotPlannerExtractionPromptTemplate(currentScene);
+
+// v2 extraction prompts (pipeline context redesign): relocated role text + task, resolved behind the `pipelineContextV2` flag.
+// Only `{{currentScene}}` / `{{currentActPhase}}` are filled by `ls()`; the remaining placeholders
+// (`{{writerOutputTemplate}}`, `{{actPhaseBoundaries}}`, `{{memoryToolsInstruction}}`, `{{inventoryToolsInstruction}}`,
+// `{{targetWordCount}}`, `{{summary}}`, `{{totalViolations}}`, `{{recommendation}}`, `{{acceptAsIs}}`) are `.replaceAll`'d at call time.
+export const editorExtractionPromptV2 = (currentScene: number | string) => ls('pipeline.extraction.v2.editor', { currentScene });
+export const reviewerExtractionPromptV2 = (currentScene: number | string) => ls('pipeline.extraction.v2.reviewer', { currentScene });
+export const quickReviewerExtractionPromptV2 = (currentScene: number | string) =>
+	ls('pipeline.extraction.v2.reviewerQuick', { currentScene });
+export const plotPlannerExtractionPromptV2 = (plotMode: PlotMode, currentScene: number | string, actPhase?: ActPhase | null) =>
+	plotMode === 'phaseEvent'
+		? ls('pipeline.extraction.v2.plotPlannerPhaseEvent', { currentActPhase: getLocalizedActPhase(actPhase ?? 'introduction') })
+		: ls('pipeline.extraction.v2.plotPlannerGuidance', { currentScene });
+export const editorTemplateFitterExtractionPromptV2 = () => ls('pipeline.extraction.v2.editorTemplateFitter');
+export const gmTemplateFitterExtractionPromptV2 = () => ls('pipeline.extraction.v2.gmTemplateFitter');
 export const summarizerFallbackExtractionPromptTemplate = (completedScenes: number | string) =>
 	ls('pipeline.extraction.summarizerFallback', { completedScenes });
 export const summarizerFullExtractionPromptTemplate = () => ls('pipeline.extraction.summarizerFull');
