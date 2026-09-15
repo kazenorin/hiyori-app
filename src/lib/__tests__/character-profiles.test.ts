@@ -240,56 +240,6 @@ describe('character-profiles DB layer', () => {
 		});
 	});
 
-	describe('getLatestProfilesByActLine upToScene bound', () => {
-		it('omits the scene bound when upToScene is not provided', async () => {
-			mockDbSelectResults = [[]];
-			await getLatestProfilesByActLine('line-1');
-			const [sql, params] = mockDb.select.mock.calls[0] as [string, unknown[]];
-			expect(sql).not.toContain('scene_number <= $2');
-			expect(params).toEqual(['line-1']);
-		});
-
-		it('applies the bound to BOTH the candidate rows and the latest-per-character subquery', async () => {
-			// Why: bounding only the outer query would let a character's post-SP
-			// profile win the "latest" pick and leak future state into the snapshot.
-			// The `scene_number IS NULL OR` guard must ride along in BOTH places so
-			// baseline (NULL-scene) imports survive the bound instead of being dropped.
-			mockDbSelectResults = [[]];
-			await getLatestProfilesByActLine('line-1', 8);
-			const [sql, params] = mockDb.select.mock.calls[0] as [string, unknown[]];
-			expect(sql.match(/scene_number IS NULL OR scene_number <= \$2/g)).toHaveLength(2);
-			expect(params).toEqual(['line-1', 8]);
-		});
-
-		it('maps bounded rows to entities', async () => {
-			mockDbSelectResults = [
-				[
-					{
-						id: 'p1',
-						act_line_id: 'line-1',
-						scene_number: 3,
-						canonical_name: 'elena',
-						preferred_name: 'Elena',
-						aliases: '["El"]',
-						logline: 'L',
-						state: null,
-						goal: null,
-						relationships: null,
-						voice: null,
-						scene_details: '',
-						importance: 1,
-						created_at: 0,
-						updated_at: 0,
-					},
-				],
-			];
-			const result = await getLatestProfilesByActLine('line-1', 8);
-			expect(result[0].preferredName).toBe('Elena');
-			expect(result[0].sceneNumber).toBe(3);
-			expect(result[0].aliases).toEqual(['El']);
-		});
-	});
-
 	describe('getLatestProfileByAlias', () => {
 		it('returns null when no match', async () => {
 			mockDbSelectResults = [[]];

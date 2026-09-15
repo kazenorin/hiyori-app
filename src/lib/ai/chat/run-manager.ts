@@ -569,8 +569,9 @@ async function buildPipelineInput(session: InternalSession, plan: RunPlan): Prom
 		}
 	}
 
+	const latestProfiles = await getLatestProfilesByActLine(actLine.id);
 	const characterProfiles = formatCharacterProfilesSection(
-		await getLatestProfilesByActLine(actLine.id),
+		latestProfiles,
 		settings.characterProfileImportanceThreshold,
 		settings.characterProfileMaxIncluded
 	);
@@ -594,17 +595,18 @@ async function buildPipelineInput(session: InternalSession, plan: RunPlan): Prom
 	if (isMain && settings.pipelineContextV2) {
 		const sp = resolveSummarizationPoint(completedScenes + 1, settings.summarizationPointInterval);
 		const actSummaryV2 = sp > 0 ? _getActSummaryAtScene(lineMessages, sp) : '';
-		const profilesV2 =
-			sp > 0
-				? formatCharacterProfilesSection(
-						await getLatestProfilesByActLine(actLine.id, sp),
-						settings.characterProfileImportanceThreshold,
-						settings.characterProfileMaxIncluded
-					)
-				: [];
-		// Summaries are injected only when an SP resolved AND at least one snapshot has
-		// content; otherwise Scenes must start from the act's first scene (design §SP-resolution).
-		const hasSummaries = sp > 0 && (profilesV2.length > 0 || actSummaryV2.trim().length > 0);
+		// Summaries are injected only when an SP resolved AND the act-summary snapshot has content;
+		// otherwise Scenes must start from the act's first scene (design §SP-resolution).
+		const hasSummaries = sp > 0 && actSummaryV2.trim().length > 0;
+		// Latest profiles are loaded regardless of the SP (they are dynamic; a snapshot pinned at the
+		// SP confuses the reader). When an Act Summary@SP is present, per-scene details at or before
+		// the SP are dropped because its Character Summaries already cover them.
+		const profilesV2 = formatCharacterProfilesSection(
+			latestProfiles,
+			settings.characterProfileImportanceThreshold,
+			settings.characterProfileMaxIncluded,
+			hasSummaries ? sp : 0
+		);
 		// Scenes run from SP+1, clamped so the last completed scene is always included: it carries
 		// the current player response folded into its block (see buildScenesSections). Without the
 		// clamp, on boundary turns (SP >= completedScenes) that scene — and the player response

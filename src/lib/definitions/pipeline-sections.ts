@@ -191,14 +191,59 @@ export function formatStorySoFar(summaries: { actNumber: number; summary: string
 	return [SECTION.STORY_SO_FAR + items];
 }
 
+export interface SceneDetailEntry {
+	sceneNumber: number;
+	details: string;
+}
+
+/**
+ * Parse a profile's serialized `sceneDetails` into structured entries. The serialized form (see
+ * `serializeSceneDetails`) is one `- <sceneNumber>: <text>` line per scene; a line that does not
+ * start a new item is appended to the previous entry so multi-line summaries survive a round-trip.
+ */
+export function parseSceneDetails(sceneDetails: string): SceneDetailEntry[] {
+	const entries: SceneDetailEntry[] = [];
+	for (const line of sceneDetails.split('\n')) {
+		const match = line.match(/^-\s*(\d+):\s*(.*)$/);
+		if (match) {
+			entries.push({ sceneNumber: Number(match[1]), details: match[2] });
+		} else if (entries.length > 0 && line.trim().length > 0) {
+			entries[entries.length - 1].details += `\n${line}`;
+		}
+	}
+	return entries;
+}
+
+/**
+ * Render a profile's scene details, optionally dropping entries at or before `afterScene`.
+ * v2 passes the summarization point so per-scene details already folded into the Act Summary's
+ * Character Summaries (scenes <= SP) are not repeated next to the latest snapshot; v1 passes
+ * nothing and keeps every entry verbatim.
+ */
+function renderSceneDetails(sceneDetails: string, afterScene?: number): string {
+	const trimmed = sceneDetails.trim();
+	if (afterScene === undefined) return trimmed;
+	return parseSceneDetails(trimmed)
+		.filter((entry) => entry.sceneNumber > afterScene)
+		.map((entry) => `- ${entry.sceneNumber}: ${entry.details}`)
+		.join('\n');
+}
+
 /**
  * Format character profiles into an inline section for the writer/reviewer/editor/GM prompts.
  * Characters with importance ≤ threshold are inlined in full, up to maxIncluded.
  * Remaining characters get a one-line reference so the LLM can retrieve them via `character-details`.
+ * When `sceneDetailsAfterScene` is given, each inlined profile's scene details are filtered to
+ * scenes strictly after it (v2 passes the summarization point).
  *
  * Returns ["## Character Profiles\n<description>\n\n<inline>\n\n<one-line refs>"] or [].
  */
-export function formatCharacterProfilesSection(profiles: CharacterProfileEntity[], threshold: number, maxIncluded: number): string[] {
+export function formatCharacterProfilesSection(
+	profiles: CharacterProfileEntity[],
+	threshold: number,
+	maxIncluded: number,
+	sceneDetailsAfterScene?: number
+): string[] {
 	if (profiles.length === 0) return [];
 
 	const sortedByImportance = [...profiles].sort((a, b) => {
@@ -229,10 +274,11 @@ export function formatCharacterProfilesSection(profiles: CharacterProfileEntity[
 				parts.push('');
 				parts.push(body);
 			}
-			if (p.sceneDetails.trim()) {
+			const sceneDetails = renderSceneDetails(p.sceneDetails, sceneDetailsAfterScene);
+			if (sceneDetails) {
 				parts.push('');
 				parts.push(`**${sceneDetailsLabel()}**:`);
-				parts.push(p.sceneDetails.trim());
+				parts.push(sceneDetails);
 			}
 			parts.push('');
 		}

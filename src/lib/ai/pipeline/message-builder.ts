@@ -180,25 +180,28 @@ export function buildMainContextMessage(input: {
 }
 
 /**
- * Assemble the Tier-1 Summaries message (Profiles@SP · Act Summary@SP), or `undefined`
- * when there is no summarization point yet / neither snapshot has content — callers
- * then omit the message entirely and start Scenes from the act's first scene.
+ * Assemble the Tier-1 Summaries message (Act Summary@SP only), or `undefined` when there is no
+ * summarization point yet / the snapshot has no content — callers then omit the message entirely
+ * and start Scenes from the act's first scene. Character Profiles are deliberately NOT included:
+ * they are dynamic, so a snapshot pinned at the SP confuses the reader; the latest profiles are
+ * emitted as their own section after Scenes (see buildPhaseMessagesV2).
  */
-export function buildSummariesMessage(input: {
-	summarizationPoint: number;
-	characterProfiles: string[];
-	actSummary: string;
-}): string | undefined {
+export function buildSummariesMessage(input: { summarizationPoint: number; actSummary: string }): string | undefined {
 	if (input.summarizationPoint <= 0) return undefined;
 	const summary = formattedActSummary(input.actSummary);
-	if (input.characterProfiles.length === 0 && summary.length === 0) return undefined;
-	return [sectionFormat(summariesHeader(), 1), ...input.characterProfiles, ...summary].join('\n').trimEnd();
+	if (summary.length === 0) return undefined;
+	return [sectionFormat(summariesHeader(), 1), ...summary].join('\n').trimEnd();
 }
 
 /**
  * Assemble a phase's messages under the redesigned prefix:
- * [Main Context][Summaries?][Scenes] (Tiers 0–2, byte-identical across phases) then
- * [prior outputs…][extraction prompt][Director's Notes] (Tier 3 tail, per phase).
+ * [Main Context][Summaries?][Scenes?][Character Profiles?] (Tiers 0–2, byte-identical across
+ * phases) then [prior outputs…][extraction prompt][Director's Notes] (Tier 3 tail, per phase).
+ *
+ * Character Profiles trail Scenes (rather than sitting inside Summaries) because they are the
+ * latest snapshot and change every turn; keeping them last in the shared prefix preserves the
+ * cache stability of Main Context/Summaries/Scenes across turns while still sharing the whole
+ * prefix across this turn's phases.
  */
 export function buildPhaseMessagesV2(
 	ctx: PipelineContext,
@@ -208,7 +211,8 @@ export function buildPhaseMessagesV2(
 ): MessageBase[] {
 	const scenesMessage =
 		ctx.scenesSections.length > 0 ? (sectionFormat(scenesHeader(), 1) + ctx.scenesSections.join('\n')).trimEnd() : undefined;
-	const shared = [buildMainContextMessage(ctx), buildSummariesMessage(ctx), scenesMessage].filter(hasContent);
+	const profilesMessage = ctx.characterProfiles.length > 0 ? ctx.characterProfiles.join('\n').trimEnd() : undefined;
+	const shared = [buildMainContextMessage(ctx), buildSummariesMessage(ctx), scenesMessage, profilesMessage].filter(hasContent);
 	const tail = [...priorOutputs.filter(hasContent), extractionPrompt, ...formatDirectorNotesSection(directorNotes)];
 	return toUserMessages([...shared, ...tail]);
 }

@@ -75,7 +75,7 @@ vi.mock('$lib/definitions/character-profile-labels', () => ({
 	importanceLabel: () => 'Importance',
 }));
 
-import { formatCharacterProfilesSection, formatCharacterProfileAsMessage } from '$lib/definitions/pipeline-sections';
+import { formatCharacterProfilesSection, formatCharacterProfileAsMessage, parseSceneDetails } from '$lib/definitions/pipeline-sections';
 import type { CharacterProfileEntity } from '$lib/db/character-profiles';
 
 function makeProfile(overrides: Partial<CharacterProfileEntity> = {}): CharacterProfileEntity {
@@ -209,6 +209,53 @@ describe('formatCharacterProfilesSection', () => {
 		});
 		const result = formatCharacterProfilesSection([profile], 0, 0);
 		expect(result[0]).toContain('No description available.');
+	});
+
+	it('keeps every scene detail when no scene filter is given (v1)', () => {
+		const profile = makeProfile({ sceneDetails: '- 1: early\n- 9: late' });
+		const result = formatCharacterProfilesSection([profile], 2, 5);
+		expect(result[0]).toContain('- 1: early');
+		expect(result[0]).toContain('- 9: late');
+	});
+
+	it('drops scene details at or before the filter scene (v2 SP)', () => {
+		// Why: details for scenes <= SP are already folded into the Act Summary's Character
+		// Summaries, so v2 must not repeat them next to the latest profile snapshot.
+		const profile = makeProfile({ sceneDetails: '- 1: early\n- 8: at sp\n- 9: late' });
+		const result = formatCharacterProfilesSection([profile], 2, 5, 8);
+		expect(result[0]).not.toContain('- 1: early');
+		expect(result[0]).not.toContain('- 8: at sp');
+		expect(result[0]).toContain('- 9: late');
+	});
+
+	it('omits the Scene Details block when every entry is filtered out', () => {
+		const profile = makeProfile({ sceneDetails: '- 1: early\n- 2: also early' });
+		const result = formatCharacterProfilesSection([profile], 2, 5, 8);
+		expect(result[0]).not.toContain('Scene Details');
+	});
+});
+
+describe('parseSceneDetails', () => {
+	it('parses "- N: text" lines into structured entries', () => {
+		// Why: v2 filters per-scene details by scene number, which requires the serialized
+		// "- <n>: <summary>" form (see serializeSceneDetails) to be parsed back into entries.
+		expect(parseSceneDetails('- 1: Elena arrives\n- 2: Elena fights\n- 5: Elena wins')).toEqual([
+			{ sceneNumber: 1, details: 'Elena arrives' },
+			{ sceneNumber: 2, details: 'Elena fights' },
+			{ sceneNumber: 5, details: 'Elena wins' },
+		]);
+	});
+
+	it('returns an empty array for blank or non-conforming input', () => {
+		expect(parseSceneDetails('')).toEqual([]);
+		expect(parseSceneDetails('Scene 3: freeform')).toEqual([]);
+	});
+
+	it('appends continuation lines to the previous entry', () => {
+		expect(parseSceneDetails('- 1: line one\nline two\n- 2: other')).toEqual([
+			{ sceneNumber: 1, details: 'line one\nline two' },
+			{ sceneNumber: 2, details: 'other' },
+		]);
 	});
 });
 

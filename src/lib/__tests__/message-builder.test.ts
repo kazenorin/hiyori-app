@@ -103,19 +103,18 @@ describe('applyNarrativeOverrides', () => {
 
 describe('buildSummariesMessage', () => {
 	it('returns undefined when there is no summarization point', () => {
-		expect(
-			buildSummariesMessage({ summarizationPoint: 0, characterProfiles: ['## Character Profiles\n\nX'], actSummary: 'S' })
-		).toBeUndefined();
+		expect(buildSummariesMessage({ summarizationPoint: 0, actSummary: 'S' })).toBeUndefined();
 	});
 
-	it('returns undefined when an SP exists but neither snapshot has content', () => {
-		expect(buildSummariesMessage({ summarizationPoint: 8, characterProfiles: [], actSummary: '' })).toBeUndefined();
+	it('returns undefined when an SP exists but the act summary is empty', () => {
+		// Why: Character Profiles no longer live here, so an empty Act Summary@SP drops the whole
+		// Summaries message (the latest profiles are emitted separately, after Scenes).
+		expect(buildSummariesMessage({ summarizationPoint: 8, actSummary: '' })).toBeUndefined();
 	});
 
-	it('includes the profiles when present', () => {
-		const msg = buildSummariesMessage({ summarizationPoint: 8, characterProfiles: ['## Character Profiles\n\nElena'], actSummary: '' });
+	it('includes the act summary section when the snapshot has content', () => {
+		const msg = buildSummariesMessage({ summarizationPoint: 8, actSummary: '## Scene Summaries' });
 		expect(msg).toContain('# Summaries');
-		expect(msg).toContain('Elena');
 	});
 });
 
@@ -157,17 +156,30 @@ describe('buildPhaseMessagesV2', () => {
 		actSummary: 'SUM',
 		scenesSections: ['## Scene 9\n\n### Narrative Body\n\nnine'],
 	};
-	it('orders Main Context → Summaries → Scenes → prior outputs → extraction prompt → Director Notes', () => {
-		// Why: the tier order is the cache-stability contract — Tiers 0–2 (Main Context,
-		// Summaries, Scenes) must precede the per-phase tail so the shared prefix is byte-identical.
+	it('orders Main Context → Summaries → Scenes → Character Profiles → prior outputs → extraction prompt → Director Notes', () => {
+		// Why: the tier order is the cache-stability contract — Tiers 0–2 (Main Context, Summaries,
+		// Scenes, Character Profiles) must precede the per-phase tail so the shared prefix is
+		// byte-identical. Profiles trail Scenes because they change every turn (see buildPhaseMessagesV2).
 		const msgs = buildPhaseMessagesV2(ctx, ['## Writer Output\n\nDRAFT'], 'DO THE TASK', 'be concise');
 		const joined = msgs.map((m) => m.content).join('\n');
 		const idx = (s: string) => joined.indexOf(s);
 		expect(idx('# Main Context')).toBeLessThan(idx('# Summaries'));
 		expect(idx('# Summaries')).toBeLessThan(idx('# Scenes'));
-		expect(idx('# Scenes')).toBeLessThan(idx('DRAFT'));
+		expect(idx('# Scenes')).toBeLessThan(idx('## Character Profiles'));
+		expect(idx('## Character Profiles')).toBeLessThan(idx('DRAFT'));
 		expect(idx('DRAFT')).toBeLessThan(idx('DO THE TASK'));
 		expect(idx('DO THE TASK')).toBeLessThan(idx('be concise'));
+	});
+	it('does not place Character Profiles inside the Summaries message', () => {
+		// Why: a profile snapshot pinned inside Summaries (before Scenes) confused readers and
+		// shortened the cache-stable prefix; profiles are now their own section after Scenes.
+		const msgs = buildPhaseMessagesV2(ctx, [], 'TASK', '');
+		const summaries = msgs.find((m) => m.content.includes('# Summaries'))?.content ?? '';
+		expect(summaries).not.toContain('Elena');
+	});
+	it('omits the Character Profiles message when there are no profiles', () => {
+		const msgs = buildPhaseMessagesV2({ ...ctx, characterProfiles: [] }, [], 'TASK', '');
+		expect(msgs.map((m) => m.content).join('\n')).not.toContain('## Character Profiles');
 	});
 	it('omits the Summaries message when there is no SP', () => {
 		const msgs = buildPhaseMessagesV2({ ...ctx, summarizationPoint: 0 }, [], 'TASK', '');
