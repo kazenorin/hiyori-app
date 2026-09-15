@@ -147,4 +147,48 @@ None.
 
 		expect(reviewerAcceptsAsIs(output)).toBe(true);
 	});
+
+	it('returns true when the recommendation has trailing wording', () => {
+		// Why: the v2 shared-prefix path puts the output-format template in a user message, so the
+		// reviewer often appends clarifying text; a genuine accept-as-is must still skip the Editor.
+		const output = `## Summary
+- Total violations: 0
+- Recommendation: accept as-is (no changes needed)`;
+
+		expect(reviewerAcceptsAsIs(output)).toBe(true);
+	});
+
+	it('returns true when the zero violation count has trailing wording', () => {
+		const output = `## Summary
+- Total violations: 0 violations found
+- Recommendation: accept as-is`;
+
+		expect(reviewerAcceptsAsIs(output)).toBe(true);
+	});
+
+	it('returns true when accept-as-is is written without the hyphen', () => {
+		const output = `## Summary
+- Total violations: 0
+- Recommendation: accept as is`;
+
+		expect(reviewerAcceptsAsIs(output)).toBe(true);
+	});
+
+	it('returns false when the violation count is non-zero despite an accept-as-is verdict', () => {
+		// Why: both conditions must hold; a non-zero leading count still routes to the Editor.
+		const output = `## Summary
+- Total violations: 3
+- Recommendation: accept as-is`;
+
+		expect(reviewerAcceptsAsIs(output)).toBe(false);
+	});
+
+	it('returns false when the recommendation only contains accept-as-is as a substring', () => {
+		// Why: the prefix anchor prevents false positives like "do not accept as-is".
+		const output = `## Summary
+- Total violations: 0
+- Recommendation: do not accept as-is`;
+
+		expect(reviewerAcceptsAsIs(output)).toBe(false);
+	});
 });
