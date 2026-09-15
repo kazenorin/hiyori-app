@@ -1,0 +1,6 @@
+# Normalize line endings to LF for all text files, both in the repository and on
+# checkout. This matches the project's Prettier (`endOfLine: lf`) and EditorConfig
+# (`end_of_line = lf`) conventions and overrides a contributor's `core.autocrlf`
+# setting, so the working tree no longer shows phantom CRLF/LF modifications on
+# Windows. Binary assets (png, ico, woff2, wasm, ...) are auto-detected and left untouched.
+* text=auto eol=lf
