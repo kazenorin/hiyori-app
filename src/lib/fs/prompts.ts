@@ -41,34 +41,29 @@ function createLoader(path: string): PromptLoader {
 
 // === Writer pipeline ===
 
-export const writerSystemPromptLoader = createLoader('writer/writer-prompt.md');
 export const writerOutputTemplateLoader = createLoader('writer/writer-output-template.md');
 export const guidanceWriterExtractionPromptLoader = createLoader('writer/guidance-writer-extraction-prompt.md');
 export const phaseEventWriterExtractionPromptLoader = createLoader('writer/phase-event-writer-extraction-prompt.md');
-export const guidanceWriterExtractionPromptV2Loader = createLoader('writer/guidance-writer-extraction-prompt-v2.md');
-export const phaseEventWriterExtractionPromptV2Loader = createLoader('writer/phase-event-writer-extraction-prompt-v2.md');
+export const epilogueWriterExtractionPromptLoader = createLoader('writer/epilogue-writer-extraction-prompt.md');
 
 // === Review pipeline ===
 
-export const reviewerSystemPromptTemplateLoader = createLoader('reviewer/reviewer-prompt.md');
-export const quickReviewerSystemPromptTemplateLoader = createLoader('reviewer/quick-reviewer-prompt.md');
+export const reviewerExtractionPromptLoader = createLoader('reviewer/reviewer-prompt.md');
+export const quickReviewerExtractionPromptLoader = createLoader('reviewer/quick-reviewer-prompt.md');
 
 // === Editor pipeline ===
 
-export const editorSystemPromptLoader = createLoader('editor/editor-prompt.md');
+export const editorExtractionPromptLoader = createLoader('editor/editor-prompt.md');
 
 // === Plot planner ===
 
-export const plotPlannerSystemPromptLoader = createLoader('plot-planner/guidance-plot-planner-prompt.md');
-export const phaseEventPlotPlannerSystemPromptLoader = createLoader('plot-planner/phase-event-plot-planner-prompt.md');
+export const guidancePlotPlannerExtractionPromptLoader = createLoader('plot-planner/guidance-plot-planner-prompt.md');
+export const phaseEventPlotPlannerExtractionPromptLoader = createLoader('plot-planner/phase-event-plot-planner-prompt.md');
 
 // === Game master ===
 
-export const gameMasterSystemPromptLoader = createLoader('game-master/game-master-prompt.md');
 export const guidanceGameMasterExtractionPromptLoader = createLoader('game-master/guidance-game-master-extraction-prompt.md');
 export const phaseEventGameMasterExtractionPromptLoader = createLoader('game-master/phase-event-game-master-extraction-prompt.md');
-export const guidanceGameMasterExtractionPromptV2Loader = createLoader('game-master/guidance-game-master-extraction-prompt-v2.md');
-export const phaseEventGameMasterExtractionPromptV2Loader = createLoader('game-master/phase-event-game-master-extraction-prompt-v2.md');
 
 // === Summarizer ===
 
