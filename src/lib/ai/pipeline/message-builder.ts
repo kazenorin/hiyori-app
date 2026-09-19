@@ -259,4 +259,3 @@ export function buildTranscriptSummarizerMessages(transcript: { role: 'user' | '
 		{ role: 'user', content: summarizerFullExtractionPromptTemplate() },
 	];
 }
-

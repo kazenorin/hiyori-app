@@ -144,9 +144,9 @@ This is the key integration point where import-world **reuses the pipeline infra
 
 Builds a `PipelineRunContext` suitable for import-world operations. This is the bridge between the import feature and the narrative generation pipeline — it provides the pipeline with the context it needs without requiring a real story/act/assistant setup.
 
-| Export                                                                | Purpose                                                                                                                                         |
-| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EMPTY_PIPELINE_CONTEXT`                                              | A `PipelineContext` with all fields empty/zeroed — the default prompt-prefix context when importing has no prior story state                    |
+| Export                                                                            | Purpose                                                                                                                                                                |
+| --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EMPTY_PIPELINE_CONTEXT`                                                          | A `PipelineContext` with all fields empty/zeroed — the default prompt-prefix context when importing has no prior story state                                           |
 | `buildImportRunContext(retryConfig, abortSignal, callbacks, prompts, overrides?)` | Constructs a full `PipelineRunContext` with zeroed scalars/story/assistant/`PipelineContext`, `buildPipelineProviderConfigs()`, and partial prompt + context overrides |
 
 The `prompts` parameter is a `Partial<PipelineRunContext['prompts']>`, so callers only need to provide the specific prompt overrides (e.g., `writerOutputTemplate` for narrative filling). All other prompt fields default to empty strings.

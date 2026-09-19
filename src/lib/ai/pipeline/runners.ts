@@ -50,14 +50,7 @@ import {
 	writerInventoryToolsInstruction,
 	writerMemoryToolsInstruction,
 } from '$lib/definitions/pipeline-prompts';
-import type {
-	AssistantContext,
-	PipelineCallbacks,
-	PipelineContext,
-	PipelineProviderConfigs,
-	PipelineState,
-	StoryContext,
-} from './types';
+import type { AssistantContext, PipelineCallbacks, PipelineContext, PipelineProviderConfigs, PipelineState, StoryContext } from './types';
 import { executeStreamingPhase, updateState } from './phase-executor';
 import type { StreamResultMetadata } from '../streaming';
 import type { StreamState } from '../chat-callbacks';

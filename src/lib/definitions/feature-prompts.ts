@@ -17,6 +17,8 @@ export const interviewSystemRolePreGame = () => ls('features.interview.systemRol
 
 export const interviewSystemRoleNextAct = () => ls('features.interview.systemRole.nextAct');
 
+export const interviewSystemRoleTurnOfEvents = () => ls('features.interview.systemRole.turnOfEvents');
+
 export const interviewPreviousActConclusion = (endingType: string) => ls('features.interview.previousActConclusion', { endingType });
 
 export const interviewNextActPurpose = (endingType: string) => ls('features.interview.nextActInterviewPurpose', { endingType });

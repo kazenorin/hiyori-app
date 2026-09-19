@@ -1,7 +1,9 @@
 import { generateText } from 'ai';
-import { getMainProviderConfig } from '$lib/stores/settings.svelte';
+import { getMainProviderConfig, settings } from '$lib/stores/settings.svelte';
 import { createModel } from '$lib/ai/provider/provider';
 import { actPlotInterviewSystemPromptLoader, generalInstructionsLoader, actPlotInterviewTurnOfEventsPromptLoader } from '$lib/fs/prompts';
+import { interviewSystemRoleTurnOfEvents } from '$lib/definitions/feature-prompts';
+import { computeTargetWordCountRange } from '$lib/ai/act-plot/target-word-count-parser';
 import { log } from '$lib/logging/logger';
 import type { WorldBuilderMessage } from '$lib/features/world-builder/world-builder.svelte';
 import { playerLabel, interviewerLabel, sceneWithNumberLabel } from '$lib/definitions/common-labels';
@@ -73,7 +75,10 @@ export async function generateTurnOfEvents(params: GenerateTurnOfEventsParams): 
 		actPlotInterviewTurnOfEventsPromptLoader.loadByStory(storyId, storyName),
 	]);
 
-	const fullSystemPrompt = systemPrompt.replace('{{generalInstructions}}', generalInstructions);
+	const fullSystemPrompt = systemPrompt
+		.replace('{{generalInstructions}}', generalInstructions)
+		.replace('{{interviewSystemRole}}', interviewSystemRoleTurnOfEvents())
+		.replace('{{targetWordCountRange}}', computeTargetWordCountRange(settings.targetWordCount));
 	const context = buildContext(actSummary, sceneNumber, sceneTitle, narrativeBody, interviewMessages);
 	const userMessage = promptTemplate.replace('{{context}}', context);
 
