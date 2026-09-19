@@ -325,7 +325,9 @@ export async function runWriterPhase(
 	epilogueEndingType?: string
 ): Promise<PipelineState> {
 	const previousSceneNumber = ctx.completedScenes;
-	const summarizedScenes = previousSceneNumber - 1;
+	// Coverage of the frozen # Summaries snapshot, not of the scenes written so far: the
+	// prompt must claim exactly what the snapshot covers (0 => no Summaries message at all).
+	const summarizedScenes = ctx.context.summarizationPoint;
 	const previousTurnOfEvents = ctx.previousTurnOfEvents;
 	const directorNotes = ctx.directorNotes;
 	const isPhaseEvent = ctx.story.actLine.plotMode === 'phaseEvent';
