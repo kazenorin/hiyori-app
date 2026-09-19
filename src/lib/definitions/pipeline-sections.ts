@@ -185,8 +185,12 @@ export function formatActPhaseBoundariesSection(boundaries: ActPhaseBoundary[]):
 	return [SECTION.ACT_PHASES + lines.join('\n')];
 }
 
-export function formatStorySoFar(summaries: { actNumber: number; summary: string }[], currentActNumber: number): string[] {
-	if (currentActNumber <= 1 || summaries.length === 0) return [];
+/**
+ * Format the "Story So Far" section from prior-act short summaries. Returns no section when the
+ * list is empty (the first act, which has no prior acts) so nothing is emitted for it.
+ */
+export function formatStorySoFar(summaries: { actNumber: number; summary: string }[]): string[] {
+	if (summaries.length === 0) return [];
 	const items = summaries.map((s) => `**${actWithNumberLabel(s.actNumber)}:** ${s.summary}`).join('\n\n');
 	return [SECTION.STORY_SO_FAR + items];
 }

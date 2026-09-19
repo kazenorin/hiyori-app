@@ -153,8 +153,6 @@ export interface PipelineContext {
 	actPlot: string;
 	/** Short summaries of PRIOR acts (the "Story So Far" section), by act number. Excludes the current act. */
 	previousActSummaries: { actNumber: number; summary: string }[];
-	/** Current act's ordinal in the story (drives Story-So-Far labeling). */
-	actNumber: number;
 	// --- Tier 1: Summaries (frozen until the summarization point advances) ---
 	/**
 	 * The last SCENE NUMBER (within the current act) covered by the frozen Summaries snapshot:

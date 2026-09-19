@@ -162,12 +162,11 @@ export function buildMainContextMessage(input: {
 	worldContent: string;
 	actPlot: string;
 	previousActSummaries: { actNumber: number; summary: string }[];
-	actNumber: number;
 }): string {
 	const parts: string[] = [
 		sectionFormat(mainContextHeader(), 1),
 		SECTION.WORLD_CONTENT + input.worldContent,
-		...formatStorySoFar(input.previousActSummaries, input.actNumber),
+		...formatStorySoFar(input.previousActSummaries),
 		SECTION.ACT_PLOT + input.actPlot,
 	];
 	return parts.join('\n').trimEnd();

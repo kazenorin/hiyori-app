@@ -146,7 +146,6 @@ function makeCtx(actLineOverrides: Partial<ActLineContext> = {}, completedScenes
 			worldContent: '',
 			actPlot: '',
 			previousActSummaries: [],
-			actNumber: 1,
 			summarizationPoint: 0,
 			characterProfiles: [],
 			actSummaryAtSP: '',

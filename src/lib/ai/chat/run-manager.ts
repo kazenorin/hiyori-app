@@ -611,7 +611,6 @@ async function buildPipelineInput(session: InternalSession, plan: RunPlan): Prom
 		worldContent,
 		actPlot,
 		previousActSummaries,
-		actNumber,
 		summarizationPoint: hasSummaries ? sp : 0,
 		characterProfiles: profilesForPrefix,
 		actSummaryAtSP: actSummaryAtSp,

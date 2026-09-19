@@ -124,24 +124,21 @@ describe('buildMainContextMessage', () => {
 			worldContent: 'WORLD',
 			actPlot: 'PLOT',
 			previousActSummaries: [{ actNumber: 1, summary: 'Act1' }],
-			actNumber: 2,
 		});
 		expect(msg).toContain('# Main Context');
 		expect(msg.indexOf('WORLD')).toBeLessThan(msg.indexOf('PLOT'));
 		expect(msg).toContain('Act1');
 	});
 
-	it('omits Story so Far in act 1 even when prior-act summaries exist', () => {
-		// Why: formatStorySoFar guards on actNumber <= 1. Passing non-empty summaries proves
-		// the act-number guard (not an empty array) is what suppresses the Story so Far section.
+	it('omits Story so Far when there are no prior-act summaries', () => {
+		// Why: the Story-so-Far section is driven purely by whether prior-act summaries exist;
+		// the first act has none (run-manager only collects them for actNumber > 1).
 		const msg = buildMainContextMessage({
 			worldContent: 'W',
 			actPlot: 'P',
-			previousActSummaries: [{ actNumber: 1, summary: 'Act1' }],
-			actNumber: 1,
+			previousActSummaries: [],
 		});
 		expect(msg).not.toContain('Story So Far');
-		expect(msg).not.toContain('Act1');
 	});
 });
 
@@ -150,7 +147,6 @@ describe('buildPhaseMessages', () => {
 		worldContent: 'W',
 		actPlot: 'P',
 		previousActSummaries: [],
-		actNumber: 1,
 		summarizationPoint: 8,
 		characterProfiles: ['## Character Profiles\n\nElena'],
 		actSummaryAtSP: 'SUM',

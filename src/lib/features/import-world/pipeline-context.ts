@@ -8,7 +8,6 @@ export const EMPTY_PIPELINE_CONTEXT: PipelineContext = {
 	worldContent: '',
 	actPlot: '',
 	previousActSummaries: [],
-	actNumber: 1,
 	summarizationPoint: 0,
 	characterProfiles: [],
 	actSummaryAtSP: '',

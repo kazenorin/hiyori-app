@@ -20,25 +20,22 @@ import {
 	updatePersistentMessageMetadata,
 } from './chat/persistence';
 import { updateMessageFields } from '$lib/db/messages';
-import type { NarrativeVariables, PhaseName } from './narrative-types';
+import type { NarrativeVariables } from './narrative-types';
 import { emptyVariables } from './narrative-types';
 import type { UIMessage } from './chat/types';
 import { generateFullSummary, type SummarizerInput, type SummarizerPrompts } from './pipeline/summarizer';
-import { executeGmPhase, type PipelineRunContext, runGmTemplateFitter, type TrackPhase } from './pipeline/runners';
-import { buildPipelineProviderConfigs } from './chat/pipeline-config';
 import { loadPrompts } from './pipeline/prompt-loader';
-import { buildImportRunContext } from '$lib/features/import-world/pipeline-context';
+import { runGameMasterRegeneration } from './game-data-regenerator';
 import { buildScenesSections } from './pipeline/scenes-builder';
 import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
 import * as runManager from './chat/run-manager';
 import type { InterruptedRunInfo } from './chat/run-manager';
 import type { PipelineRunKind } from '$lib/db/pipeline-runs';
-import type { PipelineContext, PipelineState } from './pipeline/types';
+import type { PipelineContext } from './pipeline/types';
 import { getErrorMessage } from '$lib/utils/error-handling';
 import { ensureActPlot } from '$lib/ai/act-plot';
 import { ensureWorldFile } from '$lib/ai/world-generator';
 import type { Story } from '$lib/db/stories';
-import { createOptionalCallbacks } from './chat/pipeline-callbacks';
 import { ls } from '$lib/localization';
 
 // Re-exported for `+page.svelte` only
@@ -535,15 +532,7 @@ async function regenerateGameData(
 	abortController: AbortController
 ): Promise<void> {
 	const assistantMsg = msgs[assistantIdx];
-	const providerConfigs = buildPipelineProviderConfigs();
-	if (!providerConfigs.gameMaster?.model) {
-		await log.warn('regenerate-metadata', 'No GM provider configured, skipping game data regeneration');
-		return;
-	}
-
 	const plotMode = actLine.plotMode ?? getDefaultPlotMode();
-	const currentActPhase = await dbActLines.getActPhase(actLine.id);
-	const actPhaseBoundaries = await dbActLines.getActPhaseBoundaries(actLine.id);
 	const currentSceneNumber = assistantMsg.sceneNumber ?? 1;
 	const completedScenes = currentSceneNumber - 1;
 	// Everything before the message being regenerated: scenes 1..N-1 plus the player turn
@@ -559,58 +548,25 @@ async function regenerateGameData(
 		worldContent,
 		actPlot,
 		previousActSummaries: [],
-		actNumber: 1,
 		summarizationPoint: 0,
 		characterProfiles: [],
 		actSummaryAtSP: '',
 		scenesSections: buildScenesSections(priorMessages, 1, previousScenePlot),
 	};
 
-	const loadedPrompts = await loadPrompts(story.id, story.name);
+	const gameData = await runGameMasterRegeneration({
+		story,
+		actLine,
+		actNumber: 1,
+		sceneNumber: currentSceneNumber,
+		editorOutput: assistantMsg.content,
+		context,
+		abortSignal: abortController.signal,
+	});
 
-	const ctx: PipelineRunContext = buildImportRunContext(
-		{ retryCount: 3, backoffIntervalSeconds: 5 },
-		abortController.signal,
-		createOptionalCallbacks({
-			onError: (_phase: PhaseName, err: unknown) => {
-				log.error('regenerate-metadata', 'GM phase error', err);
-			},
-		}),
-		{
-			generalInstructions: loadedPrompts.generalInstructions,
-			mainChatSystemPrompt: loadedPrompts.mainChatSystemPrompt,
-			guidanceGameMasterExtractionPrompt: loadedPrompts.guidanceGameMasterExtractionPrompt,
-			phaseEventGameMasterExtractionPrompt: loadedPrompts.phaseEventGameMasterExtractionPrompt,
-		},
-		{
-			currentScene: String(currentSceneNumber),
-			story: {
-				storyId: story.id,
-				storyName: story.name,
-				actLine: {
-					...actLine,
-					plotMode,
-					currentActPhase,
-					actPhaseBoundaries,
-					lastPlotGeneration: null,
-					actNumber: 1,
-					currentActPhaseLengthEstimate: null,
-					currentScene: currentSceneNumber,
-				},
-			},
-			context,
-		}
-	);
-
-	const trackPhase: TrackPhase = (_phaseName, result) => result.state;
-	let state: PipelineState = { editorOutput: assistantMsg.content };
-	const gmResult = await executeGmPhase(ctx, state);
-	state = await trackPhase('GAME_MASTER', gmResult, providerConfigs.gameMaster?.model);
-	state = await runGmTemplateFitter(ctx, state, trackPhase);
-
-	if (state.gameData) {
+	if (gameData) {
 		const existingVars = assistantMsg.variables ?? emptyVariables();
-		const updatedVars: NarrativeVariables = { ...existingVars, gameData: state.gameData };
+		const updatedVars: NarrativeVariables = { ...existingVars, gameData };
 		msgs[assistantIdx] = { ...assistantMsg, variables: updatedVars };
 		messages = [...msgs];
 		await updateMessageFields(assistantMsg.id, { variables: JSON.stringify(updatedVars) });
