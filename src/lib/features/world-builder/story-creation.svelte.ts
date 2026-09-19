@@ -4,9 +4,8 @@ import {
 	createStoryFromWorldBuilder,
 	setActPlotGenerationPhase,
 	getActiveStory,
-	getActiveDirectorNotesText,
 } from '$lib/stores/stories.svelte';
-import { settings, isDirectorModeEnabled } from '$lib/stores/settings.svelte';
+import { settings } from '$lib/stores/settings.svelte';
 import {
 	getStoryName,
 	setStoryName,
@@ -260,13 +259,14 @@ export async function handleStartGameAfterInterview(
 
 			if (forkedMessage) {
 				await regenerateGameDataForForkedMessage(forkedMessage.id, {
+					story: refs.story,
+					actLine,
+					actNumber: resolvedActNumber,
 					worldContent: worldContent ?? '',
 					actPlot: actPlotContent,
-					actSummary: forkedMessage.actSummary ?? '',
-					directorNotes: isDirectorModeEnabled() ? getActiveDirectorNotesText(forkedMessage.sceneNumber ?? 1) : '',
 					sceneNumber: forkedMessage.sceneNumber ?? 1,
+					editorOutput: forkedMessage.content,
 					narrativeVariables: forkedMessage.variables ?? emptyVariables(),
-					playerResponse: null,
 				});
 			}
 

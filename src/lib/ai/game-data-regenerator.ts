@@ -1,71 +1,101 @@
-import { generateText } from 'ai';
-import type { MessageBase } from '$lib/db/messages';
-import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { createModel } from './provider/provider';
-import type { GameDataFields, NarrativeVariables } from './narrative-types';
-import { emptyGameDataFields } from './narrative-types';
-import { parseContent } from '$lib/utils/chat-stream-parser';
-import { variablesToMarkdown } from './template-renderer';
-import { getGameMasterDescriptors } from './descriptors';
-import { generalInstructionsLoader, guidanceGameMasterExtractionPromptLoader, mainChatSystemPromptLoader } from '$lib/fs/prompts';
-import {
-	SECTION,
-	formatPreviousNarrativeBody,
-	formatTurnOfEventsSection,
-	formatDirectorNotesSection,
-} from '$lib/definitions/pipeline-sections';
-import { resolveGmExtractionPrompt } from '$lib/ai/pipeline/runners';
+import type { GameDataFields, NarrativeVariables, PhaseName } from './narrative-types';
+import type { Story } from '$lib/db/stories';
+import { getActPhase, getActPhaseBoundaries, type ActLineMeta } from '$lib/db/act-lines';
+import { getDefaultPlotMode } from '$lib/stores/settings.svelte';
+import { log } from '$lib/logging/logger';
+import { buildPipelineProviderConfigs } from './chat/pipeline-config';
+import { createOptionalCallbacks } from './chat/pipeline-callbacks';
+import { loadPrompts } from './pipeline/prompt-loader';
+import { executeGmPhase, runGmTemplateFitter, type PipelineRunContext, type TrackPhase } from './pipeline/runners';
+import type { PipelineContext, PipelineState } from './pipeline/types';
+import { buildImportRunContext } from '$lib/features/import-world/pipeline-context';
 
 export interface GameDataRegenerationContext {
+	story: Story;
+	actLine: ActLineMeta;
+	actNumber: number;
 	worldContent: string;
 	actPlot: string;
-	actSummary: string;
-	directorNotes: string;
 	sceneNumber: number;
+	/** The message's rendered editor output — the scene the GM re-derives game data from. */
+	editorOutput: string;
+	/** Existing variables, returned to the caller so it can merge the regenerated game data back in. */
 	narrativeVariables: NarrativeVariables;
-	playerResponse: string | null;
 }
 
 /**
- * Regenerate GameData for an existing message using non-streaming GM phase.
- * Used when enriching a forked message with turnOfEvents.
+ * Regenerate GameData for an existing message by running the real Game Master phase
+ * (executeGmPhase + GM template fitter) headlessly through the shared-prefix pipeline, so
+ * prompt assembly, plotMode selection, and format fallbacks stay identical to a live run
+ * instead of a bespoke reimplementation. Used when enriching a forked message with turnOfEvents.
+ *
+ * Context is intentionally reduced for this one-off (no prior-scene history, character profiles,
+ * act summary, or tools): the GM only needs World Content + Act Plot + the scene's editor output
+ * to produce decisions/plot threads.
  */
 export async function regenerateGameData(params: GameDataRegenerationContext): Promise<GameDataFields | null> {
-	const { worldContent, actPlot, actSummary, directorNotes, narrativeVariables, playerResponse, sceneNumber } = params;
-	const config = getMainProviderConfig();
-	if (!config?.model) return null;
+	const { story, actLine, actNumber, worldContent, actPlot, sceneNumber, editorOutput } = params;
+	const providerConfigs = buildPipelineProviderConfigs();
+	if (!providerConfigs.gameMaster?.model) {
+		await log.warn('regenerate-metadata', 'No GM provider configured, skipping game data regeneration');
+		return null;
+	}
 
-	const [mainChatSystemPrompt, generalInstructions, guidanceGameMasterExtraction] = await Promise.all([
-		mainChatSystemPromptLoader.loadDefault(),
-		generalInstructionsLoader.loadDefault(),
-		guidanceGameMasterExtractionPromptLoader.loadDefault(),
-	]);
-	const systemPrompt = mainChatSystemPrompt.replaceAll('{{generalInstructions}}', generalInstructions);
-	const gmExtractionPrompt = resolveGmExtractionPrompt(guidanceGameMasterExtraction, {
-		currentScene: String(sceneNumber),
-		inventoryToolsInstruction: '',
-	});
+	const plotMode = actLine.plotMode ?? getDefaultPlotMode();
+	const currentActPhase = await getActPhase(actLine.id);
+	const actPhaseBoundaries = await getActPhaseBoundaries(actLine.id);
+	const loadedPrompts = await loadPrompts(story.id, story.name);
 
-	const model = await createModel(config);
-	const editorOutput = variablesToMarkdown(narrativeVariables);
+	const context: PipelineContext = {
+		worldContent,
+		actPlot,
+		previousActSummaries: [],
+		actNumber,
+		summarizationPoint: 0,
+		characterProfiles: [],
+		actSummary: '',
+		scenesSections: [],
+	};
 
-	const contents = [
-		SECTION.WORLD_CONTENT + worldContent,
-		SECTION.ACT_PLOT + actPlot,
-		SECTION.ACT_SUMMARY + actSummary,
-		...formatPreviousNarrativeBody(narrativeVariables.narrativeBody, sceneNumber),
-		...(playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : []),
-		...formatTurnOfEventsSection(narrativeVariables.turnOfEvents),
-		SECTION.EDITOR_OUTPUT + editorOutput,
-		...formatDirectorNotesSection(directorNotes),
-		gmExtractionPrompt,
-	];
+	const ctx: PipelineRunContext = buildImportRunContext(
+		{ retryCount: 3, backoffIntervalSeconds: 5 },
+		new AbortController().signal,
+		createOptionalCallbacks({
+			onError: (_phase: PhaseName, err: unknown) => {
+				log.error('regenerate-metadata', 'GM phase error', err);
+			},
+		}),
+		{
+			generalInstructions: loadedPrompts.generalInstructions,
+			mainChatSystemPrompt: loadedPrompts.mainChatSystemPrompt,
+			guidanceGameMasterExtractionPrompt: loadedPrompts.guidanceGameMasterExtractionPrompt,
+			phaseEventGameMasterExtractionPrompt: loadedPrompts.phaseEventGameMasterExtractionPrompt,
+		},
+		{
+			currentScene: String(sceneNumber),
+			story: {
+				storyId: story.id,
+				storyName: story.name,
+				actLine: {
+					...actLine,
+					plotMode,
+					currentActPhase,
+					actPhaseBoundaries,
+					lastPlotGeneration: null,
+					actNumber,
+					currentActPhaseLengthEstimate: null,
+					currentScene: sceneNumber,
+				},
+			},
+			context,
+		}
+	);
 
-	const messages: MessageBase[] = contents.map((content) => ({ role: 'user' as const, content }));
+	const trackPhase: TrackPhase = (_phaseName, result) => result.state;
+	let state: PipelineState = { editorOutput };
+	const gmResult = await executeGmPhase(ctx, state);
+	state = await trackPhase('GAME_MASTER', gmResult, providerConfigs.gameMaster?.model);
+	state = await runGmTemplateFitter(ctx, state, trackPhase);
 
-	const result = await generateText({ model, instructions: systemPrompt, messages, ...(config.callSettings ?? {}) });
-	const gmText = result.text.trim();
-	if (!gmText) return null;
-
-	return parseContent<GameDataFields>(gmText, getGameMasterDescriptors(), emptyGameDataFields());
+	return state.gameData ?? null;
 }
