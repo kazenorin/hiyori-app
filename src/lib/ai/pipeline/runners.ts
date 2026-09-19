@@ -2,12 +2,8 @@ import { type ToolSet } from 'ai';
 import { ls } from '$lib/localization';
 import {
 	buildEditorFitterMessages,
-	buildEditorMessages,
-	buildGamePhaseMessages,
 	buildGmFitterMessages,
-	buildPhaseMessagesV2,
-	buildReviewerMessages,
-	buildWriterMessages,
+	buildPhaseMessages,
 	editorHasTemplateMetadata,
 	fullOutput,
 	mergeGameData,
@@ -38,23 +34,15 @@ import {
 } from '$lib/definitions/pipeline-prompts';
 import {
 	acceptAsIsLabel,
-	editorExtractionPrompt,
-	editorExtractionPromptV2,
 	editorTemplateFitterExtractionPrompt,
 	gameMasterInventoryToolsInstruction,
 	getLocalizedActPhase,
 	gmTemplateFitterExtractionPrompt,
-	plotPlannerExtractionPrompt,
-	plotPlannerExtractionPromptV2,
 	plotPlannerInventoryToolsInstruction,
 	plotPlannerMemoryToolsInstruction,
-	quickReviewerExtractionPromptTemplate,
-	quickReviewerExtractionPromptV2,
 	quickReviewerInventoryToolsInstruction,
 	quickReviewerMemoryToolsInstruction,
 	recommendationLabel,
-	reviewerExtractionPromptTemplate,
-	reviewerExtractionPromptV2,
 	reviewerInventoryToolsInstruction,
 	reviewerMemoryToolsInstruction,
 	templateFitterSystemPrompt,
@@ -77,7 +65,7 @@ import type { StreamResultMetadata } from '../streaming';
 import type { StreamState } from '../chat-callbacks';
 import { variablesToMarkdown } from '../template-renderer';
 import { extractImportantPhrases } from '../important-phrases-extractor';
-import { filterToolsForPhase, guardToolsForPhase } from '$lib/ai/tools/tools';
+import { guardToolsForPhase } from '$lib/ai/tools/tools';
 import { formatActPhaseBoundariesSection, SECTION } from '$lib/definitions/pipeline-sections';
 import { log } from '$lib/logging/logger';
 import { reviewerAcceptsAsIs } from '../reviewer-output-parser';
@@ -111,16 +99,12 @@ function inventoryToolsPartial(value: string): string {
 const earlyPhaseFactor = 0.3;
 const latePhaseFactor = 1 - earlyPhaseFactor;
 
-export function resolveGmSystemPrompt(systemPrompt: string): string {
-	return systemPrompt.replaceAll('{{additionalRules}}', '');
-}
-
 /** Resolve the single shared system prompt (persona + general instructions + tools note). */
 export function resolveSharedSystemPrompt(prompts: PipelinePrompts): string {
 	return prompts.mainChatSystemPrompt.replaceAll('{{generalInstructions}}', prompts.generalInstructions);
 }
 
-/** Act Phase Boundaries section text for v2 phaseEvent extraction prompts (empty in guidance mode). */
+/** Act Phase Boundaries section text for phaseEvent extraction prompts (empty in guidance mode). */
 function resolveActPhaseBoundaries(ctx: PipelineRunContext): string {
 	return formatActPhaseBoundariesSection(ctx.story.actLine.actPhaseBoundaries).join('\n');
 }
@@ -144,18 +128,6 @@ function resolveGmExtractionPromptForContext(ctx: PipelineRunContext): string {
 		ctx.story.actLine.plotMode === 'phaseEvent'
 			? ctx.prompts.phaseEventGameMasterExtractionPrompt
 			: ctx.prompts.guidanceGameMasterExtractionPrompt;
-	return resolveGmExtractionPrompt(base, {
-		currentScene: ctx.currentScene,
-		currentActPhase: resolveCurrentActPhase(ctx),
-		inventoryToolsInstruction: inventoryToolsPartial(indentLines(gameMasterInventoryToolsInstruction(), '   ')),
-	});
-}
-
-function resolveGmExtractionPromptV2ForContext(ctx: PipelineRunContext): string {
-	const base =
-		ctx.story.actLine.plotMode === 'phaseEvent'
-			? ctx.prompts.phaseEventGameMasterExtractionPromptV2
-			: ctx.prompts.guidanceGameMasterExtractionPromptV2;
 	return resolveGmExtractionPrompt(base, {
 		currentScene: ctx.currentScene,
 		currentActPhase: resolveCurrentActPhase(ctx),
@@ -307,20 +279,16 @@ export interface PipelinePrompts {
 	generalInstructions: string;
 	mainChatSystemPrompt: string;
 	writerOutputTemplate: string;
-	reviewerPrompt: string;
-	writerSystemPrompt: string;
-	editorSystemPrompt: string;
-	gameMasterSystemPrompt: string;
-	plotPlannerSystemPrompt: string;
-	phaseEventPlotPlannerSystemPrompt: string;
 	guidanceWriterExtractionPrompt: string;
 	phaseEventWriterExtractionPrompt: string;
-	guidanceWriterExtractionPromptV2: string;
-	phaseEventWriterExtractionPromptV2: string;
+	epilogueWriterExtractionPrompt: string;
+	reviewerExtractionPrompt: string;
+	quickReviewerExtractionPrompt: string;
+	editorExtractionPrompt: string;
+	guidancePlotPlannerExtractionPrompt: string;
+	phaseEventPlotPlannerExtractionPrompt: string;
 	guidanceGameMasterExtractionPrompt: string;
 	phaseEventGameMasterExtractionPrompt: string;
-	guidanceGameMasterExtractionPromptV2: string;
-	phaseEventGameMasterExtractionPromptV2: string;
 }
 
 export interface PipelineRunContext {
@@ -338,8 +306,8 @@ export interface PipelineRunContext {
 	story: StoryContext;
 	assistant: AssistantContext;
 	narrativeOverrides: NarrativeOverrides;
-	/** Stage-2 shared-prefix context; when present, phases use the v2 assembly path. */
-	contextV2?: PipelineContext;
+	/** Shared-prefix context (Tiers 0–2) reused by every phase this run. */
+	context: PipelineContext;
 }
 
 /**
@@ -359,16 +327,14 @@ export async function runWriterPhase(
 	ctx: PipelineRunContext,
 	state: PipelineState,
 	trackPhase: TrackPhase,
-	extractionPromptOverride?: string
+	epilogueEndingType?: string
 ): Promise<PipelineState> {
 	const previousSceneNumber = ctx.preEditorCtx.completedScenes;
 	const summarizedScenes = previousSceneNumber - 1;
 	const previousTurnOfEvents = ctx.preEditorCtx.previousTurnOfEvents;
 	const directorNotes = ctx.preEditorCtx.directorNotes;
 	const isPhaseEvent = ctx.story.actLine.plotMode === 'phaseEvent';
-	const v2 = ctx.contextV2;
 
-	// Substitutions shared by the legacy and v2 writer extraction templates.
 	const applyWriterSubstitutions = (template: string) =>
 		template
 			.replaceAll('{{previousScene}}', String(previousSceneNumber))
@@ -385,44 +351,33 @@ export async function runWriterPhase(
 			.replaceAll('{{estimatedPhaseLength}}', resolveEstimatedPhaseLength(ctx).toString())
 			.replaceAll('{{actEndInstruction}}', resolveActEndInstruction(ctx.story.actLine.plotMode, ctx.story.actLine.currentActPhase ?? null));
 
-	const writerExtractionPromptTemplate = isPhaseEvent
-		? ctx.prompts.phaseEventWriterExtractionPrompt
-		: ctx.prompts.guidanceWriterExtractionPrompt;
+	// The epilogue swaps the writing task but keeps the same writer role/format scaffolding,
+	// so it selects a dedicated base prompt and runs it through the identical substitution
+	// chain (targetWordCount, writerOutputTemplate, tool instructions). Those placeholders are
+	// absent from the guidance/phaseEvent variants' scaffolding only where noted, so the extra
+	// `.replaceAll` passes are no-ops for the non-epilogue path.
+	const baseExtractionPrompt = epilogueEndingType
+		? ctx.prompts.epilogueWriterExtractionPrompt
+		: isPhaseEvent
+			? ctx.prompts.phaseEventWriterExtractionPrompt
+			: ctx.prompts.guidanceWriterExtractionPrompt;
 
-	const writerExtractionPrompt = extractionPromptOverride ?? applyWriterSubstitutions(writerExtractionPromptTemplate);
-
-	// v2 carries the relocated role text, so the extraction prompt also absorbs the former
-	// system-prompt placeholders (targetWordCount, writerOutputTemplate, tool instructions)
-	// and, for phaseEvent, the Act Phase Boundaries.
-	const writerExtractionPromptV2 = v2
-		? applyWriterSubstitutions(isPhaseEvent ? ctx.prompts.phaseEventWriterExtractionPromptV2 : ctx.prompts.guidanceWriterExtractionPromptV2)
-				.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
-				.replaceAll('{{writerOutputTemplate}}', ctx.prompts.writerOutputTemplate)
-				.replaceAll(/{{memoryToolsInstruction}}\r?\n/g, memoryToolsPartial(indentLines(writerMemoryToolsInstruction(), '   ')))
-				.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, inventoryToolsPartial(indentLines(writerInventoryToolsInstruction(), '   ')))
-				.replaceAll('{{actPhaseBoundaries}}', resolveActPhaseBoundaries(ctx))
-		: '';
+	const writerExtractionPrompt = applyWriterSubstitutions(baseExtractionPrompt)
+		.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
+		.replaceAll('{{writerOutputTemplate}}', ctx.prompts.writerOutputTemplate)
+		.replaceAll(/{{memoryToolsInstruction}}\r?\n/g, memoryToolsPartial(indentLines(writerMemoryToolsInstruction(), '   ')))
+		.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, inventoryToolsPartial(indentLines(writerInventoryToolsInstruction(), '   ')))
+		.replaceAll('{{actPhaseBoundaries}}', resolveActPhaseBoundaries(ctx))
+		.replaceAll('{{endingType}}', epilogueEndingType ?? '');
 
 	const result = await executeStreamingPhase(
 		{
 			phaseName: 'WRITER',
-			systemPrompt: v2
-				? resolveSharedSystemPrompt(ctx.prompts)
-				: ctx.prompts.writerSystemPrompt
-						.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
-						.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
-						.replaceAll('{{writerOutputTemplate}}', ctx.prompts.writerOutputTemplate)
-						.replaceAll(/{{memoryToolsInstruction}}\r?\n/g, memoryToolsPartial(indentLines(writerMemoryToolsInstruction(), '   ')))
-						.replaceAll(
-							/{{inventoryToolsInstruction}}\r?\n/g,
-							inventoryToolsPartial(indentLines(writerInventoryToolsInstruction(), '   '))
-						),
+			systemPrompt: resolveSharedSystemPrompt(ctx.prompts),
 			...ctx.sharedParams,
-			tools: v2 ? guardToolsForPhase(ctx.tools, 'WRITER') : filterToolsForPhase(ctx.tools, 'WRITER'),
+			tools: guardToolsForPhase(ctx.tools, 'WRITER'),
 			descriptors: getNarrativeDescriptors(),
-			messages: v2
-				? buildPhaseMessagesV2(v2, [], writerExtractionPromptV2, directorNotes)
-				: buildWriterMessages(ctx.preEditorCtx, writerExtractionPrompt),
+			messages: buildPhaseMessages(ctx.context, [], writerExtractionPrompt, directorNotes),
 			providerConfig: ctx.providerConfigs.writer,
 			buildStateUpdate: buildWriterStateUpdate(ctx.narrativeOverrides),
 		},
@@ -460,7 +415,6 @@ export async function runReviewerEditorPhases(
 	state: PipelineState,
 	trackPhase: TrackPhase
 ): Promise<PipelineState> {
-	const v2 = ctx.contextV2;
 	if (!isReviewerEnabled()) {
 		state = seedEditorFromWriter(state);
 		ctx.sharedParams.callbacks.onPhaseStart('EDITOR');
@@ -469,56 +423,34 @@ export async function runReviewerEditorPhases(
 	}
 
 	if (state.reviewerOutput === undefined) {
-		const reviewerExtractionV2 = v2
-			? (isQuickReview() ? quickReviewerExtractionPromptV2(ctx.currentScene) : reviewerExtractionPromptV2(ctx.currentScene))
-					.replaceAll('{{acceptAsIs}}', acceptAsIsLabel())
-					.replaceAll('{{summary}}', summaryHeader())
-					.replaceAll('{{totalViolations}}', totalViolationsLabel())
-					.replaceAll('{{recommendation}}', recommendationLabel())
-					.replaceAll(
-						/{{memoryToolsInstruction}}\r?\n/g,
-						memoryToolsPartial(isQuickReview() ? quickReviewerMemoryToolsInstruction() : reviewerMemoryToolsInstruction())
-					)
-					.replaceAll(
-						/{{inventoryToolsInstruction}}\r?\n/g,
-						inventoryToolsPartial(isQuickReview() ? quickReviewerInventoryToolsInstruction() : reviewerInventoryToolsInstruction())
-					)
-					.replaceAll('{{actPhaseBoundaries}}', resolveActPhaseBoundaries(ctx))
-			: '';
+		const reviewerExtraction = (isQuickReview() ? ctx.prompts.quickReviewerExtractionPrompt : ctx.prompts.reviewerExtractionPrompt)
+			.replaceAll('{{currentScene}}', ctx.currentScene)
+			.replaceAll('{{acceptAsIs}}', acceptAsIsLabel())
+			.replaceAll('{{summary}}', summaryHeader())
+			.replaceAll('{{totalViolations}}', totalViolationsLabel())
+			.replaceAll('{{recommendation}}', recommendationLabel())
+			.replaceAll(
+				/{{memoryToolsInstruction}}\r?\n/g,
+				memoryToolsPartial(isQuickReview() ? quickReviewerMemoryToolsInstruction() : reviewerMemoryToolsInstruction())
+			)
+			.replaceAll(
+				/{{inventoryToolsInstruction}}\r?\n/g,
+				inventoryToolsPartial(isQuickReview() ? quickReviewerInventoryToolsInstruction() : reviewerInventoryToolsInstruction())
+			)
+			.replaceAll('{{actPhaseBoundaries}}', resolveActPhaseBoundaries(ctx));
 		const reviewerResult = await executeStreamingPhase(
 			{
 				phaseName: 'REVIEWER',
-				systemPrompt: v2
-					? resolveSharedSystemPrompt(ctx.prompts)
-					: ctx.prompts.reviewerPrompt
-							.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
-							.replaceAll('{{acceptAsIs}}', acceptAsIsLabel())
-							.replaceAll('{{summary}}', summaryHeader())
-							.replaceAll('{{totalViolations}}', totalViolationsLabel())
-							.replaceAll('{{recommendation}}', recommendationLabel())
-							.replaceAll(
-								/{{memoryToolsInstruction}}\r?\n/g,
-								memoryToolsPartial(isQuickReview() ? quickReviewerMemoryToolsInstruction() : reviewerMemoryToolsInstruction())
-							)
-							.replaceAll(
-								/{{inventoryToolsInstruction}}\r?\n/g,
-								inventoryToolsPartial(isQuickReview() ? quickReviewerInventoryToolsInstruction() : reviewerInventoryToolsInstruction())
-							),
+				systemPrompt: resolveSharedSystemPrompt(ctx.prompts),
 				...ctx.sharedParams,
-				tools: v2 ? guardToolsForPhase(ctx.tools, 'REVIEWER') : filterToolsForPhase(ctx.tools, 'REVIEWER'),
+				tools: guardToolsForPhase(ctx.tools, 'REVIEWER'),
 				descriptors: getReviewerDescriptors(),
-				messages: v2
-					? buildPhaseMessagesV2(
-							v2,
-							state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : [],
-							reviewerExtractionV2,
-							ctx.preEditorCtx.directorNotes
-						)
-					: buildReviewerMessages(
-							ctx.preEditorCtx,
-							state.writerOutput,
-							isQuickReview() ? quickReviewerExtractionPromptTemplate(ctx.currentScene) : reviewerExtractionPromptTemplate(ctx.currentScene)
-						),
+				messages: buildPhaseMessages(
+					ctx.context,
+					state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : [],
+					reviewerExtraction,
+					ctx.preEditorCtx.directorNotes
+				),
 				providerConfig: ctx.providerConfigs.reviewer,
 				buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),
 			},
@@ -532,35 +464,27 @@ export async function runReviewerEditorPhases(
 		ctx.sharedParams.callbacks.onPhaseStart('EDITOR');
 		ctx.sharedParams.callbacks.onPhaseComplete('EDITOR', state);
 	} else if (state.editorOutput === undefined) {
-		const editorExtractionV2 = v2
-			? editorExtractionPromptV2(ctx.currentScene)
-					.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
-					.replaceAll('{{writerOutputTemplate}}', ctx.prompts.writerOutputTemplate)
-					.replaceAll('{{actPhaseBoundaries}}', resolveActPhaseBoundaries(ctx))
-			: '';
+		const editorExtraction = ctx.prompts.editorExtractionPrompt
+			.replaceAll('{{currentScene}}', ctx.currentScene)
+			.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
+			.replaceAll('{{writerOutputTemplate}}', ctx.prompts.writerOutputTemplate)
+			.replaceAll('{{actPhaseBoundaries}}', resolveActPhaseBoundaries(ctx));
 		const editorResult = await executeStreamingPhase(
 			{
 				phaseName: 'EDITOR',
-				systemPrompt: v2
-					? resolveSharedSystemPrompt(ctx.prompts)
-					: ctx.prompts.editorSystemPrompt
-							.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
-							.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
-							.replaceAll('{{writerOutputTemplate}}', ctx.prompts.writerOutputTemplate),
+				systemPrompt: resolveSharedSystemPrompt(ctx.prompts),
 				...ctx.sharedParams,
-				tools: v2 ? guardToolsForPhase(ctx.tools, 'EDITOR') : filterToolsForPhase(ctx.tools, 'EDITOR'),
+				tools: guardToolsForPhase(ctx.tools, 'EDITOR'),
 				descriptors: getEditorDescriptors(),
-				messages: v2
-					? buildPhaseMessagesV2(
-							v2,
-							[
-								...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
-								...(state.reviewerOutput ? [SECTION.REVIEWER_OUTPUT + state.reviewerOutput] : []),
-							],
-							editorExtractionV2,
-							ctx.preEditorCtx.directorNotes
-						)
-					: buildEditorMessages(ctx.preEditorCtx, state.writerOutput, state.reviewerOutput, editorExtractionPrompt()),
+				messages: buildPhaseMessages(
+					ctx.context,
+					[
+						...(state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : []),
+						...(state.reviewerOutput ? [SECTION.REVIEWER_OUTPUT + state.reviewerOutput] : []),
+					],
+					editorExtraction,
+					ctx.preEditorCtx.directorNotes
+				),
 				providerConfig: ctx.providerConfigs.editor,
 				buildStateUpdate: buildEditorStateUpdate,
 			},
@@ -615,8 +539,20 @@ export function maybeExtractImportantPhrases(state: PipelineState, callbacks: Pi
 		});
 }
 
-function resolvePlotPlannerPrompt(ctx: PipelineRunContext): string {
-	return ctx.story.actLine.plotMode === 'phaseEvent' ? ctx.prompts.phaseEventPlotPlannerSystemPrompt : ctx.prompts.plotPlannerSystemPrompt;
+/** Plot Planner extraction prompt: selects the guidance/phaseEvent variant, then resolves scene/phase and tool placeholders. */
+function resolvePlotPlannerExtractionPromptForContext(ctx: PipelineRunContext): string {
+	const isPhaseEvent = ctx.story.actLine.plotMode === 'phaseEvent';
+	const base = isPhaseEvent
+		? ctx.prompts.phaseEventPlotPlannerExtractionPrompt.replaceAll(
+				'{{currentActPhase}}',
+				getLocalizedActPhase(ctx.story.actLine.currentActPhase ?? 'introduction')
+			)
+		: ctx.prompts.guidancePlotPlannerExtractionPrompt.replaceAll('{{currentScene}}', ctx.currentScene);
+	return base
+		.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
+		.replaceAll(/{{memoryToolsInstruction}}\r?\n/g, memoryToolsPartial(plotPlannerMemoryToolsInstruction()))
+		.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, inventoryToolsPartial(plotPlannerInventoryToolsInstruction()))
+		.replaceAll('{{actPhaseBoundaries}}', resolveActPhaseBoundaries(ctx));
 }
 
 export async function runGamePhases(
@@ -639,8 +575,8 @@ export async function runGamePhases(
 	const runPlotPlanner = plotPlannerPending && plotPlannerShouldRun;
 
 	if (gmPending && runPlotPlanner) {
-		const gmPromise = executeGmPhase(ctx, state, postEditorCtx);
-		const plotPromise = executePlotPlannerPhase(resolvePlotPlannerPrompt(ctx), ctx, postEditorCtx, state);
+		const gmPromise = executeGmPhase(ctx, state);
+		const plotPromise = executePlotPlannerPhase(ctx, state);
 
 		// Track each phase as soon as it completes so an interruption or failure
 		// of the sibling phase cannot lose the completed one's cached output.
@@ -660,11 +596,11 @@ export async function runGamePhases(
 	}
 
 	if (gmPending) {
-		const gmResult = await executeGmPhase(ctx, state, postEditorCtx);
+		const gmResult = await executeGmPhase(ctx, state);
 		state = await trackPhase('GAME_MASTER', gmResult, ctx.providerConfigs.gameMaster?.model);
 	} else if (runPlotPlanner) {
 		// GM already completed (resumed from cache); only the Plot Planner remains
-		const plotResult = await executePlotPlannerPhase(resolvePlotPlannerPrompt(ctx), ctx, postEditorCtx, state);
+		const plotResult = await executePlotPlannerPhase(ctx, state);
 		state = updateState(state, { scenePlot: plotResult.state.scenePlot });
 		await trackPhase('PLOT_PLANNER', plotResult, ctx.providerConfigs.plotPlanner?.model);
 		return state;
@@ -697,23 +633,20 @@ export async function runGmTemplateFitter(ctx: PipelineRunContext, state: Pipeli
 	return trackPhase('GM_TEMPLATE_FITTER', result, ctx.providerConfigs.minorTaskAgent?.model);
 }
 
-export function executeGmPhase(ctx: PipelineRunContext, state: PipelineState, postEditorCtx: PostEditorContext) {
-	const v2 = ctx.contextV2;
+export function executeGmPhase(ctx: PipelineRunContext, state: PipelineState) {
 	return executeStreamingPhase(
 		{
 			phaseName: 'GAME_MASTER',
-			systemPrompt: v2 ? resolveSharedSystemPrompt(ctx.prompts) : resolveGmSystemPrompt(ctx.prompts.gameMasterSystemPrompt),
+			systemPrompt: resolveSharedSystemPrompt(ctx.prompts),
 			...ctx.sharedParams,
-			tools: v2 ? guardToolsForPhase(ctx.tools, 'GAME_MASTER') : filterToolsForPhase(ctx.tools, 'GAME_MASTER'),
+			tools: guardToolsForPhase(ctx.tools, 'GAME_MASTER'),
 			descriptors: getGameMasterDescriptors(),
-			messages: v2
-				? buildPhaseMessagesV2(
-						v2,
-						state.editorOutput ? [SECTION.EDITOR_OUTPUT + state.editorOutput] : [],
-						resolveGmExtractionPromptV2ForContext(ctx),
-						ctx.preEditorCtx.directorNotes
-					)
-				: buildGamePhaseMessages(postEditorCtx, resolveGmExtractionPromptForContext(ctx)),
+			messages: buildPhaseMessages(
+				ctx.context,
+				state.editorOutput ? [SECTION.EDITOR_OUTPUT + state.editorOutput] : [],
+				resolveGmExtractionPromptForContext(ctx),
+				ctx.preEditorCtx.directorNotes
+			),
 			providerConfig: ctx.providerConfigs.gameMaster,
 			buildStateUpdate: buildGmStateUpdate,
 		},
@@ -721,44 +654,20 @@ export function executeGmPhase(ctx: PipelineRunContext, state: PipelineState, po
 	);
 }
 
-function executePlotPlannerPhase(
-	plotPlannerPrompt: string,
-	ctx: PipelineRunContext,
-	postEditorCtx: PostEditorContext,
-	state: PipelineState
-) {
-	const v2 = ctx.contextV2;
-	const plotExtractionV2 = v2
-		? plotPlannerExtractionPromptV2(ctx.story.actLine.plotMode, ctx.currentScene, ctx.story.actLine.currentActPhase)
-				.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
-				.replaceAll(/{{memoryToolsInstruction}}\r?\n/g, memoryToolsPartial(plotPlannerMemoryToolsInstruction()))
-				.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, inventoryToolsPartial(plotPlannerInventoryToolsInstruction()))
-				.replaceAll('{{actPhaseBoundaries}}', resolveActPhaseBoundaries(ctx))
-		: '';
+function executePlotPlannerPhase(ctx: PipelineRunContext, state: PipelineState) {
 	return executeStreamingPhase(
 		{
 			phaseName: 'PLOT_PLANNER',
-			systemPrompt: v2
-				? resolveSharedSystemPrompt(ctx.prompts)
-				: plotPlannerPrompt
-						.replaceAll('{{generalInstructions}}', ctx.prompts.generalInstructions)
-						.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
-						.replaceAll(/{{memoryToolsInstruction}}\r?\n/g, memoryToolsPartial(plotPlannerMemoryToolsInstruction()))
-						.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, inventoryToolsPartial(plotPlannerInventoryToolsInstruction())),
+			systemPrompt: resolveSharedSystemPrompt(ctx.prompts),
 			...ctx.sharedParams,
-			tools: v2 ? guardToolsForPhase(ctx.tools, 'PLOT_PLANNER') : filterToolsForPhase(ctx.tools, 'PLOT_PLANNER'),
+			tools: guardToolsForPhase(ctx.tools, 'PLOT_PLANNER'),
 			descriptors: getPlotPlannerDescriptors(),
-			messages: v2
-				? buildPhaseMessagesV2(
-						v2,
-						state.editorOutput ? [SECTION.EDITOR_OUTPUT + state.editorOutput] : [],
-						plotExtractionV2,
-						ctx.preEditorCtx.directorNotes
-					)
-				: buildGamePhaseMessages(
-						postEditorCtx,
-						plotPlannerExtractionPrompt(ctx.story.actLine.plotMode, ctx.currentScene, ctx.story.actLine.currentActPhase)
-					),
+			messages: buildPhaseMessages(
+				ctx.context,
+				state.editorOutput ? [SECTION.EDITOR_OUTPUT + state.editorOutput] : [],
+				resolvePlotPlannerExtractionPromptForContext(ctx),
+				ctx.preEditorCtx.directorNotes
+			),
 			providerConfig: ctx.providerConfigs.plotPlanner,
 			buildStateUpdate: buildPlotPlannerStateUpdate,
 		},

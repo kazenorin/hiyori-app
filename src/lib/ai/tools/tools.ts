@@ -50,27 +50,13 @@ export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 	CHARACTER_PROFILE_COMPRESSOR: [],
 };
 
-/** Filter a full ToolSet down to only the tools allowed for a given phase. */
-export function filterToolsForPhase(allTools: ToolSet | undefined, phase: PhaseName): ToolSet | undefined {
-	if (!allTools) return undefined;
-	const allowed = PHASE_TOOLS[phase];
-	const filtered: ToolSet = {};
-	for (const name of allowed) {
-		if (name in allTools) {
-			filtered[name] = allTools[name];
-		}
-	}
-	return Object.keys(filtered).length > 0 ? filtered : undefined;
-}
-
 /** Side-effecting tools whose no-op result is `{ result }` rather than a bare string. */
 const RESULT_SHAPED_TOOLS: ReadonlySet<string> = new Set(['advance-phase', 'end-act', 'set-scene-title']);
 
 /**
  * Phase-gated view of the full tool superset: identical schema for every phase (so the
  * tool block stays inside the cacheable prefix), but side-effecting tools outside their
- * allowed phase no-op with a short explanatory message. Replaces `filterToolsForPhase`
- * as the availability gate under pipelineContextV2.
+ * allowed phase no-op with a short explanatory message.
  */
 export function guardToolsForPhase(allTools: ToolSet | undefined, phase: PhaseName): ToolSet | undefined {
 	if (!allTools) return undefined;

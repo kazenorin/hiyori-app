@@ -1,5 +1,3 @@
-import { isQuickReview } from '$lib/stores/settings.svelte';
-import { writerEpilogueExtractionPrompt } from '$lib/definitions/pipeline-prompts';
 import type { ActPhase, EndingType } from '../narrative-types';
 import { DEFAULT_RETRY_CONFIG, type PhaseMetadata, toPhaseMetadata } from '../chat-stream';
 import {
@@ -60,28 +58,22 @@ export interface EpiloguePipelineInput extends CommonPipelineInput {
 	endingType: EndingType;
 }
 
-function preparePipelinePrompts(loadedPrompts: LoadedPrompts) {
-	const reviewerPrompt = isQuickReview() ? loadedPrompts.quickReviewerSystemPromptTemplate : loadedPrompts.reviewerSystemPromptTemplate;
-	const prompts: PipelinePrompts = {
+function preparePipelinePrompts(loadedPrompts: LoadedPrompts): PipelinePrompts {
+	return {
 		generalInstructions: loadedPrompts.generalInstructions,
 		mainChatSystemPrompt: loadedPrompts.mainChatSystemPrompt,
 		writerOutputTemplate: loadedPrompts.writerOutputTemplate,
-		reviewerPrompt,
-		writerSystemPrompt: loadedPrompts.writerSystemPrompt,
-		editorSystemPrompt: loadedPrompts.editorSystemPrompt,
-		gameMasterSystemPrompt: loadedPrompts.gameMasterSystemPrompt,
-		plotPlannerSystemPrompt: loadedPrompts.plotPlannerSystemPrompt,
-		phaseEventPlotPlannerSystemPrompt: loadedPrompts.phaseEventPlotPlannerSystemPrompt,
 		guidanceWriterExtractionPrompt: loadedPrompts.guidanceWriterExtractionPrompt,
 		phaseEventWriterExtractionPrompt: loadedPrompts.phaseEventWriterExtractionPrompt,
-		guidanceWriterExtractionPromptV2: loadedPrompts.guidanceWriterExtractionPromptV2,
-		phaseEventWriterExtractionPromptV2: loadedPrompts.phaseEventWriterExtractionPromptV2,
+		epilogueWriterExtractionPrompt: loadedPrompts.epilogueWriterExtractionPrompt,
 		guidanceGameMasterExtractionPrompt: loadedPrompts.guidanceGameMasterExtractionPrompt,
 		phaseEventGameMasterExtractionPrompt: loadedPrompts.phaseEventGameMasterExtractionPrompt,
-		guidanceGameMasterExtractionPromptV2: loadedPrompts.guidanceGameMasterExtractionPromptV2,
-		phaseEventGameMasterExtractionPromptV2: loadedPrompts.phaseEventGameMasterExtractionPromptV2,
+		reviewerExtractionPrompt: loadedPrompts.reviewerExtractionPrompt,
+		quickReviewerExtractionPrompt: loadedPrompts.quickReviewerExtractionPrompt,
+		editorExtractionPrompt: loadedPrompts.editorExtractionPrompt,
+		guidancePlotPlannerExtractionPrompt: loadedPrompts.guidancePlotPlannerExtractionPrompt,
+		phaseEventPlotPlannerExtractionPrompt: loadedPrompts.phaseEventPlotPlannerExtractionPrompt,
 	};
-	return prompts;
 }
 
 async function buildPipelineContext(
@@ -115,7 +107,7 @@ async function buildPipelineContext(
 		story,
 		assistant,
 		narrativeOverrides,
-		contextV2: input.contextV2,
+		context: input.context,
 	};
 }
 
@@ -258,11 +250,10 @@ export async function runEpiloguePipeline(input: EpiloguePipelineInput): Promise
 
 	const tracker = buildTrackPhase(input.initialPhases);
 	const trackPhase = buildCommittingTrackPhase(tracker, input.initialState ?? {}, execution.onPhaseCommit);
-	const epilogueExtractionPrompt = writerEpilogueExtractionPrompt(getEndingLabel(endingType));
 
 	let state: PipelineState = { ...input.initialState };
 	if (state.writerOutput === undefined) {
-		state = await runWriterPhase(ctx, state, trackPhase, epilogueExtractionPrompt);
+		state = await runWriterPhase(ctx, state, trackPhase, getEndingLabel(endingType));
 	}
 	state = await runReviewerEditorPhases(ctx, state, trackPhase);
 	state = await runEditorTemplateFitter(ctx, state, trackPhase);

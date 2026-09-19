@@ -1,7 +1,7 @@
 import type { PipelineRunContext } from '$lib/ai/pipeline/runners';
 import { buildPipelineProviderConfigs } from '$lib/ai/chat/pipeline-config';
 import type { RetryConfig } from '$lib/ai/chat-stream';
-import type { AssistantContext, PreEditorContext, StoryContext } from '$lib/ai/pipeline/types';
+import type { AssistantContext, PipelineContext, PreEditorContext, StoryContext } from '$lib/ai/pipeline/types';
 import { createNarrativeOverrides } from '$lib/ai/narrative-types';
 
 export const EMPTY_PRE_EDITOR_CONTEXT: PreEditorContext = {
@@ -19,6 +19,17 @@ export const EMPTY_PRE_EDITOR_CONTEXT: PreEditorContext = {
 	directorNotes: '',
 	previousActSummaries: [],
 	actNumber: 1,
+};
+
+export const EMPTY_PIPELINE_CONTEXT: PipelineContext = {
+	worldContent: '',
+	actPlot: '',
+	previousActSummaries: [],
+	actNumber: 1,
+	summarizationPoint: 0,
+	characterProfiles: [],
+	actSummary: '',
+	scenesSections: [],
 };
 
 const IMPORT_STORY_CONTEXT: StoryContext = {
@@ -49,7 +60,8 @@ export function buildImportRunContext(
 	retryConfig: RetryConfig,
 	abortSignal: AbortSignal,
 	callbacks: PipelineRunContext['sharedParams']['callbacks'],
-	prompts: Partial<PipelineRunContext['prompts']>
+	prompts: Partial<PipelineRunContext['prompts']>,
+	overrides: { story?: StoryContext; currentScene?: string; context?: PipelineContext } = {}
 ): PipelineRunContext {
 	return {
 		sharedParams: {
@@ -60,30 +72,27 @@ export function buildImportRunContext(
 		providerConfigs: buildPipelineProviderConfigs(),
 		preEditorCtx: EMPTY_PRE_EDITOR_CONTEXT,
 		prompts: {
-			gameMasterSystemPrompt: '',
 			generalInstructions: '',
 			mainChatSystemPrompt: '',
 			writerOutputTemplate: '',
-			reviewerPrompt: '',
-			writerSystemPrompt: '',
-			editorSystemPrompt: '',
-			plotPlannerSystemPrompt: '',
-			phaseEventPlotPlannerSystemPrompt: '',
 			guidanceWriterExtractionPrompt: '',
 			phaseEventWriterExtractionPrompt: '',
-			guidanceWriterExtractionPromptV2: '',
-			phaseEventWriterExtractionPromptV2: '',
+			epilogueWriterExtractionPrompt: '',
+			reviewerExtractionPrompt: '',
+			quickReviewerExtractionPrompt: '',
+			editorExtractionPrompt: '',
+			guidancePlotPlannerExtractionPrompt: '',
+			phaseEventPlotPlannerExtractionPrompt: '',
 			guidanceGameMasterExtractionPrompt: '',
 			phaseEventGameMasterExtractionPrompt: '',
-			guidanceGameMasterExtractionPromptV2: '',
-			phaseEventGameMasterExtractionPromptV2: '',
 			...prompts,
 		},
 		effectiveTargetWordCount: '400',
-		currentScene: '1',
+		currentScene: overrides.currentScene ?? '1',
 		tools: undefined,
-		story: IMPORT_STORY_CONTEXT,
+		story: overrides.story ?? IMPORT_STORY_CONTEXT,
 		assistant: IMPORT_ASSISTANT_CONTEXT,
 		narrativeOverrides: createNarrativeOverrides(),
+		context: overrides.context ?? EMPTY_PIPELINE_CONTEXT,
 	};
 }

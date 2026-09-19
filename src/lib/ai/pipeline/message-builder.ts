@@ -1,11 +1,10 @@
 import type { MessageBase } from '$lib/db/messages';
 import type { ActPhase, GameDataFields, NarrativeOverrides, NarrativeVariables } from '../narrative-types';
 import { hasNarrativeOverrides } from '../narrative-types';
-import type { CommonPipelineInput, PipelineContext, PlayerContext, PostEditorContext, PreEditorContext } from './types';
+import type { CommonPipelineInput, PipelineContext, PlayerContext, PreEditorContext } from './types';
 import type { ActPhaseBoundary } from '$lib/db/act-lines';
 import type { StreamState } from '../chat-callbacks';
 import {
-	formatActPhaseBoundariesSection,
 	formatDirectorNotesSection,
 	formatPreviousNarrativeBody,
 	formatStorySoFar,
@@ -78,7 +77,6 @@ export function mergeGameData(original: GameDataFields | null, fitter: GameDataF
 	};
 }
 
-/** Check whether editor variables have template metadata. */
 export function editorHasTemplateMetadata(variables: NarrativeVariables | null | undefined): boolean {
 	return hasTemplateMetadata(variables);
 }
@@ -94,9 +92,6 @@ export function applyNarrativeOverrides(variables: NarrativeVariables | null, ov
 	return mergeVariables(variables, fitter);
 }
 
-/**
- * Convert an array of content strings into user messages.
- */
 export function toUserMessages(contents: string[]): MessageBase[] {
 	return contents.map((content) => ({ role: 'user' as const, content }));
 }
@@ -161,7 +156,7 @@ export function formatActSummaryForSummarizer(completedScenes: number, actSummar
 	return summarizerActSummary ? [actSummaryHeading + summarizerActSummary] : [];
 }
 
-// --- Stage-2 shared-prefix message builders (Tiers 0–1) ---
+// --- Shared-prefix message builders (Tiers 0–2) ---
 
 /** Assemble the Tier-0 Main Context message: World Content · Story so Far · Act Plot. */
 export function buildMainContextMessage(input: {
@@ -184,7 +179,7 @@ export function buildMainContextMessage(input: {
  * summarization point yet / the snapshot has no content — callers then omit the message entirely
  * and start Scenes from the act's first scene. Character Profiles are deliberately NOT included:
  * they are dynamic, so a snapshot pinned at the SP confuses the reader; the latest profiles are
- * emitted as their own section after Scenes (see buildPhaseMessagesV2).
+ * emitted as their own section after Scenes (see buildPhaseMessages).
  */
 export function buildSummariesMessage(input: { summarizationPoint: number; actSummary: string }): string | undefined {
 	if (input.summarizationPoint <= 0) return undefined;
@@ -194,7 +189,7 @@ export function buildSummariesMessage(input: { summarizationPoint: number; actSu
 }
 
 /**
- * Assemble a phase's messages under the redesigned prefix:
+ * Assemble a phase's messages under the shared cacheable prefix:
  * [Main Context][Summaries?][Scenes?][Character Profiles?] (Tiers 0–2, byte-identical across
  * phases) then [prior outputs…][extraction prompt][Director's Notes] (Tier 3 tail, per phase).
  *
@@ -203,7 +198,7 @@ export function buildSummariesMessage(input: { summarizationPoint: number; actSu
  * cache stability of Main Context/Summaries/Scenes across turns while still sharing the whole
  * prefix across this turn's phases.
  */
-export function buildPhaseMessagesV2(
+export function buildPhaseMessages(
 	ctx: PipelineContext,
 	priorOutputs: string[],
 	extractionPrompt: string,
@@ -217,76 +212,10 @@ export function buildPhaseMessagesV2(
 	return toUserMessages([...shared, ...tail]);
 }
 
-// --- Context interfaces ---
-
-/** Build the shared sections used by Writer, Reviewer, and Editor. */
-function buildPreEditorSections(ctx: PreEditorContext): string[] {
-	return [
-		SECTION.WORLD_CONTENT + ctx.worldContent,
-		SECTION.ACT_PLOT + ctx.actPlot,
-		...ctx.characterProfiles,
-		...formatStorySoFar(ctx.previousActSummaries, ctx.actNumber),
-		...formattedActSummary(ctx.actSummary),
-		...formatActPhaseBoundariesSection(ctx.actPhaseBoundaries),
-		...(ctx.previousScenePlot ? [SECTION.SCENE_PLOT + ctx.previousScenePlot] : []),
-		...formatPreviousNarrativeBody(ctx.previousNarrativeBody, ctx.completedScenes),
-		...playerResponseSection(ctx.player),
-		...formatTurnOfEventsSection(ctx.previousTurnOfEvents),
-		...formatDirectorNotesSection(ctx.directorNotes),
-	];
-}
-
-/** Build the shared sections used by Game Master and Plot Planner. */
-function buildPostEditorSections(ctx: PostEditorContext): string[] {
-	return [
-		SECTION.ACT_PLOT + ctx.actPlot,
-		...ctx.characterProfiles,
-		...formatStorySoFar(ctx.previousActSummaries, ctx.actNumber),
-		...formattedActSummary(ctx.actSummary),
-		...formatActPhaseBoundariesSection(ctx.actPhaseBoundaries),
-		...(ctx.previousScenePlot ? [SECTION.SCENE_PLOT + ctx.previousScenePlot] : []),
-		...formatPreviousNarrativeBody(ctx.previousNarrativeBody, ctx.completedScenes),
-		...playerResponseSection(ctx.player),
-		...formatTurnOfEventsSection(ctx.previousTurnOfEvents),
-		...(ctx.editorOutput ? [SECTION.EDITOR_OUTPUT + ctx.editorOutput] : []),
-		...formatDirectorNotesSection(ctx.directorNotes),
-	];
-}
-
 // --- Per-phase message builders ---
-
-export function buildWriterMessages(ctx: PreEditorContext, extractionPrompt: string): MessageBase[] {
-	return toUserMessages([...buildPreEditorSections(ctx), extractionPrompt]);
-}
-
-export function buildReviewerMessages(ctx: PreEditorContext, writerOutput: string | undefined, extractionPrompt: string): MessageBase[] {
-	return toUserMessages([
-		...buildPreEditorSections(ctx),
-		...(writerOutput ? [SECTION.WRITER_OUTPUT + writerOutput] : []),
-		extractionPrompt,
-	]);
-}
-
-export function buildEditorMessages(
-	ctx: PreEditorContext,
-	writerOutput: string | undefined,
-	reviewerOutput: string | undefined,
-	extractionPrompt: string
-): MessageBase[] {
-	return toUserMessages([
-		...buildPreEditorSections(ctx),
-		...(writerOutput ? [SECTION.WRITER_OUTPUT + writerOutput] : []),
-		...(reviewerOutput ? [SECTION.REVIEWER_OUTPUT + reviewerOutput] : []),
-		extractionPrompt,
-	]);
-}
 
 export function buildEditorFitterMessages(editorOutput: string, writerOutputTemplate: string, extractionPrompt: string): MessageBase[] {
 	return toUserMessages([SECTION.EDITOR_OUTPUT + editorOutput, SECTION.WRITER_OUTPUT_TEMPLATE + writerOutputTemplate, extractionPrompt]);
-}
-
-export function buildGamePhaseMessages(ctx: PostEditorContext, extractionPrompt: string): MessageBase[] {
-	return toUserMessages([...buildPostEditorSections(ctx), extractionPrompt]);
 }
 
 export function buildGmFitterMessages(editorOutput: string, gmOutput: string, extractionPrompt: string): MessageBase[] {

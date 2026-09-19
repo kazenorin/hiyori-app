@@ -591,38 +591,37 @@ async function buildPipelineInput(session: InternalSession, plan: RunPlan): Prom
 		},
 	});
 
-	let contextV2: PipelineContext | undefined;
-	if (isMain && settings.pipelineContextV2) {
-		const sp = resolveSummarizationPoint(completedScenes + 1, settings.summarizationPointInterval);
-		const actSummaryV2 = sp > 0 ? _getActSummaryAtScene(lineMessages, sp) : '';
-		// Summaries are injected only when an SP resolved AND the act-summary snapshot has content;
-		// otherwise Scenes must start from the act's first scene (design §SP-resolution).
-		const hasSummaries = sp > 0 && actSummaryV2.trim().length > 0;
-		// Latest profiles are loaded regardless of the SP (they are dynamic; a snapshot pinned at the
-		// SP confuses the reader). When an Act Summary@SP is present, per-scene details at or before
-		// the SP are dropped because its Character Summaries already cover them.
-		const profilesV2 = formatCharacterProfilesSection(
-			latestProfiles,
-			settings.characterProfileImportanceThreshold,
-			settings.characterProfileMaxIncluded,
-			hasSummaries ? sp : 0
-		);
-		// Scenes run from SP+1, clamped so the last completed scene is always included: it carries
-		// the current player response folded into its block (see buildScenesSections). Without the
-		// clamp, on boundary turns (SP >= completedScenes) that scene — and the player response
-		// triggering this generation — would fall below the range and be dropped.
-		const scenesSections = buildScenesSections(lineMessages, hasSummaries ? Math.min(sp + 1, completedScenes) : 1, previousScenePlot);
-		contextV2 = {
-			worldContent,
-			actPlot,
-			previousActSummaries,
-			actNumber,
-			summarizationPoint: hasSummaries ? sp : 0,
-			characterProfiles: profilesV2,
-			actSummary: actSummaryV2,
-			scenesSections,
-		};
-	}
+	// Shared-prefix context (Tiers 0–2): assembled once per run and reused by every phase so
+	// their request prefixes are byte-identical. Main and epilogue runs build it identically.
+	const sp = resolveSummarizationPoint(completedScenes + 1, settings.summarizationPointInterval);
+	const actSummaryAtSp = sp > 0 ? _getActSummaryAtScene(lineMessages, sp) : '';
+	// Summaries are injected only when an SP resolved AND the act-summary snapshot has content;
+	// otherwise Scenes must start from the act's first scene (design §SP-resolution).
+	const hasSummaries = sp > 0 && actSummaryAtSp.trim().length > 0;
+	// Latest profiles are loaded regardless of the SP (they are dynamic; a snapshot pinned at the
+	// SP confuses the reader). When an Act Summary@SP is present, per-scene details at or before
+	// the SP are dropped because its Character Summaries already cover them.
+	const profilesForPrefix = formatCharacterProfilesSection(
+		latestProfiles,
+		settings.characterProfileImportanceThreshold,
+		settings.characterProfileMaxIncluded,
+		hasSummaries ? sp : 0
+	);
+	// Scenes run from SP+1, clamped so the last completed scene is always included: it carries
+	// the current player response folded into its block (see buildScenesSections). Without the
+	// clamp, on boundary turns (SP >= completedScenes) that scene — and the player response
+	// triggering this generation — would fall below the range and be dropped.
+	const scenesSections = buildScenesSections(lineMessages, hasSummaries ? Math.min(sp + 1, completedScenes) : 1, previousScenePlot);
+	const context: PipelineContext = {
+		worldContent,
+		actPlot,
+		previousActSummaries,
+		actNumber,
+		summarizationPoint: hasSummaries ? sp : 0,
+		characterProfiles: profilesForPrefix,
+		actSummary: actSummaryAtSp,
+		scenesSections,
+	};
 
 	const common: CommonPipelineInput = {
 		execution: {
@@ -643,7 +642,7 @@ async function buildPipelineInput(session: InternalSession, plan: RunPlan): Prom
 		targetWordCount,
 		initialState: resumeRecord?.state,
 		initialPhases: resumeRecord?.phaseMetadata,
-		contextV2,
+		context,
 	};
 
 	if (isMain) return { ...common, previousScenePlot, player };

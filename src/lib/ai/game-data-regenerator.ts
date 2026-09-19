@@ -7,14 +7,14 @@ import { emptyGameDataFields } from './narrative-types';
 import { parseContent } from '$lib/utils/chat-stream-parser';
 import { variablesToMarkdown } from './template-renderer';
 import { getGameMasterDescriptors } from './descriptors';
-import { gameMasterSystemPromptLoader, guidanceGameMasterExtractionPromptLoader } from '$lib/fs/prompts';
+import { generalInstructionsLoader, guidanceGameMasterExtractionPromptLoader, mainChatSystemPromptLoader } from '$lib/fs/prompts';
 import {
 	SECTION,
 	formatPreviousNarrativeBody,
 	formatTurnOfEventsSection,
 	formatDirectorNotesSection,
 } from '$lib/definitions/pipeline-sections';
-import { resolveGmExtractionPrompt, resolveGmSystemPrompt } from '$lib/ai/pipeline/runners';
+import { resolveGmExtractionPrompt } from '$lib/ai/pipeline/runners';
 
 export interface GameDataRegenerationContext {
 	worldContent: string;
@@ -35,8 +35,13 @@ export async function regenerateGameData(params: GameDataRegenerationContext): P
 	const config = getMainProviderConfig();
 	if (!config?.model) return null;
 
-	const gameMasterSystemPrompt = resolveGmSystemPrompt(await gameMasterSystemPromptLoader.loadDefault());
-	const gmExtractionPrompt = resolveGmExtractionPrompt(await guidanceGameMasterExtractionPromptLoader.loadDefault(), {
+	const [mainChatSystemPrompt, generalInstructions, guidanceGameMasterExtraction] = await Promise.all([
+		mainChatSystemPromptLoader.loadDefault(),
+		generalInstructionsLoader.loadDefault(),
+		guidanceGameMasterExtractionPromptLoader.loadDefault(),
+	]);
+	const systemPrompt = mainChatSystemPrompt.replaceAll('{{generalInstructions}}', generalInstructions);
+	const gmExtractionPrompt = resolveGmExtractionPrompt(guidanceGameMasterExtraction, {
 		currentScene: String(sceneNumber),
 		inventoryToolsInstruction: '',
 	});
@@ -58,7 +63,7 @@ export async function regenerateGameData(params: GameDataRegenerationContext): P
 
 	const messages: MessageBase[] = contents.map((content) => ({ role: 'user' as const, content }));
 
-	const result = await generateText({ model, instructions: gameMasterSystemPrompt, messages, ...(config.callSettings ?? {}) });
+	const result = await generateText({ model, instructions: systemPrompt, messages, ...(config.callSettings ?? {}) });
 	const gmText = result.text.trim();
 	if (!gmText) return null;
 

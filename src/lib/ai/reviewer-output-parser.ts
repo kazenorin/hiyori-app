@@ -73,7 +73,7 @@ function isAcceptAsIs(recommendation: string): boolean {
  *
  * Uses chat-stream-parser with locale-aware descriptors to match the Summary section's labeled
  * list items (total violations and recommendation) regardless of the active locale. The verdict is
- * tolerant of cosmetic model deviations (extra wording, casing, hyphenation) because the v2
+ * tolerant of cosmetic model deviations (extra wording, casing, hyphenation) because the
  * shared-prefix path places the output-format template in a user message rather than the system
  * prompt, so the reviewer drifts from the exact template more often. Both a zero violation count
  * AND an accept-as-is recommendation are required, so any non-accept verdict still routes to the Editor.

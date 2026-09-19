@@ -124,8 +124,8 @@ export interface CommonPipelineInput {
 	initialState?: PipelineState;
 	/** Phase metadata entries from the earlier run, seeded into the tracker. */
 	initialPhases?: PhaseMetadata[];
-	/** Stage-2 shared-prefix context; present only when `settings.pipelineContextV2` is on (main runs only). */
-	contextV2?: PipelineContext;
+	/** Shared-prefix context (Tiers 0–2) reused by every phase this run. */
+	context: PipelineContext;
 }
 
 export interface PipelineInput extends CommonPipelineInput {
@@ -176,9 +176,8 @@ export interface PostEditorContext {
 }
 
 /**
- * Stage-2 shared context (Tiers 0–2), assembled once per run and reused by every
- * phase so their request prefixes are byte-identical. Additive: the legacy
- * PreEditorContext/PostEditorContext remain until 2F switches call sites over.
+ * Shared context (Tiers 0–2), assembled once per run and reused by every phase so
+ * their request prefixes are byte-identical for prompt caching.
  */
 export interface PipelineContext {
 	// Tier 0 — Main Context (frozen for the act)

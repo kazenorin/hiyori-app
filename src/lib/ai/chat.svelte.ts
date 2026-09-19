@@ -8,10 +8,8 @@ import {
 	getCharacterNames as _getCharacterNames,
 	getForkSequence as _getForkSequence,
 	getLatestActivePlotThreads as _getLatestActivePlotThreads,
-	getLatestActSummary as _getLatestActSummary,
 	getLatestDecisionContext as _getLatestDecisionContext,
 	getLatestDecisions as _getLatestDecisions,
-	getPlayerContext,
 	getScenePlotForScene as _getScenePlotForScene,
 } from './chat/message-queries';
 import {
@@ -30,14 +28,15 @@ import { executeGmPhase, type PipelineRunContext, runGmTemplateFitter, type Trac
 import { buildPipelineProviderConfigs } from './chat/pipeline-config';
 import { loadPrompts } from './pipeline/prompt-loader';
 import { buildImportRunContext } from '$lib/features/import-world/pipeline-context';
-import { gameMasterSystemPromptLoader } from '$lib/fs/prompts';
+import { buildScenesSections } from './pipeline/scenes-builder';
 import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
 import * as runManager from './chat/run-manager';
 import type { InterruptedRunInfo } from './chat/run-manager';
 import type { PipelineRunKind } from '$lib/db/pipeline-runs';
-import type { PipelineState, PostEditorContext } from './pipeline/types';
+import type { PipelineContext, PipelineState } from './pipeline/types';
 import { getErrorMessage } from '$lib/utils/error-handling';
 import { ensureActPlot } from '$lib/ai/act-plot';
+import { ensureWorldFile } from '$lib/ai/world-generator';
 import type { Story } from '$lib/db/stories';
 import { createOptionalCallbacks } from './chat/pipeline-callbacks';
 import { ls } from '$lib/localization';
@@ -542,7 +541,32 @@ async function regenerateGameData(
 		return;
 	}
 
-	const gmSystemPrompt = await gameMasterSystemPromptLoader.loadDefault();
+	const plotMode = actLine.plotMode ?? getDefaultPlotMode();
+	const currentActPhase = await dbActLines.getActPhase(actLine.id);
+	const actPhaseBoundaries = await dbActLines.getActPhaseBoundaries(actLine.id);
+	const currentSceneNumber = assistantMsg.sceneNumber ?? 1;
+	const completedScenes = currentSceneNumber - 1;
+	// Everything before the message being regenerated: scenes 1..N-1 plus the player turn
+	// that triggered it, matching what a live GM run folds into its shared prefix.
+	const priorMessages = msgs.slice(0, assistantIdx);
+	const previousScenePlot = _getScenePlotForScene(priorMessages, completedScenes, plotMode);
+
+	// Rebuild the shared-prefix context so the GM sees the same Tiers 0–2 a live run would.
+	// Character profiles and prior-act summaries are not fetched for a one-off regeneration.
+	const worldContent = await ensureWorldFile(story.id, story.name, abortController.signal);
+	const actPlot = await ensureActPlot({ story, actLine, worldContent, abortSignal: abortController.signal });
+	const context: PipelineContext = {
+		worldContent,
+		actPlot,
+		previousActSummaries: [],
+		actNumber: 1,
+		summarizationPoint: 0,
+		characterProfiles: [],
+		actSummary: '',
+		scenesSections: buildScenesSections(priorMessages, 1, previousScenePlot),
+	};
+
+	const loadedPrompts = await loadPrompts(story.id, story.name);
 
 	const ctx: PipelineRunContext = buildImportRunContext(
 		{ retryCount: 3, backoffIntervalSeconds: 5 },
@@ -552,36 +576,35 @@ async function regenerateGameData(
 				log.error('regenerate-metadata', 'GM phase error', err);
 			},
 		}),
-		{ gameMasterSystemPrompt: gmSystemPrompt }
+		{
+			generalInstructions: loadedPrompts.generalInstructions,
+			mainChatSystemPrompt: loadedPrompts.mainChatSystemPrompt,
+			guidanceGameMasterExtractionPrompt: loadedPrompts.guidanceGameMasterExtractionPrompt,
+			phaseEventGameMasterExtractionPrompt: loadedPrompts.phaseEventGameMasterExtractionPrompt,
+		},
+		{
+			currentScene: String(currentSceneNumber),
+			story: {
+				storyId: story.id,
+				storyName: story.name,
+				actLine: {
+					...actLine,
+					plotMode,
+					currentActPhase,
+					actPhaseBoundaries,
+					lastPlotGeneration: null,
+					actNumber: 1,
+					currentActPhaseLengthEstimate: null,
+					currentScene: currentSceneNumber,
+				},
+			},
+			context,
+		}
 	);
 
-	const plotMode = actLine.plotMode ?? getDefaultPlotMode();
-	const currentActPhase = await dbActLines.getActPhase(actLine.id);
-	const actPhaseBoundaries = await dbActLines.getActPhaseBoundaries(actLine.id);
-	const previousSceneNumber = assistantMsg.sceneNumber ?? 0;
-	const previousScenePlot = _getScenePlotForScene(msgs, previousSceneNumber, plotMode);
-	const actPlot = await ensureActPlot({ story, actLine });
-
-	const postEditorCtx: PostEditorContext = {
-		actPlot,
-		actPhase: currentActPhase,
-		actPhaseBoundaries,
-		actSummary: _getLatestActSummary(msgs),
-		characterProfiles: [], // not fetched for game-data regeneration
-		previousScenePlot,
-		previousNarrativeBody: assistantMsg.variables?.narrativeBody ?? undefined,
-		completedScenes: previousSceneNumber,
-		player: getPlayerContext(msgs),
-		previousTurnOfEvents: assistantMsg.variables?.turnOfEvents ?? undefined,
-		editorOutput: assistantMsg.content,
-		directorNotes: '',
-		previousActSummaries: [],
-		actNumber: 1,
-	};
-
 	const trackPhase: TrackPhase = (_phaseName, result) => result.state;
-	let state: PipelineState = {};
-	const gmResult = await executeGmPhase(ctx, state, postEditorCtx);
+	let state: PipelineState = { editorOutput: assistantMsg.content };
+	const gmResult = await executeGmPhase(ctx, state);
 	state = await trackPhase('GAME_MASTER', gmResult, providerConfigs.gameMaster?.model);
 	state = await runGmTemplateFitter(ctx, state, trackPhase);
 
