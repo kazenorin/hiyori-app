@@ -31,6 +31,8 @@ Whenever a new named character needs to be introduced, you must do the following
   - Do not use `read-scene` on Scene {{previousScene}}, as you already have the full narrative body
   - Use `read-distant-scene` to retrieve contents of scenes from past Acts
 
+**Grounding check:** every fact you state about a past event or about any character must be traceable to the `# Scenes`, `# Summaries` and `## Character Profiles` sections above. What you cannot trace stays unwritten.
+
 ## Output Format
 
 - **Scene Title**: A short title reflecting the current scene's theme or focus.

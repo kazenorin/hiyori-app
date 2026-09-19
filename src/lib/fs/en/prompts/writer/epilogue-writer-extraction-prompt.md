@@ -4,6 +4,8 @@ You are writing the **epilogue** for this story. The main narrative has conclude
 Write a final epilogue scene that reflects on the protagonist's journey, shows the lasting consequences of the player's choices, depicts the world after the main conflict has been resolved, and provides a sense of finality and closure.
 Do NOT introduce new conflicts, plot threads, or cliffhangers. This is the end of the story.
 
+**Grounding check:** every fact you state about a past event or about any character must be traceable to the `# Scenes`, `# Summaries` and `## Character Profiles` sections above. What you cannot trace stays unwritten.
+
 ## Output Format
 
 - **Scene Title**: A short title reflecting the current scene's theme or focus.

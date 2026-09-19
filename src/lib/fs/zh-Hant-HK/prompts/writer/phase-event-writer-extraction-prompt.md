@@ -68,6 +68,8 @@
     {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
     {{directorNotesReinforcementPhrase}}
 
+**根據檢查:** 你對過往事件或任何角色所陳述的每一項事實，都必須能追溯至上方的 `# 場景`、`# 摘要` 和 `## 角色檔案` 區塊。無法追溯的內容一律不寫。
+
 ## 輸出格式
 
 - **場景標題**: 反映當前場景主題或焦點的簡短標題。

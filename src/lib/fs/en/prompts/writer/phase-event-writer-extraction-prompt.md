@@ -68,6 +68,8 @@ Call the `advance-phase` tool **at most once per scene**, and **ONLY** when the 
     {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
     {{directorNotesReinforcementPhrase}}
 
+**Grounding check:** every fact you state about a past event or about any character must be traceable to the `# Scenes`, `# Summaries` and `## Character Profiles` sections above. What you cannot trace stays unwritten.
+
 ## Output Format
 
 - **Scene Title**: A short title reflecting the current scene's theme or focus.
