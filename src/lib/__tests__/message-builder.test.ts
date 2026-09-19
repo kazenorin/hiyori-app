@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import {
 	applyNarrativeOverrides,
 	buildMainContextMessage,
-	buildPhaseMessagesV2,
+	buildPhaseMessages,
 	buildSummariesMessage,
 	mergeVariables,
 } from '$lib/ai/pipeline/message-builder';
@@ -145,7 +145,7 @@ describe('buildMainContextMessage', () => {
 	});
 });
 
-describe('buildPhaseMessagesV2', () => {
+describe('buildPhaseMessages', () => {
 	const ctx = {
 		worldContent: 'W',
 		actPlot: 'P',
@@ -159,8 +159,8 @@ describe('buildPhaseMessagesV2', () => {
 	it('orders Main Context → Summaries → Scenes → Character Profiles → prior outputs → extraction prompt → Director Notes', () => {
 		// Why: the tier order is the cache-stability contract — Tiers 0–2 (Main Context, Summaries,
 		// Scenes, Character Profiles) must precede the per-phase tail so the shared prefix is
-		// byte-identical. Profiles trail Scenes because they change every turn (see buildPhaseMessagesV2).
-		const msgs = buildPhaseMessagesV2(ctx, ['## Writer Output\n\nDRAFT'], 'DO THE TASK', 'be concise');
+		// byte-identical. Profiles trail Scenes because they change every turn (see buildPhaseMessages).
+		const msgs = buildPhaseMessages(ctx, ['## Writer Output\n\nDRAFT'], 'DO THE TASK', 'be concise');
 		const joined = msgs.map((m) => m.content).join('\n');
 		const idx = (s: string) => joined.indexOf(s);
 		expect(idx('# Main Context')).toBeLessThan(idx('# Summaries'));
@@ -173,22 +173,22 @@ describe('buildPhaseMessagesV2', () => {
 	it('does not place Character Profiles inside the Summaries message', () => {
 		// Why: a profile snapshot pinned inside Summaries (before Scenes) confused readers and
 		// shortened the cache-stable prefix; profiles are now their own section after Scenes.
-		const msgs = buildPhaseMessagesV2(ctx, [], 'TASK', '');
+		const msgs = buildPhaseMessages(ctx, [], 'TASK', '');
 		const summaries = msgs.find((m) => m.content.includes('# Summaries'))?.content ?? '';
 		expect(summaries).not.toContain('Elena');
 	});
 	it('omits the Character Profiles message when there are no profiles', () => {
-		const msgs = buildPhaseMessagesV2({ ...ctx, characterProfiles: [] }, [], 'TASK', '');
+		const msgs = buildPhaseMessages({ ...ctx, characterProfiles: [] }, [], 'TASK', '');
 		expect(msgs.map((m) => m.content).join('\n')).not.toContain('## Character Profiles');
 	});
 	it('omits the Summaries message when there is no SP', () => {
-		const msgs = buildPhaseMessagesV2({ ...ctx, summarizationPoint: 0 }, [], 'TASK', '');
+		const msgs = buildPhaseMessages({ ...ctx, summarizationPoint: 0 }, [], 'TASK', '');
 		expect(msgs.map((m) => m.content).join('\n')).not.toContain('# Summaries');
 	});
 	it('omits the Scenes message when there are no scene sections', () => {
 		// Why: a header-only "# Scenes" message would sit in the shared prefix of every phase
 		// carrying no information (e.g. the first scene of an act), so it must be dropped.
-		const msgs = buildPhaseMessagesV2({ ...ctx, scenesSections: [] }, [], 'TASK', '');
+		const msgs = buildPhaseMessages({ ...ctx, scenesSections: [] }, [], 'TASK', '');
 		expect(msgs.map((m) => m.content).join('\n')).not.toContain('# Scenes');
 	});
 });

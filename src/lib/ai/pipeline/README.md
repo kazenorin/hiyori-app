@@ -1,6 +1,6 @@
 # Narrative Generation Pipeline
 
-> **Last updated:** 2026-09-11 | **Version:** 1.8.0
+> **Last updated:** 2026-09-19 | **Version:** 1.8.0
 
 Multi-phase LLM pipeline that generates narrative prose, game data, and scene plots for interactive fiction.
 
@@ -109,12 +109,12 @@ On resume these conditions are re-evaluated with current settings, but cached ou
 
 The pipeline supports two plot modes stored on `ActLineMeta.plotMode`:
 
-- **`guidance`** — Plot Planner always runs (when enabled). Writer uses `writerGuidanceExtractionPrompt()`.
-- **`phaseEvent`** — Narrative advances through act phases (`introduction` → `rising-action` → `climax` → `falling-action` → `resolution`). Writer uses `writerPhaseEventExtractionPrompt()`. Act-end triggers are injected into the Game Master system prompt when in a `falling-action` or later phase. The Plot Planner uses a separate `phaseEventPlotPlannerSystemPrompt`.
+- **`guidance`** — Plot Planner always runs (when enabled). Writer uses the `guidanceWriterExtractionPrompt`.
+- **`phaseEvent`** — Narrative advances through act phases (`introduction` → `rising-action` → `climax` → `falling-action` → `resolution`). Writer uses the `phaseEventWriterExtractionPrompt` (which resolves the act-phase progression placeholders and the act-end instruction), and the Plot Planner and Game Master select their `phaseEvent…` extraction prompts.
 
-## System Prompt Variable Replacement
+## Prompt Variable Replacement
 
-All system prompts use `{{variable}}` placeholders resolved at runtime:
+Prompts use `{{variable}}` placeholders resolved at runtime by `runners.ts` (via `.replaceAll`):
 
 | Placeholder                                                | Used By                                | Source                                                      |
 | ---------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------- |
@@ -125,50 +125,25 @@ All system prompts use `{{variable}}` placeholders resolved at runtime:
 | `{{inventoryToolsInstruction}}`                            | Writer, Reviewer, Plot Planner, GM     | Emitted only when `isInventoryAvailable()`; else blank line |
 | `{{acceptAsIs}}`                                           | Reviewer                               | Localized label                                             |
 | `{{summary}}`, `{{totalViolations}}`, `{{recommendation}}` | Reviewer                               | Localized labels                                            |
-| `{{additionalRules}}`                                      | Game Master (system + extraction)      | Currently always empty; placeholder kept for future use     |
+| `{{additionalRules}}`                                      | Game Master extraction                 | Currently always empty; placeholder kept for future use     |
 
-The Game Master **system** prompt resolves only `{{additionalRules}}`; the GM **extraction** prompt additionally resolves `{{currentScene}}`, `{{inventoryToolsInstruction}}`, and (in `phaseEvent` mode) `{{currentActPhase}}`.
+Every phase shares one system prompt (`mainChatSystemPrompt` with `{{generalInstructions}}` substituted); role framing now lives inside each phase's extraction prompt. The GM extraction prompt resolves `{{currentScene}}`, `{{inventoryToolsInstruction}}`, `{{additionalRules}}`, and (in `phaseEvent` mode) `{{currentActPhase}}` and `{{actPhaseBoundaries}}`.
 
 Writer extraction prompts resolve: `{{previousScene}}`, `{{currentScene}}`, `{{providedSummary}}`, `{{providedTurnOfEvents}}`, `{{providedDirectorNotes}}`, `{{turnOfEventsReinforcementPhrase}}`, `{{directorNotesReinforcementPhrase}}`, `{{actEndInstruction}}`. The `phaseEvent` variant additionally resolves `{{currentActPhase}}`, `{{currentActPhaseProgress}}`, `{{estimatedPhaseLength}}`, `{{earlyPhaseThreshold}}`, and `{{latePhaseThreshold}}`.
 
 ## Context Passing
 
-Narrative context is passed as **user messages** (not system prompts). Two context interfaces determine which sections are included:
+Narrative context is passed as **user messages** (not system prompts). Every phase in a run shares one **tiered, byte-identical prefix** assembled once from a `PipelineContext` (Tiers 0–2) and appended to by `buildPhaseMessages`, so the phases' request prefixes are identical across a turn and append-only across turns:
 
-### `PreEditorContext` (Writer, Reviewer, Editor)
+- **Tier 0 — Main Context** (`buildMainContextMessage`): World Content · Story So Far (previous-act summaries) · Act Plot. Frozen for the act.
+- **Tier 1 — Summaries** (`buildSummariesMessage`): the Act Summary snapshot at the current summarization point, emitted only when an SP has resolved and the snapshot has content. Character Profiles are deliberately excluded here.
+- **Tier 2 — Scenes** (`buildScenesSections`): append-only raw scene blocks from the summarization point (or scene 1) up to the last completed scene, each folding the player response that followed it, plus the Upcoming Scene Plot. Character Profiles follow Scenes as their own section — they change every turn, so they sit last in the shared prefix to keep Tiers 0–2 stable.
 
-Sections in order (built by `buildPreEditorSections`):
+On top of the shared prefix each phase appends its **Tier 3 tail**: prior phase outputs (Writer Output for the Reviewer; Writer + Reviewer Output for the Editor; Editor Output for the Game Master and Plot Planner), the phase extraction prompt, and Director Notes.
 
-1. World Content
-2. Act Plot
-3. Character Profiles (inline for important cast, one-line refs for the rest)
-4. Story So Far (previous act summaries, if act > 1)
-5. Act Summary (pruned)
-6. Act Phase Boundaries (only when boundaries exist, i.e. `phaseEvent` mode)
-7. Previous Scene Plot
-8. Previous Narrative Body
-9. Player Response
-10. Turn of Events
-11. Director Notes
-12. Extraction prompt (appended last by the per-phase builder)
+### Prompt caching
 
-Additional sections inserted before the extraction prompt:
-
-- **Reviewer**: Writer Output
-- **Editor**: Writer Output + Reviewer Output
-
-### `PostEditorContext` (Game Master, Plot Planner)
-
-Same ordering as PreEditor but (built by `buildPostEditorSections`):
-
-- **No** World Content section
-- **Adds** Editor Output section (between Turn of Events and Director Notes)
-
-### Prompt caching (current behavior)
-
-The app relies on **implicit provider prefix caching only** — no explicit `cache_control`/`providerOptions` breakpoints are set anywhere in the streaming path ([`streaming.ts`](../streaming.ts), [`chat-stream.ts`](../chat-stream.ts)). `extractCacheTokens()` records `cacheReadTokens`/`cacheWriteTokens` when a provider reports them, so cache hits are visible in per-phase metadata but never engineered for.
-
-Each phase is an independent one-shot call: a **phase-specific system prompt** (`instructions`) plus a **freshly re-serialized** list of context user messages, plus a **phase-filtered tool set**. Because implicit caching matches the longest common token prefix and the system prompt is rendered first, two phases diverge at (or near) the start of the prompt even though their context sections overlap heavily. Cross-phase prefix reuse is therefore minimal today; the only reliable reuse is the stable head of a single phase's prompt across consecutive scenes (system prompt + World Content + Act Plot, up to the first section that changes each turn — typically the growing Act Summary). Caching is also strictly **per model**, so phases assigned to different provider roles can never share a cache regardless of layout.
+`run-manager.ts` builds the `PipelineContext` once per run (resolving the summarization point, act-summary snapshot, character profiles, and scene sections) and reuses it for every phase, so the shared prefix is byte-identical across phases within a turn. `extractCacheTokens()` records `cacheReadTokens`/`cacheWriteTokens` from providers that report them. Caching is strictly **per model**, so phases assigned to different provider roles cannot share a cache regardless of layout.
 
 ## Module Structure
 
@@ -178,7 +153,7 @@ Each phase is an independent one-shot call: a **phase-specific system prompt** (
 | `types.ts`           | Shared types: `PipelineState`, `PipelineInput`, `PipelineResult`, `PipelineCallbacks`, provider configs, context interfaces. Includes resume seeds (`initialState`, `initialPhases`).                      |
 | `runners.ts`         | Phase runner functions (`runWriterPhase`, `runReviewerEditorPhases`, `runGamePhases`, etc.), `PipelineRunContext`, `PipelinePrompts`, `buildStateUpdate` closures, phase-specific prompt resolution.       |
 | `phase-executor.ts`  | Generic phase execution engine. `executeStreamingPhase()` with retry logic, `runNonStreamingPhase()` for Summarizer/Compressor, metadata aggregation (`aggregateMetadata`, `aggregateMetadataFromPhases`). |
-| `message-builder.ts` | Per-phase message construction. `PreEditorContext`/`PostEditorContext` section builders, `AbstractPreEditorContext`, act summary formatters, `mergeVariables`/`mergeGameData` for template fitters.        |
+| `message-builder.ts` | Shared-prefix message assembly (`buildPhaseMessages` and the Tier 0–1 builders), act summary formatters, `mergeVariables`/`mergeGameData` for template fitters.        |
 | `summarizer.ts`      | Summarizer sub-pipeline (full/incremental), Character Profile Compressor, `runAsyncPhases()` orchestrator.                                                                                                 |
 | `prompt-loader.ts`   | Prompt loading via `PromptLoader` instances. `loadPrompts()` resolves story-specific overrides or bundled defaults.                                                                                        |
 
@@ -285,7 +260,7 @@ Runs after the Summarizer when `characterProfileCompressorInterval` scenes have 
 
 ## AI Tools
 
-`buildTools(storyId, actLine, assistant, overrides)` assembles all available tools. `filterToolsForPhase(allTools, phase)` restricts which tools each phase can use:
+`buildTools(storyId, actLine, assistant, overrides)` assembles all available tools. `guardToolsForPhase(allTools, phase)` keeps an identical schema for every phase (so the tool block stays inside the cacheable prefix) while side-effecting tools outside their allowed phase no-op with a short message:
 
 | Phase                        | Available Tools                                                                                                                                                                                               |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -309,18 +284,18 @@ Runs after the Summarizer when `characterProfileCompressorInterval` scenes have 
 
 `loadPrompts(storyId, storyName)` resolves all 16 prompt templates:
 
-- `generalInstructions` — story-specific general instructions
-- `writerSystemPrompt`, `writerOutputTemplate` — Writer
-- `guidanceWriterExtractionPrompt`, `phaseEventWriterExtractionPrompt` — Writer extraction task (selected by `plotMode`)
-- `reviewerSystemPromptTemplate`, `quickReviewerSystemPromptTemplate` — Reviewer
-- `editorSystemPrompt` — Editor
-- `gameMasterSystemPrompt` — Game Master
+- `generalInstructions` — shared general instructions substituted into the system prompt
+- `mainChatSystemPrompt` — the single shared system prompt (persona + general instructions + tools note)
+- `writerOutputTemplate` — Writer/Editor output template
+- `guidanceWriterExtractionPrompt`, `phaseEventWriterExtractionPrompt`, `epilogueWriterExtractionPrompt` — Writer extraction task (`guidance`/`phaseEvent` by `plotMode`; the epilogue run selects the epilogue variant, which reuses the writer scaffolding with an ending-specific task)
+- `reviewerExtractionPrompt`, `quickReviewerExtractionPrompt` — Reviewer extraction task (selected by `isQuickReview()` in the runner)
+- `editorExtractionPrompt` — Editor extraction task
+- `guidancePlotPlannerExtractionPrompt`, `phaseEventPlotPlannerExtractionPrompt` — Plot Planner extraction task (selected by `plotMode`)
 - `guidanceGameMasterExtractionPrompt`, `phaseEventGameMasterExtractionPrompt` — Game Master extraction task (selected by `plotMode`)
-- `plotPlannerSystemPrompt`, `phaseEventPlotPlannerSystemPrompt` — Plot Planner
 - `summarizerPrompt`, `summarizerIncrementalPrompt` — Summarizer
 - `characterProfileCompressorPrompt` — Character Profile Compressor
 
-Each uses a `PromptLoader` instance that checks for a story-specific override file before falling back to the bundled default. `preparePipelinePrompts()` then narrows these into the `PipelinePrompts` struct used at runtime (collapsing the two Reviewer templates into a single `reviewerPrompt` based on `isQuickReview()`).
+Each uses a `PromptLoader` instance that checks for a story-specific override file before falling back to the bundled default. `preparePipelinePrompts()` then narrows these into the `PipelinePrompts` struct used at runtime (the twelve pipeline prompts above; the Summarizer prompts are consumed separately).
 
 ## Adding a New Phase
 
@@ -328,9 +303,9 @@ Each uses a `PromptLoader` instance that checks for a story-specific override fi
 2. Add a `PHASE_TOOLS` entry in `tools.ts` specifying which tools the phase can use.
 3. Add output fields to `PipelineState` in `types.ts`.
 4. Create descriptors in `descriptors.ts` if the phase extracts structured fields.
-5. Create message builder(s) in `message-builder.ts` (or extend existing section builders).
+5. Add a per-phase extraction prompt (FS markdown, both locales) carrying the phase's role framing and task; assemble messages with `buildPhaseMessages(ctx.context, priorOutputs, extractionPrompt, directorNotes)`.
 6. Write the runner function in `runners.ts` — follow the pattern of `runWriterPhase`:
-   - Build system prompt with variable replacement
+   - Use `resolveSharedSystemPrompt(ctx.prompts)` and resolve the extraction prompt's `{{...}}` placeholders
    - Call `executeStreamingPhase()` with descriptors, messages, provider config, and `buildStateUpdate`
    - Return the state via `trackPhase(...)` (this is what triggers `onPhaseCommit`, so the phase is cached automatically)
 7. Wire the runner into `runPipeline()` in `index.ts`, deciding whether it's sequential or concurrent.

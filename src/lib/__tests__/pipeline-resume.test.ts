@@ -28,7 +28,7 @@ vi.mock('$lib/logging/logger', () => ({
 }));
 
 vi.mock('$lib/ai/tools/tools', () => ({
-	filterToolsForPhase: (tools: unknown) => tools,
+	guardToolsForPhase: (tools: unknown) => tools,
 }));
 
 vi.mock('$lib/ai/reviewer-output-parser', () => ({
@@ -137,20 +137,16 @@ function makeCtx(actLineOverrides: Partial<ActLineContext> = {}): PipelineRunCon
 			generalInstructions: '',
 			mainChatSystemPrompt: '',
 			writerOutputTemplate: '',
-			reviewerPrompt: '',
-			writerSystemPrompt: '',
-			editorSystemPrompt: '',
-			gameMasterSystemPrompt: '',
-			plotPlannerSystemPrompt: 'plot-planner',
-			phaseEventPlotPlannerSystemPrompt: 'phase-event-plot-planner',
 			guidanceWriterExtractionPrompt: '',
 			phaseEventWriterExtractionPrompt: '',
-			guidanceWriterExtractionPromptV2: '',
-			phaseEventWriterExtractionPromptV2: '',
+			epilogueWriterExtractionPrompt: '',
+			reviewerExtractionPrompt: '',
+			quickReviewerExtractionPrompt: '',
+			editorExtractionPrompt: '',
+			guidancePlotPlannerExtractionPrompt: '',
+			phaseEventPlotPlannerExtractionPrompt: '',
 			guidanceGameMasterExtractionPrompt: '',
 			phaseEventGameMasterExtractionPrompt: '',
-			guidanceGameMasterExtractionPromptV2: '',
-			phaseEventGameMasterExtractionPromptV2: '',
 		},
 		effectiveTargetWordCount: '400',
 		currentScene: '2',
@@ -158,6 +154,16 @@ function makeCtx(actLineOverrides: Partial<ActLineContext> = {}): PipelineRunCon
 		story: { storyId: 'story-1', storyName: 'Story', actLine: makeActLine(actLineOverrides) },
 		assistant: { messageId: 'msg-1', messageSequence: 1 },
 		narrativeOverrides: createNarrativeOverrides(),
+		context: {
+			worldContent: '',
+			actPlot: '',
+			previousActSummaries: [],
+			actNumber: 1,
+			summarizationPoint: 0,
+			characterProfiles: [],
+			actSummary: '',
+			scenesSections: [],
+		},
 	};
 }
 

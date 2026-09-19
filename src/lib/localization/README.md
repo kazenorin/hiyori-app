@@ -99,7 +99,7 @@ ls('pipeline.labels.sceneCountPlural', { count: 3 }); // parameterized
 Most `ls()` calls are mediated through two bridge modules rather than called directly:
 
 - **`src/lib/definitions/common-headers.ts`** — 30+ header functions (e.g., `worldContentHeader()`, `playerResponseHeader()`)
-- **`src/lib/definitions/pipeline-prompts.ts`** — 60+ extraction prompt, label, and sub-prompt functions (e.g., `reviewerExtractionPromptTemplate(currentScene)`, `plotPlannerExtractionPrompt(plotMode, currentScene, actPhase)`)
+- **`src/lib/definitions/pipeline-prompts.ts`** — label, tool-instruction, and short sub-prompt helpers built from `ls()` (e.g., `writerProvidedSummary(scenes)`, `reviewerMemoryToolsInstruction()`). Long-form per-phase prompts are stored as FS markdown under `src/lib/fs/{locale}/prompts/`, not here.
 
 AI tools also call `ls()` directly for their descriptions, parameters, and result messages (see `src/lib/ai/tools/`).
 

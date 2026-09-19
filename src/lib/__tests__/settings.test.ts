@@ -43,11 +43,10 @@ describe('settings', () => {
 		expect(settings.fontSize).toBe(1.0);
 	});
 
-	it('defaults summarizationPointInterval to 8 and pipelineContextV2 to false', async () => {
+	it('defaults summarizationPointInterval to 8', async () => {
 		vi.resetModules();
 		const { settings } = await import('$lib/stores/settings.svelte');
 		expect(settings.summarizationPointInterval).toBe(8);
-		expect(settings.pipelineContextV2).toBe(false);
 	});
 
 	it('persists summarizationPointInterval via updateSettings', async () => {
