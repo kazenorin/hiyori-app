@@ -1,4 +1,4 @@
-import type { GameDataFields, NarrativeVariables, PhaseName } from './narrative-types';
+import type { GameDataFields, PhaseName } from './narrative-types';
 import type { Story } from '$lib/db/stories';
 import { getActPhase, getActPhaseBoundaries, type ActLineMeta } from '$lib/db/act-lines';
 import { getDefaultPlotMode } from '$lib/stores/settings.svelte';
@@ -96,8 +96,6 @@ export interface GameDataRegenerationContext {
 	sceneNumber: number;
 	/** The message's rendered editor output — the scene the GM re-derives game data from. */
 	editorOutput: string;
-	/** Existing variables, returned to the caller so it can merge the regenerated game data back in. */
-	narrativeVariables: NarrativeVariables;
 }
 
 /**

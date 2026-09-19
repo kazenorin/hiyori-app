@@ -258,7 +258,8 @@ export async function handleStartGameAfterInterview(
 			});
 
 			if (forkedMessage) {
-				await regenerateGameDataForForkedMessage(forkedMessage.id, {
+				const narrativeVariables = forkedMessage.variables ?? emptyVariables();
+				await regenerateGameDataForForkedMessage(forkedMessage.id, narrativeVariables, {
 					story: refs.story,
 					actLine,
 					actNumber: resolvedActNumber,
@@ -266,7 +267,6 @@ export async function handleStartGameAfterInterview(
 					actPlot: actPlotContent,
 					sceneNumber: forkedMessage.sceneNumber ?? 1,
 					editorOutput: forkedMessage.content,
-					narrativeVariables: forkedMessage.variables ?? emptyVariables(),
 				});
 			}
 
@@ -320,11 +320,15 @@ async function enrichForkedMessageWithTurnOfEvents(actLineId: string, storyId: s
 	};
 }
 
-async function regenerateGameDataForForkedMessage(messageId: string, ctx: GameDataRegenerationContext): Promise<void> {
+async function regenerateGameDataForForkedMessage(
+	messageId: string,
+	narrativeVariables: NarrativeVariables,
+	ctx: GameDataRegenerationContext
+): Promise<void> {
 	const regeneratedGameData = await regenerateGameData(ctx);
 	if (regeneratedGameData) {
 		const updatedVariables: NarrativeVariables = {
-			...ctx.narrativeVariables,
+			...narrativeVariables,
 			gameData: regeneratedGameData,
 		};
 		await updateMessageFields(messageId, {
