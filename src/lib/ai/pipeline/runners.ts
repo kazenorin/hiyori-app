@@ -79,12 +79,10 @@ function indentLines(text: string, prefix: string): string {
 		.join('\n');
 }
 
-function memoryToolsPartial(value: string): string {
-	return isMemoryAvailable() ? value.trimEnd() + '\n' : '';
-}
-
-function inventoryToolsPartial(value: string): string {
-	return isInventoryAvailable() ? value.trimEnd() + '\n' : '';
+function substituteToolsLine(source: string, name: string, value: string, available: boolean): string {
+	const pattern = new RegExp(`^([ \t]*){{${name}}}[ \t]*\r?\n`, 'gm');
+	if (!available) return source.replace(pattern, '');
+	return source.replace(pattern, (_match: string, indent: string) => indentLines(value.trimEnd(), indent) + '\n');
 }
 
 const earlyPhaseFactor = 0.3;
@@ -104,14 +102,15 @@ export interface GmExtractionTemplateParams {
 	currentScene: string;
 	currentActPhase?: string;
 	inventoryToolsInstruction: string;
+	inventoryAvailable: boolean;
 }
 
 export function resolveGmExtractionPrompt(base: string, params: GmExtractionTemplateParams): string {
-	return base
+	const resolved = base
 		.replaceAll('{{currentScene}}', params.currentScene)
 		.replaceAll('{{currentActPhase}}', params.currentActPhase ?? '')
-		.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, params.inventoryToolsInstruction)
 		.replaceAll('{{additionalRules}}', '');
+	return substituteToolsLine(resolved, 'inventoryToolsInstruction', params.inventoryToolsInstruction, params.inventoryAvailable);
 }
 
 function resolveGmExtractionPromptForContext(ctx: PipelineRunContext): string {
@@ -122,7 +121,8 @@ function resolveGmExtractionPromptForContext(ctx: PipelineRunContext): string {
 	return resolveGmExtractionPrompt(base, {
 		currentScene: ctx.currentScene,
 		currentActPhase: resolveCurrentActPhase(ctx),
-		inventoryToolsInstruction: inventoryToolsPartial(indentLines(gameMasterInventoryToolsInstruction(), '   ')),
+		inventoryToolsInstruction: gameMasterInventoryToolsInstruction(),
+		inventoryAvailable: isInventoryAvailable(),
 	}).replaceAll('{{actPhaseBoundaries}}', resolveActPhaseBoundaries(ctx));
 }
 
@@ -356,13 +356,23 @@ export async function runWriterPhase(
 			? ctx.prompts.phaseEventWriterExtractionPrompt
 			: ctx.prompts.guidanceWriterExtractionPrompt;
 
-	const writerExtractionPrompt = applyWriterSubstitutions(baseExtractionPrompt)
+	let writerExtractionPrompt = applyWriterSubstitutions(baseExtractionPrompt)
 		.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
 		.replaceAll('{{writerOutputTemplate}}', ctx.prompts.writerOutputTemplate)
-		.replaceAll(/{{memoryToolsInstruction}}\r?\n/g, memoryToolsPartial(indentLines(writerMemoryToolsInstruction(), '   ')))
-		.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, inventoryToolsPartial(indentLines(writerInventoryToolsInstruction(), '   ')))
 		.replaceAll('{{actPhaseBoundaries}}', resolveActPhaseBoundaries(ctx))
 		.replaceAll('{{endingType}}', epilogueEndingType ?? '');
+	writerExtractionPrompt = substituteToolsLine(
+		writerExtractionPrompt,
+		'memoryToolsInstruction',
+		writerMemoryToolsInstruction(),
+		isMemoryAvailable()
+	);
+	writerExtractionPrompt = substituteToolsLine(
+		writerExtractionPrompt,
+		'inventoryToolsInstruction',
+		writerInventoryToolsInstruction(),
+		isInventoryAvailable()
+	);
 
 	const result = await executeStreamingPhase(
 		{
@@ -417,21 +427,25 @@ export async function runReviewerEditorPhases(
 	}
 
 	if (state.reviewerOutput === undefined) {
-		const reviewerExtraction = (isQuickReview() ? ctx.prompts.quickReviewerExtractionPrompt : ctx.prompts.reviewerExtractionPrompt)
+		let reviewerExtraction = (isQuickReview() ? ctx.prompts.quickReviewerExtractionPrompt : ctx.prompts.reviewerExtractionPrompt)
 			.replaceAll('{{currentScene}}', ctx.currentScene)
 			.replaceAll('{{acceptAsIs}}', acceptAsIsLabel())
 			.replaceAll('{{summary}}', summaryHeader())
 			.replaceAll('{{totalViolations}}', totalViolationsLabel())
 			.replaceAll('{{recommendation}}', recommendationLabel())
-			.replaceAll(
-				/{{memoryToolsInstruction}}\r?\n/g,
-				memoryToolsPartial(isQuickReview() ? quickReviewerMemoryToolsInstruction() : reviewerMemoryToolsInstruction())
-			)
-			.replaceAll(
-				/{{inventoryToolsInstruction}}\r?\n/g,
-				inventoryToolsPartial(isQuickReview() ? quickReviewerInventoryToolsInstruction() : reviewerInventoryToolsInstruction())
-			)
 			.replaceAll('{{actPhaseBoundaries}}', resolveActPhaseBoundaries(ctx));
+		reviewerExtraction = substituteToolsLine(
+			reviewerExtraction,
+			'memoryToolsInstruction',
+			isQuickReview() ? quickReviewerMemoryToolsInstruction() : reviewerMemoryToolsInstruction(),
+			isMemoryAvailable()
+		);
+		reviewerExtraction = substituteToolsLine(
+			reviewerExtraction,
+			'inventoryToolsInstruction',
+			isQuickReview() ? quickReviewerInventoryToolsInstruction() : reviewerInventoryToolsInstruction(),
+			isInventoryAvailable()
+		);
 		const reviewerResult = await executeStreamingPhase(
 			{
 				phaseName: 'REVIEWER',
@@ -542,11 +556,12 @@ function resolvePlotPlannerExtractionPromptForContext(ctx: PipelineRunContext): 
 				getLocalizedActPhase(ctx.story.actLine.currentActPhase ?? 'introduction')
 			)
 		: ctx.prompts.guidancePlotPlannerExtractionPrompt.replaceAll('{{currentScene}}', ctx.currentScene);
-	return base
+	let resolved = base
 		.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)
-		.replaceAll(/{{memoryToolsInstruction}}\r?\n/g, memoryToolsPartial(plotPlannerMemoryToolsInstruction()))
-		.replaceAll(/{{inventoryToolsInstruction}}\r?\n/g, inventoryToolsPartial(plotPlannerInventoryToolsInstruction()))
 		.replaceAll('{{actPhaseBoundaries}}', resolveActPhaseBoundaries(ctx));
+	resolved = substituteToolsLine(resolved, 'memoryToolsInstruction', plotPlannerMemoryToolsInstruction(), isMemoryAvailable());
+	resolved = substituteToolsLine(resolved, 'inventoryToolsInstruction', plotPlannerInventoryToolsInstruction(), isInventoryAvailable());
+	return resolved;
 }
 
 export async function runGamePhases(ctx: PipelineRunContext, state: PipelineState, trackPhase: TrackPhase): Promise<PipelineState> {
