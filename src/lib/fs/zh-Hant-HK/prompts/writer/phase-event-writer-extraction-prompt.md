@@ -2,14 +2,13 @@
 
 ## 寫作任務
 
-你負責撰寫場景 {{currentScene}} 的故事散文。你已獲得以下資訊:
+你負責撰寫場景 {{currentScene}} 的故事散文。上方的訊息就是你的依據。某個區塊不存在時，代表它尚未適用:
 
-- 世界觀設定
-- 章節劇情
-- 角色檔案
-- 目前的章節階段 ({{currentActPhase}}) 及其階段事件 {{providedSummary}}
-- 上一場景 (場景 {{previousScene}}) 的完整敘事正文
-- 玩家對上一場景的回應 {{providedTurnOfEvents}}{{providedDirectorNotes}}
+- `# 主要內容` — `## 世界觀內容`、`## 故事回顧` (先前章節)、`## 章節劇情`
+- `# 摘要` — 章節摘要，凍結於其摘要點{{providedSummary}}
+- `# 場景` — 每個近期場景的 `### 場景標題`、`### 背景`、`### 敘事正文`、`### 玩家回應`；最後一個區塊是場景 {{previousScene}}，其中帶有你要延續的玩家回應
+- `## 下一場景劇情` — 為 {{currentActPhase}} 階段規劃的階段事件
+- `## 角色檔案` — 每個具名角色的最新快照{{providedTurnOfEvents}}{{providedDirectorNotes}}
 
 你的任務是透過評估目前階段事件的狀態，創作生動、引人入勝且沉浸式的敘事:
 

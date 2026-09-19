@@ -2,14 +2,13 @@
 
 ## Writing task
 
-You are now responsible for writing the story prose for Scene {{currentScene}}, the upcoming scene. You have been provided with:
+You are now responsible for writing the story prose for Scene {{currentScene}}, the upcoming scene. The messages above are your evidence. A section is absent when it does not yet apply:
 
-- the World Setting
-- the Act Plot {{providedSummary}}
-- the Character Profiles
-- the Scene Plot for the upcoming scene
-- the full narrative body of the most recent scene, Scene {{previousScene}}
-- the player's response to the most recent scene {{providedTurnOfEvents}}{{providedDirectorNotes}}
+- `# Main Context` — `## World Content`, `## Story So Far` (prior acts), `## Act Plot`
+- `# Summaries` — the Act Summary, frozen at its summarization point{{providedSummary}}
+- `# Scenes` — for each recent scene: `### Scene title`, `### Background`, `### Narrative Body`, `### Player Response`; the last block is Scene {{previousScene}}, carrying the player's response you continue from
+- `## Upcoming Scene Plot` — the Scene Plot planning Scene {{currentScene}}
+- `## Character Profiles` — the latest snapshot of every named character{{providedTurnOfEvents}}{{providedDirectorNotes}}
 
 Your job is to craft vivid, engaging, and immersive narrative based on the provided information.
 You are instructed to prioritize on developing the events as directed by the Scene Plot. {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
