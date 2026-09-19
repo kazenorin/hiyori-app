@@ -104,16 +104,19 @@ export interface PipelineExecution {
 
 export interface CommonPipelineInput {
 	execution: PipelineExecution;
-	worldContent: string;
-	actPlot: string;
-	actSummary: string;
-	characterProfiles: string[];
-	directorNotes: string;
-	previousNarrativeVariables: NarrativeVariables | undefined;
-	previousActSummaries: { actNumber: number; summary: string }[];
 	story: StoryContext;
 	assistant: AssistantContext;
 	completedScenes: number;
+	directorNotes: string;
+	previousNarrativeVariables: NarrativeVariables | undefined;
+	/**
+	 * The CURRENT act's latest summary (as of `completedScenes`), consumed by the async
+	 * Summarizer. Not derivable from `previousActSummaries` (prior acts) or from
+	 * `context.actSummaryAtSP` (the current act, frozen at the older summarization point).
+	 */
+	latestActSummary: string;
+	/** Main runs pass the plot that plans the upcoming scene; undefined for the epilogue. */
+	previousScenePlot?: string;
 	targetWordCount?: number;
 	retryConfig?: RetryConfig;
 	/**
@@ -124,12 +127,11 @@ export interface CommonPipelineInput {
 	initialState?: PipelineState;
 	/** Phase metadata entries from the earlier run, seeded into the tracker. */
 	initialPhases?: PhaseMetadata[];
-	/** Shared-prefix context (Tiers 0–2) reused by every phase this run. */
+	/** Shared prompt-prefix context (Tiers 0–2) reused byte-identically by every phase. */
 	context: PipelineContext;
 }
 
 export interface PipelineInput extends CommonPipelineInput {
-	previousScenePlot?: string;
 	player?: PlayerContext;
 }
 
@@ -139,58 +141,36 @@ export interface PipelineResult {
 	phases?: PhaseMetadata[];
 	asyncPhases?: Promise<AsyncPhaseResults>;
 }
-/** Context shared by Writer, Reviewer, and Editor phases. */
-export interface PreEditorContext {
-	worldContent: string;
-	actPlot: string;
-	actPhase?: ActPhase | null;
-	actPhaseBoundaries: ActPhaseBoundary[];
-	actSummary: string;
-	characterProfiles: string[];
-	previousScenePlot: string | undefined;
-	previousNarrativeBody: string | undefined;
-	completedScenes: number;
-	player: PlayerContext | undefined;
-	previousTurnOfEvents: string | undefined;
-	directorNotes: string;
-	previousActSummaries: { actNumber: number; summary: string }[];
-	actNumber: number;
-}
-
-/** Context shared by Game Master and Plot Planner phases. */
-export interface PostEditorContext {
-	actPlot: string;
-	actPhase?: ActPhase | null;
-	actPhaseBoundaries: ActPhaseBoundary[];
-	actSummary: string;
-	characterProfiles: string[];
-	previousScenePlot: string | undefined;
-	previousNarrativeBody: string | undefined;
-	completedScenes: number;
-	player: PlayerContext | undefined;
-	previousTurnOfEvents: string | undefined;
-	editorOutput: string | undefined;
-	directorNotes: string;
-	previousActSummaries: { actNumber: number; summary: string }[];
-	actNumber: number;
-}
-
 /**
- * Shared context (Tiers 0–2), assembled once per run and reused by every phase so
- * their request prefixes are byte-identical for prompt caching.
+ * Shared prompt-prefix context (Tiers 0–2), assembled once per run by the run manager
+ * and reused byte-identically by every phase so their request prefixes are cache-stable.
  */
 export interface PipelineContext {
-	// Tier 0 — Main Context (frozen for the act)
+	// --- Tier 0: Main Context (frozen for the act) ---
+	/** World document content. */
 	worldContent: string;
+	/** Act plot markdown for the current act. */
 	actPlot: string;
+	/** Short summaries of PRIOR acts (the "Story So Far" section), by act number. Excludes the current act. */
 	previousActSummaries: { actNumber: number; summary: string }[];
+	/** Current act's ordinal in the story (drives Story-So-Far labeling). */
 	actNumber: number;
-	// Tier 1 — Summaries (frozen until the SP advances)
+	// --- Tier 1: Summaries (frozen until the summarization point advances) ---
+	/**
+	 * The last SCENE NUMBER (within the current act) covered by the frozen Summaries snapshot:
+	 * `floor(currentScene / interval) * interval`. This is a scene number, not a message sequence.
+	 * `0` means no summarization point has been reached, so the Summaries message is omitted.
+	 */
 	summarizationPoint: number;
-	characterProfiles: string[]; // formatted, as of SP
-	actSummary: string; // as of SP
-	// Tier 2 — Scenes (append-only)
+	/** Latest character profiles; per-scene details at or before `summarizationPoint` are truncated. */
+	characterProfiles: string[];
+	/**
+	 * The CURRENT act's summary, frozen as of `summarizationPoint` (scene ≤ SP). Distinct from
+	 * `previousActSummaries` (prior acts) and `CommonPipelineInput.latestActSummary` (current act,
+	 * as of now); not derivable from either.
+	 */
+	actSummaryAtSP: string;
+	// --- Tier 2: Scenes (append-only since the summarization point) ---
+	/** Raw scene blocks (title / background / narrative / turn-of-events, with folded player responses). */
 	scenesSections: string[];
 }
-
-export type PreEditorContextFactory = new (input: CommonPipelineInput) => PreEditorContext;

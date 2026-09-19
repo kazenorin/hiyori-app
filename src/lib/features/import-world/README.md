@@ -146,8 +146,8 @@ Builds a `PipelineRunContext` suitable for import-world operations. This is the 
 
 | Export                                                                | Purpose                                                                                                                                         |
 | --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `EMPTY_PRE_EDITOR_CONTEXT`                                            | A `PreEditorContext` with all fields empty/zeroed — used when importing has no prior story state                                                |
-| `buildImportRunContext(retryConfig, abortSignal, callbacks, prompts)` | Constructs a full `PipelineRunContext` using empty story/assistant contexts, `buildPipelineProviderConfigs()`, and any partial prompt overrides |
+| `EMPTY_PIPELINE_CONTEXT`                                              | A `PipelineContext` with all fields empty/zeroed — the default prompt-prefix context when importing has no prior story state                    |
+| `buildImportRunContext(retryConfig, abortSignal, callbacks, prompts, overrides?)` | Constructs a full `PipelineRunContext` with zeroed scalars/story/assistant/`PipelineContext`, `buildPipelineProviderConfigs()`, and partial prompt + context overrides |
 
 The `prompts` parameter is a `Partial<PipelineRunContext['prompts']>`, so callers only need to provide the specific prompt overrides (e.g., `writerOutputTemplate` for narrative filling). All other prompt fields default to empty strings.
 
@@ -185,7 +185,7 @@ import-world                      pipeline
 ────────────                      ────────
 narrative-filler.ts
   └── buildImportRunContext()
-        ├── EMPTY_PRE_EDITOR_CONTEXT    ←   types.ts (PreEditorContext)
+        ├── EMPTY_PIPELINE_CONTEXT      ←   types.ts (PipelineContext)
         ├── buildPipelineProviderConfigs()  ←   chat/pipeline-config.ts
         └── PipelineRunContext           ←   runners.ts
               │
@@ -196,7 +196,7 @@ narrative-filler.ts
 
 The `buildImportRunContext()` function creates an "empty" run context with:
 
-- `preEditorCtx`: All fields zeroed (no world content, no act plot, no previous narrative)
+- `context` (`PipelineContext`) and the narrative scalars (`completedScenes`, `directorNotes`, `previousScenePlot`, `previousTurnOfEvents`): all zeroed/empty
 - `story` / `assistant`: Empty IDs (no real story or message sequence)
 - `prompts`: All empty strings except for the specific overrides passed by the caller
 - `effectiveTargetWordCount`: `'400'` (default)

@@ -103,17 +103,17 @@ describe('applyNarrativeOverrides', () => {
 
 describe('buildSummariesMessage', () => {
 	it('returns undefined when there is no summarization point', () => {
-		expect(buildSummariesMessage({ summarizationPoint: 0, actSummary: 'S' })).toBeUndefined();
+		expect(buildSummariesMessage({ summarizationPoint: 0, actSummaryAtSP: 'S' })).toBeUndefined();
 	});
 
 	it('returns undefined when an SP exists but the act summary is empty', () => {
 		// Why: Character Profiles no longer live here, so an empty Act Summary@SP drops the whole
 		// Summaries message (the latest profiles are emitted separately, after Scenes).
-		expect(buildSummariesMessage({ summarizationPoint: 8, actSummary: '' })).toBeUndefined();
+		expect(buildSummariesMessage({ summarizationPoint: 8, actSummaryAtSP: '' })).toBeUndefined();
 	});
 
 	it('includes the act summary section when the snapshot has content', () => {
-		const msg = buildSummariesMessage({ summarizationPoint: 8, actSummary: '## Scene Summaries' });
+		const msg = buildSummariesMessage({ summarizationPoint: 8, actSummaryAtSP: '## Scene Summaries' });
 		expect(msg).toContain('# Summaries');
 	});
 });
@@ -153,7 +153,7 @@ describe('buildPhaseMessages', () => {
 		actNumber: 1,
 		summarizationPoint: 8,
 		characterProfiles: ['## Character Profiles\n\nElena'],
-		actSummary: 'SUM',
+		actSummaryAtSP: 'SUM',
 		scenesSections: ['## Scene 9\n\n### Narrative Body\n\nnine'],
 	};
 	it('orders Main Context → Summaries → Scenes → Character Profiles → prior outputs → extraction prompt → Director Notes', () => {

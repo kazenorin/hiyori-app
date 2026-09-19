@@ -562,7 +562,7 @@ async function regenerateGameData(
 		actNumber: 1,
 		summarizationPoint: 0,
 		characterProfiles: [],
-		actSummary: '',
+		actSummaryAtSP: '',
 		scenesSections: buildScenesSections(priorMessages, 1, previousScenePlot),
 	};
 

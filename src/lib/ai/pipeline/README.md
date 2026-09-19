@@ -187,11 +187,13 @@ index.ts ← runners, phase-executor, message-builder, summarizer, prompt-loader
 
 All interfaces are defined in [`types.ts`](./types.ts). Key types to know:
 
-- **`PipelineInput`** — Entry point parameters (extends `CommonPipelineInput` with `previousScenePlot` and `player`). Also carries the resume seeds `initialState` and `initialPhases`.
+- **`PipelineContext`** — The shared prompt-prefix data (Tiers 0–2: world content, act plot, story-so-far, act-summary@SP, character profiles, scene sections). Assembled once per run and reused byte-identically by every phase.
+- **`CommonPipelineInput`** — Entry point parameters for `runPipeline`/`runEpiloguePipeline`: orchestration (`execution`, `story`, `assistant`, `completedScenes`, `targetWordCount`, `retryConfig`), async inputs (`latestActSummary`, `previousNarrativeVariables`), narrative bits (`directorNotes`, `previousScenePlot`), the resume seeds (`initialState`, `initialPhases`), and the pre-built `context`. Prompt-prefix data lives only on `context`, not duplicated here.
+- **`PipelineInput`** — Extends `CommonPipelineInput` with `player` (the current player response, for the async chain).
 - **`PipelineState`** — Mutable state accumulated across phases (writer/editor/GM output, variables, game data). This is what gets cached in `pipeline_runs.state`.
 - **`PipelineCallbacks`** — Lifecycle hooks: `onPhaseStart`, `onPhaseStream`, `onPhaseRetry`, `onPhaseComplete`, `onError`, `onPhrasesExtracted`, `onAllComplete`.
 - **`PipelineExecution`** — Holds `abortSignal`, `callbacks`, optional `tools`, and `onPhaseCommit(state, phases)` for persisting the phase cache after each phase.
-- **`PipelineRunContext`** — Shared context passed to all phase runners (defined in [`runners.ts`](./runners.ts)). Contains `sharedParams`, `providerConfigs`, `preEditorCtx`, `prompts`, `effectiveTargetWordCount`, `currentScene`, `tools`, `story`, `assistant`, `narrativeOverrides` (writer-tool overrides merged into writer variables, fill-when-missing).
+- **`PipelineRunContext`** — Shared context passed to all phase runners (defined in [`runners.ts`](./runners.ts)). Contains `sharedParams`, `providerConfigs`, `prompts`, `effectiveTargetWordCount`, `currentScene`, the narrative scalars (`completedScenes`, `directorNotes`, `previousScenePlot`, `previousTurnOfEvents`), `tools`, `story`, `assistant`, `narrativeOverrides` (writer-tool overrides merged into writer variables, fill-when-missing), and the `context` prefix.
 - **`PipelineProviderConfigs`** — Per-phase provider resolution. Built by `buildPipelineProviderConfigs()` ([`chat/pipeline-config.ts`](../chat/pipeline-config.ts)) which resolves role-specific configs with fallback to `main`. Roles: `plotPlanner`, `writer`, `reviewer`, `editor`, `gameMaster`, `summarizer`, `minorTaskAgent`.
 
 ## Streaming Architecture

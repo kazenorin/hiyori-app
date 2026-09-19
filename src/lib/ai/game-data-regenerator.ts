@@ -53,7 +53,7 @@ export async function regenerateGameData(params: GameDataRegenerationContext): P
 		actNumber,
 		summarizationPoint: 0,
 		characterProfiles: [],
-		actSummary: '',
+		actSummaryAtSP: '',
 		scenesSections: [],
 	};
 

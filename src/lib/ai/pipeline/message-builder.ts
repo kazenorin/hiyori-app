@@ -1,8 +1,7 @@
 import type { MessageBase } from '$lib/db/messages';
-import type { ActPhase, GameDataFields, NarrativeOverrides, NarrativeVariables } from '../narrative-types';
+import type { GameDataFields, NarrativeOverrides, NarrativeVariables } from '../narrative-types';
 import { hasNarrativeOverrides } from '../narrative-types';
-import type { CommonPipelineInput, PipelineContext, PlayerContext, PreEditorContext } from './types';
-import type { ActPhaseBoundary } from '$lib/db/act-lines';
+import type { PipelineContext, PlayerContext } from './types';
 import type { StreamState } from '../chat-callbacks';
 import {
 	formatDirectorNotesSection,
@@ -181,9 +180,9 @@ export function buildMainContextMessage(input: {
  * they are dynamic, so a snapshot pinned at the SP confuses the reader; the latest profiles are
  * emitted as their own section after Scenes (see buildPhaseMessages).
  */
-export function buildSummariesMessage(input: { summarizationPoint: number; actSummary: string }): string | undefined {
+export function buildSummariesMessage(input: { summarizationPoint: number; actSummaryAtSP: string }): string | undefined {
 	if (input.summarizationPoint <= 0) return undefined;
-	const summary = formattedActSummary(input.actSummary);
+	const summary = formattedActSummary(input.actSummaryAtSP);
 	if (summary.length === 0) return undefined;
 	return [sectionFormat(summariesHeader(), 1), ...summary].join('\n').trimEnd();
 }
@@ -262,45 +261,3 @@ export function buildTranscriptSummarizerMessages(transcript: { role: 'user' | '
 	];
 }
 
-export abstract class AbstractPreEditorContext implements PreEditorContext {
-	actPhase: ActPhase | null;
-	actPhaseBoundaries: ActPhaseBoundary[];
-	actPlot: string;
-	actSummary: string;
-	actNumber: number;
-	characterProfiles: string[];
-	completedScenes: number;
-	directorNotes: string;
-	previousActSummaries: { actNumber: number; summary: string }[];
-	previousNarrativeBody: string | undefined;
-	previousTurnOfEvents: string | undefined;
-	worldContent: string;
-
-	abstract previousScenePlot: string | undefined;
-	abstract player: PlayerContext | undefined;
-
-	protected constructor({
-		worldContent,
-		actPlot,
-		actSummary,
-		characterProfiles,
-		completedScenes,
-		directorNotes,
-		previousActSummaries,
-		story,
-		previousNarrativeVariables,
-	}: CommonPipelineInput) {
-		this.worldContent = worldContent;
-		this.actPlot = actPlot;
-		this.actPhase = story.actLine.currentActPhase;
-		this.actPhaseBoundaries = story.actLine.actPhaseBoundaries;
-		this.actSummary = actSummary;
-		this.actNumber = story.actLine.actNumber;
-		this.characterProfiles = characterProfiles;
-		this.completedScenes = completedScenes;
-		this.directorNotes = directorNotes;
-		this.previousActSummaries = previousActSummaries;
-		this.previousNarrativeBody = previousNarrativeVariables?.narrativeBody ?? undefined;
-		this.previousTurnOfEvents = previousNarrativeVariables?.turnOfEvents ?? undefined;
-	}
-}

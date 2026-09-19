@@ -56,8 +56,6 @@ import type {
 	PipelineContext,
 	PipelineProviderConfigs,
 	PipelineState,
-	PostEditorContext,
-	PreEditorContext,
 	StoryContext,
 } from './types';
 import { executeStreamingPhase, updateState } from './phase-executor';
@@ -298,10 +296,13 @@ export interface PipelineRunContext {
 		retryConfig: { retryCount: number; backoffIntervalSeconds: number };
 	};
 	providerConfigs: PipelineProviderConfigs;
-	preEditorCtx: PreEditorContext;
 	prompts: PipelinePrompts;
 	effectiveTargetWordCount: string;
 	currentScene: string;
+	completedScenes: number;
+	directorNotes: string;
+	previousScenePlot?: string;
+	previousTurnOfEvents?: string;
 	tools?: ToolSet;
 	story: StoryContext;
 	assistant: AssistantContext;
@@ -329,10 +330,10 @@ export async function runWriterPhase(
 	trackPhase: TrackPhase,
 	epilogueEndingType?: string
 ): Promise<PipelineState> {
-	const previousSceneNumber = ctx.preEditorCtx.completedScenes;
+	const previousSceneNumber = ctx.completedScenes;
 	const summarizedScenes = previousSceneNumber - 1;
-	const previousTurnOfEvents = ctx.preEditorCtx.previousTurnOfEvents;
-	const directorNotes = ctx.preEditorCtx.directorNotes;
+	const previousTurnOfEvents = ctx.previousTurnOfEvents;
+	const directorNotes = ctx.directorNotes;
 	const isPhaseEvent = ctx.story.actLine.plotMode === 'phaseEvent';
 
 	const applyWriterSubstitutions = (template: string) =>
@@ -449,7 +450,7 @@ export async function runReviewerEditorPhases(
 					ctx.context,
 					state.writerOutput ? [SECTION.WRITER_OUTPUT + state.writerOutput] : [],
 					reviewerExtraction,
-					ctx.preEditorCtx.directorNotes
+					ctx.directorNotes
 				),
 				providerConfig: ctx.providerConfigs.reviewer,
 				buildStateUpdate: (ss) => ({ reviewerOutput: ss.content }),
@@ -483,7 +484,7 @@ export async function runReviewerEditorPhases(
 						...(state.reviewerOutput ? [SECTION.REVIEWER_OUTPUT + state.reviewerOutput] : []),
 					],
 					editorExtraction,
-					ctx.preEditorCtx.directorNotes
+					ctx.directorNotes
 				),
 				providerConfig: ctx.providerConfigs.editor,
 				buildStateUpdate: buildEditorStateUpdate,
@@ -555,12 +556,7 @@ function resolvePlotPlannerExtractionPromptForContext(ctx: PipelineRunContext): 
 		.replaceAll('{{actPhaseBoundaries}}', resolveActPhaseBoundaries(ctx));
 }
 
-export async function runGamePhases(
-	ctx: PipelineRunContext,
-	state: PipelineState,
-	postEditorCtx: PostEditorContext,
-	trackPhase: TrackPhase
-): Promise<PipelineState> {
+export async function runGamePhases(ctx: PipelineRunContext, state: PipelineState, trackPhase: TrackPhase): Promise<PipelineState> {
 	// Resume gates: outputs already present in state (fresh or cached) are skipped.
 	const gmPending = state.gameMasterOutput === undefined;
 	const plotPlannerPending = state.scenePlot === undefined;
@@ -570,7 +566,7 @@ export async function runGamePhases(
 		isPlotPlannerEnabled() &&
 		(ctx.story.actLine.plotMode === 'guidance' ||
 			ctx.story.actLine.lastPlotGeneration == null ||
-			postEditorCtx.completedScenes - ctx.story.actLine.lastPlotGeneration >= getReevaluationFrequency());
+			ctx.completedScenes - ctx.story.actLine.lastPlotGeneration >= getReevaluationFrequency());
 
 	const runPlotPlanner = plotPlannerPending && plotPlannerShouldRun;
 
@@ -609,7 +605,7 @@ export async function runGamePhases(
 	// Plot Planner does not run (disabled, or re-evaluation frequency not elapsed):
 	// when the feature is enabled, carry forward the previous scene plot.
 	if (plotPlannerPending && isPlotPlannerEnabled()) {
-		state = updateState(state, { scenePlot: postEditorCtx.previousScenePlot ?? '' });
+		state = updateState(state, { scenePlot: ctx.previousScenePlot ?? '' });
 	}
 	return state;
 }
@@ -645,7 +641,7 @@ export function executeGmPhase(ctx: PipelineRunContext, state: PipelineState) {
 				ctx.context,
 				state.editorOutput ? [SECTION.EDITOR_OUTPUT + state.editorOutput] : [],
 				resolveGmExtractionPromptForContext(ctx),
-				ctx.preEditorCtx.directorNotes
+				ctx.directorNotes
 			),
 			providerConfig: ctx.providerConfigs.gameMaster,
 			buildStateUpdate: buildGmStateUpdate,
@@ -666,7 +662,7 @@ function executePlotPlannerPhase(ctx: PipelineRunContext, state: PipelineState) 
 				ctx.context,
 				state.editorOutput ? [SECTION.EDITOR_OUTPUT + state.editorOutput] : [],
 				resolvePlotPlannerExtractionPromptForContext(ctx),
-				ctx.preEditorCtx.directorNotes
+				ctx.directorNotes
 			),
 			providerConfig: ctx.providerConfigs.plotPlanner,
 			buildStateUpdate: buildPlotPlannerStateUpdate,

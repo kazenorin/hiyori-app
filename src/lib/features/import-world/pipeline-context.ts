@@ -1,25 +1,8 @@
-import type { PipelineRunContext } from '$lib/ai/pipeline/runners';
+import type { PipelinePrompts, PipelineRunContext } from '$lib/ai/pipeline/runners';
 import { buildPipelineProviderConfigs } from '$lib/ai/chat/pipeline-config';
 import type { RetryConfig } from '$lib/ai/chat-stream';
-import type { AssistantContext, PipelineContext, PreEditorContext, StoryContext } from '$lib/ai/pipeline/types';
+import type { AssistantContext, PipelineCallbacks, PipelineContext, StoryContext } from '$lib/ai/pipeline/types';
 import { createNarrativeOverrides } from '$lib/ai/narrative-types';
-
-export const EMPTY_PRE_EDITOR_CONTEXT: PreEditorContext = {
-	worldContent: '',
-	actPlot: '',
-	actPhase: null,
-	actPhaseBoundaries: [],
-	actSummary: '',
-	characterProfiles: [],
-	previousScenePlot: undefined,
-	previousNarrativeBody: undefined,
-	completedScenes: 0,
-	player: undefined,
-	previousTurnOfEvents: undefined,
-	directorNotes: '',
-	previousActSummaries: [],
-	actNumber: 1,
-};
 
 export const EMPTY_PIPELINE_CONTEXT: PipelineContext = {
 	worldContent: '',
@@ -28,7 +11,7 @@ export const EMPTY_PIPELINE_CONTEXT: PipelineContext = {
 	actNumber: 1,
 	summarizationPoint: 0,
 	characterProfiles: [],
-	actSummary: '',
+	actSummaryAtSP: '',
 	scenesSections: [],
 };
 
@@ -59,9 +42,17 @@ const IMPORT_ASSISTANT_CONTEXT: AssistantContext = {
 export function buildImportRunContext(
 	retryConfig: RetryConfig,
 	abortSignal: AbortSignal,
-	callbacks: PipelineRunContext['sharedParams']['callbacks'],
-	prompts: Partial<PipelineRunContext['prompts']>,
-	overrides: { story?: StoryContext; currentScene?: string; context?: PipelineContext } = {}
+	callbacks: PipelineCallbacks,
+	prompts: Partial<PipelinePrompts>,
+	overrides: {
+		story?: StoryContext;
+		currentScene?: string;
+		context?: PipelineContext;
+		completedScenes?: number;
+		directorNotes?: string;
+		previousScenePlot?: string;
+		previousTurnOfEvents?: string;
+	} = {}
 ): PipelineRunContext {
 	return {
 		sharedParams: {
@@ -70,7 +61,6 @@ export function buildImportRunContext(
 			retryConfig: { retryCount: retryConfig.retryCount, backoffIntervalSeconds: retryConfig.backoffIntervalSeconds },
 		},
 		providerConfigs: buildPipelineProviderConfigs(),
-		preEditorCtx: EMPTY_PRE_EDITOR_CONTEXT,
 		prompts: {
 			generalInstructions: '',
 			mainChatSystemPrompt: '',
@@ -89,6 +79,10 @@ export function buildImportRunContext(
 		},
 		effectiveTargetWordCount: '400',
 		currentScene: overrides.currentScene ?? '1',
+		completedScenes: overrides.completedScenes ?? 0,
+		directorNotes: overrides.directorNotes ?? '',
+		previousScenePlot: overrides.previousScenePlot,
+		previousTurnOfEvents: overrides.previousTurnOfEvents,
 		tools: undefined,
 		story: overrides.story ?? IMPORT_STORY_CONTEXT,
 		assistant: IMPORT_ASSISTANT_CONTEXT,

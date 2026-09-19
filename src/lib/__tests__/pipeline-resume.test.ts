@@ -44,7 +44,7 @@ import { executeStreamingPhase } from '$lib/ai/pipeline/phase-executor';
 import { aggregateMetadataFromPhases } from '$lib/ai/pipeline/phase-executor';
 import { runReviewerEditorPhases, runGamePhases, type PipelineRunContext, type TrackPhase } from '$lib/ai/pipeline/runners';
 import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';
-import type { PipelineState, PostEditorContext } from '$lib/ai/pipeline/types';
+import type { PipelineState } from '$lib/ai/pipeline/types';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
 import type { PhaseMetadata } from '$lib/ai/chat-stream';
 import type { ActLineContext } from '$lib/ai/pipeline/types';
@@ -94,7 +94,7 @@ function makeActLine(overrides: Partial<ActLineContext> = {}): ActLineContext {
 	} as ActLineContext;
 }
 
-function makeCtx(actLineOverrides: Partial<ActLineContext> = {}): PipelineRunContext {
+function makeCtx(actLineOverrides: Partial<ActLineContext> = {}, completedScenes = 1): PipelineRunContext {
 	return {
 		sharedParams: {
 			abortSignal: new AbortController().signal,
@@ -117,22 +117,6 @@ function makeCtx(actLineOverrides: Partial<ActLineContext> = {}): PipelineRunCon
 			summarizer: undefined,
 			minorTaskAgent: undefined,
 		},
-		// Message builders tolerate empty sections; gates under test don't depend on message contents.
-		preEditorCtx: {
-			worldContent: '',
-			actPlot: '',
-			actPhaseBoundaries: [],
-			actSummary: '',
-			characterProfiles: [],
-			previousScenePlot: undefined,
-			previousNarrativeBody: undefined,
-			previousTurnOfEvents: undefined,
-			player: undefined,
-			completedScenes: 1,
-			directorNotes: '',
-			previousActSummaries: [],
-			actNumber: 1,
-		} as PipelineRunContext['preEditorCtx'],
 		prompts: {
 			generalInstructions: '',
 			mainChatSystemPrompt: '',
@@ -149,7 +133,11 @@ function makeCtx(actLineOverrides: Partial<ActLineContext> = {}): PipelineRunCon
 			phaseEventGameMasterExtractionPrompt: '',
 		},
 		effectiveTargetWordCount: '400',
-		currentScene: '2',
+		currentScene: String(completedScenes + 1),
+		completedScenes,
+		directorNotes: '',
+		// runGamePhases carry-forward reads previousScenePlot; other gates ignore content.
+		previousScenePlot: 'previous plot',
 		tools: undefined,
 		story: { storyId: 'story-1', storyName: 'Story', actLine: makeActLine(actLineOverrides) },
 		assistant: { messageId: 'msg-1', messageSequence: 1 },
@@ -161,29 +149,11 @@ function makeCtx(actLineOverrides: Partial<ActLineContext> = {}): PipelineRunCon
 			actNumber: 1,
 			summarizationPoint: 0,
 			characterProfiles: [],
-			actSummary: '',
+			actSummaryAtSP: '',
 			scenesSections: [],
 		},
 	};
 }
-
-const makePostEditorCtx = (overrides: Record<string, unknown> = {}) =>
-	({
-		actPlot: '',
-		actPhaseBoundaries: [],
-		actSummary: '',
-		characterProfiles: [],
-		previousScenePlot: 'previous plot',
-		previousNarrativeBody: undefined,
-		previousTurnOfEvents: undefined,
-		editorOutput: undefined,
-		player: undefined,
-		completedScenes: 1,
-		directorNotes: '',
-		previousActSummaries: [],
-		actNumber: 1,
-		...overrides,
-	}) as PostEditorContext;
 
 function makeTrackPhase(): { trackPhase: TrackPhase; tracked: string[] } {
 	const tracked: string[] = [];
@@ -309,7 +279,7 @@ describe('runGamePhases resume gates', () => {
 		const ran = mockPhases({ GAME_MASTER: { gameMasterOutput: 'gm' }, PLOT_PLANNER: { scenePlot: 'next plot' } });
 		const { trackPhase, tracked } = makeTrackPhase();
 
-		const result = await runGamePhases(makeCtx(), {}, makePostEditorCtx(), trackPhase);
+		const result = await runGamePhases(makeCtx(), {}, trackPhase);
 
 		expect(ran.sort()).toEqual(['GAME_MASTER', 'PLOT_PLANNER']);
 		expect(tracked.sort()).toEqual(['GAME_MASTER', 'PLOT_PLANNER']);
@@ -327,7 +297,7 @@ describe('runGamePhases resume gates', () => {
 		});
 		const { trackPhase, tracked } = makeTrackPhase();
 
-		await expect(runGamePhases(makeCtx(), {}, makePostEditorCtx(), trackPhase)).rejects.toThrow('gm provider down');
+		await expect(runGamePhases(makeCtx(), {}, trackPhase)).rejects.toThrow('gm provider down');
 		// The Plot Planner finished before the GM failed; its commit must not be lost.
 		expect(tracked).toContain('PLOT_PLANNER');
 		expect(tracked).not.toContain('GAME_MASTER');
@@ -337,10 +307,9 @@ describe('runGamePhases resume gates', () => {
 		const ran = mockPhases({ GAME_MASTER: { gameMasterOutput: 'gm' } });
 		const { trackPhase } = makeTrackPhase();
 		// phaseEvent mode with a recent plot generation: planner must not run
-		const ctx = makeCtx({ plotMode: 'phaseEvent', lastPlotGeneration: 1 });
-		const postEditorCtx = makePostEditorCtx({ completedScenes: 2 });
+		const ctx = makeCtx({ plotMode: 'phaseEvent', lastPlotGeneration: 1 }, 2);
 
-		const result = await runGamePhases(ctx, {}, postEditorCtx, trackPhase);
+		const result = await runGamePhases(ctx, {}, trackPhase);
 
 		expect(ran).toEqual(['GAME_MASTER']);
 		expect(result.scenePlot).toBe('previous plot');
@@ -351,7 +320,7 @@ describe('runGamePhases resume gates', () => {
 		const ran = mockPhases({ GAME_MASTER: { gameMasterOutput: 'gm' } });
 		const { trackPhase } = makeTrackPhase();
 
-		const result = await runGamePhases(makeCtx(), {}, makePostEditorCtx(), trackPhase);
+		const result = await runGamePhases(makeCtx(), {}, trackPhase);
 
 		expect(ran).toEqual(['GAME_MASTER']);
 		expect(result.scenePlot).toBeUndefined();
@@ -362,7 +331,7 @@ describe('runGamePhases resume gates', () => {
 		const { trackPhase, tracked } = makeTrackPhase();
 		const state: PipelineState = { gameMasterOutput: 'cached gm' };
 
-		const result = await runGamePhases(makeCtx(), state, makePostEditorCtx(), trackPhase);
+		const result = await runGamePhases(makeCtx(), state, trackPhase);
 
 		expect(ran).toEqual(['PLOT_PLANNER']);
 		expect(tracked).toEqual(['PLOT_PLANNER']);
@@ -373,10 +342,10 @@ describe('runGamePhases resume gates', () => {
 	it('carries forward the plot on resume when GM is cached but the re-evaluation frequency has not elapsed', async () => {
 		const ran = mockPhases({});
 		const { trackPhase } = makeTrackPhase();
-		const ctx = makeCtx({ plotMode: 'phaseEvent', lastPlotGeneration: 1 });
+		const ctx = makeCtx({ plotMode: 'phaseEvent', lastPlotGeneration: 1 }, 2);
 		const state: PipelineState = { gameMasterOutput: 'cached gm' };
 
-		const result = await runGamePhases(ctx, state, makePostEditorCtx({ completedScenes: 2 }), trackPhase);
+		const result = await runGamePhases(ctx, state, trackPhase);
 
 		expect(ran).toEqual([]);
 		expect(result.scenePlot).toBe('previous plot');
@@ -388,7 +357,7 @@ describe('runGamePhases resume gates', () => {
 		const { trackPhase } = makeTrackPhase();
 		const state: PipelineState = { gameMasterOutput: 'cached gm' };
 
-		const result = await runGamePhases(makeCtx(), state, makePostEditorCtx(), trackPhase);
+		const result = await runGamePhases(makeCtx(), state, trackPhase);
 
 		expect(ran).toEqual([]);
 		expect(result.scenePlot).toBeUndefined();
@@ -400,7 +369,7 @@ describe('runGamePhases resume gates', () => {
 		// GM-only run cached scenePlot = '' (carry-forward); planner must not run again
 		const state: PipelineState = { gameMasterOutput: 'cached gm', scenePlot: '' };
 
-		const result = await runGamePhases(makeCtx(), state, makePostEditorCtx(), trackPhase);
+		const result = await runGamePhases(makeCtx(), state, trackPhase);
 
 		expect(ran).toEqual([]);
 		expect(result).toBe(state);
@@ -411,7 +380,7 @@ describe('runGamePhases resume gates', () => {
 		const { trackPhase } = makeTrackPhase();
 		const state: PipelineState = { gameMasterOutput: 'gm', scenePlot: 'plot' };
 
-		const result = await runGamePhases(makeCtx(), state, makePostEditorCtx(), trackPhase);
+		const result = await runGamePhases(makeCtx(), state, trackPhase);
 
 		expect(ran).toEqual([]);
 		expect(result).toBe(state);

@@ -1,4 +1,4 @@
-import type { ActPhase, EndingType } from '../narrative-types';
+import type { EndingType } from '../narrative-types';
 import { DEFAULT_RETRY_CONFIG, type PhaseMetadata, toPhaseMetadata } from '../chat-stream';
 import {
 	type CommonPipelineInput,
@@ -6,10 +6,6 @@ import {
 	type PipelineProviderConfigs,
 	type PipelineResult,
 	type PipelineState,
-	type PlayerContext,
-	type PostEditorContext,
-	type PreEditorContext,
-	type PreEditorContextFactory,
 } from './types';
 import { aggregateMetadata, aggregateMetadataFromPhases } from './phase-executor';
 import { type StreamResultMetadata } from '../streaming';
@@ -33,26 +29,6 @@ import { runAsyncPhases } from './summarizer';
 import { buildPipelineProviderConfigs } from '$lib/ai/chat/pipeline-config';
 import { buildTools } from '$lib/ai/tools/tools';
 import { createNarrativeOverrides } from '$lib/ai/narrative-types';
-import { AbstractPreEditorContext } from '$lib/ai/pipeline/message-builder';
-
-class MainPreEditorContext extends AbstractPreEditorContext {
-	previousScenePlot: string | undefined;
-	player: PlayerContext | undefined;
-	constructor(input: PipelineInput) {
-		super(input);
-		this.previousScenePlot = input.previousScenePlot;
-		this.player = input.player;
-	}
-}
-
-class EpiloguePreEditorContext extends AbstractPreEditorContext {
-	actPhase: ActPhase | null = null;
-	previousScenePlot: string | undefined = undefined;
-	player: PlayerContext | undefined = undefined;
-	constructor(input: CommonPipelineInput) {
-		super(input);
-	}
-}
 
 export interface EpiloguePipelineInput extends CommonPipelineInput {
 	endingType: EndingType;
@@ -79,18 +55,25 @@ function preparePipelinePrompts(loadedPrompts: LoadedPrompts): PipelinePrompts {
 async function buildPipelineContext(
 	input: CommonPipelineInput,
 	loadedPrompts: LoadedPrompts,
-	providerConfigs: PipelineProviderConfigs,
-	preEditorContextClass: PreEditorContextFactory
+	providerConfigs: PipelineProviderConfigs
 ): Promise<PipelineRunContext> {
-	const { execution, story, assistant, completedScenes, targetWordCount } = input;
+	const {
+		execution,
+		story,
+		assistant,
+		completedScenes,
+		targetWordCount,
+		retryConfig,
+		directorNotes,
+		previousScenePlot,
+		previousNarrativeVariables,
+		context,
+	} = input;
 	const { abortSignal, callbacks } = execution;
 
 	const effectiveTargetWordCount = String(targetWordCount ?? defaultTargetWordCount);
 	const currentScene = completedScenes > 0 ? String(completedScenes + 1) : '1';
-	const retryConfig = input.retryConfig ?? DEFAULT_RETRY_CONFIG;
-	const sharedParams = { abortSignal, callbacks, retryConfig };
-
-	const preEditorCtx: PreEditorContext = new preEditorContextClass(input);
+	const sharedParams = { abortSignal, callbacks, retryConfig: retryConfig ?? DEFAULT_RETRY_CONFIG };
 
 	const narrativeOverrides = createNarrativeOverrides();
 	const tools = await buildTools(story.storyId, story.actLine, assistant, narrativeOverrides);
@@ -99,15 +82,18 @@ async function buildPipelineContext(
 	return {
 		sharedParams,
 		providerConfigs,
-		preEditorCtx,
 		prompts,
 		effectiveTargetWordCount,
 		currentScene,
+		completedScenes,
+		directorNotes,
+		previousScenePlot,
+		previousTurnOfEvents: previousNarrativeVariables?.turnOfEvents ?? undefined,
 		tools,
 		story,
 		assistant,
 		narrativeOverrides,
-		context: input.context,
+		context,
 	};
 }
 
@@ -180,13 +166,12 @@ function finalizePipelineResult(state: PipelineState, tracker: ReturnType<typeof
  * Context is passed as user messages, not stuffed into the system prompt.
  */
 export async function runPipeline(input: PipelineInput): Promise<PipelineResult> {
-	const { previousScenePlot, player, previousNarrativeVariables, story, completedScenes, directorNotes, execution } = input;
+	const { player, previousNarrativeVariables, story, completedScenes, execution } = input;
 	const previousNarrativeBody = previousNarrativeVariables?.narrativeBody ?? undefined;
-	const previousTurnOfEvents = previousNarrativeVariables?.turnOfEvents ?? undefined;
 
 	const loadedPrompts: LoadedPrompts = await loadPrompts(story.storyId, story.storyName);
 	const providerConfigs: PipelineProviderConfigs = buildPipelineProviderConfigs();
-	const ctx = await buildPipelineContext(input, loadedPrompts, providerConfigs, MainPreEditorContext);
+	const ctx = await buildPipelineContext(input, loadedPrompts, providerConfigs);
 
 	const { callbacks } = execution;
 	const tracker = buildTrackPhase(input.initialPhases);
@@ -196,7 +181,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	const asyncPhases = runAsyncPhases({
 		player,
 		completedScenes,
-		actSummary: input.actSummary,
+		actSummary: input.latestActSummary,
 		previousNarrativeVariables,
 		previousNarrativeBody,
 		providerConfigs,
@@ -216,23 +201,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	state = await runEditorTemplateFitter(ctx, state, trackPhase);
 	maybeExtractImportantPhrases(state, callbacks);
 
-	const postEditorCtx: PostEditorContext = {
-		actPlot: input.actPlot,
-		actPhase: story.actLine.currentActPhase,
-		actPhaseBoundaries: story.actLine.actPhaseBoundaries,
-		actSummary: input.actSummary,
-		characterProfiles: input.characterProfiles,
-		previousScenePlot,
-		previousNarrativeBody,
-		completedScenes,
-		player,
-		previousTurnOfEvents,
-		editorOutput: state.editorOutput,
-		directorNotes,
-		previousActSummaries: input.previousActSummaries,
-		actNumber: story.actLine.actNumber,
-	};
-	state = await runGamePhases(ctx, state, postEditorCtx, trackPhase);
+	state = await runGamePhases(ctx, state, trackPhase);
 	state = await runGmTemplateFitter(ctx, state, trackPhase);
 
 	const result = finalizePipelineResult(state, tracker);
@@ -246,7 +215,7 @@ export async function runEpiloguePipeline(input: EpiloguePipelineInput): Promise
 
 	const loadedPrompts: LoadedPrompts = await loadPrompts(story.storyId, story.storyName);
 	const providerConfigs: PipelineProviderConfigs = buildPipelineProviderConfigs();
-	const ctx = await buildPipelineContext(input, loadedPrompts, providerConfigs, EpiloguePreEditorContext);
+	const ctx = await buildPipelineContext(input, loadedPrompts, providerConfigs);
 
 	const tracker = buildTrackPhase(input.initialPhases);
 	const trackPhase = buildCommittingTrackPhase(tracker, input.initialState ?? {}, execution.onPhaseCommit);

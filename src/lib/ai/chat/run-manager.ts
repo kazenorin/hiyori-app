@@ -570,11 +570,6 @@ async function buildPipelineInput(session: InternalSession, plan: RunPlan): Prom
 	}
 
 	const latestProfiles = await getLatestProfilesByActLine(actLine.id);
-	const characterProfiles = formatCharacterProfilesSection(
-		latestProfiles,
-		settings.characterProfileImportanceThreshold,
-		settings.characterProfileMaxIncluded
-	);
 
 	const actLineContext = isMain
 		? await buildMainActLineContext(actLine, plotMode, previousScenePlot, sceneNumber)
@@ -619,7 +614,7 @@ async function buildPipelineInput(session: InternalSession, plan: RunPlan): Prom
 		actNumber,
 		summarizationPoint: hasSummaries ? sp : 0,
 		characterProfiles: profilesForPrefix,
-		actSummary: actSummaryAtSp,
+		actSummaryAtSP: actSummaryAtSp,
 		scenesSections,
 	};
 
@@ -629,13 +624,9 @@ async function buildPipelineInput(session: InternalSession, plan: RunPlan): Prom
 			callbacks,
 			onPhaseCommit: (state, phases) => commitPhaseCache(session, state, phases),
 		},
-		worldContent,
-		actPlot,
-		actSummary,
-		characterProfiles,
+		latestActSummary: actSummary,
 		directorNotes: snapshot.directorNotes,
 		previousNarrativeVariables,
-		previousActSummaries,
 		story: { storyId: story.id, storyName: story.name, actLine: actLineContext },
 		assistant: { messageId: session.messageId, messageSequence: assistantSequence },
 		completedScenes,
