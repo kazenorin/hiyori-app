@@ -194,8 +194,6 @@
 		"compressorIntervalDescription": "Scenes between character profile compression runs. Set to 0 to disable. Default: 5.",
 		"summarizationPointInterval": "Summarization Point Interval",
 		"summarizationPointIntervalDescription": "Scenes between summarization points. Recent scenes are sent in full; older ones are frozen into a cached summary. 0 disables summarization points.",
-		"pipelineContextV2": "Experimental: shared-prefix context",
-		"pipelineContextV2Description": "Use the redesigned cache-optimized prompt context for the main chat pipeline. Turn on to A/B test token caching.",
 		"plotMode": "Plot Mode",
 		"plotModeGuidance": "Guidance-based",
 		"plotModePhaseEvent": "Event-based",

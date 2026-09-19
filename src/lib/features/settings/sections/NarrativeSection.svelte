@@ -44,20 +44,6 @@
 			/>
 		</div>
 
-		<!-- Experimental: stage-2 shared-prefix context (A/B flag) -->
-		<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
-			<label class="flex items-center gap-2">
-				<input
-					type="checkbox"
-					class="checkbox"
-					checked={settings.pipelineContextV2}
-					onchange={(e) => updateSettings({ pipelineContextV2: (e.currentTarget as HTMLInputElement).checked })}
-				/>
-				<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.pipelineContextV2')}</h3>
-			</label>
-			<span class="text-xs text-surface-500 block">{t('settings.pipelineContextV2Description')}</span>
-		</div>
-
 		<!-- Director Mode & Phrase Highlighting: side-by-side mini-cards -->
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
