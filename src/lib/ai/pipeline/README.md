@@ -109,8 +109,8 @@ On resume these conditions are re-evaluated with current settings, but cached ou
 
 The pipeline supports two plot modes stored on `ActLineMeta.plotMode`:
 
-- **`guidance`** — Plot Planner always runs (when enabled). Writer uses the `guidanceWriterExtractionPrompt`.
-- **`phaseEvent`** — Narrative advances through act phases (`introduction` → `rising-action` → `climax` → `falling-action` → `resolution`). Writer uses the `phaseEventWriterExtractionPrompt` (which resolves the act-phase progression placeholders and the act-end instruction), and the Plot Planner and Game Master select their `phaseEvent…` extraction prompts.
+- **`guidance`** — Plot Planner always runs (when enabled). Writer uses `writerRole` + the `guidanceWriterExtractionPrompt` task.
+- **`phaseEvent`** — Narrative advances through act phases (`introduction` → `rising-action` → `climax` → `falling-action` → `resolution`). Writer uses `writerRole` + the `phaseEventWriterExtractionPrompt` task (which resolves the act-phase progression placeholders and the act-end instruction), and the Plot Planner and Game Master select their `phaseEvent…` extraction prompts.
 
 ## Prompt Variable Replacement
 
@@ -284,12 +284,13 @@ Runs after the Summarizer when `characterProfileCompressorInterval` scenes have 
 
 ## Prompt Loading
 
-`loadPrompts(storyId, storyName)` resolves all 16 prompt templates:
+`loadPrompts(storyId, storyName)` resolves all 17 prompt templates:
 
 - `generalInstructions` — shared general instructions substituted into the system prompt
 - `mainChatSystemPrompt` — the single shared system prompt (persona + general instructions + tools note)
 - `writerOutputTemplate` — Writer/Editor output template
-- `guidanceWriterExtractionPrompt`, `phaseEventWriterExtractionPrompt`, `epilogueWriterExtractionPrompt` — Writer extraction task (`guidance`/`phaseEvent` by `plotMode`; the epilogue run selects the epilogue variant, which reuses the writer scaffolding with an ending-specific task)
+- `writerRole` — the shared "Your Role" preamble for all three Writer task prompts; carries the `targetWordCount`/`memoryToolsInstruction`/`inventoryToolsInstruction` scaffolding placeholders
+- `guidanceWriterExtractionPrompt`, `phaseEventWriterExtractionPrompt`, `epilogueWriterExtractionPrompt` — Writer extraction task, holding only the "Task" section (`guidance`/`phaseEvent` by `plotMode`; the epilogue run selects the epilogue variant); concatenated after `writerRole` before substitution
 - `reviewerExtractionPrompt`, `quickReviewerExtractionPrompt` — Reviewer extraction task (selected by `isQuickReview()` in the runner)
 - `editorExtractionPrompt` — Editor extraction task
 - `guidancePlotPlannerExtractionPrompt`, `phaseEventPlotPlannerExtractionPrompt` — Plot Planner extraction task (selected by `plotMode`)
@@ -297,7 +298,7 @@ Runs after the Summarizer when `characterProfileCompressorInterval` scenes have 
 - `summarizerPrompt`, `summarizerIncrementalPrompt` — Summarizer
 - `characterProfileCompressorPrompt` — Character Profile Compressor
 
-Each uses a `PromptLoader` instance that checks for a story-specific override file before falling back to the bundled default. `preparePipelinePrompts()` then narrows these into the `PipelinePrompts` struct used at runtime (the twelve pipeline prompts above; the Summarizer prompts are consumed separately).
+Each uses a `PromptLoader` instance that checks for a story-specific override file before falling back to the bundled default. `preparePipelinePrompts()` then narrows these into the `PipelinePrompts` struct used at runtime (the fourteen pipeline prompts above; the Summarizer prompts are consumed separately).
 
 ## Adding a New Phase
 

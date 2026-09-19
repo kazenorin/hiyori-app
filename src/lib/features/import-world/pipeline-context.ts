@@ -64,6 +64,7 @@ export function buildImportRunContext(
 			generalInstructions: '',
 			mainChatSystemPrompt: '',
 			writerOutputTemplate: '',
+			writerRole: '',
 			guidanceWriterExtractionPrompt: '',
 			phaseEventWriterExtractionPrompt: '',
 			epilogueWriterExtractionPrompt: '',

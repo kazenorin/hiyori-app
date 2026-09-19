@@ -42,6 +42,7 @@ function createLoader(path: string): PromptLoader {
 // === Writer pipeline ===
 
 export const writerOutputTemplateLoader = createLoader('writer/writer-output-template.md');
+export const writerRoleLoader = createLoader('writer/writer-role.md');
 export const guidanceWriterExtractionPromptLoader = createLoader('writer/guidance-writer-extraction-prompt.md');
 export const phaseEventWriterExtractionPromptLoader = createLoader('writer/phase-event-writer-extraction-prompt.md');
 export const epilogueWriterExtractionPromptLoader = createLoader('writer/epilogue-writer-extraction-prompt.md');

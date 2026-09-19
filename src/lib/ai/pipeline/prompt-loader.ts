@@ -16,12 +16,14 @@ import {
 	summarizerIncrementalPromptLoader,
 	summarizerPromptLoader,
 	writerOutputTemplateLoader,
+	writerRoleLoader,
 } from '$lib/fs/prompts';
 
 const promptLoaderDefinitions = {
 	generalInstructions: generalInstructionsLoader,
 	mainChatSystemPrompt: mainChatSystemPromptLoader,
 	writerOutputTemplate: writerOutputTemplateLoader,
+	writerRole: writerRoleLoader,
 	guidanceWriterExtractionPrompt: guidanceWriterExtractionPromptLoader,
 	phaseEventWriterExtractionPrompt: phaseEventWriterExtractionPromptLoader,
 	epilogueWriterExtractionPrompt: epilogueWriterExtractionPromptLoader,

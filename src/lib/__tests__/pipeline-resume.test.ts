@@ -121,6 +121,7 @@ function makeCtx(actLineOverrides: Partial<ActLineContext> = {}, completedScenes
 			generalInstructions: '',
 			mainChatSystemPrompt: '',
 			writerOutputTemplate: '',
+			writerRole: '',
 			guidanceWriterExtractionPrompt: '',
 			phaseEventWriterExtractionPrompt: '',
 			epilogueWriterExtractionPrompt: '',

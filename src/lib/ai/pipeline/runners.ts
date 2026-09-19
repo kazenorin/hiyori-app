@@ -270,6 +270,7 @@ export interface PipelinePrompts {
 	generalInstructions: string;
 	mainChatSystemPrompt: string;
 	writerOutputTemplate: string;
+	writerRole: string;
 	guidanceWriterExtractionPrompt: string;
 	phaseEventWriterExtractionPrompt: string;
 	epilogueWriterExtractionPrompt: string;
@@ -345,16 +346,12 @@ export async function runWriterPhase(
 			.replaceAll('{{estimatedPhaseLength}}', resolveEstimatedPhaseLength(ctx).toString())
 			.replaceAll('{{actEndInstruction}}', resolveActEndInstruction(ctx.story.actLine.plotMode, ctx.story.actLine.currentActPhase ?? null));
 
-	// The epilogue swaps the writing task but keeps the same writer role/format scaffolding,
-	// so it selects a dedicated base prompt and runs it through the identical substitution
-	// chain (targetWordCount, writerOutputTemplate, tool instructions). Those placeholders are
-	// absent from the guidance/phaseEvent variants' scaffolding only where noted, so the extra
-	// `.replaceAll` passes are no-ops for the non-epilogue path.
-	const baseExtractionPrompt = epilogueEndingType
+	const writerTaskPrompt = epilogueEndingType
 		? ctx.prompts.epilogueWriterExtractionPrompt
 		: isPhaseEvent
 			? ctx.prompts.phaseEventWriterExtractionPrompt
 			: ctx.prompts.guidanceWriterExtractionPrompt;
+	const baseExtractionPrompt = `${ctx.prompts.writerRole.trimEnd()}\n\n${writerTaskPrompt.trimStart()}`;
 
 	let writerExtractionPrompt = applyWriterSubstitutions(baseExtractionPrompt)
 		.replaceAll('{{targetWordCount}}', ctx.effectiveTargetWordCount)

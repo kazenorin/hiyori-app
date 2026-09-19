@@ -39,6 +39,7 @@ function preparePipelinePrompts(loadedPrompts: LoadedPrompts): PipelinePrompts {
 		generalInstructions: loadedPrompts.generalInstructions,
 		mainChatSystemPrompt: loadedPrompts.mainChatSystemPrompt,
 		writerOutputTemplate: loadedPrompts.writerOutputTemplate,
+		writerRole: loadedPrompts.writerRole,
 		guidanceWriterExtractionPrompt: loadedPrompts.guidanceWriterExtractionPrompt,
 		phaseEventWriterExtractionPrompt: loadedPrompts.phaseEventWriterExtractionPrompt,
 		epilogueWriterExtractionPrompt: loadedPrompts.epilogueWriterExtractionPrompt,
