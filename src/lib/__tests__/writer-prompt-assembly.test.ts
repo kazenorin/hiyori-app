@@ -266,4 +266,31 @@ describe('writer prompt assembly', () => {
 		expect(text).not.toContain(locale === 'en' ? 'Phase Core Purposes' : '階段核心目的參考');
 		expect(text).not.toMatch(/^\|/m);
 	});
+
+	/**
+	 * writerRole and one variant are concatenated into a single message, so a section present in
+	 * both is paid for twice. The role's copy of the cast rules is the stricter one ("ALWAYS use
+	 * names from the tool / DO NOT invent"); the variant copies were weaker *and* later in the
+	 * message, where recency favours them.
+	 */
+	it.each(LOCALES)('%s: character-introduction rules appear exactly once in the assembled prompt', async (locale) => {
+		const heading = locale === 'en' ? '### Introducing Characters' : '### 角色引入';
+		for (const plotMode of ['guidance', 'phaseEvent'] as const) {
+			const tail = await renderTail({ locale, plotMode });
+			expect(countOccurrences(tail, heading), plotMode).toBe(1);
+			expect(countOccurrences(tail, 'suggest-character-name'), plotMode).toBe(1);
+			expect(countOccurrences(tail, 'introduce-character'), plotMode).toBe(2);
+		}
+	});
+
+	/**
+	 * Every retrieval tool belongs to the role's single tool list; the variants keep only the
+	 * caveat that depends on {{previousScene}}, which the role cannot know.
+	 */
+	it.each(LOCALES)('%s: retrieval-tool guidance has one home in the assembled prompt', (locale) => {
+		expect(writerPrompts(locale).writerRole).toContain('read-distant-scene');
+		for (const variant of ['guidanceWriterExtractionPrompt', 'phaseEventWriterExtractionPrompt'] as const) {
+			expect(writerPrompts(locale)[variant]).not.toContain('read-distant-scene');
+		}
+	});
 });
