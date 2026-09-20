@@ -1,4 +1,4 @@
-import type { ActPhase, GameDataFields, NarrativeVariables, PhaseName } from '../narrative-types';
+import type { ActPhase, GameDataFields, NarrativeVariables, PhaseName, PlotMode } from '../narrative-types';
 import type { StreamResultMetadata } from '../streaming';
 import type { ActSummary } from '../act-summary-parser';
 import type { ToolSet } from 'ai';
@@ -177,4 +177,9 @@ export interface PipelineContext {
 	 * block. Absent for reduced-scope contexts (e.g. headless regeneration) and the first planning pass.
 	 */
 	upcomingScenePlot?: string;
+	/**
+	 * Plot mode of the current act line, selecting the Upcoming Scene Plot guide description
+	 * (guidance → Scene Plot, phaseEvent → Phase Events).
+	 */
+	plotMode: PlotMode;
 }

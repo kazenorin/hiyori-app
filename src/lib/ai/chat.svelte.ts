@@ -553,6 +553,7 @@ async function regenerateGameData(
 		actSummaryAtSP: '',
 		scenesSections: buildScenesSections(priorMessages, 1),
 		upcomingScenePlot: previousScenePlot,
+		plotMode,
 	};
 
 	const gameData = await runGameMasterRegeneration({

@@ -616,6 +616,7 @@ async function buildPipelineInput(session: InternalSession, plan: RunPlan): Prom
 		actSummaryAtSP: actSummaryAtSp,
 		scenesSections,
 		upcomingScenePlot: previousScenePlot,
+		plotMode,
 	};
 
 	const common: CommonPipelineInput = {

@@ -113,6 +113,7 @@ export async function regenerateGameData(params: GameDataRegenerationContext): P
 		characterProfiles: [],
 		actSummaryAtSP: '',
 		scenesSections: [],
+		plotMode: actLine.plotMode ?? getDefaultPlotMode(),
 	};
 	return runGameMasterRegeneration({
 		story,

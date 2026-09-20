@@ -151,6 +151,7 @@ function makeCtx(actLineOverrides: Partial<ActLineContext> = {}, completedScenes
 			characterProfiles: [],
 			actSummaryAtSP: '',
 			scenesSections: [],
+			plotMode: 'guidance',
 		},
 	};
 }

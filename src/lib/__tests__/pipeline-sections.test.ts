@@ -37,7 +37,6 @@ vi.mock('$lib/definitions/common-headers', () => {
 		turnOfEventsHeader: stub,
 		summaryHeader: stub,
 		playerResponseHeader: stub,
-		scenePlotHeader: stub,
 		writerOutputTemplateHeader: stub,
 		writerOutputHeader: stub,
 		gameDataHeader: stub,

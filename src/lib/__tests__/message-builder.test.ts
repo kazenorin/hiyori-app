@@ -7,6 +7,7 @@ import {
 	mergeVariables,
 } from '$lib/ai/pipeline/message-builder';
 import { createNarrativeOverrides, type NarrativeVariables } from '$lib/ai/narrative-types';
+import type { PipelineContext } from '$lib/ai/pipeline/types';
 
 // Override only the headers these builders assert on; importOriginal keeps every other real
 // export so message-builder's transitive graph (narrative-types, pipeline-sections) still links.
@@ -26,11 +27,17 @@ vi.mock('$lib/definitions/common-headers', async (importOriginal) => {
 	};
 });
 
-// The Act Plot section header embeds a localized description (pipeline.extraction.actPlotDescription).
-// Stub it so the ACT_PLOT getter produces deterministic text (real ls() returns the raw key in tests).
+// The Act Plot and Upcoming Scene Plot section headers embed localized descriptions
+// (pipeline.extraction.*). Stub them so the getters produce deterministic text (real ls() returns
+// the raw key in tests).
 vi.mock('$lib/definitions/pipeline-prompts', async (importOriginal) => {
 	const actual = await importOriginal<typeof import('$lib/definitions/pipeline-prompts')>();
-	return { ...actual, actPlotDescription: () => 'Act Plot guide line.' };
+	return {
+		...actual,
+		actPlotDescription: () => 'Act Plot guide line.',
+		upcomingScenePlotGuidanceDescription: () => 'Scene Plot guide.',
+		upcomingScenePlotPhaseEventDescription: () => 'Phase Events guide.',
+	};
 });
 
 const vars = (over: Partial<NarrativeVariables>): NarrativeVariables => ({
@@ -166,7 +173,7 @@ describe('buildMainContextMessages', () => {
 });
 
 describe('buildPhaseMessages', () => {
-	const ctx = {
+	const ctx: PipelineContext = {
 		worldContent: 'W',
 		actPlot: 'P',
 		previousActSummaries: [],
@@ -174,6 +181,7 @@ describe('buildPhaseMessages', () => {
 		characterProfiles: ['## Character Profiles\n\nElena'],
 		actSummaryAtSP: 'SUM',
 		scenesSections: ['## Scene 9\n\n### Narrative Body\n\nnine'],
+		plotMode: 'guidance',
 	};
 	it('orders World Content → Summaries → Scenes → Character Profiles → prior outputs → extraction prompt → Director Notes', () => {
 		// Why: the tier order is the cache-stability contract — Tiers 0–2 (the sectional main-context
@@ -210,15 +218,20 @@ describe('buildPhaseMessages', () => {
 		const msgs = buildPhaseMessages({ ...ctx, scenesSections: [] }, [], 'TASK', '');
 		expect(msgs.map((m) => m.content).join('\n')).not.toContain('# Scenes');
 	});
-	it('emits the Upcoming Scene Plot as its own H1+rule message between Scenes and Character Profiles', () => {
+	it('emits the Upcoming Scene Plot with the guidance guide description between Scenes and Character Profiles', () => {
 		// Why: the plot changes every turn, so keeping it out of the append-only Scenes message
 		// lets the Scenes block stay byte-stable across turns while the plot sits in its own message.
 		const msgs = buildPhaseMessages({ ...ctx, upcomingScenePlot: 'PLAN THE SCENE' }, [], 'TASK', '');
 		const joined = msgs.map((m) => m.content).join('\n');
-		expect(joined).toContain('# Upcoming Scene Plot\n\n---\n\nPLAN THE SCENE');
+		expect(joined).toContain('# Upcoming Scene Plot\n\nScene Plot guide.\n\n---\n\nPLAN THE SCENE');
 		const idx = (s: string) => joined.indexOf(s);
 		expect(idx('# Scenes')).toBeLessThan(idx('# Upcoming Scene Plot'));
 		expect(idx('# Upcoming Scene Plot')).toBeLessThan(idx('## Character Profiles'));
+	});
+	it('uses the phase-event guide description when plotMode is phaseEvent', () => {
+		const msgs = buildPhaseMessages({ ...ctx, upcomingScenePlot: 'PLAN', plotMode: 'phaseEvent' }, [], 'TASK', '');
+		const joined = msgs.map((m) => m.content).join('\n');
+		expect(joined).toContain('# Upcoming Scene Plot\n\nPhase Events guide.\n\n---\n\nPLAN');
 	});
 	it('omits the Upcoming Scene Plot message when there is no plot', () => {
 		const msgs = buildPhaseMessages(ctx, [], 'TASK', '');

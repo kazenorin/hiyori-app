@@ -119,6 +119,7 @@ function makeCtx(summarizationPoint: number): PipelineRunContext {
 			characterProfiles: [],
 			actSummaryAtSP: '',
 			scenesSections: [],
+			plotMode: 'guidance',
 		},
 	};
 }

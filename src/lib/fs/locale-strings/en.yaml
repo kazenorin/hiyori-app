@@ -31,7 +31,6 @@ common:
     interviewTranscript: Interview Transcript
     playerPreferences: Player Preferences
     playerResponse: Player Response
-    scenePlot: Scene Plot
     writerOutputTemplate: Writer Output Template
     writerOutput: Writer Output
     reviewerOutput: Reviewer Output
@@ -152,6 +151,9 @@ pipeline:
     actPlotTailoredExperience: >-
       - **Tailored Experience:** A **Player Preferences** section is provided as a structured digest of the player's interview. You must ensure every preference listed there is reflected in the matching template section: themes & tone → Storytelling Style; protagonist archetype → Premise; conflict preferences → Premise/Major Events; incidents & events → Major Events; pacing & scope → Story Structure; ending preferences → Possible Endings; explicit constraints → the applicable sections they target. Do not silently drop a stated preference. If two preferences conflict, prioritize the more recently stated one and flag the conflict in the closest relevant section.
     actPlotDescription: 'This document is a guide for narration. The actual story will emerge through player choices and game master improvisation within this framework.'
+    upcomingScenePlotDescription:
+      guidance: 'This Scene Plot is a plan drafted by the plot planner for the upcoming scene. Treat it as directional guidance, not established events — the actual story will emerge through player choices within this framework.'
+      phaseEvent: 'These Phase Events are conditional possibilities drafted by the plot planner for the current phase. Treat them as intent, not established facts — the actual story will emerge through player choices within this framework.'
     editorTemplateFitter: >
       The "Editor Output" does not follow the required template format. Restructure it to match the Writer Output Template
       by inserting the appropriate section headers defined by "Writer Output Template" without changing any content.

@@ -11,7 +11,6 @@ export const currentSceneHeader = () => ls('common.headers.currentScene');
 export const interviewTranscriptHeader = () => ls('common.headers.interviewTranscript');
 export const playerPreferencesHeader = () => ls('common.headers.playerPreferences');
 export const playerResponseHeader = () => ls('common.headers.playerResponse');
-export const scenePlotHeader = () => ls('common.headers.scenePlot');
 export const writerOutputTemplateHeader = () => ls('common.headers.writerOutputTemplate');
 export const writerOutputHeader = () => ls('common.headers.writerOutput');
 export const reviewerOutputHeader = () => ls('common.headers.reviewerOutput');

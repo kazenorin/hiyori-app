@@ -12,6 +12,7 @@ export const EMPTY_PIPELINE_CONTEXT: PipelineContext = {
 	characterProfiles: [],
 	actSummaryAtSP: '',
 	scenesSections: [],
+	plotMode: 'guidance',
 };
 
 const IMPORT_STORY_CONTEXT: StoryContext = {

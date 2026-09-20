@@ -7,7 +7,6 @@ import {
 	interviewTranscriptHeader,
 	playerPreferencesHeader,
 	playerResponseHeader,
-	scenePlotHeader,
 	writerOutputTemplateHeader,
 	writerOutputHeader,
 	reviewerOutputHeader,
@@ -40,9 +39,12 @@ import {
 	relationshipsLabel,
 	voiceLabel,
 	actPlotDescription,
+	upcomingScenePlotGuidanceDescription,
+	upcomingScenePlotPhaseEventDescription,
 } from './pipeline-prompts';
 import { actWithNumberLabel, aliasesLabel } from '$lib/definitions/common-labels';
 import type { CharacterProfileEntity } from '$lib/db/character-profiles';
+import type { PlotMode } from '$lib/ai/narrative-types';
 
 export const interviewTranscriptDescription = () => ls('common.descriptions.interviewTranscript');
 export const playerPreferencesDescription = () => ls('common.descriptions.playerPreferences');
@@ -56,6 +58,17 @@ function sectionWithRule(header: string, description?: string): string {
 	return `# ${header}\n\n${desc}---\n\n`;
 }
 
+/**
+ * The `# Upcoming Scene Plot` section header (H1 + guide line + horizontal rule). The guide line
+ * varies by `plotMode`: guidance plans a single Scene Plot for the next scene, phaseEvent plans the
+ * Phase Events for the current phase.
+ */
+export function upcomingScenePlotSection(plotMode: PlotMode): string {
+	const description =
+		plotMode === 'phaseEvent' ? upcomingScenePlotPhaseEventDescription() : upcomingScenePlotGuidanceDescription();
+	return sectionWithRule(upcomingScenePlotHeader(), description);
+}
+
 /** Markdown section headings used in LLM message construction. */
 export const SECTION = {
 	get WORLD_CONTENT() {
@@ -66,9 +79,6 @@ export const SECTION = {
 	},
 	get PLAYER_RESPONSE() {
 		return sectionFormat(playerResponseHeader());
-	},
-	get SCENE_PLOT() {
-		return sectionFormat(scenePlotHeader());
 	},
 	get WRITER_OUTPUT_TEMPLATE() {
 		return sectionFormat(writerOutputTemplateHeader());
@@ -96,9 +106,6 @@ export const SECTION = {
 	},
 	get STORY_SO_FAR() {
 		return sectionWithRule(storySoFarHeader());
-	},
-	get UPCOMING_SCENE_PLOT() {
-		return sectionWithRule(upcomingScenePlotHeader());
 	},
 	get CHARACTER_PROFILES() {
 		return sectionFormat(characterProfilesHeader()) + ls('common.descriptions.characterProfiles') + '\n\n';

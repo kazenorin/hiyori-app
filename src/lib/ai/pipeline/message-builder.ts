@@ -9,6 +9,7 @@ import {
 	formatStorySoFar,
 	formatTurnOfEventsSection,
 	SECTION,
+	upcomingScenePlotSection,
 } from '$lib/definitions/pipeline-sections';
 import {
 	actSummaryForScenesHeader,
@@ -205,7 +206,7 @@ export function buildPhaseMessages(
 		ctx.scenesSections.length > 0 ? (sectionFormat(scenesHeader(), 1) + ctx.scenesSections.join('\n')).trimEnd() : undefined;
 	const upcomingScenePlot = ctx.upcomingScenePlot;
 	const upcomingScenePlotMessage = hasContent(upcomingScenePlot)
-		? (SECTION.UPCOMING_SCENE_PLOT + upcomingScenePlot).trimEnd()
+		? (upcomingScenePlotSection(ctx.plotMode) + upcomingScenePlot).trimEnd()
 		: undefined;
 	const profilesMessage = ctx.characterProfiles.length > 0 ? ctx.characterProfiles.join('\n').trimEnd() : undefined;
 	const shared = [
