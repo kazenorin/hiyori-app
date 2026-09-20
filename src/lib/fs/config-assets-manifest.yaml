@@ -54,21 +54,23 @@ src:
               updatedAt: "2026-08-01T11:28:19.674Z"
             guidance-act-plot-template.md:
               configPath: en/prompt-templates/act/guidance-act-plot-template.md
-              hash: f23f05df722d38efba7d7b73154b4cf7ece934f718500da29b203366a80ecfba
+              hash: f38093af2477af8257ca89ce18a48cb4726bbf50ffa0e6a559da00a8a597b428
               oldHashes:
+                - f23f05df722d38efba7d7b73154b4cf7ece934f718500da29b203366a80ecfba
                 - f3a2fb4a93c6d0cb56036b832db5ec89f0ead3304eb4aba2feb90814ea9b895f
                 - 0f6f94e1919f14d72065887946f7f104e99a8976b2a1ea2032df44597aaa5d07
                 - eaa1e57a57afb4bbcd54c681d6a276df48281efbd916b39048c6a805c3fd7981
-              updatedAt: "2026-08-01T11:28:19.674Z"
+              updatedAt: "2026-09-20T10:16:34.850Z"
             phase-event-act-plot-template.md:
               configPath: en/prompt-templates/act/phase-event-act-plot-template.md
-              hash: 8706e202e70c3fbf3e2a0497de7bcce13bcefd607f9eb3956ce8146719a485a3
+              hash: beebb024cfb41001e2cfc7c8fe673348bcd9e495b4f1a870e8fb029b0e6f4aeb
               oldHashes:
+                - 8706e202e70c3fbf3e2a0497de7bcce13bcefd607f9eb3956ce8146719a485a3
                 - 1afd8383e980ac2093b22cc10f74cace899a8b575231547e2e7dd203aa6d0f84
                 - 37b14fee12e733773567dcdacee91b54c1227e95ae27501360ca1e96b1a7a177
                 - 7ab2bf72b9d9821d20f3cd3a74e82c64c79c36a5f8eeaa01e3e262c066daa078
                 - b7afd4e4e042a4a9a65adf8be4a37d7a1e9701b805c3a03a9183502ee09d8b07
-              updatedAt: "2026-08-01T11:28:19.674Z"
+              updatedAt: "2026-09-20T10:16:34.850Z"
             guidance-act-plot-generation-prompt.md:
               configPath: en/prompt-templates/act/guidance-act-plot-generation-prompt.md
               hash: 0d0d5a65deb498094ba539af099db3a1fbe03be9a6fb1a0293614a066f276adb
@@ -421,22 +423,24 @@ src:
               updatedAt: "2026-08-01T11:28:19.674Z"
             guidance-act-plot-template.md:
               configPath: zh-Hant-HK/prompt-templates/act/guidance-act-plot-template.md
-              hash: 65d2a9a118377f87e1c2eda06fcc4c7abfb322803add430b3d2c34974e7ed5f2
+              hash: f76056d05bccce6dd06bc221232de60c059303801d123eaf663c7c7d2ce4d9cf
               oldHashes:
+                - 65d2a9a118377f87e1c2eda06fcc4c7abfb322803add430b3d2c34974e7ed5f2
                 - 0490c8f62f10abfa3fc19c50a4764d3344d330f1f1e3c369a551fe006b47e3f7
                 - c8d7de8beb3b4c965a10fd9b81fbfa1b90cffd72017b5f290cf653ea958f283f
                 - b67f07cbc1851e0921e3196371e99733024525af48020001907452cf4a5f2065
                 - a1d6362e298f606da059bbfa7e39578efee6ffe99a271663c2c5dc3734b9ddbe
-              updatedAt: "2026-08-01T11:28:19.674Z"
+              updatedAt: "2026-09-20T10:16:34.850Z"
             phase-event-act-plot-template.md:
               configPath: zh-Hant-HK/prompt-templates/act/phase-event-act-plot-template.md
-              hash: 1bd01dc94d4ed6cd782f67210a42d09fc981884d9f0d235dae327c565e7e3262
+              hash: 8bca80418ea09c7e2fa38e7ecf9b411a740078d8e723b7380fde67819880aa64
               oldHashes:
+                - 1bd01dc94d4ed6cd782f67210a42d09fc981884d9f0d235dae327c565e7e3262
                 - 649b31856c2ac9f40f21c1207b456eba754545cc5e8a51db89a99f41b80b47b0
                 - 500f8a9d1f61415a3be6f4dbb63fbd1d0c354b298f6de4e8fb1439cba3eccc07
                 - 22a743eeb7c97f2facb83e86c4f2fd3c190d80b88545b1e52b466340d2b11741
                 - 0b507a58107673a3e52e3d1bbbb97d49bf1165e8c6ca7e9b602dfe5864f233f9
-              updatedAt: "2026-08-01T11:28:19.674Z"
+              updatedAt: "2026-09-20T10:16:34.850Z"
             guidance-act-plot-generation-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/act/guidance-act-plot-generation-prompt.md
               hash: af9104f2ae03fa9d36ed681ad2377a153ea06671399712867c6f9ec5637897c6
@@ -741,7 +745,7 @@ src:
       locale-strings:
         en.yaml:
           configPath: en/locale-strings.yaml
-          hash: ec16c74b4051d9d208d53d8b6e83b648b4f111d916ecfffa16bbebd7cf9517d8
+          hash: c4823f7e56377cb28c089ce8d45666d4c0eb7a9ccdf2edbe5947e6747e4286e0
           oldHashes:
             - 70c471c9f432e55bb159fc0129c72176fce420f15d47387f838d6b4347cf9e94
             - 9a1f3a90343f526e1381520c61e41021e3a1b5ec15ae2fa86f01eba456167d31
@@ -756,10 +760,10 @@ src:
             - 2dac94173236f1d91ad05073d7ac651ae1265c4182815041ba5663713dcdd799
             - 80d841aa000184d8604696b1f1877aebb1a348db16d2267e57b421c5eed4c959
             - 02c2f6c61d948f401f32cdd4eb656a574da0366b3a2809ee2ff3c42b47348649
-          updatedAt: "2026-09-20T05:51:34.585Z"
+          updatedAt: "2026-09-20T10:16:34.850Z"
         zh-Hant-HK.yaml:
           configPath: zh-Hant-HK/locale-strings.yaml
-          hash: 193422ef01546632441c1b44c79f352cb494de96ca6dd340b1fe6fbed7a95659
+          hash: c5fe0297afd07b92adbbd434c76cd60a198f6ee0aa4a8a986bfcc306236f5bef
           oldHashes:
             - 4526e6f52ebd89a566c48893657ef25414f6bb46c2307f5f36fe0e76481d3300
             - 49251618a0e259a6ce584f6f9f7013fc32f47f6f16c69e3a0f4d20e6df87fc12
@@ -774,4 +778,4 @@ src:
             - 0eda1a48149469d75b776af15e1b34a8510a948660818ad2f0047cb2c4e95f1c
             - c9bca07458a02fd17114e6456a4c281b2460dc392ffccd2bd103199af045c4cb
             - f7772bf027cfec167bdc5e5d85aa783fac24f47303072a00685d5d7b70b80b54
-          updatedAt: "2026-09-20T05:51:34.585Z"
+          updatedAt: "2026-09-20T10:16:34.850Z"

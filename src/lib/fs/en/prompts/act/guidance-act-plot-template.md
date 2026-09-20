@@ -1,7 +1,5 @@
 # Act Plot
 
-This document is a guide for narration. The actual story will emerge through player choices and game master improvisation within this framework.
-
 ## Story Structure
 
 - **Target Scenes:** [35-50 scenes recommended]

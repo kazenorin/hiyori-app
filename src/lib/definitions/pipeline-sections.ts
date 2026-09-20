@@ -39,6 +39,7 @@ import {
 	goalLabel,
 	relationshipsLabel,
 	voiceLabel,
+	actPlotDescription,
 } from './pipeline-prompts';
 import { actWithNumberLabel, aliasesLabel } from '$lib/definitions/common-labels';
 import type { CharacterProfileEntity } from '$lib/db/character-profiles';
@@ -46,9 +47,13 @@ import type { CharacterProfileEntity } from '$lib/db/character-profiles';
 export const interviewTranscriptDescription = () => ls('common.descriptions.interviewTranscript');
 export const playerPreferencesDescription = () => ls('common.descriptions.playerPreferences');
 
-/** Format a top-level sectional message header: H1, blank line, horizontal rule, blank line. */
-function sectionWithRule(header: string): string {
-	return `# ${header}\n\n---\n\n`;
+/**
+ * Format a top-level sectional message header: H1, optional description line, then a horizontal rule.
+ * `description` (when present) sits between the H1 and the rule, each separated by a blank line.
+ */
+function sectionWithRule(header: string, description?: string): string {
+	const desc = description ? `${description}\n\n` : '';
+	return `# ${header}\n\n${desc}---\n\n`;
 }
 
 /** Markdown section headings used in LLM message construction. */
@@ -57,7 +62,7 @@ export const SECTION = {
 		return sectionWithRule(worldContentHeader());
 	},
 	get ACT_PLOT() {
-		return sectionWithRule(actPlotHeader());
+		return sectionWithRule(actPlotHeader(), actPlotDescription());
 	},
 	get PLAYER_RESPONSE() {
 		return sectionFormat(playerResponseHeader());

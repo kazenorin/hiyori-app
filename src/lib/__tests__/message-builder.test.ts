@@ -26,6 +26,13 @@ vi.mock('$lib/definitions/common-headers', async (importOriginal) => {
 	};
 });
 
+// The Act Plot section header embeds a localized description (pipeline.extraction.actPlotDescription).
+// Stub it so the ACT_PLOT getter produces deterministic text (real ls() returns the raw key in tests).
+vi.mock('$lib/definitions/pipeline-prompts', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('$lib/definitions/pipeline-prompts')>();
+	return { ...actual, actPlotDescription: () => 'Act Plot guide line.' };
+});
+
 const vars = (over: Partial<NarrativeVariables>): NarrativeVariables => ({
 	sceneTitle: null,
 	background: null,
@@ -138,6 +145,8 @@ describe('buildMainContextMessages', () => {
 		// native H1 (e.g. `# World Setting`) no longer collides with the wrapper's heading level.
 		const msgs = buildMainContextMessages({ worldContent: '# World Setting\n\nlore', actPlot: 'PLOT', previousActSummaries: [] });
 		expect(msgs[0]).toBe('# World Content\n\n---\n\n# World Setting\n\nlore');
+		// Why: the Act Plot header carries the localized description between its H1 and the rule.
+		expect(msgs[1]).toBe('# Act Plot\n\nAct Plot guide line.\n\n---\n\nPLOT');
 	});
 
 	it('omits the Story so Far message when there are no prior-act summaries', () => {
@@ -152,7 +161,7 @@ describe('buildMainContextMessages', () => {
 		// Why: a header-only wrapper for empty content would sit in every phase's shared prefix
 		// carrying no information, so blank sections are dropped.
 		const msgs = buildMainContextMessages({ worldContent: '   ', actPlot: 'P', previousActSummaries: [] });
-		expect(msgs).toEqual(['# Act Plot\n\n---\n\nP']);
+		expect(msgs).toEqual(['# Act Plot\n\nAct Plot guide line.\n\n---\n\nP']);
 	});
 });
 

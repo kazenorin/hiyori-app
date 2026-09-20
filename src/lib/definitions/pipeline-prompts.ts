@@ -42,6 +42,7 @@ export const actShortSummaryExtractionPrompt = () => ls('pipeline.extraction.act
 export const actShortSummaryCharacterPrefix = () => ls('pipeline.extraction.actShortSummaryCharacterPrefix');
 export const actPlotResumeNote = (sceneNumber: number | string) => ls('pipeline.extraction.actPlotResumeNote', { sceneNumber });
 export const actPlotTailoredExperience = () => ls('pipeline.extraction.actPlotTailoredExperience');
+export const actPlotDescription = () => ls('pipeline.extraction.actPlotDescription');
 
 export const summarizerFallbackExtractionPromptTemplate = (completedScenes: number | string) =>
 	ls('pipeline.extraction.summarizerFallback', { completedScenes });
