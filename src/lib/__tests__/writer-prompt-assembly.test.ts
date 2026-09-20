@@ -255,4 +255,15 @@ describe('writer prompt assembly', () => {
 		expect(named.length).toBeGreaterThan(0);
 		for (const name of named) expect(allowed, name).toContain(name);
 	});
+
+	/**
+	 * The story's `# Act Plot` message states each phase's purpose story-specifically, so the
+	 * writer's generic table is redundant — and it named only 4 of the 5 phases the runtime
+	 * defines, with labels that did not match what {{currentActPhase}} substitutes to.
+	 */
+	it.each(LOCALES)('%s: phase-event prompt carries no generic phase-purpose table', (locale) => {
+		const text = writerPrompts(locale).phaseEventWriterExtractionPrompt;
+		expect(text).not.toContain(locale === 'en' ? 'Phase Core Purposes' : '階段核心目的參考');
+		expect(text).not.toMatch(/^\|/m);
+	});
 });

@@ -276,13 +276,14 @@ src:
               updatedAt: "2026-09-20T11:20:45.778Z"
             phase-event-writer-extraction-prompt.md:
               configPath: en/prompt-templates/writer/phase-event-writer-extraction-prompt.md
-              hash: c8eaeaac47de90321acba770352d5e9f5bd8b5d82f8055843375bf8353f64d2e
+              hash: 68d47de7abbb91cde2b16e7a556958a9cab68b9bf7dfb65d1216736704f3a2b5
               oldHashes:
+                - c8eaeaac47de90321acba770352d5e9f5bd8b5d82f8055843375bf8353f64d2e
                 - a359edb65525a154db04e07796d5f76afcc747ebe687952cee7070e22f119dd1
                 - b2d70e85f9ad45456de127214a546060d259671048fb8057ec0c3c41e543ec7c
                 - d51bbe7118a367180b54a117faa0dc56fac7f7302801e008792226ecfbbd58c7
                 - 8e1c308cb8d49da36ea6aa1e5dc6720d63392cce9d32b0b2b9ed316e27a85871
-              updatedAt: "2026-09-20T11:20:45.778Z"
+              updatedAt: "2026-09-20T13:35:36.955Z"
             epilogue-writer-extraction-prompt.md:
               configPath: en/prompt-templates/writer/epilogue-writer-extraction-prompt.md
               hash: 4c5b847a0afffc4e884a6423875ef7e02b83425e2a348a3604ab50133a9672b7
@@ -652,13 +653,14 @@ src:
               updatedAt: "2026-09-20T11:20:45.778Z"
             phase-event-writer-extraction-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/writer/phase-event-writer-extraction-prompt.md
-              hash: 783f6216237a2ec2ba78c7281d53d3f0bfbc679077d9ee0c4547b1f9ffbfc037
+              hash: b9818b20d09da5d22991dde301d258e052a488b1b61b4c567e250ec8842c3a9f
               oldHashes:
+                - 783f6216237a2ec2ba78c7281d53d3f0bfbc679077d9ee0c4547b1f9ffbfc037
                 - ffa77e5e376ed7ac3489e28beded8104b95fee70d02ecd279d58e0d0703de72f
                 - 5796e3021598a5229e5f303de633629433c675e08a518293c8f8587d268c0aba
                 - e4936d2212d62621967aa3382769d2f8c35362a9198eb0926caa33fd9897a60a
                 - 5f744f34fe1ccf41fe1b55dec77717369b0baf6d6fc81b09faf9eeb6c5407671
-              updatedAt: "2026-09-20T11:20:45.778Z"
+              updatedAt: "2026-09-20T13:35:36.955Z"
             epilogue-writer-extraction-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/writer/epilogue-writer-extraction-prompt.md
               hash: 1971cd721668c1d80410910d961cd5973ed6c869411e54caa129f93f940e036f

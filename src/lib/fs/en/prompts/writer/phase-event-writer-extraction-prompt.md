@@ -39,21 +39,12 @@ Whenever a new named character needs to be introduced, you must do the following
 - **Early Phase (`scene count < {{earlyPhaseThreshold}}`):** Focus on developing Phase Events organically. Do not rush toward resolution.
 - **Late Phase (`scene count >= {{latePhaseThreshold}}`):** Actively steer the narrative toward resolving the currently active Phase Event. **Once resolved, prioritize phase advancement over triggering new events.**
 
-### Phase Advancement & Tool Usage
+### Phase Advancement
 
 Call the `advance-phase` tool **at most once per scene**, and **ONLY** when the narrative is ready to transition under one of these triggers:
 
-- **Primary Trigger:** You are approaching or exceeding `{{estimatedPhaseLength}}` scenes **AND** the core narrative purpose of {{currentActPhase}} has been established or resolved.
+- **Primary Trigger:** You are approaching or exceeding `{{estimatedPhaseLength}}` scenes **AND** the core purpose of {{currentActPhase}}, as defined in `# Act Plot` above, has been established or resolved.
 - **Divergence Trigger:** The player's choices have permanently altered or bypassed the need for the current phase's milestone (e.g., resolving a conflict early or forcing a premature confrontation).
-
-**Phase Core Purposes for Reference:**
-
-| Phase              | Core Purpose                                                                                                                |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| **Introduction**   | The protagonist, core setting, and central conflict are established, and the stakes of the Act are clear to the player.     |
-| **Rising-action**  | The protagonist actively engages with the central conflict and confronts at least one significant obstacle or complication. |
-| **Climax**         | The primary confrontation, revelation, or point of no return for this Act takes place.                                      |
-| **Falling-action** | The immediate consequences of the climax settle, establishing a new status quo or bridging to the next Act.                 |
 
 **Negative Constraints:**
 
