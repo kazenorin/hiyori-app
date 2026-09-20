@@ -357,4 +357,36 @@ describe('writer prompt assembly', () => {
 		expect(tail).not.toMatch(/{{\w+}}/);
 		expect(tail).not.toMatch(/^[ \t]+$/m);
 	});
+
+	/**
+	 * The epilogue's own Grounding check already tells the writer to trace facts to
+	 * `## Character Profiles`, but its evidence sentence never named that section — and the role
+	 * bullet can only defer to a per-task enumeration if every task actually carries one.
+	 */
+	it.each(LOCALES)('%s: epilogue evidence map covers Character Profiles', (locale) => {
+		const text = writerPrompts(locale).epilogueWriterExtractionPrompt;
+		const profiles = locale === 'en' ? '`## Character Profiles`' : '`## 角色檔案`';
+		const upcoming = locale === 'en' ? 'Upcoming Scene Plot' : '下一場景劇情';
+		expect(text).toContain(profiles);
+		// upcomingScenePlot is undefined for the epilogue, so the map must not claim it.
+		expect(text).not.toContain(upcoming);
+		expect(text.split('\n').filter((l) => l.startsWith('- `#')).length).toBeGreaterThanOrEqual(3);
+	});
+
+	it.each(LOCALES)('%s: role grounding bullet defers to the task enumeration', (locale) => {
+		const role = writerPrompts(locale).writerRole;
+		const prefix = locale === 'en' ? '- **Grounding:**' : '- **根據脈絡:**';
+		const grounding = role.split('\n').find((l) => l.startsWith(prefix));
+		expect(grounding, 'grounding bullet').toBeDefined();
+		expect(grounding).not.toContain(locale === 'en' ? 'World Content' : '世界觀內容');
+	});
+
+	/** The epilogue gained five placeholders with its evidence map, so it needs render coverage too. */
+	it.each(LOCALES)('%s: epilogue tail resolves every placeholder', async (locale) => {
+		const tail = await renderTail({ locale, plotMode: 'guidance', epilogueEndingType: 'bittersweet', summarizationPoint: 5 });
+		expect(tail).not.toMatch(/{{\w+}}/);
+		expect(countOccurrences(tail, ROLE_HEADING[locale])).toBe(1);
+		expect(tail).toContain('bittersweet');
+		expect(tail).not.toMatch(/^[ \t]+$/m);
+	});
 });
