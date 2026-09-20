@@ -17,7 +17,7 @@ vi.mock('$lib/definitions/common-headers', async (importOriginal) => {
 	return {
 		...actual,
 		sectionFormat: (text: string, headerLevel = 2) => `${'#'.repeat(headerLevel)} ${text}\n\n`,
-		summariesHeader: () => 'Summaries',
+		actSummaryHeader: () => 'Act Summary',
 		scenesHeader: () => 'Scenes',
 		worldContentHeader: () => 'World Content',
 		actPlotHeader: () => 'Act Plot',
@@ -111,9 +111,10 @@ describe('buildSummariesMessage', () => {
 		expect(buildSummariesMessage({ summarizationPoint: 8, actSummaryAtSP: '' })).toBeUndefined();
 	});
 
-	it('includes the act summary section when the snapshot has content', () => {
+	it('leads with the serialized Act Summary H1 (no # Summaries wrapper) when the snapshot has content', () => {
 		const msg = buildSummariesMessage({ summarizationPoint: 8, actSummaryAtSP: '## Scene Summaries' });
-		expect(msg).toContain('# Summaries');
+		expect(msg).toContain('# Act Summary');
+		expect(msg).not.toContain('# Summaries');
 	});
 });
 
@@ -171,8 +172,8 @@ describe('buildPhaseMessages', () => {
 		const msgs = buildPhaseMessages(ctx, ['## Writer Output\n\nDRAFT'], 'DO THE TASK', 'be concise');
 		const joined = msgs.map((m) => m.content).join('\n');
 		const idx = (s: string) => joined.indexOf(s);
-		expect(idx('# World Content')).toBeLessThan(idx('# Summaries'));
-		expect(idx('# Summaries')).toBeLessThan(idx('# Scenes'));
+		expect(idx('# World Content')).toBeLessThan(idx('# Act Summary'));
+		expect(idx('# Act Summary')).toBeLessThan(idx('# Scenes'));
 		expect(idx('# Scenes')).toBeLessThan(idx('## Character Profiles'));
 		expect(idx('## Character Profiles')).toBeLessThan(idx('DRAFT'));
 		expect(idx('DRAFT')).toBeLessThan(idx('DO THE TASK'));
@@ -182,7 +183,7 @@ describe('buildPhaseMessages', () => {
 		// Why: a profile snapshot pinned inside Summaries (before Scenes) confused readers and
 		// shortened the cache-stable prefix; profiles are now their own section after Scenes.
 		const msgs = buildPhaseMessages(ctx, [], 'TASK', '');
-		const summaries = msgs.find((m) => m.content.includes('# Summaries'))?.content ?? '';
+		const summaries = msgs.find((m) => m.content.includes('# Act Summary'))?.content ?? '';
 		expect(summaries).not.toContain('Elena');
 	});
 	it('omits the Character Profiles message when there are no profiles', () => {
@@ -191,7 +192,7 @@ describe('buildPhaseMessages', () => {
 	});
 	it('omits the Summaries message when there is no SP', () => {
 		const msgs = buildPhaseMessages({ ...ctx, summarizationPoint: 0 }, [], 'TASK', '');
-		expect(msgs.map((m) => m.content).join('\n')).not.toContain('# Summaries');
+		expect(msgs.map((m) => m.content).join('\n')).not.toContain('# Act Summary');
 	});
 	it('omits the Scenes message when there are no scene sections', () => {
 		// Why: a header-only "# Scenes" message would sit in the shared prefix of every phase

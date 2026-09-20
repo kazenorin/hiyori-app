@@ -3,7 +3,6 @@ import type { ActPhaseBoundary } from '$lib/db/act-lines';
 import {
 	worldContentHeader,
 	actPlotHeader,
-	actSummaryHeader,
 	actPhasesHeader,
 	interviewTranscriptHeader,
 	playerPreferencesHeader,
@@ -58,9 +57,6 @@ export const SECTION = {
 	},
 	get ACT_PLOT() {
 		return sectionWithRule(actPlotHeader());
-	},
-	get ACT_SUMMARY() {
-		return sectionFormat(actSummaryHeader());
 	},
 	get PLAYER_RESPONSE() {
 		return sectionFormat(playerResponseHeader());

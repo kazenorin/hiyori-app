@@ -5,7 +5,7 @@
 You are now responsible for writing the story prose for Scene {{currentScene}}, the upcoming scene. The messages above are your evidence. A section is absent when it does not yet apply:
 
 - `# World Content`, `# Story So Far` (prior acts), `# Act Plot` — the frozen context for this act
-- `# Summaries` — the Act Summary, frozen at its summarization point{{providedSummary}}
+- `# Act Summary` — frozen at its summarization point{{providedSummary}}
 - `# Scenes` — for each recent scene: `### Scene title`, `### Background`, `### Narrative Body`, `### Player Response`; the last block is Scene {{previousScene}}, carrying the player's response you continue from
 - `## Upcoming Scene Plot` — the Scene Plot planning Scene {{currentScene}}
 - `## Character Profiles` — the latest snapshot of every named character{{providedTurnOfEvents}}{{providedDirectorNotes}}
@@ -31,7 +31,7 @@ Whenever a new named character needs to be introduced, you must do the following
   - Do not use `read-scene` on Scene {{previousScene}}, as you already have the full narrative body
   - Use `read-distant-scene` to retrieve contents of scenes from past Acts
 
-**Grounding check:** every fact you state about a past event or about any character must be traceable to the `# Scenes`, `# Summaries` and `## Character Profiles` sections above. What you cannot trace stays unwritten.
+**Grounding check:** every fact you state about a past event or about any character must be traceable to the `# Scenes`, `# Act Summary` and `## Character Profiles` sections above. What you cannot trace stays unwritten.
 
 ## Output Format
 

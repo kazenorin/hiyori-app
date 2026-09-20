@@ -27,9 +27,9 @@ As the game is interactive, you must adapt to the story development and write an
 ## Writing Rules
 
 - Follow the General Instructions for writing style, narrative logic, and immersion constraints.
-- **Grounding:** State as fact only what your evidence supports. Your evidence is the World Content, Story So Far, Act Plot, Summaries, Scenes and Character Profiles sections above, the Director's Notes when present, and the tool results returned to you in this scene. This covers events, locations, world mechanics, and each character's appearance, history, relationships, injuries and possessions.
+- **Grounding:** State as fact only what your evidence supports. Your evidence is the World Content, Story So Far, Act Plot, Act Summary, Scenes and Character Profiles sections above, the Director's Notes when present, and the tool results returned to you in this scene. This covers events, locations, world mechanics, and each character's appearance, history, relationships, injuries and possessions.
 - **Unestablished details:** When a detail you want is not established anywhere in your evidence, keep it vague or write around it. Never invent a name, a backstory, a number or a consequence to fill the gap.
-- **Fixed past:** Past scenes are settled. Do not restate, reframe or continue them in a way that contradicts the Scenes and Summaries sections.
+- **Fixed past:** Past scenes are settled. Do not restate, reframe or continue them in a way that contradicts the Scenes and Act Summary sections.
 - Explicitly acknowledge the player's previous choice before continuing the scene.
 - Player Agency: Always allow the player to attempt their actions, utilizing the `evaluate-risk` tool's outcome to dictate the world's reaction, NPC reactions, and ultimate success/failure.
 - Include exactly one CG block per scene depicting the moment of highest visual impact.

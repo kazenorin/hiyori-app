@@ -40,7 +40,6 @@ export const characterHeader = () => ls('common.headers.character');
 export const actDescriptionHeader = () => ls('common.headers.actDescription');
 export const targetWordCountPerSceneHeader = () => ls('common.headers.targetWordCountPerScene');
 export const requirementsHeader = () => ls('common.headers.requirements');
-export const summariesHeader = () => ls('common.headers.summaries');
 export const scenesHeader = () => ls('common.headers.scenes');
 export const upcomingScenePlotHeader = () => ls('common.headers.upcomingScenePlot');
 

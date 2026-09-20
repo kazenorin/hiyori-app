@@ -15,7 +15,6 @@ import {
 	actSummaryHeader,
 	scenesHeader,
 	sectionFormat,
-	summariesHeader,
 	summaryHeader,
 } from '$lib/definitions/common-headers';
 import { aliasesLabel, locationLabel, sceneWithNumberLabel } from '$lib/definitions/common-labels';
@@ -131,7 +130,7 @@ export function formattedActSummary(actSummary: string): string[] {
 	if (actSummary.trim().length == 0) return [];
 	const existingParsed = parseActSummary(actSummary);
 	const serializedActSummary = serializeActSummary(pruneCharacterScenes(existingParsed));
-	return [SECTION.ACT_SUMMARY + serializedActSummary];
+	return [serializedActSummary];
 }
 
 /**
@@ -172,15 +171,16 @@ export function buildMainContextMessages(input: {
 /**
  * Assemble the Tier-1 Summaries message (Act Summary@SP only), or `undefined` when there is no
  * summarization point yet / the snapshot has no content — callers then omit the message entirely
- * and start Scenes from the act's first scene. Character Profiles are deliberately NOT included:
- * they are dynamic, so a snapshot pinned at the SP confuses the reader; the latest profiles are
- * emitted as their own section after Scenes (see buildPhaseMessages).
+ * and start Scenes from the act's first scene. The message is the serialized Act Summary verbatim
+ * (it already leads with its own `# Act Summary` H1). Character Profiles are deliberately NOT
+ * included: they are dynamic, so a snapshot pinned at the SP confuses the reader; the latest
+ * profiles are emitted as their own section after Scenes (see buildPhaseMessages).
  */
 export function buildSummariesMessage(input: { summarizationPoint: number; actSummaryAtSP: string }): string | undefined {
 	if (input.summarizationPoint <= 0) return undefined;
 	const summary = formattedActSummary(input.actSummaryAtSP);
 	if (summary.length === 0) return undefined;
-	return [sectionFormat(summariesHeader(), 1), ...summary].join('\n').trimEnd();
+	return summary.join('\n').trimEnd();
 }
 
 /**

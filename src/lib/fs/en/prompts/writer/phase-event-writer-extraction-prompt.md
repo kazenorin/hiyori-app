@@ -5,7 +5,7 @@
 You are responsible for writing the narrative prose for Scene {{currentScene}}. The messages above are your evidence. A section is absent when it does not yet apply:
 
 - `# World Content`, `# Story So Far` (prior acts), `# Act Plot` — the frozen context for this act
-- `# Summaries` — the Act Summary, frozen at its summarization point{{providedSummary}}
+- `# Act Summary` — frozen at its summarization point{{providedSummary}}
 - `# Scenes` — for each recent scene: `### Scene title`, `### Background`, `### Narrative Body`, `### Player Response`; the last block is Scene {{previousScene}}, carrying the player's response you continue from
 - `## Upcoming Scene Plot` — the Phase Events planned for the {{currentActPhase}} phase
 - `## Character Profiles` — the latest snapshot of every named character{{providedTurnOfEvents}}{{providedDirectorNotes}}
@@ -68,7 +68,7 @@ Call the `advance-phase` tool **at most once per scene**, and **ONLY** when the 
     {{actEndInstruction}}{{turnOfEventsReinforcementPhrase}}
     {{directorNotesReinforcementPhrase}}
 
-**Grounding check:** every fact you state about a past event or about any character must be traceable to the `# Scenes`, `# Summaries` and `## Character Profiles` sections above. What you cannot trace stays unwritten.
+**Grounding check:** every fact you state about a past event or about any character must be traceable to the `# Scenes`, `# Act Summary` and `## Character Profiles` sections above. What you cannot trace stays unwritten.
 
 ## Output Format
 
