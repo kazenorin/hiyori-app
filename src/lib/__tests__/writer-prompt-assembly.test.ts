@@ -293,4 +293,24 @@ describe('writer prompt assembly', () => {
 			expect(writerPrompts(locale)[variant]).not.toContain('read-distant-scene');
 		}
 	});
+
+	/**
+	 * The field guidance moves to the always-present role (one authoring site for all three
+	 * variants) while each variant keeps `## Output Format` — the mandate plus the fenced template —
+	 * last, because that is the position nearest generation. Distinct heading names keep the two
+	 * concerns from colliding in one message.
+	 */
+	it.each(LOCALES)('%s: output field guidance appears exactly once, in the role', async (locale) => {
+		const fields = locale === 'en' ? '## Output Fields' : '## 輸出欄位';
+		const format = locale === 'en' ? '## Output Format' : '## 輸出格式';
+		const cgLine = locale === 'en' ? 'Visual Novel style artwork description' : '視覺小說風格的插圖描述';
+		expect(countOccurrences(writerPrompts(locale).writerRole, fields)).toBe(1);
+		for (const plotMode of ['guidance', 'phaseEvent'] as const) {
+			const tail = await renderTail({ locale, plotMode });
+			expect(countOccurrences(tail, fields), plotMode).toBe(1);
+			expect(countOccurrences(tail, format), plotMode).toBe(1);
+			expect(countOccurrences(tail, cgLine), plotMode).toBe(1);
+			expect(tail.trimEnd().endsWith('```'), plotMode).toBe(true);
+		}
+	});
 });
