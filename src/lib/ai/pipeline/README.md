@@ -129,7 +129,7 @@ Prompts use `{{variable}}` placeholders resolved at runtime by `runners.ts` (via
 
 Every phase shares one system prompt (`mainChatSystemPrompt` with `{{generalInstructions}}` substituted); role framing now lives inside each phase's extraction prompt. The GM extraction prompt resolves `{{currentScene}}`, `{{inventoryToolsInstruction}}`, `{{additionalRules}}`, and (in `phaseEvent` mode) `{{currentActPhase}}` and `{{actPhaseBoundaries}}`.
 
-Writer extraction prompts resolve: `{{previousScene}}`, `{{currentScene}}`, `{{providedSummary}}`, `{{providedTurnOfEvents}}`, `{{providedDirectorNotes}}`, `{{turnOfEventsReinforcementPhrase}}`, `{{directorNotesReinforcementPhrase}}`, `{{actEndInstruction}}`. The `phaseEvent` variant additionally resolves `{{currentActPhase}}`, `{{currentActPhaseProgress}}`, `{{estimatedPhaseLength}}`, `{{earlyPhaseThreshold}}`, and `{{latePhaseThreshold}}`.
+Writer extraction prompts resolve: `{{previousScene}}`, `{{currentScene}}`, `{{providedSummary}}`, `{{providedTurnOfEvents}}`, `{{providedDirectorNotes}}`, and `{{scenePriorities}}` (a whole-line block assembled by `resolveScenePriorities` from the end-of-act instruction plus the turn-of-events and Director's Notes reinforcement phrases; `substituteToolsLine` deletes the line entirely when nothing applies). The `phaseEvent` variant additionally resolves `{{currentActPhase}}`, `{{currentActPhaseProgress}}`, `{{estimatedPhaseLength}}`, `{{earlyPhaseThreshold}}`, and `{{latePhaseThreshold}}`.
 
 ## Context Passing
 

@@ -33,7 +33,11 @@ vi.mock('$lib/ai/pipeline/phase-executor', async (importOriginal) => {
 import { executeStreamingPhase } from '$lib/ai/pipeline/phase-executor';
 import { loadLocaleStrings } from '$lib/localization';
 import { runWriterPhase, type PipelineRunContext, type TrackPhase } from '$lib/ai/pipeline/runners';
-import { writerScenePrioritiesHeader } from '$lib/definitions/pipeline-prompts';
+import {
+	writerDirectorNotesReinforcementPhrase,
+	writerScenePrioritiesHeader,
+	writerTurnOfEventsReinforcementPhrase,
+} from '$lib/definitions/pipeline-prompts';
 import type { ActLineContext, PipelineState } from '$lib/ai/pipeline/types';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
 import { createNarrativeOverrides } from '$lib/ai/narrative-types';
@@ -243,6 +247,11 @@ describe('writer prompt assembly', () => {
 	 * of defect fixed in commit 1b90e50.
 	 */
 	it.each(LOCALES)('%s: guidance evidence map names only sections the runtime can emit', (locale) => {
+		// KNOWN LIMITATION: these allow-lists are hand-copied from common.headers.* rather than read
+		// via ls(), because the suite loads only the 'en' locale and the zh file names are literal text
+		// in the markdown. This catches a prompt-side rename (the 世界背景 class of bug fixed in
+		// 1b90e50); it does NOT catch a header renamed in zh-Hant-HK.yaml. Re-check the lists whenever
+		// a common.headers.* value changes.
 		const allowed =
 			locale === 'en'
 				? ['# World Content', '# Story So Far', '# Act Plot', '# Act Summary', '# Scenes', '# Upcoming Scene Plot', '## Character Profiles']
@@ -336,10 +345,16 @@ describe('writer prompt assembly', () => {
 			const at = tail.indexOf(heading);
 			expect(at, plotMode).toBeGreaterThan(tail.indexOf(profiles));
 			expect(tail.indexOf(format), plotMode).toBeGreaterThan(at);
-			// The block must carry content, not just its heading. Phase-event contributes the
-			// turn-of-events and director's-notes lines; guidance also carries its end-of-act line.
-			const block = tail.slice(at, tail.indexOf(format, at));
-			expect(block.split('\n').filter((l) => l.trim().length > 0).length, plotMode).toBeGreaterThanOrEqual(3);
+			// Assert the phrase CONTENT arrives, not a line count: the block sits in the middle of a
+			// long prompt, so slicing heading-to-Output-Format and counting non-blank lines would pass
+			// even if the block were empty. Expected strings come from ls() so they cannot drift from
+			// the YAML the way a hard-coded literal would.
+			const directorPhrase = writerDirectorNotesReinforcementPhrase().trim();
+			expect(tail, `${plotMode} director's-notes phrase`).toContain(directorPhrase);
+			expect(tail, `${plotMode} turn-of-events phrase`).toContain(writerTurnOfEventsReinforcementPhrase().trim());
+			const phraseAt = tail.indexOf(directorPhrase);
+			expect(phraseAt, plotMode).toBeGreaterThan(at);
+			expect(phraseAt, plotMode).toBeLessThan(tail.indexOf(format, at));
 		}
 	});
 
