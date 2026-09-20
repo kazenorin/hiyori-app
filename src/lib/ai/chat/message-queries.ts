@@ -39,7 +39,7 @@ export function getActSummaryAtScene(messages: UIMessage[], maxScene: number): s
 	return '';
 }
 
-export function getScenePlotForScene(messages: UIMessage[], sceneNumber: number, plotMode: PlotMode): string {
+export function getScenePlotForScene(messages: UIMessage[], sceneNumber: number, plotMode: PlotMode): string | undefined {
 	if (plotMode === 'guidance') {
 		for (let i = messages.length - 1; i >= 0; i--) {
 			if (messages[i].sceneNumber === sceneNumber && messages[i].scenePlot) {
@@ -53,7 +53,7 @@ export function getScenePlotForScene(messages: UIMessage[], sceneNumber: number,
 		}
 	}
 
-	return '';
+	return undefined;
 }
 
 export function getPreviousNarrativeMessage(messages: UIMessage[]): NarrativeVariables | undefined {

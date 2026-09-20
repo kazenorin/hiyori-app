@@ -606,7 +606,7 @@ async function buildPipelineInput(session: InternalSession, plan: RunPlan): Prom
 	// the current player response folded into its block (see buildScenesSections). Without the
 	// clamp, on boundary turns (SP >= completedScenes) that scene — and the player response
 	// triggering this generation — would fall below the range and be dropped.
-	const scenesSections = buildScenesSections(lineMessages, hasSummaries ? Math.min(sp + 1, completedScenes) : 1, previousScenePlot);
+	const scenesSections = buildScenesSections(lineMessages, hasSummaries ? Math.min(sp + 1, completedScenes) : 1);
 	const context: PipelineContext = {
 		worldContent,
 		actPlot,
@@ -615,6 +615,7 @@ async function buildPipelineInput(session: InternalSession, plan: RunPlan): Prom
 		characterProfiles: profilesForPrefix,
 		actSummaryAtSP: actSummaryAtSp,
 		scenesSections,
+		upcomingScenePlot: previousScenePlot,
 	};
 
 	const common: CommonPipelineInput = {

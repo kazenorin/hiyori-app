@@ -171,4 +171,10 @@ export interface PipelineContext {
 	// --- Tier 2: Scenes (append-only since the summarization point) ---
 	/** Raw scene blocks (title / background / narrative / turn-of-events, with folded player responses). */
 	scenesSections: string[];
+	/**
+	 * The Scene Plot planning the scene being generated, emitted as its own `# Upcoming Scene Plot`
+	 * message after Scenes. Volatile (may change every few turns), so it sits outside the append-only Scenes
+	 * block. Absent for reduced-scope contexts (e.g. headless regeneration) and the first planning pass.
+	 */
+	upcomingScenePlot?: string;
 }

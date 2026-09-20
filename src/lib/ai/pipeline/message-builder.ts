@@ -185,13 +185,15 @@ export function buildSummariesMessage(input: { summarizationPoint: number; actSu
 
 /**
  * Assemble a phase's messages under the shared cacheable prefix:
- * [World Content?][Story So Far?][Act Plot?][Summaries?][Scenes?][Character Profiles?] (Tiers 0–2, byte-identical across
- * phases) then [prior outputs…][extraction prompt][Director's Notes] (Tier 3 tail, per phase).
+ * [World Content?][Story So Far?][Act Plot?][Summaries?][Scenes?][Upcoming Scene Plot?][Character Profiles?]
+ * (Tiers 0–2, byte-identical across phases) then [prior outputs…][extraction prompt][Director's Notes]
+ * (Tier 3 tail, per phase).
  *
- * Character Profiles trail Scenes (rather than sitting inside Summaries) because they are the
+ * Character Profiles trail everything (rather than sitting inside Summaries) because they are the
  * latest snapshot and change every turn; keeping them last in the shared prefix preserves the
  * cache stability of the Tier-0 sections/Summaries/Scenes across turns while still sharing the whole
- * prefix across this turn's phases.
+ * prefix across this turn's phases. The Upcoming Scene Plot is its own message (after the append-only
+ * Scenes block) rather than folded into Scenes, so the Scenes message stays byte-stable turn-to-turn.
  */
 export function buildPhaseMessages(
 	ctx: PipelineContext,
@@ -201,8 +203,18 @@ export function buildPhaseMessages(
 ): MessageBase[] {
 	const scenesMessage =
 		ctx.scenesSections.length > 0 ? (sectionFormat(scenesHeader(), 1) + ctx.scenesSections.join('\n')).trimEnd() : undefined;
+	const upcomingScenePlot = ctx.upcomingScenePlot;
+	const upcomingScenePlotMessage = hasContent(upcomingScenePlot)
+		? (SECTION.UPCOMING_SCENE_PLOT + upcomingScenePlot).trimEnd()
+		: undefined;
 	const profilesMessage = ctx.characterProfiles.length > 0 ? ctx.characterProfiles.join('\n').trimEnd() : undefined;
-	const shared = [...buildMainContextMessages(ctx), buildSummariesMessage(ctx), scenesMessage, profilesMessage].filter(hasContent);
+	const shared = [
+		...buildMainContextMessages(ctx),
+		buildSummariesMessage(ctx),
+		scenesMessage,
+		upcomingScenePlotMessage,
+		profilesMessage,
+	].filter(hasContent);
 	const tail = [...priorOutputs.filter(hasContent), extractionPrompt, ...formatDirectorNotesSection(directorNotes)];
 	return toUserMessages([...shared, ...tail]);
 }

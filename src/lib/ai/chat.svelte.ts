@@ -551,7 +551,8 @@ async function regenerateGameData(
 		summarizationPoint: 0,
 		characterProfiles: [],
 		actSummaryAtSP: '',
-		scenesSections: buildScenesSections(priorMessages, 1, previousScenePlot),
+		scenesSections: buildScenesSections(priorMessages, 1),
+		upcomingScenePlot: previousScenePlot,
 	};
 
 	const gameData = await runGameMasterRegeneration({

@@ -6,7 +6,6 @@ import {
 	narrativeBodyHeader,
 	turnOfEventsHeader,
 	playerResponseHeader,
-	upcomingScenePlotHeader,
 	scenesHeader,
 } from '$lib/definitions/common-headers';
 import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
@@ -21,9 +20,10 @@ function fieldSection(header: string, value: string | null | undefined): string[
  * Each completed assistant scene becomes one `## Scene N` block; the player response
  * that followed it is folded in as `### Player Response`. The output is append-only
  * across turns (a new scene appends a new block; earlier blocks are byte-identical),
- * which is what keeps the shared prefix cacheable turn-to-turn.
+ * which is what keeps the shared prefix cacheable turn-to-turn. The Upcoming Scene Plot
+ * is no longer part of these sections; it is emitted as its own message (see buildPhaseMessages).
  */
-export function buildScenesSections(messages: UIMessage[], fromScene: number, upcomingScenePlot?: string): string[] {
+export function buildScenesSections(messages: UIMessage[], fromScene: number): string[] {
 	const sections: string[] = [];
 
 	for (let i = 0; i < messages.length; i++) {
@@ -42,14 +42,10 @@ export function buildScenesSections(messages: UIMessage[], fromScene: number, up
 		}
 	}
 
-	if (hasContent(upcomingScenePlot)) {
-		sections.push(sectionFormat(upcomingScenePlotHeader(), 2) + upcomingScenePlot!.trim());
-	}
-
 	return sections;
 }
 
 /** Assemble the Tier-2 Scenes message (`# Scenes` + the raw scene blocks). */
-export function buildScenesMessage(messages: UIMessage[], fromScene: number, upcomingScenePlot?: string): string {
-	return (sectionFormat(scenesHeader(), 1) + buildScenesSections(messages, fromScene, upcomingScenePlot).join('\n')).trimEnd();
+export function buildScenesMessage(messages: UIMessage[], fromScene: number): string {
+	return (sectionFormat(scenesHeader(), 1) + buildScenesSections(messages, fromScene).join('\n')).trimEnd();
 }

@@ -22,6 +22,7 @@ vi.mock('$lib/definitions/common-headers', async (importOriginal) => {
 		worldContentHeader: () => 'World Content',
 		actPlotHeader: () => 'Act Plot',
 		storySoFarHeader: () => 'Story So Far',
+		upcomingScenePlotHeader: () => 'Upcoming Scene Plot',
 	};
 });
 
@@ -199,5 +200,19 @@ describe('buildPhaseMessages', () => {
 		// carrying no information (e.g. the first scene of an act), so it must be dropped.
 		const msgs = buildPhaseMessages({ ...ctx, scenesSections: [] }, [], 'TASK', '');
 		expect(msgs.map((m) => m.content).join('\n')).not.toContain('# Scenes');
+	});
+	it('emits the Upcoming Scene Plot as its own H1+rule message between Scenes and Character Profiles', () => {
+		// Why: the plot changes every turn, so keeping it out of the append-only Scenes message
+		// lets the Scenes block stay byte-stable across turns while the plot sits in its own message.
+		const msgs = buildPhaseMessages({ ...ctx, upcomingScenePlot: 'PLAN THE SCENE' }, [], 'TASK', '');
+		const joined = msgs.map((m) => m.content).join('\n');
+		expect(joined).toContain('# Upcoming Scene Plot\n\n---\n\nPLAN THE SCENE');
+		const idx = (s: string) => joined.indexOf(s);
+		expect(idx('# Scenes')).toBeLessThan(idx('# Upcoming Scene Plot'));
+		expect(idx('# Upcoming Scene Plot')).toBeLessThan(idx('## Character Profiles'));
+	});
+	it('omits the Upcoming Scene Plot message when there is no plot', () => {
+		const msgs = buildPhaseMessages(ctx, [], 'TASK', '');
+		expect(msgs.map((m) => m.content).join('\n')).not.toContain('Upcoming Scene Plot');
 	});
 });

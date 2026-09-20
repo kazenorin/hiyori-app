@@ -59,12 +59,6 @@ describe('buildScenesSections', () => {
 		expect(out).not.toContain('### Background');
 	});
 
-	it('appends the upcoming scene plot when provided', () => {
-		const out = buildScenesSections([assistant(11, { narrativeBody: 'x' })], 11, 'Next: the reveal').join('\n');
-		expect(out).toContain('## Upcoming Scene Plot');
-		expect(out).toContain('Next: the reveal');
-	});
-
 	it('skips assistant messages without a narrative body (incomplete scenes)', () => {
 		expect(buildScenesSections([assistant(11)], 11)).toEqual([]);
 	});

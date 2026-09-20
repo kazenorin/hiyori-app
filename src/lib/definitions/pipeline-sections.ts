@@ -20,6 +20,7 @@ import {
 	templateHeader,
 	directorNotesHeader,
 	storySoFarHeader,
+	upcomingScenePlotHeader,
 	characterProfilesHeader,
 	requirementsHeader,
 	sectionFormat,
@@ -90,6 +91,9 @@ export const SECTION = {
 	},
 	get STORY_SO_FAR() {
 		return sectionWithRule(storySoFarHeader());
+	},
+	get UPCOMING_SCENE_PLOT() {
+		return sectionWithRule(upcomingScenePlotHeader());
 	},
 	get CHARACTER_PROFILES() {
 		return sectionFormat(characterProfilesHeader()) + ls('common.descriptions.characterProfiles') + '\n\n';

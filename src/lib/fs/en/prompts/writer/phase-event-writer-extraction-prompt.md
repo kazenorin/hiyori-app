@@ -7,7 +7,7 @@ You are responsible for writing the narrative prose for Scene {{currentScene}}. 
 - `# World Content`, `# Story So Far` (prior acts), `# Act Plot` — the frozen context for this act
 - `# Act Summary` — frozen at its summarization point{{providedSummary}}
 - `# Scenes` — for each recent scene: `### Scene title`, `### Background`, `### Narrative Body`, `### Player Response`; the last block is Scene {{previousScene}}, carrying the player's response you continue from
-- `## Upcoming Scene Plot` — the Phase Events planned for the {{currentActPhase}} phase
+- `# Upcoming Scene Plot` — the Phase Events planned for the {{currentActPhase}} phase
 - `## Character Profiles` — the latest snapshot of every named character{{providedTurnOfEvents}}{{providedDirectorNotes}}
 
 Your task is to craft a vivid, engaging, and immersive narrative by evaluating the current state of Phase Events:
