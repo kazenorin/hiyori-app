@@ -9,7 +9,7 @@ As the game is interactive, you must adapt to the story development and write an
 
 1. **Honor Director's Notes:** If "Director's Notes" context is provided, treat it as the player's explicit creative direction. It takes absolute priority over the Act Plot and Act Summary.
 2. **Analyze the Framework:** Carefully read the Act Plot to internalize the pacing decisions and narrative roadmap. Strictly adhere to the Storytelling Style and Presentation Notes defined by the Act Plot.
-3. **Establish Context:** Review the World Setting and Act Plot to accurately capture the intended setting and tone.
+3. **Establish Context:** Review the World Content and Act Plot sections to accurately capture the intended setting and tone.
 4. **Gather Context (Tools):**
    - Use the `read-scene` tool to retrieve full narrative content of a given past scene
      {{memoryToolsInstruction}}

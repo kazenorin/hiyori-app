@@ -267,20 +267,22 @@ src:
               updatedAt: "2026-09-19T06:25:47.891Z"
             guidance-writer-extraction-prompt.md:
               configPath: en/prompt-templates/writer/guidance-writer-extraction-prompt.md
-              hash: 9442f2a25bd6588b9272e615f813782cf3d4f14b1645b045ec2b82dd0efb1255
+              hash: 77151f0ea6f5adb2918a90e201a0219bbf8ced0ecb2eb07eea0ede22d005e95e
               oldHashes:
+                - 9442f2a25bd6588b9272e615f813782cf3d4f14b1645b045ec2b82dd0efb1255
                 - 40ab6b6145dea601a8745e75274d23e68ebd1a6813d58b657eda0b01463e4ac6
                 - 26cd221fe81de22e9fe9231f437ef68bd9b21ef6f050a13960dd5aa88873b98b
                 - 17deebcd5373c4a9eb433d43a499a4e2392444810efa04fa3879cf7503f621e9
-              updatedAt: "2026-09-20T09:41:43.782Z"
+              updatedAt: "2026-09-20T11:20:45.778Z"
             phase-event-writer-extraction-prompt.md:
               configPath: en/prompt-templates/writer/phase-event-writer-extraction-prompt.md
-              hash: a359edb65525a154db04e07796d5f76afcc747ebe687952cee7070e22f119dd1
+              hash: c8eaeaac47de90321acba770352d5e9f5bd8b5d82f8055843375bf8353f64d2e
               oldHashes:
+                - a359edb65525a154db04e07796d5f76afcc747ebe687952cee7070e22f119dd1
                 - b2d70e85f9ad45456de127214a546060d259671048fb8057ec0c3c41e543ec7c
                 - d51bbe7118a367180b54a117faa0dc56fac7f7302801e008792226ecfbbd58c7
                 - 8e1c308cb8d49da36ea6aa1e5dc6720d63392cce9d32b0b2b9ed316e27a85871
-              updatedAt: "2026-09-20T09:41:43.782Z"
+              updatedAt: "2026-09-20T11:20:45.778Z"
             epilogue-writer-extraction-prompt.md:
               configPath: en/prompt-templates/writer/epilogue-writer-extraction-prompt.md
               hash: 4c5b847a0afffc4e884a6423875ef7e02b83425e2a348a3604ab50133a9672b7
@@ -288,9 +290,10 @@ src:
               updatedAt: "2026-09-20T05:51:34.585Z"
             writer-role.md:
               configPath: en/prompt-templates/writer/writer-role.md
-              hash: a15e0c75c1f532ba190b984de7546fbbdc6abd07e1d23a46dfd00a8b8b0065b2
-              oldHashes: []
-              updatedAt: "2026-09-20T05:51:34.585Z"
+              hash: e5aff39336aebbf4f82552cd165de29cfd07b90acc99d99e2e9a4be4168b7d68
+              oldHashes:
+                - a15e0c75c1f532ba190b984de7546fbbdc6abd07e1d23a46dfd00a8b8b0065b2
+              updatedAt: "2026-09-20T11:20:45.778Z"
           main-chat-system-prompt.md:
             configPath: en/prompt-templates/main-chat-system-prompt.md
             hash: 0f25f4e7da4a4594eeb776e3b1874028f82785f975660c398fb9eda7e1e3dc18
@@ -640,20 +643,22 @@ src:
               updatedAt: "2026-09-19T06:25:47.891Z"
             guidance-writer-extraction-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/writer/guidance-writer-extraction-prompt.md
-              hash: 3067259b4e8a98868986425ea9df655bb36d32f88cb89eb01270db75bc50cae8
+              hash: cb702351be1aac1570997ae7af6e681fe525d8250d726f73d46a9fc50677a9dc
               oldHashes:
+                - 3067259b4e8a98868986425ea9df655bb36d32f88cb89eb01270db75bc50cae8
                 - 87522ed3b26d72c4c4fc23b8c212093aadcad8753a7a0e03499bcdb09b8ea2e3
                 - b2ebc46117bf8cd32aa7471e3f08d60308a8bcd0cf64ab064cae2ffc8d116fcc
                 - 6d54b69c714365c03c96dd83bcdc4aaa908c82c3e8261b808865c735f5ad6a08
-              updatedAt: "2026-09-20T09:41:43.782Z"
+              updatedAt: "2026-09-20T11:20:45.778Z"
             phase-event-writer-extraction-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/writer/phase-event-writer-extraction-prompt.md
-              hash: ffa77e5e376ed7ac3489e28beded8104b95fee70d02ecd279d58e0d0703de72f
+              hash: 783f6216237a2ec2ba78c7281d53d3f0bfbc679077d9ee0c4547b1f9ffbfc037
               oldHashes:
+                - ffa77e5e376ed7ac3489e28beded8104b95fee70d02ecd279d58e0d0703de72f
                 - 5796e3021598a5229e5f303de633629433c675e08a518293c8f8587d268c0aba
                 - e4936d2212d62621967aa3382769d2f8c35362a9198eb0926caa33fd9897a60a
                 - 5f744f34fe1ccf41fe1b55dec77717369b0baf6d6fc81b09faf9eeb6c5407671
-              updatedAt: "2026-09-20T09:41:43.782Z"
+              updatedAt: "2026-09-20T11:20:45.778Z"
             epilogue-writer-extraction-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/writer/epilogue-writer-extraction-prompt.md
               hash: 1971cd721668c1d80410910d961cd5973ed6c869411e54caa129f93f940e036f
@@ -661,9 +666,10 @@ src:
               updatedAt: "2026-09-20T05:51:34.585Z"
             writer-role.md:
               configPath: zh-Hant-HK/prompt-templates/writer/writer-role.md
-              hash: e1820a30209caed796c6d156cd7449f59e904faadb7baf0561faed239b9dc90f
-              oldHashes: []
-              updatedAt: "2026-09-20T05:51:34.585Z"
+              hash: 490cde2f3100a3601b5a062cfe9b1ca83574f6d076b00daa4da1711af86c8018
+              oldHashes:
+                - e1820a30209caed796c6d156cd7449f59e904faadb7baf0561faed239b9dc90f
+              updatedAt: "2026-09-20T11:20:45.778Z"
           main-chat-system-prompt.md:
             configPath: zh-Hant-HK/prompt-templates/main-chat-system-prompt.md
             hash: bd4ce2ade4c884514d442ee819c22381574fbf09146b1f9f5561416c0b0164da
