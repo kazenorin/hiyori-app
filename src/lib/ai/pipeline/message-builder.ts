@@ -13,7 +13,6 @@ import {
 import {
 	actSummaryForScenesHeader,
 	actSummaryHeader,
-	mainContextHeader,
 	scenesHeader,
 	sectionFormat,
 	summariesHeader,
@@ -157,19 +156,17 @@ export function formatActSummaryForSummarizer(completedScenes: number, actSummar
 
 // --- Shared-prefix message builders (Tiers 0–2) ---
 
-/** Assemble the Tier-0 Main Context message: World Content · Story so Far · Act Plot. */
-export function buildMainContextMessage(input: {
+/** Assemble the Tier-0 sectional messages: World Content · Story so Far · Act Plot. */
+export function buildMainContextMessages(input: {
 	worldContent: string;
 	actPlot: string;
 	previousActSummaries: { actNumber: number; summary: string }[];
-}): string {
-	const parts: string[] = [
-		sectionFormat(mainContextHeader(), 1),
-		SECTION.WORLD_CONTENT + input.worldContent,
-		...formatStorySoFar(input.previousActSummaries),
-		SECTION.ACT_PLOT + input.actPlot,
-	];
-	return parts.join('\n').trimEnd();
+}): string[] {
+	const messages: string[] = [];
+	if (hasContent(input.worldContent)) messages.push((SECTION.WORLD_CONTENT + input.worldContent).trimEnd());
+	messages.push(...formatStorySoFar(input.previousActSummaries).map((m) => m.trimEnd()));
+	if (hasContent(input.actPlot)) messages.push((SECTION.ACT_PLOT + input.actPlot).trimEnd());
+	return messages;
 }
 
 /**
@@ -188,12 +185,12 @@ export function buildSummariesMessage(input: { summarizationPoint: number; actSu
 
 /**
  * Assemble a phase's messages under the shared cacheable prefix:
- * [Main Context][Summaries?][Scenes?][Character Profiles?] (Tiers 0–2, byte-identical across
+ * [World Content?][Story So Far?][Act Plot?][Summaries?][Scenes?][Character Profiles?] (Tiers 0–2, byte-identical across
  * phases) then [prior outputs…][extraction prompt][Director's Notes] (Tier 3 tail, per phase).
  *
  * Character Profiles trail Scenes (rather than sitting inside Summaries) because they are the
  * latest snapshot and change every turn; keeping them last in the shared prefix preserves the
- * cache stability of Main Context/Summaries/Scenes across turns while still sharing the whole
+ * cache stability of the Tier-0 sections/Summaries/Scenes across turns while still sharing the whole
  * prefix across this turn's phases.
  */
 export function buildPhaseMessages(
@@ -205,7 +202,7 @@ export function buildPhaseMessages(
 	const scenesMessage =
 		ctx.scenesSections.length > 0 ? (sectionFormat(scenesHeader(), 1) + ctx.scenesSections.join('\n')).trimEnd() : undefined;
 	const profilesMessage = ctx.characterProfiles.length > 0 ? ctx.characterProfiles.join('\n').trimEnd() : undefined;
-	const shared = [buildMainContextMessage(ctx), buildSummariesMessage(ctx), scenesMessage, profilesMessage].filter(hasContent);
+	const shared = [...buildMainContextMessages(ctx), buildSummariesMessage(ctx), scenesMessage, profilesMessage].filter(hasContent);
 	const tail = [...priorOutputs.filter(hasContent), extractionPrompt, ...formatDirectorNotesSection(directorNotes)];
 	return toUserMessages([...shared, ...tail]);
 }

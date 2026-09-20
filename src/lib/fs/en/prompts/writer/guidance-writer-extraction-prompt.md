@@ -4,7 +4,7 @@
 
 You are now responsible for writing the story prose for Scene {{currentScene}}, the upcoming scene. The messages above are your evidence. A section is absent when it does not yet apply:
 
-- `# Main Context` — `## World Content`, `## Story So Far` (prior acts), `## Act Plot`
+- `# World Content`, `# Story So Far` (prior acts), `# Act Plot` — the frozen context for this act
 - `# Summaries` — the Act Summary, frozen at its summarization point{{providedSummary}}
 - `# Scenes` — for each recent scene: `### Scene title`, `### Background`, `### Narrative Body`, `### Player Response`; the last block is Scene {{previousScene}}, carrying the player's response you continue from
 - `## Upcoming Scene Plot` — the Scene Plot planning Scene {{currentScene}}

@@ -46,13 +46,18 @@ import type { CharacterProfileEntity } from '$lib/db/character-profiles';
 export const interviewTranscriptDescription = () => ls('common.descriptions.interviewTranscript');
 export const playerPreferencesDescription = () => ls('common.descriptions.playerPreferences');
 
+/** Format a top-level sectional message header: H1, blank line, horizontal rule, blank line. */
+function sectionWithRule(header: string): string {
+	return `# ${header}\n\n---\n\n`;
+}
+
 /** Markdown section headings used in LLM message construction. */
 export const SECTION = {
 	get WORLD_CONTENT() {
-		return sectionFormat(worldContentHeader());
+		return sectionWithRule(worldContentHeader());
 	},
 	get ACT_PLOT() {
-		return sectionFormat(actPlotHeader());
+		return sectionWithRule(actPlotHeader());
 	},
 	get ACT_SUMMARY() {
 		return sectionFormat(actSummaryHeader());
@@ -88,7 +93,7 @@ export const SECTION = {
 		return sectionFormat(actPhasesHeader());
 	},
 	get STORY_SO_FAR() {
-		return sectionFormat(storySoFarHeader());
+		return sectionWithRule(storySoFarHeader());
 	},
 	get CHARACTER_PROFILES() {
 		return sectionFormat(characterProfilesHeader()) + ls('common.descriptions.characterProfiles') + '\n\n';

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import {
 	applyNarrativeOverrides,
-	buildMainContextMessage,
+	buildMainContextMessages,
 	buildPhaseMessages,
 	buildSummariesMessage,
 	mergeVariables,
@@ -17,7 +17,6 @@ vi.mock('$lib/definitions/common-headers', async (importOriginal) => {
 	return {
 		...actual,
 		sectionFormat: (text: string, headerLevel = 2) => `${'#'.repeat(headerLevel)} ${text}\n\n`,
-		mainContextHeader: () => 'Main Context',
 		summariesHeader: () => 'Summaries',
 		scenesHeader: () => 'Scenes',
 		worldContentHeader: () => 'World Content',
@@ -118,27 +117,40 @@ describe('buildSummariesMessage', () => {
 	});
 });
 
-describe('buildMainContextMessage', () => {
-	it('emits World Content, Story so Far (act > 1), and Act Plot in order', () => {
-		const msg = buildMainContextMessage({
+describe('buildMainContextMessages', () => {
+	it('emits World Content, Story so Far, and Act Plot as separate messages in order', () => {
+		const msgs = buildMainContextMessages({
 			worldContent: 'WORLD',
 			actPlot: 'PLOT',
 			previousActSummaries: [{ actNumber: 1, summary: 'Act1' }],
 		});
-		expect(msg).toContain('# Main Context');
-		expect(msg.indexOf('WORLD')).toBeLessThan(msg.indexOf('PLOT'));
-		expect(msg).toContain('Act1');
+		expect(msgs).toHaveLength(3);
+		expect(msgs[0]).toContain('World Content');
+		expect(msgs[1]).toContain('Story So Far');
+		expect(msgs[1]).toContain('Act1');
+		expect(msgs[2]).toContain('Act Plot');
 	});
 
-	it('omits Story so Far when there are no prior-act summaries', () => {
+	it("leads each message with an H1 and horizontal rule, preserving the content's own headers", () => {
+		// Why: the whole point of the restructure — the section wrapper is H1 + `---`, so the content's
+		// native H1 (e.g. `# World Setting`) no longer collides with the wrapper's heading level.
+		const msgs = buildMainContextMessages({ worldContent: '# World Setting\n\nlore', actPlot: 'PLOT', previousActSummaries: [] });
+		expect(msgs[0]).toBe('# World Content\n\n---\n\n# World Setting\n\nlore');
+	});
+
+	it('omits the Story so Far message when there are no prior-act summaries', () => {
 		// Why: the Story-so-Far section is driven purely by whether prior-act summaries exist;
 		// the first act has none (run-manager only collects them for actNumber > 1).
-		const msg = buildMainContextMessage({
-			worldContent: 'W',
-			actPlot: 'P',
-			previousActSummaries: [],
-		});
-		expect(msg).not.toContain('Story So Far');
+		const msgs = buildMainContextMessages({ worldContent: 'W', actPlot: 'P', previousActSummaries: [] });
+		expect(msgs).toHaveLength(2);
+		expect(msgs.join('\n')).not.toContain('Story So Far');
+	});
+
+	it('omits a section whose content is blank', () => {
+		// Why: a header-only wrapper for empty content would sit in every phase's shared prefix
+		// carrying no information, so blank sections are dropped.
+		const msgs = buildMainContextMessages({ worldContent: '   ', actPlot: 'P', previousActSummaries: [] });
+		expect(msgs).toEqual(['# Act Plot\n\n---\n\nP']);
 	});
 });
 
@@ -152,14 +164,14 @@ describe('buildPhaseMessages', () => {
 		actSummaryAtSP: 'SUM',
 		scenesSections: ['## Scene 9\n\n### Narrative Body\n\nnine'],
 	};
-	it('orders Main Context → Summaries → Scenes → Character Profiles → prior outputs → extraction prompt → Director Notes', () => {
-		// Why: the tier order is the cache-stability contract — Tiers 0–2 (Main Context, Summaries,
-		// Scenes, Character Profiles) must precede the per-phase tail so the shared prefix is
-		// byte-identical. Profiles trail Scenes because they change every turn (see buildPhaseMessages).
+	it('orders World Content → Summaries → Scenes → Character Profiles → prior outputs → extraction prompt → Director Notes', () => {
+		// Why: the tier order is the cache-stability contract — Tiers 0–2 (the sectional main-context
+		// messages, Summaries, Scenes, Character Profiles) must precede the per-phase tail so the shared
+		// prefix is byte-identical. Profiles trail Scenes because they change every turn (see buildPhaseMessages).
 		const msgs = buildPhaseMessages(ctx, ['## Writer Output\n\nDRAFT'], 'DO THE TASK', 'be concise');
 		const joined = msgs.map((m) => m.content).join('\n');
 		const idx = (s: string) => joined.indexOf(s);
-		expect(idx('# Main Context')).toBeLessThan(idx('# Summaries'));
+		expect(idx('# World Content')).toBeLessThan(idx('# Summaries'));
 		expect(idx('# Summaries')).toBeLessThan(idx('# Scenes'));
 		expect(idx('# Scenes')).toBeLessThan(idx('## Character Profiles'));
 		expect(idx('## Character Profiles')).toBeLessThan(idx('DRAFT'));

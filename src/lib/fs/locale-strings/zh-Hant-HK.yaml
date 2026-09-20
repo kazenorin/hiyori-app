@@ -57,7 +57,6 @@ common:
     storySoFar: 故事回顧
     characterProfiles: 角色檔案
     targetWordCountPerScene: 每場景目標字數
-    mainContext: '主要內容'
     summaries: '摘要'
     scenes: '場景'
     upcomingScenePlot: '下一場景劇情'
