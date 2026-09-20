@@ -106,6 +106,7 @@ pipeline:
       turnOfEventsReinforcementPhrase: "\nYou must also consider the Turn Of Events that may drive the story to a different direction."
       providedDirectorNotes: "\n- the Director's Notes"
       directorNotesReinforcementPhrase: '**Important**: The Director has given directions for the upcoming scene. You **MUST** consider it when writing, and follow the directions or instructions given.'
+      scenePrioritiesHeader: Priorities for this scene
       actEndPhaseEvent: >
         When the story reaches a natural conclusion that aligns with one of the Act Plot's Possible Endings,
         call the `end-act` tool **exactly once** during your reasoning, before writing the closing scene.

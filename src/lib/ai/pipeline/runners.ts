@@ -21,7 +21,7 @@ import {
 } from '$lib/stores/settings.svelte';
 import type { ActPhase, EndingType, GameDataFields, NarrativeOverrides, NarrativeVariables, PlotMode } from '../narrative-types';
 import { getActPhaseIndex } from '../narrative-types';
-import { summaryHeader } from '$lib/definitions/common-headers';
+import { sectionFormat, summaryHeader } from '$lib/definitions/common-headers';
 import {
 	writerProvidedSummary,
 	writerProvidedTurnOfEvents,
@@ -49,6 +49,7 @@ import {
 	totalViolationsLabel,
 	writerInventoryToolsInstruction,
 	writerMemoryToolsInstruction,
+	writerScenePrioritiesHeader,
 } from '$lib/definitions/pipeline-prompts';
 import type { AssistantContext, PipelineCallbacks, PipelineContext, PipelineProviderConfigs, PipelineState, StoryContext } from './types';
 import { executeStreamingPhase, updateState } from './phase-executor';
@@ -138,12 +139,18 @@ function resolveDirectorNotes(directorNotes: string) {
 	return directorNotes ? '\n' + writerProvidedDirectorNotes().trim() : '';
 }
 
-function resolveTurnOfEventsReinforcementPhrase(previousTurnOfEvents: string | undefined) {
-	return previousTurnOfEvents ? writerTurnOfEventsReinforcementPhrase() : '';
-}
-
-function resolveDirectorNotesReinforcementPhrase(directorNotes: string) {
-	return directorNotes ? writerDirectorNotesReinforcementPhrase() : '';
+/**
+ * The per-scene priority block, or '' when nothing applies. Returning '' lets substituteToolsLine
+ * remove the placeholder line entirely, so neither an empty heading nor orphan whitespace survives
+ * into the rendered prompt.
+ */
+function resolveScenePriorities(actEndInstruction: string, previousTurnOfEvents: string | undefined, directorNotes: string): string {
+	const lines = [
+		actEndInstruction.trim(),
+		previousTurnOfEvents ? writerTurnOfEventsReinforcementPhrase().trim() : '',
+		directorNotes ? writerDirectorNotesReinforcementPhrase().trim() : '',
+	].filter((line) => line.length > 0);
+	return lines.length === 0 ? '' : `${sectionFormat(writerScenePrioritiesHeader(), 2)}${lines.join('\n')}`.trimEnd();
 }
 
 function resolveCurrentActPhase(ctx: PipelineRunContext) {
@@ -339,14 +346,11 @@ export async function runWriterPhase(
 			.replaceAll('{{providedSummary}}', resolveSummarizedScenes(summarizedScenes))
 			.replaceAll('{{providedTurnOfEvents}}', resolveTurnOfEvents(previousTurnOfEvents))
 			.replaceAll('{{providedDirectorNotes}}', resolveDirectorNotes(directorNotes))
-			.replaceAll('{{turnOfEventsReinforcementPhrase}}', resolveTurnOfEventsReinforcementPhrase(previousTurnOfEvents))
-			.replaceAll('{{directorNotesReinforcementPhrase}}', resolveDirectorNotesReinforcementPhrase(directorNotes))
 			.replaceAll('{{currentActPhase}}', resolveCurrentActPhase(ctx))
 			.replaceAll('{{currentActPhaseProgress}}', resolveCurrentActPhaseProgress(ctx).toString())
 			.replaceAll('{{earlyPhaseThreshold}}', resolveEarlyPhaseThreshold(ctx).toString())
 			.replaceAll('{{latePhaseThreshold}}', resolveLatePhaseThreshold(ctx).toString())
-			.replaceAll('{{estimatedPhaseLength}}', resolveEstimatedPhaseLength(ctx).toString())
-			.replaceAll('{{actEndInstruction}}', resolveActEndInstruction(ctx.story.actLine.plotMode, ctx.story.actLine.currentActPhase ?? null));
+			.replaceAll('{{estimatedPhaseLength}}', resolveEstimatedPhaseLength(ctx).toString());
 
 	const writerTaskPrompt = epilogueEndingType
 		? ctx.prompts.epilogueWriterExtractionPrompt
@@ -372,6 +376,12 @@ export async function runWriterPhase(
 		writerInventoryToolsInstruction(),
 		isInventoryAvailable()
 	);
+	const scenePriorities = resolveScenePriorities(
+		resolveActEndInstruction(ctx.story.actLine.plotMode, ctx.story.actLine.currentActPhase ?? null),
+		previousTurnOfEvents,
+		directorNotes
+	);
+	writerExtractionPrompt = substituteToolsLine(writerExtractionPrompt, 'scenePriorities', scenePriorities, scenePriorities.length > 0);
 
 	const result = await executeStreamingPhase(
 		{

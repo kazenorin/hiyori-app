@@ -61,6 +61,7 @@ export const writerProvidedTurnOfEvents = () => ls('pipeline.extraction.writer.p
 export const writerTurnOfEventsReinforcementPhrase = () => ls('pipeline.extraction.writer.turnOfEventsReinforcementPhrase');
 export const writerProvidedDirectorNotes = () => ls('pipeline.extraction.writer.providedDirectorNotes');
 export const writerDirectorNotesReinforcementPhrase = () => ls('pipeline.extraction.writer.directorNotesReinforcementPhrase');
+export const writerScenePrioritiesHeader = () => ls('pipeline.extraction.writer.scenePrioritiesHeader');
 export const writerClosingSceneRules = () => ls('pipeline.extraction.writer.closingSceneRules');
 export const writerActEndPhaseEvent = (params: { closingSceneRules: string; endingTypeInstructions: string }) =>
 	ls('pipeline.extraction.writer.actEndPhaseEvent', params);

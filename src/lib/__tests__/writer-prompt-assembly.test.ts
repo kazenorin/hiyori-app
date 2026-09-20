@@ -33,6 +33,7 @@ vi.mock('$lib/ai/pipeline/phase-executor', async (importOriginal) => {
 import { executeStreamingPhase } from '$lib/ai/pipeline/phase-executor';
 import { loadLocaleStrings } from '$lib/localization';
 import { runWriterPhase, type PipelineRunContext, type TrackPhase } from '$lib/ai/pipeline/runners';
+import { writerScenePrioritiesHeader } from '$lib/definitions/pipeline-prompts';
 import type { ActLineContext, PipelineState } from '$lib/ai/pipeline/types';
 import type { StreamResultMetadata } from '$lib/ai/streaming';
 import { createNarrativeOverrides } from '$lib/ai/narrative-types';
@@ -312,5 +313,48 @@ describe('writer prompt assembly', () => {
 			expect(countOccurrences(tail, cgLine), plotMode).toBe(1);
 			expect(tail.trimEnd().endsWith('```'), plotMode).toBe(true);
 		}
+	});
+
+	/**
+	 * The Director's Notes reinforcement is "absolute priority" per the role's first rule, yet it
+	 * used to render as an indented sub-bullet of a *tool instruction* line. One named slot, right
+	 * after the evidence map, gives all three priorities coherent salience.
+	 */
+	it.each(LOCALES)('%s: priority block sits after the evidence map and before the output format', async (locale) => {
+		// Derived from ls(), not hardcoded: the header is the one heading in this block that the
+		// pipeline injects at runtime, so it follows whichever locale the test environment loaded.
+		const heading = `## ${writerScenePrioritiesHeader()}`;
+		const profiles = locale === 'en' ? '## Character Profiles' : '## 角色檔案';
+		const format = locale === 'en' ? '## Output Format' : '## 輸出格式';
+		for (const plotMode of ['guidance', 'phaseEvent'] as const) {
+			const tail = await renderTail({
+				locale,
+				plotMode,
+				directorNotes: 'Keep the ending bleak.',
+				previousTurnOfEvents: 'The bridge collapsed behind them.',
+			});
+			const at = tail.indexOf(heading);
+			expect(at, plotMode).toBeGreaterThan(tail.indexOf(profiles));
+			expect(tail.indexOf(format), plotMode).toBeGreaterThan(at);
+			// The block must carry content, not just its heading. Phase-event contributes the
+			// turn-of-events and director's-notes lines; guidance also carries its end-of-act line.
+			const block = tail.slice(at, tail.indexOf(format, at));
+			expect(block.split('\n').filter((l) => l.trim().length > 0).length, plotMode).toBeGreaterThanOrEqual(3);
+		}
+	});
+
+	/**
+	 * substituteToolsLine removes the whole placeholder line when the value is empty, satisfying the
+	 * project convention that an empty templated value leaves no orphan line behind. Whitespace-only
+	 * lines are the failure mode; genuinely empty lines are acceptable.
+	 *
+	 * Phase-event mode only: resolveActEndInstruction returns the end-of-act instruction
+	 * unconditionally in guidance mode, so "no priority applies" is unreachable there.
+	 */
+	it.each(LOCALES)('%s: nothing is left behind when no priority applies', async (locale) => {
+		const tail = await renderTail({ locale, plotMode: 'phaseEvent' });
+		expect(tail).not.toContain(writerScenePrioritiesHeader());
+		expect(tail).not.toMatch(/{{\w+}}/);
+		expect(tail).not.toMatch(/^[ \t]+$/m);
 	});
 });

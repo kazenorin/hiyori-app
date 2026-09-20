@@ -10,6 +10,8 @@ You are now responsible for writing the story prose for Scene {{currentScene}}, 
 - `# Upcoming Scene Plot` — the Scene Plot planning Scene {{currentScene}}
 - `## Character Profiles` — the latest snapshot of every named character{{providedTurnOfEvents}}{{providedDirectorNotes}}
 
+{{scenePriorities}}
+
 Your job is to craft vivid, engaging, and immersive narrative based on the provided information.
 You are instructed to prioritize on developing the events as directed by the Scene Plot.
 Use the pacing decision from the Scene Plot. If the plot planner allows an expanded word count, you may write up to double the usual length.

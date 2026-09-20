@@ -105,6 +105,7 @@ pipeline:
       turnOfEventsReinforcementPhrase: "\n你也必須考慮可能使故事轉向不同方向的劇情轉折。"
       providedDirectorNotes: "\n- 導演備註"
       directorNotesReinforcementPhrase: '**重要**: 導演已為即將到來的場景給出指示。你**必須**在撰寫時考慮，並遵循所給的方向或指示。'
+      scenePrioritiesHeader: 本場景優先事項
       actEndPhaseEvent: >
         當故事達到與章節劇情中可能結局之一相符的自然結論時，請在推理期間呼叫 `end-act` 工具**精確一次**，且必須在撰寫收尾場景之前。
         {{endingTypeInstructions}}

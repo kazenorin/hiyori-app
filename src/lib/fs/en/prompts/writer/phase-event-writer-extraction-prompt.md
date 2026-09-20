@@ -10,6 +10,8 @@ You are responsible for writing the narrative prose for Scene {{currentScene}}. 
 - `# Upcoming Scene Plot` — the Phase Events planned for the {{currentActPhase}} phase
 - `## Character Profiles` — the latest snapshot of every named character{{providedTurnOfEvents}}{{providedDirectorNotes}}
 
+{{scenePriorities}}
+
 Your task is to craft a vivid, engaging, and immersive narrative by evaluating the current state of Phase Events:
 
 - **The active event:** If a Phase Event has been triggered but not fully elaborated, continue developing it.

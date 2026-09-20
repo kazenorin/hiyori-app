@@ -10,6 +10,8 @@
 - `# 下一場景劇情` — 為 {{currentActPhase}} 階段規劃的階段事件
 - `## 角色檔案` — 每個具名角色的最新快照{{providedTurnOfEvents}}{{providedDirectorNotes}}
 
+{{scenePriorities}}
+
 你的任務是透過評估目前階段事件的狀態，創作生動、引人入勝且沉浸式的敘事:
 
 - **進行中的事件:** 若有階段事件已被觸發但尚未詳細闡述，請繼續發展該事件。
