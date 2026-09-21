@@ -218,6 +218,10 @@
 			"debug": "除錯"
 		},
 		"logLevelDescription": "Debug Log 包含完整的 AI 上下文對話。 Log 會被寫入應用程式的 log 資料夾。",
+		"logging": "Logging",
+		"llmStreamLogging": "LLM 串流 Logs",
+		"logInputMessages": "記錄輸入訊息",
+		"logCompletedResponse": "記錄已完成回應",
 		"settingsAutoSaved": "設定會自動儲存。",
 		"noProvidersAdd": "尚未設定AI提供者。新增一個即可開始。",
 		"failedToFetchModels": "無法取得模型",

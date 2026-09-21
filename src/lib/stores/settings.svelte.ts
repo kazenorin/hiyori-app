@@ -37,6 +37,8 @@ export interface Settings {
 	themeMode: ThemeMode;
 	colorTheme: string;
 	logLevel: LogLevel;
+	llmStreamLogInputMessages: boolean;
+	llmStreamLogCompletedResponse: boolean;
 	fontSize: number;
 	memoryEnabled: boolean;
 	inventoryEnabled: boolean;
@@ -111,6 +113,8 @@ function createDefaults(): Settings {
 		themeMode: 'system',
 		colorTheme: 'hiyori',
 		logLevel: 'info',
+		llmStreamLogInputMessages: false,
+		llmStreamLogCompletedResponse: false,
 		fontSize: 1.0,
 		memoryEnabled: false,
 		inventoryEnabled: false,

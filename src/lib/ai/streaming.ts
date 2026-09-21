@@ -2,6 +2,7 @@ import type { MessageBase } from '$lib/db/messages';
 import { isStepCount, streamText, type ToolSet, type LanguageModelCallOptions } from 'ai';
 import type { LanguageModel } from 'ai';
 import { fileLog } from '$lib/logging/logger';
+import { getSettings } from '$lib/stores/settings.svelte';
 import { ERR_EMPTY_STREAM } from '$lib/definitions/error-messages';
 
 const DEFAULT_MAX_STEPS = 10;
@@ -54,6 +55,7 @@ export function extractCacheTokens(usage: Record<string, unknown>): { cacheReadT
  * Does NOT handle error recovery — callers should wrap in try/catch.
  */
 export async function executeStream(config: StreamConfig, callbacks: StreamCallbacks): Promise<void> {
+	const settings = getSettings();
 	const startTime = Date.now();
 
 	try {
@@ -65,6 +67,10 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 		};
 
 		const hasTools = config.tools && Object.keys(config.tools).length > 0;
+
+		if (settings.llmStreamLogInputMessages) {
+			await fileLog('debug', 'streaming', () => `Messages:\n${JSON.stringify(config.messages, null, 2)}`);
+		}
 
 		const result = streamText({
 			...baseConfig,
@@ -103,7 +109,7 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 
 		if (text.trim().length === 0) {
 			callbacks.onError(new Error(ERR_EMPTY_STREAM));
-			await fileLog('warn', 'streaming', `empty body\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`);
+			await fileLog('warn', 'streaming', 'Response: empty body');
 		} else {
 			const cacheTokens = extractCacheTokens(usage as unknown as Record<string, unknown>);
 			callbacks.onComplete({
@@ -118,7 +124,11 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 				models: new Set(config.modelId ? [config.modelId] : []),
 			});
 
-			await fileLog('debug', 'streaming', `${text}\n\nUsage: ${JSON.stringify(usage.raw, null, 2)}\n\nFinish Reason: ${finishReason}`);
+			let loggedResponse = text.length.toString();
+			if (settings.llmStreamLogCompletedResponse) {
+				loggedResponse = text;
+			}
+			await fileLog('debug', 'streaming', `Response:\n${loggedResponse}`);
 		}
 	} catch (err: unknown) {
 		callbacks.onError(err);

@@ -8,10 +8,34 @@
 	const logLevelItems = $derived(getLogLevelItems());
 </script>
 
-<Card title={t('settings.developer')}>
+<Card title={t('settings.logging')}>
 	<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
 		<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.logLevel')}</h3>
 		<ThemedSelect items={logLevelItems} value={settings.logLevel} onValueChange={(v) => updateSettings({ logLevel: v as LogLevel })} />
 		<span class="text-xs text-surface-500 block">{t('settings.logLevelDescription')}</span>
 	</div>
+
+	{#if settings.logLevel === 'debug'}
+		<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+			<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.llmStreamLogging')}</h3>
+			<label class="flex items-center gap-2">
+				<input
+					type="checkbox"
+					class="checkbox"
+					checked={settings.llmStreamLogInputMessages}
+					onchange={(e) => updateSettings({ llmStreamLogInputMessages: (e.currentTarget as HTMLInputElement).checked })}
+				/>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.logInputMessages')}</span>
+			</label>
+			<label class="flex items-center gap-2">
+				<input
+					type="checkbox"
+					class="checkbox"
+					checked={settings.llmStreamLogCompletedResponse}
+					onchange={(e) => updateSettings({ llmStreamLogCompletedResponse: (e.currentTarget as HTMLInputElement).checked })}
+				/>
+				<span class="text-sm font-medium text-surface-700-300">{t('settings.logCompletedResponse')}</span>
+			</label>
+		</div>
+	{/if}
 </Card>

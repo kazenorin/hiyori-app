@@ -218,6 +218,10 @@
 			"debug": "Debug"
 		},
 		"logLevelDescription": "Debug logs include full AI chat context. Logs are written to the app log directory.",
+		"logging": "Logging",
+		"llmStreamLogging": "LLM stream logging",
+		"logInputMessages": "Log input messages",
+		"logCompletedResponse": "Log completed response",
 		"settingsAutoSaved": "Settings are saved automatically.",
 		"noProvidersAdd": "No providers configured. Add one to get started.",
 		"failedToFetchModels": "Failed to fetch models",
