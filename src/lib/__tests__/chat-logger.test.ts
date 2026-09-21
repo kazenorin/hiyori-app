@@ -45,10 +45,20 @@ import { logMainChat, logWorldBuilderChat } from '$lib/logging/chat-logger';
 import { getLogLevel } from '$lib/logging/logger';
 import { getActiveStory } from '$lib/stores/stories.svelte';
 import type { Story } from '$lib/db/stories';
+import type { UIMessage } from '$lib/ai/chat/types';
 
 const mockWriteTextFile = vi.mocked(mockFs.writeTextFile);
 const mockGetLogLevel = vi.mocked(getLogLevel);
 const mockGetActiveStory = vi.mocked(getActiveStory);
+
+function firstLoggedContent(): string {
+	return (mockWriteTextFile.mock.calls[0] as unknown as [string, string])[1];
+}
+
+/** Extract the pretty-printed JSON array from a formatted log entry. */
+function parseLoggedEntries(raw: string): Record<string, unknown>[] {
+	return JSON.parse(raw.slice(raw.indexOf('[\n'), raw.lastIndexOf(']') + 1));
+}
 
 describe('chat-logger', () => {
 	beforeEach(() => {
@@ -58,11 +68,31 @@ describe('chat-logger', () => {
 	});
 
 	describe('logMainChat', () => {
+		const userMessage = {
+			id: 'user-1',
+			role: 'user',
+			content: 'Hello',
+			sceneNumber: 1,
+		} satisfies UIMessage;
+
+		const assistantMessage = {
+			id: 'assistant-1',
+			role: 'assistant',
+			content: 'Rendered template output',
+			sceneNumber: 1,
+			reasoning: 'chain of thought',
+			variables: {
+				sceneTitle: 'Dawn',
+				background: 'forest',
+				narrativeBody: 'The story prose.',
+				turnOfEvents: 'Morning arrives',
+				cg: 'cg-1',
+				gameData: null,
+			},
+		} satisfies UIMessage;
+
 		it('writes to main-chat.log when logLevel is debug', async () => {
-			await logMainChat({
-				systemPrompt: 'You are a GM',
-				newMessages: [{ role: 'user', content: 'Hello' }],
-			});
+			await logMainChat([userMessage]);
 
 			expect(mockWriteTextFile).toHaveBeenCalledWith(
 				expect.stringContaining('main-chat.log'),
@@ -71,50 +101,43 @@ describe('chat-logger', () => {
 			);
 		});
 
-		it('includes system prompt in log content', async () => {
-			await logMainChat({
-				systemPrompt: 'You are a GM',
-				newMessages: [],
-			});
+		it('logs selected fields as pretty-printed JSON in declaration order', async () => {
+			await logMainChat([userMessage, assistantMessage]);
 
-			const loggedContent = (mockWriteTextFile.mock.calls[0] as unknown as [string, string])[1];
-			expect(loggedContent).toContain('You are a GM');
-			expect(loggedContent).toContain('SYSTEM PROMPT');
+			const entries = parseLoggedEntries(firstLoggedContent());
+			expect(entries).toHaveLength(2);
+			expect(Object.keys(entries[1])).toEqual([
+				'role',
+				'sceneNumber',
+				'sceneTitle',
+				'content',
+				'background',
+				'cg',
+				'turnOfEvents',
+				'reasoning',
+			]);
+			expect(entries[1].content).toBe('The story prose.');
+			expect(firstLoggedContent()).toContain('\n  {\n');
 		});
 
-		it('includes messages in log content', async () => {
-			await logMainChat({
-				systemPrompt: 'prompt',
-				newMessages: [
-					{ role: 'user', content: 'Hello' },
-					{ role: 'assistant', content: 'Hi there' },
-				],
-			});
+		it('falls back to message content when narrativeBody is missing', async () => {
+			await logMainChat([userMessage]);
 
-			const loggedContent = (mockWriteTextFile.mock.calls[0] as unknown as [string, string])[1];
-			expect(loggedContent).toContain('[USER]');
-			expect(loggedContent).toContain('Hello');
-			expect(loggedContent).toContain('[ASSISTANT]');
-			expect(loggedContent).toContain('Hi there');
+			const entries = parseLoggedEntries(firstLoggedContent());
+			expect(entries[0].content).toBe('Hello');
+			expect(Object.keys(entries[0])).toEqual(['role', 'sceneNumber', 'content']);
 		});
 
 		it('formats timestamp in entry', async () => {
-			await logMainChat({
-				systemPrompt: 'prompt',
-				newMessages: [],
-			});
+			await logMainChat([]);
 
-			const loggedContent = (mockWriteTextFile.mock.calls[0] as unknown as [string, string])[1];
-			expect(loggedContent).toMatch(/^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]/);
+			expect(firstLoggedContent()).toMatch(/^\[\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\]/);
 		});
 
 		it('skips writing when logLevel is not debug', async () => {
 			mockGetLogLevel.mockReturnValue('info');
 
-			await logMainChat({
-				systemPrompt: 'prompt',
-				newMessages: [],
-			});
+			await logMainChat([userMessage]);
 
 			expect(mockWriteTextFile).not.toHaveBeenCalled();
 		});
@@ -122,10 +145,7 @@ describe('chat-logger', () => {
 		it('skips writing when no active story', async () => {
 			mockGetActiveStory.mockReturnValue(null);
 
-			await logMainChat({
-				systemPrompt: 'prompt',
-				newMessages: [],
-			});
+			await logMainChat([userMessage]);
 
 			expect(mockWriteTextFile).not.toHaveBeenCalled();
 		});

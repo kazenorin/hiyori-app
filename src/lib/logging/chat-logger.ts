@@ -2,12 +2,7 @@ import { fs } from '$lib/fs/file-system';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { getActiveStory } from '$lib/stores/stories.svelte';
 import { getLogLevel, log } from './logger';
-import type { NarrativeVariables } from '$lib/ai/narrative-types';
-import type { MessageBase } from '$lib/db/messages';
-
-interface ChatLogMessage extends MessageBase {
-	variables?: NarrativeVariables;
-}
+import type { UIMessage } from '$lib/ai/chat/types';
 
 function isDebugEnabled(): boolean {
 	return getLogLevel() === 'debug';
@@ -35,39 +30,23 @@ async function appendToStoryLog(filename: string, label: string, content: string
 }
 
 /**
- * Log main chat context: system prompt, narration context, and all messages.
- * Called before each AI call in the main chat.
+ * Log the final messages of a completed main chat run as pretty-printed JSON.
  */
-export async function logMainChat(context: {
-	newMessages: ChatLogMessage[];
-	systemPrompt?: string;
-	history?: ChatLogMessage[];
-}): Promise<void> {
-	const parts: string[] = [];
-
-	if (context.systemPrompt) {
-		parts.push(`=== SYSTEM PROMPT ===\n${context.systemPrompt}`);
-	}
-
-	const messagesStr = [...(context.history ?? []), ...context.newMessages]
-		.map((m) => {
-			let result: string = `--- [${m.role.toUpperCase()}] ---\n`;
-			if (m.variables) {
-				result += 'Variables:\n';
-				result += JSON.stringify(m.variables, null, 2);
-				result += '\n';
-			}
-			result += 'Content:\n';
-			result += `${m.content}\n`;
-			return result;
-		})
-		.join('\n\n');
-	parts.push(`=== MESSAGES ===\n${messagesStr}`);
-
-	const content = parts.join('\n\n');
-
-	// Write to story-level log file
-	await appendToStoryLog('main-chat.log', 'Main Chat Context', content);
+export async function logMainChat(newMessages: UIMessage[]): Promise<void> {
+	const entries = newMessages.map((message) => {
+		const variables = message.variables;
+		return {
+			role: message.role,
+			sceneNumber: message.sceneNumber,
+			sceneTitle: variables?.sceneTitle,
+			content: variables?.narrativeBody ?? message.content,
+			background: variables?.background,
+			cg: variables?.cg,
+			turnOfEvents: variables?.turnOfEvents,
+			reasoning: message.reasoning,
+		};
+	});
+	await appendToStoryLog('main-chat.log', 'Main Chat Context', JSON.stringify(entries, null, 2));
 }
 
 /**

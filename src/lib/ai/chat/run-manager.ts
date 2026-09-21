@@ -722,7 +722,7 @@ async function finalizeRun(session: InternalSession, plan: RunPlan, result: Pipe
 	if (!alreadyPersisted) {
 		await persistMessage(session.actLineId, session.message, plan.assistantSequence);
 		const newMessages = plan.userMessage ? [plan.userMessage, session.message] : [session.message];
-		await logMainChat({ newMessages });
+		await logMainChat(newMessages);
 	}
 	await updateLastPlotGeneration(result.phases, session.actLineId, assistant, plan.completedScenes);
 	await dbPipelineRuns.deletePipelineRun(session.messageId);
