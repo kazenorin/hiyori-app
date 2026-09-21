@@ -219,6 +219,43 @@ sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-
 
 _(If developing via WSL2, ensure Rust is installed directly within your WSL environment along with `build-essential gcc make`)._
 
+**Windows system dependencies:**
+
+Running the development build (e.g. `npm run tauri dev`) only requires Node.js and npm (the project requires Node 24+).
+
+Building on a native Windows host also needs the Visual C++ build toolchain and Python in addition to Node.js and Rust:
+
+- **nvm-windows** _(optional but recommended)_ — to manage the Node.js version.
+- **Visual C++ Build Tools** (MSVC compiler + Windows SDK) — required both by `node-gyp` (to compile the native `better-sqlite3` test dependency) **and** by the Rust/Tauri toolchain.
+- **Python 3** — required by `node-gyp`.
+
+Install them with `winget` from PowerShell:
+
+```powershell
+# 1. Node.js version manager, then Node 24 (project requires >= 24)
+winget install -e --id CoreyButler.NVMforWindows
+# Open a NEW terminal so nvm's PATH takes effect, then:
+nvm install 24
+nvm use 24
+
+# 2. Native build toolchain (used by node-gyp AND by Rust/Tauri)
+winget install -e --id Python.Python.3.12
+winget install -e --id Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+```
+
+Then install the JavaScript dependencies:
+
+```powershell
+npm install
+```
+
+> **Troubleshooting:** `better-sqlite3` ships no prebuilt binary for Node 24, so it is compiled from source on install. If `npm install` reports native install scripts being skipped (npm 11's script allow-list) or `node-gyp` cannot find Python, re-run the build explicitly:
+>
+> ```powershell
+> npm install-scripts approve better-sqlite3 sharp protobufjs
+> npm rebuild better-sqlite3
+> ```
+
 ### Building and Running
 
 Start the Vite dev server (`http://localhost:1420`) and launch the Tauri hot-reload window:
