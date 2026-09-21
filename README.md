@@ -219,42 +219,49 @@ sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-
 
 _(If developing via WSL2, ensure Rust is installed directly within your WSL environment along with `build-essential gcc make`)._
 
-**Windows system dependencies:**
+**Windows environment setup:**
 
-Running the development build (e.g. `npm run tauri dev`) only requires Node.js and npm (the project requires Node 24+).
+Building and running Hiyori natively on Windows (`npm run tauri dev` / `npm run tauri build`) needs four things: **Node.js 24+**, **Rust** (installed via `rustup`), the **Visual C++ Build Tools** (MSVC compiler + Windows SDK), and **Python 3** (used by `node-gyp`).
 
-Building on a native Windows host also needs the Visual C++ build toolchain and Python in addition to Node.js and Rust:
-
-- **nvm-windows** _(optional but recommended)_ — to manage the Node.js version.
-- **Visual C++ Build Tools** (MSVC compiler + Windows SDK) — required both by `node-gyp` (to compile the native `better-sqlite3` test dependency) **and** by the Rust/Tauri toolchain.
-- **Python 3** — required by `node-gyp`.
-
-Install them with `winget` from PowerShell:
+Install everything with `winget` from PowerShell:
 
 ```powershell
-# 1. Node.js version manager, then Node 24 (project requires >= 24)
+# 1. Node.js — nvm-windows is optional but recommended for managing versions.
 winget install -e --id CoreyButler.NVMforWindows
 # Open a NEW terminal so nvm's PATH takes effect, then:
 nvm install 24
 nvm use 24
 
-# 2. Native build toolchain (used by node-gyp AND by Rust/Tauri)
-winget install -e --id Python.Python.3.12
+# 2. Rust toolchain (cargo/rustc) — required by the Tauri CLI to compile src-tauri.
+winget install -e --id Rustlang.Rustup
+
+# 3. MSVC build tools + Windows SDK — required by the Rust/Tauri linker AND by
+#    node-gyp (to compile the native `better-sqlite3` dev dependency).
 winget install -e --id Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
+
+# 4. Python — required by node-gyp.
+winget install -e --id Python.Python.3.12
 ```
 
-Then install the JavaScript dependencies:
+> **Restart your terminal after each install.** `winget` updates the system `PATH`, but already-open shells (and editors like WebStorm/VS Code) won't pick it up until restarted. Verify with `node --version`, `cargo --version`, and `rustc --version`.
+
+Then install the JavaScript dependencies and run the app:
 
 ```powershell
 npm install
+npm run tauri dev
 ```
 
-> **Troubleshooting:** `better-sqlite3` ships no prebuilt binary for Node 24, so it is compiled from source on install. If `npm install` reports native install scripts being skipped (npm 11's script allow-list) or `node-gyp` cannot find Python, re-run the build explicitly:
+> **Troubleshooting:**
 >
-> ```powershell
-> npm install-scripts approve better-sqlite3 sharp protobufjs
-> npm rebuild better-sqlite3
-> ```
+> - **`failed to run 'cargo metadata' ... program not found`** — Rust isn't installed, or the terminal hasn't been restarted so its `PATH` isn't loaded. Install `Rustlang.Rustup` (step 2) and open a new terminal.
+> - **Linker / `link.exe` errors during the Rust build** — the MSVC Build Tools (step 3) are missing, or the `Desktop development with C++` workload wasn't selected.
+> - **`better-sqlite3` native build skipped / `node-gyp` cannot find Python** — `better-sqlite3` ships no prebuilt binary for Node 24 and is compiled from source. Approve the install scripts and rebuild:
+>
+>   ```powershell
+>   npm install-scripts approve better-sqlite3 sharp protobufjs
+>   npm rebuild better-sqlite3
+>   ```
 
 ### Building and Running
 

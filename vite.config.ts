@@ -52,6 +52,11 @@ export default defineConfig({
 	server: {
 		port: 1420,
 		strictPort: true,
+		watch: {
+			// Ignore the Rust build output so the dev watcher doesn't choke on
+			// locked .exe artifacts on Windows (EBUSY).
+			ignored: ['**/src-tauri/target/**'],
+		},
 	},
 	worker: {
 		format: 'es',
