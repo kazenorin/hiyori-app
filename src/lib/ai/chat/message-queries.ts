@@ -23,22 +23,6 @@ export function getLatestActSummary(messages: UIMessage[], minSceneNumber?: numb
 	return '';
 }
 
-/**
- * Latest act summary at or before `maxScene` — the summary snapshot to freeze into
- * the Summaries message at a summarization point. Mirror of `getLatestActSummary`
- * (which is bounded below). Returns '' when no message at or before `maxScene`
- * carries a summary, so callers can omit the Summaries message.
- */
-export function getActSummaryAtScene(messages: UIMessage[], maxScene: number): string {
-	for (let i = messages.length - 1; i >= 0; i--) {
-		const summary = messages[i].actSummary;
-		if (summary && (messages[i].sceneNumber ?? 0) <= maxScene) {
-			return summary;
-		}
-	}
-	return '';
-}
-
 export function getScenePlotForScene(messages: UIMessage[], sceneNumber: number, plotMode: PlotMode): string | undefined {
 	if (plotMode === 'guidance') {
 		for (let i = messages.length - 1; i >= 0; i--) {

@@ -155,15 +155,18 @@ export interface PipelineContext {
 	previousActSummaries: { actNumber: number; summary: string }[];
 	// --- Tier 1: Summaries (frozen until the summarization point advances) ---
 	/**
-	 * The last SCENE NUMBER (within the current act) covered by the frozen Summaries snapshot:
-	 * `floor(currentScene / interval) * interval`. This is a scene number, not a message sequence.
-	 * `0` means no summarization point has been reached, so the Summaries message is omitted.
+	 * The last SCENE NUMBER (within the current act) covered by the frozen Summaries snapshot —
+	 * one full interval below the current boundary, because the boundary's own summary is only
+	 * persisted by the run after it (see `resolveSummariesSnapshot`). This is a scene number,
+	 * not a message sequence. `0` means no snapshot resolved, so the Summaries message is
+	 * omitted and Scenes start from the act's first scene.
 	 */
 	summarizationPoint: number;
 	/** Latest character profiles; per-scene details at or before `summarizationPoint` are truncated. */
 	characterProfiles: string[];
 	/**
-	 * The CURRENT act's summary, frozen as of `summarizationPoint` (scene ≤ SP). Distinct from
+	 * The CURRENT act's summary, frozen at exactly `summarizationPoint` (scenes 1..SP — the
+	 * snapshot persisted on the assistant message for scene SP+1). Distinct from
 	 * `previousActSummaries` (prior acts) and `CommonPipelineInput.latestActSummary` (current act,
 	 * as of now); not derivable from either.
 	 */
