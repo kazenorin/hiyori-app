@@ -1,21 +1,25 @@
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
-import { SvelteKitPWA } from '@vite-pwa/sveltekit';
+import { VitePWA } from 'vite-plugin-pwa';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
+import kitConfig from './sveltekit.config.ts';
 
 const pkg = JSON.parse(readFileSync(resolve(import.meta.dirname, 'package.json'), 'utf-8'));
 const baseRaw = (process.env.BASE_PATH || '').replace(/\/$/, '');
 const base = baseRaw ? `${baseRaw}/` : '/';
 const isTauriBuild = !!process.env.TAURI_ENV_PLATFORM;
+const pwaEnabled = baseRaw === '' && !isTauriBuild;
 
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
-		sveltekit(),
-		SvelteKitPWA({
-			disable: baseRaw !== '' || isTauriBuild,
+		sveltekit(kitConfig),
+		VitePWA({
+			// PWA is only meaningful for a root-hosted web build.
+			disable: !pwaEnabled,
+			outDir: '.svelte-kit/output/client',
 			registerType: 'autoUpdate',
 			manifest: {
 				name: 'Hiyori — Build Your Own Adventure',
@@ -41,6 +45,8 @@ export default defineConfig({
 			scope: base,
 			workbox: {
 				globPatterns: ['**/*.{js,css,ico,png,svg,webmanifest,wasm}'],
+				// The onnxruntime wasm is ~27 MB and loaded on demand; keep it out of the precache.
+				globIgnores: ['**/workers/assets/**'],
 				maximumFileSizeToCacheInBytes: 25 * 1024 * 1024,
 			},
 		}),

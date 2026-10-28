@@ -32,7 +32,7 @@ export async function createLibcurlFetch(wispProxyUrl: string): Promise<typeof g
 		const { libcurl } = await import('libcurl.js');
 
 		if (!libcurlReady) {
-			await libcurl.load_wasm(asset('/libcurl.wasm'));
+			await libcurl.load_wasm(asset('libcurl.wasm'));
 			libcurlReady = true;
 		}
 

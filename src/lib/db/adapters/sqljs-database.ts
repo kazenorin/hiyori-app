@@ -165,9 +165,9 @@ async function loadSqlJs(locateWasm?: (file: string) => string) {
 		locateWasm ??
 		((file: string) => {
 			if (file === 'sql-wasm-browser.wasm' || file === 'sql-wasm-browser-debug.wasm') {
-				return asset('/sql-wasm.wasm');
+				return asset('sql-wasm.wasm');
 			}
-			return asset(`/${file}`);
+			return asset(file);
 		});
 
 	return initSqlJs({ locateFile });

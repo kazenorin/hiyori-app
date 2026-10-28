@@ -35,6 +35,8 @@ export async function createModel(config: ProviderConfig) {
 		// The OpenRouter SDK ignores the standard `reasoning` call option, so map the
 		// selected effort into the model settings it does read (provider-default => omit).
 		const effort = config.callSettings?.reasoning;
+		// OpenRouter's API tops out at 'xhigh'; clamp the AI SDK's newer 'max' level.
+		const openRouterEffort = effort === 'max' ? 'xhigh' : effort;
 		// strict mode sends stream_options.include_usage, which the pipeline's usage reporting relies on
 		const provider = createOpenRouter({
 			baseURL,
@@ -43,7 +45,10 @@ export async function createModel(config: ProviderConfig) {
 			compatibility: 'strict',
 			headers: OPENROUTER_ATTRIBUTION_HEADERS,
 		});
-		return provider.chat(config.model, effort && effort !== 'provider-default' ? { reasoning: { effort } } : undefined);
+		return provider.chat(
+			config.model,
+			openRouterEffort && openRouterEffort !== 'provider-default' ? { reasoning: { effort: openRouterEffort } } : undefined
+		);
 	}
 
 	if (!config.apiKey) {

@@ -14,9 +14,17 @@
 
 	type ReasoningEffort = NonNullable<LanguageModelCallOptions['reasoning']>;
 
-	const REASONING_EFFORT_OPTIONS: readonly ReasoningEffort[] = ['provider-default', 'none', 'minimal', 'low', 'medium', 'high', 'xhigh'];
+	const REASONING_EFFORT_OPTIONS = [
+		'provider-default',
+		'none',
+		'minimal',
+		'low',
+		'medium',
+		'high',
+		'xhigh',
+	] as const satisfies readonly ReasoningEffort[];
 
-	const REASONING_EFFORT_LABEL_KEYS: Record<ReasoningEffort, string> = {
+	const REASONING_EFFORT_LABEL_KEYS: Record<(typeof REASONING_EFFORT_OPTIONS)[number], string> = {
 		'provider-default': 'settings.reasoningEfforts.providerDefault',
 		none: 'settings.reasoningEfforts.none',
 		minimal: 'settings.reasoningEfforts.minimal',
