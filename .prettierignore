@@ -7,3 +7,4 @@ src-tauri/
 *.local
 package-lock.json
 skills-lock.json
+wiki/
