@@ -8,13 +8,14 @@
 Hiyori (日和) is an AI-powered interactive storytelling app built with Tauri v2 and SvelteKit 5.
 Create intricate stories through an AI-guided world builder, then play through branching narratives with real-time game state tracking, robust memory, and customizable AI pipelines.
 
+> **Looking for the details?** Everything beyond this page lives in the **[project wiki](https://github.com/kazenorin/hiyori-app/wiki)** — provider setup, role recommendations, gameplay guides, and developer documentation. See [Documentation](#documentation) below.
+
 ## Table of Contents
 
 1. [Quick Start](#quick-start)
 2. [Features](#features)
-3. [User Guide](#user-guide)
-4. [UI & Accessibility](#ui--accessibility)
-5. [Developer Guide](#developer-guide)
+3. [Documentation](#documentation)
+4. [Developer Guide](#developer-guide)
 
 ---
 
@@ -29,17 +30,17 @@ Get Hiyori running in three simple steps:
 2. **Connect AI:** Open the app, go to **Settings → AI Providers**, and add your preferred provider (OpenAI, OpenAI-compatible, Ollama, etc.).
 3. **Play:** Click **New Story → World Builder** to generate your first universe!
 
-| Option            | How to Run                                                                 | Recommendation            |
-| ----------------- | -------------------------------------------------------------------------- | ------------------------- |
-| **Installer**     | Download and install `Hiyori_<version>.exe`                                | **Recommended (Windows)** |
-| **Built SPA**     | `npm install && npm run build`, then serve `build/`                        | **Recommended (Web)**     |
-| **Online**        | Visit [GitHub Pages](https://kazenorin.github.io/hiyori-app/) or self-host | **No install needed**     |
-| **Dev server**    | `npm install && npm run dev`                                               | For web development       |
-| **Local desktop** | `npm install && npm run tauri dev` (requires Rust)                         | For app development       |
-| **Android**       | See [Building the Android APK](#building-the-android-apk) below            | For Android devices       |
+| Option            | How to Run                                                                                      | Recommendation            |
+| ----------------- | ----------------------------------------------------------------------------------------------- | ------------------------- |
+| **Installer**     | Download and install `Hiyori_<version>.exe`                                                     | **Recommended (Windows)** |
+| **Built SPA**     | `npm install && npm run build`, then serve `build/`                                             | **Recommended (Web)**     |
+| **Online**        | Visit [GitHub Pages](https://kazenorin.github.io/hiyori-app/) or self-host                      | **No install needed**     |
+| **Dev server**    | `npm install && npm run dev`                                                                    | For web development       |
+| **Local desktop** | `npm install && npm run tauri dev` (requires Rust)                                              | For app development       |
+| **Android**       | See [Platform Builds](https://github.com/kazenorin/hiyori-app/wiki/Platform-Builds) in the wiki | For Android devices       |
 
 > **Note:** Running the locally-built executable directly without the installer is not recommended, as the local data cache is not automatically erased between versions and can cause stale data issues.
-> **Web App Note:** `localhost`/`127.0.0.1` is allowed on HTTP. All other hosts require HTTPS. An HTTPS web app can only call HTTPS providers or localhost providers. See the [WISP Proxy](#2-wisp-proxy--advanced-routing) section for CORS workarounds.
+> **Web App Note:** `localhost`/`127.0.0.1` is allowed on HTTP. All other hosts require HTTPS. An HTTPS web app can only call HTTPS providers or localhost providers. See [Getting Started](https://github.com/kazenorin/hiyori-app/wiki/Getting-Started) in the wiki for CORS workarounds.
 
 ---
 
@@ -83,122 +84,27 @@ Get Hiyori running in three simple steps:
 
 ---
 
-## User Guide
+## Documentation
 
-### 1. Setting Up Your AI Provider
+Detailed guides live in the **[wiki](https://github.com/kazenorin/hiyori-app/wiki)**. The wiki is also part of this repository as a git submodule at [`wiki/`](wiki) — run `git submodule update --init wiki` to check it out locally.
 
-![Settings page showing AI provider configuration](docs/settings-page-dark.png)
+**Getting started**
 
-Nothing works without an AI provider.
+- [Getting Started](https://github.com/kazenorin/hiyori-app/wiki/Getting-Started) — connect an AI provider, WISP proxy and CORS workarounds
+- [Pipeline Roles](https://github.com/kazenorin/hiyori-app/wiki/Pipeline-Roles) — assign models per role, with recommendations and KV-cache notes
 
-1. Go to **Settings → AI Providers** and click **+ Add Provider**.
-2. Choose a provider type: **OpenAI Compatible**, **OpenAI**, or **Ollama**.
-3. Fill in the **Base URL** and **Model** (use the **Fetch Models** button to auto-populate if supported).
-4. Select the correct **API type**: `chat-completions` for most providers, `responses` only for OpenAI's `responses` API.
-5. Optionally configure a **CORS bypass** (WISP proxy or libcurl) for web app usage.
+**Playing**
 
-> **Ollama (Local) Users:** Set `OLLAMA_ORIGINS=*` on your Ollama server to allow browser CORS requests.
+- [Playing the Story](https://github.com/kazenorin/hiyori-app/wiki/Playing-the-Story) — core loop, acts and epilogues, message actions, forking, plot planner
+- [Importing Content](https://github.com/kazenorin/hiyori-app/wiki/Importing-Content) — start a story from an existing chat transcript
+- [Memory System](https://github.com/kazenorin/hiyori-app/wiki/Memory-System) — desktop-only vector memory
+- [UI & Accessibility](https://github.com/kazenorin/hiyori-app/wiki/UI-and-Accessibility) — typography, themes, localization, TTS, mobile gestures
 
-### 2. WISP Proxy & Advanced Routing
+**Developing**
 
-Since some API providers do not support CORS, API requests from the web app directly to those providers will fail.
-
-- **Per-Provider CORS Bypass:** Each provider can be individually configured with a WISP proxy URL or the built-in libcurl-based CORS bypass.
-- **WISP Protocol:** This app supports the [WISP-protocol proxy](https://github.com/MercuryWorkshop/wisp-protocol). You can easily proxy web app requests by setting up a local server using [wisp-server-python](https://github.com/MercuryWorkshop/wisp-server-python).
-- **Advanced Usage (Cost & Token Management):** For power users managing multiple APIs, consider routing your Hiyori requests through an intermediate gateway. Deploying a self-contained Docker Compose stack running LiteLLM on a local NAS is an excellent strategy to bypass CORS restrictions, unify your endpoints, and monitor your overall token usage without relying on a host-machine database.
-
-### 3. Assigning Provider Roles
-
-![Provider roles configuration panel](docs/provider-roles.png)
-
-All pipeline roles default to your **Main Provider**. To optimize speed and cost, assign smaller/faster models to minor roles in **Settings → Pipeline Roles**. Each role is an independent agent that does not share much context with the others, and you can mix providers and models freely across roles.
-
-- Enable the **Reviewer** to unlock the **Editor** role. Choose between **detailed** (thorough analysis) and **quick** (fast pass/fail) review modes.
-- You must assign a **Minor Task Agent** to enable phrase extraction and template fitting.
-
-#### Role Recommendations
-
-The "minimum" requirement is a local Gemma 12B class model for everything.
-
-Using open weight/open source frontier models (e.g. DeepSeek V4 Pro, GLM-5, Kimi K2.6) for everything is good, but may also be too slow for a semi-interactive game.
-
-| Role                 | Recommendation                                                                                                                                                         | KV-cache                                       |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
-| **Main Provider**    | Cloud "Flash"-class models (e.g. DeepSeek V4 Flash, Gemini 3.1 Flash Lite Preview), or local ~24-30B models (e.g. Qwen3.6 27B/35B A3B, Gemma 31b/26B A4B, GPT-OSS 20B) | —                                              |
-| **Minor Task Agent** | Small, fast non-reasoning models (e.g. Gemma E4B, 12B class). May work with even smaller models.                                                                       | Not needed                                     |
-| **Plot Planner**     | Strong frontier models with Event-based mode; "Flash"-class with Guidance-based mode. Both modes are token-heavy and slow, but they drive the entire story direction.  | Needed for Guidance-based, not for Event-based |
-| **Writer**           | Same as Main Provider, may also opt for frontier models. What you read will mostly be written by this model.                                                           | Needed                                         |
-| **Reviewer**         | Reasoning models — quick review with stronger models, or detailed review with local ~24-30B models                                                                     | Needed                                         |
-| **Editor**           | Fast non-reasoning models, but not too weak — quality still matters (e.g. Gemma E4B/12B class). Depending on the reviewer, the editor will be asked to rewrite stuff.  | Needed                                         |
-| **Game Master**      | Same as Main Provider. Primarily generates decisions that drive the plot — weaker models work if decision quality isn't critical                                       | Needed                                         |
-| **Summarizer**       | Same as Main Provider, or a stronger frontier model with reasoning disabled — better summarization means higher-quality context for other agents                       | Needed                                         |
-
-> **KV-cache note:** Roles marked "Needed" benefit significantly from prompt-caching. Using the same provider and model for these roles allows the cache to persist across turns. Conversely, the Minor Task Agent's context shifts every call, so prompt-caching offers no advantage — a different provider can be used without penalty.
-
-![Pipeline roles with detailed assignments](docs/pipeline-roles.png)
-
-### 4. Playing the Narrative
-
-The core loop: send a message → AI generates narrative → you choose a decision (or enter your own) → repeat.
-
-- **Concluding Acts:** When an act ends (via the `end-act` tool or player choice), choosing "Continue to Next Act" creates a new act line. Choosing "End the story here" writes a concluding Epilogue with a selectable ending type (good, bad, bittersweet, or alternative).
-
-  ![Act conclusion options showing Continue and End](docs/concluding-act.png)
-
-- **Message Actions:** Every AI message features buttons to **Copy** (Markdown), **Read** (TTS), **Fork** (branch narrative), **Regenerate**, or **Edit** (reveals structured fields like scene title, background, and narrative that aren't visible in standard reading mode).
-
-### 5. Branching Narratives (Forking)
-
-![Fork dialog showing plot mode and branch options](docs/fork-dialog.png)
-
-Forking lets you explore "what if" scenarios. Click **Fork** on any assistant message and choose:
-
-- **Keep current plot:** Continue with the identical plot outline from the fork point.
-- **Tell us what's different:** Describe the divergence in an interview, allowing the AI to generate an entirely new act plot for the branch.
-
-### 6. Plot Planner & Act Plots
-
-Enable the Plot Planner in **Settings → Pipeline Roles** to shape narrative direction before the Writer runs.
-
-- **Event-based mode (Recommended):** Structures the story through narrative phases (introduction → rising action → climax → falling action → resolution). The Writer uses the `advance-phase` tool to progress through phases based on milestone gating (narrative completion score, player divergence score, goal completion). Runs at a configurable reevaluation frequency (default every 10 scenes).
-- **Guidance-based mode:** Runs every turn with strong, Bethesda-style directional guidance.
-
-### 7. Import Existing Content
-
-You can import chat transcripts, world cards, and character profiles as new stories (supports Open WebUI JSON transcripts, Markdown, and text files).
-
-- The multi-step wizard handles story details, acts, characters, and settings.
-- Use the **Preview step** to review and remove individual messages before committing.
-- _Note: Importing long chat histories is a token-heavy process._
-
-![Import game data dialog for backing up stories](docs/import-game-data.png)
-
-### 8. The Memory System (Desktop Only)
-
-An advanced feature disabled by default (unavailable in the web app due to browser SQLite limitations).
-
-- Requires both a **Memory provider** and an **Embedding provider**.
-- Memory extraction runs automatically after narrative generation.
-- Use the **Memory Manager** page to search past context by character, location, or both.
-
----
-
-## UI & Accessibility
-
-- **Dynamic Typography:** Use `Ctrl+Scroll` to adjust text size (70%–150%), or use the **Aa** slider in the sidebar.
-- **Themes:** Choose from 23 color themes, plus System/Light/Dark modes.
-- **Localization:** Fully supported in English and Traditional Chinese (Hong Kong).
-- **Text-to-Speech (TTS):** Enable Kokoro-based TTS in Settings to read stories aloud (requires a one-time ~300MB WASM model download; English locales only).
-- **Mobile Navigation:**
-- Swipe right from the left edge to open the sidebar drawer.
-- Use the bottom tab bar to switch between Chat, Choices, and Menu.
-- Swipe right-to-left on stories/acts to **Delete**.
-
-  ![Mobile swipe-to-delete gesture](docs/mobile-delete.png)
-
-- Swipe left-to-right on stories/acts to **Rename**.
-
-  ![Mobile swipe-to-rename gesture](docs/mobile-rename.png)
+- [Development Setup](https://github.com/kazenorin/hiyori-app/wiki/Development-Setup) — prerequisites, Linux and Windows environment setup, building and running
+- [Platform Builds](https://github.com/kazenorin/hiyori-app/wiki/Platform-Builds) — Android APKs and Windows cross-compilation
+- [Feature Internals](https://github.com/kazenorin/hiyori-app/wiki/Feature-Internals) — dialogue preprocessor, phrase highlighting, `sqlite-vec` constraints
 
 ---
 
@@ -209,142 +115,22 @@ An advanced feature disabled by default (unavailable in the web app due to brows
 - [Node.js](https://nodejs.org/) v24+
 - [Rust](https://www.rust-lang.org/tools/install) 1.77.2+
 
-**Linux system dependencies:**
-Tauri requires WebKit2GTK and related libraries:
-
-```bash
-sudo apt install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
-
-```
-
-_(If developing via WSL2, ensure Rust is installed directly within your WSL environment along with `build-essential gcc make`)._
-
-**Windows environment setup:**
-
-Building and running Hiyori natively on Windows (`npm run tauri dev` / `npm run tauri build`) needs four things: **Node.js 24+**, **Rust** (installed via `rustup`), the **Visual C++ Build Tools** (MSVC compiler + Windows SDK), and **Python 3** (used by `node-gyp`).
-
-Install everything with `winget` from PowerShell:
-
-```powershell
-# 1. Node.js — nvm-windows is optional but recommended for managing versions.
-winget install -e --id CoreyButler.NVMforWindows
-# Open a NEW terminal so nvm's PATH takes effect, then:
-nvm install 24
-nvm use 24
-
-# 2. Rust toolchain (cargo/rustc) — required by the Tauri CLI to compile src-tauri.
-winget install -e --id Rustlang.Rustup
-
-# 3. MSVC build tools + Windows SDK — required by the Rust/Tauri linker AND by
-#    node-gyp (to compile the native `better-sqlite3` dev dependency).
-winget install -e --id Microsoft.VisualStudio.2022.BuildTools --override "--quiet --wait --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"
-
-# 4. Python — required by node-gyp.
-winget install -e --id Python.Python.3.12
-```
-
-> **Restart your terminal after each install.** `winget` updates the system `PATH`, but already-open shells (and editors like WebStorm/VS Code) won't pick it up until restarted. Verify with `node --version`, `cargo --version`, and `rustc --version`.
-
-Then install the JavaScript dependencies and run the app:
-
-```powershell
-npm install
-npm run tauri dev
-```
-
-> **Troubleshooting:**
->
-> - **`failed to run 'cargo metadata' ... program not found`** — Rust isn't installed, or the terminal hasn't been restarted so its `PATH` isn't loaded. Install `Rustlang.Rustup` (step 2) and open a new terminal.
-> - **Linker / `link.exe` errors during the Rust build** — the MSVC Build Tools (step 3) are missing, or the `Desktop development with C++` workload wasn't selected.
-> - **`better-sqlite3` native build skipped / `node-gyp` cannot find Python** — `better-sqlite3` ships no prebuilt binary for Node 24 and is compiled from source. Approve the install scripts and rebuild:
->
->   ```powershell
->   npm install-scripts approve better-sqlite3 sharp protobufjs
->   npm rebuild better-sqlite3
->   ```
+Platform-specific setup — Linux system dependencies, the Windows `winget` walkthrough, and build troubleshooting — is covered in [Development Setup](https://github.com/kazenorin/hiyori-app/wiki/Development-Setup).
 
 ### Building and Running
 
-Start the Vite dev server (`http://localhost:1420`) and launch the Tauri hot-reload window:
-
 ```bash
 npm install
-npm run tauri dev
 
+npm run dev          # Vite dev server for the web app (http://localhost:1420)
+npm run tauri dev    # desktop app with hot reload (requires Rust)
+npm run build        # static web app (SPA) into build/
+npm run tauri build  # standalone platform binaries
 ```
 
-Build standalone platform binaries:
+The `build/` directory can be deployed to any static host (Netlify, Vercel, GitHub Pages) or served locally. Web app data is stored in the browser via OPFS (Origin Private File System), and the web app is PWA-enabled.
 
-```bash
-npm run tauri build
-
-```
-
-Build the standalone static Web App (SPA):
-
-```bash
-npm install
-npm run build
-
-```
-
-The resulting `build/` directory can be deployed to any static host (Netlify, Vercel, GitHub Pages) or served locally. App data is stored in the browser via OPFS (Origin Private File System). The web app is PWA-enabled and can be installed as a standalone application.
-
-### Feature Internals
-
-The preprocessor (`src/lib/utils/dialogue-preprocessor.ts`) applies highlighting with strict precedence: `dialogue > highlighted-phrase > character-name`. Each layer masks its regions so subsequent passes cannot match inside them.
-
-When Phrase Highlighting is enabled, the `MinorTaskAgent` extracts important phrases in the background (fire-and-forget) after the Editor phase. Older messages are sequentially backfilled when an act line is loaded.
-
-The `sqlite-vec` extension is globally registered via `main.rs` and available to JS queries.
-
-- **Schema Constraints:** Requires explicit dimension definitions (e.g., `float[768]`).
-- **IPC Limitations:** `tauri-plugin-sql` IPC cannot bind binary BLOBs from JS. You must pass vectors as JSON strings.
-- **Primary Keys:** Use `last_insert_rowid()` in SQL, as JS numbers bind as `REAL` and `vec0` requires integers.
-- **KNN Queries:** When JOINing with other tables, use a subquery pattern to ensure the `LIMIT` applies directly to the `vec0` virtual table scan.
-
-Add the Windows GNU target and install the MinGW-w64 cross-compiler:
-
-```bash
-rustup target add x86_64-pc-windows-gnu
-sudo apt install -y gcc-mingw-w64-x86-64 nsis
-
-```
-
-Build the `.exe`:
-
-```bash
-npm run tauri build -- --target x86_64-pc-windows-gnu
-
-```
-
-### Building the Android APK
-
-#### Debug APK
-
-```bash
-npx tauri android build --debug
-```
-
-Output: `src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk`
-
-For a specific device architecture:
-
-```bash
-npx tauri android build --debug --target aarch64
-```
-
-#### Signed release APK
-
-The release keystore and Gradle signing config are already set up. Ensure `src-tauri/gen/android/key.properties` points to your keystore, then:
-
-```bash
-npx tauri android build --target aarch64
-```
-
-APK output: `src-tauri/gen/android/app/build/outputs/apk/aarch64/release/app-aarch64-release.apk`
-
-Install via File Manager or `adb install -r <path-to-apk>`.
+For Android APKs and cross-compiling the Windows executable from Linux, see [Platform Builds](https://github.com/kazenorin/hiyori-app/wiki/Platform-Builds).
 
 ### License
 
