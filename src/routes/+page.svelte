@@ -81,7 +81,6 @@
 	import DirectorNotesPanel from '$lib/components/DirectorNotesPanel.svelte';
 	import WorldBuilderControls from '$lib/components/WorldBuilderControls.svelte';
 	import { hasTemplateMetadata, renderTemplate } from '$lib/ai/template-renderer';
-	import { formatPhaseName } from '$lib/ai/narrative-types';
 	import { loadStoryMessageTemplate, loadStoryMessageTemplateForStory } from '$lib/fs/view-templates';
 	import { actPlotExists as actPlotExistsHelper } from '$lib/ai/act-plot';
 	import { getActLine } from '$lib/db/act-lines';
@@ -91,7 +90,8 @@
 	import ScrollToFAB from '$lib/components/ScrollToFAB.svelte';
 	import MobileInputSheet from '$lib/components/MobileInputSheet.svelte';
 	import ChoicesSheet from '$lib/components/ChoicesSheet.svelte';
-	import ReasoningAccordion from '$lib/components/chat/ReasoningAccordion.svelte';
+	import PhaseStrip from '$lib/components/chat/PhaseStrip.svelte';
+	import { openPhaseDialog } from '$lib/components/chat/phase-dialog-state.svelte';
 	import RightPanelShell from '$lib/components/chat/RightPanelShell.svelte';
 	import MessageActions from '$lib/components/chat/MessageActions.svelte';
 	import ForkChoicePanel from '$lib/components/chat/ForkChoicePanel.svelte';
@@ -628,23 +628,14 @@
 								<span data-streaming-cursor class="inline-block w-2 h-5 bg-primary-500 animate-pulse rounded-sm"></span>
 							{:else}
 								<div class="rounded-(--radius-container) bg-surface-50-950 p-3 md:p-5 shadow-message border border-surface-200-800">
-									<!-- Pipeline phase accordions -->
-									{#if message.phases && message.phases.length > 0}
-										{#each message.phases as phase, pi (pi)}
-											<ReasoningAccordion label={formatPhaseName(phase.phaseName)} value={phase.phaseName}>
-												{#if phase.reasoning}
-													<div class="mb-2 italic text-surface-400">{phase.reasoning}</div>
-												{/if}
-												<MarkdownContent content={phase.content} />
-											</ReasoningAccordion>
-										{/each}
-									{/if}
-
-									{#if message.reasoning}
-										<ReasoningAccordion label={t('chat.reasoning')} value="reasoning">
-											{message.reasoning}
-										</ReasoningAccordion>
-									{/if}
+									<!-- Pipeline phase strip -->
+									<PhaseStrip
+										phases={message.phases ?? []}
+										streamingPhase={getIsStreaming() && message === getMessages().at(-1)
+											? (message.phases?.at(-1)?.phaseName ?? null)
+											: null}
+										onOpen={(phase) => openPhaseDialog(message.id, phase)}
+									/>
 
 									<!-- Main content: Editor output -->
 									{#if isEditingMessage(message.id)}

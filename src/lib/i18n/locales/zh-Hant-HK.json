@@ -307,6 +307,17 @@
 		"describeChanges": "描述更改",
 		"describeChangesPlaceholder": "描述你想要更改的內容…",
 		"reasoning": "推理",
+		"sceneLabel": "場景 {{sceneNumber}}",
+		"phases": {
+			"writer": "寫手",
+			"reviewer": "審閱者",
+			"editor": "編輯",
+			"gameMaster": "GM",
+			"plotPlanner": "編劇",
+			"templateFitter": "範本配適",
+			"summarizer": "摘要者",
+			"profileCompressor": "檔案壓縮"
+		},
 		"message": "訊息",
 		"noActLineSelected": "未選擇故事線",
 		"loadingStory": "載入故事中…",
