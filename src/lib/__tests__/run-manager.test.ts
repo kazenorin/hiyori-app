@@ -31,9 +31,10 @@ vi.mock('$lib/ai/chat/persistence', () => ({
 	updatePersistentMessageMetadata: vi.fn(async () => {}),
 }));
 
-import { draftMessageFromRecord, resumedSessionMessage } from '$lib/ai/chat/run-manager';
+import { draftMessageFromRecord, resumedSessionMessage, trackStreamingPhase } from '$lib/ai/chat/run-manager';
 import type { PipelineRunRecord } from '$lib/db/pipeline-runs';
-import type { GameDataFields, NarrativeVariables } from '$lib/ai/narrative-types';
+import type { PipelineCallbacks } from '$lib/ai/pipeline/types';
+import type { GameDataFields, NarrativeVariables, PhaseName } from '$lib/ai/narrative-types';
 
 const vars = (over: Partial<NarrativeVariables>): NarrativeVariables => ({
 	sceneTitle: null,
@@ -92,7 +93,7 @@ describe('draftMessageFromRecord', () => {
 		const draft = draftMessageFromRecord(record);
 
 		expect(draft.content).toBe('polished');
-		expect(draft.phases?.map((p) => p.phaseName)).toEqual(['WRITER', 'REVIEWER']);
+		expect(draft.phases?.map((p) => p.phaseName)).toEqual(['WRITER', 'REVIEWER', 'EDITOR']);
 		expect(draft.variables?.sceneTitle).toBe('Title');
 		expect(draft.variables?.gameData?.decisions).toEqual(['Go left']);
 	});
@@ -116,7 +117,8 @@ describe('draftMessageFromRecord', () => {
 		});
 		const draft = draftMessageFromRecord(record);
 		expect(draft.reasoning).toBe('thought process');
-		expect(draft.phases?.map((p) => p.phaseName)).toEqual(['WRITER', 'GAME_MASTER', 'PLOT_PLANNER']);
+		expect(draft.phases?.map((p) => p.phaseName)).toEqual(['WRITER', 'EDITOR', 'GAME_MASTER', 'PLOT_PLANNER']);
+		expect(draft.phases?.[1]).toEqual({ phaseName: 'EDITOR', content: 'polished', reasoning: 'thought process' });
 	});
 
 	it('omits an empty carried-forward scene plot from the phase list', () => {
@@ -172,9 +174,18 @@ describe('resumedSessionMessage', () => {
 		);
 		expect(message.content).toBe('polished');
 		expect(message.reasoning).toBe('thoughts');
-		expect(message.phases?.map((p) => p.phaseName)).toEqual(['WRITER', 'REVIEWER', 'GAME_MASTER', 'PLOT_PLANNER']);
+		expect(message.phases?.map((p) => p.phaseName)).toEqual(['WRITER', 'REVIEWER', 'EDITOR', 'GAME_MASTER', 'PLOT_PLANNER']);
+		expect(message.phases?.[2]).toEqual({ phaseName: 'EDITOR', content: 'polished', reasoning: 'thoughts' });
 		expect(message.variables?.sceneTitle).toBe('Title');
 		expect(message.variables?.gameData?.decisions).toEqual(['Go left']);
+	});
+
+	it('includes an EDITOR entry even with the reviewer disabled, while WRITER stays hidden', () => {
+		// Reviewer-off runs seed the editor from the writer; the EDITOR chip must
+		// still appear (design §4.4) while the WRITER stream remains the body seed.
+		const message = resumedSessionMessage(makeRecord({ writerOutput: 'final prose', editorOutput: 'final prose' }));
+		expect(message.content).toBe('final prose');
+		expect(message.phases).toEqual([{ phaseName: 'EDITOR', content: 'final prose' }]);
 	});
 
 	it('derives the scene number from completedScenes', () => {
@@ -189,5 +200,55 @@ describe('resumedSessionMessage', () => {
 		expect(message.content).toBe('');
 		expect(message.phases).toEqual([]);
 		expect(message.variables).toBeUndefined();
+	});
+});
+
+describe('trackStreamingPhase', () => {
+	function makeInner(): PipelineCallbacks {
+		return {
+			onPhaseStart: vi.fn(),
+			onPhaseStream: vi.fn(),
+			onPhaseRetry: vi.fn(),
+			onPhaseComplete: vi.fn(),
+			onError: vi.fn(),
+			onAllComplete: vi.fn(),
+		};
+	}
+
+	it('sets streamingPhase on phase start and clears it on phase complete, notifying the UI both times', () => {
+		// The phase strip spinner needs a live source: the session must expose which
+		// phase is currently streaming through RunSessionView events.
+		const inner = makeInner();
+		const session = { streamingPhase: null as PhaseName | null };
+		const onUpdate = vi.fn();
+		const wrapped = trackStreamingPhase(session, inner, onUpdate);
+
+		wrapped.onPhaseStart('WRITER');
+		expect(session.streamingPhase).toBe('WRITER');
+		expect(inner.onPhaseStart).toHaveBeenCalledWith('WRITER');
+		expect(onUpdate).toHaveBeenCalledTimes(1);
+
+		wrapped.onPhaseStream('WRITER', { content: 'x', reasoning: null, variables: null });
+		expect(session.streamingPhase).toBe('WRITER');
+		expect(onUpdate).toHaveBeenCalledTimes(1);
+
+		wrapped.onPhaseComplete('WRITER', { writerOutput: 'x' });
+		expect(session.streamingPhase).toBeNull();
+		expect(inner.onPhaseComplete).toHaveBeenCalledWith('WRITER', { writerOutput: 'x' });
+		expect(onUpdate).toHaveBeenCalledTimes(2);
+	});
+
+	it('passes every other callback through untouched', () => {
+		const inner = makeInner();
+		const session = { streamingPhase: null as PhaseName | null };
+		const wrapped = trackStreamingPhase(session, inner, vi.fn());
+
+		const streamState = { content: 'c', reasoning: null, variables: null };
+		wrapped.onPhaseStream('EDITOR', streamState);
+		expect(inner.onPhaseStream).toHaveBeenCalledWith('EDITOR', streamState);
+		wrapped.onPhaseRetry('EDITOR', 1, 3);
+		expect(inner.onPhaseRetry).toHaveBeenCalledWith('EDITOR', 1, 3);
+		wrapped.onAllComplete({});
+		expect(inner.onAllComplete).toHaveBeenCalledWith({});
 	});
 });

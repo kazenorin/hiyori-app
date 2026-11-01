@@ -22,6 +22,7 @@ import type {
 	ActLineContext,
 	AsyncPhaseResults,
 	CommonPipelineInput,
+	PipelineCallbacks,
 	PipelineContext,
 	PipelineInput,
 	PipelineResult,
@@ -30,7 +31,7 @@ import type {
 import type { PipelineRunKind, PipelineRunRecord, RunInputSnapshot } from '$lib/db/pipeline-runs';
 import { deleteInventoryByMessages } from '$lib/db/inventory';
 import type { PhaseMetadata } from '$lib/ai/chat-stream';
-import type { EndingType, UIScenePhase } from '$lib/ai/narrative-types';
+import type { EndingType, PhaseName, UIScenePhase } from '$lib/ai/narrative-types';
 import type { Story } from '$lib/db/stories';
 import type { ActLineMeta } from '$lib/db/act-lines';
 import type { UIMessage } from './types';
@@ -74,6 +75,8 @@ export interface RunSessionView {
 	kind: PipelineRunKind;
 	status: RunStatus;
 	message: UIMessage;
+	/** Phase whose stream is currently active, or null between phases / after settle (spinner source). */
+	streamingPhase: PhaseName | null;
 	error?: string;
 }
 
@@ -89,6 +92,7 @@ interface InternalSession {
 	kind: PipelineRunKind;
 	status: RunStatus;
 	message: UIMessage;
+	streamingPhase: PhaseName | null;
 	error?: string;
 	abortController: AbortController;
 	record: PipelineRunRecord;
@@ -138,6 +142,7 @@ function toView(session: InternalSession): RunSessionView {
 		kind: session.kind,
 		status: session.status,
 		message: session.message,
+		streamingPhase: session.streamingPhase,
 		error: session.error,
 	};
 }
@@ -149,6 +154,31 @@ function emitUpdate(session: InternalSession): void {
 export function getActiveSession(actLineId: string): RunSessionView | undefined {
 	const session = sessions.get(actLineId);
 	return session ? toView(session) : undefined;
+}
+
+/**
+ * Wrap pipeline callbacks so the session tracks which phase is currently
+ * streaming — the spinner source for the UI phase strip. Set on phase start,
+ * cleared on phase complete; settle paths clear it directly.
+ */
+export function trackStreamingPhase(
+	session: { streamingPhase: PhaseName | null },
+	callbacks: PipelineCallbacks,
+	onUpdate: () => void
+): PipelineCallbacks {
+	return {
+		...callbacks,
+		onPhaseStart: (phase) => {
+			session.streamingPhase = phase;
+			onUpdate();
+			callbacks.onPhaseStart(phase);
+		},
+		onPhaseComplete: (phase, state) => {
+			session.streamingPhase = null;
+			onUpdate();
+			callbacks.onPhaseComplete(phase, state);
+		},
+	};
 }
 
 export function isProcessingAsyncPhases(actLineId: string): boolean {
@@ -173,6 +203,9 @@ export function draftMessageFromRecord(record: PipelineRunRecord): UIMessage {
 	const phases: UIScenePhase[] = [];
 	if (state.writerOutput !== undefined) phases.push({ phaseName: 'WRITER', content: state.writerOutput });
 	if (state.reviewerOutput !== undefined) phases.push({ phaseName: 'REVIEWER', content: state.reviewerOutput });
+	if (state.editorOutput !== undefined) {
+		phases.push({ phaseName: 'EDITOR', content: state.editorOutput, reasoning: state.editorReasoning ?? undefined });
+	}
 	if (state.gameMasterOutput !== undefined) phases.push({ phaseName: 'GAME_MASTER', content: state.gameMasterOutput });
 	if (state.scenePlot) phases.push({ phaseName: 'PLOT_PLANNER', content: state.scenePlot });
 
@@ -198,10 +231,11 @@ export interface InterruptedRunInfo {
 
 /**
  * Live message for a resumed run — follows the same display rules as a fresh run:
- * the narrative body shows editor output only, and cached phases appear as accordions.
- * The WRITER accordion is shown only when the reviewer is enabled (mirroring
- * `phasesOfMainChat`); with the reviewer disabled the writer output IS the final
- * prose (deterministic editor-from-writer seed), so it goes to the body instead.
+ * the narrative body streams editor output, and cached phases appear as chips/dialog
+ * panes. EDITOR always gets an entry when its output is cached (it is dual-routed);
+ * the WRITER entry is shown only when the reviewer is enabled (mirroring
+ * `hiddenPhases`) — with the reviewer disabled the writer output IS the final
+ * prose (deterministic editor-from-writer seed), so it goes to the body only.
  */
 export function resumedSessionMessage(record: PipelineRunRecord): UIMessage {
 	const state = record.state;
@@ -209,6 +243,9 @@ export function resumedSessionMessage(record: PipelineRunRecord): UIMessage {
 	const phases: UIScenePhase[] = [];
 	if (state.writerOutput !== undefined && reviewerEnabled) phases.push({ phaseName: 'WRITER', content: state.writerOutput });
 	if (state.reviewerOutput !== undefined) phases.push({ phaseName: 'REVIEWER', content: state.reviewerOutput });
+	if (state.editorOutput !== undefined) {
+		phases.push({ phaseName: 'EDITOR', content: state.editorOutput, reasoning: state.editorReasoning ?? undefined });
+	}
 	if (state.gameMasterOutput !== undefined) phases.push({ phaseName: 'GAME_MASTER', content: state.gameMasterOutput });
 	if (state.scenePlot) phases.push({ phaseName: 'PLOT_PLANNER', content: state.scenePlot });
 
@@ -450,6 +487,7 @@ async function prepareRun(params: PrepareRunParams): Promise<{ session: Internal
 		kind,
 		status: 'running',
 		message: resumeRecord ? resumedSessionMessage(resumeRecord) : newAssistantMessage(messageId, sceneNumber),
+		streamingPhase: null,
 		abortController: new AbortController(),
 		record,
 		mainConfig,
@@ -574,16 +612,20 @@ async function buildPipelineInput(session: InternalSession, plan: RunPlan): Prom
 		? await buildMainActLineContext(actLine, plotMode, previousScenePlot, sceneNumber)
 		: await buildEpilogueActLineContext(actLine, sceneNumber);
 
-	const callbacks = createPipelineCallbacks({
-		getCurrentMessage: () => session.message,
-		setCurrentMessage: (message) => {
-			session.message = message;
-			emitUpdate(session);
-		},
-		onError: (errorMessage) => {
-			session.error = errorMessage;
-		},
-	});
+	const callbacks = trackStreamingPhase(
+		session,
+		createPipelineCallbacks({
+			getCurrentMessage: () => session.message,
+			setCurrentMessage: (message) => {
+				session.message = message;
+				emitUpdate(session);
+			},
+			onError: (errorMessage) => {
+				session.error = errorMessage;
+			},
+		}),
+		() => emitUpdate(session)
+	);
 
 	// Shared-prefix context (Tiers 0–2): assembled once per run and reused by every phase so
 	// their request prefixes are byte-identical. Main and epilogue runs build it identically.
@@ -693,6 +735,7 @@ async function commitPhaseCache(session: InternalSession, state: PipelineState, 
 }
 
 async function finalizeRun(session: InternalSession, plan: RunPlan, result: PipelineResult): Promise<void> {
+	session.streamingPhase = null;
 	// Guard against deletion racing with the final commit (story/act/line removed mid-run).
 	const actLineStillExists = await dbActLines.getActLine(session.actLineId);
 	if (!actLineStillExists) {
@@ -741,6 +784,7 @@ async function finalizeRun(session: InternalSession, plan: RunPlan, result: Pipe
 }
 
 async function settleRunWithError(session: InternalSession, err: unknown): Promise<void> {
+	session.streamingPhase = null;
 	if (isAbortLikeError(err)) {
 		if (session.discardOnAbort) {
 			try {

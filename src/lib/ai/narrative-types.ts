@@ -7,16 +7,14 @@ export interface GameDataFields {
 	decisions: string[];
 }
 
-/** Phase names for multi-phase narrative generation. EDITOR is excluded from the `phases: UIScenePhase[]` array on UIMessage — its output is stored in top-level UIMessage fields instead. */
+/**
+ * Phase names for multi-phase narrative generation. EDITOR is dual-routed: it appears in the
+ * `phases: UIScenePhase[]` array on UIMessage AND its stream feeds the top-level UIMessage
+ * fields (content/reasoning). WRITER is excluded from `phases` only when the reviewer is
+ * disabled — then its output seeds the message body directly.
+ */
 export type PhaseName =
-	| 'PLOT_PLANNER'
-	| 'WRITER'
-	| 'REVIEWER'
-	| 'EDITOR'
-	| 'TEMPLATE_FITTER'
-	| 'GAME_MASTER'
-	| 'SUMMARIZER'
-	| 'CHARACTER_PROFILE_COMPRESSOR';
+	'PLOT_PLANNER' | 'WRITER' | 'REVIEWER' | 'EDITOR' | 'TEMPLATE_FITTER' | 'GAME_MASTER' | 'SUMMARIZER' | 'CHARACTER_PROFILE_COMPRESSOR';
 
 /** A single phase within a UI scene, produced during streaming */
 export interface UIScenePhase {
