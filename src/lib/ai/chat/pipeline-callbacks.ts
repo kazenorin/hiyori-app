@@ -71,7 +71,10 @@ export function createOptionalCallbacks({
 export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 	const { getCurrentMessage, setCurrentMessage, onError } = deps;
 
-	const phasesOfMainChat: PhaseName[] = isReviewerEnabled() ? ['EDITOR'] : ['EDITOR', 'WRITER'];
+	/** Phases whose stream feeds the message body (content/reasoning/variables). */
+	const bodyPhases: PhaseName[] = isReviewerEnabled() ? ['EDITOR'] : ['EDITOR', 'WRITER'];
+	/** Phases excluded from the `phases` array (no chip, no dialog pane). */
+	const hiddenPhases: PhaseName[] = isReviewerEnabled() ? [] : ['WRITER'];
 
 	const updatePhaseInList = (phase: PhaseName, update: Partial<UIScenePhase>): void => {
 		const current = getCurrentMessage();
@@ -95,28 +98,31 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 
 	return {
 		onPhaseStart: (phase: PhaseName) => {
-			if (phasesOfMainChat.includes(phase)) return;
+			if (hiddenPhases.includes(phase)) return;
 			const current = getCurrentMessage();
 			const phases = [...(current.phases ?? []), { phaseName: phase, content: '' }];
 			setCurrentMessage({ ...current, phases });
 		},
 		onPhaseStream: (phase: PhaseName, streamState: PhaseStreamState) => {
-			if (phasesOfMainChat.includes(phase)) {
+			if (bodyPhases.includes(phase)) {
 				updateEditorMessage(streamState.content, streamState.reasoning, streamState.variables);
-				return;
 			}
-			updatePhaseInList(phase, { content: streamState.content, reasoning: streamState.reasoning ?? undefined });
+			// EDITOR is dual-routed: its deltas feed the body above AND its own
+			// phases entry so the dialog pane streams in lockstep.
+			if (!hiddenPhases.includes(phase)) {
+				updatePhaseInList(phase, { content: streamState.content, reasoning: streamState.reasoning ?? undefined });
+			}
 		},
 		onPhaseRetry: (phase: PhaseName, attempt: number, maxAttempts: number) => {
 			updatePhaseInList(phase, { content: `Retrying (attempt ${attempt}/${maxAttempts})...` });
 		},
 		onPhaseComplete: (phase: PhaseName, pipelineState: PipelineState) => {
-			if (phasesOfMainChat.includes(phase)) {
-				updateEditorMessage(
-					pipelineState.editorOutput ?? getCurrentMessage().content,
-					pipelineState.editorReasoning,
-					pipelineState.editorVariables
-				);
+			if (bodyPhases.includes(phase)) {
+				const content = pipelineState.editorOutput ?? getCurrentMessage().content;
+				updateEditorMessage(content, pipelineState.editorReasoning, pipelineState.editorVariables);
+				if (!hiddenPhases.includes(phase)) {
+					updatePhaseInList(phase, { content, reasoning: pipelineState.editorReasoning ?? undefined });
+				}
 				return;
 			}
 			if (phase === 'TEMPLATE_FITTER') {

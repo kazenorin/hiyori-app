@@ -2,6 +2,7 @@ import * as dbActLines from '$lib/db/act-lines';
 import * as dbMessages from '$lib/db/messages';
 import { parseImportantPhrases, serializeImportantPhrases } from '$lib/db/messages';
 export { serializeImportantPhrases };
+import { deletePhasesForMessages, getPhasesForMessages } from '$lib/db/message-phases';
 import { Memory } from '$lib/features/memory';
 import { log } from '$lib/logging/logger';
 import { getMemoryProviderConfig, isMemoryAvailable, isInventoryAvailable } from '$lib/stores/settings.svelte';
@@ -68,18 +69,25 @@ export async function persistUserMessage(playerResponse: string, sceneNumber: nu
 
 export async function loadActLineMessagesFromDB(actLineId: string): Promise<UIMessage[]> {
 	const dbMsgs = await dbActLines.getMessagesForLine(actLineId);
-	return dbMsgs.map((m) => ({
-		id: m.id,
-		role: m.role,
-		content: m.content,
-		reasoning: m.reasoning,
-		metadata: parseMetadata(m.metadata),
-		sceneNumber: m.sceneNumber ?? 0,
-		variables: m.variables,
-		actSummary: m.actSummary,
-		scenePlot: m.scenePlot,
-		importantPhrases: parseImportantPhrases(m.importantPhrases),
-	}));
+	// Eager attach: UIMessage.phases stays the single source of truth for the
+	// phase strip and dialog after a reload (design §5.4).
+	const phasesByMessage = await getPhasesForMessages(dbMsgs.map((m) => m.id));
+	return dbMsgs.map((m) => {
+		const phases = phasesByMessage.get(m.id);
+		return {
+			id: m.id,
+			role: m.role,
+			content: m.content,
+			reasoning: m.reasoning,
+			metadata: parseMetadata(m.metadata),
+			sceneNumber: m.sceneNumber ?? 0,
+			variables: m.variables,
+			actSummary: m.actSummary,
+			scenePlot: m.scenePlot,
+			importantPhrases: parseImportantPhrases(m.importantPhrases),
+			...(phases && { phases }),
+		};
+	});
 }
 
 export async function backfillImportantPhrases(
@@ -126,6 +134,16 @@ export async function removeMessagesById(actLineId: string, messageIds: string[]
 	}
 
 	if (removedIds.length > 0) {
+		try {
+			// removeMessagesFromActLine returns every requested id, but only deletes
+			// `messages` rows with no remaining act-line references (forked lines share
+			// messages). Delete phases only for messages that are truly gone.
+			const survivors = await dbMessages.getMessagesByIds(removedIds);
+			const survivorIds = new Set(survivors.map((m) => m.id));
+			await deletePhasesForMessages(removedIds.filter((id) => !survivorIds.has(id)));
+		} catch (err) {
+			await log.error('remove-messages-from-index', 'Phase cleanup failed', err);
+		}
 		try {
 			await removeMemoriesFromActLine(actLineId, removedIds);
 		} catch (err) {

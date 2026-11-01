@@ -161,6 +161,17 @@ const migrationStatements: string[][] = [
 		)`,
 		`CREATE INDEX IF NOT EXISTS idx_pipeline_runs_line ON pipeline_runs(act_line_id)`,
 	],
+	[
+		// No secondary index: the composite PK already serves WHERE message_id = … lookups.
+		`CREATE TABLE IF NOT EXISTS message_phases (
+			message_id TEXT NOT NULL,
+			phase_name TEXT NOT NULL,
+			reasoning TEXT,
+			content TEXT NOT NULL,
+			sequence INTEGER NOT NULL,
+			PRIMARY KEY (message_id, phase_name)
+		)`,
+	],
 ];
 
 interface ActLineMetaMigrateRow {
