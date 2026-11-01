@@ -307,6 +307,16 @@
 		"describeChanges": "Describe Changes",
 		"describeChangesPlaceholder": "Describe what you want changed...",
 		"reasoning": "Reasoning",
+		"phases": {
+			"writer": "Writer",
+			"reviewer": "Reviewer",
+			"editor": "Editor",
+			"gameMaster": "Game Master",
+			"plotPlanner": "Plot Planner",
+			"templateFitter": "Template Fitter",
+			"summarizer": "Summarizer",
+			"profileCompressor": "Profile Compressor"
+		},
 		"message": "Message",
 		"noActLineSelected": "No Act Line Selected",
 		"loadingStory": "Loading story...",
