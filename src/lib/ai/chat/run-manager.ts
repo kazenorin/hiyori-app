@@ -1,5 +1,6 @@
 import * as dbActLines from '$lib/db/act-lines';
 import * as dbMessages from '$lib/db/messages';
+import * as dbMessagePhases from '$lib/db/message-phases';
 import * as dbPipelineRuns from '$lib/db/pipeline-runs';
 import * as dbDirectorNotes from '$lib/db/director-notes';
 import { getDatabase } from '$lib/db/database';
@@ -767,6 +768,9 @@ async function finalizeRun(session: InternalSession, plan: RunPlan, result: Pipe
 		const newMessages = plan.userMessage ? [plan.userMessage, session.message] : [session.message];
 		await logMainChat(newMessages);
 	}
+	// Persist phases alongside the committed message so strips/dialogs survive reload;
+	// the async chain re-upserts the full array when it lands (idempotent per phase).
+	await dbMessagePhases.upsertMessagePhases(session.messageId, session.message.phases ?? []);
 	await updateLastPlotGeneration(result.phases, session.actLineId, assistant, plan.completedScenes);
 	await dbPipelineRuns.deletePipelineRun(session.messageId);
 
@@ -818,6 +822,7 @@ function wireAsyncPhases(session: InternalSession, asyncPhases: Promise<AsyncPha
 			session.message = updatedMessage;
 			emitUpdate(session);
 			await updatePersistentMessageMetadata(session.messageId, metadataUpdates);
+			await dbMessagePhases.upsertMessagePhases(session.messageId, updatedMessage.phases ?? []);
 		} catch (err) {
 			if (isAbortLikeError(err)) {
 				await log.warn(LOG_TAG, 'Async phases aborted');

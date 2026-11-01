@@ -3,7 +3,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const settingsMock = vi.hoisted(() => ({ reviewerEnabled: false }));
 
 vi.mock('$lib/stores/settings.svelte', () => ({
-	settings: { targetWordCount: 400, importantPhraseHighlighting: false },
+	settings: {
+		targetWordCount: 400,
+		importantPhraseHighlighting: false,
+		summarizationPointInterval: 10,
+		characterProfileImportanceThreshold: 3,
+		characterProfileMaxIncluded: 20,
+	},
 	getDefaultPlotMode: () => 'guidance',
 	getMainProviderConfig: () => ({ id: 'main', model: 'test-model', apiKey: 'k' }),
 	getSummarizerProviderConfig: () => ({ id: 'sum', model: 'sum-model', apiKey: 'k' }),
@@ -23,15 +29,62 @@ vi.mock('$lib/ai/world-generator', () => ({ ensureWorldFile: vi.fn(async () => '
 vi.mock('$lib/ai/act-plot', () => ({ ensureActPlot: vi.fn(async () => 'plot') }));
 vi.mock('$lib/localization', () => ({ loadLocaleStrings: vi.fn(async () => {}), ls: (k: string) => k }));
 vi.mock('$lib/fs/prompt-loader', () => ({ setActiveLocale: vi.fn() }));
+vi.mock('$lib/db/database', () => ({ initDatabase: vi.fn(), getDatabase: () => ({ flush: vi.fn(async () => {}) }) }));
+vi.mock('$lib/db/act-lines', () => ({
+	getStoryForActLine: vi.fn(async () => ({ id: 'story-1', name: 'Story', locale: 'en', createdAt: 0, updatedAt: 0 })),
+	getActLine: vi.fn(async () => ({ id: 'line-1', actId: 'act-1', name: 'Main', isMainLine: true, createdAt: 0, plotMode: 'guidance' })),
+	getLastSceneNumber: vi.fn(async () => 0),
+	getNextSequence: vi.fn(async () => 1),
+	getActNumberForActLine: vi.fn(async () => 1),
+	getActPhase: vi.fn(async () => null),
+	getActPhaseBoundaries: vi.fn(async () => []),
+	getLastPlotGeneration: vi.fn(async () => null),
+	isActLineEnded: vi.fn(async () => false),
+	deleteEventsForMessage: vi.fn(async () => {}),
+	recordPlotGeneration: vi.fn(async () => {}),
+	recordEpilogueWritten: vi.fn(async () => {}),
+	getEndingType: vi.fn(async () => null),
+}));
+vi.mock('$lib/db/pipeline-runs', () => ({
+	getPipelineRunForActLine: vi.fn(async () => null),
+	upsertPipelineRun: vi.fn(async () => {}),
+	updatePipelineRunIfExists: vi.fn(async () => true),
+	deletePipelineRun: vi.fn(async () => {}),
+	getPipelineRun: vi.fn(async () => null),
+	getPipelineRunsForStory: vi.fn(async () => []),
+	deletePipelineRunsForActLine: vi.fn(async () => {}),
+	deletePipelineRunsForAct: vi.fn(async () => {}),
+	deletePipelineRunsForStory: vi.fn(async () => {}),
+}));
+vi.mock('$lib/db/director-notes', () => ({ getDirectorNotes: vi.fn(async () => []) }));
+vi.mock('$lib/db/messages', () => ({ getMessagesByIds: vi.fn(async () => []) }));
+vi.mock('$lib/db/acts', () => ({ traceActLineChain: vi.fn(async () => []) }));
+vi.mock('$lib/db/character-profiles', () => ({ getLatestProfilesByActLine: vi.fn(async () => []) }));
+vi.mock('$lib/db/inventory', () => ({ deleteInventoryByMessages: vi.fn(async () => {}) }));
+vi.mock('$lib/db/message-phases', () => ({
+	upsertMessagePhases: vi.fn(async () => {}),
+	getPhasesForMessages: vi.fn(async () => new Map()),
+	deletePhasesForMessages: vi.fn(async () => {}),
+}));
 vi.mock('$lib/ai/chat/persistence', () => ({
 	loadActLineMessagesFromDB: vi.fn(async () => []),
 	persistMessage: vi.fn(async () => {}),
 	persistUserMessage: vi.fn(async () => ({ id: 'user-1', role: 'user', content: 'hi', sceneNumber: 0 })),
 	updateLastPlotGeneration: vi.fn(async () => {}),
 	updatePersistentMessageMetadata: vi.fn(async () => {}),
+	serializeImportantPhrases: (phrases: string[]) => phrases.join('\n'),
 }));
 
-import { draftMessageFromRecord, resumedSessionMessage, trackStreamingPhase } from '$lib/ai/chat/run-manager';
+import {
+	draftMessageFromRecord,
+	resumedSessionMessage,
+	startMainRun,
+	subscribeRuns,
+	trackStreamingPhase,
+	type RunEvent,
+} from '$lib/ai/chat/run-manager';
+import { runPipeline } from '$lib/ai/pipeline';
+import * as dbMessagePhases from '$lib/db/message-phases';
 import type { PipelineRunRecord } from '$lib/db/pipeline-runs';
 import type { PipelineCallbacks } from '$lib/ai/pipeline/types';
 import type { GameDataFields, NarrativeVariables, PhaseName } from '$lib/ai/narrative-types';
@@ -250,5 +303,60 @@ describe('trackStreamingPhase', () => {
 		expect(inner.onPhaseRetry).toHaveBeenCalledWith('EDITOR', 1, 3);
 		wrapped.onAllComplete({});
 		expect(inner.onAllComplete).toHaveBeenCalledWith({});
+	});
+});
+
+describe('phase persistence on settle', () => {
+	beforeEach(() => {
+		settingsMock.reviewerEnabled = false;
+		vi.mocked(dbMessagePhases.upsertMessagePhases).mockClear();
+	});
+
+	it('upserts phases at main settle and again after the async chain lands', async () => {
+		// The write path is the whole point of message_phases: phases must survive
+		// reload (main settle) and gain SUMMARIZER/COMPRESSOR rows when the async
+		// chain finishes after it (async settle).
+		vi.mocked(runPipeline).mockImplementation(async (input) => {
+			const cb = input.execution.callbacks;
+			cb.onPhaseStart('EDITOR');
+			cb.onPhaseStream('EDITOR', { content: 'final prose', reasoning: 'thoughts', variables: null });
+			cb.onPhaseComplete('EDITOR', { editorOutput: 'final prose', editorReasoning: 'thoughts' });
+			return {
+				state: { editorOutput: 'final prose' },
+				phases: [],
+				asyncPhases: Promise.resolve({ actSummary: 'the summary' }),
+			};
+		});
+
+		const events: RunEvent[] = [];
+		let resolveSettled!: () => void;
+		let resolveAsyncSettled!: () => void;
+		const settled = new Promise<void>((r) => (resolveSettled = r));
+		const asyncSettled = new Promise<void>((r) => (resolveAsyncSettled = r));
+		const off = subscribeRuns((e) => {
+			events.push(e);
+			if (e.type === 'settled') resolveSettled();
+			if (e.type === 'async-settled') resolveAsyncSettled();
+		});
+
+		const { assistantMessage } = await startMainRun({ actLineId: 'line-1', message: 'go' });
+		await settled;
+		await asyncSettled;
+		off();
+
+		const upserts = vi.mocked(dbMessagePhases.upsertMessagePhases).mock.calls;
+		expect(upserts).toHaveLength(2);
+		// Main settle: the dual-routed EDITOR entry.
+		expect(upserts[0][0]).toBe(assistantMessage.id);
+		expect(upserts[0][1]).toEqual([{ phaseName: 'EDITOR', content: 'final prose', reasoning: 'thoughts' }]);
+		// Async settle: the full array re-sent with the SUMMARIZER row added.
+		expect(upserts[1][0]).toBe(assistantMessage.id);
+		expect(upserts[1][1].map((p) => p.phaseName)).toEqual(['EDITOR', 'SUMMARIZER']);
+		expect(upserts[1][1][1].content).toBe('the summary');
+
+		// streamingPhase drives the strip spinner: live during the phase, gone on settle.
+		expect(events.some((e) => e.type === 'update' && e.session.streamingPhase === 'EDITOR')).toBe(true);
+		const settledEvent = events.find((e) => e.type === 'settled');
+		expect(settledEvent?.type === 'settled' && settledEvent.session.streamingPhase).toBeNull();
 	});
 });
