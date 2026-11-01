@@ -20,7 +20,7 @@ import {
 	updatePersistentMessageMetadata,
 } from './chat/persistence';
 import { updateMessageFields } from '$lib/db/messages';
-import type { NarrativeVariables } from './narrative-types';
+import type { NarrativeVariables, PhaseName } from './narrative-types';
 import { emptyVariables } from './narrative-types';
 import type { UIMessage } from './chat/types';
 import { generateFullSummary, type SummarizerInput, type SummarizerPrompts } from './pipeline/summarizer';
@@ -46,6 +46,7 @@ let displayedActLineId: string | null = null;
 /** Reactive mirror of the displayed line's run state — the run-manager registry itself is not reactive. */
 let displayedRunStatus = $state<'running' | null>(null);
 let displayedRunKind = $state<PipelineRunKind | null>(null);
+let displayedStreamingPhase = $state<PhaseName | null>(null);
 let error = $state<string | null>(null);
 let actEnded = $state(false);
 let storyConcluded = $state(false);
@@ -74,10 +75,16 @@ function syncDisplayedRun(): void {
 	const session = displayedActLineId ? runManager.getActiveSession(displayedActLineId) : undefined;
 	displayedRunStatus = session?.status === 'running' ? 'running' : null;
 	displayedRunKind = session?.kind ?? null;
+	displayedStreamingPhase = session?.status === 'running' ? session.streamingPhase : null;
 }
 
 export function getIsStreaming(): boolean {
 	return displayedRunStatus === 'running' || isBackfilling;
+}
+
+/** Phase currently streaming on the displayed line, or null (spinner source for strip/dialog). */
+export function getStreamingPhase(): PhaseName | null {
+	return displayedStreamingPhase;
 }
 
 export function getIsProcessingAsync(): boolean {

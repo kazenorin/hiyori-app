@@ -10,6 +10,7 @@
 		getInterruptedRun,
 		getIsBusy,
 		getIsStreaming,
+		getStreamingPhase,
 		getLatestActivePlotThreads,
 		getLatestDecisionContext,
 		getLatestDecisions,
@@ -631,9 +632,7 @@
 									<!-- Pipeline phase strip -->
 									<PhaseStrip
 										phases={message.phases ?? []}
-										streamingPhase={getIsStreaming() && message === getMessages().at(-1)
-											? (message.phases?.at(-1)?.phaseName ?? null)
-											: null}
+										streamingPhase={message === getMessages().at(-1) ? getStreamingPhase() : null}
 										onOpen={(phase) => openPhaseDialog(message.id, phase)}
 									/>
 

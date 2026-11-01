@@ -14,7 +14,7 @@
 		getPhaseDialogPhase,
 		setPhaseDialogPhase,
 	} from './phase-dialog-state.svelte';
-	import { findDisplayedMessage, getCharacterNames, getIsStreaming, getMessages } from '$lib/ai/chat.svelte';
+	import { findDisplayedMessage, getCharacterNames, getMessages, getStreamingPhase } from '$lib/ai/chat.svelte';
 	import { getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
 	import type { PhaseName, UIScenePhase } from '$lib/ai/narrative-types';
 
@@ -31,11 +31,8 @@
 	const active = $derived(phases[activeIdx]);
 	const phaseMeta = $derived(active ? message?.metadata?.phases?.find((m) => m.phaseName === active.phaseName) : undefined);
 	const characterNames = $derived(getCharacterNames());
-	// While the run is live, the bound message is the mirrored session view and its last phase
-	// entry is the one currently streaming (until the run-manager exposes session.streamingPhase).
-	const streamingPhase = $derived(
-		getIsStreaming() && message !== undefined && message === getMessages().at(-1) ? (phases.at(-1)?.phaseName ?? null) : null
-	);
+	// The run-manager session is the spinner source; only the live last message can be streaming.
+	const streamingPhase = $derived(message === getMessages().at(-1) ? getStreamingPhase() : null);
 	const cacheReadPct = $derived(
 		phaseMeta?.cacheReadTokens && phaseMeta.inputTokens > 0 ? Math.round((phaseMeta.cacheReadTokens / phaseMeta.inputTokens) * 100) : null
 	);
