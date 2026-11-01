@@ -59,6 +59,16 @@ export function getMessages(): UIMessage[] {
 	return messages;
 }
 
+/**
+ * Resolves a currently displayed message by id (used by the phase dialog).
+ * Live session messages win automatically: the run-manager session view is
+ * mirrored into `messages` on every update event, so during a run this
+ * returns the live streaming message object.
+ */
+export function findDisplayedMessage(id: string): UIMessage | undefined {
+	return messages.find((m) => m.id === id);
+}
+
 /** Re-reads the run registry for the displayed line into reactive state. */
 function syncDisplayedRun(): void {
 	const session = displayedActLineId ? runManager.getActiveSession(displayedActLineId) : undefined;

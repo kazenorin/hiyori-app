@@ -32,6 +32,7 @@
 	import { createBackendFromSettings } from '$lib/features/cloud-sync/backend-factory';
 	import CloudSyncOverlay from '$lib/features/cloud-sync/CloudSyncOverlay.svelte';
 	import SettingsDialog from '$lib/features/settings/SettingsDialog.svelte';
+	import PhaseDialog from '$lib/components/chat/PhaseDialog.svelte';
 	import { isSettingsDialogOpen } from '$lib/features/settings/settings-dialog-state.svelte';
 	import { t } from '$lib/i18n';
 
@@ -514,6 +515,9 @@
 
 <!-- Settings Dialog -->
 <SettingsDialog />
+
+<!-- Phase Dialog -->
+<PhaseDialog />
 
 <!-- App-wide Toast container -->
 <Toast.Group {toaster}>

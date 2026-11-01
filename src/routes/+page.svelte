@@ -91,6 +91,7 @@
 	import MobileInputSheet from '$lib/components/MobileInputSheet.svelte';
 	import ChoicesSheet from '$lib/components/ChoicesSheet.svelte';
 	import PhaseStrip from '$lib/components/chat/PhaseStrip.svelte';
+	import { openPhaseDialog } from '$lib/components/chat/phase-dialog-state.svelte';
 	import RightPanelShell from '$lib/components/chat/RightPanelShell.svelte';
 	import MessageActions from '$lib/components/chat/MessageActions.svelte';
 	import ForkChoicePanel from '$lib/components/chat/ForkChoicePanel.svelte';
@@ -633,7 +634,7 @@
 										streamingPhase={getIsStreaming() && message === getMessages().at(-1)
 											? (message.phases?.at(-1)?.phaseName ?? null)
 											: null}
-										onOpen={() => {}}
+										onOpen={(phase) => openPhaseDialog(message.id, phase)}
 									/>
 
 									<!-- Main content: Editor output -->

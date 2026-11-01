@@ -307,6 +307,7 @@
 		"describeChanges": "Describe Changes",
 		"describeChangesPlaceholder": "Describe what you want changed...",
 		"reasoning": "Reasoning",
+		"sceneLabel": "Scene {{sceneNumber}}",
 		"phases": {
 			"writer": "Writer",
 			"reviewer": "Reviewer",
