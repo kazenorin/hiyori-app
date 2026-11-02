@@ -12,10 +12,12 @@ import {
 import { getStoryFolderInfo } from '$lib/db/story-folders';
 import { getDirectorNotesForActLines, type DirectorNote } from '$lib/db/director-notes';
 import { getMessagesByIds, type Message } from '$lib/db/messages';
+import { getPhasesForMessages } from '$lib/db/message-phases';
 import { getCharacterProfilesForActLines } from '$lib/db/character-profiles';
 import { fs } from '$lib/fs/file-system';
 import { collectFilesInDir, isBinaryData } from '$lib/fs/file-tree';
 import { downloadExport } from '$lib/db/data-portability';
+import type { UIScenePhase } from '$lib/ai/narrative-types';
 import type { StoryExportData } from './archive-schema';
 import { CURRENT_ARCHIVE_VERSION } from './archive-schema';
 import { collectMessageIds } from './story-loader';
@@ -44,6 +46,7 @@ export async function buildStoryExportData(storyId: string): Promise<StoryExport
 
 	const msgIdList = [...collectMessageIds(actLineEntries, actLinePremises, actLineEvents)];
 	let messages: Message[] = [];
+	const phasesByMessage = msgIdList.length > 0 ? await getPhasesForMessages(msgIdList) : new Map<string, UIScenePhase[]>();
 
 	if (msgIdList.length > 0) {
 		messages = await getMessagesByIds(msgIdList);
@@ -123,6 +126,15 @@ export async function buildStoryExportData(storyId: string): Promise<StoryExport
 			sceneNumber: m.sceneNumber ?? null,
 			createdAt: m.createdAt,
 		})),
+		messagePhases: msgIdList.flatMap((id) =>
+			(phasesByMessage.get(id) ?? []).map((phase, index) => ({
+				messageId: id,
+				phaseName: phase.phaseName,
+				reasoning: phase.reasoning ?? null,
+				content: phase.content,
+				sequence: index,
+			}))
+		),
 		characterProfiles: characterProfiles.map((p) => ({
 			id: p.id,
 			actLineId: p.actLineId,

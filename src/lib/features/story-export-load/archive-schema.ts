@@ -3,8 +3,10 @@
  *   1 — initial schema
  *   2 — added `characterProfiles` field (optional; older archives without it still load).
  *        Includes `logline` (NOT NULL); `state` is nullable.
+ *   3 — added `messagePhases` field (optional; per-phase generation output keyed by
+ *        message id, mirroring the `message_phases` table).
  */
-export const CURRENT_ARCHIVE_VERSION = 2;
+export const CURRENT_ARCHIVE_VERSION = 3;
 
 export interface StoryExportData {
 	version: number;
@@ -94,5 +96,12 @@ export interface StoryExportData {
 		importance: number;
 		createdAt: number;
 		updatedAt: number;
+	}[];
+	messagePhases?: {
+		messageId: string;
+		phaseName: string;
+		reasoning: string | null;
+		content: string;
+		sequence: number;
 	}[];
 }
