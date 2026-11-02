@@ -27,7 +27,10 @@ import * as stories from '$lib/db/stories';
 import * as acts from '$lib/db/acts';
 import { createActLine, getActLine, getMessagesForLine, insertActLineEntries } from '$lib/db/act-lines';
 import { insertMessage, getMessagesByIds, type Message } from '$lib/db/messages';
-import { compareLineages, mergeIncomingActLine } from '$lib/features/cloud-sync/sync-merge';
+import { upsertMessagePhases, getPhasesForMessages } from '$lib/db/message-phases';
+import { compareLineages, mergeIncomingActLine, mergeIncomingStory } from '$lib/features/cloud-sync/sync-merge';
+import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
+import JSZip from 'jszip';
 import { setFileSystem, fs } from '$lib/fs/file-system';
 import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
 import { buildLineDir, buildLineSubdirSuffix } from '$lib/ai/card-output-path';
@@ -597,5 +600,222 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		const m3 = (await getMessagesByIds(['m3']))[0];
 		expect(m3.content).not.toBe('ATTEMPTED OVERWRITE');
 		expect(result.action).toBe('no-op');
+	});
+});
+
+describe('mergeIncomingActLine phase portability', () => {
+	beforeEach(async () => {
+		testDb = createTestDatabase();
+		await runMigrations();
+		await stories.createStory('story-1', 'Test', 'en');
+		await acts.createAct('act-1', 'story-1', 'Act 1', 1);
+		setFileSystem(new InMemoryFileSystem());
+	});
+
+	afterEach(() => {
+		testDb.close();
+	});
+
+	function phaseRows(messageId: string, suffix = ''): NonNullable<StoryExportData['messagePhases']> {
+		return [
+			{ messageId, phaseName: 'WRITER', reasoning: null, content: `draft ${messageId}${suffix}`, sequence: 0 },
+			{ messageId, phaseName: 'EDITOR', reasoning: 'r', content: `final ${messageId}${suffix}`, sequence: 1 },
+		];
+	}
+
+	const incomingMeta = {
+		id: 'line-1',
+		actId: 'act-1',
+		name: 'Main',
+		isMainLine: true,
+		createdAt: Date.now(),
+		plotMode: 'guidance' as const,
+	};
+
+	// WHY: fast-forward is the common cross-device case — the incoming tail's
+	// phases must land so the restored scenes show strips immediately. The
+	// delete-and-reimport path also deletes solely-referenced prefix messages,
+	// so those are "new locally" too and take the archive's rows.
+	it('fast-forward imports phases for the messages it (re-)inserts', async () => {
+		await seedLine(['m1', 'm2']);
+		const result = await mergeIncomingActLine({
+			actLineId: 'line-1',
+			storyId: 'story-1',
+			incomingMeta,
+			incomingEntries: [
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm3', sequence: 3 },
+			],
+			incomingMessages: [messageRow('m1', 'c1'), messageRow('m2', 'c2'), messageRow('m3', 'c3')],
+			incomingPhases: [...phaseRows('m1'), ...phaseRows('m3')],
+			forkNameSuffix: '(local branch)',
+		});
+
+		expect(result.action).toBe('fast-forward');
+		const phases = await getPhasesForMessages(['m1', 'm3']);
+		expect(phases.get('m3')?.map((p) => p.content)).toEqual(['draft m3', 'final m3']);
+		expect(phases.get('m1')?.map((p) => p.content)).toEqual(['draft m1', 'final m1']);
+	});
+
+	// WHY (acceptance): a message kept alive by another local line survives the
+	// merge delete — it "exists on both sides", so its local phase rows must win
+	// (add-only mirror of the message rule).
+	it('skips incoming phases for messages that survive via another line', async () => {
+		await seedLine(['m1', 'm2']);
+		await createActLine('line-2', 'act-1', 'Sibling', false);
+		await insertActLineEntries([{ actLineId: 'line-2', messageId: 'm1', sequence: 1 }]);
+		await upsertMessagePhases('m1', [{ phaseName: 'WRITER', content: 'local draft' }]);
+
+		const result = await mergeIncomingActLine({
+			actLineId: 'line-1',
+			storyId: 'story-1',
+			incomingMeta,
+			incomingEntries: [
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm3', sequence: 3 },
+			],
+			incomingMessages: [messageRow('m1', 'c1'), messageRow('m2', 'c2'), messageRow('m3', 'c3')],
+			incomingPhases: phaseRows('m1', '-remote'),
+			forkNameSuffix: '(local branch)',
+		});
+
+		expect(result.action).toBe('fast-forward');
+		const phases = await getPhasesForMessages(['m1']);
+		expect(phases.get('m1')).toEqual([{ phaseName: 'WRITER', content: 'local draft' }]);
+	});
+
+	// WHY (acceptance): a v2 remote (no messagePhases) must not wipe local
+	// phases on the shared prefix — the delete-and-reimport path captures and
+	// restores them.
+	it('merge without incoming phases preserves local phases', async () => {
+		await seedLine(['m1', 'm2']);
+		await upsertMessagePhases('m1', [{ phaseName: 'WRITER', content: 'local draft' }]);
+
+		const result = await mergeIncomingActLine({
+			actLineId: 'line-1',
+			storyId: 'story-1',
+			incomingMeta,
+			incomingEntries: [
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm3', sequence: 3 },
+			],
+			incomingMessages: [messageRow('m1', 'c1'), messageRow('m2', 'c2'), messageRow('m3', 'c3')],
+			forkNameSuffix: '(local branch)',
+		});
+
+		expect(result.action).toBe('fast-forward');
+		const phases = await getPhasesForMessages(['m1']);
+		expect(phases.get('m1')).toEqual([{ phaseName: 'WRITER', content: 'local draft' }]);
+	});
+
+	// WHY (handoff §3.5): on a fork merge, the imported tail becomes the main
+	// line — its phases must come with it.
+	it('forked merge carries phases on the imported tail', async () => {
+		await seedLine(['m1', 'm2', 'm3', 'm4', 'm5']);
+		const result = await mergeIncomingActLine({
+			actLineId: 'line-1',
+			storyId: 'story-1',
+			incomingMeta,
+			incomingEntries: [
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+				{ actLineId: 'line-1', messageId: 'm3', sequence: 3 },
+				{ actLineId: 'line-1', messageId: 'm6', sequence: 4 },
+			],
+			incomingMessages: [messageRow('m1', 'c1'), messageRow('m2', 'c2'), messageRow('m3', 'c3'), messageRow('m6', 'c6')],
+			incomingPhases: phaseRows('m6'),
+			forkNameSuffix: '(local branch)',
+		});
+
+		expect(result.action).toBe('forked');
+		const phases = await getPhasesForMessages(['m6']);
+		expect(phases.get('m6')?.map((p) => p.content)).toEqual(['draft m6', 'final m6']);
+	});
+
+	// WHY: identical lineages never insert messages, so phases must not be
+	// touched either — local rows win on shared messages.
+	it('identical-lineage overlay leaves local phases untouched', async () => {
+		await seedLine(['m1', 'm2']);
+		await upsertMessagePhases('m1', [{ phaseName: 'WRITER', content: 'local draft' }]);
+
+		const result = await mergeIncomingActLine({
+			actLineId: 'line-1',
+			storyId: 'story-1',
+			incomingMeta,
+			incomingEntries: [
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+			],
+			incomingMessages: [messageRow('m1', 'c1'), messageRow('m2', 'c2')],
+			incomingPhases: phaseRows('m1', '-remote'),
+			forkNameSuffix: '(local branch)',
+		});
+
+		expect(result.action).toBe('no-op');
+		const phases = await getPhasesForMessages(['m1']);
+		expect(phases.get('m1')).toEqual([{ phaseName: 'WRITER', content: 'local draft' }]);
+	});
+});
+
+describe('mergeIncomingStory phase portability', () => {
+	beforeEach(async () => {
+		testDb = createTestDatabase();
+		await runMigrations();
+		await stories.createStory('story-1', 'Test', 'en');
+		await acts.createAct('act-1', 'story-1', 'Act 1', 1);
+		setFileSystem(new InMemoryFileSystem());
+	});
+
+	afterEach(() => {
+		testDb.close();
+	});
+
+	// WHY: a line created on another device is imported whole — its messages
+	// are new locally, so their phases must land in the same pass.
+	it('imports phases for a line created on the other device', async () => {
+		const data: StoryExportData = {
+			version: 3,
+			story: { id: 'story-1', name: 'Test', locale: 'en', createdAt: 1000, updatedAt: 2000 },
+			storyFolder: { storyId: 'story-1', folderName: 'test-folder', createdAt: 1000 },
+			acts: [
+				{ id: 'act-1', storyId: 'story-1', name: 'Act 1', actNumber: 1, continuesFromActLineId: null, createdAt: 1000, updatedAt: 2000 },
+			],
+			actLineMeta: [{ id: 'line-9', actId: 'act-1', name: 'Remote Fork', isMainLine: false, createdAt: 2000, plotMode: 'guidance' }],
+			actLineEvents: [],
+			actLineEntries: [{ actLineId: 'line-9', messageId: 'r1', sequence: 1 }],
+			actLinePremises: [],
+			directorNotes: [],
+			messages: [
+				{
+					id: 'r1',
+					role: 'assistant',
+					content: 'remote scene',
+					reasoning: null,
+					metadata: null,
+					variables: null,
+					actSummary: null,
+					scenePlot: null,
+					importantPhrases: null,
+					sceneNumber: 1,
+					createdAt: 2000,
+				},
+			],
+			messagePhases: [
+				{ messageId: 'r1', phaseName: 'WRITER', reasoning: null, content: 'remote draft', sequence: 0 },
+				{ messageId: 'r1', phaseName: 'EDITOR', reasoning: null, content: 'remote final', sequence: 1 },
+			],
+		};
+		const zip = new JSZip();
+		zip.file('story-data.json', JSON.stringify(data));
+		const zipBytes = await zip.generateAsync({ type: 'uint8array' });
+
+		const result = await mergeIncomingStory(zipBytes);
+
+		expect(result).toBe('merged');
+		const phases = await getPhasesForMessages(['r1']);
+		expect(phases.get('r1')?.map((p) => p.content)).toEqual(['remote draft', 'remote final']);
 	});
 });

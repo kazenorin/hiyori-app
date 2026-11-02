@@ -17,6 +17,7 @@ import {
 	type ActLineMeta,
 } from '$lib/db/act-lines';
 import { getMessagesByIds, insertMessage, parseVariables, type Message } from '$lib/db/messages';
+import { getPhasesForMessages, upsertMessagePhases } from '$lib/db/message-phases';
 import { getStory } from '$lib/db/stories';
 import { getAct, upsertAct, type Act } from '$lib/db/acts';
 import { getStoryFolderInfo } from '$lib/db/story-folders';
@@ -42,6 +43,7 @@ import {
 	toActLinePremises,
 	toDirectorNotes,
 	toCharacterProfileInputs,
+	upsertMessagePhasesFromRows,
 } from '$lib/features/story-export-load/story-loader';
 
 export type LineageDecision = 'identical' | 'remote-stale' | 'local-stale' | 'divergent';
@@ -96,6 +98,9 @@ export interface MergeIncomingInput {
 	incomingPremises?: ActLineEntry[];
 	incomingNotes?: DirectorNote[];
 	incomingProfiles?: InsertCharacterProfileInput[];
+	/** Archive phase rows for this line's messages. Applied add-only: only
+	 * messages newly inserted locally receive them (mirrors the message rule). */
+	incomingPhases?: NonNullable<StoryExportData['messagePhases']>;
 	forkNameSuffix: string;
 }
 
@@ -290,6 +295,10 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 		}
 	}
 
+	// Capture local phases before the delete so messages re-imported from an
+	// archive without phase rows (v2 remote) don't lose their local strips.
+	const localPhases = await getPhasesForMessages(incomingIds);
+
 	// Delete the local copy, then import the incoming act line under the same
 	// ID (save incoming). Fast-forward and divergent converge here.
 	await cleanupActLine(input.actLineId);
@@ -299,8 +308,21 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 	// from the archive; rows referenced by another local line are untouched
 	// (add-only holds wherever a global reference exists).
 	const existing = new Set((await getMessagesByIds(incomingIds)).map((m) => m.id));
+	const insertedIds = new Set<string>();
 	for (const message of input.incomingMessages) {
-		if (!existing.has(message.id)) await insertMessage(message);
+		if (!existing.has(message.id)) {
+			await insertMessage(message);
+			insertedIds.add(message.id);
+		}
+	}
+
+	// Phases follow the add-only message rule: incoming rows apply only to
+	// messages new locally; pre-existing messages keep their local phase rows.
+	await upsertMessagePhasesFromRows(input.incomingPhases ?? [], insertedIds);
+	const incomingPhaseIds = new Set((input.incomingPhases ?? []).map((r) => r.messageId));
+	for (const id of insertedIds) {
+		const preserved = localPhases.get(id);
+		if (!incomingPhaseIds.has(id) && preserved) await upsertMessagePhases(id, preserved);
 	}
 
 	await insertActLineMeta({
@@ -389,6 +411,8 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 			.map((id) => messageById.get(id))
 			.filter((m): m is NonNullable<typeof m> => !!m)
 			.map(toIncomingMessage);
+		const idSet = new Set(ids);
+		const linePhases = (data.messagePhases ?? []).filter((r) => idSet.has(r.messageId));
 
 		const localLine = await getActLine(actLineId);
 		if (!localLine) {
@@ -411,9 +435,14 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 			});
 			// Add-only rule applies here too: shared-prefix messages may exist already.
 			const existing = new Set((await getMessagesByIds(ids)).map((m) => m.id));
+			const insertedIds = new Set<string>();
 			for (const message of incomingMessages) {
-				if (!existing.has(message.id)) await insertMessage(message);
+				if (!existing.has(message.id)) {
+					await insertMessage(message);
+					insertedIds.add(message.id);
+				}
 			}
+			await upsertMessagePhasesFromRows(linePhases, insertedIds);
 			await insertActLineEntries(entries.map((e) => ({ actLineId: e.actLineId, messageId: e.messageId, sequence: e.sequence })));
 			anyChange = true;
 			continue;
@@ -436,6 +465,7 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 			incomingPremises: toActLinePremises(data.actLinePremises, lineSet),
 			incomingNotes: toDirectorNotes(data.directorNotes, lineSet),
 			incomingProfiles: data.characterProfiles ? toCharacterProfileInputs(data.characterProfiles, lineSet) : [],
+			incomingPhases: linePhases,
 			forkNameSuffix: '(local branch)',
 		});
 		if (result.action !== 'no-op') anyChange = true;
