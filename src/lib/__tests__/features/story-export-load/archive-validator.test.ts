@@ -168,4 +168,48 @@ describe('validateStoryData', () => {
 		expect(result.isValid).toBe(false);
 		expect(result.errors.length).toBeGreaterThanOrEqual(3);
 	});
+
+	describe('messagePhases (archive v3)', () => {
+		// WHY (handoff §4): v1/v2 archives must not warn or fail — the field is
+		// purely additive.
+		it('accepts data without messagePhases with no errors or warnings', () => {
+			const result = validateStoryData(makeValidData());
+			expect(result.isValid).toBe(true);
+			expect(result.warnings.filter((w) => /phase/i.test(w))).toHaveLength(0);
+		});
+
+		it('accepts well-formed messagePhases', () => {
+			const data = makeValidData();
+			data.messagePhases = [
+				{ messageId: 'msg-1', phaseName: 'WRITER', reasoning: 'why', content: 'draft', sequence: 0 },
+				{ messageId: 'msg-1', phaseName: 'EDITOR', reasoning: null, content: 'final', sequence: 1 },
+			];
+			const result = validateStoryData(data);
+			expect(result.isValid).toBe(true);
+			expect(result.errors).toHaveLength(0);
+		});
+
+		it('accepts an empty messagePhases array', () => {
+			const data = makeValidData();
+			data.messagePhases = [];
+			expect(validateStoryData(data).isValid).toBe(true);
+		});
+
+		it('rejects messagePhases that is not an array', () => {
+			const data = makeValidData();
+			(data as any).messagePhases = { messageId: 'msg-1' };
+			const result = validateStoryData(data);
+			expect(result.isValid).toBe(false);
+			expect(result.errors[0]).toContain('messagePhases');
+		});
+
+		it('rejects malformed elements', () => {
+			const data = makeValidData();
+			// missing `content`
+			(data as any).messagePhases = [{ messageId: 'msg-1', phaseName: 'WRITER', reasoning: null, sequence: 0 }];
+			const result = validateStoryData(data);
+			expect(result.isValid).toBe(false);
+			expect(result.errors[0]).toContain('messagePhases');
+		});
+	});
 });

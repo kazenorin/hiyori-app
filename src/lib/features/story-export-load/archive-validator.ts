@@ -50,6 +50,29 @@ export function validateStoryData(data: unknown): ValidationResult {
 		if (!sf.folderName || typeof sf.folderName !== 'string') errors.push('storyFolder.folderName is missing or not a string');
 	}
 
+	if (d.messagePhases !== undefined) {
+		if (!Array.isArray(d.messagePhases)) {
+			errors.push('Invalid "messagePhases" field (expected array)');
+		} else {
+			const hasMalformed = d.messagePhases.some((p) => {
+				if (!p || typeof p !== 'object') return true;
+				const r = p as Record<string, unknown>;
+				return (
+					typeof r.messageId !== 'string' ||
+					typeof r.phaseName !== 'string' ||
+					typeof r.content !== 'string' ||
+					typeof r.sequence !== 'number' ||
+					!(r.reasoning === null || r.reasoning === undefined || typeof r.reasoning === 'string')
+				);
+			});
+			if (hasMalformed) {
+				errors.push(
+					'messagePhases contains malformed elements (expected {messageId, phaseName, content: string, sequence: number, reasoning: string|null})'
+				);
+			}
+		}
+	}
+
 	if (Array.isArray(d.actLineMeta) && d.actLineMeta.length === 0) {
 		warnings.push('Archive contains no act lines');
 	}
