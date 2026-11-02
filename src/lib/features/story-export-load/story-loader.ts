@@ -15,7 +15,9 @@ import {
 } from '$lib/db/act-lines';
 import { insertDirectorNote, type DirectorNote } from '$lib/db/director-notes';
 import { upsertMessage, insertMessage, type Message, parseVariables } from '$lib/db/messages';
+import { upsertMessagePhases } from '$lib/db/message-phases';
 import { insertCharacterProfile, type InsertCharacterProfileInput, type CharacterImportance } from '$lib/db/character-profiles';
+import type { PhaseName, UIScenePhase } from '$lib/ai/narrative-types';
 import { resolveStoryFolder } from '$lib/fs/story-folders';
 import { fs } from '$lib/fs/file-system';
 import { loadStories, selectStory } from '$lib/stores/stories.svelte';
@@ -108,6 +110,34 @@ function toMessages(messages: StoryExportData['messages'], messageIds: Set<strin
 		}));
 }
 
+/**
+ * Restores archived phase rows for the given messages. Rows are sorted by their
+ * exported `sequence` before upserting so `upsertMessagePhases` (sequence :=
+ * array index) reproduces the original order. Idempotent via the
+ * (message_id, phase_name) conflict key.
+ */
+export async function upsertMessagePhasesFromRows(
+	rows: NonNullable<StoryExportData['messagePhases']>,
+	messageIds: Set<string>
+): Promise<void> {
+	const byMessage = new Map<string, NonNullable<StoryExportData['messagePhases']>>();
+	for (const row of rows) {
+		if (!messageIds.has(row.messageId)) continue;
+		const list = byMessage.get(row.messageId) ?? [];
+		list.push(row);
+		byMessage.set(row.messageId, list);
+	}
+	for (const [messageId, list] of byMessage) {
+		const sorted = [...list].sort((a, b) => a.sequence - b.sequence);
+		const phases: UIScenePhase[] = sorted.map((r) => ({
+			phaseName: r.phaseName as PhaseName,
+			content: r.content,
+			...(r.reasoning != null && { reasoning: r.reasoning }),
+		}));
+		await upsertMessagePhases(messageId, phases);
+	}
+}
+
 export function toCharacterProfileInputs(
 	profiles: NonNullable<StoryExportData['characterProfiles']>,
 	selectedActLineIds: Set<string>
@@ -191,6 +221,10 @@ async function insertSelectedActLineData(data: StoryExportData, selectedActLineI
 		} else {
 			await insertMessage(msg);
 		}
+	}
+
+	if (data.messagePhases) {
+		await upsertMessagePhasesFromRows(data.messagePhases, lineMessageIds);
 	}
 
 	if (data.characterProfiles) {
