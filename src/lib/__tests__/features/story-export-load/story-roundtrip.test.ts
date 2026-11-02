@@ -131,4 +131,27 @@ describe('story load round-trips messagePhases', () => {
 		expect(result.success).toBe(true);
 		expect((await getPhasesForMessages(['m1', 'm2'])).size).toBe(0);
 	});
+
+	// WHY: as-new must not leak original ids anywhere; phases belong to the
+	// remapped messages and only those.
+	it('as-new round-trip attaches phases to remapped message ids', async () => {
+		await upsertMessagePhases('m1', M1_PHASES);
+		const data = await buildStoryExportData('story-1');
+		const zip = makeZip(data);
+		await deletePhasesForMessages(['m1']); // isolate: only the new story's rows remain to assert on
+
+		const result = await loadStoryAsNew(data, ['line-1'], zip);
+
+		expect(result.success).toBe(true);
+		expect(result.storyId).not.toBe('story-1');
+		const rows = await testDb.select<{ message_id: string; phase_name: string; content: string; sequence: number }[]>(
+			'SELECT message_id, phase_name, content, sequence FROM message_phases ORDER BY sequence'
+		);
+		expect(rows).toHaveLength(2);
+		for (const row of rows) expect(row.message_id).not.toBe('m1');
+		const orphans = await testDb.select<{ c: number }[]>(
+			'SELECT COUNT(*) AS c FROM message_phases mp LEFT JOIN messages m ON m.id = mp.message_id WHERE m.id IS NULL'
+		);
+		expect(orphans[0].c).toBe(0);
+	});
 });

@@ -92,6 +92,10 @@ export function regenerateIds(data: StoryExportData): RemappedData {
 			...msg,
 			id: idMap.get(msg.id) ?? msg.id,
 		})),
+		messagePhases: data.messagePhases?.map((p) => ({
+			...p,
+			messageId: idMap.get(p.messageId) ?? p.messageId,
+		})),
 		characterProfiles: data.characterProfiles?.map((p) => ({
 			...p,
 			id: idMap.get(p.id) ?? p.id,

@@ -290,4 +290,24 @@ describe('regenerateIds', () => {
 		expect(data.story.id).toBe(origStoryId);
 		expect(data.acts[0].id).toBe(origActId);
 	});
+
+	// WHY (handoff §4, "classic miss"): without remapping, as-new loads attach
+	// phases to nonexistent message ids — silently orphaned rows.
+	it('remaps messagePhases messageIds', () => {
+		const data = makeValidData();
+		data.messagePhases = [
+			{ messageId: 'msg-1', phaseName: 'WRITER', reasoning: null, content: 'draft', sequence: 0 },
+			{ messageId: 'msg-1', phaseName: 'EDITOR', reasoning: 'r', content: 'final', sequence: 1 },
+		];
+		const result = regenerateIds(data);
+		const newMsgId = result.idMap.get('msg-1')!;
+		expect(result.data.messagePhases?.map((p) => p.messageId)).toEqual([newMsgId, newMsgId]);
+		expect(result.data.messagePhases?.[1].content).toBe('final');
+		expect(result.data.messagePhases?.[1].sequence).toBe(1);
+	});
+
+	it('leaves messagePhases undefined for older archives', () => {
+		const result = regenerateIds(makeValidData());
+		expect(result.data.messagePhases).toBeUndefined();
+	});
 });
