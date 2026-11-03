@@ -2,6 +2,7 @@
 	import { settings, updateSettings, type ThemeMode } from '$lib/stores/settings.svelte';
 	import { t } from '$lib/i18n';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
+	import SearchableSelect from '$lib/components/SearchableSelect.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import { getLocaleItems, getThemeModeItems, getColorThemeItems } from '$lib/features/settings-options';
 
@@ -19,7 +20,14 @@
 	<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 		<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
 			<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.colorTheme')}</h3>
-			<ThemedSelect items={colorThemeItems} value={settings.colorTheme} onValueChange={(v) => updateSettings({ colorTheme: v })} />
+			<SearchableSelect
+				items={colorThemeItems}
+				value={settings.colorTheme}
+				onValueChange={(v) => updateSettings({ colorTheme: v })}
+				title={t('settings.chooseColorTheme')}
+				searchPlaceholder={t('settings.searchColorThemes')}
+				emptyText={t('settings.noMatchingColorThemes')}
+			/>
 		</div>
 		<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
 			<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.themeMode')}</h3>
