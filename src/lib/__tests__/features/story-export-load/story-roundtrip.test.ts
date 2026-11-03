@@ -132,6 +132,21 @@ describe('story load round-trips messagePhases', () => {
 		expect((await getPhasesForMessages(['m1', 'm2'])).size).toBe(0);
 	});
 
+	// WHY: Overwrite treats the archive as authoritative — local phases for
+	// re-imported messages are dropped when the archive predates phase
+	// persistence; Load-as-new never touches the source story.
+	it('overwrite of a phase-less archive drops local phases for re-imported messages', async () => {
+		await upsertMessagePhases('m1', M1_PHASES);
+		const data = await buildStoryExportData('story-1');
+		delete data.messagePhases; // simulate a pre-v3 archive
+		const zip = makeZip(data);
+
+		const result = await loadStoryOverwrite(data, ['line-1'], zip);
+
+		expect(result.success).toBe(true);
+		expect((await getPhasesForMessages(['m1'])).size).toBe(0);
+	});
+
 	// WHY: as-new must not leak original ids anywhere; phases belong to the
 	// remapped messages and only those.
 	it('as-new round-trip attaches phases to remapped message ids', async () => {

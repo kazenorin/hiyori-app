@@ -864,4 +864,53 @@ describe('mergeIncomingStory phase portability', () => {
 		const phases = await getPhasesForMessages(['r1']);
 		expect(phases.get('r1')?.map((p) => p.content)).toEqual(['remote draft', 'remote final']);
 	});
+
+	// WHY: mixed-version state — the local copy synced before phase persistence
+	// and holds the same lineage with no phase rows. The archive's phases are the
+	// only source, so the pull must report a change (not 'up-to-date') and
+	// backfill them; otherwise the device never gains strips.
+	it('identical-lineage pull backfills phases for a locally phase-less message', async () => {
+		await seedLine(['m1']);
+		const data: StoryExportData = {
+			version: 3,
+			story: { id: 'story-1', name: 'Test', locale: 'en', createdAt: 1000, updatedAt: 2000 },
+			storyFolder: { storyId: 'story-1', folderName: 'test-folder', createdAt: 1000 },
+			acts: [
+				{ id: 'act-1', storyId: 'story-1', name: 'Act 1', actNumber: 1, continuesFromActLineId: null, createdAt: 1000, updatedAt: 2000 },
+			],
+			actLineMeta: [{ id: 'line-1', actId: 'act-1', name: 'Main', isMainLine: true, createdAt: 1000, plotMode: 'guidance' }],
+			actLineEvents: [],
+			actLineEntries: [{ actLineId: 'line-1', messageId: 'm1', sequence: 1 }],
+			actLinePremises: [],
+			directorNotes: [],
+			messages: [
+				{
+					id: 'm1',
+					role: 'assistant',
+					content: 'content m1',
+					reasoning: null,
+					metadata: null,
+					variables: null,
+					actSummary: null,
+					scenePlot: null,
+					importantPhrases: null,
+					sceneNumber: 1,
+					createdAt: 2000,
+				},
+			],
+			messagePhases: [
+				{ messageId: 'm1', phaseName: 'WRITER', reasoning: null, content: 'remote draft', sequence: 0 },
+				{ messageId: 'm1', phaseName: 'EDITOR', reasoning: null, content: 'remote final', sequence: 1 },
+			],
+		};
+		const zip = new JSZip();
+		zip.file('story-data.json', JSON.stringify(data));
+		const zipBytes = await zip.generateAsync({ type: 'uint8array' });
+
+		const result = await mergeIncomingStory(zipBytes);
+
+		expect(result).toBe('merged');
+		const phases = await getPhasesForMessages(['m1']);
+		expect(phases.get('m1')?.map((p) => p.content)).toEqual(['remote draft', 'remote final']);
+	});
 });
