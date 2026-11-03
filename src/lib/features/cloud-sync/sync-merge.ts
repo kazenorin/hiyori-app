@@ -98,8 +98,10 @@ export interface MergeIncomingInput {
 	incomingPremises?: ActLineEntry[];
 	incomingNotes?: DirectorNote[];
 	incomingProfiles?: InsertCharacterProfileInput[];
-	/** Archive phase rows for this line's messages. Applied add-only: only
-	 * messages newly inserted locally receive them (mirrors the message rule). */
+	/** Archive phase rows for this line's messages. Applied add-only: messages
+	 * newly inserted locally receive them, and identical-lineage pulls backfill
+	 * messages that have no local phase rows (mirrors the message rule: existing
+	 * local rows are never overwritten). */
 	incomingPhases?: NonNullable<StoryExportData['messagePhases']>;
 	forkNameSuffix: string;
 }
