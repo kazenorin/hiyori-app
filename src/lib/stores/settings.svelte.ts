@@ -387,6 +387,16 @@ export function updateProviderConfig(id: string, partial: Partial<Omit<ProviderC
 	persist();
 }
 
+/** Reorders providers to match the given ids; ids not listed keep their relative order at the end. */
+export function reorderProviders(orderedIds: string[]): void {
+	const index = (id: string) => {
+		const position = orderedIds.indexOf(id);
+		return position === -1 ? orderedIds.length : position;
+	};
+	settings.providers = [...settings.providers].sort((a, b) => index(a.id) - index(b.id));
+	persist();
+}
+
 export function deleteProviderConfig(id: string): void {
 	settings.providers = settings.providers.filter((p) => p.id !== id);
 	// Clean up any role assignments pointing to the deleted config

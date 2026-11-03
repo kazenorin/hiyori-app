@@ -3,17 +3,46 @@
 		addProviderConfig,
 		assignRole,
 		deleteProviderConfig,
+		reorderProviders,
 		settings,
 		updateProviderConfig,
 		type ProviderConfig,
 	} from '$lib/stores/settings.svelte';
 	import { t } from '$lib/i18n';
+	import Sortable from 'sortablejs';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
+	import Icon from '$lib/components/ui/Icon.svelte';
 	import ProviderForm from '$lib/components/chat/ProviderForm.svelte';
 
 	let editingId = $state<string | null>(null);
 	let isAddingNew = $state(false);
+
+	// --- Drag reordering of providers ---
+	let providerListEl = $state<HTMLDivElement | null>(null);
+	let sortable: Sortable | null = null;
+
+	$effect(() => {
+		if (providerListEl && !sortable) {
+			sortable = Sortable.create(providerListEl, {
+				animation: 150,
+				handle: '[data-provider-drag-handle]',
+				onEnd: () => {
+					if (!providerListEl) return;
+					const order = [...providerListEl.querySelectorAll<HTMLElement>('[data-provider-id]')].map((el) => el.dataset.providerId!);
+					reorderProviders(order);
+				},
+			});
+		}
+		return () => {
+			sortable?.destroy();
+			sortable = null;
+		};
+	});
+
+	$effect(() => {
+		sortable?.option('disabled', editingId !== null || isAddingNew);
+	});
 
 	function startEdit(config: ProviderConfig) {
 		editingId = config.id;
@@ -82,50 +111,62 @@
 	{/if}
 
 	<!-- Provider List -->
-	{#each settings.providers as config (config.id)}
-		{#if isEditing(config)}
-			<ProviderForm
-				mode="edit"
-				{config}
-				isMainProvider={mainProviderId === config.id}
-				onsave={(data) => handleSaveFromForm(config.id, data)}
-				oncancel={cancelEdit}
-			/>
-		{:else}
-			<!-- Provider Card -->
-			<div class="flex items-center justify-between p-3 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150">
-				<div class="min-w-0">
-					<p class="text-sm font-medium truncate">{config.name}</p>
-					<p class="text-xs text-surface-500 truncate">
-						{config.provider === 'openai'
-							? t('settings.providers.openai')
-							: config.provider === 'ollama'
-								? t('settings.providers.ollama')
-								: config.provider === 'openrouter'
-									? t('settings.providers.openrouter')
-									: t('settings.providers.openaiCompatible')} · {config.model}
-					</p>
-				</div>
-				<div class="flex items-center gap-1 shrink-0">
-					<button class="btn preset-tonal text-xs px-2 py-1 min-h-11" type="button" onclick={() => handleDuplicate(config)}>
-						{t('settings.copy')}
-					</button>
-					<button class="btn preset-tonal text-xs px-2 py-1 min-h-11" type="button" onclick={() => startEdit(config)}>
-						{t('settings.edit')}
-					</button>
-					{#if mainProviderId !== config.id}
-						<button
-							class="btn preset-tonal text-xs px-2 py-1 text-error-700-300 min-h-11"
-							type="button"
-							onclick={() => handleDelete(config.id)}
-						>
-							{t('settings.delete')}
-						</button>
-					{/if}
-				</div>
+	<div bind:this={providerListEl} class="space-y-4">
+		{#each settings.providers as config (config.id)}
+			<div data-provider-id={config.id}>
+				{#if isEditing(config)}
+					<ProviderForm
+						mode="edit"
+						{config}
+						isMainProvider={mainProviderId === config.id}
+						onsave={(data) => handleSaveFromForm(config.id, data)}
+						oncancel={cancelEdit}
+					/>
+				{:else}
+					<!-- Provider Card -->
+					<div
+						class="flex items-center justify-between p-3 rounded-(--radius-base) hover:bg-surface-200-800 transition-colors duration-150"
+					>
+						<div class="flex items-center gap-2 min-w-0">
+							<!-- Reorder handle (touch-none so the browser never claims the gesture) -->
+							<span data-provider-drag-handle class="shrink-0 text-surface-400-600 touch-none cursor-grab" aria-hidden="true">
+								<Icon name="grip-vertical" class="w-4 h-4" />
+							</span>
+							<div class="min-w-0">
+								<p class="text-sm font-medium truncate">{config.name}</p>
+								<p class="text-xs text-surface-500 truncate">
+									{config.provider === 'openai'
+										? t('settings.providers.openai')
+										: config.provider === 'ollama'
+											? t('settings.providers.ollama')
+											: config.provider === 'openrouter'
+												? t('settings.providers.openrouter')
+												: t('settings.providers.openaiCompatible')} · {config.model}
+								</p>
+							</div>
+						</div>
+						<div class="flex items-center gap-1 shrink-0">
+							<button class="btn preset-tonal text-xs px-2 py-1 min-h-11" type="button" onclick={() => handleDuplicate(config)}>
+								{t('settings.copy')}
+							</button>
+							<button class="btn preset-tonal text-xs px-2 py-1 min-h-11" type="button" onclick={() => startEdit(config)}>
+								{t('settings.edit')}
+							</button>
+							{#if mainProviderId !== config.id}
+								<button
+									class="btn preset-tonal text-xs px-2 py-1 text-error-700-300 min-h-11"
+									type="button"
+									onclick={() => handleDelete(config.id)}
+								>
+									{t('settings.delete')}
+								</button>
+							{/if}
+						</div>
+					</div>
+				{/if}
 			</div>
-		{/if}
-	{/each}
+		{/each}
+	</div>
 
 	{#if isAddingNew}
 		<ProviderForm mode="add" onsave={handleSaveNewFromForm} oncancel={cancelEdit} />

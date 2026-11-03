@@ -203,6 +203,75 @@ describe('settings', () => {
 		expect(stored.roleAssignments.main).toBe(config.id);
 	});
 
+	it('reorderProviders reorders providers by the given ids and persists', async () => {
+		vi.resetModules();
+		const { addProviderConfig, assignRole, getSettings, reorderProviders } = await import('$lib/stores/settings.svelte');
+		const c1 = addProviderConfig({
+			name: 'First',
+			provider: 'openai',
+			apiType: 'responses',
+			baseURL: '',
+			model: 'gpt-4o',
+			apiKey: 'sk-1',
+			corsBypassEnabled: false,
+			wispProxyUrl: 'ws://localhost:6001',
+		});
+		const c2 = addProviderConfig({
+			name: 'Second',
+			provider: 'openai-compatible',
+			apiType: 'chat-completions',
+			baseURL: '',
+			model: 'llama3',
+			apiKey: '',
+			corsBypassEnabled: false,
+			wispProxyUrl: 'ws://localhost:6001',
+		});
+		const c3 = addProviderConfig({
+			name: 'Third',
+			provider: 'ollama',
+			apiType: 'chat-completions',
+			baseURL: '',
+			model: 'qwen3',
+			apiKey: '',
+			corsBypassEnabled: false,
+			wispProxyUrl: 'ws://localhost:6001',
+		});
+		assignRole('main', c1.id);
+		assignRole('writer', c2.id);
+
+		reorderProviders([c3.id, c1.id, c2.id]);
+
+		expect(getSettings().providers.map((p) => p.id)).toEqual([c3.id, c1.id, c2.id]);
+		expect(getSettings().roleAssignments['main']).toBe(c1.id);
+		expect(getSettings().roleAssignments['writer']).toBe(c2.id);
+
+		const stored = JSON.parse(localStorage.getItem(STORAGE_KEY)!);
+		expect(stored.providers.map((p: { id: string }) => p.id)).toEqual([c3.id, c1.id, c2.id]);
+	});
+
+	it('reorderProviders keeps unlisted providers at the end in their relative order', async () => {
+		vi.resetModules();
+		const { addProviderConfig, getSettings, reorderProviders } = await import('$lib/stores/settings.svelte');
+		const make = (name: string) =>
+			addProviderConfig({
+				name,
+				provider: 'openai-compatible',
+				apiType: 'chat-completions',
+				baseURL: '',
+				model: 'model',
+				apiKey: '',
+				corsBypassEnabled: false,
+				wispProxyUrl: 'ws://localhost:6001',
+			});
+		const c1 = make('First');
+		const c2 = make('Second');
+		const c3 = make('Third');
+
+		reorderProviders([c3.id]);
+
+		expect(getSettings().providers.map((p) => p.id)).toEqual([c3.id, c1.id, c2.id]);
+	});
+
 	it('syncs logLevel to logging layer and Rust backend on change', async () => {
 		vi.resetModules();
 		const { updateSettings } = await import('$lib/stores/settings.svelte');
