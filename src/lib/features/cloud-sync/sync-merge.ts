@@ -205,6 +205,21 @@ async function overlayIncomingLineState(input: MergeIncomingInput): Promise<bool
 		}
 	}
 
+	// Identical lineages never insert messages, so phases usually have nothing to
+	// attach to locally — except on a device that synced before phase persistence
+	// existed. Backfill only messages with zero local phase rows; a partial local
+	// set is never merged (add-only at message granularity).
+	const incomingPhaseRows = input.incomingPhases ?? [];
+	if (incomingPhaseRows.length > 0) {
+		const incomingPhaseMessageIds = new Set(incomingPhaseRows.map((r) => r.messageId));
+		const localPhases = await getPhasesForMessages([...incomingPhaseMessageIds]);
+		const missing = new Set([...incomingPhaseMessageIds].filter((id) => !localPhases.has(id)));
+		if (missing.size > 0) {
+			await upsertMessagePhasesFromRows(incomingPhaseRows, missing);
+			imported = true;
+		}
+	}
+
 	return imported;
 }
 

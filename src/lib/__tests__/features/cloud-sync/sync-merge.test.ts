@@ -758,6 +758,52 @@ describe('mergeIncomingActLine phase portability', () => {
 		const phases = await getPhasesForMessages(['m1']);
 		expect(phases.get('m1')).toEqual([{ phaseName: 'WRITER', content: 'local draft' }]);
 	});
+
+	// WHY: a device that synced messages before phase persistence existed keeps
+	// an identical lineage forever; without backfill it never gains strips.
+	it('identical-lineage pull backfills phases for messages with none locally', async () => {
+		await seedLine(['m1', 'm2']);
+		const result = await mergeIncomingActLine({
+			actLineId: 'line-1',
+			storyId: 'story-1',
+			incomingMeta,
+			incomingEntries: [
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+			],
+			incomingMessages: [messageRow('m1', 'c1'), messageRow('m2', 'c2')],
+			incomingPhases: phaseRows('m1'),
+			forkNameSuffix: '(local branch)',
+		});
+
+		expect(result.action).toBe('merged');
+		expect((await getPhasesForMessages(['m1'])).get('m1')?.map((p) => p.content)).toEqual(['draft m1', 'final m1']);
+	});
+
+	// WHY: never merge partial phase sets — a message that already has any local
+	// phases keeps them verbatim; fully-unphased messages still get backfilled.
+	it('identical-lineage backfill skips messages that have any local phases', async () => {
+		await seedLine(['m1', 'm2']);
+		await upsertMessagePhases('m1', [{ phaseName: 'WRITER', content: 'local draft' }]);
+
+		const result = await mergeIncomingActLine({
+			actLineId: 'line-1',
+			storyId: 'story-1',
+			incomingMeta,
+			incomingEntries: [
+				{ actLineId: 'line-1', messageId: 'm1', sequence: 1 },
+				{ actLineId: 'line-1', messageId: 'm2', sequence: 2 },
+			],
+			incomingMessages: [messageRow('m1', 'c1'), messageRow('m2', 'c2')],
+			incomingPhases: [...phaseRows('m1', '-remote'), ...phaseRows('m2')],
+			forkNameSuffix: '(local branch)',
+		});
+
+		expect(result.action).toBe('merged');
+		const phases = await getPhasesForMessages(['m1', 'm2']);
+		expect(phases.get('m1')).toEqual([{ phaseName: 'WRITER', content: 'local draft' }]);
+		expect(phases.get('m2')).toHaveLength(2);
+	});
 });
 
 describe('mergeIncomingStory phase portability', () => {
