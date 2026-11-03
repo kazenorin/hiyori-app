@@ -242,6 +242,8 @@ export async function getMessage(id: string): Promise<Message | null> {
 export async function deleteMessage(id: string): Promise<void> {
 	const db = getDatabase();
 	await db.execute('DELETE FROM messages WHERE id = $1', [id]);
+	// message_phases has no FK; a hard-deleted message must not leave phase rows.
+	await db.execute('DELETE FROM message_phases WHERE message_id = $1', [id]);
 }
 
 export async function updateMessageFields(

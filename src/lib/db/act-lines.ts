@@ -966,6 +966,8 @@ async function removeOrphanedMessages(db: Database, messageIds: string[]): Promi
 		]);
 		if (refsInLines[0].cnt === 0 && refsInPremises[0].cnt === 0) {
 			await db.execute('DELETE FROM messages WHERE id = $1', [msgId]);
+			// message_phases has no FK; phases die with the message or not at all.
+			await db.execute('DELETE FROM message_phases WHERE message_id = $1', [msgId]);
 			deleted.push(msgId);
 		}
 	}

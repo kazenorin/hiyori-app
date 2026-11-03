@@ -10,6 +10,10 @@ vi.mock('$lib/db/database', () => ({
 }));
 
 import * as messagePhases from '$lib/db/message-phases';
+import * as stories from '$lib/db/stories';
+import * as acts from '$lib/db/acts';
+import * as actLines from '$lib/db/act-lines';
+import * as messages from '$lib/db/messages';
 import type { UIScenePhase } from '$lib/ai/narrative-types';
 
 function makePhases(): UIScenePhase[] {
@@ -111,5 +115,50 @@ describe('message_phases CRUD', () => {
 
 		const loaded = await messagePhases.getPhasesForMessages(['msg-1']);
 		expect(loaded.get('msg-1')![0]).not.toHaveProperty('reasoning');
+	});
+
+	describe('phase cleanup on hard message deletion', () => {
+		beforeEach(async () => {
+			await stories.createStory('story-1', 'Test', 'en');
+			await acts.createAct('act-1', 'story-1', 'Act 1', 1);
+		});
+
+		// WHY: phase rows have no FK cascade; deleting a message without its phases
+		// leaves orphans that resurrect whenever the same id is re-inserted
+		// (sync fast-forward, overwrite load).
+		it('deleteActLine removes phases of solely-referenced messages', async () => {
+			await actLines.createActLine('line-1', 'act-1', 'Main', true);
+			await messages.createMessage({ id: 'm1', role: 'assistant', content: 'scene' });
+			await actLines.addMessageToLine('line-1', 'm1', 1);
+			await messagePhases.upsertMessagePhases('m1', makePhases());
+
+			await actLines.deleteActLine('line-1');
+
+			expect((await messagePhases.getPhasesForMessages(['m1'])).size).toBe(0);
+		});
+
+		// WHY: forked lines share message rows — deleting one line must not strip
+		// phases that the surviving line still renders.
+		it('deleteActLine keeps phases of messages shared with another line', async () => {
+			await actLines.createActLine('line-1', 'act-1', 'Main', true);
+			await actLines.createActLine('line-2', 'act-1', 'Fork', false);
+			await messages.createMessage({ id: 'shared', role: 'assistant', content: 'scene' });
+			await actLines.addMessageToLine('line-1', 'shared', 1);
+			await actLines.addMessageToLine('line-2', 'shared', 1);
+			await messagePhases.upsertMessagePhases('shared', makePhases());
+
+			await actLines.deleteActLine('line-1');
+
+			expect((await messagePhases.getPhasesForMessages(['shared'])).get('shared')).toHaveLength(3);
+		});
+
+		it('deleteMessage removes its phases', async () => {
+			await messages.createMessage({ id: 'm3', role: 'assistant', content: 'scene' });
+			await messagePhases.upsertMessagePhases('m3', makePhases());
+
+			await messages.deleteMessage('m3');
+
+			expect((await messagePhases.getPhasesForMessages(['m3'])).size).toBe(0);
+		});
 	});
 });
