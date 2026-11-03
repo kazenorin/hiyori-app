@@ -2,6 +2,7 @@
 	import { assignRole, settings, updateSettings } from '$lib/stores/settings.svelte';
 	import { t } from '$lib/i18n';
 	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
+	import ProviderSelect from '$lib/components/ProviderSelect.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import RoleCallSettingsOverride from '$lib/components/chat/RoleCallSettingsOverride.svelte';
 	import { getRoleItems, getReviewerModeItems } from '$lib/features/settings-options';
@@ -15,7 +16,7 @@
 		<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
 			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
 				<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.mainProvider')}</h3>
-				<ThemedSelect
+				<ProviderSelect
 					items={getRoleItems(false)}
 					value={mainProviderId}
 					onValueChange={(v) => assignRole('main', v)}
@@ -28,7 +29,7 @@
 
 			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
 				<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.minorTaskAgent')}</h3>
-				<ThemedSelect
+				<ProviderSelect
 					items={getRoleItems()}
 					value={settings.minorTaskAgentProviderRole}
 					onValueChange={(v) => updateSettings({ minorTaskAgentProviderRole: v })}
@@ -56,7 +57,7 @@
 					/>
 					<span class="text-xs text-surface-500">{t('settings.enabled')}</span>
 				</label>
-				<ThemedSelect
+				<ProviderSelect
 					items={getRoleItems()}
 					value={settings.plotPlannerProviderRole}
 					onValueChange={(v) => updateSettings({ plotPlannerProviderRole: v })}
@@ -111,7 +112,7 @@
 					/>
 					<span class="text-xs text-surface-500">{t('settings.enabled')}</span>
 				</label>
-				<ThemedSelect
+				<ProviderSelect
 					items={getRoleItems()}
 					value={settings.reviewerProviderRole}
 					onValueChange={(v) => updateSettings({ reviewerProviderRole: v })}
@@ -142,7 +143,7 @@
 			<!-- Writer -->
 			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
 				<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.writer')}</h3>
-				<ThemedSelect
+				<ProviderSelect
 					items={getRoleItems()}
 					value={settings.writerProviderRole}
 					onValueChange={(v) => updateSettings({ writerProviderRole: v })}
@@ -156,7 +157,7 @@
 			<!-- Editor -->
 			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
 				<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.editor')}</h3>
-				<ThemedSelect
+				<ProviderSelect
 					items={getRoleItems()}
 					value={settings.editorProviderRole}
 					onValueChange={(v) => updateSettings({ editorProviderRole: v })}
@@ -173,7 +174,7 @@
 			<!-- Game Master -->
 			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
 				<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.gameMaster')}</h3>
-				<ThemedSelect
+				<ProviderSelect
 					items={getRoleItems()}
 					value={settings.gameMasterProviderRole}
 					onValueChange={(v) => updateSettings({ gameMasterProviderRole: v })}
@@ -187,7 +188,7 @@
 			<!-- Summarizer -->
 			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
 				<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.summarizer')}</h3>
-				<ThemedSelect
+				<ProviderSelect
 					items={getRoleItems()}
 					value={settings.summarizerProviderRole}
 					onValueChange={(v) => updateSettings({ summarizerProviderRole: v })}

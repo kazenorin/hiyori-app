@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { isMemoryAvailable, isMemoryCapable, settings, updateSettings } from '$lib/stores/settings.svelte';
 	import { t } from '$lib/i18n';
-	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
+	import ProviderSelect from '$lib/components/ProviderSelect.svelte';
 	import Card from '$lib/components/ui/Card.svelte';
 	import RoleCallSettingsOverride from '$lib/components/chat/RoleCallSettingsOverride.svelte';
 	import { getRoleItems } from '$lib/features/settings-options';
@@ -21,7 +21,7 @@
 
 	<div class="block">
 		<span class="text-sm font-medium text-surface-700-300">{t('settings.memoryProvider')}</span>
-		<ThemedSelect
+		<ProviderSelect
 			items={getRoleItems()}
 			value={settings.memoryProviderRole}
 			onValueChange={(v) => updateSettings({ memoryProviderRole: v })}
@@ -34,7 +34,7 @@
 
 	<div class="block">
 		<span class="text-sm font-medium text-surface-700-300">{t('settings.embeddingProvider')}</span>
-		<ThemedSelect
+		<ProviderSelect
 			items={getRoleItems()}
 			value={settings.embeddingProviderRole}
 			onValueChange={(v) => updateSettings({ embeddingProviderRole: v })}
