@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { canonicalName } from '$lib/fs/story-folders';
+import { canonicalName } from '#lib/fs/story-folders';
 
 describe('canonicalName', () => {
 	it('preserves simple names', () => {

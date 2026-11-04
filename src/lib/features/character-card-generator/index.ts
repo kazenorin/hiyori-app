@@ -1,17 +1,17 @@
 import { generateText, type ModelMessage } from 'ai';
-import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { createModel } from '$lib/ai/provider/provider';
-import { characterCardTemplateLoader, generalInstructionsLoader } from '$lib/fs/prompts';
-import { exportActLine } from '$lib/ai/act-line-export';
-import type { ActLineMeta } from '$lib/db/act-lines';
-import { getMessagesForLine } from '$lib/db/act-lines';
-import { type ActChainEntry, traceActLineChain } from '$lib/db/acts';
-import { resolveStoryFolder } from '$lib/fs/story-folders';
-import { type DirEntry, fs } from '$lib/fs/file-system';
+import { getMainProviderConfig } from '#lib/stores/settings.svelte';
+import { createModel } from '#lib/ai/provider/provider';
+import { characterCardTemplateLoader, generalInstructionsLoader } from '#lib/fs/prompts';
+import { exportActLine } from '#lib/ai/act-line-export';
+import type { ActLineMeta } from '#lib/db/act-lines';
+import { getMessagesForLine } from '#lib/db/act-lines';
+import { type ActChainEntry, traceActLineChain } from '#lib/db/acts';
+import { resolveStoryFolder } from '#lib/fs/story-folders';
+import { type DirEntry, fs } from '#lib/fs/file-system';
 import { kebabCase } from 'lodash-es';
-import { log } from '$lib/logging/logger';
-import { logCharacterCardActivity } from '$lib/logging/chat-logger';
-import { getLineDir } from '$lib/ai/card-output-path';
+import { log } from '#lib/logging/logger';
+import { logCharacterCardActivity } from '#lib/logging/chat-logger';
+import { getLineDir } from '#lib/ai/card-output-path';
 import {
 	actCardLabel,
 	characterCardGenerationInstruction,
@@ -23,12 +23,12 @@ import {
 	transcriptEnd,
 	transcriptStart,
 } from './extraction-prompts';
-import { ERR_NO_CHARACTERS_SELECTED, ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT } from '$lib/definitions/error-messages';
-import { aliasesLabel, nameLabel } from '$lib/definitions/common-labels';
-import { characterCardCoreIdentityLabel, characterCardExtractionRules } from '$lib/definitions/feature-prompts';
-import { type CharacterProfileEntity, getLatestProfileByAlias, getLatestProfilesByActLine } from '$lib/db/character-profiles';
-import { formatCharacterProfileAsMessage } from '$lib/definitions/pipeline-sections';
-import { importanceLevelLabel } from '$lib/definitions/pipeline-prompts';
+import { ERR_NO_CHARACTERS_SELECTED, ERR_NO_MAIN_PROVIDER, ERR_NO_NARRATIVE_CONTENT } from '#lib/definitions/error-messages';
+import { aliasesLabel, nameLabel } from '#lib/definitions/common-labels';
+import { characterCardCoreIdentityLabel, characterCardExtractionRules } from '#lib/definitions/feature-prompts';
+import { type CharacterProfileEntity, getLatestProfileByAlias, getLatestProfilesByActLine } from '#lib/db/character-profiles';
+import { formatCharacterProfileAsMessage } from '#lib/definitions/pipeline-sections';
+import { importanceLevelLabel } from '#lib/definitions/pipeline-prompts';
 
 // === Types ===
 

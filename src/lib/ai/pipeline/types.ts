@@ -3,8 +3,8 @@ import type { StreamResultMetadata } from '../streaming';
 import type { ActSummary } from '../act-summary-parser';
 import type { ToolSet } from 'ai';
 import type { PhaseMetadata, RetryConfig } from '../chat-stream';
-import type { ProviderConfig } from '$lib/stores/settings.svelte';
-import type { ActLineMeta, ActPhaseBoundary } from '$lib/db/act-lines';
+import type { ProviderConfig } from '#lib/stores/settings.svelte';
+import type { ActLineMeta, ActPhaseBoundary } from '#lib/db/act-lines';
 
 export interface ActLineContext extends ActLineMeta {
 	currentActPhase: ActPhase | null;

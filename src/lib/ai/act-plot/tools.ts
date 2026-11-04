@@ -1,9 +1,9 @@
 import { type ToolSet } from 'ai';
-import { buildSceneTools } from '$lib/ai/tools/read-scene';
-import { buildCharacterDetailsTools } from '$lib/ai/tools/character-details';
-import { buildIntroduceCharacterTools } from '$lib/ai/tools/introduce-character';
-import { buildSuggestCharacterNameTools } from '$lib/ai/tools/suggest-character-name';
-import type { ToolContext } from '$lib/ai/tools/tools';
+import { buildSceneTools } from '#lib/ai/tools/read-scene';
+import { buildCharacterDetailsTools } from '#lib/ai/tools/character-details';
+import { buildIntroduceCharacterTools } from '#lib/ai/tools/introduce-character';
+import { buildSuggestCharacterNameTools } from '#lib/ai/tools/suggest-character-name';
+import type { ToolContext } from '#lib/ai/tools/tools';
 
 /** Phases that support tools within the act-plot pipeline. */
 export type ActPlotToolPhase = 'writer' | 'reviewer';

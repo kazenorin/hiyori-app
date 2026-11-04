@@ -1,4 +1,4 @@
-import { sceneTitleHeader, backgroundHeader, narrativeBodyHeader, turnOfEventsHeader, cgHeader } from '$lib/definitions/common-headers';
+import { sceneTitleHeader, backgroundHeader, narrativeBodyHeader, turnOfEventsHeader, cgHeader } from '#lib/definitions/common-headers';
 
 /** Structured game data extracted from ## Game Data section */
 export interface GameDataFields {

@@ -1,12 +1,12 @@
 import { v4 as uuidv4 } from 'uuid';
 import { isEqual, omitBy } from 'lodash-es';
-import { getDatabase } from '$lib/db/database';
-import { DEFAULT_NAME_QUOTAS, type NameQuotaConfig } from '$lib/features/name-suggestion/quota';
-import { fs } from '$lib/fs/file-system';
-import { detectDefaultLocale, setLocale, type Locale } from '$lib/i18n';
-import { setLogLevel, type LogLevel } from '$lib/logging/logger';
+import { getDatabase } from '#lib/db/database';
+import { DEFAULT_NAME_QUOTAS, type NameQuotaConfig } from '#lib/features/name-suggestion/quota';
+import { fs } from '#lib/fs/file-system';
+import { detectDefaultLocale, setLocale, type Locale } from '#lib/i18n';
+import { setLogLevel, type LogLevel } from '#lib/logging/logger';
 import type { LanguageModelCallOptions } from 'ai';
-import type { VoiceId } from '$lib/kokoro/kokoro-hiyori';
+import type { VoiceId } from '#lib/kokoro/kokoro-hiyori';
 
 export type { LogLevel };
 
@@ -474,11 +474,11 @@ export async function updateSettings(partial: Partial<UpdatableSettings>): Promi
 		// Only reload locale strings if no story is active
 		// (stories.svelte.ts handles locale string loading on story select)
 		try {
-			const { getActiveStoryId } = await import('$lib/stores/stories.svelte');
+			const { getActiveStoryId } = await import('#lib/stores/stories.svelte');
 			if (!getActiveStoryId()) {
-				const { setActiveLocale } = await import('$lib/fs/prompt-loader');
+				const { setActiveLocale } = await import('#lib/fs/prompt-loader');
 				setActiveLocale(partial.locale);
-				const { loadLocaleStrings } = await import('$lib/localization');
+				const { loadLocaleStrings } = await import('#lib/localization');
 				await loadLocaleStrings(partial.locale);
 			}
 		} catch (err) {

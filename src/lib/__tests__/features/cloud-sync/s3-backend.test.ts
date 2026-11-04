@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-vi.mock('$lib/features/cloud-sync/http-client', () => ({
+vi.mock('#lib/features/cloud-sync/http-client', () => ({
 	syncFetch: vi.fn(),
 	withRetry: vi.fn((fn: () => Promise<unknown>) => fn()),
 }));
 
-import { S3Backend } from '$lib/features/cloud-sync/s3-backend';
-import { syncFetch, withRetry } from '$lib/features/cloud-sync/http-client';
+import { S3Backend } from '#lib/features/cloud-sync/s3-backend';
+import { syncFetch, withRetry } from '#lib/features/cloud-sync/http-client';
 
 const mockedFetch = vi.mocked(syncFetch);
 const mockedRetry = vi.mocked(withRetry);

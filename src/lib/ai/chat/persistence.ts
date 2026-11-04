@@ -1,15 +1,15 @@
-import * as dbActLines from '$lib/db/act-lines';
-import * as dbMessages from '$lib/db/messages';
-import { parseImportantPhrases, serializeImportantPhrases } from '$lib/db/messages';
+import * as dbActLines from '#lib/db/act-lines';
+import * as dbMessages from '#lib/db/messages';
+import { parseImportantPhrases, serializeImportantPhrases } from '#lib/db/messages';
 export { serializeImportantPhrases };
-import { deletePhasesForMessages, getPhasesForMessages } from '$lib/db/message-phases';
-import { Memory } from '$lib/features/memory';
-import { log } from '$lib/logging/logger';
-import { getMemoryProviderConfig, isMemoryAvailable, isInventoryAvailable } from '$lib/stores/settings.svelte';
-import { getActiveStoryId } from '$lib/stores/stories.svelte';
-import { deleteInventoryByMessages } from '$lib/db/inventory';
+import { deletePhasesForMessages, getPhasesForMessages } from '#lib/db/message-phases';
+import { Memory } from '#lib/features/memory';
+import { log } from '#lib/logging/logger';
+import { getMemoryProviderConfig, isMemoryAvailable, isInventoryAvailable } from '#lib/stores/settings.svelte';
+import { getActiveStoryId } from '#lib/stores/stories.svelte';
+import { deleteInventoryByMessages } from '#lib/db/inventory';
 import type { MessageMetadata, PhaseMetadata } from '../chat-stream';
-import type { AssistantContext } from '$lib/ai/pipeline/types';
+import type { AssistantContext } from '#lib/ai/pipeline/types';
 import type { UIMessage } from './types';
 
 export function parseMetadata(raw: string | undefined | null): MessageMetadata | undefined {

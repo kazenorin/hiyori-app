@@ -1,6 +1,6 @@
 <script lang="ts">
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Icon from '$lib/components/ui/Icon.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Icon from '#lib/components/ui/Icon.svelte';
 
 	interface Props {
 		items: { label: string; value: string }[];

@@ -1,5 +1,5 @@
-import { checkIsTauri } from '$lib/runtime';
-import { log } from '$lib/logging/logger';
+import { checkIsTauri } from '#lib/runtime';
+import { log } from '#lib/logging/logger';
 
 export interface DirEntry {
 	name: string;

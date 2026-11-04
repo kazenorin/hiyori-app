@@ -1,7 +1,7 @@
-import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
+import { getSettings, updateSettings } from '#lib/stores/settings.svelte';
 import { createBackendFromSettings } from './backend-factory';
 import { syncNow, removeStoryFromCloud, type SyncReport, type SyncProgress } from './sync-engine';
-import { log } from '$lib/logging/logger';
+import { log } from '#lib/logging/logger';
 
 export type CloudSyncStatus = 'unconfigured' | 'idle' | 'syncing' | 'testing';
 

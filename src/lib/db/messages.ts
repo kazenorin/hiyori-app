@@ -6,7 +6,7 @@ import {
 	FIELD_DESCRIPTORS,
 	emptyGameDataFields,
 	setField,
-} from '$lib/ai/narrative-types';
+} from '#lib/ai/narrative-types';
 
 export interface MessageBase {
 	role: 'user' | 'assistant';

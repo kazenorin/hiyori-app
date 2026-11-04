@@ -1,7 +1,7 @@
 // Validation logic for Import World feature
 
 import type { ImportFormData, ImportActInput, ValidationResult, ValidationError, ValidationWarning } from './types';
-import { MAX_FILE_SIZE } from '$lib/utils/async';
+import { MAX_FILE_SIZE } from '#lib/utils/async';
 import {
 	importValStoryNameEmpty,
 	importValActTranscriptRequired,
@@ -16,7 +16,7 @@ import {
 	importValBackoffIntervalRange,
 	importValFileMustBeMdOrTxt,
 	importValFileMustBeJson,
-} from '$lib/definitions/feature-prompts';
+} from '#lib/definitions/feature-prompts';
 
 export function validateImportForm(formData: ImportFormData): ValidationResult {
 	const errors: ValidationError[] = [];

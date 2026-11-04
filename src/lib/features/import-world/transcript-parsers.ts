@@ -1,15 +1,15 @@
 // Transcript parsers for multiple JSON formats
 
-import { emptyVariables, type GameDataFields } from '$lib/ai/narrative-types';
+import { emptyVariables, type GameDataFields } from '#lib/ai/narrative-types';
 import type { TranscriptFormat, ParsedTranscript, ParsedMessage, OpenWebUIExport, OpenWebUIMessage } from './types';
-import { validateFileSize } from '$lib/utils/async';
+import { validateFileSize } from '#lib/utils/async';
 import {
 	ERR_INVALID_APP_EXPORT,
 	ERR_INVALID_OPENAI_FORMAT,
 	ERR_INVALID_OPENWEBUI_FORMAT,
 	ERR_OPENWEBUI_EMPTY,
 	ERR_UNABLE_TO_DETECT_FORMAT,
-} from '$lib/definitions/error-messages';
+} from '#lib/definitions/error-messages';
 
 // === Format Detection ===
 

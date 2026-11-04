@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('$lib/features/cloud-sync/http-client', () => ({
+vi.mock('#lib/features/cloud-sync/http-client', () => ({
 	syncFetch: vi.fn(),
 	withRetry: vi.fn((fn: () => Promise<unknown>) => fn()),
 }));
 
-import { WebDavBackend } from '$lib/features/cloud-sync/webdav-backend';
-import { syncFetch } from '$lib/features/cloud-sync/http-client';
+import { WebDavBackend } from '#lib/features/cloud-sync/webdav-backend';
+import { syncFetch } from '#lib/features/cloud-sync/http-client';
 
 const mockedFetch = vi.mocked(syncFetch);
 const config = { url: 'https://cloud.example.com/remote.php/dav/files/user/Hiyori', username: 'user', password: 'app-pw' };

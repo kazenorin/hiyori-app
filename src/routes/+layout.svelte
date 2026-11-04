@@ -5,8 +5,8 @@
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { page } from '$app/state';
-	import { initializeApp } from '$lib/app/init.svelte';
-	import { log } from '$lib/logging/logger';
+	import { initializeApp } from '#lib/app/init.svelte';
+	import { log } from '#lib/logging/logger';
 	import { registerSW } from 'virtual:pwa-register';
 	import {
 		getActiveStoryName,
@@ -19,31 +19,31 @@
 		deleteStory,
 		deleteAct,
 		deleteActLine,
-	} from '$lib/stores/stories.svelte';
-	import { getActByActLineId } from '$lib/db/acts';
-	import { loadActLineMessages, clearMessages } from '$lib/ai/chat.svelte';
+	} from '#lib/stores/stories.svelte';
+	import { getActByActLineId } from '#lib/db/acts';
+	import { loadActLineMessages, clearMessages } from '#lib/ai/chat.svelte';
 	import {
 		enterWorldBuilderMode,
 		exitWorldBuilderMode,
 		getIsActive as getIsWorldBuilderActive,
-	} from '$lib/features/world-builder/world-builder.svelte';
-	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
-	import { removeStoryFromCloudById, excludeStoryFromSync } from '$lib/features/cloud-sync/cloud-sync.svelte';
-	import { createBackendFromSettings } from '$lib/features/cloud-sync/backend-factory';
-	import CloudSyncOverlay from '$lib/features/cloud-sync/CloudSyncOverlay.svelte';
-	import SettingsDialog from '$lib/features/settings/SettingsDialog.svelte';
-	import PhaseDialog from '$lib/components/chat/PhaseDialog.svelte';
-	import { isSettingsDialogOpen } from '$lib/features/settings/settings-dialog-state.svelte';
-	import { t } from '$lib/i18n';
+	} from '#lib/features/world-builder/world-builder.svelte';
+	import { getSettings, updateSettings } from '#lib/stores/settings.svelte';
+	import { removeStoryFromCloudById, excludeStoryFromSync } from '#lib/features/cloud-sync/cloud-sync.svelte';
+	import { createBackendFromSettings } from '#lib/features/cloud-sync/backend-factory';
+	import CloudSyncOverlay from '#lib/features/cloud-sync/CloudSyncOverlay.svelte';
+	import SettingsDialog from '#lib/features/settings/SettingsDialog.svelte';
+	import PhaseDialog from '#lib/components/chat/PhaseDialog.svelte';
+	import { isSettingsDialogOpen } from '#lib/features/settings/settings-dialog-state.svelte';
+	import { t } from '#lib/i18n';
 
-	import BottomTabBar from '$lib/components/BottomTabBar.svelte';
-	import { mobileNav, mobileFeatures } from '$lib/stores/mobile-nav.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import SidebarNav from '$lib/components/chat/SidebarNav.svelte';
-	import Spinner from '$lib/components/ui/Spinner.svelte';
-	import { SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from '$lib/components/chat/panel-limits';
+	import BottomTabBar from '#lib/components/BottomTabBar.svelte';
+	import { mobileNav, mobileFeatures } from '#lib/stores/mobile-nav.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import SidebarNav from '#lib/components/chat/SidebarNav.svelte';
+	import Spinner from '#lib/components/ui/Spinner.svelte';
+	import { SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH, SIDEBAR_COLLAPSED_WIDTH } from '#lib/components/chat/panel-limits';
 	import { Toast } from '@skeletonlabs/skeleton-svelte';
-	import { toaster } from '$lib/stores/toaster.svelte';
+	import { toaster } from '#lib/stores/toaster.svelte';
 
 	let { children } = $props();
 	let appError = $state<string | null>(null);

@@ -1,8 +1,8 @@
-import { initDatabase, getDatabase } from '$lib/db/database';
-import { runMigrations } from '$lib/db/migrations';
-import { initMemoryDatabase, getMemoryDatabase } from '$lib/db/memory-database';
-import { runMemoryMigrations } from '$lib/db/memory-migrations';
-import { loadStories, restoreState } from '$lib/stores/stories.svelte';
+import { initDatabase, getDatabase } from '#lib/db/database';
+import { runMigrations } from '#lib/db/migrations';
+import { initMemoryDatabase, getMemoryDatabase } from '#lib/db/memory-database';
+import { runMemoryMigrations } from '#lib/db/memory-migrations';
+import { loadStories, restoreState } from '#lib/stores/stories.svelte';
 import {
 	highFantasyTemplateLoader,
 	modernSliceOfLifeTemplateLoader,
@@ -12,17 +12,17 @@ import {
 	worldBuilderSystemPromptLoader,
 	memoryExtractionSystemPromptLoader,
 	memoryExtractionPromptLoader,
-} from '$lib/fs/prompts';
-import { registerNameDefaults } from '$lib/fs/names';
-import { ensureAllBaseConfigs, setActiveLocale } from '$lib/fs/prompt-loader';
-import { initLogging, log } from '$lib/logging/logger';
-import { getSettings } from '$lib/stores/settings.svelte';
-import { loadLocale } from '$lib/i18n';
-import { loadLocaleStrings } from '$lib/localization';
-import { ensureAllLocaleStringConfigs } from '$lib/fs/locale-string-loader';
-import { initFileSystem } from '$lib/fs/file-system';
-import { initHttpClient } from '$lib/http/fetch';
-import { checkIsTauri, detectPlatform } from '$lib/runtime';
+} from '#lib/fs/prompts';
+import { registerNameDefaults } from '#lib/fs/names';
+import { ensureAllBaseConfigs, setActiveLocale } from '#lib/fs/prompt-loader';
+import { initLogging, log } from '#lib/logging/logger';
+import { getSettings } from '#lib/stores/settings.svelte';
+import { loadLocale } from '#lib/i18n';
+import { loadLocaleStrings } from '#lib/localization';
+import { ensureAllLocaleStringConfigs } from '#lib/fs/locale-string-loader';
+import { initFileSystem } from '#lib/fs/file-system';
+import { initHttpClient } from '#lib/http/fetch';
+import { checkIsTauri, detectPlatform } from '#lib/runtime';
 
 let initialized = false;
 let initializing = false;

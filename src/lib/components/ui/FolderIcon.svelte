@@ -1,5 +1,5 @@
 <script lang="ts">
-	import Icon from '$lib/components/ui/Icon.svelte';
+	import Icon from '#lib/components/ui/Icon.svelte';
 
 	const SIZE_CLASS = {
 		'size-3': 'size-3',

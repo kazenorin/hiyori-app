@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { ProviderConfig } from '$lib/stores/settings.svelte';
+import type { ProviderConfig } from '#lib/stores/settings.svelte';
 
 // Mock the database module
 let mockDbExecuteCalls: Array<[string, unknown[]]> = [];
@@ -21,7 +21,7 @@ const mockDb = {
 	}),
 };
 
-vi.mock('$lib/db/memory-database', () => ({
+vi.mock('#lib/db/memory-database', () => ({
 	getMemoryDatabase: () => mockDb,
 }));
 
@@ -34,7 +34,7 @@ vi.mock('ai', () => ({
 }));
 
 // Mock provider
-vi.mock('$lib/ai/provider/provider', () => ({
+vi.mock('#lib/ai/provider/provider', () => ({
 	createEmbeddingModel: vi.fn(() => ({})),
 }));
 
@@ -80,7 +80,7 @@ function setupMocksForVecInsertRowid(rowid: number) {
 }
 
 describe('Memory', () => {
-	let Memory: typeof import('$lib/features/memory').Memory;
+	let Memory: typeof import('#lib/features/memory').Memory;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
@@ -93,7 +93,7 @@ describe('Memory', () => {
 		vi.resetModules();
 
 		// Re-mock after resetModules
-		vi.doMock('$lib/db/memory-database', () => ({
+		vi.doMock('#lib/db/memory-database', () => ({
 			getMemoryDatabase: () => mockDb,
 		}));
 		vi.doMock('ai', () => ({
@@ -105,14 +105,14 @@ describe('Memory', () => {
 				],
 			})),
 		}));
-		vi.doMock('$lib/ai/provider/provider', () => ({
+		vi.doMock('#lib/ai/provider/provider', () => ({
 			createEmbeddingModel: vi.fn(() => ({})),
 		}));
 		vi.stubGlobal('crypto', {
 			randomUUID: () => `test-uuid-${++uuidCounter}`,
 		});
 
-		const mod = await import('$lib/features/memory');
+		const mod = await import('#lib/features/memory');
 		Memory = mod.Memory;
 	});
 
@@ -391,7 +391,7 @@ describe('Memory', () => {
 				{ character_canonical_name: 'elena-thornwood' }, // duplicate
 			]);
 
-			const mod = await import('$lib/features/memory');
+			const mod = await import('#lib/features/memory');
 			const names = await mod.knownCharacterNameList();
 
 			// SELECT DISTINCT should be in the query
@@ -403,7 +403,7 @@ describe('Memory', () => {
 		it('returns empty array on error', async () => {
 			mockDb.select.mockRejectedValueOnce(new Error('table not found'));
 
-			const mod = await import('$lib/features/memory');
+			const mod = await import('#lib/features/memory');
 			const names = await mod.knownCharacterNameList();
 
 			expect(names).toEqual([]);

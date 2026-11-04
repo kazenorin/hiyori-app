@@ -126,7 +126,7 @@ export const ICONS = {
 
 ```svelte
 <script lang="ts">
-	import Icon from '$lib/components/ui/Icon.svelte';
+	import Icon from '#lib/components/ui/Icon.svelte';
 </script>
 
 <Icon name="my-new-icon" class="size-4 text-primary-500" aria-hidden="true" />

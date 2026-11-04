@@ -4,12 +4,12 @@ import JSZip from 'jszip';
 // DB test setup follows the sync-merge.test.ts pattern.
 let testDb: ReturnType<typeof createTestDatabase>;
 
-vi.mock('$lib/db/database', () => ({
+vi.mock('#lib/db/database', () => ({
 	initDatabase: vi.fn(async () => testDb),
 	getDatabase: vi.fn(() => testDb),
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -19,33 +19,33 @@ vi.mock('$lib/logging/logger', () => ({
 	setLogLevel: vi.fn(),
 }));
 
-vi.mock('$lib/db/data-portability', () => ({ downloadExport: vi.fn() }));
+vi.mock('#lib/db/data-portability', () => ({ downloadExport: vi.fn() }));
 
 // loadStoryOverwrite/loadStoryAsNew end with store refresh + selection;
 // irrelevant to phase restoration.
-vi.mock('$lib/stores/stories.svelte', () => ({
+vi.mock('#lib/stores/stories.svelte', () => ({
 	loadStories: vi.fn(async () => {}),
 	selectStory: vi.fn(async () => {}),
 }));
 
-vi.mock('$lib/ai/chat/run-manager', () => ({ cleanupActLine: vi.fn(async () => {}) }));
+vi.mock('#lib/ai/chat/run-manager', () => ({ cleanupActLine: vi.fn(async () => {}) }));
 
 // loadStoryAsNew resolves a collision-free folder name via fs scanning;
 // a fixed name keeps the test on phases.
-vi.mock('$lib/fs/story-folders', () => ({ resolveStoryFolder: vi.fn(async () => 'new-story-folder') }));
+vi.mock('#lib/fs/story-folders', () => ({ resolveStoryFolder: vi.fn(async () => 'new-story-folder') }));
 
 import { createTestDatabase } from '../../helpers/test-database';
-import { runMigrations } from '$lib/db/migrations';
-import { createStory } from '$lib/db/stories';
-import { createAct } from '$lib/db/acts';
-import { createActLine, insertActLineEntries } from '$lib/db/act-lines';
-import { insertMessage, type Message } from '$lib/db/messages';
-import { upsertMessagePhases, getPhasesForMessages, deletePhasesForMessages } from '$lib/db/message-phases';
-import { buildStoryExportData } from '$lib/features/story-export-load/story-exporter';
-import { loadStoryOverwrite, loadStoryAsNew } from '$lib/features/story-export-load/story-loader';
-import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
-import { setFileSystem } from '$lib/fs/file-system';
-import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
+import { runMigrations } from '#lib/db/migrations';
+import { createStory } from '#lib/db/stories';
+import { createAct } from '#lib/db/acts';
+import { createActLine, insertActLineEntries } from '#lib/db/act-lines';
+import { insertMessage, type Message } from '#lib/db/messages';
+import { upsertMessagePhases, getPhasesForMessages, deletePhasesForMessages } from '#lib/db/message-phases';
+import { buildStoryExportData } from '#lib/features/story-export-load/story-exporter';
+import { loadStoryOverwrite, loadStoryAsNew } from '#lib/features/story-export-load/story-loader';
+import type { StoryExportData } from '#lib/features/story-export-load/archive-schema';
+import { setFileSystem } from '#lib/fs/file-system';
+import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
 
 function messageRow(id: string, role: Message['role'], content: string): Message {
 	return { id, role, content, createdAt: Date.now() };

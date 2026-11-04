@@ -1,7 +1,7 @@
 import { getDatabase } from './database';
-import type { PipelineState } from '$lib/ai/pipeline/types';
-import type { PhaseMetadata } from '$lib/ai/chat-stream';
-import type { EndingType } from '$lib/ai/narrative-types';
+import type { PipelineState } from '#lib/ai/pipeline/types';
+import type { PhaseMetadata } from '#lib/ai/chat-stream';
+import type { EndingType } from '#lib/ai/narrative-types';
 
 export type PipelineRunKind = 'main' | 'epilogue';
 

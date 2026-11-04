@@ -1,4 +1,4 @@
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 
 export const sceneTitleHeader = () => ls('common.headers.sceneTitle');
 export const backgroundHeader = () => ls('common.headers.background');

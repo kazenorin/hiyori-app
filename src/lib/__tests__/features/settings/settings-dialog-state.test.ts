@@ -6,7 +6,7 @@ import {
 	getActiveSection,
 	setActiveSection,
 	DEFAULT_SECTION,
-} from '$lib/features/settings/settings-dialog-state.svelte';
+} from '#lib/features/settings/settings-dialog-state.svelte';
 
 describe('settings-dialog-state', () => {
 	beforeEach(() => {

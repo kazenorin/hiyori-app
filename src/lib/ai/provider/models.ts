@@ -1,5 +1,5 @@
-import { resolveFetch } from '$lib/http/fetch';
-import type { Provider } from '$lib/stores/settings.svelte';
+import { resolveFetch } from '#lib/http/fetch';
+import type { Provider } from '#lib/stores/settings.svelte';
 import { OLLAMA_BASE_URL, OPENAI_BASE_URL } from './constants';
 
 export interface ModelInfo {

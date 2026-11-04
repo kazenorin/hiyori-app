@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const settingsMock = vi.hoisted(() => ({ reviewerEnabled: false }));
 
-vi.mock('$lib/stores/settings.svelte', () => ({
+vi.mock('#lib/stores/settings.svelte', () => ({
 	settings: {
 		targetWordCount: 400,
 		importantPhraseHighlighting: false,
@@ -18,19 +18,19 @@ vi.mock('$lib/stores/settings.svelte', () => ({
 	isReviewerEnabled: () => settingsMock.reviewerEnabled,
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: { info: vi.fn(async () => {}), error: vi.fn(async () => {}), warn: vi.fn(async () => {}), debug: vi.fn(async () => {}) },
 	fileLog: vi.fn(async () => {}),
 }));
 
-vi.mock('$lib/logging/chat-logger', () => ({ logMainChat: vi.fn(async () => {}) }));
-vi.mock('$lib/ai/pipeline', () => ({ runPipeline: vi.fn(), runEpiloguePipeline: vi.fn() }));
-vi.mock('$lib/ai/world-generator', () => ({ ensureWorldFile: vi.fn(async () => 'world') }));
-vi.mock('$lib/ai/act-plot', () => ({ ensureActPlot: vi.fn(async () => 'plot') }));
-vi.mock('$lib/localization', () => ({ loadLocaleStrings: vi.fn(async () => {}), ls: (k: string) => k }));
-vi.mock('$lib/fs/prompt-loader', () => ({ setActiveLocale: vi.fn() }));
-vi.mock('$lib/db/database', () => ({ initDatabase: vi.fn(), getDatabase: () => ({ flush: vi.fn(async () => {}) }) }));
-vi.mock('$lib/db/act-lines', () => ({
+vi.mock('#lib/logging/chat-logger', () => ({ logMainChat: vi.fn(async () => {}) }));
+vi.mock('#lib/ai/pipeline', () => ({ runPipeline: vi.fn(), runEpiloguePipeline: vi.fn() }));
+vi.mock('#lib/ai/world-generator', () => ({ ensureWorldFile: vi.fn(async () => 'world') }));
+vi.mock('#lib/ai/act-plot', () => ({ ensureActPlot: vi.fn(async () => 'plot') }));
+vi.mock('#lib/localization', () => ({ loadLocaleStrings: vi.fn(async () => {}), ls: (k: string) => k }));
+vi.mock('#lib/fs/prompt-loader', () => ({ setActiveLocale: vi.fn() }));
+vi.mock('#lib/db/database', () => ({ initDatabase: vi.fn(), getDatabase: () => ({ flush: vi.fn(async () => {}) }) }));
+vi.mock('#lib/db/act-lines', () => ({
 	getStoryForActLine: vi.fn(async () => ({ id: 'story-1', name: 'Story', locale: 'en', createdAt: 0, updatedAt: 0 })),
 	getActLine: vi.fn(async () => ({ id: 'line-1', actId: 'act-1', name: 'Main', isMainLine: true, createdAt: 0, plotMode: 'guidance' })),
 	getLastSceneNumber: vi.fn(async () => 0),
@@ -45,7 +45,7 @@ vi.mock('$lib/db/act-lines', () => ({
 	recordEpilogueWritten: vi.fn(async () => {}),
 	getEndingType: vi.fn(async () => null),
 }));
-vi.mock('$lib/db/pipeline-runs', () => ({
+vi.mock('#lib/db/pipeline-runs', () => ({
 	getPipelineRunForActLine: vi.fn(async () => null),
 	upsertPipelineRun: vi.fn(async () => {}),
 	updatePipelineRunIfExists: vi.fn(async () => true),
@@ -56,17 +56,17 @@ vi.mock('$lib/db/pipeline-runs', () => ({
 	deletePipelineRunsForAct: vi.fn(async () => {}),
 	deletePipelineRunsForStory: vi.fn(async () => {}),
 }));
-vi.mock('$lib/db/director-notes', () => ({ getDirectorNotes: vi.fn(async () => []) }));
-vi.mock('$lib/db/messages', () => ({ getMessagesByIds: vi.fn(async () => []) }));
-vi.mock('$lib/db/acts', () => ({ traceActLineChain: vi.fn(async () => []) }));
-vi.mock('$lib/db/character-profiles', () => ({ getLatestProfilesByActLine: vi.fn(async () => []) }));
-vi.mock('$lib/db/inventory', () => ({ deleteInventoryByMessages: vi.fn(async () => {}) }));
-vi.mock('$lib/db/message-phases', () => ({
+vi.mock('#lib/db/director-notes', () => ({ getDirectorNotes: vi.fn(async () => []) }));
+vi.mock('#lib/db/messages', () => ({ getMessagesByIds: vi.fn(async () => []) }));
+vi.mock('#lib/db/acts', () => ({ traceActLineChain: vi.fn(async () => []) }));
+vi.mock('#lib/db/character-profiles', () => ({ getLatestProfilesByActLine: vi.fn(async () => []) }));
+vi.mock('#lib/db/inventory', () => ({ deleteInventoryByMessages: vi.fn(async () => {}) }));
+vi.mock('#lib/db/message-phases', () => ({
 	upsertMessagePhases: vi.fn(async () => {}),
 	getPhasesForMessages: vi.fn(async () => new Map()),
 	deletePhasesForMessages: vi.fn(async () => {}),
 }));
-vi.mock('$lib/ai/chat/persistence', () => ({
+vi.mock('#lib/ai/chat/persistence', () => ({
 	loadActLineMessagesFromDB: vi.fn(async () => []),
 	persistMessage: vi.fn(async () => {}),
 	persistUserMessage: vi.fn(async () => ({ id: 'user-1', role: 'user', content: 'hi', sceneNumber: 0 })),
@@ -82,12 +82,12 @@ import {
 	subscribeRuns,
 	trackStreamingPhase,
 	type RunEvent,
-} from '$lib/ai/chat/run-manager';
-import { runPipeline } from '$lib/ai/pipeline';
-import * as dbMessagePhases from '$lib/db/message-phases';
-import type { PipelineRunRecord } from '$lib/db/pipeline-runs';
-import type { PipelineCallbacks } from '$lib/ai/pipeline/types';
-import type { GameDataFields, NarrativeVariables, PhaseName } from '$lib/ai/narrative-types';
+} from '#lib/ai/chat/run-manager';
+import { runPipeline } from '#lib/ai/pipeline';
+import * as dbMessagePhases from '#lib/db/message-phases';
+import type { PipelineRunRecord } from '#lib/db/pipeline-runs';
+import type { PipelineCallbacks } from '#lib/ai/pipeline/types';
+import type { GameDataFields, NarrativeVariables, PhaseName } from '#lib/ai/narrative-types';
 
 const vars = (over: Partial<NarrativeVariables>): NarrativeVariables => ({
 	sceneTitle: null,

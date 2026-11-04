@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { getMinorTaskAgentProviderConfig, settings, updateSettings } from '$lib/stores/settings.svelte';
-	import { t } from '$lib/i18n';
-	import Card from '$lib/components/ui/Card.svelte';
-	import NumberField from '$lib/components/ui/NumberField.svelte';
+	import { getMinorTaskAgentProviderConfig, settings, updateSettings } from '#lib/stores/settings.svelte';
+	import { t } from '#lib/i18n';
+	import Card from '#lib/components/ui/Card.svelte';
+	import NumberField from '#lib/components/ui/NumberField.svelte';
 </script>
 
 <div class="space-y-4">

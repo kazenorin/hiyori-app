@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { t } from '$lib/i18n';
-	import { mobileNav, mobileFeatures } from '$lib/stores/mobile-nav.svelte';
+	import { t } from '#lib/i18n';
+	import { mobileNav, mobileFeatures } from '#lib/stores/mobile-nav.svelte';
 	import MarkdownContent from './MarkdownContent.svelte';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
-	import Icon from '$lib/components/ui/Icon.svelte';
+	import Icon from '#lib/components/ui/Icon.svelte';
 
 	interface Props {
 		decisions: string[];

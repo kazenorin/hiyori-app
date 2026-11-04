@@ -126,7 +126,7 @@ New stories absent locally are imported whole via `loadStoryOverwrite` — IDs a
 ## Platform differences (`http-client.ts`)
 
 - **Tauri (desktop/Android):** requests go through `@tauri-apps/plugin-http`, which bypasses webview CORS — user-configured WebDAV/S3 servers cannot be expected to send CORS headers for desktop apps.
-- **Web:** plain `fetch` by default. The deployment must allow the backend origin in CSP `connect-src`, and the remote server must send CORS headers for the web origin. Alternatively, `settings.cloudSync.corsBypassEnabled` routes requests through a WISP proxy (`wispProxyUrl`) using the libcurl fetch from `$lib/http/fetch.ts` — the same mechanism provider API calls use. The libcurl fetch is cached after first init, so a changed proxy URL takes effect after reload.
+- **Web:** plain `fetch` by default. The deployment must allow the backend origin in CSP `connect-src`, and the remote server must send CORS headers for the web origin. Alternatively, `settings.cloudSync.corsBypassEnabled` routes requests through a WISP proxy (`wispProxyUrl`) using the libcurl fetch from `#lib/http/fetch.ts` — the same mechanism provider API calls use. The libcurl fetch is cached after first init, so a changed proxy URL takes effect after reload.
 
 ## Security notes
 

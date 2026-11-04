@@ -1,6 +1,6 @@
-import type { ProviderConfig } from '$lib/stores/settings.svelte';
-import { getSettings, isMemoryAvailable } from '$lib/stores/settings.svelte';
-import type { MessageBase } from '$lib/db/messages';
+import type { ProviderConfig } from '#lib/stores/settings.svelte';
+import { getSettings, isMemoryAvailable } from '#lib/stores/settings.svelte';
+import type { MessageBase } from '#lib/db/messages';
 import type { NarrativeVariables } from '../narrative-types';
 import type {
 	AssistantContext,
@@ -26,7 +26,7 @@ import {
 	parseProfilesBody,
 	serializeActSummary,
 } from '../act-summary-parser';
-import { actSummaryHeader } from '$lib/definitions/common-headers';
+import { actSummaryHeader } from '#lib/definitions/common-headers';
 import {
 	goalLabel,
 	importanceLabel,
@@ -34,16 +34,16 @@ import {
 	relationshipsLabel,
 	stateLabel,
 	voiceLabel,
-} from '$lib/definitions/character-profile-labels';
+} from '#lib/definitions/character-profile-labels';
 import {
 	actSummaryTemplate,
 	characterProfilesHeader,
 	summarizerExtractionPromptTemplate,
 	summarizerFallbackExtractionPromptTemplate,
-} from '$lib/definitions/pipeline-prompts';
-import { isAbortLikeError } from '$lib/utils/async';
-import { log } from '$lib/logging/logger';
-import { runMemoryExtractionPipeline } from '$lib/features/memory/memory-extraction-pipeline';
+} from '#lib/definitions/pipeline-prompts';
+import { isAbortLikeError } from '#lib/utils/async';
+import { log } from '#lib/logging/logger';
+import { runMemoryExtractionPipeline } from '#lib/features/memory/memory-extraction-pipeline';
 import { type LoadedPrompts } from './prompt-loader';
 import {
 	insertCharacterProfile,
@@ -51,8 +51,8 @@ import {
 	toCanonicalName,
 	ensurePreferredInAliases,
 	type CharacterImportance,
-} from '$lib/db/character-profiles';
-import { getLastCompressionScene, recordCharacterProfileCompression } from '$lib/db/act-lines';
+} from '#lib/db/character-profiles';
+import { getLastCompressionScene, recordCharacterProfileCompression } from '#lib/db/act-lines';
 
 // --- Input interfaces ---
 

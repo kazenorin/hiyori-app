@@ -1,8 +1,8 @@
-import { parseContent } from '$lib/utils/chat-stream-parser/parser';
-import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
-import { summaryHeader } from '$lib/definitions/common-headers';
-import { totalViolationsLabel, recommendationLabel, acceptAsIsLabel } from '$lib/definitions/pipeline-prompts';
-import { stripCodeFences } from '$lib/utils/strings';
+import { parseContent } from '#lib/utils/chat-stream-parser/parser';
+import type { OutputDescriptor } from '#lib/utils/chat-stream-parser/types';
+import { summaryHeader } from '#lib/definitions/common-headers';
+import { totalViolationsLabel, recommendationLabel, acceptAsIsLabel } from '#lib/definitions/pipeline-prompts';
+import { stripCodeFences } from '#lib/utils/strings';
 
 interface ReviewerOutputSummary {
 	totalViolations: string | undefined;

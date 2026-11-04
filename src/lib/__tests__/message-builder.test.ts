@@ -5,16 +5,16 @@ import {
 	buildPhaseMessages,
 	buildSummariesMessage,
 	mergeVariables,
-} from '$lib/ai/pipeline/message-builder';
-import { createNarrativeOverrides, type NarrativeVariables } from '$lib/ai/narrative-types';
-import type { PipelineContext } from '$lib/ai/pipeline/types';
+} from '#lib/ai/pipeline/message-builder';
+import { createNarrativeOverrides, type NarrativeVariables } from '#lib/ai/narrative-types';
+import type { PipelineContext } from '#lib/ai/pipeline/types';
 
 // Override only the headers these builders assert on; importOriginal keeps every other real
 // export so message-builder's transitive graph (narrative-types, pipeline-sections) still links.
 // sectionFormat mirrors the real impl; ls() would otherwise return raw keys (locale strings are
 // not loaded in the test env), so the stubs give deterministic header text.
-vi.mock('$lib/definitions/common-headers', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/definitions/common-headers')>();
+vi.mock('#lib/definitions/common-headers', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/definitions/common-headers')>();
 	return {
 		...actual,
 		sectionFormat: (text: string, headerLevel = 2) => `${'#'.repeat(headerLevel)} ${text}\n\n`,
@@ -30,8 +30,8 @@ vi.mock('$lib/definitions/common-headers', async (importOriginal) => {
 // The Act Plot and Upcoming Scene Plot section headers embed localized descriptions
 // (pipeline.extraction.*). Stub them so the getters produce deterministic text (real ls() returns
 // the raw key in tests).
-vi.mock('$lib/definitions/pipeline-prompts', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/definitions/pipeline-prompts')>();
+vi.mock('#lib/definitions/pipeline-prompts', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/definitions/pipeline-prompts')>();
 	return {
 		...actual,
 		actPlotDescription: () => 'Act Plot guide line.',

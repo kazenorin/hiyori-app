@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from 'vitest';
 
 /**
- * Unlike writer-prompt-context.test.ts, this file does NOT mock `$lib/localization`: the
+ * Unlike writer-prompt-context.test.ts, this file does NOT mock `#lib/localization`: the
  * assertions here compare prompt text against the real header labels the pipeline emits, so
  * `ls()` must return real values. loadLocaleStrings() falls back to the bundled YAML when the
  * Tauri filesystem is absent (the case under vitest), which logs one warning and works.
  */
-vi.mock('$lib/stores/settings.svelte', () => ({
+vi.mock('#lib/stores/settings.svelte', () => ({
 	isReviewerEnabled: () => true,
 	isQuickReview: () => false,
 	isPlotPlannerEnabled: () => true,
@@ -16,31 +16,31 @@ vi.mock('$lib/stores/settings.svelte', () => ({
 	isPhraseHighlightingEnabled: () => false,
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: { info: vi.fn(async () => {}), error: vi.fn(async () => {}), warn: vi.fn(async () => {}), debug: vi.fn(async () => {}) },
 	fileLog: vi.fn(async () => {}),
 }));
 
-vi.mock('$lib/ai/tools/tools', () => ({
+vi.mock('#lib/ai/tools/tools', () => ({
 	guardToolsForPhase: (tools: unknown) => tools,
 }));
 
-vi.mock('$lib/ai/pipeline/phase-executor', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/ai/pipeline/phase-executor')>();
+vi.mock('#lib/ai/pipeline/phase-executor', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/ai/pipeline/phase-executor')>();
 	return { ...actual, executeStreamingPhase: vi.fn() };
 });
 
-import { executeStreamingPhase } from '$lib/ai/pipeline/phase-executor';
-import { loadLocaleStrings } from '$lib/localization';
-import { runWriterPhase, type PipelineRunContext, type TrackPhase } from '$lib/ai/pipeline/runners';
+import { executeStreamingPhase } from '#lib/ai/pipeline/phase-executor';
+import { loadLocaleStrings } from '#lib/localization';
+import { runWriterPhase, type PipelineRunContext, type TrackPhase } from '#lib/ai/pipeline/runners';
 import {
 	writerDirectorNotesReinforcementPhrase,
 	writerScenePrioritiesHeader,
 	writerTurnOfEventsReinforcementPhrase,
-} from '$lib/definitions/pipeline-prompts';
-import type { ActLineContext, PipelineState } from '$lib/ai/pipeline/types';
-import type { StreamResultMetadata } from '$lib/ai/streaming';
-import { createNarrativeOverrides } from '$lib/ai/narrative-types';
+} from '#lib/definitions/pipeline-prompts';
+import type { ActLineContext, PipelineState } from '#lib/ai/pipeline/types';
+import type { StreamResultMetadata } from '#lib/ai/streaming';
+import { createNarrativeOverrides } from '#lib/ai/narrative-types';
 
 const executeStreamingPhaseMock = vi.mocked(executeStreamingPhase);
 

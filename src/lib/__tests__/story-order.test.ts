@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { orderStories } from '$lib/stores/stories.svelte';
-import type { Story } from '$lib/db/stories';
+import { orderStories } from '#lib/stores/stories.svelte';
+import type { Story } from '#lib/db/stories';
 
 function makeStory(id: string, updatedAt: number): Story {
 	return { id, name: id, locale: 'en', createdAt: 0, updatedAt };

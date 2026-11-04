@@ -1,11 +1,11 @@
 import { embed, embedMany } from 'ai';
-import type { Database } from '$lib/db/types';
-import { getMemoryDatabase } from '$lib/db/memory-database';
-import { createEmbeddingModel } from '$lib/ai/provider/provider';
-import type { ProviderConfig } from '$lib/stores/settings.svelte';
+import type { Database } from '#lib/db/types';
+import { getMemoryDatabase } from '#lib/db/memory-database';
+import { createEmbeddingModel } from '#lib/ai/provider/provider';
+import type { ProviderConfig } from '#lib/stores/settings.svelte';
 import type { InventoryCategory, EquipStatus, InventoryItem, InventoryChange } from './inventory-types';
 import { toInventoryItem, toInventoryChange } from './inventory-types';
-import { ERR_FAILED_VECTOR_ROWID, ERR_FAILED_LOCATION_VECTOR_ROWID } from '$lib/definitions/error-messages';
+import { ERR_FAILED_VECTOR_ROWID, ERR_FAILED_LOCATION_VECTOR_ROWID } from '#lib/definitions/error-messages';
 
 function cosineDistance(a: number[], b: number[]): number {
 	let dot = 0,

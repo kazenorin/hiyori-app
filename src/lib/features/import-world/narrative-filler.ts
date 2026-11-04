@@ -3,15 +3,15 @@
 // from raw assistant message text, producing full NarrativeVariables.
 
 import type { NarrativeExtractionResult, ParsedMessage } from './types';
-import { type RetryConfig } from '$lib/ai/chat-stream';
-import { sleep } from '$lib/utils/async';
-import type { StreamState } from '$lib/ai/chat-callbacks';
-import { runEditorTemplateFitter, type PipelineRunContext, type TrackPhase } from '$lib/ai/pipeline/runners';
-import { editorHasTemplateMetadata } from '$lib/ai/pipeline/message-builder';
-import type { PipelineCallbacks, PipelineState } from '$lib/ai/pipeline/types';
-import { writerOutputTemplateLoader } from '$lib/fs/prompts';
+import { type RetryConfig } from '#lib/ai/chat-stream';
+import { sleep } from '#lib/utils/async';
+import type { StreamState } from '#lib/ai/chat-callbacks';
+import { runEditorTemplateFitter, type PipelineRunContext, type TrackPhase } from '#lib/ai/pipeline/runners';
+import { editorHasTemplateMetadata } from '#lib/ai/pipeline/message-builder';
+import type { PipelineCallbacks, PipelineState } from '#lib/ai/pipeline/types';
+import { writerOutputTemplateLoader } from '#lib/fs/prompts';
 import { buildImportRunContext } from './pipeline-context';
-import { emptyVariables } from '$lib/ai/narrative-types';
+import { emptyVariables } from '#lib/ai/narrative-types';
 
 function buildNarrativeFillerCallbacks(
 	msgIndex: number,

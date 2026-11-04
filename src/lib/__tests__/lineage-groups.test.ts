@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { computeLineageGroups } from '$lib/db/lineage-groups';
-import type { Act } from '$lib/db/acts';
-import type { ActLineMeta } from '$lib/db/act-lines';
+import { computeLineageGroups } from '#lib/db/lineage-groups';
+import type { Act } from '#lib/db/acts';
+import type { ActLineMeta } from '#lib/db/act-lines';
 
 function makeAct(partial: Partial<Act> & Pick<Act, 'id' | 'actNumber'>): Act {
 	return {

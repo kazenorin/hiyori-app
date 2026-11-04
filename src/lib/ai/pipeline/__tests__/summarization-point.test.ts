@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveSummariesSnapshot, resolveSummarizationPoint } from '../summarization-point';
-import type { UIMessage } from '$lib/ai/chat/types';
+import type { UIMessage } from '#lib/ai/chat/types';
 
 const msg = (sceneNumber: number, role: 'user' | 'assistant', actSummary?: string): UIMessage => ({
 	id: `m-${role}-${sceneNumber}`,

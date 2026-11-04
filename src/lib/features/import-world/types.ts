@@ -1,6 +1,6 @@
 // Core types for Import World feature
 
-import type { NarrativeVariables } from '$lib/ai/narrative-types';
+import type { NarrativeVariables } from '#lib/ai/narrative-types';
 
 // === Transcript Format Detection ===
 

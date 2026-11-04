@@ -1,11 +1,11 @@
-import * as dbActLines from '$lib/db/act-lines';
-import * as dbMessages from '$lib/db/messages';
-import * as dbMessagePhases from '$lib/db/message-phases';
-import * as dbPipelineRuns from '$lib/db/pipeline-runs';
-import * as dbDirectorNotes from '$lib/db/director-notes';
-import { getDatabase } from '$lib/db/database';
-import { traceActLineChain } from '$lib/db/acts';
-import { getLatestProfilesByActLine } from '$lib/db/character-profiles';
+import * as dbActLines from '#lib/db/act-lines';
+import * as dbMessages from '#lib/db/messages';
+import * as dbMessagePhases from '#lib/db/message-phases';
+import * as dbPipelineRuns from '#lib/db/pipeline-runs';
+import * as dbDirectorNotes from '#lib/db/director-notes';
+import { getDatabase } from '#lib/db/database';
+import { traceActLineChain } from '#lib/db/acts';
+import { getLatestProfilesByActLine } from '#lib/db/character-profiles';
 import {
 	getDefaultPlotMode,
 	getMainProviderConfig,
@@ -14,11 +14,11 @@ import {
 	isReviewerEnabled,
 	settings,
 	type ProviderConfig,
-} from '$lib/stores/settings.svelte';
-import { runPipeline, runEpiloguePipeline, type EpiloguePipelineInput } from '$lib/ai/pipeline';
-import { formatCacheEfficiency, summarizeCacheEfficiency } from '$lib/ai/pipeline/cache-metrics';
-import { resolveSummariesSnapshot } from '$lib/ai/pipeline/summarization-point';
-import { buildScenesSections } from '$lib/ai/pipeline/scenes-builder';
+} from '#lib/stores/settings.svelte';
+import { runPipeline, runEpiloguePipeline, type EpiloguePipelineInput } from '#lib/ai/pipeline';
+import { formatCacheEfficiency, summarizeCacheEfficiency } from '#lib/ai/pipeline/cache-metrics';
+import { resolveSummariesSnapshot } from '#lib/ai/pipeline/summarization-point';
+import { buildScenesSections } from '#lib/ai/pipeline/scenes-builder';
 import type {
 	ActLineContext,
 	AsyncPhaseResults,
@@ -28,26 +28,26 @@ import type {
 	PipelineInput,
 	PipelineResult,
 	PipelineState,
-} from '$lib/ai/pipeline/types';
-import type { PipelineRunKind, PipelineRunRecord, RunInputSnapshot } from '$lib/db/pipeline-runs';
-import { deleteInventoryByMessages } from '$lib/db/inventory';
-import type { PhaseMetadata } from '$lib/ai/chat-stream';
-import type { EndingType, PhaseName, UIScenePhase } from '$lib/ai/narrative-types';
-import type { Story } from '$lib/db/stories';
-import type { ActLineMeta } from '$lib/db/act-lines';
+} from '#lib/ai/pipeline/types';
+import type { PipelineRunKind, PipelineRunRecord, RunInputSnapshot } from '#lib/db/pipeline-runs';
+import { deleteInventoryByMessages } from '#lib/db/inventory';
+import type { PhaseMetadata } from '#lib/ai/chat-stream';
+import type { EndingType, PhaseName, UIScenePhase } from '#lib/ai/narrative-types';
+import type { Story } from '#lib/db/stories';
+import type { ActLineMeta } from '#lib/db/act-lines';
 import type { UIMessage } from './types';
-import { ensureWorldFile } from '$lib/ai/world-generator';
-import { ensureActPlot } from '$lib/ai/act-plot';
-import { parseActPlotTargetWordCount } from '$lib/ai/act-plot/target-word-count-parser';
-import { parseActPhaseLengthEstimate } from '$lib/ai/plot-planner-output-parser';
-import { formatCharacterProfilesSection } from '$lib/definitions/pipeline-sections';
-import { otherDirectorNotesHeader, sectionFormat } from '$lib/definitions/common-headers';
-import { loadLocaleStrings } from '$lib/localization';
-import { setActiveLocale } from '$lib/fs/prompt-loader';
-import { log, fileLog } from '$lib/logging/logger';
-import { logMainChat } from '$lib/logging/chat-logger';
-import { isAbortLikeError } from '$lib/utils/async';
-import { getErrorMessage } from '$lib/utils/error-handling';
+import { ensureWorldFile } from '#lib/ai/world-generator';
+import { ensureActPlot } from '#lib/ai/act-plot';
+import { parseActPlotTargetWordCount } from '#lib/ai/act-plot/target-word-count-parser';
+import { parseActPhaseLengthEstimate } from '#lib/ai/plot-planner-output-parser';
+import { formatCharacterProfilesSection } from '#lib/definitions/pipeline-sections';
+import { otherDirectorNotesHeader, sectionFormat } from '#lib/definitions/common-headers';
+import { loadLocaleStrings } from '#lib/localization';
+import { setActiveLocale } from '#lib/fs/prompt-loader';
+import { log, fileLog } from '#lib/logging/logger';
+import { logMainChat } from '#lib/logging/chat-logger';
+import { isAbortLikeError } from '#lib/utils/async';
+import { getErrorMessage } from '#lib/utils/error-handling';
 import {
 	getLatestActSummary as _getLatestActSummary,
 	getPlayerContext,

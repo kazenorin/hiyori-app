@@ -4,12 +4,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // database injected via a mocked database module.
 let testDb: ReturnType<typeof createTestDatabase>;
 
-vi.mock('$lib/db/database', () => ({
+vi.mock('#lib/db/database', () => ({
 	initDatabase: vi.fn(async () => testDb),
 	getDatabase: vi.fn(() => testDb),
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -22,18 +22,18 @@ vi.mock('$lib/logging/logger', () => ({
 }));
 
 import { createTestDatabase } from '../../helpers/test-database';
-import { runMigrations } from '$lib/db/migrations';
-import * as stories from '$lib/db/stories';
-import * as acts from '$lib/db/acts';
-import { createActLine, getActLine, getMessagesForLine, insertActLineEntries } from '$lib/db/act-lines';
-import { insertMessage, getMessagesByIds, type Message } from '$lib/db/messages';
-import { upsertMessagePhases, getPhasesForMessages } from '$lib/db/message-phases';
-import { compareLineages, mergeIncomingActLine, mergeIncomingStory } from '$lib/features/cloud-sync/sync-merge';
-import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
+import { runMigrations } from '#lib/db/migrations';
+import * as stories from '#lib/db/stories';
+import * as acts from '#lib/db/acts';
+import { createActLine, getActLine, getMessagesForLine, insertActLineEntries } from '#lib/db/act-lines';
+import { insertMessage, getMessagesByIds, type Message } from '#lib/db/messages';
+import { upsertMessagePhases, getPhasesForMessages } from '#lib/db/message-phases';
+import { compareLineages, mergeIncomingActLine, mergeIncomingStory } from '#lib/features/cloud-sync/sync-merge';
+import type { StoryExportData } from '#lib/features/story-export-load/archive-schema';
 import JSZip from 'jszip';
-import { setFileSystem, fs } from '$lib/fs/file-system';
-import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
-import { buildLineDir, buildLineSubdirSuffix } from '$lib/ai/card-output-path';
+import { setFileSystem, fs } from '#lib/fs/file-system';
+import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
+import { buildLineDir, buildLineSubdirSuffix } from '#lib/ai/card-output-path';
 
 function messageRow(id: string, content: string): Message {
 	return { id, role: 'assistant', content, createdAt: Date.now() };

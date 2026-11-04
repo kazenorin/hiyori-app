@@ -1,6 +1,6 @@
-import { checkIsTauri } from '$lib/runtime';
+import { checkIsTauri } from '#lib/runtime';
 import type { Database } from './types';
-import { ERR_MEMORY_DB_NOT_INITIALIZED } from '$lib/definitions/error-messages';
+import { ERR_MEMORY_DB_NOT_INITIALIZED } from '#lib/definitions/error-messages';
 
 let memoryDb: Database | null = null;
 let memoryDbInit: Promise<Database> | null = null;

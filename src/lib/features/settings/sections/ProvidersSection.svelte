@@ -7,13 +7,13 @@
 		settings,
 		updateProviderConfig,
 		type ProviderConfig,
-	} from '$lib/stores/settings.svelte';
-	import { t } from '$lib/i18n';
+	} from '#lib/stores/settings.svelte';
+	import { t } from '#lib/i18n';
 	import Sortable from 'sortablejs';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Card from '$lib/components/ui/Card.svelte';
-	import Icon from '$lib/components/ui/Icon.svelte';
-	import ProviderForm from '$lib/components/chat/ProviderForm.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Card from '#lib/components/ui/Card.svelte';
+	import Icon from '#lib/components/ui/Icon.svelte';
+	import ProviderForm from '#lib/components/chat/ProviderForm.svelte';
 
 	let editingId = $state<string | null>(null);
 	let isAddingNew = $state(false);

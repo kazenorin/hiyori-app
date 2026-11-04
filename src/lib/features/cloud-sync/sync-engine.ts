@@ -1,11 +1,11 @@
 import { NotFoundError, type SyncBackend } from './sync-backend';
 import { emptyManifest, parseManifest, computeContentHash, hashBytes, type SyncManifest } from './sync-manifest';
-import { buildStoryArchive, buildStoryExportData } from '$lib/features/story-export-load/story-exporter';
-import { getAllStories } from '$lib/db/stories';
+import { buildStoryArchive, buildStoryExportData } from '#lib/features/story-export-load/story-exporter';
+import { getAllStories } from '#lib/db/stories';
 import { mergeIncomingStory } from './sync-merge';
-import { collectFilesInDir } from '$lib/fs/file-tree';
-import { fs } from '$lib/fs/file-system';
-import { getStoryFolderInfo } from '$lib/db/story-folders';
+import { collectFilesInDir } from '#lib/fs/file-tree';
+import { fs } from '#lib/fs/file-system';
+import { getStoryFolderInfo } from '#lib/db/story-folders';
 
 export const MANIFEST_PATH = 'hiyori-manifest.json';
 const ARCHIVE_DIR = 'stories';

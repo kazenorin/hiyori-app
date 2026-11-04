@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isLocalOrLanHost, getUrlWarnings } from '$lib/utils/url-security';
+import { isLocalOrLanHost, getUrlWarnings } from '#lib/utils/url-security';
 
 describe('isLocalOrLanHost', () => {
 	it('classifies localhost and loopback as local', () => {

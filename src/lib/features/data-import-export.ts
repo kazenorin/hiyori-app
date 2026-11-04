@@ -1,5 +1,5 @@
-import { downloadExport, readFileAsUint8Array } from '$lib/db/data-portability';
-import { t } from '$lib/i18n';
+import { downloadExport, readFileAsUint8Array } from '#lib/db/data-portability';
+import { t } from '#lib/i18n';
 
 export interface DataImportExportState {
 	isExporting: boolean;

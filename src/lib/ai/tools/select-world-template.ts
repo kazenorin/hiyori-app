@@ -1,7 +1,7 @@
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 import { tool, type ToolSet } from 'ai';
 import { z } from 'zod';
-import { WORLD_TEMPLATES } from '$lib/features/world-builder/template-registry';
+import { WORLD_TEMPLATES } from '#lib/features/world-builder/template-registry';
 
 export function createSelectWorldTemplateTool(onSelected: (templateId: string) => Promise<string>) {
 	const templateIds = WORLD_TEMPLATES.map((t) => t.id) as [string, ...string[]];

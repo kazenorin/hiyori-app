@@ -1,4 +1,4 @@
-import { t } from '$lib/i18n';
+import { t } from '#lib/i18n';
 import { VOICES } from './kokoro-hiyori/voices';
 import type { VoiceId, VoiceInfo, VoiceLanguage } from './kokoro-hiyori/voices';
 

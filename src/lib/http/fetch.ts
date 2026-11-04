@@ -1,5 +1,5 @@
-import { checkIsTauri, isTauriSync } from '$lib/runtime';
-import { log } from '$lib/logging/logger';
+import { checkIsTauri, isTauriSync } from '#lib/runtime';
+import { log } from '#lib/logging/logger';
 import { asset } from '$app/paths';
 
 let _fetch: typeof globalThis.fetch = globalThis.fetch.bind(globalThis);

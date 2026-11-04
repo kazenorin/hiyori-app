@@ -1,8 +1,8 @@
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 import { tool, type ToolSet } from 'ai';
 import { z } from 'zod';
 import type { ToolContext } from './tools';
-import type { NarrativeOverrides } from '$lib/ai/narrative-types';
+import type { NarrativeOverrides } from '#lib/ai/narrative-types';
 import { log } from './utils';
 
 export function createSetSceneTitleTool(ctx: ToolContext, overrides: NarrativeOverrides) {

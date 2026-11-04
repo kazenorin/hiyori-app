@@ -7,9 +7,9 @@ import {
 	restoreConfigDefault,
 	deleteFile,
 	renameFile,
-} from '$lib/fs/file-tree';
-import { readFileData, getLanguageFromPath, decodeText } from '$lib/fs/file-tree';
-import { log } from '$lib/logging/logger';
+} from '#lib/fs/file-tree';
+import { readFileData, getLanguageFromPath, decodeText } from '#lib/fs/file-tree';
+import { log } from '#lib/logging/logger';
 
 export interface FileActionState {
 	isExporting: boolean;

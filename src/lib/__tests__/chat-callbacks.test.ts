@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('$lib/definitions/common-headers', () => ({
+vi.mock('#lib/definitions/common-headers', () => ({
 	sceneTitleHeader: () => 'Scene title',
 	backgroundHeader: () => 'Background',
 	narrativeBodyHeader: () => 'Narrative Body',
@@ -12,8 +12,8 @@ vi.mock('$lib/definitions/common-headers', () => ({
 	sectionFormat: (text: string, headerLevel: number = 2) => '#'.repeat(headerLevel) + ' ' + text + '\n\n',
 }));
 
-import { createStreamAccumulator, type StreamState } from '$lib/ai/chat-callbacks';
-import type { GameDataFields } from '$lib/ai/narrative-types';
+import { createStreamAccumulator, type StreamState } from '#lib/ai/chat-callbacks';
+import type { GameDataFields } from '#lib/ai/narrative-types';
 
 const T = 'think';
 const emptyMetadata = {

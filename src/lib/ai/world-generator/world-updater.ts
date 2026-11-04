@@ -1,15 +1,15 @@
-import type { MessageBase } from '$lib/db/messages';
+import type { MessageBase } from '#lib/db/messages';
 import { streamText } from 'ai';
-import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { createModel } from '$lib/ai/provider/provider';
-import { fs } from '$lib/fs/file-system';
-import { worldFromActPrompt, worldFromActSystemPrompt } from '$lib/definitions/feature-prompts';
-import { ls } from '$lib/localization';
-import { actSummaryHeader, interviewTranscriptHeader, worldContentHeader } from '$lib/definitions/common-headers';
-import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED } from '$lib/definitions/error-messages';
-import { log } from '$lib/logging/logger';
+import { getMainProviderConfig } from '#lib/stores/settings.svelte';
+import { createModel } from '#lib/ai/provider/provider';
+import { fs } from '#lib/fs/file-system';
+import { worldFromActPrompt, worldFromActSystemPrompt } from '#lib/definitions/feature-prompts';
+import { ls } from '#lib/localization';
+import { actSummaryHeader, interviewTranscriptHeader, worldContentHeader } from '#lib/definitions/common-headers';
+import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED } from '#lib/definitions/error-messages';
+import { log } from '#lib/logging/logger';
 import { resolveTemplateForUpdate } from './template-resolution';
-import { WORLD_MD } from '$lib/ai/world-generator/constants';
+import { WORLD_MD } from '#lib/ai/world-generator/constants';
 
 const LOG_TAG = 'world-updater';
 

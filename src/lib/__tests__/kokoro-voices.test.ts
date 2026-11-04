@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { getVoiceList, getVoiceLabel } from '$lib/kokoro/voices';
-import { loadLocale } from '$lib/i18n';
+import { getVoiceList, getVoiceLabel } from '#lib/kokoro/voices';
+import { loadLocale } from '#lib/i18n';
 
 describe('getVoiceLabel', () => {
 	beforeAll(async () => {

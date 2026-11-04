@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { isNearBottom, scrollToBottom } from '$lib/utils/scroll';
-	import Icon from '$lib/components/ui/Icon.svelte';
+	import { isNearBottom, scrollToBottom } from '#lib/utils/scroll';
+	import Icon from '#lib/components/ui/Icon.svelte';
 
 	interface Props {
 		chatContainer: HTMLDivElement | null;

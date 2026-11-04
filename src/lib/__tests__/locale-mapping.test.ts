@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { localeMatches, getAllowedVoiceLanguages, isTTSSupportedLocale, getVoicesForLocale } from '$lib/kokoro/locale-mapping';
+import { localeMatches, getAllowedVoiceLanguages, isTTSSupportedLocale, getVoicesForLocale } from '#lib/kokoro/locale-mapping';
 
 describe('localeMatches', () => {
 	it('matches exact and prefixed values case-insensitively', () => {

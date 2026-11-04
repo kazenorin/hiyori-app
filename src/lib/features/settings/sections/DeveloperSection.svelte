@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { settings, updateSettings, type LogLevel } from '$lib/stores/settings.svelte';
-	import { t } from '$lib/i18n';
-	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
-	import Card from '$lib/components/ui/Card.svelte';
-	import { getLogLevelItems } from '$lib/features/settings-options';
+	import { settings, updateSettings, type LogLevel } from '#lib/stores/settings.svelte';
+	import { t } from '#lib/i18n';
+	import ThemedSelect from '#lib/components/ThemedSelect.svelte';
+	import Card from '#lib/components/ui/Card.svelte';
+	import { getLogLevelItems } from '#lib/features/settings-options';
 
 	const logLevelItems = $derived(getLogLevelItems());
 </script>

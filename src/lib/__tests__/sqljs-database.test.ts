@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import path from 'path';
-import { SqlJsDatabase } from '$lib/db/adapters/sqljs-database';
+import { SqlJsDatabase } from '#lib/db/adapters/sqljs-database';
 
 const SQLJS_WASM_PATH = path.join(__dirname, '..', '..', '..', 'node_modules', 'sql.js', 'dist', 'sql-wasm.wasm');
 

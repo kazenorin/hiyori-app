@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { Act } from '$lib/db/acts';
+import type { Act } from '#lib/db/acts';
 
 // Shared mock state
 let mockDbSelectResults: unknown[] = [];
@@ -13,7 +13,7 @@ const mockDb = {
 	}),
 };
 
-vi.mock('$lib/db/database', () => ({
+vi.mock('#lib/db/database', () => ({
 	getDatabase: () => mockDb,
 }));
 
@@ -31,16 +31,16 @@ function makeAct(overrides: Partial<Act> = {}): Act {
 }
 
 describe('canActBeDeleted', () => {
-	let canActBeDeleted: typeof import('$lib/db/acts').canActBeDeleted;
+	let canActBeDeleted: typeof import('#lib/db/acts').canActBeDeleted;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
 		mockDbSelectResults = [];
 
 		vi.resetModules();
-		vi.doMock('$lib/db/database', () => ({ getDatabase: () => mockDb }));
+		vi.doMock('#lib/db/database', () => ({ getDatabase: () => mockDb }));
 
-		const mod = await import('$lib/db/acts');
+		const mod = await import('#lib/db/acts');
 		canActBeDeleted = mod.canActBeDeleted;
 	});
 
@@ -103,16 +103,16 @@ describe('canActBeDeleted', () => {
 });
 
 describe('canActLineBeDeleted', () => {
-	let canActLineBeDeleted: typeof import('$lib/db/acts').canActLineBeDeleted;
+	let canActLineBeDeleted: typeof import('#lib/db/acts').canActLineBeDeleted;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
 		mockDbSelectResults = [];
 
 		vi.resetModules();
-		vi.doMock('$lib/db/database', () => ({ getDatabase: () => mockDb }));
+		vi.doMock('#lib/db/database', () => ({ getDatabase: () => mockDb }));
 
-		const mod = await import('$lib/db/acts');
+		const mod = await import('#lib/db/acts');
 		canActLineBeDeleted = mod.canActLineBeDeleted;
 	});
 
@@ -142,16 +142,16 @@ describe('canActLineBeDeleted', () => {
 });
 
 describe('getActLinesForStory', () => {
-	let getActLinesForStory: typeof import('$lib/db/act-lines').getActLinesForStory;
+	let getActLinesForStory: typeof import('#lib/db/act-lines').getActLinesForStory;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
 		mockDbSelectResults = [];
 
 		vi.resetModules();
-		vi.doMock('$lib/db/database', () => ({ getDatabase: () => mockDb }));
+		vi.doMock('#lib/db/database', () => ({ getDatabase: () => mockDb }));
 
-		const mod = await import('$lib/db/act-lines');
+		const mod = await import('#lib/db/act-lines');
 		getActLinesForStory = mod.getActLinesForStory;
 	});
 

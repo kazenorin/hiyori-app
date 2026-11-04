@@ -1,14 +1,14 @@
 <script lang="ts">
-	import { getNameSuggestionQuotas, settings, updateSettings } from '$lib/stores/settings.svelte';
-	import { DEFAULT_NAME_QUOTAS, type NameQuotaConfig } from '$lib/features/name-suggestion/quota';
-	import { getNameDataset, getNameDatasetPool } from '$lib/features/name-suggestion/dataset';
-	import { CULTURE_META, CULTURES, type Culture } from '$lib/features/name-suggestion/types';
-	import { SUPPORTED_LOCALES } from '$lib/fs/prompt-loader';
-	import { getLocaleItems } from '$lib/features/settings-options';
-	import { t } from '$lib/i18n';
-	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
-	import NumberField from '$lib/components/ui/NumberField.svelte';
-	import Card from '$lib/components/ui/Card.svelte';
+	import { getNameSuggestionQuotas, settings, updateSettings } from '#lib/stores/settings.svelte';
+	import { DEFAULT_NAME_QUOTAS, type NameQuotaConfig } from '#lib/features/name-suggestion/quota';
+	import { getNameDataset, getNameDatasetPool } from '#lib/features/name-suggestion/dataset';
+	import { CULTURE_META, CULTURES, type Culture } from '#lib/features/name-suggestion/types';
+	import { SUPPORTED_LOCALES } from '#lib/fs/prompt-loader';
+	import { getLocaleItems } from '#lib/features/settings-options';
+	import { t } from '#lib/i18n';
+	import ThemedSelect from '#lib/components/ThemedSelect.svelte';
+	import NumberField from '#lib/components/ui/NumberField.svelte';
+	import Card from '#lib/components/ui/Card.svelte';
 
 	function cloneQuotas(q: NameQuotaConfig): NameQuotaConfig {
 		return {

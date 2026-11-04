@@ -1,5 +1,5 @@
 import BetterSqlite3 from 'better-sqlite3';
-import type { Database, QueryResult } from '$lib/db/types';
+import type { Database, QueryResult } from '#lib/db/types';
 
 /**
  * Convert positional params[] to {1: val1, 2: val2, …} named object for better-sqlite3.

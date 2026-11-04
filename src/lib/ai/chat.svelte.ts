@@ -1,7 +1,7 @@
-import type { ActLineMeta } from '$lib/db/act-lines';
-import * as dbActLines from '$lib/db/act-lines';
-import { log } from '$lib/logging/logger';
-import { getDefaultPlotMode, getSummarizerProviderConfig, isPhraseHighlightingEnabled } from '$lib/stores/settings.svelte';
+import type { ActLineMeta } from '#lib/db/act-lines';
+import * as dbActLines from '#lib/db/act-lines';
+import { log } from '#lib/logging/logger';
+import { getDefaultPlotMode, getSummarizerProviderConfig, isPhraseHighlightingEnabled } from '#lib/stores/settings.svelte';
 import { extractImportantPhrases } from './important-phrases-extractor';
 import {
 	findLastNonNullSceneNumber,
@@ -19,7 +19,7 @@ import {
 	removeMessagesFromIndex,
 	updatePersistentMessageMetadata,
 } from './chat/persistence';
-import { updateMessageFields } from '$lib/db/messages';
+import { updateMessageFields } from '#lib/db/messages';
 import type { NarrativeVariables, PhaseName } from './narrative-types';
 import { emptyVariables } from './narrative-types';
 import type { UIMessage } from './chat/types';
@@ -27,16 +27,16 @@ import { generateFullSummary, type SummarizerInput, type SummarizerPrompts } fro
 import { loadPrompts } from './pipeline/prompt-loader';
 import { runGameMasterRegeneration } from './game-data-regenerator';
 import { buildScenesSections } from './pipeline/scenes-builder';
-import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
+import { sceneWithNumberLabel } from '#lib/definitions/common-labels';
 import * as runManager from './chat/run-manager';
 import type { InterruptedRunInfo } from './chat/run-manager';
-import type { PipelineRunKind } from '$lib/db/pipeline-runs';
+import type { PipelineRunKind } from '#lib/db/pipeline-runs';
 import type { PipelineContext } from './pipeline/types';
-import { getErrorMessage } from '$lib/utils/error-handling';
-import { ensureActPlot } from '$lib/ai/act-plot';
-import { ensureWorldFile } from '$lib/ai/world-generator';
-import type { Story } from '$lib/db/stories';
-import { ls } from '$lib/localization';
+import { getErrorMessage } from '#lib/utils/error-handling';
+import { ensureActPlot } from '#lib/ai/act-plot';
+import { ensureWorldFile } from '#lib/ai/world-generator';
+import type { Story } from '#lib/db/stories';
+import { ls } from '#lib/localization';
 
 // Re-exported for `+page.svelte` only
 export type { UIMessage };

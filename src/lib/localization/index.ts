@@ -1,8 +1,8 @@
-import { LocaleStringBundle, registerLocaleStringDefaults, flattenToPaths } from '$lib/fs/locale-string-loader';
-import { log } from '$lib/logging/logger';
-import { registerBundledContent } from '$lib/fs/config-manifest';
-import defaultEnStrings from '$lib/fs/locale-strings/en.yaml?raw';
-import defaultZhHantHkStrings from '$lib/fs/locale-strings/zh-Hant-HK.yaml?raw';
+import { LocaleStringBundle, registerLocaleStringDefaults, flattenToPaths } from '#lib/fs/locale-string-loader';
+import { log } from '#lib/logging/logger';
+import { registerBundledContent } from '#lib/fs/config-manifest';
+import defaultEnStrings from '#lib/fs/locale-strings/en.yaml?raw';
+import defaultZhHantHkStrings from '#lib/fs/locale-strings/zh-Hant-HK.yaml?raw';
 
 let cache: Record<string, string> = {};
 const enBundle = new LocaleStringBundle({ locale: 'en', defaultContent: defaultEnStrings });
@@ -35,7 +35,7 @@ function getBundle(locale: string): LocaleStringBundle {
 async function resolveStoryFolder(_storyId: string, _storyName: string): Promise<string> {
 	try {
 		// To avoid circular dependencies, if `story-folders` needs localization too.
-		const { resolveStoryFolder: resolve } = await import('$lib/fs/story-folders');
+		const { resolveStoryFolder: resolve } = await import('#lib/fs/story-folders');
 		return await resolve(_storyId, _storyName);
 	} catch {
 		return '';

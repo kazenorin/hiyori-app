@@ -1,4 +1,4 @@
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 import { tool } from 'ai';
 import { z } from 'zod';
 import type { ToolSet } from 'ai';
@@ -12,7 +12,7 @@ import {
 	type InventoryCategory,
 	type EquipStatus,
 	type InventoryEventType,
-} from '$lib/db/inventory';
+} from '#lib/db/inventory';
 
 export interface UpdateInventoryContext extends ToolContext {
 	messageId: string;

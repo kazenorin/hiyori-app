@@ -1,11 +1,11 @@
 import { describe, it, expect, vi } from 'vitest';
 
 const lsMock = vi.fn((key: string) => (key === 'pipeline.labels.plotPlanner.estimatedLength' ? 'Estimated length' : key));
-vi.mock('$lib/localization', () => ({
+vi.mock('#lib/localization', () => ({
 	ls: (key: string) => lsMock(key),
 }));
 
-import { parseActPhaseLengthEstimate } from '$lib/ai/plot-planner-output-parser';
+import { parseActPhaseLengthEstimate } from '#lib/ai/plot-planner-output-parser';
 
 describe('parseActPhaseLengthEstimate', () => {
 	it('Case 1: header line, value on next line', () => {

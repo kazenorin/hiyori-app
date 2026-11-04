@@ -22,7 +22,7 @@ Import existing stories from world-building documents, chat transcripts, and cha
       ├──── transcript-parsers.ts      Parse JSON → ParsedMessage[]
       ├──── narrative-filler.ts        Extract NarrativeVariables via LLM
       │      └── pipeline-context.ts   Build PipelineRunContext for import
-      │             └── ← $lib/ai/pipeline/runners.ts (runEditorTemplateFitter)
+      │             └── ← #lib/ai/pipeline/runners.ts (runEditorTemplateFitter)
       └──── world-generator.ts        Generate world.md from cards (no world file)
 ```
 

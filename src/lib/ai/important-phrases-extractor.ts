@@ -1,9 +1,9 @@
 import { generateText } from 'ai';
 import { createModel } from './provider/provider';
-import { getMinorTaskAgentProviderConfig, type MinorTaskAgentProviderConfig } from '$lib/stores/settings.svelte';
-import { importantPhrasesSystemPrompt } from '$lib/definitions/feature-prompts';
-import { isAuthError, withRetry } from '$lib/utils/async';
-import { log } from '$lib/logging/logger';
+import { getMinorTaskAgentProviderConfig, type MinorTaskAgentProviderConfig } from '#lib/stores/settings.svelte';
+import { importantPhrasesSystemPrompt } from '#lib/definitions/feature-prompts';
+import { isAuthError, withRetry } from '#lib/utils/async';
+import { log } from '#lib/logging/logger';
 
 const MAX_PHRASES = 5;
 const RETRY_COUNT = 2;

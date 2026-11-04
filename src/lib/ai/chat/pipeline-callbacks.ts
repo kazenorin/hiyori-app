@@ -1,6 +1,6 @@
-import { log } from '$lib/logging/logger';
-import { isReviewerEnabled } from '$lib/stores/settings.svelte';
-import { getErrorMessage } from '$lib/utils/error-handling';
+import { log } from '#lib/logging/logger';
+import { isReviewerEnabled } from '#lib/stores/settings.svelte';
+import { getErrorMessage } from '#lib/utils/error-handling';
 import type { UIMessage } from './types';
 import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from '../narrative-types';
 import type { PipelineCallbacks, PipelineState, PhaseStreamState } from '../pipeline/types';

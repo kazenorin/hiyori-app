@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('$lib/localization', () => ({
+vi.mock('#lib/localization', () => ({
 	ls: (key: string, params?: Record<string, string | number>) => (params ? `${key} ${JSON.stringify(params)}` : key),
 	t: (key: string) => key,
 }));
 
-vi.mock('$lib/stores/settings.svelte', () => ({
+vi.mock('#lib/stores/settings.svelte', () => ({
 	isReviewerEnabled: () => true,
 	isQuickReview: () => false,
 	isPlotPlannerEnabled: () => true,
@@ -15,25 +15,25 @@ vi.mock('$lib/stores/settings.svelte', () => ({
 	isPhraseHighlightingEnabled: () => false,
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: { info: vi.fn(async () => {}), error: vi.fn(async () => {}), warn: vi.fn(async () => {}), debug: vi.fn(async () => {}) },
 	fileLog: vi.fn(async () => {}),
 }));
 
-vi.mock('$lib/ai/tools/tools', () => ({
+vi.mock('#lib/ai/tools/tools', () => ({
 	guardToolsForPhase: (tools: unknown) => tools,
 }));
 
-vi.mock('$lib/ai/pipeline/phase-executor', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/ai/pipeline/phase-executor')>();
+vi.mock('#lib/ai/pipeline/phase-executor', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/ai/pipeline/phase-executor')>();
 	return { ...actual, executeStreamingPhase: vi.fn() };
 });
 
-import { executeStreamingPhase } from '$lib/ai/pipeline/phase-executor';
-import { runWriterPhase, type PipelineRunContext, type TrackPhase } from '$lib/ai/pipeline/runners';
-import type { ActLineContext, PipelineState } from '$lib/ai/pipeline/types';
-import type { StreamResultMetadata } from '$lib/ai/streaming';
-import { createNarrativeOverrides } from '$lib/ai/narrative-types';
+import { executeStreamingPhase } from '#lib/ai/pipeline/phase-executor';
+import { runWriterPhase, type PipelineRunContext, type TrackPhase } from '#lib/ai/pipeline/runners';
+import type { ActLineContext, PipelineState } from '#lib/ai/pipeline/types';
+import type { StreamResultMetadata } from '#lib/ai/streaming';
+import { createNarrativeOverrides } from '#lib/ai/narrative-types';
 
 const executeStreamingPhaseMock = vi.mocked(executeStreamingPhase);
 

@@ -19,21 +19,21 @@ const mockGoalLabel = vi.fn(() => 'Goal');
 const mockRelationshipsLabel = vi.fn(() => 'Relationships');
 const mockVoiceLabel = vi.fn(() => 'Voice');
 const mockImportanceLabel = vi.fn(() => 'Importance');
-vi.mock('$lib/definitions/common-headers', () => ({
+vi.mock('#lib/definitions/common-headers', () => ({
 	actSummaryHeader: () => mockActSummaryHeader(),
 	turnOfEventsHeader: () => mockTurnOfEventsHeader(),
 	summaryHeader: () => mockSummaryHeader(),
 	sectionFormat: (text: string, headerLevel: number = 2) => '#'.repeat(headerLevel) + ' ' + text + '\n\n',
 }));
 
-vi.mock('$lib/definitions/common-labels', () => ({
+vi.mock('#lib/definitions/common-labels', () => ({
 	sceneWithNumberLabel: (n: number | string) => mockSceneWithNumberLabel(n),
 	locationLabel: () => mockLocationLabel(),
 	aliasesLabel: () => mockAliasesLabel(),
 	lastUpdateLabel: () => mockLastUpdateLabel(),
 }));
 
-vi.mock('$lib/definitions/character-profile-labels', () => ({
+vi.mock('#lib/definitions/character-profile-labels', () => ({
 	stateLabel: () => mockStateLabel(),
 	loglineLabel: () => mockLoglineLabel(),
 	goalLabel: () => mockGoalLabel(),
@@ -42,14 +42,14 @@ vi.mock('$lib/definitions/character-profile-labels', () => ({
 	importanceLabel: () => mockImportanceLabel(),
 }));
 
-vi.mock('$lib/definitions/pipeline-prompts', () => ({
+vi.mock('#lib/definitions/pipeline-prompts', () => ({
 	sceneSummariesHeader: () => mockSceneSummariesHeader(),
 	characterSummariesHeader: () => mockCharacterSummariesHeader(),
 	characterProfilesHeader: () => mockCharacterProfilesHeader(),
 	characterSummariesSinceSceneLabel: (sceneNumber: number) => mockCharacterSummariesSinceSceneLabel(sceneNumber),
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -68,7 +68,7 @@ import {
 	serializeActSummary,
 	type ActSummary,
 	type IncrementalUpdate,
-} from '$lib/ai/act-summary-parser';
+} from '#lib/ai/act-summary-parser';
 
 const SAMPLE_ACT_SUMMARY = `## Scene Summaries
 ### Scene 1: The Arrival

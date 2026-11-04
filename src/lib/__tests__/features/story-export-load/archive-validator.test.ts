@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { validateStoryData } from '$lib/features/story-export-load/archive-validator';
-import { CURRENT_ARCHIVE_VERSION, type StoryExportData } from '$lib/features/story-export-load/archive-schema';
+import { validateStoryData } from '#lib/features/story-export-load/archive-validator';
+import { CURRENT_ARCHIVE_VERSION, type StoryExportData } from '#lib/features/story-export-load/archive-schema';
 
 function makeValidData(): StoryExportData {
 	return {
@@ -45,6 +45,10 @@ function makeValidData(): StoryExportData {
 	};
 }
 
+function asRaw<T extends object>(value: T): Record<string, unknown> {
+	return value as unknown as Record<string, unknown>;
+}
+
 describe('validateStoryData', () => {
 	it('returns valid for correct data', () => {
 		const result = validateStoryData(makeValidData());
@@ -66,7 +70,7 @@ describe('validateStoryData', () => {
 
 	it('rejects wrong version', () => {
 		const data = makeValidData();
-		(data as any).version = CURRENT_ARCHIVE_VERSION + 1;
+		asRaw(data).version = CURRENT_ARCHIVE_VERSION + 1;
 		const result = validateStoryData(data);
 		expect(result.isValid).toBe(false);
 		expect(result.errors[0]).toContain('Unsupported archive version');
@@ -74,7 +78,7 @@ describe('validateStoryData', () => {
 
 	it('rejects missing version', () => {
 		const data = makeValidData();
-		delete (data as any).version;
+		delete asRaw(data).version;
 		const result = validateStoryData(data);
 		expect(result.isValid).toBe(false);
 		expect(result.errors[0]).toContain('Unsupported archive version');
@@ -82,7 +86,7 @@ describe('validateStoryData', () => {
 
 	it('reports missing story field', () => {
 		const data = makeValidData();
-		delete (data as any).story;
+		delete asRaw(data).story;
 		const result = validateStoryData(data);
 		expect(result.isValid).toBe(false);
 		expect(result.errors).toContain('Missing or invalid "story" field');
@@ -90,7 +94,7 @@ describe('validateStoryData', () => {
 
 	it('reports missing storyFolder field', () => {
 		const data = makeValidData();
-		delete (data as any).storyFolder;
+		delete asRaw(data).storyFolder;
 		const result = validateStoryData(data);
 		expect(result.isValid).toBe(false);
 		expect(result.errors).toContain('Missing or invalid "storyFolder" field');
@@ -98,7 +102,7 @@ describe('validateStoryData', () => {
 
 	it('reports missing acts array', () => {
 		const data = makeValidData();
-		(data as any).acts = 'not-array';
+		asRaw(data).acts = 'not-array';
 		const result = validateStoryData(data);
 		expect(result.isValid).toBe(false);
 		expect(result.errors).toContain('Missing or invalid "acts" field (expected array)');
@@ -106,7 +110,7 @@ describe('validateStoryData', () => {
 
 	it('reports missing actLineMeta array', () => {
 		const data = makeValidData();
-		(data as any).actLineMeta = null;
+		asRaw(data).actLineMeta = null;
 		const result = validateStoryData(data);
 		expect(result.isValid).toBe(false);
 		expect(result.errors).toContain('Missing or invalid "actLineMeta" field (expected array)');
@@ -114,7 +118,7 @@ describe('validateStoryData', () => {
 
 	it('reports missing messages array', () => {
 		const data = makeValidData();
-		(data as any).messages = 42;
+		asRaw(data).messages = 42;
 		const result = validateStoryData(data);
 		expect(result.isValid).toBe(false);
 		expect(result.errors).toContain('Missing or invalid "messages" field (expected array)');
@@ -130,7 +134,7 @@ describe('validateStoryData', () => {
 
 	it('reports missing story.name', () => {
 		const data = makeValidData();
-		(data.story as any).name = 123;
+		asRaw(data.story).name = 123;
 		const result = validateStoryData(data);
 		expect(result.isValid).toBe(false);
 		expect(result.errors).toContain('story.name is missing or not a string');
@@ -197,7 +201,7 @@ describe('validateStoryData', () => {
 
 		it('rejects messagePhases that is not an array', () => {
 			const data = makeValidData();
-			(data as any).messagePhases = { messageId: 'msg-1' };
+			asRaw(data).messagePhases = { messageId: 'msg-1' };
 			const result = validateStoryData(data);
 			expect(result.isValid).toBe(false);
 			expect(result.errors[0]).toContain('messagePhases');
@@ -206,7 +210,7 @@ describe('validateStoryData', () => {
 		it('rejects malformed elements', () => {
 			const data = makeValidData();
 			// missing `content`
-			(data as any).messagePhases = [{ messageId: 'msg-1', phaseName: 'WRITER', reasoning: null, sequence: 0 }];
+			asRaw(data).messagePhases = [{ messageId: 'msg-1', phaseName: 'WRITER', reasoning: null, sequence: 0 }];
 			const result = validateStoryData(data);
 			expect(result.isValid).toBe(false);
 			expect(result.errors[0]).toContain('messagePhases');

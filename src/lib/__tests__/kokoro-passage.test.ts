@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { stripFormatting, buildTTSPassage } from '$lib/kokoro/passage';
-import type { NarrativeVariables } from '$lib/ai/narrative-types';
+import { stripFormatting, buildTTSPassage } from '#lib/kokoro/passage';
+import type { NarrativeVariables } from '#lib/ai/narrative-types';
 
 describe('stripFormatting', () => {
 	it('removes HTML tags', () => {

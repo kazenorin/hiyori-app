@@ -2,12 +2,12 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { getLoadStoryStore, type ActLineSelection } from './load-story-state.svelte';
-	import { loadStoryOverwrite, loadStoryAsNew } from '$lib/features/story-export-load/story-loader';
-	import { t } from '$lib/i18n';
-	import { toaster } from '$lib/stores/toaster.svelte';
-	import Card from '$lib/components/ui/Card.svelte';
-	import Spinner from '$lib/components/ui/Spinner.svelte';
-	import Icon from '$lib/components/ui/Icon.svelte';
+	import { loadStoryOverwrite, loadStoryAsNew } from '#lib/features/story-export-load/story-loader';
+	import { t } from '#lib/i18n';
+	import { toaster } from '#lib/stores/toaster.svelte';
+	import Card from '#lib/components/ui/Card.svelte';
+	import Spinner from '#lib/components/ui/Spinner.svelte';
+	import Icon from '#lib/components/ui/Icon.svelte';
 
 	const store = getLoadStoryStore();
 

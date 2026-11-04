@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { MemoryItem } from '$lib/features/memory';
+import type { LocationItem, Memory, MemoryItem } from '#lib/features/memory';
 
 vi.mock('@tauri-apps/api/core', () => ({
 	invoke: vi.fn(async () => {}),
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -21,11 +21,11 @@ const mockDb = {
 	select: vi.fn(async () => []),
 };
 
-vi.mock('$lib/db/database', () => ({
+vi.mock('#lib/db/database', () => ({
 	getDatabase: () => mockDb,
 }));
 
-vi.mock('$lib/db/memory-database', () => ({
+vi.mock('#lib/db/memory-database', () => ({
 	getMemoryDatabase: () => ({
 		execute: vi.fn(async () => ({ rowsAffected: 0 })),
 		select: vi.fn(async () => []),
@@ -38,7 +38,7 @@ vi.mock('ai', () => ({
 	tool: vi.fn((def) => def),
 }));
 
-vi.mock('$lib/ai/provider/provider', () => ({
+vi.mock('#lib/ai/provider/provider', () => ({
 	createEmbeddingModel: vi.fn(() => ({})),
 }));
 
@@ -47,11 +47,11 @@ const mockTraceActLineChain = vi.fn(async (_actLineId: string) => [
 	{ actLineId: 'line-2', actNumber: 2, isMainLine: false },
 ]);
 
-vi.mock('$lib/db/act-lines', () => ({
+vi.mock('#lib/db/act-lines', () => ({
 	batchResolveActLineInfo: vi.fn(async () => new Map()),
 }));
 
-vi.mock('$lib/db/acts', () => ({
+vi.mock('#lib/db/acts', () => ({
 	traceActLineChain: (actLineId: string) => mockTraceActLineChain(actLineId),
 }));
 
@@ -76,10 +76,21 @@ const mockSearchResults: MemoryItem[] = [
 	},
 ];
 
-const noOpResolveAliases = vi.fn(async (_s: any, _a: any, name: string) => [name]);
+type MemoryApi = Pick<Memory, 'resolveAliases' | 'search' | 'searchByLocation' | 'searchLocations' | 'sampleByLocation'>;
+
+function makeMemoryApi(overrides: Partial<MemoryApi> = {}): MemoryApi {
+	return {
+		resolveAliases: vi.fn(async (_storyId: string, _actLineIds: string[], name: string) => [name]),
+		search: vi.fn(async () => [] as MemoryItem[]),
+		searchByLocation: vi.fn(async () => [] as MemoryItem[]),
+		searchLocations: vi.fn(async () => [] as LocationItem[]),
+		sampleByLocation: vi.fn(async () => [] as MemoryItem[]),
+		...overrides,
+	};
+}
 
 describe('createQueryMemoriesTool', () => {
-	let createQueryMemoriesTool: typeof import('$lib/ai/tools/query-memories').createQueryMemoriesTool;
+	let createQueryMemoriesTool: typeof import('#lib/ai/tools/query-memories').createQueryMemoriesTool;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
@@ -88,7 +99,7 @@ describe('createQueryMemoriesTool', () => {
 		vi.doMock('@tauri-apps/api/core', () => ({
 			invoke: vi.fn(async () => {}),
 		}));
-		vi.doMock('$lib/logging/logger', () => ({
+		vi.doMock('#lib/logging/logger', () => ({
 			log: {
 				info: vi.fn(async () => {}),
 				error: vi.fn(async () => {}),
@@ -98,8 +109,8 @@ describe('createQueryMemoriesTool', () => {
 			fileLog: vi.fn(async () => {}),
 			setLogLevel: vi.fn(),
 		}));
-		vi.doMock('$lib/db/database', () => ({ getDatabase: () => mockDb }));
-		vi.doMock('$lib/db/memory-database', () => ({
+		vi.doMock('#lib/db/database', () => ({ getDatabase: () => mockDb }));
+		vi.doMock('#lib/db/memory-database', () => ({
 			getMemoryDatabase: () => ({
 				execute: vi.fn(async () => ({ rowsAffected: 0 })),
 				select: vi.fn(async () => []),
@@ -110,24 +121,24 @@ describe('createQueryMemoriesTool', () => {
 			embedMany: vi.fn(async () => ({ embeddings: [[0.1, 0.2]] })),
 			tool: vi.fn((def) => def),
 		}));
-		vi.doMock('$lib/ai/provider/provider', () => ({
+		vi.doMock('#lib/ai/provider/provider', () => ({
 			createEmbeddingModel: vi.fn(() => ({})),
 		}));
-		vi.doMock('$lib/db/act-lines', () => ({
+		vi.doMock('#lib/db/act-lines', () => ({
 			batchResolveActLineInfo: vi.fn(async () => new Map()),
 		}));
-		vi.doMock('$lib/db/acts', () => ({
+		vi.doMock('#lib/db/acts', () => ({
 			traceActLineChain: (actLineId: string) => mockTraceActLineChain(actLineId),
 		}));
 
-		const mod = await import('$lib/ai/tools/query-memories');
+		const mod = await import('#lib/ai/tools/query-memories');
 		createQueryMemoriesTool = mod.createQueryMemoriesTool;
 	});
 
 	it('returns empty array when no parameters provided', async () => {
 		const searchSpy = vi.fn(async () => mockSearchResults);
 		const searchByLocSpy = vi.fn(async () => mockSearchResults);
-		const mem = { resolveAliases: noOpResolveAliases, search: searchSpy, searchByLocation: searchByLocSpy } as any;
+		const mem = makeMemoryApi({ search: searchSpy, searchByLocation: searchByLocSpy });
 
 		const toolDef = createQueryMemoriesTool({
 			memory: mem,
@@ -152,7 +163,7 @@ describe('createQueryMemoriesTool', () => {
 
 	it('calls search when only characterQuery provided with currentActOnly=true', async () => {
 		const searchSpy = vi.fn(async () => mockSearchResults);
-		const mem = { resolveAliases: noOpResolveAliases, search: searchSpy, searchByLocation: vi.fn(async () => []) } as any;
+		const mem = makeMemoryApi({ search: searchSpy, searchByLocation: vi.fn(async () => []) });
 
 		const toolDef = createQueryMemoriesTool({
 			memory: mem,
@@ -179,7 +190,7 @@ describe('createQueryMemoriesTool', () => {
 
 	it('calls search with lineage actLineIds when currentActOnly=false', async () => {
 		const searchSpy = vi.fn(async () => mockSearchResults);
-		const mem = { resolveAliases: noOpResolveAliases, search: searchSpy, searchByLocation: vi.fn(async () => []) } as any;
+		const mem = makeMemoryApi({ search: searchSpy, searchByLocation: vi.fn(async () => []) });
 
 		const toolDef = createQueryMemoriesTool({
 			memory: mem,
@@ -211,13 +222,7 @@ describe('createQueryMemoriesTool', () => {
 		];
 		const searchLocationsSpy = vi.fn(async () => locationItems);
 		const sampleByLocationSpy = vi.fn(async () => mockSearchResults);
-		const mem = {
-			resolveAliases: noOpResolveAliases,
-			search: vi.fn(async () => []),
-			searchByLocation: vi.fn(async () => []),
-			searchLocations: searchLocationsSpy,
-			sampleByLocation: sampleByLocationSpy,
-		} as any;
+		const mem = makeMemoryApi({ searchLocations: searchLocationsSpy, sampleByLocation: sampleByLocationSpy });
 
 		const toolDef = createQueryMemoriesTool({
 			memory: mem,
@@ -246,7 +251,7 @@ describe('createQueryMemoriesTool', () => {
 
 	it('calls searchByLocation with lineage actLineIds when currentActOnly=false', async () => {
 		const searchByLocSpy = vi.fn(async () => mockSearchResults);
-		const mem = { resolveAliases: noOpResolveAliases, search: vi.fn(async () => []), searchByLocation: searchByLocSpy } as any;
+		const mem = makeMemoryApi({ search: vi.fn(async () => []), searchByLocation: searchByLocSpy });
 
 		const toolDef = createQueryMemoriesTool({
 			memory: mem,
@@ -282,7 +287,7 @@ describe('createQueryMemoriesTool', () => {
 			location: 'cave',
 		}));
 		const searchSpy = vi.fn(async () => manyResults);
-		const mem = { resolveAliases: noOpResolveAliases, search: searchSpy, searchByLocation: vi.fn(async () => []) } as any;
+		const mem = makeMemoryApi({ search: searchSpy, searchByLocation: vi.fn(async () => []) });
 
 		const toolDef = createQueryMemoriesTool({
 			memory: mem,
@@ -299,14 +304,14 @@ describe('createQueryMemoriesTool', () => {
 			{ toolCallId: 'test', messages: [], context: {} }
 		);
 
-		expect((result as any).length).toBe(10);
-		expect((result as any).map((r: any) => r.memory)).toEqual(manyResults.slice(0, 10).map((m) => m.memory));
+		expect(result.length).toBe(10);
+		expect(result.map((r) => r.memory)).toEqual(manyResults.slice(0, 10).map((m) => m.memory));
 	});
 
 	it('returns all results when fewer than limit', async () => {
 		const fewResults = mockSearchResults;
 		const searchSpy = vi.fn(async () => fewResults);
-		const mem = { resolveAliases: noOpResolveAliases, search: searchSpy, searchByLocation: vi.fn(async () => []) } as any;
+		const mem = makeMemoryApi({ search: searchSpy, searchByLocation: vi.fn(async () => []) });
 
 		const toolDef = createQueryMemoriesTool({
 			memory: mem,
@@ -323,7 +328,7 @@ describe('createQueryMemoriesTool', () => {
 			{ toolCallId: 'test', messages: [], context: {} }
 		);
 
-		expect((result as any).length).toBe(2);
+		expect(result.length).toBe(2);
 	});
 
 	it('samples randomly for timeAndLocation-only case', async () => {
@@ -350,14 +355,8 @@ describe('createQueryMemoriesTool', () => {
 			location: 'Cave',
 		}));
 		const searchLocationsSpy = vi.fn(async () => locationItems);
-		const sampleByLocationSpy = vi.fn(async (loc: any) => (loc.location === 'Tavern' ? tavernMemories : caveMemories));
-		const mem = {
-			resolveAliases: noOpResolveAliases,
-			search: vi.fn(async () => []),
-			searchByLocation: vi.fn(async () => []),
-			searchLocations: searchLocationsSpy,
-			sampleByLocation: sampleByLocationSpy,
-		} as any;
+		const sampleByLocationSpy = vi.fn(async (loc: LocationItem) => (loc.location === 'Tavern' ? tavernMemories : caveMemories));
+		const mem = makeMemoryApi({ searchLocations: searchLocationsSpy, sampleByLocation: sampleByLocationSpy });
 
 		const toolDef = createQueryMemoriesTool({
 			memory: mem,
@@ -374,9 +373,9 @@ describe('createQueryMemoriesTool', () => {
 			{ toolCallId: 'test', messages: [], context: {} }
 		);
 
-		expect((result as any).length).toBe(10);
+		expect(result.length).toBe(10);
 		const allMemories = [...tavernMemories, ...caveMemories];
-		for (const r of result as any) {
+		for (const r of result) {
 			expect(allMemories.some((m) => m.memory === r.memory)).toBe(true);
 		}
 	});

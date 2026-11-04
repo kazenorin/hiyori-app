@@ -4,12 +4,12 @@ vi.mock('ai', () => ({
 	tool: vi.fn((def) => def),
 }));
 
-vi.mock('$lib/localization', () => ({
+vi.mock('#lib/localization', () => ({
 	ls: vi.fn((key: string) => key),
 }));
 
-import { createRecordRequirementTool, buildRequirementTools } from '$lib/ai/tools/record-requirement';
-import type { RequirementCategory } from '$lib/definitions/requirements';
+import { createRecordRequirementTool, buildRequirementTools } from '#lib/ai/tools/record-requirement';
+import type { RequirementCategory } from '#lib/definitions/requirements';
 
 const callCtx = { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} } as never;
 

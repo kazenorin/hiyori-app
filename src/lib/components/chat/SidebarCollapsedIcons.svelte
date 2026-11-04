@@ -1,18 +1,18 @@
 <script lang="ts">
-	import { t } from '$lib/i18n';
-	import { version } from '$lib/app/version';
+	import { t } from '#lib/i18n';
+	import { version } from '#lib/app/version';
 	import Sortable from 'sortablejs';
-	import { setStoryOrder } from '$lib/stores/stories.svelte';
-	import { getSettings, updateSettings } from '$lib/stores/settings.svelte';
-	import type { Act } from '$lib/db/acts';
-	import type { ActLineMeta } from '$lib/db/act-lines';
-	import type { LineageGroupsResult } from '$lib/db/lineage-groups';
+	import { setStoryOrder } from '#lib/stores/stories.svelte';
+	import { getSettings, updateSettings } from '#lib/stores/settings.svelte';
+	import type { Act } from '#lib/db/acts';
+	import type { ActLineMeta } from '#lib/db/act-lines';
+	import type { LineageGroupsResult } from '#lib/db/lineage-groups';
 	import { deriveCollapsedGroups } from './collapsed-icons';
 	import SidebarRowMenu from './SidebarRowMenu.svelte';
-	import Icon from '$lib/components/ui/Icon.svelte';
+	import Icon from '#lib/components/ui/Icon.svelte';
 	import { resolve } from '$app/paths';
-	import { canActBeDeleted, canActLineBeDeleted } from '$lib/db/acts';
-	import { openSettingsDialog } from '$lib/features/settings/settings-dialog-state.svelte';
+	import { canActBeDeleted, canActLineBeDeleted } from '#lib/db/acts';
+	import { openSettingsDialog } from '#lib/features/settings/settings-dialog-state.svelte';
 
 	interface Props {
 		stories: { id: string; name: string }[];

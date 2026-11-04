@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { settings, updateSettings, type ThemeMode } from '$lib/stores/settings.svelte';
-	import { t } from '$lib/i18n';
-	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
-	import SearchableSelect from '$lib/components/SearchableSelect.svelte';
-	import Card from '$lib/components/ui/Card.svelte';
-	import { getLocaleItems, getThemeModeItems, getColorThemeItems } from '$lib/features/settings-options';
+	import { settings, updateSettings, type ThemeMode } from '#lib/stores/settings.svelte';
+	import { t } from '#lib/i18n';
+	import ThemedSelect from '#lib/components/ThemedSelect.svelte';
+	import SearchableSelect from '#lib/components/SearchableSelect.svelte';
+	import Card from '#lib/components/ui/Card.svelte';
+	import { getLocaleItems, getThemeModeItems, getColorThemeItems } from '#lib/features/settings-options';
 
 	const localeItems = $derived(getLocaleItems());
 	const themeModeItems = $derived(getThemeModeItems());

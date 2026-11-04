@@ -1,5 +1,5 @@
 import { buildMetadata, toPhaseMetadata, type MessageMetadata, type PhaseMetadata } from '../chat-stream';
-import { getSummarizerProviderConfig, type ProviderConfig } from '$lib/stores/settings.svelte';
+import { getSummarizerProviderConfig, type ProviderConfig } from '#lib/stores/settings.svelte';
 import type { UIMessage } from './types';
 import type { PhaseName, UIScenePhase } from '../narrative-types';
 import type { AsyncPhaseResults } from '../pipeline/types';

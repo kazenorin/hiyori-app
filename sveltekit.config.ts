@@ -12,9 +12,6 @@ const config: Config = {
 		fallback: '200.html',
 	}),
 	paths: { base },
-	// SvelteKit 3 replaced the implicit `$lib` alias with Node subpath imports
-	// (`#lib`). Keep `$lib` so existing imports don't need rewriting.
-	alias: { $lib: 'src/lib' },
 };
 
 export default config;

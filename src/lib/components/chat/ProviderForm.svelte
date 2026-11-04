@@ -1,24 +1,24 @@
 <script lang="ts">
-	import { t } from '$lib/i18n';
-	import { fetchModels, type ModelInfo } from '$lib/ai/provider/models';
-	import { LMSTUDIO_BASE_URL, OLLAMA_BASE_URL, OPENAI_BASE_URL, OPENROUTER_BASE_URL } from '$lib/ai/provider/constants';
-	import { isTauriSync, getPlatformSync } from '$lib/runtime';
-	import type { ApiType, Provider, ProviderConfig } from '$lib/stores/settings.svelte';
+	import { t } from '#lib/i18n';
+	import { fetchModels, type ModelInfo } from '#lib/ai/provider/models';
+	import { LMSTUDIO_BASE_URL, OLLAMA_BASE_URL, OPENAI_BASE_URL, OPENROUTER_BASE_URL } from '#lib/ai/provider/constants';
+	import { isTauriSync, getPlatformSync } from '#lib/runtime';
+	import type { ApiType, Provider, ProviderConfig } from '#lib/stores/settings.svelte';
 	import type { LanguageModelCallOptions } from 'ai';
-	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
-	import TextField from '$lib/components/ui/TextField.svelte';
-	import Button from '$lib/components/ui/Button.svelte';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import Icon from '$lib/components/ui/Icon.svelte';
-	import ProviderTips from '$lib/components/chat/ProviderTips.svelte';
-	import AdvancedSettingsEditor from '$lib/components/chat/AdvancedSettingsEditor.svelte';
+	import ThemedSelect from '#lib/components/ThemedSelect.svelte';
+	import TextField from '#lib/components/ui/TextField.svelte';
+	import Button from '#lib/components/ui/Button.svelte';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import Icon from '#lib/components/ui/Icon.svelte';
+	import ProviderTips from '#lib/components/chat/ProviderTips.svelte';
+	import AdvancedSettingsEditor from '#lib/components/chat/AdvancedSettingsEditor.svelte';
 	import {
 		evaluateProviderTip,
 		expandSuggestionTemplate,
 		applyStripSuffix,
 		type TipEvaluationInput,
 		type ProviderConfigTip,
-	} from '$lib/ai/provider-tips/evaluator';
+	} from '#lib/ai/provider-tips/evaluator';
 
 	interface Props {
 		mode: 'add' | 'edit';

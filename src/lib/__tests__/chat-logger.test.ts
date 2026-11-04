@@ -18,19 +18,19 @@ const { mockFs } = vi.hoisted(() => {
 });
 
 // Mock dependencies before importing
-vi.mock('$lib/fs/file-system', () => ({
+vi.mock('#lib/fs/file-system', () => ({
 	fs: mockFs,
 }));
 
-vi.mock('$lib/fs/story-folders', () => ({
+vi.mock('#lib/fs/story-folders', () => ({
 	resolveStoryFolder: vi.fn(async () => 'test-story-folder'),
 }));
 
-vi.mock('$lib/stores/stories.svelte', () => ({
+vi.mock('#lib/stores/stories.svelte', () => ({
 	getActiveStory: vi.fn(() => ({ id: 'story-1', name: 'Test Story' })),
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -41,11 +41,11 @@ vi.mock('$lib/logging/logger', () => ({
 	getLogLevel: vi.fn(() => 'debug'),
 }));
 
-import { logMainChat, logWorldBuilderChat } from '$lib/logging/chat-logger';
-import { getLogLevel } from '$lib/logging/logger';
-import { getActiveStory } from '$lib/stores/stories.svelte';
-import type { Story } from '$lib/db/stories';
-import type { UIMessage } from '$lib/ai/chat/types';
+import { logMainChat, logWorldBuilderChat } from '#lib/logging/chat-logger';
+import { getLogLevel } from '#lib/logging/logger';
+import { getActiveStory } from '#lib/stores/stories.svelte';
+import type { Story } from '#lib/db/stories';
+import type { UIMessage } from '#lib/ai/chat/types';
 
 const mockWriteTextFile = vi.mocked(mockFs.writeTextFile);
 const mockGetLogLevel = vi.mocked(getLogLevel);

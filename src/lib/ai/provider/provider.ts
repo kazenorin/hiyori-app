@@ -2,9 +2,9 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
 import { createOllama } from 'ai-sdk-ollama';
 import { createOpenRouter } from '@openrouter/ai-sdk-provider';
-import type { ProviderConfig } from '$lib/stores/settings.svelte';
-import { resolveFetch } from '$lib/http/fetch';
-import { ERR_API_KEY_NOT_CONFIGURED } from '$lib/definitions/error-messages';
+import type { ProviderConfig } from '#lib/stores/settings.svelte';
+import { resolveFetch } from '#lib/http/fetch';
+import { ERR_API_KEY_NOT_CONFIGURED } from '#lib/definitions/error-messages';
 import { isOpenRouterBaseUrl, OPENAI_BASE_URL, OPENROUTER_ATTRIBUTION_HEADERS } from './constants';
 
 export async function createModel(config: ProviderConfig) {

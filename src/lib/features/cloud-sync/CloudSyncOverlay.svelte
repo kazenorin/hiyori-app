@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { t } from '$lib/i18n';
-	import Spinner from '$lib/components/ui/Spinner.svelte';
+	import { t } from '#lib/i18n';
+	import Spinner from '#lib/components/ui/Spinner.svelte';
 	import { Progress } from '@skeletonlabs/skeleton-svelte';
 	import { getCloudSyncStatus, getSyncProgress } from './cloud-sync.svelte';
 

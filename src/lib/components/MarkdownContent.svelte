@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { marked } from 'marked';
 	import DOMPurify from 'dompurify';
-	import { preprocessDialogue } from '$lib/utils/dialogue-preprocessor';
+	import { preprocessDialogue } from '#lib/utils/dialogue-preprocessor';
 
 	interface Props {
 		content: string;

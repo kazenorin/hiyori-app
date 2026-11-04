@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
-import { setFileSystem, fs } from '$lib/fs/file-system';
+import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
+import { setFileSystem, fs } from '#lib/fs/file-system';
 
 const { mockGenerateActPlot, mockEnsureWorldFile, mockResolveStoryFolder, mockGetLineDir, mockGetActNumber } = vi.hoisted(() => ({
 	mockGenerateActPlot: vi.fn(),
@@ -10,17 +10,17 @@ const { mockGenerateActPlot, mockEnsureWorldFile, mockResolveStoryFolder, mockGe
 	mockGetActNumber: vi.fn(),
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: { info: vi.fn(async () => {}), error: vi.fn(async () => {}), warn: vi.fn(async () => {}), debug: vi.fn(async () => {}) },
 	fileLog: vi.fn(async () => {}),
 }));
-vi.mock('$lib/ai/act-plot/act-plot-generator', () => ({ generateActPlot: mockGenerateActPlot }));
-vi.mock('$lib/ai/world-generator', () => ({ ensureWorldFile: mockEnsureWorldFile }));
-vi.mock('$lib/fs/story-folders', () => ({ resolveStoryFolder: mockResolveStoryFolder }));
-vi.mock('$lib/ai/card-output-path', () => ({ getLineDir: mockGetLineDir }));
-vi.mock('$lib/db/acts', () => ({ getActNumber: mockGetActNumber }));
+vi.mock('#lib/ai/act-plot/act-plot-generator', () => ({ generateActPlot: mockGenerateActPlot }));
+vi.mock('#lib/ai/world-generator', () => ({ ensureWorldFile: mockEnsureWorldFile }));
+vi.mock('#lib/fs/story-folders', () => ({ resolveStoryFolder: mockResolveStoryFolder }));
+vi.mock('#lib/ai/card-output-path', () => ({ getLineDir: mockGetLineDir }));
+vi.mock('#lib/db/acts', () => ({ getActNumber: mockGetActNumber }));
 
-import { ensureActPlot } from '$lib/ai/act-plot';
+import { ensureActPlot } from '#lib/ai/act-plot';
 
 const LINE_DIR = '/story/act-1/main-line';
 const story = { id: 's1', name: 'Story', locale: 'en', createdAt: 0, updatedAt: 0 };

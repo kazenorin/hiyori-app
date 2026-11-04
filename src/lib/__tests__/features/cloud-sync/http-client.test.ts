@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { withRetry } from '$lib/features/cloud-sync/http-client';
+import { withRetry } from '#lib/features/cloud-sync/http-client';
 
 describe('withRetry', () => {
 	it('returns the first successful result without retrying', async () => {

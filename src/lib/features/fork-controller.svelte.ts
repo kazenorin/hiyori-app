@@ -5,14 +5,14 @@ import {
 	forkActLineForInterview,
 	selectActLine,
 	getActiveStory,
-} from '$lib/stores/stories.svelte';
-import { getForkSequence, loadActLineMessages, getIsBusy, getMessages } from '$lib/ai/chat.svelte';
-import { enterActPlotInterviewMode } from '$lib/features/world-builder/world-builder.svelte';
-import { ensureWorldFile } from '$lib/ai/world-generator';
-import { setError as setStoryCreationError } from '$lib/features/world-builder/story-creation.svelte';
-import { log } from '$lib/logging/logger';
-import { t } from '$lib/i18n';
-import { toaster } from '$lib/stores/toaster.svelte';
+} from '#lib/stores/stories.svelte';
+import { getForkSequence, loadActLineMessages, getIsBusy, getMessages } from '#lib/ai/chat.svelte';
+import { enterActPlotInterviewMode } from '#lib/features/world-builder/world-builder.svelte';
+import { ensureWorldFile } from '#lib/ai/world-generator';
+import { setError as setStoryCreationError } from '#lib/features/world-builder/story-creation.svelte';
+import { log } from '#lib/logging/logger';
+import { t } from '#lib/i18n';
+import { toaster } from '#lib/stores/toaster.svelte';
 
 let isForking = $state(false);
 let forkChoiceIndex = $state<number | null>(null);

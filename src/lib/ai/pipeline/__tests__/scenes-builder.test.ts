@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('$lib/definitions/common-headers', () => ({
+vi.mock('#lib/definitions/common-headers', () => ({
 	sectionFormat: (t: string, lvl = 2) => `${'#'.repeat(lvl)} ${t}\n\n`,
 	sceneTitleHeader: () => 'Scene Title',
 	backgroundHeader: () => 'Background',
@@ -10,7 +10,7 @@ vi.mock('$lib/definitions/common-headers', () => ({
 	upcomingScenePlotHeader: () => 'Upcoming Scene Plot',
 	scenesHeader: () => 'Scenes',
 }));
-vi.mock('$lib/definitions/common-labels', () => ({ sceneWithNumberLabel: (n: number | string) => `Scene ${n}` }));
+vi.mock('#lib/definitions/common-labels', () => ({ sceneWithNumberLabel: (n: number | string) => `Scene ${n}` }));
 // scenes-builder only needs `hasContent` from message-builder; stub it so the test does not
 // pull message-builder's heavy transitive graph (narrative-types, pipeline-sections, template-renderer, …),
 // which cannot link against the partial common-headers/common-labels mocks above.
@@ -19,7 +19,7 @@ vi.mock('../message-builder', () => ({
 }));
 
 import { buildScenesSections, buildScenesMessage } from '../scenes-builder';
-import type { UIMessage } from '$lib/ai/chat/types';
+import type { UIMessage } from '#lib/ai/chat/types';
 
 const assistant = (sceneNumber: number, over: Partial<NonNullable<UIMessage['variables']>> = {}): UIMessage => ({
 	id: `a${sceneNumber}`,

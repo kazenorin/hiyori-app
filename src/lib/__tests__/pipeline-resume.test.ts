@@ -7,12 +7,12 @@ const flags = vi.hoisted(() => ({
 	reevalFrequency: 5,
 }));
 
-vi.mock('$lib/localization', () => ({
+vi.mock('#lib/localization', () => ({
 	ls: (key: string) => key,
 	t: (key: string) => key,
 }));
 
-vi.mock('$lib/stores/settings.svelte', () => ({
+vi.mock('#lib/stores/settings.svelte', () => ({
 	isReviewerEnabled: () => flags.reviewerEnabled,
 	isQuickReview: () => flags.quickReview,
 	isPlotPlannerEnabled: () => flags.plotPlannerEnabled,
@@ -22,33 +22,33 @@ vi.mock('$lib/stores/settings.svelte', () => ({
 	isPhraseHighlightingEnabled: () => false,
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: { info: vi.fn(async () => {}), error: vi.fn(async () => {}), warn: vi.fn(async () => {}), debug: vi.fn(async () => {}) },
 	fileLog: vi.fn(async () => {}),
 }));
 
-vi.mock('$lib/ai/tools/tools', () => ({
+vi.mock('#lib/ai/tools/tools', () => ({
 	guardToolsForPhase: (tools: unknown) => tools,
 }));
 
-vi.mock('$lib/ai/reviewer-output-parser', () => ({
+vi.mock('#lib/ai/reviewer-output-parser', () => ({
 	reviewerAcceptsAsIs: vi.fn(() => false),
 }));
 
-vi.mock('$lib/ai/pipeline/phase-executor', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('$lib/ai/pipeline/phase-executor')>();
+vi.mock('#lib/ai/pipeline/phase-executor', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/ai/pipeline/phase-executor')>();
 	return { ...actual, executeStreamingPhase: vi.fn() };
 });
 
-import { executeStreamingPhase } from '$lib/ai/pipeline/phase-executor';
-import { aggregateMetadataFromPhases } from '$lib/ai/pipeline/phase-executor';
-import { runReviewerEditorPhases, runGamePhases, type PipelineRunContext, type TrackPhase } from '$lib/ai/pipeline/runners';
-import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';
-import type { PipelineState } from '$lib/ai/pipeline/types';
-import type { StreamResultMetadata } from '$lib/ai/streaming';
-import type { PhaseMetadata } from '$lib/ai/chat-stream';
-import type { ActLineContext } from '$lib/ai/pipeline/types';
-import { createNarrativeOverrides } from '$lib/ai/narrative-types';
+import { executeStreamingPhase } from '#lib/ai/pipeline/phase-executor';
+import { aggregateMetadataFromPhases } from '#lib/ai/pipeline/phase-executor';
+import { runReviewerEditorPhases, runGamePhases, type PipelineRunContext, type TrackPhase } from '#lib/ai/pipeline/runners';
+import { reviewerAcceptsAsIs } from '#lib/ai/reviewer-output-parser';
+import type { PipelineState } from '#lib/ai/pipeline/types';
+import type { StreamResultMetadata } from '#lib/ai/streaming';
+import type { PhaseMetadata } from '#lib/ai/chat-stream';
+import type { ActLineContext } from '#lib/ai/pipeline/types';
+import { createNarrativeOverrides } from '#lib/ai/narrative-types';
 
 const executeStreamingPhaseMock = vi.mocked(executeStreamingPhase);
 const reviewerAcceptsAsIsMock = vi.mocked(reviewerAcceptsAsIs);

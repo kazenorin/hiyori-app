@@ -1,12 +1,14 @@
 import { vi } from 'vitest';
-import type { Database, QueryResult } from '$lib/db/types';
+import type { Database, QueryResult } from '#lib/db/types';
+
+type Row = Record<string, unknown>;
 
 export function createMockDatabase(): Database & {
-	getTables: () => Map<string, any[]>;
-	seed: (tableName: string, rows: any[]) => void;
+	getTables: () => Map<string, Row[]>;
+	seed: (tableName: string, rows: Row[]) => void;
 	clear: () => void;
 } {
-	const tables = new Map<string, any[]>();
+	const tables = new Map<string, Row[]>();
 
 	return {
 		execute: vi.fn(async (query: string, params?: unknown[]): Promise<QueryResult> => {
@@ -50,7 +52,7 @@ export function createMockDatabase(): Database & {
 
 		getTables: () => tables,
 
-		seed(tableName: string, rows: any[]) {
+		seed(tableName: string, rows: Row[]) {
 			tables.set(tableName, [...rows]);
 		},
 
@@ -78,7 +80,7 @@ export function createMockDatabase(): Database & {
 		if (maxMatch) {
 			const col = maxMatch[1];
 			if (rows.length === 0) return [{ [`MAX(${col})`]: null }];
-			const maxVal = Math.max(...rows.map((r) => r[col] ?? 0));
+			const maxVal = Math.max(...rows.map((r) => Number(r[col] ?? 0)));
 			return [{ [`MAX(${col})`]: maxVal }];
 		}
 
@@ -88,9 +90,9 @@ export function createMockDatabase(): Database & {
 				const col = orderMatch[1];
 				const dir = (orderMatch[2] ?? 'ASC').toUpperCase();
 				const sorted = [...rows].sort((a, b) => {
-					const av = a[col] ?? 0;
-					const bv = b[col] ?? 0;
-					return dir === 'DESC' ? (bv as number) - (av as number) : (av as number) - (bv as number);
+					const av = Number(a[col] ?? 0);
+					const bv = Number(b[col] ?? 0);
+					return dir === 'DESC' ? bv - av : av - bv;
 				});
 				return sorted;
 			}

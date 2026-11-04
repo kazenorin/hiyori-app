@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
-import { setFileSystem } from '$lib/fs/file-system';
-import * as dbStoryFolders from '$lib/db/story-folders';
+import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
+import { setFileSystem } from '#lib/fs/file-system';
+import * as dbStoryFolders from '#lib/db/story-folders';
 import {
 	readDirectoryNodes,
 	classifyManagedConfig,
@@ -12,7 +12,7 @@ import {
 	CRITICAL_SYSTEM_FILENAMES,
 	renameFile,
 	deriveRenamedPath,
-} from '$lib/fs/file-tree';
+} from '#lib/fs/file-tree';
 
 describe('readDirectoryNodes — managedConfig classification', () => {
 	let fs: InMemoryFileSystem;

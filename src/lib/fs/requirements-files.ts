@@ -1,4 +1,4 @@
-import { fs } from '$lib/fs/file-system';
+import { fs } from '#lib/fs/file-system';
 
 const REQUIREMENTS_FILENAME = 'requirements.md';
 

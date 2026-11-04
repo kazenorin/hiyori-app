@@ -1,5 +1,5 @@
-import { ls } from '$lib/localization';
-import type { ActPhaseBoundary } from '$lib/db/act-lines';
+import { ls } from '#lib/localization';
+import type { ActPhaseBoundary } from '#lib/db/act-lines';
 import {
 	worldContentHeader,
 	actPlotHeader,
@@ -42,9 +42,9 @@ import {
 	upcomingScenePlotGuidanceDescription,
 	upcomingScenePlotPhaseEventDescription,
 } from './pipeline-prompts';
-import { actWithNumberLabel, aliasesLabel } from '$lib/definitions/common-labels';
-import type { CharacterProfileEntity } from '$lib/db/character-profiles';
-import type { PlotMode } from '$lib/ai/narrative-types';
+import { actWithNumberLabel, aliasesLabel } from '#lib/definitions/common-labels';
+import type { CharacterProfileEntity } from '#lib/db/character-profiles';
+import type { PlotMode } from '#lib/ai/narrative-types';
 
 export const interviewTranscriptDescription = () => ls('common.descriptions.interviewTranscript');
 export const playerPreferencesDescription = () => ls('common.descriptions.playerPreferences');

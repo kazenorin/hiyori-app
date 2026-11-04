@@ -11,11 +11,11 @@ const mockDb = {
 	}),
 };
 
-vi.mock('$lib/db/database', () => ({
+vi.mock('#lib/db/database', () => ({
 	getDatabase: () => mockDb,
 }));
 
-import { appendInventoryEvents, getLatestPerItem, type InventoryRow } from '$lib/db/inventory';
+import { appendInventoryEvents, getLatestPerItem, type InventoryRow } from '#lib/db/inventory';
 
 function makeRow(overrides: Partial<InventoryRow> = {}): InventoryRow {
 	return {

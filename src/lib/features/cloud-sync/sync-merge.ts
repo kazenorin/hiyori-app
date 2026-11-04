@@ -15,26 +15,26 @@ import {
 	type ActLineEntry,
 	type ActLineEvent,
 	type ActLineMeta,
-} from '$lib/db/act-lines';
-import { getMessagesByIds, insertMessage, parseVariables, type Message } from '$lib/db/messages';
-import { getPhasesForMessages, upsertMessagePhases } from '$lib/db/message-phases';
-import { getStory } from '$lib/db/stories';
-import { getAct, upsertAct, type Act } from '$lib/db/acts';
-import { getStoryFolderInfo } from '$lib/db/story-folders';
+} from '#lib/db/act-lines';
+import { getMessagesByIds, insertMessage, parseVariables, type Message } from '#lib/db/messages';
+import { getPhasesForMessages, upsertMessagePhases } from '#lib/db/message-phases';
+import { getStory } from '#lib/db/stories';
+import { getAct, upsertAct, type Act } from '#lib/db/acts';
+import { getStoryFolderInfo } from '#lib/db/story-folders';
 import {
 	cloneCharacterProfiles,
 	getCharacterProfilesForActLines,
 	insertCharacterProfile,
 	type InsertCharacterProfileInput,
-} from '$lib/db/character-profiles';
-import { cloneDirectorNotes, getDirectorNotesForActLines, insertDirectorNote, type DirectorNote } from '$lib/db/director-notes';
-import { cloneInventory } from '$lib/db/inventory';
-import { getMemoryProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
-import { log } from '$lib/logging/logger';
-import { copyActPlotFileBetweenLines } from '$lib/ai/card-output-path';
-import { cleanupActLine } from '$lib/ai/chat/run-manager';
+} from '#lib/db/character-profiles';
+import { cloneDirectorNotes, getDirectorNotesForActLines, insertDirectorNote, type DirectorNote } from '#lib/db/director-notes';
+import { cloneInventory } from '#lib/db/inventory';
+import { getMemoryProviderConfig, isMemoryAvailable } from '#lib/stores/settings.svelte';
+import { log } from '#lib/logging/logger';
+import { copyActPlotFileBetweenLines } from '#lib/ai/card-output-path';
+import { cleanupActLine } from '#lib/ai/chat/run-manager';
 import JSZip from 'jszip';
-import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
+import type { StoryExportData } from '#lib/features/story-export-load/archive-schema';
 import {
 	loadStoryOverwrite,
 	writeFilesFromZip,
@@ -44,7 +44,7 @@ import {
 	toDirectorNotes,
 	toCharacterProfileInputs,
 	upsertMessagePhasesFromRows,
-} from '$lib/features/story-export-load/story-loader';
+} from '#lib/features/story-export-load/story-loader';
 
 export type LineageDecision = 'identical' | 'remote-stale' | 'local-stale' | 'divergent';
 
@@ -300,7 +300,7 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 			const config = getMemoryProviderConfig();
 			if (config) {
 				try {
-					const { Memory } = await import('$lib/features/memory');
+					const { Memory } = await import('#lib/features/memory');
 					const messageIds = await getMessageIdsUpToSequence(input.actLineId, forkSequence);
 					// The fork-point clone carries a new id; keep memory refs aligned.
 					const remappedIds = messageIds.map((id) => remappedMessageIds.get(id) ?? id);

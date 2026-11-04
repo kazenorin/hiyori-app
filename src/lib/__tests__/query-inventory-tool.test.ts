@@ -4,7 +4,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 	invoke: vi.fn(async () => {}),
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -20,9 +20,9 @@ const mockTraceActLineChain = vi.fn(async (actLineId: string, _descending?: bool
 	{ actLineId: 'line-1', actNumber: 1, isMainLine: true },
 ]);
 
-vi.mock('$lib/db/act-lines', () => ({}));
+vi.mock('#lib/db/act-lines', () => ({}));
 
-vi.mock('$lib/db/acts', () => ({
+vi.mock('#lib/db/acts', () => ({
 	traceActLineChain: (actLineId: string, descending?: boolean) => mockTraceActLineChain(actLineId, descending),
 }));
 
@@ -32,14 +32,14 @@ const mockResolveCharacterNames = vi.fn(async (_actLineId: string, name: string,
 	name,
 ]);
 
-vi.mock('$lib/db/inventory', () => ({
+vi.mock('#lib/db/inventory', () => ({
 	getLatestPerItem: (...args: unknown[]) => mockGetLatestPerItem(...(args as [string, string[], unknown])),
 	getInventoryEvents: (...args: unknown[]) => mockGetInventoryEvents(...(args as [string[], unknown])),
 	resolveCharacterNames: (...args: unknown[]) => mockResolveCharacterNames(...(args as [string, string, { actLineId: string }[]?])),
 }));
 
-import { createQueryInventoryTool } from '$lib/ai/tools/query-inventory';
-import type { InventoryItem, InventoryEvent, InventoryCategory, EquipStatus, InventoryEventType } from '$lib/db/inventory';
+import { createQueryInventoryTool } from '#lib/ai/tools/query-inventory';
+import type { InventoryItem, InventoryEvent, InventoryCategory, EquipStatus, InventoryEventType } from '#lib/db/inventory';
 
 interface InventoryResult {
 	name: string;

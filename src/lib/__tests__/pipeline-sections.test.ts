@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('$lib/localization', () => ({
+vi.mock('#lib/localization', () => ({
 	ls: (key: string, opts?: Record<string, unknown>) => {
 		if (key === 'pipeline.labels.lastSeen' && opts) return `last seen: scene ${opts.sceneNumber}`;
 		if (key === 'pipeline.labels.noDescription') return 'No description available.';
@@ -27,7 +27,7 @@ vi.mock('$lib/localization', () => ({
 	},
 }));
 
-vi.mock('$lib/definitions/common-headers', () => {
+vi.mock('#lib/definitions/common-headers', () => {
 	const stub = () => 'header';
 	return {
 		sectionFormat: (text: string, level: number = 2) => '#'.repeat(level) + ' ' + text + '\n\n',
@@ -57,7 +57,7 @@ vi.mock('$lib/definitions/common-headers', () => {
 	};
 });
 
-vi.mock('$lib/definitions/common-labels', () => ({
+vi.mock('#lib/definitions/common-labels', () => ({
 	actWithNumberLabel: (n: number) => `Act ${n}`,
 	aliasesLabel: () => 'Aliases',
 	sceneWithNumberLabel: (n: number | string) => `Scene ${n}`,
@@ -65,7 +65,7 @@ vi.mock('$lib/definitions/common-labels', () => ({
 	lastUpdateLabel: () => 'Last update',
 }));
 
-vi.mock('$lib/definitions/character-profile-labels', () => ({
+vi.mock('#lib/definitions/character-profile-labels', () => ({
 	stateLabel: () => 'State',
 	loglineLabel: () => 'Logline',
 	goalLabel: () => 'Goal',
@@ -74,8 +74,8 @@ vi.mock('$lib/definitions/character-profile-labels', () => ({
 	importanceLabel: () => 'Importance',
 }));
 
-import { formatCharacterProfilesSection, formatCharacterProfileAsMessage, parseSceneDetails } from '$lib/definitions/pipeline-sections';
-import type { CharacterProfileEntity } from '$lib/db/character-profiles';
+import { formatCharacterProfilesSection, formatCharacterProfileAsMessage, parseSceneDetails } from '#lib/definitions/pipeline-sections';
+import type { CharacterProfileEntity } from '#lib/db/character-profiles';
 
 function makeProfile(overrides: Partial<CharacterProfileEntity> = {}): CharacterProfileEntity {
 	return {

@@ -4,7 +4,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 	invoke: vi.fn(async () => {}),
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -18,20 +18,20 @@ vi.mock('ai', () => ({
 	tool: vi.fn((def) => def),
 }));
 
-vi.mock('$lib/localization', () => ({
+vi.mock('#lib/localization', () => ({
 	ls: vi.fn((key: string, _params?: Record<string, string | number>) => key),
 }));
 
-vi.mock('$lib/db/character-profiles', () => ({
+vi.mock('#lib/db/character-profiles', () => ({
 	insertCharacterProfile: vi.fn(async () => {}),
 	areAnyCharacterNamesKnown: vi.fn(async () => false),
 	ensurePreferredInAliases: (preferredName: string, aliases: string[]) => [preferredName, ...aliases],
 	toCanonicalName: (name: string) => name,
 }));
 
-import { createIntroduceCharacterTool, buildIntroduceCharacterTools } from '$lib/ai/tools/introduce-character';
-import { insertCharacterProfile, areAnyCharacterNamesKnown } from '$lib/db/character-profiles';
-import type { ToolContext } from '$lib/ai/tools/tools';
+import { createIntroduceCharacterTool, buildIntroduceCharacterTools } from '#lib/ai/tools/introduce-character';
+import { insertCharacterProfile, areAnyCharacterNamesKnown } from '#lib/db/character-profiles';
+import type { ToolContext } from '#lib/ai/tools/tools';
 
 function createMockContext(currentScene: number | null): ToolContext {
 	return {

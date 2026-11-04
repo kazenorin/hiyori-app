@@ -1,6 +1,6 @@
-import type { Act } from '$lib/db/acts';
-import type { ActLineMeta } from '$lib/db/act-lines';
-import type { LineageGroupsResult } from '$lib/db/lineage-groups';
+import type { Act } from '#lib/db/acts';
+import type { ActLineMeta } from '#lib/db/act-lines';
+import type { LineageGroupsResult } from '#lib/db/lineage-groups';
 
 export interface CollapsedLine {
 	lineId: string;

@@ -1,8 +1,8 @@
-import { getDatabase } from '$lib/db/database';
-import { isTauriSync } from '$lib/runtime';
-import { fs } from '$lib/fs/file-system';
-import { loadManifest, type ConfigAssetEntry } from '$lib/fs/config-manifest';
-import { log } from '$lib/logging/logger';
+import { getDatabase } from '#lib/db/database';
+import { isTauriSync } from '#lib/runtime';
+import { fs } from '#lib/fs/file-system';
+import { loadManifest, type ConfigAssetEntry } from '#lib/fs/config-manifest';
+import { log } from '#lib/logging/logger';
 import JSZip from 'jszip';
 
 // --- Hash helper ---
@@ -78,8 +78,8 @@ async function readMainDbBinary(): Promise<Uint8Array> {
 
 async function readMemoryDbBinary(): Promise<Uint8Array | null> {
 	try {
-		const { getMemoryDatabase } = await import('$lib/db/memory-database');
-		const { isMemoryCapable } = await import('$lib/stores/settings.svelte');
+		const { getMemoryDatabase } = await import('#lib/db/memory-database');
+		const { isMemoryCapable } = await import('#lib/stores/settings.svelte');
 		if (!isMemoryCapable()) return null;
 
 		const memDb = getMemoryDatabase();
@@ -231,8 +231,9 @@ async function importDatabase(zip: JSZip): Promise<void> {
 	const mainDbBinary = await mainDbFile.async('uint8array');
 	const db = getDatabase();
 
-	if ('importFromData' in db && typeof (db as any).importFromData === 'function') {
-		await (db as any).importFromData(mainDbBinary);
+	if ('importFromData' in db) {
+		const importable = db as typeof db & { importFromData: (data: Uint8Array | ArrayLike<number>) => Promise<void> };
+		await importable.importFromData(mainDbBinary);
 		await db.flush();
 	} else if (isTauriSync()) {
 		const { writeFile, BaseDirectory } = await import('@tauri-apps/plugin-fs');

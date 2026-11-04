@@ -5,7 +5,7 @@ import { SvelteSet } from 'svelte/reactivity';
 // Lazy import to break circular init: i18n -> logger -> settings -> i18n
 // (settings runs loadSettings() at module load, which needs detectDefaultLocale).
 async function logger() {
-	return (await import('$lib/logging/logger')).log;
+	return (await import('#lib/logging/logger')).log;
 }
 
 export type Locale = string;

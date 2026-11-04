@@ -11,29 +11,29 @@ const mockDb = {
 	}),
 };
 
-vi.mock('$lib/db/database', () => ({
+vi.mock('#lib/db/database', () => ({
 	getDatabase: () => mockDb,
 }));
 
 describe('character-profiles DB layer', () => {
-	let insertCharacterProfile: typeof import('$lib/db/character-profiles').insertCharacterProfile;
-	let getLatestProfilesByActLine: typeof import('$lib/db/character-profiles').getLatestProfilesByActLine;
-	let getLatestProfileByAlias: typeof import('$lib/db/character-profiles').getLatestProfileByAlias;
-	let areAnyCharacterNamesKnown: typeof import('$lib/db/character-profiles').areAnyCharacterNamesKnown;
-	let deleteCharacterProfilesForActLine: typeof import('$lib/db/character-profiles').deleteCharacterProfilesForActLine;
-	let cloneCharacterProfiles: typeof import('$lib/db/character-profiles').cloneCharacterProfiles;
-	let inheritProfilesFromActLine: typeof import('$lib/db/character-profiles').inheritProfilesFromActLine;
-	let resolveCanonicalName: typeof import('$lib/db/character-profiles').resolveCanonicalName;
-	let toCanonicalName: typeof import('$lib/db/character-profiles').toCanonicalName;
-	let ensurePreferredInAliases: typeof import('$lib/db/character-profiles').ensurePreferredInAliases;
+	let insertCharacterProfile: typeof import('#lib/db/character-profiles').insertCharacterProfile;
+	let getLatestProfilesByActLine: typeof import('#lib/db/character-profiles').getLatestProfilesByActLine;
+	let getLatestProfileByAlias: typeof import('#lib/db/character-profiles').getLatestProfileByAlias;
+	let areAnyCharacterNamesKnown: typeof import('#lib/db/character-profiles').areAnyCharacterNamesKnown;
+	let deleteCharacterProfilesForActLine: typeof import('#lib/db/character-profiles').deleteCharacterProfilesForActLine;
+	let cloneCharacterProfiles: typeof import('#lib/db/character-profiles').cloneCharacterProfiles;
+	let inheritProfilesFromActLine: typeof import('#lib/db/character-profiles').inheritProfilesFromActLine;
+	let resolveCanonicalName: typeof import('#lib/db/character-profiles').resolveCanonicalName;
+	let toCanonicalName: typeof import('#lib/db/character-profiles').toCanonicalName;
+	let ensurePreferredInAliases: typeof import('#lib/db/character-profiles').ensurePreferredInAliases;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
 		mockDbSelectResults = [];
 		vi.resetModules();
-		vi.doMock('$lib/db/database', () => ({ getDatabase: () => mockDb }));
+		vi.doMock('#lib/db/database', () => ({ getDatabase: () => mockDb }));
 
-		const mod = await import('$lib/db/character-profiles');
+		const mod = await import('#lib/db/character-profiles');
 		insertCharacterProfile = mod.insertCharacterProfile;
 		getLatestProfilesByActLine = mod.getLatestProfilesByActLine;
 		getLatestProfileByAlias = mod.getLatestProfileByAlias;
@@ -126,7 +126,7 @@ describe('character-profiles DB layer', () => {
 			});
 
 			expect(mockDb.execute).toHaveBeenCalledTimes(1);
-			const [, params] = mockDb.execute.mock.calls[0] as unknown[] as any[];
+			const [, params] = mockDb.execute.mock.calls[0] as [string, unknown[]];
 			expect(params[0]).toBe('p1');
 			expect(params[1]).toBe('line-1');
 			expect(params[2]).toBe(5);
@@ -156,7 +156,7 @@ describe('character-profiles DB layer', () => {
 				importance: 4,
 			});
 
-			const [, params] = mockDb.execute.mock.calls[0] as unknown[] as any[];
+			const [, params] = mockDb.execute.mock.calls[0] as [string, unknown[]];
 			expect(params[5]).toBe('[]');
 		});
 	});
@@ -347,7 +347,7 @@ describe('character-profiles DB layer', () => {
 			const result = await areAnyCharacterNamesKnown('line-1', ['Elena', 'Voss', 'Unknown']);
 			expect(result).toBe(true);
 			expect(mockDb.select).toHaveBeenCalledTimes(1);
-			const [, params] = mockDb.select.mock.calls[0] as unknown[] as any[];
+			const [, params] = mockDb.select.mock.calls[0] as [string, unknown[]];
 			expect(params[0]).toBe('line-1');
 			expect(params).toContain('Elena');
 			expect(params).toContain('Voss');
@@ -426,7 +426,7 @@ describe('character-profiles DB layer', () => {
 			await cloneCharacterProfiles('src', 'dest', 5);
 
 			expect(mockDb.execute).toHaveBeenCalledTimes(2);
-			const params1 = (mockDb.execute.mock.calls[0] as unknown as any[])[1];
+			const params1 = (mockDb.execute.mock.calls[0] as [string, unknown[]])[1];
 			expect(params1[1]).toBe('dest');
 			expect(params1[3]).toBe('elena');
 			expect(params1[4]).toBe('Elena');
@@ -443,7 +443,7 @@ describe('character-profiles DB layer', () => {
 			mockDbSelectResults = [[]];
 			await cloneCharacterProfiles('src', 'dest', 7);
 			expect(mockDb.select).toHaveBeenCalledTimes(1);
-			const params = (mockDb.select.mock.calls[0] as unknown as any[])[1];
+			const params = (mockDb.select.mock.calls[0] as [string, unknown[]])[1];
 			expect(params).toEqual(['src', 7]);
 		});
 
@@ -487,7 +487,7 @@ describe('character-profiles DB layer', () => {
 			await cloneCharacterProfiles('src', 'dest', 3);
 
 			expect(mockDb.execute).toHaveBeenCalledTimes(2);
-			const selectParams = (mockDb.select.mock.calls[0] as unknown as any[])[1];
+			const selectParams = (mockDb.select.mock.calls[0] as [string, unknown[]])[1];
 			expect(selectParams).toEqual(['src', 3]);
 		});
 	});
@@ -513,7 +513,7 @@ describe('character-profiles DB layer', () => {
 			await inheritProfilesFromActLine('src', 'dest');
 
 			expect(mockDb.execute).toHaveBeenCalledTimes(1);
-			const params = (mockDb.execute.mock.calls[0] as unknown as any[])[1];
+			const params = (mockDb.execute.mock.calls[0] as [string, unknown[]])[1];
 			expect(params[1]).toBe('dest');
 			expect(params[2]).toBeNull();
 			expect(params[3]).toBe('elena');
@@ -542,7 +542,7 @@ describe('character-profiles DB layer', () => {
 
 			await inheritProfilesFromActLine('src', 'dest');
 
-			const params = (mockDb.execute.mock.calls[0] as unknown as any[])[1];
+			const params = (mockDb.execute.mock.calls[0] as [string, unknown[]])[1];
 			const aliases = JSON.parse(params[5] as string);
 			expect(aliases.filter((a: string) => a === 'Elena')).toHaveLength(1);
 		});

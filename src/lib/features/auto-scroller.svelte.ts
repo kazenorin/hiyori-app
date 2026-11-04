@@ -1,4 +1,4 @@
-import { scrollToBottom } from '$lib/utils/scroll';
+import { scrollToBottom } from '#lib/utils/scroll';
 
 function isCursorVisible(container: HTMLDivElement | null): boolean {
 	if (!container) return false;

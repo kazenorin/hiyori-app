@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { toError, sleep, withRetry, isAuthError, validateFileSize, MAX_FILE_SIZE } from '$lib/utils/async';
+import { toError, sleep, withRetry, isAuthError, validateFileSize, MAX_FILE_SIZE } from '#lib/utils/async';
 
 describe('async utilities', () => {
 	describe('toError', () => {

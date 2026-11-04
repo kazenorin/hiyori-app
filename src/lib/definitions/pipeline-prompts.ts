@@ -1,5 +1,5 @@
-import { ls } from '$lib/localization';
-import { ACT_PHASE_LOCALE_KEYS, type ActPhase } from '$lib/ai/narrative-types';
+import { ls } from '#lib/localization';
+import { ACT_PHASE_LOCALE_KEYS, type ActPhase } from '#lib/ai/narrative-types';
 
 // Headers
 export const sceneSummariesHeader = () => ls('pipeline.headers.sceneSummaries');

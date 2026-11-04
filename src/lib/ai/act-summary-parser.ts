@@ -1,5 +1,5 @@
-import { actSummaryHeader, turnOfEventsHeader, summaryHeader, sectionFormat } from '$lib/definitions/common-headers';
-import { sceneWithNumberLabel, locationLabel, aliasesLabel, lastUpdateLabel } from '$lib/definitions/common-labels';
+import { actSummaryHeader, turnOfEventsHeader, summaryHeader, sectionFormat } from '#lib/definitions/common-headers';
+import { sceneWithNumberLabel, locationLabel, aliasesLabel, lastUpdateLabel } from '#lib/definitions/common-labels';
 import {
 	stateLabel,
 	loglineLabel,
@@ -7,14 +7,14 @@ import {
 	relationshipsLabel,
 	voiceLabel,
 	importanceLabel,
-} from '$lib/definitions/character-profile-labels';
-import type { CharacterImportance } from '$lib/db/character-profiles';
+} from '#lib/definitions/character-profile-labels';
+import type { CharacterImportance } from '#lib/db/character-profiles';
 import {
 	sceneSummariesHeader,
 	characterSummariesHeader,
 	characterProfilesHeader,
 	characterSummariesSinceSceneLabel,
-} from '$lib/definitions/pipeline-prompts';
+} from '#lib/definitions/pipeline-prompts';
 
 // === Types ===
 
@@ -74,7 +74,7 @@ function escapeRegex(str: string): string {
 	return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-import { stripCodeFences } from '$lib/utils/strings';
+import { stripCodeFences } from '#lib/utils/strings';
 
 function stripListMarker(text: string): string {
 	return text.replace(/^[-*]\s+/, '');

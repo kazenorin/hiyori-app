@@ -1,14 +1,14 @@
 import { generateText } from 'ai';
-import { getMainProviderConfig, settings } from '$lib/stores/settings.svelte';
-import { createModel } from '$lib/ai/provider/provider';
-import { actPlotInterviewSystemPromptLoader, generalInstructionsLoader, actPlotInterviewTurnOfEventsPromptLoader } from '$lib/fs/prompts';
-import { interviewSystemRoleTurnOfEvents } from '$lib/definitions/feature-prompts';
-import { computeTargetWordCountRange } from '$lib/ai/act-plot/target-word-count-parser';
-import { log } from '$lib/logging/logger';
-import type { WorldBuilderMessage } from '$lib/features/world-builder/world-builder.svelte';
-import { playerLabel, interviewerLabel, sceneWithNumberLabel } from '$lib/definitions/common-labels';
-import { actSummaryHeader, currentSceneHeader, interviewTranscriptHeader, sectionFormat } from '$lib/definitions/common-headers';
-import { ERR_NO_MAIN_PROVIDER, ERR_EMPTY_TURN_OF_EVENTS } from '$lib/definitions/error-messages';
+import { getMainProviderConfig, settings } from '#lib/stores/settings.svelte';
+import { createModel } from '#lib/ai/provider/provider';
+import { actPlotInterviewSystemPromptLoader, generalInstructionsLoader, actPlotInterviewTurnOfEventsPromptLoader } from '#lib/fs/prompts';
+import { interviewSystemRoleTurnOfEvents } from '#lib/definitions/feature-prompts';
+import { computeTargetWordCountRange } from '#lib/ai/act-plot/target-word-count-parser';
+import { log } from '#lib/logging/logger';
+import type { WorldBuilderMessage } from '#lib/features/world-builder/world-builder.svelte';
+import { playerLabel, interviewerLabel, sceneWithNumberLabel } from '#lib/definitions/common-labels';
+import { actSummaryHeader, currentSceneHeader, interviewTranscriptHeader, sectionFormat } from '#lib/definitions/common-headers';
+import { ERR_NO_MAIN_PROVIDER, ERR_EMPTY_TURN_OF_EVENTS } from '#lib/definitions/error-messages';
 
 const LOG_TAG = 'turn-of-events-generator';
 

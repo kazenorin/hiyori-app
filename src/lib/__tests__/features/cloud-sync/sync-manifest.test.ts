@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { emptyManifest, computeContentHash, type SyncManifest } from '$lib/features/cloud-sync/sync-manifest';
+import { emptyManifest, computeContentHash, type SyncManifest } from '#lib/features/cloud-sync/sync-manifest';
 
 describe('sync-manifest', () => {
 	it('emptyManifest has no stories', () => {

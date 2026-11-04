@@ -1,5 +1,5 @@
 import { AISDKError, APICallError } from 'ai';
-import { ERR_PROVIDER_UNREACHABLE } from '$lib/definitions/error-messages';
+import { ERR_PROVIDER_UNREACHABLE } from '#lib/definitions/error-messages';
 
 const NETWORK_ERROR_PATTERNS = [
 	'failed to fetch',

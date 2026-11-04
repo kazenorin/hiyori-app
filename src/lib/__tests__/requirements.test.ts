@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('$lib/localization', () => ({
+vi.mock('#lib/localization', () => ({
 	ls: (key: string) => {
 		const map: Record<string, string> = {
 			'common.headers.requirements': 'Requirements',
@@ -23,7 +23,7 @@ import {
 	isDuplicateRequirement,
 	appendRequirementLine,
 	type Requirement,
-} from '$lib/definitions/requirements';
+} from '#lib/definitions/requirements';
 
 const req = (category: Requirement['category'], requirement: string): Requirement => ({ category, requirement });
 

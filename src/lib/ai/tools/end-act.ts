@@ -1,11 +1,11 @@
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 import { tool } from 'ai';
 import { z } from 'zod';
 import type { ToolSet } from 'ai';
-import { recordEnding } from '$lib/db/act-lines';
-import type { EndingType, ActPhase } from '$lib/ai/narrative-types';
-import { getActPhaseIndex } from '$lib/ai/narrative-types';
-import type { AssistantContext } from '$lib/ai/pipeline/types';
+import { recordEnding } from '#lib/db/act-lines';
+import type { EndingType, ActPhase } from '#lib/ai/narrative-types';
+import { getActPhaseIndex } from '#lib/ai/narrative-types';
+import type { AssistantContext } from '#lib/ai/pipeline/types';
 import { log } from './utils';
 
 const ENDING_LABELS: Record<EndingType, string> = {

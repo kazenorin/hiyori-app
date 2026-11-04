@@ -1,6 +1,6 @@
-import { loadNameFiles } from '$lib/fs/names';
-import { log } from '$lib/logging/logger';
-import { getNameSuggestionQuotas } from '$lib/stores/settings.svelte';
+import { loadNameFiles } from '#lib/fs/names';
+import { log } from '#lib/logging/logger';
+import { getNameSuggestionQuotas } from '#lib/stores/settings.svelte';
 import { normalizeName } from './engine';
 import { parseNameDataset } from './json';
 import { applyQuotas, QUOTA_FALLBACK_LOCALE as FALLBACK_LOCALE } from './quota';

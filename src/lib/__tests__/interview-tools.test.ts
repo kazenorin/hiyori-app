@@ -1,21 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock the streaming layer so no real LLM call is made; `tools` is the 7th argument.
-vi.mock('$lib/ai/chat-stream', () => ({
+vi.mock('#lib/ai/chat-stream', () => ({
 	streamChatResponse: vi.fn(),
 }));
 
 // Stub the name tool so the test asserts interview wiring, not name-engine internals.
-vi.mock('$lib/ai/tools/suggest-character-name', () => ({
+vi.mock('#lib/ai/tools/suggest-character-name', () => ({
 	buildSuggestCharacterNameTools: vi.fn((ctx: unknown) => ({ 'suggest-character-name': { description: 'stub', ctx } })),
 }));
 
-vi.mock('$lib/localization', () => ({
+vi.mock('#lib/localization', () => ({
 	ls: (key: string) => key,
 	loadLocaleStrings: vi.fn(async () => {}),
 }));
 
-vi.mock('$lib/stores/settings.svelte', () => ({
+vi.mock('#lib/stores/settings.svelte', () => ({
 	settings: { locale: 'en', targetWordCount: 400 },
 	getMainProviderConfig: vi.fn(() => ({
 		id: 'test',
@@ -29,12 +29,12 @@ vi.mock('$lib/stores/settings.svelte', () => ({
 	getProviderOptions: vi.fn(() => ({})),
 }));
 
-vi.mock('$lib/logging/chat-logger', () => ({
+vi.mock('#lib/logging/chat-logger', () => ({
 	logWorldBuilderChat: vi.fn(async () => {}),
 	generateWorldBuilderLogFilename: vi.fn(() => 'wb-test.log'),
 }));
 
-vi.mock('$lib/fs/prompts', () => {
+vi.mock('#lib/fs/prompts', () => {
 	const loader = () => ({ loadDefault: vi.fn(async () => 'prompt'), loadByStory: vi.fn(async () => 'prompt') });
 	return {
 		actPlotInterviewSystemPromptLoader: loader(),
@@ -49,11 +49,11 @@ vi.mock('$lib/fs/prompts', () => {
 });
 
 // Keep interview transcript persistence out of the database.
-vi.mock('$lib/db/messages', () => ({
+vi.mock('#lib/db/messages', () => ({
 	createMessage: vi.fn(async () => {}),
 }));
 
-vi.mock('$lib/db/act-lines', () => ({
+vi.mock('#lib/db/act-lines', () => ({
 	getNextPremisesSequence: vi.fn(async () => 1),
 	addMessageToPremises: vi.fn(async () => {}),
 	getPremisesMessages: vi.fn(async () => []),
@@ -61,11 +61,11 @@ vi.mock('$lib/db/act-lines', () => ({
 	removeMessagesFromPremises: vi.fn(async () => {}),
 }));
 
-import { enterActPlotInterviewMode, enterWorldBuilderMode, exitWorldBuilderMode } from '$lib/features/world-builder/world-builder.svelte';
-import { streamChatResponse } from '$lib/ai/chat-stream';
-import { buildSuggestCharacterNameTools } from '$lib/ai/tools/suggest-character-name';
-import { createStreamAccumulator } from '$lib/ai/chat-callbacks';
-import type { StreamResultMetadata } from '$lib/ai/streaming';
+import { enterActPlotInterviewMode, enterWorldBuilderMode, exitWorldBuilderMode } from '#lib/features/world-builder/world-builder.svelte';
+import { streamChatResponse } from '#lib/ai/chat-stream';
+import { buildSuggestCharacterNameTools } from '#lib/ai/tools/suggest-character-name';
+import { createStreamAccumulator } from '#lib/ai/chat-callbacks';
+import type { StreamResultMetadata } from '#lib/ai/streaming';
 import type { ToolSet } from 'ai';
 
 const metadata: StreamResultMetadata = {

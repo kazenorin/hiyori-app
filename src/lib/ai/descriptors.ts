@@ -1,4 +1,4 @@
-import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
+import type { OutputDescriptor } from '#lib/utils/chat-stream-parser/types';
 import {
 	sceneTitleHeader,
 	backgroundHeader,
@@ -8,7 +8,7 @@ import {
 	activePlotThreadsHeader,
 	decisionContextHeader,
 	decisionsHeader,
-} from '$lib/definitions/common-headers';
+} from '#lib/definitions/common-headers';
 
 /** Scene header descriptors — used by WRITER and EDITOR phases. */
 export function getSceneDescriptors(): OutputDescriptor[] {

@@ -1,20 +1,20 @@
 import { generateText } from 'ai';
-import { createModel } from '$lib/ai/provider/provider';
+import { createModel } from '#lib/ai/provider/provider';
 import {
 	type EmbeddingProviderConfig,
 	getEmbeddingProviderConfig,
 	getMemoryProviderConfig,
 	type MemoryProviderConfig,
-} from '$lib/stores/settings.svelte';
-import { memoryExtractionPromptLoader, memoryExtractionSystemPromptLoader } from '$lib/fs/prompts';
-import { type ExtractedMemories, parseMemoryExtract } from '$lib/features/memory/memory-extract-parser';
-import { Memory } from '$lib/features/memory';
-import { parseCharacterAliases } from '$lib/ai/act-summary-parser';
-import { aliasFilterExtractionPrompt } from '$lib/definitions/pipeline-prompts';
-import { stripCodeFences } from '$lib/utils/strings';
-import { isAuthError, toError, withRetry } from '$lib/utils/async';
-import { fileLog, log } from '$lib/logging/logger';
-import { ERR_MEMORY_PROVIDER_NOT_CONFIGURED, ERR_EMBEDDING_PROVIDER_NOT_CONFIGURED } from '$lib/definitions/error-messages';
+} from '#lib/stores/settings.svelte';
+import { memoryExtractionPromptLoader, memoryExtractionSystemPromptLoader } from '#lib/fs/prompts';
+import { type ExtractedMemories, parseMemoryExtract } from '#lib/features/memory/memory-extract-parser';
+import { Memory } from '#lib/features/memory';
+import { parseCharacterAliases } from '#lib/ai/act-summary-parser';
+import { aliasFilterExtractionPrompt } from '#lib/definitions/pipeline-prompts';
+import { stripCodeFences } from '#lib/utils/strings';
+import { isAuthError, toError, withRetry } from '#lib/utils/async';
+import { fileLog, log } from '#lib/logging/logger';
+import { ERR_MEMORY_PROVIDER_NOT_CONFIGURED, ERR_EMBEDDING_PROVIDER_NOT_CONFIGURED } from '#lib/definitions/error-messages';
 
 export interface PipelineResult {
 	charactersProcessed: number;

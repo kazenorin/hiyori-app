@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { getActiveStory, getActiveAct, getActiveActLine, getActiveActLineId } from '$lib/stores/stories.svelte';
-	import { t } from '$lib/i18n';
-	import type { CharacterCardContext } from '$lib/features/character-card-generator';
+	import { getActiveStory, getActiveAct, getActiveActLine, getActiveActLineId } from '#lib/stores/stories.svelte';
+	import { t } from '#lib/i18n';
+	import type { CharacterCardContext } from '#lib/features/character-card-generator';
 	import {
 		getCharacters,
 		getIsExtracting,
@@ -21,14 +21,14 @@
 		addManualCharacter,
 		removeCharacter,
 		resetState,
-	} from '$lib/stores/character-card.svelte';
-	import { getExistingCardNamesForActLine } from '$lib/features/character-card-generator';
-	import { getActLine, getMessagesForLine } from '$lib/db/act-lines';
-	import { getLatestProfilesByActLine } from '$lib/db/character-profiles';
-	import { traceActLineChain } from '$lib/db/acts';
-	import Icon from '$lib/components/ui/Icon.svelte';
-	import Spinner from '$lib/components/ui/Spinner.svelte';
-	import { log } from '$lib/logging/logger';
+	} from '#lib/stores/character-card.svelte';
+	import { getExistingCardNamesForActLine } from '#lib/features/character-card-generator';
+	import { getActLine, getMessagesForLine } from '#lib/db/act-lines';
+	import { getLatestProfilesByActLine } from '#lib/db/character-profiles';
+	import { traceActLineChain } from '#lib/db/acts';
+	import Icon from '#lib/components/ui/Icon.svelte';
+	import Spinner from '#lib/components/ui/Spinner.svelte';
+	import { log } from '#lib/logging/logger';
 
 	let concurrent = $state(false);
 	let fallbackActNumber = $state<number | null>(null);

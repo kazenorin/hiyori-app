@@ -1,20 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createTestDatabase } from './helpers/test-database';
-import { runMigrations } from '$lib/db/migrations';
+import { runMigrations } from '#lib/db/migrations';
 
 let testDb: ReturnType<typeof createTestDatabase>;
 
-vi.mock('$lib/db/database', () => ({
+vi.mock('#lib/db/database', () => ({
 	initDatabase: vi.fn(async () => testDb),
 	getDatabase: vi.fn(() => testDb),
 }));
 
-import * as messagePhases from '$lib/db/message-phases';
-import * as stories from '$lib/db/stories';
-import * as acts from '$lib/db/acts';
-import * as actLines from '$lib/db/act-lines';
-import * as messages from '$lib/db/messages';
-import type { UIScenePhase } from '$lib/ai/narrative-types';
+import * as messagePhases from '#lib/db/message-phases';
+import * as stories from '#lib/db/stories';
+import * as acts from '#lib/db/acts';
+import * as actLines from '#lib/db/act-lines';
+import * as messages from '#lib/db/messages';
+import type { UIScenePhase } from '#lib/ai/narrative-types';
 
 function makePhases(): UIScenePhase[] {
 	return [

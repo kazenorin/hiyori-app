@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
-import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
-import type { LoadMode } from '$lib/features/story-export-load/story-loader';
-import { validateArchive } from '$lib/features/story-export-load/archive-validator';
+import type { StoryExportData } from '#lib/features/story-export-load/archive-schema';
+import type { LoadMode } from '#lib/features/story-export-load/story-loader';
+import { validateArchive } from '#lib/features/story-export-load/archive-validator';
 import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 
 export interface ActLineSelection {

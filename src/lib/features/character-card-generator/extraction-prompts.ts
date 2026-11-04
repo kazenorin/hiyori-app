@@ -1,4 +1,4 @@
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 
 /** System prompt for character extraction. */
 export const characterExtractionSystemPrompt = () => ls('features.characterCardGenerator.characterExtraction.systemPrompt');

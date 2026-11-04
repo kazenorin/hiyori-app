@@ -1,5 +1,5 @@
 import ESpeakNg from 'espeak-ng';
-import type { VoiceLanguage } from '$lib/kokoro/kokoro-hiyori/voices';
+import type { VoiceLanguage } from '#lib/kokoro/kokoro-hiyori/voices';
 
 /**
  * Runs ESpeakNg with the given arguments and returns the phonemized text.

@@ -1,4 +1,4 @@
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { type ToolSet } from 'ai';
@@ -10,7 +10,7 @@ import {
 	ensurePreferredInAliases,
 	type CharacterImportance,
 	toCanonicalName,
-} from '$lib/db/character-profiles';
+} from '#lib/db/character-profiles';
 
 export function createIntroduceCharacterTool(ctx: ToolContext) {
 	const { actLine } = ctx;

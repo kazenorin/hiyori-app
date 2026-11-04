@@ -1,56 +1,56 @@
-import { getMainProviderConfig, type ProviderConfig, settings } from '$lib/stores/settings.svelte';
+import { getMainProviderConfig, type ProviderConfig, settings } from '#lib/stores/settings.svelte';
 import {
 	resumeStoryActPrefix,
 	resumeStoryActSuffix,
 	worldBuilderExtractionPrompt,
 	worldBuilderSeed,
-} from '$lib/features/world-builder/prompts';
-import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
-import { actInformationHeader, charactersHeader, currentSceneHeader } from '$lib/definitions/common-headers';
+} from '#lib/features/world-builder/prompts';
+import { sceneWithNumberLabel } from '#lib/definitions/common-labels';
+import { actInformationHeader, charactersHeader, currentSceneHeader } from '#lib/definitions/common-headers';
 import {
 	actPlotInterviewExtractionPrompt,
 	interviewSystemRoleNextAct,
 	interviewSystemRolePreGame,
 	interviewPreviousActConclusion,
 	interviewNextActPurpose,
-} from '$lib/definitions/feature-prompts';
-import { loadLocaleStrings } from '$lib/localization';
+} from '#lib/definitions/feature-prompts';
+import { loadLocaleStrings } from '#lib/localization';
 import {
 	actPlotInterviewSystemPromptLoader,
 	generalInstructionsLoader,
 	worldBuilderSystemPromptLoader,
 	worldPreTemplateDiscoveryLoader,
-} from '$lib/fs/prompts';
-import { setActiveLocale } from '$lib/fs/prompt-loader';
-import { generateWorldBuilderLogFilename, logWorldBuilderChat } from '$lib/logging/chat-logger';
-import { log } from '$lib/logging/logger';
-import { type StreamAccumulator, type StreamState } from '$lib/ai/chat-callbacks';
-import { streamChatResponse } from '$lib/ai/chat-stream';
-import { computeTargetWordCountRange } from '$lib/ai/act-plot/target-word-count-parser';
-import type { MessageBase } from '$lib/db/messages';
-import * as dbMessages from '$lib/db/messages';
-import type { Story } from '$lib/db/stories';
-import * as dbActLines from '$lib/db/act-lines';
-import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED } from '$lib/definitions/error-messages';
-import { isAbortLikeError } from '$lib/utils/async';
-import { getUserFacingErrorMessage } from '$lib/utils/error-handling';
-import { ls } from '$lib/localization';
-import { WORLD_TEMPLATES } from '$lib/features/world-builder/template-registry';
-import { buildWorldBuilderTools } from '$lib/ai/tools/select-world-template';
+} from '#lib/fs/prompts';
+import { setActiveLocale } from '#lib/fs/prompt-loader';
+import { generateWorldBuilderLogFilename, logWorldBuilderChat } from '#lib/logging/chat-logger';
+import { log } from '#lib/logging/logger';
+import { type StreamAccumulator, type StreamState } from '#lib/ai/chat-callbacks';
+import { streamChatResponse } from '#lib/ai/chat-stream';
+import { computeTargetWordCountRange } from '#lib/ai/act-plot/target-word-count-parser';
+import type { MessageBase } from '#lib/db/messages';
+import * as dbMessages from '#lib/db/messages';
+import type { Story } from '#lib/db/stories';
+import * as dbActLines from '#lib/db/act-lines';
+import { ERR_API_KEY_AND_MODEL_NOT_CONFIGURED } from '#lib/definitions/error-messages';
+import { isAbortLikeError } from '#lib/utils/async';
+import { getUserFacingErrorMessage } from '#lib/utils/error-handling';
+import { ls } from '#lib/localization';
+import { WORLD_TEMPLATES } from '#lib/features/world-builder/template-registry';
+import { buildWorldBuilderTools } from '#lib/ai/tools/select-world-template';
 import type { ToolSet } from 'ai';
-import { getLineDir } from '$lib/ai/card-output-path';
-import { resolveStoryFolder } from '$lib/fs/story-folders';
-import { getActNumber } from '$lib/db/acts';
-import { buildRequirementTools } from '$lib/ai/tools/record-requirement';
-import { buildSuggestCharacterNameTools } from '$lib/ai/tools/suggest-character-name';
-import { readRequirementsBlock, writeRequirementsBlock } from '$lib/fs/requirements-files';
+import { getLineDir } from '#lib/ai/card-output-path';
+import { resolveStoryFolder } from '#lib/fs/story-folders';
+import { getActNumber } from '#lib/db/acts';
+import { buildRequirementTools } from '#lib/ai/tools/record-requirement';
+import { buildSuggestCharacterNameTools } from '#lib/ai/tools/suggest-character-name';
+import { readRequirementsBlock, writeRequirementsBlock } from '#lib/fs/requirements-files';
 import {
 	appendRequirementLine,
 	formatRequirementsContext,
 	isDuplicateRequirement,
 	type Requirement,
 	type RequirementCategory,
-} from '$lib/definitions/requirements';
+} from '#lib/definitions/requirements';
 
 export interface WorldBuilderMessage {
 	id: string;

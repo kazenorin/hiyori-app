@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { t } from '$lib/i18n';
-	import { settings, updateSettings, type Settings } from '$lib/stores/settings.svelte';
-	import Card from '$lib/components/ui/Card.svelte';
-	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
-	import { isTauriSync } from '$lib/runtime';
-	import { getUrlWarnings } from '$lib/utils/url-security';
-	import { getAllStories, type Story } from '$lib/db/stories';
+	import { t } from '#lib/i18n';
+	import { settings, updateSettings, type Settings } from '#lib/stores/settings.svelte';
+	import Card from '#lib/components/ui/Card.svelte';
+	import ThemedSelect from '#lib/components/ThemedSelect.svelte';
+	import { isTauriSync } from '#lib/runtime';
+	import { getUrlWarnings } from '#lib/utils/url-security';
+	import { getAllStories, type Story } from '#lib/db/stories';
 	import {
 		getCloudSyncStatus,
 		getCloudSyncError,
@@ -14,7 +14,7 @@
 		refreshCloudSyncStatus,
 		testCloudSyncConnection,
 		runCloudSync,
-	} from '$lib/features/cloud-sync/cloud-sync.svelte';
+	} from '#lib/features/cloud-sync/cloud-sync.svelte';
 
 	type CloudSyncSettings = NonNullable<Settings['cloudSync']>;
 

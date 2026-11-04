@@ -1,4 +1,4 @@
-import { getIsBusy, getMessages, clearMessages, runEpilogueFlow, setIsConcludingStory } from '$lib/ai/chat.svelte';
+import { getIsBusy, getMessages, clearMessages, runEpilogueFlow, setIsConcludingStory } from '#lib/ai/chat.svelte';
 import {
 	getActiveActLineId,
 	getActiveAct,
@@ -6,12 +6,12 @@ import {
 	createActLineContinuation,
 	selectAct,
 	selectActLine,
-} from '$lib/stores/stories.svelte';
-import { enterActPlotInterviewMode, type NewActInterviewContext } from '$lib/features/world-builder/world-builder.svelte';
-import { getActLine, getEndingType, getMessageSequence } from '$lib/db/act-lines';
-import { ensureWorldFile } from '$lib/ai/world-generator';
-import { ensureActShortSummary } from '$lib/ai/act-short-summary-generator';
-import { log } from '$lib/logging/logger';
+} from '#lib/stores/stories.svelte';
+import { enterActPlotInterviewMode, type NewActInterviewContext } from '#lib/features/world-builder/world-builder.svelte';
+import { getActLine, getEndingType, getMessageSequence } from '#lib/db/act-lines';
+import { ensureWorldFile } from '#lib/ai/world-generator';
+import { ensureActShortSummary } from '#lib/ai/act-short-summary-generator';
+import { log } from '#lib/logging/logger';
 
 export async function handleContinueToNextAct(): Promise<void> {
 	if (getIsBusy()) return;

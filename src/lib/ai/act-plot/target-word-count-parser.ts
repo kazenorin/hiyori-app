@@ -1,4 +1,4 @@
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 
 /** Minimum lower bound for the interview suggestion range (settings UI clamps at 50). */
 const MIN_RANGE_LOWER = 50;

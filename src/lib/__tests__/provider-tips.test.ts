@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
-import { evaluateProviderTip, expandSuggestionTemplate, applyStripSuffix, type TipEvaluationInput } from '$lib/ai/provider-tips/evaluator';
-import { matchField, matchWhen, type FieldCondition } from '$lib/ai/provider-tips/predicates';
-import { findKnownProvider, isInKnownProviders, isModelVerifiedForBaseUrl } from '$lib/ai/provider-tips/known-providers';
-import { detectPlatform, getPlatformSync, resetTauriCache, resetPlatformCache, type Platform } from '$lib/runtime';
+import { evaluateProviderTip, expandSuggestionTemplate, applyStripSuffix, type TipEvaluationInput } from '#lib/ai/provider-tips/evaluator';
+import { matchField, matchWhen, type FieldCondition } from '#lib/ai/provider-tips/predicates';
+import { findKnownProvider, isInKnownProviders, isModelVerifiedForBaseUrl } from '#lib/ai/provider-tips/known-providers';
+import { detectPlatform, getPlatformSync, resetTauriCache, resetPlatformCache, type Platform } from '#lib/runtime';
 
 // ---------------------------------------------------------------------------
 // Helpers

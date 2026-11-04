@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
-import { setFileSystem } from '$lib/fs/file-system';
+import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
+import { setFileSystem } from '#lib/fs/file-system';
 
 const { mockGenerateText, mockGetMainProviderConfig, mockIsReviewerEnabled, mockCreateModel } = vi.hoisted(() => ({
 	mockGenerateText: vi.fn(),
@@ -9,19 +9,19 @@ const { mockGenerateText, mockGetMainProviderConfig, mockIsReviewerEnabled, mock
 	mockCreateModel: vi.fn(),
 }));
 
-vi.mock('$lib/localization', () => ({ ls: (key: string) => key }));
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/localization', () => ({ ls: (key: string) => key }));
+vi.mock('#lib/logging/logger', () => ({
 	log: { info: vi.fn(async () => {}), error: vi.fn(async () => {}), warn: vi.fn(async () => {}), debug: vi.fn(async () => {}) },
 	fileLog: vi.fn(async () => {}),
 }));
 vi.mock('ai', () => ({ generateText: mockGenerateText, isStepCount: vi.fn(() => undefined) }));
-vi.mock('$lib/stores/settings.svelte', () => ({
+vi.mock('#lib/stores/settings.svelte', () => ({
 	getMainProviderConfig: mockGetMainProviderConfig,
 	isReviewerEnabled: mockIsReviewerEnabled,
 	settings: { characterProfileImportanceThreshold: 3, characterProfileMaxIncluded: 5 },
 }));
-vi.mock('$lib/ai/provider/provider', () => ({ createModel: mockCreateModel }));
-vi.mock('$lib/fs/prompts', () => {
+vi.mock('#lib/ai/provider/provider', () => ({ createModel: mockCreateModel }));
+vi.mock('#lib/fs/prompts', () => {
 	const loader = { loadByStory: async () => '', loadDefault: async () => '' };
 	return {
 		actPlotEditorPromptLoader: loader,
@@ -35,32 +35,32 @@ vi.mock('$lib/fs/prompts', () => {
 		interviewSummaryPromptLoader: loader,
 	};
 });
-vi.mock('$lib/db/act-lines', () => ({
+vi.mock('#lib/db/act-lines', () => ({
 	getActLine: vi.fn(async () => null),
 	getLastSceneNumber: vi.fn(async () => 1),
 	getLatestActSummary: vi.fn(async () => null),
 	getLatestTurnOfEvents: vi.fn(async () => null),
 	getPremisesMessages: vi.fn(async () => []),
 }));
-vi.mock('$lib/db/acts', () => ({ getAct: vi.fn(async () => null), traceActLineChain: vi.fn(async () => []) }));
-vi.mock('$lib/db/stories', () => ({ getStory: vi.fn(async () => null) }));
-vi.mock('$lib/features/act-card-generator', () => ({
+vi.mock('#lib/db/acts', () => ({ getAct: vi.fn(async () => null), traceActLineChain: vi.fn(async () => []) }));
+vi.mock('#lib/db/stories', () => ({ getStory: vi.fn(async () => null) }));
+vi.mock('#lib/features/act-card-generator', () => ({
 	checkActCardExists: vi.fn(async () => false),
 	ensureActCard: vi.fn(async () => ({ content: '' })),
 }));
-vi.mock('$lib/fs/story-folders', () => ({ resolveStoryFolder: vi.fn(async () => '/story') }));
-vi.mock('$lib/features/character-card-generator', () => ({
+vi.mock('#lib/fs/story-folders', () => ({ resolveStoryFolder: vi.fn(async () => '/story') }));
+vi.mock('#lib/features/character-card-generator', () => ({
 	ensureCharacterCard: vi.fn(async () => ({ content: '' })),
 	loadLatestCharacterCardsForActLine: vi.fn(async () => []),
 	toCharacterSummary: vi.fn((p) => p),
 }));
-vi.mock('$lib/db/character-profiles', () => ({ getLatestProfilesByActLine: vi.fn(async () => []) }));
-vi.mock('$lib/ai/act-plot/tools', () => ({
+vi.mock('#lib/db/character-profiles', () => ({ getLatestProfilesByActLine: vi.fn(async () => []) }));
+vi.mock('#lib/ai/act-plot/tools', () => ({
 	buildActPlotTools: vi.fn(() => undefined),
 	filterActPlotToolsForPhase: vi.fn(() => undefined),
 }));
 
-import { generateActPlot } from '$lib/ai/act-plot/act-plot-generator';
+import { generateActPlot } from '#lib/ai/act-plot/act-plot-generator';
 
 const actLine = {
 	id: 'line-1',

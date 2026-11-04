@@ -12,16 +12,16 @@ const mockDb = {
 	}),
 };
 
-vi.mock('$lib/db/database', () => ({
+vi.mock('#lib/db/database', () => ({
 	getDatabase: () => mockDb,
 }));
 
 describe('act-lines helpers', () => {
-	let getActNumberForActLine: typeof import('$lib/db/act-lines').getActNumberForActLine;
-	let getStoryForActLine: typeof import('$lib/db/act-lines').getStoryForActLine;
-	let batchResolveActLineInfo: typeof import('$lib/db/act-lines').batchResolveActLineInfo;
-	let recordCharacterProfileCompression: typeof import('$lib/db/act-lines').recordCharacterProfileCompression;
-	let getLastCompressionScene: typeof import('$lib/db/act-lines').getLastCompressionScene;
+	let getActNumberForActLine: typeof import('#lib/db/act-lines').getActNumberForActLine;
+	let getStoryForActLine: typeof import('#lib/db/act-lines').getStoryForActLine;
+	let batchResolveActLineInfo: typeof import('#lib/db/act-lines').batchResolveActLineInfo;
+	let recordCharacterProfileCompression: typeof import('#lib/db/act-lines').recordCharacterProfileCompression;
+	let getLastCompressionScene: typeof import('#lib/db/act-lines').getLastCompressionScene;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
@@ -29,9 +29,9 @@ describe('act-lines helpers', () => {
 
 		// Re-import to get fresh module bound to our mock
 		vi.resetModules();
-		vi.doMock('$lib/db/database', () => ({ getDatabase: () => mockDb }));
+		vi.doMock('#lib/db/database', () => ({ getDatabase: () => mockDb }));
 
-		const mod = await import('$lib/db/act-lines');
+		const mod = await import('#lib/db/act-lines');
 		getActNumberForActLine = mod.getActNumberForActLine;
 		getStoryForActLine = mod.getStoryForActLine;
 		batchResolveActLineInfo = mod.batchResolveActLineInfo;

@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { resetConfiguration } from '$lib/stores/settings.svelte';
-	import { deleteStory, getStories } from '$lib/stores/stories.svelte';
-	import * as dbAppState from '$lib/db/app-state';
-	import { t } from '$lib/i18n';
-	import Modal from '$lib/components/ui/Modal.svelte';
-	import ProgressField from '$lib/components/ui/ProgressField.svelte';
-	import Spinner from '$lib/components/ui/Spinner.svelte';
-	import Card from '$lib/components/ui/Card.svelte';
+	import { resetConfiguration } from '#lib/stores/settings.svelte';
+	import { deleteStory, getStories } from '#lib/stores/stories.svelte';
+	import * as dbAppState from '#lib/db/app-state';
+	import { t } from '#lib/i18n';
+	import Modal from '#lib/components/ui/Modal.svelte';
+	import ProgressField from '#lib/components/ui/ProgressField.svelte';
+	import Spinner from '#lib/components/ui/Spinner.svelte';
+	import Card from '#lib/components/ui/Card.svelte';
 	import {
 		type DataImportExportState,
 		createDataImportExportState,
@@ -14,11 +14,11 @@
 		handleImportFileSelect,
 		handleImportCancel,
 		handleImportConfirm,
-	} from '$lib/features/data-import-export';
-	import { exportGameData, importGameData, exportConfigData, importConfigData } from '$lib/db/data-portability';
-	import { isTauriSync } from '$lib/runtime';
-	import { ensureAllBaseConfigs } from '$lib/fs/prompt-loader';
-	import { getDatabase } from '$lib/db/database';
+	} from '#lib/features/data-import-export';
+	import { exportGameData, importGameData, exportConfigData, importConfigData } from '#lib/db/data-portability';
+	import { isTauriSync } from '#lib/runtime';
+	import { ensureAllBaseConfigs } from '#lib/fs/prompt-loader';
+	import { getDatabase } from '#lib/db/database';
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
 
 	let gameIO = $state<DataImportExportState>(createDataImportExportState());

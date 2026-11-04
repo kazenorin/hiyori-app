@@ -1,16 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createTestDatabase } from './helpers/test-database';
-import { runMigrations } from '$lib/db/migrations';
+import { runMigrations } from '#lib/db/migrations';
 
 // Create a shared test database instance
 let testDb: ReturnType<typeof createTestDatabase>;
 
-vi.mock('$lib/db/database', () => ({
+vi.mock('#lib/db/database', () => ({
 	initDatabase: vi.fn(async () => testDb),
 	getDatabase: vi.fn(() => testDb),
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -20,13 +20,13 @@ vi.mock('$lib/logging/logger', () => ({
 	fileLog: vi.fn(async () => {}),
 }));
 
-import * as stories from '$lib/db/stories';
-import * as acts from '$lib/db/acts';
-import * as actLines from '$lib/db/act-lines';
-import * as messages from '$lib/db/messages';
-import * as appState from '$lib/db/app-state';
-import * as storyFolders from '$lib/db/story-folders';
-import * as characterProfiles from '$lib/db/character-profiles';
+import * as stories from '#lib/db/stories';
+import * as acts from '#lib/db/acts';
+import * as actLines from '#lib/db/act-lines';
+import * as messages from '#lib/db/messages';
+import * as appState from '#lib/db/app-state';
+import * as storyFolders from '#lib/db/story-folders';
+import * as characterProfiles from '#lib/db/character-profiles';
 
 describe('migrations', () => {
 	beforeEach(() => {
@@ -54,9 +54,9 @@ describe('migrations', () => {
 	it('is idempotent - running twice does not error', async () => {
 		await runMigrations();
 		await runMigrations();
-		const versions = testDb._db.prepare('SELECT version FROM schema_version ORDER BY version').all();
+		const versions = testDb._db.prepare('SELECT version FROM schema_version ORDER BY version').all() as Array<{ version: number }>;
 		expect(versions.length).toBeGreaterThan(0);
-		expect(new Set(versions.map((v: any) => v.version)).size).toBe(versions.length);
+		expect(new Set(versions.map((v) => v.version)).size).toBe(versions.length);
 	});
 });
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { allocateQuotas, applyQuotas, DEFAULT_NAME_QUOTAS, resolveBudget, type NameQuotaConfig } from '$lib/features/name-suggestion/quota';
-import type { Culture, DataNameType, NameEntry } from '$lib/features/name-suggestion/types';
+import { allocateQuotas, applyQuotas, DEFAULT_NAME_QUOTAS, resolveBudget, type NameQuotaConfig } from '#lib/features/name-suggestion/quota';
+import type { Culture, DataNameType, NameEntry } from '#lib/features/name-suggestion/types';
 
 /** Deterministic PRNG so sampling assertions are reproducible. */
 function mulberry32(seed: number): () => number {

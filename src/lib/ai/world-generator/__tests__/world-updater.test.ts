@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
-import { setFileSystem, fs } from '$lib/fs/file-system';
+import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
+import { setFileSystem, fs } from '#lib/fs/file-system';
 
 const { mockResolveTemplateForUpdate, mockStreamText, mockGetMainProviderConfig, mockCreateModel } = vi.hoisted(() => ({
 	mockResolveTemplateForUpdate: vi.fn(),
@@ -9,7 +9,7 @@ const { mockResolveTemplateForUpdate, mockStreamText, mockGetMainProviderConfig,
 	mockCreateModel: vi.fn(),
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -19,15 +19,15 @@ vi.mock('$lib/logging/logger', () => ({
 	fileLog: vi.fn(async () => {}),
 }));
 
-vi.mock('$lib/localization', () => ({
+vi.mock('#lib/localization', () => ({
 	ls: (key: string) => key,
 }));
 
-vi.mock('$lib/stores/settings.svelte', () => ({
+vi.mock('#lib/stores/settings.svelte', () => ({
 	getMainProviderConfig: mockGetMainProviderConfig,
 }));
 
-vi.mock('$lib/ai/provider/provider', () => ({
+vi.mock('#lib/ai/provider/provider', () => ({
 	createModel: mockCreateModel,
 }));
 
@@ -35,12 +35,12 @@ vi.mock('ai', () => ({
 	streamText: mockStreamText,
 }));
 
-vi.mock('$lib/definitions/feature-prompts', () => ({
+vi.mock('#lib/definitions/feature-prompts', () => ({
 	worldFromActSystemPrompt: () => 'SYSTEM_PROMPT',
 	worldFromActPrompt: () => 'EXTRACTION_PROMPT',
 }));
 
-vi.mock('$lib/definitions/common-headers', () => ({
+vi.mock('#lib/definitions/common-headers', () => ({
 	worldContentHeader: () => 'World Content',
 	actSummaryHeader: () => 'Act Summary',
 	interviewTranscriptHeader: () => 'Interview Transcript',

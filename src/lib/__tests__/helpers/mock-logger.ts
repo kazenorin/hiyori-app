@@ -1,7 +1,7 @@
 import { vi } from 'vitest';
 
 /**
- * Mock for $lib/logging/logger.
+ * Mock for #lib/logging/logger.
  * All log methods are vi.fn() spies that resolve immediately.
  */
 export function createMockLogger() {

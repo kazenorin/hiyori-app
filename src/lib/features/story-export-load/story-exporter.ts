@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
-import { getStory } from '$lib/db/stories';
-import { getActsForStory } from '$lib/db/acts';
+import { getStory } from '#lib/db/stories';
+import { getActsForStory } from '#lib/db/acts';
 import {
 	getActLineMetasForStory,
 	getActLineEventsForLines,
@@ -8,16 +8,16 @@ import {
 	getActLinePremisesForLines,
 	type ActLineEvent,
 	type ActLineEntry,
-} from '$lib/db/act-lines';
-import { getStoryFolderInfo } from '$lib/db/story-folders';
-import { getDirectorNotesForActLines, type DirectorNote } from '$lib/db/director-notes';
-import { getMessagesByIds, type Message } from '$lib/db/messages';
-import { getPhasesForMessages } from '$lib/db/message-phases';
-import { getCharacterProfilesForActLines } from '$lib/db/character-profiles';
-import { fs } from '$lib/fs/file-system';
-import { collectFilesInDir, isBinaryData } from '$lib/fs/file-tree';
-import { downloadExport } from '$lib/db/data-portability';
-import type { UIScenePhase } from '$lib/ai/narrative-types';
+} from '#lib/db/act-lines';
+import { getStoryFolderInfo } from '#lib/db/story-folders';
+import { getDirectorNotesForActLines, type DirectorNote } from '#lib/db/director-notes';
+import { getMessagesByIds, type Message } from '#lib/db/messages';
+import { getPhasesForMessages } from '#lib/db/message-phases';
+import { getCharacterProfilesForActLines } from '#lib/db/character-profiles';
+import { fs } from '#lib/fs/file-system';
+import { collectFilesInDir, isBinaryData } from '#lib/fs/file-tree';
+import { downloadExport } from '#lib/db/data-portability';
+import type { UIScenePhase } from '#lib/ai/narrative-types';
 import type { StoryExportData } from './archive-schema';
 import { CURRENT_ARCHIVE_VERSION } from './archive-schema';
 import { collectMessageIds } from './story-loader';

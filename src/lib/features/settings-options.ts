@@ -1,5 +1,5 @@
-import { t } from '$lib/i18n';
-import { settings } from '$lib/stores/settings.svelte';
+import { t } from '#lib/i18n';
+import { settings } from '#lib/stores/settings.svelte';
 
 export function getProviderItems(): { label: string; value: string }[] {
 	return [

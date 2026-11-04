@@ -1,4 +1,4 @@
-import type { PhaseName } from '$lib/ai/narrative-types';
+import type { PhaseName } from '#lib/ai/narrative-types';
 
 let isOpen = $state(false);
 let messageId = $state<string | null>(null);

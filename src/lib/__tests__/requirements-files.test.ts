@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
-import { setFileSystem, fs } from '$lib/fs/file-system';
-import { readRequirementsBlock, writeRequirementsBlock, deleteRequirements } from '$lib/fs/requirements-files';
+import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
+import { setFileSystem, fs } from '#lib/fs/file-system';
+import { readRequirementsBlock, writeRequirementsBlock, deleteRequirements } from '#lib/fs/requirements-files';
 
 const DIR = '/story/act-1/main-line';
 

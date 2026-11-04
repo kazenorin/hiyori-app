@@ -87,7 +87,7 @@ Deep-merge algorithm: nested objects are recursively merged; arrays and primitiv
 ### Usage
 
 ```typescript
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 
 ls('common.headers.worldContent'); // → "World Content"
 ls('pipeline.extraction.reviewer', { currentScene: 5 }); // parameterized

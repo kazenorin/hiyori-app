@@ -1,12 +1,12 @@
-import { type ActPlotPhase, generateActPlot } from '$lib/ai/act-plot/act-plot-generator';
-import { getLineDir } from '$lib/ai/card-output-path';
-import { ensureWorldFile } from '$lib/ai/world-generator';
-import { resolveStoryFolder } from '$lib/fs/story-folders';
-import { fs } from '$lib/fs/file-system';
-import { readRequirementsBlock, deleteRequirements } from '$lib/fs/requirements-files';
-import type { EnsureActPlotParams } from '$lib/ai/act-plot/types';
-import { log } from '$lib/logging/logger';
-import * as dbActs from '$lib/db/acts';
+import { type ActPlotPhase, generateActPlot } from '#lib/ai/act-plot/act-plot-generator';
+import { getLineDir } from '#lib/ai/card-output-path';
+import { ensureWorldFile } from '#lib/ai/world-generator';
+import { resolveStoryFolder } from '#lib/fs/story-folders';
+import { fs } from '#lib/fs/file-system';
+import { readRequirementsBlock, deleteRequirements } from '#lib/fs/requirements-files';
+import type { EnsureActPlotParams } from '#lib/ai/act-plot/types';
+import { log } from '#lib/logging/logger';
+import * as dbActs from '#lib/db/acts';
 
 export type { ActPlotPhase };
 

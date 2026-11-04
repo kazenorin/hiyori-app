@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import JSZip from 'jszip';
-import type { StoryExportData } from '$lib/features/story-export-load/archive-schema';
-import { CURRENT_ARCHIVE_VERSION } from '$lib/features/story-export-load/archive-schema';
-import { validateStoryData } from '$lib/features/story-export-load/archive-validator';
+import type { StoryExportData } from '#lib/features/story-export-load/archive-schema';
+import { CURRENT_ARCHIVE_VERSION } from '#lib/features/story-export-load/archive-schema';
+import { validateStoryData } from '#lib/features/story-export-load/archive-validator';
 
 function makeValidExportData(): StoryExportData {
 	return {

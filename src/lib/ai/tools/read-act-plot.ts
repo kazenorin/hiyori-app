@@ -1,9 +1,9 @@
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 import { tool } from 'ai';
 import { z } from 'zod';
-import { fs } from '$lib/fs/file-system';
-import { resolveStoryFolder } from '$lib/fs/story-folders';
-import { getLineDir } from '$lib/ai/card-output-path';
+import { fs } from '#lib/fs/file-system';
+import { resolveStoryFolder } from '#lib/fs/story-folders';
+import { getLineDir } from '#lib/ai/card-output-path';
 import { log } from './utils';
 import { type ToolSet } from 'ai';
 import type { ToolContext } from './tools';

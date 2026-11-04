@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { APICallError } from 'ai';
-import { getErrorMessage, getUserFacingErrorMessage, isNetworkError } from '$lib/utils/error-handling';
-import { ERR_PROVIDER_UNREACHABLE } from '$lib/definitions/error-messages';
+import { getErrorMessage, getUserFacingErrorMessage, isNetworkError } from '#lib/utils/error-handling';
+import { ERR_PROVIDER_UNREACHABLE } from '#lib/definitions/error-messages';
 
 describe('isNetworkError', () => {
 	it('detects browser fetch failures', () => {

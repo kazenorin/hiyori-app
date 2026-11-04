@@ -1,4 +1,4 @@
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 import { tool } from 'ai';
 import { z } from 'zod';
 import {
@@ -8,9 +8,9 @@ import {
 	type InventoryCategory,
 	type EquipStatus,
 	type InventoryEventType,
-} from '$lib/db/inventory';
-import { traceActLineChain } from '$lib/db/acts';
-import { isInventoryAvailable } from '$lib/stores/settings.svelte';
+} from '#lib/db/inventory';
+import { traceActLineChain } from '#lib/db/acts';
+import { isInventoryAvailable } from '#lib/stores/settings.svelte';
 import type { ToolSet } from 'ai';
 import { log } from './utils';
 

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
-import type { FileSystem } from '$lib/fs/file-system';
+import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
+import type { FileSystem } from '#lib/fs/file-system';
 
 function createTestSubject(): FileSystem {
 	const fs = new InMemoryFileSystem();

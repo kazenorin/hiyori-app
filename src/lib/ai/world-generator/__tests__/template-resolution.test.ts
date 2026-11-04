@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
-import { setFileSystem, FileSystemError, type FileSystem } from '$lib/fs/file-system';
+import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
+import { setFileSystem, FileSystemError, type FileSystem } from '#lib/fs/file-system';
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -12,11 +12,11 @@ vi.mock('$lib/logging/logger', () => ({
 	fileLog: vi.fn(async () => {}),
 }));
 
-vi.mock('$lib/stores/settings.svelte', () => ({
+vi.mock('#lib/stores/settings.svelte', () => ({
 	getMinorTaskAgentProviderConfig: vi.fn(() => undefined),
 }));
 
-vi.mock('$lib/features/world-builder/template-registry', () => ({
+vi.mock('#lib/features/world-builder/template-registry', () => ({
 	WORLD_TEMPLATES: [
 		{ id: 'high-fantasy', loader: { loadDefault: async () => 'HIGH_FANTASY_TEMPLATE' } },
 		{ id: 'sci-fi', loader: { loadDefault: async () => 'SCI_FI_TEMPLATE' } },

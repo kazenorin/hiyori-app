@@ -1,5 +1,5 @@
-import { checkIsTauri } from '$lib/runtime';
-import { fs } from '$lib/fs/file-system';
+import { checkIsTauri } from '#lib/runtime';
+import { fs } from '#lib/fs/file-system';
 import { kebabCase } from 'lodash-es';
 
 export type LogLevel = 'error' | 'warn' | 'info' | 'debug';

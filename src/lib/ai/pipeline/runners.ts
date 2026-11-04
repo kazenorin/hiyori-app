@@ -1,5 +1,5 @@
 import { type ToolSet } from 'ai';
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 import {
 	buildEditorFitterMessages,
 	buildGmFitterMessages,
@@ -18,10 +18,10 @@ import {
 	isPlotPlannerEnabled,
 	isQuickReview,
 	isReviewerEnabled,
-} from '$lib/stores/settings.svelte';
+} from '#lib/stores/settings.svelte';
 import type { ActPhase, EndingType, GameDataFields, NarrativeOverrides, NarrativeVariables, PlotMode } from '../narrative-types';
 import { getActPhaseIndex } from '../narrative-types';
-import { sectionFormat, summaryHeader } from '$lib/definitions/common-headers';
+import { sectionFormat, summaryHeader } from '#lib/definitions/common-headers';
 import {
 	writerProvidedSummary,
 	writerProvidedTurnOfEvents,
@@ -31,7 +31,7 @@ import {
 	writerClosingSceneRules,
 	writerActEndPhaseEvent,
 	writerActEndGuidance,
-} from '$lib/definitions/pipeline-prompts';
+} from '#lib/definitions/pipeline-prompts';
 import {
 	acceptAsIsLabel,
 	editorTemplateFitterExtractionPrompt,
@@ -50,16 +50,16 @@ import {
 	writerInventoryToolsInstruction,
 	writerMemoryToolsInstruction,
 	writerScenePrioritiesHeader,
-} from '$lib/definitions/pipeline-prompts';
+} from '#lib/definitions/pipeline-prompts';
 import type { AssistantContext, PipelineCallbacks, PipelineContext, PipelineProviderConfigs, PipelineState, StoryContext } from './types';
 import { executeStreamingPhase, updateState } from './phase-executor';
 import type { StreamResultMetadata } from '../streaming';
 import type { StreamState } from '../chat-callbacks';
 import { variablesToMarkdown } from '../template-renderer';
 import { extractImportantPhrases } from '../important-phrases-extractor';
-import { guardToolsForPhase } from '$lib/ai/tools/tools';
-import { formatActPhaseBoundariesSection, SECTION } from '$lib/definitions/pipeline-sections';
-import { log } from '$lib/logging/logger';
+import { guardToolsForPhase } from '#lib/ai/tools/tools';
+import { formatActPhaseBoundariesSection, SECTION } from '#lib/definitions/pipeline-sections';
+import { log } from '#lib/logging/logger';
 import { reviewerAcceptsAsIs } from '../reviewer-output-parser';
 import {
 	getEditorDescriptors,

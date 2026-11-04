@@ -2,11 +2,11 @@
 	import { untrack } from 'svelte';
 	import { Dialog } from '@skeletonlabs/skeleton-svelte';
 	import { ArrowLeft, X } from '@lucide/svelte';
-	import { t } from '$lib/i18n';
-	import Icon from '$lib/components/ui/Icon.svelte';
-	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
-	import ReasoningAccordion from '$lib/components/chat/ReasoningAccordion.svelte';
-	import { PHASE_ICONS, PHASE_LABEL_KEYS } from '$lib/components/chat/PhaseStrip.svelte';
+	import { t } from '#lib/i18n';
+	import Icon from '#lib/components/ui/Icon.svelte';
+	import MarkdownContent from '#lib/components/MarkdownContent.svelte';
+	import ReasoningAccordion from '#lib/components/chat/ReasoningAccordion.svelte';
+	import { PHASE_ICONS, PHASE_LABEL_KEYS } from '#lib/components/chat/PhaseStrip.svelte';
 	import {
 		closePhaseDialog,
 		getPhaseDialogMessageId,
@@ -14,9 +14,9 @@
 		getPhaseDialogPhase,
 		setPhaseDialogPhase,
 	} from './phase-dialog-state.svelte';
-	import { findDisplayedMessage, getCharacterNames, getMessages, getStreamingPhase } from '$lib/ai/chat.svelte';
-	import { getActiveActLineId, getActiveStory } from '$lib/stores/stories.svelte';
-	import type { PhaseName, UIScenePhase } from '$lib/ai/narrative-types';
+	import { findDisplayedMessage, getCharacterNames, getMessages, getStreamingPhase } from '#lib/ai/chat.svelte';
+	import { getActiveActLineId, getActiveStory } from '#lib/stores/stories.svelte';
+	import type { PhaseName, UIScenePhase } from '#lib/ai/narrative-types';
 
 	const message = $derived.by(() => {
 		const id = getPhaseDialogMessageId();

@@ -1,15 +1,15 @@
 import { generateText, isStepCount, type ToolSet } from 'ai';
-import type { MessageBase } from '$lib/db/messages';
+import type { MessageBase } from '#lib/db/messages';
 import { type RetryConfig, streamWithRetry } from '../chat-stream';
 import { createModel } from '../provider/provider';
-import type { ProviderConfig } from '$lib/stores/settings.svelte';
+import type { ProviderConfig } from '#lib/stores/settings.svelte';
 import type { PhaseName } from '../narrative-types';
 import type { PipelineCallbacks, PipelineState } from './types';
 import type { StreamState } from '../chat-callbacks';
 import { extractCacheTokens, type StreamResultMetadata } from '../streaming';
-import type { OutputDescriptor } from '$lib/utils/chat-stream-parser/types';
-import { ERR_NO_PROVIDER_FOR_PHASE } from '$lib/definitions/error-messages';
-import { isAbortLikeError } from '$lib/utils/async';
+import type { OutputDescriptor } from '#lib/utils/chat-stream-parser/types';
+import { ERR_NO_PROVIDER_FOR_PHASE } from '#lib/definitions/error-messages';
+import { isAbortLikeError } from '#lib/utils/async';
 import type { PhaseMetadata } from '../chat-stream';
 
 export interface StreamingPhaseParams {

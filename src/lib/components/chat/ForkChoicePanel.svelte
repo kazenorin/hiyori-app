@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { t } from '$lib/i18n';
-	import Icon from '$lib/components/ui/Icon.svelte';
-	import Spinner from '$lib/components/ui/Spinner.svelte';
+	import { t } from '#lib/i18n';
+	import Icon from '#lib/components/ui/Icon.svelte';
+	import Spinner from '#lib/components/ui/Spinner.svelte';
 	import { slide } from 'svelte/transition';
 
 	type PlotMode = 'guidance' | 'phaseEvent' | null;

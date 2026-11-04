@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { parseNameDataset } from '$lib/features/name-suggestion/json';
-import type { NameEntry } from '$lib/features/name-suggestion/types';
+import { parseNameDataset } from '#lib/features/name-suggestion/json';
+import type { NameEntry } from '#lib/features/name-suggestion/types';
 
 function dataset(entries: unknown[]): string {
 	return JSON.stringify(entries);

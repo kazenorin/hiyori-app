@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // Mock the streaming layer so no real LLM call is made
-vi.mock('$lib/ai/chat-stream', () => ({
+vi.mock('#lib/ai/chat-stream', () => ({
 	streamChatResponse: vi.fn(),
 }));
 
-vi.mock('$lib/stores/settings.svelte', () => ({
+vi.mock('#lib/stores/settings.svelte', () => ({
 	settings: { locale: 'en' },
 	getMainProviderConfig: vi.fn(() => ({
 		id: 'test',
@@ -19,12 +19,12 @@ vi.mock('$lib/stores/settings.svelte', () => ({
 	getProviderOptions: vi.fn(() => ({})),
 }));
 
-vi.mock('$lib/logging/chat-logger', () => ({
+vi.mock('#lib/logging/chat-logger', () => ({
 	logWorldBuilderChat: vi.fn(async () => {}),
 	generateWorldBuilderLogFilename: vi.fn(() => 'wb-test.log'),
 }));
 
-vi.mock('$lib/fs/prompts', () => {
+vi.mock('#lib/fs/prompts', () => {
 	const loader = () => ({ loadDefault: vi.fn(async () => 'prompt'), loadByStory: vi.fn(async () => 'prompt') });
 	return {
 		actPlotInterviewSystemPromptLoader: loader(),
@@ -38,11 +38,11 @@ vi.mock('$lib/fs/prompts', () => {
 	};
 });
 
-import { sendWorldBuilderMessage, getError, getMessages, exitWorldBuilderMode } from '$lib/features/world-builder/world-builder.svelte';
-import { streamChatResponse } from '$lib/ai/chat-stream';
-import { createStreamAccumulator } from '$lib/ai/chat-callbacks';
-import type { StreamResultMetadata } from '$lib/ai/streaming';
-import { ERR_PROVIDER_UNREACHABLE } from '$lib/definitions/error-messages';
+import { sendWorldBuilderMessage, getError, getMessages, exitWorldBuilderMode } from '#lib/features/world-builder/world-builder.svelte';
+import { streamChatResponse } from '#lib/ai/chat-stream';
+import { createStreamAccumulator } from '#lib/ai/chat-callbacks';
+import type { StreamResultMetadata } from '#lib/ai/streaming';
+import { ERR_PROVIDER_UNREACHABLE } from '#lib/definitions/error-messages';
 
 const metadata: StreamResultMetadata = {
 	finishReason: 'stop',

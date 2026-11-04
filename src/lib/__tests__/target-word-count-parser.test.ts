@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const lsMock = vi.fn((key: string) => key);
-vi.mock('$lib/localization', () => ({
+vi.mock('#lib/localization', () => ({
 	ls: (key: string) => lsMock(key),
 }));
 
-import { computeTargetWordCountRange, parseActPlotTargetWordCount } from '$lib/ai/act-plot/target-word-count-parser';
+import { computeTargetWordCountRange, parseActPlotTargetWordCount } from '#lib/ai/act-plot/target-word-count-parser';
 
 const LABEL = 'Target Word Count per Scene';
 

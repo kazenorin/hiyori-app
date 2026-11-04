@@ -1,33 +1,33 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createTestDatabase } from './helpers/test-database';
-import { runMigrations } from '$lib/db/migrations';
+import { runMigrations } from '#lib/db/migrations';
 
 let testDb: ReturnType<typeof createTestDatabase>;
 
-vi.mock('$lib/db/database', () => ({
+vi.mock('#lib/db/database', () => ({
 	initDatabase: vi.fn(async () => testDb),
 	getDatabase: vi.fn(() => testDb),
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: { info: vi.fn(async () => {}), error: vi.fn(async () => {}), warn: vi.fn(async () => {}), debug: vi.fn(async () => {}) },
 	fileLog: vi.fn(async () => {}),
 }));
 
-vi.mock('$lib/features/memory', () => ({ Memory: class {} }));
-vi.mock('$lib/stores/stories.svelte', () => ({ getActiveStoryId: () => null }));
-vi.mock('$lib/stores/settings.svelte', () => ({
+vi.mock('#lib/features/memory', () => ({ Memory: class {} }));
+vi.mock('#lib/stores/stories.svelte', () => ({ getActiveStoryId: () => null }));
+vi.mock('#lib/stores/settings.svelte', () => ({
 	getMemoryProviderConfig: () => undefined,
 	isMemoryAvailable: () => false,
 	isInventoryAvailable: () => false,
 }));
-vi.mock('$lib/db/inventory', () => ({ deleteInventoryByMessages: vi.fn(async () => {}) }));
+vi.mock('#lib/db/inventory', () => ({ deleteInventoryByMessages: vi.fn(async () => {}) }));
 
-import * as dbActLines from '$lib/db/act-lines';
-import * as dbMessages from '$lib/db/messages';
-import * as dbMessagePhases from '$lib/db/message-phases';
-import { loadActLineMessagesFromDB, removeMessagesById } from '$lib/ai/chat/persistence';
-import type { UIScenePhase } from '$lib/ai/narrative-types';
+import * as dbActLines from '#lib/db/act-lines';
+import * as dbMessages from '#lib/db/messages';
+import * as dbMessagePhases from '#lib/db/message-phases';
+import { loadActLineMessagesFromDB, removeMessagesById } from '#lib/ai/chat/persistence';
+import type { UIScenePhase } from '#lib/ai/narrative-types';
 
 const phases: UIScenePhase[] = [
 	{ phaseName: 'EDITOR', content: 'polished prose', reasoning: 'thoughts' },

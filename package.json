@@ -30,6 +30,9 @@
 	"author": "kazenorin",
 	"license": "AGPL-3.0-or-later",
 	"type": "module",
+	"imports": {
+		"#lib/*": "./src/lib/*"
+	},
 	"engines": {
 		"node": ">=24"
 	},

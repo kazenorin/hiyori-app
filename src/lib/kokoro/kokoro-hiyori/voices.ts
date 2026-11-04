@@ -1,4 +1,4 @@
-import { getVoiceDataUrl, type TTSModelKey } from '$lib/kokoro/constants';
+import { getVoiceDataUrl, type TTSModelKey } from '#lib/kokoro/constants';
 
 export type VoiceQuality = 'A' | 'A-' | 'B' | 'B-' | 'C+' | 'C' | 'C-' | 'D+' | 'D' | 'D-' | 'F+';
 export type VoiceLanguage = 'en-us' | 'en-gb' | 'ja' | 'zh' | 'yue' | 'es' | 'fr-fr' | 'hi' | 'it' | 'pt-br';

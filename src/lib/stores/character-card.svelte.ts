@@ -6,9 +6,9 @@ import {
 	type CharacterCardResult,
 	type GenerateProgress,
 	type CharacterCardContext,
-} from '$lib/features/character-card-generator';
-import { toCanonicalName } from '$lib/db/character-profiles';
-import { log } from '$lib/logging/logger';
+} from '#lib/features/character-card-generator';
+import { toCanonicalName } from '#lib/db/character-profiles';
+import { log } from '#lib/logging/logger';
 import { SvelteSet } from 'svelte/reactivity';
 
 let characters = $state<CharacterEntry[]>([]);

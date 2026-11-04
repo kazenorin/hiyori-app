@@ -1,14 +1,14 @@
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 import type { ToolSet } from 'ai';
 import { tool } from 'ai';
 import { z } from 'zod';
-import { recordActPhaseTransition } from '$lib/db/act-lines';
-import { ACT_PHASE_ORDER, type ActPhase } from '$lib/ai/narrative-types';
-import { getNextActPhase } from '$lib/ai/narrative-types';
-import { getLocalizedActPhase } from '$lib/definitions/pipeline-prompts';
-import { actWithNumberLabel } from '$lib/definitions/common-labels';
-import { settings } from '$lib/stores/settings.svelte';
-import type { ActLineContext, AssistantContext } from '$lib/ai/pipeline/types';
+import { recordActPhaseTransition } from '#lib/db/act-lines';
+import { ACT_PHASE_ORDER, type ActPhase } from '#lib/ai/narrative-types';
+import { getNextActPhase } from '#lib/ai/narrative-types';
+import { getLocalizedActPhase } from '#lib/definitions/pipeline-prompts';
+import { actWithNumberLabel } from '#lib/definitions/common-labels';
+import { settings } from '#lib/stores/settings.svelte';
+import type { ActLineContext, AssistantContext } from '#lib/ai/pipeline/types';
 import { log } from './utils';
 
 const EARLY_PHASE_FACTOR = 0.3;

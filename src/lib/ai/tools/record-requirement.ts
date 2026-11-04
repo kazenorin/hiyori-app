@@ -1,7 +1,7 @@
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 import { tool, type ToolSet } from 'ai';
 import { z } from 'zod';
-import { REQUIREMENT_CATEGORIES, type RequirementCategory } from '$lib/definitions/requirements';
+import { REQUIREMENT_CATEGORIES, type RequirementCategory } from '#lib/definitions/requirements';
 
 export type RecordRequirementHandler = (category: RequirementCategory, requirement: string) => Promise<string>;
 

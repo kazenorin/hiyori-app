@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-vi.mock('$lib/localization', () => ({
+vi.mock('#lib/localization', () => ({
 	ls: (key: string, _opts?: Record<string, unknown>) => {
 		const levels: Record<string, string> = {
 			'pipeline.labels.importanceLevels.1': 'Protagonist',
@@ -18,8 +18,8 @@ import {
 	toCharacterEntries,
 	toCharacterSummary,
 	type CharacterSummary,
-} from '$lib/features/character-card-generator';
-import type { CharacterProfileEntity } from '$lib/db/character-profiles';
+} from '#lib/features/character-card-generator';
+import type { CharacterProfileEntity } from '#lib/db/character-profiles';
 
 describe('parseCharacterJson', () => {
 	it('parses simple JSON array', () => {

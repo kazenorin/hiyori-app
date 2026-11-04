@@ -7,8 +7,8 @@ import {
 	turnOfEventsHeader,
 	playerResponseHeader,
 	scenesHeader,
-} from '$lib/definitions/common-headers';
-import { sceneWithNumberLabel } from '$lib/definitions/common-labels';
+} from '#lib/definitions/common-headers';
+import { sceneWithNumberLabel } from '#lib/definitions/common-labels';
 import { hasContent } from './message-builder';
 
 function fieldSection(header: string, value: string | null | undefined): string[] {

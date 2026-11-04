@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Dialog } from '@skeletonlabs/skeleton-svelte';
 	import { ArrowLeft, X } from '@lucide/svelte';
-	import { t } from '$lib/i18n';
+	import { t } from '#lib/i18n';
 	import {
 		closeSettingsDialog,
 		getActiveSection,

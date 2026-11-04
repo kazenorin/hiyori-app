@@ -1,9 +1,9 @@
-import { fs } from '$lib/fs/file-system';
-import { isTauriSync } from '$lib/runtime';
+import { fs } from '#lib/fs/file-system';
+import { isTauriSync } from '#lib/runtime';
 import JSZip from 'jszip';
-import * as dbStoryFolders from '$lib/db/story-folders';
-import { getBundledContent, hashContent, loadManifest } from '$lib/fs/config-manifest';
-import { WORLD_MD } from '$lib/ai/world-generator/constants';
+import * as dbStoryFolders from '#lib/db/story-folders';
+import { getBundledContent, hashContent, loadManifest } from '#lib/fs/config-manifest';
+import { WORLD_MD } from '#lib/ai/world-generator/constants';
 
 const manifest = loadManifest();
 

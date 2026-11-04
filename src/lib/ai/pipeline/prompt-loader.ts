@@ -17,7 +17,7 @@ import {
 	summarizerPromptLoader,
 	writerOutputTemplateLoader,
 	writerRoleLoader,
-} from '$lib/fs/prompts';
+} from '#lib/fs/prompts';
 
 const promptLoaderDefinitions = {
 	generalInstructions: generalInstructionsLoader,

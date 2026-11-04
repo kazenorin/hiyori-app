@@ -1,20 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
-import { setFileSystem } from '$lib/fs/file-system';
+import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
+import { setFileSystem } from '#lib/fs/file-system';
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 	fileLog: vi.fn(),
 	setLogLevel: vi.fn(),
 }));
 
-import { parseNameDataset } from '$lib/features/name-suggestion/json';
-import { getNameDataset } from '$lib/features/name-suggestion/dataset';
-import { normalizeName } from '$lib/features/name-suggestion/engine';
-import { DEFAULT_NAME_QUOTAS } from '$lib/features/name-suggestion/quota';
-import { CULTURES, NAME_THEMES, STORY_THEME_TO_NAME_THEME, type Culture } from '$lib/features/name-suggestion/types';
-import { settings } from '$lib/stores/settings.svelte';
-import { WORLD_TEMPLATES } from '$lib/features/world-builder/template-registry';
+import { parseNameDataset } from '#lib/features/name-suggestion/json';
+import { getNameDataset } from '#lib/features/name-suggestion/dataset';
+import { normalizeName } from '#lib/features/name-suggestion/engine';
+import { DEFAULT_NAME_QUOTAS } from '#lib/features/name-suggestion/quota';
+import { CULTURES, NAME_THEMES, STORY_THEME_TO_NAME_THEME, type Culture } from '#lib/features/name-suggestion/types';
+import { settings } from '#lib/stores/settings.svelte';
+import { WORLD_TEMPLATES } from '#lib/features/world-builder/template-registry';
 
 const jsonFiles = import.meta.glob('../../../fs/*/names/**/*.json', {
 	eager: true,

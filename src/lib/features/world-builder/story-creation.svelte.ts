@@ -4,8 +4,8 @@ import {
 	createStoryFromWorldBuilder,
 	setActPlotGenerationPhase,
 	getActiveStory,
-} from '$lib/stores/stories.svelte';
-import { settings } from '$lib/stores/settings.svelte';
+} from '#lib/stores/stories.svelte';
+import { settings } from '#lib/stores/settings.svelte';
 import {
 	getStoryName,
 	setStoryName,
@@ -21,22 +21,22 @@ import {
 	getSelectedTemplateId,
 	getRecordedRequirements,
 	type NewActInterviewContext,
-} from '$lib/features/world-builder/world-builder.svelte';
-import { formatRequirementsBlock } from '$lib/definitions/requirements';
-import { loadActLineMessages, sendInitialNarration } from '$lib/ai/chat.svelte';
-import { resolveStoryFolder } from '$lib/fs/story-folders';
-import { updateWorldCard, ensureWorldFile } from '$lib/ai/world-generator';
-import { ensureActPlot } from '$lib/ai/act-plot';
-import { getActLine, getPrecedingActSummary, getPremisesMessages, getMessagesForLine, getEndingType } from '$lib/db/act-lines';
-import { getAct, getActByActLineId } from '$lib/db/acts';
-import { ensureActCard } from '$lib/features/act-card-generator';
-import { generateTurnOfEvents } from '$lib/features/turn-of-events-generator';
-import { updateMessageFields, type Message } from '$lib/db/messages';
-import { type GameDataRegenerationContext, regenerateGameData } from '$lib/ai/game-data-regenerator';
-import { emptyVariables, type NarrativeVariables } from '$lib/ai/narrative-types';
-import { log } from '$lib/logging/logger';
-import { t } from '$lib/i18n';
-import type { Story } from '$lib/db/stories';
+} from '#lib/features/world-builder/world-builder.svelte';
+import { formatRequirementsBlock } from '#lib/definitions/requirements';
+import { loadActLineMessages, sendInitialNarration } from '#lib/ai/chat.svelte';
+import { resolveStoryFolder } from '#lib/fs/story-folders';
+import { updateWorldCard, ensureWorldFile } from '#lib/ai/world-generator';
+import { ensureActPlot } from '#lib/ai/act-plot';
+import { getActLine, getPrecedingActSummary, getPremisesMessages, getMessagesForLine, getEndingType } from '#lib/db/act-lines';
+import { getAct, getActByActLineId } from '#lib/db/acts';
+import { ensureActCard } from '#lib/features/act-card-generator';
+import { generateTurnOfEvents } from '#lib/features/turn-of-events-generator';
+import { updateMessageFields, type Message } from '#lib/db/messages';
+import { type GameDataRegenerationContext, regenerateGameData } from '#lib/ai/game-data-regenerator';
+import { emptyVariables, type NarrativeVariables } from '#lib/ai/narrative-types';
+import { log } from '#lib/logging/logger';
+import { t } from '#lib/i18n';
+import type { Story } from '#lib/db/stories';
 
 let isCreatingStory = $state(false);
 let createStoryError = $state<string | null>(null);

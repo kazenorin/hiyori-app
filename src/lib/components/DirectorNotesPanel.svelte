@@ -1,9 +1,9 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
-	import { getActiveDirectorNotes, addDirectorNote, updateDirectorNote, deleteDirectorNote } from '$lib/stores/stories.svelte';
-	import { t } from '$lib/i18n';
-	import type { DirectorNote } from '$lib/db/director-notes';
-	import Icon from '$lib/components/ui/Icon.svelte';
+	import { getActiveDirectorNotes, addDirectorNote, updateDirectorNote, deleteDirectorNote } from '#lib/stores/stories.svelte';
+	import { t } from '#lib/i18n';
+	import type { DirectorNote } from '#lib/db/director-notes';
+	import Icon from '#lib/components/ui/Icon.svelte';
 
 	let isExpanded = $state(false);
 	let newText = $state('');

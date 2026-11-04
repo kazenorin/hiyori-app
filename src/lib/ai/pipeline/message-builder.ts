@@ -1,4 +1,4 @@
-import type { MessageBase } from '$lib/db/messages';
+import type { MessageBase } from '#lib/db/messages';
 import type { GameDataFields, NarrativeOverrides, NarrativeVariables } from '../narrative-types';
 import { hasNarrativeOverrides } from '../narrative-types';
 import type { PipelineContext, PlayerContext } from './types';
@@ -10,25 +10,25 @@ import {
 	formatTurnOfEventsSection,
 	SECTION,
 	upcomingScenePlotSection,
-} from '$lib/definitions/pipeline-sections';
+} from '#lib/definitions/pipeline-sections';
 import {
 	actSummaryForScenesHeader,
 	actSummaryHeader,
 	scenesHeader,
 	sectionFormat,
 	summaryHeader,
-} from '$lib/definitions/common-headers';
-import { aliasesLabel, locationLabel, sceneWithNumberLabel } from '$lib/definitions/common-labels';
+} from '#lib/definitions/common-headers';
+import { aliasesLabel, locationLabel, sceneWithNumberLabel } from '#lib/definitions/common-labels';
 import { hasTemplateMetadata, variablesToMarkdown } from '../template-renderer';
 import { type ActSummary, parseActSummary, pruneCharacterScenes, serializeActSummary } from '../act-summary-parser';
-import { upToLabel } from '$lib/definitions/character-profile-labels';
+import { upToLabel } from '#lib/definitions/character-profile-labels';
 import {
 	characterSummariesHeader,
 	sceneSummariesHeader,
 	summarizerFullExtractionPromptTemplate,
 	summarizerTranscriptEnd,
 	summarizerTranscriptStart,
-} from '$lib/definitions/pipeline-prompts';
+} from '#lib/definitions/pipeline-prompts';
 
 // --- Utility functions ---
 

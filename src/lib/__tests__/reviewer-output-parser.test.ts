@@ -5,17 +5,17 @@ const mockRecommendationLabel = vi.fn(() => 'Recommendation');
 const mockAcceptAsIsLabel = vi.fn(() => 'accept as-is');
 const mockSummaryHeader = vi.fn(() => 'Summary');
 
-vi.mock('$lib/definitions/pipeline-prompts', () => ({
+vi.mock('#lib/definitions/pipeline-prompts', () => ({
 	totalViolationsLabel: () => mockTotalViolationsLabel(),
 	recommendationLabel: () => mockRecommendationLabel(),
 	acceptAsIsLabel: () => mockAcceptAsIsLabel(),
 }));
 
-vi.mock('$lib/definitions/common-headers', () => ({
+vi.mock('#lib/definitions/common-headers', () => ({
 	summaryHeader: () => mockSummaryHeader(),
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -25,7 +25,7 @@ vi.mock('$lib/logging/logger', () => ({
 	fileLog: vi.fn(async () => {}),
 }));
 
-import { reviewerAcceptsAsIs } from '$lib/ai/reviewer-output-parser';
+import { reviewerAcceptsAsIs } from '#lib/ai/reviewer-output-parser';
 
 describe('reviewerAcceptsAsIs', () => {
 	afterEach(() => {

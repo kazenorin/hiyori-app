@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import JSZip from 'jszip';
-import { validateArchive } from '$lib/features/story-export-load/archive-validator';
-import { CURRENT_ARCHIVE_VERSION, type StoryExportData } from '$lib/features/story-export-load/archive-schema';
+import { validateArchive } from '#lib/features/story-export-load/archive-validator';
+import { CURRENT_ARCHIVE_VERSION, type StoryExportData } from '#lib/features/story-export-load/archive-schema';
 
 function makeValidData(): StoryExportData {
 	return {
@@ -32,6 +32,10 @@ function makeValidData(): StoryExportData {
 			},
 		],
 	};
+}
+
+function asRaw<T extends object>(value: T): Record<string, unknown> {
+	return value as unknown as Record<string, unknown>;
 }
 
 async function makeValidZip(data?: StoryExportData, includeFolder = true): Promise<JSZip> {
@@ -79,7 +83,7 @@ describe('validateArchive', () => {
 
 	it('rejects archive with wrong version', async () => {
 		const data = makeValidData();
-		(data as any).version = CURRENT_ARCHIVE_VERSION + 1;
+		asRaw(data).version = CURRENT_ARCHIVE_VERSION + 1;
 		const zip = await makeValidZip(data);
 		const result = await validateArchive(zip);
 		expect(result.isValid).toBe(false);
@@ -88,7 +92,7 @@ describe('validateArchive', () => {
 
 	it('rejects archive with missing story field', async () => {
 		const data = makeValidData();
-		delete (data as any).story;
+		delete asRaw(data).story;
 		const zip = await makeValidZip(data);
 		const result = await validateArchive(zip);
 		expect(result.isValid).toBe(false);
@@ -98,7 +102,7 @@ describe('validateArchive', () => {
 	it('rejects archive with missing storyFolder field', async () => {
 		const data = makeValidData();
 		const folderName = data.storyFolder.folderName;
-		delete (data as any).storyFolder;
+		delete asRaw(data).storyFolder;
 		const zip = new JSZip();
 		zip.file('story-data.json', JSON.stringify(data, null, 2));
 		zip.file(`${folderName}/world.md`, '# World');
@@ -109,7 +113,7 @@ describe('validateArchive', () => {
 
 	it('rejects archive with missing messages array', async () => {
 		const data = makeValidData();
-		delete (data as any).messages;
+		delete asRaw(data).messages;
 		const zip = await makeValidZip(data);
 		const result = await validateArchive(zip);
 		expect(result.isValid).toBe(false);

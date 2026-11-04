@@ -1,14 +1,14 @@
 import type { GameDataFields, PhaseName } from './narrative-types';
-import type { Story } from '$lib/db/stories';
-import { getActPhase, getActPhaseBoundaries, type ActLineMeta } from '$lib/db/act-lines';
-import { getDefaultPlotMode } from '$lib/stores/settings.svelte';
-import { log } from '$lib/logging/logger';
+import type { Story } from '#lib/db/stories';
+import { getActPhase, getActPhaseBoundaries, type ActLineMeta } from '#lib/db/act-lines';
+import { getDefaultPlotMode } from '#lib/stores/settings.svelte';
+import { log } from '#lib/logging/logger';
 import { buildPipelineProviderConfigs } from './chat/pipeline-config';
 import { createOptionalCallbacks } from './chat/pipeline-callbacks';
 import { loadPrompts } from './pipeline/prompt-loader';
 import { executeGmPhase, runGmTemplateFitter, type PipelineRunContext, type TrackPhase } from './pipeline/runners';
 import type { PipelineContext, PipelineState } from './pipeline/types';
-import { buildImportRunContext } from '$lib/features/import-world/pipeline-context';
+import { buildImportRunContext } from '#lib/features/import-world/pipeline-context';
 
 export interface GameMasterRegenerationInput {
 	story: Story;

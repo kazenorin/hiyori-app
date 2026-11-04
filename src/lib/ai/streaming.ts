@@ -1,9 +1,9 @@
-import type { MessageBase } from '$lib/db/messages';
+import type { MessageBase } from '#lib/db/messages';
 import { isStepCount, streamText, type ToolSet, type LanguageModelCallOptions } from 'ai';
 import type { LanguageModel } from 'ai';
-import { fileLog } from '$lib/logging/logger';
-import { getSettings } from '$lib/stores/settings.svelte';
-import { ERR_EMPTY_STREAM } from '$lib/definitions/error-messages';
+import { fileLog } from '#lib/logging/logger';
+import { getSettings } from '#lib/stores/settings.svelte';
+import { ERR_EMPTY_STREAM } from '#lib/definitions/error-messages';
 
 const DEFAULT_MAX_STEPS = 10;
 

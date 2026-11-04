@@ -1,11 +1,11 @@
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { sampleSize } from 'lodash-es';
-import { Memory, type MemoryItem } from '$lib/features/memory';
-import { batchResolveActLineInfo } from '$lib/db/act-lines';
-import { traceActLineChain } from '$lib/db/acts';
-import { getEmbeddingProviderConfig, isMemoryAvailable } from '$lib/stores/settings.svelte';
+import { Memory, type MemoryItem } from '#lib/features/memory';
+import { batchResolveActLineInfo } from '#lib/db/act-lines';
+import { traceActLineChain } from '#lib/db/acts';
+import { getEmbeddingProviderConfig, isMemoryAvailable } from '#lib/stores/settings.svelte';
 import { type ToolSet } from 'ai';
 import { log } from './utils';
 

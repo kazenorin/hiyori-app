@@ -1,9 +1,9 @@
 <script lang="ts">
-	import MarkdownContent from '$lib/components/MarkdownContent.svelte';
+	import MarkdownContent from '#lib/components/MarkdownContent.svelte';
 	import { slide as svelteSlide } from 'svelte/transition';
-	import { t } from '$lib/i18n';
-	import { scrollToBottom } from '$lib/utils/scroll';
-	import Icon from '$lib/components/ui/Icon.svelte';
+	import { t } from '#lib/i18n';
+	import { scrollToBottom } from '#lib/utils/scroll';
+	import Icon from '#lib/components/ui/Icon.svelte';
 
 	interface Props {
 		decisions: string[];

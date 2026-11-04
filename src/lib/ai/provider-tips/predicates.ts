@@ -1,6 +1,6 @@
 // noinspection RedundantIfStatementJS
 
-import type { Provider } from '$lib/stores/settings.svelte';
+import type { Provider } from '#lib/stores/settings.svelte';
 import { isInKnownProviders, isModelVerifiedForBaseUrl } from './known-providers';
 
 /**

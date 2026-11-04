@@ -1,7 +1,7 @@
 import type { Component } from 'svelte';
 import { Palette, Plug, Users, BookOpen, Sparkles, AudioLines, CloudUpload, Brain, Database, Bug } from '@lucide/svelte';
 import type { SectionId } from './settings-dialog-state.svelte';
-import { isMemoryCapable } from '$lib/stores/settings.svelte';
+import { isMemoryCapable } from '#lib/stores/settings.svelte';
 import GeneralSection from './sections/GeneralSection.svelte';
 import ProvidersSection from './sections/ProvidersSection.svelte';
 import RolesSection from './sections/RolesSection.svelte';

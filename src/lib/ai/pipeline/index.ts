@@ -9,7 +9,7 @@ import {
 } from './types';
 import { aggregateMetadata, aggregateMetadataFromPhases } from './phase-executor';
 import { type StreamResultMetadata } from '../streaming';
-import { log } from '$lib/logging/logger';
+import { log } from '#lib/logging/logger';
 import {
 	defaultTargetWordCount,
 	getEndingLabel,
@@ -26,9 +26,9 @@ import {
 import type { LoadedPrompts } from './prompt-loader';
 import { loadPrompts } from './prompt-loader';
 import { runAsyncPhases } from './summarizer';
-import { buildPipelineProviderConfigs } from '$lib/ai/chat/pipeline-config';
-import { buildTools } from '$lib/ai/tools/tools';
-import { createNarrativeOverrides } from '$lib/ai/narrative-types';
+import { buildPipelineProviderConfigs } from '#lib/ai/chat/pipeline-config';
+import { buildTools } from '#lib/ai/tools/tools';
+import { createNarrativeOverrides } from '#lib/ai/narrative-types';
 
 export interface EpiloguePipelineInput extends CommonPipelineInput {
 	endingType: EndingType;

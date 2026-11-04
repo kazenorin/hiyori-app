@@ -6,7 +6,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 }));
 
 // Mock logger
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -34,7 +34,7 @@ describe('settings', () => {
 
 	it('returns defaults when localStorage is empty', async () => {
 		vi.resetModules();
-		const { getSettings } = await import('$lib/stores/settings.svelte');
+		const { getSettings } = await import('#lib/stores/settings.svelte');
 		const settings = getSettings();
 
 		expect(settings.providers).toEqual([]);
@@ -45,20 +45,20 @@ describe('settings', () => {
 
 	it('defaults summarizationPointInterval to 8', async () => {
 		vi.resetModules();
-		const { settings } = await import('$lib/stores/settings.svelte');
+		const { settings } = await import('#lib/stores/settings.svelte');
 		expect(settings.summarizationPointInterval).toBe(8);
 	});
 
 	it('persists summarizationPointInterval via updateSettings', async () => {
 		vi.resetModules();
-		const { settings, updateSettings } = await import('$lib/stores/settings.svelte');
+		const { settings, updateSettings } = await import('#lib/stores/settings.svelte');
 		await updateSettings({ summarizationPointInterval: 12 });
 		expect(settings.summarizationPointInterval).toBe(12);
 	});
 
 	it('addProviderConfig creates a config with UUID', async () => {
 		vi.resetModules();
-		const { addProviderConfig, getSettings } = await import('$lib/stores/settings.svelte');
+		const { addProviderConfig, getSettings } = await import('#lib/stores/settings.svelte');
 		const config = addProviderConfig({
 			name: 'Test Provider',
 			provider: 'openai',
@@ -77,7 +77,7 @@ describe('settings', () => {
 
 	it('updateProviderConfig updates the correct config', async () => {
 		vi.resetModules();
-		const { addProviderConfig, updateProviderConfig, getProviderConfig } = await import('$lib/stores/settings.svelte');
+		const { addProviderConfig, updateProviderConfig, getProviderConfig } = await import('#lib/stores/settings.svelte');
 		const c1 = addProviderConfig({
 			name: 'First',
 			provider: 'openai',
@@ -107,7 +107,7 @@ describe('settings', () => {
 
 	it('deleteProviderConfig removes config and cleans up role assignments', async () => {
 		vi.resetModules();
-		const { addProviderConfig, assignRole, deleteProviderConfig, getSettings } = await import('$lib/stores/settings.svelte');
+		const { addProviderConfig, assignRole, deleteProviderConfig, getSettings } = await import('#lib/stores/settings.svelte');
 		const c1 = addProviderConfig({
 			name: 'Main',
 			provider: 'openai',
@@ -141,7 +141,7 @@ describe('settings', () => {
 
 	it('getMainProviderConfig returns the config assigned to main role', async () => {
 		vi.resetModules();
-		const { addProviderConfig, assignRole, getMainProviderConfig } = await import('$lib/stores/settings.svelte');
+		const { addProviderConfig, assignRole, getMainProviderConfig } = await import('#lib/stores/settings.svelte');
 		const config = addProviderConfig({
 			name: 'Main',
 			provider: 'openai',
@@ -161,13 +161,13 @@ describe('settings', () => {
 
 	it('getMainProviderConfig returns undefined when no main is assigned', async () => {
 		vi.resetModules();
-		const { getMainProviderConfig } = await import('$lib/stores/settings.svelte');
+		const { getMainProviderConfig } = await import('#lib/stores/settings.svelte');
 		expect(getMainProviderConfig()).toBeUndefined();
 	});
 
 	it('assignRole correctly updates the map', async () => {
 		vi.resetModules();
-		const { addProviderConfig, assignRole, getSettings } = await import('$lib/stores/settings.svelte');
+		const { addProviderConfig, assignRole, getSettings } = await import('#lib/stores/settings.svelte');
 		const config = addProviderConfig({
 			name: 'Test',
 			provider: 'openai',
@@ -185,7 +185,7 @@ describe('settings', () => {
 
 	it('persists to localStorage', async () => {
 		vi.resetModules();
-		const { addProviderConfig, assignRole } = await import('$lib/stores/settings.svelte');
+		const { addProviderConfig, assignRole } = await import('#lib/stores/settings.svelte');
 		const config = addProviderConfig({
 			name: 'Test',
 			provider: 'openai',
@@ -205,7 +205,7 @@ describe('settings', () => {
 
 	it('reorderProviders reorders providers by the given ids and persists', async () => {
 		vi.resetModules();
-		const { addProviderConfig, assignRole, getSettings, reorderProviders } = await import('$lib/stores/settings.svelte');
+		const { addProviderConfig, assignRole, getSettings, reorderProviders } = await import('#lib/stores/settings.svelte');
 		const c1 = addProviderConfig({
 			name: 'First',
 			provider: 'openai',
@@ -251,7 +251,7 @@ describe('settings', () => {
 
 	it('reorderProviders keeps unlisted providers at the end in their relative order', async () => {
 		vi.resetModules();
-		const { addProviderConfig, getSettings, reorderProviders } = await import('$lib/stores/settings.svelte');
+		const { addProviderConfig, getSettings, reorderProviders } = await import('#lib/stores/settings.svelte');
 		const make = (name: string) =>
 			addProviderConfig({
 				name,
@@ -274,9 +274,9 @@ describe('settings', () => {
 
 	it('syncs logLevel to logging layer and Rust backend on change', async () => {
 		vi.resetModules();
-		const { updateSettings } = await import('$lib/stores/settings.svelte');
+		const { updateSettings } = await import('#lib/stores/settings.svelte');
 		const { invoke } = await import('@tauri-apps/api/core');
-		const { setLogLevel } = await import('$lib/logging/logger');
+		const { setLogLevel } = await import('#lib/logging/logger');
 		const mockInvoke = vi.mocked(invoke);
 		const mockSetLogLevel = vi.mocked(setLogLevel);
 		mockInvoke.mockClear();
@@ -289,7 +289,7 @@ describe('settings', () => {
 
 	it('duplicate copies provider with new id and (copy) suffix', async () => {
 		vi.resetModules();
-		const { addProviderConfig, getSettings } = await import('$lib/stores/settings.svelte');
+		const { addProviderConfig, getSettings } = await import('#lib/stores/settings.svelte');
 		const original = addProviderConfig({
 			name: 'My Provider',
 			provider: 'openai',
@@ -323,7 +323,7 @@ describe('settings', () => {
 	describe('role Advanced Settings overrides', () => {
 		async function setup() {
 			vi.resetModules();
-			const mod = await import('$lib/stores/settings.svelte');
+			const mod = await import('#lib/stores/settings.svelte');
 			const config = mod.addProviderConfig({
 				name: 'Main',
 				provider: 'openai',

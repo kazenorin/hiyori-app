@@ -1,4 +1,4 @@
-import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
+import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
 import { vi } from 'vitest';
 
 /**

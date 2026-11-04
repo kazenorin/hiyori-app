@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { t } from '$lib/i18n';
-	import { settings } from '$lib/stores/settings.svelte';
-	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
-	import SearchableSelect from '$lib/components/SearchableSelect.svelte';
+	import { t } from '#lib/i18n';
+	import { settings } from '#lib/stores/settings.svelte';
+	import ThemedSelect from '#lib/components/ThemedSelect.svelte';
+	import SearchableSelect from '#lib/components/SearchableSelect.svelte';
 
 	interface Props {
 		items: { label: string; value: string }[];

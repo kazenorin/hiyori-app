@@ -1,22 +1,22 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createTestDatabase } from '../helpers/test-database';
-import { runMigrations } from '$lib/db/migrations';
-import { InMemoryFileSystem } from '$lib/fs/file-system-in-memory';
-import * as dbStories from '$lib/db/stories';
-import * as dbStoryFolders from '$lib/db/story-folders';
-import * as dbActs from '$lib/db/acts';
-import * as dbActLines from '$lib/db/act-lines';
-import type { FileSystem } from '$lib/fs/file-system';
+import { runMigrations } from '#lib/db/migrations';
+import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
+import * as dbStories from '#lib/db/stories';
+import * as dbStoryFolders from '#lib/db/story-folders';
+import * as dbActs from '#lib/db/acts';
+import * as dbActLines from '#lib/db/act-lines';
+import type { FileSystem } from '#lib/fs/file-system';
 
 let testDb: ReturnType<typeof createTestDatabase>;
 let fs: FileSystem;
 
-vi.mock('$lib/db/database', () => ({
+vi.mock('#lib/db/database', () => ({
 	initDatabase: vi.fn(async () => testDb),
 	getDatabase: vi.fn(() => testDb),
 }));
 
-vi.mock('$lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -32,7 +32,7 @@ describe('stories store filesystem cleanup', () => {
 		testDb = createTestDatabase();
 		await runMigrations();
 		vi.resetModules();
-		const fileSystemModule = await import('$lib/fs/file-system');
+		const fileSystemModule = await import('#lib/fs/file-system');
 		fs = fileSystemModule.fs;
 		fileSystemModule.setFileSystem(new InMemoryFileSystem());
 	});
@@ -43,7 +43,7 @@ describe('stories store filesystem cleanup', () => {
 
 	describe('deleteStory', () => {
 		it('removes the story folder when removeFolder is true', async () => {
-			const { loadStories, deleteStory } = await import('$lib/stores/stories.svelte');
+			const { loadStories, deleteStory } = await import('#lib/stores/stories.svelte');
 
 			const story = await dbStories.createStory('story-1', 'Test Story', 'en');
 			await dbStoryFolders.setStoryFolder(story.id, 'test-story');
@@ -59,7 +59,7 @@ describe('stories store filesystem cleanup', () => {
 		});
 
 		it('keeps the story folder when removeFolder is false', async () => {
-			const { loadStories, deleteStory } = await import('$lib/stores/stories.svelte');
+			const { loadStories, deleteStory } = await import('#lib/stores/stories.svelte');
 
 			const story = await dbStories.createStory('story-2', 'Test Story 2', 'en');
 			await dbStoryFolders.setStoryFolder(story.id, 'test-story-2');
@@ -78,7 +78,7 @@ describe('stories store filesystem cleanup', () => {
 
 	describe('deleteAct', () => {
 		it('removes the act folder when removeFolder is true', async () => {
-			const { loadStories, selectStory, deleteAct } = await import('$lib/stores/stories.svelte');
+			const { loadStories, selectStory, deleteAct } = await import('#lib/stores/stories.svelte');
 
 			const story = await dbStories.createStory('story-3', 'Test Story 3', 'en');
 			await dbStoryFolders.setStoryFolder(story.id, 'test-story-3');
@@ -101,7 +101,7 @@ describe('stories store filesystem cleanup', () => {
 		});
 
 		it('keeps the act folder when removeFolder is false', async () => {
-			const { loadStories, selectStory, deleteAct } = await import('$lib/stores/stories.svelte');
+			const { loadStories, selectStory, deleteAct } = await import('#lib/stores/stories.svelte');
 
 			const story = await dbStories.createStory('story-4', 'Test Story 4', 'en');
 			await dbStoryFolders.setStoryFolder(story.id, 'test-story-4');
@@ -126,7 +126,7 @@ describe('stories store filesystem cleanup', () => {
 
 	describe('deleteActLine', () => {
 		it('removes the line folder when removeFolder is true', async () => {
-			const { loadStories, selectStory, selectAct, deleteActLine } = await import('$lib/stores/stories.svelte');
+			const { loadStories, selectStory, selectAct, deleteActLine } = await import('#lib/stores/stories.svelte');
 
 			const story = await dbStories.createStory('story-5', 'Test Story 5', 'en');
 			await dbStoryFolders.setStoryFolder(story.id, 'test-story-5');
@@ -151,7 +151,7 @@ describe('stories store filesystem cleanup', () => {
 		});
 
 		it('keeps the line folder when removeFolder is false', async () => {
-			const { loadStories, selectStory, selectAct, deleteActLine } = await import('$lib/stores/stories.svelte');
+			const { loadStories, selectStory, selectAct, deleteActLine } = await import('#lib/stores/stories.svelte');
 
 			const story = await dbStories.createStory('story-6', 'Test Story 6', 'en');
 			await dbStoryFolders.setStoryFolder(story.id, 'test-story-6');

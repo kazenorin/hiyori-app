@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { slide as svelteSlide } from 'svelte/transition';
-	import { t } from '$lib/i18n';
+	import { t } from '#lib/i18n';
 	import { resolve } from '$app/paths';
-	import { scrollToBottom } from '$lib/utils/scroll';
-	import Icon from '$lib/components/ui/Icon.svelte';
-	import Spinner from '$lib/components/ui/Spinner.svelte';
-	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
-	import { getLocaleItems } from '$lib/features/settings-options';
-	import { getActiveStory, getActiveAct, getActiveActLine } from '$lib/stores/stories.svelte';
-	import { settings } from '$lib/stores/settings.svelte';
-	import { checkActCardExists } from '$lib/features/act-card-generator';
-	import { loadLatestCharacterCardsForActLine } from '$lib/features/character-card-generator';
-	import { getLatestProfilesByActLine } from '$lib/db/character-profiles';
-	import { traceActLineChain } from '$lib/db/acts';
-	import { getActLine } from '$lib/db/act-lines';
+	import { scrollToBottom } from '#lib/utils/scroll';
+	import Icon from '#lib/components/ui/Icon.svelte';
+	import Spinner from '#lib/components/ui/Spinner.svelte';
+	import ThemedSelect from '#lib/components/ThemedSelect.svelte';
+	import { getLocaleItems } from '#lib/features/settings-options';
+	import { getActiveStory, getActiveAct, getActiveActLine } from '#lib/stores/stories.svelte';
+	import { settings } from '#lib/stores/settings.svelte';
+	import { checkActCardExists } from '#lib/features/act-card-generator';
+	import { loadLatestCharacterCardsForActLine } from '#lib/features/character-card-generator';
+	import { getLatestProfilesByActLine } from '#lib/db/character-profiles';
+	import { traceActLineChain } from '#lib/db/acts';
+	import { getActLine } from '#lib/db/act-lines';
 
 	interface Props {
 		isReadyToStart: boolean;

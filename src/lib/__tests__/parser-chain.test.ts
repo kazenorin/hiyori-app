@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { NarrativeVariables } from '$lib/ai/narrative-types';
+import type { NarrativeVariables } from '#lib/ai/narrative-types';
 
-vi.mock('$lib/definitions/common-headers', () => ({
+vi.mock('#lib/definitions/common-headers', () => ({
 	sceneTitleHeader: () => 'Scene title',
 	backgroundHeader: () => 'Background',
 	narrativeBodyHeader: () => 'Narrative Body',
@@ -13,7 +13,7 @@ vi.mock('$lib/definitions/common-headers', () => ({
 	sectionFormat: (text: string, headerLevel: number = 2) => '#'.repeat(headerLevel) + ' ' + text + '\n\n',
 }));
 
-import { createParserChain } from '$lib/ai/parser-chain';
+import { createParserChain } from '#lib/ai/parser-chain';
 
 const T = 'think';
 

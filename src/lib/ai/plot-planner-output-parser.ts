@@ -1,4 +1,4 @@
-import { ls } from '$lib/localization';
+import { ls } from '#lib/localization';
 
 const MIN_ESTIMATE = 1;
 const MAX_ESTIMATE = 100;

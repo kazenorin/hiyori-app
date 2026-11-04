@@ -1,26 +1,26 @@
-import type { MessageBase } from '$lib/db/messages';
+import type { MessageBase } from '#lib/db/messages';
 import { streamText } from 'ai';
 import { maxBy } from 'lodash-es';
-import { getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { createModel } from '$lib/ai/provider/provider';
-import * as dbActs from '$lib/db/acts';
-import * as dbActLines from '$lib/db/act-lines';
-import { fs } from '$lib/fs/file-system';
+import { getMainProviderConfig } from '#lib/stores/settings.svelte';
+import { createModel } from '#lib/ai/provider/provider';
+import * as dbActs from '#lib/db/acts';
+import * as dbActLines from '#lib/db/act-lines';
+import { fs } from '#lib/fs/file-system';
 import { resolveTemplateForGeneration } from './template-resolution';
-import { actDescriptionHeader, characterHeader } from '$lib/definitions/common-headers';
+import { actDescriptionHeader, characterHeader } from '#lib/definitions/common-headers';
 import {
 	importWorldUnnamedCharacter,
 	worldFromCardsPrompt,
 	worldFromCardsSystemPrompt,
 	worldFromChatPrompt,
 	worldFromChatSystemPrompt,
-} from '$lib/definitions/feature-prompts';
+} from '#lib/definitions/feature-prompts';
 import {
 	ERR_API_KEY_AND_MODEL_NOT_CONFIGURED,
 	ERR_NO_AT_LEAST_ONE_CONTENT,
 	ERR_NO_MESSAGES_FOR_WORLD,
-} from '$lib/definitions/error-messages';
-import { WORLD_MD } from '$lib/ai/world-generator/constants';
+} from '#lib/definitions/error-messages';
+import { WORLD_MD } from '#lib/ai/world-generator/constants';
 
 /**
  * Trace back through the act line chain to collect the full message history.

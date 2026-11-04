@@ -1,16 +1,16 @@
 import { generateText } from 'ai';
 import { z } from 'zod';
 import { type ToolSet, tool } from 'ai';
-import { ls } from '$lib/localization';
-import { createModel } from '$lib/ai/provider/provider';
-import { getCharacterNameSuggestionMode, getPlotPlannerProviderConfig, type PlotPlannerProviderConfig } from '$lib/stores/settings.svelte';
-import { suggestCharacterNamePromptLoader } from '$lib/fs/prompts';
+import { ls } from '#lib/localization';
+import { createModel } from '#lib/ai/provider/provider';
+import { getCharacterNameSuggestionMode, getPlotPlannerProviderConfig, type PlotPlannerProviderConfig } from '#lib/stores/settings.svelte';
+import { suggestCharacterNamePromptLoader } from '#lib/fs/prompts';
 import { createSuggestCharacterNameAnalyticTool } from './suggest-character-name-analytic';
-import { getAllCharacterNames } from '$lib/db/character-profiles';
-import { isAuthError, withRetry } from '$lib/utils/async';
+import { getAllCharacterNames } from '#lib/db/character-profiles';
+import { isAuthError, withRetry } from '#lib/utils/async';
 import { log as toolLog } from './utils';
-import { log } from '$lib/logging/logger';
-import type { Story } from '$lib/db/stories';
+import { log } from '#lib/logging/logger';
+import type { Story } from '#lib/db/stories';
 
 const LOG_TAG = 'suggest-character-name';
 const RETRY_COUNT = 2;

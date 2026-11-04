@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { assignRole, settings, updateSettings } from '$lib/stores/settings.svelte';
-	import { t } from '$lib/i18n';
-	import ThemedSelect from '$lib/components/ThemedSelect.svelte';
-	import ProviderSelect from '$lib/components/ProviderSelect.svelte';
-	import Card from '$lib/components/ui/Card.svelte';
-	import RoleCallSettingsOverride from '$lib/components/chat/RoleCallSettingsOverride.svelte';
-	import { getRoleItems, getReviewerModeItems } from '$lib/features/settings-options';
+	import { assignRole, settings, updateSettings } from '#lib/stores/settings.svelte';
+	import { t } from '#lib/i18n';
+	import ThemedSelect from '#lib/components/ThemedSelect.svelte';
+	import ProviderSelect from '#lib/components/ProviderSelect.svelte';
+	import Card from '#lib/components/ui/Card.svelte';
+	import RoleCallSettingsOverride from '#lib/components/chat/RoleCallSettingsOverride.svelte';
+	import { getRoleItems, getReviewerModeItems } from '#lib/features/settings-options';
 
 	const mainProviderId = $derived(settings.roleAssignments['main']);
 	const reviewerModeItems = $derived(getReviewerModeItems());

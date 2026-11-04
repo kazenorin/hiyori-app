@@ -1,11 +1,11 @@
 import { generateText } from 'ai';
 import { createModel } from './provider/provider';
-import { getSummarizerProviderConfig, getMainProviderConfig } from '$lib/stores/settings.svelte';
-import { actShortSummaryExtractionPrompt, actShortSummaryCharacterPrefix, sceneCountLabel } from '$lib/definitions/pipeline-prompts';
-import { getLastSceneNumber, recordActShortSummary, hasEventForMessage } from '$lib/db/act-lines';
+import { getSummarizerProviderConfig, getMainProviderConfig } from '#lib/stores/settings.svelte';
+import { actShortSummaryExtractionPrompt, actShortSummaryCharacterPrefix, sceneCountLabel } from '#lib/definitions/pipeline-prompts';
+import { getLastSceneNumber, recordActShortSummary, hasEventForMessage } from '#lib/db/act-lines';
 import type { AssistantContext } from './pipeline/types';
-import { isAuthError, withRetry } from '$lib/utils/async';
-import { log } from '$lib/logging/logger';
+import { isAuthError, withRetry } from '#lib/utils/async';
+import { log } from '#lib/logging/logger';
 import { parseActSummary } from './act-summary-parser';
 
 const RETRY_COUNT = 2;

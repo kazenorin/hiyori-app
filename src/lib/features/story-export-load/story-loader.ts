@@ -1,7 +1,7 @@
 import JSZip from 'jszip';
-import { upsertStory, createStory } from '$lib/db/stories';
-import { upsertStoryFolder, setStoryFolder } from '$lib/db/story-folders';
-import { upsertAct, insertAct, type Act } from '$lib/db/acts';
+import { upsertStory, createStory } from '#lib/db/stories';
+import { upsertStoryFolder, setStoryFolder } from '#lib/db/story-folders';
+import { upsertAct, insertAct, type Act } from '#lib/db/acts';
 import {
 	getActLine,
 	deleteActLine,
@@ -12,16 +12,16 @@ import {
 	type ActLineMeta,
 	type ActLineEvent,
 	type ActLineEntry,
-} from '$lib/db/act-lines';
-import { insertDirectorNote, type DirectorNote } from '$lib/db/director-notes';
-import { upsertMessage, insertMessage, type Message, parseVariables } from '$lib/db/messages';
-import { upsertMessagePhases } from '$lib/db/message-phases';
-import { insertCharacterProfile, type InsertCharacterProfileInput, type CharacterImportance } from '$lib/db/character-profiles';
-import type { PhaseName, UIScenePhase } from '$lib/ai/narrative-types';
-import { resolveStoryFolder } from '$lib/fs/story-folders';
-import { fs } from '$lib/fs/file-system';
-import { loadStories, selectStory } from '$lib/stores/stories.svelte';
-import { cleanupActLine } from '$lib/ai/chat/run-manager';
+} from '#lib/db/act-lines';
+import { insertDirectorNote, type DirectorNote } from '#lib/db/director-notes';
+import { upsertMessage, insertMessage, type Message, parseVariables } from '#lib/db/messages';
+import { upsertMessagePhases } from '#lib/db/message-phases';
+import { insertCharacterProfile, type InsertCharacterProfileInput, type CharacterImportance } from '#lib/db/character-profiles';
+import type { PhaseName, UIScenePhase } from '#lib/ai/narrative-types';
+import { resolveStoryFolder } from '#lib/fs/story-folders';
+import { fs } from '#lib/fs/file-system';
+import { loadStories, selectStory } from '#lib/stores/stories.svelte';
+import { cleanupActLine } from '#lib/ai/chat/run-manager';
 import type { StoryExportData } from './archive-schema';
 import { regenerateIds } from './id-remapper';
 

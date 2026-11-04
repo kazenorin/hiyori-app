@@ -1,5 +1,5 @@
-import { ls } from '$lib/localization';
-import { requirementsHeader, sectionFormat } from '$lib/definitions/common-headers';
+import { ls } from '#lib/localization';
+import { requirementsHeader, sectionFormat } from '#lib/definitions/common-headers';
 
 /** Modal-verb categories the world-builder agent can assign to an explicit requirement. */
 export const REQUIREMENT_CATEGORIES = ['must', 'should', 'may', 'mustNot', 'will'] as const;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { splitTextSmart, splitLongSentence } from '$lib/kokoro/semantic-split';
+import { splitTextSmart, splitLongSentence } from '#lib/kokoro/semantic-split';
 
 describe('splitTextSmart', () => {
 	it('returns single chunk for short text', () => {

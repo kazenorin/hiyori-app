@@ -1,4 +1,4 @@
-import type { Settings } from '$lib/stores/settings.svelte';
+import type { Settings } from '#lib/stores/settings.svelte';
 import type { SyncBackend } from './sync-backend';
 import { S3Backend } from './s3-backend';
 import { WebDavBackend } from './webdav-backend';
