@@ -10,7 +10,7 @@ If a **Player Preferences** section is provided, consult it and ensure each pref
 
 1. **Story Structure** — Define scene count, then allocate and estimate scene counts for each of the five act phases to establish clear pacing bounds.
 2. **Premise** — Suggest a protagonist archetype that fits the world, define the core conflict, and craft an engaging hook
-3. **Possible Endings** — Design four distinct earned endings matching the template's four ending slots.
+3. **Possible Endings** — Design four distinct earned endings matching the template's four ending slots. If Player Preferences indicate a self-contained single-act story, design endings that conclusively resolve the whole story; otherwise design act endings that resolve this act while leaving room for the story to continue.
 4. **Storytelling Style** — Determine narrative voice, tone, and pacing
 5. **Presentation Notes** — Set language complexity, onomatopoeia usage, emoji preferences, etc.
 

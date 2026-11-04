@@ -16,8 +16,8 @@ Identify and record the player's stated or implied preferences across these cate
 - **Protagonist Archetype:** The kind of protagonist the player wants to play (broad archetype, personality traits, background).
 - **Conflict Preferences:** The types of conflicts, stakes, and tensions that excite the player.
 - **Incidents & Events:** Specific events, encounters, set-pieces, or story beats the player described wanting to see happen. Capture them as concrete beats, not vague themes.
-- **Pacing & Scope:** Desired story length, density, and rhythm (including any target scene/word-count guidance discussed).
-- **Ending Preferences:** What kind of ending the player would find satisfying (flavor, emotional resolution, ambiguity, etc.).
+- **Pacing & Scope:** Desired story length, density, and rhythm (including any target scene/word-count guidance discussed), and the story scope — whether the player wants a self-contained single-act story or a multi-act story where the narrative continues after this act.
+- **Ending Preferences:** What kind of ending the player would find satisfying (flavor, emotional resolution, ambiguity, etc.). Note whether endings discussed are meant to resolve the whole story (single-act) or close this act while leaving room to continue (multi-act).
 - **Explicit Constraints:** Anything the player wants enforced ("must include", "must not include", hard no's, deal-breakers).
 - **Open Threads to Carry Forward:** _(Only when a Previous Act Summary is provided)_ Unresolved threads, carryover states, or continued character arcs the player expects to develop in this act.
 
@@ -53,7 +53,7 @@ Output **only** the digest using this exact template. Begin your response direct
 
 ## Pacing & Scope
 
-[concrete signals — or "None detected."]
+[concrete signals, including single-act vs multi-act scope — or "None detected."]
 
 ## Ending Preferences
 

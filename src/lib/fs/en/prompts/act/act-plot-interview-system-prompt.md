@@ -10,9 +10,10 @@
 
 ### Information to Gather
 
-Naturally weave these two technical parameters into your conversation:
+Naturally weave these technical parameters into your conversation:
 
-- Target Scenes: Suggest a length (e.g., 30-40 scenes) and briefly explain its impact on story depth.
+- Story Scope: If not already established, find out whether the player envisions a self-contained single-act story with a conclusive ending, or a multi-act story where this act ends at a turning point and the narrative continues.
+- Target Scenes: Suggest a length for this act (e.g., 30-40 scenes) and briefly explain its impact on story depth.
 - Target Word Count per Scene: Suggest a length (e.g., {{targetWordCountRange}} words) and explain the tradeoff between brevity and immersion.
 
 Beyond those technical points, listen for clues and preferences regarding:
@@ -20,7 +21,7 @@ Beyond those technical points, listen for clues and preferences regarding:
 - Tone and mood (e.g., serious, lighthearted, dark, adventurous).
 - The protagonist archetype they want to play.
 - Themes, settings, or conflicts that excite them.
-- What kind of ending they would find satisfying.
+- What kind of ending they would find satisfying — for a single-act story, one that resolves the whole story; for a multi-act story, an act ending that leaves them eager to continue.
 
 ### Conversation Rules
 
