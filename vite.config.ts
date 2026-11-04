@@ -1,7 +1,6 @@
 import tailwindcss from '@tailwindcss/vite';
-import { sveltekit } from '@sveltejs/kit/vite';
+import { withPwa } from '@vite-pwa/sveltekit';
 import { defineConfig } from 'vite';
-import { VitePWA } from 'vite-plugin-pwa';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import kitConfig from './sveltekit.config.ts';
@@ -15,12 +14,15 @@ const pwaEnabled = baseRaw === '' && !isTauriBuild;
 export default defineConfig({
 	plugins: [
 		tailwindcss(),
-		sveltekit(kitConfig),
-		VitePWA({
+		// SvelteKit 3 does not run Vite's transformIndexHtml hook, which the PWA
+		// integration uses to inject the manifest link. It is added in app.html.
+		withPwa(kitConfig, {
 			// PWA is only meaningful for a root-hosted web build.
 			disable: !pwaEnabled,
 			outDir: '.svelte-kit/output/client',
 			registerType: 'autoUpdate',
+			base,
+			scope: base,
 			manifest: {
 				name: 'Hiyori — Build Your Own Adventure',
 				short_name: 'Hiyori',
@@ -42,15 +44,19 @@ export default defineConfig({
 					},
 				],
 			},
-			scope: base,
-			workbox: {
-				globPatterns: ['**/*.{js,css,ico,png,svg,webmanifest,wasm}'],
-				// The onnxruntime wasm is ~27 MB and loaded on demand; keep it out of the precache.
+			// The onnxruntime wasm is ~27 MB and loaded on demand; keep it out of the precache.
+			maximumFileSizeToCacheInBytes: 25 * 1024 * 1024,
+			generateSW: {
+				globPatterns: ['client/**/*.{js,css,ico,png,svg,webp,webmanifest,wasm}', 'prerendered/**/*.{html,json}'],
 				globIgnores: ['**/workers/assets/**'],
-				maximumFileSizeToCacheInBytes: 25 * 1024 * 1024,
 			},
 		}),
 	],
+	build: {
+		// AI SDK + zod and marked + bundled localized prompts are intentionally large,
+		// offline-cached chunks; the default 500 kB limit does not apply to this app.
+		chunkSizeWarningLimit: 1500,
+	},
 	clearScreen: false,
 	define: {
 		__APP_VERSION__: JSON.stringify(pkg.version),

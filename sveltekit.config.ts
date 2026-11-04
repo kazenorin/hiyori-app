@@ -9,7 +9,7 @@ const base = rawBase as '' | `/${string}`;
 const config: Config = {
 	preprocess: vitePreprocess(),
 	adapter: adapter({
-		fallback: 'index.html',
+		fallback: '200.html',
 	}),
 	paths: { base },
 	// SvelteKit 3 replaced the implicit `$lib` alias with Node subpath imports
