@@ -27,6 +27,7 @@ common:
     currentScene: 目前場景
     actInformation: 章節資訊
     character: 角色
+    currentCharacterProfiles: 目前角色檔案
     characters: 角色
     interviewTranscript: 訪談記錄
     playerPreferences: 玩家偏好
@@ -186,6 +187,7 @@ pipeline:
     goal: 目標
     relationships: 關係
     voice: 語氣
+    traits: 特質
     importance: 重要性
     importanceLevels:
       1: 主角
@@ -588,6 +590,7 @@ tools:
       goal: '此角色於現場景的即時動機或驅動力。'
       relationships: '角色與其他活躍角色之間的當前關係簡述。'
       voice: '引述一句能代表此角色的說話。'
+      traits: '最多 10 個單一形容詞，描述角色穩定、內在的特質（非暫時狀態），依重要性排序——最具定義性者在前。各特質必須語義互異；不可包含同義或意義重疊的形容詞。'
       importance: '1=主角, 2=主要角色, 3=配角, 4=次要角色'
     messages:
       exists: '此名稱或別名的角色已存在。請使用 `character-details` 工具取得現有檔案。'

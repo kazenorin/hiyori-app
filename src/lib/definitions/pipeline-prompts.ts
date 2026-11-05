@@ -16,6 +16,7 @@ export const loglineLabel = () => ls('pipeline.labels.logline');
 export const goalLabel = () => ls('pipeline.labels.goal');
 export const relationshipsLabel = () => ls('pipeline.labels.relationships');
 export const voiceLabel = () => ls('pipeline.labels.voice');
+export const traitsLabel = () => ls('pipeline.labels.traits');
 export const importanceLabel = () => ls('pipeline.labels.importance');
 export const importanceLevelLabel = (level: 1 | 2 | 3 | 4) => ls(`pipeline.labels.importanceLevels.${level}`);
 export const sceneCountLabel = (n: number) =>

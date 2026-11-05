@@ -38,6 +38,7 @@ import {
 	goalLabel,
 	relationshipsLabel,
 	voiceLabel,
+	traitsLabel,
 	actPlotDescription,
 	upcomingScenePlotGuidanceDescription,
 	upcomingScenePlotPhaseEventDescription,
@@ -64,8 +65,7 @@ function sectionWithRule(header: string, description?: string): string {
  * Phase Events for the current phase.
  */
 export function upcomingScenePlotSection(plotMode: PlotMode): string {
-	const description =
-		plotMode === 'phaseEvent' ? upcomingScenePlotPhaseEventDescription() : upcomingScenePlotGuidanceDescription();
+	const description = plotMode === 'phaseEvent' ? upcomingScenePlotPhaseEventDescription() : upcomingScenePlotGuidanceDescription();
 	return sectionWithRule(upcomingScenePlotHeader(), description);
 }
 
@@ -319,7 +319,7 @@ export function formatCharacterProfilesSection(
 }
 
 /**
- * Render the structured fields (state, goal, relationships, voice) of a character profile
+ * Render the structured fields (state, goal, relationships, voice, traits) of a character profile
  * as labeled markdown lines. Null or blank fields are omitted. Returns empty string if all fields are blank.
  * Shared by the pipeline inline section and the `character-details` tool.
  */
@@ -334,6 +334,9 @@ export function formatProfileResponseBody(p: CharacterProfileEntity): string {
 	push(goalLabel(), p.goal);
 	push(relationshipsLabel(), p.relationships);
 	push(voiceLabel(), p.voice);
+	if (p.traits.length > 0) {
+		push(traitsLabel(), p.traits.join(', '));
+	}
 	return lines.join('\n');
 }
 
