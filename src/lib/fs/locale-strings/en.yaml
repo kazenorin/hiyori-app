@@ -27,6 +27,7 @@ common:
     currentScene: Current Scene
     actInformation: Act Information
     character: Character
+    currentCharacterProfiles: Current Character Profiles
     characters: Characters
     interviewTranscript: Interview Transcript
     playerPreferences: Player Preferences
@@ -192,6 +193,7 @@ pipeline:
     goal: Goal
     relationships: Relationships
     voice: Voice
+    traits: Traits
     importance: Importance
     importanceLevels:
       1: Protagonist
@@ -593,6 +595,7 @@ tools:
       goal: "The character's immediate motive or drive based on the latest scenes."
       relationships: "Brief notes on the character's current standing with other active characters."
       voice: "A single representative quote capturing the character's mindset."
+      traits: "Up to 10 single adjectives describing the character's stable, intrinsic qualities (not temporary states), ordered by importance — most defining first. Traits must be semantically distinct; never include synonyms or overlapping adjectives."
       importance: '1=Protagonist, 2=Main, 3=Supporting, 4=Minor'
     messages:
       exists: 'A character already exists with that name or alias. Use the `character-details` tool to retrieve the existing profile.'

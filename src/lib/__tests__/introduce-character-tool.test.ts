@@ -27,6 +27,7 @@ vi.mock('#lib/db/character-profiles', () => ({
 	areAnyCharacterNamesKnown: vi.fn(async () => false),
 	ensurePreferredInAliases: (preferredName: string, aliases: string[]) => [preferredName, ...aliases],
 	toCanonicalName: (name: string) => name,
+	MAX_CHARACTER_TRAITS: 10,
 }));
 
 import { createIntroduceCharacterTool, buildIntroduceCharacterTools } from '#lib/ai/tools/introduce-character';
@@ -104,6 +105,33 @@ describe('createIntroduceCharacterTool', () => {
 
 		expect(result).toBe('tools.introduceCharacter.messages.exists');
 		expect(insertCharacterProfile).not.toHaveBeenCalled();
+	});
+
+	it('passes traits through to the profile insert', async () => {
+		const toolDef = createIntroduceCharacterTool(createMockContext(5));
+
+		await toolDef.execute!(
+			{ ...validInput, traits: ['bold', 'cunning'] },
+			{ toolCallId: 'test', messages: [], abortSignal: undefined, context: {} }
+		);
+
+		expect(vi.mocked(insertCharacterProfile).mock.calls[0][0].traits).toEqual(['bold', 'cunning']);
+	});
+
+	it('defaults traits to an empty array when omitted', async () => {
+		const toolDef = createIntroduceCharacterTool(createMockContext(5));
+
+		await toolDef.execute!(validInput, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
+
+		expect(vi.mocked(insertCharacterProfile).mock.calls[0][0].traits).toEqual([]);
+	});
+
+	it('rejects more than 10 traits at the schema level', () => {
+		const toolDef = createIntroduceCharacterTool(createMockContext(5));
+		const schema = toolDef.inputSchema as unknown as { safeParse: (input: unknown) => { success: boolean } };
+
+		expect(schema.safeParse({ ...validInput, traits: Array.from({ length: 10 }, (_, i) => `t${i}`) }).success).toBe(true);
+		expect(schema.safeParse({ ...validInput, traits: Array.from({ length: 11 }, (_, i) => `t${i}`) }).success).toBe(false);
 	});
 });
 

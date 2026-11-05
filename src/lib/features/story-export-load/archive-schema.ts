@@ -5,8 +5,9 @@
  *        Includes `logline` (NOT NULL); `state` is nullable.
  *   3 — added `messagePhases` field (optional; per-phase generation output keyed by
  *        message id, mirroring the `message_phases` table).
+ *   4 — added optional `traits` to `characterProfiles` entries (older archives without it still load).
  */
-export const CURRENT_ARCHIVE_VERSION = 3;
+export const CURRENT_ARCHIVE_VERSION = 4;
 
 export interface StoryExportData {
 	version: number;
@@ -92,6 +93,7 @@ export interface StoryExportData {
 		goal: string | null;
 		relationships: string | null;
 		voice: string | null;
+		traits?: string[];
 		sceneDetails: string;
 		importance: number;
 		createdAt: number;

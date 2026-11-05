@@ -22,6 +22,7 @@ vi.mock('#lib/localization', () => ({
 			'pipeline.labels.goal': 'Goal',
 			'pipeline.labels.relationships': 'Relationships',
 			'pipeline.labels.voice': 'Voice',
+			'pipeline.labels.traits': 'Traits',
 		};
 		return map[key] ?? key;
 	},
@@ -90,6 +91,7 @@ function makeProfile(overrides: Partial<CharacterProfileEntity> = {}): Character
 		goal: null,
 		relationships: null,
 		voice: null,
+		traits: [],
 		sceneDetails: '',
 		importance: 2,
 		createdAt: 1000,
@@ -302,5 +304,17 @@ describe('formatCharacterProfileAsMessage', () => {
 		const result = formatCharacterProfileAsMessage(profile);
 		expect(result).toContain('**Logline:** A hero.');
 		expect(result).toContain('**State:** Determined.');
+	});
+
+	it('renders traits as a comma-separated line when present', () => {
+		const profile = makeProfile({ traits: ['bold', 'cunning'] });
+		const result = formatCharacterProfileAsMessage(profile);
+		expect(result).toContain('**Traits:** bold, cunning');
+	});
+
+	it('omits the traits line when traits are empty', () => {
+		const profile = makeProfile({ traits: [] });
+		const result = formatCharacterProfileAsMessage(profile);
+		expect(result).not.toContain('Traits:');
 	});
 });

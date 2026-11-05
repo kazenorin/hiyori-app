@@ -10,6 +10,7 @@ import {
 	ensurePreferredInAliases,
 	type CharacterImportance,
 	toCanonicalName,
+	MAX_CHARACTER_TRAITS,
 } from '#lib/db/character-profiles';
 
 export function createIntroduceCharacterTool(ctx: ToolContext) {
@@ -23,6 +24,7 @@ export function createIntroduceCharacterTool(ctx: ToolContext) {
 		goal: z.string().optional().describe(ls('tools.introduceCharacter.parameters.goal')),
 		relationships: z.string().optional().describe(ls('tools.introduceCharacter.parameters.relationships')),
 		voice: z.string().optional().describe(ls('tools.introduceCharacter.parameters.voice')),
+		traits: z.array(z.string()).max(MAX_CHARACTER_TRAITS).optional().default([]).describe(ls('tools.introduceCharacter.parameters.traits')),
 		importance: z
 			.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)])
 			.describe(ls('tools.introduceCharacter.parameters.importance')),
@@ -32,7 +34,7 @@ export function createIntroduceCharacterTool(ctx: ToolContext) {
 		description: ls('tools.introduceCharacter.description'),
 		inputSchema,
 		execute: async (input): Promise<string> => {
-			const { preferredName, aliases = [], logline, state, goal, relationships, voice, importance } = input;
+			const { preferredName, aliases = [], logline, state, goal, relationships, voice, traits = [], importance } = input;
 			await log(`introduce-character triggered for actLineId=${actLine.id}, name=${preferredName}`);
 
 			const allNames = [preferredName, ...aliases];
@@ -55,6 +57,7 @@ export function createIntroduceCharacterTool(ctx: ToolContext) {
 				goal: goal ?? null,
 				relationships: relationships ?? null,
 				voice: voice ?? null,
+				traits,
 				sceneDetails: '',
 				importance: importance as CharacterImportance,
 			});

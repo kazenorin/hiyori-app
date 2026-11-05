@@ -461,6 +461,12 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 			}
 			await upsertMessagePhasesFromRows(linePhases, insertedIds);
 			await insertActLineEntries(entries.map((e) => ({ actLineId: e.actLineId, messageId: e.messageId, sequence: e.sequence })));
+			if (data.characterProfiles) {
+				const lineSet = new Set([actLineId]);
+				for (const profile of toCharacterProfileInputs(data.characterProfiles, lineSet)) {
+					await insertCharacterProfile(profile);
+				}
+			}
 			anyChange = true;
 			continue;
 		}

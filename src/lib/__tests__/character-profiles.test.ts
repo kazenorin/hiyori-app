@@ -26,6 +26,8 @@ describe('character-profiles DB layer', () => {
 	let resolveCanonicalName: typeof import('#lib/db/character-profiles').resolveCanonicalName;
 	let toCanonicalName: typeof import('#lib/db/character-profiles').toCanonicalName;
 	let ensurePreferredInAliases: typeof import('#lib/db/character-profiles').ensurePreferredInAliases;
+	let normalizeTraits: typeof import('#lib/db/character-profiles').normalizeTraits;
+	let parseTraits: typeof import('#lib/db/character-profiles').parseTraits;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
@@ -44,6 +46,38 @@ describe('character-profiles DB layer', () => {
 		resolveCanonicalName = mod.resolveCanonicalName;
 		toCanonicalName = mod.toCanonicalName;
 		ensurePreferredInAliases = mod.ensurePreferredInAliases;
+		normalizeTraits = mod.normalizeTraits;
+		parseTraits = mod.parseTraits;
+	});
+
+	describe('normalizeTraits', () => {
+		it('trims entries and drops empties', () => {
+			expect(normalizeTraits([' bold ', '', '  ', 'cunning'])).toEqual(['bold', 'cunning']);
+		});
+
+		it('dedupes exact duplicates keeping first occurrence', () => {
+			expect(normalizeTraits(['bold', 'cunning', 'bold'])).toEqual(['bold', 'cunning']);
+		});
+
+		it('keeps the first 10 traits in order', () => {
+			const traits = Array.from({ length: 12 }, (_, i) => `t${i}`);
+			expect(normalizeTraits(traits)).toEqual(traits.slice(0, 10));
+		});
+	});
+
+	describe('parseTraits', () => {
+		it('parses a comma-separated string into an array', () => {
+			expect(parseTraits('bold, cunning, loyal')).toEqual(['bold', 'cunning', 'loyal']);
+		});
+
+		it('returns empty array for null or blank', () => {
+			expect(parseTraits(null)).toEqual([]);
+			expect(parseTraits('')).toEqual([]);
+		});
+
+		it('normalizes parsed values', () => {
+			expect(parseTraits('bold,bold, ,cunning')).toEqual(['bold', 'cunning']);
+		});
 	});
 
 	describe('toCanonicalName', () => {
@@ -138,8 +172,45 @@ describe('character-profiles DB layer', () => {
 			expect(params[8]).toBeNull();
 			expect(params[9]).toBeNull();
 			expect(params[10]).toBeNull();
-			expect(params[11]).toBe('Scene 5: Elena fights');
-			expect(params[12]).toBe(2);
+			expect(params[11]).toBeNull();
+			expect(params[12]).toBe('Scene 5: Elena fights');
+			expect(params[13]).toBe(2);
+		});
+
+		it('serializes traits as a normalized comma-separated string', async () => {
+			await insertCharacterProfile({
+				id: 'p3',
+				actLineId: 'line-1',
+				sceneNumber: null,
+				canonicalName: 'elena',
+				preferredName: 'Elena',
+				aliases: [],
+				logline: 'A determined hero.',
+				traits: [' bold ', 'bold', 'cunning'],
+				sceneDetails: '',
+				importance: 2,
+			});
+
+			const [, params] = mockDb.execute.mock.calls[0] as [string, unknown[]];
+			expect(params[11]).toBe('bold, cunning');
+		});
+
+		it('stores null when traits are empty', async () => {
+			await insertCharacterProfile({
+				id: 'p4',
+				actLineId: 'line-1',
+				sceneNumber: null,
+				canonicalName: 'elena',
+				preferredName: 'Elena',
+				aliases: [],
+				logline: 'A determined hero.',
+				traits: [],
+				sceneDetails: '',
+				importance: 2,
+			});
+
+			const [, params] = mockDb.execute.mock.calls[0] as [string, unknown[]];
+			expect(params[11]).toBeNull();
 		});
 
 		it('serializes empty aliases as "[]"', async () => {
@@ -177,6 +248,7 @@ describe('character-profiles DB layer', () => {
 						goal: null,
 						relationships: null,
 						voice: null,
+						traits: 'bold, cunning',
 						scene_details: 'details',
 						importance: 2,
 						created_at: 1000,
@@ -199,11 +271,40 @@ describe('character-profiles DB layer', () => {
 				goal: null,
 				relationships: null,
 				voice: null,
+				traits: ['bold', 'cunning'],
 				sceneDetails: 'details',
 				importance: 2,
 				createdAt: 1000,
 				updatedAt: 2000,
 			});
+		});
+
+		it('maps null traits to an empty array', async () => {
+			mockDbSelectResults = [
+				[
+					{
+						id: 'p1',
+						act_line_id: 'line-1',
+						scene_number: 5,
+						canonical_name: 'elena',
+						preferred_name: 'Elena',
+						aliases: '[]',
+						logline: 'A determined hero.',
+						state: null,
+						goal: null,
+						relationships: null,
+						voice: null,
+						traits: null,
+						scene_details: '',
+						importance: 2,
+						created_at: 1000,
+						updated_at: 2000,
+					},
+				],
+			];
+
+			const result = await getLatestProfilesByActLine('line-1');
+			expect(result[0].traits).toEqual([]);
 		});
 
 		it('returns empty array when no profiles', async () => {
@@ -433,6 +534,36 @@ describe('character-profiles DB layer', () => {
 			expect(params1[0]).not.toBe('p1');
 		});
 
+		it('carries traits over to the cloned rows', async () => {
+			mockDbSelectResults = [
+				[
+					{
+						id: 'p1',
+						act_line_id: 'src',
+						scene_number: 5,
+						canonical_name: 'elena',
+						preferred_name: 'Elena',
+						aliases: '["E"]',
+						logline: 'A hero.',
+						state: 'P',
+						goal: null,
+						relationships: null,
+						voice: null,
+						traits: 'bold, cunning',
+						scene_details: 'D',
+						importance: 2,
+						created_at: 1000,
+						updated_at: 2000,
+					},
+				],
+			];
+
+			await cloneCharacterProfiles('src', 'dest', 5);
+
+			const params = (mockDb.execute.mock.calls[0] as [string, unknown[]])[1];
+			expect(params).toContain('bold, cunning');
+		});
+
 		it('does nothing when source has no profiles', async () => {
 			mockDbSelectResults = [[]];
 			await cloneCharacterProfiles('src', 'dest', 5);
@@ -521,6 +652,30 @@ describe('character-profiles DB layer', () => {
 			const aliases = JSON.parse(params[5] as string);
 			expect(aliases).toContain('Shadow');
 			expect(aliases).toContain('Elena');
+		});
+
+		it('carries traits over to the inherited baseline rows', async () => {
+			mockDbSelectResults = [
+				[
+					{
+						canonical_name: 'elena',
+						preferred_name: 'Elena',
+						aliases: '["Shadow"]',
+						logline: 'A determined hero.',
+						state: 'Determined',
+						goal: null,
+						relationships: null,
+						voice: null,
+						traits: 'bold, cunning',
+						importance: 2,
+					},
+				],
+			];
+
+			await inheritProfilesFromActLine('src', 'dest');
+
+			const params = (mockDb.execute.mock.calls[0] as [string, unknown[]])[1];
+			expect(params).toContain('bold, cunning');
 		});
 
 		it('deduplicates aliases when preferred name already in aliases', async () => {

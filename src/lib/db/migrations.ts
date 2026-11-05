@@ -172,6 +172,7 @@ const migrationStatements: string[][] = [
 			PRIMARY KEY (message_id, phase_name)
 		)`,
 	],
+	[`ALTER TABLE character_profiles ADD COLUMN traits TEXT`],
 ];
 
 interface ActLineMetaMigrateRow {

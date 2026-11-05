@@ -4,6 +4,7 @@ import { hasNarrativeOverrides } from '../narrative-types';
 import type { PipelineContext, PlayerContext } from './types';
 import type { StreamState } from '../chat-callbacks';
 import {
+	formatCharacterProfileAsMessage,
 	formatDirectorNotesSection,
 	formatPreviousNarrativeBody,
 	formatStorySoFar,
@@ -14,10 +15,12 @@ import {
 import {
 	actSummaryForScenesHeader,
 	actSummaryHeader,
+	currentCharacterProfilesHeader,
 	scenesHeader,
 	sectionFormat,
 	summaryHeader,
 } from '#lib/definitions/common-headers';
+import type { CharacterProfileEntity } from '#lib/db/character-profiles';
 import { aliasesLabel, locationLabel, sceneWithNumberLabel } from '#lib/definitions/common-labels';
 import { hasTemplateMetadata, variablesToMarkdown } from '../template-renderer';
 import { type ActSummary, parseActSummary, pruneCharacterScenes, serializeActSummary } from '../act-summary-parser';
@@ -141,6 +144,17 @@ export function formatActSummaryForCompressor(completedScenes: number, newActSum
 	const actSummaryHeading = sectionFormat(`(${upToLabel()} ${sceneWithNumberLabel(completedScenes)})`);
 	const summarizerActSummary = serializeActSummary({ ...newActSummary, characterProfiles: [], characterProfileLastScene: null });
 	return summarizerActSummary ? [actSummaryHeading + summarizerActSummary] : [];
+}
+
+/**
+ * Format the latest character profiles as the baseline reference section for the compressor,
+ * so it evolves existing profiles instead of re-deriving them from scratch.
+ * Scene details are excluded — the compressor rebuilds them from the act summary.
+ */
+export function formatExistingProfilesForCompressor(profiles: CharacterProfileEntity[]): string[] {
+	if (profiles.length === 0) return [];
+	const body = profiles.map((p) => formatCharacterProfileAsMessage(p, false)).join('\n\n');
+	return [sectionFormat(currentCharacterProfilesHeader()) + body];
 }
 
 /**

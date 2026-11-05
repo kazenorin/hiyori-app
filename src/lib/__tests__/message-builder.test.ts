@@ -4,10 +4,12 @@ import {
 	buildMainContextMessages,
 	buildPhaseMessages,
 	buildSummariesMessage,
+	formatExistingProfilesForCompressor,
 	mergeVariables,
 } from '#lib/ai/pipeline/message-builder';
 import { createNarrativeOverrides, type NarrativeVariables } from '#lib/ai/narrative-types';
 import type { PipelineContext } from '#lib/ai/pipeline/types';
+import type { CharacterProfileEntity } from '#lib/db/character-profiles';
 
 // Override only the headers these builders assert on; importOriginal keeps every other real
 // export so message-builder's transitive graph (narrative-types, pipeline-sections) still links.
@@ -24,6 +26,7 @@ vi.mock('#lib/definitions/common-headers', async (importOriginal) => {
 		actPlotHeader: () => 'Act Plot',
 		storySoFarHeader: () => 'Story So Far',
 		upcomingScenePlotHeader: () => 'Upcoming Scene Plot',
+		currentCharacterProfilesHeader: () => 'Current Character Profiles',
 	};
 });
 
@@ -236,5 +239,48 @@ describe('buildPhaseMessages', () => {
 	it('omits the Upcoming Scene Plot message when there is no plot', () => {
 		const msgs = buildPhaseMessages(ctx, [], 'TASK', '');
 		expect(msgs.map((m) => m.content).join('\n')).not.toContain('Upcoming Scene Plot');
+	});
+});
+
+function makeProfileEntity(overrides: Partial<CharacterProfileEntity> = {}): CharacterProfileEntity {
+	return {
+		id: 'p1',
+		actLineId: 'line-1',
+		sceneNumber: 5,
+		canonicalName: 'elena',
+		preferredName: 'Elena',
+		aliases: [],
+		logline: 'A determined hero.',
+		state: 'Determined.',
+		goal: null,
+		relationships: null,
+		voice: null,
+		traits: [],
+		sceneDetails: '',
+		importance: 2,
+		createdAt: 1000,
+		updatedAt: 1000,
+		...overrides,
+	};
+}
+
+describe('formatExistingProfilesForCompressor', () => {
+	it('returns empty array when there are no profiles', () => {
+		expect(formatExistingProfilesForCompressor([])).toEqual([]);
+	});
+
+	it('renders a baseline section with profile names and traits', () => {
+		const result = formatExistingProfilesForCompressor([makeProfileEntity({ traits: ['bold', 'cunning'] })]);
+
+		expect(result).toHaveLength(1);
+		expect(result[0]).toContain('## Current Character Profiles');
+		expect(result[0]).toContain('### Elena');
+		expect(result[0]).toContain('bold, cunning');
+	});
+
+	it('omits scene details from the baseline section', () => {
+		const result = formatExistingProfilesForCompressor([makeProfileEntity({ sceneDetails: 'Scene 3: Elena fights.' })]);
+
+		expect(result[0]).not.toContain('Elena fights');
 	});
 });

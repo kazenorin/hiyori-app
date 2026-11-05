@@ -156,6 +156,7 @@ export function toCharacterProfileInputs(
 			goal: p.goal,
 			relationships: p.relationships,
 			voice: p.voice,
+			traits: p.traits ?? [],
 			sceneDetails: p.sceneDetails,
 			importance: p.importance as CharacterImportance,
 			createdAt: p.createdAt,

@@ -29,6 +29,7 @@ import { createAct } from '#lib/db/acts';
 import { createActLine, insertActLineEntries } from '#lib/db/act-lines';
 import { insertMessage, type Message } from '#lib/db/messages';
 import { upsertMessagePhases } from '#lib/db/message-phases';
+import { insertCharacterProfile } from '#lib/db/character-profiles';
 import { buildStoryExportData } from '#lib/features/story-export-load/story-exporter';
 import { CURRENT_ARCHIVE_VERSION } from '#lib/features/story-export-load/archive-schema';
 
@@ -55,10 +56,29 @@ describe('buildStoryExportData messagePhases', () => {
 		testDb.close();
 	});
 
-	it('exports archive version 3', async () => {
+	it('exports archive version 4', async () => {
 		const data = await buildStoryExportData('story-1');
-		expect(CURRENT_ARCHIVE_VERSION).toBe(3);
-		expect(data.version).toBe(3);
+		expect(CURRENT_ARCHIVE_VERSION).toBe(4);
+		expect(data.version).toBe(4);
+	});
+
+	// WHY: traits must survive the export→import round-trip across devices.
+	it('exports profile traits as an array', async () => {
+		await insertCharacterProfile({
+			id: 'cp-1',
+			actLineId: 'line-1',
+			sceneNumber: 1,
+			canonicalName: 'alice',
+			preferredName: 'Alice',
+			aliases: [],
+			logline: 'A determined hero.',
+			traits: ['bold', 'cunning'],
+			sceneDetails: '',
+			importance: 2,
+		});
+
+		const data = await buildStoryExportData('story-1');
+		expect(data.characterProfiles?.[0].traits).toEqual(['bold', 'cunning']);
 	});
 
 	// WHY: the archive is the only carrier of phases across devices; wrong

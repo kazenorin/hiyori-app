@@ -18,6 +18,7 @@ const mockLoglineLabel = vi.fn(() => 'Logline');
 const mockGoalLabel = vi.fn(() => 'Goal');
 const mockRelationshipsLabel = vi.fn(() => 'Relationships');
 const mockVoiceLabel = vi.fn(() => 'Voice');
+const mockTraitsLabel = vi.fn(() => 'Traits');
 const mockImportanceLabel = vi.fn(() => 'Importance');
 vi.mock('#lib/definitions/common-headers', () => ({
 	actSummaryHeader: () => mockActSummaryHeader(),
@@ -39,6 +40,7 @@ vi.mock('#lib/definitions/character-profile-labels', () => ({
 	goalLabel: () => mockGoalLabel(),
 	relationshipsLabel: () => mockRelationshipsLabel(),
 	voiceLabel: () => mockVoiceLabel(),
+	traitsLabel: () => mockTraitsLabel(),
 	importanceLabel: () => mockImportanceLabel(),
 }));
 
@@ -260,6 +262,45 @@ describe('serializeActSummary', () => {
 		expect(reparsed.characters).toHaveLength(original.characters.length);
 		expect(reparsed.characters[0].characterName).toBe(original.characters[0].characterName);
 	});
+	it('serializes traits for character profiles when present', () => {
+		const data: ActSummary = {
+			completedScenes: 5,
+			scenes: [],
+			characters: [],
+			turnOfEvents: null,
+			turnOfEventsSceneNumber: null,
+			turnOfEventsSceneTitle: null,
+			characterProfiles: [
+				{
+					characterName: 'Elena',
+					logline: 'A determined hero.',
+					state: 'Wounded',
+					goal: 'Escape',
+					relationships: 'Allied with hero',
+					voice: 'Quiet',
+					traits: ['bold', 'cunning'],
+					importance: 1,
+				},
+				{
+					characterName: 'Voss',
+					logline: 'A gruff captain.',
+					state: 'Alert',
+					goal: 'Pursue',
+					relationships: 'Hostile',
+					voice: 'Gruff',
+					traits: [],
+					importance: 3,
+				},
+			],
+			characterProfileLastScene: 5,
+		};
+
+		const result = serializeActSummary(data);
+		expect(result).toContain('- Traits: bold, cunning');
+		const vossSection = result.split('### Voss')[1];
+		expect(vossSection).not.toContain('Traits:');
+	});
+
 	it('serializes turnOfEvents section when present', () => {
 		const data: ActSummary = {
 			completedScenes: 2,
@@ -568,6 +609,7 @@ Summary: The hero discovers a hidden path.
 					goal: 'Escape',
 					relationships: 'Distrusts Voss',
 					voice: 'Quiet',
+					traits: [],
 					importance: null,
 				},
 			],
@@ -614,6 +656,7 @@ describe('parseProfilesBody', () => {
 			goal: 'Escape the castle',
 			relationships: 'Distrusts Captain Voss, allied with the hero',
 			voice: 'Quiet and measured',
+			traits: [],
 			importance: null,
 		});
 		expect(result.profiles[1]).toEqual({
@@ -623,8 +666,26 @@ describe('parseProfilesBody', () => {
 			goal: 'Prevent the escape',
 			relationships: 'Hostile toward Elena',
 			voice: 'Gruff and commanding',
+			traits: [],
 			importance: null,
 		});
+	});
+
+	it('parses traits into a normalized array', () => {
+		const body = `### Elena
+- Logline: A determined hero.
+- Traits: bold, cunning, bold,  loyal`;
+
+		const result = parseProfilesBody(body);
+		expect(result.profiles[0].traits).toEqual(['bold', 'cunning', 'loyal']);
+	});
+
+	it('defaults traits to an empty array when the label is absent', () => {
+		const body = `### Elena
+- Logline: A determined hero.`;
+
+		const result = parseProfilesBody(body);
+		expect(result.profiles[0].traits).toEqual([]);
 	});
 
 	it('parses importance when present', () => {
@@ -693,7 +754,7 @@ describe('pruneCharacterScenes', () => {
 				},
 			],
 			characterProfiles: [
-				{ characterName: 'Elena', logline: 'A hero.', state: 'S', goal: 'G', relationships: 'R', voice: 'V', importance: null },
+				{ characterName: 'Elena', logline: 'A hero.', state: 'S', goal: 'G', relationships: 'R', voice: 'V', traits: [], importance: null },
 			],
 			characterProfileLastScene: 5,
 			turnOfEvents: null,
@@ -798,6 +859,7 @@ describe('compressed act summary (caller-side assembly)', () => {
 				goal: 'Escape',
 				relationships: 'Allied with hero',
 				voice: 'Quiet',
+				traits: [],
 				importance: null,
 			},
 			{
@@ -807,6 +869,7 @@ describe('compressed act summary (caller-side assembly)', () => {
 				goal: 'Survive',
 				relationships: 'Hostile',
 				voice: 'Gruff',
+				traits: [],
 				importance: null,
 			},
 		],

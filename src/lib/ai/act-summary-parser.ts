@@ -6,9 +6,10 @@ import {
 	goalLabel,
 	relationshipsLabel,
 	voiceLabel,
+	traitsLabel,
 	importanceLabel,
 } from '#lib/definitions/character-profile-labels';
-import type { CharacterImportance } from '#lib/db/character-profiles';
+import { parseTraits, type CharacterImportance } from '#lib/db/character-profiles';
 import {
 	sceneSummariesHeader,
 	characterSummariesHeader,
@@ -48,6 +49,7 @@ export interface CharacterProfile {
 	goal: string;
 	relationships: string;
 	voice: string;
+	traits: string[];
 	importance: number | null;
 }
 
@@ -278,6 +280,7 @@ export function parseProfilesBody(rawBody: string): { profiles: CharacterProfile
 				goal: '',
 				relationships: '',
 				voice: '',
+				traits: [],
 				importance: null,
 			};
 			continue;
@@ -324,6 +327,12 @@ export function parseProfilesBody(rawBody: string): { profiles: CharacterProfile
 		const voice = extractLabeledValue(text, voiceLabel());
 		if (voice !== null) {
 			currentProfile.voice = voice;
+			continue;
+		}
+
+		const traits = extractLabeledValue(text, traitsLabel());
+		if (traits !== null) {
+			currentProfile.traits = parseTraits(traits);
 			continue;
 		}
 
@@ -458,6 +467,9 @@ export function serializeActSummary(data: ActSummary): string {
 			lines.push(`- ${goalLabel()}: ${profile.goal}`);
 			lines.push(`- ${relationshipsLabel()}: ${profile.relationships}`);
 			lines.push(`- ${voiceLabel()}: ${profile.voice}`);
+			if (profile.traits.length > 0) {
+				lines.push(`- ${traitsLabel()}: ${profile.traits.join(', ')}`);
+			}
 			if (profile.importance !== null) {
 				lines.push(`- ${importanceLabel()}: ${profile.importance}`);
 			}
