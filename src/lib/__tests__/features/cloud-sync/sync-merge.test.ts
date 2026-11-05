@@ -30,6 +30,7 @@ import { insertMessage, getMessagesByIds, type Message } from '#lib/db/messages'
 import { upsertMessagePhases, getPhasesForMessages } from '#lib/db/message-phases';
 import { compareLineages, mergeIncomingActLine, mergeIncomingStory } from '#lib/features/cloud-sync/sync-merge';
 import type { StoryExportData } from '#lib/features/story-export-load/archive-schema';
+import { CURRENT_ARCHIVE_VERSION } from '#lib/features/story-export-load/archive-schema';
 import JSZip from 'jszip';
 import { setFileSystem, fs } from '#lib/fs/file-system';
 import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
@@ -441,12 +442,36 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 				messageRow('m6', 'incoming content'),
 			],
 			incomingEvents: [
-				{ id: 'evt-shared', actLineId: 'line-1', messageId: 'm2', messageSequence: 2, event: 'act-phase-transition', value: 'rising', createdAt: 10 },
-				{ id: 'evt-remote-tail', actLineId: 'line-1', messageId: 'm6', messageSequence: 4, event: 'plot-generated', value: '4', createdAt: 20 },
+				{
+					id: 'evt-shared',
+					actLineId: 'line-1',
+					messageId: 'm2',
+					messageSequence: 2,
+					event: 'act-phase-transition',
+					value: 'rising',
+					createdAt: 10,
+				},
+				{
+					id: 'evt-remote-tail',
+					actLineId: 'line-1',
+					messageId: 'm6',
+					messageSequence: 4,
+					event: 'plot-generated',
+					value: '4',
+					createdAt: 20,
+				},
 			],
 			incomingPremises: [{ actLineId: 'line-1', messageId: 'm6', sequence: 4 }],
 			incomingNotes: [
-				{ id: 'note-remote', actLineId: 'line-1', text: 'incoming note', isActive: true, effectiveFromScene: null, effectiveToScene: null, createdAt: 30 },
+				{
+					id: 'note-remote',
+					actLineId: 'line-1',
+					text: 'incoming note',
+					isActive: true,
+					effectiveFromScene: null,
+					effectiveToScene: null,
+					createdAt: 30,
+				},
 			],
 			incomingProfiles: [
 				{
@@ -475,15 +500,11 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 		// The whole incoming line-local state lands on the line: the shared
 		// event (wiped with the delete, re-imported), the tail event, the tail
 		// premise, the note and the profile.
-		const events = await testDb.select<{ id: string }[]>(
-			'SELECT id FROM act_line_events WHERE act_line_id = $1 ORDER BY id',
-			['line-1']
-		);
+		const events = await testDb.select<{ id: string }[]>('SELECT id FROM act_line_events WHERE act_line_id = $1 ORDER BY id', ['line-1']);
 		expect(events.map((e) => e.id)).toEqual(['evt-remote-tail', 'evt-shared']);
-		const premises = await testDb.select<{ message_id: string }[]>(
-			'SELECT message_id FROM act_line_premises WHERE act_line_id = $1',
-			['line-1']
-		);
+		const premises = await testDb.select<{ message_id: string }[]>('SELECT message_id FROM act_line_premises WHERE act_line_id = $1', [
+			'line-1',
+		]);
 		expect(premises.map((p) => p.message_id)).toEqual(['m6']);
 		const notes = await testDb.select<{ text: string }[]>('SELECT text FROM director_notes WHERE act_line_id = $1', ['line-1']);
 		expect(notes.map((n) => n.text)).toEqual(['incoming note']);
@@ -527,7 +548,15 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 				messageRow('m6', 'incoming content'),
 			],
 			incomingNotes: [
-				{ id: 'note-remote', actLineId: 'line-1', text: 'incoming note', isActive: true, effectiveFromScene: null, effectiveToScene: null, createdAt: 50 },
+				{
+					id: 'note-remote',
+					actLineId: 'line-1',
+					text: 'incoming note',
+					isActive: true,
+					effectiveFromScene: null,
+					effectiveToScene: null,
+					createdAt: 50,
+				},
 			],
 			forkNameSuffix: '(local branch)',
 		});
@@ -567,8 +596,24 @@ describe('mergeIncomingActLine (fork-and-yield)', () => {
 			],
 			incomingMessages: [],
 			incomingNotes: [
-				{ id: 'note-local', actLineId: 'line-1', text: 'local note', isActive: true, effectiveFromScene: null, effectiveToScene: null, createdAt: 10 },
-				{ id: 'note-remote', actLineId: 'line-1', text: 'remote note', isActive: true, effectiveFromScene: null, effectiveToScene: null, createdAt: 20 },
+				{
+					id: 'note-local',
+					actLineId: 'line-1',
+					text: 'local note',
+					isActive: true,
+					effectiveFromScene: null,
+					effectiveToScene: null,
+					createdAt: 10,
+				},
+				{
+					id: 'note-remote',
+					actLineId: 'line-1',
+					text: 'remote note',
+					isActive: true,
+					effectiveFromScene: null,
+					effectiveToScene: null,
+					createdAt: 20,
+				},
 			],
 			forkNameSuffix: '(local branch)',
 		});
@@ -912,5 +957,95 @@ describe('mergeIncomingStory phase portability', () => {
 		expect(result).toBe('merged');
 		const phases = await getPhasesForMessages(['m1']);
 		expect(phases.get('m1')?.map((p) => p.content)).toEqual(['remote draft', 'remote final']);
+	});
+});
+
+describe('mergeIncomingStory character profile traits', () => {
+	beforeEach(async () => {
+		testDb = createTestDatabase();
+		await runMigrations();
+		await stories.createStory('story-1', 'Test', 'en');
+		await acts.createAct('act-1', 'story-1', 'Act 1', 1);
+		setFileSystem(new InMemoryFileSystem());
+	});
+
+	afterEach(() => {
+		testDb.close();
+	});
+
+	function makeArchiveData(profile: NonNullable<StoryExportData['characterProfiles']>[number]): StoryExportData {
+		return {
+			version: CURRENT_ARCHIVE_VERSION,
+			story: { id: 'story-1', name: 'Test', locale: 'en', createdAt: 1000, updatedAt: 2000 },
+			storyFolder: { storyId: 'story-1', folderName: 'test-folder', createdAt: 1000 },
+			acts: [
+				{ id: 'act-1', storyId: 'story-1', name: 'Act 1', actNumber: 1, continuesFromActLineId: null, createdAt: 1000, updatedAt: 2000 },
+			],
+			actLineMeta: [{ id: 'line-9', actId: 'act-1', name: 'Remote Fork', isMainLine: false, createdAt: 2000, plotMode: 'guidance' }],
+			actLineEvents: [],
+			actLineEntries: [{ actLineId: 'line-9', messageId: 'r1', sequence: 1 }],
+			actLinePremises: [],
+			directorNotes: [],
+			messages: [
+				{
+					id: 'r1',
+					role: 'assistant',
+					content: 'remote scene',
+					reasoning: null,
+					metadata: null,
+					variables: null,
+					actSummary: null,
+					scenePlot: null,
+					importantPhrases: null,
+					sceneNumber: 1,
+					createdAt: 2000,
+				},
+			],
+			characterProfiles: [profile],
+		};
+	}
+
+	const baseProfile = {
+		id: 'cp-1',
+		actLineId: 'line-9',
+		sceneNumber: 1,
+		canonicalName: 'alice',
+		preferredName: 'Alice',
+		aliases: [] as string[],
+		logline: 'A determined hero.',
+		state: null,
+		goal: null,
+		relationships: null,
+		voice: null,
+		sceneDetails: '',
+		importance: 2,
+		createdAt: 1,
+		updatedAt: 1,
+	};
+
+	// WHY: traits travel with the archive; a remote device's trait updates must
+	// land in the local DB instead of being dropped by the import mapping.
+	it('imports traits from a remote archive profile', async () => {
+		const data = makeArchiveData({ ...baseProfile, traits: ['bold', 'cunning'] });
+		const zip = new JSZip();
+		zip.file('story-data.json', JSON.stringify(data));
+
+		const result = await mergeIncomingStory(await zip.generateAsync({ type: 'uint8array' }));
+
+		expect(result).toBe('merged');
+		const rows = await testDb.select<{ traits: string | null }[]>('SELECT traits FROM character_profiles WHERE id = $1', ['cp-1']);
+		expect(rows[0].traits).toBe('bold, cunning');
+	});
+
+	it('imports legacy profiles without traits as null', async () => {
+		const data = makeArchiveData({ ...baseProfile });
+		const zip = new JSZip();
+		zip.file('story-data.json', JSON.stringify(data));
+
+		const result = await mergeIncomingStory(await zip.generateAsync({ type: 'uint8array' }));
+
+		expect(result).toBe('merged');
+		const rows = await testDb.select<{ traits: string | null }[]>('SELECT traits FROM character_profiles WHERE id = $1', ['cp-1']);
+		expect(rows[0].traits).toBeNull();
 	});
 });
