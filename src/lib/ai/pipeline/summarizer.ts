@@ -15,6 +15,7 @@ import {
 	buildSummarizerMessages,
 	buildTranscriptSummarizerMessages,
 	formatActSummaryForCompressor,
+	formatExistingProfilesForCompressor,
 	substituteActSummaryTemplate,
 	toUserMessages,
 } from './message-builder';
@@ -26,13 +27,14 @@ import {
 	parseProfilesBody,
 	serializeActSummary,
 } from '../act-summary-parser';
-import { actSummaryHeader } from '#lib/definitions/common-headers';
+import { actSummaryHeader, currentCharacterProfilesHeader } from '#lib/definitions/common-headers';
 import {
 	goalLabel,
 	importanceLabel,
 	loglineLabel,
 	relationshipsLabel,
 	stateLabel,
+	traitsLabel,
 	voiceLabel,
 } from '#lib/definitions/character-profile-labels';
 import {
@@ -48,6 +50,7 @@ import { type LoadedPrompts } from './prompt-loader';
 import {
 	insertCharacterProfile,
 	getLatestProfileByAlias,
+	getLatestProfilesByActLine,
 	toCanonicalName,
 	ensurePreferredInAliases,
 	type CharacterImportance,
@@ -210,14 +213,20 @@ export async function generateCharacterProfiles(
 	const compressorSystemPrompt = prompts.characterProfileCompressorPrompt
 		.replaceAll('{{actSummaryHeader}}', actSummaryHeader())
 		.replaceAll('{{characterProfilesHeader}}', characterProfilesHeader())
+		.replaceAll('{{currentCharacterProfilesHeader}}', currentCharacterProfilesHeader())
 		.replaceAll('{{loglineLabel}}', loglineLabel())
 		.replaceAll('{{stateLabel}}', stateLabel())
 		.replaceAll('{{goalLabel}}', goalLabel())
 		.replaceAll('{{relationshipsLabel}}', relationshipsLabel())
 		.replaceAll('{{voiceLabel}}', voiceLabel())
+		.replaceAll('{{traitsLabel}}', traitsLabel())
 		.replaceAll('{{importanceLabel}}', importanceLabel());
 
-	const messages = toUserMessages(formatActSummaryForCompressor(completedScenes, newActSummary));
+	const existingProfiles = await getLatestProfilesByActLine(compressorInput.actLineId);
+	const messages = toUserMessages([
+		...formatActSummaryForCompressor(completedScenes, newActSummary),
+		...formatExistingProfilesForCompressor(existingProfiles),
+	]);
 
 	const { text: rawProfiles, metadata } = await runNonStreamingPhase(
 		'CHARACTER_PROFILE_COMPRESSOR',
@@ -248,6 +257,7 @@ export async function generateCharacterProfiles(
 				goal: profile.goal || null,
 				relationships: profile.relationships || null,
 				voice: profile.voice || null,
+				traits: profile.traits,
 				sceneDetails: serializeSceneDetails(newActSummary, profile.characterName),
 				importance,
 			});
