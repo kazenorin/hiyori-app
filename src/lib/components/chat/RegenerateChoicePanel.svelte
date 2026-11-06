@@ -42,8 +42,7 @@
 				class="w-full rounded-lg border border-surface-300-700 bg-surface-50-950 p-2 text-sm text-surface-900-100 placeholder:text-surface-400-500 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none"
 				rows={3}
 				placeholder={t('chat.describeChangesPlaceholder')}
-				bind:value={directionText}
-			></textarea>
+				bind:value={directionText}></textarea>
 			<div class="flex gap-2 items-center">
 				<button
 					class="btn preset-filled-primary-500 text-xs gap-1 disabled:opacity-50 disabled:cursor-not-allowed"
@@ -80,8 +79,7 @@
 				class="w-full rounded-lg border border-surface-300-700 bg-surface-50-950 p-2 text-sm text-surface-900-100 placeholder:text-surface-400-500 focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none"
 				rows={3}
 				placeholder={t('chat.describeChangesPlaceholder')}
-				bind:value={directionText}
-			></textarea>
+				bind:value={directionText}></textarea>
 			<div class="flex flex-wrap gap-2">
 				<button
 					class="btn preset-filled-primary-500 flex-1 min-h-11 gap-2 disabled:opacity-50 disabled:cursor-not-allowed"

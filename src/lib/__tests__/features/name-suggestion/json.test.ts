@@ -55,8 +55,9 @@ describe('parseNameDataset', () => {
 
 	it('rejects "full" and "simple" as data name types (full is composed, simple is retired)', () => {
 		const reasons: string[] = [];
-		const entries = parseNameDataset(dataset([patched({ name: 'X', nameTypes: ['full'] }), patched({ name: 'Y', nameTypes: ['simple'] })]), (_index, reason) =>
-			reasons.push(reason)
+		const entries = parseNameDataset(
+			dataset([patched({ name: 'X', nameTypes: ['full'] }), patched({ name: 'Y', nameTypes: ['simple'] })]),
+			(_index, reason) => reasons.push(reason)
 		);
 		expect(entries).toEqual([]);
 		expect(reasons).toEqual(['unknown nameType "full"', 'unknown nameType "simple"']);

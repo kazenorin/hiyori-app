@@ -7,17 +7,17 @@ description: 'Collapse config-assets-manifest.yaml churn against the latest rele
 
 `src/lib/fs/config-assets-manifest.yaml` records a `hash`, an `oldHashes` history and an `updatedAt` stamp for every bundled config asset. Each `npm run update-manifest` prepends the previous hash to `oldHashes` and re-stamps the entries whose hash changed. Repeated runs inside one release cycle therefore accumulate two kinds of noise: dead intermediate `oldHashes` entries (content revisions that never shipped and no longer exist) and `updatedAt` values that have drifted past the moment the asset content actually changed.
 
-**Pruning** rebuilds the manifest from the newest release tag as the baseline, so the result records exactly one transition per changed asset: *tag version → current version*. It is a closing step for any task that touched manifest sources.
+**Pruning** rebuilds the manifest from the newest release tag as the baseline, so the result records exactly one transition per changed asset: _tag version → current version_. It is a closing step for any task that touched manifest sources.
 
 ## When to run
 
 Run at the end of a task whose diff touches any of these (the full hashed set, from `collectSourceFiles()` in `scripts/update-config-manifest.mjs`):
 
-| Source | Manifest `configPath` prefix |
-| --- | --- |
-| `src/lib/fs/{en,zh-Hant-HK}/prompts/**` | `<locale>/prompt-templates/` |
-| `src/lib/fs/{en,zh-Hant-HK}/view-templates/**` | `<locale>/view-templates/` |
-| `src/lib/fs/{en,zh-Hant-HK}/names/**` | `<locale>/names/` |
+| Source                                           | Manifest `configPath` prefix   |
+| ------------------------------------------------ | ------------------------------ |
+| `src/lib/fs/{en,zh-Hant-HK}/prompts/**`          | `<locale>/prompt-templates/`   |
+| `src/lib/fs/{en,zh-Hant-HK}/view-templates/**`   | `<locale>/view-templates/`     |
+| `src/lib/fs/{en,zh-Hant-HK}/names/**`            | `<locale>/names/`              |
 | `src/lib/fs/locale-strings/{en,zh-Hant-HK}.yaml` | `<locale>/locale-strings.yaml` |
 
 Skip it when a task touched none of those — the manifest needs no maintenance on code-only changes.

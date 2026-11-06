@@ -70,7 +70,9 @@ describe('toNameThemes', () => {
 describe('suggestNames — direct filtering', () => {
 	it('returns every unused direct name when no filters are given', () => {
 		const data = [entry({ name: 'A' }), entry({ name: 'B' })];
-		const names = suggestNames(data, {}, new Set(), EN, rng).map((e) => e.name).sort();
+		const names = suggestNames(data, {}, new Set(), EN, rng)
+			.map((e) => e.name)
+			.sort();
 		expect(names).toEqual(['A', 'B']);
 	});
 
@@ -114,7 +116,9 @@ describe('suggestNames — nameTypes and full composition', () => {
 	const thornwood = entry({ name: 'Thornwood', genders: ['neutral'], nameTypes: ['family'], meaningTags: ['noble', 'pastoral'] });
 
 	it('omitting nameTypes returns direct forms only and never composes full names', () => {
-		const names = suggestNames([aria, thornwood], { count: 20 }, new Set(), EN, rng).map((e) => e.name).sort();
+		const names = suggestNames([aria, thornwood], { count: 20 }, new Set(), EN, rng)
+			.map((e) => e.name)
+			.sort();
 		expect(names).toEqual(['Aria', 'Thornwood']);
 	});
 
@@ -211,7 +215,9 @@ describe('suggestNames — count and dedup', () => {
 
 	it('deduplicates identical names appearing across multiple files', () => {
 		const data = [entry({ name: 'Dup' }), entry({ name: 'Dup' }), entry({ name: 'Other' })];
-		const names = suggestNames(data, { count: 20 }, new Set(), EN, rng).map((e) => e.name).sort();
+		const names = suggestNames(data, { count: 20 }, new Set(), EN, rng)
+			.map((e) => e.name)
+			.sort();
 		expect(names).toEqual(['Dup', 'Other']);
 	});
 });

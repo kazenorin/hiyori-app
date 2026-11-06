@@ -6,7 +6,16 @@ import { getAllCharacterNames } from '#lib/db/character-profiles';
 import { WORLD_TEMPLATES } from '#lib/features/world-builder/template-registry';
 import { getNameDataset } from '#lib/features/name-suggestion/dataset';
 import { buildExistingNameSet, suggestNames } from '#lib/features/name-suggestion/engine';
-import { CULTURES, DEFAULT_AVOIDANCE, DEFAULT_COUNT, GENDERS, MAX_AVOIDANCE, MAX_COUNT, TOOL_NAME_TYPES, toNameThemes } from '#lib/features/name-suggestion/types';
+import {
+	CULTURES,
+	DEFAULT_AVOIDANCE,
+	DEFAULT_COUNT,
+	GENDERS,
+	MAX_AVOIDANCE,
+	MAX_COUNT,
+	TOOL_NAME_TYPES,
+	toNameThemes,
+} from '#lib/features/name-suggestion/types';
 import { log as toolLog } from './utils';
 
 const LOG_TAG = 'suggest-character-name';

@@ -44,8 +44,8 @@
 			<div class="max-h-[60vh] overflow-y-auto space-y-2 pr-1">
 				<div
 					class="w-full px-3 py-2 rounded-lg text-left text-sm transition-colors flex items-center justify-between gap-2 {selected === null
-							? 'bg-primary-500/10 text-primary-500'
-							: 'hover:bg-surface-200-800'}"
+						? 'bg-primary-500/10 text-primary-500'
+						: 'hover:bg-surface-200-800'}"
 				>
 					<div class="min-w-0">
 						<div class="font-medium truncate">{t('tts.disabled')}</div>

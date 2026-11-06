@@ -42,14 +42,14 @@ deduplicated pool without quota curation (used for quota previews).
 }
 ```
 
-| Field         | Required | Values |
-| ------------- | -------- | ------ |
-| `name`        | yes      | Free text. The suggested name. |
+| Field         | Required | Values                                                                                                           |
+| ------------- | -------- | ---------------------------------------------------------------------------------------------------------------- |
+| `name`        | yes      | Free text. The suggested name.                                                                                   |
 | `genders`     | yes      | `masculine`, `feminine`, `neutral`. Use multiple for names usable across genders; `neutral` for gender-agnostic. |
-| `themes`      | yes      | Consolidated name themes: `fantasy`, `modern`, `sci-fi` (see `NAME_THEMES`). |
-| `cultures`    | yes      | See `CULTURES` in [`types.ts`](./types.ts). |
-| `nameTypes`   | yes      | `family`, `given`, `nickname` (data forms only — see below). |
-| `meaningTags` | no       | Connotation tags. See `MEANING_TAGS` in [`types.ts`](./types.ts). |
+| `themes`      | yes      | Consolidated name themes: `fantasy`, `modern`, `sci-fi` (see `NAME_THEMES`).                                     |
+| `cultures`    | yes      | See `CULTURES` in [`types.ts`](./types.ts).                                                                      |
+| `nameTypes`   | yes      | `family`, `given`, `nickname` (data forms only — see below).                                                     |
+| `meaningTags` | no       | Connotation tags. See `MEANING_TAGS` in [`types.ts`](./types.ts).                                                |
 
 Invalid entries are skipped and logged at load without aborting the whole file.
 
@@ -72,12 +72,12 @@ The dataset uses a consolidated three-value vocabulary (`NAME_THEMES`):
 `fantasy`, `modern`, and `sci-fi`. Story themes (world-template ids) are mapped
 onto it at the tool boundary (`STORY_THEME_TO_NAME_THEME` / `toNameThemes`):
 
-| Story theme             | Name theme |
-| ----------------------- | ---------- |
-| `high-fantasy`          | `fantasy`  |
-| `modern-slice-of-life`  | `modern`   |
-| `urban-fantasy`         | `modern`   |
-| `sci-fi`                | `sci-fi`   |
+| Story theme            | Name theme |
+| ---------------------- | ---------- |
+| `high-fantasy`         | `fantasy`  |
+| `modern-slice-of-life` | `modern`   |
+| `urban-fantasy`        | `modern`   |
+| `sci-fi`               | `sci-fi`   |
 
 Urban-fantasy names sit under `modern`; their fantastical side is carried by
 `meaningTags` (e.g. `arcane`, `dark`, `mysterious`) rather than a separate

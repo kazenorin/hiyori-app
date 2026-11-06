@@ -154,9 +154,7 @@ describe('inventory DB layer', () => {
 
 		it('maps lost event to lost status', async () => {
 			mockDbSelectResults = [[makeRow({ equip_status: 'carried' })]];
-			await appendInventoryEvents('story-1', 'line-1', 'msg-2', 2, [
-				{ characterName: 'Elena', itemName: 'Iron Sword', eventType: 'lost' },
-			]);
+			await appendInventoryEvents('story-1', 'line-1', 'msg-2', 2, [{ characterName: 'Elena', itemName: 'Iron Sword', eventType: 'lost' }]);
 
 			expect(insertParams()[9]).toBe('lost');
 		});
@@ -172,9 +170,7 @@ describe('inventory DB layer', () => {
 
 		it('carries forward prior status on used', async () => {
 			mockDbSelectResults = [[makeRow({ equip_status: 'equipped' })]];
-			await appendInventoryEvents('story-1', 'line-1', 'msg-2', 2, [
-				{ characterName: 'Elena', itemName: 'Iron Sword', eventType: 'used' },
-			]);
+			await appendInventoryEvents('story-1', 'line-1', 'msg-2', 2, [{ characterName: 'Elena', itemName: 'Iron Sword', eventType: 'used' }]);
 
 			expect(insertParams()[9]).toBe('equipped');
 		});

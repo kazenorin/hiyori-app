@@ -67,8 +67,7 @@
 					class="input w-full resize-y text-sm leading-relaxed min-h-8"
 					rows="1"
 					bind:value={formSceneTitle}
-					onkeydown={handleKeydown}
-				></textarea>
+					onkeydown={handleKeydown}></textarea>
 			</div>
 			<div>
 				<label for="edit-background-{messageId}" class="block text-xs font-medium text-surface-500 mb-1">{t('chat.background')}</label>
@@ -77,8 +76,7 @@
 					class="input w-full resize-y text-sm leading-relaxed min-h-16"
 					rows="3"
 					bind:value={formBackground}
-					onkeydown={handleKeydown}
-				></textarea>
+					onkeydown={handleKeydown}></textarea>
 			</div>
 			<div>
 				<label for="edit-narrative-body-{messageId}" class="block text-xs font-medium text-surface-500 mb-1"
@@ -89,8 +87,7 @@
 					class="input w-full resize-y text-sm leading-relaxed min-h-32"
 					rows="8"
 					bind:value={formNarrativeBody}
-					onkeydown={handleKeydown}
-				></textarea>
+					onkeydown={handleKeydown}></textarea>
 			</div>
 			<div>
 				<label for="edit-cg-{messageId}" class="block text-xs font-medium text-surface-500 mb-1">{t('chat.cg')}</label>
@@ -99,8 +96,7 @@
 					class="input w-full resize-y text-sm leading-relaxed min-h-8"
 					rows="1"
 					bind:value={formCg}
-					onkeydown={handleKeydown}
-				></textarea>
+					onkeydown={handleKeydown}></textarea>
 			</div>
 		</div>
 	</div>
@@ -114,8 +110,7 @@
 			? 'min-h-20 bg-surface-50-950 text-primary-900-100'
 			: 'min-h-32'}"
 		bind:value={formContent}
-		onkeydown={handleKeydown}
-	></textarea>
+		onkeydown={handleKeydown}></textarea>
 	<div class="flex gap-2 {mode === 'main' ? 'mt-3 pt-3 border-t border-surface-200-800' : 'mt-2'}">
 		<button class="btn preset-filled-primary-500 text-xs py-1 px-3" onclick={handleSave}>{t('chat.save')}</button>
 		<button class="btn preset-tonal text-xs py-1 px-3" onclick={oncancel}>{t('chat.cancel')}</button>

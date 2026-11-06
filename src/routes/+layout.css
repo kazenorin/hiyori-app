@@ -97,6 +97,6 @@ body {
    which puts them under overlays like the settings dialog (z-50). Raise them
    above overlays but below confirm modals (z-[70]). !important is required to
    beat zag's inline style. */
-[data-scope='combobox'][data-part='positioner'] {
+[data-scope="combobox"][data-part="positioner"] {
 	z-index: 60 !important;
 }

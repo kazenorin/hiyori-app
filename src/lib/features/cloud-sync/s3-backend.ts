@@ -32,10 +32,7 @@ export class S3Backend implements SyncBackend {
 
 	private url(path: string, query?: string): string {
 		const base = this.config.endpoint.replace(/\/+$/, '');
-		const encodedKey = this.key(path)
-			.split('/')
-			.map(encodeURIComponent)
-			.join('/');
+		const encodedKey = this.key(path).split('/').map(encodeURIComponent).join('/');
 		return `${base}/${this.config.bucket}/${encodedKey}${query ? `?${query}` : ''}`;
 	}
 
@@ -50,10 +47,8 @@ export class S3Backend implements SyncBackend {
 
 	async testConnection(): Promise<void> {
 		const res = await this.signedFetch('', { method: 'GET' }, 'list-type=2&max-keys=1');
-		if (res.status === 403)
-			throw new Error('S3 connection failed: access denied. Check the access key ID and secret.');
-		if (res.status === 404)
-			throw new Error('S3 connection failed: bucket not found. Check the endpoint and bucket name.');
+		if (res.status === 403) throw new Error('S3 connection failed: access denied. Check the access key ID and secret.');
+		if (res.status === 404) throw new Error('S3 connection failed: bucket not found. Check the endpoint and bucket name.');
 		if (!res.ok) throw new Error(`S3 connection failed: HTTP ${res.status}`);
 	}
 
@@ -81,9 +76,7 @@ export class S3Backend implements SyncBackend {
 				});
 			}
 			const truncated = xml.getElementsByTagName('IsTruncated')[0]?.textContent === 'true';
-			continuationToken = truncated
-				? xml.getElementsByTagName('NextContinuationToken')[0]?.textContent
-				: undefined;
+			continuationToken = truncated ? xml.getElementsByTagName('NextContinuationToken')[0]?.textContent : undefined;
 		} while (continuationToken);
 		return entries;
 	}

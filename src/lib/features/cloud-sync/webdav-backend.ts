@@ -37,8 +37,7 @@ export class WebDavBackend implements SyncBackend {
 
 	async testConnection(): Promise<void> {
 		const res = await this.request('', { method: 'PROPFIND', headers: { Depth: '0' } });
-		if (res.status === 401)
-			throw new Error('WebDAV connection failed: unauthorized. Check the username and password (app password).');
+		if (res.status === 401) throw new Error('WebDAV connection failed: unauthorized. Check the username and password (app password).');
 		if (res.status === 404) throw new Error('WebDAV connection failed: folder not found. Check the server URL.');
 		if (!res.ok && res.status !== 207) throw new Error(`WebDAV connection failed: HTTP ${res.status}`);
 	}
@@ -57,9 +56,7 @@ export class WebDavBackend implements SyncBackend {
 			const isCollection = response.getElementsByTagNameNS('DAV:', 'collection').length > 0;
 			if (isCollection) continue;
 
-			const relative = href.startsWith(baseHref)
-				? href.slice(baseHref.length).replace(/^\//, '')
-				: href.split('/').pop() ?? '';
+			const relative = href.startsWith(baseHref) ? href.slice(baseHref.length).replace(/^\//, '') : (href.split('/').pop() ?? '');
 			if (!relative) continue;
 			const lengthText = response.getElementsByTagNameNS('DAV:', 'getcontentlength')[0]?.textContent;
 			const modifiedText = response.getElementsByTagNameNS('DAV:', 'getlastmodified')[0]?.textContent;

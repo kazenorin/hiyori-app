@@ -10,7 +10,7 @@ Icons are centralized in `src/lib/ui/icons.ts` as an `ICONS` record. Each entry 
 ## Reference Materials
 
 | Resource          | Path                                          | Use for                                                                                    |
-|-------------------|-----------------------------------------------|--------------------------------------------------------------------------------------------|
+| ----------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------ |
 | Lucide icon tags  | `node_modules/lucide-static/tags.json`        | Search by keyword to find icon names (e.g. search "warning" → `triangle-alert`)            |
 | Lucide icon nodes | `node_modules/lucide-static/icon-nodes.json`  | Structured node data (tag + attributes) for each icon — useful for programmatic extraction |
 | Lucide icon SVGs  | `node_modules/lucide-static/icons/<name>.svg` | Full SVG source to extract the inner `<path>`/`<circle>`/etc. body                         |

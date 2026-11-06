@@ -221,13 +221,7 @@
 				</label>
 			{/if}
 
-			<TextField
-				label={t('settings.baseUrl')}
-				type="url"
-				placeholder={OPENAI_BASE_URL}
-				bind:value={formBaseURL}
-				hint={baseUrlHint}
-			/>
+			<TextField label={t('settings.baseUrl')} type="url" placeholder={OPENAI_BASE_URL} bind:value={formBaseURL} hint={baseUrlHint} />
 
 			<div>
 				<div class="flex items-end gap-2">

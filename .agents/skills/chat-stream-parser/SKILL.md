@@ -5,7 +5,7 @@ description: 'Parse structured data from LLM markdown output using declarative d
 
 ## Overview
 
-`chat-stream-parser` provides `parseContent()` — a declarative markdown parser that extracts structured data from LLM output using descriptor objects. Instead of writing regex or manual parsing, you declare *what* to extract and *where* to put it.
+`chat-stream-parser` provides `parseContent()` — a declarative markdown parser that extracts structured data from LLM output using descriptor objects. Instead of writing regex or manual parsing, you declare _what_ to extract and _where_ to put it.
 
 ## Quick Start
 
@@ -25,9 +25,13 @@ Some analysis text
 - Confidence: Medium`;
 
 const descriptors: OutputDescriptor[] = [
-  { outputPath: 'analysis', match: { type: 'header', content: 'Analysis' }, bodyOnly: true, currentLevelOnly: true },
-  { outputPath: 'findings', match: { type: 'list', listIndex: 0, parent: { type: 'header', content: 'Key Findings' } }, bodyOnly: true },
-  { outputPath: 'quality', match: { type: 'list_labeled_item', content: 'Quality', parent: { type: 'header', content: 'Rating' } }, bodyOnly: true },
+	{ outputPath: 'analysis', match: { type: 'header', content: 'Analysis' }, bodyOnly: true, currentLevelOnly: true },
+	{ outputPath: 'findings', match: { type: 'list', listIndex: 0, parent: { type: 'header', content: 'Key Findings' } }, bodyOnly: true },
+	{
+		outputPath: 'quality',
+		match: { type: 'list_labeled_item', content: 'Quality', parent: { type: 'header', content: 'Rating' } },
+		bodyOnly: true,
+	},
 ];
 
 const result = parseContent(llmOutput, descriptors);
@@ -38,11 +42,11 @@ const result = parseContent(llmOutput, descriptors);
 
 ### `parseContent(content, descriptors?, output?)`
 
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `content` | `string` | Markdown text (typically LLM output) |
+| Parameter     | Type                 | Description                                  |
+| ------------- | -------------------- | -------------------------------------------- |
+| `content`     | `string`             | Markdown text (typically LLM output)         |
 | `descriptors` | `OutputDescriptor[]` | Declarative extraction rules (default: `[]`) |
-| `output` | `T` | Pre-existing object to populate (optional) |
+| `output`      | `T`                  | Pre-existing object to populate (optional)   |
 
 **Returns**: Populated object with extracted values at specified `outputPath`s.
 
@@ -54,10 +58,10 @@ const result = parseContent(llmOutput, descriptors);
 
 ```typescript
 interface OutputDescriptor {
-  outputPath: string;       // Dot-notation path in output object (e.g. 'meta.score')
-  match?: MatchDescriptor;  // How to locate the content; omit to assign full content
-  bodyOnly?: boolean;       // Strip the markdown header/list marker, return just text
-  currentLevelOnly?: boolean; // For headers: exclude sub-headers; for lists: exclude nested lists
+	outputPath: string; // Dot-notation path in output object (e.g. 'meta.score')
+	match?: MatchDescriptor; // How to locate the content; omit to assign full content
+	bodyOnly?: boolean; // Strip the markdown header/list marker, return just text
+	currentLevelOnly?: boolean; // For headers: exclude sub-headers; for lists: exclude nested lists
 }
 ```
 
@@ -65,12 +69,12 @@ interface OutputDescriptor {
 
 Four match types, each with optional `parent` and `ancestor` filters:
 
-| Type | Key Fields | Extracts |
-|------|-----------|----------|
-| `header` | `content`, `headerLevel?` | Section under a markdown heading |
-| `list` | `listIndex?` | All items of a markdown list |
-| `list_item` | `itemIndex`, `parent: { type: 'list' }` | Single item by position |
-| `list_labeled_item` | `content` (label), `listIndex?` | Item matching "Label: value" pattern |
+| Type                | Key Fields                              | Extracts                             |
+| ------------------- | --------------------------------------- | ------------------------------------ |
+| `header`            | `content`, `headerLevel?`               | Section under a markdown heading     |
+| `list`              | `listIndex?`                            | All items of a markdown list         |
+| `list_item`         | `itemIndex`, `parent: { type: 'list' }` | Single item by position              |
+| `list_labeled_item` | `content` (label), `listIndex?`         | Item matching "Label: value" pattern |
 
 ## Match Types in Detail
 
@@ -96,16 +100,19 @@ Extracts a section under a heading. Case-insensitive matching on header text.
 ```
 
 **Parent filter**: Find header as direct child of another header:
+
 ```typescript
 { type: 'header', content: 'Comments', parent: { type: 'header', content: 'Subject 1' } }
 ```
 
 **Ancestor filter**: Find header anywhere under an ancestor (survives same-level siblings):
+
 ```typescript
 { type: 'header', content: 'Level 4', ancestor: { type: 'header', content: 'Level 1' } }
 ```
 
 **Children**: Nested extraction within a section — the matched section becomes the source for child descriptors:
+
 ```typescript
 {
   outputPath: 'lv1',
@@ -184,15 +191,22 @@ Extracts value from a "Label: value" list item. Case-insensitive label matching.
 ### Dot-notation outputPath
 
 `outputPath` uses lodash `set()`, so nested paths work:
+
 ```typescript
-{ outputPath: 'meta.scores.quality' } // → result.meta.scores.quality
+{
+	outputPath: 'meta.scores.quality';
+} // → result.meta.scores.quality
 ```
 
 ### Pre-populated output object
 
 Pass a third argument to merge into an existing object (useful with typed interfaces):
+
 ```typescript
-interface MyOutput { fieldOne: string; fieldTwo: { inner: string } }
+interface MyOutput {
+	fieldOne: string;
+	fieldTwo: { inner: string };
+}
 const output: MyOutput = { fieldOne: '', fieldTwo: { inner: '' } };
 parseContent(content, descriptors, output);
 ```

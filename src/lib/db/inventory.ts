@@ -10,15 +10,7 @@ export type InventoryEventType = 'acquired' | 'lost' | 'consumed' | 'equipped' |
 
 export const INVENTORY_CATEGORIES: readonly InventoryCategory[] = ['item', 'equipment', 'skill', 'clothing', 'status'] as const;
 
-export const EQUIP_STATUSES: readonly EquipStatus[] = [
-	'equipped',
-	'unequipped',
-	'carried',
-	'owned',
-	'known',
-	'lost',
-	'consumed',
-] as const;
+export const EQUIP_STATUSES: readonly EquipStatus[] = ['equipped', 'unequipped', 'carried', 'owned', 'known', 'lost', 'consumed'] as const;
 
 export const INVENTORY_EVENT_TYPES: readonly InventoryEventType[] = [
 	'acquired',
@@ -162,11 +154,7 @@ export async function appendInventoryEvents(
 	}
 }
 
-async function getLatestRowForItem(
-	actLineId: string,
-	characterCanonicalName: string,
-	itemName: string
-): Promise<InventoryRow | null> {
+async function getLatestRowForItem(actLineId: string, characterCanonicalName: string, itemName: string): Promise<InventoryRow | null> {
 	const db = getDatabase();
 	const rows = await db.select<InventoryRow[]>(
 		`SELECT * FROM inventory
@@ -225,19 +213,13 @@ export async function getInventoryEvents(
 	return events;
 }
 
-export async function resolveCharacterNames(
-	actLineId: string,
-	name: string,
-	chain?: { actLineId: string }[]
-): Promise<string[]> {
+export async function resolveCharacterNames(actLineId: string, name: string, chain?: { actLineId: string }[]): Promise<string[]> {
 	const canonical = toCanonicalName(name);
 	const resolvedChain = chain ?? (await traceActLineChain(actLineId, true));
 	for (const link of resolvedChain) {
 		const profile = await getLatestProfileByAlias(link.actLineId, name);
 		if (profile) {
-			return [profile.canonicalName, canonical, ...profile.aliases.map(toCanonicalName)].filter(
-				(v, i, a) => a.indexOf(v) === i
-			);
+			return [profile.canonicalName, canonical, ...profile.aliases.map(toCanonicalName)].filter((v, i, a) => a.indexOf(v) === i);
 		}
 	}
 	return [canonical];
@@ -246,10 +228,7 @@ export async function resolveCharacterNames(
 export async function deleteInventoryByMessages(actLineId: string, messageIds: string[]): Promise<void> {
 	const db = getDatabase();
 	const placeholders = messageIds.map((_, i) => `$${i + 2}`).join(',');
-	await db.execute(`DELETE FROM inventory WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [
-		actLineId,
-		...messageIds,
-	]);
+	await db.execute(`DELETE FROM inventory WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [actLineId, ...messageIds]);
 }
 
 export async function cloneInventory(fromActLineId: string, toActLineId: string): Promise<void> {

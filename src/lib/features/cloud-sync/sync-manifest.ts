@@ -32,10 +32,7 @@ async function sha256Hex(text: string): Promise<string> {
  * Content hash over the story-data payload plus the sorted set of
  * story-folder file hashes. Deterministic regardless of file enumeration order.
  */
-export async function computeContentHash(
-	storyDataJson: string,
-	files: { path: string; hash: string }[]
-): Promise<string> {
+export async function computeContentHash(storyDataJson: string, files: { path: string; hash: string }[]): Promise<string> {
 	const sorted = [...files].sort((a, b) => a.path.localeCompare(b.path));
 	const fingerprint = JSON.stringify({ storyData: storyDataJson, files: sorted });
 	return sha256Hex(fingerprint);

@@ -851,8 +851,7 @@
 	<div class="space-y-2">
 		<textarea
 			class="w-full h-[70dvh] rounded border border-surface-200-800 bg-surface-50-950 p-4 font-mono text-xs leading-relaxed text-surface-900-100 resize-y"
-			bind:value={editContent}
-		></textarea>
+			bind:value={editContent}></textarea>
 		{#if saveError}
 			<p class="text-error-500 text-xs">{saveError}</p>
 		{/if}

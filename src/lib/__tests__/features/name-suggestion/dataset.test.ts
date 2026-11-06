@@ -55,7 +55,9 @@ describe('bundled name dataset', () => {
 	});
 
 	it('only references the consolidated name themes', () => {
-		const badThemes = bundledEntries().flatMap((e) => e.themes).filter((t) => !(NAME_THEMES as readonly string[]).includes(t));
+		const badThemes = bundledEntries()
+			.flatMap((e) => e.themes)
+			.filter((t) => !(NAME_THEMES as readonly string[]).includes(t));
 		expect([...new Set(badThemes)]).toEqual([]);
 	});
 
@@ -106,7 +108,14 @@ describe('getNameDataset', () => {
 
 	it('respects a user-edited AppData override', async () => {
 		const custom = JSON.stringify([
-			{ name: 'Zzzcustom', genders: ['masculine'], themes: ['fantasy'], cultures: ['european'], nameTypes: ['given'], meaningTags: ['noble'] },
+			{
+				name: 'Zzzcustom',
+				genders: ['masculine'],
+				themes: ['fantasy'],
+				cultures: ['european'],
+				nameTypes: ['given'],
+				meaningTags: ['noble'],
+			},
 		]);
 		await memFs.writeTextFileEnsuringDir('config/en/names/european.json', custom);
 		const names = (await getNameDataset('en')).map((e) => e.name);

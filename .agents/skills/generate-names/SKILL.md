@@ -22,16 +22,16 @@ BehindTheName (webfetch) ──research+classify──▶ JSON entries
 
 ## Source Files
 
-| File                                                                                   | Role                                                                                                          |
-| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `src/lib/fs/<locale>/names/<culture>.json`                                             | The bundled name data: one JSON array per culture.                                                             |
-| `src/lib/features/name-suggestion/types.ts`                                            | Canonical enums: `GENDERS`, `CULTURES`, `DATA_NAME_TYPES`, `MEANING_TAGS`, `NAME_THEMES`, `CULTURE_META` (name order), `STORY_THEME_TO_NAME_THEME` (story→name theme mapping). |
-| `src/lib/features/name-suggestion/json.ts`                                             | Runtime JSON parser (`parseNameDataset`) with per-entry validation.                                            |
-| `src/lib/features/name-suggestion/quota.ts`                                            | Quota config + load-time curation (`DEFAULT_NAME_QUOTAS`, `allocateQuotas`, `applyQuotas`).                    |
-| `src/lib/features/name-suggestion/engine.ts`                                           | Filtering + full-name composition (`suggestNames`, `formatFullName`).                                          |
-| `src/lib/features/name-suggestion/README.md`                                           | Data-format reference (entry shape, quotas, composition, avoidance).                                           |
-| `src/lib/__tests__/features/name-suggestion/dataset.test.ts`                           | Bundled-data quality gates: no invalid entries, only real themes, dedup.                                       |
-| `src/lib/fs/config-assets-manifest.yaml`                                               | Config-asset hashes; refresh with `npm run update-manifest` after JSON changes.                                |
+| File                                                         | Role                                                                                                                                                                           |
+| ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `src/lib/fs/<locale>/names/<culture>.json`                   | The bundled name data: one JSON array per culture.                                                                                                                             |
+| `src/lib/features/name-suggestion/types.ts`                  | Canonical enums: `GENDERS`, `CULTURES`, `DATA_NAME_TYPES`, `MEANING_TAGS`, `NAME_THEMES`, `CULTURE_META` (name order), `STORY_THEME_TO_NAME_THEME` (story→name theme mapping). |
+| `src/lib/features/name-suggestion/json.ts`                   | Runtime JSON parser (`parseNameDataset`) with per-entry validation.                                                                                                            |
+| `src/lib/features/name-suggestion/quota.ts`                  | Quota config + load-time curation (`DEFAULT_NAME_QUOTAS`, `allocateQuotas`, `applyQuotas`).                                                                                    |
+| `src/lib/features/name-suggestion/engine.ts`                 | Filtering + full-name composition (`suggestNames`, `formatFullName`).                                                                                                          |
+| `src/lib/features/name-suggestion/README.md`                 | Data-format reference (entry shape, quotas, composition, avoidance).                                                                                                           |
+| `src/lib/__tests__/features/name-suggestion/dataset.test.ts` | Bundled-data quality gates: no invalid entries, only real themes, dedup.                                                                                                       |
+| `src/lib/fs/config-assets-manifest.yaml`                     | Config-asset hashes; refresh with `npm run update-manifest` after JSON changes.                                                                                                |
 
 ## Schema (must match `types.ts` exactly)
 
@@ -52,7 +52,7 @@ Each file is a JSON array of entries. `full` names are **never stored** — they
 | Field         | Allowed values                                                                                                                                            |
 | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `genders`     | `masculine`, `feminine`, `neutral` (multi OK, e.g. `["masculine","feminine"]`)                                                                            |
-| `themes`      | `fantasy`, `modern`, `sci-fi` (consolidated `NAME_THEMES`; story themes map onto these via `STORY_THEME_TO_NAME_THEME`)                                  |
+| `themes`      | `fantasy`, `modern`, `sci-fi` (consolidated `NAME_THEMES`; story themes map onto these via `STORY_THEME_TO_NAME_THEME`)                                   |
 | `cultures`    | `european`, `japanese`, `chinese`, `middle-eastern`, `african`, `south-asian`, `latin`, `elven`, `dwarven`, `orcish`, `draconic`, `celestial`, `infernal` |
 | `nameTypes`   | `family`, `given`, `nickname` (data forms only)                                                                                                           |
 | `meaningTags` | `noble`, `nature`, `dark`, `arcane`, `martial`, `serene`, `cunning`, `heroic`, `mysterious`, `pastoral`, `royal`, `wild` (may be empty)                   |

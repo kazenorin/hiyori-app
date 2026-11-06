@@ -72,9 +72,7 @@ function fakeBackend(files: Record<string, Uint8Array>): SyncBackend & {
 function manifestJson(stories: Record<string, { name: string; archiveHash: string }>): Uint8Array {
 	const manifest = {
 		version: 1,
-		stories: Object.fromEntries(
-			Object.entries(stories).map(([id, e]) => [id, { ...e, updatedAt: 0 }])
-		),
+		stories: Object.fromEntries(Object.entries(stories).map(([id, e]) => [id, { ...e, updatedAt: 0 }])),
 	};
 	return new TextEncoder().encode(JSON.stringify(manifest));
 }
@@ -248,10 +246,12 @@ describe('syncNow story exclusion', () => {
 		const uploaded = JSON.parse(new TextDecoder().decode(backend.store[MANIFEST_PATH]));
 		expect(uploaded.stories.s2).toBeUndefined();
 		expect(uploaded.stories.s3).toBeUndefined();
-		expect(report.entries.filter((e) => e.action === 'removed').map((e) => e.storyId).sort()).toEqual([
-			's2',
-			's3',
-		]);
+		expect(
+			report.entries
+				.filter((e) => e.action === 'removed')
+				.map((e) => e.storyId)
+				.sort()
+		).toEqual(['s2', 's3']);
 	});
 
 	// WHY: a failed removal must keep the manifest entry — dropping it would
