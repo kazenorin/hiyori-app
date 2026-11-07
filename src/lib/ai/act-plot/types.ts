@@ -1,6 +1,6 @@
-import type { ActPlotPhase } from '#lib/ai/act-plot/act-plot-generator';
-import type { ActLineMeta } from '#lib/db/act-lines';
-import type { Story } from '#lib/db/stories';
+import type { ActPlotPhase } from '#lib/ai/act-plot/act-plot-generator.ts';
+import type { ActLineMeta } from '#lib/db/act-lines.ts';
+import type { Story } from '#lib/db/stories.ts';
 
 export interface EnsureActPlotParams {
 	story: Story;

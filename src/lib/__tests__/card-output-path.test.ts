@@ -4,7 +4,7 @@ import {
 	_computeLineSubdirForTest as computeLineSubdir,
 	_buildLineSubdirSuffixForTest as buildLineSubdirSuffix,
 	buildLineDir,
-} from '#lib/ai/card-output-path';
+} from '#lib/ai/card-output-path.ts';
 
 describe('computeLineSubdir', () => {
 	it('returns "main-line" for main line', () => {

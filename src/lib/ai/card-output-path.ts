@@ -1,6 +1,6 @@
 import { kebabCase } from 'lodash-es';
-import { fs, type DirEntry } from '#lib/fs/file-system';
-import { log } from '#lib/logging/logger';
+import { fs, type DirEntry } from '#lib/fs/file-system.ts';
+import { log } from '#lib/logging/logger.ts';
 
 /**
  * Convert an act line name into a kebab-case suffix for the folder name.

@@ -1,11 +1,11 @@
-import { ls } from '#lib/localization';
+import { ls } from '#lib/localization/index.ts';
 import { tool } from 'ai';
 import { z } from 'zod';
-import { getDatabase } from '#lib/db/database';
+import { getDatabase } from '#lib/db/database.ts';
 import { type ToolSet } from 'ai';
 import type { ToolContext } from './tools';
 import { log } from './utils';
-import { traceActLineChain } from '#lib/db/acts';
+import { traceActLineChain } from '#lib/db/acts.ts';
 
 interface SceneRow {
 	role: string;

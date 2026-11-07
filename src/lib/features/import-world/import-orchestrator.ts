@@ -1,14 +1,14 @@
 // Main import orchestrator coordinating all import steps
 
-import { createStory, deleteStory } from '#lib/db/stories';
-import { createAct, deleteAct } from '#lib/db/acts';
-import { addMessageToLine, createActLine, deleteActLine, deleteLineEntries } from '#lib/db/act-lines';
-import { getDefaultPlotMode, settings } from '#lib/stores/settings.svelte';
-import { createMessage, deleteMessage } from '#lib/db/messages';
-import { resolveStoryFolder } from '#lib/fs/story-folders';
-import { deleteStoryFolder } from '#lib/db/story-folders';
-import { fs } from '#lib/fs/file-system';
-import { loadStories } from '#lib/stores/stories.svelte';
+import { createStory, deleteStory } from '#lib/db/stories.ts';
+import { createAct, deleteAct } from '#lib/db/acts.ts';
+import { addMessageToLine, createActLine, deleteActLine, deleteLineEntries } from '#lib/db/act-lines.ts';
+import { getDefaultPlotMode, settings } from '#lib/stores/settings.svelte.ts';
+import { createMessage, deleteMessage } from '#lib/db/messages.ts';
+import { resolveStoryFolder } from '#lib/fs/story-folders.ts';
+import { deleteStoryFolder } from '#lib/db/story-folders.ts';
+import { fs } from '#lib/fs/file-system.ts';
+import { loadStories } from '#lib/stores/stories.svelte.ts';
 import { kebabCase } from 'lodash-es';
 import type {
 	CreatedResources,
@@ -20,12 +20,12 @@ import type {
 	ImportResult,
 	ParsedMessage,
 } from './types';
-import { emptyVariables } from '#lib/ai/narrative-types';
-import type { RetryConfig } from '#lib/ai/chat-stream';
+import { emptyVariables } from '#lib/ai/narrative-types.ts';
+import type { RetryConfig } from '#lib/ai/chat-stream.ts';
 import { parseTranscriptFile } from './transcript-parsers';
 import { runNarrativeFilling } from './narrative-filler';
-import { generateWorldFromCards } from '#lib/ai/world-generator';
-import { loadLocaleStrings } from '#lib/localization';
+import { generateWorldFromCards } from '#lib/ai/world-generator/index.ts';
+import { loadLocaleStrings } from '#lib/localization/index.ts';
 import {
 	characterCardCoreIdentityLabel,
 	importWorldComplete,
@@ -36,11 +36,11 @@ import {
 	importWorldFillingNarrativeVariables,
 	importWorldProcessingAct,
 	importWorldUnnamedCharacter,
-} from '#lib/definitions/feature-prompts';
-import { nameLabel } from '#lib/definitions/common-labels';
-import { type OutputDescriptor, parseContent } from '#lib/utils/chat-stream-parser';
-import { setActiveLocale } from '#lib/fs/prompt-loader';
-import { WORLD_MD } from '#lib/ai/world-generator/constants';
+} from '#lib/definitions/feature-prompts.ts';
+import { nameLabel } from '#lib/definitions/common-labels.ts';
+import { type OutputDescriptor, parseContent } from '#lib/utils/chat-stream-parser/index.ts';
+import { setActiveLocale } from '#lib/fs/prompt-loader.ts';
+import { WORLD_MD } from '#lib/ai/world-generator/constants.ts';
 
 // === Progress Callback Type ===
 

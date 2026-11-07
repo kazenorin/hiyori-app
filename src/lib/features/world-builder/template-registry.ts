@@ -1,11 +1,11 @@
-import { ls } from '#lib/localization';
-import type { PromptLoader } from '#lib/fs/prompts';
+import { ls } from '#lib/localization/index.ts';
+import type { PromptLoader } from '#lib/fs/prompts.ts';
 import {
 	highFantasyTemplateLoader,
 	modernSliceOfLifeTemplateLoader,
 	sciFiTemplateLoader,
 	urbanFantasyTemplateLoader,
-} from '#lib/fs/prompts';
+} from '#lib/fs/prompts.ts';
 
 export interface WorldTemplateEntry {
 	id: string;

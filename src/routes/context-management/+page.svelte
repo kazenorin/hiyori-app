@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t } from '#lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
 	import Icon from '#lib/components/ui/Icon.svelte';

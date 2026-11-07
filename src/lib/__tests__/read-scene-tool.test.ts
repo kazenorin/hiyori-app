@@ -4,7 +4,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 	invoke: vi.fn(async () => {}),
 }));
 
-vi.mock('#lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.ts', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -19,7 +19,7 @@ const mockDb = {
 	select: vi.fn(async (): Promise<{ role: string; content: string; scene_number: number | null }[]> => []),
 };
 
-vi.mock('#lib/db/database', () => ({
+vi.mock('#lib/db/database.ts', () => ({
 	getDatabase: () => mockDb,
 }));
 
@@ -27,9 +27,9 @@ const mockTraceActLineChain = vi.fn(
 	async (_actLineId: string): Promise<{ actLineId: string; actNumber: number; isMainLine: boolean }[]> => []
 );
 
-vi.mock('#lib/db/act-lines', () => ({}));
+vi.mock('#lib/db/act-lines.ts', () => ({}));
 
-vi.mock('#lib/db/acts', () => ({
+vi.mock('#lib/db/acts.ts', () => ({
 	traceActLineChain: (actLineId: string) => mockTraceActLineChain(actLineId),
 }));
 
@@ -37,12 +37,12 @@ vi.mock('ai', () => ({
 	tool: vi.fn((def) => def),
 }));
 
-vi.mock('#lib/localization', () => ({
+vi.mock('#lib/localization/index.ts', () => ({
 	ls: vi.fn((key: string, _params?: Record<string, string | number>) => key),
 }));
 
-import { createReadSceneTool, createReadDistantSceneTool, buildSceneTools } from '#lib/ai/tools/read-scene';
-import type { ToolContext } from '#lib/ai/tools/tools';
+import { createReadSceneTool, createReadDistantSceneTool, buildSceneTools } from '#lib/ai/tools/read-scene.ts';
+import type { ToolContext } from '#lib/ai/tools/tools.ts';
 
 function createMockContext(actNumber = 3): ToolContext {
 	return {

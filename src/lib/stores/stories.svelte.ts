@@ -1,24 +1,24 @@
-import * as dbStories from '#lib/db/stories';
-import * as dbActs from '#lib/db/acts';
-import * as dbActLines from '#lib/db/act-lines';
-import * as dbAppState from '#lib/db/app-state';
-import * as dbDirectorNotes from '#lib/db/director-notes';
-import { cloneCharacterProfiles, inheritProfilesFromActLine } from '#lib/db/character-profiles';
-import { cloneInventory } from '#lib/db/inventory';
-import { loadLocaleStrings } from '#lib/localization';
-import { log } from '#lib/logging/logger';
-import { moveWorldBuilderLog } from '#lib/logging/chat-logger';
-import { getLogFilePath } from '#lib/features/world-builder/world-builder.svelte';
-import { Memory } from '#lib/features/memory';
-import { getDefaultPlotMode, getMemoryProviderConfig, isMemoryAvailable, settings, updateSettings } from '#lib/stores/settings.svelte';
-import { setActiveLocale } from '#lib/fs/prompt-loader';
-import { ensureWorldFile } from '#lib/ai/world-generator';
-import { writeWorldTemplateId } from '#lib/ai/world-generator/template-resolution';
-import { deriveStoryName, renameStoryFolder, resolveStoryFolder } from '#lib/fs/story-folders';
-import { fs } from '#lib/fs/file-system';
-import { writeRequirementsBlock } from '#lib/fs/requirements-files';
-import * as dbStoryFolders from '#lib/db/story-folders';
-import { cleanupAct, cleanupActLine, cleanupStory } from '#lib/ai/chat/run-manager';
+import * as dbStories from '#lib/db/stories.ts';
+import * as dbActs from '#lib/db/acts.ts';
+import * as dbActLines from '#lib/db/act-lines.ts';
+import * as dbAppState from '#lib/db/app-state.ts';
+import * as dbDirectorNotes from '#lib/db/director-notes.ts';
+import { cloneCharacterProfiles, inheritProfilesFromActLine } from '#lib/db/character-profiles.ts';
+import { cloneInventory } from '#lib/db/inventory.ts';
+import { loadLocaleStrings } from '#lib/localization/index.ts';
+import { log } from '#lib/logging/logger.ts';
+import { moveWorldBuilderLog } from '#lib/logging/chat-logger.ts';
+import { getLogFilePath } from '#lib/features/world-builder/world-builder.svelte.ts';
+import { Memory } from '#lib/features/memory/index.ts';
+import { getDefaultPlotMode, getMemoryProviderConfig, isMemoryAvailable, settings, updateSettings } from '#lib/stores/settings.svelte.ts';
+import { setActiveLocale } from '#lib/fs/prompt-loader.ts';
+import { ensureWorldFile } from '#lib/ai/world-generator/index.ts';
+import { writeWorldTemplateId } from '#lib/ai/world-generator/template-resolution.ts';
+import { deriveStoryName, renameStoryFolder, resolveStoryFolder } from '#lib/fs/story-folders.ts';
+import { fs } from '#lib/fs/file-system.ts';
+import { writeRequirementsBlock } from '#lib/fs/requirements-files.ts';
+import * as dbStoryFolders from '#lib/db/story-folders.ts';
+import { cleanupAct, cleanupActLine, cleanupStory } from '#lib/ai/chat/run-manager.ts';
 import {
 	buildLineDir,
 	buildLineSubdirSuffix,
@@ -26,11 +26,11 @@ import {
 	copyActPlotFileBetweenLines,
 	getLineDir,
 	resolveLineSubdir,
-} from '#lib/ai/card-output-path';
-import { type ActPlotPhase } from '#lib/ai/act-plot';
-import type { PlotMode } from '#lib/ai/narrative-types';
-import { actWithNumberLabel, mainLineNameLabel } from '#lib/definitions/common-labels';
-import { WORLD_MD } from '#lib/ai/world-generator/constants';
+} from '#lib/ai/card-output-path.ts';
+import { type ActPlotPhase } from '#lib/ai/act-plot/index.ts';
+import type { PlotMode } from '#lib/ai/narrative-types.ts';
+import { actWithNumberLabel, mainLineNameLabel } from '#lib/definitions/common-labels.ts';
+import { WORLD_MD } from '#lib/ai/world-generator/constants.ts';
 
 let stories = $state<dbStories.Story[]>([]);
 let acts = $state<dbActs.Act[]>([]);

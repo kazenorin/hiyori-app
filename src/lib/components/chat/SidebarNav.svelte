@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { t } from '#lib/i18n';
-	import { version } from '#lib/app/version';
+	import { t } from '#lib/i18n/index.ts';
+	import { version } from '#lib/app/version.ts';
 	import {
 		getStories,
 		getActs,
@@ -15,25 +15,25 @@
 		setStoryOrder,
 		selectAct,
 		selectActLine,
-	} from '#lib/stores/stories.svelte';
-	import { getIsActive as getIsWorldBuilderActive } from '#lib/features/world-builder/world-builder.svelte';
-	import { batchGetActLineEventSummary, getActLinesForStory, type ActLineEventSummary, type ActLineMeta } from '#lib/db/act-lines';
-	import { canActBeDeleted, canActLineBeDeleted, getActByActLineId } from '#lib/db/acts';
-	import { getActEnded, getStoryConcluded } from '#lib/ai/chat.svelte';
-	import { getSettings, isMemoryAvailable, updateSettings } from '#lib/stores/settings.svelte';
-	import { exportStory } from '#lib/features/story-export-load/story-exporter';
-	import { getCloudSyncStatus, runCloudSync, getCloudSyncError } from '#lib/features/cloud-sync/cloud-sync.svelte';
-	import { createBackendFromSettings } from '#lib/features/cloud-sync/backend-factory';
-	import { toaster } from '#lib/stores/toaster.svelte';
+	} from '#lib/stores/stories.svelte.ts';
+	import { getIsActive as getIsWorldBuilderActive } from '#lib/features/world-builder/world-builder.svelte.ts';
+	import { batchGetActLineEventSummary, getActLinesForStory, type ActLineEventSummary, type ActLineMeta } from '#lib/db/act-lines.ts';
+	import { canActBeDeleted, canActLineBeDeleted, getActByActLineId } from '#lib/db/acts.ts';
+	import { getActEnded, getStoryConcluded } from '#lib/ai/chat.svelte.ts';
+	import { getSettings, isMemoryAvailable, updateSettings } from '#lib/stores/settings.svelte.ts';
+	import { exportStory } from '#lib/features/story-export-load/story-exporter.ts';
+	import { getCloudSyncStatus, runCloudSync, getCloudSyncError } from '#lib/features/cloud-sync/cloud-sync.svelte.ts';
+	import { createBackendFromSettings } from '#lib/features/cloud-sync/backend-factory.ts';
+	import { toaster } from '#lib/stores/toaster.svelte.ts';
 	import { type SwipeEndEventDetail } from '@svelte-put/swipeable';
 	import Sortable from 'sortablejs';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
-	import { openSettingsDialog } from '#lib/features/settings/settings-dialog-state.svelte';
+	import { openSettingsDialog } from '#lib/features/settings/settings-dialog-state.svelte.ts';
 	import SidebarRow from './SidebarRow.svelte';
 	import SidebarRowMenu from './SidebarRowMenu.svelte';
 	import SidebarCollapsedIcons from './SidebarCollapsedIcons.svelte';
-	import { getLineageGroupsForStory, type LineageGroupsResult } from '#lib/db/lineage-groups';
+	import { getLineageGroupsForStory, type LineageGroupsResult } from '#lib/db/lineage-groups.ts';
 	import Spinner from '#lib/components/ui/Spinner.svelte';
 	import Icon from '#lib/components/ui/Icon.svelte';
 

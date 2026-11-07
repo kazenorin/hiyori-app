@@ -1,6 +1,6 @@
 import { generateText, type ModelMessage, isStepCount } from 'ai';
-import { getMainProviderConfig, isReviewerEnabled, settings } from '#lib/stores/settings.svelte';
-import { createModel } from '#lib/ai/provider/provider';
+import { getMainProviderConfig, isReviewerEnabled, settings } from '#lib/stores/settings.svelte.ts';
+import { createModel } from '#lib/ai/provider/provider.ts';
 import {
 	actPlotEditorPromptLoader,
 	guidanceActPlotGenerationPromptLoader,
@@ -11,8 +11,8 @@ import {
 	guidanceActPlotTemplateLoader,
 	phaseEventActPlotTemplateLoader,
 	interviewSummaryPromptLoader,
-} from '#lib/fs/prompts';
-import { log } from '#lib/logging/logger';
+} from '#lib/fs/prompts.ts';
+import { log } from '#lib/logging/logger.ts';
 import {
 	type ActLineMeta,
 	getActLine,
@@ -20,30 +20,30 @@ import {
 	getLatestActSummary,
 	getLatestTurnOfEvents,
 	getPremisesMessages,
-} from '#lib/db/act-lines';
-import { getAct, traceActLineChain } from '#lib/db/acts';
-import { getStory } from '#lib/db/stories';
-import { checkActCardExists, ensureActCard } from '#lib/features/act-card-generator';
-import { resolveStoryFolder } from '#lib/fs/story-folders';
-import { fs } from '#lib/fs/file-system';
+} from '#lib/db/act-lines.ts';
+import { getAct, traceActLineChain } from '#lib/db/acts.ts';
+import { getStory } from '#lib/db/stories.ts';
+import { checkActCardExists, ensureActCard } from '#lib/features/act-card-generator/index.ts';
+import { resolveStoryFolder } from '#lib/fs/story-folders.ts';
+import { fs } from '#lib/fs/file-system.ts';
 import {
 	type CharacterCardContext,
 	ensureCharacterCard,
 	loadLatestCharacterCardsForActLine,
 	toCharacterSummary,
-} from '#lib/features/character-card-generator';
-import { getLatestProfilesByActLine } from '#lib/db/character-profiles';
-import { ACT_PLOT_SECTION, formatCharacterProfilesSection } from '#lib/definitions/pipeline-sections';
-import { actPlotResumeNote, actPlotTailoredExperience } from '#lib/definitions/pipeline-prompts';
-import { reviewerAcceptsAsIs } from '#lib/ai/reviewer-output-parser';
-import { targetWordCountPerSceneHeader } from '#lib/definitions/common-headers';
-import { ERR_EMPTY_ACT_PLOT_WRITER, ERR_NO_MAIN_PROVIDER } from '#lib/definitions/error-messages';
-import { actWithNumberLabel } from '#lib/definitions/common-labels';
-import { formatRequirementsBlockFromLines } from '#lib/definitions/requirements';
+} from '#lib/features/character-card-generator/index.ts';
+import { getLatestProfilesByActLine } from '#lib/db/character-profiles.ts';
+import { ACT_PLOT_SECTION, formatCharacterProfilesSection } from '#lib/definitions/pipeline-sections.ts';
+import { actPlotResumeNote, actPlotTailoredExperience } from '#lib/definitions/pipeline-prompts.ts';
+import { reviewerAcceptsAsIs } from '#lib/ai/reviewer-output-parser.ts';
+import { targetWordCountPerSceneHeader } from '#lib/definitions/common-headers.ts';
+import { ERR_EMPTY_ACT_PLOT_WRITER, ERR_NO_MAIN_PROVIDER } from '#lib/definitions/error-messages.ts';
+import { actWithNumberLabel } from '#lib/definitions/common-labels.ts';
+import { formatRequirementsBlockFromLines } from '#lib/definitions/requirements.ts';
 import { buildActPlotTools, filterActPlotToolsForPhase } from './tools';
 import { ACT_LEVEL_ACT_CARD } from './constants';
-import type { ActLineContext } from '#lib/ai/pipeline/types';
-import type { ToolContext } from '#lib/ai/tools/tools';
+import type { ActLineContext } from '#lib/ai/pipeline/types.ts';
+import type { ToolContext } from '#lib/ai/tools/tools.ts';
 
 const LOG_TAG = 'act-plot-generator';
 const TOOL_MAX_STEPS = 10;

@@ -2,23 +2,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const settingsMock = vi.hoisted(() => ({ reviewerEnabled: true }));
 
-vi.mock('#lib/stores/settings.svelte', () => ({
+vi.mock('#lib/stores/settings.svelte.ts', () => ({
 	isReviewerEnabled: () => settingsMock.reviewerEnabled,
 }));
 
-vi.mock('#lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.ts', () => ({
 	log: { info: vi.fn(async () => {}), error: vi.fn(async () => {}), warn: vi.fn(async () => {}), debug: vi.fn(async () => {}) },
 	fileLog: vi.fn(async () => {}),
 }));
 
-vi.mock('#lib/ai/chat/persistence', () => ({
+vi.mock('#lib/ai/chat/persistence.ts', () => ({
 	serializeImportantPhrases: (phrases: string[]) => phrases.join('\n'),
 	updatePersistentMessageMetadata: vi.fn(async () => {}),
 }));
 
-import { createPipelineCallbacks } from '#lib/ai/chat/pipeline-callbacks';
-import type { UIMessage } from '#lib/ai/chat/types';
-import type { PipelineCallbacks } from '#lib/ai/pipeline/types';
+import { createPipelineCallbacks } from '#lib/ai/chat/pipeline-callbacks.ts';
+import type { UIMessage } from '#lib/ai/chat/types.ts';
+import type { PipelineCallbacks } from '#lib/ai/pipeline/types.ts';
 
 function makeHarness() {
 	let message: UIMessage = { id: 'msg-1', role: 'assistant', content: '', reasoning: '', phases: [], sceneNumber: 1 };

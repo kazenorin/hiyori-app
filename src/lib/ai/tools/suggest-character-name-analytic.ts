@@ -1,11 +1,11 @@
 import { z } from 'zod';
 import { tool } from 'ai';
-import { ls } from '#lib/localization';
-import { getActiveLocale } from '#lib/fs/prompt-loader';
-import { getAllCharacterNames } from '#lib/db/character-profiles';
-import { WORLD_TEMPLATES } from '#lib/features/world-builder/template-registry';
-import { getNameDataset } from '#lib/features/name-suggestion/dataset';
-import { buildExistingNameSet, suggestNames } from '#lib/features/name-suggestion/engine';
+import { ls } from '#lib/localization/index.ts';
+import { getActiveLocale } from '#lib/fs/prompt-loader.ts';
+import { getAllCharacterNames } from '#lib/db/character-profiles.ts';
+import { WORLD_TEMPLATES } from '#lib/features/world-builder/template-registry.ts';
+import { getNameDataset } from '#lib/features/name-suggestion/dataset.ts';
+import { buildExistingNameSet, suggestNames } from '#lib/features/name-suggestion/engine.ts';
 import {
 	CULTURES,
 	DEFAULT_AVOIDANCE,
@@ -15,7 +15,7 @@ import {
 	MAX_COUNT,
 	TOOL_NAME_TYPES,
 	toNameThemes,
-} from '#lib/features/name-suggestion/types';
+} from '#lib/features/name-suggestion/types.ts';
 import { log as toolLog } from './utils';
 
 const LOG_TAG = 'suggest-character-name';

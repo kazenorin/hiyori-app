@@ -1,5 +1,5 @@
-import { getActByActLineId } from '#lib/db/acts';
-import type { ContextKey } from '#lib/components/chat/context/context-registry';
+import { getActByActLineId } from '#lib/db/acts.ts';
+import type { ContextKey } from '#lib/components/chat/context/context-registry.ts';
 import { SvelteMap } from 'svelte/reactivity';
 
 let available = $state<ContextKey[]>([]);

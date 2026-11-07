@@ -1,5 +1,5 @@
-import type { Message } from '#lib/db/messages';
-import { backgroundHeader, narrativeBodyHeader } from '#lib/definitions/common-headers';
+import type { Message } from '#lib/db/messages.ts';
+import { backgroundHeader, narrativeBodyHeader } from '#lib/definitions/common-headers.ts';
 
 /**
  * Export narrative content from an act line.

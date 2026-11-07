@@ -7,8 +7,8 @@
 		settings,
 		updateProviderConfig,
 		type ProviderConfig,
-	} from '#lib/stores/settings.svelte';
-	import { t } from '#lib/i18n';
+	} from '#lib/stores/settings.svelte.ts';
+	import { t } from '#lib/i18n/index.ts';
 	import Sortable from 'sortablejs';
 	import Button from '#lib/components/ui/Button.svelte';
 	import Card from '#lib/components/ui/Card.svelte';

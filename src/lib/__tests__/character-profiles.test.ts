@@ -11,31 +11,31 @@ const mockDb = {
 	}),
 };
 
-vi.mock('#lib/db/database', () => ({
+vi.mock('#lib/db/database.ts', () => ({
 	getDatabase: () => mockDb,
 }));
 
 describe('character-profiles DB layer', () => {
-	let insertCharacterProfile: typeof import('#lib/db/character-profiles').insertCharacterProfile;
-	let getLatestProfilesByActLine: typeof import('#lib/db/character-profiles').getLatestProfilesByActLine;
-	let getLatestProfileByAlias: typeof import('#lib/db/character-profiles').getLatestProfileByAlias;
-	let areAnyCharacterNamesKnown: typeof import('#lib/db/character-profiles').areAnyCharacterNamesKnown;
-	let deleteCharacterProfilesForActLine: typeof import('#lib/db/character-profiles').deleteCharacterProfilesForActLine;
-	let cloneCharacterProfiles: typeof import('#lib/db/character-profiles').cloneCharacterProfiles;
-	let inheritProfilesFromActLine: typeof import('#lib/db/character-profiles').inheritProfilesFromActLine;
-	let resolveCanonicalName: typeof import('#lib/db/character-profiles').resolveCanonicalName;
-	let toCanonicalName: typeof import('#lib/db/character-profiles').toCanonicalName;
-	let ensurePreferredInAliases: typeof import('#lib/db/character-profiles').ensurePreferredInAliases;
-	let normalizeTraits: typeof import('#lib/db/character-profiles').normalizeTraits;
-	let parseTraits: typeof import('#lib/db/character-profiles').parseTraits;
+	let insertCharacterProfile: typeof import('#lib/db/character-profiles.ts').insertCharacterProfile;
+	let getLatestProfilesByActLine: typeof import('#lib/db/character-profiles.ts').getLatestProfilesByActLine;
+	let getLatestProfileByAlias: typeof import('#lib/db/character-profiles.ts').getLatestProfileByAlias;
+	let areAnyCharacterNamesKnown: typeof import('#lib/db/character-profiles.ts').areAnyCharacterNamesKnown;
+	let deleteCharacterProfilesForActLine: typeof import('#lib/db/character-profiles.ts').deleteCharacterProfilesForActLine;
+	let cloneCharacterProfiles: typeof import('#lib/db/character-profiles.ts').cloneCharacterProfiles;
+	let inheritProfilesFromActLine: typeof import('#lib/db/character-profiles.ts').inheritProfilesFromActLine;
+	let resolveCanonicalName: typeof import('#lib/db/character-profiles.ts').resolveCanonicalName;
+	let toCanonicalName: typeof import('#lib/db/character-profiles.ts').toCanonicalName;
+	let ensurePreferredInAliases: typeof import('#lib/db/character-profiles.ts').ensurePreferredInAliases;
+	let normalizeTraits: typeof import('#lib/db/character-profiles.ts').normalizeTraits;
+	let parseTraits: typeof import('#lib/db/character-profiles.ts').parseTraits;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
 		mockDbSelectResults = [];
 		vi.resetModules();
-		vi.doMock('#lib/db/database', () => ({ getDatabase: () => mockDb }));
+		vi.doMock('#lib/db/database.ts', () => ({ getDatabase: () => mockDb }));
 
-		const mod = await import('#lib/db/character-profiles');
+		const mod = await import('#lib/db/character-profiles.ts');
 		insertCharacterProfile = mod.insertCharacterProfile;
 		getLatestProfilesByActLine = mod.getLatestProfilesByActLine;
 		getLatestProfileByAlias = mod.getLatestProfileByAlias;

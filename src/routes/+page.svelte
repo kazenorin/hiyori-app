@@ -21,7 +21,7 @@
 		sendMessage,
 		stopStreaming,
 		type UIMessage,
-	} from '#lib/ai/chat.svelte';
+	} from '#lib/ai/chat.svelte.ts';
 	import MetadataPanel from '#lib/components/MetadataPanel.svelte';
 	import {
 		deleteLastWorldBuilderExchange,
@@ -42,7 +42,7 @@
 		stopStreaming as stopWorldBuilderStreaming,
 		type WorldBuilderMessage,
 		getWbPhase,
-	} from '#lib/features/world-builder/world-builder.svelte';
+	} from '#lib/features/world-builder/world-builder.svelte.ts';
 	import {
 		getIsCreatingStory,
 		getCreateStoryError,
@@ -53,7 +53,7 @@
 		handleStartGameAfterInterview,
 		handleStartGameFromEmptyChat,
 		handleDiscussPlotFromEmptyChat,
-	} from '#lib/features/world-builder/story-creation.svelte';
+	} from '#lib/features/world-builder/story-creation.svelte.ts';
 	import {
 		getIsForking,
 		getForkChoiceIndex,
@@ -61,8 +61,8 @@
 		handleForkDirect,
 		handleForkWithInterview,
 		cancelForkChoice,
-	} from '#lib/features/fork-controller.svelte';
-	import { getRegenerateChoiceIndex, handleRegenerateChoice, cancelRegenerateChoice } from '#lib/features/regenerate-controller.svelte';
+	} from '#lib/features/fork-controller.svelte.ts';
+	import { getRegenerateChoiceIndex, handleRegenerateChoice, cancelRegenerateChoice } from '#lib/features/regenerate-controller.svelte.ts';
 	import {
 		getEditingIsTemplated,
 		isEditingMessage,
@@ -71,29 +71,29 @@
 		cancelEdit,
 		saveEditMainChatMessage,
 		saveEditWorldBuilderMessage,
-	} from '#lib/features/message-editor.svelte';
-	import { getActiveActLineId, getActiveDirectorNotes, getActiveStory, getIsSelectingStory } from '#lib/stores/stories.svelte';
-	import { settings, isDirectorModeEnabled, isPlotPlannerEnabled, getTTSVoiceByLocale, getTTSSpeed } from '#lib/stores/settings.svelte';
-	import { isTTSSupportedLocale } from '#lib/kokoro/locale-mapping';
-	import { ttsPlayer } from '#lib/kokoro/player.svelte';
-	import { buildTTSPassage } from '#lib/kokoro/passage';
+	} from '#lib/features/message-editor.svelte.ts';
+	import { getActiveActLineId, getActiveDirectorNotes, getActiveStory, getIsSelectingStory } from '#lib/stores/stories.svelte.ts';
+	import { settings, isDirectorModeEnabled, isPlotPlannerEnabled, getTTSVoiceByLocale, getTTSSpeed } from '#lib/stores/settings.svelte.ts';
+	import { isTTSSupportedLocale } from '#lib/kokoro/locale-mapping.ts';
+	import { ttsPlayer } from '#lib/kokoro/player.svelte.ts';
+	import { buildTTSPassage } from '#lib/kokoro/passage.ts';
 	import MarkdownContent from '#lib/components/MarkdownContent.svelte';
 	import ChatControls from '#lib/components/ChatControls.svelte';
 	import DirectorNotesPanel from '#lib/components/DirectorNotesPanel.svelte';
 	import WorldBuilderControls from '#lib/components/WorldBuilderControls.svelte';
-	import { hasTemplateMetadata, renderTemplate } from '#lib/ai/template-renderer';
-	import { loadStoryMessageTemplate, loadStoryMessageTemplateForStory } from '#lib/fs/view-templates';
-	import { actPlotExists as actPlotExistsHelper } from '#lib/ai/act-plot';
-	import { getActLine } from '#lib/db/act-lines';
+	import { hasTemplateMetadata, renderTemplate } from '#lib/ai/template-renderer.ts';
+	import { loadStoryMessageTemplate, loadStoryMessageTemplateForStory } from '#lib/fs/view-templates.ts';
+	import { actPlotExists as actPlotExistsHelper } from '#lib/ai/act-plot/index.ts';
+	import { getActLine } from '#lib/db/act-lines.ts';
 
-	import { t } from '#lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 
 	import ScrollToFAB from '#lib/components/ScrollToFAB.svelte';
 	import MobileInputSheet from '#lib/components/MobileInputSheet.svelte';
 	import ChoicesSheet from '#lib/components/ChoicesSheet.svelte';
 	import PhaseStrip from '#lib/components/chat/PhaseStrip.svelte';
-	import { openContext, openPhaseDialog } from '#lib/components/chat/phase-dialog-state.svelte';
-	import { getAvailableContexts, refreshAvailableContexts } from '#lib/features/context-availability.svelte';
+	import { openContext, openPhaseDialog } from '#lib/components/chat/phase-dialog-state.svelte.ts';
+	import { getAvailableContexts, refreshAvailableContexts } from '#lib/features/context-availability.svelte.ts';
 	import RightPanelShell from '#lib/components/chat/RightPanelShell.svelte';
 	import MessageActions from '#lib/components/chat/MessageActions.svelte';
 	import ForkChoicePanel from '#lib/components/chat/ForkChoicePanel.svelte';
@@ -101,12 +101,12 @@
 	import MessageEditForm from '#lib/components/chat/MessageEditForm.svelte';
 	import Icon from '#lib/components/ui/Icon.svelte';
 	import Button from '#lib/components/ui/Button.svelte';
-	import { mobileNav, mobileFeatures } from '#lib/stores/mobile-nav.svelte';
-	import { scrollToBottom } from '#lib/utils/scroll';
-	import { setupScrollObservers, handleStreamEndScroll } from '#lib/features/auto-scroller.svelte';
-	import { handleContinueToNextAct, handleEndStory } from '#lib/features/act-transition.svelte';
-	import { toaster } from '#lib/stores/toaster.svelte';
-	import type { VoiceId } from '#lib/kokoro/kokoro-hiyori';
+	import { mobileNav, mobileFeatures } from '#lib/stores/mobile-nav.svelte.ts';
+	import { scrollToBottom } from '#lib/utils/scroll.ts';
+	import { setupScrollObservers, handleStreamEndScroll } from '#lib/features/auto-scroller.svelte.ts';
+	import { handleContinueToNextAct, handleEndStory } from '#lib/features/act-transition.svelte.ts';
+	import { toaster } from '#lib/stores/toaster.svelte.ts';
+	import type { VoiceId } from '#lib/kokoro/kokoro-hiyori/index.ts';
 
 	let input = $state('');
 	let chatContainer = $state<HTMLDivElement | null>(null);

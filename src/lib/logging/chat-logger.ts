@@ -1,8 +1,8 @@
-import { fs } from '#lib/fs/file-system';
-import { resolveStoryFolder } from '#lib/fs/story-folders';
-import { getActiveStory } from '#lib/stores/stories.svelte';
+import { fs } from '#lib/fs/file-system.ts';
+import { resolveStoryFolder } from '#lib/fs/story-folders.ts';
+import { getActiveStory } from '#lib/stores/stories.svelte.ts';
 import { getLogLevel, log } from './logger';
-import type { UIMessage } from '#lib/ai/chat/types';
+import type { UIMessage } from '#lib/ai/chat/types.ts';
 
 function isDebugEnabled(): boolean {
 	return getLogLevel() === 'debug';

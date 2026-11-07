@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mobileFeatures } from '#lib/stores/mobile-nav.svelte';
+import { mobileFeatures } from '#lib/stores/mobile-nav.svelte.ts';
 import {
 	openPhaseDialog,
 	closePhaseDialog,
@@ -14,7 +14,7 @@ import {
 	getContextDialogMessageId,
 	getContextDialogSelection,
 	setContextDialogSelection,
-} from '#lib/components/chat/phase-dialog-state.svelte';
+} from '#lib/components/chat/phase-dialog-state.svelte.ts';
 
 beforeEach(() => {
 	closePhaseDialog();

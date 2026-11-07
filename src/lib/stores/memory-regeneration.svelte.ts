@@ -1,10 +1,10 @@
-import { Memory } from '#lib/features/memory';
-import { getEmbeddingProviderConfig } from '#lib/stores/settings.svelte';
+import { Memory } from '#lib/features/memory/index.ts';
+import { getEmbeddingProviderConfig } from '#lib/stores/settings.svelte.ts';
 import { getActiveStoryId, getActiveActLineId } from './stories.svelte';
-import { getMessagesForLine } from '#lib/db/act-lines';
-import { runMemoryExtractionPipeline } from '#lib/features/memory/memory-extraction-pipeline';
-import { log } from '#lib/logging/logger';
-import { ERR_EMBEDDING_PROVIDER_NOT_CONFIGURED } from '#lib/definitions/error-messages';
+import { getMessagesForLine } from '#lib/db/act-lines.ts';
+import { runMemoryExtractionPipeline } from '#lib/features/memory/memory-extraction-pipeline.ts';
+import { log } from '#lib/logging/logger.ts';
+import { ERR_EMBEDDING_PROVIDER_NOT_CONFIGURED } from '#lib/definitions/error-messages.ts';
 
 let isRegenerating = $state(false);
 let error = $state<string | null>(null);

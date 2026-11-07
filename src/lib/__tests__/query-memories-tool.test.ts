@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { LocationItem, Memory, MemoryItem } from '#lib/features/memory';
+import type { LocationItem, Memory, MemoryItem } from '#lib/features/memory/index.ts';
 
 vi.mock('@tauri-apps/api/core', () => ({
 	invoke: vi.fn(async () => {}),
 }));
 
-vi.mock('#lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.ts', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -21,11 +21,11 @@ const mockDb = {
 	select: vi.fn(async () => []),
 };
 
-vi.mock('#lib/db/database', () => ({
+vi.mock('#lib/db/database.ts', () => ({
 	getDatabase: () => mockDb,
 }));
 
-vi.mock('#lib/db/memory-database', () => ({
+vi.mock('#lib/db/memory-database.ts', () => ({
 	getMemoryDatabase: () => ({
 		execute: vi.fn(async () => ({ rowsAffected: 0 })),
 		select: vi.fn(async () => []),
@@ -38,7 +38,7 @@ vi.mock('ai', () => ({
 	tool: vi.fn((def) => def),
 }));
 
-vi.mock('#lib/ai/provider/provider', () => ({
+vi.mock('#lib/ai/provider/provider.ts', () => ({
 	createEmbeddingModel: vi.fn(() => ({})),
 }));
 
@@ -47,11 +47,11 @@ const mockTraceActLineChain = vi.fn(async (_actLineId: string) => [
 	{ actLineId: 'line-2', actNumber: 2, isMainLine: false },
 ]);
 
-vi.mock('#lib/db/act-lines', () => ({
+vi.mock('#lib/db/act-lines.ts', () => ({
 	batchResolveActLineInfo: vi.fn(async () => new Map()),
 }));
 
-vi.mock('#lib/db/acts', () => ({
+vi.mock('#lib/db/acts.ts', () => ({
 	traceActLineChain: (actLineId: string) => mockTraceActLineChain(actLineId),
 }));
 
@@ -78,7 +78,7 @@ const mockSearchResults: MemoryItem[] = [
 
 type MemoryApi = Pick<Memory, 'resolveAliases' | 'search' | 'searchByLocation' | 'searchLocations' | 'sampleByLocation'>;
 
-function makeMemoryApi(overrides: Partial<MemoryApi> = {}): MemoryApi {
+function makeMemoryApi(overrides: Partial<MemoryApi> = {}): Memory {
 	return {
 		resolveAliases: vi.fn(async (_storyId: string, _actLineIds: string[], name: string) => [name]),
 		search: vi.fn(async () => [] as MemoryItem[]),
@@ -86,11 +86,11 @@ function makeMemoryApi(overrides: Partial<MemoryApi> = {}): MemoryApi {
 		searchLocations: vi.fn(async () => [] as LocationItem[]),
 		sampleByLocation: vi.fn(async () => [] as MemoryItem[]),
 		...overrides,
-	};
+	} as unknown as Memory;
 }
 
 describe('createQueryMemoriesTool', () => {
-	let createQueryMemoriesTool: typeof import('#lib/ai/tools/query-memories').createQueryMemoriesTool;
+	let createQueryMemoriesTool: typeof import('#lib/ai/tools/query-memories.ts').createQueryMemoriesTool;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
@@ -99,7 +99,7 @@ describe('createQueryMemoriesTool', () => {
 		vi.doMock('@tauri-apps/api/core', () => ({
 			invoke: vi.fn(async () => {}),
 		}));
-		vi.doMock('#lib/logging/logger', () => ({
+		vi.doMock('#lib/logging/logger.ts', () => ({
 			log: {
 				info: vi.fn(async () => {}),
 				error: vi.fn(async () => {}),
@@ -109,8 +109,8 @@ describe('createQueryMemoriesTool', () => {
 			fileLog: vi.fn(async () => {}),
 			setLogLevel: vi.fn(),
 		}));
-		vi.doMock('#lib/db/database', () => ({ getDatabase: () => mockDb }));
-		vi.doMock('#lib/db/memory-database', () => ({
+		vi.doMock('#lib/db/database.ts', () => ({ getDatabase: () => mockDb }));
+		vi.doMock('#lib/db/memory-database.ts', () => ({
 			getMemoryDatabase: () => ({
 				execute: vi.fn(async () => ({ rowsAffected: 0 })),
 				select: vi.fn(async () => []),
@@ -121,17 +121,17 @@ describe('createQueryMemoriesTool', () => {
 			embedMany: vi.fn(async () => ({ embeddings: [[0.1, 0.2]] })),
 			tool: vi.fn((def) => def),
 		}));
-		vi.doMock('#lib/ai/provider/provider', () => ({
+		vi.doMock('#lib/ai/provider/provider.ts', () => ({
 			createEmbeddingModel: vi.fn(() => ({})),
 		}));
-		vi.doMock('#lib/db/act-lines', () => ({
+		vi.doMock('#lib/db/act-lines.ts', () => ({
 			batchResolveActLineInfo: vi.fn(async () => new Map()),
 		}));
-		vi.doMock('#lib/db/acts', () => ({
+		vi.doMock('#lib/db/acts.ts', () => ({
 			traceActLineChain: (actLineId: string) => mockTraceActLineChain(actLineId),
 		}));
 
-		const mod = await import('#lib/ai/tools/query-memories');
+		const mod = await import('#lib/ai/tools/query-memories.ts');
 		createQueryMemoriesTool = mod.createQueryMemoriesTool;
 	});
 
@@ -295,14 +295,14 @@ describe('createQueryMemoriesTool', () => {
 			actLineId: 'line-1',
 		});
 
-		const result = await toolDef.execute!(
+		const result = (await toolDef.execute!(
 			{
 				characterQuery: 'Elena',
 				timeAndLocation: undefined,
 				currentActOnly: true,
 			},
 			{ toolCallId: 'test', messages: [], context: {} }
-		);
+		)) as Array<{ memory: string }>;
 
 		expect(result.length).toBe(10);
 		expect(result.map((r) => r.memory)).toEqual(manyResults.slice(0, 10).map((m) => m.memory));
@@ -319,14 +319,14 @@ describe('createQueryMemoriesTool', () => {
 			actLineId: 'line-1',
 		});
 
-		const result = await toolDef.execute!(
+		const result = (await toolDef.execute!(
 			{
 				characterQuery: 'Elena',
 				timeAndLocation: undefined,
 				currentActOnly: true,
 			},
 			{ toolCallId: 'test', messages: [], context: {} }
-		);
+		)) as unknown[];
 
 		expect(result.length).toBe(2);
 	});
@@ -364,14 +364,14 @@ describe('createQueryMemoriesTool', () => {
 			actLineId: 'line-1',
 		});
 
-		const result = await toolDef.execute!(
+		const result = (await toolDef.execute!(
 			{
 				characterQuery: undefined,
 				timeAndLocation: 'Night at the Tavern',
 				currentActOnly: true,
 			},
 			{ toolCallId: 'test', messages: [], context: {} }
-		);
+		)) as Array<{ memory: string }>;
 
 		expect(result.length).toBe(10);
 		const allMemories = [...tavernMemories, ...caveMemories];

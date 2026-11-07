@@ -2,10 +2,10 @@
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import { getImportWorldStore } from './import-state.svelte';
-	import { prepareImport, confirmImport, cancelImport } from '#lib/features/import-world/import-orchestrator';
-	import { enterActPlotInterviewMode } from '#lib/features/world-builder/world-builder.svelte';
-	import { selectStory, selectAct, selectActLine } from '#lib/stores/stories.svelte';
-	import { t } from '#lib/i18n';
+	import { prepareImport, confirmImport, cancelImport } from '#lib/features/import-world/import-orchestrator.ts';
+	import { enterActPlotInterviewMode } from '#lib/features/world-builder/world-builder.svelte.ts';
+	import { selectStory, selectAct, selectActLine } from '#lib/stores/stories.svelte.ts';
+	import { t } from '#lib/i18n/index.ts';
 	import Icon from '#lib/components/ui/Icon.svelte';
 	import Card from '#lib/components/ui/Card.svelte';
 	import Spinner from '#lib/components/ui/Spinner.svelte';

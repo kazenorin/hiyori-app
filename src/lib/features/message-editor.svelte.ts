@@ -1,14 +1,14 @@
-import { getIsBusy, getIsStreaming, getMessages, updateMessageInState, type UIMessage } from '#lib/ai/chat.svelte';
+import { getIsBusy, getIsStreaming, getMessages, updateMessageInState, type UIMessage } from '#lib/ai/chat.svelte.ts';
 import {
 	getIsStreaming as getIsWorldBuilderStreaming,
 	updateWorldBuilderMessageContent,
 	getActPlotInterview,
 	type WorldBuilderMessage,
-} from '#lib/features/world-builder/world-builder.svelte';
-import { updateMessageFields } from '#lib/db/messages';
-import { hasTemplateMetadata } from '#lib/ai/template-renderer';
-import { emptyVariables, type NarrativeVariables } from '#lib/ai/narrative-types';
-import { log } from '#lib/logging/logger';
+} from '#lib/features/world-builder/world-builder.svelte.ts';
+import { updateMessageFields } from '#lib/db/messages.ts';
+import { hasTemplateMetadata } from '#lib/ai/template-renderer.ts';
+import { emptyVariables, type NarrativeVariables } from '#lib/ai/narrative-types.ts';
+import { log } from '#lib/logging/logger.ts';
 
 let editingMessageId = $state<string | null>(null);
 let editingIsTemplated = $state(false);

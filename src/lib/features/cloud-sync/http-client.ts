@@ -1,6 +1,6 @@
-import { checkIsTauri } from '#lib/runtime';
-import { getSettings } from '#lib/stores/settings.svelte';
-import { resolveFetch } from '#lib/http/fetch';
+import { checkIsTauri } from '#lib/runtime.ts';
+import { getSettings } from '#lib/stores/settings.svelte.ts';
+import { resolveFetch } from '#lib/http/fetch.ts';
 
 /**
  * Platform-aware fetch. Under Tauri, routes through @tauri-apps/plugin-http

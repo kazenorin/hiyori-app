@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { Database, QueryResult } from '#lib/db/types';
+import type { Database, QueryResult } from '#lib/db/types.ts';
 
 type Row = Record<string, unknown>;
 

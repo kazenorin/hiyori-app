@@ -1,5 +1,5 @@
-import type { NarrativeVariables } from '#lib/ai/narrative-types';
-import { hasTemplateMetadata } from '#lib/ai/template-renderer';
+import type { NarrativeVariables } from '#lib/ai/narrative-types.ts';
+import { hasTemplateMetadata } from '#lib/ai/template-renderer.ts';
 
 export function buildTTSPassage(variables: NarrativeVariables | undefined, fallbackContent: string | undefined): string {
 	if (variables && hasTemplateMetadata(variables)) {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildExistingNameSet, formatFullName, normalizeName, suggestNames } from '#lib/features/name-suggestion/engine';
-import { toNameThemes, type NameEntry } from '#lib/features/name-suggestion/types';
+import { buildExistingNameSet, formatFullName, normalizeName, suggestNames } from '#lib/features/name-suggestion/engine.ts';
+import { toNameThemes, type NameEntry } from '#lib/features/name-suggestion/types.ts';
 
 function entry(overrides: Partial<NameEntry> & { name: string }): NameEntry {
 	return {

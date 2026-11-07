@@ -1,9 +1,9 @@
-import { fs } from '#lib/fs/file-system';
-import * as dbStoryFolders from '#lib/db/story-folders';
-import * as dbStories from '#lib/db/stories';
-import { resolveStoryFolder } from '#lib/fs/story-folders';
+import { fs } from '#lib/fs/file-system.ts';
+import * as dbStoryFolders from '#lib/db/story-folders.ts';
+import * as dbStories from '#lib/db/stories.ts';
+import { resolveStoryFolder } from '#lib/fs/story-folders.ts';
 import { generateWorld } from './world-generator';
-import { WORLD_MD } from '#lib/ai/world-generator/constants';
+import { WORLD_MD } from '#lib/ai/world-generator/constants.ts';
 
 export async function ensureWorldFile(storyId: string, storyName?: string, abortSignal?: AbortSignal): Promise<string> {
 	const story = await dbStories.getStory(storyId);

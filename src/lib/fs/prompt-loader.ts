@@ -1,5 +1,5 @@
-import { fs } from '#lib/fs/file-system';
-import { log } from '#lib/logging/logger';
+import { fs } from '#lib/fs/file-system.ts';
+import { log } from '#lib/logging/logger.ts';
 import { resolveStoryFolder } from './story-folders';
 import { syncConfigAssets, loadManifest } from './config-manifest';
 

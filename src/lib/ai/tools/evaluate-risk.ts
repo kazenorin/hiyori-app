@@ -1,10 +1,10 @@
-import { ls } from '#lib/localization';
+import { ls } from '#lib/localization/index.ts';
 import { tool } from 'ai';
 import { z } from 'zod';
 import type { ToolSet } from 'ai';
 import type { ToolContext } from './tools';
-import { evaluateRisk } from '#lib/utils/risk-model';
-import type { RiskOutcome } from '#lib/utils/risk-model';
+import { evaluateRisk } from '#lib/utils/risk-model.ts';
+import type { RiskOutcome } from '#lib/utils/risk-model.ts';
 import { log } from './utils';
 
 const OUTCOME_LABELS: Record<RiskOutcome, string> = {

@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { t } from '#lib/i18n';
-	import { getRoleCallSettings, setRoleCallSettings } from '#lib/stores/settings.svelte';
+	import { t } from '#lib/i18n/index.ts';
+	import { getRoleCallSettings, setRoleCallSettings } from '#lib/stores/settings.svelte.ts';
 	import AdvancedSettingsEditor from '#lib/components/chat/AdvancedSettingsEditor.svelte';
 
 	interface Props {

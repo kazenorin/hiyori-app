@@ -1,6 +1,6 @@
 <script module lang="ts">
-	import type { PhaseName } from '#lib/ai/narrative-types';
-	import type { IconName } from '#lib/ui/icons';
+	import type { PhaseName } from '#lib/ai/narrative-types.ts';
+	import type { IconName } from '#lib/ui/icons.ts';
 
 	/** Icon per pipeline phase (design §4.3). */
 	export const PHASE_ICONS: Record<PhaseName, IconName> = {
@@ -29,9 +29,9 @@
 
 <script lang="ts">
 	import Icon from '#lib/components/ui/Icon.svelte';
-	import { t } from '#lib/i18n';
-	import type { UIScenePhase } from '#lib/ai/narrative-types';
-	import type { ContextKey } from '#lib/components/chat/context/context-registry';
+	import { t } from '#lib/i18n/index.ts';
+	import type { UIScenePhase } from '#lib/ai/narrative-types.ts';
+	import type { ContextKey } from '#lib/components/chat/context/context-registry.ts';
 
 	interface Props {
 		phases: UIScenePhase[];

@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
-import { setFileSystem } from '#lib/fs/file-system';
+import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory.ts';
+import { setFileSystem } from '#lib/fs/file-system.ts';
 import { createTestDatabase } from './helpers/test-database';
-import { runMigrations } from '#lib/db/migrations';
+import { runMigrations } from '#lib/db/migrations.ts';
 
 let testDb: ReturnType<typeof createTestDatabase>;
 
-vi.mock('#lib/db/database', () => ({
+vi.mock('#lib/db/database.ts', () => ({
 	initDatabase: vi.fn(async () => testDb),
 	getDatabase: vi.fn(() => testDb),
 }));
 
-vi.mock('#lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.ts', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -21,65 +21,65 @@ vi.mock('#lib/logging/logger', () => ({
 	fileLog: vi.fn(async () => {}),
 }));
 
-vi.mock('#lib/definitions/common-labels', () => ({
+vi.mock('#lib/definitions/common-labels.ts', () => ({
 	mainLineNameLabel: () => 'Main Line',
 	actWithNumberLabel: (n: number | string) => `Act ${n}`,
 }));
 
-vi.mock('#lib/localization', () => ({
+vi.mock('#lib/localization/index.ts', () => ({
 	loadLocaleStrings: vi.fn(async () => {}),
 }));
 
-vi.mock('#lib/fs/prompt-loader', async (importOriginal) => {
-	const actual = await importOriginal<typeof import('#lib/fs/prompt-loader')>();
+vi.mock('#lib/fs/prompt-loader.ts', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/fs/prompt-loader.ts')>();
 	return {
 		...actual,
 		setActiveLocale: vi.fn(),
 	};
 });
 
-vi.mock('#lib/stores/settings.svelte', () => ({
+vi.mock('#lib/stores/settings.svelte.ts', () => ({
 	settings: { locale: 'en' },
 	getDefaultPlotMode: () => 'guidance',
 	getMemoryProviderConfig: () => undefined,
 	isMemoryAvailable: () => false,
 }));
 
-vi.mock('#lib/ai/world-generator', () => ({
+vi.mock('#lib/ai/world-generator/index.ts', () => ({
 	ensureWorldFile: vi.fn(async () => ''),
 }));
 
-vi.mock('#lib/ai/world-generator/template-resolution', () => ({
+vi.mock('#lib/ai/world-generator/template-resolution.ts', () => ({
 	writeWorldTemplateId: vi.fn(async () => {}),
 }));
 
-vi.mock('#lib/fs/story-folders', () => ({
+vi.mock('#lib/fs/story-folders.ts', () => ({
 	resolveStoryFolder: vi.fn(async () => 'Story'),
 	renameStoryFolder: vi.fn(async () => 'Story'),
 	deriveStoryName: vi.fn((name: string) => name),
 }));
 
-vi.mock('#lib/features/world-builder/world-builder.svelte', () => ({
+vi.mock('#lib/features/world-builder/world-builder.svelte.ts', () => ({
 	moveWorldBuilderLog: vi.fn(async () => {}),
 	getLogFilePath: vi.fn(async () => ''),
 	enterActPlotInterviewMode: vi.fn(async () => {}),
 }));
 
-vi.mock('#lib/logging/chat-logger', () => ({
+vi.mock('#lib/logging/chat-logger.ts', () => ({
 	moveWorldBuilderLog: vi.fn(async () => {}),
 }));
 
-vi.mock('#lib/features/memory', () => ({
+vi.mock('#lib/features/memory/index.ts', () => ({
 	Memory: class {
 		constructor() {}
 	},
 }));
 
-import * as dbStories from '#lib/db/stories';
-import * as dbActs from '#lib/db/acts';
-import * as dbActLines from '#lib/db/act-lines';
-import { createActLineContinuation, createActLine } from '#lib/stores/stories.svelte';
-import { getLineDir, buildLineSubdirSuffix } from '#lib/ai/card-output-path';
+import * as dbStories from '#lib/db/stories.ts';
+import * as dbActs from '#lib/db/acts.ts';
+import * as dbActLines from '#lib/db/act-lines.ts';
+import { createActLineContinuation, createActLine } from '#lib/stores/stories.svelte.ts';
+import { getLineDir, buildLineSubdirSuffix } from '#lib/ai/card-output-path.ts';
 
 describe('createActLineContinuation — always creates a fresh act', () => {
 	let story: dbStories.Story;

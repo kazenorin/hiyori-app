@@ -1,5 +1,5 @@
 import { getDatabase } from './database';
-import type { PhaseName, UIScenePhase } from '#lib/ai/narrative-types';
+import type { PhaseName, UIScenePhase } from '#lib/ai/narrative-types.ts';
 
 interface MessagePhaseRow {
 	message_id: string;

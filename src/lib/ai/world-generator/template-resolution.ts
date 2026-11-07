@@ -1,10 +1,10 @@
 import { generateText } from 'ai';
-import { createModel } from '#lib/ai/provider/provider';
-import { getMinorTaskAgentProviderConfig } from '#lib/stores/settings.svelte';
-import { ls } from '#lib/localization';
-import { log } from '#lib/logging/logger';
-import { WORLD_TEMPLATES } from '#lib/features/world-builder/template-registry';
-import { fs } from '#lib/fs/file-system';
+import { createModel } from '#lib/ai/provider/provider.ts';
+import { getMinorTaskAgentProviderConfig } from '#lib/stores/settings.svelte.ts';
+import { ls } from '#lib/localization/index.ts';
+import { log } from '#lib/logging/logger.ts';
+import { WORLD_TEMPLATES } from '#lib/features/world-builder/template-registry.ts';
+import { fs } from '#lib/fs/file-system.ts';
 
 export const WORLD_TEMPLATE_ID_FILE = 'world-template-id';
 

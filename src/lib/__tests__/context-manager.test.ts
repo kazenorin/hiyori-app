@@ -1,24 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { UIMessage } from '#lib/ai/chat/types';
+import type { UIMessage } from '#lib/ai/chat/types.ts';
 
 const mockGetLatestActShortSummaryEntry = vi.fn();
 const mockUpdateActShortSummary = vi.fn();
 const mockGetActLine = vi.fn();
 const mockTraceActLineChain = vi.fn();
 
-vi.mock('#lib/db/act-lines', () => ({
+vi.mock('#lib/db/act-lines.ts', () => ({
 	getLatestActShortSummaryEntry: (...args: unknown[]) => mockGetLatestActShortSummaryEntry(...args),
 	updateActShortSummary: (...args: unknown[]) => mockUpdateActShortSummary(...args),
 	getActLine: (...args: unknown[]) => mockGetActLine(...args),
 }));
-vi.mock('#lib/db/acts', () => ({
+vi.mock('#lib/db/acts.ts', () => ({
 	traceActLineChain: (...args: unknown[]) => mockTraceActLineChain(...args),
 }));
-vi.mock('#lib/db/database', () => ({
+vi.mock('#lib/db/database.ts', () => ({
 	getDatabase: () => ({ select: vi.fn(async () => []), execute: vi.fn(async () => ({ rowsAffected: 0 })) }),
 }));
 
-import { resolveScenePlot, getStorySoFar, saveActShortSummary } from '#lib/features/context-manager';
+import { resolveScenePlot, getStorySoFar, saveActShortSummary } from '#lib/features/context-manager.ts';
 
 function msg(id: string, sceneNumber: number, scenePlot?: string): UIMessage {
 	return { id, role: 'assistant', content: '', sceneNumber, scenePlot };

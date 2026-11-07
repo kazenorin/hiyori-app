@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { isMemoryAvailable, isMemoryCapable, settings, updateSettings } from '#lib/stores/settings.svelte';
-	import { t } from '#lib/i18n';
+	import { isMemoryAvailable, isMemoryCapable, settings, updateSettings } from '#lib/stores/settings.svelte.ts';
+	import { t } from '#lib/i18n/index.ts';
 	import ProviderSelect from '#lib/components/ProviderSelect.svelte';
 	import Card from '#lib/components/ui/Card.svelte';
 	import RoleCallSettingsOverride from '#lib/components/chat/RoleCallSettingsOverride.svelte';
-	import { getRoleItems } from '#lib/features/settings-options';
+	import { getRoleItems } from '#lib/features/settings-options.ts';
 </script>
 
 <Card title={t('settings.memory')} description={t('settings.enableMemoryDescription')}>

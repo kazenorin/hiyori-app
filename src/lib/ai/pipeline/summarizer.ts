@@ -1,6 +1,6 @@
-import type { ProviderConfig } from '#lib/stores/settings.svelte';
-import { getSettings, isMemoryAvailable } from '#lib/stores/settings.svelte';
-import type { MessageBase } from '#lib/db/messages';
+import type { ProviderConfig } from '#lib/stores/settings.svelte.ts';
+import { getSettings, isMemoryAvailable } from '#lib/stores/settings.svelte.ts';
+import type { MessageBase } from '#lib/db/messages.ts';
 import type { NarrativeVariables } from '../narrative-types';
 import type {
 	AssistantContext,
@@ -27,7 +27,7 @@ import {
 	parseProfilesBody,
 	serializeActSummary,
 } from '../act-summary-parser';
-import { actSummaryHeader, currentCharacterProfilesHeader } from '#lib/definitions/common-headers';
+import { actSummaryHeader, currentCharacterProfilesHeader } from '#lib/definitions/common-headers.ts';
 import {
 	goalLabel,
 	importanceLabel,
@@ -36,16 +36,16 @@ import {
 	stateLabel,
 	traitsLabel,
 	voiceLabel,
-} from '#lib/definitions/character-profile-labels';
+} from '#lib/definitions/character-profile-labels.ts';
 import {
 	actSummaryTemplate,
 	characterProfilesHeader,
 	summarizerExtractionPromptTemplate,
 	summarizerFallbackExtractionPromptTemplate,
-} from '#lib/definitions/pipeline-prompts';
-import { isAbortLikeError } from '#lib/utils/async';
-import { log } from '#lib/logging/logger';
-import { runMemoryExtractionPipeline } from '#lib/features/memory/memory-extraction-pipeline';
+} from '#lib/definitions/pipeline-prompts.ts';
+import { isAbortLikeError } from '#lib/utils/async.ts';
+import { log } from '#lib/logging/logger.ts';
+import { runMemoryExtractionPipeline } from '#lib/features/memory/memory-extraction-pipeline.ts';
 import { type LoadedPrompts } from './prompt-loader';
 import {
 	insertCharacterProfile,
@@ -54,8 +54,8 @@ import {
 	toCanonicalName,
 	ensurePreferredInAliases,
 	type CharacterImportance,
-} from '#lib/db/character-profiles';
-import { getLastCompressionScene, recordCharacterProfileCompression } from '#lib/db/act-lines';
+} from '#lib/db/character-profiles.ts';
+import { getLastCompressionScene, recordCharacterProfileCompression } from '#lib/db/act-lines.ts';
 
 // --- Input interfaces ---
 

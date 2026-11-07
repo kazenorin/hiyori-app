@@ -1,9 +1,9 @@
-import { ls } from '#lib/localization';
+import { ls } from '#lib/localization/index.ts';
 import { tool } from 'ai';
 import { z } from 'zod';
-import { fs } from '#lib/fs/file-system';
-import { resolveStoryFolder } from '#lib/fs/story-folders';
-import { getLineDir } from '#lib/ai/card-output-path';
+import { fs } from '#lib/fs/file-system.ts';
+import { resolveStoryFolder } from '#lib/fs/story-folders.ts';
+import { getLineDir } from '#lib/ai/card-output-path.ts';
 import { log } from './utils';
 import { type ToolSet } from 'ai';
 import type { ToolContext } from './tools';

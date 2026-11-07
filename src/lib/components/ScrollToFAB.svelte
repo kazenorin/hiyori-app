@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { isNearBottom, scrollToBottom } from '#lib/utils/scroll';
+	import { isNearBottom, scrollToBottom } from '#lib/utils/scroll.ts';
 	import Icon from '#lib/components/ui/Icon.svelte';
 
 	interface Props {

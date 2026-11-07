@@ -1,12 +1,12 @@
 <script lang="ts">
 	import { Dialog } from '@skeletonlabs/skeleton-svelte';
 	import { ArrowLeft } from '@lucide/svelte';
-	import { t } from '#lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 	import Icon from '#lib/components/ui/Icon.svelte';
-	import { mobileFeatures } from '#lib/stores/mobile-nav.svelte';
-	import { findDisplayedMessage } from '#lib/ai/chat.svelte';
-	import { getActiveActLineId, getActiveStory } from '#lib/stores/stories.svelte';
-	import { getAvailableContexts } from '#lib/features/context-availability.svelte';
+	import { mobileFeatures } from '#lib/stores/mobile-nav.svelte.ts';
+	import { findDisplayedMessage } from '#lib/ai/chat.svelte.ts';
+	import { getActiveActLineId, getActiveStory } from '#lib/stores/stories.svelte.ts';
+	import { getAvailableContexts } from '#lib/features/context-availability.svelte.ts';
 	import { CONTEXT_ICONS, CONTEXT_LABEL_KEYS } from './context/context-registry';
 	import StorySoFarPanel from './context/StorySoFarPanel.svelte';
 	import ScenePlotPanel from './context/ScenePlotPanel.svelte';

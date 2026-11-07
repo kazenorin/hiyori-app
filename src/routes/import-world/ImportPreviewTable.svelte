@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Accordion } from '@skeletonlabs/skeleton-svelte';
-	import type { ImportPreviewAct, ImportPreviewMessage } from '#lib/features/import-world/types';
-	import { t } from '#lib/i18n';
+	import type { ImportPreviewAct, ImportPreviewMessage } from '#lib/features/import-world/types.ts';
+	import { t } from '#lib/i18n/index.ts';
 
 	import { SvelteMap, SvelteSet } from 'svelte/reactivity';
 

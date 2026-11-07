@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t } from '#lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 	import Spinner from '#lib/components/ui/Spinner.svelte';
 	import { Progress } from '@skeletonlabs/skeleton-svelte';
 	import { getCloudSyncStatus, getSyncProgress } from './cloud-sync.svelte';

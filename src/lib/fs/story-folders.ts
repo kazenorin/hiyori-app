@@ -1,5 +1,5 @@
-import { fs, type DirEntry } from '#lib/fs/file-system';
-import * as dbStoryFolders from '#lib/db/story-folders';
+import { fs, type DirEntry } from '#lib/fs/file-system.ts';
+import * as dbStoryFolders from '#lib/db/story-folders.ts';
 
 /**
  * Compute the canonical folder name for a story.

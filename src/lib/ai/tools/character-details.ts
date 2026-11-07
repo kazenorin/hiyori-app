@@ -1,14 +1,14 @@
-import { ls } from '#lib/localization';
+import { ls } from '#lib/localization/index.ts';
 import { tool } from 'ai';
 import { z } from 'zod';
 import { type ToolSet } from 'ai';
 import type { ToolContext } from './tools';
 import { log } from './utils';
-import { getLatestProfileByAlias } from '#lib/db/character-profiles';
-import { traceActLineChain } from '#lib/db/acts';
-import { formatCharacterProfileAsMessage } from '#lib/definitions/pipeline-sections';
-import { sectionFormat } from '#lib/definitions/common-headers';
-import { loadCharacterCardForActLine } from '#lib/features/character-card-generator';
+import { getLatestProfileByAlias } from '#lib/db/character-profiles.ts';
+import { traceActLineChain } from '#lib/db/acts.ts';
+import { formatCharacterProfileAsMessage } from '#lib/definitions/pipeline-sections.ts';
+import { sectionFormat } from '#lib/definitions/common-headers.ts';
+import { loadCharacterCardForActLine } from '#lib/features/character-card-generator/index.ts';
 
 export function createCharacterDetailsTool(ctx: ToolContext) {
 	const { story, actLine, act } = ctx;

@@ -1,6 +1,6 @@
-import type { PhaseName } from '#lib/ai/narrative-types';
-import type { ContextKey } from '#lib/components/chat/context/context-registry';
-import { mobileFeatures } from '#lib/stores/mobile-nav.svelte';
+import type { PhaseName } from '#lib/ai/narrative-types.ts';
+import type { ContextKey } from '#lib/components/chat/context/context-registry.ts';
+import { mobileFeatures } from '#lib/stores/mobile-nav.svelte.ts';
 
 export type PhaseDialogSelection = { kind: 'phase'; phase: PhaseName } | { kind: 'context'; context: ContextKey };
 

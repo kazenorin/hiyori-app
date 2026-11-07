@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { t } from '#lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 	import { clamp } from 'lodash-es';
 	import type { Snippet } from 'svelte';
-	import { getSettings, updateSettings } from '#lib/stores/settings.svelte';
-	import { RIGHT_PANEL_MIN_WIDTH, RIGHT_PANEL_MAX_WIDTH, RIGHT_PANEL_COLLAPSED_WIDTH } from '#lib/components/chat/panel-limits';
+	import { getSettings, updateSettings } from '#lib/stores/settings.svelte.ts';
+	import { RIGHT_PANEL_MIN_WIDTH, RIGHT_PANEL_MAX_WIDTH, RIGHT_PANEL_COLLAPSED_WIDTH } from '#lib/components/chat/panel-limits.ts';
 	import Icon from '#lib/components/ui/Icon.svelte';
 
 	interface Props {

@@ -16,7 +16,7 @@
 		getFolderType,
 		type FileNode,
 		type UserChangedConfigFile,
-	} from '#lib/fs/file-tree';
+	} from '#lib/fs/file-tree.ts';
 	import {
 		type FileActionState,
 		createFileActionState,
@@ -28,11 +28,11 @@
 		handleRestoreDefault as doHandleRestoreDefault,
 		handleDeleteFile as doHandleDeleteFile,
 		handleRenameFile as doHandleRenameFile,
-	} from '#lib/features/file-actions';
-	import { getAllStoryFolderInfo, getAllFolderNames, type StoryFolderInfo } from '#lib/db/story-folders';
-	import { t } from '#lib/i18n';
-	import { log } from '#lib/logging/logger';
-	import { mobileFeatures } from '#lib/stores/mobile-nav.svelte';
+	} from '#lib/features/file-actions.ts';
+	import { getAllStoryFolderInfo, getAllFolderNames, type StoryFolderInfo } from '#lib/db/story-folders.ts';
+	import { t } from '#lib/i18n/index.ts';
+	import { log } from '#lib/logging/logger.ts';
+	import { mobileFeatures } from '#lib/stores/mobile-nav.svelte.ts';
 	import CodeBlock from '#lib/components/CodeBlock.svelte';
 	import Icon from '#lib/components/ui/Icon.svelte';
 	import Modal from '#lib/components/ui/Modal.svelte';

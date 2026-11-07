@@ -1,5 +1,5 @@
-import { getActiveActLineId, getActiveAct } from '#lib/stores/stories.svelte';
-import { getIsBusy } from '#lib/ai/chat.svelte';
+import { getActiveActLineId, getActiveAct } from '#lib/stores/stories.svelte.ts';
+import { getIsBusy } from '#lib/ai/chat.svelte.ts';
 
 let regenerateChoiceIndex = $state<number | null>(null);
 

@@ -1,4 +1,4 @@
-import type { IconName } from '#lib/ui/icons';
+import type { IconName } from '#lib/ui/icons.ts';
 
 export type ContextKey = 'storySoFar' | 'scenePlot';
 

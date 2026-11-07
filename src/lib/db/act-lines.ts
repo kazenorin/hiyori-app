@@ -4,9 +4,9 @@ import type { Message } from './messages';
 import { cloneMessage, mapRowToMessage, type MessageRow } from './messages';
 import { deleteCharacterProfilesForScenes } from './character-profiles';
 import type { Story } from './stories';
-import type { ActPhase, EndingType, PlotMode } from '#lib/ai/narrative-types';
-import { getActPhaseIndex, isValidEndingType, isValidPlotMode } from '#lib/ai/narrative-types';
-import type { AssistantContext } from '#lib/ai/pipeline/types';
+import type { ActPhase, EndingType, PlotMode } from '#lib/ai/narrative-types.ts';
+import { getActPhaseIndex, isValidEndingType, isValidPlotMode } from '#lib/ai/narrative-types.ts';
+import type { AssistantContext } from '#lib/ai/pipeline/types.ts';
 
 // --- Act line event types ---
 

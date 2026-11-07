@@ -8,11 +8,11 @@ const lsMock = vi.fn((key: string) => {
 afterEach(() => {
 	labelOverride = null;
 });
-vi.mock('#lib/localization', () => ({
+vi.mock('#lib/localization/index.ts', () => ({
 	ls: (key: string) => lsMock(key),
 }));
 
-import { parseActPhaseLengthEstimate, splitScenePlotEstimate, joinScenePlotEstimate } from '#lib/ai/plot-planner-output-parser';
+import { parseActPhaseLengthEstimate, splitScenePlotEstimate, joinScenePlotEstimate } from '#lib/ai/plot-planner-output-parser.ts';
 
 describe('parseActPhaseLengthEstimate', () => {
 	it('Case 1: header line, value on next line', () => {

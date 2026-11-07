@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { applyParserOutput, applyReasoningDelta, mergeGameDataFields } from '#lib/ai/message-updater';
-import { type NarrativeVariables, type GameDataFields, emptyVariables } from '#lib/ai/narrative-types';
-import type { StreamState } from '#lib/ai/chat-callbacks';
+import { applyParserOutput, applyReasoningDelta, mergeGameDataFields } from '#lib/ai/message-updater.ts';
+import { type NarrativeVariables, type GameDataFields, emptyVariables } from '#lib/ai/narrative-types.ts';
+import type { StreamState } from '#lib/ai/chat-callbacks.ts';
 
 const emptyState: StreamState = {
 	content: '',

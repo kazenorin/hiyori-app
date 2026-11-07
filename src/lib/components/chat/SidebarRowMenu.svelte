@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { t } from '#lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 	import { Popover, Portal, Switch } from '@skeletonlabs/skeleton-svelte';
 	import Icon from '#lib/components/ui/Icon.svelte';
 

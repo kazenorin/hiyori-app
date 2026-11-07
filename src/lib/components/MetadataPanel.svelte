@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { MessageMetadata } from '#lib/ai/chat-stream';
-	import { formatPhaseName, type PhaseName } from '#lib/ai/narrative-types';
+	import type { MessageMetadata } from '#lib/ai/chat-stream.ts';
+	import { formatPhaseName, type PhaseName } from '#lib/ai/narrative-types.ts';
 
 	interface Props {
 		metadata: MessageMetadata;

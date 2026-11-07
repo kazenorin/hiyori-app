@@ -1,5 +1,5 @@
-import { checkIsTauri } from '#lib/runtime';
-import { log } from '#lib/logging/logger';
+import { checkIsTauri } from '#lib/runtime.ts';
+import { log } from '#lib/logging/logger.ts';
 
 export interface DirEntry {
 	name: string;

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { validateStoryData } from '#lib/features/story-export-load/archive-validator';
-import { CURRENT_ARCHIVE_VERSION, type StoryExportData } from '#lib/features/story-export-load/archive-schema';
+import { validateStoryData } from '#lib/features/story-export-load/archive-validator.ts';
+import { CURRENT_ARCHIVE_VERSION, type StoryExportData } from '#lib/features/story-export-load/archive-schema.ts';
 
 function makeValidData(): StoryExportData {
 	return {

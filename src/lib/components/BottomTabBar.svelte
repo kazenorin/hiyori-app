@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { t } from '#lib/i18n';
-	import { mobileNav, mobileFeatures } from '#lib/stores/mobile-nav.svelte';
-	import { getIsActive as getIsWorldBuilderActive } from '#lib/features/world-builder/world-builder.svelte';
+	import { t } from '#lib/i18n/index.ts';
+	import { mobileNav, mobileFeatures } from '#lib/stores/mobile-nav.svelte.ts';
+	import { getIsActive as getIsWorldBuilderActive } from '#lib/features/world-builder/world-builder.svelte.ts';
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import Icon from '#lib/components/ui/Icon.svelte';
-	import type { IconName } from '#lib/ui/icons';
+	import type { IconName } from '#lib/ui/icons.ts';
 
 	interface Props {
 		onOpenSidebar?: () => void;

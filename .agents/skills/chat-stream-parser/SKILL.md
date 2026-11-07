@@ -10,8 +10,8 @@ description: 'Parse structured data from LLM markdown output using declarative d
 ## Quick Start
 
 ```typescript
-import { parseContent } from '#lib/chat-stream-parser';
-import type { OutputDescriptor } from '#lib/chat-stream-parser';
+import { parseContent } from '#lib/utils/chat-stream-parser/index.ts';
+import type { OutputDescriptor } from '#lib/utils/chat-stream-parser/index.ts';
 
 const llmOutput = `# Analysis
 Some analysis text

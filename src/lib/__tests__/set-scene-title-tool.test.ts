@@ -4,7 +4,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 	invoke: vi.fn(async () => {}),
 }));
 
-vi.mock('#lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.ts', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -18,13 +18,13 @@ vi.mock('ai', () => ({
 	tool: vi.fn((def) => def),
 }));
 
-vi.mock('#lib/localization', () => ({
+vi.mock('#lib/localization/index.ts', () => ({
 	ls: vi.fn((key: string, _params?: Record<string, string | number>) => key),
 }));
 
-import { createSetSceneTitleTool, buildSetSceneTitleTools } from '#lib/ai/tools/set-scene-title';
-import type { ToolContext } from '#lib/ai/tools/tools';
-import { createNarrativeOverrides } from '#lib/ai/narrative-types';
+import { createSetSceneTitleTool, buildSetSceneTitleTools } from '#lib/ai/tools/set-scene-title.ts';
+import type { ToolContext } from '#lib/ai/tools/tools.ts';
+import { createNarrativeOverrides } from '#lib/ai/narrative-types.ts';
 
 function createMockContext(): ToolContext {
 	return {

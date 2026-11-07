@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockGetActByActLineId = vi.fn();
-vi.mock('#lib/db/acts', () => ({
+vi.mock('#lib/db/acts.ts', () => ({
 	getActByActLineId: (...args: unknown[]) => mockGetActByActLineId(...args),
 }));
 
-import { refreshAvailableContexts, getAvailableContexts } from '#lib/features/context-availability.svelte';
+import { refreshAvailableContexts, getAvailableContexts } from '#lib/features/context-availability.svelte.ts';
 
 beforeEach(async () => {
 	vi.clearAllMocks();

@@ -1,6 +1,6 @@
-import { checkIsTauri } from '#lib/runtime';
+import { checkIsTauri } from '#lib/runtime.ts';
 import type { Database } from './types';
-import { ERR_DB_NOT_INITIALIZED } from '#lib/definitions/error-messages';
+import { ERR_DB_NOT_INITIALIZED } from '#lib/definitions/error-messages.ts';
 
 let db: Database | null = null;
 let dbInit: Promise<Database> | null = null;

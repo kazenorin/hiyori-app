@@ -1,4 +1,4 @@
-import { ls } from '#lib/localization';
+import { ls } from '#lib/localization/index.ts';
 
 // === Character Card Generator ===
 

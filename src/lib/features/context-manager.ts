@@ -1,8 +1,8 @@
-import { getActLine, getLatestActShortSummaryEntry, updateActShortSummary } from '#lib/db/act-lines';
-import { traceActLineChain } from '#lib/db/acts';
-import { findScenePlotMessage } from '#lib/ai/chat/message-queries';
-import type { UIMessage } from '#lib/ai/chat/types';
-import type { PlotMode } from '#lib/ai/narrative-types';
+import { getActLine, getLatestActShortSummaryEntry, updateActShortSummary } from '#lib/db/act-lines.ts';
+import { traceActLineChain } from '#lib/db/acts.ts';
+import { findScenePlotMessage } from '#lib/ai/chat/message-queries.ts';
+import type { UIMessage } from '#lib/ai/chat/types.ts';
+import type { PlotMode } from '#lib/ai/narrative-types.ts';
 
 export interface ScenePlotContext {
 	messageId: string;

@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { t } from '#lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 	import MarkdownContent from '#lib/components/MarkdownContent.svelte';
-	import { log } from '#lib/logging/logger';
-	import { toaster } from '#lib/stores/toaster.svelte';
-	import { getIsBusy, getMessages, updateMessageInState } from '#lib/ai/chat.svelte';
-	import { getActiveActLine, getActiveActLineId } from '#lib/stores/stories.svelte';
-	import { getDefaultPlotMode, isPlotPlannerEnabled } from '#lib/stores/settings.svelte';
-	import { getLastSceneNumber } from '#lib/db/act-lines';
-	import { updateMessageFields } from '#lib/db/messages';
-	import { resolveScenePlot } from '#lib/features/context-manager';
+	import { log } from '#lib/logging/logger.ts';
+	import { toaster } from '#lib/stores/toaster.svelte.ts';
+	import { getIsBusy, getMessages, updateMessageInState } from '#lib/ai/chat.svelte.ts';
+	import { getActiveActLine, getActiveActLineId } from '#lib/stores/stories.svelte.ts';
+	import { getDefaultPlotMode, isPlotPlannerEnabled } from '#lib/stores/settings.svelte.ts';
+	import { getLastSceneNumber } from '#lib/db/act-lines.ts';
+	import { updateMessageFields } from '#lib/db/messages.ts';
+	import { resolveScenePlot } from '#lib/features/context-manager.ts';
 	import {
 		DEFAULT_ESTIMATE,
 		MAX_ESTIMATE,
 		MIN_ESTIMATE,
 		joinScenePlotEstimate,
 		splitScenePlotEstimate,
-	} from '#lib/ai/plot-planner-output-parser';
+	} from '#lib/ai/plot-planner-output-parser.ts';
 
 	interface Props {
 		messageId: string;

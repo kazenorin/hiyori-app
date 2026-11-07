@@ -4,12 +4,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // in-memory database injected via a mocked database module.
 let testDb: ReturnType<typeof createTestDatabase>;
 
-vi.mock('#lib/db/database', () => ({
+vi.mock('#lib/db/database.ts', () => ({
 	initDatabase: vi.fn(async () => testDb),
 	getDatabase: vi.fn(() => testDb),
 }));
 
-vi.mock('#lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.ts', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -20,18 +20,18 @@ vi.mock('#lib/logging/logger', () => ({
 }));
 
 // story-exporter imports downloadExport at module level; never called here.
-vi.mock('#lib/db/data-portability', () => ({ downloadExport: vi.fn() }));
+vi.mock('#lib/db/data-portability.ts', () => ({ downloadExport: vi.fn() }));
 
 import { createTestDatabase } from '../../helpers/test-database';
-import { runMigrations } from '#lib/db/migrations';
-import { createStory } from '#lib/db/stories';
-import { createAct } from '#lib/db/acts';
-import { createActLine, insertActLineEntries } from '#lib/db/act-lines';
-import { insertMessage, type Message } from '#lib/db/messages';
-import { upsertMessagePhases } from '#lib/db/message-phases';
-import { insertCharacterProfile } from '#lib/db/character-profiles';
-import { buildStoryExportData } from '#lib/features/story-export-load/story-exporter';
-import { CURRENT_ARCHIVE_VERSION } from '#lib/features/story-export-load/archive-schema';
+import { runMigrations } from '#lib/db/migrations.ts';
+import { createStory } from '#lib/db/stories.ts';
+import { createAct } from '#lib/db/acts.ts';
+import { createActLine, insertActLineEntries } from '#lib/db/act-lines.ts';
+import { insertMessage, type Message } from '#lib/db/messages.ts';
+import { upsertMessagePhases } from '#lib/db/message-phases.ts';
+import { insertCharacterProfile } from '#lib/db/character-profiles.ts';
+import { buildStoryExportData } from '#lib/features/story-export-load/story-exporter.ts';
+import { CURRENT_ARCHIVE_VERSION } from '#lib/features/story-export-load/archive-schema.ts';
 
 function messageRow(id: string, role: Message['role'], content: string): Message {
 	return { id, role, content, createdAt: Date.now() };

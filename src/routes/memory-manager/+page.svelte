@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Memory, type MemoryItem, type LocationItem, type AliasGroup } from '#lib/features/memory';
-	import type { InventoryItem } from '#lib/features/memory/inventory-types';
-	import { getEmbeddingProviderConfig, getMemoryProviderConfig, isMemoryAvailable } from '#lib/stores/settings.svelte';
-	import { t } from '#lib/i18n';
+	import { Memory, type MemoryItem, type LocationItem, type AliasGroup } from '#lib/features/memory/index.ts';
+	import type { InventoryItem } from '#lib/features/memory/inventory-types.ts';
+	import { getEmbeddingProviderConfig, getMemoryProviderConfig, isMemoryAvailable } from '#lib/stores/settings.svelte.ts';
+	import { t } from '#lib/i18n/index.ts';
 	import { sampleSize } from 'lodash-es';
 	import { SvelteSet } from 'svelte/reactivity';
 	import {
@@ -12,14 +12,14 @@
 		getActiveStoryId,
 		getActiveActLineId,
 		getActiveActId,
-	} from '#lib/stores/stories.svelte';
+	} from '#lib/stores/stories.svelte.ts';
 	import {
 		regenerateMemoriesForCurrentLine,
 		getIsRegenerating,
 		getRegenError,
 		getLastRegenResult,
-	} from '#lib/stores/memory-regeneration.svelte';
-	import { traceActLineChain } from '#lib/db/acts';
+	} from '#lib/stores/memory-regeneration.svelte.ts';
+	import { traceActLineChain } from '#lib/db/acts.ts';
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import Card from '#lib/components/ui/Card.svelte';
 

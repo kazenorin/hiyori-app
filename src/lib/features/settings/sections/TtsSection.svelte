@@ -1,16 +1,16 @@
 <script lang="ts">
-	import { t } from '#lib/i18n';
-	import { settings, updateSettings } from '#lib/stores/settings.svelte';
-	import { getVoicesForLocale } from '#lib/kokoro/locale-mapping';
-	import { isModelCached } from '#lib/kokoro/model';
-	import { isVoiceFileCached } from '#lib/kokoro/kokoro-hiyori/voices';
-	import { TTS_MODELS, TTS_PREVIEW_TEXT, TTS_SPEED_MAX, TTS_SPEED_MIN, TTS_SPEED_STEP, type TTSModelKey } from '#lib/kokoro/constants';
-	import { ttsPlayer } from '#lib/kokoro/player.svelte';
+	import { t } from '#lib/i18n/index.ts';
+	import { settings, updateSettings } from '#lib/stores/settings.svelte.ts';
+	import { getVoicesForLocale } from '#lib/kokoro/locale-mapping.ts';
+	import { isModelCached } from '#lib/kokoro/model.ts';
+	import { isVoiceFileCached } from '#lib/kokoro/kokoro-hiyori/voices.ts';
+	import { TTS_MODELS, TTS_PREVIEW_TEXT, TTS_SPEED_MAX, TTS_SPEED_MIN, TTS_SPEED_STEP, type TTSModelKey } from '#lib/kokoro/constants.ts';
+	import { ttsPlayer } from '#lib/kokoro/player.svelte.ts';
 	import VoiceSelector from '#lib/components/tts/VoiceSelector.svelte';
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import ProgressField from '#lib/components/ui/ProgressField.svelte';
 	import Card from '#lib/components/ui/Card.svelte';
-	import type { VoiceId, VoiceInfo } from '#lib/kokoro/kokoro-hiyori';
+	import type { VoiceId, VoiceInfo } from '#lib/kokoro/kokoro-hiyori/index.ts';
 
 	const TTS_LOCALES = ['en', 'zh-Hant-HK'] as const;
 

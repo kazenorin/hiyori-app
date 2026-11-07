@@ -1,8 +1,8 @@
 <script lang="ts">
 	import MarkdownContent from '#lib/components/MarkdownContent.svelte';
 	import { slide as svelteSlide } from 'svelte/transition';
-	import { t } from '#lib/i18n';
-	import { scrollToBottom } from '#lib/utils/scroll';
+	import { t } from '#lib/i18n/index.ts';
+	import { scrollToBottom } from '#lib/utils/scroll.ts';
 	import Icon from '#lib/components/ui/Icon.svelte';
 
 	interface Props {

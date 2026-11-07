@@ -1,9 +1,9 @@
 <script lang="ts">
-	import { t } from '#lib/i18n';
-	import { log } from '#lib/logging/logger';
-	import { toaster } from '#lib/stores/toaster.svelte';
-	import { getIsBusy } from '#lib/ai/chat.svelte';
-	import { getStorySoFar, saveActShortSummary, type StorySoFarEntry } from '#lib/features/context-manager';
+	import { t } from '#lib/i18n/index.ts';
+	import { log } from '#lib/logging/logger.ts';
+	import { toaster } from '#lib/stores/toaster.svelte.ts';
+	import { getIsBusy } from '#lib/ai/chat.svelte.ts';
+	import { getStorySoFar, saveActShortSummary, type StorySoFarEntry } from '#lib/features/context-manager.ts';
 
 	interface Props {
 		actLineId: string;

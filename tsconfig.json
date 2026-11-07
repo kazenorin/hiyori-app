@@ -11,5 +11,7 @@
 		"strict": true,
 		"moduleResolution": "bundler",
 		"allowImportingTsExtensions": true
-	}
+	},
+	"include": ["src", "*"],
+	"exclude": ["src-tauri", "build", "dist"]
 }

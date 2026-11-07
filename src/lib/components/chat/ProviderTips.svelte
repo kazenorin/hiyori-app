@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { t } from '#lib/i18n';
-	import type { ProviderConfigTip } from '#lib/ai/provider-tips/evaluator';
+	import { t } from '#lib/i18n/index.ts';
+	import type { ProviderConfigTip } from '#lib/ai/provider-tips/evaluator.ts';
 	import Icon from '#lib/components/ui/Icon.svelte';
-	import type { IconName } from '#lib/ui/icons';
+	import type { IconName } from '#lib/ui/icons.ts';
 
 	interface Props {
 		tip: ProviderConfigTip | null;

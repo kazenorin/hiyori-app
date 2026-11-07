@@ -1,8 +1,8 @@
-import { initDatabase, getDatabase } from '#lib/db/database';
-import { runMigrations } from '#lib/db/migrations';
-import { initMemoryDatabase, getMemoryDatabase } from '#lib/db/memory-database';
-import { runMemoryMigrations } from '#lib/db/memory-migrations';
-import { loadStories, restoreState } from '#lib/stores/stories.svelte';
+import { initDatabase, getDatabase } from '#lib/db/database.ts';
+import { runMigrations } from '#lib/db/migrations.ts';
+import { initMemoryDatabase, getMemoryDatabase } from '#lib/db/memory-database.ts';
+import { runMemoryMigrations } from '#lib/db/memory-migrations.ts';
+import { loadStories, restoreState } from '#lib/stores/stories.svelte.ts';
 import {
 	highFantasyTemplateLoader,
 	modernSliceOfLifeTemplateLoader,
@@ -12,17 +12,17 @@ import {
 	worldBuilderSystemPromptLoader,
 	memoryExtractionSystemPromptLoader,
 	memoryExtractionPromptLoader,
-} from '#lib/fs/prompts';
-import { registerNameDefaults } from '#lib/fs/names';
-import { ensureAllBaseConfigs, setActiveLocale } from '#lib/fs/prompt-loader';
-import { initLogging, log } from '#lib/logging/logger';
-import { getSettings } from '#lib/stores/settings.svelte';
-import { loadLocale } from '#lib/i18n';
-import { loadLocaleStrings } from '#lib/localization';
-import { ensureAllLocaleStringConfigs } from '#lib/fs/locale-string-loader';
-import { initFileSystem } from '#lib/fs/file-system';
-import { initHttpClient } from '#lib/http/fetch';
-import { checkIsTauri, detectPlatform } from '#lib/runtime';
+} from '#lib/fs/prompts.ts';
+import { registerNameDefaults } from '#lib/fs/names.ts';
+import { ensureAllBaseConfigs, setActiveLocale } from '#lib/fs/prompt-loader.ts';
+import { initLogging, log } from '#lib/logging/logger.ts';
+import { getSettings } from '#lib/stores/settings.svelte.ts';
+import { loadLocale } from '#lib/i18n/index.ts';
+import { loadLocaleStrings } from '#lib/localization/index.ts';
+import { ensureAllLocaleStringConfigs } from '#lib/fs/locale-string-loader.ts';
+import { initFileSystem } from '#lib/fs/file-system.ts';
+import { initHttpClient } from '#lib/http/fetch.ts';
+import { checkIsTauri, detectPlatform } from '#lib/runtime.ts';
 
 let initialized = false;
 let initializing = false;

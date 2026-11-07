@@ -1,36 +1,36 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-vi.mock('#lib/db/stories', () => ({
+vi.mock('#lib/db/stories.ts', () => ({
 	getAllStories: vi.fn(),
 }));
 
-vi.mock('#lib/features/story-export-load/story-exporter', () => ({
+vi.mock('#lib/features/story-export-load/story-exporter.ts', () => ({
 	buildStoryExportData: vi.fn(),
 	buildStoryArchive: vi.fn(),
 }));
 
-vi.mock('#lib/features/cloud-sync/sync-merge', () => ({
+vi.mock('#lib/features/cloud-sync/sync-merge.ts', () => ({
 	mergeIncomingStory: vi.fn(),
 }));
 
 // Folder hashing is bypassed by returning no folder — computeLocalStoryHash
 // then hashes only the export payload, which tests can reproduce exactly.
-vi.mock('#lib/db/story-folders', () => ({
+vi.mock('#lib/db/story-folders.ts', () => ({
 	getStoryFolderInfo: vi.fn(async () => null),
 }));
-vi.mock('#lib/fs/file-tree', () => ({
+vi.mock('#lib/fs/file-tree.ts', () => ({
 	collectFilesInDir: vi.fn(async () => []),
 }));
-vi.mock('#lib/fs/file-system', () => ({
+vi.mock('#lib/fs/file-system.ts', () => ({
 	fs: { exists: vi.fn(async () => false), readBinaryFile: vi.fn() },
 }));
 
-import { NotFoundError, type SyncBackend } from '#lib/features/cloud-sync/sync-backend';
-import { syncNow, MANIFEST_PATH, type SyncProgress } from '#lib/features/cloud-sync/sync-engine';
-import { computeContentHash } from '#lib/features/cloud-sync/sync-manifest';
-import { getAllStories, type Story } from '#lib/db/stories';
-import { buildStoryExportData, buildStoryArchive } from '#lib/features/story-export-load/story-exporter';
-import { mergeIncomingStory } from '#lib/features/cloud-sync/sync-merge';
+import { NotFoundError, type SyncBackend } from '#lib/features/cloud-sync/sync-backend.ts';
+import { syncNow, MANIFEST_PATH, type SyncProgress } from '#lib/features/cloud-sync/sync-engine.ts';
+import { computeContentHash } from '#lib/features/cloud-sync/sync-manifest.ts';
+import { getAllStories, type Story } from '#lib/db/stories.ts';
+import { buildStoryExportData, buildStoryArchive } from '#lib/features/story-export-load/story-exporter.ts';
+import { mergeIncomingStory } from '#lib/features/cloud-sync/sync-merge.ts';
 
 const mockedStories = vi.mocked(getAllStories);
 const mockedExportData = vi.mocked(buildStoryExportData);

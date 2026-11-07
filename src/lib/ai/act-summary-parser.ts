@@ -1,5 +1,5 @@
-import { actSummaryHeader, turnOfEventsHeader, summaryHeader, sectionFormat } from '#lib/definitions/common-headers';
-import { sceneWithNumberLabel, locationLabel, aliasesLabel, lastUpdateLabel } from '#lib/definitions/common-labels';
+import { actSummaryHeader, turnOfEventsHeader, summaryHeader, sectionFormat } from '#lib/definitions/common-headers.ts';
+import { sceneWithNumberLabel, locationLabel, aliasesLabel, lastUpdateLabel } from '#lib/definitions/common-labels.ts';
 import {
 	stateLabel,
 	loglineLabel,
@@ -8,14 +8,14 @@ import {
 	voiceLabel,
 	traitsLabel,
 	importanceLabel,
-} from '#lib/definitions/character-profile-labels';
-import { parseTraits, type CharacterImportance } from '#lib/db/character-profiles';
+} from '#lib/definitions/character-profile-labels.ts';
+import { parseTraits, type CharacterImportance } from '#lib/db/character-profiles.ts';
 import {
 	sceneSummariesHeader,
 	characterSummariesHeader,
 	characterProfilesHeader,
 	characterSummariesSinceSceneLabel,
-} from '#lib/definitions/pipeline-prompts';
+} from '#lib/definitions/pipeline-prompts.ts';
 
 // === Types ===
 
@@ -76,7 +76,7 @@ function escapeRegex(str: string): string {
 	return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-import { stripCodeFences } from '#lib/utils/strings';
+import { stripCodeFences } from '#lib/utils/strings.ts';
 
 function stripListMarker(text: string): string {
 	return text.replace(/^[-*]\s+/, '');

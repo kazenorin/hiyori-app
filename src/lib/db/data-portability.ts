@@ -1,8 +1,8 @@
-import { getDatabase } from '#lib/db/database';
-import { isTauriSync } from '#lib/runtime';
-import { fs } from '#lib/fs/file-system';
-import { loadManifest, type ConfigAssetEntry } from '#lib/fs/config-manifest';
-import { log } from '#lib/logging/logger';
+import { getDatabase } from '#lib/db/database.ts';
+import { isTauriSync } from '#lib/runtime.ts';
+import { fs } from '#lib/fs/file-system.ts';
+import { loadManifest, type ConfigAssetEntry } from '#lib/fs/config-manifest.ts';
+import { log } from '#lib/logging/logger.ts';
 import JSZip from 'jszip';
 
 // --- Hash helper ---
@@ -78,8 +78,8 @@ async function readMainDbBinary(): Promise<Uint8Array> {
 
 async function readMemoryDbBinary(): Promise<Uint8Array | null> {
 	try {
-		const { getMemoryDatabase } = await import('#lib/db/memory-database');
-		const { isMemoryCapable } = await import('#lib/stores/settings.svelte');
+		const { getMemoryDatabase } = await import('#lib/db/memory-database.ts');
+		const { isMemoryCapable } = await import('#lib/stores/settings.svelte.ts');
 		if (!isMemoryCapable()) return null;
 
 		const memDb = getMemoryDatabase();

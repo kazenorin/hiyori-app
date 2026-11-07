@@ -1,10 +1,10 @@
 <script lang="ts">
-	import { t } from '#lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 	import Modal from '#lib/components/ui/Modal.svelte';
 	import Icon from '#lib/components/ui/Icon.svelte';
-	import { getVoiceLabel } from '#lib/kokoro/voices';
-	import type { VoiceId, VoiceInfo } from '#lib/kokoro/kokoro-hiyori';
-	import type { TTSModelKey } from '#lib/kokoro/constants';
+	import { getVoiceLabel } from '#lib/kokoro/voices.ts';
+	import type { VoiceId, VoiceInfo } from '#lib/kokoro/kokoro-hiyori/index.ts';
+	import type { TTSModelKey } from '#lib/kokoro/constants.ts';
 
 	interface Props {
 		voices: [VoiceId, VoiceInfo][];

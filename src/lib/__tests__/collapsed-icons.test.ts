@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { deriveCollapsedGroups } from '#lib/components/chat/collapsed-icons';
-import type { Act } from '#lib/db/acts';
-import type { ActLineMeta } from '#lib/db/act-lines';
-import type { LineageGroupsResult } from '#lib/db/lineage-groups';
+import { deriveCollapsedGroups } from '#lib/components/chat/collapsed-icons.ts';
+import type { Act } from '#lib/db/acts.ts';
+import type { ActLineMeta } from '#lib/db/act-lines.ts';
+import type { LineageGroupsResult } from '#lib/db/lineage-groups.ts';
 
 function act(id: string, actNumber: number, continuesFromActLineId: string | null = null, name = `Act ${actNumber}`): Act {
 	return { id, actNumber, continuesFromActLineId, name } as Act;

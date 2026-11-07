@@ -1,4 +1,4 @@
-import { ls } from '#lib/localization';
+import { ls } from '#lib/localization/index.ts';
 
 export const MIN_ESTIMATE = 1;
 export const MAX_ESTIMATE = 100;

@@ -1,19 +1,19 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-vi.mock('#lib/localization', () => ({
+vi.mock('#lib/localization/index.ts', () => ({
 	ls: (key: string) => key,
 	loadLocaleStrings: vi.fn(async () => {}),
 }));
 
-import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory';
-import { setFileSystem } from '#lib/fs/file-system';
-import { readRequirementsBlock } from '#lib/fs/requirements-files';
+import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory.ts';
+import { setFileSystem } from '#lib/fs/file-system.ts';
+import { readRequirementsBlock } from '#lib/fs/requirements-files.ts';
 import {
 	exitWorldBuilderMode,
 	getRecordedRequirements,
 	handleRecordRequirement,
 	appendRequirementToSidecar,
-} from '#lib/features/world-builder/world-builder.svelte';
+} from '#lib/features/world-builder/world-builder.svelte.ts';
 
 describe('world-builder recorded requirements', () => {
 	beforeEach(() => {

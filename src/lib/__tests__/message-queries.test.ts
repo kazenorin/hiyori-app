@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest';
-import type { UIMessage } from '#lib/ai/chat/types';
+import type { UIMessage } from '#lib/ai/chat/types.ts';
 
 // message-queries transitively imports db/act-lines, which calls getDatabase() at query time.
 // These tests never query, but the module graph must link without a Tauri runtime.
-vi.mock('#lib/db/database', () => ({
+vi.mock('#lib/db/database.ts', () => ({
 	getDatabase: () => ({ select: vi.fn(async () => []), execute: vi.fn(async () => ({ rowsAffected: 0 })) }),
 }));
 
-import { findScenePlotMessage, getScenePlotForScene } from '#lib/ai/chat/message-queries';
+import { findScenePlotMessage, getScenePlotForScene } from '#lib/ai/chat/message-queries.ts';
 
 function msg(id: string, sceneNumber: number, scenePlot?: string): UIMessage {
 	return { id, role: 'assistant', content: '', sceneNumber, scenePlot };

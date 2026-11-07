@@ -1,13 +1,13 @@
 <script lang="ts">
-	import { t } from '#lib/i18n';
+	import { t } from '#lib/i18n/index.ts';
 	import { resolve } from '$app/paths';
 	import { goto } from '$app/navigation';
-	import { getActiveStory, getActiveActLineId } from '#lib/stores/stories.svelte';
-	import { generateNewActCard, checkActCardExists } from '#lib/features/act-card-generator';
-	import { getActLine, getMessagesForLine, isActLineEnded } from '#lib/db/act-lines';
-	import { getActByActLineId, traceActLineChain } from '#lib/db/acts';
-	import type { ActLineMeta } from '#lib/db/act-lines';
-	import { log } from '#lib/logging/logger';
+	import { getActiveStory, getActiveActLineId } from '#lib/stores/stories.svelte.ts';
+	import { generateNewActCard, checkActCardExists } from '#lib/features/act-card-generator/index.ts';
+	import { getActLine, getMessagesForLine, isActLineEnded } from '#lib/db/act-lines.ts';
+	import { getActByActLineId, traceActLineChain } from '#lib/db/acts.ts';
+	import type { ActLineMeta } from '#lib/db/act-lines.ts';
+	import { log } from '#lib/logging/logger.ts';
 	import Icon from '#lib/components/ui/Icon.svelte';
 	import Spinner from '#lib/components/ui/Spinner.svelte';
 	import { SvelteSet } from 'svelte/reactivity';

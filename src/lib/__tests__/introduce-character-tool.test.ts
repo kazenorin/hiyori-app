@@ -4,7 +4,7 @@ vi.mock('@tauri-apps/api/core', () => ({
 	invoke: vi.fn(async () => {}),
 }));
 
-vi.mock('#lib/logging/logger', () => ({
+vi.mock('#lib/logging/logger.ts', () => ({
 	log: {
 		info: vi.fn(async () => {}),
 		error: vi.fn(async () => {}),
@@ -18,11 +18,11 @@ vi.mock('ai', () => ({
 	tool: vi.fn((def) => def),
 }));
 
-vi.mock('#lib/localization', () => ({
+vi.mock('#lib/localization/index.ts', () => ({
 	ls: vi.fn((key: string, _params?: Record<string, string | number>) => key),
 }));
 
-vi.mock('#lib/db/character-profiles', () => ({
+vi.mock('#lib/db/character-profiles.ts', () => ({
 	insertCharacterProfile: vi.fn(async () => {}),
 	areAnyCharacterNamesKnown: vi.fn(async () => false),
 	ensurePreferredInAliases: (preferredName: string, aliases: string[]) => [preferredName, ...aliases],
@@ -30,9 +30,9 @@ vi.mock('#lib/db/character-profiles', () => ({
 	MAX_CHARACTER_TRAITS: 10,
 }));
 
-import { createIntroduceCharacterTool, buildIntroduceCharacterTools } from '#lib/ai/tools/introduce-character';
-import { insertCharacterProfile, areAnyCharacterNamesKnown } from '#lib/db/character-profiles';
-import type { ToolContext } from '#lib/ai/tools/tools';
+import { createIntroduceCharacterTool, buildIntroduceCharacterTools } from '#lib/ai/tools/introduce-character.ts';
+import { insertCharacterProfile, areAnyCharacterNamesKnown } from '#lib/db/character-profiles.ts';
+import type { ToolContext } from '#lib/ai/tools/tools.ts';
 
 function createMockContext(currentScene: number | null): ToolContext {
 	return {
@@ -63,12 +63,14 @@ function createMockContext(currentScene: number | null): ToolContext {
 	};
 }
 
+type IntroduceCharacterInput = Parameters<NonNullable<ReturnType<typeof createIntroduceCharacterTool>['execute']>>[0];
+
 const validInput = {
 	preferredName: 'Elena',
 	aliases: ['The Rogue'],
 	logline: 'A wary rogue with a hidden agenda.',
 	importance: 2 as const,
-};
+} as IntroduceCharacterInput;
 
 describe('createIntroduceCharacterTool', () => {
 	beforeEach(() => {
