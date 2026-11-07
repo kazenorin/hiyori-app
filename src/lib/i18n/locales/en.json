@@ -324,6 +324,22 @@
 			"summarizer": "Summarizer",
 			"profileCompressor": "Profile Compressor"
 		},
+		"context": {
+			"button": "Context",
+			"storySoFar": "Story So Far",
+			"scenePlot": "Scene Plot",
+			"storySoFarWarning": "Editing a past act's summary can introduce anachronisms or continuity errors in later scenes.",
+			"sceneMismatchNote": "This plot belongs to Scene {{ownerSceneNumber}}, not Scene {{clickedSceneNumber}}. In this plot mode the pipeline reuses the most recent plot.",
+			"noSummaries": "No act summaries recorded yet.",
+			"noScenePlotPlannerOff": "The Plot Planner is off, so no scene plots are recorded. Enable it in Settings to generate them.",
+			"noScenePlot": "No scene plot recorded for this scene.",
+			"scenePlotReadOnly": "Only the latest scene's plot can be edited.",
+			"estimatedLength": "Estimated length",
+			"loadFailed": "Failed to load context.",
+			"saveFailed": "Failed to save context.",
+			"loading": "Loading...",
+			"mainLine": "(main)"
+		},
 		"message": "Message",
 		"noActLineSelected": "No Act Line Selected",
 		"loadingStory": "Loading story...",

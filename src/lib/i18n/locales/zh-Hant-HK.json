@@ -324,6 +324,22 @@
 			"summarizer": "摘要者",
 			"profileCompressor": "檔案壓縮"
 		},
+		"context": {
+			"button": "上下文",
+			"storySoFar": "前情提要",
+			"scenePlot": "場景劇情",
+			"storySoFarWarning": "編輯過往章節的摘要，可能令後續場景出現時序錯亂或連貫性錯誤。",
+			"sceneMismatchNote": "此劇情屬於場景 {{ownerSceneNumber}}，而非場景 {{clickedSceneNumber}}。在此劇情模式下，管線會沿用最近的劇情。",
+			"noSummaries": "尚未記錄任何章節摘要。",
+			"noScenePlotPlannerOff": "編劇已關閉，因此沒有記錄場景劇情。可在設定中啟用以生成劇情。",
+			"noScenePlot": "此場景沒有記錄場景劇情。",
+			"scenePlotReadOnly": "只有最新場景的劇情可以編輯。",
+			"estimatedLength": "預計長度",
+			"loadFailed": "載入上下文失敗。",
+			"saveFailed": "儲存上下文失敗。",
+			"loading": "載入中…",
+			"mainLine": "（主線）"
+		},
 		"message": "訊息",
 		"noActLineSelected": "未選擇故事線",
 		"loadingStory": "載入故事中…",
