@@ -56,7 +56,7 @@ Conformance > taste inside the codebase. If you genuinely think a convention is 
 
 ## Architecture
 
-Tauri v2 + SvelteKit 5 App
+Tauri v2 + SvelteKit 3 / Svelte 5 App
 
 Supports Desktop App, Web App and Android App.
 
@@ -68,6 +68,11 @@ Supports Desktop App, Web App and Android App.
 - **Color tokens**: Reference theme variables via Tailwind (e.g., `bg-surface-50`, `text-primary-500`, `border-surface-200-700`)
 - **Dark mode**: Skeleton handles automatic dark mode via `data-theme`; don't write custom dark mode selectors
 - **Custom CSS**: Only use `+layout.css` for global resets or Skeleton theme customizations; component styles should use Tailwind classes
+
+## Comment Guidelines
+
+- Do not add comments to describe code or behavior that can easily be understood or traced, instead focus on documenting hidden details or complex logic
+- Avoid using line numbers to reference other parts of the code, as it may change without alert
 
 ## Localization Architecture
 
@@ -161,14 +166,6 @@ Async chain (starts concurrently with sequential):
 ## AI Tools
 
 **`src/lib/ai/tools/tools.ts`** — `buildTools(storyId, actLineId)` combines all tool sets.
-
-## Memory System
-
-Supported on Desktop App mode only.
-
-Vector-based memory database per story using `sqlite-vec`. **`src/lib/memory/memory.ts`** manages vector storage and search with deduplication (cosine distance threshold). Memory extraction runs after streaming completion: `memory-extraction-pipeline.ts` orchestrates extraction, `memory-extract-parser.ts` parses markdown output into character memories and locations.
-
-The `query-memories` tool supports three search modes: by character + location, by character only, or by location only (with random sampling).
 
 ## World Builder
 
