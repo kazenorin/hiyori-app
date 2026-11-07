@@ -21,6 +21,7 @@ import {
 } from '#lib/stores/settings.svelte';
 import type { ActPhase, EndingType, GameDataFields, NarrativeOverrides, NarrativeVariables, PlotMode } from '../narrative-types';
 import { getActPhaseIndex } from '../narrative-types';
+import { DEFAULT_ESTIMATE } from '../plot-planner-output-parser';
 import { sectionFormat, summaryHeader } from '#lib/definitions/common-headers';
 import {
 	writerProvidedSummary,
@@ -193,7 +194,7 @@ function resolveLatePhaseThreshold(ctx: PipelineRunContext) {
 }
 
 function resolveEstimatedPhaseLength(ctx: PipelineRunContext) {
-	return ctx.story.actLine.currentActPhaseLengthEstimate ?? 2;
+	return ctx.story.actLine.currentActPhaseLengthEstimate ?? DEFAULT_ESTIMATE;
 }
 
 function resolveActEndInstruction(plotMode: PlotMode, actPhase: ActPhase | null): string {
