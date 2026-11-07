@@ -51,10 +51,12 @@
 	}
 
 	async function save(entry: StorySoFarEntry): Promise<void> {
+		if (saving) return;
+		const body = draft.trim();
 		saving = true;
 		try {
-			await saveActShortSummary(entry.eventId, draft, entry.marker);
-			entries = entries.map((e) => (e.eventId === entry.eventId ? { ...e, body: draft.trim() } : e));
+			await saveActShortSummary(entry.eventId, body, entry.marker);
+			entries = entries.map((e) => (e.eventId === entry.eventId ? { ...e, body } : e));
 			editingEventId = null;
 		} catch (err) {
 			await log.error('context-manager', 'Failed to save act short summary', err);
