@@ -334,13 +334,17 @@ export async function clearMessages(): Promise<void> {
 	isAsyncPending = false;
 }
 
-export function updateMessageInState(messageId: string, updates: { content?: string; variables?: NarrativeVariables }): void {
+export function updateMessageInState(
+	messageId: string,
+	updates: { content?: string; variables?: NarrativeVariables; scenePlot?: string }
+): void {
 	const idx = messages.findIndex((m) => m.id === messageId);
 	if (idx === -1) return;
 	messages[idx] = {
 		...messages[idx],
 		...(updates.content !== undefined && { content: updates.content }),
 		...(updates.variables !== undefined && { variables: updates.variables }),
+		...(updates.scenePlot !== undefined && { scenePlot: updates.scenePlot }),
 	};
 }
 
