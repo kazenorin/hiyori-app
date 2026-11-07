@@ -73,7 +73,7 @@
 		saveEditWorldBuilderMessage,
 	} from '#lib/features/message-editor.svelte';
 	import { getActiveActLineId, getActiveDirectorNotes, getActiveStory, getIsSelectingStory } from '#lib/stores/stories.svelte';
-	import { settings, isDirectorModeEnabled, getTTSVoiceByLocale, getTTSSpeed } from '#lib/stores/settings.svelte';
+	import { settings, isDirectorModeEnabled, isPlotPlannerEnabled, getTTSVoiceByLocale, getTTSSpeed } from '#lib/stores/settings.svelte';
 	import { isTTSSupportedLocale } from '#lib/kokoro/locale-mapping';
 	import { ttsPlayer } from '#lib/kokoro/player.svelte';
 	import { buildTTSPassage } from '#lib/kokoro/passage';
@@ -93,7 +93,7 @@
 	import ChoicesSheet from '#lib/components/ChoicesSheet.svelte';
 	import PhaseStrip from '#lib/components/chat/PhaseStrip.svelte';
 	import { openContext, openPhaseDialog } from '#lib/components/chat/phase-dialog-state.svelte';
-	import { getAvailableContexts } from '#lib/features/context-availability.svelte';
+	import { getAvailableContexts, refreshAvailableContexts } from '#lib/features/context-availability.svelte';
 	import RightPanelShell from '#lib/components/chat/RightPanelShell.svelte';
 	import MessageActions from '#lib/components/chat/MessageActions.svelte';
 	import ForkChoicePanel from '#lib/components/chat/ForkChoicePanel.svelte';
@@ -134,6 +134,15 @@
 	// Sync choices badge count for mobile bottom nav
 	$effect(() => {
 		mobileNav.choicesCount = latestDecisions.length;
+	});
+
+	// All three inputs are synchronous reads so the effect tracks them; the async lookup inside
+	// refreshAvailableContexts happens after an await and is deliberately not tracked.
+	$effect(() => {
+		const actLineId = getActiveActLineId();
+		const plannerEnabled = isPlotPlannerEnabled();
+		const hasScenePlots = getMessages().some((m) => m.scenePlot);
+		void refreshAvailableContexts(actLineId, plannerEnabled, hasScenePlots);
 	});
 
 	$effect(() => {

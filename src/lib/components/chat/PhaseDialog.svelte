@@ -16,6 +16,11 @@
 	} from './phase-dialog-state.svelte';
 	import { findDisplayedMessage, getCharacterNames, getMessages, getStreamingPhase } from '#lib/ai/chat.svelte';
 	import { getActiveActLineId, getActiveStory } from '#lib/stores/stories.svelte';
+	import { mobileFeatures } from '#lib/stores/mobile-nav.svelte';
+	import { getAvailableContexts } from '#lib/features/context-availability.svelte';
+	import { CONTEXT_ICONS, CONTEXT_LABEL_KEYS } from './context/context-registry';
+	import StorySoFarPanel from './context/StorySoFarPanel.svelte';
+	import ScenePlotPanel from './context/ScenePlotPanel.svelte';
 	import type { PhaseName, UIScenePhase } from '#lib/ai/narrative-types';
 
 	const message = $derived.by(() => {
@@ -23,10 +28,11 @@
 		return id ? findDisplayedMessage(id) : undefined;
 	});
 	const phases = $derived(message?.phases ?? []);
-	const selectedPhase = $derived.by(() => {
-		const selected = getPhaseDialogSelection();
-		return selected.kind === 'phase' ? selected.phase : null;
-	});
+	const contexts = $derived(getAvailableContexts());
+	const selection = $derived(getPhaseDialogSelection());
+	const activeContext = $derived(selection.kind === 'context' ? selection.context : null);
+	const actLineId = $derived(getActiveActLineId());
+	const selectedPhase = $derived(selection.kind === 'phase' ? selection.phase : null);
 	const activeIdx = $derived.by(() => {
 		const idx = phases.findIndex((p) => p.phaseName === selectedPhase);
 		return idx >= 0 ? idx : 0;
@@ -77,6 +83,7 @@
 	// starts at the top. streamingPhase is read untracked so phase progression elsewhere in the
 	// run does not reset the current pane's scroll position.
 	$effect(() => {
+		if (activeContext !== null) return;
 		const el = contentEl;
 		const idx = activeIdx;
 		if (!el || idx < 0) return;
@@ -90,6 +97,7 @@
 
 	// Follow output/reasoning deltas while pinned.
 	$effect(() => {
+		if (activeContext !== null) return;
 		// Dependency reads: re-run this effect on every streaming delta of the active pane.
 		void active?.content;
 		void active?.reasoning;
@@ -111,15 +119,23 @@
 		}
 		if (actLineId !== prevActLineId || storyId !== prevStoryId) closePhaseDialog();
 	});
+
+	// The narrow phase dialog cannot represent a context selection; ContextDialog owns that case.
+	$effect(() => {
+		if (mobileFeatures.isPhone && getPhaseDialogSelection().kind === 'context') closePhaseDialog();
+	});
 </script>
 
-<Dialog open={getPhaseDialogOpen() && message !== undefined && active !== undefined} onOpenChange={handleOpenChange}>
+<Dialog
+	open={getPhaseDialogOpen() && message !== undefined && (activeContext !== null || active !== undefined)}
+	onOpenChange={handleOpenChange}
+>
 	<Dialog.Backdrop class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" />
 	<Dialog.Positioner class="fixed inset-0 z-50 flex items-center justify-center p-2 md:p-4">
 		<Dialog.Content
 			class="bg-surface-50-950 border border-surface-200-800 rounded-xl shadow-2xl w-[95vw] max-w-4xl h-[90dvh] md:h-[85dvh] flex flex-col overflow-hidden outline-none"
 		>
-			{#if message && active}
+			{#if message && (active || activeContext)}
 				<!-- Mobile top bar: back button + horizontally scrollable pill tabs -->
 				<div class="md:hidden flex items-center gap-2 p-2 border-b border-surface-200-800 shrink-0">
 					<button
@@ -175,13 +191,36 @@
 								{t(PHASE_LABEL_KEYS[phase.phaseName])}
 							</button>
 						{/each}
+						{#if contexts.length > 0}
+							<hr class="my-2 border-surface-200-800" />
+							{#each contexts as context (context)}
+								<button
+									class="flex items-center gap-2 px-3 py-2 rounded-(--radius-base) text-sm text-left transition-colors {activeContext ===
+									context
+										? 'bg-surface-200-800 text-primary-600-400 font-medium'
+										: 'text-surface-500 hover:bg-surface-200-800'}"
+									type="button"
+									aria-current={activeContext === context ? 'true' : undefined}
+									onclick={() => setPhaseDialogSelection({ kind: 'context', context })}
+								>
+									<Icon name={CONTEXT_ICONS[context]} class="size-4 shrink-0" aria-hidden="true" />
+									{t(CONTEXT_LABEL_KEYS[context])}
+								</button>
+							{/each}
+						{/if}
 					</nav>
 
 					<!-- Right content pane -->
 					<div class="flex-1 flex flex-col min-w-0">
 						<header class="flex items-start justify-between gap-4 p-4 border-b border-surface-200-800 shrink-0">
 							<div>
-								<Dialog.Title class="h4 font-display">{t(PHASE_LABEL_KEYS[active.phaseName])}</Dialog.Title>
+								<Dialog.Title class="h4 font-display">
+									{#if activeContext}
+										{t(CONTEXT_LABEL_KEYS[activeContext])}
+									{:else if active}
+										{t(PHASE_LABEL_KEYS[active.phaseName])}
+									{/if}
+								</Dialog.Title>
 								<Dialog.Description class="text-sm text-surface-500 mt-1">
 									{t('chat.sceneLabel', { sceneNumber: message.sceneNumber })}
 								</Dialog.Description>
@@ -196,35 +235,41 @@
 							</button>
 						</header>
 						<div class="flex-1 overflow-y-auto p-4 md:p-6" bind:this={contentEl} onscroll={handleContentScroll}>
-							{#key activeIdx}
-								<!-- Meta line -->
-								{#if phaseMeta}
-									<div
-										class="flex flex-wrap items-center gap-x-3 gap-y-1 pb-2.5 mb-3 border-b border-surface-200-800 text-[11px] font-mono text-surface-400-500"
-									>
-										<span class="truncate">{phaseMeta.model}</span>
-										<span class="opacity-30">&middot;</span>
-										<span>{formatTokens(phaseMeta.inputTokens)} in / {formatTokens(phaseMeta.outputTokens)} out</span>
-										<span class="opacity-30">&middot;</span>
-										<span>{formatDuration(phaseMeta.durationMs)}</span>
-										{#if cacheReadPct !== null}
+							{#key activeContext ?? `phase-${activeIdx}`}
+								{#if activeContext === 'storySoFar' && actLineId}
+									<StorySoFarPanel {actLineId} />
+								{:else if activeContext === 'scenePlot'}
+									<ScenePlotPanel messageId={message.id} />
+								{:else if active}
+									<!-- Meta line -->
+									{#if phaseMeta}
+										<div
+											class="flex flex-wrap items-center gap-x-3 gap-y-1 pb-2.5 mb-3 border-b border-surface-200-800 text-[11px] font-mono text-surface-400-500"
+										>
+											<span class="truncate">{phaseMeta.model}</span>
 											<span class="opacity-30">&middot;</span>
-											<span>cache {cacheReadPct}%</span>
-										{/if}
+											<span>{formatTokens(phaseMeta.inputTokens)} in / {formatTokens(phaseMeta.outputTokens)} out</span>
+											<span class="opacity-30">&middot;</span>
+											<span>{formatDuration(phaseMeta.durationMs)}</span>
+											{#if cacheReadPct !== null}
+												<span class="opacity-30">&middot;</span>
+												<span>cache {cacheReadPct}%</span>
+											{/if}
+										</div>
+									{/if}
+
+									<!-- Reasoning (collapsed by default, live while streaming) -->
+									{#if active.reasoning}
+										<ReasoningAccordion label={t('chat.reasoning')} value="reasoning">
+											{active.reasoning}
+										</ReasoningAccordion>
+									{/if}
+
+									<!-- Output: same MarkdownContent invocation as the main chat body -->
+									<div class="leading-relaxed text-surface-800-200">
+										<MarkdownContent content={active.content} {characterNames} importantPhrases={message.importantPhrases} />
 									</div>
 								{/if}
-
-								<!-- Reasoning (collapsed by default, live while streaming) -->
-								{#if active.reasoning}
-									<ReasoningAccordion label={t('chat.reasoning')} value="reasoning">
-										{active.reasoning}
-									</ReasoningAccordion>
-								{/if}
-
-								<!-- Output: same MarkdownContent invocation as the main chat body -->
-								<div class="leading-relaxed text-surface-800-200">
-									<MarkdownContent content={active.content} {characterNames} importantPhrases={message.importantPhrases} />
-								</div>
 							{/key}
 						</div>
 					</div>
