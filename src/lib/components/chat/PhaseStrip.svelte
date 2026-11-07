@@ -31,14 +31,17 @@
 	import Icon from '#lib/components/ui/Icon.svelte';
 	import { t } from '#lib/i18n';
 	import type { UIScenePhase } from '#lib/ai/narrative-types';
+	import type { ContextKey } from '#lib/components/chat/context/context-registry';
 
 	interface Props {
 		phases: UIScenePhase[];
 		streamingPhase: PhaseName | null;
 		onOpen: (phase: PhaseName) => void;
+		contexts: ContextKey[];
+		onOpenContext: (context: ContextKey) => void;
 	}
 
-	let { phases, streamingPhase, onOpen }: Props = $props();
+	let { phases, streamingPhase, onOpen, contexts, onOpenContext }: Props = $props();
 
 	// The pipeline writes this marker into phase.content while a phase is retrying (pipeline-callbacks.ts).
 	function isRetrying(phase: UIScenePhase): boolean {
@@ -46,7 +49,7 @@
 	}
 </script>
 
-{#if phases.length > 0}
+{#if phases.length > 0 || contexts.length > 0}
 	<div class="flex flex-wrap items-center gap-1.5 pb-2 mb-3 border-b border-surface-200-800">
 		{#each phases as phase, pi (pi)}
 			{@const label = t(PHASE_LABEL_KEYS[phase.phaseName])}
@@ -73,5 +76,18 @@
 				<span class="hidden md:inline">{label}</span>
 			</button>
 		{/each}
+		{#if contexts.length > 0}
+			{@const label = t('chat.context.button')}
+			<button
+				type="button"
+				class="ml-auto md:ml-0 inline-flex items-center gap-1.5 rounded-full border border-transparent px-2.5 py-1 text-xs transition-colors cursor-pointer text-surface-500 hover:bg-surface-200-800 hover:text-surface-700-300"
+				aria-label={label}
+				data-tip={label}
+				onclick={() => onOpenContext(contexts[0])}
+			>
+				<Icon name="sliders-horizontal" class="size-3.5" aria-hidden="true" />
+				<span class="hidden md:inline">{label}</span>
+			</button>
+		{/if}
 	</div>
 {/if}

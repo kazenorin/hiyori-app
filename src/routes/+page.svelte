@@ -92,7 +92,8 @@
 	import MobileInputSheet from '#lib/components/MobileInputSheet.svelte';
 	import ChoicesSheet from '#lib/components/ChoicesSheet.svelte';
 	import PhaseStrip from '#lib/components/chat/PhaseStrip.svelte';
-	import { openPhaseDialog } from '#lib/components/chat/phase-dialog-state.svelte';
+	import { openContext, openPhaseDialog } from '#lib/components/chat/phase-dialog-state.svelte';
+	import { getAvailableContexts } from '#lib/features/context-availability.svelte';
 	import RightPanelShell from '#lib/components/chat/RightPanelShell.svelte';
 	import MessageActions from '#lib/components/chat/MessageActions.svelte';
 	import ForkChoicePanel from '#lib/components/chat/ForkChoicePanel.svelte';
@@ -634,6 +635,8 @@
 										phases={message.phases ?? []}
 										streamingPhase={message === getMessages().at(-1) ? getStreamingPhase() : null}
 										onOpen={(phase) => openPhaseDialog(message.id, phase)}
+										contexts={getAvailableContexts()}
+										onOpenContext={(context) => openContext(message.id, context)}
 									/>
 
 									<!-- Main content: Editor output -->

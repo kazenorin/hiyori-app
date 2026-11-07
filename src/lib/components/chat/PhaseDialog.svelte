@@ -11,8 +11,8 @@
 		closePhaseDialog,
 		getPhaseDialogMessageId,
 		getPhaseDialogOpen,
-		getPhaseDialogPhase,
-		setPhaseDialogPhase,
+		getPhaseDialogSelection,
+		setPhaseDialogSelection,
 	} from './phase-dialog-state.svelte';
 	import { findDisplayedMessage, getCharacterNames, getMessages, getStreamingPhase } from '#lib/ai/chat.svelte';
 	import { getActiveActLineId, getActiveStory } from '#lib/stores/stories.svelte';
@@ -23,9 +23,12 @@
 		return id ? findDisplayedMessage(id) : undefined;
 	});
 	const phases = $derived(message?.phases ?? []);
+	const selectedPhase = $derived.by(() => {
+		const selected = getPhaseDialogSelection();
+		return selected.kind === 'phase' ? selected.phase : null;
+	});
 	const activeIdx = $derived.by(() => {
-		const selected = getPhaseDialogPhase();
-		const idx = phases.findIndex((p) => p.phaseName === selected);
+		const idx = phases.findIndex((p) => p.phaseName === selectedPhase);
 		return idx >= 0 ? idx : 0;
 	});
 	const active = $derived(phases[activeIdx]);
@@ -42,7 +45,7 @@
 	}
 
 	function select(phase: PhaseName): void {
-		setPhaseDialogPhase(phase);
+		setPhaseDialogSelection({ kind: 'phase', phase });
 	}
 
 	function isNotStarted(phase: UIScenePhase): boolean {
