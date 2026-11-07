@@ -18,7 +18,7 @@ vi.mock('#lib/db/database', () => ({
 	getDatabase: () => ({ select: vi.fn(async () => []), execute: vi.fn(async () => ({ rowsAffected: 0 })) }),
 }));
 
-import { splitSceneCountMarker, resolveScenePlot, getStorySoFar, saveActShortSummary } from '#lib/features/context-manager';
+import { resolveScenePlot, getStorySoFar, saveActShortSummary } from '#lib/features/context-manager';
 
 function msg(id: string, sceneNumber: number, scenePlot?: string): UIMessage {
 	return { id, role: 'assistant', content: '', sceneNumber, scenePlot };
@@ -26,43 +26,6 @@ function msg(id: string, sceneNumber: number, scenePlot?: string): UIMessage {
 
 beforeEach(() => {
 	vi.clearAllMocks();
-});
-
-describe('splitSceneCountMarker', () => {
-	// The marker is an ls() string resolved against the STORY locale, which may differ from the
-	// UI locale. Recomputing it would silently rewrite it in the wrong language, so it must round-trip.
-	it('peels a trailing marker off the body', () => {
-		expect(splitSceneCountMarker('The party fled north. [3 scenes]')).toEqual({
-			body: 'The party fled north.',
-			marker: '[3 scenes]',
-		});
-	});
-
-	it('returns the whole value as body when there is no marker', () => {
-		expect(splitSceneCountMarker('The party fled north.')).toEqual({ body: 'The party fled north.', marker: '' });
-	});
-
-	it('keeps only the LAST bracket group as the marker, leaving earlier brackets in the body', () => {
-		expect(splitSceneCountMarker('They reached [Northkeep]. The gate fell. [2 scenes]')).toEqual({
-			body: 'They reached [Northkeep]. The gate fell.',
-			marker: '[2 scenes]',
-		});
-	});
-
-	it('handles a marker-only value without inventing a body', () => {
-		expect(splitSceneCountMarker('[1 scene]')).toEqual({ body: '', marker: '[1 scene]' });
-	});
-
-	it('handles the empty string', () => {
-		expect(splitSceneCountMarker('')).toEqual({ body: '', marker: '' });
-	});
-
-	it('spans newlines, because summaries are multi-paragraph', () => {
-		expect(splitSceneCountMarker('Line one.\nLine two. [4 scenes]')).toEqual({
-			body: 'Line one.\nLine two.',
-			marker: '[4 scenes]',
-		});
-	});
 });
 
 describe('resolveScenePlot', () => {
@@ -134,8 +97,7 @@ describe('getStorySoFar', () => {
 			actNumber: 2,
 			lineName: 'Name line-2',
 			isMainLine: true,
-			body: 'Summary for line-2.',
-			marker: '[2 scenes]',
+			value: 'Summary for line-2. [2 scenes]',
 		});
 		// The current act must never be queried — the pipeline does not send it as previous context.
 		expect(mockGetLatestActShortSummaryEntry).not.toHaveBeenCalledWith('line-3');
@@ -169,23 +131,47 @@ describe('getStorySoFar', () => {
 		const entries = await getStorySoFar('line-2');
 		expect(entries[0].isMainLine).toBe(false);
 		expect(entries[0].lineName).toBe('Branch Line');
-		expect(entries[0].marker).toBe('');
+		expect(entries[0].value).toBe('Branch summary');
 	});
 });
 
 describe('saveActShortSummary', () => {
-	it('re-appends the original marker verbatim so the story-locale wording is never rewritten', async () => {
-		await saveActShortSummary('evt-1', '  Edited body.  ', '[3 scenes]');
-		expect(mockUpdateActShortSummary).toHaveBeenCalledWith('evt-1', 'Edited body. [3 scenes]');
+	// The stored value is opaque: nothing else in the system parses it, so the whole string is
+	// editable and must round-trip verbatim. D5 is satisfied by never regenerating any part of it.
+	it('writes a value carrying a scene-count marker back unchanged', async () => {
+		await saveActShortSummary('evt-1', 'The party fled north. [3 scenes]');
+		expect(mockUpdateActShortSummary).toHaveBeenCalledWith('evt-1', 'The party fled north. [3 scenes]');
 	});
 
-	it('writes just the trimmed body when the stored value had no marker', async () => {
-		await saveActShortSummary('evt-1', '  Edited body.  ', '');
-		expect(mockUpdateActShortSummary).toHaveBeenCalledWith('evt-1', 'Edited body.');
+	it('writes a value with no marker back unchanged', async () => {
+		await saveActShortSummary('evt-1', 'The party fled north.');
+		expect(mockUpdateActShortSummary).toHaveBeenCalledWith('evt-1', 'The party fled north.');
+	});
+
+	it('trims surrounding whitespace, matching the generator own normalization', async () => {
+		await saveActShortSummary('evt-1', '  The party fled north. [3 scenes]  \n');
+		expect(mockUpdateActShortSummary).toHaveBeenCalledWith('evt-1', 'The party fled north. [3 scenes]');
+	});
+
+	it('keeps a trailing bracket group that is prose editable instead of classifying it as a marker', async () => {
+		// The old split matched ANY trailing bracket group and peeled it into a read-only field, so
+		// a prose aside could never be edited. Read then save: the whole string must survive both.
+		mockTraceActLineChain.mockResolvedValue([
+			{ actLineId: 'line-1', actNumber: 1, isMainLine: true },
+			{ actLineId: 'line-2', actNumber: 2, isMainLine: true },
+		]);
+		mockGetActLine.mockResolvedValue({ id: 'line-1', name: 'Act One', isMainLine: true });
+		mockGetLatestActShortSummaryEntry.mockResolvedValue({ eventId: 'evt-1', value: 'The gate fell. [unresolved]' });
+
+		const [entry] = await getStorySoFar('line-2');
+		expect(entry.value).toBe('The gate fell. [unresolved]');
+
+		await saveActShortSummary(entry.eventId, entry.value);
+		expect(mockUpdateActShortSummary).toHaveBeenCalledWith('evt-1', 'The gate fell. [unresolved]');
 	});
 
 	it('does not swallow a write failure — the caller must surface it', async () => {
 		mockUpdateActShortSummary.mockRejectedValue(new Error('db locked'));
-		await expect(saveActShortSummary('evt-1', 'body', '')).rejects.toThrow('db locked');
+		await expect(saveActShortSummary('evt-1', 'body')).rejects.toThrow('db locked');
 	});
 });

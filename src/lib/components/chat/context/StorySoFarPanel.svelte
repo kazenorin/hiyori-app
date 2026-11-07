@@ -40,7 +40,7 @@
 	function startEdit(entry: StorySoFarEntry): void {
 		if (getIsBusy()) return;
 		editingEventId = entry.eventId;
-		draft = entry.body;
+		draft = entry.value;
 	}
 
 	function handleKeydown(e: KeyboardEvent, entry: StorySoFarEntry): void {
@@ -52,11 +52,11 @@
 
 	async function save(entry: StorySoFarEntry): Promise<void> {
 		if (saving) return;
-		const body = draft.trim();
+		const value = draft.trim();
 		saving = true;
 		try {
-			await saveActShortSummary(entry.eventId, body, entry.marker);
-			entries = entries.map((e) => (e.eventId === entry.eventId ? { ...e, body } : e));
+			await saveActShortSummary(entry.eventId, value);
+			entries = entries.map((e) => (e.eventId === entry.eventId ? { ...e, value } : e));
 			editingEventId = null;
 		} catch (err) {
 			await log.error('context-manager', 'Failed to save act short summary', err);
@@ -113,15 +113,9 @@
 						<button class="btn preset-tonal text-xs py-1 px-3" type="button" disabled={saving} onclick={() => (editingEventId = null)}>
 							{t('chat.cancel')}
 						</button>
-						{#if entry.marker}
-							<span class="text-xs font-mono text-surface-400-500 ml-auto">{entry.marker}</span>
-						{/if}
 					</div>
 				{:else}
-					<p class="text-sm leading-relaxed whitespace-pre-wrap text-surface-800-200">
-						{entry.body}{#if entry.marker}
-							<span class="font-mono text-surface-400-500">{entry.marker}</span>{/if}
-					</p>
+					<p class="text-sm leading-relaxed whitespace-pre-wrap text-surface-800-200">{entry.value}</p>
 				{/if}
 			</div>
 		{/each}
