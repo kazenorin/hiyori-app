@@ -1,7 +1,21 @@
 import { ls } from '#lib/localization';
 
-const MIN_ESTIMATE = 1;
-const MAX_ESTIMATE = 100;
+export const MIN_ESTIMATE = 1;
+export const MAX_ESTIMATE = 100;
+export const DEFAULT_ESTIMATE = 2;
+
+export interface ScenePlotEstimateParts {
+	prose: string;
+	estimate: number | null;
+	labelPrefix: string | null;
+}
+
+interface EstimateMatch {
+	value: number | null;
+	start: number;
+	prefixEnd: number;
+	end: number;
+}
 
 function escapeRegex(s: string): string {
 	return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -17,30 +31,81 @@ function buildLabelRe(label: string): RegExp {
 	return new RegExp(`#{0,6}${ws}*[-*]?${ws}*\\*{0,2}${ws}*${escaped}${ws}*\\*{0,2}${ws}*:?`, 'i');
 }
 
-function findInline(text: string, labelRe: RegExp): number | null {
-	const re = new RegExp(labelRe.source + '[^\\d\\n]*(\\d+)', labelRe.flags);
-	const m = re.exec(text);
-	return m ? clamp(parseInt(m[1], 10)) : null;
+function estimateLabelRe(): RegExp | null {
+	const label = ls('pipeline.labels.plotPlanner.estimatedLength');
+	return label ? buildLabelRe(label) : null;
 }
 
-function findInBody(text: string, labelRe: RegExp): number | null {
-	const match = labelRe.exec(text);
-	if (!match) return null;
+function lineStart(text: string, index: number): number {
+	return index > 0 ? text.lastIndexOf('\n', index - 1) + 1 : 0;
+}
 
-	const fromLabel = text.slice(match.index + match[0].length);
+function lineEnd(text: string, index: number): number {
+	const nextNewline = text.indexOf('\n', index);
+	return nextNewline === -1 ? text.length : nextNewline;
+}
+
+function matchEstimate(text: string, labelRe: RegExp): EstimateMatch | null {
+	const inlineRe = new RegExp(labelRe.source + '[^\\d\\n]*(\\d+)', labelRe.flags);
+	const inline = inlineRe.exec(text);
+	if (inline) {
+		return {
+			value: clamp(parseInt(inline[1], 10)),
+			start: lineStart(text, inline.index),
+			prefixEnd: inline.index + inline[0].length - inline[1].length,
+			end: lineEnd(text, inline.index),
+		};
+	}
+
+	const label = labelRe.exec(text);
+	if (!label) return null;
+
+	const labelEnd = label.index + label[0].length;
+	const fromLabel = text.slice(labelEnd);
 	const headingIdx = fromLabel.search(/\n#{1,6}\s/);
 	const section = headingIdx === -1 ? fromLabel : fromLabel.slice(0, headingIdx);
-
 	const numMatch = section.match(/\d+/);
-	return numMatch ? clamp(parseInt(numMatch[0], 10)) : null;
+
+	return {
+		value: numMatch ? clamp(parseInt(numMatch[0], 10)) : null,
+		start: lineStart(text, label.index),
+		prefixEnd: lineEnd(text, label.index),
+		end: headingIdx === -1 ? text.length : labelEnd + headingIdx,
+	};
 }
 
 export function parseActPhaseLengthEstimate(scenePlot: string | null | undefined): number | null {
 	if (!scenePlot) return null;
 
-	const label = ls('pipeline.labels.plotPlanner.estimatedLength');
-	if (!label) return null;
+	const labelRe = estimateLabelRe();
+	if (!labelRe) return null;
 
-	const labelRe = buildLabelRe(label);
-	return findInline(scenePlot, labelRe) ?? findInBody(scenePlot, labelRe);
+	return matchEstimate(scenePlot, labelRe)?.value ?? null;
+}
+
+export function splitScenePlotEstimate(scenePlot: string): ScenePlotEstimateParts {
+	const labelRe = estimateLabelRe();
+	const match = labelRe ? matchEstimate(scenePlot, labelRe) : null;
+	if (!match) {
+		return { prose: scenePlot.trim(), estimate: null, labelPrefix: null };
+	}
+
+	const prose = [scenePlot.slice(0, match.start), scenePlot.slice(match.end)]
+		.map((part) => part.trim())
+		.filter(Boolean)
+		.join('\n\n');
+
+	return {
+		prose,
+		estimate: match.value,
+		// Verbatim: the heading is a story-locale string, so re-emitting it from ls() could rewrite it.
+		labelPrefix: scenePlot.slice(match.start, match.prefixEnd).trimEnd() || null,
+	};
+}
+
+export function joinScenePlotEstimate(prose: string, estimate: number, labelPrefix: string | null): string {
+	const heading = labelPrefix ?? `## ${ls('pipeline.labels.plotPlanner.estimatedLength')}`;
+	const section = `${heading}\n\n${estimate}`;
+	const body = prose.trim();
+	return body ? `${body}\n\n${section}` : section;
 }

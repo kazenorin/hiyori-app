@@ -23,21 +23,21 @@ export function getLatestActSummary(messages: UIMessage[], minSceneNumber?: numb
 	return '';
 }
 
-export function getScenePlotForScene(messages: UIMessage[], sceneNumber: number, plotMode: PlotMode): string | undefined {
+export function findScenePlotMessage(messages: UIMessage[], sceneNumber: number, plotMode: PlotMode): UIMessage | undefined {
 	if (plotMode === 'guidance') {
 		for (let i = messages.length - 1; i >= 0; i--) {
-			if (messages[i].sceneNumber === sceneNumber && messages[i].scenePlot) {
-				return messages[i].scenePlot!;
-			}
+			if (messages[i].sceneNumber === sceneNumber && messages[i].scenePlot) return messages[i];
 		}
 	} else if (plotMode === 'phaseEvent') {
 		for (let i = messages.length - 1; i >= 0; i--) {
-			const scenePlot = messages[i].scenePlot;
-			if (scenePlot) return scenePlot;
+			if (messages[i].scenePlot) return messages[i];
 		}
 	}
-
 	return undefined;
+}
+
+export function getScenePlotForScene(messages: UIMessage[], sceneNumber: number, plotMode: PlotMode): string | undefined {
+	return findScenePlotMessage(messages, sceneNumber, plotMode)?.scenePlot;
 }
 
 export function getPreviousNarrativeMessage(messages: UIMessage[]): NarrativeVariables | undefined {

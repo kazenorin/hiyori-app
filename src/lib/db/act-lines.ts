@@ -488,6 +488,26 @@ export async function getActShortSummary(actLineId: string): Promise<string | nu
 	return rows.length > 0 ? rows[0].value : null;
 }
 
+export interface ActShortSummaryEntry {
+	eventId: string;
+	value: string;
+}
+
+/** Same row and ordering as getActShortSummary(), plus the id needed to edit it in place. */
+export async function getLatestActShortSummaryEntry(actLineId: string): Promise<ActShortSummaryEntry | null> {
+	const db = getDatabase();
+	const rows = await db.select<{ id: string; value: string }[]>(
+		`SELECT id, value FROM act_line_events WHERE act_line_id = $1 AND event = 'act-short-summary' ORDER BY message_sequence DESC, created_at DESC LIMIT 1`,
+		[actLineId]
+	);
+	return rows.length > 0 ? { eventId: rows[0].id, value: rows[0].value } : null;
+}
+
+export async function updateActShortSummary(eventId: string, value: string): Promise<void> {
+	const db = getDatabase();
+	await db.execute(`UPDATE act_line_events SET value = $1 WHERE id = $2 AND event = 'act-short-summary'`, [value, eventId]);
+}
+
 export async function getEndingType(actLineId: string): Promise<EndingType | null> {
 	const db = getDatabase();
 	const rows = await db.select<{ value: string }[]>(

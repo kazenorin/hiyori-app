@@ -22,6 +22,8 @@ describe('act-lines helpers', () => {
 	let batchResolveActLineInfo: typeof import('#lib/db/act-lines').batchResolveActLineInfo;
 	let recordCharacterProfileCompression: typeof import('#lib/db/act-lines').recordCharacterProfileCompression;
 	let getLastCompressionScene: typeof import('#lib/db/act-lines').getLastCompressionScene;
+	let getLatestActShortSummaryEntry: typeof import('#lib/db/act-lines').getLatestActShortSummaryEntry;
+	let updateActShortSummary: typeof import('#lib/db/act-lines').updateActShortSummary;
 
 	beforeEach(async () => {
 		vi.clearAllMocks();
@@ -37,6 +39,8 @@ describe('act-lines helpers', () => {
 		batchResolveActLineInfo = mod.batchResolveActLineInfo;
 		recordCharacterProfileCompression = mod.recordCharacterProfileCompression;
 		getLastCompressionScene = mod.getLastCompressionScene;
+		getLatestActShortSummaryEntry = mod.getLatestActShortSummaryEntry;
+		updateActShortSummary = mod.updateActShortSummary;
 	});
 
 	describe('getActNumberForActLine', () => {
@@ -149,6 +153,37 @@ describe('act-lines helpers', () => {
 
 			mockDbSelectResults = [[{ value: 'abc' }]];
 			expect(await getLastCompressionScene('line-1')).toBeNull();
+		});
+	});
+
+	describe('act short summary editing', () => {
+		it('reads the same row the pipeline reads, plus its id, so an edit cannot target a different summary', async () => {
+			mockDbSelectResults = [[{ id: 'evt-9', value: 'The party fled north. [3 scenes]' }]];
+
+			const entry = await getLatestActShortSummaryEntry('line-1');
+
+			expect(entry).toEqual({ eventId: 'evt-9', value: 'The party fled north. [3 scenes]' });
+			expect(mockDb.select).toHaveBeenCalledTimes(1);
+			const sql = mockDb.select.mock.calls[0][0] as string;
+			expect(sql).toContain("event = 'act-short-summary'");
+			expect(sql).toContain('ORDER BY message_sequence DESC, created_at DESC LIMIT 1');
+			expect(sql).toContain('SELECT id, value');
+			expect(mockDb.select.mock.calls[0][1]).toEqual(['line-1']);
+		});
+
+		it('returns null when the ancestor act has no summary, matching the pipeline skip', async () => {
+			mockDbSelectResults = [[]];
+			expect(await getLatestActShortSummaryEntry('line-1')).toBeNull();
+		});
+
+		it('updates the existing row in place and refuses to rewrite a different event type on id collision', async () => {
+			await updateActShortSummary('evt-9', 'The party fled south. [3 scenes]');
+
+			expect(mockDb.execute).toHaveBeenCalledTimes(1);
+			const sql = mockDb.execute.mock.calls[0][0] as string;
+			expect(sql).toContain('UPDATE act_line_events SET value = $1');
+			expect(sql).toContain("WHERE id = $2 AND event = 'act-short-summary'");
+			expect(mockDb.execute.mock.calls[0][1]).toEqual(['The party fled south. [3 scenes]', 'evt-9']);
 		});
 	});
 });
