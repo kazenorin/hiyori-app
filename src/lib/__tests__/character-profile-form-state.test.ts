@@ -4,14 +4,13 @@ import type { SceneDetailEntry } from '#lib/definitions/pipeline-sections.ts';
 import {
 	buildProfileAliases,
 	buildProfileDraft,
-	initialAliasesText,
+	buildSceneDetailRows,
+	initialAliases,
 	initialSceneEntries,
 	inspectSceneDetailEntries,
-	nextSceneNumber,
-	removeDisplayIndex,
-	sceneDetailDisplayOrder,
 	type ProfileDraftResult,
 	type ProfileFormInput,
+	type SceneDetailRow,
 } from '#lib/components/chat/context/character-profile-form-state.ts';
 
 function entity(overrides: Partial<CharacterProfileEntity> = {}): CharacterProfileEntity {
@@ -41,13 +40,13 @@ function input(overrides: Partial<ProfileFormInput> = {}): ProfileFormInput {
 	return {
 		initial: null,
 		preferredName: 'Alice',
-		aliasesText: '',
+		aliases: [],
 		logline: '',
 		state: '',
 		goal: '',
 		relationships: '',
 		voice: '',
-		traitsText: '',
+		traits: [],
 		importance: 4,
 		sceneEntries: [],
 		...overrides,
@@ -62,27 +61,27 @@ function expectDraft(result: ProfileDraftResult) {
 describe('alias draft building', () => {
 	it('preserves the old preferred name as an alias when a character is renamed', () => {
 		// Without this rule, renaming Alice drops "Alice" from aliases and breaks alias lookup.
-		const draft = expectDraft(buildProfileDraft(input({ initial: entity(), preferredName: 'Alicia', aliasesText: 'Al' })));
+		const draft = expectDraft(buildProfileDraft(input({ initial: entity(), preferredName: 'Alicia', aliases: ['Al'] })));
 		expect(draft.preferredName).toBe('Alicia');
 		expect(draft.aliases).toEqual(['Al', 'Alice']);
 	});
 
 	it('does not re-add the preferred name when it is unchanged', () => {
-		expect(buildProfileAliases(entity(), 'Alice', 'Al')).toEqual(['Al']);
-		expect(buildProfileAliases(null, 'Alice', 'Al')).toEqual(['Al']);
+		expect(buildProfileAliases(entity(), 'Alice', ['Al'])).toEqual(['Al']);
+		expect(buildProfileAliases(null, 'Alice', ['Al'])).toEqual(['Al']);
 	});
 
-	it('seeds the alias input without the preferred name', () => {
-		expect(initialAliasesText(null)).toBe('');
-		expect(initialAliasesText(entity())).toBe('Al');
+	it('seeds alias tags from the stored array without the preferred name', () => {
+		expect(initialAliases(null)).toEqual([]);
+		expect(initialAliases(entity({ aliases: ['Alice', 'Al', 'Ali'] }))).toEqual(['Al', 'Ali']);
 	});
 });
 
 describe('buildProfileDraft', () => {
-	it('trims the preferred name and logline and splits/drops empty aliases and traits', () => {
+	it('trims the preferred name and logline and drops blank aliases and traits', () => {
 		const draft = expectDraft(
 			buildProfileDraft(
-				input({ preferredName: '  Alice  ', aliasesText: ' Al , , Ally ', logline: ' A courier. ', traitsText: ' brave, , kind ' })
+				input({ preferredName: '  Alice  ', aliases: [' Al ', '  ', 'Ally '], logline: ' A courier. ', traits: [' brave ', ' ', 'kind'] })
 			)
 		);
 		expect(draft.preferredName).toBe('Alice');
@@ -165,60 +164,91 @@ describe('scene detail validation and serialization', () => {
 			{ sceneNumber: 1, details: 'single' },
 		]);
 	});
-
-	it('picks the next scene number after the highest valid row', () => {
-		expect(nextSceneNumber([])).toBe(1);
-		expect(nextSceneNumber([{ sceneNumber: 2, details: '' }])).toBe(3);
-		expect(
-			nextSceneNumber([
-				{ sceneNumber: Number.NaN, details: '' },
-				{ sceneNumber: 5, details: '' },
-			])
-		).toBe(6);
-	});
 });
 
-describe('scene detail display order', () => {
-	it('orders valid scene numbers descending and keeps invalid rows last in input order', () => {
-		const entries: SceneDetailEntry[] = [
-			{ sceneNumber: Number.NaN, details: 'invalid first' },
-			{ sceneNumber: 2, details: 'two' },
-			{ sceneNumber: 0, details: 'invalid second' },
-			{ sceneNumber: 9, details: 'nine' },
-		];
-		expect(sceneDetailDisplayOrder(entries)).toEqual([3, 1, 0, 2]);
-	});
+describe('scene detail row ranges', () => {
+	const entriesAt = (numbers: number[]): SceneDetailEntry[] =>
+		numbers.map((sceneNumber) => ({ sceneNumber, details: `scene ${sceneNumber}` }));
 
-	it('keeps the order stable when a row scene number changes', () => {
-		// Why: re-sorting on every keystroke moves the focused row, so edits can land on another
-		// entry. The order is seeded once; later changes must not be re-sorted.
-		const order = sceneDetailDisplayOrder([
-			{ sceneNumber: 5, details: 'five' },
-			{ sceneNumber: 3, details: 'three' },
-			{ sceneNumber: 1, details: 'one' },
+	function entryRow(rows: SceneDetailRow[], sceneNumber: number) {
+		const row = rows.find((candidate) => candidate.kind === 'entry' && candidate.sceneNumber === sceneNumber);
+		if (!row || row.kind !== 'entry') throw new Error(`No entry row for scene ${sceneNumber}`);
+		return row;
+	}
+
+	function addRows(rows: SceneDetailRow[]) {
+		return rows.filter((row): row is Extract<SceneDetailRow, { kind: 'add' }> => row.kind === 'add');
+	}
+
+	it('matches the review example: latest 10 with entries 9, 8, 7, 4, 2, 1', () => {
+		const rows = buildSceneDetailRows(entriesAt([9, 8, 7, 4, 2, 1]), 10);
+
+		expect(rows[0]).toMatchObject({ kind: 'add', range: { min: 10, max: 10 } });
+		expect(entryRow(rows, 9).range).toEqual({ min: 9, max: 9 });
+		expect(entryRow(rows, 8).range).toEqual({ min: 8, max: 8 });
+		expect(entryRow(rows, 7).range).toEqual({ min: 5, max: 7 });
+		expect(rows[4]).toMatchObject({ kind: 'add', range: { min: 5, max: 6 } });
+		expect(entryRow(rows, 4).range).toEqual({ min: 4, max: 4 });
+		expect(rows[6]).toMatchObject({ kind: 'add', range: { min: 3, max: 3 } });
+		expect(entryRow(rows, 2).range).toEqual({ min: 2, max: 2 });
+		expect(entryRow(rows, 1).range).toEqual({ min: 1, max: 1 });
+		expect(rows.map((row) => (row.kind === 'entry' ? row.sceneNumber : `add:${row.range.min}-${row.range.max}`))).toEqual([
+			'add:10-10',
+			9,
+			8,
+			7,
+			'add:5-6',
+			4,
+			'add:3-3',
+			2,
+			1,
 		]);
-		expect(order).toEqual([0, 1, 2]);
-		const edited = [
-			{ sceneNumber: 1, details: 'five' },
-			{ sceneNumber: 3, details: 'three' },
-			{ sceneNumber: 5, details: 'one' },
-		];
-		expect(sceneDetailDisplayOrder(edited)).toEqual([2, 1, 0]);
-		expect(order.map((index) => edited[index].details)).toEqual(['five', 'three', 'one']);
 	});
 
-	it('places a newly added max+1 row before the existing rows', () => {
-		const entries: SceneDetailEntry[] = [
-			{ sceneNumber: 5, details: 'five' },
-			{ sceneNumber: 2, details: 'two' },
-		];
-		const order = sceneDetailDisplayOrder(entries);
-		const added = [...entries, { sceneNumber: nextSceneNumber(entries), details: '' }];
-		expect(sceneDetailDisplayOrder(added)).toEqual([added.length - 1, ...order]);
+	it('offers a single add row across the whole range when no entries exist', () => {
+		expect(buildSceneDetailRows([], 10)).toEqual([{ kind: 'add', key: expect.any(String), range: { min: 1, max: 10 } }]);
 	});
 
-	it('drops a removed row and shifts the indices after it', () => {
-		expect(removeDisplayIndex([3, 1, 0, 2], 1)).toEqual([2, 0, 1]);
-		expect(removeDisplayIndex([0], 0)).toEqual([]);
+	it('offers no add rows when every scene up to the latest exists', () => {
+		const rows = buildSceneDetailRows(entriesAt([4, 3, 2, 1]), 4);
+		expect(rows).toHaveLength(4);
+		expect(addRows(rows)).toEqual([]);
+		expect(rows.every((row) => row.kind === 'entry' && row.range.min === row.range.max)).toBe(true);
+	});
+
+	it('fills the gaps above the highest and below the lowest entry', () => {
+		const rows = buildSceneDetailRows(entriesAt([5, 4]), 10);
+		const adds = addRows(rows).map((row) => row.range);
+		expect(adds).toEqual([
+			{ min: 6, max: 10 },
+			{ min: 1, max: 3 },
+		]);
+	});
+
+	it('widens the lowest entry downward only when the gap below has two or more scenes', () => {
+		// Gap 1..3 has three scenes, so the lowest entry can shift inside it.
+		expect(entryRow(buildSceneDetailRows(entriesAt([5, 4]), 10), 4).range).toEqual({ min: 1, max: 4 });
+		// Gap 1..2 has two scenes; scene 3's row can still shift.
+		expect(entryRow(buildSceneDetailRows(entriesAt([3]), 10), 3).range).toEqual({ min: 1, max: 3 });
+	});
+
+	it('keeps a fixed scene when its upper gap has only one free scene', () => {
+		// Between 9 and 7 only scene 8 is free, so the add row owns it and 9 stays fixed.
+		const rows = buildSceneDetailRows(entriesAt([9, 7]), 10);
+		expect(entryRow(rows, 9).range).toEqual({ min: 9, max: 9 });
+		expect(addRows(rows).map((row) => row.range)).toEqual([
+			{ min: 10, max: 10 },
+			{ min: 8, max: 8 },
+			{ min: 1, max: 6 },
+		]);
+	});
+
+	it('shows entries above the latest scene as fixed rows without offering a gap above them', () => {
+		const rows = buildSceneDetailRows(entriesAt([12, 9]), 10);
+		expect(rows[0]).toMatchObject({ kind: 'entry', sceneNumber: 12, range: { min: 12, max: 12 } });
+		expect(addRows(rows).map((row) => row.range)).toEqual([
+			{ min: 10, max: 10 },
+			{ min: 1, max: 8 },
+		]);
 	});
 });

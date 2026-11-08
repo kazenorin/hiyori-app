@@ -14,13 +14,13 @@ export type ProfileDraftResult = { draft: ProfileDraft; error: null } | { draft:
 export interface ProfileFormInput {
 	initial: CharacterProfileEntity | null;
 	preferredName: string;
-	aliasesText: string;
+	aliases: string[];
 	logline: string;
 	state: string;
 	goal: string;
 	relationships: string;
 	voice: string;
-	traitsText: string;
+	traits: string[];
 	importance: number;
 	sceneEntries: SceneDetailEntry[];
 }
@@ -29,13 +29,6 @@ export interface SceneDetailIssues {
 	invalidRows: number[];
 	duplicateNumbers: number[];
 	valid: boolean;
-}
-
-export function splitCommaList(value: string): string[] {
-	return value
-		.split(',')
-		.map((item) => item.trim())
-		.filter((item) => item.length > 0);
 }
 
 export function isValidSceneNumber(value: unknown): value is number {
@@ -65,10 +58,60 @@ export function inspectSceneDetailEntries(entries: SceneDetailEntry[]): SceneDet
 	return { invalidRows, duplicateNumbers: sortedDuplicates, valid: invalidRows.length === 0 && sortedDuplicates.length === 0 };
 }
 
-/** A new row takes the next free scene after the highest valid one, or scene 1. */
-export function nextSceneNumber(entries: SceneDetailEntry[]): number {
-	const validNumbers = entries.map((entry) => entry.sceneNumber).filter(isValidSceneNumber);
-	return validNumbers.length > 0 ? Math.max(...validNumbers) + 1 : 1;
+export interface SceneDetailRange {
+	min: number;
+	max: number;
+}
+
+export type SceneDetailRow =
+	{ kind: 'entry'; index: number; sceneNumber: number; range: SceneDetailRange } | { kind: 'add'; key: string; range: SceneDetailRange };
+
+/**
+ * Build the table rows for a profile's scene details. Scene numbers are normally fixed; a row
+ * becomes editable only when the gap below it has at least two free scenes, in which case it may
+ * shift down inside that gap. Each free gap also gets an add row covering exactly its missing
+ * scenes. Rows above the latest scene stay visible but fixed.
+ */
+export function buildSceneDetailRows(entries: SceneDetailEntry[], latestScene: number): SceneDetailRow[] {
+	const valid = entries
+		.map((entry, index) => ({ entry, index }))
+		.filter(({ entry }) => isValidSceneNumber(entry.sceneNumber))
+		.sort((a, b) => b.entry.sceneNumber - a.entry.sceneNumber || a.index - b.index);
+
+	const future = valid.filter(({ entry }) => entry.sceneNumber > latestScene);
+	const within = valid.filter(({ entry }) => entry.sceneNumber <= latestScene);
+	const rows: SceneDetailRow[] = future.map(({ entry, index }) => ({
+		kind: 'entry',
+		index,
+		sceneNumber: entry.sceneNumber,
+		range: { min: entry.sceneNumber, max: entry.sceneNumber },
+	}));
+
+	const addRow = (min: number, max: number): void => {
+		if (min <= max) rows.push({ kind: 'add', key: `${min}:${max}`, range: { min, max } });
+	};
+
+	if (within.length === 0) {
+		addRow(1, latestScene);
+		return rows;
+	}
+
+	addRow(within[0].entry.sceneNumber + 1, latestScene);
+
+	within.forEach(({ entry, index }, position) => {
+		const scene = entry.sceneNumber;
+		const lower = within[position + 1]?.entry.sceneNumber ?? 0;
+		const gapMin = lower + 1;
+		rows.push({
+			kind: 'entry',
+			index,
+			sceneNumber: scene,
+			range: scene - gapMin >= 2 ? { min: gapMin, max: scene } : { min: scene, max: scene },
+		});
+		addRow(gapMin, scene - 1);
+	});
+
+	return rows;
 }
 
 /**
@@ -81,47 +124,24 @@ export function initialSceneEntries(initial: CharacterProfileEntity | null): Sce
 }
 
 /**
- * Descending display order (as indices into `entries`) computed once when the editor opens:
- * valid scene numbers first, invalid rows last in their original order. Preserving this order
- * afterwards keeps a focused row in place while the user edits its scene number.
- */
-export function sceneDetailDisplayOrder(entries: SceneDetailEntry[]): number[] {
-	return entries
-		.map((entry, index) => ({ entry, index }))
-		.sort((a, b) => {
-			const aValid = isValidSceneNumber(a.entry.sceneNumber);
-			const bValid = isValidSceneNumber(b.entry.sceneNumber);
-			if (aValid && bValid && a.entry.sceneNumber !== b.entry.sceneNumber) return b.entry.sceneNumber - a.entry.sceneNumber;
-			if (aValid !== bValid) return aValid ? -1 : 1;
-			return a.index - b.index;
-		})
-		.map((row) => row.index);
-}
-
-/** Drop a removed row from a display-order list and shift the indices that followed it. */
-export function removeDisplayIndex(order: number[], removedIndex: number): number[] {
-	return order.filter((index) => index !== removedIndex).map((index) => (index > removedIndex ? index - 1 : index));
-}
-
-/**
- * Seed the alias input from an observed profile, hiding the preferred name because the form
+ * Seed the alias tags from an observed profile, hiding the preferred name because the form
  * re-adds it on submit. Keeping the old name only in the seed would drop it on rename.
  */
-export function initialAliasesText(initial: CharacterProfileEntity | null): string {
-	if (initial === null) return '';
-	return initial.aliases.filter((alias) => alias !== initial.preferredName).join(', ');
+export function initialAliases(initial: CharacterProfileEntity | null): string[] {
+	if (initial === null) return [];
+	return initial.aliases.filter((alias) => alias !== initial.preferredName);
 }
 
 /**
- * Submitted aliases: the typed list plus, on a rename, the previously preferred name so the
+ * Submitted aliases: the tag list plus, on a rename, the previously preferred name so the
  * old name stays matchable. Save-time normalization re-adds the new preferred name and dedupes.
  */
-export function buildProfileAliases(initial: CharacterProfileEntity | null, preferredName: string, aliasesText: string): string[] {
-	const aliases = splitCommaList(aliasesText);
+export function buildProfileAliases(initial: CharacterProfileEntity | null, preferredName: string, aliases: string[]): string[] {
+	const merged = aliases.map((alias) => alias.trim()).filter((alias) => alias.length > 0);
 	const oldName = initial?.preferredName.trim() ?? '';
 	const newName = preferredName.trim();
-	if (oldName.length > 0 && oldName !== newName && !aliases.includes(oldName)) aliases.push(oldName);
-	return aliases;
+	if (oldName.length > 0 && oldName !== newName && !merged.includes(oldName)) merged.push(oldName);
+	return merged;
 }
 
 function optionalText(value: string): string | null {
@@ -148,13 +168,13 @@ export function buildProfileDraft(input: ProfileFormInput): ProfileDraftResult {
 	return {
 		draft: {
 			preferredName,
-			aliases: buildProfileAliases(input.initial, preferredName, input.aliasesText),
+			aliases: buildProfileAliases(input.initial, preferredName, input.aliases),
 			logline: input.logline.trim(),
 			state: optionalText(input.state),
 			goal: optionalText(input.goal),
 			relationships: optionalText(input.relationships),
 			voice: optionalText(input.voice),
-			traits: splitCommaList(input.traitsText),
+			traits: input.traits.map((trait) => trait.trim()).filter((trait) => trait.length > 0),
 			sceneDetails: serializeSceneDetailEntries(input.sceneEntries),
 			importance,
 		},

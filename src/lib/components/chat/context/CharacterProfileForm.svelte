@@ -1,12 +1,14 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { Tabs, TagsInput } from '@skeletonlabs/skeleton-svelte';
+	import Icon from '#lib/components/ui/Icon.svelte';
 	import { t } from '#lib/i18n/index.ts';
 	import ThemedSelect from '#lib/components/ThemedSelect.svelte';
 	import SceneDetailsEditor from './SceneDetailsEditor.svelte';
 	import { MAX_CHARACTER_TRAITS, type CharacterImportance, type CharacterProfileEntity } from '#lib/db/character-profiles.ts';
 	import type { SceneDetailEntry } from '#lib/definitions/pipeline-sections.ts';
 	import type { ProfileDraft } from '#lib/features/character-profile-context.ts';
-	import { buildProfileDraft, initialAliasesText, initialSceneEntries, inspectSceneDetailEntries } from './character-profile-form-state.ts';
+	import { buildProfileDraft, initialAliases, initialSceneEntries, inspectSceneDetailEntries } from './character-profile-form-state.ts';
 
 	interface Props {
 		initial: CharacterProfileEntity | null;
@@ -27,7 +29,7 @@
 	// svelte-ignore state_referenced_locally
 	let formPreferredName = $state(initial?.preferredName ?? '');
 	// svelte-ignore state_referenced_locally
-	let formAliases = $state(initialAliasesText(initial));
+	let formAliases = $state<string[]>(initialAliases(initial));
 	// svelte-ignore state_referenced_locally
 	let formLogline = $state(initial?.logline ?? '');
 	// svelte-ignore state_referenced_locally
@@ -47,6 +49,15 @@
 
 	const importanceItems = [1, 2, 3, 4].map((level) => ({ value: String(level), label: t(`chat.context.importance.${level}`) }));
 
+	let backButton = $state<HTMLButtonElement | null>(null);
+
+	// The editor replaces the profile list inside the dialog's scroll container, which may be
+	// scrolled far down the list; bring the editor into view when it opens.
+	onMount(() => {
+		backButton?.scrollIntoView({ block: 'start' });
+		backButton?.focus();
+	});
+
 	const preferredNameMissing = $derived(formPreferredName.trim().length === 0);
 	const sceneDetailsInvalid = $derived(!inspectSceneDetailEntries(formSceneEntries).valid);
 	const saveDisabled = $derived(saving || !editable || preferredNameMissing || sceneDetailsInvalid);
@@ -65,13 +76,13 @@
 		const result = buildProfileDraft({
 			initial,
 			preferredName: formPreferredName,
-			aliasesText: formAliases,
+			aliases: formAliases,
 			logline: formLogline,
 			state: formState,
 			goal: formGoal,
 			relationships: formRelationships,
 			voice: formVoice,
-			traitsText: formTraits.join(', '),
+			traits: formTraits,
 			importance: formImportance,
 			sceneEntries: formSceneEntries,
 		});
@@ -81,9 +92,21 @@
 </script>
 
 <div class="rounded-(--radius-container) border border-primary-500/40 bg-primary-50-950 p-4 space-y-4">
-	<header class="space-y-1">
-		<h3 class="text-base font-medium">{initial ? t('chat.context.editProfile') : t('chat.context.addProfile')}</h3>
-		<p class="text-xs text-surface-500">{t('chat.sceneLabel', { sceneNumber })}</p>
+	<header class="flex items-start gap-2">
+		<button
+			bind:this={backButton}
+			class="-ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-surface-500 transition-colors hover:bg-surface-100-900"
+			type="button"
+			aria-label={t('chat.context.backToProfiles')}
+			title={t('chat.context.backToProfiles')}
+			onclick={onCancel}
+		>
+			<Icon name="chevron-left" class="h-5 w-5" />
+		</button>
+		<div class="space-y-1">
+			<h3 class="text-base font-medium">{initial ? t('chat.context.editProfile') : t('chat.context.addProfile')}</h3>
+			<p class="text-xs text-surface-500">{t('chat.sceneLabel', { sceneNumber })}</p>
+		</div>
 	</header>
 
 	<Tabs value={tab} onValueChange={handleTabChange}>
@@ -125,10 +148,26 @@
 					{/if}
 				</label>
 
-				<label class="block" for="{formId}-aliases">
-					<span class="text-sm font-medium text-surface-700-300">{t('chat.context.aliases')}</span>
-					<input id="{formId}-aliases" class="input mt-1 w-full text-sm" type="text" bind:value={formAliases} />
-				</label>
+				<div class="block sm:col-span-2">
+					<TagsInput value={formAliases} onValueChange={(details) => (formAliases = details.value)}>
+						<TagsInput.Label class="text-sm font-medium text-surface-700-300">{t('chat.context.aliases')}</TagsInput.Label>
+						<TagsInput.Control class="text-sm">
+							{#each formAliases as alias, index (index)}
+								<TagsInput.Item value={alias} {index}>
+									<TagsInput.ItemPreview>
+										<TagsInput.ItemText>{alias}</TagsInput.ItemText>
+										<TagsInput.ItemDeleteTrigger aria-label={`${t('chat.remove')}: ${alias}`}>
+											<span aria-hidden="true">×</span>
+										</TagsInput.ItemDeleteTrigger>
+									</TagsInput.ItemPreview>
+									<TagsInput.ItemInput />
+								</TagsInput.Item>
+							{/each}
+							<TagsInput.Input placeholder={t('chat.context.aliasesPlaceholder')} />
+						</TagsInput.Control>
+						<p class="text-xs text-surface-500">{t('chat.context.tagInputHint')}</p>
+					</TagsInput>
+				</div>
 
 				<label class="block">
 					<span class="text-sm font-medium text-surface-700-300">{t('chat.context.importanceField')}</span>
@@ -140,18 +179,18 @@
 					<input id="{formId}-logline" class="input mt-1 w-full text-sm" type="text" bind:value={formLogline} />
 				</label>
 
-				<label class="block" for="{formId}-state">
+				<label class="block sm:col-span-2" for="{formId}-state">
 					<span class="text-sm font-medium text-surface-700-300">{t('chat.context.state')}</span>
 					<textarea id="{formId}-state" class="input mt-1 w-full resize-y text-sm leading-relaxed" rows="2" bind:value={formState}
 					></textarea>
 				</label>
 
-				<label class="block" for="{formId}-goal">
+				<label class="block sm:col-span-2" for="{formId}-goal">
 					<span class="text-sm font-medium text-surface-700-300">{t('chat.context.goal')}</span>
 					<textarea id="{formId}-goal" class="input mt-1 w-full resize-y text-sm leading-relaxed" rows="2" bind:value={formGoal}></textarea>
 				</label>
 
-				<label class="block" for="{formId}-relationships">
+				<label class="block sm:col-span-2" for="{formId}-relationships">
 					<span class="text-sm font-medium text-surface-700-300">{t('chat.context.relationships')}</span>
 					<textarea
 						id="{formId}-relationships"
@@ -160,7 +199,7 @@
 						bind:value={formRelationships}></textarea>
 				</label>
 
-				<label class="block" for="{formId}-voice">
+				<label class="block sm:col-span-2" for="{formId}-voice">
 					<span class="text-sm font-medium text-surface-700-300">{t('chat.context.voice')}</span>
 					<textarea id="{formId}-voice" class="input mt-1 w-full resize-y text-sm leading-relaxed" rows="2" bind:value={formVoice}
 					></textarea>
@@ -184,14 +223,17 @@
 							{/each}
 							<TagsInput.Input placeholder={t('chat.context.traitsPlaceholder')} />
 						</TagsInput.Control>
-						<p class="text-xs text-surface-500">{t('chat.context.traitsHint', { max: MAX_CHARACTER_TRAITS })}</p>
+						<p class="text-xs text-surface-500">
+							{t('chat.context.tagInputHint')}
+							{t('chat.context.traitsHint', { max: MAX_CHARACTER_TRAITS })}
+						</p>
 					</TagsInput>
 				</div>
 			</div>
 		</Tabs.Content>
 
 		<Tabs.Content value="sceneDetails" class="pt-4">
-			<SceneDetailsEditor entries={formSceneEntries} onChange={(entries) => (formSceneEntries = entries)} />
+			<SceneDetailsEditor entries={formSceneEntries} latestScene={sceneNumber} onChange={(entries) => (formSceneEntries = entries)} />
 		</Tabs.Content>
 	</Tabs>
 

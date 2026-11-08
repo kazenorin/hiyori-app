@@ -1,53 +1,68 @@
 <script lang="ts">
+	import { tick } from 'svelte';
+	import Icon from '#lib/components/ui/Icon.svelte';
 	import { t } from '#lib/i18n/index.ts';
 	import type { SceneDetailEntry } from '#lib/definitions/pipeline-sections.ts';
 	import {
+		buildSceneDetailRows,
 		inspectSceneDetailEntries,
-		isValidSceneNumber,
-		nextSceneNumber,
-		removeDisplayIndex,
-		sceneDetailDisplayOrder,
+		type SceneDetailRange,
+		type SceneDetailRow,
 	} from './character-profile-form-state.ts';
 
 	interface Props {
 		entries: SceneDetailEntry[];
+		latestScene: number;
 		onChange: (entries: SceneDetailEntry[]) => void;
 	}
 
-	let { entries, onChange }: Props = $props();
+	let { entries, latestScene, onChange }: Props = $props();
 
 	const editorId = $props.id();
 
 	const issues = $derived(inspectSceneDetailEntries(entries));
+	const rows = $derived(buildSceneDetailRows(entries, latestScene));
 
-	// svelte-ignore state_referenced_locally
-	let displayOrder = $state<number[]>(sceneDetailDisplayOrder(entries));
+	let addChoices = $state<Record<string, number>>({});
 
-	const rows = $derived(displayOrder.map((index) => ({ entry: entries[index], index })));
+	function addChoice(row: Extract<SceneDetailRow, { kind: 'add' }>): number {
+		const chosen = addChoices[row.key];
+		return chosen !== undefined && chosen >= row.range.min && chosen <= row.range.max ? chosen : row.range.max;
+	}
+
+	function clampScene(value: number, range: SceneDetailRange): number | null {
+		if (!Number.isFinite(value)) return null;
+		return Math.min(range.max, Math.max(range.min, Math.round(value)));
+	}
 
 	function updateEntry(index: number, patch: Partial<SceneDetailEntry>): void {
 		onChange(entries.map((entry, current) => (current === index ? { ...entry, ...patch } : entry)));
 	}
 
-	function handleSceneNumberInput(index: number, event: Event): void {
-		const value = (event.currentTarget as HTMLInputElement).valueAsNumber;
-		updateEntry(index, { sceneNumber: value });
+	function handleSceneChange(index: number, event: Event, range: SceneDetailRange): void {
+		const clamped = clampScene((event.currentTarget as HTMLInputElement).valueAsNumber, range);
+		if (clamped !== null) updateEntry(index, { sceneNumber: clamped });
+	}
+
+	function handleAddSceneChange(key: string, event: Event, range: SceneDetailRange): void {
+		const clamped = clampScene((event.currentTarget as HTMLInputElement).valueAsNumber, range);
+		if (clamped !== null) addChoices = { ...addChoices, [key]: clamped };
 	}
 
 	function handleDetailsInput(index: number, event: Event): void {
 		updateEntry(index, { details: (event.currentTarget as HTMLInputElement).value });
 	}
 
-	function addRow(): void {
+	async function addRow(row: Extract<SceneDetailRow, { kind: 'add' }>): Promise<void> {
 		const newIndex = entries.length;
-		onChange([...entries, { sceneNumber: nextSceneNumber(entries), details: '' }]);
-		// The new row is the highest valid scene number, so it belongs at the top of the descending order.
-		displayOrder = [newIndex, ...displayOrder];
+		const sceneNumber = addChoice(row);
+		onChange([...entries, { sceneNumber, details: '' }]);
+		await tick();
+		document.getElementById(`${editorId}-details-${newIndex}`)?.focus();
 	}
 
 	function removeRow(index: number): void {
 		onChange(entries.filter((_, current) => current !== index));
-		displayOrder = removeDisplayIndex(displayOrder, index);
 	}
 </script>
 
@@ -58,57 +73,89 @@
 		</p>
 	{/if}
 
-	{#if entries.length === 0}
-		<p class="text-sm text-surface-500">{t('chat.context.noSceneDetails')}</p>
-	{/if}
-
-	{#each rows as row (row.index)}
-		<div class="rounded-(--radius-container) border border-surface-200-800 p-3 space-y-2">
-			<div class="flex flex-wrap items-end gap-2">
-				<label class="block w-28" for="{editorId}-scene-{row.index}">
-					<span class="text-xs text-surface-500">{t('chat.context.sceneNumber')}</span>
-					<input
-						id="{editorId}-scene-{row.index}"
-						class="input mt-1 w-full text-sm"
-						type="number"
-						min="1"
-						step="1"
-						value={isValidSceneNumber(row.entry.sceneNumber) ? row.entry.sceneNumber : ''}
-						aria-invalid={issues.invalidRows.includes(row.index) || issues.duplicateNumbers.includes(row.entry.sceneNumber)}
-						oninput={(event) => handleSceneNumberInput(row.index, event)}
-					/>
-				</label>
-				<button
-					class="btn preset-tonal text-xs py-1 px-3"
-					type="button"
-					aria-label={t('chat.context.removeSceneDetail')}
-					onclick={() => removeRow(row.index)}
-				>
-					{t('chat.remove')}
-				</button>
-			</div>
-
-			<label class="block" for="{editorId}-details-{row.index}">
-				<span class="text-xs text-surface-500">{t('chat.context.sceneDetail')}</span>
-				<input
-					id="{editorId}-details-{row.index}"
-					class="input mt-1 w-full text-sm"
-					type="text"
-					placeholder={t('chat.context.sceneDetailPlaceholder')}
-					value={row.entry.details}
-					oninput={(event) => handleDetailsInput(row.index, event)}
-				/>
-			</label>
-
-			{#if issues.invalidRows.includes(row.index)}
-				<p class="text-xs text-error-500">{t('chat.context.sceneNumberInvalid')}</p>
-			{:else if issues.duplicateNumbers.includes(row.entry.sceneNumber)}
-				<p class="text-xs text-error-500">{t('chat.context.sceneNumberDuplicate')}</p>
-			{/if}
-		</div>
-	{/each}
-
-	<button class="btn preset-tonal text-xs py-1 px-3" type="button" onclick={addRow}>
-		{t('chat.context.addSceneDetail')}
-	</button>
+	<div class="overflow-x-auto">
+		<table class="w-full text-sm">
+			<thead>
+				<tr class="text-left text-xs text-surface-500">
+					<th class="w-16 pb-2 font-medium">{t('chat.context.sceneNumber')}</th>
+					<th class="pb-2 font-medium">{t('chat.context.sceneDetail')}</th>
+					<th class="w-10 pb-2 text-right font-medium">{t('chat.remove')}</th>
+				</tr>
+			</thead>
+			<tbody>
+				{#each rows as row (row.kind === 'entry' ? `entry-${row.index}` : `add-${row.key}`)}
+					{#if row.kind === 'entry'}
+						<tr class="border-t border-surface-200-800 align-top">
+							<td class="py-2 pr-2">
+								{#if row.range.min < row.range.max}
+									<input
+										class="input w-16 text-sm"
+										type="number"
+										min={row.range.min}
+										max={row.range.max}
+										step="1"
+										value={row.sceneNumber}
+										aria-label={t('chat.context.sceneNumber')}
+										onchange={(event) => handleSceneChange(row.index, event, row.range)}
+									/>
+								{:else}
+									<span class="inline-block py-1.5 text-surface-700-300">{row.sceneNumber}</span>
+								{/if}
+							</td>
+							<td class="py-2 pr-2">
+								<input
+									id="{editorId}-details-{row.index}"
+									class="input w-full text-sm"
+									type="text"
+									placeholder={t('chat.context.sceneDetailPlaceholder')}
+									value={entries[row.index].details}
+									oninput={(event) => handleDetailsInput(row.index, event)}
+								/>
+								{#if issues.invalidRows.includes(row.index)}
+									<p class="mt-1 text-xs text-error-500">{t('chat.context.sceneNumberInvalid')}</p>
+								{:else if issues.duplicateNumbers.includes(row.sceneNumber)}
+									<p class="mt-1 text-xs text-error-500">{t('chat.context.sceneNumberDuplicate')}</p>
+								{/if}
+							</td>
+							<td class="py-2 text-right">
+								<button
+									class="flex h-9 w-9 items-center justify-center rounded-lg text-error-500 transition-colors hover:bg-surface-100-900"
+									type="button"
+									aria-label={t('chat.context.removeSceneDetail')}
+									title={t('chat.context.removeSceneDetail')}
+									onclick={() => removeRow(row.index)}
+								>
+									<Icon name="trash" class="h-4 w-4" />
+								</button>
+							</td>
+						</tr>
+					{:else}
+						<tr class="border-t border-surface-200-800">
+							<td class="py-2 pr-2">
+								{#if row.range.min < row.range.max}
+									<input
+										class="input w-16 text-sm"
+										type="number"
+										min={row.range.min}
+										max={row.range.max}
+										step="1"
+										value={addChoice(row)}
+										aria-label={t('chat.context.sceneNumber')}
+										onchange={(event) => handleAddSceneChange(row.key, event, row.range)}
+									/>
+								{:else}
+									<span class="inline-block py-1.5 text-surface-500">{row.range.min}</span>
+								{/if}
+							</td>
+							<td class="py-2 pr-2" colspan="2">
+								<button class="btn preset-tonal text-xs py-1 px-3" type="button" onclick={() => void addRow(row)}>
+									{t('chat.context.addSceneDetail')}
+								</button>
+							</td>
+						</tr>
+					{/if}
+				{/each}
+			</tbody>
+		</table>
+	</div>
 </div>

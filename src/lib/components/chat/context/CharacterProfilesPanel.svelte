@@ -340,9 +340,7 @@
 				onSave={handleSave}
 				onCancel={closeForm}
 			/>
-		{/if}
-
-		{#if removeTarget !== null}
+		{:else if removeTarget !== null}
 			<div
 				class="rounded-(--radius-container) border border-error-500/50 bg-error-50-950 p-4 space-y-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
 				role="alertdialog"
@@ -396,9 +394,7 @@
 					</button>
 				</div>
 			</div>
-		{/if}
-
-		{#if consolidationOpen}
+		{:else if consolidationOpen}
 			<CharacterConsolidation
 				profiles={profileContext.profiles}
 				saving={consolidating || getIsBusy() || !profileContext.editable}
