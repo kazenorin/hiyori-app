@@ -265,38 +265,6 @@ export async function getLatestProfileByAlias(actLineId: string, nameOrAlias: st
 	return rows.length > 0 ? mapRowToEntity(rows[0]) : null;
 }
 
-/**
- * Like `getLatestProfileByAlias`, but keeps tombstone winners. Callers that rebuild profiles
- * from generated content use this so a revival reuses the erased identity's canonical name and
- * aliases instead of forking a new one.
- */
-export async function getLatestProfileByAliasIncludingRemoved(
-	actLineId: string,
-	nameOrAlias: string
-): Promise<CharacterProfileEntity | null> {
-	const db = getDatabase();
-	const rows = await db.select<CharacterProfileRow[]>(
-		`SELECT cp.* FROM character_profiles cp
-		 WHERE cp.act_line_id = $1
-		 AND cp.id = (
-		     SELECT id FROM character_profiles
-		     WHERE act_line_id = cp.act_line_id AND canonical_name = cp.canonical_name
-		     ORDER BY COALESCE(scene_number, -1) DESC, created_at DESC LIMIT 1
-		 )
-		 AND (
-			   cp.canonical_name = $2
-				 OR cp.preferred_name = $2
-		     OR EXISTS (
-		         SELECT 1 FROM json_each(cp.aliases) WHERE value = $2
-		     )
-		 )
-		 ORDER BY COALESCE(cp.scene_number, -1) DESC, cp.created_at DESC
-		 LIMIT 1`,
-		[actLineId, nameOrAlias]
-	);
-	return rows.length > 0 ? mapRowToEntity(rows[0]) : null;
-}
-
 /** Check whether any of the given names (preferred or alias) is active in the act line. */
 export async function areAnyCharacterNamesKnown(actLineId: string, names: string[]): Promise<boolean> {
 	if (names.length === 0) return false;
