@@ -159,6 +159,7 @@ export function toCharacterProfileInputs(
 			traits: p.traits ?? [],
 			sceneDetails: p.sceneDetails,
 			importance: p.importance as CharacterImportance,
+			removed: p.removed ?? false,
 			createdAt: p.createdAt,
 			updatedAt: p.updatedAt,
 		}));

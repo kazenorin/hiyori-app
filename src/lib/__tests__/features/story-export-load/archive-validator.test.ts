@@ -216,4 +216,100 @@ describe('validateStoryData', () => {
 			expect(result.errors[0]).toContain('messagePhases');
 		});
 	});
+
+	describe('characterProfiles (archive v5)', () => {
+		const profile = {
+			id: 'cp-1',
+			actLineId: 'line-1',
+			sceneNumber: 1,
+			canonicalName: 'alice',
+			preferredName: 'Alice',
+			aliases: ['Alice'],
+			logline: 'A determined hero.',
+			state: null,
+			goal: null,
+			relationships: null,
+			voice: null,
+			sceneDetails: '',
+			importance: 2,
+			createdAt: 1000,
+			updatedAt: 1000,
+		};
+
+		// WHY (v1–v4 compatibility): the collection predates `removed`; absence of
+		// the field means active and must stay valid.
+		it('accepts entries without removed and no collection at all', () => {
+			const data = makeValidData();
+			expect(validateStoryData(data).isValid).toBe(true);
+
+			data.characterProfiles = [{ ...profile }];
+			expect(validateStoryData(data).isValid).toBe(true);
+		});
+
+		it('accepts boolean removed values and optional traits', () => {
+			const data = makeValidData();
+			data.characterProfiles = [
+				{ ...profile, removed: false, traits: ['bold'] },
+				{ ...profile, id: 'cp-2', removed: true },
+			];
+			const result = validateStoryData(data);
+			expect(result.isValid).toBe(true);
+			expect(result.errors).toHaveLength(0);
+		});
+
+		it('accepts an explicit empty collection', () => {
+			const data = makeValidData();
+			data.characterProfiles = [];
+			expect(validateStoryData(data).isValid).toBe(true);
+		});
+
+		it('rejects a non-array collection', () => {
+			const data = makeValidData();
+			asRaw(data).characterProfiles = { id: 'cp-1' };
+			const result = validateStoryData(data);
+			expect(result.isValid).toBe(false);
+			expect(result.errors[0]).toContain('characterProfiles');
+		});
+
+		// WHY: `removed: "true"` and `removed: 1` would be silently coerced by
+		// truthiness downstream, inverting or inventing a tombstone.
+		it('rejects non-boolean removed values without coercing', () => {
+			for (const removed of ['true', 1, 0, null]) {
+				const data = makeValidData();
+				asRaw(data).characterProfiles = [{ ...profile, removed }];
+				const result = validateStoryData(data);
+				expect(result.isValid, `removed=${JSON.stringify(removed)}`).toBe(false);
+				expect(result.errors[0]).toContain('characterProfiles');
+			}
+		});
+
+		it('rejects entries missing required fields', () => {
+			const data = makeValidData();
+			const { sceneDetails: _sceneDetails, ...withoutSceneDetails } = profile;
+			asRaw(data).characterProfiles = [withoutSceneDetails];
+			expect(validateStoryData(data).isValid).toBe(false);
+
+			const data2 = makeValidData();
+			asRaw(data2).characterProfiles = [{ ...profile, aliases: 'Alice' }];
+			expect(validateStoryData(data2).isValid).toBe(false);
+		});
+
+		// WHY: a fractional scene is uneditable and un-erasable downstream, and an
+		// out-of-range importance renders without a label; both must fail at the boundary.
+		it('rejects non-integer scene numbers and out-of-range importance', () => {
+			const badScene = makeValidData();
+			asRaw(badScene).characterProfiles = [{ ...profile, sceneNumber: 1.5 }];
+			expect(validateStoryData(badScene).isValid).toBe(false);
+
+			for (const importance of [0, 5, 99, 1.5]) {
+				const data = makeValidData();
+				asRaw(data).characterProfiles = [{ ...profile, importance }];
+				expect(validateStoryData(data).isValid, `importance=${importance}`).toBe(false);
+			}
+
+			const baseline = makeValidData();
+			asRaw(baseline).characterProfiles = [{ ...profile, sceneNumber: null }];
+			expect(validateStoryData(baseline).isValid).toBe(true);
+		});
+	});
 });

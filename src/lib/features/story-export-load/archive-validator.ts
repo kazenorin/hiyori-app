@@ -8,6 +8,37 @@ export interface ValidationResult {
 	warnings: string[];
 }
 
+const isNullableString = (value: unknown): boolean => value === null || value === undefined || typeof value === 'string';
+
+/**
+ * Shape check for one `characterProfiles` entry. `removed` is optional for
+ * v1–v4 archives; when present it must be a real boolean (no coercion).
+ */
+function isCharacterProfileEntry(value: unknown): boolean {
+	if (!value || typeof value !== 'object') return false;
+	const p = value as Record<string, unknown>;
+	return (
+		typeof p.id === 'string' &&
+		typeof p.actLineId === 'string' &&
+		(p.sceneNumber === null || (typeof p.sceneNumber === 'number' && Number.isInteger(p.sceneNumber))) &&
+		typeof p.canonicalName === 'string' &&
+		typeof p.preferredName === 'string' &&
+		Array.isArray(p.aliases) &&
+		p.aliases.every((alias) => typeof alias === 'string') &&
+		typeof p.logline === 'string' &&
+		isNullableString(p.state) &&
+		isNullableString(p.goal) &&
+		isNullableString(p.relationships) &&
+		isNullableString(p.voice) &&
+		(p.traits === undefined || (Array.isArray(p.traits) && p.traits.every((trait) => typeof trait === 'string'))) &&
+		typeof p.sceneDetails === 'string' &&
+		(p.importance === 1 || p.importance === 2 || p.importance === 3 || p.importance === 4) &&
+		(p.removed === undefined || typeof p.removed === 'boolean') &&
+		Number.isFinite(p.createdAt) &&
+		Number.isFinite(p.updatedAt)
+	);
+}
+
 export function validateStoryData(data: unknown): ValidationResult {
 	const errors: string[] = [];
 	const warnings: string[] = [];
@@ -70,6 +101,16 @@ export function validateStoryData(data: unknown): ValidationResult {
 					'messagePhases contains malformed elements (expected {messageId, phaseName, content: string, sequence: number, reasoning: string|null})'
 				);
 			}
+		}
+	}
+
+	if (d.characterProfiles !== undefined) {
+		if (!Array.isArray(d.characterProfiles)) {
+			errors.push('Invalid "characterProfiles" field (expected array)');
+		} else if (!d.characterProfiles.every(isCharacterProfileEntry)) {
+			errors.push(
+				'characterProfiles contains malformed elements (expected {id, actLineId, sceneNumber, canonicalName, preferredName, aliases: string[], logline, state, goal, relationships, voice, sceneDetails: string, importance: number, createdAt: number, updatedAt: number, optional traits: string[], removed: boolean})'
+			);
 		}
 	}
 

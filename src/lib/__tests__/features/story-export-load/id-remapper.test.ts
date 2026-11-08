@@ -310,4 +310,56 @@ describe('regenerateIds', () => {
 		const result = regenerateIds(makeValidData());
 		expect(result.data.messagePhases).toBeUndefined();
 	});
+
+	// WHY (archive v5): as-new import must carry tombstones across the ID
+	// rewrite; dropping `removed` would resurrect erased characters.
+	it('remaps profile ids and actLineIds while preserving removed', () => {
+		const data = makeValidData();
+		data.characterProfiles = [
+			{
+				id: 'cp-1',
+				actLineId: 'line-1',
+				sceneNumber: 1,
+				canonicalName: 'alice',
+				preferredName: 'Alice',
+				aliases: ['Alice'],
+				logline: 'erased',
+				state: null,
+				goal: null,
+				relationships: null,
+				voice: null,
+				sceneDetails: '',
+				importance: 2,
+				removed: true,
+				createdAt: 1000,
+				updatedAt: 1000,
+			},
+			{
+				id: 'cp-2',
+				actLineId: 'line-1',
+				sceneNumber: 2,
+				canonicalName: 'bob',
+				preferredName: 'Bob',
+				aliases: ['Bob'],
+				logline: 'active legacy entry',
+				state: null,
+				goal: null,
+				relationships: null,
+				voice: null,
+				sceneDetails: '',
+				importance: 3,
+				createdAt: 2000,
+				updatedAt: 2000,
+			},
+		];
+
+		const result = regenerateIds(data);
+		const newLineId = result.idMap.get('line-1')!;
+		const byCanonical = new Map(result.data.characterProfiles!.map((p) => [p.canonicalName, p]));
+
+		expect(byCanonical.get('alice')?.id).not.toBe('cp-1');
+		expect(byCanonical.get('alice')?.actLineId).toBe(newLineId);
+		expect(byCanonical.get('alice')?.removed).toBe(true);
+		expect(byCanonical.get('bob')?.removed).toBeUndefined();
+	});
 });

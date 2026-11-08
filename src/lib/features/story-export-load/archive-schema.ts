@@ -6,8 +6,11 @@
  *   3 — added `messagePhases` field (optional; per-phase generation output keyed by
  *        message id, mirroring the `message_phases` table).
  *   4 — added optional `traits` to `characterProfiles` entries (older archives without it still load).
+ *   5 — added optional `removed` to `characterProfiles` entries and exports complete profile
+ *        history including tombstones. Older archives omit `removed`, whose entries import as
+ *        active (older archives without it still load).
  */
-export const CURRENT_ARCHIVE_VERSION = 4;
+export const CURRENT_ARCHIVE_VERSION = 5;
 
 export interface StoryExportData {
 	version: number;
@@ -96,6 +99,8 @@ export interface StoryExportData {
 		traits?: string[];
 		sceneDetails: string;
 		importance: number;
+		/** Archive v5+. Absent in v1–v4 archives, which import as active. */
+		removed?: boolean;
 		createdAt: number;
 		updatedAt: number;
 	}[];
