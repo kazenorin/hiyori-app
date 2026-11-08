@@ -7,6 +7,7 @@ import { log } from './utils';
 import {
 	insertCharacterProfile,
 	areAnyCharacterNamesKnown,
+	resolveTombstonedCanonicalName,
 	ensurePreferredInAliases,
 	type CharacterImportance,
 	toCanonicalName,
@@ -42,7 +43,7 @@ export function createIntroduceCharacterTool(ctx: ToolContext) {
 				return ls('tools.introduceCharacter.messages.exists');
 			}
 
-			const canonicalName = toCanonicalName(preferredName);
+			const canonicalName = (await resolveTombstonedCanonicalName(actLine.id, allNames)) ?? toCanonicalName(preferredName);
 			const allAliases = ensurePreferredInAliases(preferredName, aliases);
 
 			await insertCharacterProfile({

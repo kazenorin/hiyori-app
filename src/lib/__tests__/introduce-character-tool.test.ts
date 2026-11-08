@@ -25,13 +25,14 @@ vi.mock('#lib/localization/index.ts', () => ({
 vi.mock('#lib/db/character-profiles.ts', () => ({
 	insertCharacterProfile: vi.fn(async () => {}),
 	areAnyCharacterNamesKnown: vi.fn(async () => false),
+	resolveTombstonedCanonicalName: vi.fn(async () => null),
 	ensurePreferredInAliases: (preferredName: string, aliases: string[]) => [preferredName, ...aliases],
 	toCanonicalName: (name: string) => name,
 	MAX_CHARACTER_TRAITS: 10,
 }));
 
 import { createIntroduceCharacterTool, buildIntroduceCharacterTools } from '#lib/ai/tools/introduce-character.ts';
-import { insertCharacterProfile, areAnyCharacterNamesKnown } from '#lib/db/character-profiles.ts';
+import { insertCharacterProfile, areAnyCharacterNamesKnown, resolveTombstonedCanonicalName } from '#lib/db/character-profiles.ts';
 import type { ToolContext } from '#lib/ai/tools/tools.ts';
 
 function createMockContext(currentScene: number | null): ToolContext {
@@ -76,6 +77,7 @@ describe('createIntroduceCharacterTool', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(areAnyCharacterNamesKnown).mockResolvedValue(false);
+		vi.mocked(resolveTombstonedCanonicalName).mockResolvedValue(null);
 	});
 
 	it('tags the profile with the current scene number from context', async () => {
@@ -107,6 +109,25 @@ describe('createIntroduceCharacterTool', () => {
 
 		expect(result).toBe('tools.introduceCharacter.messages.exists');
 		expect(insertCharacterProfile).not.toHaveBeenCalled();
+		expect(resolveTombstonedCanonicalName).not.toHaveBeenCalled();
+	});
+
+	it('reuses a tombstoned canonical identity when no active name matches', async () => {
+		vi.mocked(resolveTombstonedCanonicalName).mockResolvedValue('elena-shadowcrest');
+		const toolDef = createIntroduceCharacterTool(createMockContext(5));
+
+		await toolDef.execute!(validInput, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
+
+		expect(resolveTombstonedCanonicalName).toHaveBeenCalledWith('line-current', ['Elena', 'The Rogue']);
+		expect(vi.mocked(insertCharacterProfile).mock.calls[0][0].canonicalName).toBe('elena-shadowcrest');
+	});
+
+	it('derives a fresh canonical name when no tombstoned identity matches', async () => {
+		const toolDef = createIntroduceCharacterTool(createMockContext(5));
+
+		await toolDef.execute!(validInput, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
+
+		expect(vi.mocked(insertCharacterProfile).mock.calls[0][0].canonicalName).toBe('Elena');
 	});
 
 	it('passes traits through to the profile insert', async () => {

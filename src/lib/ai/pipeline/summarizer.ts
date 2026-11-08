@@ -49,7 +49,7 @@ import { runMemoryExtractionPipeline } from '#lib/features/memory/memory-extract
 import { type LoadedPrompts } from './prompt-loader';
 import {
 	insertCharacterProfile,
-	getLatestProfileByAlias,
+	getLatestProfileByAliasIncludingRemoved,
 	getLatestProfilesByActLine,
 	toCanonicalName,
 	ensurePreferredInAliases,
@@ -242,9 +242,11 @@ export async function generateCharacterProfiles(
 
 		for (const profile of profilesResult.profiles) {
 			const importance: CharacterImportance = resolveImportance(profile.importance);
-			const existing = await getLatestProfileByAlias(compressorInput.actLineId, profile.characterName);
-			const canonicalName = existing?.canonicalName ?? toCanonicalName(profile.characterName);
-			const aliases = ensurePreferredInAliases(profile.characterName, existing?.aliases ?? []);
+			const latest = await getLatestProfileByAliasIncludingRemoved(compressorInput.actLineId, profile.characterName);
+			// A human erased this identity; generated summaries mentioning them must not revive it.
+			if (latest?.removed) continue;
+			const canonicalName = latest?.canonicalName ?? toCanonicalName(profile.characterName);
+			const aliases = ensurePreferredInAliases(profile.characterName, latest?.aliases ?? []);
 			await insertCharacterProfile({
 				id: crypto.randomUUID(),
 				actLineId: compressorInput.actLineId,
