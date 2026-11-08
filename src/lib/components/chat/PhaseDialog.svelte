@@ -21,6 +21,7 @@
 	import { CONTEXT_ICONS, CONTEXT_LABEL_KEYS } from './context/context-registry';
 	import StorySoFarPanel from './context/StorySoFarPanel.svelte';
 	import ScenePlotPanel from './context/ScenePlotPanel.svelte';
+	import CharacterProfilesPanel from './context/CharacterProfilesPanel.svelte';
 	import type { PhaseName, UIScenePhase } from '#lib/ai/narrative-types.ts';
 
 	const message = $derived.by(() => {
@@ -240,6 +241,8 @@
 									<StorySoFarPanel {actLineId} />
 								{:else if activeContext === 'scenePlot'}
 									<ScenePlotPanel messageId={message.id} />
+								{:else if activeContext === 'characterProfiles'}
+									<CharacterProfilesPanel messageId={message.id} />
 								{:else if active}
 									<!-- Meta line -->
 									{#if phaseMeta}

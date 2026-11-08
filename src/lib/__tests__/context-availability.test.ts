@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockGetActByActLineId = vi.fn();
+const mockGetProfilesAtScene = vi.fn();
 vi.mock('#lib/db/acts.ts', () => ({
 	getActByActLineId: (...args: unknown[]) => mockGetActByActLineId(...args),
+}));
+vi.mock('#lib/db/character-profiles.ts', () => ({
+	getProfilesAtScene: (...args: unknown[]) => mockGetProfilesAtScene(...args),
 }));
 
 import { refreshAvailableContexts, getAvailableContexts } from '#lib/features/context-availability.svelte.ts';
@@ -15,35 +19,45 @@ beforeEach(async () => {
 });
 
 describe('context availability', () => {
-	it('offers nothing for a first act with the planner off, so the strip can hide entirely', async () => {
+	it('offers Character Profiles for a first act with the planner off, so profiles stay reachable', async () => {
 		mockGetActByActLineId.mockResolvedValue({ id: 'act-a', continuesFromActLineId: null });
 		await refreshAvailableContexts('line-a', false, false);
-		expect(getAvailableContexts()).toEqual([]);
+		expect(getAvailableContexts()).toEqual(['characterProfiles']);
 	});
 
-	it('offers Scene Plot for a first act with the planner on', async () => {
+	it('offers Scene Plot and Character Profiles for a first act with the planner on', async () => {
 		mockGetActByActLineId.mockResolvedValue({ id: 'act-b', continuesFromActLineId: null });
 		await refreshAvailableContexts('line-b', true, false);
-		expect(getAvailableContexts()).toEqual(['scenePlot']);
+		expect(getAvailableContexts()).toEqual(['scenePlot', 'characterProfiles']);
 	});
 
-	it('offers Story So Far for a continued act even with no summaries yet, because it will accumulate them', async () => {
+	it('offers Story So Far and Character Profiles for a continued act even with no summaries yet, because both will accumulate data', async () => {
 		mockGetActByActLineId.mockResolvedValue({ id: 'act-c', continuesFromActLineId: 'line-parent' });
 		await refreshAvailableContexts('line-c', false, false);
-		expect(getAvailableContexts()).toEqual(['storySoFar']);
+		expect(getAvailableContexts()).toEqual(['storySoFar', 'characterProfiles']);
 	});
 
-	it('offers both for a continued act with the planner on, broader context first', async () => {
+	it('offers all contexts for a continued act with the planner on, broader context first', async () => {
 		mockGetActByActLineId.mockResolvedValue({ id: 'act-d', continuesFromActLineId: 'line-parent' });
 		await refreshAvailableContexts('line-d', true, false);
-		expect(getAvailableContexts()).toEqual(['storySoFar', 'scenePlot']);
+		expect(getAvailableContexts()).toEqual(['storySoFar', 'scenePlot', 'characterProfiles']);
 	});
 
 	it('keeps recorded plots reachable after the user disables the planner mid-story', async () => {
 		// Gating on the current setting alone would hide real, editable data.
 		mockGetActByActLineId.mockResolvedValue({ id: 'act-e', continuesFromActLineId: null });
 		await refreshAvailableContexts('line-e', false, true);
-		expect(getAvailableContexts()).toEqual(['scenePlot']);
+		expect(getAvailableContexts()).toEqual(['scenePlot', 'characterProfiles']);
+	});
+
+	it('offers Character Profiles for a selected line even when the profile collection is empty', async () => {
+		// Availability must not consult profile rows: an empty collection still needs the panel so
+		// Add remains reachable later.
+		mockGetActByActLineId.mockResolvedValue({ id: 'act-h', continuesFromActLineId: null });
+		mockGetProfilesAtScene.mockResolvedValue([]);
+		await refreshAvailableContexts('line-h', false, false);
+		expect(getAvailableContexts()).toEqual(['characterProfiles']);
+		expect(mockGetProfilesAtScene).not.toHaveBeenCalled();
 	});
 
 	it('offers nothing when no act line is selected, without querying', async () => {
@@ -58,12 +72,12 @@ describe('context availability', () => {
 		await refreshAvailableContexts('line-f', true, true);
 		await refreshAvailableContexts('line-f', false, false);
 		expect(mockGetActByActLineId).toHaveBeenCalledTimes(1);
-		expect(getAvailableContexts()).toEqual(['storySoFar']);
+		expect(getAvailableContexts()).toEqual(['storySoFar', 'characterProfiles']);
 	});
 
 	it('treats a missing act row as not continued rather than throwing', async () => {
 		mockGetActByActLineId.mockResolvedValue(null);
 		await refreshAvailableContexts('line-g', false, false);
-		expect(getAvailableContexts()).toEqual([]);
+		expect(getAvailableContexts()).toEqual(['characterProfiles']);
 	});
 });
