@@ -266,9 +266,9 @@ export async function getLatestProfileByAlias(actLineId: string, nameOrAlias: st
 }
 
 /**
- * Like `getLatestProfileByAlias`, but keeps tombstone winners. Callers that write profiles
- * from generated content use this to tell "unknown name" (insert) apart from "erased identity"
- * (must not be resurrected).
+ * Like `getLatestProfileByAlias`, but keeps tombstone winners. Callers that rebuild profiles
+ * from generated content use this so a revival reuses the erased identity's canonical name and
+ * aliases instead of forking a new one.
  */
 export async function getLatestProfileByAliasIncludingRemoved(
 	actLineId: string,

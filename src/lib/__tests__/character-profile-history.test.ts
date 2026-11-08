@@ -148,7 +148,7 @@ describe('character profile history', () => {
 		expect((await getProfilesAtScene(LINE, 1)).map((p) => p.logline)).toEqual(['Alive captain']);
 	});
 
-	it('exposes the tombstone winner when callers must not resurrect an erased identity', async () => {
+	it('exposes the tombstone winner so a revival can reuse the erased identity', async () => {
 		await insertCharacterProfile(
 			makeProfile({ sceneNumber: 2, preferredName: 'Voss', aliases: ['Voss', 'Captain'], logline: 'Erased captain', removed: true })
 		);
@@ -160,6 +160,30 @@ describe('character profile history', () => {
 		expect(await getLatestProfileByAlias(LINE, 'Captain')).toBeNull();
 		expect((await getLatestProfileByAliasIncludingRemoved(LINE, 'Elena'))?.removed).toBe(false);
 		expect(await getLatestProfileByAliasIncludingRemoved(LINE, 'Unknown')).toBeNull();
+	});
+
+	it('revives an erased identity when a later active version is written under it', async () => {
+		await insertCharacterProfile(
+			makeProfile({ sceneNumber: 1, preferredName: 'Voss', aliases: ['Voss', 'Captain'], canonicalName: 'voss', createdAt: 1000 })
+		);
+		await insertCharacterProfile(
+			makeProfile({
+				sceneNumber: 2,
+				preferredName: 'Voss',
+				aliases: ['Voss', 'Captain'],
+				canonicalName: 'voss',
+				removed: true,
+				createdAt: 2000,
+			})
+		);
+		expect(await getProfilesAtScene(LINE, 2)).toEqual([]);
+
+		await insertCharacterProfile(
+			makeProfile({ sceneNumber: 5, preferredName: 'Captain', aliases: ['Captain', 'Voss'], canonicalName: 'voss', createdAt: 3000 })
+		);
+
+		expect(await getProfilesAtScene(LINE, 3)).toEqual([]);
+		expect((await getProfilesAtScene(LINE, 5)).map((p) => p.preferredName)).toEqual(['Captain']);
 	});
 
 	it('resolves a consolidated source alias to the active destination', async () => {

@@ -242,9 +242,9 @@ export async function generateCharacterProfiles(
 
 		for (const profile of profilesResult.profiles) {
 			const importance: CharacterImportance = resolveImportance(profile.importance);
+			// Compiled summaries reflect the current context, so a character still listed there is
+			// revived; the tombstoned identity supplies the canonical name and aliases to reuse.
 			const latest = await getLatestProfileByAliasIncludingRemoved(compressorInput.actLineId, profile.characterName);
-			// A human erased this identity; generated summaries mentioning them must not revive it.
-			if (latest?.removed) continue;
 			const canonicalName = latest?.canonicalName ?? toCanonicalName(profile.characterName);
 			const aliases = ensurePreferredInAliases(profile.characterName, latest?.aliases ?? []);
 			await insertCharacterProfile({
