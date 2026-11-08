@@ -173,6 +173,7 @@ const migrationStatements: string[][] = [
 		)`,
 	],
 	[`ALTER TABLE character_profiles ADD COLUMN traits TEXT`],
+	[`ALTER TABLE character_profiles ADD COLUMN removed INTEGER NOT NULL DEFAULT 0`],
 ];
 
 interface ActLineMetaMigrateRow {

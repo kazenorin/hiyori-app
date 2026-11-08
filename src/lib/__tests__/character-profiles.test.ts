@@ -175,6 +175,25 @@ describe('character-profiles DB layer', () => {
 			expect(params[11]).toBeNull();
 			expect(params[12]).toBe('Scene 5: Elena fights');
 			expect(params[13]).toBe(2);
+			expect(params[16]).toBe(0);
+		});
+
+		it('persists an explicit removed flag', async () => {
+			await insertCharacterProfile({
+				id: 'p5',
+				actLineId: 'line-1',
+				sceneNumber: 3,
+				canonicalName: 'elena',
+				preferredName: 'Elena',
+				aliases: [],
+				logline: 'A determined hero.',
+				sceneDetails: '',
+				importance: 2,
+				removed: true,
+			});
+
+			const [, params] = mockDb.execute.mock.calls[0] as [string, unknown[]];
+			expect(params[16]).toBe(1);
 		});
 
 		it('serializes traits as a normalized comma-separated string', async () => {
@@ -251,6 +270,7 @@ describe('character-profiles DB layer', () => {
 						traits: 'bold, cunning',
 						scene_details: 'details',
 						importance: 2,
+						removed: 0,
 						created_at: 1000,
 						updated_at: 2000,
 					},
@@ -274,6 +294,7 @@ describe('character-profiles DB layer', () => {
 				traits: ['bold', 'cunning'],
 				sceneDetails: 'details',
 				importance: 2,
+				removed: false,
 				createdAt: 1000,
 				updatedAt: 2000,
 			});
@@ -621,6 +642,57 @@ describe('character-profiles DB layer', () => {
 			const selectParams = (mockDb.select.mock.calls[0] as [string, unknown[]])[1];
 			expect(selectParams).toEqual(['src', 3]);
 		});
+
+		it('copies tombstones and preserves version timestamps', async () => {
+			mockDbSelectResults = [
+				[
+					{
+						id: 'p1',
+						act_line_id: 'src',
+						scene_number: 1,
+						canonical_name: 'elena',
+						preferred_name: 'Elena',
+						aliases: '[]',
+						logline: 'A hero.',
+						state: 'P',
+						goal: null,
+						relationships: null,
+						voice: null,
+						scene_details: '',
+						importance: 2,
+						removed: 0,
+						created_at: 1000,
+						updated_at: 1100,
+					},
+					{
+						id: 'p2',
+						act_line_id: 'src',
+						scene_number: 2,
+						canonical_name: 'elena',
+						preferred_name: 'Elena',
+						aliases: '[]',
+						logline: 'A hero.',
+						state: 'P',
+						goal: null,
+						relationships: null,
+						voice: null,
+						scene_details: '',
+						importance: 2,
+						removed: 1,
+						created_at: 2000,
+						updated_at: 2100,
+					},
+				],
+			];
+
+			await cloneCharacterProfiles('src', 'dest', 2);
+
+			const cloneParams = mockDb.execute.mock.calls.map((call) => (call as [string, unknown[]])[1]);
+			expect(cloneParams[0][16]).toBe(0);
+			expect(cloneParams[1][16]).toBe(1);
+			expect(cloneParams[0].slice(14, 16)).toEqual([1000, 1100]);
+			expect(cloneParams[1].slice(14, 16)).toEqual([2000, 2100]);
+		});
 	});
 
 	describe('inheritProfilesFromActLine', () => {
@@ -652,6 +724,7 @@ describe('character-profiles DB layer', () => {
 			const aliases = JSON.parse(params[5] as string);
 			expect(aliases).toContain('Shadow');
 			expect(aliases).toContain('Elena');
+			expect(params[16]).toBe(0);
 		});
 
 		it('carries traits over to the inherited baseline rows', async () => {

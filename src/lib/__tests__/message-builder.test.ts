@@ -258,6 +258,7 @@ function makeProfileEntity(overrides: Partial<CharacterProfileEntity> = {}): Cha
 		traits: [],
 		sceneDetails: '',
 		importance: 2,
+		removed: false,
 		createdAt: 1000,
 		updatedAt: 1000,
 		...overrides,
