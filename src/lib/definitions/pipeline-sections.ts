@@ -236,6 +236,48 @@ export function parseSceneDetails(sceneDetails: string): SceneDetailEntry[] {
 }
 
 /**
+ * Collapse embedded line breaks and repeated whitespace so a scene detail always occupies one line.
+ * The serialized form is one `- <sceneNumber>: <text>` line per scene, so a detail must never
+ * introduce a line that the parser could read as a separate item or continuation.
+ */
+export function normalizeSceneDetailText(details: string): string {
+	return details.replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Serialize scene-detail entries into the canonical `- <sceneNumber>: <text>` form,
+ * ordered by descending scene number. Scene numbers are unique keys, so duplicates
+ * are rejected instead of being silently overwritten. Detail text is collapsed to a
+ * single line (see `normalizeSceneDetailText`), so serialization never emits a multi-line item.
+ */
+export function serializeSceneDetailEntries(entries: SceneDetailEntry[]): string {
+	if (!Array.isArray(entries)) {
+		throw new Error('Scene detail entries must be an array.');
+	}
+	const seen = new Set<number>();
+	for (const entry of entries) {
+		if (!entry || typeof entry !== 'object') {
+			throw new Error('Scene detail entry must be an object with a scene number and details.');
+		}
+		const { sceneNumber, details } = entry as SceneDetailEntry;
+		if (typeof sceneNumber !== 'number' || !Number.isFinite(sceneNumber) || !Number.isInteger(sceneNumber)) {
+			throw new Error(`Scene detail entry has an invalid scene number (${String(sceneNumber)}).`);
+		}
+		if (typeof details !== 'string') {
+			throw new Error(`Scene detail entry for scene ${sceneNumber} must have string details.`);
+		}
+		if (seen.has(sceneNumber)) {
+			throw new Error(`Duplicate scene number ${sceneNumber} in scene details; each scene may appear only once.`);
+		}
+		seen.add(sceneNumber);
+	}
+	return [...entries]
+		.sort((a, b) => b.sceneNumber - a.sceneNumber)
+		.map((entry) => `- ${entry.sceneNumber}: ${normalizeSceneDetailText(entry.details)}`)
+		.join('\n');
+}
+
+/**
  * Render a profile's scene details, optionally dropping entries at or before `afterScene`.
  * v2 passes the summarization point so per-scene details already folded into the Act Summary's
  * Character Summaries (scenes <= SP) are not repeated next to the latest snapshot; v1 passes
