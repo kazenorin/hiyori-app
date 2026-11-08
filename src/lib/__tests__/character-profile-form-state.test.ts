@@ -146,14 +146,14 @@ describe('scene detail validation and serialization', () => {
 		expect(buildProfileDraft(input({ sceneEntries: [{ sceneNumber: 0, details: 'a' }] })).error).toBe('sceneDetailsInvalid');
 	});
 
-	it('serializes entries in descending scene order and collapses multiline details', () => {
+	it('serializes entries in ascending scene order and collapses multiline details', () => {
 		const sceneEntries: SceneDetailEntry[] = [
 			{ sceneNumber: 1, details: 'first line\nsecond line' },
 			{ sceneNumber: 3, details: 'latest' },
 			{ sceneNumber: 2, details: 'middle' },
 		];
 		const draft = expectDraft(buildProfileDraft(input({ sceneEntries })));
-		expect(draft.sceneDetails).toBe('- 3: latest\n- 2: middle\n- 1: first line second line');
+		expect(draft.sceneDetails).toBe('- 1: first line second line\n- 2: middle\n- 3: latest');
 		expect(draft.sceneDetails.split('\n')).toHaveLength(3);
 	});
 
@@ -183,25 +183,25 @@ describe('scene detail row ranges', () => {
 	it('matches the review example: latest 10 with entries 9, 8, 7, 4, 2, 1', () => {
 		const rows = buildSceneDetailRows(entriesAt([9, 8, 7, 4, 2, 1]), 10);
 
-		expect(rows[0]).toMatchObject({ kind: 'add', range: { min: 10, max: 10 } });
-		expect(entryRow(rows, 9).range).toEqual({ min: 9, max: 9 });
-		expect(entryRow(rows, 8).range).toEqual({ min: 8, max: 8 });
-		expect(entryRow(rows, 7).range).toEqual({ min: 5, max: 7 });
-		expect(rows[4]).toMatchObject({ kind: 'add', range: { min: 5, max: 6 } });
-		expect(entryRow(rows, 4).range).toEqual({ min: 4, max: 4 });
-		expect(rows[6]).toMatchObject({ kind: 'add', range: { min: 3, max: 3 } });
+		expect(rows[0]).toMatchObject({ kind: 'entry', sceneNumber: 1, range: { min: 1, max: 1 } });
 		expect(entryRow(rows, 2).range).toEqual({ min: 2, max: 2 });
-		expect(entryRow(rows, 1).range).toEqual({ min: 1, max: 1 });
+		expect(rows[2]).toMatchObject({ kind: 'add', range: { min: 3, max: 3 } });
+		expect(entryRow(rows, 4).range).toEqual({ min: 4, max: 4 });
+		expect(rows[4]).toMatchObject({ kind: 'add', range: { min: 5, max: 6 } });
+		expect(entryRow(rows, 7).range).toEqual({ min: 5, max: 7 });
+		expect(entryRow(rows, 8).range).toEqual({ min: 8, max: 8 });
+		expect(entryRow(rows, 9).range).toEqual({ min: 9, max: 9 });
+		expect(rows[8]).toMatchObject({ kind: 'add', range: { min: 10, max: 10 } });
 		expect(rows.map((row) => (row.kind === 'entry' ? row.sceneNumber : `add:${row.range.min}-${row.range.max}`))).toEqual([
-			'add:10-10',
-			9,
-			8,
-			7,
-			'add:5-6',
-			4,
-			'add:3-3',
-			2,
 			1,
+			2,
+			'add:3-3',
+			4,
+			'add:5-6',
+			7,
+			8,
+			9,
+			'add:10-10',
 		]);
 	});
 
@@ -220,8 +220,8 @@ describe('scene detail row ranges', () => {
 		const rows = buildSceneDetailRows(entriesAt([5, 4]), 10);
 		const adds = addRows(rows).map((row) => row.range);
 		expect(adds).toEqual([
-			{ min: 6, max: 10 },
 			{ min: 1, max: 3 },
+			{ min: 6, max: 10 },
 		]);
 	});
 
@@ -237,18 +237,23 @@ describe('scene detail row ranges', () => {
 		const rows = buildSceneDetailRows(entriesAt([9, 7]), 10);
 		expect(entryRow(rows, 9).range).toEqual({ min: 9, max: 9 });
 		expect(addRows(rows).map((row) => row.range)).toEqual([
-			{ min: 10, max: 10 },
-			{ min: 8, max: 8 },
 			{ min: 1, max: 6 },
+			{ min: 8, max: 8 },
+			{ min: 10, max: 10 },
 		]);
 	});
 
 	it('shows entries above the latest scene as fixed rows without offering a gap above them', () => {
 		const rows = buildSceneDetailRows(entriesAt([12, 9]), 10);
-		expect(rows[0]).toMatchObject({ kind: 'entry', sceneNumber: 12, range: { min: 12, max: 12 } });
+		expect(rows[rows.length - 1]).toMatchObject({ kind: 'entry', sceneNumber: 12, range: { min: 12, max: 12 } });
 		expect(addRows(rows).map((row) => row.range)).toEqual([
-			{ min: 10, max: 10 },
 			{ min: 1, max: 8 },
+			{ min: 10, max: 10 },
 		]);
+	});
+
+	it('keeps future entries after the whole-range add row when no entry is within the latest scene', () => {
+		const rows = buildSceneDetailRows(entriesAt([12]), 10);
+		expect(rows.map((row) => (row.kind === 'entry' ? row.sceneNumber : `add:${row.range.min}-${row.range.max}`))).toEqual(['add:1-10', 12]);
 	});
 });

@@ -5,6 +5,7 @@
 	import { toaster } from '#lib/stores/toaster.svelte.ts';
 	import { getIsBusy, getMessages } from '#lib/ai/chat.svelte.ts';
 	import { getActiveActLineId } from '#lib/stores/stories.svelte.ts';
+	import { getSettings } from '#lib/stores/settings.svelte.ts';
 	import { getLastSceneNumber } from '#lib/db/act-lines.ts';
 	import {
 		DuplicateProfileError,
@@ -16,8 +17,11 @@
 		type ProfileDraft,
 	} from '#lib/features/character-profile-context.ts';
 	import type { CharacterProfileEntity } from '#lib/db/character-profiles.ts';
+	import Icon from '#lib/components/ui/Icon.svelte';
 	import CharacterProfileForm from './CharacterProfileForm.svelte';
+	import CharacterProfileView from './CharacterProfileView.svelte';
 	import CharacterConsolidation from './CharacterConsolidation.svelte';
+	import { findSavedProfile, shouldShowCompressionWarning } from './character-profile-panel-state.ts';
 
 	interface Props {
 		messageId: string;
@@ -40,6 +44,7 @@
 
 	let formMode = $state<'add' | 'edit' | null>(null);
 	let editingProfile = $state<CharacterProfileEntity | null>(null);
+	let viewedProfileId = $state<string | null>(null);
 	let saving = $state(false);
 	let removeTarget = $state<CharacterProfileEntity | null>(null);
 	let removing = $state(false);
@@ -53,6 +58,16 @@
 	let consolidateTrigger = $state<HTMLButtonElement | null>(null);
 
 	const isEditable = $derived(profileContext?.editable === true);
+	const viewedProfile = $derived(profileContext?.profiles.find((profile) => profile.id === viewedProfileId) ?? null);
+	const showCompressionWarning = $derived(
+		profileContext !== null &&
+			clickedSceneNumber !== undefined &&
+			shouldShowCompressionWarning(
+				clickedSceneNumber,
+				profileContext.lastCompressionScene,
+				getSettings().characterProfileCompressorInterval
+			)
+	);
 	const canMutate = $derived(isEditable && !getIsBusy() && formMode === null && removeTarget === null && !saving && !removing);
 	const canConsolidate = $derived(canMutate && profileContext !== null && profileContext.profiles.length >= 2);
 	const removeEntryDisabled = $derived(removeTarget === null || clicked === undefined || removeTarget.sceneNumber !== clicked.sceneNumber);
@@ -90,6 +105,7 @@
 			refreshError = null;
 			formMode = null;
 			editingProfile = null;
+			viewedProfileId = null;
 			removeTarget = null;
 			consolidationOpen = false;
 			actionError = null;
@@ -119,52 +135,46 @@
 		return getMessages().find((m) => m.id === messageId)?.sceneNumber === sceneNumber;
 	}
 
-	async function load(token: number, lineId: string, sceneNumber: number, options: { silent?: boolean } = {}): Promise<void> {
+	async function load(
+		token: number,
+		lineId: string,
+		sceneNumber: number,
+		options: { silent?: boolean } = {}
+	): Promise<ProfileContext | null> {
 		try {
 			const result = await loadProfileContext(lineId, sceneNumber);
-			if (!isCurrent(token, lineId, sceneNumber)) return;
+			if (!isCurrent(token, lineId, sceneNumber)) return null;
 			profileContext = result;
 			refreshError = null;
 			loading = false;
+			return result;
 		} catch (err) {
-			if (!isCurrent(token, lineId, sceneNumber)) return;
+			if (!isCurrent(token, lineId, sceneNumber)) return null;
 			loading = false;
 			// A silent refresh must keep the last context (and any open form/dialog) instead of
 			// swapping the whole panel for the error branch.
 			if (options.silent && profileContext !== null) {
 				refreshError = t('chat.context.loadFailed');
 				await log.error('character-profile', 'Failed to refresh character profiles', err);
-				return;
+				return null;
 			}
 			loadError = true;
 			await log.error('character-profile', 'Failed to load character profiles', err);
+			return null;
 		}
 	}
 
-	async function refresh(lineId: string, sceneNumber: number, options: { silent?: boolean } = {}): Promise<void> {
+	async function refresh(lineId: string, sceneNumber: number, options: { silent?: boolean } = {}): Promise<ProfileContext | null> {
 		const token = ++requestId;
 		if (!options.silent) {
 			loading = true;
 			loadError = false;
 		}
-		await load(token, lineId, sceneNumber, { silent: options.silent });
+		return load(token, lineId, sceneNumber, { silent: options.silent });
 	}
 
 	function originLabel(sceneNumber: number | null): string {
 		return sceneNumber === null ? t('chat.context.characterProfileBaseline') : t('chat.sceneLabel', { sceneNumber });
-	}
-
-	function profileFields(profile: CharacterProfileEntity): { labelKey: string; value: string }[] {
-		const aliases = profile.aliases.filter((alias) => alias !== profile.preferredName).join(', ');
-		return [
-			{ labelKey: 'chat.context.aliases', value: aliases },
-			{ labelKey: 'chat.context.state', value: profile.state?.trim() ?? '' },
-			{ labelKey: 'chat.context.goal', value: profile.goal?.trim() ?? '' },
-			{ labelKey: 'chat.context.relationships', value: profile.relationships?.trim() ?? '' },
-			{ labelKey: 'chat.context.voice', value: profile.voice?.trim() ?? '' },
-			{ labelKey: 'chat.context.traits', value: profile.traits.join(', ') },
-			{ labelKey: 'chat.context.sceneDetails', value: profile.sceneDetails.trim() },
-		];
 	}
 
 	function closeForm(): void {
@@ -182,6 +192,7 @@
 
 	function startEdit(profile: CharacterProfileEntity): void {
 		if (!canMutate) return;
+		viewedProfileId = profile.id;
 		editingProfile = profile;
 		actionError = null;
 		formMode = 'edit';
@@ -224,7 +235,10 @@
 			await saveProfile(lineId, sceneNumber, previous, draft);
 			if (!isCurrentTarget(lineId, sceneNumber)) return;
 			closeForm();
-			void refresh(lineId, sceneNumber);
+			const next = await refresh(lineId, sceneNumber);
+			if (next !== null) {
+				viewedProfileId = findSavedProfile(next.profiles, previous, draft.preferredName)?.id ?? null;
+			}
 		} catch (err) {
 			if (!isCurrentTarget(lineId, sceneNumber)) return;
 			const duplicate = err instanceof DuplicateProfileError;
@@ -249,6 +263,7 @@
 			await removeProfile(lineId, sceneNumber, target, mode);
 			if (!isCurrentTarget(lineId, sceneNumber)) return;
 			removeTarget = null;
+			viewedProfileId = null;
 			actionError = null;
 			void refresh(lineId, sceneNumber);
 		} catch (err) {
@@ -337,6 +352,8 @@
 				sceneNumber={clicked.sceneNumber}
 				saving={saving || getIsBusy()}
 				editable={profileContext.editable}
+				{showCompressionWarning}
+				lastCompressionScene={profileContext.lastCompressionScene}
 				onSave={handleSave}
 				onCancel={closeForm}
 			/>
@@ -401,6 +418,14 @@
 				onConfirm={handleConsolidate}
 				onCancel={cancelConsolidate}
 			/>
+		{:else if viewedProfile !== null}
+			<CharacterProfileView
+				profile={viewedProfile}
+				editable={canMutate}
+				onBack={() => (viewedProfileId = null)}
+				onEdit={() => startEdit(viewedProfile)}
+				onRemove={() => startRemove(viewedProfile)}
+			/>
 		{:else}
 			{#if canMutate}
 				<div class="flex flex-wrap gap-2">
@@ -418,41 +443,68 @@
 			{#if profileContext.profiles.length === 0}
 				<p class="text-sm text-surface-500">{t('chat.context.characterProfilesEmpty')}</p>
 			{:else}
-				{#each profileContext.profiles as profile (profile.id)}
-					<article class="rounded-(--radius-container) border border-surface-200-800 p-4 space-y-3">
-						<header class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-							<h3 class="text-base font-medium">{profile.preferredName}</h3>
-							<span class="text-xs text-primary-500">{t(importanceLabelKey(profile.importance))}</span>
-						</header>
-						<p class="text-xs text-surface-500">{originLabel(profile.sceneNumber)}</p>
-
-						{#if canMutate}
-							<div class="flex flex-wrap gap-2">
-								<button class="btn preset-tonal text-xs py-1 px-3" type="button" onclick={() => startEdit(profile)}>
-									{t('chat.edit')}
-								</button>
-								<button class="btn preset-tonal text-xs py-1 px-3" type="button" onclick={() => startRemove(profile)}>
-									{t('chat.remove')}
-								</button>
-							</div>
-						{/if}
-
-						{#if profile.logline.trim()}
-							<p class="text-sm leading-relaxed text-surface-800-200">{profile.logline}</p>
-						{/if}
-
-						<dl class="space-y-2 text-sm">
-							{#each profileFields(profile) as field (field.labelKey)}
-								{#if field.value.length > 0}
-									<div>
-										<dt class="text-xs text-surface-500">{t(field.labelKey)}</dt>
-										<dd class="whitespace-pre-line leading-relaxed text-surface-800-200">{field.value}</dd>
-									</div>
-								{/if}
+				<div class="overflow-x-auto">
+					<table class="w-full text-sm">
+						<thead>
+							<tr class="text-left text-xs text-surface-500">
+								<th class="pb-2 font-medium">{t('chat.context.profileNameColumn')}</th>
+								<th class="pb-2 font-medium">{t('chat.context.lastSeenColumn')}</th>
+								<th class="pb-2 font-medium">{t('chat.context.importanceColumn')}</th>
+								<th class="w-28 pb-2 text-right font-medium">{t('chat.context.actionsColumn')}</th>
+							</tr>
+						</thead>
+						<tbody>
+							{#each profileContext.profiles as profile (profile.id)}
+								<tr class="border-t border-surface-200-800">
+									<td class="py-2 pr-2">
+										<button
+											class="text-left font-medium text-primary-500 hover:underline"
+											type="button"
+											onclick={() => (viewedProfileId = profile.id)}
+										>
+											{profile.preferredName}
+										</button>
+									</td>
+									<td class="py-2 pr-2 text-surface-500">{originLabel(profile.sceneNumber)}</td>
+									<td class="py-2 pr-2">{t(importanceLabelKey(profile.importance))}</td>
+									<td class="py-2">
+										<div class="flex justify-end gap-1">
+											<button
+												class="flex h-9 w-9 items-center justify-center rounded-lg text-surface-500 transition-colors hover:bg-surface-100-900"
+												type="button"
+												aria-label={t('chat.context.viewProfile')}
+												title={t('chat.context.viewProfile')}
+												onclick={() => (viewedProfileId = profile.id)}
+											>
+												<Icon name="eye" class="h-4 w-4" />
+											</button>
+											{#if canMutate}
+												<button
+													class="flex h-9 w-9 items-center justify-center rounded-lg text-surface-500 transition-colors hover:bg-surface-100-900"
+													type="button"
+													aria-label={t('chat.edit')}
+													title={t('chat.edit')}
+													onclick={() => startEdit(profile)}
+												>
+													<Icon name="pencil" class="h-4 w-4" />
+												</button>
+												<button
+													class="flex h-9 w-9 items-center justify-center rounded-lg text-error-500 transition-colors hover:bg-surface-100-900"
+													type="button"
+													aria-label={t('chat.remove')}
+													title={t('chat.remove')}
+													onclick={() => startRemove(profile)}
+												>
+													<Icon name="trash" class="h-4 w-4" />
+												</button>
+											{/if}
+										</div>
+									</td>
+								</tr>
 							{/each}
-						</dl>
-					</article>
-				{/each}
+						</tbody>
+					</table>
+				</div>
 			{/if}
 		{/if}
 	</div>

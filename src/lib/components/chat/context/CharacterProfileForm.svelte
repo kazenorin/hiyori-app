@@ -15,11 +15,13 @@
 		sceneNumber: number;
 		saving: boolean;
 		editable: boolean;
+		showCompressionWarning: boolean;
+		lastCompressionScene: number | null;
 		onSave: (draft: ProfileDraft, previous: CharacterProfileEntity | null) => void;
 		onCancel: () => void;
 	}
 
-	let { initial, sceneNumber, saving, editable, onSave, onCancel }: Props = $props();
+	let { initial, sceneNumber, saving, editable, showCompressionWarning, lastCompressionScene, onSave, onCancel }: Props = $props();
 
 	const formId = $props.id();
 
@@ -97,8 +99,8 @@
 			bind:this={backButton}
 			class="-ml-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-surface-500 transition-colors hover:bg-surface-100-900"
 			type="button"
-			aria-label={t('chat.context.backToProfiles')}
-			title={t('chat.context.backToProfiles')}
+			aria-label={t('chat.back')}
+			title={t('chat.back')}
 			onclick={onCancel}
 		>
 			<Icon name="chevron-left" class="h-5 w-5" />
@@ -108,6 +110,16 @@
 			<p class="text-xs text-surface-500">{t('chat.sceneLabel', { sceneNumber })}</p>
 		</div>
 	</header>
+
+	{#if showCompressionWarning}
+		<div class="rounded-(--radius-container) border border-warning-500/50 bg-warning-100-900 p-3">
+			<p class="text-sm text-warning-600-400">
+				{lastCompressionScene === null
+					? t('chat.context.compressionNotRunYet')
+					: t('chat.context.compressionNotRunForScene', { scene: lastCompressionScene })}
+			</p>
+		</div>
+	{/if}
 
 	<Tabs value={tab} onValueChange={handleTabChange}>
 		<Tabs.List class="flex gap-1 border-b border-surface-200-800">

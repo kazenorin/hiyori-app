@@ -246,7 +246,7 @@ export function normalizeSceneDetailText(details: string): string {
 
 /**
  * Serialize scene-detail entries into the canonical `- <sceneNumber>: <text>` form,
- * ordered by descending scene number. Scene numbers are unique keys, so duplicates
+ * ordered by ascending scene number. Scene numbers are unique keys, so duplicates
  * are rejected instead of being silently overwritten. Detail text is collapsed to a
  * single line (see `normalizeSceneDetailText`), so serialization never emits a multi-line item.
  */
@@ -272,7 +272,7 @@ export function serializeSceneDetailEntries(entries: SceneDetailEntry[]): string
 		seen.add(sceneNumber);
 	}
 	return [...entries]
-		.sort((a, b) => b.sceneNumber - a.sceneNumber)
+		.sort((a, b) => a.sceneNumber - b.sceneNumber)
 		.map((entry) => `- ${entry.sceneNumber}: ${normalizeSceneDetailText(entry.details)}`)
 		.join('\n');
 }

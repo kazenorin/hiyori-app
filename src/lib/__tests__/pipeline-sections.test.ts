@@ -267,7 +267,7 @@ describe('parseSceneDetails', () => {
 });
 
 describe('serializeSceneDetailEntries', () => {
-	it('sorts by descending scene number and collapses multiline details to one line', () => {
+	it('sorts by ascending scene number and collapses multiline details to one line', () => {
 		// Why: one line per scene is the storage contract; a detail must never add lines that the
 		// parser would read as new items or continuation lines.
 		expect(
@@ -275,7 +275,7 @@ describe('serializeSceneDetailEntries', () => {
 				{ sceneNumber: 2, details: 'first\nsecond' },
 				{ sceneNumber: 10, details: 'tenth' },
 			])
-		).toBe('- 10: tenth\n- 2: first second');
+		).toBe('- 2: first second\n- 10: tenth');
 	});
 
 	it('trims and collapses repeated whitespace in details', () => {
@@ -287,7 +287,7 @@ describe('serializeSceneDetailEntries', () => {
 			{ sceneNumber: 3, details: 'a\n\nb' },
 			{ sceneNumber: 1, details: 'c\r\nd' },
 		]);
-		expect(serialized.split('\n')).toEqual(['- 3: a b', '- 1: c d']);
+		expect(serialized.split('\n')).toEqual(['- 1: c d', '- 3: a b']);
 	});
 
 	it('returns an empty string for an empty list', () => {
@@ -315,8 +315,8 @@ describe('serializeSceneDetailEntries', () => {
 			{ sceneNumber: 1, details: 'single' },
 		];
 		expect(parseSceneDetails(serializeSceneDetailEntries(entries))).toEqual([
-			{ sceneNumber: 3, details: 'line one line two' },
 			{ sceneNumber: 1, details: 'single' },
+			{ sceneNumber: 3, details: 'line one line two' },
 		]);
 	});
 });

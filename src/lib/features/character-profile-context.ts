@@ -11,7 +11,7 @@ import {
 	type CharacterImportance,
 	type CharacterProfileEntity,
 } from '#lib/db/character-profiles.ts';
-import { getLastSceneNumber } from '#lib/db/act-lines.ts';
+import { getLastCompressionScene, getLastSceneNumber } from '#lib/db/act-lines.ts';
 import { parseSceneDetails, serializeSceneDetailEntries, type SceneDetailEntry } from '#lib/definitions/pipeline-sections.ts';
 
 export type ProfileDraft = Omit<
@@ -22,6 +22,7 @@ export type ProfileDraft = Omit<
 export interface ProfileContext {
 	profiles: CharacterProfileEntity[];
 	editable: boolean;
+	lastCompressionScene: number | null;
 }
 
 /** Add rejected because the name or canonical form already belongs to an active profile. */
@@ -232,8 +233,12 @@ async function resolveAddedCanonicalName(actLineId: string, draft: ProfileDraft)
 export async function loadProfileContext(actLineId: string, sceneNumber: number): Promise<ProfileContext> {
 	assertActLineId(actLineId);
 	assertSceneNumber(sceneNumber);
-	const [profiles, lastSceneNumber] = await Promise.all([getProfilesAtScene(actLineId, sceneNumber), getLastSceneNumber(actLineId)]);
-	return { profiles, editable: lastSceneNumber === sceneNumber };
+	const [profiles, lastSceneNumber, lastCompressionScene] = await Promise.all([
+		getProfilesAtScene(actLineId, sceneNumber),
+		getLastSceneNumber(actLineId),
+		getLastCompressionScene(actLineId),
+	]);
+	return { profiles, editable: lastSceneNumber === sceneNumber, lastCompressionScene };
 }
 
 export async function saveProfile(

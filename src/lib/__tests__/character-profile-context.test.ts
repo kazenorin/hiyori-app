@@ -74,6 +74,21 @@ async function rawRow(id: string): Promise<Record<string, unknown> | null> {
 	return rows[0] ?? null;
 }
 
+async function seedCompression(actLineId: string, sceneNumber: number): Promise<void> {
+	await testDb.execute(
+		`INSERT INTO act_line_events (id, act_line_id, message_sequence, event, value, created_at)
+		 VALUES ($1, $2, $3, $4, $5, $6)`,
+		[
+			`compression-${actLineId}-${sceneNumber}`,
+			actLineId,
+			sceneNumber,
+			'character-profiles-compressed',
+			String(sceneNumber),
+			2000 + sceneNumber,
+		]
+	);
+}
+
 async function rawCount(): Promise<number> {
 	const rows = await testDb.select<{ total: number }[]>('SELECT COUNT(*) AS total FROM character_profiles');
 	return rows[0].total;
@@ -146,7 +161,22 @@ describe('character profile context operations', () => {
 		});
 
 		it('is not editable when the act line has no scenes', async () => {
-			expect(await loadProfileContext('empty-line', 1)).toEqual({ profiles: [], editable: false });
+			expect(await loadProfileContext('empty-line', 1)).toEqual({ profiles: [], editable: false, lastCompressionScene: null });
+		});
+
+		it('includes the latest character-profile compression scene', async () => {
+			await seedScene(LINE, 1);
+			await seedScene(LINE, 2);
+			await seedCompression(LINE, 1);
+			await seedCompression(LINE, 2);
+
+			expect((await loadProfileContext(LINE, 2)).lastCompressionScene).toBe(2);
+		});
+
+		it('reports no compression point when the compressor has never run', async () => {
+			await seedScene(LINE, 1);
+
+			expect((await loadProfileContext(LINE, 1)).lastCompressionScene).toBeNull();
 		});
 	});
 
@@ -582,7 +612,7 @@ describe('character profile context operations', () => {
 
 			const draft = mergeProfileContent(destination, [source]);
 
-			expect(draft.sceneDetails).toBe('- 5: source five\n- 3: source three\n- 1: dest one');
+			expect(draft.sceneDetails).toBe('- 1: dest one\n- 3: source three\n- 5: source five');
 		});
 
 		it('resolves scene-detail conflicts among non-base profiles by rank order', () => {
@@ -592,7 +622,7 @@ describe('character profile context operations', () => {
 
 			const draft = mergeProfileContent(destination, [sourceA, sourceB]);
 
-			expect(draft.sceneDetails).toBe('- 7: b seven\n- 6: a six\n- 4: dest four\n- 3: a three');
+			expect(draft.sceneDetails).toBe('- 3: a three\n- 4: dest four\n- 6: a six\n- 7: b seven');
 		});
 
 		it('lets a baseline candidate fill a missing scene after numbered candidates', () => {
@@ -605,17 +635,17 @@ describe('character profile context operations', () => {
 
 			const draft = mergeProfileContent(destination, [source]);
 
-			expect(draft.sceneDetails).toBe('- 4: source four\n- 3: source three\n- 1: baseline one');
+			expect(draft.sceneDetails).toBe('- 1: baseline one\n- 3: source three\n- 4: source four');
 		});
 
-		it('collapses multiline scene details to one line and sorts by descending scene number', () => {
+		it('collapses multiline scene details to one line and sorts by ascending scene number', () => {
 			// Why: consolidation re-serializes entries, and the storage contract is one line per scene.
 			const destination = entity({ id: 'dest', sceneNumber: 1, sceneDetails: '' });
 			const source = entity({ id: 'src', sceneNumber: 2, sceneDetails: '- 2: first line\nsecond line\n- 9: nine' });
 
 			const draft = mergeProfileContent(destination, [source]);
 
-			expect(draft.sceneDetails).toBe('- 9: nine\n- 2: first line second line');
+			expect(draft.sceneDetails).toBe('- 2: first line second line\n- 9: nine');
 		});
 	});
 
@@ -722,7 +752,7 @@ describe('character profile context operations', () => {
 			expect(written.state).toBe('Source state');
 			expect(written.traits).toEqual(['bold']);
 			expect(written.aliases).toEqual(['Elena', 'Voss', 'Captain', 'Mira']);
-			expect(written.sceneDetails).toBe('- 3: third\n- 1: first');
+			expect(written.sceneDetails).toBe('- 1: first\n- 3: third');
 
 			const destinationRow = await rawRow('dest');
 			expect(destinationRow?.scene_number).toBe(2);

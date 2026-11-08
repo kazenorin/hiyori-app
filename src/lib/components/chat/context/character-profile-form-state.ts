@@ -67,25 +67,21 @@ export type SceneDetailRow =
 	{ kind: 'entry'; index: number; sceneNumber: number; range: SceneDetailRange } | { kind: 'add'; key: string; range: SceneDetailRange };
 
 /**
- * Build the table rows for a profile's scene details. Scene numbers are normally fixed; a row
- * becomes editable only when the gap below it has at least two free scenes, in which case it may
- * shift down inside that gap. Each free gap also gets an add row covering exactly its missing
- * scenes. Rows above the latest scene stay visible but fixed.
+ * Build the table rows for a profile's scene details in ascending scene order. Scene numbers are
+ * normally fixed; a row becomes editable only when the gap below it has at least two free scenes,
+ * in which case it may shift down inside that gap. Each free gap also gets an add row covering
+ * exactly its missing scenes, emitted before the entry above it. Rows above the latest scene stay
+ * visible but fixed.
  */
 export function buildSceneDetailRows(entries: SceneDetailEntry[], latestScene: number): SceneDetailRow[] {
 	const valid = entries
 		.map((entry, index) => ({ entry, index }))
 		.filter(({ entry }) => isValidSceneNumber(entry.sceneNumber))
-		.sort((a, b) => b.entry.sceneNumber - a.entry.sceneNumber || a.index - b.index);
+		.sort((a, b) => a.entry.sceneNumber - b.entry.sceneNumber || a.index - b.index);
 
 	const future = valid.filter(({ entry }) => entry.sceneNumber > latestScene);
 	const within = valid.filter(({ entry }) => entry.sceneNumber <= latestScene);
-	const rows: SceneDetailRow[] = future.map(({ entry, index }) => ({
-		kind: 'entry',
-		index,
-		sceneNumber: entry.sceneNumber,
-		range: { min: entry.sceneNumber, max: entry.sceneNumber },
-	}));
+	const rows: SceneDetailRow[] = [];
 
 	const addRow = (min: number, max: number): void => {
 		if (min <= max) rows.push({ kind: 'add', key: `${min}:${max}`, range: { min, max } });
@@ -93,23 +89,31 @@ export function buildSceneDetailRows(entries: SceneDetailEntry[], latestScene: n
 
 	if (within.length === 0) {
 		addRow(1, latestScene);
-		return rows;
+	} else {
+		let lower = 0;
+		for (const { entry, index } of within) {
+			const scene = entry.sceneNumber;
+			const gapMin = lower + 1;
+			addRow(gapMin, scene - 1);
+			rows.push({
+				kind: 'entry',
+				index,
+				sceneNumber: scene,
+				range: scene - gapMin >= 2 ? { min: gapMin, max: scene } : { min: scene, max: scene },
+			});
+			lower = scene;
+		}
+		addRow(lower + 1, latestScene);
 	}
 
-	addRow(within[0].entry.sceneNumber + 1, latestScene);
-
-	within.forEach(({ entry, index }, position) => {
-		const scene = entry.sceneNumber;
-		const lower = within[position + 1]?.entry.sceneNumber ?? 0;
-		const gapMin = lower + 1;
+	for (const { entry, index } of future) {
 		rows.push({
 			kind: 'entry',
 			index,
-			sceneNumber: scene,
-			range: scene - gapMin >= 2 ? { min: gapMin, max: scene } : { min: scene, max: scene },
+			sceneNumber: entry.sceneNumber,
+			range: { min: entry.sceneNumber, max: entry.sceneNumber },
 		});
-		addRow(gapMin, scene - 1);
-	});
+	}
 
 	return rows;
 }
