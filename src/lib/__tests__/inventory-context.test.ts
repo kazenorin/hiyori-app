@@ -37,9 +37,9 @@ async function seedScene(sceneNumber: number): Promise<void> {
 	await testDb.execute('INSERT INTO act_lines (act_line_id, message_id, sequence) VALUES ($1, $2, $3)', [LINE, messageId, sceneNumber]);
 }
 
-async function seedRow(overrides: Partial<InventoryRow> & { id: string }): Promise<void> {
+async function seedRow({ id, ...overrides }: Omit<Partial<InventoryRow>, 'id'> & { id: string }): Promise<void> {
 	const row: InventoryRow = {
-		id: overrides.id,
+		id,
 		story_id: STORY,
 		act_line_id: LINE,
 		message_id: `msg-${overrides.scene_number ?? 'baseline'}`,
