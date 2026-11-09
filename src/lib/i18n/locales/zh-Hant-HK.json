@@ -443,7 +443,7 @@
 				"deleteEntryHint": "只刪除目前場景的記錄。",
 				"deleteEntryUnavailable": "這筆記錄屬於{{origin}}；只能刪除所選場景的記錄。",
 				"eraseHistory": "清除物品記錄",
-				"eraseHistoryHint": "刪除此幕線中該物品的所有記錄。",
+				"eraseHistoryHint": "刪除此故事線中該物品的所有記錄。",
 				"categories": {
 					"item": "物品",
 					"equipment": "裝備",
