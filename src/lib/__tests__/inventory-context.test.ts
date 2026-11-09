@@ -10,7 +10,16 @@ vi.mock('#lib/db/database.ts', () => ({
 }));
 
 import type { InventoryRow } from '#lib/db/inventory.ts';
-import { inventoryCharacterNames, loadInventoryContext, type InventoryCharacter } from '#lib/features/inventory-context.ts';
+import {
+	DuplicateInventoryItemError,
+	addInventoryEntry,
+	inventoryCharacterNames,
+	loadInventoryContext,
+	removeInventoryEntry,
+	updateInventoryEntry,
+	type InventoryCharacter,
+	type InventoryEntryDraft,
+} from '#lib/features/inventory-context.ts';
 
 const LINE = 'line-1';
 const STORY = 'story-1';
@@ -142,5 +151,188 @@ describe('inventory context — load', () => {
 		expect(context.items).toHaveLength(0);
 		expect(context.inactiveItems[0].entries).toHaveLength(1);
 		expect(context.inactiveItems[0].entries[0].eventType).toBe('consumed');
+	});
+});
+
+async function rawRows(): Promise<InventoryRow[]> {
+	return testDb.select<InventoryRow[]>('SELECT * FROM inventory ORDER BY rowid ASC');
+}
+
+function draft(overrides: Partial<InventoryEntryDraft> = {}): InventoryEntryDraft {
+	return {
+		itemName: 'Iron Sword',
+		eventType: 'acquired',
+		category: 'equipment',
+		description: null,
+		...overrides,
+	};
+}
+
+describe('inventory context — mutations', () => {
+	beforeEach(async () => {
+		testDb = createTestDatabase();
+		await runMigrations();
+	});
+
+	afterEach(() => {
+		testDb.close();
+	});
+
+	it('adds a new item under the canonical name at the latest scene', async () => {
+		await seedScene(1);
+		await seedScene(2);
+
+		await addInventoryEntry(STORY, LINE, 'msg-2', 2, CHARACTER, draft({ itemName: '  Cloak  ' }), 'item');
+
+		const rows = await rawRows();
+		expect(rows).toHaveLength(1);
+		expect(rows[0].item_name).toBe('Cloak');
+		expect(rows[0].character_canonical_name).toBe('elena');
+		expect(rows[0].message_id).toBe('msg-2');
+		expect(rows[0].scene_number).toBe(2);
+		expect(rows[0].equip_status).toBe('carried');
+	});
+
+	it('rejects add when the selected scene is not the latest', async () => {
+		await seedScene(1);
+		await seedScene(2);
+
+		await expect(addInventoryEntry(STORY, LINE, 'msg-1', 1, CHARACTER, draft(), 'item')).rejects.toThrow(/latest scene/);
+	});
+
+	it('trims Add item input, rejects duplicates, and preserves exact names for entries', async () => {
+		await seedScene(1);
+		await seedRow({ id: 'plain', scene_number: 1, item_name: 'Sword' });
+		await seedRow({ id: 'spaced', scene_number: 1, item_name: 'Sword ', category: 'equipment', equip_status: 'carried' });
+
+		await expect(addInventoryEntry(STORY, LINE, 'msg-1', 1, CHARACTER, draft({ itemName: '  Sword  ' }), 'item')).rejects.toBeInstanceOf(
+			DuplicateInventoryItemError
+		);
+
+		await addInventoryEntry(STORY, LINE, 'msg-1', 1, CHARACTER, draft({ itemName: '  Cloak  ' }), 'item');
+		await addInventoryEntry(
+			STORY,
+			LINE,
+			'msg-1',
+			1,
+			CHARACTER,
+			draft({ itemName: 'Sword ', eventType: 'modified', category: undefined, description: 'Exact spaced name' }),
+			'entry',
+			'elena'
+		);
+
+		const rows = await rawRows();
+		expect(rows.map((row) => row.item_name)).toEqual(['Sword', 'Sword ', 'Cloak', 'Sword ']);
+		expect(rows[3].description).toBe('Exact spaced name');
+		expect(rows[3].category).toBe('equipment');
+	});
+
+	it('adds an entry to an alias-owned item, inheriting category and status under the owner name', async () => {
+		await seedScene(1);
+		await seedScene(2);
+		await seedRow({
+			id: 'alias-row',
+			scene_number: 1,
+			character_canonical_name: 'elena-the-brave',
+			category: 'equipment',
+			equip_status: 'equipped',
+		});
+
+		await addInventoryEntry(
+			STORY,
+			LINE,
+			'msg-2',
+			2,
+			CHARACTER,
+			draft({ eventType: 'modified', category: undefined, description: 'Reforged' }),
+			'entry',
+			'elena-the-brave'
+		);
+
+		const rows = await rawRows();
+		expect(rows[1].character_canonical_name).toBe('elena-the-brave');
+		expect(rows[1].category).toBe('equipment');
+		expect(rows[1].equip_status).toBe('equipped');
+
+		const context = await loadInventoryContext(LINE, CHARACTER, 2);
+		expect(context.items).toHaveLength(1);
+		expect(context.items[0].entries.map((entry) => entry.id)).toHaveLength(2);
+	});
+
+	it('clears the category with null and rejects undefined for acquired on Add entry', async () => {
+		await seedScene(1);
+		await seedRow({ id: 'base', scene_number: 1, category: 'equipment' });
+
+		await addInventoryEntry(STORY, LINE, 'msg-1', 1, CHARACTER, draft({ eventType: 'modified', category: null }), 'entry', 'elena');
+		expect((await rawRows())[1].category).toBeNull();
+
+		await addInventoryEntry(STORY, LINE, 'msg-1', 1, CHARACTER, draft({ eventType: 'acquired', category: null }), 'entry', 'elena');
+		expect((await rawRows())[2].category).toBeNull();
+
+		await expect(
+			addInventoryEntry(STORY, LINE, 'msg-1', 1, CHARACTER, draft({ eventType: 'acquired', category: undefined }), 'entry', 'elena')
+		).rejects.toThrow(/explicit category/);
+	});
+
+	it('updates the current-scene entry and resolves implied status', async () => {
+		await seedScene(1);
+		await seedScene(2);
+		await seedRow({ id: 'row-1', scene_number: 2, event_type: 'acquired', category: 'equipment', equip_status: 'carried' });
+		const [entry] = (await loadInventoryContext(LINE, CHARACTER, 2)).items[0].entries;
+
+		await updateInventoryEntry(LINE, 2, entry, draft({ eventType: 'equipped', category: 'item', description: '  Drawn  ' }));
+
+		const [row] = await rawRows();
+		expect(row.event_type).toBe('equipped');
+		expect(row.equip_status).toBe('equipped');
+		expect(row.category).toBe('item');
+		expect(row.description).toBe('Drawn');
+		expect(row.item_name).toBe('Iron Sword');
+	});
+
+	it('rejects updating an entry from an earlier scene and stale rows', async () => {
+		await seedScene(1);
+		await seedScene(2);
+		await seedRow({ id: 'old', scene_number: 1 });
+		await seedRow({ id: 'new', scene_number: 2 });
+		const context = await loadInventoryContext(LINE, CHARACTER, 2);
+		const oldEntry = context.items[0].entries[0];
+
+		await expect(updateInventoryEntry(LINE, 2, oldEntry, draft())).rejects.toThrow(/selected scene/);
+		await expect(updateInventoryEntry(LINE, 2, { ...oldEntry, id: 'missing', sceneNumber: 2 }, draft())).rejects.toThrow(/stale/);
+	});
+
+	it('deletes only a current-scene entry', async () => {
+		await seedScene(1);
+		await seedScene(2);
+		await seedRow({ id: 'old', scene_number: 1 });
+		await seedRow({ id: 'new', scene_number: 2 });
+		const [oldEntry, newEntry] = (await loadInventoryContext(LINE, CHARACTER, 2)).items[0].entries;
+
+		await expect(removeInventoryEntry(LINE, 2, CHARACTER, oldEntry, 'entry')).rejects.toThrow(/selected scene/);
+		await removeInventoryEntry(LINE, 2, CHARACTER, newEntry, 'entry');
+
+		expect((await rawRows()).map((row) => row.id)).toEqual(['old']);
+	});
+
+	it('erases the full history across alias-owned rows', async () => {
+		await seedScene(1);
+		await seedRow({ id: 'a', scene_number: 1, character_canonical_name: 'elena' });
+		await seedRow({ id: 'b', scene_number: null, character_canonical_name: 'elena-the-brave' });
+		const [entry] = (await loadInventoryContext(LINE, CHARACTER, 1)).items[0].entries;
+
+		await removeInventoryEntry(LINE, 1, CHARACTER, entry, 'history');
+
+		expect(await rawRows()).toHaveLength(0);
+	});
+
+	it('requires the latest scene for history erasure', async () => {
+		await seedScene(1);
+		await seedScene(2);
+		await seedRow({ id: 'old', scene_number: 1 });
+		await seedRow({ id: 'new', scene_number: 2 });
+		const [entry] = (await loadInventoryContext(LINE, CHARACTER, 2)).items[0].entries;
+
+		await expect(removeInventoryEntry(LINE, 1, CHARACTER, entry, 'history')).rejects.toThrow(/latest scene/);
 	});
 });
