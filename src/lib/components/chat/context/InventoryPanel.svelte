@@ -136,36 +136,39 @@
 			return;
 		}
 		if (targetChanged) loading = true;
-		void load(token, lineId, sceneNumber, { silent: !targetChanged });
+		void load(token, lineId, sceneNumber, currentMessageId, currentCharacterKey, { silent: !targetChanged });
 	});
 
-	function isCurrentTarget(lineId: string, targetMessageId: string, sceneNumber: number): boolean {
+	function isCurrentTarget(lineId: string, targetMessageId: string, sceneNumber: number, targetCharacterKey: string): boolean {
 		if (disposed) return false;
 		if (getActiveActLineId() !== lineId) return false;
 		if (targetMessageId !== messageId) return false;
+		if (targetCharacterKey !== characterKey) return false;
 		return getMessages().find((message) => message.id === messageId)?.sceneNumber === sceneNumber;
 	}
 
-	function isCurrent(token: number, lineId: string, sceneNumber: number): boolean {
+	function isCurrent(token: number, lineId: string, sceneNumber: number, targetMessageId: string, targetCharacterKey: string): boolean {
 		if (disposed || token !== requestId) return false;
-		return isCurrentTarget(lineId, messageId, sceneNumber);
+		return isCurrentTarget(lineId, targetMessageId, sceneNumber, targetCharacterKey);
 	}
 
 	async function load(
 		token: number,
 		lineId: string,
 		sceneNumber: number,
+		targetMessageId: string,
+		targetCharacterKey: string,
 		options: { silent?: boolean } = {}
 	): Promise<InventoryContext | null> {
 		try {
 			const result = await loadInventoryContext(lineId, characterRef(), sceneNumber);
-			if (!isCurrent(token, lineId, sceneNumber)) return null;
+			if (!isCurrent(token, lineId, sceneNumber, targetMessageId, targetCharacterKey)) return null;
 			inventoryContext = result;
 			refreshError = null;
 			loading = false;
 			return result;
 		} catch (err) {
-			if (!isCurrent(token, lineId, sceneNumber)) return null;
+			if (!isCurrent(token, lineId, sceneNumber, targetMessageId, targetCharacterKey)) return null;
 			loading = false;
 			if (options.silent && inventoryContext !== null) {
 				refreshError = t('chat.context.loadFailed');
@@ -180,16 +183,23 @@
 
 	async function refresh(lineId: string, sceneNumber: number, options: { silent?: boolean } = {}): Promise<InventoryContext | null> {
 		const token = ++requestId;
+		const targetMessageId = messageId;
+		const targetCharacterKey = characterKey;
 		if (!options.silent) {
 			loading = true;
 			loadError = false;
 		}
-		return load(token, lineId, sceneNumber, { silent: options.silent });
+		return load(token, lineId, sceneNumber, targetMessageId, targetCharacterKey, { silent: options.silent });
 	}
 
-	async function ensureLatestScene(lineId: string, sceneNumber: number): Promise<boolean> {
+	async function ensureLatestScene(
+		lineId: string,
+		sceneNumber: number,
+		targetMessageId: string,
+		targetCharacterKey: string
+	): Promise<boolean> {
 		const lastSceneNumber = await getLastSceneNumber(lineId);
-		if (!isCurrentTarget(lineId, messageId, sceneNumber)) return false;
+		if (!isCurrentTarget(lineId, targetMessageId, sceneNumber, targetCharacterKey)) return false;
 		if (lastSceneNumber === sceneNumber) return true;
 		actionError = t('chat.context.inventory.readOnly');
 		void refresh(lineId, sceneNumber, { silent: true });
@@ -270,25 +280,27 @@
 		const mode = formMode;
 		const item = formItem;
 		const entry = formEntry;
+		const targetMessageId = messageId;
+		const targetCharacterKey = characterKey;
 		if (saving || getIsBusy() || lineId === null || sceneNumber === undefined || mode === null || storyId === null) return;
 		saving = true;
 		try {
-			if (!(await ensureLatestScene(lineId, sceneNumber))) return;
+			if (!(await ensureLatestScene(lineId, sceneNumber, targetMessageId, targetCharacterKey))) return;
 			if (mode === 'addItem') {
-				await addInventoryEntry(storyId, lineId, messageId, sceneNumber, characterRef(), entryDraft, 'item');
+				await addInventoryEntry(storyId, lineId, targetMessageId, sceneNumber, characterRef(), entryDraft, 'item');
 			} else if (mode === 'addEntry') {
 				if (item === null) return;
-				await addInventoryEntry(storyId, lineId, messageId, sceneNumber, characterRef(), entryDraft, 'entry', item.ownerName);
+				await addInventoryEntry(storyId, lineId, targetMessageId, sceneNumber, characterRef(), entryDraft, 'entry', item.ownerName);
 			} else {
 				if (entry === null) return;
 				await updateInventoryEntry(lineId, sceneNumber, entry, entryDraft);
 			}
-			if (!isCurrentTarget(lineId, messageId, sceneNumber)) return;
+			if (!isCurrentTarget(lineId, targetMessageId, sceneNumber, targetCharacterKey)) return;
 			closeForm();
 			const next = await refresh(lineId, sceneNumber);
 			if (next !== null && mode !== 'addItem' && item !== null) viewedItemName = item.itemName;
 		} catch (err) {
-			if (!isCurrentTarget(lineId, messageId, sceneNumber)) return;
+			if (!isCurrentTarget(lineId, targetMessageId, sceneNumber, targetCharacterKey)) return;
 			const duplicate = err instanceof DuplicateInventoryItemError;
 			const message = t(duplicate ? 'chat.context.inventory.duplicateItem' : 'chat.context.saveFailed');
 			actionError = message;
@@ -303,22 +315,24 @@
 		const target = removeTarget;
 		const lineId = actLineId;
 		const sceneNumber = clickedSceneNumber;
+		const targetMessageId = messageId;
+		const targetCharacterKey = characterKey;
 		if (removing || getIsBusy() || target === null || lineId === null || sceneNumber === undefined) return;
 		const entry = mode === 'entry' ? target.entry : (target.entry ?? target.item.entries[target.item.entries.length - 1]);
 		if (entry === null) return;
 		if (mode === 'entry' && target.entry?.sceneNumber !== sceneNumber) return;
 		removing = true;
 		try {
-			if (!(await ensureLatestScene(lineId, sceneNumber))) return;
+			if (!(await ensureLatestScene(lineId, sceneNumber, targetMessageId, targetCharacterKey))) return;
 			await removeInventoryEntry(lineId, sceneNumber, characterRef(), entry, mode);
-			if (!isCurrentTarget(lineId, messageId, sceneNumber)) return;
+			if (!isCurrentTarget(lineId, targetMessageId, sceneNumber, targetCharacterKey)) return;
 			removeTarget = null;
 			if (mode === 'history') viewedItemName = null;
 			actionError = null;
 			void refresh(lineId, sceneNumber);
 			await restoreRemoveFocus();
 		} catch (err) {
-			if (!isCurrentTarget(lineId, messageId, sceneNumber)) return;
+			if (!isCurrentTarget(lineId, targetMessageId, sceneNumber, targetCharacterKey)) return;
 			actionError = t('chat.context.removeFailed');
 			toaster.error({ title: t('chat.context.removeFailed') });
 			await log.error('inventory', 'Failed to remove inventory entry', err);
@@ -448,7 +462,7 @@
 						<button
 							class="btn preset-tonal text-sm py-1.5 px-4"
 							type="button"
-							disabled={removeEntryDisabled || removing || getIsBusy()}
+							disabled={!inventoryContext.editable || removeEntryDisabled || removing || getIsBusy()}
 							onclick={() => void handleRemove('entry')}
 						>
 							{t('chat.context.inventory.deleteEntry')}
@@ -464,7 +478,7 @@
 						<button
 							class="btn preset-tonal text-sm py-1.5 px-4"
 							type="button"
-							disabled={removing || getIsBusy()}
+							disabled={!inventoryContext.editable || removing || getIsBusy()}
 							onclick={() => void handleRemove('history')}
 						>
 							{t('chat.context.inventory.eraseHistory')}
