@@ -63,7 +63,7 @@ export interface AppendInventoryEventInput {
 	characterName: string;
 	itemName: string;
 	eventType: InventoryEventType;
-	category?: InventoryCategory;
+	category?: InventoryCategory | null;
 	equipStatus?: EquipStatus;
 	description?: string;
 }
@@ -91,48 +91,52 @@ function mapRowToEvent(row: InventoryRow): InventoryEvent {
 	};
 }
 
+export function resolveEquipStatus(
+	eventType: InventoryEventType,
+	requested: EquipStatus | undefined,
+	prior: EquipStatus | undefined
+): EquipStatus {
+	switch (eventType) {
+		case 'equipped':
+			return 'equipped';
+		case 'unequipped':
+			return 'unequipped';
+		case 'lost':
+			return 'lost';
+		case 'consumed':
+			return 'consumed';
+		case 'acquired':
+			return requested ?? 'carried';
+		default:
+			return requested ?? prior ?? 'carried';
+	}
+}
+
 export async function appendInventoryEvents(
 	storyId: string,
 	actLineId: string,
 	messageId: string,
 	sceneNumber: number | null,
-	events: AppendInventoryEventInput[]
+	events: AppendInventoryEventInput[],
+	options: { priorNames?: string[] } = {}
 ): Promise<void> {
 	const db = getDatabase();
 	for (const event of events) {
 		const canonical = toCanonicalName(event.characterName);
+		const priorNames = options.priorNames && options.priorNames.length > 0 ? options.priorNames : [canonical];
 
 		let category: InventoryCategory | null = event.category ?? null;
 		let priorEquipStatus: EquipStatus | undefined;
 
 		if (event.eventType !== 'acquired') {
-			const prior = await getLatestRowForItem(actLineId, canonical, event.itemName);
+			const prior = await getLatestRowForItem(actLineId, priorNames, event.itemName);
 			if (prior) {
-				category = category ?? (prior.category as InventoryCategory | null);
+				if (event.category === undefined) category = prior.category as InventoryCategory | null;
 				priorEquipStatus = prior.equip_status as EquipStatus;
 			}
 		}
 
-		let equipStatus: EquipStatus;
-		switch (event.eventType) {
-			case 'equipped':
-				equipStatus = 'equipped';
-				break;
-			case 'unequipped':
-				equipStatus = 'unequipped';
-				break;
-			case 'lost':
-				equipStatus = 'lost';
-				break;
-			case 'consumed':
-				equipStatus = 'consumed';
-				break;
-			case 'acquired':
-				equipStatus = event.equipStatus ?? 'carried';
-				break;
-			default:
-				equipStatus = event.equipStatus ?? priorEquipStatus ?? 'carried';
-		}
+		const equipStatus = resolveEquipStatus(event.eventType, event.equipStatus, priorEquipStatus);
 
 		await db.execute(
 			`INSERT INTO inventory (id, story_id, act_line_id, message_id, scene_number, character_canonical_name, item_name, event_type, category, equip_status, description)
@@ -154,13 +158,16 @@ export async function appendInventoryEvents(
 	}
 }
 
-async function getLatestRowForItem(actLineId: string, characterCanonicalName: string, itemName: string): Promise<InventoryRow | null> {
+async function getLatestRowForItem(actLineId: string, characterCanonicalNames: string[], itemName: string): Promise<InventoryRow | null> {
 	const db = getDatabase();
+	const names = characterCanonicalNames.length > 0 ? characterCanonicalNames : [''];
+	const namePlaceholders = names.map((_, i) => `$${i + 2}`).join(',');
+	const itemPlaceholder = `$${names.length + 2}`;
 	const rows = await db.select<InventoryRow[]>(
 		`SELECT * FROM inventory
-		 WHERE act_line_id = $1 AND character_canonical_name = $2 AND item_name = $3
+		 WHERE act_line_id = $1 AND character_canonical_name IN (${namePlaceholders}) AND item_name = ${itemPlaceholder}
 		 ORDER BY COALESCE(scene_number, -1) DESC, rowid DESC LIMIT 1`,
-		[actLineId, characterCanonicalName, itemName]
+		[actLineId, ...names, itemName]
 	);
 	return rows.length > 0 ? rows[0] : null;
 }
@@ -254,4 +261,55 @@ export async function cloneInventory(fromActLineId: string, toActLineId: string)
 			]
 		);
 	}
+}
+
+export async function getInventoryRowsUpToScene(
+	actLineId: string,
+	characterCanonicalNames: string[],
+	sceneNumber: number
+): Promise<InventoryRow[]> {
+	if (characterCanonicalNames.length === 0) return [];
+	const db = getDatabase();
+	const namePlaceholders = characterCanonicalNames.map((_, i) => `$${i + 2}`).join(',');
+	const scenePlaceholder = `$${characterCanonicalNames.length + 2}`;
+	return db.select<InventoryRow[]>(
+		`SELECT * FROM inventory
+		 WHERE act_line_id = $1
+		   AND character_canonical_name IN (${namePlaceholders})
+		   AND (scene_number IS NULL OR scene_number <= ${scenePlaceholder})
+		 ORDER BY COALESCE(scene_number, -1) ASC, rowid ASC`,
+		[actLineId, ...characterCanonicalNames, sceneNumber]
+	);
+}
+
+export async function updateInventoryRow(
+	id: string,
+	actLineId: string,
+	fields: { eventType: InventoryEventType; category: InventoryCategory | null; equipStatus: EquipStatus; description: string | null }
+): Promise<number> {
+	const db = getDatabase();
+	const result = await db.execute(
+		'UPDATE inventory SET event_type = $3, category = $4, equip_status = $5, description = $6 WHERE id = $1 AND act_line_id = $2',
+		[id, actLineId, fields.eventType, fields.category, fields.equipStatus, fields.description]
+	);
+	return result.rowsAffected;
+}
+
+export async function deleteInventoryRow(id: string, actLineId: string): Promise<number> {
+	const db = getDatabase();
+	const result = await db.execute('DELETE FROM inventory WHERE id = $1 AND act_line_id = $2', [id, actLineId]);
+	return result.rowsAffected;
+}
+
+export async function deleteInventoryItemHistory(actLineId: string, characterCanonicalNames: string[], itemName: string): Promise<number> {
+	if (characterCanonicalNames.length === 0) return 0;
+	const db = getDatabase();
+	const namePlaceholders = characterCanonicalNames.map((_, i) => `$${i + 2}`).join(',');
+	const itemPlaceholder = `$${characterCanonicalNames.length + 2}`;
+	const result = await db.execute(
+		`DELETE FROM inventory
+		 WHERE act_line_id = $1 AND character_canonical_name IN (${namePlaceholders}) AND item_name = ${itemPlaceholder}`,
+		[actLineId, ...characterCanonicalNames, itemName]
+	);
+	return result.rowsAffected;
 }
