@@ -75,7 +75,12 @@ vi.mock('#lib/definitions/character-profile-labels.ts', () => ({
 	importanceLabel: () => 'Importance',
 }));
 
-import { formatCharacterProfilesSection, formatCharacterProfileAsMessage, parseSceneDetails } from '#lib/definitions/pipeline-sections.ts';
+import {
+	formatCharacterProfilesSection,
+	formatCharacterProfileAsMessage,
+	parseSceneDetails,
+	serializeSceneDetailEntries,
+} from '#lib/definitions/pipeline-sections.ts';
 import type { CharacterProfileEntity } from '#lib/db/character-profiles.ts';
 
 function makeProfile(overrides: Partial<CharacterProfileEntity> = {}): CharacterProfileEntity {
@@ -94,6 +99,7 @@ function makeProfile(overrides: Partial<CharacterProfileEntity> = {}): Character
 		traits: [],
 		sceneDetails: '',
 		importance: 2,
+		removed: false,
 		createdAt: 1000,
 		updatedAt: 1000,
 		...overrides,
@@ -256,6 +262,61 @@ describe('parseSceneDetails', () => {
 		expect(parseSceneDetails('- 1: line one\nline two\n- 2: other')).toEqual([
 			{ sceneNumber: 1, details: 'line one\nline two' },
 			{ sceneNumber: 2, details: 'other' },
+		]);
+	});
+});
+
+describe('serializeSceneDetailEntries', () => {
+	it('sorts by ascending scene number and collapses multiline details to one line', () => {
+		// Why: one line per scene is the storage contract; a detail must never add lines that the
+		// parser would read as new items or continuation lines.
+		expect(
+			serializeSceneDetailEntries([
+				{ sceneNumber: 2, details: 'first\nsecond' },
+				{ sceneNumber: 10, details: 'tenth' },
+			])
+		).toBe('- 2: first second\n- 10: tenth');
+	});
+
+	it('trims and collapses repeated whitespace in details', () => {
+		expect(serializeSceneDetailEntries([{ sceneNumber: 1, details: '  spaced \t\t out \r\n here  ' }])).toBe('- 1: spaced out here');
+	});
+
+	it('never emits a multi-line item', () => {
+		const serialized = serializeSceneDetailEntries([
+			{ sceneNumber: 3, details: 'a\n\nb' },
+			{ sceneNumber: 1, details: 'c\r\nd' },
+		]);
+		expect(serialized.split('\n')).toEqual(['- 1: c d', '- 3: a b']);
+	});
+
+	it('returns an empty string for an empty list', () => {
+		expect(serializeSceneDetailEntries([])).toBe('');
+	});
+
+	it('rejects duplicate scene numbers instead of overwriting them', () => {
+		expect(() =>
+			serializeSceneDetailEntries([
+				{ sceneNumber: 2, details: 'a' },
+				{ sceneNumber: 2, details: 'b' },
+			])
+		).toThrow(/duplicate scene number 2/i);
+	});
+
+	it('rejects non-integer or non-finite scene numbers', () => {
+		expect(() => serializeSceneDetailEntries([{ sceneNumber: 1.5, details: 'a' }])).toThrow(/invalid scene number/i);
+		expect(() => serializeSceneDetailEntries([{ sceneNumber: Number.NaN, details: 'a' }])).toThrow(/invalid scene number/i);
+		expect(() => serializeSceneDetailEntries([{ sceneNumber: Number.POSITIVE_INFINITY, details: 'a' }])).toThrow(/invalid scene number/i);
+	});
+
+	it('round-trips through parseSceneDetails with details normalized to one line', () => {
+		const entries = [
+			{ sceneNumber: 3, details: 'line one\nline two' },
+			{ sceneNumber: 1, details: 'single' },
+		];
+		expect(parseSceneDetails(serializeSceneDetailEntries(entries))).toEqual([
+			{ sceneNumber: 1, details: 'single' },
+			{ sceneNumber: 3, details: 'line one line two' },
 		]);
 	});
 });

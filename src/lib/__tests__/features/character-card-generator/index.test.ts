@@ -201,6 +201,7 @@ describe('toCharacterSummary', () => {
 			voice: null,
 			sceneDetails: '',
 			importance: 1,
+			removed: false,
 			createdAt: 0,
 			updatedAt: 0,
 		};
@@ -226,6 +227,7 @@ describe('toCharacterSummary', () => {
 			voice: null,
 			sceneDetails: '',
 			importance: 4,
+			removed: false,
 			createdAt: 0,
 			updatedAt: 0,
 		};

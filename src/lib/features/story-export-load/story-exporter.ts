@@ -150,6 +150,7 @@ export async function buildStoryExportData(storyId: string): Promise<StoryExport
 			traits: p.traits,
 			sceneDetails: p.sceneDetails,
 			importance: p.importance,
+			removed: p.removed,
 			createdAt: p.createdAt,
 			updatedAt: p.updatedAt,
 		})),

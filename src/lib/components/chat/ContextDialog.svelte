@@ -10,6 +10,7 @@
 	import { CONTEXT_ICONS, CONTEXT_LABEL_KEYS } from './context/context-registry';
 	import StorySoFarPanel from './context/StorySoFarPanel.svelte';
 	import ScenePlotPanel from './context/ScenePlotPanel.svelte';
+	import CharacterProfilesPanel from './context/CharacterProfilesPanel.svelte';
 	import {
 		closeContextDialog,
 		getContextDialogMessageId,
@@ -105,6 +106,8 @@
 								<StorySoFarPanel {actLineId} />
 							{:else if active === 'scenePlot'}
 								<ScenePlotPanel messageId={message.id} />
+							{:else if active === 'characterProfiles'}
+								<CharacterProfilesPanel messageId={message.id} />
 							{/if}
 						{/key}
 					</div>

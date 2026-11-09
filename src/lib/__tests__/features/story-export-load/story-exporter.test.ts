@@ -56,10 +56,10 @@ describe('buildStoryExportData messagePhases', () => {
 		testDb.close();
 	});
 
-	it('exports archive version 4', async () => {
+	it('exports archive version 5', async () => {
 		const data = await buildStoryExportData('story-1');
-		expect(CURRENT_ARCHIVE_VERSION).toBe(4);
-		expect(data.version).toBe(4);
+		expect(CURRENT_ARCHIVE_VERSION).toBe(5);
+		expect(data.version).toBe(5);
 	});
 
 	// WHY: traits must survive the export→import round-trip across devices.
@@ -79,6 +79,48 @@ describe('buildStoryExportData messagePhases', () => {
 
 		const data = await buildStoryExportData('story-1');
 		expect(data.characterProfiles?.[0].traits).toEqual(['bold', 'cunning']);
+	});
+
+	// WHY (archive v5): tombstones are part of the portable history. Exporting
+	// only active rows would resurrect erased characters on another device.
+	it('exports removed and the complete profile history', async () => {
+		await testDb.execute('UPDATE messages SET scene_number = 1 WHERE id = $1', ['m1']);
+		await testDb.execute('UPDATE messages SET scene_number = 2 WHERE id = $1', ['m2']);
+		await insertCharacterProfile({
+			id: 'cp-old',
+			actLineId: 'line-1',
+			sceneNumber: 1,
+			canonicalName: 'alice',
+			preferredName: 'Alice',
+			aliases: ['Alice'],
+			logline: 'first version',
+			sceneDetails: '',
+			importance: 2,
+			removed: false,
+			createdAt: 10,
+			updatedAt: 10,
+		});
+		await insertCharacterProfile({
+			id: 'cp-new',
+			actLineId: 'line-1',
+			sceneNumber: 2,
+			canonicalName: 'alice',
+			preferredName: 'Alice',
+			aliases: ['Alice'],
+			logline: 'erased version',
+			sceneDetails: '',
+			importance: 2,
+			removed: true,
+			createdAt: 20,
+			updatedAt: 20,
+		});
+
+		const data = await buildStoryExportData('story-1');
+
+		expect(data.characterProfiles).toHaveLength(2);
+		const byId = new Map(data.characterProfiles!.map((p) => [p.id, p]));
+		expect(byId.get('cp-old')?.removed).toBe(false);
+		expect(byId.get('cp-new')?.removed).toBe(true);
 	});
 
 	// WHY: the archive is the only carrier of phases across devices; wrong

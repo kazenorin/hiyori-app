@@ -29,6 +29,9 @@ export async function refreshAvailableContexts(actLineId: string | null, planner
 	const contexts: ContextKey[] = [];
 	if (continued) contexts.push('storySoFar');
 	if (actLineId !== null && (plannerEnabled || hasScenePlots)) contexts.push('scenePlot');
+	// Profiles are readable and addable at any scene, even before one exists, so the panel stays
+	// reachable with an empty collection.
+	if (actLineId !== null) contexts.push('characterProfiles');
 	available = contexts;
 }
 

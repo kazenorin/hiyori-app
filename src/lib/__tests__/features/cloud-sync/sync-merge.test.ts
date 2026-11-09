@@ -28,9 +28,10 @@ import * as acts from '#lib/db/acts.ts';
 import { createActLine, getActLine, getMessagesForLine, insertActLineEntries } from '#lib/db/act-lines.ts';
 import { insertMessage, getMessagesByIds, type Message } from '#lib/db/messages.ts';
 import { upsertMessagePhases, getPhasesForMessages } from '#lib/db/message-phases.ts';
-import { compareLineages, mergeIncomingActLine, mergeIncomingStory } from '#lib/features/cloud-sync/sync-merge.ts';
+import { compareLineages, mergeIncomingActLine, mergeIncomingStory, profileHistoriesEqual } from '#lib/features/cloud-sync/sync-merge.ts';
 import type { StoryExportData } from '#lib/features/story-export-load/archive-schema.ts';
 import { CURRENT_ARCHIVE_VERSION } from '#lib/features/story-export-load/archive-schema.ts';
+import { insertCharacterProfile, type CharacterImportance } from '#lib/db/character-profiles.ts';
 import JSZip from 'jszip';
 import { setFileSystem, fs } from '#lib/fs/file-system.ts';
 import { InMemoryFileSystem } from '#lib/fs/file-system-in-memory.ts';
@@ -1047,5 +1048,434 @@ describe('mergeIncomingStory character profile traits', () => {
 		expect(result).toBe('merged');
 		const rows = await testDb.select<{ traits: string | null }[]>('SELECT traits FROM character_profiles WHERE id = $1', ['cp-1']);
 		expect(rows[0].traits).toBeNull();
+	});
+});
+
+describe('mergeIncomingStory character profile history preservation', () => {
+	beforeEach(async () => {
+		testDb = createTestDatabase();
+		await runMigrations();
+		await stories.createStory('story-1', 'Test', 'en');
+		await acts.createAct('act-1', 'story-1', 'Act 1', 1);
+		setFileSystem(new InMemoryFileSystem());
+	});
+
+	afterEach(() => {
+		testDb.close();
+	});
+
+	type ArchiveProfile = NonNullable<StoryExportData['characterProfiles']>[number];
+	type ArchiveMessage = StoryExportData['messages'][number];
+
+	function archiveProfile(overrides: Partial<ArchiveProfile> & Pick<ArchiveProfile, 'id' | 'canonicalName'>): ArchiveProfile {
+		return {
+			actLineId: 'line-1',
+			sceneNumber: 1,
+			preferredName: overrides.canonicalName,
+			aliases: [overrides.canonicalName],
+			logline: 'logline',
+			state: null,
+			goal: null,
+			relationships: null,
+			voice: null,
+			sceneDetails: '',
+			importance: 2,
+			removed: false,
+			createdAt: 100,
+			updatedAt: 100,
+			...overrides,
+		};
+	}
+
+	function archiveMessage(id: string, sceneNumber: number): ArchiveMessage {
+		return {
+			id,
+			role: 'assistant',
+			content: `content ${id}`,
+			reasoning: null,
+			metadata: null,
+			variables: null,
+			actSummary: null,
+			scenePlot: null,
+			importantPhrases: null,
+			sceneNumber,
+			createdAt: 1000,
+		};
+	}
+
+	function makeArchive(opts: {
+		entries?: string[];
+		messages?: ArchiveMessage[];
+		profiles?: ArchiveProfile[];
+		version?: number;
+	}): StoryExportData {
+		const entries = opts.entries ?? ['m1', 'm2'];
+		const data: StoryExportData = {
+			version: opts.version ?? CURRENT_ARCHIVE_VERSION,
+			story: { id: 'story-1', name: 'Test', locale: 'en', createdAt: 1000, updatedAt: 2000 },
+			storyFolder: { storyId: 'story-1', folderName: 'Test', createdAt: 1000 },
+			acts: [
+				{ id: 'act-1', storyId: 'story-1', name: 'Act 1', actNumber: 1, continuesFromActLineId: null, createdAt: 1000, updatedAt: 2000 },
+			],
+			actLineMeta: [{ id: 'line-1', actId: 'act-1', name: 'Main', isMainLine: true, createdAt: 1000, plotMode: 'guidance' }],
+			actLineEvents: [],
+			actLineEntries: entries.map((messageId, index) => ({ actLineId: 'line-1', messageId, sequence: index + 1 })),
+			actLinePremises: [],
+			directorNotes: [],
+			messages: opts.messages ?? entries.map((id, index) => archiveMessage(id, index + 1)),
+		};
+		if (opts.profiles !== undefined) data.characterProfiles = opts.profiles;
+		return data;
+	}
+
+	async function merge(data: StoryExportData): Promise<string> {
+		const zip = new JSZip();
+		zip.file('story-data.json', JSON.stringify(data));
+		return mergeIncomingStory(await zip.generateAsync({ type: 'uint8array' }));
+	}
+
+	async function seedScenes(ids: string[]): Promise<void> {
+		await seedLine(ids);
+		for (const [index, id] of ids.entries()) {
+			await testDb.execute('UPDATE messages SET scene_number = $1 WHERE id = $2', [index + 1, id]);
+		}
+	}
+
+	async function seedProfile(overrides: Partial<ArchiveProfile> & Pick<ArchiveProfile, 'id' | 'canonicalName'>): Promise<void> {
+		const p = archiveProfile(overrides);
+		await insertCharacterProfile({
+			id: p.id,
+			actLineId: p.actLineId,
+			sceneNumber: p.sceneNumber,
+			canonicalName: p.canonicalName,
+			preferredName: p.preferredName,
+			aliases: p.aliases,
+			logline: p.logline,
+			state: p.state,
+			goal: p.goal,
+			relationships: p.relationships,
+			voice: p.voice,
+			traits: p.traits,
+			sceneDetails: p.sceneDetails,
+			importance: p.importance as CharacterImportance,
+			removed: p.removed,
+			createdAt: p.createdAt,
+			updatedAt: p.updatedAt,
+		});
+	}
+
+	async function readProfiles(lineId: string) {
+		return testDb.select<{ id: string; canonical_name: string; removed: number; logline: string }[]>(
+			'SELECT id, canonical_name, removed, logline FROM character_profiles WHERE act_line_id = $1 ORDER BY canonical_name',
+			[lineId]
+		);
+	}
+
+	async function forkLineId(): Promise<string> {
+		const rows = await testDb.select<{ id: string }[]>('SELECT id FROM act_line_meta WHERE id <> $1', ['line-1']);
+		expect(rows).toHaveLength(1);
+		return rows[0].id;
+	}
+
+	// WHY: identical message chains cannot distinguish a remote in-place edit
+	// from a local one. The local version survives on a preservation fork and
+	// the main line receives the exact incoming snapshot.
+	it('same-ID profile edit forks and applies the incoming snapshot', async () => {
+		await seedScenes(['m1', 'm2']);
+		await seedProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 2, logline: 'local edit', updatedAt: 200 });
+
+		const result = await merge(
+			makeArchive({
+				profiles: [archiveProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 2, logline: 'remote edit', updatedAt: 300 })],
+			})
+		);
+
+		expect(result).toBe('merged');
+		const forkId = await forkLineId();
+		expect((await readProfiles(forkId)).map((p) => p.logline)).toEqual(['local edit']);
+		expect((await readProfiles('line-1')).map((p) => p.logline)).toEqual(['remote edit']);
+
+		// Idempotent: the applied snapshot compares equal on the next pull.
+		expect(
+			await merge(
+				makeArchive({
+					profiles: [archiveProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 2, logline: 'remote edit', updatedAt: 300 })],
+				})
+			)
+		).toBe('up-to-date');
+		expect(await testDb.select<{ c: number }[]>('SELECT COUNT(*) AS c FROM act_line_meta')).toEqual([{ c: 2 }]);
+	});
+
+	// WHY: a tombstone flip is an edit of the profile row, not an absent row;
+	// the add-only overlay would keep the local active row forever.
+	it('tombstone update forks and transports removed=true', async () => {
+		await seedScenes(['m1', 'm2']);
+		await seedProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 2, updatedAt: 200 });
+
+		const result = await merge(
+			makeArchive({ profiles: [archiveProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 2, removed: true, updatedAt: 300 })] })
+		);
+
+		expect(result).toBe('merged');
+		const forkId = await forkLineId();
+		expect((await readProfiles(forkId)).map((p) => p.removed)).toEqual([0]);
+		expect((await readProfiles('line-1')).map((p) => p.removed)).toEqual([1]);
+
+		expect(
+			await merge(
+				makeArchive({ profiles: [archiveProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 2, removed: true, updatedAt: 300 })] })
+			)
+		).toBe('up-to-date');
+	});
+
+	// WHY: a row physically deleted remotely is indistinguishable from a local
+	// addition without a common baseline, so the fork preserves local state and
+	// the main line mirrors the explicit incoming collection.
+	it('physical profile deletion forks and keeps local rows on the fork', async () => {
+		await seedScenes(['m1', 'm2']);
+		await seedProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 1, updatedAt: 100 });
+		await seedProfile({ id: 'cp-2', canonicalName: 'bob', sceneNumber: 2, updatedAt: 100 });
+
+		const result = await merge(makeArchive({ profiles: [archiveProfile({ id: 'cp-2', canonicalName: 'bob', sceneNumber: 2 })] }));
+
+		expect(result).toBe('merged');
+		const forkId = await forkLineId();
+		expect((await readProfiles(forkId)).map((p) => p.canonical_name)).toEqual(['alice', 'bob']);
+		expect((await readProfiles('line-1')).map((p) => p.canonical_name)).toEqual(['bob']);
+
+		expect(await merge(makeArchive({ profiles: [archiveProfile({ id: 'cp-2', canonicalName: 'bob', sceneNumber: 2 })] }))).toBe(
+			'up-to-date'
+		);
+	});
+
+	// WHY (legacy omission): v1 archives carry no profile collection at all.
+	// Absence is not an empty snapshot, so it must neither fork nor delete.
+	it('legacy omission neither forks nor loses local profiles', async () => {
+		await seedScenes(['m1', 'm2']);
+		await seedProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 2, updatedAt: 200 });
+
+		expect(await merge(makeArchive({ version: 1 }))).toBe('up-to-date');
+
+		const lines = await testDb.select<{ c: number }[]>('SELECT COUNT(*) AS c FROM act_line_meta');
+		expect(lines).toEqual([{ c: 1 }]);
+		expect((await readProfiles('line-1')).map((p) => p.id)).toEqual(['cp-1']);
+	});
+
+	// WHY: equal normalized histories need no fork; the add-only overlay is a
+	// no-op, keeping repeated pulls idempotent.
+	it('equal normalized profile histories remain a no-op overlay', async () => {
+		await seedScenes(['m1', 'm2']);
+		await seedProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 2, logline: 'same', updatedAt: 200 });
+
+		expect(
+			await merge(
+				makeArchive({ profiles: [archiveProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 2, logline: 'same', updatedAt: 200 })] })
+			)
+		).toBe('up-to-date');
+		expect(await testDb.select<{ c: number }[]>('SELECT COUNT(*) AS c FROM act_line_meta')).toEqual([{ c: 1 }]);
+	});
+
+	// WHY: undefined (legacy) and [] (explicit snapshot) are different answers.
+	// An explicit empty collection with no local profiles is equal, not a fork.
+	it('explicit empty snapshot with no local profiles is a no-op', async () => {
+		await seedScenes(['m1', 'm2']);
+		expect(await merge(makeArchive({ profiles: [] }))).toBe('up-to-date');
+		expect(await testDb.select<{ c: number }[]>('SELECT COUNT(*) AS c FROM act_line_meta')).toEqual([{ c: 1 }]);
+	});
+
+	// WHY: the reverse direction of legacy omission — an explicit empty snapshot
+	// is a real remote deletion of every row. A truthiness guard on the incoming
+	// collection would treat it as omission and silently keep local history.
+	it('explicit empty snapshot forks over local profiles and applies zero rows', async () => {
+		await seedScenes(['m1', 'm2']);
+		await seedProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 2, updatedAt: 200 });
+
+		const result = await merge(makeArchive({ profiles: [] }));
+
+		expect(result).toBe('merged');
+		const forkId = await forkLineId();
+		// cloneCharacterProfiles re-keys rows, so identity is asserted by content.
+		expect((await readProfiles(forkId)).map((p) => [p.canonical_name, p.logline])).toEqual([['alice', 'logline']]);
+		expect(await readProfiles('line-1')).toHaveLength(0);
+
+		// Idempotent: both sides now hold the empty snapshot.
+		expect(await merge(makeArchive({ profiles: [] }))).toBe('up-to-date');
+	});
+
+	// WHY: a tip fork (no scene number anywhere in the prefix) still has a
+	// complete profile history. Skipping the clone there dropped it from both
+	// copies, because the yielded line's rows are deleted right after the fork.
+	it('fork keeps local tombstones when the prefix has no scene number', async () => {
+		await seedLine(['m1', 'm2']);
+		await seedProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: null, removed: true, updatedAt: 200 });
+
+		const result = await merge(makeArchive({ profiles: [] }));
+
+		expect(result).toBe('merged');
+		const forkId = await forkLineId();
+		expect((await readProfiles(forkId)).map((p) => [p.canonical_name, p.removed])).toEqual([['alice', 1]]);
+		expect(await readProfiles('line-1')).toHaveLength(0);
+	});
+
+	// WHY: remote-stale keeps the local narrative; profiles must not fork it.
+	it('remote-stale lineage ignores differing remote profiles', async () => {
+		await seedScenes(['m1', 'm2', 'm3']);
+		await seedProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 2, logline: 'local', updatedAt: 200 });
+
+		const result = await merge(
+			makeArchive({
+				entries: ['m1', 'm2'],
+				profiles: [archiveProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 2, logline: 'remote', updatedAt: 300 })],
+			})
+		);
+
+		expect(result).toBe('up-to-date');
+		expect((await getMessagesForLine('line-1')).map((m) => m.id)).toEqual(['m1', 'm2', 'm3']);
+		expect((await readProfiles('line-1')).map((p) => p.logline)).toEqual(['local']);
+	});
+
+	// WHY: divergent local-stale-style replacement paths must carry local
+	// tombstones onto the fork; the main line mirrors the incoming snapshot.
+	it('divergent lineage preserves local tombstones on the fork', async () => {
+		await seedScenes(['m1', 'm2', 'm3']);
+		await seedProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 2, removed: true, updatedAt: 200 });
+
+		const result = await merge(
+			makeArchive({
+				entries: ['m1', 'm2', 'm4'],
+				messages: [archiveMessage('m1', 1), archiveMessage('m2', 2), archiveMessage('m4', 3)],
+				profiles: [archiveProfile({ id: 'cp-2', canonicalName: 'bob', sceneNumber: 2 })],
+			})
+		);
+
+		expect(result).toBe('merged');
+		const forkId = await forkLineId();
+		expect((await readProfiles(forkId)).map((p) => [p.canonical_name, p.removed])).toEqual([['alice', 1]]);
+		expect((await readProfiles('line-1')).map((p) => [p.canonical_name, p.removed])).toEqual([['bob', 0]]);
+	});
+
+	// WHY: local-stale + local-only profile state escalates to a fork; the
+	// tombstone survives there and the imported line is the exact snapshot.
+	it('local-stale replacement preserves local tombstones on the fork', async () => {
+		await seedScenes(['m1', 'm2']);
+		await seedProfile({ id: 'cp-1', canonicalName: 'alice', sceneNumber: 2, removed: true, updatedAt: 200 });
+
+		const result = await merge(
+			makeArchive({
+				entries: ['m1', 'm2', 'm3'],
+				messages: [archiveMessage('m1', 1), archiveMessage('m2', 2), archiveMessage('m3', 3)],
+				profiles: [],
+			})
+		);
+
+		expect(result).toBe('merged');
+		const forkId = await forkLineId();
+		expect((await readProfiles(forkId)).map((p) => p.removed)).toEqual([1]);
+		expect(await readProfiles('line-1')).toHaveLength(0);
+	});
+
+	// WHY (v1–v4): missing `removed` imports as active, never as a tombstone.
+	it('legacy entries without removed import as active', async () => {
+		await seedScenes(['m1', 'm2']);
+
+		const result = await merge(
+			makeArchive({
+				version: 4,
+				profiles: [
+					{
+						id: 'cp-legacy',
+						actLineId: 'line-1',
+						sceneNumber: 2,
+						canonicalName: 'alice',
+						preferredName: 'Alice',
+						aliases: ['Alice'],
+						logline: 'legacy',
+						state: null,
+						goal: null,
+						relationships: null,
+						voice: null,
+						sceneDetails: '',
+						importance: 2,
+						createdAt: 100,
+						updatedAt: 100,
+					},
+				],
+			})
+		);
+
+		expect(result).toBe('merged');
+		expect((await readProfiles('line-1')).map((p) => p.removed)).toEqual([0]);
+	});
+
+	// WHY (cloud trust boundary): a malformed tombstone must reject the whole
+	// archive instead of being coerced into an active or erased row.
+	it('rejects malformed removed values on the cloud import boundary', async () => {
+		const data = makeArchive({
+			profiles: [{ ...archiveProfile({ id: 'cp-1', canonicalName: 'alice' }), removed: 'yes' } as unknown as ArchiveProfile],
+		});
+		await expect(merge(data)).rejects.toThrow(/Invalid cloud archive/);
+	});
+});
+
+describe('profileHistoriesEqual', () => {
+	type Profile = {
+		id: string;
+		sceneNumber: number | null;
+		canonicalName: string;
+		preferredName: string;
+		aliases: string[];
+		logline: string;
+		state: string | null;
+		traits?: string[];
+		sceneDetails: string;
+		importance: number;
+		removed?: boolean;
+		createdAt: number;
+		updatedAt: number;
+	};
+
+	function p(overrides: Partial<Profile> = {}): Profile {
+		return {
+			id: 'cp-1',
+			sceneNumber: 1,
+			canonicalName: 'alice',
+			preferredName: 'Alice',
+			aliases: ['Alice', 'Al'],
+			logline: 'hero',
+			state: null,
+			sceneDetails: '',
+			importance: 2,
+			createdAt: 10,
+			updatedAt: 20,
+			...overrides,
+		};
+	}
+
+	// WHY: ID/timestamp equality is insufficient — these are the fields the
+	// overlay used to ignore, losing edits and resurrecting deletions. Every
+	// fingerprint field is pinned so dropping one cannot pass silently.
+	it('compares all fields, not only ids and timestamps', () => {
+		expect(profileHistoriesEqual([p()], [p()])).toBe(true);
+		expect(profileHistoriesEqual([p()], [p({ removed: true })])).toBe(false);
+		expect(profileHistoriesEqual([p()], [p({ logline: 'villain' })])).toBe(false);
+		expect(profileHistoriesEqual([p()], [p({ aliases: ['Al', 'Alice'] })])).toBe(false);
+		expect(profileHistoriesEqual([p()], [p({ traits: ['bold'] })])).toBe(false);
+		expect(profileHistoriesEqual([p()], [p({ sceneDetails: '- 2: x' })])).toBe(false);
+		expect(profileHistoriesEqual([p()], [p({ state: 'tired' })])).toBe(false);
+		expect(profileHistoriesEqual([p()], [p({ importance: 3 })])).toBe(false);
+		expect(profileHistoriesEqual([p()], [p({ createdAt: 11 })])).toBe(false);
+		expect(profileHistoriesEqual([p()], [p({ updatedAt: 21 })])).toBe(false);
+	});
+
+	// WHY: the query has no ORDER BY contract; identity-keyed comparison must not
+	// read a reordered snapshot as an edit and fork needlessly.
+	it('ignores row order', () => {
+		const alice = p();
+		const bob = p({ id: 'cp-2', canonicalName: 'bob', preferredName: 'Bob' });
+		expect(profileHistoriesEqual([alice, bob], [bob, alice])).toBe(true);
+	});
+
+	it('treats an absent removed field as active', () => {
+		expect(profileHistoriesEqual([p()], [p({ removed: false })])).toBe(true);
 	});
 });

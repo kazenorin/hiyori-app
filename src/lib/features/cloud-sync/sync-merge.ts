@@ -25,6 +25,7 @@ import {
 	cloneCharacterProfiles,
 	getCharacterProfilesForActLines,
 	insertCharacterProfile,
+	normalizeTraits,
 	type InsertCharacterProfileInput,
 } from '#lib/db/character-profiles.ts';
 import { cloneDirectorNotes, getDirectorNotesForActLines, insertDirectorNote, type DirectorNote } from '#lib/db/director-notes.ts';
@@ -45,6 +46,7 @@ import {
 	toCharacterProfileInputs,
 	upsertMessagePhasesFromRows,
 } from '#lib/features/story-export-load/story-loader.ts';
+import { validateStoryData } from '#lib/features/story-export-load/archive-validator.ts';
 
 export type LineageDecision = 'identical' | 'remote-stale' | 'local-stale' | 'divergent';
 
@@ -82,6 +84,80 @@ export function compareLineages(local: string[], incoming: string[]): LineageCom
 
 export type MergeAction = 'no-op' | 'fast-forward' | 'forked' | 'merged';
 
+/** The fields that define one profile-history row for sync comparison. */
+type ComparableProfile = {
+	id: string;
+	sceneNumber: number | null;
+	canonicalName: string;
+	preferredName: string;
+	aliases: string[];
+	logline: string;
+	state?: string | null;
+	goal?: string | null;
+	relationships?: string | null;
+	voice?: string | null;
+	traits?: string[];
+	sceneDetails: string;
+	importance: number;
+	removed?: boolean;
+	createdAt?: number;
+	updatedAt?: number;
+};
+
+/**
+ * Canonical fingerprint for a profile row. Every field participates, including
+ * `removed` and the version clocks, so an in-place edit, tombstone update or a
+ * physically absent row all count as a difference. `removed` absent (v1–v4
+ * archives) normalizes to the active default; traits use the DB's own
+ * normalization because imported rows were written through it.
+ */
+function profileFingerprint(profile: ComparableProfile): string {
+	return JSON.stringify([
+		profile.removed ?? false,
+		profile.sceneNumber,
+		profile.canonicalName,
+		profile.preferredName,
+		[...profile.aliases],
+		profile.logline,
+		profile.state ?? null,
+		profile.goal ?? null,
+		profile.relationships ?? null,
+		profile.voice ?? null,
+		normalizeTraits(profile.traits ?? []),
+		profile.sceneDetails,
+		profile.importance,
+		profile.createdAt ?? null,
+		profile.updatedAt ?? null,
+	]);
+}
+
+/** Complete normalized profile-history equality, keyed by row id. */
+export function profileHistoriesEqual(local: ComparableProfile[], incoming: ComparableProfile[]): boolean {
+	if (local.length !== incoming.length) return false;
+	const localById = new Map(local.map((p) => [p.id, profileFingerprint(p)]));
+	const incomingById = new Map(incoming.map((p) => [p.id, profileFingerprint(p)]));
+	if (localById.size !== incomingById.size || incomingById.size !== local.length) return false;
+	for (const [id, fingerprint] of localById) {
+		if (incomingById.get(id) !== fingerprint) return false;
+	}
+	return true;
+}
+
+/**
+ * Whether the incoming archive carries a defined profile snapshot that differs
+ * from the local complete history. An undefined collection means a legacy
+ * archive omitted profiles entirely — absence is not an explicit empty
+ * snapshot, so it never counts as a difference (and never deletes locally).
+ */
+async function profileHistoriesDifferFromIncoming(
+	actLineId: string,
+	incomingProfiles: InsertCharacterProfileInput[] | undefined
+): Promise<boolean> {
+	if (incomingProfiles === undefined) return false;
+	const localProfiles = await getCharacterProfilesForActLines([actLineId]);
+	return !profileHistoriesEqual(localProfiles, incomingProfiles);
+}
+
 export interface MergeIncomingInput {
 	actLineId: string;
 	storyId: string;
@@ -97,6 +173,9 @@ export interface MergeIncomingInput {
 	incomingEvents?: ActLineEvent[];
 	incomingPremises?: ActLineEntry[];
 	incomingNotes?: DirectorNote[];
+	/** Line-local profile history. `undefined` means a legacy archive omitted the
+	 * collection (not an explicit empty snapshot); `[]` is a real empty snapshot
+	 * and participates in identical-lineage conflict decisions. */
 	incomingProfiles?: InsertCharacterProfileInput[];
 	/** Archive phase rows for this line's messages. Applied add-only: messages
 	 * newly inserted locally receive them, and identical-lineage pulls backfill
@@ -120,7 +199,8 @@ export interface MergeResult {
  * deviation the prefix can't express. When this fails, the merge escalates to
  * fork-and-yield so local state survives on the fork instead of being
  * destroyed by delete-and-import. Undefined incoming arrays are treated as
- * empty, so any local state escalates (conservative).
+ * empty, so any local state escalates (conservative). Identical lineages use
+ * the stricter `profileHistoriesDifferFromIncoming` comparison instead.
  */
 async function localStateSubsetOfIncoming(
 	actLineId: string,
@@ -167,10 +247,10 @@ async function localStateSubsetOfIncoming(
 }
 
 /**
- * Identical-lineage overlay: equal message chains mean neither side supersedes
- * the other, so incoming line-local state is unioned in by row identity.
- * Message rows are never touched (add-only rule). Returns whether anything was
- * imported.
+ * Identical-lineage overlay: equal message chains and equal normalized profile
+ * histories mean neither side supersedes the other, so incoming line-local
+ * state is unioned in by row identity. Message rows are never touched (add-only
+ * rule). Returns whether anything was imported.
  */
 async function overlayIncomingLineState(input: MergeIncomingInput): Promise<boolean> {
 	let imported = false;
@@ -235,18 +315,29 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 		return { action: 'no-op' };
 	}
 
-	if (decision === 'identical') {
+	// Profiles are cumulative version history, not append-only records: the
+	// add-only overlay cannot express an in-place edit, a tombstone flip or a
+	// physical deletion, and would resurrect deleted rows. Equal message chains
+	// with differing complete histories therefore take the fork-and-yield path:
+	// the local line survives on a fork and the main line receives the exact
+	// incoming snapshot. A legacy archive without a profile collection is not an
+	// explicit empty snapshot, so it never forces this fork.
+	const profilesDiffer = decision === 'identical' && (await profileHistoriesDifferFromIncoming(input.actLineId, input.incomingProfiles));
+
+	if (decision === 'identical' && !profilesDiffer) {
 		// Equal message chains: no winner, so union the line-local state.
 		const imported = await overlayIncomingLineState(input);
 		return { action: imported ? 'merged' : 'no-op' };
 	}
 
-	// local-stale or divergent. A prefix lineage alone doesn't prove the
-	// incoming copy can take over the line: line-local state added locally
-	// after the last sync is invisible to compareLineages, so escalate to the
-	// fork path — the fork preserves it, the main line becomes the import.
+	// local-stale, divergent, or identical-with-differing-profiles. A prefix
+	// lineage alone doesn't prove the incoming copy can take over the line:
+	// line-local state added locally after the last sync is invisible to
+	// compareLineages, so escalate to the fork path — the fork preserves it, the
+	// main line becomes the import.
 	const forkNeeded =
 		decision === 'divergent' ||
+		profilesDiffer ||
 		!(await localStateSubsetOfIncoming(
 			input.actLineId,
 			input.incomingEvents,
@@ -277,10 +368,12 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 		// Rest of the forkActLine() workflow: carry the remaining line-local
 		// state to the fork before the original line is deleted.
 		await cloneDirectorNotes(input.actLineId, fork.id);
+		// A fork whose prefix has no scene number is a tip fork: there is no
+		// scene cutoff, so clone the whole history (MAX_SAFE_INTEGER sentinel).
+		// Skipping the clone would drop profiles from both lines, because the
+		// yielded line's rows are deleted right after.
 		const forkSceneNumber = await getSceneNumberAtSequence(input.actLineId, forkSequence);
-		if (forkSceneNumber !== null) {
-			await cloneCharacterProfiles(input.actLineId, fork.id, forkSceneNumber);
-		}
+		await cloneCharacterProfiles(input.actLineId, fork.id, forkSceneNumber ?? Number.MAX_SAFE_INTEGER);
 		await cloneInventory(input.actLineId, fork.id);
 		// Mirror the act-plot file onto the fork (forkActLine does the same;
 		// only interview forks diverge and skip the copy).
@@ -400,6 +493,14 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 	if (!dataFile) throw new Error('Invalid cloud archive: missing story-data.json');
 	const data = JSON.parse(await dataFile.async('string')) as StoryExportData;
 
+	// Cloud archives cross the same trust boundary as local imports: reject a
+	// malformed profile collection (including non-boolean `removed`) instead of
+	// letting it reach the DB.
+	const validation = validateStoryData(data);
+	if (!validation.isValid) {
+		throw new Error(`Invalid cloud archive: ${validation.errors.join('; ')}`);
+	}
+
 	const localStory = await getStory(data.story.id);
 	if (!localStory) {
 		// New story: load with IDs preserved. NEVER remap — story identity by
@@ -487,7 +588,7 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 			incomingEvents: toActLineEvents(data.actLineEvents, lineSet),
 			incomingPremises: toActLinePremises(data.actLinePremises, lineSet),
 			incomingNotes: toDirectorNotes(data.directorNotes, lineSet),
-			incomingProfiles: data.characterProfiles ? toCharacterProfileInputs(data.characterProfiles, lineSet) : [],
+			incomingProfiles: data.characterProfiles ? toCharacterProfileInputs(data.characterProfiles, lineSet) : undefined,
 			incomingPhases: linePhases,
 			forkNameSuffix: '(local branch)',
 		});

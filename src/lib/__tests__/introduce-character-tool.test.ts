@@ -109,6 +109,14 @@ describe('createIntroduceCharacterTool', () => {
 		expect(insertCharacterProfile).not.toHaveBeenCalled();
 	});
 
+	it('derives the canonical name from the preferred name', async () => {
+		const toolDef = createIntroduceCharacterTool(createMockContext(5));
+
+		await toolDef.execute!(validInput, { toolCallId: 'test', messages: [], abortSignal: undefined, context: {} });
+
+		expect(vi.mocked(insertCharacterProfile).mock.calls[0][0].canonicalName).toBe('Elena');
+	});
+
 	it('passes traits through to the profile insert', async () => {
 		const toolDef = createIntroduceCharacterTool(createMockContext(5));
 
