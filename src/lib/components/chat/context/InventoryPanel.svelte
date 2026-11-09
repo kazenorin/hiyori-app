@@ -165,6 +165,7 @@
 			if (!isCurrent(token, lineId, sceneNumber, targetMessageId, targetCharacterKey)) return null;
 			inventoryContext = result;
 			refreshError = null;
+			loadError = false;
 			loading = false;
 			return result;
 		} catch (err) {

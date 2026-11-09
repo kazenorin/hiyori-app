@@ -121,6 +121,18 @@ describe('inventory context — load', () => {
 		expect(context.inactiveItems[0].equipStatus).toBe('lost');
 	});
 
+	it('orders a baseline row before the same item’s scene rows', async () => {
+		await seedScene(1);
+		await seedScene(2);
+		await seedRow({ id: 'base', scene_number: null, category: 'equipment', equip_status: 'carried' });
+		await seedRow({ id: 'scene-1', scene_number: 1, event_type: 'modified', category: 'item', equip_status: 'carried' });
+
+		const context = await loadInventoryContext(LINE, CHARACTER, 2);
+
+		expect(context.items[0].entries.map((entry) => entry.id)).toEqual(['base', 'scene-1']);
+		expect(context.items[0].category).toBe('item');
+	});
+
 	it('merges alias-owned rows into one item and keeps the latest owner', async () => {
 		await seedScene(1);
 		await seedScene(2);
@@ -313,6 +325,22 @@ describe('inventory context — mutations', () => {
 		await removeInventoryEntry(LINE, 2, CHARACTER, newEntry, 'entry');
 
 		expect((await rawRows()).map((row) => row.id)).toEqual(['old']);
+	});
+
+	it('rejects deleting a stale entry row', async () => {
+		await seedScene(1);
+		await seedRow({ id: 'row-1', scene_number: 1 });
+		const [entry] = (await loadInventoryContext(LINE, CHARACTER, 1)).items[0].entries;
+
+		await expect(removeInventoryEntry(LINE, 1, CHARACTER, { ...entry, id: 'missing' }, 'entry')).rejects.toThrow(/stale/);
+	});
+
+	it('rejects editing with an undefined category', async () => {
+		await seedScene(1);
+		await seedRow({ id: 'row-1', scene_number: 1 });
+		const [entry] = (await loadInventoryContext(LINE, CHARACTER, 1)).items[0].entries;
+
+		await expect(updateInventoryEntry(LINE, 1, entry, draft({ category: undefined }))).rejects.toThrow(/explicit category/);
 	});
 
 	it('erases the full history across alias-owned rows', async () => {

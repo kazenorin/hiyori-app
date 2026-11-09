@@ -280,6 +280,12 @@ describe('inventory DB layer', () => {
 				'elena-the-brave',
 				2,
 			]);
+			expect(mockDb.select).toHaveBeenCalledWith(expect.stringContaining('ORDER BY COALESCE(scene_number, -1) ASC, rowid ASC'), [
+				'line-1',
+				'elena',
+				'elena-the-brave',
+				2,
+			]);
 		});
 
 		it('returns no rows without querying when no names are supplied', async () => {

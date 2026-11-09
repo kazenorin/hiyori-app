@@ -39,9 +39,11 @@
 	// svelte-ignore state_referenced_locally
 	let formItemName = $state(mode === 'addItem' ? '' : itemName);
 	// svelte-ignore state_referenced_locally
-	let formEventType = $state<InventoryEventType>(initialEntry?.eventType ?? 'acquired');
+	let formEventType = $state<InventoryEventType>(initialEntry?.eventType ?? (mode === 'addEntry' ? 'modified' : 'acquired'));
 	// svelte-ignore state_referenced_locally
-	let formCategoryChoice = $state<InventoryCategoryChoice>(initialEntry === null ? 'none' : (initialEntry.category ?? 'none'));
+	let formCategoryChoice = $state<InventoryCategoryChoice>(
+		initialEntry === null ? (mode === 'addEntry' ? 'inherit' : 'none') : (initialEntry.category ?? 'none')
+	);
 	// svelte-ignore state_referenced_locally
 	let formEquipStatus = $state<EquipStatus>(initialEntry?.equipStatus ?? currentEquipStatus);
 	// svelte-ignore state_referenced_locally
@@ -80,6 +82,7 @@
 	function handleEventChange(value: InventoryEventType): void {
 		formEventType = value;
 		formCategoryChoice = nextCategoryChoice(value, formCategoryChoice);
+		if (value === 'acquired' && (formEquipStatus === 'lost' || formEquipStatus === 'consumed')) formEquipStatus = 'carried';
 	}
 
 	function handleKeydown(event: KeyboardEvent): void {
