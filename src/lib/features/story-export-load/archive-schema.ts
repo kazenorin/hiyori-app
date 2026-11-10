@@ -9,8 +9,11 @@
  *   5 — added optional `removed` to `characterProfiles` entries and exports complete profile
  *        history including tombstones. Older archives omit `removed`, whose entries import as
  *        active (older archives without it still load).
+ *   6 — added `inventory` field (optional; complete inventory event history keyed by act line,
+ *        mirroring the `inventory` table). Older archives without it still load, but carry no
+ *        inventory rows.
  */
-export const CURRENT_ARCHIVE_VERSION = 5;
+export const CURRENT_ARCHIVE_VERSION = 6;
 
 export interface StoryExportData {
 	version: number;
@@ -110,5 +113,20 @@ export interface StoryExportData {
 		reasoning: string | null;
 		content: string;
 		sequence: number;
+	}[];
+	/** Archive v6+. Absent in v1–v5 archives, which import without inventory rows. */
+	inventory?: {
+		id: string;
+		storyId: string;
+		actLineId: string;
+		messageId: string;
+		sceneNumber: number | null;
+		characterCanonicalName: string;
+		itemName: string;
+		eventType: string;
+		category: string | null;
+		equipStatus: string;
+		description: string | null;
+		createdAt: string | null;
 	}[];
 }

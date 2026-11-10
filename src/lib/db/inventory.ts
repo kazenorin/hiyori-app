@@ -238,6 +238,56 @@ export async function deleteInventoryByMessages(actLineId: string, messageIds: s
 	await db.execute(`DELETE FROM inventory WHERE act_line_id = $1 AND message_id IN (${placeholders})`, [actLineId, ...messageIds]);
 }
 
+export async function getInventoryRowsForActLines(actLineIds: string[]): Promise<InventoryRow[]> {
+	if (actLineIds.length === 0) return [];
+	const db = getDatabase();
+	const placeholders = actLineIds.map((_, i) => `$${i + 1}`).join(',');
+	return db.select<InventoryRow[]>(
+		`SELECT * FROM inventory WHERE act_line_id IN (${placeholders}) ORDER BY COALESCE(scene_number, -1) ASC, rowid ASC`,
+		actLineIds
+	);
+}
+
+/** A complete inventory row for archive import; ids and timestamps are preserved as exported. */
+export interface InsertInventoryRowInput {
+	id: string;
+	storyId: string;
+	actLineId: string;
+	messageId: string;
+	sceneNumber: number | null;
+	characterCanonicalName: string;
+	itemName: string;
+	eventType: string;
+	category: string | null;
+	equipStatus: string;
+	description: string | null;
+	createdAt: string | null;
+}
+
+export async function insertInventoryRows(rows: InsertInventoryRowInput[]): Promise<void> {
+	const db = getDatabase();
+	for (const row of rows) {
+		await db.execute(
+			`INSERT INTO inventory (id, story_id, act_line_id, message_id, scene_number, character_canonical_name, item_name, event_type, category, equip_status, description, created_at)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+			[
+				row.id,
+				row.storyId,
+				row.actLineId,
+				row.messageId,
+				row.sceneNumber,
+				row.characterCanonicalName,
+				row.itemName,
+				row.eventType,
+				row.category,
+				row.equipStatus,
+				row.description,
+				row.createdAt,
+			]
+		);
+	}
+}
+
 export async function cloneInventory(fromActLineId: string, toActLineId: string): Promise<void> {
 	const db = getDatabase();
 	const rows = await db.select<InventoryRow[]>('SELECT * FROM inventory WHERE act_line_id = $1', [fromActLineId]);

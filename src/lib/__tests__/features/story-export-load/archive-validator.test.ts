@@ -312,4 +312,76 @@ describe('validateStoryData', () => {
 			expect(validateStoryData(baseline).isValid).toBe(true);
 		});
 	});
+
+	describe('inventory (archive v6)', () => {
+		const entry = {
+			id: 'inv-1',
+			storyId: 'story-1',
+			actLineId: 'line-1',
+			messageId: 'msg-1',
+			sceneNumber: 1,
+			characterCanonicalName: 'alice',
+			itemName: 'Sword',
+			eventType: 'acquired',
+			category: 'equipment',
+			equipStatus: 'carried',
+			description: null,
+			createdAt: '2026-01-01 00:00:00',
+		};
+
+		// WHY (v1–v5 compatibility): the collection is purely additive; absence
+		// must stay valid and an explicit empty snapshot must pass.
+		it('accepts archives without inventory and with an empty collection', () => {
+			expect(validateStoryData(makeValidData()).isValid).toBe(true);
+
+			const data = makeValidData();
+			data.inventory = [];
+			expect(validateStoryData(data).isValid).toBe(true);
+		});
+
+		it('accepts well-formed entries', () => {
+			const data = makeValidData();
+			data.inventory = [
+				{ ...entry },
+				{ ...entry, id: 'inv-2', sceneNumber: null, category: null, description: 'a blade', createdAt: null },
+			];
+			const result = validateStoryData(data);
+			expect(result.isValid).toBe(true);
+			expect(result.errors).toHaveLength(0);
+		});
+
+		it('rejects a non-array collection', () => {
+			const data = makeValidData();
+			asRaw(data).inventory = { id: 'inv-1' };
+			const result = validateStoryData(data);
+			expect(result.isValid).toBe(false);
+			expect(result.errors[0]).toContain('inventory');
+		});
+
+		it('rejects entries missing required fields', () => {
+			const { itemName: _itemName, ...withoutItemName } = entry;
+			const data = makeValidData();
+			asRaw(data).inventory = [withoutItemName];
+			expect(validateStoryData(data).isValid).toBe(false);
+
+			const data2 = makeValidData();
+			asRaw(data2).inventory = [{ ...entry, sceneNumber: 1.5 }];
+			expect(validateStoryData(data2).isValid).toBe(false);
+		});
+
+		// WHY: the DB layer stores these values unchecked, so an unknown enum
+		// member from a tampered or cross-version archive would render as a
+		// label-less row and corrupt the item's resolved state.
+		it('rejects unknown enum members without coercing', () => {
+			for (const [field, value] of [
+				['eventType', 'dropped'],
+				['equipStatus', 'broken'],
+				['category', 'weapon'],
+			] as const) {
+				const data = makeValidData();
+				asRaw(data).inventory = [{ ...entry, [field]: value }];
+				expect(validateStoryData(data).isValid, `${field}=${value}`).toBe(false);
+			}
+		});
+	});
 });
