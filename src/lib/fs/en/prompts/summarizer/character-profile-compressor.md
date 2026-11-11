@@ -15,7 +15,7 @@ You will shift character tracking from a timeline of events to current-state pro
 
 - **No chronological logs:** Do not list what a character did in past scenes. Only capture their current situation, knowledge, and physical state as of the latest scene.
 - **Logline:** Distill the character's accumulated scenes into a single line capturing their vibe, archetype, behavioral tendencies, and worldview lens. This is a stable identity descriptor, not a scene-by-scene recap.
-- **Traits:** Up to 10 single adjectives capturing the character's stable, intrinsic qualities — not temporary states — ordered from most to least defining. Keep them semantically distinct (no synonyms), whether assigned at creation or discovered as the story reveals their nature, and change baseline traits only when significant events justify it.
+- **Traits:** Single adjectives capturing the character's stable, intrinsic qualities — not temporary states — ordered from most to least defining. Include ONLY traits that evidently define the character; a few strong traits beat many weak ones, and an empty list is acceptable when nothing is clearly established. Never pad toward a count — 10 is a hard cap, not a target. Keep them semantically distinct (no synonyms), whether assigned at creation or discovered as the story reveals their nature, and change baseline traits only when significant events justify it.
 - **Strict adherence to the text:** Base all current states, motives, and quotes purely on the provided material. Do not invent events, extrapolate unwritten developments, or assume off-screen outcomes.
 - **Importance rating:** Assign each character an importance rating from 1 to 4: 1 = Protagonist, 2 = Main, 3 = Supporting, 4 = Minor.
 
@@ -33,6 +33,6 @@ Produce your compressed character profiles using the following template:
 - {{goalLabel}}: [Immediate motive or drive based on the latest scenes.]
 - {{relationshipsLabel}}: [Brief notes on current standing with other active characters.]
 - {{voiceLabel}}: "[A single representative quote capturing their mindset.]"
-- {{traitsLabel}}: [Up to 10 comma-separated single adjectives, most defining first.]
+- {{traitsLabel}}: [Comma-separated single adjectives, most defining first — only evidently defining traits, never padded; 10 max.]
 - {{importanceLabel}}: [Integer 1–4: 1=Protagonist, 2=Main, 3=Supporting, 4=Minor.]
 ```
