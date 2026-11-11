@@ -29,7 +29,7 @@ import {
 	type InsertCharacterProfileInput,
 } from '#lib/db/character-profiles.ts';
 import { cloneDirectorNotes, getDirectorNotesForActLines, insertDirectorNote, type DirectorNote } from '#lib/db/director-notes.ts';
-import { cloneInventory } from '#lib/db/inventory.ts';
+import { cloneInventory, getInventoryRowsForActLines, insertInventoryRows, type InsertInventoryRowInput } from '#lib/db/inventory.ts';
 import { getMemoryProviderConfig, isMemoryAvailable } from '#lib/stores/settings.svelte.ts';
 import { log } from '#lib/logging/logger.ts';
 import { copyActPlotFileBetweenLines } from '#lib/ai/card-output-path.ts';
@@ -44,6 +44,7 @@ import {
 	toActLinePremises,
 	toDirectorNotes,
 	toCharacterProfileInputs,
+	toInventoryRows,
 	upsertMessagePhasesFromRows,
 } from '#lib/features/story-export-load/story-loader.ts';
 import { validateStoryData } from '#lib/features/story-export-load/archive-validator.ts';
@@ -158,6 +159,62 @@ async function profileHistoriesDifferFromIncoming(
 	return !profileHistoriesEqual(localProfiles, incomingProfiles);
 }
 
+/**
+ * Canonical fingerprint for an inventory row. Entries are mutable through the
+ * context UI (in-place edit, single-row and history deletion), so every
+ * user-visible field participates — same rationale as profileFingerprint.
+ */
+function inventoryFingerprint(row: {
+	id: string;
+	eventType: string;
+	category: string | null;
+	equipStatus: string;
+	description: string | null;
+}): string {
+	return JSON.stringify([row.id, row.eventType, row.category ?? null, row.equipStatus, row.description ?? null]);
+}
+
+/** Complete normalized inventory equality, keyed by row id. */
+export function inventoryHistoriesEqual(
+	local: Awaited<ReturnType<typeof getInventoryRowsForActLines>>,
+	incoming: InsertInventoryRowInput[]
+): boolean {
+	if (local.length !== incoming.length) return false;
+	const localById = new Map(
+		local.map((r) => [
+			r.id,
+			inventoryFingerprint({
+				id: r.id,
+				eventType: r.event_type,
+				category: r.category,
+				equipStatus: r.equip_status,
+				description: r.description,
+			}),
+		])
+	);
+	const incomingById = new Map(incoming.map((r) => [r.id, inventoryFingerprint(r)]));
+	if (localById.size !== incomingById.size || incomingById.size !== local.length) return false;
+	for (const [id, fingerprint] of localById) {
+		if (incomingById.get(id) !== fingerprint) return false;
+	}
+	return true;
+}
+
+/**
+ * Whether the incoming archive carries a defined inventory snapshot that differs
+ * from the local rows. Undefined means a legacy (pre-v6) archive omitted the
+ * collection — absence is not an explicit empty snapshot, so it never counts as
+ * a difference (and never deletes locally).
+ */
+async function inventoryHistoriesDifferFromIncoming(
+	actLineId: string,
+	incomingInventory: InsertInventoryRowInput[] | undefined
+): Promise<boolean> {
+	if (incomingInventory === undefined) return false;
+	const localRows = await getInventoryRowsForActLines([actLineId]);
+	return !inventoryHistoriesEqual(localRows, incomingInventory);
+}
+
 export interface MergeIncomingInput {
 	actLineId: string;
 	storyId: string;
@@ -177,6 +234,9 @@ export interface MergeIncomingInput {
 	 * collection (not an explicit empty snapshot); `[]` is a real empty snapshot
 	 * and participates in identical-lineage conflict decisions. */
 	incomingProfiles?: InsertCharacterProfileInput[];
+	/** Line-local inventory rows, with the same undefined-vs-empty semantics as
+	 * `incomingProfiles` (undefined = legacy pre-v6 archive). */
+	incomingInventory?: InsertInventoryRowInput[];
 	/** Archive phase rows for this line's messages. Applied add-only: messages
 	 * newly inserted locally receive them, and identical-lineage pulls backfill
 	 * messages that have no local phase rows (mirrors the message rule: existing
@@ -207,13 +267,15 @@ async function localStateSubsetOfIncoming(
 	incomingEvents: ActLineEvent[] | undefined,
 	incomingPremises: ActLineEntry[] | undefined,
 	incomingNotes: DirectorNote[] | undefined,
-	incomingProfiles: InsertCharacterProfileInput[] | undefined
+	incomingProfiles: InsertCharacterProfileInput[] | undefined,
+	incomingInventory: InsertInventoryRowInput[] | undefined
 ): Promise<boolean> {
-	const [localEvents, localPremises, localNotes, localProfiles] = await Promise.all([
+	const [localEvents, localPremises, localNotes, localProfiles, localInventory] = await Promise.all([
 		getActLineEventsForLines([actLineId]),
 		getActLinePremisesForLines([actLineId]),
 		getDirectorNotesForActLines([actLineId]),
 		getCharacterProfilesForActLines([actLineId]),
+		getInventoryRowsForActLines([actLineId]),
 	]);
 
 	// Events are append-only records — same id implies same content.
@@ -241,6 +303,20 @@ async function localStateSubsetOfIncoming(
 	const incomingProfileVersions = new Set((incomingProfiles ?? []).map((p) => `${p.id}:${p.updatedAt}`));
 	for (const profile of localProfiles) {
 		if (!incomingProfileVersions.has(`${profile.id}:${profile.updatedAt}`)) return false;
+	}
+
+	// Inventory rows are mutable events without a version clock — compare the
+	// content fingerprint to catch edits and deletions.
+	const incomingInventoryFingerprints = new Set((incomingInventory ?? []).map(inventoryFingerprint));
+	for (const row of localInventory) {
+		const fingerprint = inventoryFingerprint({
+			id: row.id,
+			eventType: row.event_type,
+			category: row.category,
+			equipStatus: row.equip_status,
+			description: row.description,
+		});
+		if (!incomingInventoryFingerprints.has(fingerprint)) return false;
 	}
 
 	return true;
@@ -317,14 +393,17 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 
 	// Profiles are cumulative version history, not append-only records: the
 	// add-only overlay cannot express an in-place edit, a tombstone flip or a
-	// physical deletion, and would resurrect deleted rows. Equal message chains
-	// with differing complete histories therefore take the fork-and-yield path:
+	// physical deletion, and would resurrect deleted rows. Inventory rows are
+	// likewise mutable through the context UI. Equal message chains with
+	// differing complete histories therefore take the fork-and-yield path:
 	// the local line survives on a fork and the main line receives the exact
-	// incoming snapshot. A legacy archive without a profile collection is not an
+	// incoming snapshot. A legacy archive without the collection is not an
 	// explicit empty snapshot, so it never forces this fork.
 	const profilesDiffer = decision === 'identical' && (await profileHistoriesDifferFromIncoming(input.actLineId, input.incomingProfiles));
+	const inventoryDiffer =
+		decision === 'identical' && (await inventoryHistoriesDifferFromIncoming(input.actLineId, input.incomingInventory));
 
-	if (decision === 'identical' && !profilesDiffer) {
+	if (decision === 'identical' && !profilesDiffer && !inventoryDiffer) {
 		// Equal message chains: no winner, so union the line-local state.
 		const imported = await overlayIncomingLineState(input);
 		return { action: imported ? 'merged' : 'no-op' };
@@ -338,12 +417,14 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 	const forkNeeded =
 		decision === 'divergent' ||
 		profilesDiffer ||
+		inventoryDiffer ||
 		!(await localStateSubsetOfIncoming(
 			input.actLineId,
 			input.incomingEvents,
 			input.incomingPremises,
 			input.incomingNotes,
-			input.incomingProfiles
+			input.incomingProfiles,
+			input.incomingInventory
 		));
 
 	let forkActLineId: string | null = null;
@@ -453,6 +534,9 @@ export async function mergeIncomingActLine(input: MergeIncomingInput): Promise<M
 	for (const profile of input.incomingProfiles ?? []) {
 		await insertCharacterProfile(profile);
 	}
+	// The deleteActLine above wiped local inventory rows; the incoming snapshot
+	// is the exact replacement (undefined for legacy archives = no rows).
+	await insertInventoryRows(input.incomingInventory ?? []);
 
 	return forkNeeded ? { action: 'forked', forkActLineId: forkActLineId! } : { action: 'fast-forward' };
 }
@@ -562,11 +646,14 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 			}
 			await upsertMessagePhasesFromRows(linePhases, insertedIds);
 			await insertActLineEntries(entries.map((e) => ({ actLineId: e.actLineId, messageId: e.messageId, sequence: e.sequence })));
+			const lineSet = new Set([actLineId]);
 			if (data.characterProfiles) {
-				const lineSet = new Set([actLineId]);
 				for (const profile of toCharacterProfileInputs(data.characterProfiles, lineSet)) {
 					await insertCharacterProfile(profile);
 				}
+			}
+			if (data.inventory) {
+				await insertInventoryRows(toInventoryRows(data.inventory, lineSet));
 			}
 			anyChange = true;
 			continue;
@@ -589,6 +676,7 @@ export async function mergeIncomingStory(zipData: Uint8Array): Promise<StoryMerg
 			incomingPremises: toActLinePremises(data.actLinePremises, lineSet),
 			incomingNotes: toDirectorNotes(data.directorNotes, lineSet),
 			incomingProfiles: data.characterProfiles ? toCharacterProfileInputs(data.characterProfiles, lineSet) : undefined,
+			incomingInventory: data.inventory ? toInventoryRows(data.inventory, lineSet) : undefined,
 			incomingPhases: linePhases,
 			forkNameSuffix: '(local branch)',
 		});

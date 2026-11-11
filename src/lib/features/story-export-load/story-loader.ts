@@ -17,6 +17,7 @@ import { insertDirectorNote, type DirectorNote } from '#lib/db/director-notes.ts
 import { upsertMessage, insertMessage, type Message, parseVariables } from '#lib/db/messages.ts';
 import { upsertMessagePhases } from '#lib/db/message-phases.ts';
 import { insertCharacterProfile, type InsertCharacterProfileInput, type CharacterImportance } from '#lib/db/character-profiles.ts';
+import { insertInventoryRows, type InsertInventoryRowInput } from '#lib/db/inventory.ts';
 import type { PhaseName, UIScenePhase } from '#lib/ai/narrative-types.ts';
 import { resolveStoryFolder } from '#lib/fs/story-folders.ts';
 import { fs } from '#lib/fs/file-system.ts';
@@ -165,6 +166,13 @@ export function toCharacterProfileInputs(
 		}));
 }
 
+export function toInventoryRows(
+	inventory: NonNullable<StoryExportData['inventory']>,
+	selectedActLineIds: Set<string>
+): InsertInventoryRowInput[] {
+	return inventory.filter((r) => selectedActLineIds.has(r.actLineId));
+}
+
 export function collectMessageIds(entries: ActLineEntry[], premises: ActLineEntry[], events: ActLineEvent[]): Set<string> {
 	const ids = new Set<string>();
 	for (const e of entries) ids.add(e.messageId);
@@ -234,6 +242,10 @@ async function insertSelectedActLineData(data: StoryExportData, selectedActLineI
 		for (const profile of selectedProfiles) {
 			await insertCharacterProfile(profile);
 		}
+	}
+
+	if (data.inventory) {
+		await insertInventoryRows(toInventoryRows(data.inventory, selectedActLineIds));
 	}
 }
 

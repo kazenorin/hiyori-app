@@ -14,6 +14,7 @@ import { getDirectorNotesForActLines, type DirectorNote } from '#lib/db/director
 import { getMessagesByIds, type Message } from '#lib/db/messages.ts';
 import { getPhasesForMessages } from '#lib/db/message-phases.ts';
 import { getCharacterProfilesForActLines } from '#lib/db/character-profiles.ts';
+import { getInventoryRowsForActLines } from '#lib/db/inventory.ts';
 import { fs } from '#lib/fs/file-system.ts';
 import { collectFilesInDir, isBinaryData } from '#lib/fs/file-tree.ts';
 import { downloadExport } from '#lib/db/data-portability.ts';
@@ -53,6 +54,7 @@ export async function buildStoryExportData(storyId: string): Promise<StoryExport
 	}
 
 	const characterProfiles = actLineIds.length > 0 ? await getCharacterProfilesForActLines(actLineIds) : [];
+	const inventory = actLineIds.length > 0 ? await getInventoryRowsForActLines(actLineIds) : [];
 
 	return {
 		version: CURRENT_ARCHIVE_VERSION,
@@ -153,6 +155,20 @@ export async function buildStoryExportData(storyId: string): Promise<StoryExport
 			removed: p.removed,
 			createdAt: p.createdAt,
 			updatedAt: p.updatedAt,
+		})),
+		inventory: inventory.map((r) => ({
+			id: r.id,
+			storyId: r.story_id,
+			actLineId: r.act_line_id,
+			messageId: r.message_id,
+			sceneNumber: r.scene_number,
+			characterCanonicalName: r.character_canonical_name,
+			itemName: r.item_name,
+			eventType: r.event_type,
+			category: r.category,
+			equipStatus: r.equip_status,
+			description: r.description,
+			createdAt: r.created_at,
 		})),
 	};
 }

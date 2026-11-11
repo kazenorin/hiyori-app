@@ -5,7 +5,7 @@
 	import { toaster } from '#lib/stores/toaster.svelte.ts';
 	import { getIsBusy, getMessages } from '#lib/ai/chat.svelte.ts';
 	import { getActiveActLineId } from '#lib/stores/stories.svelte.ts';
-	import { getSettings } from '#lib/stores/settings.svelte.ts';
+	import { getSettings, isInventoryAvailable } from '#lib/stores/settings.svelte.ts';
 	import { getLastSceneNumber } from '#lib/db/act-lines.ts';
 	import {
 		DuplicateProfileError,
@@ -21,6 +21,7 @@
 	import CharacterProfileForm from './CharacterProfileForm.svelte';
 	import CharacterProfileView from './CharacterProfileView.svelte';
 	import CharacterConsolidation from './CharacterConsolidation.svelte';
+	import InventoryPanel from './InventoryPanel.svelte';
 	import { findSavedProfile, shouldShowCompressionWarning } from './character-profile-panel-state.ts';
 
 	interface Props {
@@ -45,6 +46,7 @@
 	let formMode = $state<'add' | 'edit' | null>(null);
 	let editingProfile = $state<CharacterProfileEntity | null>(null);
 	let viewedProfileId = $state<string | null>(null);
+	let inventoryProfile = $state<CharacterProfileEntity | null>(null);
 	let saving = $state(false);
 	let removeTarget = $state<CharacterProfileEntity | null>(null);
 	let removing = $state(false);
@@ -70,6 +72,7 @@
 	);
 	const canMutate = $derived(isEditable && !getIsBusy() && formMode === null && removeTarget === null && !saving && !removing);
 	const canConsolidate = $derived(canMutate && profileContext !== null && profileContext.profiles.length >= 2);
+	const inventoryAvailable = $derived(isInventoryAvailable());
 	const removeEntryDisabled = $derived(removeTarget === null || clicked === undefined || removeTarget.sceneNumber !== clicked.sceneNumber);
 
 	let disposed = false;
@@ -106,6 +109,7 @@
 			formMode = null;
 			editingProfile = null;
 			viewedProfileId = null;
+			inventoryProfile = null;
 			removeTarget = null;
 			consolidationOpen = false;
 			actionError = null;
@@ -198,6 +202,14 @@
 		formMode = 'edit';
 	}
 
+	function startInventory(profile: CharacterProfileEntity): void {
+		if (!inventoryAvailable) return;
+		closeForm();
+		removeTarget = null;
+		actionError = null;
+		inventoryProfile = profile;
+	}
+
 	function startRemove(profile: CharacterProfileEntity): void {
 		if (!canMutate) return;
 		closeForm();
@@ -264,6 +276,7 @@
 			if (!isCurrentTarget(lineId, sceneNumber)) return;
 			removeTarget = null;
 			viewedProfileId = null;
+			inventoryProfile = null;
 			actionError = null;
 			void refresh(lineId, sceneNumber);
 		} catch (err) {
@@ -418,13 +431,17 @@
 				onConfirm={handleConsolidate}
 				onCancel={cancelConsolidate}
 			/>
+		{:else if inventoryProfile !== null}
+			<InventoryPanel {messageId} profile={inventoryProfile} onBack={() => (inventoryProfile = null)} />
 		{:else if viewedProfile !== null}
 			<CharacterProfileView
 				profile={viewedProfile}
 				editable={canMutate}
+				showInventory={inventoryAvailable}
 				onBack={() => (viewedProfileId = null)}
 				onEdit={() => startEdit(viewedProfile)}
 				onRemove={() => startRemove(viewedProfile)}
+				onInventory={() => startInventory(viewedProfile)}
 			/>
 		{:else}
 			{#if canMutate}

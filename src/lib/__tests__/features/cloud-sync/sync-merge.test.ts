@@ -28,7 +28,14 @@ import * as acts from '#lib/db/acts.ts';
 import { createActLine, getActLine, getMessagesForLine, insertActLineEntries } from '#lib/db/act-lines.ts';
 import { insertMessage, getMessagesByIds, type Message } from '#lib/db/messages.ts';
 import { upsertMessagePhases, getPhasesForMessages } from '#lib/db/message-phases.ts';
-import { compareLineages, mergeIncomingActLine, mergeIncomingStory, profileHistoriesEqual } from '#lib/features/cloud-sync/sync-merge.ts';
+import {
+	compareLineages,
+	mergeIncomingActLine,
+	mergeIncomingStory,
+	profileHistoriesEqual,
+	inventoryHistoriesEqual,
+} from '#lib/features/cloud-sync/sync-merge.ts';
+import { insertInventoryRows, type InventoryRow, type InsertInventoryRowInput } from '#lib/db/inventory.ts';
 import type { StoryExportData } from '#lib/features/story-export-load/archive-schema.ts';
 import { CURRENT_ARCHIVE_VERSION } from '#lib/features/story-export-load/archive-schema.ts';
 import { insertCharacterProfile, type CharacterImportance } from '#lib/db/character-profiles.ts';
@@ -1477,5 +1484,238 @@ describe('profileHistoriesEqual', () => {
 
 	it('treats an absent removed field as active', () => {
 		expect(profileHistoriesEqual([p()], [p({ removed: false })])).toBe(true);
+	});
+});
+
+describe('mergeIncomingStory inventory history preservation', () => {
+	beforeEach(async () => {
+		testDb = createTestDatabase();
+		await runMigrations();
+		await stories.createStory('story-1', 'Test', 'en');
+		await acts.createAct('act-1', 'story-1', 'Act 1', 1);
+		setFileSystem(new InMemoryFileSystem());
+	});
+
+	afterEach(() => {
+		testDb.close();
+	});
+
+	type ArchiveInventoryRow = NonNullable<StoryExportData['inventory']>[number];
+	type ArchiveMessage = StoryExportData['messages'][number];
+
+	function archiveInventory(overrides: Partial<ArchiveInventoryRow> & Pick<ArchiveInventoryRow, 'id'>): ArchiveInventoryRow {
+		return {
+			storyId: 'story-1',
+			actLineId: 'line-1',
+			messageId: 'm1',
+			sceneNumber: 1,
+			characterCanonicalName: 'alice',
+			itemName: 'Sword',
+			eventType: 'acquired',
+			category: 'equipment',
+			equipStatus: 'carried',
+			description: null,
+			createdAt: '2026-01-01 00:00:00',
+			...overrides,
+		};
+	}
+
+	function archiveMessage(id: string, sceneNumber: number): ArchiveMessage {
+		return {
+			id,
+			role: 'assistant',
+			content: `content ${id}`,
+			reasoning: null,
+			metadata: null,
+			variables: null,
+			actSummary: null,
+			scenePlot: null,
+			importantPhrases: null,
+			sceneNumber,
+			createdAt: 1000,
+		};
+	}
+
+	function makeArchive(opts: { entries?: string[]; inventory?: ArchiveInventoryRow[]; version?: number }): StoryExportData {
+		const entries = opts.entries ?? ['m1', 'm2'];
+		const data: StoryExportData = {
+			version: opts.version ?? CURRENT_ARCHIVE_VERSION,
+			story: { id: 'story-1', name: 'Test', locale: 'en', createdAt: 1000, updatedAt: 2000 },
+			storyFolder: { storyId: 'story-1', folderName: 'Test', createdAt: 1000 },
+			acts: [
+				{ id: 'act-1', storyId: 'story-1', name: 'Act 1', actNumber: 1, continuesFromActLineId: null, createdAt: 1000, updatedAt: 2000 },
+			],
+			actLineMeta: [{ id: 'line-1', actId: 'act-1', name: 'Main', isMainLine: true, createdAt: 1000, plotMode: 'guidance' }],
+			actLineEvents: [],
+			actLineEntries: entries.map((messageId, index) => ({ actLineId: 'line-1', messageId, sequence: index + 1 })),
+			actLinePremises: [],
+			directorNotes: [],
+			messages: entries.map((id, index) => archiveMessage(id, index + 1)),
+		};
+		if (opts.inventory !== undefined) data.inventory = opts.inventory;
+		return data;
+	}
+
+	async function merge(data: StoryExportData): Promise<string> {
+		const zip = new JSZip();
+		zip.file('story-data.json', JSON.stringify(data));
+		return mergeIncomingStory(await zip.generateAsync({ type: 'uint8array' }));
+	}
+
+	async function seedScenes(ids: string[]): Promise<void> {
+		await seedLine(ids);
+		for (const [index, id] of ids.entries()) {
+			await testDb.execute('UPDATE messages SET scene_number = $1 WHERE id = $2', [index + 1, id]);
+		}
+	}
+
+	async function readInventory(lineId: string) {
+		return testDb.select<{ id: string; item_name: string; equip_status: string }[]>(
+			'SELECT id, item_name, equip_status FROM inventory WHERE act_line_id = $1 ORDER BY id',
+			[lineId]
+		);
+	}
+
+	async function forkLineId(): Promise<string> {
+		const rows = await testDb.select<{ id: string }[]>('SELECT id FROM act_line_meta WHERE id <> $1', ['line-1']);
+		expect(rows).toHaveLength(1);
+		return rows[0].id;
+	}
+
+	// WHY (review-1): identical message chains cannot distinguish a remote
+	// in-place entry edit from a local one. The local version survives on a
+	// preservation fork and the main line receives the exact incoming snapshot.
+	it('same-ID inventory edit forks and applies the incoming snapshot', async () => {
+		await seedScenes(['m1', 'm2']);
+		await insertInventoryRows([archiveInventory({ id: 'inv-1' })]);
+
+		const result = await merge(
+			makeArchive({ inventory: [archiveInventory({ id: 'inv-1', eventType: 'equipped', equipStatus: 'equipped' })] })
+		);
+
+		expect(result).toBe('merged');
+		const forkId = await forkLineId();
+		expect((await readInventory(forkId)).map((r) => r.equip_status)).toEqual(['carried']);
+		expect(await readInventory('line-1')).toEqual([{ id: 'inv-1', item_name: 'Sword', equip_status: 'equipped' }]);
+
+		// Idempotent: the applied snapshot compares equal on the next pull.
+		expect(
+			await merge(makeArchive({ inventory: [archiveInventory({ id: 'inv-1', eventType: 'equipped', equipStatus: 'equipped' })] }))
+		).toBe('up-to-date');
+		expect(await testDb.select<{ c: number }[]>('SELECT COUNT(*) AS c FROM act_line_meta')).toEqual([{ c: 2 }]);
+	});
+
+	// WHY: the common continue-on-another-device case — the delete-and-import
+	// path wiped local inventory before this fix and restored nothing.
+	it('local-stale replacement imports incoming inventory rows', async () => {
+		await seedScenes(['m1']);
+
+		const result = await merge(
+			makeArchive({ entries: ['m1', 'm2'], inventory: [archiveInventory({ id: 'inv-1', messageId: 'm2', sceneNumber: 2 })] })
+		);
+
+		expect(result).toBe('merged');
+		expect(await readInventory('line-1')).toEqual([{ id: 'inv-1', item_name: 'Sword', equip_status: 'carried' }]);
+		expect(await testDb.select<{ c: number }[]>('SELECT COUNT(*) AS c FROM act_line_meta')).toEqual([{ c: 1 }]);
+	});
+
+	// WHY (legacy omission): pre-v6 archives carry no inventory collection at
+	// all. Absence is not an empty snapshot, so it must neither fork nor delete.
+	it('legacy omission neither forks nor loses local inventory', async () => {
+		await seedScenes(['m1', 'm2']);
+		await insertInventoryRows([archiveInventory({ id: 'inv-1' })]);
+
+		expect(await merge(makeArchive({ version: 5 }))).toBe('up-to-date');
+
+		expect(await testDb.select<{ c: number }[]>('SELECT COUNT(*) AS c FROM act_line_meta')).toEqual([{ c: 1 }]);
+		expect((await readInventory('line-1')).map((r) => r.id)).toEqual(['inv-1']);
+	});
+
+	// WHY: an explicit empty snapshot is a real "all rows deleted remotely"
+	// state; the local rows survive on the fork and the main line mirrors it.
+	it('explicit empty snapshot forks over local inventory and applies zero rows', async () => {
+		await seedScenes(['m1', 'm2']);
+		await insertInventoryRows([archiveInventory({ id: 'inv-1' })]);
+
+		const result = await merge(makeArchive({ inventory: [] }));
+
+		expect(result).toBe('merged');
+		const forkId = await forkLineId();
+		// cloneInventory re-keys rows with fresh ids; identity is the item history.
+		expect((await readInventory(forkId)).map((r) => r.item_name)).toEqual(['Sword']);
+		expect(await readInventory('line-1')).toEqual([]);
+	});
+
+	// WHY: a line created on the other device imports whole — its inventory
+	// rows must ride along or the new line silently loses item tracking.
+	it('imports inventory for a line created on the other device', async () => {
+		await seedScenes(['m1', 'm2']);
+
+		const data = makeArchive({ inventory: [] });
+		data.actLineMeta.push({ id: 'line-2', actId: 'act-1', name: 'Branch', isMainLine: false, createdAt: 1000, plotMode: 'guidance' });
+		data.actLineEntries.push({ actLineId: 'line-2', messageId: 'm3', sequence: 1 });
+		data.messages.push(archiveMessage('m3', 1));
+		data.inventory = [archiveInventory({ id: 'inv-9', actLineId: 'line-2', messageId: 'm3' })];
+
+		expect(await merge(data)).toBe('merged');
+		expect(await readInventory('line-2')).toEqual([{ id: 'inv-9', item_name: 'Sword', equip_status: 'carried' }]);
+	});
+});
+
+describe('inventoryHistoriesEqual', () => {
+	function localRow(overrides: Partial<InventoryRow> = {}): InventoryRow {
+		return {
+			id: 'inv-1',
+			story_id: 'story-1',
+			act_line_id: 'line-1',
+			message_id: 'm1',
+			scene_number: 1,
+			character_canonical_name: 'alice',
+			item_name: 'Sword',
+			event_type: 'acquired',
+			category: 'equipment',
+			equip_status: 'carried',
+			description: null,
+			created_at: '2026-01-01 00:00:00',
+			...overrides,
+		};
+	}
+
+	function incomingRow(overrides: Partial<InsertInventoryRowInput> = {}): InsertInventoryRowInput {
+		return {
+			id: 'inv-1',
+			storyId: 'story-1',
+			actLineId: 'line-1',
+			messageId: 'm1',
+			sceneNumber: 1,
+			characterCanonicalName: 'alice',
+			itemName: 'Sword',
+			eventType: 'acquired',
+			category: 'equipment',
+			equipStatus: 'carried',
+			description: null,
+			createdAt: '2026-01-01 00:00:00',
+			...overrides,
+		};
+	}
+
+	// WHY: ID equality is insufficient — entries are mutable through the context
+	// UI, so every user-visible field is pinned; dropping one cannot pass silently.
+	it('compares all mutable fields, not only ids', () => {
+		expect(inventoryHistoriesEqual([localRow()], [incomingRow()])).toBe(true);
+		expect(inventoryHistoriesEqual([localRow()], [incomingRow({ eventType: 'used' })])).toBe(false);
+		expect(inventoryHistoriesEqual([localRow()], [incomingRow({ category: null })])).toBe(false);
+		expect(inventoryHistoriesEqual([localRow()], [incomingRow({ equipStatus: 'lost' })])).toBe(false);
+		expect(inventoryHistoriesEqual([localRow()], [incomingRow({ description: 'chipped' })])).toBe(false);
+		expect(inventoryHistoriesEqual([localRow()], [incomingRow({ id: 'inv-2' })])).toBe(false);
+	});
+
+	// WHY: the query has no ORDER BY contract; identity-keyed comparison must not
+	// read a reordered snapshot as an edit and fork needlessly.
+	it('ignores row order and detects length differences', () => {
+		const a = localRow();
+		const b = localRow({ id: 'inv-2', item_name: 'Shield' });
+		expect(inventoryHistoriesEqual([a, b], [incomingRow({ id: 'inv-2', itemName: 'Shield' }), incomingRow()])).toBe(true);
+		expect(inventoryHistoriesEqual([a, b], [incomingRow()])).toBe(false);
 	});
 });

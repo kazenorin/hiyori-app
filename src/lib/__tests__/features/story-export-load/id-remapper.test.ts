@@ -311,6 +311,42 @@ describe('regenerateIds', () => {
 		expect(result.data.messagePhases).toBeUndefined();
 	});
 
+	// WHY (archive v6): without remapping, as-new loads attach inventory rows to
+	// the source story's ids — the copy silently loses item tracking and the
+	// original story gains orphaned rows.
+	it('remaps inventory ids, storyId, actLineId and messageId', () => {
+		const data = makeValidData();
+		data.inventory = [
+			{
+				id: 'inv-1',
+				storyId: 'story-1',
+				actLineId: 'line-1',
+				messageId: 'msg-1',
+				sceneNumber: 1,
+				characterCanonicalName: 'alice',
+				itemName: 'Sword',
+				eventType: 'acquired',
+				category: 'equipment',
+				equipStatus: 'carried',
+				description: null,
+				createdAt: '2026-01-01 00:00:00',
+			},
+		];
+		const result = regenerateIds(data);
+		const row = result.data.inventory![0];
+		expect(row.id).not.toBe('inv-1');
+		expect(row.storyId).toBe(result.newStoryId);
+		expect(row.actLineId).toBe(result.idMap.get('line-1')!);
+		expect(row.messageId).toBe(result.idMap.get('msg-1')!);
+		expect(row.itemName).toBe('Sword');
+		expect(row.createdAt).toBe('2026-01-01 00:00:00');
+	});
+
+	it('leaves inventory undefined for older archives', () => {
+		const result = regenerateIds(makeValidData());
+		expect(result.data.inventory).toBeUndefined();
+	});
+
 	// WHY (archive v5): as-new import must carry tombstones across the ID
 	// rewrite; dropping `removed` would resurrect erased characters.
 	it('remaps profile ids and actLineIds while preserving removed', () => {

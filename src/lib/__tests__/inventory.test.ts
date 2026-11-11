@@ -15,7 +15,16 @@ vi.mock('#lib/db/database.ts', () => ({
 	getDatabase: () => mockDb,
 }));
 
-import { appendInventoryEvents, getLatestPerItem, type InventoryRow } from '#lib/db/inventory.ts';
+import {
+	appendInventoryEvents,
+	deleteInventoryItemHistory,
+	deleteInventoryRow,
+	getInventoryRowsUpToScene,
+	getLatestPerItem,
+	resolveEquipStatus,
+	updateInventoryRow,
+	type InventoryRow,
+} from '#lib/db/inventory.ts';
 
 function makeRow(overrides: Partial<InventoryRow> = {}): InventoryRow {
 	return {
@@ -191,6 +200,140 @@ describe('inventory DB layer', () => {
 			]);
 
 			expect(insertParams()[8]).toBe('equipment');
+		});
+	});
+
+	describe('resolveEquipStatus', () => {
+		it('implies the status for equipped, unequipped, lost, and consumed', () => {
+			expect(resolveEquipStatus('equipped', 'carried', 'carried')).toBe('equipped');
+			expect(resolveEquipStatus('unequipped', 'equipped', 'equipped')).toBe('unequipped');
+			expect(resolveEquipStatus('lost', 'carried', 'carried')).toBe('lost');
+			expect(resolveEquipStatus('consumed', 'carried', 'carried')).toBe('consumed');
+		});
+
+		it('defaults acquired to carried but honors an explicit request', () => {
+			expect(resolveEquipStatus('acquired', undefined, undefined)).toBe('carried');
+			expect(resolveEquipStatus('acquired', 'equipped', undefined)).toBe('equipped');
+		});
+
+		it('falls back requested -> prior -> carried for other events', () => {
+			expect(resolveEquipStatus('used', 'known', 'equipped')).toBe('known');
+			expect(resolveEquipStatus('used', undefined, 'equipped')).toBe('equipped');
+			expect(resolveEquipStatus('used', undefined, undefined)).toBe('carried');
+		});
+	});
+
+	describe('appendInventoryEvents — alias-aware inheritance', () => {
+		it('looks up the prior row across every supplied canonical name', async () => {
+			mockDbSelectResults = [[makeRow({ category: 'equipment', equip_status: 'equipped' })]];
+
+			await appendInventoryEvents(
+				'story-1',
+				'line-1',
+				'msg-3',
+				3,
+				[{ characterName: 'Elena', itemName: 'Iron Sword', eventType: 'modified' }],
+				{ priorNames: ['elena', 'elena-the-brave'] }
+			);
+
+			expect(mockDb.select).toHaveBeenCalledWith(expect.stringContaining('character_canonical_name IN ($2,$3)'), [
+				'line-1',
+				'elena',
+				'elena-the-brave',
+				'Iron Sword',
+			]);
+			expect(insertParams()[8]).toBe('equipment');
+			expect(insertParams()[9]).toBe('equipped');
+		});
+
+		it('clears the category when null is passed', async () => {
+			mockDbSelectResults = [[makeRow({ category: 'equipment', equip_status: 'carried' })]];
+
+			await appendInventoryEvents('story-1', 'line-1', 'msg-2', 2, [
+				{ characterName: 'Elena', itemName: 'Iron Sword', eventType: 'modified', category: null },
+			]);
+
+			expect(insertParams()[8]).toBeNull();
+		});
+
+		it('inherits the category when undefined is passed', async () => {
+			mockDbSelectResults = [[makeRow({ category: 'equipment', equip_status: 'carried' })]];
+
+			await appendInventoryEvents('story-1', 'line-1', 'msg-2', 2, [
+				{ characterName: 'Elena', itemName: 'Iron Sword', eventType: 'modified' },
+			]);
+
+			expect(insertParams()[8]).toBe('equipment');
+		});
+	});
+
+	describe('scene-scoped reads and row writes', () => {
+		it('selects rows up to the scene, including baseline rows', async () => {
+			mockDbSelectResults = [[makeRow({ id: 'baseline', scene_number: null }), makeRow({ id: 'scene-1', scene_number: 1 })]];
+
+			const rows = await getInventoryRowsUpToScene('line-1', ['elena', 'elena-the-brave'], 2);
+
+			expect(rows).toHaveLength(2);
+			expect(mockDb.select).toHaveBeenCalledWith(expect.stringContaining('scene_number IS NULL OR scene_number <= $4'), [
+				'line-1',
+				'elena',
+				'elena-the-brave',
+				2,
+			]);
+			expect(mockDb.select).toHaveBeenCalledWith(expect.stringContaining('ORDER BY COALESCE(scene_number, -1) ASC, rowid ASC'), [
+				'line-1',
+				'elena',
+				'elena-the-brave',
+				2,
+			]);
+		});
+
+		it('returns no rows without querying when no names are supplied', async () => {
+			await expect(getInventoryRowsUpToScene('line-1', [], 2)).resolves.toEqual([]);
+			expect(mockDb.select).not.toHaveBeenCalled();
+		});
+
+		it('updates one row and returns the affected count', async () => {
+			mockDb.execute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+			const affected = await updateInventoryRow('row-1', 'line-1', {
+				eventType: 'equipped',
+				category: 'equipment',
+				equipStatus: 'equipped',
+				description: null,
+			});
+
+			expect(affected).toBe(1);
+			expect(mockDb.execute).toHaveBeenCalledWith(expect.stringContaining('UPDATE inventory SET'), [
+				'row-1',
+				'line-1',
+				'equipped',
+				'equipment',
+				'equipped',
+				null,
+			]);
+		});
+
+		it('deletes one row and returns the affected count', async () => {
+			mockDb.execute.mockResolvedValueOnce({ rowsAffected: 1 });
+
+			await expect(deleteInventoryRow('row-1', 'line-1')).resolves.toBe(1);
+			expect(mockDb.execute).toHaveBeenCalledWith(expect.stringContaining('DELETE FROM inventory WHERE id = $1 AND act_line_id = $2'), [
+				'row-1',
+				'line-1',
+			]);
+		});
+
+		it('deletes every history row for the item across names', async () => {
+			mockDb.execute.mockResolvedValueOnce({ rowsAffected: 3 });
+
+			await expect(deleteInventoryItemHistory('line-1', ['elena', 'elena-the-brave'], 'Iron Sword')).resolves.toBe(3);
+			expect(mockDb.execute).toHaveBeenCalledWith(expect.stringContaining('item_name = $4'), [
+				'line-1',
+				'elena',
+				'elena-the-brave',
+				'Iron Sword',
+			]);
 		});
 	});
 });

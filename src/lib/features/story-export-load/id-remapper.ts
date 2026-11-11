@@ -42,6 +42,12 @@ export function regenerateIds(data: StoryExportData): RemappedData {
 		}
 	}
 
+	if (data.inventory) {
+		for (const r of data.inventory) {
+			idMap.set(r.id, crypto.randomUUID());
+		}
+	}
+
 	const shortId = newStoryId.slice(-8);
 	const newFolderName = `Story-${shortId}`;
 
@@ -100,6 +106,13 @@ export function regenerateIds(data: StoryExportData): RemappedData {
 			...p,
 			id: idMap.get(p.id) ?? p.id,
 			actLineId: idMap.get(p.actLineId) ?? p.actLineId,
+		})),
+		inventory: data.inventory?.map((r) => ({
+			...r,
+			id: idMap.get(r.id) ?? r.id,
+			storyId: newStoryId,
+			actLineId: idMap.get(r.actLineId) ?? r.actLineId,
+			messageId: idMap.get(r.messageId) ?? r.messageId,
 		})),
 	};
 

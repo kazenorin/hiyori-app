@@ -8,12 +8,14 @@
 	interface Props {
 		profile: CharacterProfileEntity;
 		editable: boolean;
+		showInventory: boolean;
 		onBack: () => void;
 		onEdit: () => void;
 		onRemove: () => void;
+		onInventory: () => void;
 	}
 
-	let { profile, editable, onBack, onEdit, onRemove }: Props = $props();
+	let { profile, editable, showInventory, onBack, onEdit, onRemove, onInventory }: Props = $props();
 
 	let backButton = $state<HTMLButtonElement | null>(null);
 
@@ -58,10 +60,17 @@
 
 	<p class="text-xs text-surface-500">{originLabel(profile.sceneNumber)}</p>
 
-	{#if editable}
+	{#if editable || showInventory}
 		<div class="flex flex-wrap gap-2">
-			<button class="btn preset-tonal text-xs py-1 px-3" type="button" onclick={onEdit}>{t('chat.edit')}</button>
-			<button class="btn preset-tonal text-xs py-1 px-3" type="button" onclick={onRemove}>{t('chat.remove')}</button>
+			{#if editable}
+				<button class="btn preset-tonal text-xs py-1 px-3" type="button" onclick={onEdit}>{t('chat.edit')}</button>
+				<button class="btn preset-tonal text-xs py-1 px-3" type="button" onclick={onRemove}>{t('chat.remove')}</button>
+			{/if}
+			{#if showInventory}
+				<button class="btn preset-tonal text-xs py-1 px-3" type="button" onclick={onInventory}>
+					{t('chat.context.inventory.title')}
+				</button>
+			{/if}
 		</div>
 	{/if}
 

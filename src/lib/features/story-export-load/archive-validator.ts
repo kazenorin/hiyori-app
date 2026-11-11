@@ -1,6 +1,7 @@
 import type JSZip from 'jszip';
 import type { StoryExportData } from './archive-schema';
 import { CURRENT_ARCHIVE_VERSION } from './archive-schema';
+import { EQUIP_STATUSES, INVENTORY_CATEGORIES, INVENTORY_EVENT_TYPES } from '#lib/db/inventory.ts';
 
 export interface ValidationResult {
 	isValid: boolean;
@@ -36,6 +37,33 @@ function isCharacterProfileEntry(value: unknown): boolean {
 		(p.removed === undefined || typeof p.removed === 'boolean') &&
 		Number.isFinite(p.createdAt) &&
 		Number.isFinite(p.updatedAt)
+	);
+}
+
+/**
+ * Shape check for one `inventory` entry. Enum membership is enforced here because
+ * archives cross a trust boundary (file import / cloud sync) and the DB layer
+ * stores these values unchecked.
+ */
+function isInventoryEntry(value: unknown): boolean {
+	if (!value || typeof value !== 'object') return false;
+	const r = value as Record<string, unknown>;
+	return (
+		typeof r.id === 'string' &&
+		typeof r.storyId === 'string' &&
+		typeof r.actLineId === 'string' &&
+		typeof r.messageId === 'string' &&
+		(r.sceneNumber === null || (typeof r.sceneNumber === 'number' && Number.isInteger(r.sceneNumber))) &&
+		typeof r.characterCanonicalName === 'string' &&
+		typeof r.itemName === 'string' &&
+		typeof r.eventType === 'string' &&
+		INVENTORY_EVENT_TYPES.includes(r.eventType as (typeof INVENTORY_EVENT_TYPES)[number]) &&
+		(r.category === null ||
+			(typeof r.category === 'string' && INVENTORY_CATEGORIES.includes(r.category as (typeof INVENTORY_CATEGORIES)[number]))) &&
+		typeof r.equipStatus === 'string' &&
+		EQUIP_STATUSES.includes(r.equipStatus as (typeof EQUIP_STATUSES)[number]) &&
+		isNullableString(r.description) &&
+		isNullableString(r.createdAt)
 	);
 }
 
@@ -110,6 +138,16 @@ export function validateStoryData(data: unknown): ValidationResult {
 		} else if (!d.characterProfiles.every(isCharacterProfileEntry)) {
 			errors.push(
 				'characterProfiles contains malformed elements (expected {id, actLineId, sceneNumber, canonicalName, preferredName, aliases: string[], logline, state, goal, relationships, voice, sceneDetails: string, importance: number, createdAt: number, updatedAt: number, optional traits: string[], removed: boolean})'
+			);
+		}
+	}
+
+	if (d.inventory !== undefined) {
+		if (!Array.isArray(d.inventory)) {
+			errors.push('Invalid "inventory" field (expected array)');
+		} else if (!d.inventory.every(isInventoryEntry)) {
+			errors.push(
+				'inventory contains malformed elements (expected {id, storyId, actLineId, messageId, sceneNumber: number|null, characterCanonicalName, itemName, eventType, category: string|null, equipStatus, description: string|null, createdAt: string|null} with valid enum members)'
 			);
 		}
 	}

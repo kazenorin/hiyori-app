@@ -30,6 +30,7 @@ import { createActLine, insertActLineEntries } from '#lib/db/act-lines.ts';
 import { insertMessage, type Message } from '#lib/db/messages.ts';
 import { upsertMessagePhases } from '#lib/db/message-phases.ts';
 import { insertCharacterProfile } from '#lib/db/character-profiles.ts';
+import { insertInventoryRows } from '#lib/db/inventory.ts';
 import { buildStoryExportData } from '#lib/features/story-export-load/story-exporter.ts';
 import { CURRENT_ARCHIVE_VERSION } from '#lib/features/story-export-load/archive-schema.ts';
 
@@ -56,10 +57,10 @@ describe('buildStoryExportData messagePhases', () => {
 		testDb.close();
 	});
 
-	it('exports archive version 5', async () => {
+	it('exports archive version 6', async () => {
 		const data = await buildStoryExportData('story-1');
-		expect(CURRENT_ARCHIVE_VERSION).toBe(5);
-		expect(data.version).toBe(5);
+		expect(CURRENT_ARCHIVE_VERSION).toBe(6);
+		expect(data.version).toBe(6);
 	});
 
 	// WHY: traits must survive the export→import round-trip across devices.
@@ -150,5 +151,78 @@ describe('buildStoryExportData messagePhases', () => {
 	it('emits an empty array when no phases exist', async () => {
 		const data = await buildStoryExportData('story-1');
 		expect(data.messagePhases).toEqual([]);
+	});
+
+	// WHY (archive v6): the archive is the only carrier of inventory rows across
+	// export/delete/import; omitting them silently discards every character's
+	// item history.
+	it('exports the complete inventory history for the story act lines', async () => {
+		await insertInventoryRows([
+			{
+				id: 'inv-1',
+				storyId: 'story-1',
+				actLineId: 'line-1',
+				messageId: 'm1',
+				sceneNumber: 1,
+				characterCanonicalName: 'alice',
+				itemName: 'Sword',
+				eventType: 'acquired',
+				category: 'equipment',
+				equipStatus: 'carried',
+				description: 'a blade',
+				createdAt: '2026-01-01 00:00:00',
+			},
+			{
+				id: 'inv-2',
+				storyId: 'story-1',
+				actLineId: 'line-1',
+				messageId: 'm2',
+				sceneNumber: 2,
+				characterCanonicalName: 'alice',
+				itemName: 'Sword',
+				eventType: 'lost',
+				category: 'equipment',
+				equipStatus: 'lost',
+				description: null,
+				createdAt: null,
+			},
+		]);
+
+		const data = await buildStoryExportData('story-1');
+		expect(data.inventory).toEqual([
+			{
+				id: 'inv-1',
+				storyId: 'story-1',
+				actLineId: 'line-1',
+				messageId: 'm1',
+				sceneNumber: 1,
+				characterCanonicalName: 'alice',
+				itemName: 'Sword',
+				eventType: 'acquired',
+				category: 'equipment',
+				equipStatus: 'carried',
+				description: 'a blade',
+				createdAt: '2026-01-01 00:00:00',
+			},
+			{
+				id: 'inv-2',
+				storyId: 'story-1',
+				actLineId: 'line-1',
+				messageId: 'm2',
+				sceneNumber: 2,
+				characterCanonicalName: 'alice',
+				itemName: 'Sword',
+				eventType: 'lost',
+				category: 'equipment',
+				equipStatus: 'lost',
+				description: null,
+				createdAt: null,
+			},
+		]);
+	});
+
+	it('emits an empty inventory array when no rows exist', async () => {
+		const data = await buildStoryExportData('story-1');
+		expect(data.inventory).toEqual([]);
 	});
 });

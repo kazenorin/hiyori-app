@@ -41,6 +41,7 @@ import { createAct } from '#lib/db/acts.ts';
 import { createActLine, insertActLineEntries } from '#lib/db/act-lines.ts';
 import { insertMessage, type Message } from '#lib/db/messages.ts';
 import { upsertMessagePhases, getPhasesForMessages, deletePhasesForMessages } from '#lib/db/message-phases.ts';
+import { insertInventoryRows, getInventoryRowsForActLines } from '#lib/db/inventory.ts';
 import { buildStoryExportData } from '#lib/features/story-export-load/story-exporter.ts';
 import { loadStoryOverwrite, loadStoryAsNew } from '#lib/features/story-export-load/story-loader.ts';
 import type { StoryExportData } from '#lib/features/story-export-load/archive-schema.ts';
@@ -168,5 +169,86 @@ describe('story load round-trips messagePhases', () => {
 			'SELECT COUNT(*) AS c FROM message_phases mp LEFT JOIN messages m ON m.id = mp.message_id WHERE m.id IS NULL'
 		);
 		expect(orphans[0].c).toBe(0);
+	});
+
+	const INVENTORY_ROW = {
+		id: 'inv-1',
+		storyId: 'story-1',
+		actLineId: 'line-1',
+		messageId: 'm1',
+		sceneNumber: null,
+		characterCanonicalName: 'alice',
+		itemName: 'Sword',
+		eventType: 'acquired',
+		category: 'equipment',
+		equipStatus: 'carried',
+		description: 'a blade',
+		createdAt: '2026-01-01 00:00:00',
+	};
+
+	// WHY (review-1): export→delete→import must restore inventory rows — the
+	// delete wipes the table for the story's lines, so the archive is the only
+	// carrier.
+	it('overwrite round-trip preserves inventory rows', async () => {
+		await insertInventoryRows([INVENTORY_ROW]);
+		const data = await buildStoryExportData('story-1');
+		const zip = makeZip(data);
+
+		const result = await loadStoryOverwrite(data, ['line-1'], zip); // deleteActLine wipes the rows
+
+		expect(result.success).toBe(true);
+		const rows = await getInventoryRowsForActLines(['line-1']);
+		expect(rows).toHaveLength(1);
+		expect(rows[0]).toMatchObject({
+			id: 'inv-1',
+			story_id: 'story-1',
+			act_line_id: 'line-1',
+			message_id: 'm1',
+			character_canonical_name: 'alice',
+			item_name: 'Sword',
+			event_type: 'acquired',
+			category: 'equipment',
+			equip_status: 'carried',
+			description: 'a blade',
+			created_at: '2026-01-01 00:00:00',
+		});
+	});
+
+	// WHY: as-new must not leak original ids — rows belong to the new story's
+	// remapped line and message ids, and the source story's rows stay untouched.
+	it('as-new round-trip remaps inventory rows into the new story', async () => {
+		await insertInventoryRows([INVENTORY_ROW]);
+		const data = await buildStoryExportData('story-1');
+		const zip = makeZip(data);
+
+		const result = await loadStoryAsNew(data, ['line-1'], zip);
+
+		expect(result.success).toBe(true);
+		const rows = await getInventoryRowsForActLines(['line-1']);
+		expect(rows).toHaveLength(1); // source story untouched
+		const copies = await testDb.select<{ id: string; story_id: string; act_line_id: string; message_id: string; item_name: string }[]>(
+			'SELECT id, story_id, act_line_id, message_id, item_name FROM inventory WHERE story_id = $1',
+			[result.storyId]
+		);
+		expect(copies).toHaveLength(1);
+		expect(copies[0].id).not.toBe('inv-1');
+		expect(copies[0].act_line_id).not.toBe('line-1');
+		expect(copies[0].message_id).not.toBe('m1');
+		expect(copies[0].item_name).toBe('Sword');
+	});
+
+	// WHY (legacy compatibility): pre-v6 archives carry no inventory collection;
+	// load must behave exactly as before — no error, zero rows.
+	it('archive without inventory loads with zero inventory rows', async () => {
+		await insertInventoryRows([INVENTORY_ROW]);
+		const data = await buildStoryExportData('story-1');
+		delete data.inventory; // simulate a pre-v6 archive
+		const zip = makeZip(data);
+		await testDb.execute('DELETE FROM inventory');
+
+		const result = await loadStoryOverwrite(data, ['line-1'], zip);
+
+		expect(result.success).toBe(true);
+		expect(await getInventoryRowsForActLines(['line-1'])).toHaveLength(0);
 	});
 });
