@@ -160,14 +160,13 @@ export async function appendInventoryEvents(
 
 async function getLatestRowForItem(actLineId: string, characterCanonicalNames: string[], itemName: string): Promise<InventoryRow | null> {
 	const db = getDatabase();
-	const names = characterCanonicalNames.length > 0 ? characterCanonicalNames : [''];
-	const namePlaceholders = names.map((_, i) => `$${i + 2}`).join(',');
-	const itemPlaceholder = `$${names.length + 2}`;
+	const namePlaceholders = characterCanonicalNames.map((_, i) => `$${i + 2}`).join(',');
+	const itemPlaceholder = `$${characterCanonicalNames.length + 2}`;
 	const rows = await db.select<InventoryRow[]>(
 		`SELECT * FROM inventory
 		 WHERE act_line_id = $1 AND character_canonical_name IN (${namePlaceholders}) AND item_name = ${itemPlaceholder}
 		 ORDER BY COALESCE(scene_number, -1) DESC, rowid DESC LIMIT 1`,
-		[actLineId, ...names, itemName]
+		[actLineId, ...characterCanonicalNames, itemName]
 	);
 	return rows.length > 0 ? rows[0] : null;
 }
