@@ -164,13 +164,14 @@ src:
               updatedAt: "2026-09-19T13:08:25.273Z"
             phase-event-plot-planner-prompt.md:
               configPath: en/prompt-templates/plot-planner/phase-event-plot-planner-prompt.md
-              hash: 58af30391bf18481d8026fdf85f1dde28da750067eb2128b482d5b017bdcc7f9
+              hash: f812f82f1288cced754cb7817395fc18275dba87e4ef837386d68733d314d665
               oldHashes:
+                - 58af30391bf18481d8026fdf85f1dde28da750067eb2128b482d5b017bdcc7f9
                 - 72cefd52142ab83f087baaa93aee3651febec048f1ee3e8f46ea36738985e865
                 - 9921424820de899992588aafb580c6a30a5b62899aab4fec0122c2bf8e258f70
                 - 419b985708c8bdf4b1a1d3423e9c048d2b2154d8abf269364a58b5aa705e3a5f
                 - eba123a0e017f11c0c00b83c5e76ec0ff4ac4a89e30d830558bd3ca39e611508
-              updatedAt: "2026-09-19T13:08:25.273Z"
+              updatedAt: "2026-11-11T13:08:02.317Z"
           reviewer:
             quick-reviewer-prompt.md:
               configPath: en/prompt-templates/reviewer/quick-reviewer-prompt.md
@@ -542,13 +543,14 @@ src:
               updatedAt: "2026-09-19T13:33:52.518Z"
             phase-event-plot-planner-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/plot-planner/phase-event-plot-planner-prompt.md
-              hash: f1ab0a16270acea27b8a35dc16a69e6c7cc8fa8579c589e20822b4c30bdebb94
+              hash: 1b1181c004384abfabc321da10b44d66c1699788c2f8e83609391db5f245c603
               oldHashes:
+                - f1ab0a16270acea27b8a35dc16a69e6c7cc8fa8579c589e20822b4c30bdebb94
                 - 8ead8c2c530816f4e00b312b9e506c16cf994be7e19176670a45573bde668638
                 - 705e1e2e39be910df7fc22e3a16d866b444d26d9de7eab1941787a1ff771b727
                 - 85a5908a81f1f55b94501878ad45851ce51d8069b636f661c275977a7857b207
                 - c1415926c1645bfedc4d80bae7615c61f911861b20a576701756d5546d3d6516
-              updatedAt: "2026-09-19T13:33:52.518Z"
+              updatedAt: "2026-11-11T13:08:02.317Z"
           reviewer:
             quick-reviewer-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/reviewer/quick-reviewer-prompt.md
@@ -757,9 +759,8 @@ src:
       locale-strings:
         en.yaml:
           configPath: en/locale-strings.yaml
-          hash: 1ee2b54145b371e35f1d147438173640ddc10f023ccf2d6209b5560b33e84099
+          hash: e0d701edbe669b7fc6c396ea9e441f32bd2c6d4b9bb9c951aefbe5b7f54a6f36
           oldHashes:
-            - d0ec8ab828bb56625799159b6cc0e3c9fae0706ea1545614bdb0966074d06c53
             - fb1a007f10b3940621c4b7bd8f12d077119284bd56f0a4198a657479b6d8daaf
             - f70fd1b80e6d3917ac7897b3c760afd4149542f53c3e1278fb16294228b9ae9e
             - 70c471c9f432e55bb159fc0129c72176fce420f15d47387f838d6b4347cf9e94
@@ -775,12 +776,11 @@ src:
             - 2dac94173236f1d91ad05073d7ac651ae1265c4182815041ba5663713dcdd799
             - 80d841aa000184d8604696b1f1877aebb1a348db16d2267e57b421c5eed4c959
             - 02c2f6c61d948f401f32cdd4eb656a574da0366b3a2809ee2ff3c42b47348649
-          updatedAt: "2026-11-11T12:48:05.912Z"
+          updatedAt: "2026-11-11T13:08:02.317Z"
         zh-Hant-HK.yaml:
           configPath: zh-Hant-HK/locale-strings.yaml
-          hash: a96dcbdbf58ddc41c9836f4aca52dc4e6ec734c9e7cc0d8f59bee29c55a6634f
+          hash: ba60376897aac6c60b2b09b547eed798207dd37acd0414480463ad6a25e6ac2c
           oldHashes:
-            - 7a5ff93f210ec392de185903ef38270643c05e788d5d821976d90bf5f770587b
             - fe0177e02a5c6abeee4d3b9f3fd5adb95a51fe500e67bb6bf6a7e21fa5eff5d5
             - d723cb29e4e6d6b22e3db87e0803292c5d92502dbb3804ad08f678a6484968cc
             - 4526e6f52ebd89a566c48893657ef25414f6bb46c2307f5f36fe0e76481d3300
@@ -796,4 +796,4 @@ src:
             - 0eda1a48149469d75b776af15e1b34a8510a948660818ad2f0047cb2c4e95f1c
             - c9bca07458a02fd17114e6456a4c281b2460dc392ffccd2bd103199af045c4cb
             - f7772bf027cfec167bdc5e5d85aa783fac24f47303072a00685d5d7b70b80b54
-          updatedAt: "2026-11-11T12:48:05.912Z"
+          updatedAt: "2026-11-11T13:08:02.317Z"

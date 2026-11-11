@@ -70,8 +70,4 @@ List 1 to 3 unresolved narrative threads from previous phases that events in thi
 - **Thread:** [description]
   - **Status:** [planted / developing / ready to resolve]
   - **Relevant events:** [which standalone or chain events touch this thread]
-
-## Estimated length
-
-[Estimate the number of scenes this phase will span. A single integer.]
 ```

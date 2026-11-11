@@ -21,7 +21,7 @@ import {
 } from '#lib/stores/settings.svelte.ts';
 import type { ActPhase, EndingType, GameDataFields, NarrativeOverrides, NarrativeVariables, PlotMode } from '../narrative-types';
 import { getActPhaseIndex } from '../narrative-types';
-import { DEFAULT_ESTIMATE } from '../plot-planner-output-parser';
+import { DEFAULT_ESTIMATE, joinScenePlotEstimate, splitScenePlotEstimate } from '../plot-planner-output-parser';
 import { sectionFormat, summaryHeader } from '#lib/definitions/common-headers.ts';
 import {
 	writerProvidedSummary,
@@ -39,6 +39,8 @@ import {
 	gameMasterInventoryToolsInstruction,
 	getLocalizedActPhase,
 	gmTemplateFitterExtractionPrompt,
+	plotPlannerEstimateRequirement,
+	plotPlannerEstimatedLengthLabel,
 	plotPlannerInventoryToolsInstruction,
 	plotPlannerMemoryToolsInstruction,
 	quickReviewerInventoryToolsInstruction,
@@ -251,8 +253,19 @@ function buildGmStateUpdate(ss: StreamState): Partial<PipelineState> {
 	};
 }
 
-function buildPlotPlannerStateUpdate(ss: StreamState): Partial<PipelineState> {
-	return { scenePlot: ss.content };
+function buildPlotPlannerStateUpdate(isPhaseEvent: boolean) {
+	return (ss: StreamState): Partial<PipelineState> => {
+		if (!isPhaseEvent) return { scenePlot: ss.content };
+		// Stale template copies can instruct the estimate twice; keep only the first section.
+		const first = splitScenePlotEstimate(ss.content);
+		let prose = first.prose;
+		let rest = splitScenePlotEstimate(prose);
+		while (rest.labelPrefix !== null) {
+			prose = rest.prose;
+			rest = splitScenePlotEstimate(prose);
+		}
+		return { scenePlot: joinScenePlotEstimate(prose, first.estimate ?? DEFAULT_ESTIMATE, null) };
+	};
 }
 
 function buildEditorFitterStateUpdate(originalVars: NarrativeVariables | null, currentEditorOutput: string) {
@@ -571,6 +584,10 @@ function resolvePlotPlannerExtractionPromptForContext(ctx: PipelineRunContext): 
 		.replaceAll('{{actPhaseBoundaries}}', resolveActPhaseBoundaries(ctx));
 	resolved = substituteToolsLine(resolved, 'memoryToolsInstruction', plotPlannerMemoryToolsInstruction(), isMemoryAvailable());
 	resolved = substituteToolsLine(resolved, 'inventoryToolsInstruction', plotPlannerInventoryToolsInstruction(), isInventoryAvailable());
+	if (isPhaseEvent) {
+		// Appended outside the editable template so the ask survives any template edit.
+		resolved += `\n\n${sectionFormat(plotPlannerEstimatedLengthLabel())}${plotPlannerEstimateRequirement()}`;
+	}
 	return resolved;
 }
 
@@ -683,7 +700,7 @@ function executePlotPlannerPhase(ctx: PipelineRunContext, state: PipelineState) 
 				ctx.directorNotes
 			),
 			providerConfig: ctx.providerConfigs.plotPlanner,
-			buildStateUpdate: buildPlotPlannerStateUpdate,
+			buildStateUpdate: buildPlotPlannerStateUpdate(ctx.story.actLine.plotMode === 'phaseEvent'),
 		},
 		state
 	);

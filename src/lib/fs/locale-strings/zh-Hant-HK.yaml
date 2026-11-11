@@ -159,6 +159,8 @@ pipeline:
     gmTemplateFitter: >
       「GM 輸出」未符合所需的遊戲資料格式。請根據遊戲資料範本重新調整結構，
       插入適當的標題而不更改任何內容。若缺少某個區段，請加上標題並留空內容。
+    plotPlanner:
+      estimatedLengthRequirement: '你的輸出必須以此區段作結。估計此階段將涵蓋的場景數量，以一個整數表示。'
   memoryTools:
     writer: '- 使用 `query-memories` 工具擷取相關的背景資訊'
     reviewer: '- **驗證連貫性:** 視需要使用 `query-memories` 工具來核實角色細節、過往事件和地點一致性。'

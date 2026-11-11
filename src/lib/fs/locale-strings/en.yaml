@@ -165,6 +165,8 @@ pipeline:
       The "Game Master Output" does not follow the required game data format. Restructure it to match the game data
       template by inserting the appropriate section headers defined by the "Game Data" template without changing any content.
       If a section is missing from the content, add the header with no body.
+    plotPlanner:
+      estimatedLengthRequirement: 'Your output must end with this section. Estimate the number of scenes this phase will span, written as a single integer.'
   memoryTools:
     writer: '- Use the `query-memories` tool for background information'
     reviewer: '- **Verify Continuity:** Use the `query-memories` tool as needed to fact-check character details, past events, and location consistency.'

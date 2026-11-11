@@ -28,6 +28,7 @@ export const aliasesValueLabel = (aliases: string) => ls('pipeline.labels.aliase
 export const noDescriptionLabel = () => ls('pipeline.labels.noDescription');
 export const sceneDetailsLabel = () => ls('pipeline.labels.sceneDetails');
 export const characterSummariesSinceSceneLabel = (sceneNumber: number) => ls('pipeline.labels.characterSummaries', { sceneNumber });
+export const plotPlannerEstimatedLengthLabel = () => ls('pipeline.labels.plotPlanner.estimatedLength');
 
 /** Localized display name for an act phase (e.g., 'rising-action' → 'Rising Action'). */
 export const getLocalizedActPhase = (phase: ActPhase): string => ls(`pipeline.labels.actPhases.${ACT_PHASE_LOCALE_KEYS[phase]}`);
@@ -69,6 +70,7 @@ export const writerActEndPhaseEvent = (params: { closingSceneRules: string; endi
 export const writerActEndGuidance = (params: { closingSceneRules: string; endingTypeInstructions: string }) =>
 	ls('pipeline.extraction.writer.actEndGuidance', params);
 export const actSummaryTemplate = () => ls('pipeline.extraction.actSummaryTemplate');
+export const plotPlannerEstimateRequirement = () => ls('pipeline.extraction.plotPlanner.estimatedLengthRequirement');
 
 // Memory tools conditional instructions
 export const writerMemoryToolsInstruction = () => ls('pipeline.memoryTools.writer');

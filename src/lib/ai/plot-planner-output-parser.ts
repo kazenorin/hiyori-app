@@ -1,4 +1,4 @@
-import { ls } from '#lib/localization/index.ts';
+import { plotPlannerEstimatedLengthLabel } from '#lib/definitions/pipeline-prompts.ts';
 
 export const MIN_ESTIMATE = 1;
 export const MAX_ESTIMATE = 100;
@@ -32,7 +32,7 @@ function buildLabelRe(label: string): RegExp {
 }
 
 function estimateLabelRe(): RegExp | null {
-	const label = ls('pipeline.labels.plotPlanner.estimatedLength');
+	const label = plotPlannerEstimatedLengthLabel();
 	return label ? buildLabelRe(label) : null;
 }
 
@@ -104,7 +104,7 @@ export function splitScenePlotEstimate(scenePlot: string): ScenePlotEstimatePart
 }
 
 export function joinScenePlotEstimate(prose: string, estimate: number, labelPrefix: string | null): string {
-	const heading = labelPrefix ?? `## ${ls('pipeline.labels.plotPlanner.estimatedLength')}`;
+	const heading = labelPrefix ?? `## ${plotPlannerEstimatedLengthLabel()}`;
 	const section = `${heading}\n\n${estimate}`;
 	const body = prose.trim();
 	return body ? `${body}\n\n${section}` : section;
