@@ -24,7 +24,7 @@ import type { CharacterProfileEntity } from '#lib/db/character-profiles.ts';
 import { aliasesLabel, locationLabel, sceneWithNumberLabel } from '#lib/definitions/common-labels.ts';
 import { hasTemplateMetadata, variablesToMarkdown } from '../template-renderer';
 import { type ActSummary, parseActSummary, pruneCharacterScenes, serializeActSummary } from '../act-summary-parser';
-import { upToLabel } from '#lib/definitions/character-profile-labels.ts';
+import { canonicalNameLabel, upToLabel } from '#lib/definitions/character-profile-labels.ts';
 import {
 	characterSummariesHeader,
 	sceneSummariesHeader,
@@ -153,7 +153,9 @@ export function formatActSummaryForCompressor(completedScenes: number, newActSum
  */
 export function formatExistingProfilesForCompressor(profiles: CharacterProfileEntity[]): string[] {
 	if (profiles.length === 0) return [];
-	const body = profiles.map((p) => formatCharacterProfileAsMessage(p, false)).join('\n\n');
+	const body = profiles
+		.map((p) => `${formatCharacterProfileAsMessage(p, false)}\n- ${canonicalNameLabel()}: ${p.canonicalName}`)
+		.join('\n\n');
 	return [sectionFormat(currentCharacterProfilesHeader()) + body];
 }
 

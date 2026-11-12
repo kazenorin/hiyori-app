@@ -6,5 +6,6 @@ export {
 	voiceLabel,
 	traitsLabel,
 	importanceLabel,
+	canonicalNameLabel,
 	upToLabel,
 } from './pipeline-prompts';

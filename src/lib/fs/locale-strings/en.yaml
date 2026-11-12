@@ -205,6 +205,7 @@ pipeline:
     sceneCountSingular: '1 scene'
     sceneCountPlural: '{{count}} scenes'
     sceneDetails: 'Scene Details'
+    canonicalName: 'Canonical name'
     importanceValue: 'Importance: {{importance}}'
     aliasesValue: 'Aliases: {{aliases}}'
     lastSeen: 'last seen: scene {{sceneNumber}}'

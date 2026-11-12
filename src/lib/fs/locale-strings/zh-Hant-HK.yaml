@@ -199,6 +199,7 @@ pipeline:
     sceneCountSingular: 1 個場景
     sceneCountPlural: '{{count}} 個場景'
     sceneDetails: '場景詳情'
+    canonicalName: '標準名稱'
     importanceValue: '重要性: {{importance}}'
     aliasesValue: '別名: {{aliases}}'
     lastSeen: '最後出現: 場景 {{sceneNumber}}'

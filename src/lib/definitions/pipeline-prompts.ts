@@ -27,6 +27,7 @@ export const importanceValueLabel = (importance: string) => ls('pipeline.labels.
 export const aliasesValueLabel = (aliases: string) => ls('pipeline.labels.aliasesValue', { aliases });
 export const noDescriptionLabel = () => ls('pipeline.labels.noDescription');
 export const sceneDetailsLabel = () => ls('pipeline.labels.sceneDetails');
+export const canonicalNameLabel = () => ls('pipeline.labels.canonicalName');
 export const characterSummariesSinceSceneLabel = (sceneNumber: number) => ls('pipeline.labels.characterSummaries', { sceneNumber });
 export const plotPlannerEstimatedLengthLabel = () => ls('pipeline.labels.plotPlanner.estimatedLength');
 
