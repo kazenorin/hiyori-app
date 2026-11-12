@@ -1,6 +1,6 @@
 # Narrative Generation Pipeline
 
-> **Last updated:** 2026-09-19 | **Version:** 1.8.0
+> **Last updated:** 2026-11-13 | **Version:** 1.8.0
 
 Multi-phase LLM pipeline that generates narrative prose, game data, and scene plots for interactive fiction.
 
@@ -141,6 +141,11 @@ Narrative context is passed as **user messages** (not system prompts). Every pha
 
 On top of the shared prefix each phase appends its **Tier 3 tail**: prior phase outputs (Writer Output for the Reviewer; Writer + Reviewer Output for the Editor; Editor Output for the Game Master and Plot Planner), the phase extraction prompt, and Director Notes.
 
+The async phases (Summarizer and Character Profile Compressor) share the same prefix. Their Tier 3 tails are:
+
+- **Summarizer** — the latest act summary (up to the previous scene), the extraction prompt (incremental or full), and a final line naming the scene to summarize.
+- **Compressor** — the **new** act summary produced by the Summarizer, the existing character profiles as a baseline reference (each entry includes its canonical name so updates keep character identity), then the extraction prompt.
+
 ### Prompt caching
 
 `run-manager.ts` builds the `PipelineContext` once per run (resolving the summarization point, act-summary snapshot, character profiles, and scene sections) and reuses it for every phase, so the shared prefix is byte-identical across phases within a turn. `extractCacheTokens()` records `cacheReadTokens`/`cacheWriteTokens` from providers that report them. Caching is strictly **per model**, so phases assigned to different provider roles cannot share a cache regardless of layout.
@@ -251,18 +256,20 @@ Also in [`narrative-types.ts`](../narrative-types.ts). Contains `activePlotThrea
 
 ### Incremental vs Full
 
-- **Incremental** (`generateIncrementalSummary`): Used when an existing `actSummary` is present. Sends existing summary + new scene, asks for just the new scene's contribution, then merges with `mergeActSummary()`. Falls back to full generation on parse/merge failure.
-- **Full** (`generateFullSummary`): Used when no act summary exists. Sends full transcript or all context, generates complete summary from scratch.
+- **Incremental** (`generateIncrementalSummary`): Used when an existing `actSummary` is present. Tail = existing summary + new scene's extraction prompt, asks for just the new scene's contribution, then merges with `mergeActSummary()`. Falls back to full generation on parse/merge failure.
+- **Full** (`generateFullSummary`): Used when no act summary exists. Tail = full-summary extraction prompt over the shared prefix, generates the complete summary from scratch.
 
-Both use `runNonStreamingPhase()` (AI SDK `generateText()`) rather than streaming.
+Both use `runNonStreamingPhase()` (AI SDK `generateText()`) rather than streaming, and both use the shared system prompt (`mainChatSystemPrompt` with `{{generalInstructions}}` substituted — same as every other phase) on top of the shared prefix.
+
+**Transcript branch (legacy):** when `generateFullSummary` receives a `transcript` (one-off UI backfill via regenerate-metadata), it keeps the old bespoke layout — the role prompt as system prompt, transcript user messages, no tools — with no cache sharing. The pipeline path requires a `PipelineContext`.
 
 ### Character Profile Compressor
 
-Runs after the Summarizer when `characterProfileCompressorInterval` scenes have elapsed since the last compression. Compresses per-character scene-level summaries into consolidated character profiles (state, goals, relationships, voice).
+Runs after the Summarizer when `characterProfileCompressorInterval` scenes have elapsed since the last compression. Compresses per-character scene-level summaries into consolidated character profiles (state, goals, relationships, voice). Input is the shared prefix plus the new act summary and the existing profiles baseline (with canonical names), so it evolves existing profiles instead of re-deriving them.
 
 ## AI Tools
 
-`buildTools(storyId, actLine, assistant, overrides)` assembles all available tools. `guardToolsForPhase(allTools, phase)` keeps an identical schema for every phase (so the tool block stays inside the cacheable prefix) while side-effecting tools outside their allowed phase no-op with a short message:
+`buildTools(storyId, actLine, assistant, overrides, compression)` assembles all available tools (`compression` is the per-run `ProfileCompressionState` holder consumed by `update-character-profile`). `guardToolsForPhase(allTools, phase)` keeps an identical schema for every phase (so the tool block stays inside the cacheable prefix) while side-effecting tools outside their allowed phase no-op with a short message. The async compression phases use `guardToolsForAsyncPhase(allTools, phase)` instead — a **strict** guard where every tool outside the allow-list no-ops, read-only tools included:
 
 | Phase                        | Available Tools                                                                                                                                                                                               |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -272,8 +279,10 @@ Runs after the Summarizer when `characterProfileCompressorInterval` scenes have 
 | GAME_MASTER                  | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`, `update-inventory`, `character-details`                                                                                              |
 | PLOT_PLANNER                 | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`                                                                                                                                       |
 | TEMPLATE_FITTER              | (none)                                                                                                                                                                                                        |
-| SUMMARIZER                   | (none)                                                                                                                                                                                                        |
-| CHARACTER_PROFILE_COMPRESSOR | (none)                                                                                                                                                                                                        |
+| SUMMARIZER                   | (none — strict guard: all tools no-op)                                                                                                                                                                        |
+| CHARACTER_PROFILE_COMPRESSOR | (none — strict guard: all tools no-op)                                                                                                                                                                        |
+
+`update-character-profile` is registered in the tool set (its schema is visible to every phase, keeping the prefix byte-identical) but guarded in **every** phase — it no-ops everywhere until the compressor allow-list flips in step 2.
 
 ## Retry and Error Handling
 
