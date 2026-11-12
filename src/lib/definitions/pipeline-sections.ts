@@ -206,7 +206,7 @@ export interface SceneDetailEntry {
 
 /**
  * Parse a profile's serialized `sceneDetails` into structured entries. The serialized form (see
- * `serializeSceneDetails`) is one `- <sceneNumber>: <text>` line per scene; a line that does not
+ * `serializeCharacterSceneDetails`) is one `- <sceneNumber>: <text>` line per scene; a line that does not
  * start a new item is appended to the previous entry so multi-line summaries survive a round-trip.
  */
 export function parseSceneDetails(sceneDetails: string): SceneDetailEntry[] {

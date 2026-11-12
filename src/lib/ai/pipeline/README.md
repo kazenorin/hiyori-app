@@ -181,7 +181,7 @@ message-builder.ts ← types, narrative-types, template-renderer, definitions
        ↑
 prompt-loader.ts ← fs/prompts
        ↑
-summarizer.ts ← phase-executor, message-builder, types, act-summary-parser, definitions
+summarizer.ts ← phase-executor, message-builder, types, act-summary-parser, tools, definitions
        ↑
 runners.ts ← phase-executor, message-builder, types, descriptors, settings, definitions
        ↑
@@ -198,7 +198,7 @@ All interfaces are defined in [`types.ts`](./types.ts). Key types to know:
 - **`PipelineState`** — Mutable state accumulated across phases (writer/editor/GM output, variables, game data). This is what gets cached in `pipeline_runs.state`.
 - **`PipelineCallbacks`** — Lifecycle hooks: `onPhaseStart`, `onPhaseStream`, `onPhaseRetry`, `onPhaseComplete`, `onError`, `onPhrasesExtracted`, `onAllComplete`.
 - **`PipelineExecution`** — Holds `abortSignal`, `callbacks`, optional `tools`, and `onPhaseCommit(state, phases)` for persisting the phase cache after each phase.
-- **`PipelineRunContext`** — Shared context passed to all phase runners (defined in [`runners.ts`](./runners.ts)). Contains `sharedParams`, `providerConfigs`, `prompts`, `effectiveTargetWordCount`, `currentScene`, the narrative scalars (`completedScenes`, `directorNotes`, `previousScenePlot`, `previousTurnOfEvents`), `tools`, `story`, `assistant`, `narrativeOverrides` (writer-tool overrides merged into writer variables, fill-when-missing), and the `context` prefix.
+- **`PipelineRunContext`** — Shared context passed to all phase runners (defined in [`runners.ts`](./runners.ts)). Contains `sharedParams`, `providerConfigs`, `prompts`, `effectiveTargetWordCount`, `currentScene`, the narrative scalars (`completedScenes`, `directorNotes`, `previousScenePlot`, `previousTurnOfEvents`), `tools`, `story`, `assistant`, `narrativeOverrides` (writer-tool overrides merged into writer variables, fill-when-missing), the `context` prefix, and `compression` (the per-run `ProfileCompressionState` holder).
 - **`PipelineProviderConfigs`** — Per-phase provider resolution. Built by `buildPipelineProviderConfigs()` ([`chat/pipeline-config.ts`](../chat/pipeline-config.ts)) which resolves role-specific configs with fallback to `main`. Roles: `plotPlanner`, `writer`, `reviewer`, `editor`, `gameMaster`, `summarizer`, `minorTaskAgent`.
 
 ## Streaming Architecture
