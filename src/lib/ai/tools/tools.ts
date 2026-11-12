@@ -48,7 +48,7 @@ export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 	EDITOR: [],
 	TEMPLATE_FITTER: [],
 	GAME_MASTER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory', 'update-inventory', 'character-details'],
-	CHARACTER_PROFILE_COMPRESSOR: [],
+	CHARACTER_PROFILE_COMPRESSOR: ['update-character-profile'],
 };
 
 /** Side-effecting tools whose no-op result is `{ result }` rather than a bare string. */

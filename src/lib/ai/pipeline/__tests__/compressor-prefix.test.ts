@@ -188,10 +188,11 @@ describe('compressor shared-prefix layout (step 1)', () => {
 		expect(contents[contents.length - 1]).toContain('COMPRESSOR-ROLE');
 	});
 
-	it('registers update-character-profile as side-effecting but allowed nowhere yet', () => {
+	it('registers update-character-profile as side-effecting, allowed only for the compressor', () => {
 		expect(SIDE_EFFECTING_TOOLS.has('update-character-profile')).toBe(true);
-		for (const allowed of Object.values(PHASE_TOOLS)) {
-			expect(allowed).not.toContain('update-character-profile');
+		expect(PHASE_TOOLS.CHARACTER_PROFILE_COMPRESSOR).toContain('update-character-profile');
+		for (const [phase, allowed] of Object.entries(PHASE_TOOLS)) {
+			if (phase !== 'CHARACTER_PROFILE_COMPRESSOR') expect(allowed).not.toContain('update-character-profile');
 		}
 	});
 });

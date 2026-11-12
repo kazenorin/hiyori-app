@@ -23,15 +23,7 @@ import {
 	substituteActSummaryTemplate,
 } from './message-builder';
 import { guardToolsForAsyncPhase } from '#lib/ai/tools/tools.ts';
-import {
-	type ActSummary,
-	mergeActSummary,
-	parseActSummary,
-	parseIncrementalOutput,
-	parseProfilesBody,
-	serializeActSummary,
-	serializeCharacterSceneDetails,
-} from '../act-summary-parser';
+import { type ActSummary, mergeActSummary, parseActSummary, parseIncrementalOutput, serializeActSummary } from '../act-summary-parser';
 import { actSummaryHeader, currentCharacterProfilesHeader } from '#lib/definitions/common-headers.ts';
 import {
 	goalLabel,
@@ -52,14 +44,7 @@ import { isAbortLikeError } from '#lib/utils/async.ts';
 import { log } from '#lib/logging/logger.ts';
 import { runMemoryExtractionPipeline } from '#lib/features/memory/memory-extraction-pipeline.ts';
 import { type LoadedPrompts } from './prompt-loader';
-import {
-	insertCharacterProfile,
-	getLatestProfileByAlias,
-	getLatestProfilesByActLine,
-	toCanonicalName,
-	ensurePreferredInAliases,
-	type CharacterImportance,
-} from '#lib/db/character-profiles.ts';
+import { getLatestProfilesByActLine } from '#lib/db/character-profiles.ts';
 import { getLastCompressionScene, recordCharacterProfileCompression } from '#lib/db/act-lines.ts';
 
 // --- Input interfaces ---
@@ -261,7 +246,7 @@ export async function generateCharacterProfiles(
 	);
 
 	compressorInput.compression.newActSummary = newActSummary;
-	const { text: rawProfiles, metadata } = await runNonStreamingPhase(
+	const { metadata } = await runNonStreamingPhase(
 		'CHARACTER_PROFILE_COMPRESSOR',
 		resolveAsyncSystemPrompt(prompts),
 		messages,
@@ -270,45 +255,20 @@ export async function generateCharacterProfiles(
 		guardToolsForAsyncPhase(compressorInput.tools, 'CHARACTER_PROFILE_COMPRESSOR')
 	);
 
-	try {
-		const profilesResult = parseProfilesBody(rawProfiles);
-		if (profilesResult.profiles.length === 0) return null;
-
-		for (const profile of profilesResult.profiles) {
-			const importance: CharacterImportance = resolveImportance(profile.importance);
-			const existing = await getLatestProfileByAlias(compressorInput.actLineId, profile.characterName);
-			const canonicalName = existing?.canonicalName ?? toCanonicalName(profile.characterName);
-			const aliases = ensurePreferredInAliases(profile.characterName, existing?.aliases ?? []);
-			await insertCharacterProfile({
-				id: crypto.randomUUID(),
-				actLineId: compressorInput.actLineId,
-				sceneNumber: completedScenes,
-				canonicalName,
-				preferredName: profile.characterName,
-				aliases,
-				logline: profile.logline,
-				state: profile.state || null,
-				goal: profile.goal || null,
-				relationships: profile.relationships || null,
-				voice: profile.voice || null,
-				traits: profile.traits,
-				sceneDetails: serializeCharacterSceneDetails(newActSummary, profile.characterName),
-				importance,
-			});
-		}
-
+	const { compression } = compressorInput;
+	if (compression.successCount > 0 || compression.attemptCount === 0) {
 		await recordCharacterProfileCompression(compressorInput.actLineId, compressorInput.assistant, completedScenes);
-
+		await log.info(
+			'pipeline',
+			`Character profile compression at scene ${completedScenes}: ${compression.successCount} updated, ${compression.attemptCount - compression.successCount} failed`
+		);
 		return { metadata };
-	} catch (err) {
-		await log.warn('pipeline', `Character profile compressor parse failed: ${err}`);
-		return null;
 	}
-}
-
-function resolveImportance(parsed: number | null): CharacterImportance {
-	if (parsed !== null && parsed >= 1 && parsed <= 4) return parsed as CharacterImportance;
-	return 4;
+	await log.warn(
+		'pipeline',
+		`Character profile compression: all ${compression.attemptCount} attempts failed; not recorded, will retry next turn`
+	);
+	return null;
 }
 
 // --- Async phases (Summarizer → Compressor → Memory) ---
