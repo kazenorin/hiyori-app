@@ -6,6 +6,7 @@ import {
 	type PipelineProviderConfigs,
 	type PipelineResult,
 	type PipelineState,
+	type ProfileCompressionState,
 } from './types';
 import { aggregateMetadata, aggregateMetadataFromPhases } from './phase-executor';
 import { type StreamResultMetadata } from '../streaming';
@@ -77,7 +78,8 @@ async function buildPipelineContext(
 	const sharedParams = { abortSignal, callbacks, retryConfig: retryConfig ?? DEFAULT_RETRY_CONFIG };
 
 	const narrativeOverrides = createNarrativeOverrides();
-	const tools = await buildTools(story.storyId, story.actLine, assistant, narrativeOverrides);
+	const compression: ProfileCompressionState = { completedScenes, newActSummary: undefined, attemptCount: 0, successCount: 0 };
+	const tools = await buildTools(story.storyId, story.actLine, assistant, narrativeOverrides, compression);
 	const prompts = preparePipelinePrompts(loadedPrompts);
 
 	return {
@@ -95,6 +97,7 @@ async function buildPipelineContext(
 		assistant,
 		narrativeOverrides,
 		context,
+		compression,
 	};
 }
 
@@ -193,6 +196,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		loadedPrompts,
 		context: input.context,
 		tools: ctx.tools,
+		compression: ctx.compression,
 	});
 
 	// --- Sequential phases (resume gates: cached outputs are skipped) ---

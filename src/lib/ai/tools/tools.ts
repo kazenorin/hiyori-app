@@ -10,8 +10,9 @@ import { buildIntroduceCharacterTools } from '#lib/ai/tools/introduce-character.
 import { buildCharacterDetailsTools } from '#lib/ai/tools/character-details.ts';
 import { buildSetSceneTitleTools } from '#lib/ai/tools/set-scene-title.ts';
 import { buildSuggestCharacterNameTools } from '#lib/ai/tools/suggest-character-name.ts';
+import { buildUpdateCharacterProfileTools } from '#lib/ai/tools/update-character-profile.ts';
 import { getStory, type Story } from '#lib/db/stories.ts';
-import type { ActLineContext, AssistantContext } from '#lib/ai/pipeline/types.ts';
+import type { ActLineContext, AssistantContext, ProfileCompressionState } from '#lib/ai/pipeline/types.ts';
 import { getSceneCountInCurrentPhase, isActLineEnded } from '#lib/db/act-lines.ts';
 import { type Act, getAct } from '#lib/db/acts.ts';
 import { type ToolSet } from 'ai';
@@ -80,7 +81,8 @@ export async function buildTools(
 	storyId: string,
 	actLine: ActLineContext,
 	assistant: AssistantContext,
-	overrides: NarrativeOverrides
+	overrides: NarrativeOverrides,
+	compression: ProfileCompressionState
 ): Promise<ToolSet | undefined> {
 	const story = await getStory(storyId);
 
@@ -103,6 +105,7 @@ export async function buildTools(
 		...buildCharacterDetailsTools(ctx),
 		...buildSetSceneTitleTools(ctx, overrides),
 		...buildSuggestCharacterNameTools(ctx),
+		...buildUpdateCharacterProfileTools(ctx, compression),
 	};
 
 	if (isInventoryAvailable()) {

@@ -54,7 +54,15 @@ import {
 	writerMemoryToolsInstruction,
 	writerScenePrioritiesHeader,
 } from '#lib/definitions/pipeline-prompts.ts';
-import type { AssistantContext, PipelineCallbacks, PipelineContext, PipelineProviderConfigs, PipelineState, StoryContext } from './types';
+import type {
+	AssistantContext,
+	PipelineCallbacks,
+	PipelineContext,
+	PipelineProviderConfigs,
+	PipelineState,
+	ProfileCompressionState,
+	StoryContext,
+} from './types';
 import { executeStreamingPhase, updateState } from './phase-executor';
 import type { StreamResultMetadata } from '../streaming';
 import type { StreamState } from '../chat-callbacks';
@@ -324,6 +332,7 @@ export interface PipelineRunContext {
 	narrativeOverrides: NarrativeOverrides;
 	/** Shared-prefix context (Tiers 0–2) reused by every phase this run. */
 	context: PipelineContext;
+	compression: ProfileCompressionState;
 }
 
 /**

@@ -10,6 +10,7 @@ import type {
 	PipelineContext,
 	PipelineProviderConfigs,
 	PlayerContext,
+	ProfileCompressionState,
 	SummarizerResult,
 } from './types';
 import { runNonStreamingPhase } from './phase-executor';
@@ -20,7 +21,6 @@ import {
 	formatActSummaryForSummarizer,
 	formatExistingProfilesForCompressor,
 	substituteActSummaryTemplate,
-	toUserMessages,
 } from './message-builder';
 import { guardToolsForAsyncPhase } from '#lib/ai/tools/tools.ts';
 import {
@@ -90,6 +90,9 @@ export interface CharacterProfileCompressorInput {
 	assistant: AssistantContext;
 	providerConfig: ProviderConfig | undefined;
 	abortSignal: AbortSignal;
+	context: PipelineContext;
+	tools: ToolSet | undefined;
+	compression: ProfileCompressionState;
 }
 
 // --- Summarizer functions ---
@@ -236,7 +239,7 @@ export async function generateCharacterProfiles(
 
 	if (completedScenes - lastScene < interval) return null;
 
-	const compressorSystemPrompt = prompts.characterProfileCompressorPrompt
+	const compressorExtraction = prompts.characterProfileCompressorPrompt
 		.replaceAll('{{actSummaryHeader}}', actSummaryHeader())
 		.replaceAll('{{characterProfilesHeader}}', characterProfilesHeader())
 		.replaceAll('{{currentCharacterProfilesHeader}}', currentCharacterProfilesHeader())
@@ -249,17 +252,20 @@ export async function generateCharacterProfiles(
 		.replaceAll('{{importanceLabel}}', importanceLabel());
 
 	const existingProfiles = await getLatestProfilesByActLine(compressorInput.actLineId);
-	const messages = toUserMessages([
-		...formatActSummaryForCompressor(completedScenes, newActSummary),
-		...formatExistingProfilesForCompressor(existingProfiles),
-	]);
+	const messages = buildPhaseMessages(
+		compressorInput.context,
+		[...formatActSummaryForCompressor(completedScenes, newActSummary), ...formatExistingProfilesForCompressor(existingProfiles)],
+		compressorExtraction,
+		''
+	);
 
 	const { text: rawProfiles, metadata } = await runNonStreamingPhase(
 		'CHARACTER_PROFILE_COMPRESSOR',
-		compressorSystemPrompt,
+		resolveAsyncSystemPrompt(prompts),
 		messages,
 		providerConfig,
-		abortSignal
+		abortSignal,
+		guardToolsForAsyncPhase(compressorInput.tools, 'CHARACTER_PROFILE_COMPRESSOR')
 	);
 
 	try {
@@ -326,6 +332,7 @@ export interface AsyncPhasesContext {
 	loadedPrompts: LoadedPrompts;
 	context: PipelineContext;
 	tools: ToolSet | undefined;
+	compression: ProfileCompressionState;
 }
 
 export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhaseResults> {
@@ -343,6 +350,7 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 		loadedPrompts,
 		context,
 		tools,
+		compression,
 	} = ctx;
 	if (player?.playerResponse && completedScenes > 0) {
 		const summarizerInput: SummarizerInput = {
@@ -384,6 +392,9 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 					assistant,
 					providerConfig: providerConfigs.summarizer,
 					abortSignal,
+					context,
+					tools,
+					compression,
 				};
 				compressorResult = await generateCharacterProfiles(result.actSummary, compressorInput, summarizerPrompts);
 			}

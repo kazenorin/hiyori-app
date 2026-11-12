@@ -55,6 +55,14 @@ export interface CompressorResult {
 	metadata: StreamResultMetadata;
 }
 
+/** Run-scoped mutable state shared between the compressor tool's execute and the async chain. */
+export interface ProfileCompressionState {
+	completedScenes: number;
+	newActSummary: ActSummary | undefined;
+	attemptCount: number;
+	successCount: number;
+}
+
 export interface AsyncPhaseResults {
 	actSummary?: string;
 	summarizerMetadata?: StreamResultMetadata;

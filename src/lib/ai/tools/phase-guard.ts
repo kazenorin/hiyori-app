@@ -4,6 +4,7 @@ import type { ToolSet } from 'ai';
 export const SIDE_EFFECTING_TOOLS: ReadonlySet<string> = new Set([
 	'introduce-character',
 	'update-inventory',
+	'update-character-profile',
 	'advance-phase',
 	'end-act',
 	'set-scene-title',

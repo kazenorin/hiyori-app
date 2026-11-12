@@ -92,3 +92,106 @@ describe('formatExistingProfilesForCompressor', () => {
 		expect(formatExistingProfilesForCompressor([])).toEqual([]);
 	});
 });
+
+// --- Compressor shared-prefix layout (step 1) ---
+
+const compressionCalls: { system: string; messages: { role: string; content: string }[]; tools: Record<string, unknown> | undefined }[] =
+	[];
+vi.mock('#lib/ai/pipeline/phase-executor.ts', () => ({
+	runNonStreamingPhase: vi.fn(
+		async (
+			phase: string,
+			system: string,
+			messages: never[],
+			config: unknown,
+			signal: unknown,
+			tools: Record<string, unknown> | undefined
+		) => {
+			compressionCalls.push({ system, messages, tools });
+			return {
+				text: '',
+				metadata: {
+					finishReason: 'stop',
+					usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+					durationMs: 1,
+					models: new Set(['m']),
+				},
+			};
+		}
+	),
+}));
+vi.mock('#lib/stores/settings.svelte.ts', () => ({
+	getSettings: () => ({ characterProfileCompressorInterval: 5 }),
+	isMemoryAvailable: () => false,
+}));
+vi.mock('#lib/db/act-lines.ts', () => ({
+	getLastCompressionScene: vi.fn(async () => 0),
+	recordCharacterProfileCompression: vi.fn(async () => {}),
+}));
+vi.mock('#lib/db/character-profiles.ts', async (importOriginal) => {
+	const actual = await importOriginal<typeof import('#lib/db/character-profiles.ts')>();
+	return { ...actual, getLatestProfilesByActLine: vi.fn(async () => [profile()]), insertCharacterProfile: vi.fn(async () => {}) };
+});
+
+import type { ProfileCompressionState, PipelineContext } from '#lib/ai/pipeline/types.ts';
+import { generateCharacterProfiles, type SummarizerPrompts } from '#lib/ai/pipeline/summarizer.ts';
+import { parseActSummary } from '#lib/ai/act-summary-parser.ts';
+import { SIDE_EFFECTING_TOOLS } from '#lib/ai/tools/phase-guard.ts';
+import { PHASE_TOOLS } from '#lib/ai/tools/tools.ts';
+
+const context: PipelineContext = {
+	worldContent: 'WORLD-BODY',
+	actPlot: 'PLOT-BODY',
+	previousActSummaries: [],
+	summarizationPoint: 0,
+	characterProfiles: [],
+	actSummaryAtSP: '',
+	scenesSections: ['## Scene 9\n### Narrative Body\nThey arrive at the gate.'],
+	plotMode: 'guidance',
+};
+
+const prompts: SummarizerPrompts = {
+	summarizerPrompt: 'FULL-ROLE {{actSummaryTemplate}}',
+	summarizerIncrementalPrompt: 'INCREMENTAL-ROLE {{actSummaryTemplate}}',
+	characterProfileCompressorPrompt: 'COMPRESSOR-ROLE',
+	mainChatSystemPrompt: 'SHARED-SYSTEM {{generalInstructions}}',
+	generalInstructions: 'GEN-INSTR',
+};
+
+describe('compressor shared-prefix layout (step 1)', () => {
+	it('uses shared system + prefix + tail (new summary, profiles with canonical, role prompt)', async () => {
+		const compression: ProfileCompressionState = { completedScenes: 9, newActSummary: undefined, attemptCount: 0, successCount: 0 };
+		const newSummary = parseActSummary(
+			'# Act Summary\n\n## Scene Summaries\n\n### Scene 9: The Gate\n- Location: Gate\n- Summary: They arrive.'
+		);
+		await generateCharacterProfiles(
+			newSummary,
+			{
+				actSummary: '',
+				actLineId: 'line-1',
+				completedScenes: 9,
+				assistant: { messageId: 'msg-10', messageSequence: 10 },
+				providerConfig: { model: 'm' } as never,
+				abortSignal: new AbortController().signal,
+				context,
+				tools: undefined,
+				compression,
+			},
+			prompts
+		);
+		const { system, messages } = compressionCalls[0];
+		expect(system).toBe('SHARED-SYSTEM GEN-INSTR');
+		const contents = messages.map((m) => m.content);
+		expect(contents[0]).toContain('WORLD-BODY');
+		expect(contents.some((c) => c.includes('Scene 9: The Gate'))).toBe(true);
+		expect(contents.some((c) => c.includes('elena-vale'))).toBe(true);
+		expect(contents[contents.length - 1]).toContain('COMPRESSOR-ROLE');
+	});
+
+	it('registers update-character-profile as side-effecting but allowed nowhere yet', () => {
+		expect(SIDE_EFFECTING_TOOLS.has('update-character-profile')).toBe(true);
+		for (const allowed of Object.values(PHASE_TOOLS)) {
+			expect(allowed).not.toContain('update-character-profile');
+		}
+	});
+});
