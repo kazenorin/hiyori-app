@@ -30,6 +30,7 @@ import {
 	parseIncrementalOutput,
 	parseProfilesBody,
 	serializeActSummary,
+	serializeCharacterSceneDetails,
 } from '../act-summary-parser';
 import { actSummaryHeader, currentCharacterProfilesHeader } from '#lib/definitions/common-headers.ts';
 import {
@@ -291,7 +292,7 @@ export async function generateCharacterProfiles(
 				relationships: profile.relationships || null,
 				voice: profile.voice || null,
 				traits: profile.traits,
-				sceneDetails: serializeSceneDetails(newActSummary, profile.characterName),
+				sceneDetails: serializeCharacterSceneDetails(newActSummary, profile.characterName),
 				importance,
 			});
 		}
@@ -308,13 +309,6 @@ export async function generateCharacterProfiles(
 function resolveImportance(parsed: number | null): CharacterImportance {
 	if (parsed !== null && parsed >= 1 && parsed <= 4) return parsed as CharacterImportance;
 	return 4;
-}
-
-function serializeSceneDetails(actSummary: ActSummary, characterName: string): string {
-	const character = actSummary.characters.find((c) => c.characterName === characterName || c.aliases.includes(characterName));
-	if (!character || character.sceneEntries.length === 0) return '';
-	const lines = character.sceneEntries.map((e) => `- ${e.sceneNumber}: ${e.summary}`);
-	return lines.join('\n');
 }
 
 // --- Async phases (Summarizer → Compressor → Memory) ---
