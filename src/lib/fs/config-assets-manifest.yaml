@@ -194,7 +194,6 @@ src:
               configPath: en/prompt-templates/summarizer/character-profile-compressor.md
               hash: 573c1b9c2bf5d83c5bd81d90596a62b2b2bf437d21323757a51ce4d9aca95a19
               oldHashes:
-                - a5f37988d31fdc6746f8d578bbef96a05520cf8b8c1eae40faad121027bbed20
                 - deae9178b9a19fbe928aac0f06beda1558dafc019f0fd5752dde4c3818ae5099
                 - 39510e58e34136a6335773375d1939bcb37c6ca074bd48d7907a0f6a8fd7ac5d
                 - 2438a90b9599afc9f40d34fe3e466765eebbcd916ef3f1d2643fed9a031bfdae
@@ -576,7 +575,6 @@ src:
               configPath: zh-Hant-HK/prompt-templates/summarizer/character-profile-compressor.md
               hash: 567a3d4ee417c9f19502f992cf2f11a66bdd01ec4df932a0406e2b2af06474d2
               oldHashes:
-                - e20bf9e34023048d8c782ddc4a0222b34022471b15e020ba64f5b252e9a75936
                 - 6d2de09624796971882412328f98ed4d2774dfce953ca91f09b245f65b5c9c47
                 - 3c68b796e31f834761bc6a4c41c3947937246de4522c7564f6254f8cfa55df3c
                 - 3a55e9df6531ed7f7f94156222dac4fe1de4b02c86704fcf1dd5aa340225ab69

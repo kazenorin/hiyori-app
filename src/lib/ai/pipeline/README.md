@@ -86,11 +86,11 @@ Runs the pre-editor chain only (Writer → Reviewer → Editor → Template Fitt
 
 ### Async Phases
 
-| Phase                            | Purpose                                                          | Provider Role          | Output in `AsyncPhaseResults`                          | Mode                           |
-| -------------------------------- | ---------------------------------------------------------------- | ---------------------- | ------------------------------------------------------ | ------------------------------ |
-| **Summarizer**                   | Updates act summary (full or incremental)                        | `summarizer`           | `actSummary`, `summarizerMetadata`                     | Non-streaming (`generateText`) |
-| **Character Profile Compressor** | Compresses character profiles when interval threshold is met     | `summarizer`           | `compressorMetadata` (profiles persist directly to DB) | Non-streaming                  |
-| **Memory Extraction**            | Extracts character memories, locations, inventory into vector DB | `memory` + `embedding` | (persists directly)                                    | Non-streaming                  |
+| Phase                            | Purpose                                                                                             | Provider Role          | Output in `AsyncPhaseResults`                                                                     | Mode                           |
+| -------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------ |
+| **Summarizer**                   | Updates act summary (full or incremental)                                                           | `summarizer`           | `actSummary`, `summarizerMetadata`                                                                | Non-streaming (`generateText`) |
+| **Character Profile Compressor** | Updates character profiles via `update-character-profile` tool calls when interval threshold is met | `summarizer`           | `compressorMetadata` (only when compression is recorded; profile versions persist via tool calls) | Non-streaming                  |
+| **Memory Extraction**            | Extracts character memories, locations, inventory into vector DB                                    | `memory` + `embedding` | (persists directly)                                                                               | Non-streaming                  |
 
 ## Conditional Phase Execution
 
@@ -265,7 +265,16 @@ Both use `runNonStreamingPhase()` (AI SDK `generateText()`) rather than streamin
 
 ### Character Profile Compressor
 
-Runs after the Summarizer when `characterProfileCompressorInterval` scenes have elapsed since the last compression. Compresses per-character scene-level summaries into consolidated character profiles (state, goals, relationships, voice). Input is the shared prefix plus the new act summary and the existing profiles baseline (with canonical names), so it evolves existing profiles instead of re-deriving them.
+Runs after the Summarizer when `characterProfileCompressorInterval` scenes have elapsed since the last compression. Input is the shared prefix plus the **new** act summary and the existing profiles baseline (each entry includes its canonical name), so it evolves existing profiles instead of re-deriving them.
+
+The compressor produces no markdown profile document. It updates profiles through per-character `update-character-profile` tool calls ([`tools/update-character-profile.ts`](../tools/update-character-profile.ts)); each successful call inserts a new profile version row at the compressed scene:
+
+- **Changed-only policy** — the model calls the tool only for characters whose fields the new material justifies changing, and emits only changed fields. Unchanged characters get no new version row.
+- **Tri-state merge** — per field: omitted keeps the existing value, `null` clears it, a value sets it. `logline` clears to `''` (the column is NOT NULL); traits clear with an empty list.
+- **Additive aliases** — the call lists only NEW aliases; existing aliases are unioned in and can never be removed. Identity resolves via `getLatestProfileByAlias` (canonical name or any known alias); an unknown name derives a fresh canonical identity.
+- **sceneDetails** are rebuilt deterministically from the new act summary (`serializeCharacterSceneDetails`), not from model output.
+
+**Recording matrix (D4):** after the phase, compression is recorded (`recordCharacterProfileCompression` advances the interval gate to the compressed scene) iff `successCount > 0 || attemptCount === 0` — at least one update succeeded, or the model made no tool calls at all (a quiet run is a legitimate no-change outcome). If every attempt failed, compression is NOT recorded and the gate retries next turn.
 
 ## AI Tools
 
@@ -274,15 +283,15 @@ Runs after the Summarizer when `characterProfileCompressorInterval` scenes have 
 | Phase                        | Available Tools                                                                                                                                                                                               |
 | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | WRITER                       | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`, `evaluate-risk`, `advance-phase`, `end-act`, `introduce-character`, `character-details`, `set-scene-title`, `suggest-character-name` |
-| REVIEWER                     | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`                                                                                                                                       |
+| REVIEWER                     | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`, `character-details`                                                                                                                  |
 | EDITOR                       | (none)                                                                                                                                                                                                        |
 | GAME_MASTER                  | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`, `update-inventory`, `character-details`                                                                                              |
-| PLOT_PLANNER                 | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`                                                                                                                                       |
+| PLOT_PLANNER                 | `read-scene`, `read-distant-scene`, `query-memories`, `query-inventory`, `character-details`                                                                                                                  |
 | TEMPLATE_FITTER              | (none)                                                                                                                                                                                                        |
 | SUMMARIZER                   | (none — strict guard: all tools no-op)                                                                                                                                                                        |
-| CHARACTER_PROFILE_COMPRESSOR | (none — strict guard: all tools no-op)                                                                                                                                                                        |
+| CHARACTER_PROFILE_COMPRESSOR | `update-character-profile` (strict async guard: all other tools no-op)                                                                                                                                        |
 
-`update-character-profile` is registered in the tool set (its schema is visible to every phase, keeping the prefix byte-identical) but guarded in **every** phase — it no-ops everywhere until the compressor allow-list flips in step 2.
+`update-character-profile` is registered in the tool set (its schema is visible to every phase, keeping the prefix byte-identical) but allow-listed only for CHARACTER_PROFILE_COMPRESSOR — every other phase's guard no-ops it.
 
 ## Retry and Error Handling
 
