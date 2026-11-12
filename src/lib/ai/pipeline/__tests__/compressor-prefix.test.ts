@@ -195,3 +195,35 @@ describe('compressor shared-prefix layout (step 1)', () => {
 		}
 	});
 });
+
+it('fills the holder with the new act summary before the executor runs', async () => {
+	const compression: ProfileCompressionState = { completedScenes: 9, newActSummary: undefined, attemptCount: 0, successCount: 0 };
+	let seen: unknown;
+	const { runNonStreamingPhase } = await import('#lib/ai/pipeline/phase-executor.ts');
+	vi.mocked(runNonStreamingPhase).mockImplementationOnce(async () => {
+		seen = compression.newActSummary;
+		return {
+			text: '',
+			metadata: { finishReason: 'stop', usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 }, durationMs: 1, models: new Set(['m']) },
+		};
+	});
+	const newSummary = parseActSummary(
+		'# Act Summary\n\n## Scene Summaries\n\n### Scene 9: The Gate\n- Location: Gate\n- Summary: They arrive.'
+	);
+	await generateCharacterProfiles(
+		newSummary,
+		{
+			actSummary: '',
+			actLineId: 'line-1',
+			completedScenes: 9,
+			assistant: { messageId: 'msg-10', messageSequence: 10 },
+			providerConfig: { model: 'm' } as never,
+			abortSignal: new AbortController().signal,
+			context,
+			tools: undefined,
+			compression,
+		},
+		prompts
+	);
+	expect(seen).toBe(newSummary);
+});

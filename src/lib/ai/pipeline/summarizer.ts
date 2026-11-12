@@ -259,6 +259,7 @@ export async function generateCharacterProfiles(
 		''
 	);
 
+	compressorInput.compression.newActSummary = newActSummary;
 	const { text: rawProfiles, metadata } = await runNonStreamingPhase(
 		'CHARACTER_PROFILE_COMPRESSOR',
 		resolveAsyncSystemPrompt(prompts),
