@@ -53,6 +53,13 @@ export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 /** Side-effecting tools whose no-op result is `{ result }` rather than a bare string. */
 const RESULT_SHAPED_TOOLS: ReadonlySet<string> = new Set(['advance-phase', 'end-act', 'set-scene-title']);
 
+function phaseGuardNoOp(phase: PhaseName) {
+	return (name: string) => {
+		const msg = ls('tools.guarded.notAllowed', { tool: name, phase: formatPhaseName(phase) });
+		return RESULT_SHAPED_TOOLS.has(name) ? { result: msg } : msg;
+	};
+}
+
 /**
  * Phase-gated view of the full tool superset: identical schema for every phase (so the
  * tool block stays inside the cacheable prefix), but side-effecting tools outside their
@@ -60,10 +67,13 @@ const RESULT_SHAPED_TOOLS: ReadonlySet<string> = new Set(['advance-phase', 'end-
  */
 export function guardToolsForPhase(allTools: ToolSet | undefined, phase: PhaseName): ToolSet | undefined {
 	if (!allTools) return undefined;
-	return withPhaseGuards(allTools, PHASE_TOOLS[phase], (name) => {
-		const msg = ls('tools.guarded.notAllowed', { tool: name, phase: formatPhaseName(phase) });
-		return RESULT_SHAPED_TOOLS.has(name) ? { result: msg } : msg;
-	});
+	return withPhaseGuards(allTools, PHASE_TOOLS[phase], phaseGuardNoOp(phase));
+}
+
+/** Async compression phases: every tool outside the allow-list no-ops, read-only included (design D5). */
+export function guardToolsForAsyncPhase(allTools: ToolSet | undefined, phase: PhaseName): ToolSet | undefined {
+	if (!allTools) return undefined;
+	return withPhaseGuards(allTools, PHASE_TOOLS[phase], phaseGuardNoOp(phase), true);
 }
 
 export async function buildTools(
