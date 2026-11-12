@@ -1,14 +1,12 @@
 import type { MessageBase } from '#lib/db/messages.ts';
 import type { GameDataFields, NarrativeOverrides, NarrativeVariables } from '../narrative-types';
 import { hasNarrativeOverrides } from '../narrative-types';
-import type { PipelineContext, PlayerContext } from './types';
+import type { PipelineContext } from './types';
 import type { StreamState } from '../chat-callbacks';
 import {
 	formatCharacterProfileAsMessage,
 	formatDirectorNotesSection,
-	formatPreviousNarrativeBody,
 	formatStorySoFar,
-	formatTurnOfEventsSection,
 	SECTION,
 	upcomingScenePlotSection,
 } from '#lib/definitions/pipeline-sections.ts';
@@ -124,11 +122,6 @@ export function substituteActSummaryTemplate(
 }
 
 // --- Shared section builders ---
-
-function playerResponseSection(playerContext: PlayerContext | undefined): string[] {
-	const playerResponse = playerContext?.playerResponse;
-	return playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : [];
-}
 
 export function formattedActSummary(actSummary: string): string[] {
 	if (actSummary.trim().length == 0) return [];
@@ -247,35 +240,6 @@ export function buildGmFitterMessages(editorOutput: string, gmOutput: string, ex
 }
 
 // --- Summarizer message builder ---
-
-export function buildSummarizerMessages(
-	actSummary: string,
-	previousNarrativeVariables: NarrativeVariables | undefined,
-	completedScenes: number,
-	player: PlayerContext | undefined,
-	parsedActSummary: ActSummary | undefined,
-	extractionPromptTemplate: (completedScenes: number, sceneTitle: string) => string,
-	fallbackExtractionPromptTemplate: (completedScenes: number) => string
-): MessageBase[] {
-	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
-
-	const effectiveSummary = parsedActSummary ?? parseActSummary(actSummary);
-	if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
-		return toUserMessages([
-			...formatActSummaryForSummarizer(completedScenes, effectiveSummary),
-			...formatPreviousNarrativeBody(previousNarrativeVariables.narrativeBody, completedScenes),
-			...playerResponseSection(player),
-			...formatTurnOfEventsSection(previousNarrativeVariables.turnOfEvents),
-			extractionPromptTemplate(completedScenes, sceneTitle),
-		]);
-	} else {
-		return toUserMessages([
-			...formatActSummaryForSummarizer(completedScenes, effectiveSummary),
-			...playerResponseSection(player),
-			fallbackExtractionPromptTemplate(completedScenes),
-		]);
-	}
-}
 
 export function buildTranscriptSummarizerMessages(transcript: { role: 'user' | 'assistant'; content: string }[]): MessageBase[] {
 	return [

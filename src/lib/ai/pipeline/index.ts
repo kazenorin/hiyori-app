@@ -191,6 +191,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		actLineId: story.actLine.id,
 		assistant: input.assistant,
 		loadedPrompts,
+		context: input.context,
+		tools: ctx.tools,
 	});
 
 	// --- Sequential phases (resume gates: cached outputs are skipped) ---

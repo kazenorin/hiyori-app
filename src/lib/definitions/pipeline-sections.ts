@@ -14,7 +14,6 @@ import {
 	editorOutputHeader,
 	gameMasterOutputHeader,
 	previousActSummaryHeader,
-	previousNarrativeBodyHeader,
 	turnOfEventsHeader,
 	templateHeader,
 	directorNotesHeader,
@@ -157,18 +156,6 @@ export const ACT_PLOT_SECTION = {
 		return sectionFormat(ls('pipeline.sections.actPlotCharacterProfiles'));
 	},
 };
-
-/** Format the previous narrative body as a user message section. Returns empty array if no body. */
-export function formatPreviousNarrativeBody(previousNarrativeBody: string | null | undefined, completedScenes: number): string[] {
-	if (!previousNarrativeBody || previousNarrativeBody.trim().length === 0) return [];
-	return [sectionFormat(previousNarrativeBodyHeader(completedScenes)) + previousNarrativeBody];
-}
-
-/** Format the turn of events as a user message section. Returns empty array if no content. */
-export function formatTurnOfEventsSection(turnOfEvents: string | null | undefined): string[] {
-	if (!turnOfEvents || turnOfEvents.trim().length === 0) return [];
-	return [SECTION.TURN_OF_EVENTS + turnOfEvents];
-}
 
 /** Format director's notes as a user message section. Returns empty array if no content. */
 export function formatDirectorNotesSection(directorNotes: string | null | undefined): string[] {

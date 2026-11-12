@@ -200,16 +200,18 @@ src:
               updatedAt: "2026-11-11T12:13:37.029Z"
             summarizer-incremental-prompt.md:
               configPath: en/prompt-templates/summarizer/summarizer-incremental-prompt.md
-              hash: 45df1120b49e6c7db13a3bd3d8a2342123b2a0d7da61ac78f653d87ad829a68c
+              hash: 8f0477dd4059d73e6facccaf2fcee1a9b7807505a4016098a10607d87771004f
               oldHashes:
+                - 45df1120b49e6c7db13a3bd3d8a2342123b2a0d7da61ac78f653d87ad829a68c
                 - 1adea755ce3238373ed5176705bb0a34d5b186a29ea140bf746d2d16691ea273
-              updatedAt: "2026-07-18T08:56:38.701Z"
+              updatedAt: "2026-11-12T16:55:24.946Z"
             summarizer-prompt.md:
               configPath: en/prompt-templates/summarizer/summarizer-prompt.md
-              hash: f5ffe4ccccbda213ce652479f575cf22bceda700a2c46b8f340a447e0bcb4c0a
+              hash: 87947d0e244fb16cc76466570887c7163793f3ed26f856c5efe11d3bc7532e36
               oldHashes:
+                - f5ffe4ccccbda213ce652479f575cf22bceda700a2c46b8f340a447e0bcb4c0a
                 - ca13fc3d6c9abcb4d414448e25e0e1299345738f499a3e3f6b58cf5c9b63b8ee
-              updatedAt: "2026-07-18T08:56:38.701Z"
+              updatedAt: "2026-11-12T16:55:24.946Z"
           world:
             world-builder-system-prompt.md:
               configPath: en/prompt-templates/world/world-builder-system-prompt.md
@@ -579,16 +581,18 @@ src:
               updatedAt: "2026-11-11T12:13:37.029Z"
             summarizer-incremental-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/summarizer/summarizer-incremental-prompt.md
-              hash: c6643cc66b2aab2fa7f4c4cf33ce28c5fe4a49f40107f875cd5c180d3f3418a4
+              hash: 2945384626d8a1837b4f6ba03a348265138483cb1efed4dab5155e4eee532fc7
               oldHashes:
+                - c6643cc66b2aab2fa7f4c4cf33ce28c5fe4a49f40107f875cd5c180d3f3418a4
                 - 61f39151a50a0e03382a05c4b1ed57f425dc9899ad6a9bc3c6e5b762a50047af
-              updatedAt: "2026-07-18T08:56:38.701Z"
+              updatedAt: "2026-11-12T16:55:24.946Z"
             summarizer-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/summarizer/summarizer-prompt.md
-              hash: 8a18d9b4aab0b60c06ce9eb1e224efc146b540c14abe69fd002e01a3664e7959
+              hash: fea5f2ce52a06addd7ba9411ba26d8bec68d016dc14024ef39c141fd4a1d7536
               oldHashes:
+                - 8a18d9b4aab0b60c06ce9eb1e224efc146b540c14abe69fd002e01a3664e7959
                 - 6334ad160f6ec46a1286883e257d393c53d8455f6b7298c284340f07e93bc22d
-              updatedAt: "2026-07-18T08:56:38.701Z"
+              updatedAt: "2026-11-12T16:55:24.946Z"
           world:
             world-builder-system-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/world/world-builder-system-prompt.md

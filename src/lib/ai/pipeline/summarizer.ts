@@ -1,24 +1,28 @@
 import type { ProviderConfig } from '#lib/stores/settings.svelte.ts';
 import { getSettings, isMemoryAvailable } from '#lib/stores/settings.svelte.ts';
 import type { MessageBase } from '#lib/db/messages.ts';
+import type { ToolSet } from 'ai';
 import type { NarrativeVariables } from '../narrative-types';
 import type {
 	AssistantContext,
 	AsyncPhaseResults,
 	CompressorResult,
+	PipelineContext,
 	PipelineProviderConfigs,
 	PlayerContext,
 	SummarizerResult,
 } from './types';
 import { runNonStreamingPhase } from './phase-executor';
 import {
-	buildSummarizerMessages,
+	buildPhaseMessages,
 	buildTranscriptSummarizerMessages,
 	formatActSummaryForCompressor,
+	formatActSummaryForSummarizer,
 	formatExistingProfilesForCompressor,
 	substituteActSummaryTemplate,
 	toUserMessages,
 } from './message-builder';
+import { guardToolsForAsyncPhase } from '#lib/ai/tools/tools.ts';
 import {
 	type ActSummary,
 	mergeActSummary,
@@ -67,12 +71,16 @@ export interface SummarizerInput {
 	providerConfig: ProviderConfig | undefined;
 	abortSignal: AbortSignal;
 	transcript?: { role: 'user' | 'assistant'; content: string }[];
+	context?: PipelineContext;
+	tools?: ToolSet;
 }
 
 export interface SummarizerPrompts {
 	summarizerPrompt: string;
 	summarizerIncrementalPrompt: string;
 	characterProfileCompressorPrompt: string;
+	mainChatSystemPrompt: string;
+	generalInstructions: string;
 }
 
 export interface CharacterProfileCompressorInput {
@@ -86,6 +94,17 @@ export interface CharacterProfileCompressorInput {
 
 // --- Summarizer functions ---
 
+// Same substitution as resolveSharedSystemPrompt in runners.ts, inlined to avoid a
+// summarizer→runners import.
+function resolveAsyncSystemPrompt(prompts: SummarizerPrompts): string {
+	return prompts.mainChatSystemPrompt.replaceAll('{{generalInstructions}}', prompts.generalInstructions);
+}
+
+function requireContext(input: SummarizerInput): PipelineContext {
+	if (!input.context) throw new Error('Summarizer pipeline path requires PipelineContext');
+	return input.context;
+}
+
 export async function generateFullSummary(input: SummarizerInput, prompts: SummarizerPrompts): Promise<SummarizerResult> {
 	const { providerConfig, abortSignal } = input;
 
@@ -94,30 +113,40 @@ export async function generateFullSummary(input: SummarizerInput, prompts: Summa
 		sceneNumber: '{N}',
 		sceneTitle: '[Scene title]',
 	});
-	const summarizerSystemPrompt = prompts.summarizerPrompt.replaceAll('{{actSummaryTemplate}}', actSummaryTemplateProcessed);
+	const fullRolePrompt = prompts.summarizerPrompt.replaceAll('{{actSummaryTemplate}}', actSummaryTemplateProcessed);
 
+	let systemPrompt: string;
 	let summarizerMessages: MessageBase[];
+	let phaseTools: ToolSet | undefined;
 
 	if (input.transcript && input.transcript.length > 0) {
+		// Legacy bespoke layout: one-off UI backfill, no cache sharing.
+		systemPrompt = fullRolePrompt;
 		summarizerMessages = buildTranscriptSummarizerMessages(input.transcript);
+		phaseTools = undefined;
 	} else {
-		summarizerMessages = buildSummarizerMessages(
-			input.actSummary,
-			input.previousNarrativeVariables,
-			input.completedScenes,
-			input.player,
-			undefined,
-			summarizerExtractionPromptTemplate,
-			summarizerFallbackExtractionPromptTemplate
+		const context = requireContext(input);
+		systemPrompt = resolveAsyncSystemPrompt(prompts);
+		const sceneTitle = input.previousNarrativeVariables?.sceneTitle ?? '';
+		const finalLine = input.previousNarrativeVariables?.narrativeBody
+			? summarizerExtractionPromptTemplate(String(input.completedScenes), sceneTitle)
+			: summarizerFallbackExtractionPromptTemplate(input.completedScenes);
+		summarizerMessages = buildPhaseMessages(
+			context,
+			[...formatActSummaryForSummarizer(input.completedScenes, parseActSummary(input.actSummary)), fullRolePrompt],
+			finalLine,
+			''
 		);
+		phaseTools = guardToolsForAsyncPhase(input.tools, 'SUMMARIZER');
 	}
 
 	const { text: rawSummary, metadata } = await runNonStreamingPhase(
 		'SUMMARIZER',
-		summarizerSystemPrompt,
+		systemPrompt,
 		summarizerMessages,
 		providerConfig,
-		abortSignal
+		abortSignal,
+		phaseTools
 	);
 	const { completedScenes, previousNarrativeVariables } = input;
 	try {
@@ -145,23 +174,20 @@ async function generateIncrementalSummary(input: SummarizerInput, prompts: Summa
 	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
 	const processedTemplate = substituteActSummaryTemplate(actSummaryTemplate(), { sceneNumber, sceneTitle });
 
-	const incrementalSystemPrompt = prompts.summarizerIncrementalPrompt.replaceAll('{{actSummaryTemplate}}', processedTemplate);
-
-	const incrementalMessages = buildSummarizerMessages(
-		input.actSummary,
-		input.previousNarrativeVariables,
-		input.completedScenes,
-		input.player,
-		existingParsed,
-		summarizerExtractionPromptTemplate,
-		summarizerFallbackExtractionPromptTemplate
+	const incrementalExtraction = prompts.summarizerIncrementalPrompt.replaceAll('{{actSummaryTemplate}}', processedTemplate);
+	const incrementalMessages = buildPhaseMessages(
+		requireContext(input),
+		[...formatActSummaryForSummarizer(completedScenes, existingParsed), incrementalExtraction],
+		summarizerExtractionPromptTemplate(sceneNumber, sceneTitle),
+		''
 	);
 	const { text: incrementalRaw, metadata } = await runNonStreamingPhase(
 		'SUMMARIZER',
-		incrementalSystemPrompt,
+		resolveAsyncSystemPrompt(prompts),
 		incrementalMessages,
 		providerConfig,
-		abortSignal
+		abortSignal,
+		guardToolsForAsyncPhase(input.tools, 'SUMMARIZER')
 	);
 
 	try {
@@ -298,6 +324,8 @@ export interface AsyncPhasesContext {
 	actLineId: string | undefined;
 	assistant: AssistantContext;
 	loadedPrompts: LoadedPrompts;
+	context: PipelineContext;
+	tools: ToolSet | undefined;
 }
 
 export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhaseResults> {
@@ -313,6 +341,8 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 		actLineId,
 		assistant,
 		loadedPrompts,
+		context,
+		tools,
 	} = ctx;
 	if (player?.playerResponse && completedScenes > 0) {
 		const summarizerInput: SummarizerInput = {
@@ -322,11 +352,15 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 			player,
 			providerConfig: providerConfigs.summarizer,
 			abortSignal,
+			context,
+			tools,
 		};
 		const summarizerPrompts: SummarizerPrompts = {
 			summarizerPrompt: loadedPrompts.summarizerPrompt,
 			summarizerIncrementalPrompt: loadedPrompts.summarizerIncrementalPrompt,
 			characterProfileCompressorPrompt: loadedPrompts.characterProfileCompressorPrompt,
+			mainChatSystemPrompt: loadedPrompts.mainChatSystemPrompt,
+			generalInstructions: loadedPrompts.generalInstructions,
 		};
 		let result: SummarizerResult;
 		try {
