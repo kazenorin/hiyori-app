@@ -88,7 +88,7 @@ import { generateCharacterProfiles } from '#lib/ai/pipeline/summarizer.ts';
 import { buildUpdateCharacterProfileTools } from '#lib/ai/tools/update-character-profile.ts';
 import { insertCharacterProfile, getLatestProfilesByActLine, getLatestProfileByAlias } from '#lib/db/character-profiles.ts';
 import { getLastCompressionScene } from '#lib/db/act-lines.ts';
-import { parseActSummary } from '#lib/ai/act-summary-parser.ts';
+import { parseActSummary, type ActSummary } from '#lib/ai/act-summary-parser.ts';
 import { PHASE_TOOLS } from '#lib/ai/tools/tools.ts';
 import { fileLog } from '#lib/logging/logger.ts';
 import type { ProfileCompressionState, PipelineContext } from '#lib/ai/pipeline/types.ts';
@@ -115,10 +115,10 @@ const newSummary = parseActSummary(
 	'# Act Summary\n\n## Scene Summaries\n\n### Scene 9: The Gate\n- Location: Gate\n- Summary: They arrive.'
 );
 
-function run(compression: ProfileCompressionState) {
+function run(compression: ProfileCompressionState, summary: ActSummary = newSummary) {
 	const tools = buildUpdateCharacterProfileTools({ story: { id: 's' }, actLine: { id: LINE }, act: { id: 'a' } } as never, compression);
 	return generateCharacterProfiles(
-		newSummary,
+		summary,
 		{
 			actLineId: LINE,
 			completedScenes: 9,
@@ -208,5 +208,47 @@ describe('compressor recording matrix (D4)', () => {
 		await run({ completedScenes: 9, newActSummary: undefined, attemptCount: 0, successCount: 0 });
 		const toolLogs = vi.mocked(fileLog).mock.calls.filter((c) => c[0] === 'debug' && c[1] === 'tool');
 		expect(toolLogs.some((c) => String(c[2]).includes('update-character-profile failed for : name must not be empty'))).toBe(true);
+	});
+});
+
+// Bracket-placeholder name forms must not silently erase sceneDetails on the
+// new profile version: derivation matches summary names exactly.
+describe('placeholder-bracket normalization preserves sceneDetails', () => {
+	it('bracketed summary name derives sceneDetails for a clean profile name', async () => {
+		const summary = parseActSummary(`## Character Summaries
+### [Elena Vale]
+- Scene 5: Elena scouts the gate.`);
+		scriptedCalls = [{ name: 'Elena Vale', state: 'Recovered' }];
+		await run({ completedScenes: 9, newActSummary: undefined, attemptCount: 0, successCount: 0 }, summary);
+		const latest = await getLatestProfileByAlias(LINE, 'Elena Vale');
+		expect(latest?.preferredName).toBe('Elena Vale');
+		expect(latest?.sceneDetails).toContain('Elena scouts the gate.');
+	});
+
+	it('bracketed profile preferredName is normalized and matches a clean summary name', async () => {
+		await insertCharacterProfile({
+			id: 'p2',
+			actLineId: LINE,
+			sceneNumber: 5,
+			canonicalName: 'elena-vale',
+			preferredName: '[Elena Vale]',
+			aliases: ['[Elena Vale]'],
+			logline: '',
+			state: null,
+			goal: null,
+			relationships: null,
+			voice: null,
+			traits: [],
+			sceneDetails: '',
+			importance: 2,
+		});
+		const summary = parseActSummary(`## Character Summaries
+### Elena Vale
+- Scene 6: Elena holds the gate.`);
+		scriptedCalls = [{ name: '[Elena Vale]', state: 'X' }];
+		await run({ completedScenes: 9, newActSummary: undefined, attemptCount: 0, successCount: 0 }, summary);
+		const latest = await getLatestProfileByAlias(LINE, 'Elena Vale');
+		expect(latest?.preferredName).toBe('Elena Vale');
+		expect(latest?.sceneDetails).toContain('Elena holds the gate.');
 	});
 });

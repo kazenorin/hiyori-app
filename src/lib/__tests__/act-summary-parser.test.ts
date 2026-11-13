@@ -183,6 +183,32 @@ Summary: A thing happened.
 		const result = parseActSummary(markdown);
 		expect(result.characters[0].aliases).toEqual(['Bobby', 'Robert']);
 	});
+
+	// Name-form drift between summary and profiles silently empties sceneDetails:
+	// the template's [bracket] placeholders get copied into names by the model.
+	it('strips template placeholder brackets from character names', () => {
+		const markdown = `## Character Summaries
+### [主角]
+- Scene 1: 主角 appeared.`;
+
+		const result = parseActSummary(markdown);
+		expect(result.characters[0].characterName).toBe('主角');
+	});
+
+	it('leaves clean names, parenthesized suffixes, and inner brackets untouched', () => {
+		const markdown = `## Character Summaries
+### 主角
+- Scene 1: 主角 appeared.
+
+### 白影 (推測)
+- Scene 1: 白影 appeared.
+
+### [白影 [推測]]
+- Scene 1: 白影 appeared.`;
+
+		const result = parseActSummary(markdown);
+		expect(result.characters.map((c) => c.characterName)).toEqual(['主角', '白影 (推測)', '白影 [推測]']);
+	});
 });
 
 describe('serializeActSummary', () => {

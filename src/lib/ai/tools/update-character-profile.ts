@@ -44,7 +44,7 @@ export function buildUpdateCharacterProfileTools(ctx: ToolContext, compression: 
 						const actLineId = ctx.actLine.id;
 						const existing = await getLatestProfileByAlias(actLineId, input.name);
 						const canonicalName = existing?.canonicalName ?? toCanonicalName(input.name);
-						const preferredName = input.preferredName ?? existing?.preferredName ?? input.name;
+						const preferredName = (input.preferredName ?? existing?.preferredName ?? input.name).replace(/^\[(.+)\]$/, '$1').trim();
 						const aliases = ensurePreferredInAliases(preferredName, [...new Set([...(existing?.aliases ?? []), ...(input.aliases ?? [])])]);
 						const summary = compression.newActSummary;
 						await insertCharacterProfile({

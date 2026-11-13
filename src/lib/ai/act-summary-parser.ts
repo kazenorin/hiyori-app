@@ -184,7 +184,17 @@ function parseCharactersBody(body: string): CharacterSummary[] {
 		const h3Match = trimmed.match(/^###\s+(.+)$/);
 		if (h3Match) {
 			if (currentCharacter) characters.push(currentCharacter);
-			currentCharacter = { characterName: h3Match[1].trim(), aliases: [], sceneEntries: [] };
+			// The summary template uses [bracket] placeholders; models copy the brackets
+			// into names, and name-form drift breaks exact-match sceneDetails derivation
+			// and mergeActSummary identity.
+			currentCharacter = {
+				characterName: h3Match[1]
+					.trim()
+					.replace(/^\[(.+)\]$/, '$1')
+					.trim(),
+				aliases: [],
+				sceneEntries: [],
+			};
 			continue;
 		}
 
