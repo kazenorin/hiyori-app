@@ -27,6 +27,7 @@ export interface StreamWithRetryOptions {
 	abortSignal?: AbortSignal;
 	onRetry?: (attempt: number, maxAttempts: number) => void;
 	descriptors?: OutputDescriptor[];
+	allowEmptyText?: boolean;
 }
 
 export interface PhaseMetadata {
@@ -95,7 +96,8 @@ export async function streamChatResponse(
 	onError: (err: unknown) => void,
 	providerConfig: ProviderConfig | undefined,
 	tools?: ToolSet,
-	descriptors?: OutputDescriptor[]
+	descriptors?: OutputDescriptor[],
+	allowEmptyText?: boolean
 ): Promise<StreamAccumulator> {
 	if (!providerConfig) {
 		throw new Error(ERR_NO_MAIN_PROVIDER);
@@ -114,6 +116,7 @@ export async function streamChatResponse(
 			abortSignal: abortSignal,
 			callSettings: providerConfig.callSettings,
 			tools,
+			allowEmptyText,
 		},
 		accumulator.callbacks
 	);
@@ -132,7 +135,17 @@ export async function streamWithRetry(
 	messages: MessageBase[],
 	options: StreamWithRetryOptions
 ): Promise<StreamAccumulator> {
-	const { retryConfig, onProgress, onError, providerConfig = getMainProviderConfig(), tools, abortSignal, onRetry, descriptors } = options;
+	const {
+		retryConfig,
+		onProgress,
+		onError,
+		providerConfig = getMainProviderConfig(),
+		tools,
+		abortSignal,
+		onRetry,
+		descriptors,
+		allowEmptyText,
+	} = options;
 
 	const maxAttempts = retryConfig.retryCount + 1;
 	let lastError: Error | null = null;
@@ -156,7 +169,8 @@ export async function streamWithRetry(
 				},
 				providerConfig,
 				tools,
-				descriptors
+				descriptors,
+				allowEmptyText
 			);
 
 			// KEY: await resultMetadata to detect mid-stream errors.
