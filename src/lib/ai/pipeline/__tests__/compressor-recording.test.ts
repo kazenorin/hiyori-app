@@ -90,6 +90,7 @@ import { insertCharacterProfile, getLatestProfilesByActLine, getLatestProfileByA
 import { getLastCompressionScene } from '#lib/db/act-lines.ts';
 import { parseActSummary } from '#lib/ai/act-summary-parser.ts';
 import { PHASE_TOOLS } from '#lib/ai/tools/tools.ts';
+import { fileLog } from '#lib/logging/logger.ts';
 import type { ProfileCompressionState, PipelineContext } from '#lib/ai/pipeline/types.ts';
 
 const LINE = 'line-1';
@@ -137,6 +138,7 @@ beforeEach(async () => {
 	await runMigrations();
 	scriptedCalls = [];
 	executorError = undefined;
+	vi.mocked(fileLog).mockClear();
 	await insertCharacterProfile({
 		id: 'p1',
 		actLineId: LINE,
@@ -191,5 +193,20 @@ describe('compressor recording matrix (D4)', () => {
 		expect(PHASE_TOOLS.CHARACTER_PROFILE_COMPRESSOR).toContain('update-character-profile');
 		expect(PHASE_TOOLS.SUMMARIZER).not.toContain('update-character-profile');
 		expect(PHASE_TOOLS.WRITER).not.toContain('update-character-profile');
+	});
+
+	it('logs tool activity to tool.log like introduce-character', async () => {
+		scriptedCalls = [{ name: 'elena-vale', state: 'Recovered' }];
+		await run({ completedScenes: 9, newActSummary: undefined, attemptCount: 0, successCount: 0 });
+		const toolLogs = vi.mocked(fileLog).mock.calls.filter((c) => c[0] === 'debug' && c[1] === 'tool');
+		expect(toolLogs.some((c) => String(c[2]).includes('update-character-profile triggered'))).toBe(true);
+		expect(toolLogs.some((c) => String(c[2]).includes('updated profile for elena-vale'))).toBe(true);
+	});
+
+	it('logs failed attempts to tool.log (empty name)', async () => {
+		scriptedCalls = [{ name: '' }];
+		await run({ completedScenes: 9, newActSummary: undefined, attemptCount: 0, successCount: 0 });
+		const toolLogs = vi.mocked(fileLog).mock.calls.filter((c) => c[0] === 'debug' && c[1] === 'tool');
+		expect(toolLogs.some((c) => String(c[2]).includes('update-character-profile failed for : name must not be empty'))).toBe(true);
 	});
 });

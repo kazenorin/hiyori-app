@@ -837,6 +837,10 @@ function wireBackgroundPhases(session: InternalSession, backgroundPhases: Promis
 			emitUpdate(session);
 			await updatePersistentMessageMetadata(session.messageId, metadataUpdates);
 			await dbMessagePhases.upsertMessagePhases(session.messageId, updatedMessage.phases ?? []);
+			const backgroundEntries = (updatedMessage.metadata?.phases ?? []).filter((p) => BACKGROUND_PHASES.includes(p.phaseName as PhaseName));
+			if (backgroundEntries.length > 0) {
+				await fileLog('debug', 'pipeline-cache', () => formatCacheEfficiency(summarizeCacheEfficiency(backgroundEntries)));
+			}
 		} catch (err) {
 			session.streamingPhases = [];
 			session.message = {

@@ -2,6 +2,7 @@ import { ls } from '#lib/localization/index.ts';
 import { tool, type ToolSet } from 'ai';
 import { z } from 'zod';
 import type { ToolContext } from './tools';
+import { log } from './utils';
 import type { ProfileCompressionState } from '#lib/ai/pipeline/types.ts';
 import {
 	getLatestProfileByAlias,
@@ -32,10 +33,12 @@ export function buildUpdateCharacterProfileTools(ctx: ToolContext, compression: 
 			inputSchema,
 			execute: async (input): Promise<string> => {
 				compression.attemptCount += 1;
+				await log(`update-character-profile triggered for actLineId=${ctx.actLine.id}, name=${input.name}`);
 				let result: string;
 				let success = false;
 				if (!input.name.trim()) {
 					result = 'Profile update failed: name must not be empty';
+					await log(`update-character-profile failed for ${input.name}: name must not be empty`);
 				} else {
 					try {
 						const actLineId = ctx.actLine.id;
@@ -64,8 +67,11 @@ export function buildUpdateCharacterProfileTools(ctx: ToolContext, compression: 
 						compression.successCount += 1;
 						result = `Profile updated for ${canonicalName} at scene ${compression.completedScenes}.`;
 						success = true;
+						await log(`update-character-profile updated profile for ${canonicalName} at scene ${compression.completedScenes}`);
 					} catch (err) {
-						result = `Profile update failed for ${input.name}: ${err instanceof Error ? err.message : String(err)}`;
+						const reason = err instanceof Error ? err.message : String(err);
+						result = `Profile update failed for ${input.name}: ${reason}`;
+						await log(`update-character-profile failed for ${input.name}: ${reason}`);
 					}
 				}
 				try {

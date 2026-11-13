@@ -87,6 +87,7 @@ import {
 } from '#lib/ai/chat/run-manager.ts';
 import { runPipeline } from '#lib/ai/pipeline/index.ts';
 import { persistMessage } from '#lib/ai/chat/persistence.ts';
+import { fileLog } from '#lib/logging/logger.ts';
 import * as dbMessagePhases from '#lib/db/message-phases.ts';
 import type { PipelineRunRecord } from '#lib/db/pipeline-runs.ts';
 import type { PipelineCallbacks } from '#lib/ai/pipeline/types.ts';
@@ -335,6 +336,7 @@ describe('phase persistence on settle', () => {
 	beforeEach(() => {
 		settingsMock.reviewerEnabled = false;
 		vi.mocked(dbMessagePhases.upsertMessagePhases).mockClear();
+		vi.mocked(fileLog).mockClear();
 	});
 
 	it('upserts phases at main settle and again after the background chain lands', async () => {
@@ -399,6 +401,39 @@ describe('phase persistence on settle', () => {
 		expect(events.some((e) => e.type === 'update' && e.session.streamingPhases.includes('EDITOR'))).toBe(true);
 		const settledEvent = events.find((e) => e.type === 'settled');
 		expect(settledEvent?.type === 'settled' && settledEvent.session.streamingPhases).toEqual([]);
+
+		// WHY: the finalize report only covers main-tracker phases; background usage
+		// must get its own report when the chain lands, or cache measurement misses it.
+		const cacheLogs = vi.mocked(fileLog).mock.calls.filter((c) => c[1] === 'pipeline-cache');
+		expect(cacheLogs.length).toBe(2);
+		const backgroundReport = (cacheLogs[1][2] as () => string)();
+		expect(backgroundReport).toContain('SUMMARIZER');
+		expect(backgroundReport).toContain('input=10');
+	});
+
+	it('skips the background cache report when no background phase metadata landed', async () => {
+		// WHY: the report is guarded on non-empty background entries — a chain that
+		// lands without phase metadata (or an epilogue, which has no background chain)
+		// must not emit an empty report.
+		vi.mocked(runPipeline).mockImplementation(async (input) => {
+			const cb = input.execution.callbacks;
+			cb.onPhaseStart('EDITOR');
+			cb.onPhaseComplete('EDITOR', { editorOutput: 'prose' });
+			return { state: { editorOutput: 'prose' }, phases: [], backgroundPhases: Promise.resolve({}) };
+		});
+
+		let resolveBackgroundSettled!: () => void;
+		const backgroundSettled = new Promise<void>((r) => (resolveBackgroundSettled = r));
+		const off = subscribeRuns((e) => {
+			if (e.type === 'background-settled') resolveBackgroundSettled();
+		});
+
+		await startMainRun({ actLineId: 'line-1', message: 'go' });
+		await backgroundSettled;
+		off();
+
+		const cacheLogs = vi.mocked(fileLog).mock.calls.filter((c) => c[1] === 'pipeline-cache');
+		expect(cacheLogs.length).toBe(1);
 	});
 });
 

@@ -43,6 +43,13 @@ describe('formatProfileUpdateAttempt', () => {
 		const block = formatProfileUpdateAttempt(attempt({ state: 'X' }, false));
 		expect(block).toContain('Profile update failed for elena-vale: bad input');
 	});
+
+	it('separates the result from the field list with a blank line (markdown paragraph)', () => {
+		// WHY: without the blank line, markdown lazy continuation renders the result
+		// inside the last list bullet (observed on the traits line in the dialog).
+		const block = formatProfileUpdateAttempt(attempt({ traits: ['brave'] }));
+		expect(block).toContain('- traits: brave\n\nProfile updated for elena-vale at scene 9.');
+	});
 });
 
 describe('emptyCompressionLog', () => {

@@ -15,7 +15,7 @@ export function formatProfileUpdateAttempt({ input, result }: ProfileUpdateAttem
 	}
 	if (input.traits !== undefined) lines.push(`- traits: ${input.traits.join(', ')}`);
 	if (input.importance !== undefined) lines.push(`- importance: ${input.importance}`);
-	lines.push(result);
+	lines.push('', result);
 	return lines.join('\n');
 }
 
