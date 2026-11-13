@@ -611,7 +611,7 @@ tools:
     parameters:
       name: "Identity key: the character's canonical name (preferred), or any known alias"
       preferredName: 'New display name; omit to keep the current one'
-      aliases: 'Additional aliases to add; existing aliases are always kept'
+      aliases: 'New identifying name variants to add—such as full names, names with titles/professions, nicknames, or codenames (no bare generic roles, descriptions, or insults); existing aliases are always kept'
       logline: 'One line capturing vibe, archetype, behavioral tendencies, worldview lens; null clears'
       state: 'Current physical condition, rank, knowledge, active equipment; null clears'
       goal: 'Immediate motive or drive; null clears'
