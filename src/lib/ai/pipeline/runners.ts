@@ -48,6 +48,7 @@ import {
 	recommendationLabel,
 	reviewerInventoryToolsInstruction,
 	reviewerMemoryToolsInstruction,
+	resolveSharedSystemPrompt,
 	templateFitterSystemPrompt,
 	totalViolationsLabel,
 	writerInventoryToolsInstruction,
@@ -99,11 +100,6 @@ function substituteToolsLine(source: string, name: string, value: string, availa
 
 const earlyPhaseFactor = 0.3;
 const latePhaseFactor = 1 - earlyPhaseFactor;
-
-/** Resolve the single shared system prompt (persona + general instructions + tools note). */
-export function resolveSharedSystemPrompt(prompts: PipelinePrompts): string {
-	return prompts.mainChatSystemPrompt.replaceAll('{{generalInstructions}}', prompts.generalInstructions);
-}
 
 /** Act Phase Boundaries section text for phaseEvent extraction prompts (empty in guidance mode). */
 function resolveActPhaseBoundaries(ctx: PipelineRunContext): string {

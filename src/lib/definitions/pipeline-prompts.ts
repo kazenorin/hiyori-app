@@ -37,6 +37,11 @@ export const getLocalizedActPhase = (phase: ActPhase): string => ls(`pipeline.la
 // System prompts
 export const templateFitterSystemPrompt = () => ls('pipeline.system.templateFitter');
 
+/** Resolve the single shared system prompt (persona + general instructions + tools note). */
+export function resolveSharedSystemPrompt(prompts: { mainChatSystemPrompt: string; generalInstructions: string }): string {
+	return prompts.mainChatSystemPrompt.replaceAll('{{generalInstructions}}', prompts.generalInstructions);
+}
+
 // Extraction prompts
 export const editorTemplateFitterExtractionPrompt = () => ls('pipeline.extraction.editorTemplateFitter');
 export const gmTemplateFitterExtractionPrompt = () => ls('pipeline.extraction.gmTemplateFitter');

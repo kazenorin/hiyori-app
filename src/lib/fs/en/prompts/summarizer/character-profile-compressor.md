@@ -21,10 +21,11 @@ You will shift character tracking from a timeline of events to current-state pro
 
 ## Tool Usage
 
-Use the `update-character-profile` tool for each character that changes:
+Use the `update-character-profile` tool for each character that changes. The tool also introduces new characters: calling it with a name that matches no existing profile creates a new one.
 
-- **Identity:** Key every call by the character's canonical name from the baseline (any known alias also resolves). New characters use their best-known name.
+- **Identity:** Key every call by the character's canonical name from the baseline (any known alias also resolves).
+- **New characters:** Call the tool with the character's best-known name and the fields the material establishes; a new profile is created automatically.
 - **Changed-only:** Call the tool only for characters whose fields the new material justifies changing. Within a call, include only changed fields — omitted fields keep their current value automatically.
 - **Clearing:** Pass null to clear a text field; pass an empty list to clear traits. Omitting is NOT clearing.
 - **Aliases:** List only NEW aliases to add; existing aliases are kept automatically and can never be removed.
-- **preferredName:** Set only when the character's display name genuinely changes; the old name is retained as an alias.
+- **Display name (`preferredName` parameter):** Set only when the character's display name genuinely changes; omit to keep the current one. The old name is retained as an alias.

@@ -192,12 +192,12 @@ src:
           summarizer:
             character-profile-compressor.md:
               configPath: en/prompt-templates/summarizer/character-profile-compressor.md
-              hash: 573c1b9c2bf5d83c5bd81d90596a62b2b2bf437d21323757a51ce4d9aca95a19
+              hash: 2234f47a2ad6c9ef6c6abac4043f0a0373af20b89454dc09857a20f82e2da8ac
               oldHashes:
                 - deae9178b9a19fbe928aac0f06beda1558dafc019f0fd5752dde4c3818ae5099
                 - 39510e58e34136a6335773375d1939bcb37c6ca074bd48d7907a0f6a8fd7ac5d
                 - 2438a90b9599afc9f40d34fe3e466765eebbcd916ef3f1d2643fed9a031bfdae
-              updatedAt: "2026-11-12T18:16:03.905Z"
+              updatedAt: "2026-11-13T00:49:25.221Z"
             summarizer-incremental-prompt.md:
               configPath: en/prompt-templates/summarizer/summarizer-incremental-prompt.md
               hash: 8f0477dd4059d73e6facccaf2fcee1a9b7807505a4016098a10607d87771004f
@@ -573,12 +573,12 @@ src:
           summarizer:
             character-profile-compressor.md:
               configPath: zh-Hant-HK/prompt-templates/summarizer/character-profile-compressor.md
-              hash: 567a3d4ee417c9f19502f992cf2f11a66bdd01ec4df932a0406e2b2af06474d2
+              hash: 18bf98b5e486793a014cd38f97954f90b2d322721a7003cf1551795a8852501b
               oldHashes:
                 - 6d2de09624796971882412328f98ed4d2774dfce953ca91f09b245f65b5c9c47
                 - 3c68b796e31f834761bc6a4c41c3947937246de4522c7564f6254f8cfa55df3c
                 - 3a55e9df6531ed7f7f94156222dac4fe1de4b02c86704fcf1dd5aa340225ab69
-              updatedAt: "2026-11-12T18:16:03.905Z"
+              updatedAt: "2026-11-13T00:49:25.221Z"
             summarizer-incremental-prompt.md:
               configPath: zh-Hant-HK/prompt-templates/summarizer/summarizer-incremental-prompt.md
               hash: 2945384626d8a1837b4f6ba03a348265138483cb1efed4dab5155e4eee532fc7

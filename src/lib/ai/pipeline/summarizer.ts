@@ -25,18 +25,10 @@ import {
 import { guardToolsForAsyncPhase } from '#lib/ai/tools/tools.ts';
 import { type ActSummary, mergeActSummary, parseActSummary, parseIncrementalOutput, serializeActSummary } from '../act-summary-parser';
 import { actSummaryHeader, currentCharacterProfilesHeader } from '#lib/definitions/common-headers.ts';
-import {
-	goalLabel,
-	importanceLabel,
-	loglineLabel,
-	relationshipsLabel,
-	stateLabel,
-	traitsLabel,
-	voiceLabel,
-} from '#lib/definitions/character-profile-labels.ts';
+import { loglineLabel, traitsLabel } from '#lib/definitions/character-profile-labels.ts';
 import {
 	actSummaryTemplate,
-	characterProfilesHeader,
+	resolveSharedSystemPrompt,
 	summarizerExtractionPromptTemplate,
 	summarizerFallbackExtractionPromptTemplate,
 } from '#lib/definitions/pipeline-prompts.ts';
@@ -83,12 +75,6 @@ export interface CharacterProfileCompressorInput {
 
 // --- Summarizer functions ---
 
-// Same substitution as resolveSharedSystemPrompt in runners.ts, inlined to avoid a
-// summarizer→runners import.
-function resolveAsyncSystemPrompt(prompts: SummarizerPrompts): string {
-	return prompts.mainChatSystemPrompt.replaceAll('{{generalInstructions}}', prompts.generalInstructions);
-}
-
 function requireContext(input: SummarizerInput): PipelineContext {
 	if (!input.context) throw new Error('Summarizer pipeline path requires PipelineContext');
 	return input.context;
@@ -109,13 +95,14 @@ export async function generateFullSummary(input: SummarizerInput, prompts: Summa
 	let phaseTools: ToolSet | undefined;
 
 	if (input.transcript && input.transcript.length > 0) {
-		// Legacy bespoke layout: one-off UI backfill, no cache sharing.
+		// Legacy bespoke layout for transcript-based summary regeneration
+		// (chat.svelte.ts regenerateMissingMetadata → regenerateActSummary); no cache sharing.
 		systemPrompt = fullRolePrompt;
 		summarizerMessages = buildTranscriptSummarizerMessages(input.transcript);
 		phaseTools = undefined;
 	} else {
 		const context = requireContext(input);
-		systemPrompt = resolveAsyncSystemPrompt(prompts);
+		systemPrompt = resolveSharedSystemPrompt(prompts);
 		const sceneTitle = input.previousNarrativeVariables?.sceneTitle ?? '';
 		const finalLine = input.previousNarrativeVariables?.narrativeBody
 			? summarizerExtractionPromptTemplate(String(input.completedScenes), sceneTitle)
@@ -172,7 +159,7 @@ async function generateIncrementalSummary(input: SummarizerInput, prompts: Summa
 	);
 	const { text: incrementalRaw, metadata } = await runNonStreamingPhase(
 		'SUMMARIZER',
-		resolveAsyncSystemPrompt(prompts),
+		resolveSharedSystemPrompt(prompts),
 		incrementalMessages,
 		providerConfig,
 		abortSignal,
@@ -227,15 +214,9 @@ export async function generateCharacterProfiles(
 
 	const compressorExtraction = prompts.characterProfileCompressorPrompt
 		.replaceAll('{{actSummaryHeader}}', actSummaryHeader())
-		.replaceAll('{{characterProfilesHeader}}', characterProfilesHeader())
 		.replaceAll('{{currentCharacterProfilesHeader}}', currentCharacterProfilesHeader())
 		.replaceAll('{{loglineLabel}}', loglineLabel())
-		.replaceAll('{{stateLabel}}', stateLabel())
-		.replaceAll('{{goalLabel}}', goalLabel())
-		.replaceAll('{{relationshipsLabel}}', relationshipsLabel())
-		.replaceAll('{{voiceLabel}}', voiceLabel())
-		.replaceAll('{{traitsLabel}}', traitsLabel())
-		.replaceAll('{{importanceLabel}}', importanceLabel());
+		.replaceAll('{{traitsLabel}}', traitsLabel());
 
 	const existingProfiles = await getLatestProfilesByActLine(compressorInput.actLineId);
 	const messages = buildPhaseMessages(
@@ -248,7 +229,7 @@ export async function generateCharacterProfiles(
 	compressorInput.compression.newActSummary = newActSummary;
 	const { metadata } = await runNonStreamingPhase(
 		'CHARACTER_PROFILE_COMPRESSOR',
-		resolveAsyncSystemPrompt(prompts),
+		resolveSharedSystemPrompt(prompts),
 		messages,
 		providerConfig,
 		abortSignal,

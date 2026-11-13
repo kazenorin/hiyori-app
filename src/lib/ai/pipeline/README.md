@@ -1,6 +1,6 @@
 # Narrative Generation Pipeline
 
-> **Last updated:** 2026-11-13 | **Version:** 1.8.0
+> **Last updated:** 2026-11-13 | **Version:** 1.12.0
 
 Multi-phase LLM pipeline that generates narrative prose, game data, and scene plots for interactive fiction.
 
