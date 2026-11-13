@@ -11,7 +11,7 @@ const msg = (sceneNumber: number, role: 'user' | 'assistant', actSummary?: strin
 });
 
 /**
- * History mirroring the persistence invariant: the async Summarizer of the run for
+ * History mirroring the persistence invariant: the background Summarizer of the run for
  * scene S+1 merges scene S and persists the summary covering scenes 1..S on the
  * assistant message for scene S+1. Each player message is persisted with the last
  * completed scene number and sits after that scene's assistant message.

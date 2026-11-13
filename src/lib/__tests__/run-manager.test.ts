@@ -312,10 +312,10 @@ describe('phase persistence on settle', () => {
 		vi.mocked(dbMessagePhases.upsertMessagePhases).mockClear();
 	});
 
-	it('upserts phases at main settle and again after the async chain lands', async () => {
+	it('upserts phases at main settle and again after the background chain lands', async () => {
 		// The write path is the whole point of message_phases: phases must survive
-		// reload (main settle) and gain SUMMARIZER/COMPRESSOR rows when the async
-		// chain finishes after it (async settle).
+		// reload (main settle) and gain SUMMARIZER/COMPRESSOR rows when the background
+		// chain finishes after it (background settle).
 		vi.mocked(runPipeline).mockImplementation(async (input) => {
 			const cb = input.execution.callbacks;
 			cb.onPhaseStart('EDITOR');
@@ -324,24 +324,24 @@ describe('phase persistence on settle', () => {
 			return {
 				state: { editorOutput: 'final prose' },
 				phases: [],
-				asyncPhases: Promise.resolve({ actSummary: 'the summary' }),
+				backgroundPhases: Promise.resolve({ actSummary: 'the summary' }),
 			};
 		});
 
 		const events: RunEvent[] = [];
 		let resolveSettled!: () => void;
-		let resolveAsyncSettled!: () => void;
+		let resolveBackgroundSettled!: () => void;
 		const settled = new Promise<void>((r) => (resolveSettled = r));
-		const asyncSettled = new Promise<void>((r) => (resolveAsyncSettled = r));
+		const backgroundSettled = new Promise<void>((r) => (resolveBackgroundSettled = r));
 		const off = subscribeRuns((e) => {
 			events.push(e);
 			if (e.type === 'settled') resolveSettled();
-			if (e.type === 'async-settled') resolveAsyncSettled();
+			if (e.type === 'background-settled') resolveBackgroundSettled();
 		});
 
 		const { assistantMessage } = await startMainRun({ actLineId: 'line-1', message: 'go' });
 		await settled;
-		await asyncSettled;
+		await backgroundSettled;
 		off();
 
 		const upserts = vi.mocked(dbMessagePhases.upsertMessagePhases).mock.calls;
@@ -349,7 +349,7 @@ describe('phase persistence on settle', () => {
 		// Main settle: the dual-routed EDITOR entry.
 		expect(upserts[0][0]).toBe(assistantMessage.id);
 		expect(upserts[0][1]).toEqual([{ phaseName: 'EDITOR', content: 'final prose', reasoning: 'thoughts' }]);
-		// Async settle: the full array re-sent with the SUMMARIZER row added.
+		// Background settle: the full array re-sent with the SUMMARIZER row added.
 		expect(upserts[1][0]).toBe(assistantMessage.id);
 		expect(upserts[1][1].map((p) => p.phaseName)).toEqual(['EDITOR', 'SUMMARIZER']);
 		expect(upserts[1][1][1].content).toBe('the summary');

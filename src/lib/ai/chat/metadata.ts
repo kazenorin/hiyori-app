@@ -2,7 +2,7 @@ import { buildMetadata, toPhaseMetadata, type MessageMetadata, type PhaseMetadat
 import { getSummarizerProviderConfig, type ProviderConfig } from '#lib/stores/settings.svelte.ts';
 import type { UIMessage } from './types';
 import type { PhaseName, UIScenePhase } from '../narrative-types';
-import type { AsyncPhaseResults } from '../pipeline/types';
+import type { BackgroundPhaseResults } from '../pipeline/types';
 import type { StreamResultMetadata } from '../streaming';
 
 export function updateMetaData(
@@ -36,58 +36,58 @@ export function mergeTokenFields(
 /** Merge compressor metadata into base metadata. Returns base unchanged if no compressor metadata present. */
 export function mergeCompressorIntoMetadata(
 	base: MessageMetadata | undefined,
-	asyncResults: { compressorMetadata?: StreamResultMetadata },
+	backgroundResults: { compressorMetadata?: StreamResultMetadata },
 	existingMetadata: MessageMetadata | undefined,
 	summarizerModel: string
 ): MessageMetadata | undefined {
-	if (!asyncResults.compressorMetadata) return base;
-	const cm = asyncResults.compressorMetadata;
+	if (!backgroundResults.compressorMetadata) return base;
+	const cm = backgroundResults.compressorMetadata;
 	const compressorPhaseEntry = toPhaseMetadata('CHARACTER_PROFILE_COMPRESSOR', cm, summarizerModel);
 	return mergeTokenFields(base ?? existingMetadata, cm, compressorPhaseEntry, summarizerModel);
 }
 
-export interface AsyncPhaseResolution {
+export interface BackgroundPhaseResolution {
 	updatedMessage: UIMessage;
 	metadataUpdates: { actSummary?: string; metadata?: string };
 }
 
-/** Resolve async phase results into an updated message and metadata changes for DB persistence. */
-export function resolveAsyncPhaseMetadata(
+/** Resolve background phase results into an updated message and metadata changes for DB persistence. */
+export function resolveBackgroundPhaseMetadata(
 	existing: UIMessage,
-	asyncResults: AsyncPhaseResults,
+	backgroundResults: BackgroundPhaseResults,
 	mainConfig: ProviderConfig
-): AsyncPhaseResolution {
+): BackgroundPhaseResolution {
 	const summarizerModel = getSummarizerProviderConfig()?.model ?? mainConfig.model;
 	const updatedPhases: UIScenePhase[] = existing.phases ? [...existing.phases] : [];
 	const metadataUpdates: { actSummary?: string; metadata?: string } = {};
 
-	if (asyncResults.actSummary !== undefined) {
-		updatedPhases.push({ phaseName: 'SUMMARIZER' as PhaseName, content: asyncResults.actSummary });
-		metadataUpdates.actSummary = asyncResults.actSummary;
+	if (backgroundResults.actSummary !== undefined) {
+		updatedPhases.push({ phaseName: 'SUMMARIZER' as PhaseName, content: backgroundResults.actSummary });
+		metadataUpdates.actSummary = backgroundResults.actSummary;
 	}
 
 	let baseMetadata: MessageMetadata | undefined;
-	if (asyncResults.summarizerMetadata) {
-		const phaseEntry = toPhaseMetadata('SUMMARIZER', asyncResults.summarizerMetadata, summarizerModel);
-		baseMetadata = mergeTokenFields(existing.metadata, asyncResults.summarizerMetadata, phaseEntry, summarizerModel);
+	if (backgroundResults.summarizerMetadata) {
+		const phaseEntry = toPhaseMetadata('SUMMARIZER', backgroundResults.summarizerMetadata, summarizerModel);
+		baseMetadata = mergeTokenFields(existing.metadata, backgroundResults.summarizerMetadata, phaseEntry, summarizerModel);
 		metadataUpdates.metadata = JSON.stringify(baseMetadata);
 	}
 
-	if (asyncResults.compressorMetadata) {
+	if (backgroundResults.compressorMetadata) {
 		updatedPhases.push({
 			phaseName: 'CHARACTER_PROFILE_COMPRESSOR' as PhaseName,
 			content: 'compressed',
 		});
 	}
 
-	const finalMetadata = mergeCompressorIntoMetadata(baseMetadata, asyncResults, existing.metadata, summarizerModel);
+	const finalMetadata = mergeCompressorIntoMetadata(baseMetadata, backgroundResults, existing.metadata, summarizerModel);
 	if (finalMetadata !== baseMetadata) {
 		metadataUpdates.metadata = JSON.stringify(finalMetadata);
 	}
 
 	const updatedMessage: UIMessage = {
 		...existing,
-		actSummary: asyncResults.actSummary ?? existing.actSummary,
+		actSummary: backgroundResults.actSummary ?? existing.actSummary,
 		phases: updatedPhases,
 		...(finalMetadata && { metadata: finalMetadata }),
 	};

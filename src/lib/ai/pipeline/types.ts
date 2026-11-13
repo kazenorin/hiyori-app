@@ -55,7 +55,7 @@ export interface CompressorResult {
 	metadata: StreamResultMetadata;
 }
 
-/** Run-scoped mutable state shared between the compressor tool's execute and the async chain. */
+/** Run-scoped mutable state shared between the compressor tool's execute and the background chain. */
 export interface ProfileCompressionState {
 	completedScenes: number;
 	newActSummary: ActSummary | undefined;
@@ -63,7 +63,7 @@ export interface ProfileCompressionState {
 	successCount: number;
 }
 
-export interface AsyncPhaseResults {
+export interface BackgroundPhaseResults {
 	actSummary?: string;
 	summarizerMetadata?: StreamResultMetadata;
 	compressorMetadata?: StreamResultMetadata;
@@ -118,7 +118,7 @@ export interface CommonPipelineInput {
 	directorNotes: string;
 	previousNarrativeVariables: NarrativeVariables | undefined;
 	/**
-	 * The CURRENT act's latest summary (as of `completedScenes`), consumed by the async
+	 * The CURRENT act's latest summary (as of `completedScenes`), consumed by the background
 	 * Summarizer. Not derivable from `previousActSummaries` (prior acts) or from
 	 * `context.actSummaryAtSP` (the current act, frozen at the older summarization point).
 	 */
@@ -147,7 +147,7 @@ export interface PipelineResult {
 	state: PipelineState;
 	aggregatedMetadata?: StreamResultMetadata;
 	phases?: PhaseMetadata[];
-	asyncPhases?: Promise<AsyncPhaseResults>;
+	backgroundPhases?: Promise<BackgroundPhaseResults>;
 }
 /**
  * Shared prompt-prefix context (Tiers 0–2), assembled once per run by the run manager

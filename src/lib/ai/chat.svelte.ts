@@ -52,7 +52,7 @@ let actEnded = $state(false);
 let storyConcluded = $state(false);
 let isConcludingStoryOverride = $state(false);
 let isBackfilling = $state(false);
-let isAsyncPending = $state(false);
+let isBackgroundPending = $state(false);
 /** Interrupted run awaiting the user's Continue/Discard decision for the displayed line. */
 let interruptedRun = $state<InterruptedRunInfo | null>(null);
 
@@ -87,8 +87,8 @@ export function getStreamingPhase(): PhaseName | null {
 	return displayedStreamingPhase;
 }
 
-export function getIsProcessingAsync(): boolean {
-	return isAsyncPending;
+export function getIsProcessingBackground(): boolean {
+	return isBackgroundPending;
 }
 
 export function getIsConcludingStory(): boolean {
@@ -100,7 +100,7 @@ export function setIsConcludingStory(value: boolean): void {
 }
 
 export function getIsBusy(): boolean {
-	return getIsStreaming() || getIsProcessingAsync() || getIsConcludingStory() || interruptedRun !== null;
+	return getIsStreaming() || getIsProcessingBackground() || getIsConcludingStory() || interruptedRun !== null;
 }
 
 export function getError(): string | null {
@@ -153,8 +153,8 @@ function mirrorSessionMessage(message: UIMessage): void {
 // --- Run event mirroring: only the displayed act line is reflected in the UI ---
 
 runManager.subscribeRuns((event) => {
-	if (event.type === 'async-settled') {
-		if (event.actLineId === displayedActLineId) isAsyncPending = false;
+	if (event.type === 'background-settled') {
+		if (event.actLineId === displayedActLineId) isBackgroundPending = false;
 		return;
 	}
 	const { session } = event;
@@ -169,7 +169,7 @@ runManager.subscribeRuns((event) => {
 	switch (session.status) {
 		case 'completed':
 			mirrorSessionMessage(session.message);
-			isAsyncPending = runManager.isProcessingAsyncPhases(session.actLineId);
+			isBackgroundPending = runManager.isProcessingBackgroundPhases(session.actLineId);
 			if (event.actEnded) actEnded = true;
 			if (event.storyConcluded) storyConcluded = true;
 			break;
@@ -288,7 +288,7 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 	syncDisplayedRun();
 	interruptedRun = null;
 	error = null;
-	isAsyncPending = runManager.isProcessingAsyncPhases(actLineId);
+	isBackgroundPending = runManager.isProcessingBackgroundPhases(actLineId);
 
 	const loaded = await loadActLineMessagesFromDB(actLineId);
 	setMessages(loaded);
@@ -331,7 +331,7 @@ export async function clearMessages(): Promise<void> {
 	interruptedRun = null;
 	actEnded = false;
 	storyConcluded = false;
-	isAsyncPending = false;
+	isBackgroundPending = false;
 }
 
 export function updateMessageInState(
@@ -458,7 +458,7 @@ export async function deleteOrphanedUserMessages(actLineId: string): Promise<voi
 	if (success) setMessages(remaining);
 }
 
-// --- Metadata backfill for messages whose async phases never completed ---
+// --- Metadata backfill for messages whose background phases never completed ---
 
 async function regenerateMissingMetadata(actLine: ActLineMeta, msgs: UIMessage[]): Promise<void> {
 	const lastAssistantIdx = msgs.findLastIndex((m) => m.role === 'assistant');

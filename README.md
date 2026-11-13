@@ -48,7 +48,7 @@ Get Hiyori running in three simple steps:
 
 ### Narrative Engine
 
-- **Multi-Phase Pipeline:** A sequential orchestration of Writer → Reviewer → Editor → Template Fitter → Game Master ‖ Plot Planner, accompanied by an async Summarizer → Character Profile Compressor → Memory extraction chain.
+- **Multi-Phase Pipeline:** A sequential orchestration of Writer → Reviewer → Editor → Template Fitter → Game Master ‖ Plot Planner, accompanied by a background Summarizer → Character Profile Compressor → Memory extraction chain.
 - **Write-Review-Edit Loop:** An optional feedback cycle (with detailed or quick review modes) to guarantee writing quality and narrative consistency.
 - **Branching Narratives:** Fork storylines at any point. Each branch is an independent act line sharing messages up to the fork point.
 - **Act Plots:** AI-generated scene-by-scene plot outlines with guided interview creation that drives the storytelling.
