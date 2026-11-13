@@ -211,6 +211,38 @@ describe('compressor recording matrix (D4)', () => {
 	});
 });
 
+// The summarizer uses short/role names ('Amiri') while the profile stores the
+// full preferred name; sceneDetails must derive via the identity's name set.
+describe('sceneDetails derivation matches the identity name set', () => {
+	it('derives sceneDetails when the summary uses a short name linked by aliases', async () => {
+		await insertCharacterProfile({
+			id: 'p-amiri',
+			actLineId: LINE,
+			sceneNumber: 4,
+			canonicalName: 'amiri-verspera',
+			preferredName: 'Amiri Verspera',
+			aliases: ['Amiri Verspera', 'little rose'],
+			logline: '',
+			state: null,
+			goal: null,
+			relationships: null,
+			voice: null,
+			traits: [],
+			sceneDetails: '',
+			importance: 2,
+		});
+		const summary = parseActSummary(`## Character Summaries
+### Amiri
+- Aliases: [little rose, gifted girl]
+- Scene 5: Amiri recovers in the lead wagon.`);
+		scriptedCalls = [{ name: 'Amiri Verspera', state: 'Recovered' }];
+		await run({ completedScenes: 9, newActSummary: undefined, attemptCount: 0, successCount: 0 }, summary);
+		const latest = await getLatestProfileByAlias(LINE, 'Amiri Verspera');
+		expect(latest?.sceneNumber).toBe(9);
+		expect(latest?.sceneDetails).toContain('Amiri recovers in the lead wagon.');
+	});
+});
+
 // Bracket-placeholder name forms must not silently erase sceneDetails on the
 // new profile version: derivation matches summary names exactly.
 describe('placeholder-bracket normalization preserves sceneDetails', () => {

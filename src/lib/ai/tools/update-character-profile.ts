@@ -61,7 +61,7 @@ export function buildUpdateCharacterProfileTools(ctx: ToolContext, compression: 
 							relationships: input.relationships === undefined ? (existing?.relationships ?? null) : input.relationships,
 							voice: input.voice === undefined ? (existing?.voice ?? null) : input.voice,
 							traits: input.traits === undefined ? (existing?.traits ?? []) : normalizeTraits(input.traits),
-							sceneDetails: summary ? serializeCharacterSceneDetails(summary, preferredName) : '',
+							sceneDetails: summary ? serializeCharacterSceneDetails(summary, [preferredName, canonicalName, ...aliases]) : '',
 							importance: (input.importance ?? existing?.importance ?? 4) as CharacterImportance,
 						});
 						compression.successCount += 1;
