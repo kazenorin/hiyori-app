@@ -174,10 +174,15 @@ export function trackStreamingPhase(
 			onUpdate();
 			callbacks.onPhaseStart(phase);
 		},
-		onPhaseComplete: (phase, state) => {
+		onPhaseComplete: (phase, state, metadata) => {
 			session.streamingPhases = session.streamingPhases.filter((p) => p !== phase);
 			onUpdate();
-			callbacks.onPhaseComplete(phase, state);
+			callbacks.onPhaseComplete(phase, state, metadata);
+		},
+		onPhaseFailed: (phase) => {
+			session.streamingPhases = session.streamingPhases.filter((p) => p !== phase);
+			onUpdate();
+			callbacks.onPhaseFailed?.(phase);
 		},
 	};
 }

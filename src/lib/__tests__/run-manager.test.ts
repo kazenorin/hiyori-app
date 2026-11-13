@@ -284,7 +284,7 @@ describe('trackStreamingPhase', () => {
 
 		wrapped.onPhaseComplete('WRITER', { writerOutput: 'x' });
 		expect(session.streamingPhases).toEqual([]);
-		expect(inner.onPhaseComplete).toHaveBeenCalledWith('WRITER', { writerOutput: 'x' });
+		expect(inner.onPhaseComplete).toHaveBeenCalledWith('WRITER', { writerOutput: 'x' }, undefined);
 		expect(onUpdate).toHaveBeenCalledTimes(2);
 	});
 

@@ -2,8 +2,11 @@ import { log } from '#lib/logging/logger.ts';
 import { isReviewerEnabled } from '#lib/stores/settings.svelte.ts';
 import { getErrorMessage } from '#lib/utils/error-handling.ts';
 import type { UIMessage } from './types';
-import type { GameDataFields, NarrativeVariables, PhaseName, UIScenePhase } from '../narrative-types';
+import { BACKGROUND_PHASES, type GameDataFields, type NarrativeVariables, type PhaseName, type UIScenePhase } from '../narrative-types';
 import type { PipelineCallbacks, PipelineState, PhaseStreamState } from '../pipeline/types';
+import type { StreamResultMetadata } from '../streaming';
+import { mergeTokenFields } from './metadata';
+import { toPhaseMetadata } from '../chat-stream';
 import { serializeImportantPhrases, updatePersistentMessageMetadata } from './persistence';
 
 /** Merge Editor variables with GM game data into final NarrativeVariables */
@@ -40,7 +43,7 @@ export function getPhaseContent(phase: PhaseName, state: PipelineState): string 
 		case 'TEMPLATE_FITTER':
 			return '';
 		case 'CHARACTER_PROFILE_COMPRESSOR':
-			return '';
+			return state.profileCompressionLog ?? '';
 	}
 }
 
@@ -55,6 +58,7 @@ export function createOptionalCallbacks({
 	onPhaseStream = () => {},
 	onPhaseRetry = () => {},
 	onPhaseComplete = () => {},
+	onPhaseFailed = (_phase) => {},
 	onError = (_phase, _err) => {},
 	onAllComplete = () => {},
 }: Partial<PipelineCallbacks> = {}): PipelineCallbacks {
@@ -63,6 +67,7 @@ export function createOptionalCallbacks({
 		onPhaseStream,
 		onPhaseRetry,
 		onPhaseComplete,
+		onPhaseFailed,
 		onError,
 		onAllComplete,
 	};
@@ -100,7 +105,15 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 		onPhaseStart: (phase: PhaseName) => {
 			if (hiddenPhases.includes(phase)) return;
 			const current = getCurrentMessage();
-			const phases = [...(current.phases ?? []), { phaseName: phase, content: '' }];
+			const phases = [...(current.phases ?? [])];
+			const entry: UIScenePhase = { phaseName: phase, content: '' };
+			if (BACKGROUND_PHASES.includes(phase)) {
+				phases.push(entry);
+			} else {
+				const firstBackground = phases.findIndex((p) => BACKGROUND_PHASES.includes(p.phaseName));
+				if (firstBackground === -1) phases.push(entry);
+				else phases.splice(firstBackground, 0, entry);
+			}
 			setCurrentMessage({ ...current, phases });
 		},
 		onPhaseStream: (phase: PhaseName, streamState: PhaseStreamState) => {
@@ -116,7 +129,13 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 		onPhaseRetry: (phase: PhaseName, attempt: number, maxAttempts: number) => {
 			updatePhaseInList(phase, { content: `Retrying (attempt ${attempt}/${maxAttempts})...` });
 		},
-		onPhaseComplete: (phase: PhaseName, pipelineState: PipelineState) => {
+		onPhaseComplete: (phase: PhaseName, pipelineState: PipelineState, metadata?: StreamResultMetadata) => {
+			if (metadata) {
+				const current = getCurrentMessage();
+				const model = [...metadata.models][0] ?? 'unknown';
+				const entry = toPhaseMetadata(phase, metadata, model);
+				setCurrentMessage({ ...current, metadata: mergeTokenFields(current.metadata, metadata, entry, model) });
+			}
 			if (bodyPhases.includes(phase)) {
 				const content = pipelineState.editorOutput ?? getCurrentMessage().content;
 				updateEditorMessage(content, pipelineState.editorReasoning, pipelineState.editorVariables);
@@ -152,6 +171,10 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 				const current = getCurrentMessage();
 				setCurrentMessage({ ...current, scenePlot: pipelineState.scenePlot });
 			}
+		},
+		onPhaseFailed: (phase: PhaseName) => {
+			const current = getCurrentMessage();
+			setCurrentMessage({ ...current, phases: (current.phases ?? []).filter((p) => p.phaseName !== phase) });
 		},
 		onError: (phase: PhaseName, err: unknown) => {
 			const errorMessage = getErrorMessage(err);

@@ -26,6 +26,7 @@ export interface PipelineState {
 	gameMasterOutput?: string;
 	gameData?: GameDataFields | null;
 	actSummary?: string;
+	profileCompressionLog?: string;
 }
 
 /** Stream state for a single phase during streaming */
@@ -39,7 +40,8 @@ export interface PipelineCallbacks {
 	onPhaseStart: (phase: PhaseName) => void;
 	onPhaseStream: (phase: PhaseName, streamState: PhaseStreamState) => void;
 	onPhaseRetry: (phase: PhaseName, attempt: number, maxAttempts: number) => void;
-	onPhaseComplete: (phase: PhaseName, state: PipelineState) => void;
+	onPhaseComplete: (phase: PhaseName, state: PipelineState, metadata?: StreamResultMetadata) => void;
+	onPhaseFailed?: (phase: PhaseName) => void;
 	onError: (phase: PhaseName, error: unknown) => void;
 	onPhrasesExtracted?: (phrases: string[]) => void;
 	onAllComplete: (state: PipelineState) => void;
