@@ -57,17 +57,35 @@ export interface CompressorResult {
 	metadata: StreamResultMetadata;
 }
 
+/** One update-character-profile attempt, as supplied to the tool (observer payload). */
+export interface ProfileUpdateAttempt {
+	input: {
+		name: string;
+		preferredName?: string;
+		aliases?: string[];
+		logline?: string | null;
+		state?: string | null;
+		goal?: string | null;
+		relationships?: string | null;
+		voice?: string | null;
+		traits?: string[];
+		importance?: number;
+	};
+	result: string;
+	success: boolean;
+}
+
 /** Run-scoped mutable state shared between the compressor tool's execute and the background chain. */
 export interface ProfileCompressionState {
 	completedScenes: number;
 	newActSummary: ActSummary | undefined;
 	attemptCount: number;
 	successCount: number;
+	onAttempt?: (attempt: ProfileUpdateAttempt) => void;
 }
 
 export interface BackgroundPhaseResults {
 	actSummary?: string;
-	compressorMetadata?: StreamResultMetadata;
 }
 
 /** Player response context. Both fields are present together or both absent. */

@@ -54,28 +54,27 @@ vi.mock('#lib/db/database.ts', () => ({
 
 let scriptedCalls: Record<string, unknown>[] = [];
 let executorError: Error | undefined;
-vi.mock('#lib/ai/pipeline/phase-executor.ts', () => ({
-	runNonStreamingPhase: vi.fn(
+vi.mock('#lib/ai/chat-stream.ts', () => ({
+	DEFAULT_RETRY_CONFIG: { retryCount: 2, backoffIntervalSeconds: 2 },
+	streamWithRetry: vi.fn(
 		async (
-			phase: string,
-			system: string,
-			messages: never[],
-			config: unknown,
-			signal: unknown,
-			tools: Record<string, { execute: (i: never, c: never) => Promise<string> }> | undefined
+			_system: string,
+			_messages: never[],
+			options: { tools?: Record<string, { execute: (i: never, c: never) => Promise<string> }> }
 		) => {
 			if (executorError) throw executorError;
 			for (const call of scriptedCalls) {
-				await tools!['update-character-profile'].execute(call as never, {} as never);
+				await options.tools!['update-character-profile'].execute(call as never, {} as never);
 			}
 			return {
-				text: '',
-				metadata: {
+				state: { content: '', reasoning: null, variables: null },
+				resultMetadata: Promise.resolve({
 					finishReason: 'stop',
 					usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
 					durationMs: 1,
 					models: new Set(['m']),
-				},
+				}),
+				callbacks: {},
 			};
 		}
 	),

@@ -618,6 +618,9 @@ tools:
       voice: 'A single representative quote capturing mindset; null clears'
       traits: 'Replacement list of defining single adjectives, most defining first (max 10); empty list clears; omit to keep'
       importance: '1 = Protagonist, 2 = Main, 3 = Supporting, 4 = Minor; omit to keep'
+    log:
+      cleared: '(cleared)'
+      noChanges: 'No profile changes — the new material did not justify any updates.'
   characterDetails:
     description: >
       Retrieve the latest profile for a character by any of their known names or aliases.

@@ -828,7 +828,7 @@ function wireBackgroundPhases(session: InternalSession, backgroundPhases: Promis
 	const pending = (async () => {
 		try {
 			const backgroundResults = await backgroundPhases;
-			const { updatedMessage, metadataUpdates } = resolveBackgroundPhaseMetadata(session.message, backgroundResults, session.mainConfig);
+			const { updatedMessage, metadataUpdates } = resolveBackgroundPhaseMetadata(session.message, backgroundResults);
 			session.message = updatedMessage;
 			emitUpdate(session);
 			await updatePersistentMessageMetadata(session.messageId, metadataUpdates);

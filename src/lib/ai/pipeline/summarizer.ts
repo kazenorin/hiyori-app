@@ -15,6 +15,7 @@ import type {
 	SummarizerResult,
 } from './types';
 import { aggregateMetadata, runNonStreamingPhase } from './phase-executor';
+import { emptyCompressionLog, formatProfileUpdateAttempt } from './compression-log';
 import { DEFAULT_RETRY_CONFIG, streamWithRetry } from '../chat-stream';
 import type { StreamResultMetadata } from '../streaming';
 import {
@@ -73,6 +74,7 @@ export interface CharacterProfileCompressorInput {
 	context: PipelineContext;
 	tools: ToolSet | undefined;
 	compression: ProfileCompressionState;
+	callbacks?: PipelineCallbacks;
 }
 
 // --- Summarizer functions ---
@@ -246,16 +248,43 @@ export async function generateCharacterProfiles(
 	);
 
 	compressorInput.compression.newActSummary = newActSummary;
-	const { metadata } = await runNonStreamingPhase(
-		'CHARACTER_PROFILE_COMPRESSOR',
-		resolveSharedSystemPrompt(prompts),
-		messages,
-		providerConfig,
-		abortSignal,
-		guardToolsForBackgroundPhase(compressorInput.tools, 'CHARACTER_PROFILE_COMPRESSOR')
-	);
-
+	const callbacks = compressorInput.callbacks;
 	const { compression } = compressorInput;
+	let toolLog = '';
+	let latestReasoning: string | null = null;
+	const emitStream = () =>
+		callbacks?.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', { content: toolLog, reasoning: latestReasoning, variables: null });
+	if (callbacks) {
+		compression.onAttempt = (attempt) => {
+			toolLog += (toolLog ? '\n\n' : '') + formatProfileUpdateAttempt(attempt);
+			emitStream();
+		};
+		callbacks.onPhaseStart('CHARACTER_PROFILE_COMPRESSOR');
+	}
+	let metadata: StreamResultMetadata;
+	try {
+		const accumulator = await streamWithRetry(resolveSharedSystemPrompt(prompts), messages, {
+			retryConfig: DEFAULT_RETRY_CONFIG,
+			onProgress: (state) => {
+				latestReasoning = state.reasoning;
+				emitStream();
+			},
+			onError: () => {},
+			providerConfig,
+			abortSignal,
+			tools: guardToolsForBackgroundPhase(compressorInput.tools, 'CHARACTER_PROFILE_COMPRESSOR'),
+			descriptors: [],
+			allowEmptyText: true,
+			onRetry: callbacks
+				? (attempt, maxAttempts) => callbacks.onPhaseRetry('CHARACTER_PROFILE_COMPRESSOR', attempt, maxAttempts)
+				: undefined,
+		});
+		metadata = await accumulator.resultMetadata;
+	} finally {
+		compression.onAttempt = undefined;
+	}
+	callbacks?.onPhaseComplete('CHARACTER_PROFILE_COMPRESSOR', { profileCompressionLog: toolLog || emptyCompressionLog() }, metadata);
+
 	if (compression.successCount > 0 || compression.attemptCount === 0) {
 		await recordCharacterProfileCompression(compressorInput.actLineId, compressorInput.assistant, completedScenes);
 		await log.info(
@@ -341,7 +370,6 @@ export async function runBackgroundPhases(ctx: BackgroundPhasesContext): Promise
 			return {};
 		}
 
-		let compressorResult: CompressorResult | null = null;
 		try {
 			if (result.actSummary && actLineId) {
 				const compressorInput: CharacterProfileCompressorInput = {
@@ -353,10 +381,12 @@ export async function runBackgroundPhases(ctx: BackgroundPhasesContext): Promise
 					context,
 					tools,
 					compression,
+					callbacks,
 				};
-				compressorResult = await generateCharacterProfiles(result.actSummary, compressorInput, summarizerPrompts);
+				await generateCharacterProfiles(result.actSummary, compressorInput, summarizerPrompts);
 			}
 		} catch (err) {
+			callbacks.onPhaseFailed?.('CHARACTER_PROFILE_COMPRESSOR');
 			if (isAbortLikeError(err)) {
 				await log.warn('pipeline', 'Character profile compressor aborted');
 			} else {
@@ -378,14 +408,7 @@ export async function runBackgroundPhases(ctx: BackgroundPhasesContext): Promise
 			}
 		}
 
-		return {
-			actSummary: serializedSummary,
-			...(compressorResult
-				? {
-						compressorMetadata: compressorResult.metadata,
-					}
-				: {}),
-		};
+		return { actSummary: serializedSummary };
 	}
 	return {};
 }

@@ -1,7 +1,6 @@
-import { buildMetadata, toPhaseMetadata, type MessageMetadata, type PhaseMetadata } from '../chat-stream';
-import { getSummarizerProviderConfig, type ProviderConfig } from '#lib/stores/settings.svelte.ts';
+import { buildMetadata, type MessageMetadata, type PhaseMetadata } from '../chat-stream';
 import type { UIMessage } from './types';
-import { BACKGROUND_PHASES, type PhaseName, type UIScenePhase } from '../narrative-types';
+import { BACKGROUND_PHASES, type PhaseName } from '../narrative-types';
 import type { BackgroundPhaseResults } from '../pipeline/types';
 import type { StreamResultMetadata } from '../streaming';
 import { aggregateMetadataFromPhases } from '../pipeline/phase-executor';
@@ -48,58 +47,19 @@ export function mergePreservedBackgroundMetadata(
 	return merged;
 }
 
-/** Merge compressor metadata into base metadata. Returns base unchanged if no compressor metadata present. */
-export function mergeCompressorIntoMetadata(
-	base: MessageMetadata | undefined,
-	backgroundResults: { compressorMetadata?: StreamResultMetadata },
-	existingMetadata: MessageMetadata | undefined,
-	summarizerModel: string
-): MessageMetadata | undefined {
-	if (!backgroundResults.compressorMetadata) return base;
-	const cm = backgroundResults.compressorMetadata;
-	const compressorPhaseEntry = toPhaseMetadata('CHARACTER_PROFILE_COMPRESSOR', cm, summarizerModel);
-	return mergeTokenFields(base ?? existingMetadata, cm, compressorPhaseEntry, summarizerModel);
-}
-
 export interface BackgroundPhaseResolution {
 	updatedMessage: UIMessage;
 	metadataUpdates: { actSummary?: string; metadata?: string };
 }
 
-/** Resolve background phase results into an updated message and metadata changes for DB persistence. */
-export function resolveBackgroundPhaseMetadata(
-	existing: UIMessage,
-	backgroundResults: BackgroundPhaseResults,
-	mainConfig: ProviderConfig
-): BackgroundPhaseResolution {
-	const summarizerModel = getSummarizerProviderConfig()?.model ?? mainConfig.model;
-	const updatedPhases: UIScenePhase[] = existing.phases ? [...existing.phases] : [];
+/** Persist the background chain's results; content/reasoning/metadata already landed via callbacks. */
+export function resolveBackgroundPhaseMetadata(existing: UIMessage, backgroundResults: BackgroundPhaseResults): BackgroundPhaseResolution {
 	const metadataUpdates: { actSummary?: string; metadata?: string } = {};
-
-	if (backgroundResults.actSummary !== undefined) {
-		metadataUpdates.actSummary = backgroundResults.actSummary;
-	}
-
-	let baseMetadata: MessageMetadata | undefined;
-
-	if (backgroundResults.compressorMetadata) {
-		updatedPhases.push({
-			phaseName: 'CHARACTER_PROFILE_COMPRESSOR' as PhaseName,
-			content: 'compressed',
-		});
-	}
-
-	const finalMetadata = mergeCompressorIntoMetadata(baseMetadata, backgroundResults, existing.metadata, summarizerModel);
-	if (finalMetadata) {
-		metadataUpdates.metadata = JSON.stringify(finalMetadata);
-	}
-
+	if (backgroundResults.actSummary !== undefined) metadataUpdates.actSummary = backgroundResults.actSummary;
+	if (existing.metadata) metadataUpdates.metadata = JSON.stringify(existing.metadata);
 	const updatedMessage: UIMessage = {
 		...existing,
 		actSummary: backgroundResults.actSummary ?? existing.actSummary,
-		phases: updatedPhases,
-		...(finalMetadata && { metadata: finalMetadata }),
 	};
-
 	return { updatedMessage, metadataUpdates };
 }
