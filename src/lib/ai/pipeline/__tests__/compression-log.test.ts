@@ -20,23 +20,28 @@ describe('formatProfileUpdateAttempt', () => {
 		// WHY: the pane must show what the model actually changed, not the whole profile.
 		const block = formatProfileUpdateAttempt(attempt({ state: 'Recovered', goal: 'Find the healer' }));
 		expect(block).toContain('### elena-vale');
-		expect(block).toContain('- state: Recovered');
-		expect(block).toContain('- goal: Find the healer');
-		expect(block).not.toContain('logline');
-		expect(block).not.toContain('traits');
+		expect(block).toContain('- State: Recovered');
+		expect(block).toContain('- Goal: Find the healer');
+		expect(block).not.toContain('Logline');
+		expect(block).not.toContain('Traits');
 		expect(block).toContain('Profile updated for elena-vale at scene 9.');
+	});
+
+	it('renders the localized preferred name label', () => {
+		const block = formatProfileUpdateAttempt(attempt({ preferredName: 'Elena' }));
+		expect(block).toContain('- Preferred Name: Elena');
 	});
 
 	it('renders explicit null as the cleared marker (tri-state)', () => {
 		const block = formatProfileUpdateAttempt(attempt({ state: null }));
-		expect(block).toContain('- state: (cleared)');
+		expect(block).toContain('- State: (cleared)');
 	});
 
 	it('joins arrays and renders importance', () => {
 		const block = formatProfileUpdateAttempt(attempt({ traits: ['brave', 'cautious'], aliases: ['Lady Vale'], importance: 2 }));
-		expect(block).toContain('- traits: brave, cautious');
-		expect(block).toContain('- aliases: Lady Vale');
-		expect(block).toContain('- importance: 2');
+		expect(block).toContain('- Traits: brave, cautious');
+		expect(block).toContain('- Aliases: Lady Vale');
+		expect(block).toContain('- Importance: 2');
 	});
 
 	it('appends the failure result for failed attempts', () => {
@@ -48,7 +53,7 @@ describe('formatProfileUpdateAttempt', () => {
 		// WHY: without the blank line, markdown lazy continuation renders the result
 		// inside the last list bullet (observed on the traits line in the dialog).
 		const block = formatProfileUpdateAttempt(attempt({ traits: ['brave'] }));
-		expect(block).toContain('- traits: brave\n\nProfile updated for elena-vale at scene 9.');
+		expect(block).toContain('- Traits: brave\n\nProfile updated for elena-vale at scene 9.');
 	});
 });
 

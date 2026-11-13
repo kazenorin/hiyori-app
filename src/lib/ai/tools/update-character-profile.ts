@@ -37,7 +37,7 @@ export function buildUpdateCharacterProfileTools(ctx: ToolContext, compression: 
 				let result: string;
 				let success = false;
 				if (!input.name.trim()) {
-					result = 'Profile update failed: name must not be empty';
+					result = ls('tools.updateCharacterProfile.messages.emptyName');
 					await log(`update-character-profile failed for ${input.name}: name must not be empty`);
 				} else {
 					try {
@@ -65,12 +65,12 @@ export function buildUpdateCharacterProfileTools(ctx: ToolContext, compression: 
 							importance: (input.importance ?? existing?.importance ?? 4) as CharacterImportance,
 						});
 						compression.successCount += 1;
-						result = `Profile updated for ${canonicalName} at scene ${compression.completedScenes}.`;
+						result = ls('tools.updateCharacterProfile.messages.updated', { name: canonicalName, sceneNumber: compression.completedScenes });
 						success = true;
 						await log(`update-character-profile updated profile for ${canonicalName} at scene ${compression.completedScenes}`);
 					} catch (err) {
 						const reason = err instanceof Error ? err.message : String(err);
-						result = `Profile update failed for ${input.name}: ${reason}`;
+						result = ls('tools.updateCharacterProfile.messages.failed', { name: input.name, reason });
 						await log(`update-character-profile failed for ${input.name}: ${reason}`);
 					}
 				}

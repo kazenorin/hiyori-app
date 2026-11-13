@@ -183,6 +183,7 @@ pipeline:
     acceptAsIs: 不需修改
     totalViolations: 違規總數
     recommendation: 建議
+    preferredName: 偏好名稱
     state: 狀態
     logline: 概述
     goal: 目標
@@ -613,6 +614,10 @@ tools:
       voice: '一句捕捉心態的代表性引言；null 清除'
       traits: '具定義性的單一形容詞取代清單，最具定義性者在前（上限 10）；空清單清除；省略則保留'
       importance: '1 = 主角，2 = 主要，3 = 配角，4 = 次要；省略則保留'
+    messages:
+      updated: '已於場景 {{sceneNumber}} 更新 {{name}} 的檔案。'
+      failed: '{{name}} 的檔案更新失敗：{{reason}}'
+      emptyName: '檔案更新失敗：名稱不可為空'
     log:
       cleared: '（已清除）'
       noChanges: '沒有檔案變更——新材料未構成任何更新。'

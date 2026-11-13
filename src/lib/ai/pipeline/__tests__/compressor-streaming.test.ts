@@ -161,7 +161,7 @@ describe('compressor streaming lifecycle', () => {
 
 		expect(callbacks.onPhaseStart).toHaveBeenCalledWith('CHARACTER_PROFILE_COMPRESSOR');
 		const streamContents = vi.mocked(callbacks.onPhaseStream).mock.calls.map((c) => c[1].content);
-		expect(streamContents.some((c) => c.includes('### elena-vale') && c.includes('- state: Recovered'))).toBe(true);
+		expect(streamContents.some((c) => c.includes('### elena-vale') && c.includes('- State: Recovered'))).toBe(true);
 		// WHY: the pane must show the model's reasoning alongside the tool log.
 		expect(vi.mocked(callbacks.onPhaseStream).mock.calls.some((c) => c[1].reasoning === 'compressor thoughts')).toBe(true);
 		const [phase, state, metadata] = vi.mocked(callbacks.onPhaseComplete).mock.calls[0];
