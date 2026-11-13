@@ -115,7 +115,7 @@ interface RunPlan {
 // --- Registry + events ---
 
 const sessions = new Map<string, InternalSession>();
-const pendingBackgroundByLine = new Map<string, Promise<void>>();
+const pendingBackgroundByLine = new Map<string, { promise: Promise<void>; session: InternalSession }>();
 const listeners = new Set<(event: RunEvent) => void>();
 
 export function subscribeRuns(listener: (event: RunEvent) => void): () => void {
@@ -153,7 +153,7 @@ function emitUpdate(session: InternalSession): void {
 }
 
 export function getActiveSession(actLineId: string): RunSessionView | undefined {
-	const session = sessions.get(actLineId);
+	const session = sessions.get(actLineId) ?? pendingBackgroundByLine.get(actLineId)?.session;
 	return session ? toView(session) : undefined;
 }
 
@@ -195,7 +195,7 @@ async function awaitPendingBackgroundPhases(actLineId: string): Promise<void> {
 	const pending = pendingBackgroundByLine.get(actLineId);
 	if (!pending) return;
 	try {
-		await pending;
+		await pending.promise;
 	} catch (err) {
 		await log.error(LOG_TAG, 'Pending background phases failed', err);
 	}
@@ -332,7 +332,11 @@ export async function discardRun(actLineId: string): Promise<void> {
 /** Stop the running session; completed phases stay cached for continue/discard. */
 export function abortRun(actLineId: string): void {
 	const session = sessions.get(actLineId);
-	if (session?.status === 'running') session.abortController.abort();
+	if (session?.status === 'running') {
+		session.abortController.abort();
+		return;
+	}
+	pendingBackgroundByLine.get(actLineId)?.session.abortController.abort();
 }
 
 // --- Cleanup hooks for deletion flows ---
@@ -850,5 +854,5 @@ function wireBackgroundPhases(session: InternalSession, backgroundPhases: Promis
 			emit({ type: 'background-settled', actLineId: session.actLineId });
 		}
 	})();
-	pendingBackgroundByLine.set(session.actLineId, pending);
+	pendingBackgroundByLine.set(session.actLineId, { promise: pending, session });
 }

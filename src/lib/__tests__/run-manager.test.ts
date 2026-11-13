@@ -76,7 +76,9 @@ vi.mock('#lib/ai/chat/persistence.ts', () => ({
 }));
 
 import {
+	abortRun,
 	draftMessageFromRecord,
+	getActiveSession,
 	resumedSessionMessage,
 	startMainRun,
 	subscribeRuns,
@@ -289,6 +291,14 @@ describe('trackStreamingPhase', () => {
 		expect(onUpdate).toHaveBeenCalledTimes(2);
 	});
 
+	it('keeps a single entry when the same phase starts twice', () => {
+		const session = { streamingPhases: [] as PhaseName[] };
+		const wrapped = trackStreamingPhase(session, makeInner(), vi.fn());
+		wrapped.onPhaseStart('WRITER');
+		wrapped.onPhaseStart('WRITER');
+		expect(session.streamingPhases).toEqual(['WRITER']);
+	});
+
 	it('tracks concurrent phases independently — completing one keeps the other spinning', () => {
 		// WHY: GM ‖ Plot Planner (and later Summarizer ‖ Writer) stream at the same
 		// time; a single slot made the second phase overwrite the first's spinner.
@@ -389,5 +399,74 @@ describe('phase persistence on settle', () => {
 		expect(events.some((e) => e.type === 'update' && e.session.streamingPhases.includes('EDITOR'))).toBe(true);
 		const settledEvent = events.find((e) => e.type === 'settled');
 		expect(settledEvent?.type === 'settled' && settledEvent.session.streamingPhases).toEqual([]);
+	});
+});
+
+describe('background session reachability', () => {
+	beforeEach(() => {
+		settingsMock.reviewerEnabled = false;
+	});
+
+	function mockRunWithDeferredBackground() {
+		let resolveBackground!: (v: { actSummary?: string }) => void;
+		const backgroundPhases = new Promise<{ actSummary?: string }>((r) => (resolveBackground = r));
+		let capturedSignal: AbortSignal | undefined;
+		vi.mocked(runPipeline).mockImplementation(async (input) => {
+			capturedSignal = input.execution.abortSignal;
+			const cb = input.execution.callbacks;
+			cb.onPhaseStart('EDITOR');
+			cb.onPhaseComplete('EDITOR', { editorOutput: 'prose' });
+			cb.onPhaseStart('SUMMARIZER');
+			return { state: { editorOutput: 'prose' }, phases: [], backgroundPhases };
+		});
+		return { resolveBackground: () => resolveBackground({ actSummary: 's' }), getSignal: () => capturedSignal };
+	}
+
+	it('getActiveSession falls back to the background session after main settle', async () => {
+		// WHY: spinners and re-attach must keep working while the background chain
+		// runs after the main run has settled and unregistered.
+		const { resolveBackground } = mockRunWithDeferredBackground();
+		const events: RunEvent[] = [];
+		let resolveSettled!: () => void;
+		let resolveBackgroundSettled!: () => void;
+		const settled = new Promise<void>((r) => (resolveSettled = r));
+		const backgroundSettled = new Promise<void>((r) => (resolveBackgroundSettled = r));
+		const off = subscribeRuns((e) => {
+			events.push(e);
+			if (e.type === 'settled') resolveSettled();
+			if (e.type === 'background-settled') resolveBackgroundSettled();
+		});
+
+		await startMainRun({ actLineId: 'line-1', message: 'go' });
+		await settled;
+
+		const view = getActiveSession('line-1');
+		expect(view).toBeDefined();
+		expect(view?.streamingPhases).toEqual(['SUMMARIZER']);
+
+		resolveBackground();
+		await backgroundSettled;
+		expect(getActiveSession('line-1')).toBeUndefined();
+		off();
+	});
+
+	it('abortRun aborts the background chain when no live run is running', async () => {
+		// WHY: Stop must cover visible background phases (design D3).
+		const { resolveBackground, getSignal } = mockRunWithDeferredBackground();
+		let resolveSettled!: () => void;
+		const settled = new Promise<void>((r) => (resolveSettled = r));
+		const off = subscribeRuns((e) => {
+			if (e.type === 'settled') resolveSettled();
+		});
+
+		await startMainRun({ actLineId: 'line-1', message: 'go' });
+		await settled;
+		expect(getSignal()?.aborted).toBe(false);
+
+		abortRun('line-1');
+		expect(getSignal()?.aborted).toBe(true);
+
+		resolveBackground();
+		off();
 	});
 });

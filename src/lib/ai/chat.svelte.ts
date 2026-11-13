@@ -79,7 +79,7 @@ function syncDisplayedRun(): void {
 }
 
 export function getIsStreaming(): boolean {
-	return displayedRunStatus === 'running' || isBackfilling;
+	return displayedRunStatus === 'running' || isBackgroundPending || isBackfilling;
 }
 
 /** Phases currently streaming on the displayed line (spinner source for strip/dialog). */
@@ -154,7 +154,10 @@ function mirrorSessionMessage(message: UIMessage): void {
 
 runManager.subscribeRuns((event) => {
 	if (event.type === 'background-settled') {
-		if (event.actLineId === displayedActLineId) isBackgroundPending = false;
+		if (event.actLineId === displayedActLineId) {
+			isBackgroundPending = false;
+			syncDisplayedRun();
+		}
 		return;
 	}
 	const { session } = event;
