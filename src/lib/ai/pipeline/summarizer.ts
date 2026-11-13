@@ -25,7 +25,6 @@ import {
 import { guardToolsForAsyncPhase } from '#lib/ai/tools/tools.ts';
 import { type ActSummary, mergeActSummary, parseActSummary, parseIncrementalOutput, serializeActSummary } from '../act-summary-parser';
 import { actSummaryHeader, currentCharacterProfilesHeader } from '#lib/definitions/common-headers.ts';
-import { loglineLabel, traitsLabel } from '#lib/definitions/character-profile-labels.ts';
 import {
 	actSummaryTemplate,
 	resolveSharedSystemPrompt,
@@ -214,9 +213,7 @@ export async function generateCharacterProfiles(
 
 	const compressorExtraction = prompts.characterProfileCompressorPrompt
 		.replaceAll('{{actSummaryHeader}}', actSummaryHeader())
-		.replaceAll('{{currentCharacterProfilesHeader}}', currentCharacterProfilesHeader())
-		.replaceAll('{{loglineLabel}}', loglineLabel())
-		.replaceAll('{{traitsLabel}}', traitsLabel());
+		.replaceAll('{{currentCharacterProfilesHeader}}', currentCharacterProfilesHeader());
 
 	const existingProfiles = await getLatestProfilesByActLine(compressorInput.actLineId);
 	const messages = buildPhaseMessages(

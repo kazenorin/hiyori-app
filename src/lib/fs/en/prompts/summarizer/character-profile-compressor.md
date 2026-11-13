@@ -28,4 +28,4 @@ Use the `update-character-profile` tool for each character that changes. The too
 - **Changed-only:** Call the tool only for characters whose fields the new material justifies changing. Within a call, include only changed fields — omitted fields keep their current value automatically.
 - **Clearing:** Pass null to clear a text field; pass an empty list to clear traits. Omitting is NOT clearing.
 - **Aliases:** List only NEW aliases to add; existing aliases are kept automatically and can never be removed.
-- **Display name (`preferredName` parameter):** Set only when the character's display name genuinely changes; omit to keep the current one. The old name is retained as an alias.
+- **Display name:** Set only when the character's display name genuinely changes; omit to keep the current one. The old name is retained as an alias.
