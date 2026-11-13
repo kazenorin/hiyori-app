@@ -88,7 +88,7 @@ Runs the pre-editor chain only (Writer → Reviewer → Editor → Template Fitt
 
 These phases run concurrently with the sequential chain and outlive it; they are ordinary pipeline phases, not a separate class. The chain resolves after the main run settles.
 
-| Phase                            | Purpose                                                                                             | Provider Role          | Output in `BackgroundPhaseResults`                                                                      | Mode                          |
+| Phase                            | Purpose                                                                                             | Provider Role          | Output / pane content                                                                                   | Mode                          |
 | -------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------- |
 | **Summarizer**                   | Updates act summary (full or incremental)                                                           | `summarizer`           | `actSummary`                                                                                            | Streaming (`streamWithRetry`) |
 | **Character Profile Compressor** | Updates character profiles via `update-character-profile` tool calls when interval threshold is met | `summarizer`           | `profileCompressionLog` (per-character tool-call activity log); profile versions persist via tool calls | Streaming (tool calls)        |
