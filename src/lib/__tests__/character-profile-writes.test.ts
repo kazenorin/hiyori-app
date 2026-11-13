@@ -184,6 +184,22 @@ describe.each(ADAPTERS)('guarded character profile writes ($name)', ({ create })
 		expect((await getProfilesAtScene(LINE, 1)).map((p) => p.id)).toEqual(['scene-1']);
 	});
 
+	it('regenerates canonical_aliases from the aliases being written on insert, update and copy', async () => {
+		await seedScene(1);
+		const original = entity({ id: 'p1', aliases: ['Elena Vale', 'Lady Vale'], createdAt: 1000, updatedAt: 1000 });
+		await writeProfileVersions(LINE, 1, [{ previous: null, next: original }]);
+		expect((await rawRow('p1'))?.canonical_aliases).toBe(JSON.stringify(['elena-vale', 'lady-vale']));
+
+		const edited = { ...original, aliases: ['Mira'], updatedAt: 2000 };
+		await writeProfileVersions(LINE, 1, [{ previous: original, next: edited }]);
+		expect((await rawRow('p1'))?.canonical_aliases).toBe(JSON.stringify(['mira']));
+
+		await seedScene(2);
+		const copied = entity({ id: 'p2', sceneNumber: 2, aliases: ['Elena', 'The Captain'], createdAt: 3000, updatedAt: 3000 });
+		await writeProfileVersions(LINE, 2, [{ previous: edited, next: copied }]);
+		expect((await rawRow('p2'))?.canonical_aliases).toBe(JSON.stringify(['elena', 'the-captain']));
+	});
+
 	it('rejects mutations at a historical scene without changing any row', async () => {
 		await seedScene(1);
 		const historical = entity({ id: 'p1', logline: 'Scene 1', createdAt: 1000, updatedAt: 1000 });

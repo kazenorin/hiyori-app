@@ -393,7 +393,7 @@ describe('serializeCharacterSceneDetails', () => {
 
 	it('prefers a name match over an earlier alias-only match', () => {
 		const twoCharacters = parseActSummary(`## Character Summaries
-### Little Rose
+### Rose Guardian
 - Aliases: [little rose]
 - Scene 5: A different character sharing the alias.
 
@@ -411,6 +411,14 @@ describe('serializeCharacterSceneDetails', () => {
 ### Amiri
 - Aliases: [little rose]`);
 		expect(serializeCharacterSceneDetails(emptyEntries, ['little rose'])).toBe('');
+	});
+
+	it('matches name variants that differ only in case or punctuation', () => {
+		expect(serializeCharacterSceneDetails(summary, ['AMIRI', 'amiri-verspera'])).toBe('- 5: Amiri recovers in the lead wagon.');
+	});
+
+	it('matches alias variants that differ only in case, punctuation or brackets', () => {
+		expect(serializeCharacterSceneDetails(summary, ['Amiri Verspera', '[Little Rose]'])).toBe('- 5: Amiri recovers in the lead wagon.');
 	});
 });
 

@@ -1,6 +1,7 @@
 // noinspection SqlResolve
 
 import { getDatabase } from './database';
+import { parseAliases, serializeCanonicalAliases } from './character-profiles';
 
 interface SchemaVersion {
 	version: number;
@@ -174,8 +175,7 @@ const migrationStatements: string[][] = [
 	],
 	[`ALTER TABLE character_profiles ADD COLUMN traits TEXT`],
 	[`ALTER TABLE character_profiles ADD COLUMN removed INTEGER NOT NULL DEFAULT 0`],
-	// Data-only migration; the schema is unchanged, see backfillCompressorLogParagraphs.
-	[],
+	[`ALTER TABLE character_profiles ADD COLUMN canonical_aliases TEXT NOT NULL DEFAULT '[]'`],
 ];
 
 interface ActLineMetaMigrateRow {
@@ -285,36 +285,20 @@ async function migrateV9Data(): Promise<void> {
 	}
 }
 
-interface CompressorLogMigrateRow {
-	message_id: string;
-	content: string;
-}
-
-// Pre-2026-11-14 compressor logs appended the result line directly after the
-// field list; markdown lazy continuation renders it inside the last bullet.
-// Legacy result strings were hardcoded English regardless of locale; new
-// localized content already has the blank line and is untouched.
-export async function backfillCompressorLogParagraphs(): Promise<void> {
+export async function backfillCanonicalAliases(): Promise<void> {
 	const db = getDatabase();
-	const rows = await db.select<CompressorLogMigrateRow[]>(
-		"SELECT message_id, content FROM message_phases WHERE phase_name = 'CHARACTER_PROFILE_COMPRESSOR'"
-	);
-
+	const rows = await db.select<{ id: string; aliases: string }[]>('SELECT id, aliases FROM character_profiles');
 	for (const row of rows) {
-		const content = row.content.replace(/(?<!\n)\n(Profile (?:updated for|update failed)[^\n]*)/g, '\n\n$1');
-		if (content !== row.content) {
-			await db.execute('UPDATE message_phases SET content = $1 WHERE message_id = $2 AND phase_name = $3', [
-				content,
-				row.message_id,
-				'CHARACTER_PROFILE_COMPRESSOR',
-			]);
-		}
+		await db.execute('UPDATE character_profiles SET canonical_aliases = $1 WHERE id = $2', [
+			serializeCanonicalAliases(parseAliases(row.aliases)),
+			row.id,
+		]);
 	}
 }
 
 const postMigrationHooks: Record<number, () => Promise<void>> = {
 	9: migrateV9Data,
-	16: backfillCompressorLogParagraphs,
+	16: backfillCanonicalAliases,
 };
 
 export async function runMigrations(): Promise<void> {
