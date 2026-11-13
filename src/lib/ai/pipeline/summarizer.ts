@@ -7,13 +7,16 @@ import type {
 	AssistantContext,
 	BackgroundPhaseResults,
 	CompressorResult,
+	PipelineCallbacks,
 	PipelineContext,
 	PipelineProviderConfigs,
 	PlayerContext,
 	ProfileCompressionState,
 	SummarizerResult,
 } from './types';
-import { runNonStreamingPhase } from './phase-executor';
+import { aggregateMetadata, runNonStreamingPhase } from './phase-executor';
+import { DEFAULT_RETRY_CONFIG, streamWithRetry } from '../chat-stream';
+import type { StreamResultMetadata } from '../streaming';
 import {
 	buildPhaseMessages,
 	buildTranscriptSummarizerMessages,
@@ -50,6 +53,7 @@ export interface SummarizerInput {
 	transcript?: { role: 'user' | 'assistant'; content: string }[];
 	context?: PipelineContext;
 	tools?: ToolSet;
+	callbacks?: PipelineCallbacks;
 }
 
 export interface SummarizerPrompts {
@@ -76,6 +80,26 @@ export interface CharacterProfileCompressorInput {
 function requireContext(input: SummarizerInput): PipelineContext {
 	if (!input.context) throw new Error('Summarizer pipeline path requires PipelineContext');
 	return input.context;
+}
+
+async function streamSummaryText(
+	input: SummarizerInput,
+	systemPrompt: string,
+	messages: MessageBase[],
+	tools: ToolSet | undefined
+): Promise<{ text: string; metadata: StreamResultMetadata }> {
+	const accumulator = await streamWithRetry(systemPrompt, messages, {
+		retryConfig: DEFAULT_RETRY_CONFIG,
+		onProgress: (state) => input.callbacks?.onPhaseStream('SUMMARIZER', state),
+		onError: () => {},
+		providerConfig: input.providerConfig,
+		tools,
+		abortSignal: input.abortSignal,
+		descriptors: [],
+		onRetry: input.callbacks ? (attempt, maxAttempts) => input.callbacks!.onPhaseRetry('SUMMARIZER', attempt, maxAttempts) : undefined,
+	});
+	const metadata = await accumulator.resultMetadata;
+	return { text: accumulator.state.content, metadata };
 }
 
 export async function generateFullSummary(input: SummarizerInput, prompts: SummarizerPrompts): Promise<SummarizerResult> {
@@ -114,14 +138,9 @@ export async function generateFullSummary(input: SummarizerInput, prompts: Summa
 		phaseTools = guardToolsForBackgroundPhase(input.tools, 'SUMMARIZER');
 	}
 
-	const { text: rawSummary, metadata } = await runNonStreamingPhase(
-		'SUMMARIZER',
-		systemPrompt,
-		summarizerMessages,
-		providerConfig,
-		abortSignal,
-		phaseTools
-	);
+	const { text: rawSummary, metadata } = input.transcript?.length
+		? await runNonStreamingPhase('SUMMARIZER', systemPrompt, summarizerMessages, providerConfig, abortSignal, phaseTools)
+		: await streamSummaryText(input, systemPrompt, summarizerMessages, phaseTools);
 	const { completedScenes, previousNarrativeVariables } = input;
 	try {
 		const parsed = parseActSummary(rawSummary);
@@ -140,7 +159,6 @@ export async function generateFullSummary(input: SummarizerInput, prompts: Summa
 
 async function generateIncrementalSummary(input: SummarizerInput, prompts: SummarizerPrompts): Promise<SummarizerResult> {
 	const { actSummary, completedScenes, previousNarrativeVariables } = input;
-	const { providerConfig, abortSignal } = input;
 
 	const existingParsed = parseActSummary(actSummary);
 
@@ -155,12 +173,10 @@ async function generateIncrementalSummary(input: SummarizerInput, prompts: Summa
 		summarizerExtractionPromptTemplate(sceneNumber, sceneTitle),
 		''
 	);
-	const { text: incrementalRaw, metadata } = await runNonStreamingPhase(
-		'SUMMARIZER',
+	const { text: incrementalRaw, metadata } = await streamSummaryText(
+		input,
 		resolveSharedSystemPrompt(prompts),
 		incrementalMessages,
-		providerConfig,
-		abortSignal,
 		guardToolsForBackgroundPhase(input.tools, 'SUMMARIZER')
 	);
 
@@ -177,7 +193,8 @@ async function generateIncrementalSummary(input: SummarizerInput, prompts: Summa
 		return { actSummary: merged, serializedSummary, metadata };
 	} catch (err) {
 		await log.warn('pipeline', `Incremental act summary parse/merge failed, falling back to full summary: ${err}`);
-		return generateFullSummary(input, prompts);
+		const full = await generateFullSummary(input, prompts);
+		return { ...full, metadata: aggregateMetadata(metadata, full.metadata, input.providerConfig?.model) };
 	}
 }
 
@@ -185,7 +202,13 @@ async function generateIncrementalSummary(input: SummarizerInput, prompts: Summa
  * Run the summarizer sub-pipeline: incremental if an act summary exists, full generation otherwise.
  */
 export async function generateSummarizerResult(input: SummarizerInput, prompts: SummarizerPrompts): Promise<SummarizerResult> {
-	return input.actSummary ? generateIncrementalSummary(input, prompts) : generateFullSummary(input, prompts);
+	const callbacks = input.callbacks;
+	const generate = () => (input.actSummary ? generateIncrementalSummary(input, prompts) : generateFullSummary(input, prompts));
+	if (!callbacks) return generate();
+	callbacks.onPhaseStart('SUMMARIZER');
+	const result = await generate();
+	callbacks.onPhaseComplete('SUMMARIZER', { actSummary: result.serializedSummary }, result.metadata);
+	return result;
 }
 
 // --- Character profile compressor ---
@@ -265,6 +288,7 @@ export interface BackgroundPhasesContext {
 	context: PipelineContext;
 	tools: ToolSet | undefined;
 	compression: ProfileCompressionState;
+	callbacks: PipelineCallbacks;
 }
 
 export async function runBackgroundPhases(ctx: BackgroundPhasesContext): Promise<BackgroundPhaseResults> {
@@ -283,6 +307,7 @@ export async function runBackgroundPhases(ctx: BackgroundPhasesContext): Promise
 		context,
 		tools,
 		compression,
+		callbacks,
 	} = ctx;
 	if (player?.playerResponse && completedScenes > 0) {
 		const summarizerInput: SummarizerInput = {
@@ -294,6 +319,7 @@ export async function runBackgroundPhases(ctx: BackgroundPhasesContext): Promise
 			abortSignal,
 			context,
 			tools,
+			callbacks,
 		};
 		const summarizerPrompts: SummarizerPrompts = {
 			summarizerPrompt: loadedPrompts.summarizerPrompt,
@@ -306,6 +332,7 @@ export async function runBackgroundPhases(ctx: BackgroundPhasesContext): Promise
 		try {
 			result = await generateSummarizerResult(summarizerInput, summarizerPrompts);
 		} catch (err) {
+			callbacks.onPhaseFailed?.('SUMMARIZER');
 			if (isAbortLikeError(err)) {
 				await log.warn('pipeline', 'Background summarizer aborted');
 			} else {
@@ -353,7 +380,6 @@ export async function runBackgroundPhases(ctx: BackgroundPhasesContext): Promise
 
 		return {
 			actSummary: serializedSummary,
-			summarizerMetadata: result.metadata,
 			...(compressorResult
 				? {
 						compressorMetadata: compressorResult.metadata,

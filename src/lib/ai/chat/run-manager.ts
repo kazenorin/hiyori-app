@@ -54,7 +54,7 @@ import {
 	getPreviousNarrativeMessage,
 	getScenePlotForScene as _getScenePlotForScene,
 } from './message-queries';
-import { resolveBackgroundPhaseMetadata, updateMetaData } from './metadata';
+import { mergePreservedBackgroundMetadata, resolveBackgroundPhaseMetadata, updateMetaData } from './metadata';
 import { buildFinalVariables, createPipelineCallbacks } from './pipeline-callbacks';
 import {
 	loadActLineMessagesFromDB,
@@ -160,7 +160,7 @@ export function getActiveSession(actLineId: string): RunSessionView | undefined 
 /**
  * Wrap pipeline callbacks so the session tracks which phases are currently
  * streaming — the spinner source for the UI phase strip. Added on phase start,
- * removed on phase complete; finalize keeps background phases, error settle clears all.
+ * removed on phase complete or failure; finalize keeps background phases, error settle clears all.
  */
 export function trackStreamingPhase(
 	session: { streamingPhases: PhaseName[] },
@@ -752,7 +752,10 @@ async function finalizeRun(session: InternalSession, plan: RunPlan, result: Pipe
 
 	const assistant = { messageId: session.messageId, messageSequence: plan.assistantSequence };
 
-	session.message = { ...session.message, metadata: updateMetaData(result.aggregatedMetadata, result.phases) };
+	session.message = {
+		...session.message,
+		metadata: mergePreservedBackgroundMetadata(updateMetaData(result.aggregatedMetadata, result.phases), session.message.metadata),
+	};
 	emitUpdate(session);
 
 	// Measurement harness: per-turn prompt-cache report (debug level only).
@@ -775,7 +778,9 @@ async function finalizeRun(session: InternalSession, plan: RunPlan, result: Pipe
 	}
 	// Persist phases alongside the committed message so strips/dialogs survive reload;
 	// the background chain re-upserts the full array when it lands (idempotent per phase).
-	await dbMessagePhases.upsertMessagePhases(session.messageId, session.message.phases ?? []);
+	// Background phase rows are owned by the background chain (upserted at its settle).
+	const mainPhases = (session.message.phases ?? []).filter((p) => !BACKGROUND_PHASES.includes(p.phaseName));
+	await dbMessagePhases.upsertMessagePhases(session.messageId, mainPhases);
 	await updateLastPlotGeneration(result.phases, session.actLineId, assistant, plan.completedScenes);
 	await dbPipelineRuns.deletePipelineRun(session.messageId);
 
@@ -829,6 +834,12 @@ function wireBackgroundPhases(session: InternalSession, backgroundPhases: Promis
 			await updatePersistentMessageMetadata(session.messageId, metadataUpdates);
 			await dbMessagePhases.upsertMessagePhases(session.messageId, updatedMessage.phases ?? []);
 		} catch (err) {
+			session.streamingPhases = [];
+			session.message = {
+				...session.message,
+				phases: (session.message.phases ?? []).filter((p) => !BACKGROUND_PHASES.includes(p.phaseName)),
+			};
+			emitUpdate(session);
 			if (isAbortLikeError(err)) {
 				await log.warn(LOG_TAG, 'Background phases aborted');
 			} else {

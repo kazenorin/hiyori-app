@@ -88,11 +88,11 @@ Runs the pre-editor chain only (Writer → Reviewer → Editor → Template Fitt
 
 These phases run concurrently with the sequential chain and outlive it; they are ordinary pipeline phases, not a separate class. The chain resolves after the main run settles.
 
-| Phase                            | Purpose                                                                                             | Provider Role          | Output in `BackgroundPhaseResults`                                                                | Mode                           |
-| -------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------- | ------------------------------ |
-| **Summarizer**                   | Updates act summary (full or incremental)                                                           | `summarizer`           | `actSummary`, `summarizerMetadata`                                                                | Non-streaming (`generateText`) |
-| **Character Profile Compressor** | Updates character profiles via `update-character-profile` tool calls when interval threshold is met | `summarizer`           | `compressorMetadata` (only when compression is recorded; profile versions persist via tool calls) | Non-streaming                  |
-| **Memory Extraction**            | Extracts character memories, locations, inventory into vector DB                                    | `memory` + `embedding` | (persists directly)                                                                               | Non-streaming                  |
+| Phase                            | Purpose                                                                                             | Provider Role          | Output in `BackgroundPhaseResults`                                                                | Mode                          |
+| -------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------- | ----------------------------- |
+| **Summarizer**                   | Updates act summary (full or incremental)                                                           | `summarizer`           | `actSummary`                                                                                      | Streaming (`streamWithRetry`) |
+| **Character Profile Compressor** | Updates character profiles via `update-character-profile` tool calls when interval threshold is met | `summarizer`           | `compressorMetadata` (only when compression is recorded; profile versions persist via tool calls) | Non-streaming                 |
+| **Memory Extraction**            | Extracts character memories, locations, inventory into vector DB                                    | `memory` + `embedding` | (persists directly)                                                                               | Non-streaming                 |
 
 ## Conditional Phase Execution
 
@@ -154,15 +154,15 @@ The background phases (Summarizer and Character Profile Compressor) share the sa
 
 ## Module Structure
 
-| File                 | Responsibility                                                                                                                                                                                             |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `index.ts`           | Orchestrator. `runPipeline()` and `runEpiloguePipeline()` entry points. Wires phases together, builds `PipelineRunContext`, tracks phase metadata, applies resume gates, commits the phase cache.          |
-| `types.ts`           | Shared types: `PipelineState`, `PipelineInput`, `PipelineResult`, `PipelineCallbacks`, provider configs, context interfaces. Includes resume seeds (`initialState`, `initialPhases`).                      |
-| `runners.ts`         | Phase runner functions (`runWriterPhase`, `runReviewerEditorPhases`, `runGamePhases`, etc.), `PipelineRunContext`, `PipelinePrompts`, `buildStateUpdate` closures, phase-specific prompt resolution.       |
-| `phase-executor.ts`  | Generic phase execution engine. `executeStreamingPhase()` with retry logic, `runNonStreamingPhase()` for Summarizer/Compressor, metadata aggregation (`aggregateMetadata`, `aggregateMetadataFromPhases`). |
-| `message-builder.ts` | Shared-prefix message assembly (`buildPhaseMessages` and the Tier 0–1 builders), act summary formatters, `mergeVariables`/`mergeGameData` for template fitters.                                            |
-| `summarizer.ts`      | Summarizer sub-pipeline (full/incremental), Character Profile Compressor, `runBackgroundPhases()` orchestrator.                                                                                            |
-| `prompt-loader.ts`   | Prompt loading via `PromptLoader` instances. `loadPrompts()` resolves story-specific overrides or bundled defaults.                                                                                        |
+| File                 | Responsibility                                                                                                                                                                                                     |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `index.ts`           | Orchestrator. `runPipeline()` and `runEpiloguePipeline()` entry points. Wires phases together, builds `PipelineRunContext`, tracks phase metadata, applies resume gates, commits the phase cache.                  |
+| `types.ts`           | Shared types: `PipelineState`, `PipelineInput`, `PipelineResult`, `PipelineCallbacks`, provider configs, context interfaces. Includes resume seeds (`initialState`, `initialPhases`).                              |
+| `runners.ts`         | Phase runner functions (`runWriterPhase`, `runReviewerEditorPhases`, `runGamePhases`, etc.), `PipelineRunContext`, `PipelinePrompts`, `buildStateUpdate` closures, phase-specific prompt resolution.               |
+| `phase-executor.ts`  | Generic phase execution engine. `executeStreamingPhase()` with retry logic, `runNonStreamingPhase()` for the transcript-regen backfill, metadata aggregation (`aggregateMetadata`, `aggregateMetadataFromPhases`). |
+| `message-builder.ts` | Shared-prefix message assembly (`buildPhaseMessages` and the Tier 0–1 builders), act summary formatters, `mergeVariables`/`mergeGameData` for template fitters.                                                    |
+| `summarizer.ts`      | Summarizer sub-pipeline (full/incremental), Character Profile Compressor, `runBackgroundPhases()` orchestrator.                                                                                                    |
+| `prompt-loader.ts`   | Prompt loading via `PromptLoader` instances. `loadPrompts()` resolves story-specific overrides or bundled defaults.                                                                                                |
 
 ### Related modules outside `pipeline/`
 
@@ -261,7 +261,7 @@ Also in [`narrative-types.ts`](../narrative-types.ts). Contains `activePlotThrea
 - **Incremental** (`generateIncrementalSummary`): Used when an existing `actSummary` is present. Tail = existing summary + new scene's extraction prompt, asks for just the new scene's contribution, then merges with `mergeActSummary()`. Falls back to full generation on parse/merge failure.
 - **Full** (`generateFullSummary`): Used when no act summary exists. Tail = full-summary extraction prompt over the shared prefix, generates the complete summary from scratch.
 
-Both use `runNonStreamingPhase()` (AI SDK `generateText()`) rather than streaming, and both use the shared system prompt (`mainChatSystemPrompt` with `{{generalInstructions}}` substituted — same as every other phase) on top of the shared prefix.
+The pipeline path streams via `streamWithRetry()` (raw-content descriptors, runner-owned lifecycle); the transcript branch keeps `runNonStreamingPhase()` (`generateText()`). Both use the shared system prompt (`mainChatSystemPrompt` with `{{generalInstructions}}` substituted — same as every other phase) on top of the shared prefix.
 
 **Transcript branch (legacy):** when `generateFullSummary` receives a `transcript` (one-off UI backfill via regenerate-metadata), it keeps the old bespoke layout — the role prompt as system prompt, transcript user messages, no tools — with no cache sharing. The pipeline path requires a `PipelineContext`.
 
@@ -298,7 +298,7 @@ The compressor produces no markdown profile document. It updates profiles throug
 ## Retry and Error Handling
 
 - **Streaming phases**: `executeStreamingPhase()` wraps `streamWithRetry()`. Outer retry loop with `retryCount` budget; inner stream retries deduct from the budget. Abort errors propagate immediately. Auth errors are never retried.
-- **Non-streaming phases**: Summarizer and Compressor use `runNonStreamingPhase()` without retry wrapping (retry is handled at the background orchestration level).
+- **Summarizer**: streams via `streamWithRetry()` (inner retry with linear backoff, same as main phases). **Compressor**: `runNonStreamingPhase()` without retry wrapping.
 - **Important phrases extraction**: Fire-and-forget with its own `withRetry()` (max 3 attempts, 2s backoff). Failures are logged but never block the pipeline.
 - **Memory extraction**: Own `withRetry()` (max 4 attempts, 2s backoff). Per-location retry scope prevents duplicate work.
 

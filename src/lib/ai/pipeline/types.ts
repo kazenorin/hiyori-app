@@ -67,7 +67,6 @@ export interface ProfileCompressionState {
 
 export interface BackgroundPhaseResults {
 	actSummary?: string;
-	summarizerMetadata?: StreamResultMetadata;
 	compressorMetadata?: StreamResultMetadata;
 }
 

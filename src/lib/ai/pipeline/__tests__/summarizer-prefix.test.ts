@@ -65,6 +65,36 @@ vi.mock('#lib/ai/pipeline/phase-executor.ts', () => ({
 	),
 }));
 
+const streamCalls: { system: string; messages: { role: string; content: string }[]; tools: unknown }[] = [];
+vi.mock('#lib/ai/chat-stream.ts', () => ({
+	DEFAULT_RETRY_CONFIG: { retryCount: 2, backoffIntervalSeconds: 2 },
+	streamWithRetry: vi.fn(
+		async (
+			system: string,
+			messages: { role: string; content: string }[],
+			options: { tools?: unknown; onProgress?: (s: { content: string; reasoning: null; variables: null }) => void }
+		) => {
+			streamCalls.push({ system, messages, tools: options.tools });
+			const state = {
+				content: '## Scene Summaries\n\n### Scene 9: The Gate\n- Location: Gate\n- Summary: They arrive.',
+				reasoning: null,
+				variables: null,
+			};
+			options.onProgress?.(state);
+			return {
+				state,
+				resultMetadata: Promise.resolve({
+					finishReason: 'stop',
+					usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+					durationMs: 1,
+					models: new Set(['m']),
+				}),
+				callbacks: {},
+			};
+		}
+	),
+}));
+
 import type { PipelineContext } from '#lib/ai/pipeline/types.ts';
 import {
 	generateSummarizerResult,
@@ -118,12 +148,13 @@ function input(overrides: Partial<SummarizerInput> = {}): SummarizerInput {
 
 beforeEach(() => {
 	calls.length = 0;
+	streamCalls.length = 0;
 });
 
 describe('summarizer shared-prefix layout', () => {
 	it('incremental: shared system + prefix + tail summary + role prompt + scene line', async () => {
 		await generateSummarizerResult(input(), prompts);
-		const { system, messages } = calls[0];
+		const { system, messages } = streamCalls[0];
 		expect(system).toBe('SHARED-SYSTEM GEN-INSTR');
 		const contents = messages.map((m) => m.content);
 		expect(contents[0]).toContain('WORLD-BODY');
@@ -137,14 +168,14 @@ describe('summarizer shared-prefix layout', () => {
 
 	it('full fallback keeps the non-empty existing summary in the tail (F8)', async () => {
 		await generateFullSummary(input(), prompts);
-		const contents = calls[0].messages.map((m) => m.content);
+		const contents = streamCalls[0].messages.map((m) => m.content);
 		expect(contents.some((c) => c.includes('FULL-ROLE'))).toBe(true);
 		expect(contents.some((c) => c.includes('Scene 8: Before'))).toBe(true);
 	});
 
 	it("first scene: empty-skeleton tail (today's parity), full role prompt present", async () => {
 		await generateSummarizerResult(input({ actSummary: '' }), prompts);
-		const contents = calls[0].messages.map((m) => m.content);
+		const contents = streamCalls[0].messages.map((m) => m.content);
 		const roleIdx = contents.findIndex((c) => c.includes('FULL-ROLE'));
 		expect(roleIdx).toBeGreaterThan(0);
 		expect(contents[roleIdx - 1]).toContain('Act Summary');

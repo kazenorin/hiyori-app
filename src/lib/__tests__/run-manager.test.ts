@@ -84,6 +84,7 @@ import {
 	type RunEvent,
 } from '#lib/ai/chat/run-manager.ts';
 import { runPipeline } from '#lib/ai/pipeline/index.ts';
+import { persistMessage } from '#lib/ai/chat/persistence.ts';
 import * as dbMessagePhases from '#lib/db/message-phases.ts';
 import type { PipelineRunRecord } from '#lib/db/pipeline-runs.ts';
 import type { PipelineCallbacks } from '#lib/ai/pipeline/types.ts';
@@ -335,6 +336,17 @@ describe('phase persistence on settle', () => {
 			cb.onPhaseStart('EDITOR');
 			cb.onPhaseStream('EDITOR', { content: 'final prose', reasoning: 'thoughts', variables: null });
 			cb.onPhaseComplete('EDITOR', { editorOutput: 'final prose', editorReasoning: 'thoughts' });
+			cb.onPhaseStart('SUMMARIZER');
+			cb.onPhaseComplete(
+				'SUMMARIZER',
+				{ actSummary: 'the summary' },
+				{
+					finishReason: 'stop',
+					usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+					durationMs: 1,
+					models: new Set(['sum-model']),
+				}
+			);
 			return {
 				state: { editorOutput: 'final prose' },
 				phases: [],
@@ -360,13 +372,18 @@ describe('phase persistence on settle', () => {
 
 		const upserts = vi.mocked(dbMessagePhases.upsertMessagePhases).mock.calls;
 		expect(upserts).toHaveLength(2);
-		// Main settle: the dual-routed EDITOR entry.
+		// Main settle: background rows are excluded (the background chain owns them).
 		expect(upserts[0][0]).toBe(assistantMessage.id);
 		expect(upserts[0][1]).toEqual([{ phaseName: 'EDITOR', content: 'final prose', reasoning: 'thoughts' }]);
-		// Background settle: the full array re-sent with the SUMMARIZER row added.
+		// Background settle: the full array, SUMMARIZER content from the lifecycle callbacks.
 		expect(upserts[1][0]).toBe(assistantMessage.id);
 		expect(upserts[1][1].map((p) => p.phaseName)).toEqual(['EDITOR', 'SUMMARIZER']);
 		expect(upserts[1][1][1].content).toBe('the summary');
+
+		// The early-merged summarizer metadata survives finalize's rebuild (no double count).
+		const persisted = vi.mocked(persistMessage).mock.calls[0][1];
+		expect(persisted.metadata?.phases?.map((p) => p.phaseName)).toEqual(['SUMMARIZER']);
+		expect(persisted.metadata?.inputTokens).toBe(10);
 
 		// streamingPhases drives the strip spinner: live during the phase, gone on settle.
 		expect(events.some((e) => e.type === 'update' && e.session.streamingPhases.includes('EDITOR'))).toBe(true);

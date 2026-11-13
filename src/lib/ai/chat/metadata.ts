@@ -1,9 +1,10 @@
 import { buildMetadata, toPhaseMetadata, type MessageMetadata, type PhaseMetadata } from '../chat-stream';
 import { getSummarizerProviderConfig, type ProviderConfig } from '#lib/stores/settings.svelte.ts';
 import type { UIMessage } from './types';
-import type { PhaseName, UIScenePhase } from '../narrative-types';
+import { BACKGROUND_PHASES, type PhaseName, type UIScenePhase } from '../narrative-types';
 import type { BackgroundPhaseResults } from '../pipeline/types';
 import type { StreamResultMetadata } from '../streaming';
+import { aggregateMetadataFromPhases } from '../pipeline/phase-executor';
 
 export function updateMetaData(
 	resultMetadata: StreamResultMetadata | null | undefined,
@@ -31,6 +32,20 @@ export function mergeTokenFields(
 		durationMs: (base?.durationMs ?? 0) + delta.durationMs,
 		phases: [...(base?.phases ?? []), newPhase],
 	};
+}
+
+/** Re-append background phase entries already merged during the run (finalize rebuilds from the main aggregate). */
+export function mergePreservedBackgroundMetadata(
+	mainMetadata: MessageMetadata | undefined,
+	existingMetadata: MessageMetadata | undefined
+): MessageMetadata | undefined {
+	const backgroundEntries = (existingMetadata?.phases ?? []).filter((p) => BACKGROUND_PHASES.includes(p.phaseName as PhaseName));
+	let merged = mainMetadata;
+	for (const entry of backgroundEntries) {
+		const delta = aggregateMetadataFromPhases([entry]);
+		if (delta) merged = mergeTokenFields(merged, delta, entry, entry.model);
+	}
+	return merged;
 }
 
 /** Merge compressor metadata into base metadata. Returns base unchanged if no compressor metadata present. */
@@ -62,16 +77,10 @@ export function resolveBackgroundPhaseMetadata(
 	const metadataUpdates: { actSummary?: string; metadata?: string } = {};
 
 	if (backgroundResults.actSummary !== undefined) {
-		updatedPhases.push({ phaseName: 'SUMMARIZER' as PhaseName, content: backgroundResults.actSummary });
 		metadataUpdates.actSummary = backgroundResults.actSummary;
 	}
 
 	let baseMetadata: MessageMetadata | undefined;
-	if (backgroundResults.summarizerMetadata) {
-		const phaseEntry = toPhaseMetadata('SUMMARIZER', backgroundResults.summarizerMetadata, summarizerModel);
-		baseMetadata = mergeTokenFields(existing.metadata, backgroundResults.summarizerMetadata, phaseEntry, summarizerModel);
-		metadataUpdates.metadata = JSON.stringify(baseMetadata);
-	}
 
 	if (backgroundResults.compressorMetadata) {
 		updatedPhases.push({
@@ -81,7 +90,7 @@ export function resolveBackgroundPhaseMetadata(
 	}
 
 	const finalMetadata = mergeCompressorIntoMetadata(baseMetadata, backgroundResults, existing.metadata, summarizerModel);
-	if (finalMetadata !== baseMetadata) {
+	if (finalMetadata) {
 		metadataUpdates.metadata = JSON.stringify(finalMetadata);
 	}
 
