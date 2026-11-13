@@ -167,7 +167,6 @@ describe('compressor shared-prefix layout (step 1)', () => {
 		await generateCharacterProfiles(
 			newSummary,
 			{
-				actSummary: '',
 				actLineId: 'line-1',
 				completedScenes: 9,
 				assistant: { messageId: 'msg-10', messageSequence: 10 },
@@ -214,7 +213,6 @@ it('fills the holder with the new act summary before the executor runs', async (
 	await generateCharacterProfiles(
 		newSummary,
 		{
-			actSummary: '',
 			actLineId: 'line-1',
 			completedScenes: 9,
 			assistant: { messageId: 'msg-10', messageSequence: 10 },

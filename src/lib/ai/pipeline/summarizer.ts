@@ -61,7 +61,6 @@ export interface SummarizerPrompts {
 }
 
 export interface CharacterProfileCompressorInput {
-	actSummary: string;
 	actLineId: string;
 	completedScenes: number;
 	assistant: AssistantContext;
@@ -319,7 +318,6 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 		try {
 			if (result.actSummary && actLineId) {
 				const compressorInput: CharacterProfileCompressorInput = {
-					actSummary,
 					actLineId,
 					completedScenes,
 					assistant,

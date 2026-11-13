@@ -39,7 +39,6 @@ common:
     gameMasterOutput: GM 輸出
     previousActSummary: 上一章節摘要
     actSummaryForScenes: '章節摘要 {{summarizedScenes}}'
-    previousNarrativeBody: '場景 {{completedScenes}} 的敘事正文'
     sceneTitle: 場景標題
     background: 背景
     narrativeBody: 敘事正文

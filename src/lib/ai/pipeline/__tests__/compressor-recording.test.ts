@@ -87,7 +87,7 @@ vi.mock('#lib/stores/settings.svelte.ts', () => ({
 
 import { generateCharacterProfiles } from '#lib/ai/pipeline/summarizer.ts';
 import { buildUpdateCharacterProfileTools } from '#lib/ai/tools/update-character-profile.ts';
-import { insertCharacterProfile, getLatestProfilesByActLine } from '#lib/db/character-profiles.ts';
+import { insertCharacterProfile, getLatestProfilesByActLine, getLatestProfileByAlias } from '#lib/db/character-profiles.ts';
 import { getLastCompressionScene } from '#lib/db/act-lines.ts';
 import { parseActSummary } from '#lib/ai/act-summary-parser.ts';
 import { PHASE_TOOLS } from '#lib/ai/tools/tools.ts';
@@ -120,7 +120,6 @@ function run(compression: ProfileCompressionState) {
 	return generateCharacterProfiles(
 		newSummary,
 		{
-			actSummary: '',
 			actLineId: LINE,
 			completedScenes: 9,
 			assistant: { messageId: 'msg-10', messageSequence: 10 },
@@ -171,6 +170,9 @@ describe('compressor recording matrix (D4)', () => {
 		const result = await run({ completedScenes: 9, newActSummary: undefined, attemptCount: 0, successCount: 0 });
 		expect(result).not.toBeNull();
 		expect(await getLastCompressionScene(LINE)).toBe(9);
+		const latest = await getLatestProfileByAlias(LINE, 'Elena Vale');
+		expect(latest?.state).toBe('Recovered');
+		expect(latest?.sceneNumber).toBe(9);
 	});
 
 	it('all attempts failed: no recording, gate stays open', async () => {

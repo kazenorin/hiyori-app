@@ -145,7 +145,10 @@ describe('summarizer shared-prefix layout', () => {
 	it("first scene: empty-skeleton tail (today's parity), full role prompt present", async () => {
 		await generateSummarizerResult(input({ actSummary: '' }), prompts);
 		const contents = calls[0].messages.map((m) => m.content);
-		expect(contents.some((c) => c.includes('FULL-ROLE'))).toBe(true);
+		const roleIdx = contents.findIndex((c) => c.includes('FULL-ROLE'));
+		expect(roleIdx).toBeGreaterThan(0);
+		expect(contents[roleIdx - 1]).toContain('Act Summary');
+		expect(contents[roleIdx - 1]).toContain('Scene Summaries');
 		expect(contents.some((c) => c.includes('Scene 8: Before'))).toBe(false);
 	});
 

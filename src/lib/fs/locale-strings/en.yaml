@@ -39,7 +39,6 @@ common:
     gameMasterOutput: Game Master Output
     previousActSummary: Previous Act Summary
     actSummaryForScenes: 'Act Summary {{summarizedScenes}}'
-    previousNarrativeBody: 'Narrative Body for Scene {{completedScenes}}'
     sceneTitle: Scene title
     background: Background
     narrativeBody: Narrative Body

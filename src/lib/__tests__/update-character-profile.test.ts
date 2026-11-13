@@ -111,6 +111,33 @@ describe('update-character-profile execute', () => {
 		expect(h.attemptCount).toBe(1);
 	});
 
+	it('duplicate same-identity calls merge sequentially; both versions kept, latest wins', async () => {
+		// Why: smoke runs showed the model emitting the same call twice; each call must
+		// inherit the previous version's fields and append a new version row (design §5.3).
+		const nowSpy = vi.spyOn(Date, 'now');
+		nowSpy.mockReturnValue(1000);
+		await seedProfile();
+		const h = holder();
+		nowSpy.mockReturnValue(2000);
+		await execute(h, { name: 'Elena Vale', state: 'Recovered' });
+		nowSpy.mockReturnValue(3000);
+		await execute(h, { name: 'Elena Vale', goal: 'Hold the gate' });
+		nowSpy.mockRestore();
+
+		const rows = await testDb.select<{ state: string | null; goal: string | null; scene_number: number }[]>(
+			'SELECT state, goal, scene_number FROM character_profiles WHERE act_line_id = $1 AND canonical_name = $2 ORDER BY created_at',
+			[LINE, 'elena-vale']
+		);
+		expect(rows).toHaveLength(3);
+		expect(rows[1]).toMatchObject({ state: 'Recovered', goal: 'Reach the gate', scene_number: 9 });
+		expect(rows[2]).toMatchObject({ state: 'Recovered', goal: 'Hold the gate', scene_number: 9 });
+		const latest = await getLatestProfileByAlias(LINE, 'Elena Vale');
+		expect(latest?.state).toBe('Recovered');
+		expect(latest?.goal).toBe('Hold the gate');
+		expect(h.successCount).toBe(2);
+		expect(h.attemptCount).toBe(2);
+	});
+
 	it('explicit null clears a text field; empty traits clears traits', async () => {
 		await seedProfile();
 		await execute(holder(), { name: 'elena-vale', goal: null, traits: [] });

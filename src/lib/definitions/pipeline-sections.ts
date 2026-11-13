@@ -6,7 +6,6 @@ import {
 	actPhasesHeader,
 	interviewTranscriptHeader,
 	playerPreferencesHeader,
-	playerResponseHeader,
 	writerOutputTemplateHeader,
 	writerOutputHeader,
 	reviewerOutputHeader,
@@ -76,9 +75,6 @@ export const SECTION = {
 	get ACT_PLOT() {
 		return sectionWithRule(actPlotHeader(), actPlotDescription());
 	},
-	get PLAYER_RESPONSE() {
-		return sectionFormat(playerResponseHeader());
-	},
 	get WRITER_OUTPUT_TEMPLATE() {
 		return sectionFormat(writerOutputTemplateHeader());
 	},
@@ -93,9 +89,6 @@ export const SECTION = {
 	},
 	get GAME_MASTER_OUTPUT() {
 		return sectionFormat(gameMasterOutputHeader());
-	},
-	get TURN_OF_EVENTS() {
-		return sectionFormat(turnOfEventsHeader());
 	},
 	get DIRECTOR_NOTES() {
 		return sectionFormat(directorNotesHeader()) + ls('common.descriptions.directorNotes') + '\n\n';
