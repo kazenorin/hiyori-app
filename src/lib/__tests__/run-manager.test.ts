@@ -268,32 +268,46 @@ describe('trackStreamingPhase', () => {
 		};
 	}
 
-	it('sets streamingPhase on phase start and clears it on phase complete, notifying the UI both times', () => {
-		// The phase strip spinner needs a live source: the session must expose which
-		// phase is currently streaming through RunSessionView events.
+	it('adds the phase on start and removes it on complete', () => {
 		const inner = makeInner();
-		const session = { streamingPhase: null as PhaseName | null };
+		const session = { streamingPhases: [] as PhaseName[] };
 		const onUpdate = vi.fn();
 		const wrapped = trackStreamingPhase(session, inner, onUpdate);
 
 		wrapped.onPhaseStart('WRITER');
-		expect(session.streamingPhase).toBe('WRITER');
+		expect(session.streamingPhases).toEqual(['WRITER']);
 		expect(inner.onPhaseStart).toHaveBeenCalledWith('WRITER');
 		expect(onUpdate).toHaveBeenCalledTimes(1);
 
 		wrapped.onPhaseStream('WRITER', { content: 'x', reasoning: null, variables: null });
-		expect(session.streamingPhase).toBe('WRITER');
-		expect(onUpdate).toHaveBeenCalledTimes(1);
+		expect(session.streamingPhases).toEqual(['WRITER']);
 
 		wrapped.onPhaseComplete('WRITER', { writerOutput: 'x' });
-		expect(session.streamingPhase).toBeNull();
+		expect(session.streamingPhases).toEqual([]);
 		expect(inner.onPhaseComplete).toHaveBeenCalledWith('WRITER', { writerOutput: 'x' });
 		expect(onUpdate).toHaveBeenCalledTimes(2);
 	});
 
+	it('tracks concurrent phases independently — completing one keeps the other spinning', () => {
+		// WHY: GM ‖ Plot Planner (and later Summarizer ‖ Writer) stream at the same
+		// time; a single slot made the second phase overwrite the first's spinner.
+		const session = { streamingPhases: [] as PhaseName[] };
+		const wrapped = trackStreamingPhase(session, makeInner(), vi.fn());
+
+		wrapped.onPhaseStart('GAME_MASTER');
+		wrapped.onPhaseStart('PLOT_PLANNER');
+		expect(session.streamingPhases).toEqual(['GAME_MASTER', 'PLOT_PLANNER']);
+
+		wrapped.onPhaseComplete('GAME_MASTER', { gameMasterOutput: 'gm' });
+		expect(session.streamingPhases).toEqual(['PLOT_PLANNER']);
+
+		wrapped.onPhaseComplete('PLOT_PLANNER', { scenePlot: 'plot' });
+		expect(session.streamingPhases).toEqual([]);
+	});
+
 	it('passes every other callback through untouched', () => {
 		const inner = makeInner();
-		const session = { streamingPhase: null as PhaseName | null };
+		const session = { streamingPhases: [] as PhaseName[] };
 		const wrapped = trackStreamingPhase(session, inner, vi.fn());
 
 		const streamState = { content: 'c', reasoning: null, variables: null };
@@ -354,9 +368,9 @@ describe('phase persistence on settle', () => {
 		expect(upserts[1][1].map((p) => p.phaseName)).toEqual(['EDITOR', 'SUMMARIZER']);
 		expect(upserts[1][1][1].content).toBe('the summary');
 
-		// streamingPhase drives the strip spinner: live during the phase, gone on settle.
-		expect(events.some((e) => e.type === 'update' && e.session.streamingPhase === 'EDITOR')).toBe(true);
+		// streamingPhases drives the strip spinner: live during the phase, gone on settle.
+		expect(events.some((e) => e.type === 'update' && e.session.streamingPhases.includes('EDITOR'))).toBe(true);
 		const settledEvent = events.find((e) => e.type === 'settled');
-		expect(settledEvent?.type === 'settled' && settledEvent.session.streamingPhase).toBeNull();
+		expect(settledEvent?.type === 'settled' && settledEvent.session.streamingPhases).toEqual([]);
 	});
 });

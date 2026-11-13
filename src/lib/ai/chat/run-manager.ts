@@ -32,7 +32,7 @@ import type {
 import type { PipelineRunKind, PipelineRunRecord, RunInputSnapshot } from '#lib/db/pipeline-runs.ts';
 import { deleteInventoryByMessages } from '#lib/db/inventory.ts';
 import type { PhaseMetadata } from '#lib/ai/chat-stream.ts';
-import type { EndingType, PhaseName, UIScenePhase } from '#lib/ai/narrative-types.ts';
+import { BACKGROUND_PHASES, type EndingType, type PhaseName, type UIScenePhase } from '#lib/ai/narrative-types.ts';
 import type { Story } from '#lib/db/stories.ts';
 import type { ActLineMeta } from '#lib/db/act-lines.ts';
 import type { UIMessage } from './types';
@@ -76,8 +76,8 @@ export interface RunSessionView {
 	kind: PipelineRunKind;
 	status: RunStatus;
 	message: UIMessage;
-	/** Phase whose stream is currently active, or null between phases / after settle (spinner source). */
-	streamingPhase: PhaseName | null;
+	/** Phases whose streams are currently active (spinner source; concurrent chains each appear). */
+	streamingPhases: PhaseName[];
 	error?: string;
 }
 
@@ -93,7 +93,7 @@ interface InternalSession {
 	kind: PipelineRunKind;
 	status: RunStatus;
 	message: UIMessage;
-	streamingPhase: PhaseName | null;
+	streamingPhases: PhaseName[];
 	error?: string;
 	abortController: AbortController;
 	record: PipelineRunRecord;
@@ -143,7 +143,7 @@ function toView(session: InternalSession): RunSessionView {
 		kind: session.kind,
 		status: session.status,
 		message: session.message,
-		streamingPhase: session.streamingPhase,
+		streamingPhases: [...session.streamingPhases],
 		error: session.error,
 	};
 }
@@ -158,24 +158,24 @@ export function getActiveSession(actLineId: string): RunSessionView | undefined 
 }
 
 /**
- * Wrap pipeline callbacks so the session tracks which phase is currently
- * streaming — the spinner source for the UI phase strip. Set on phase start,
- * cleared on phase complete; settle paths clear it directly.
+ * Wrap pipeline callbacks so the session tracks which phases are currently
+ * streaming — the spinner source for the UI phase strip. Added on phase start,
+ * removed on phase complete; finalize keeps background phases, error settle clears all.
  */
 export function trackStreamingPhase(
-	session: { streamingPhase: PhaseName | null },
+	session: { streamingPhases: PhaseName[] },
 	callbacks: PipelineCallbacks,
 	onUpdate: () => void
 ): PipelineCallbacks {
 	return {
 		...callbacks,
 		onPhaseStart: (phase) => {
-			session.streamingPhase = phase;
+			if (!session.streamingPhases.includes(phase)) session.streamingPhases.push(phase);
 			onUpdate();
 			callbacks.onPhaseStart(phase);
 		},
 		onPhaseComplete: (phase, state) => {
-			session.streamingPhase = null;
+			session.streamingPhases = session.streamingPhases.filter((p) => p !== phase);
 			onUpdate();
 			callbacks.onPhaseComplete(phase, state);
 		},
@@ -488,7 +488,7 @@ async function prepareRun(params: PrepareRunParams): Promise<{ session: Internal
 		kind,
 		status: 'running',
 		message: resumeRecord ? resumedSessionMessage(resumeRecord) : newAssistantMessage(messageId, sceneNumber),
-		streamingPhase: null,
+		streamingPhases: [],
 		abortController: new AbortController(),
 		record,
 		mainConfig,
@@ -736,7 +736,7 @@ async function commitPhaseCache(session: InternalSession, state: PipelineState, 
 }
 
 async function finalizeRun(session: InternalSession, plan: RunPlan, result: PipelineResult): Promise<void> {
-	session.streamingPhase = null;
+	session.streamingPhases = session.streamingPhases.filter((p) => BACKGROUND_PHASES.includes(p));
 	// Guard against deletion racing with the final commit (story/act/line removed mid-run).
 	const actLineStillExists = await dbActLines.getActLine(session.actLineId);
 	if (!actLineStillExists) {
@@ -788,7 +788,7 @@ async function finalizeRun(session: InternalSession, plan: RunPlan, result: Pipe
 }
 
 async function settleRunWithError(session: InternalSession, err: unknown): Promise<void> {
-	session.streamingPhase = null;
+	session.streamingPhases = [];
 	if (isAbortLikeError(err)) {
 		if (session.discardOnAbort) {
 			try {

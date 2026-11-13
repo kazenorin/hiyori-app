@@ -16,6 +16,9 @@ export interface GameDataFields {
 export type PhaseName =
 	'PLOT_PLANNER' | 'WRITER' | 'REVIEWER' | 'EDITOR' | 'TEMPLATE_FITTER' | 'GAME_MASTER' | 'SUMMARIZER' | 'CHARACTER_PROFILE_COMPRESSOR';
 
+/** Phases owned by the background chain (never produced by the sequential chain). */
+export const BACKGROUND_PHASES: readonly PhaseName[] = ['SUMMARIZER', 'CHARACTER_PROFILE_COMPRESSOR'];
+
 /** A single phase within a UI scene, produced during streaming */
 export interface UIScenePhase {
 	phaseName: PhaseName;

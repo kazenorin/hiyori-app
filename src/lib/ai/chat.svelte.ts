@@ -46,7 +46,7 @@ let displayedActLineId: string | null = null;
 /** Reactive mirror of the displayed line's run state — the run-manager registry itself is not reactive. */
 let displayedRunStatus = $state<'running' | null>(null);
 let displayedRunKind = $state<PipelineRunKind | null>(null);
-let displayedStreamingPhase = $state<PhaseName | null>(null);
+let displayedStreamingPhases = $state<PhaseName[]>([]);
 let error = $state<string | null>(null);
 let actEnded = $state(false);
 let storyConcluded = $state(false);
@@ -75,16 +75,16 @@ function syncDisplayedRun(): void {
 	const session = displayedActLineId ? runManager.getActiveSession(displayedActLineId) : undefined;
 	displayedRunStatus = session?.status === 'running' ? 'running' : null;
 	displayedRunKind = session?.kind ?? null;
-	displayedStreamingPhase = session?.status === 'running' ? session.streamingPhase : null;
+	displayedStreamingPhases = [...(session?.streamingPhases ?? [])];
 }
 
 export function getIsStreaming(): boolean {
 	return displayedRunStatus === 'running' || isBackfilling;
 }
 
-/** Phase currently streaming on the displayed line, or null (spinner source for strip/dialog). */
-export function getStreamingPhase(): PhaseName | null {
-	return displayedStreamingPhase;
+/** Phases currently streaming on the displayed line (spinner source for strip/dialog). */
+export function getStreamingPhases(): PhaseName[] {
+	return displayedStreamingPhases;
 }
 
 export function getIsProcessingBackground(): boolean {
