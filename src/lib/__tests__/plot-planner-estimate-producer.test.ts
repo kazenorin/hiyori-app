@@ -138,6 +138,7 @@ function makeCtx(locale: Locale, plotMode: 'guidance' | 'phaseEvent'): PipelineR
 			scenesSections: [],
 			plotMode,
 		},
+		compression: { completedScenes: 7, newActSummary: undefined, attemptCount: 0, successCount: 0 },
 	};
 }
 

@@ -1,14 +1,12 @@
 import type { MessageBase } from '#lib/db/messages.ts';
 import type { GameDataFields, NarrativeOverrides, NarrativeVariables } from '../narrative-types';
 import { hasNarrativeOverrides } from '../narrative-types';
-import type { PipelineContext, PlayerContext } from './types';
+import type { PipelineContext } from './types';
 import type { StreamState } from '../chat-callbacks';
 import {
 	formatCharacterProfileAsMessage,
 	formatDirectorNotesSection,
-	formatPreviousNarrativeBody,
 	formatStorySoFar,
-	formatTurnOfEventsSection,
 	SECTION,
 	upcomingScenePlotSection,
 } from '#lib/definitions/pipeline-sections.ts';
@@ -24,7 +22,7 @@ import type { CharacterProfileEntity } from '#lib/db/character-profiles.ts';
 import { aliasesLabel, locationLabel, sceneWithNumberLabel } from '#lib/definitions/common-labels.ts';
 import { hasTemplateMetadata, variablesToMarkdown } from '../template-renderer';
 import { type ActSummary, parseActSummary, pruneCharacterScenes, serializeActSummary } from '../act-summary-parser';
-import { upToLabel } from '#lib/definitions/character-profile-labels.ts';
+import { canonicalNameLabel, upToLabel } from '#lib/definitions/character-profile-labels.ts';
 import {
 	characterSummariesHeader,
 	sceneSummariesHeader,
@@ -125,11 +123,6 @@ export function substituteActSummaryTemplate(
 
 // --- Shared section builders ---
 
-function playerResponseSection(playerContext: PlayerContext | undefined): string[] {
-	const playerResponse = playerContext?.playerResponse;
-	return playerResponse ? [SECTION.PLAYER_RESPONSE + playerResponse] : [];
-}
-
 export function formattedActSummary(actSummary: string): string[] {
 	if (actSummary.trim().length == 0) return [];
 	const existingParsed = parseActSummary(actSummary);
@@ -153,7 +146,9 @@ export function formatActSummaryForCompressor(completedScenes: number, newActSum
  */
 export function formatExistingProfilesForCompressor(profiles: CharacterProfileEntity[]): string[] {
 	if (profiles.length === 0) return [];
-	const body = profiles.map((p) => formatCharacterProfileAsMessage(p, false)).join('\n\n');
+	const body = profiles
+		.map((p) => `${formatCharacterProfileAsMessage(p, false)}\n- ${canonicalNameLabel()}: ${p.canonicalName}`)
+		.join('\n\n');
 	return [sectionFormat(currentCharacterProfilesHeader()) + body];
 }
 
@@ -245,35 +240,6 @@ export function buildGmFitterMessages(editorOutput: string, gmOutput: string, ex
 }
 
 // --- Summarizer message builder ---
-
-export function buildSummarizerMessages(
-	actSummary: string,
-	previousNarrativeVariables: NarrativeVariables | undefined,
-	completedScenes: number,
-	player: PlayerContext | undefined,
-	parsedActSummary: ActSummary | undefined,
-	extractionPromptTemplate: (completedScenes: number, sceneTitle: string) => string,
-	fallbackExtractionPromptTemplate: (completedScenes: number) => string
-): MessageBase[] {
-	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
-
-	const effectiveSummary = parsedActSummary ?? parseActSummary(actSummary);
-	if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
-		return toUserMessages([
-			...formatActSummaryForSummarizer(completedScenes, effectiveSummary),
-			...formatPreviousNarrativeBody(previousNarrativeVariables.narrativeBody, completedScenes),
-			...playerResponseSection(player),
-			...formatTurnOfEventsSection(previousNarrativeVariables.turnOfEvents),
-			extractionPromptTemplate(completedScenes, sceneTitle),
-		]);
-	} else {
-		return toUserMessages([
-			...formatActSummaryForSummarizer(completedScenes, effectiveSummary),
-			...playerResponseSection(player),
-			fallbackExtractionPromptTemplate(completedScenes),
-		]);
-	}
-}
 
 export function buildTranscriptSummarizerMessages(transcript: { role: 'user' | 'assistant'; content: string }[]): MessageBase[] {
 	return [

@@ -4,6 +4,7 @@ import type { ToolSet } from 'ai';
 export const SIDE_EFFECTING_TOOLS: ReadonlySet<string> = new Set([
 	'introduce-character',
 	'update-inventory',
+	'update-character-profile',
 	'advance-phase',
 	'end-act',
 	'set-scene-title',
@@ -15,13 +16,20 @@ export const SIDE_EFFECTING_TOOLS: ReadonlySet<string> = new Set([
  * preserved (spread), so the serialized schema sent to the model is byte-identical across
  * phases — keeping the tool block inside the cacheable prefix. Read-only tools and allowed
  * side-effecting tools pass through by reference, so their internal state guards (e.g.
- * advance-phase's `hasAdvancedPhase`) run unchanged. Pure: no DB/settings/locale imports.
+ * advance-phase's `hasAdvancedPhase`) run unchanged. With `strict`, every tool outside
+ * `allowed` no-ops instead — read-only included — for async phases that must not call any
+ * tool. Pure: no DB/settings/locale imports.
  */
-export function withPhaseGuards(allTools: ToolSet, allowed: readonly string[], noOp: (toolName: string) => unknown): ToolSet {
+export function withPhaseGuards(
+	allTools: ToolSet,
+	allowed: readonly string[],
+	noOp: (toolName: string) => unknown,
+	strict = false
+): ToolSet {
 	const allowedSet = new Set(allowed);
 	const guarded: ToolSet = {};
 	for (const [name, t] of Object.entries(allTools)) {
-		if (!SIDE_EFFECTING_TOOLS.has(name) || allowedSet.has(name)) {
+		if (allowedSet.has(name) || (!strict && !SIDE_EFFECTING_TOOLS.has(name))) {
 			guarded[name] = t;
 			continue;
 		}

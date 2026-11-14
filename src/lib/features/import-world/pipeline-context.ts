@@ -89,5 +89,6 @@ export function buildImportRunContext(
 		assistant: IMPORT_ASSISTANT_CONTEXT,
 		narrativeOverrides: createNarrativeOverrides(),
 		context: overrides.context ?? EMPTY_PIPELINE_CONTEXT,
+		compression: { completedScenes: overrides.completedScenes ?? 0, newActSummary: undefined, attemptCount: 0, successCount: 0 },
 	};
 }

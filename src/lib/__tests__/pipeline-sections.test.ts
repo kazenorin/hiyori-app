@@ -245,7 +245,7 @@ describe('formatCharacterProfilesSection', () => {
 describe('parseSceneDetails', () => {
 	it('parses "- N: text" lines into structured entries', () => {
 		// Why: v2 filters per-scene details by scene number, which requires the serialized
-		// "- <n>: <summary>" form (see serializeSceneDetails) to be parsed back into entries.
+		// "- <n>: <summary>" form (see serializeCharacterSceneDetails) to be parsed back into entries.
 		expect(parseSceneDetails('- 1: Elena arrives\n- 2: Elena fights\n- 5: Elena wins')).toEqual([
 			{ sceneNumber: 1, details: 'Elena arrives' },
 			{ sceneNumber: 2, details: 'Elena fights' },

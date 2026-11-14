@@ -39,7 +39,6 @@ common:
     gameMasterOutput: Game Master Output
     previousActSummary: Previous Act Summary
     actSummaryForScenes: 'Act Summary {{summarizedScenes}}'
-    previousNarrativeBody: 'Narrative Body for Scene {{completedScenes}}'
     sceneTitle: Scene title
     background: Background
     narrativeBody: Narrative Body
@@ -205,6 +204,7 @@ pipeline:
     sceneCountSingular: '1 scene'
     sceneCountPlural: '{{count}} scenes'
     sceneDetails: 'Scene Details'
+    canonicalName: 'Canonical name'
     importanceValue: 'Importance: {{importance}}'
     aliasesValue: 'Aliases: {{aliases}}'
     lastSeen: 'last seen: scene {{sceneNumber}}'
@@ -601,6 +601,23 @@ tools:
       importance: '1=Protagonist, 2=Main, 3=Supporting, 4=Minor'
     messages:
       exists: 'A character already exists with that name or alias. Use the `character-details` tool to retrieve the existing profile.'
+  updateCharacterProfile:
+    description: >
+      Update one character's profile with only the fields the new material changes.
+      Key the call by the character's canonical name shown in the baseline profiles.
+      Omitted fields keep their current value; null clears a text field; an empty traits list clears traits.
+      Aliases are additive — existing aliases are never removed.
+    parameters:
+      name: "Identity key: the character's canonical name (preferred), or any known alias"
+      preferredName: 'New display name; omit to keep the current one'
+      aliases: 'Additional aliases to add; existing aliases are always kept'
+      logline: 'One line capturing vibe, archetype, behavioral tendencies, worldview lens; null clears'
+      state: 'Current physical condition, rank, knowledge, active equipment; null clears'
+      goal: 'Immediate motive or drive; null clears'
+      relationships: 'Current standing with other active characters; null clears'
+      voice: 'A single representative quote capturing mindset; null clears'
+      traits: 'Replacement list of defining single adjectives, most defining first (max 10); empty list clears; omit to keep'
+      importance: '1 = Protagonist, 2 = Main, 3 = Supporting, 4 = Minor; omit to keep'
   characterDetails:
     description: >
       Retrieve the latest profile for a character by any of their known names or aliases.

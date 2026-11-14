@@ -39,7 +39,6 @@ common:
     gameMasterOutput: GM 輸出
     previousActSummary: 上一章節摘要
     actSummaryForScenes: '章節摘要 {{summarizedScenes}}'
-    previousNarrativeBody: '場景 {{completedScenes}} 的敘事正文'
     sceneTitle: 場景標題
     background: 背景
     narrativeBody: 敘事正文
@@ -199,6 +198,7 @@ pipeline:
     sceneCountSingular: 1 個場景
     sceneCountPlural: '{{count}} 個場景'
     sceneDetails: '場景詳情'
+    canonicalName: '標準名稱'
     importanceValue: '重要性: {{importance}}'
     aliasesValue: '別名: {{aliases}}'
     lastSeen: '最後出現: 場景 {{sceneNumber}}'
@@ -596,6 +596,23 @@ tools:
       importance: '1=主角, 2=主要角色, 3=配角, 4=次要角色'
     messages:
       exists: '此名稱或別名的角色已存在。請使用 `character-details` 工具取得現有檔案。'
+  updateCharacterProfile:
+    description: >
+      僅以新材料有改變的欄位，更新單一角色的檔案。
+      以基準檔案中顯示的角色標準名稱作為呼叫的識別鍵。
+      省略的欄位保留現值；null 清除文字欄位；空的特質清單清除特質。
+      別名只增不減——現有別名絕不會被移除。
+    parameters:
+      name: '識別鍵：角色的標準名稱（優先），或任何已知別名'
+      preferredName: '新的顯示名稱；省略則保留現有名稱'
+      aliases: '要新增的別名；現有別名一律保留'
+      logline: '一行捕捉氣質氛圍、原型、行為傾向、世界觀視角；null 清除'
+      state: '目前身體狀況、位階、知識、活躍裝備；null 清除'
+      goal: '近期動機或驅力；null 清除'
+      relationships: '與其他活躍角色之間的目前關係；null 清除'
+      voice: '一句捕捉心態的代表性引言；null 清除'
+      traits: '具定義性的單一形容詞取代清單，最具定義性者在前（上限 10）；空清單清除；省略則保留'
+      importance: '1 = 主角，2 = 主要，3 = 配角，4 = 次要；省略則保留'
   characterDetails:
     description: >
       透過角色的任何已知名稱或別名取得最新檔案。

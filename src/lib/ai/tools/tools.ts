@@ -10,8 +10,9 @@ import { buildIntroduceCharacterTools } from '#lib/ai/tools/introduce-character.
 import { buildCharacterDetailsTools } from '#lib/ai/tools/character-details.ts';
 import { buildSetSceneTitleTools } from '#lib/ai/tools/set-scene-title.ts';
 import { buildSuggestCharacterNameTools } from '#lib/ai/tools/suggest-character-name.ts';
+import { buildUpdateCharacterProfileTools } from '#lib/ai/tools/update-character-profile.ts';
 import { getStory, type Story } from '#lib/db/stories.ts';
-import type { ActLineContext, AssistantContext } from '#lib/ai/pipeline/types.ts';
+import type { ActLineContext, AssistantContext, ProfileCompressionState } from '#lib/ai/pipeline/types.ts';
 import { getSceneCountInCurrentPhase, isActLineEnded } from '#lib/db/act-lines.ts';
 import { type Act, getAct } from '#lib/db/acts.ts';
 import { type ToolSet } from 'ai';
@@ -47,11 +48,18 @@ export const PHASE_TOOLS: Record<PhaseName, readonly string[]> = {
 	EDITOR: [],
 	TEMPLATE_FITTER: [],
 	GAME_MASTER: ['read-scene', 'read-distant-scene', 'query-memories', 'query-inventory', 'update-inventory', 'character-details'],
-	CHARACTER_PROFILE_COMPRESSOR: [],
+	CHARACTER_PROFILE_COMPRESSOR: ['update-character-profile'],
 };
 
 /** Side-effecting tools whose no-op result is `{ result }` rather than a bare string. */
 const RESULT_SHAPED_TOOLS: ReadonlySet<string> = new Set(['advance-phase', 'end-act', 'set-scene-title']);
+
+function phaseGuardNoOp(phase: PhaseName) {
+	return (name: string) => {
+		const msg = ls('tools.guarded.notAllowed', { tool: name, phase: formatPhaseName(phase) });
+		return RESULT_SHAPED_TOOLS.has(name) ? { result: msg } : msg;
+	};
+}
 
 /**
  * Phase-gated view of the full tool superset: identical schema for every phase (so the
@@ -60,17 +68,21 @@ const RESULT_SHAPED_TOOLS: ReadonlySet<string> = new Set(['advance-phase', 'end-
  */
 export function guardToolsForPhase(allTools: ToolSet | undefined, phase: PhaseName): ToolSet | undefined {
 	if (!allTools) return undefined;
-	return withPhaseGuards(allTools, PHASE_TOOLS[phase], (name) => {
-		const msg = ls('tools.guarded.notAllowed', { tool: name, phase: formatPhaseName(phase) });
-		return RESULT_SHAPED_TOOLS.has(name) ? { result: msg } : msg;
-	});
+	return withPhaseGuards(allTools, PHASE_TOOLS[phase], phaseGuardNoOp(phase));
+}
+
+/** Async compression phases: every tool outside the allow-list no-ops, read-only included (design D5). */
+export function guardToolsForAsyncPhase(allTools: ToolSet | undefined, phase: PhaseName): ToolSet | undefined {
+	if (!allTools) return undefined;
+	return withPhaseGuards(allTools, PHASE_TOOLS[phase], phaseGuardNoOp(phase), true);
 }
 
 export async function buildTools(
 	storyId: string,
 	actLine: ActLineContext,
 	assistant: AssistantContext,
-	overrides: NarrativeOverrides
+	overrides: NarrativeOverrides,
+	compression: ProfileCompressionState
 ): Promise<ToolSet | undefined> {
 	const story = await getStory(storyId);
 
@@ -93,6 +105,7 @@ export async function buildTools(
 		...buildCharacterDetailsTools(ctx),
 		...buildSetSceneTitleTools(ctx, overrides),
 		...buildSuggestCharacterNameTools(ctx),
+		...buildUpdateCharacterProfileTools(ctx, compression),
 	};
 
 	if (isInventoryAvailable()) {

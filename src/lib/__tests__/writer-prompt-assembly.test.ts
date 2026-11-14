@@ -180,6 +180,7 @@ function makeCtx(opts: RenderOptions): PipelineRunContext {
 			scenesSections: [],
 			plotMode: opts.plotMode,
 		},
+		compression: { completedScenes: 7, newActSummary: undefined, attemptCount: 0, successCount: 0 },
 	};
 }
 

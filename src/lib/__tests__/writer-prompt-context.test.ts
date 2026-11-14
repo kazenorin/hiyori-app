@@ -121,6 +121,7 @@ function makeCtx(summarizationPoint: number): PipelineRunContext {
 			scenesSections: [],
 			plotMode: 'guidance',
 		},
+		compression: { completedScenes: 7, newActSummary: undefined, attemptCount: 0, successCount: 0 },
 	};
 }
 

@@ -6,7 +6,6 @@ import {
 	actPhasesHeader,
 	interviewTranscriptHeader,
 	playerPreferencesHeader,
-	playerResponseHeader,
 	writerOutputTemplateHeader,
 	writerOutputHeader,
 	reviewerOutputHeader,
@@ -14,7 +13,6 @@ import {
 	editorOutputHeader,
 	gameMasterOutputHeader,
 	previousActSummaryHeader,
-	previousNarrativeBodyHeader,
 	turnOfEventsHeader,
 	templateHeader,
 	directorNotesHeader,
@@ -77,9 +75,6 @@ export const SECTION = {
 	get ACT_PLOT() {
 		return sectionWithRule(actPlotHeader(), actPlotDescription());
 	},
-	get PLAYER_RESPONSE() {
-		return sectionFormat(playerResponseHeader());
-	},
 	get WRITER_OUTPUT_TEMPLATE() {
 		return sectionFormat(writerOutputTemplateHeader());
 	},
@@ -94,9 +89,6 @@ export const SECTION = {
 	},
 	get GAME_MASTER_OUTPUT() {
 		return sectionFormat(gameMasterOutputHeader());
-	},
-	get TURN_OF_EVENTS() {
-		return sectionFormat(turnOfEventsHeader());
 	},
 	get DIRECTOR_NOTES() {
 		return sectionFormat(directorNotesHeader()) + ls('common.descriptions.directorNotes') + '\n\n';
@@ -158,18 +150,6 @@ export const ACT_PLOT_SECTION = {
 	},
 };
 
-/** Format the previous narrative body as a user message section. Returns empty array if no body. */
-export function formatPreviousNarrativeBody(previousNarrativeBody: string | null | undefined, completedScenes: number): string[] {
-	if (!previousNarrativeBody || previousNarrativeBody.trim().length === 0) return [];
-	return [sectionFormat(previousNarrativeBodyHeader(completedScenes)) + previousNarrativeBody];
-}
-
-/** Format the turn of events as a user message section. Returns empty array if no content. */
-export function formatTurnOfEventsSection(turnOfEvents: string | null | undefined): string[] {
-	if (!turnOfEvents || turnOfEvents.trim().length === 0) return [];
-	return [SECTION.TURN_OF_EVENTS + turnOfEvents];
-}
-
 /** Format director's notes as a user message section. Returns empty array if no content. */
 export function formatDirectorNotesSection(directorNotes: string | null | undefined): string[] {
 	if (!directorNotes || directorNotes.trim().length === 0) return [];
@@ -219,7 +199,7 @@ export interface SceneDetailEntry {
 
 /**
  * Parse a profile's serialized `sceneDetails` into structured entries. The serialized form (see
- * `serializeSceneDetails`) is one `- <sceneNumber>: <text>` line per scene; a line that does not
+ * `serializeCharacterSceneDetails`) is one `- <sceneNumber>: <text>` line per scene; a line that does not
  * start a new item is appended to the previous entry so multi-line summaries survive a round-trip.
  */
 export function parseSceneDetails(sceneDetails: string): SceneDetailEntry[] {

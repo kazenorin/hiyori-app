@@ -505,6 +505,13 @@ export function serializeActSummary(data: ActSummary): string {
 	return lines.join('\n').trimEnd();
 }
 
+export function serializeCharacterSceneDetails(actSummary: ActSummary, characterName: string): string {
+	const character = actSummary.characters.find((c) => c.characterName === characterName || c.aliases.includes(characterName));
+	if (!character || character.sceneEntries.length === 0) return '';
+	const lines = character.sceneEntries.map((e) => `- ${e.sceneNumber}: ${e.summary}`);
+	return lines.join('\n');
+}
+
 export function parseIncrementalOutput(markdown: string): IncrementalUpdate {
 	const content = stripCodeFences(markdown);
 	const sections = splitByH2Sections(content);

@@ -153,6 +153,7 @@ function makeCtx(actLineOverrides: Partial<ActLineContext> = {}, completedScenes
 			scenesSections: [],
 			plotMode: 'guidance',
 		},
+		compression: { completedScenes, newActSummary: undefined, attemptCount: 0, successCount: 0 },
 	};
 }
 

@@ -1,45 +1,33 @@
 import type { ProviderConfig } from '#lib/stores/settings.svelte.ts';
 import { getSettings, isMemoryAvailable } from '#lib/stores/settings.svelte.ts';
 import type { MessageBase } from '#lib/db/messages.ts';
+import type { ToolSet } from 'ai';
 import type { NarrativeVariables } from '../narrative-types';
 import type {
 	AssistantContext,
 	AsyncPhaseResults,
 	CompressorResult,
+	PipelineContext,
 	PipelineProviderConfigs,
 	PlayerContext,
+	ProfileCompressionState,
 	SummarizerResult,
 } from './types';
 import { runNonStreamingPhase } from './phase-executor';
 import {
-	buildSummarizerMessages,
+	buildPhaseMessages,
 	buildTranscriptSummarizerMessages,
 	formatActSummaryForCompressor,
+	formatActSummaryForSummarizer,
 	formatExistingProfilesForCompressor,
 	substituteActSummaryTemplate,
-	toUserMessages,
 } from './message-builder';
-import {
-	type ActSummary,
-	mergeActSummary,
-	parseActSummary,
-	parseIncrementalOutput,
-	parseProfilesBody,
-	serializeActSummary,
-} from '../act-summary-parser';
+import { guardToolsForAsyncPhase } from '#lib/ai/tools/tools.ts';
+import { type ActSummary, mergeActSummary, parseActSummary, parseIncrementalOutput, serializeActSummary } from '../act-summary-parser';
 import { actSummaryHeader, currentCharacterProfilesHeader } from '#lib/definitions/common-headers.ts';
 import {
-	goalLabel,
-	importanceLabel,
-	loglineLabel,
-	relationshipsLabel,
-	stateLabel,
-	traitsLabel,
-	voiceLabel,
-} from '#lib/definitions/character-profile-labels.ts';
-import {
 	actSummaryTemplate,
-	characterProfilesHeader,
+	resolveSharedSystemPrompt,
 	summarizerExtractionPromptTemplate,
 	summarizerFallbackExtractionPromptTemplate,
 } from '#lib/definitions/pipeline-prompts.ts';
@@ -47,14 +35,7 @@ import { isAbortLikeError } from '#lib/utils/async.ts';
 import { log } from '#lib/logging/logger.ts';
 import { runMemoryExtractionPipeline } from '#lib/features/memory/memory-extraction-pipeline.ts';
 import { type LoadedPrompts } from './prompt-loader';
-import {
-	insertCharacterProfile,
-	getLatestProfileByAlias,
-	getLatestProfilesByActLine,
-	toCanonicalName,
-	ensurePreferredInAliases,
-	type CharacterImportance,
-} from '#lib/db/character-profiles.ts';
+import { getLatestProfilesByActLine } from '#lib/db/character-profiles.ts';
 import { getLastCompressionScene, recordCharacterProfileCompression } from '#lib/db/act-lines.ts';
 
 // --- Input interfaces ---
@@ -67,24 +48,35 @@ export interface SummarizerInput {
 	providerConfig: ProviderConfig | undefined;
 	abortSignal: AbortSignal;
 	transcript?: { role: 'user' | 'assistant'; content: string }[];
+	context?: PipelineContext;
+	tools?: ToolSet;
 }
 
 export interface SummarizerPrompts {
 	summarizerPrompt: string;
 	summarizerIncrementalPrompt: string;
 	characterProfileCompressorPrompt: string;
+	mainChatSystemPrompt: string;
+	generalInstructions: string;
 }
 
 export interface CharacterProfileCompressorInput {
-	actSummary: string;
 	actLineId: string;
 	completedScenes: number;
 	assistant: AssistantContext;
 	providerConfig: ProviderConfig | undefined;
 	abortSignal: AbortSignal;
+	context: PipelineContext;
+	tools: ToolSet | undefined;
+	compression: ProfileCompressionState;
 }
 
 // --- Summarizer functions ---
+
+function requireContext(input: SummarizerInput): PipelineContext {
+	if (!input.context) throw new Error('Summarizer pipeline path requires PipelineContext');
+	return input.context;
+}
 
 export async function generateFullSummary(input: SummarizerInput, prompts: SummarizerPrompts): Promise<SummarizerResult> {
 	const { providerConfig, abortSignal } = input;
@@ -94,30 +86,41 @@ export async function generateFullSummary(input: SummarizerInput, prompts: Summa
 		sceneNumber: '{N}',
 		sceneTitle: '[Scene title]',
 	});
-	const summarizerSystemPrompt = prompts.summarizerPrompt.replaceAll('{{actSummaryTemplate}}', actSummaryTemplateProcessed);
+	const fullRolePrompt = prompts.summarizerPrompt.replaceAll('{{actSummaryTemplate}}', actSummaryTemplateProcessed);
 
+	let systemPrompt: string;
 	let summarizerMessages: MessageBase[];
+	let phaseTools: ToolSet | undefined;
 
 	if (input.transcript && input.transcript.length > 0) {
+		// Legacy bespoke layout for transcript-based summary regeneration
+		// (chat.svelte.ts regenerateMissingMetadata → regenerateActSummary); no cache sharing.
+		systemPrompt = fullRolePrompt;
 		summarizerMessages = buildTranscriptSummarizerMessages(input.transcript);
+		phaseTools = undefined;
 	} else {
-		summarizerMessages = buildSummarizerMessages(
-			input.actSummary,
-			input.previousNarrativeVariables,
-			input.completedScenes,
-			input.player,
-			undefined,
-			summarizerExtractionPromptTemplate,
-			summarizerFallbackExtractionPromptTemplate
+		const context = requireContext(input);
+		systemPrompt = resolveSharedSystemPrompt(prompts);
+		const sceneTitle = input.previousNarrativeVariables?.sceneTitle ?? '';
+		const finalLine = input.previousNarrativeVariables?.narrativeBody
+			? summarizerExtractionPromptTemplate(String(input.completedScenes), sceneTitle)
+			: summarizerFallbackExtractionPromptTemplate(input.completedScenes);
+		summarizerMessages = buildPhaseMessages(
+			context,
+			[...formatActSummaryForSummarizer(input.completedScenes, parseActSummary(input.actSummary)), fullRolePrompt],
+			finalLine,
+			''
 		);
+		phaseTools = guardToolsForAsyncPhase(input.tools, 'SUMMARIZER');
 	}
 
 	const { text: rawSummary, metadata } = await runNonStreamingPhase(
 		'SUMMARIZER',
-		summarizerSystemPrompt,
+		systemPrompt,
 		summarizerMessages,
 		providerConfig,
-		abortSignal
+		abortSignal,
+		phaseTools
 	);
 	const { completedScenes, previousNarrativeVariables } = input;
 	try {
@@ -145,23 +148,20 @@ async function generateIncrementalSummary(input: SummarizerInput, prompts: Summa
 	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
 	const processedTemplate = substituteActSummaryTemplate(actSummaryTemplate(), { sceneNumber, sceneTitle });
 
-	const incrementalSystemPrompt = prompts.summarizerIncrementalPrompt.replaceAll('{{actSummaryTemplate}}', processedTemplate);
-
-	const incrementalMessages = buildSummarizerMessages(
-		input.actSummary,
-		input.previousNarrativeVariables,
-		input.completedScenes,
-		input.player,
-		existingParsed,
-		summarizerExtractionPromptTemplate,
-		summarizerFallbackExtractionPromptTemplate
+	const incrementalExtraction = prompts.summarizerIncrementalPrompt.replaceAll('{{actSummaryTemplate}}', processedTemplate);
+	const incrementalMessages = buildPhaseMessages(
+		requireContext(input),
+		[...formatActSummaryForSummarizer(completedScenes, existingParsed), incrementalExtraction],
+		summarizerExtractionPromptTemplate(sceneNumber, sceneTitle),
+		''
 	);
 	const { text: incrementalRaw, metadata } = await runNonStreamingPhase(
 		'SUMMARIZER',
-		incrementalSystemPrompt,
+		resolveSharedSystemPrompt(prompts),
 		incrementalMessages,
 		providerConfig,
-		abortSignal
+		abortSignal,
+		guardToolsForAsyncPhase(input.tools, 'SUMMARIZER')
 	);
 
 	try {
@@ -210,78 +210,42 @@ export async function generateCharacterProfiles(
 
 	if (completedScenes - lastScene < interval) return null;
 
-	const compressorSystemPrompt = prompts.characterProfileCompressorPrompt
+	const compressorExtraction = prompts.characterProfileCompressorPrompt
 		.replaceAll('{{actSummaryHeader}}', actSummaryHeader())
-		.replaceAll('{{characterProfilesHeader}}', characterProfilesHeader())
-		.replaceAll('{{currentCharacterProfilesHeader}}', currentCharacterProfilesHeader())
-		.replaceAll('{{loglineLabel}}', loglineLabel())
-		.replaceAll('{{stateLabel}}', stateLabel())
-		.replaceAll('{{goalLabel}}', goalLabel())
-		.replaceAll('{{relationshipsLabel}}', relationshipsLabel())
-		.replaceAll('{{voiceLabel}}', voiceLabel())
-		.replaceAll('{{traitsLabel}}', traitsLabel())
-		.replaceAll('{{importanceLabel}}', importanceLabel());
+		.replaceAll('{{currentCharacterProfilesHeader}}', currentCharacterProfilesHeader());
 
 	const existingProfiles = await getLatestProfilesByActLine(compressorInput.actLineId);
-	const messages = toUserMessages([
-		...formatActSummaryForCompressor(completedScenes, newActSummary),
-		...formatExistingProfilesForCompressor(existingProfiles),
-	]);
-
-	const { text: rawProfiles, metadata } = await runNonStreamingPhase(
-		'CHARACTER_PROFILE_COMPRESSOR',
-		compressorSystemPrompt,
-		messages,
-		providerConfig,
-		abortSignal
+	const messages = buildPhaseMessages(
+		compressorInput.context,
+		[...formatActSummaryForCompressor(completedScenes, newActSummary), ...formatExistingProfilesForCompressor(existingProfiles)],
+		compressorExtraction,
+		''
 	);
 
-	try {
-		const profilesResult = parseProfilesBody(rawProfiles);
-		if (profilesResult.profiles.length === 0) return null;
+	compressorInput.compression.newActSummary = newActSummary;
+	const { metadata } = await runNonStreamingPhase(
+		'CHARACTER_PROFILE_COMPRESSOR',
+		resolveSharedSystemPrompt(prompts),
+		messages,
+		providerConfig,
+		abortSignal,
+		guardToolsForAsyncPhase(compressorInput.tools, 'CHARACTER_PROFILE_COMPRESSOR')
+	);
 
-		for (const profile of profilesResult.profiles) {
-			const importance: CharacterImportance = resolveImportance(profile.importance);
-			const existing = await getLatestProfileByAlias(compressorInput.actLineId, profile.characterName);
-			const canonicalName = existing?.canonicalName ?? toCanonicalName(profile.characterName);
-			const aliases = ensurePreferredInAliases(profile.characterName, existing?.aliases ?? []);
-			await insertCharacterProfile({
-				id: crypto.randomUUID(),
-				actLineId: compressorInput.actLineId,
-				sceneNumber: completedScenes,
-				canonicalName,
-				preferredName: profile.characterName,
-				aliases,
-				logline: profile.logline,
-				state: profile.state || null,
-				goal: profile.goal || null,
-				relationships: profile.relationships || null,
-				voice: profile.voice || null,
-				traits: profile.traits,
-				sceneDetails: serializeSceneDetails(newActSummary, profile.characterName),
-				importance,
-			});
-		}
-
+	const { compression } = compressorInput;
+	if (compression.successCount > 0 || compression.attemptCount === 0) {
 		await recordCharacterProfileCompression(compressorInput.actLineId, compressorInput.assistant, completedScenes);
-
+		await log.info(
+			'pipeline',
+			`Character profile compression at scene ${completedScenes}: ${compression.successCount} updated, ${compression.attemptCount - compression.successCount} failed`
+		);
 		return { metadata };
-	} catch (err) {
-		await log.warn('pipeline', `Character profile compressor parse failed: ${err}`);
-		return null;
 	}
-}
-
-function resolveImportance(parsed: number | null): CharacterImportance {
-	if (parsed !== null && parsed >= 1 && parsed <= 4) return parsed as CharacterImportance;
-	return 4;
-}
-
-function serializeSceneDetails(actSummary: ActSummary, characterName: string): string {
-	const character = actSummary.characters.find((c) => c.characterName === characterName || c.aliases.includes(characterName));
-	if (!character || character.sceneEntries.length === 0) return '';
-	const lines = character.sceneEntries.map((e) => `- ${e.sceneNumber}: ${e.summary}`);
-	return lines.join('\n');
+	await log.warn(
+		'pipeline',
+		`Character profile compression: all ${compression.attemptCount} attempts failed; not recorded, will retry next turn`
+	);
+	return null;
 }
 
 // --- Async phases (Summarizer → Compressor → Memory) ---
@@ -298,6 +262,9 @@ export interface AsyncPhasesContext {
 	actLineId: string | undefined;
 	assistant: AssistantContext;
 	loadedPrompts: LoadedPrompts;
+	context: PipelineContext;
+	tools: ToolSet | undefined;
+	compression: ProfileCompressionState;
 }
 
 export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhaseResults> {
@@ -313,6 +280,9 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 		actLineId,
 		assistant,
 		loadedPrompts,
+		context,
+		tools,
+		compression,
 	} = ctx;
 	if (player?.playerResponse && completedScenes > 0) {
 		const summarizerInput: SummarizerInput = {
@@ -322,11 +292,15 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 			player,
 			providerConfig: providerConfigs.summarizer,
 			abortSignal,
+			context,
+			tools,
 		};
 		const summarizerPrompts: SummarizerPrompts = {
 			summarizerPrompt: loadedPrompts.summarizerPrompt,
 			summarizerIncrementalPrompt: loadedPrompts.summarizerIncrementalPrompt,
 			characterProfileCompressorPrompt: loadedPrompts.characterProfileCompressorPrompt,
+			mainChatSystemPrompt: loadedPrompts.mainChatSystemPrompt,
+			generalInstructions: loadedPrompts.generalInstructions,
 		};
 		let result: SummarizerResult;
 		try {
@@ -344,12 +318,14 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 		try {
 			if (result.actSummary && actLineId) {
 				const compressorInput: CharacterProfileCompressorInput = {
-					actSummary,
 					actLineId,
 					completedScenes,
 					assistant,
 					providerConfig: providerConfigs.summarizer,
 					abortSignal,
+					context,
+					tools,
+					compression,
 				};
 				compressorResult = await generateCharacterProfiles(result.actSummary, compressorInput, summarizerPrompts);
 			}
