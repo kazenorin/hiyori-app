@@ -35,13 +35,13 @@
 
 	interface Props {
 		phases: UIScenePhase[];
-		streamingPhase: PhaseName | null;
+		streamingPhases: PhaseName[];
 		onOpen: (phase: PhaseName) => void;
 		contexts: ContextKey[];
 		onOpenContext: (context: ContextKey) => void;
 	}
 
-	let { phases, streamingPhase, onOpen, contexts, onOpenContext }: Props = $props();
+	let { phases, streamingPhases, onOpen, contexts, onOpenContext }: Props = $props();
 
 	// The pipeline writes this marker into phase.content while a phase is retrying (pipeline-callbacks.ts).
 	function isRetrying(phase: UIScenePhase): boolean {
@@ -53,7 +53,7 @@
 	<div class="flex flex-wrap items-center gap-1.5 pb-2 mb-3 border-b border-surface-200-800">
 		{#each phases as phase, pi (pi)}
 			{@const label = t(PHASE_LABEL_KEYS[phase.phaseName])}
-			{@const streaming = phase.phaseName === streamingPhase}
+			{@const streaming = streamingPhases.includes(phase.phaseName)}
 			{@const failed = !streaming && isRetrying(phase)}
 			<button
 				type="button"

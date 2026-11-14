@@ -71,8 +71,8 @@ export function guardToolsForPhase(allTools: ToolSet | undefined, phase: PhaseNa
 	return withPhaseGuards(allTools, PHASE_TOOLS[phase], phaseGuardNoOp(phase));
 }
 
-/** Async compression phases: every tool outside the allow-list no-ops, read-only included (design D5). */
-export function guardToolsForAsyncPhase(allTools: ToolSet | undefined, phase: PhaseName): ToolSet | undefined {
+/** Background compression phases: every tool outside the allow-list no-ops, read-only included (design D5). */
+export function guardToolsForBackgroundPhase(allTools: ToolSet | undefined, phase: PhaseName): ToolSet | undefined {
 	if (!allTools) return undefined;
 	return withPhaseGuards(allTools, PHASE_TOOLS[phase], phaseGuardNoOp(phase), true);
 }

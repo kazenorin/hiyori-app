@@ -68,6 +68,7 @@ import {
 	pruneCharacterScenes,
 	mergeActSummary,
 	serializeActSummary,
+	serializeCharacterSceneDetails,
 	type ActSummary,
 	type IncrementalUpdate,
 } from '#lib/ai/act-summary-parser.ts';
@@ -182,6 +183,32 @@ Summary: A thing happened.
 
 		const result = parseActSummary(markdown);
 		expect(result.characters[0].aliases).toEqual(['Bobby', 'Robert']);
+	});
+
+	// Name-form drift between summary and profiles silently empties sceneDetails:
+	// the template's [bracket] placeholders get copied into names by the model.
+	it('strips template placeholder brackets from character names', () => {
+		const markdown = `## Character Summaries
+### [主角]
+- Scene 1: 主角 appeared.`;
+
+		const result = parseActSummary(markdown);
+		expect(result.characters[0].characterName).toBe('主角');
+	});
+
+	it('leaves clean names, parenthesized suffixes, and inner brackets untouched', () => {
+		const markdown = `## Character Summaries
+### 主角
+- Scene 1: 主角 appeared.
+
+### 白影 (推測)
+- Scene 1: 白影 appeared.
+
+### [白影 [推測]]
+- Scene 1: 白影 appeared.`;
+
+		const result = parseActSummary(markdown);
+		expect(result.characters.map((c) => c.characterName)).toEqual(['主角', '白影 (推測)', '白影 [推測]']);
 	});
 });
 
@@ -330,6 +357,68 @@ describe('serializeActSummary', () => {
 		expect(result).toContain('Shift the story toward uncovering the conspiracy.');
 		// Character Summaries section is always emitted
 		expect(result).toContain('## Character Summaries');
+	});
+});
+
+describe('serializeCharacterSceneDetails', () => {
+	// WHY: the summarizer refers to characters by short/role names ('Amiri')
+	// while the profile stores the full preferred name; derivation must match
+	// the identity's full name set or sceneDetails silently empties.
+	const summary = parseActSummary(`## Character Summaries
+### Amiri
+- Aliases: [little rose, gifted girl]
+- Scene 5: Amiri recovers in the lead wagon.
+
+### Tristan Carver
+- Scene 5: Tristan repairs the wheel.`);
+
+	it('matches when the name set contains the summary character name (preferred form)', () => {
+		expect(serializeCharacterSceneDetails(summary, ['Amiri', 'amiri-verspera'])).toBe('- 5: Amiri recovers in the lead wagon.');
+	});
+
+	it('matches when the summary uses the canonical form present in the name set', () => {
+		const canonicalSummary = parseActSummary(`## Character Summaries
+### amiri-verspera
+- Scene 5: Amiri recovers in the lead wagon.`);
+		expect(serializeCharacterSceneDetails(canonicalSummary, ['Amiri Verspera', 'amiri-verspera'])).toBe(
+			'- 5: Amiri recovers in the lead wagon.'
+		);
+	});
+
+	it('matches via alias intersection when no name equals the summary character name (Amiri shape)', () => {
+		expect(serializeCharacterSceneDetails(summary, ['Amiri Verspera', 'amiri-verspera', 'little rose'])).toBe(
+			'- 5: Amiri recovers in the lead wagon.'
+		);
+	});
+
+	it('prefers a name match over an earlier alias-only match', () => {
+		const twoCharacters = parseActSummary(`## Character Summaries
+### Rose Guardian
+- Aliases: [little rose]
+- Scene 5: A different character sharing the alias.
+
+### Amiri
+- Scene 6: Amiri recovers in the lead wagon.`);
+		expect(serializeCharacterSceneDetails(twoCharacters, ['Amiri', 'little rose'])).toBe('- 6: Amiri recovers in the lead wagon.');
+	});
+
+	it('returns empty when no name or alias intersects (structurally unlinkable)', () => {
+		expect(serializeCharacterSceneDetails(summary, ['Isadora Verspera', 'Matriarch Verspera'])).toBe('');
+	});
+
+	it('returns empty when the matched character has no scene entries', () => {
+		const emptyEntries = parseActSummary(`## Character Summaries
+### Amiri
+- Aliases: [little rose]`);
+		expect(serializeCharacterSceneDetails(emptyEntries, ['little rose'])).toBe('');
+	});
+
+	it('matches name variants that differ only in case or punctuation', () => {
+		expect(serializeCharacterSceneDetails(summary, ['AMIRI', 'amiri-verspera'])).toBe('- 5: Amiri recovers in the lead wagon.');
+	});
+
+	it('matches alias variants that differ only in case, punctuation or brackets', () => {
+		expect(serializeCharacterSceneDetails(summary, ['Amiri Verspera', '[Little Rose]'])).toBe('- 5: Amiri recovers in the lead wagon.');
 	});
 });
 

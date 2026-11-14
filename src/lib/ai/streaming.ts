@@ -16,6 +16,8 @@ export interface StreamConfig {
 	callSettings?: LanguageModelCallOptions;
 	tools?: ToolSet;
 	maxSteps?: number;
+	/** Tool-only phases may legitimately produce no text (quiet compressor runs). */
+	allowEmptyText?: boolean;
 }
 
 export interface StreamCallbacks {
@@ -107,7 +109,7 @@ export async function executeStream(config: StreamConfig, callbacks: StreamCallb
 
 		const [usage, finishReason, text] = await Promise.all([result.usage, result.finishReason.then((s) => s ?? 'unknown'), result.text]);
 
-		if (text.trim().length === 0) {
+		if (text.trim().length === 0 && !config.allowEmptyText) {
 			callbacks.onError(new Error(ERR_EMPTY_STREAM));
 			await fileLog('warn', 'streaming', 'Response: empty body');
 		} else {

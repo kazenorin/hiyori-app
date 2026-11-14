@@ -26,6 +26,7 @@ describe('character-profiles DB layer', () => {
 	let resolveCanonicalName: typeof import('#lib/db/character-profiles.ts').resolveCanonicalName;
 	let toCanonicalName: typeof import('#lib/db/character-profiles.ts').toCanonicalName;
 	let ensurePreferredInAliases: typeof import('#lib/db/character-profiles.ts').ensurePreferredInAliases;
+	let serializeCanonicalAliases: typeof import('#lib/db/character-profiles.ts').serializeCanonicalAliases;
 	let normalizeTraits: typeof import('#lib/db/character-profiles.ts').normalizeTraits;
 	let parseTraits: typeof import('#lib/db/character-profiles.ts').parseTraits;
 
@@ -46,6 +47,7 @@ describe('character-profiles DB layer', () => {
 		resolveCanonicalName = mod.resolveCanonicalName;
 		toCanonicalName = mod.toCanonicalName;
 		ensurePreferredInAliases = mod.ensurePreferredInAliases;
+		serializeCanonicalAliases = mod.serializeCanonicalAliases;
 		normalizeTraits = mod.normalizeTraits;
 		parseTraits = mod.parseTraits;
 	});
@@ -141,6 +143,16 @@ describe('character-profiles DB layer', () => {
 		it('preserves alias order after the preferredName when preferredName is absent from aliases', () => {
 			const result = ensurePreferredInAliases('Elena', ['Shadow', 'E', 'Captain']);
 			expect(result).toEqual(['Elena', 'Shadow', 'E', 'Captain']);
+		});
+	});
+
+	describe('serializeCanonicalAliases', () => {
+		it('kebab-cases and dedupes aliases into matching-only canonical forms', () => {
+			expect(serializeCanonicalAliases(['Elena Vale', 'elena-vale', '[Lady Vale]'])).toBe(JSON.stringify(['elena-vale', 'lady-vale']));
+		});
+
+		it('serializes empty aliases as "[]"', () => {
+			expect(serializeCanonicalAliases([])).toBe('[]');
 		});
 	});
 

@@ -201,6 +201,18 @@ describe('streamWithRetry', () => {
 		// Should not attempt any calls
 		expect(executeStream).not.toHaveBeenCalled();
 	});
+
+	it('threads allowEmptyText through to executeStream', async () => {
+		await streamWithRetry('system', [], {
+			retryConfig: DEFAULT_RETRY_CONFIG,
+			onProgress: vi.fn(),
+			onError: vi.fn(),
+			providerConfig,
+			allowEmptyText: true,
+		});
+		const config = (executeStream as ReturnType<typeof vi.fn>).mock.calls[0][0];
+		expect(config.allowEmptyText).toBe(true);
+	});
 });
 
 describe('DEFAULT_RETRY_CONFIG', () => {

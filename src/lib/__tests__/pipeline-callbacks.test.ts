@@ -130,3 +130,89 @@ describe('createPipelineCallbacks non-body phases', () => {
 		expect(h.phase('REVIEWER')?.content).toBe('full review');
 	});
 });
+
+describe('background phase callbacks', () => {
+	const meta = (input: number, output: number) => ({
+		finishReason: 'stop',
+		usage: { inputTokens: input, outputTokens: output, totalTokens: input + output, cacheReadTokens: 5 },
+		durationMs: 10,
+		models: new Set(['sum-model']),
+	});
+
+	it('merges per-phase metadata into message.metadata on complete', () => {
+		// WHY: the dialog meta line (tokens/cache) must appear when a background
+		// phase completes — not only when the whole chain settles.
+		const h = makeHarness();
+		h.callbacks.onPhaseStart('SUMMARIZER');
+		h.callbacks.onPhaseComplete('SUMMARIZER', { actSummary: 'merged summary' }, meta(100, 20));
+
+		expect(h.phase('SUMMARIZER')?.content).toBe('merged summary');
+		expect(h.message.metadata?.inputTokens).toBe(100);
+		expect(h.message.metadata?.cacheReadTokens).toBe(5);
+		expect(h.message.metadata?.phases).toEqual([
+			{
+				phaseName: 'SUMMARIZER',
+				model: 'sum-model',
+				finishReason: 'stop',
+				inputTokens: 100,
+				outputTokens: 20,
+				totalTokens: 120,
+				cacheReadTokens: 5,
+				durationMs: 10,
+			},
+		]);
+	});
+
+	it('accumulates metadata across phases without double counting', () => {
+		const h = makeHarness();
+		h.callbacks.onPhaseStart('SUMMARIZER');
+		h.callbacks.onPhaseComplete('SUMMARIZER', { actSummary: 's' }, meta(100, 20));
+		h.callbacks.onPhaseStart('CHARACTER_PROFILE_COMPRESSOR');
+		h.callbacks.onPhaseComplete('CHARACTER_PROFILE_COMPRESSOR', { profileCompressionLog: 'log' }, meta(200, 30));
+
+		expect(h.message.metadata?.inputTokens).toBe(300);
+		expect(h.message.metadata?.phases?.map((p) => p.phaseName)).toEqual(['SUMMARIZER', 'CHARACTER_PROFILE_COMPRESSOR']);
+	});
+
+	it('keeps main phases before background phases regardless of start order', () => {
+		// WHY: the Summarizer starts during the Writer; live start-order would
+		// interleave chips nondeterministically and diverge from persisted layout.
+		const h = makeHarness();
+		h.callbacks.onPhaseStart('WRITER');
+		h.callbacks.onPhaseStart('SUMMARIZER');
+		h.callbacks.onPhaseStart('REVIEWER');
+		h.callbacks.onPhaseStart('CHARACTER_PROFILE_COMPRESSOR');
+		h.callbacks.onPhaseStart('EDITOR');
+
+		expect(h.message.phases?.map((p) => p.phaseName)).toEqual([
+			'WRITER',
+			'REVIEWER',
+			'EDITOR',
+			'SUMMARIZER',
+			'CHARACTER_PROFILE_COMPRESSOR',
+		]);
+	});
+
+	it('routes the compressor log through getPhaseContent on complete', () => {
+		const h = makeHarness();
+		h.callbacks.onPhaseStart('CHARACTER_PROFILE_COMPRESSOR');
+		h.callbacks.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', { content: 'partial log', reasoning: 'thinking', variables: null });
+		h.callbacks.onPhaseComplete('CHARACTER_PROFILE_COMPRESSOR', { profileCompressionLog: 'final log' });
+
+		expect(h.phase('CHARACTER_PROFILE_COMPRESSOR')).toEqual({
+			phaseName: 'CHARACTER_PROFILE_COMPRESSOR',
+			content: 'final log',
+			reasoning: 'thinking',
+		});
+		expect(h.message.content).toBe('');
+	});
+
+	it('onPhaseFailed strips the started entry so no ghost chip survives', () => {
+		const h = makeHarness();
+		h.callbacks.onPhaseStart('SUMMARIZER');
+		h.callbacks.onPhaseStream('SUMMARIZER', { content: 'partial', reasoning: null, variables: null });
+		h.callbacks.onPhaseFailed?.('SUMMARIZER');
+
+		expect(h.phase('SUMMARIZER')).toBeUndefined();
+	});
+});

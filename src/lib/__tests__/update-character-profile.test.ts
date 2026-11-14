@@ -53,6 +53,7 @@ vi.mock('#lib/db/database.ts', () => ({
 import { insertCharacterProfile, getLatestProfileByAlias, getLatestProfilesByActLine } from '#lib/db/character-profiles.ts';
 import { buildUpdateCharacterProfileTools } from '#lib/ai/tools/update-character-profile.ts';
 import { parseActSummary } from '#lib/ai/act-summary-parser.ts';
+import { loadLocaleStrings } from '#lib/localization/index.ts';
 import type { ProfileCompressionState } from '#lib/ai/pipeline/types.ts';
 import type { ToolContext } from '#lib/ai/tools/tools.ts';
 
@@ -93,6 +94,7 @@ async function execute(compression: ProfileCompressionState, input: Record<strin
 beforeEach(async () => {
 	testDb = createTestDatabase();
 	await runMigrations();
+	await loadLocaleStrings('en');
 });
 
 describe('update-character-profile execute', () => {

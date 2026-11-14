@@ -26,7 +26,7 @@ import {
 } from './runners';
 import type { LoadedPrompts } from './prompt-loader';
 import { loadPrompts } from './prompt-loader';
-import { runAsyncPhases } from './summarizer';
+import { runBackgroundPhases } from './summarizer';
 import { buildPipelineProviderConfigs } from '#lib/ai/chat/pipeline-config.ts';
 import { buildTools } from '#lib/ai/tools/tools.ts';
 import { createNarrativeOverrides } from '#lib/ai/narrative-types.ts';
@@ -164,8 +164,8 @@ function finalizePipelineResult(state: PipelineState, tracker: ReturnType<typeof
  * Run the full narrative generation pipeline.
  * Sequential phases: Writer → Reviewer → Editor → [Game Master ‖ Plot Planner].
  * Game Master and Plot Planner run concurrently after Editor completes.
- * Async phases (Summarizer, then Memory Extraction) run concurrently with the
- * sequential chain and resolve afterward.
+ * Background phases (Summarizer → Character Profile Compressor → Memory Extraction)
+ * run concurrently with the sequential chain and resolve afterward.
  * Editor LLM call is skipped when the reviewer indicates "accept as-is".
  * Context is passed as user messages, not stuffed into the system prompt.
  */
@@ -181,8 +181,8 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	const tracker = buildTrackPhase(input.initialPhases);
 	const trackPhase = buildCommittingTrackPhase(tracker, input.initialState ?? {}, execution.onPhaseCommit);
 
-	// --- Async phases (Summarizer → Character Profile Compressor → Memory) ---
-	const asyncPhases = runAsyncPhases({
+	// --- Background phases (Summarizer → Character Profile Compressor → Memory) ---
+	const backgroundPhases = runBackgroundPhases({
 		player,
 		completedScenes,
 		actSummary: input.latestActSummary,
@@ -197,6 +197,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		context: input.context,
 		tools: ctx.tools,
 		compression: ctx.compression,
+		callbacks,
 	});
 
 	// --- Sequential phases (resume gates: cached outputs are skipped) ---
@@ -213,7 +214,7 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 	const result = finalizePipelineResult(state, tracker);
 	callbacks.onAllComplete(state);
-	return { ...result, asyncPhases };
+	return { ...result, backgroundPhases };
 }
 
 export async function runEpiloguePipeline(input: EpiloguePipelineInput): Promise<PipelineResult> {

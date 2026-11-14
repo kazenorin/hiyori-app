@@ -1,6 +1,7 @@
 // noinspection SqlResolve
 
 import { getDatabase } from './database';
+import { parseAliases, serializeCanonicalAliases } from './character-profiles';
 
 interface SchemaVersion {
 	version: number;
@@ -174,6 +175,7 @@ const migrationStatements: string[][] = [
 	],
 	[`ALTER TABLE character_profiles ADD COLUMN traits TEXT`],
 	[`ALTER TABLE character_profiles ADD COLUMN removed INTEGER NOT NULL DEFAULT 0`],
+	[`ALTER TABLE character_profiles ADD COLUMN canonical_aliases TEXT NOT NULL DEFAULT '[]'`],
 ];
 
 interface ActLineMetaMigrateRow {
@@ -283,8 +285,20 @@ async function migrateV9Data(): Promise<void> {
 	}
 }
 
+export async function backfillCanonicalAliases(): Promise<void> {
+	const db = getDatabase();
+	const rows = await db.select<{ id: string; aliases: string }[]>('SELECT id, aliases FROM character_profiles');
+	for (const row of rows) {
+		await db.execute('UPDATE character_profiles SET canonical_aliases = $1 WHERE id = $2', [
+			serializeCanonicalAliases(parseAliases(row.aliases)),
+			row.id,
+		]);
+	}
+}
+
 const postMigrationHooks: Record<number, () => Promise<void>> = {
 	9: migrateV9Data,
+	16: backfillCanonicalAliases,
 };
 
 export async function runMigrations(): Promise<void> {

@@ -21,7 +21,7 @@ import { resolveSummariesSnapshot } from '#lib/ai/pipeline/summarization-point.t
 import { buildScenesSections } from '#lib/ai/pipeline/scenes-builder.ts';
 import type {
 	ActLineContext,
-	AsyncPhaseResults,
+	BackgroundPhaseResults,
 	CommonPipelineInput,
 	PipelineCallbacks,
 	PipelineContext,
@@ -32,7 +32,7 @@ import type {
 import type { PipelineRunKind, PipelineRunRecord, RunInputSnapshot } from '#lib/db/pipeline-runs.ts';
 import { deleteInventoryByMessages } from '#lib/db/inventory.ts';
 import type { PhaseMetadata } from '#lib/ai/chat-stream.ts';
-import type { EndingType, PhaseName, UIScenePhase } from '#lib/ai/narrative-types.ts';
+import { BACKGROUND_PHASES, type EndingType, type PhaseName, type UIScenePhase } from '#lib/ai/narrative-types.ts';
 import type { Story } from '#lib/db/stories.ts';
 import type { ActLineMeta } from '#lib/db/act-lines.ts';
 import type { UIMessage } from './types';
@@ -54,7 +54,7 @@ import {
 	getPreviousNarrativeMessage,
 	getScenePlotForScene as _getScenePlotForScene,
 } from './message-queries';
-import { resolveAsyncPhaseMetadata, updateMetaData } from './metadata';
+import { mergePreservedBackgroundMetadata, resolveBackgroundPhaseMetadata, updateMetaData } from './metadata';
 import { buildFinalVariables, createPipelineCallbacks } from './pipeline-callbacks';
 import {
 	loadActLineMessagesFromDB,
@@ -76,15 +76,15 @@ export interface RunSessionView {
 	kind: PipelineRunKind;
 	status: RunStatus;
 	message: UIMessage;
-	/** Phase whose stream is currently active, or null between phases / after settle (spinner source). */
-	streamingPhase: PhaseName | null;
+	/** Phases whose streams are currently active (spinner source; concurrent chains each appear). */
+	streamingPhases: PhaseName[];
 	error?: string;
 }
 
 export type RunEvent =
 	| { type: 'update'; session: RunSessionView }
 	| { type: 'settled'; session: RunSessionView; actEnded: boolean; storyConcluded: boolean }
-	| { type: 'async-settled'; actLineId: string };
+	| { type: 'background-settled'; actLineId: string };
 
 interface InternalSession {
 	messageId: string;
@@ -93,7 +93,7 @@ interface InternalSession {
 	kind: PipelineRunKind;
 	status: RunStatus;
 	message: UIMessage;
-	streamingPhase: PhaseName | null;
+	streamingPhases: PhaseName[];
 	error?: string;
 	abortController: AbortController;
 	record: PipelineRunRecord;
@@ -115,7 +115,7 @@ interface RunPlan {
 // --- Registry + events ---
 
 const sessions = new Map<string, InternalSession>();
-const pendingAsyncByLine = new Map<string, Promise<void>>();
+const pendingBackgroundByLine = new Map<string, { promise: Promise<void>; session: InternalSession }>();
 const listeners = new Set<(event: RunEvent) => void>();
 
 export function subscribeRuns(listener: (event: RunEvent) => void): () => void {
@@ -143,7 +143,7 @@ function toView(session: InternalSession): RunSessionView {
 		kind: session.kind,
 		status: session.status,
 		message: session.message,
-		streamingPhase: session.streamingPhase,
+		streamingPhases: [...session.streamingPhases],
 		error: session.error,
 	};
 }
@@ -153,46 +153,51 @@ function emitUpdate(session: InternalSession): void {
 }
 
 export function getActiveSession(actLineId: string): RunSessionView | undefined {
-	const session = sessions.get(actLineId);
+	const session = sessions.get(actLineId) ?? pendingBackgroundByLine.get(actLineId)?.session;
 	return session ? toView(session) : undefined;
 }
 
 /**
- * Wrap pipeline callbacks so the session tracks which phase is currently
- * streaming — the spinner source for the UI phase strip. Set on phase start,
- * cleared on phase complete; settle paths clear it directly.
+ * Wrap pipeline callbacks so the session tracks which phases are currently
+ * streaming — the spinner source for the UI phase strip. Added on phase start,
+ * removed on phase complete or failure; finalize keeps background phases, error settle clears all.
  */
 export function trackStreamingPhase(
-	session: { streamingPhase: PhaseName | null },
+	session: { streamingPhases: PhaseName[] },
 	callbacks: PipelineCallbacks,
 	onUpdate: () => void
 ): PipelineCallbacks {
 	return {
 		...callbacks,
 		onPhaseStart: (phase) => {
-			session.streamingPhase = phase;
+			if (!session.streamingPhases.includes(phase)) session.streamingPhases.push(phase);
 			onUpdate();
 			callbacks.onPhaseStart(phase);
 		},
-		onPhaseComplete: (phase, state) => {
-			session.streamingPhase = null;
+		onPhaseComplete: (phase, state, metadata) => {
+			session.streamingPhases = session.streamingPhases.filter((p) => p !== phase);
 			onUpdate();
-			callbacks.onPhaseComplete(phase, state);
+			callbacks.onPhaseComplete(phase, state, metadata);
+		},
+		onPhaseFailed: (phase) => {
+			session.streamingPhases = session.streamingPhases.filter((p) => p !== phase);
+			onUpdate();
+			callbacks.onPhaseFailed?.(phase);
 		},
 	};
 }
 
-export function isProcessingAsyncPhases(actLineId: string): boolean {
-	return pendingAsyncByLine.has(actLineId);
+export function isProcessingBackgroundPhases(actLineId: string): boolean {
+	return pendingBackgroundByLine.has(actLineId);
 }
 
-async function awaitPendingAsyncPhases(actLineId: string): Promise<void> {
-	const pending = pendingAsyncByLine.get(actLineId);
+async function awaitPendingBackgroundPhases(actLineId: string): Promise<void> {
+	const pending = pendingBackgroundByLine.get(actLineId);
 	if (!pending) return;
 	try {
-		await pending;
+		await pending.promise;
 	} catch (err) {
-		await log.error(LOG_TAG, 'Pending async phases failed', err);
+		await log.error(LOG_TAG, 'Pending background phases failed', err);
 	}
 }
 
@@ -327,7 +332,11 @@ export async function discardRun(actLineId: string): Promise<void> {
 /** Stop the running session; completed phases stay cached for continue/discard. */
 export function abortRun(actLineId: string): void {
 	const session = sessions.get(actLineId);
-	if (session?.status === 'running') session.abortController.abort();
+	if (session?.status === 'running') {
+		session.abortController.abort();
+		return;
+	}
+	pendingBackgroundByLine.get(actLineId)?.session.abortController.abort();
 }
 
 // --- Cleanup hooks for deletion flows ---
@@ -436,7 +445,7 @@ async function prepareRun(params: PrepareRunParams): Promise<{ session: Internal
 		throw new Error('An unfinished scene exists for this act line. Continue or discard it first.');
 	}
 
-	await awaitPendingAsyncPhases(actLineId);
+	await awaitPendingBackgroundPhases(actLineId);
 	await loadLocaleStrings(story.locale);
 	setActiveLocale(story.locale);
 
@@ -488,7 +497,7 @@ async function prepareRun(params: PrepareRunParams): Promise<{ session: Internal
 		kind,
 		status: 'running',
 		message: resumeRecord ? resumedSessionMessage(resumeRecord) : newAssistantMessage(messageId, sceneNumber),
-		streamingPhase: null,
+		streamingPhases: [],
 		abortController: new AbortController(),
 		record,
 		mainConfig,
@@ -736,7 +745,7 @@ async function commitPhaseCache(session: InternalSession, state: PipelineState, 
 }
 
 async function finalizeRun(session: InternalSession, plan: RunPlan, result: PipelineResult): Promise<void> {
-	session.streamingPhase = null;
+	session.streamingPhases = session.streamingPhases.filter((p) => BACKGROUND_PHASES.includes(p));
 	// Guard against deletion racing with the final commit (story/act/line removed mid-run).
 	const actLineStillExists = await dbActLines.getActLine(session.actLineId);
 	if (!actLineStillExists) {
@@ -747,7 +756,10 @@ async function finalizeRun(session: InternalSession, plan: RunPlan, result: Pipe
 
 	const assistant = { messageId: session.messageId, messageSequence: plan.assistantSequence };
 
-	session.message = { ...session.message, metadata: updateMetaData(result.aggregatedMetadata, result.phases) };
+	session.message = {
+		...session.message,
+		metadata: mergePreservedBackgroundMetadata(updateMetaData(result.aggregatedMetadata, result.phases), session.message.metadata),
+	};
 	emitUpdate(session);
 
 	// Measurement harness: per-turn prompt-cache report (debug level only).
@@ -769,8 +781,10 @@ async function finalizeRun(session: InternalSession, plan: RunPlan, result: Pipe
 		await logMainChat(newMessages);
 	}
 	// Persist phases alongside the committed message so strips/dialogs survive reload;
-	// the async chain re-upserts the full array when it lands (idempotent per phase).
-	await dbMessagePhases.upsertMessagePhases(session.messageId, session.message.phases ?? []);
+	// the background chain re-upserts the full array when it lands (idempotent per phase).
+	// Background phase rows are owned by the background chain (upserted at its settle).
+	const mainPhases = (session.message.phases ?? []).filter((p) => !BACKGROUND_PHASES.includes(p.phaseName));
+	await dbMessagePhases.upsertMessagePhases(session.messageId, mainPhases);
 	await updateLastPlotGeneration(result.phases, session.actLineId, assistant, plan.completedScenes);
 	await dbPipelineRuns.deletePipelineRun(session.messageId);
 
@@ -781,14 +795,14 @@ async function finalizeRun(session: InternalSession, plan: RunPlan, result: Pipe
 	}
 	const actEnded = await dbActLines.isActLineEnded(session.actLineId);
 
-	if (result.asyncPhases) wireAsyncPhases(session, result.asyncPhases);
+	if (result.backgroundPhases) wireBackgroundPhases(session, result.backgroundPhases);
 
 	session.status = 'completed';
 	emit({ type: 'settled', session: toView(session), actEnded, storyConcluded });
 }
 
 async function settleRunWithError(session: InternalSession, err: unknown): Promise<void> {
-	session.streamingPhase = null;
+	session.streamingPhases = [];
 	if (isAbortLikeError(err)) {
 		if (session.discardOnAbort) {
 			try {
@@ -813,26 +827,36 @@ async function settleRunWithError(session: InternalSession, err: unknown): Promi
 	emit({ type: 'settled', session: toView(session), actEnded: false, storyConcluded: false });
 }
 
-/** Track async phases (Summarizer → Compressor → Memory) per line after the main chain completes. */
-function wireAsyncPhases(session: InternalSession, asyncPhases: Promise<AsyncPhaseResults>): void {
+/** Track background phases (Summarizer → Compressor → Memory) per line after the main chain completes. */
+function wireBackgroundPhases(session: InternalSession, backgroundPhases: Promise<BackgroundPhaseResults>): void {
 	const pending = (async () => {
 		try {
-			const asyncResults = await asyncPhases;
-			const { updatedMessage, metadataUpdates } = resolveAsyncPhaseMetadata(session.message, asyncResults, session.mainConfig);
+			const backgroundResults = await backgroundPhases;
+			const { updatedMessage, metadataUpdates } = resolveBackgroundPhaseMetadata(session.message, backgroundResults);
 			session.message = updatedMessage;
 			emitUpdate(session);
 			await updatePersistentMessageMetadata(session.messageId, metadataUpdates);
 			await dbMessagePhases.upsertMessagePhases(session.messageId, updatedMessage.phases ?? []);
+			const backgroundEntries = (updatedMessage.metadata?.phases ?? []).filter((p) => BACKGROUND_PHASES.includes(p.phaseName as PhaseName));
+			if (backgroundEntries.length > 0) {
+				await fileLog('debug', 'pipeline-cache', () => formatCacheEfficiency(summarizeCacheEfficiency(backgroundEntries)));
+			}
 		} catch (err) {
+			session.streamingPhases = [];
+			session.message = {
+				...session.message,
+				phases: (session.message.phases ?? []).filter((p) => !BACKGROUND_PHASES.includes(p.phaseName)),
+			};
+			emitUpdate(session);
 			if (isAbortLikeError(err)) {
-				await log.warn(LOG_TAG, 'Async phases aborted');
+				await log.warn(LOG_TAG, 'Background phases aborted');
 			} else {
-				await log.error(LOG_TAG, 'Async phases failed', err);
+				await log.error(LOG_TAG, 'Background phases failed', err);
 			}
 		} finally {
-			pendingAsyncByLine.delete(session.actLineId);
-			emit({ type: 'async-settled', actLineId: session.actLineId });
+			pendingBackgroundByLine.delete(session.actLineId);
+			emit({ type: 'background-settled', actLineId: session.actLineId });
 		}
 	})();
-	pendingAsyncByLine.set(session.actLineId, pending);
+	pendingBackgroundByLine.set(session.actLineId, { promise: pending, session });
 }

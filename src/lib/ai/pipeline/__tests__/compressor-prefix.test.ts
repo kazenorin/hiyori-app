@@ -97,25 +97,20 @@ describe('formatExistingProfilesForCompressor', () => {
 
 const compressionCalls: { system: string; messages: { role: string; content: string }[]; tools: Record<string, unknown> | undefined }[] =
 	[];
-vi.mock('#lib/ai/pipeline/phase-executor.ts', () => ({
-	runNonStreamingPhase: vi.fn(
-		async (
-			phase: string,
-			system: string,
-			messages: never[],
-			config: unknown,
-			signal: unknown,
-			tools: Record<string, unknown> | undefined
-		) => {
-			compressionCalls.push({ system, messages, tools });
+vi.mock('#lib/ai/chat-stream.ts', () => ({
+	DEFAULT_RETRY_CONFIG: { retryCount: 2, backoffIntervalSeconds: 2 },
+	streamWithRetry: vi.fn(
+		async (_system: string, _messages: { role: string; content: string }[], options: { tools?: Record<string, unknown> }) => {
+			compressionCalls.push({ system: _system, messages: _messages, tools: options.tools });
 			return {
-				text: '',
-				metadata: {
+				state: { content: '', reasoning: null, variables: null },
+				resultMetadata: Promise.resolve({
 					finishReason: 'stop',
 					usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
 					durationMs: 1,
 					models: new Set(['m']),
-				},
+				}),
+				callbacks: {},
 			};
 		}
 	),
@@ -199,13 +194,19 @@ describe('compressor shared-prefix layout (step 1)', () => {
 it('fills the holder with the new act summary before the executor runs', async () => {
 	const compression: ProfileCompressionState = { completedScenes: 9, newActSummary: undefined, attemptCount: 0, successCount: 0 };
 	let seen: unknown;
-	const { runNonStreamingPhase } = await import('#lib/ai/pipeline/phase-executor.ts');
-	vi.mocked(runNonStreamingPhase).mockImplementationOnce(async () => {
+	const { streamWithRetry } = await import('#lib/ai/chat-stream.ts');
+	vi.mocked(streamWithRetry).mockImplementationOnce(async () => {
 		seen = compression.newActSummary;
 		return {
-			text: '',
-			metadata: { finishReason: 'stop', usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 }, durationMs: 1, models: new Set(['m']) },
-		};
+			state: { content: '', reasoning: null, variables: null },
+			resultMetadata: Promise.resolve({
+				finishReason: 'stop',
+				usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+				durationMs: 1,
+				models: new Set(['m']),
+			}),
+			callbacks: {},
+		} as never;
 	});
 	const newSummary = parseActSummary(
 		'# Act Summary\n\n## Scene Summaries\n\n### Scene 9: The Gate\n- Location: Gate\n- Summary: They arrive.'

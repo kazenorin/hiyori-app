@@ -26,6 +26,7 @@ export interface PipelineState {
 	gameMasterOutput?: string;
 	gameData?: GameDataFields | null;
 	actSummary?: string;
+	profileCompressionLog?: string;
 }
 
 /** Stream state for a single phase during streaming */
@@ -39,7 +40,8 @@ export interface PipelineCallbacks {
 	onPhaseStart: (phase: PhaseName) => void;
 	onPhaseStream: (phase: PhaseName, streamState: PhaseStreamState) => void;
 	onPhaseRetry: (phase: PhaseName, attempt: number, maxAttempts: number) => void;
-	onPhaseComplete: (phase: PhaseName, state: PipelineState) => void;
+	onPhaseComplete: (phase: PhaseName, state: PipelineState, metadata?: StreamResultMetadata) => void;
+	onPhaseFailed?: (phase: PhaseName) => void;
 	onError: (phase: PhaseName, error: unknown) => void;
 	onPhrasesExtracted?: (phrases: string[]) => void;
 	onAllComplete: (state: PipelineState) => void;
@@ -55,18 +57,35 @@ export interface CompressorResult {
 	metadata: StreamResultMetadata;
 }
 
-/** Run-scoped mutable state shared between the compressor tool's execute and the async chain. */
+/** One update-character-profile attempt, as supplied to the tool (observer payload). */
+export interface ProfileUpdateAttempt {
+	input: {
+		name: string;
+		preferredName?: string;
+		aliases?: string[];
+		logline?: string | null;
+		state?: string | null;
+		goal?: string | null;
+		relationships?: string | null;
+		voice?: string | null;
+		traits?: string[];
+		importance?: number;
+	};
+	result: string;
+	success: boolean;
+}
+
+/** Run-scoped mutable state shared between the compressor tool's execute and the background chain. */
 export interface ProfileCompressionState {
 	completedScenes: number;
 	newActSummary: ActSummary | undefined;
 	attemptCount: number;
 	successCount: number;
+	onAttempt?: (attempt: ProfileUpdateAttempt) => void;
 }
 
-export interface AsyncPhaseResults {
+export interface BackgroundPhaseResults {
 	actSummary?: string;
-	summarizerMetadata?: StreamResultMetadata;
-	compressorMetadata?: StreamResultMetadata;
 }
 
 /** Player response context. Both fields are present together or both absent. */
@@ -118,7 +137,7 @@ export interface CommonPipelineInput {
 	directorNotes: string;
 	previousNarrativeVariables: NarrativeVariables | undefined;
 	/**
-	 * The CURRENT act's latest summary (as of `completedScenes`), consumed by the async
+	 * The CURRENT act's latest summary (as of `completedScenes`), consumed by the background
 	 * Summarizer. Not derivable from `previousActSummaries` (prior acts) or from
 	 * `context.actSummaryAtSP` (the current act, frozen at the older summarization point).
 	 */
@@ -147,7 +166,7 @@ export interface PipelineResult {
 	state: PipelineState;
 	aggregatedMetadata?: StreamResultMetadata;
 	phases?: PhaseMetadata[];
-	asyncPhases?: Promise<AsyncPhaseResults>;
+	backgroundPhases?: Promise<BackgroundPhaseResults>;
 }
 /**
  * Shared prompt-prefix context (Tiers 0–2), assembled once per run by the run manager

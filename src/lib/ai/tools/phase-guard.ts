@@ -17,7 +17,7 @@ export const SIDE_EFFECTING_TOOLS: ReadonlySet<string> = new Set([
  * phases — keeping the tool block inside the cacheable prefix. Read-only tools and allowed
  * side-effecting tools pass through by reference, so their internal state guards (e.g.
  * advance-phase's `hasAdvancedPhase`) run unchanged. With `strict`, every tool outside
- * `allowed` no-ops instead — read-only included — for async phases that must not call any
+ * `allowed` no-ops instead — read-only included — for background phases that must not call any
  * tool. Pure: no DB/settings/locale imports.
  */
 export function withPhaseGuards(

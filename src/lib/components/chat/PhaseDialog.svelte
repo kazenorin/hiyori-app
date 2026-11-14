@@ -14,7 +14,7 @@
 		getPhaseDialogSelection,
 		setPhaseDialogSelection,
 	} from './phase-dialog-state.svelte';
-	import { findDisplayedMessage, getCharacterNames, getMessages, getStreamingPhase } from '#lib/ai/chat.svelte.ts';
+	import { findDisplayedMessage, getCharacterNames, getMessages, getStreamingPhases } from '#lib/ai/chat.svelte.ts';
 	import { getActiveActLineId, getActiveStory } from '#lib/stores/stories.svelte.ts';
 	import { mobileFeatures } from '#lib/stores/mobile-nav.svelte.ts';
 	import { getAvailableContexts } from '#lib/features/context-availability.svelte.ts';
@@ -42,7 +42,7 @@
 	const phaseMeta = $derived(active ? message?.metadata?.phases?.find((m) => m.phaseName === active.phaseName) : undefined);
 	const characterNames = $derived(getCharacterNames());
 	// The run-manager session is the spinner source; only the live last message can be streaming.
-	const streamingPhase = $derived(message === getMessages().at(-1) ? getStreamingPhase() : null);
+	const streamingPhases = $derived(message === getMessages().at(-1) ? getStreamingPhases() : []);
 	const cacheReadPct = $derived(
 		phaseMeta?.cacheReadTokens && phaseMeta.inputTokens > 0 ? Math.round((phaseMeta.cacheReadTokens / phaseMeta.inputTokens) * 100) : null
 	);
@@ -81,7 +81,7 @@
 	}
 
 	// On dialog open / pane switch: a streaming pane starts pinned to the bottom, a settled pane
-	// starts at the top. streamingPhase is read untracked so phase progression elsewhere in the
+	// starts at the top. streamingPhases is read untracked so phase progression elsewhere in the
 	// run does not reset the current pane's scroll position.
 	$effect(() => {
 		if (activeContext !== null) return;
@@ -89,9 +89,9 @@
 		const idx = activeIdx;
 		if (!el || idx < 0) return;
 		const phaseName = untrack(() => phases[idx]?.phaseName);
-		const streaming = untrack(() => streamingPhase);
+		const streaming = untrack(() => streamingPhases);
 		requestAnimationFrame(() => {
-			pinnedToBottom = phaseName !== undefined && phaseName === streaming;
+			pinnedToBottom = phaseName !== undefined && streaming.includes(phaseName);
 			el.scrollTop = pinnedToBottom ? el.scrollHeight : 0;
 		});
 	});
@@ -152,14 +152,14 @@
 							<button
 								class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm shrink-0 transition-colors {pi === activeIdx
 									? 'bg-primary-500 text-white'
-									: 'text-surface-500 hover:bg-surface-200-800'} {phase.phaseName !== streamingPhase && isNotStarted(phase)
+									: 'text-surface-500 hover:bg-surface-200-800'} {!streamingPhases.includes(phase.phaseName) && isNotStarted(phase)
 									? 'opacity-45'
 									: ''}"
 								type="button"
 								aria-current={pi === activeIdx ? 'true' : undefined}
 								onclick={() => select(phase.phaseName)}
 							>
-								{#if phase.phaseName === streamingPhase}
+								{#if streamingPhases.includes(phase.phaseName)}
 									<Icon name="loader-circle" class="size-4 animate-spin shrink-0" aria-hidden="true" />
 								{:else}
 									<Icon name={PHASE_ICONS[phase.phaseName]} class="size-4 shrink-0" aria-hidden="true" />
@@ -177,14 +177,14 @@
 							<button
 								class="flex items-center gap-2 px-3 py-2 rounded-(--radius-base) text-sm text-left transition-colors {pi === activeIdx
 									? 'bg-surface-200-800 text-primary-600-400 font-medium'
-									: 'text-surface-500 hover:bg-surface-200-800'} {phase.phaseName !== streamingPhase && isNotStarted(phase)
+									: 'text-surface-500 hover:bg-surface-200-800'} {!streamingPhases.includes(phase.phaseName) && isNotStarted(phase)
 									? 'opacity-45'
 									: ''}"
 								type="button"
 								aria-current={pi === activeIdx ? 'true' : undefined}
 								onclick={() => select(phase.phaseName)}
 							>
-								{#if phase.phaseName === streamingPhase}
+								{#if streamingPhases.includes(phase.phaseName)}
 									<Icon name="loader-circle" class="size-4 shrink-0 animate-spin" aria-hidden="true" />
 								{:else}
 									<Icon name={PHASE_ICONS[phase.phaseName]} class="size-4 shrink-0" aria-hidden="true" />

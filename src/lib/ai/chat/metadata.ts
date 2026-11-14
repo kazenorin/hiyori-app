@@ -1,9 +1,9 @@
-import { buildMetadata, toPhaseMetadata, type MessageMetadata, type PhaseMetadata } from '../chat-stream';
-import { getSummarizerProviderConfig, type ProviderConfig } from '#lib/stores/settings.svelte.ts';
+import { buildMetadata, type MessageMetadata, type PhaseMetadata } from '../chat-stream';
 import type { UIMessage } from './types';
-import type { PhaseName, UIScenePhase } from '../narrative-types';
-import type { AsyncPhaseResults } from '../pipeline/types';
+import { BACKGROUND_PHASES, type PhaseName } from '../narrative-types';
+import type { BackgroundPhaseResults } from '../pipeline/types';
 import type { StreamResultMetadata } from '../streaming';
+import { aggregateMetadataFromPhases } from '../pipeline/phase-executor';
 
 export function updateMetaData(
 	resultMetadata: StreamResultMetadata | null | undefined,
@@ -33,64 +33,33 @@ export function mergeTokenFields(
 	};
 }
 
-/** Merge compressor metadata into base metadata. Returns base unchanged if no compressor metadata present. */
-export function mergeCompressorIntoMetadata(
-	base: MessageMetadata | undefined,
-	asyncResults: { compressorMetadata?: StreamResultMetadata },
-	existingMetadata: MessageMetadata | undefined,
-	summarizerModel: string
+/** Re-append background phase entries already merged during the run (finalize rebuilds from the main aggregate). */
+export function mergePreservedBackgroundMetadata(
+	mainMetadata: MessageMetadata | undefined,
+	existingMetadata: MessageMetadata | undefined
 ): MessageMetadata | undefined {
-	if (!asyncResults.compressorMetadata) return base;
-	const cm = asyncResults.compressorMetadata;
-	const compressorPhaseEntry = toPhaseMetadata('CHARACTER_PROFILE_COMPRESSOR', cm, summarizerModel);
-	return mergeTokenFields(base ?? existingMetadata, cm, compressorPhaseEntry, summarizerModel);
+	const backgroundEntries = (existingMetadata?.phases ?? []).filter((p) => BACKGROUND_PHASES.includes(p.phaseName as PhaseName));
+	let merged = mainMetadata;
+	for (const entry of backgroundEntries) {
+		const delta = aggregateMetadataFromPhases([entry]);
+		if (delta) merged = mergeTokenFields(merged, delta, entry, entry.model);
+	}
+	return merged;
 }
 
-export interface AsyncPhaseResolution {
+export interface BackgroundPhaseResolution {
 	updatedMessage: UIMessage;
 	metadataUpdates: { actSummary?: string; metadata?: string };
 }
 
-/** Resolve async phase results into an updated message and metadata changes for DB persistence. */
-export function resolveAsyncPhaseMetadata(
-	existing: UIMessage,
-	asyncResults: AsyncPhaseResults,
-	mainConfig: ProviderConfig
-): AsyncPhaseResolution {
-	const summarizerModel = getSummarizerProviderConfig()?.model ?? mainConfig.model;
-	const updatedPhases: UIScenePhase[] = existing.phases ? [...existing.phases] : [];
+/** Persist the background chain's results; content/reasoning/metadata already landed via callbacks. */
+export function resolveBackgroundPhaseMetadata(existing: UIMessage, backgroundResults: BackgroundPhaseResults): BackgroundPhaseResolution {
 	const metadataUpdates: { actSummary?: string; metadata?: string } = {};
-
-	if (asyncResults.actSummary !== undefined) {
-		updatedPhases.push({ phaseName: 'SUMMARIZER' as PhaseName, content: asyncResults.actSummary });
-		metadataUpdates.actSummary = asyncResults.actSummary;
-	}
-
-	let baseMetadata: MessageMetadata | undefined;
-	if (asyncResults.summarizerMetadata) {
-		const phaseEntry = toPhaseMetadata('SUMMARIZER', asyncResults.summarizerMetadata, summarizerModel);
-		baseMetadata = mergeTokenFields(existing.metadata, asyncResults.summarizerMetadata, phaseEntry, summarizerModel);
-		metadataUpdates.metadata = JSON.stringify(baseMetadata);
-	}
-
-	if (asyncResults.compressorMetadata) {
-		updatedPhases.push({
-			phaseName: 'CHARACTER_PROFILE_COMPRESSOR' as PhaseName,
-			content: 'compressed',
-		});
-	}
-
-	const finalMetadata = mergeCompressorIntoMetadata(baseMetadata, asyncResults, existing.metadata, summarizerModel);
-	if (finalMetadata !== baseMetadata) {
-		metadataUpdates.metadata = JSON.stringify(finalMetadata);
-	}
-
+	if (backgroundResults.actSummary !== undefined) metadataUpdates.actSummary = backgroundResults.actSummary;
+	if (existing.metadata) metadataUpdates.metadata = JSON.stringify(existing.metadata);
 	const updatedMessage: UIMessage = {
 		...existing,
-		actSummary: asyncResults.actSummary ?? existing.actSummary,
-		phases: updatedPhases,
-		...(finalMetadata && { metadata: finalMetadata }),
+		actSummary: backgroundResults.actSummary ?? existing.actSummary,
 	};
-
 	return { updatedMessage, metadataUpdates };
 }

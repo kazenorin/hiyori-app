@@ -46,13 +46,13 @@ let displayedActLineId: string | null = null;
 /** Reactive mirror of the displayed line's run state — the run-manager registry itself is not reactive. */
 let displayedRunStatus = $state<'running' | null>(null);
 let displayedRunKind = $state<PipelineRunKind | null>(null);
-let displayedStreamingPhase = $state<PhaseName | null>(null);
+let displayedStreamingPhases = $state<PhaseName[]>([]);
 let error = $state<string | null>(null);
 let actEnded = $state(false);
 let storyConcluded = $state(false);
 let isConcludingStoryOverride = $state(false);
 let isBackfilling = $state(false);
-let isAsyncPending = $state(false);
+let isBackgroundPending = $state(false);
 /** Interrupted run awaiting the user's Continue/Discard decision for the displayed line. */
 let interruptedRun = $state<InterruptedRunInfo | null>(null);
 
@@ -75,20 +75,20 @@ function syncDisplayedRun(): void {
 	const session = displayedActLineId ? runManager.getActiveSession(displayedActLineId) : undefined;
 	displayedRunStatus = session?.status === 'running' ? 'running' : null;
 	displayedRunKind = session?.kind ?? null;
-	displayedStreamingPhase = session?.status === 'running' ? session.streamingPhase : null;
+	displayedStreamingPhases = [...(session?.streamingPhases ?? [])];
 }
 
 export function getIsStreaming(): boolean {
-	return displayedRunStatus === 'running' || isBackfilling;
+	return displayedRunStatus === 'running' || isBackgroundPending || isBackfilling;
 }
 
-/** Phase currently streaming on the displayed line, or null (spinner source for strip/dialog). */
-export function getStreamingPhase(): PhaseName | null {
-	return displayedStreamingPhase;
+/** Phases currently streaming on the displayed line (spinner source for strip/dialog). */
+export function getStreamingPhases(): PhaseName[] {
+	return displayedStreamingPhases;
 }
 
-export function getIsProcessingAsync(): boolean {
-	return isAsyncPending;
+export function getIsProcessingBackground(): boolean {
+	return isBackgroundPending;
 }
 
 export function getIsConcludingStory(): boolean {
@@ -100,7 +100,7 @@ export function setIsConcludingStory(value: boolean): void {
 }
 
 export function getIsBusy(): boolean {
-	return getIsStreaming() || getIsProcessingAsync() || getIsConcludingStory() || interruptedRun !== null;
+	return getIsStreaming() || getIsProcessingBackground() || getIsConcludingStory() || interruptedRun !== null;
 }
 
 export function getError(): string | null {
@@ -153,8 +153,11 @@ function mirrorSessionMessage(message: UIMessage): void {
 // --- Run event mirroring: only the displayed act line is reflected in the UI ---
 
 runManager.subscribeRuns((event) => {
-	if (event.type === 'async-settled') {
-		if (event.actLineId === displayedActLineId) isAsyncPending = false;
+	if (event.type === 'background-settled') {
+		if (event.actLineId === displayedActLineId) {
+			isBackgroundPending = false;
+			syncDisplayedRun();
+		}
 		return;
 	}
 	const { session } = event;
@@ -169,7 +172,7 @@ runManager.subscribeRuns((event) => {
 	switch (session.status) {
 		case 'completed':
 			mirrorSessionMessage(session.message);
-			isAsyncPending = runManager.isProcessingAsyncPhases(session.actLineId);
+			isBackgroundPending = runManager.isProcessingBackgroundPhases(session.actLineId);
 			if (event.actEnded) actEnded = true;
 			if (event.storyConcluded) storyConcluded = true;
 			break;
@@ -288,7 +291,7 @@ export async function loadActLineMessages(actLineId: string): Promise<void> {
 	syncDisplayedRun();
 	interruptedRun = null;
 	error = null;
-	isAsyncPending = runManager.isProcessingAsyncPhases(actLineId);
+	isBackgroundPending = runManager.isProcessingBackgroundPhases(actLineId);
 
 	const loaded = await loadActLineMessagesFromDB(actLineId);
 	setMessages(loaded);
@@ -331,7 +334,7 @@ export async function clearMessages(): Promise<void> {
 	interruptedRun = null;
 	actEnded = false;
 	storyConcluded = false;
-	isAsyncPending = false;
+	isBackgroundPending = false;
 }
 
 export function updateMessageInState(
@@ -458,7 +461,7 @@ export async function deleteOrphanedUserMessages(actLineId: string): Promise<voi
 	if (success) setMessages(remaining);
 }
 
-// --- Metadata backfill for messages whose async phases never completed ---
+// --- Metadata backfill for messages whose background phases never completed ---
 
 async function regenerateMissingMetadata(actLine: ActLineMeta, msgs: UIMessage[]): Promise<void> {
 	const lastAssistantIdx = msgs.findLastIndex((m) => m.role === 'assistant');

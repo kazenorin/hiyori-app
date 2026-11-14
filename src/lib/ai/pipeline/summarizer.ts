@@ -5,15 +5,19 @@ import type { ToolSet } from 'ai';
 import type { NarrativeVariables } from '../narrative-types';
 import type {
 	AssistantContext,
-	AsyncPhaseResults,
+	BackgroundPhaseResults,
 	CompressorResult,
+	PipelineCallbacks,
 	PipelineContext,
 	PipelineProviderConfigs,
 	PlayerContext,
 	ProfileCompressionState,
 	SummarizerResult,
 } from './types';
-import { runNonStreamingPhase } from './phase-executor';
+import { aggregateMetadata, runNonStreamingPhase } from './phase-executor';
+import { emptyCompressionLog, formatProfileUpdateAttempt } from './compression-log';
+import { DEFAULT_RETRY_CONFIG, streamWithRetry } from '../chat-stream';
+import type { StreamResultMetadata } from '../streaming';
 import {
 	buildPhaseMessages,
 	buildTranscriptSummarizerMessages,
@@ -22,7 +26,7 @@ import {
 	formatExistingProfilesForCompressor,
 	substituteActSummaryTemplate,
 } from './message-builder';
-import { guardToolsForAsyncPhase } from '#lib/ai/tools/tools.ts';
+import { guardToolsForBackgroundPhase } from '#lib/ai/tools/tools.ts';
 import { type ActSummary, mergeActSummary, parseActSummary, parseIncrementalOutput, serializeActSummary } from '../act-summary-parser';
 import { actSummaryHeader, currentCharacterProfilesHeader } from '#lib/definitions/common-headers.ts';
 import {
@@ -50,6 +54,7 @@ export interface SummarizerInput {
 	transcript?: { role: 'user' | 'assistant'; content: string }[];
 	context?: PipelineContext;
 	tools?: ToolSet;
+	callbacks?: PipelineCallbacks;
 }
 
 export interface SummarizerPrompts {
@@ -69,6 +74,7 @@ export interface CharacterProfileCompressorInput {
 	context: PipelineContext;
 	tools: ToolSet | undefined;
 	compression: ProfileCompressionState;
+	callbacks?: PipelineCallbacks;
 }
 
 // --- Summarizer functions ---
@@ -76,6 +82,26 @@ export interface CharacterProfileCompressorInput {
 function requireContext(input: SummarizerInput): PipelineContext {
 	if (!input.context) throw new Error('Summarizer pipeline path requires PipelineContext');
 	return input.context;
+}
+
+async function streamSummaryText(
+	input: SummarizerInput,
+	systemPrompt: string,
+	messages: MessageBase[],
+	tools: ToolSet | undefined
+): Promise<{ text: string; metadata: StreamResultMetadata }> {
+	const accumulator = await streamWithRetry(systemPrompt, messages, {
+		retryConfig: DEFAULT_RETRY_CONFIG,
+		onProgress: (state) => input.callbacks?.onPhaseStream('SUMMARIZER', state),
+		onError: () => {},
+		providerConfig: input.providerConfig,
+		tools,
+		abortSignal: input.abortSignal,
+		descriptors: [],
+		onRetry: input.callbacks ? (attempt, maxAttempts) => input.callbacks!.onPhaseRetry('SUMMARIZER', attempt, maxAttempts) : undefined,
+	});
+	const metadata = await accumulator.resultMetadata;
+	return { text: accumulator.state.content, metadata };
 }
 
 export async function generateFullSummary(input: SummarizerInput, prompts: SummarizerPrompts): Promise<SummarizerResult> {
@@ -111,17 +137,12 @@ export async function generateFullSummary(input: SummarizerInput, prompts: Summa
 			finalLine,
 			''
 		);
-		phaseTools = guardToolsForAsyncPhase(input.tools, 'SUMMARIZER');
+		phaseTools = guardToolsForBackgroundPhase(input.tools, 'SUMMARIZER');
 	}
 
-	const { text: rawSummary, metadata } = await runNonStreamingPhase(
-		'SUMMARIZER',
-		systemPrompt,
-		summarizerMessages,
-		providerConfig,
-		abortSignal,
-		phaseTools
-	);
+	const { text: rawSummary, metadata } = input.transcript?.length
+		? await runNonStreamingPhase('SUMMARIZER', systemPrompt, summarizerMessages, providerConfig, abortSignal, phaseTools)
+		: await streamSummaryText(input, systemPrompt, summarizerMessages, phaseTools);
 	const { completedScenes, previousNarrativeVariables } = input;
 	try {
 		const parsed = parseActSummary(rawSummary);
@@ -140,7 +161,6 @@ export async function generateFullSummary(input: SummarizerInput, prompts: Summa
 
 async function generateIncrementalSummary(input: SummarizerInput, prompts: SummarizerPrompts): Promise<SummarizerResult> {
 	const { actSummary, completedScenes, previousNarrativeVariables } = input;
-	const { providerConfig, abortSignal } = input;
 
 	const existingParsed = parseActSummary(actSummary);
 
@@ -155,13 +175,11 @@ async function generateIncrementalSummary(input: SummarizerInput, prompts: Summa
 		summarizerExtractionPromptTemplate(sceneNumber, sceneTitle),
 		''
 	);
-	const { text: incrementalRaw, metadata } = await runNonStreamingPhase(
-		'SUMMARIZER',
+	const { text: incrementalRaw, metadata } = await streamSummaryText(
+		input,
 		resolveSharedSystemPrompt(prompts),
 		incrementalMessages,
-		providerConfig,
-		abortSignal,
-		guardToolsForAsyncPhase(input.tools, 'SUMMARIZER')
+		guardToolsForBackgroundPhase(input.tools, 'SUMMARIZER')
 	);
 
 	try {
@@ -177,7 +195,8 @@ async function generateIncrementalSummary(input: SummarizerInput, prompts: Summa
 		return { actSummary: merged, serializedSummary, metadata };
 	} catch (err) {
 		await log.warn('pipeline', `Incremental act summary parse/merge failed, falling back to full summary: ${err}`);
-		return generateFullSummary(input, prompts);
+		const full = await generateFullSummary(input, prompts);
+		return { ...full, metadata: aggregateMetadata(metadata, full.metadata, input.providerConfig?.model) };
 	}
 }
 
@@ -185,7 +204,13 @@ async function generateIncrementalSummary(input: SummarizerInput, prompts: Summa
  * Run the summarizer sub-pipeline: incremental if an act summary exists, full generation otherwise.
  */
 export async function generateSummarizerResult(input: SummarizerInput, prompts: SummarizerPrompts): Promise<SummarizerResult> {
-	return input.actSummary ? generateIncrementalSummary(input, prompts) : generateFullSummary(input, prompts);
+	const callbacks = input.callbacks;
+	const generate = () => (input.actSummary ? generateIncrementalSummary(input, prompts) : generateFullSummary(input, prompts));
+	if (!callbacks) return generate();
+	callbacks.onPhaseStart('SUMMARIZER');
+	const result = await generate();
+	callbacks.onPhaseComplete('SUMMARIZER', { actSummary: result.serializedSummary }, result.metadata);
+	return result;
 }
 
 // --- Character profile compressor ---
@@ -223,16 +248,43 @@ export async function generateCharacterProfiles(
 	);
 
 	compressorInput.compression.newActSummary = newActSummary;
-	const { metadata } = await runNonStreamingPhase(
-		'CHARACTER_PROFILE_COMPRESSOR',
-		resolveSharedSystemPrompt(prompts),
-		messages,
-		providerConfig,
-		abortSignal,
-		guardToolsForAsyncPhase(compressorInput.tools, 'CHARACTER_PROFILE_COMPRESSOR')
-	);
-
+	const callbacks = compressorInput.callbacks;
 	const { compression } = compressorInput;
+	let toolLog = '';
+	let latestReasoning: string | null = null;
+	const emitStream = () =>
+		callbacks?.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', { content: toolLog, reasoning: latestReasoning, variables: null });
+	if (callbacks) {
+		compression.onAttempt = (attempt) => {
+			toolLog += (toolLog ? '\n\n' : '') + formatProfileUpdateAttempt(attempt);
+			emitStream();
+		};
+		callbacks.onPhaseStart('CHARACTER_PROFILE_COMPRESSOR');
+	}
+	let metadata: StreamResultMetadata;
+	try {
+		const accumulator = await streamWithRetry(resolveSharedSystemPrompt(prompts), messages, {
+			retryConfig: DEFAULT_RETRY_CONFIG,
+			onProgress: (state) => {
+				latestReasoning = state.reasoning;
+				emitStream();
+			},
+			onError: () => {},
+			providerConfig,
+			abortSignal,
+			tools: guardToolsForBackgroundPhase(compressorInput.tools, 'CHARACTER_PROFILE_COMPRESSOR'),
+			descriptors: [],
+			allowEmptyText: true,
+			onRetry: callbacks
+				? (attempt, maxAttempts) => callbacks.onPhaseRetry('CHARACTER_PROFILE_COMPRESSOR', attempt, maxAttempts)
+				: undefined,
+		});
+		metadata = await accumulator.resultMetadata;
+	} finally {
+		compression.onAttempt = undefined;
+	}
+	callbacks?.onPhaseComplete('CHARACTER_PROFILE_COMPRESSOR', { profileCompressionLog: toolLog || emptyCompressionLog() }, metadata);
+
 	if (compression.successCount > 0 || compression.attemptCount === 0) {
 		await recordCharacterProfileCompression(compressorInput.actLineId, compressorInput.assistant, completedScenes);
 		await log.info(
@@ -248,9 +300,9 @@ export async function generateCharacterProfiles(
 	return null;
 }
 
-// --- Async phases (Summarizer → Compressor → Memory) ---
+// --- Background phases (Summarizer → Compressor → Memory) ---
 
-export interface AsyncPhasesContext {
+export interface BackgroundPhasesContext {
 	player: PlayerContext | undefined;
 	completedScenes: number;
 	actSummary: string;
@@ -265,9 +317,10 @@ export interface AsyncPhasesContext {
 	context: PipelineContext;
 	tools: ToolSet | undefined;
 	compression: ProfileCompressionState;
+	callbacks: PipelineCallbacks;
 }
 
-export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhaseResults> {
+export async function runBackgroundPhases(ctx: BackgroundPhasesContext): Promise<BackgroundPhaseResults> {
 	const {
 		player,
 		completedScenes,
@@ -283,6 +336,7 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 		context,
 		tools,
 		compression,
+		callbacks,
 	} = ctx;
 	if (player?.playerResponse && completedScenes > 0) {
 		const summarizerInput: SummarizerInput = {
@@ -294,6 +348,7 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 			abortSignal,
 			context,
 			tools,
+			callbacks,
 		};
 		const summarizerPrompts: SummarizerPrompts = {
 			summarizerPrompt: loadedPrompts.summarizerPrompt,
@@ -306,15 +361,15 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 		try {
 			result = await generateSummarizerResult(summarizerInput, summarizerPrompts);
 		} catch (err) {
+			callbacks.onPhaseFailed?.('SUMMARIZER');
 			if (isAbortLikeError(err)) {
-				await log.warn('pipeline', 'Async summarizer aborted');
+				await log.warn('pipeline', 'Background summarizer aborted');
 			} else {
-				await log.error('pipeline', 'Async summarizer failed', err);
+				await log.error('pipeline', 'Background summarizer failed', err);
 			}
 			return {};
 		}
 
-		let compressorResult: CompressorResult | null = null;
 		try {
 			if (result.actSummary && actLineId) {
 				const compressorInput: CharacterProfileCompressorInput = {
@@ -326,10 +381,12 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 					context,
 					tools,
 					compression,
+					callbacks,
 				};
-				compressorResult = await generateCharacterProfiles(result.actSummary, compressorInput, summarizerPrompts);
+				await generateCharacterProfiles(result.actSummary, compressorInput, summarizerPrompts);
 			}
 		} catch (err) {
+			callbacks.onPhaseFailed?.('CHARACTER_PROFILE_COMPRESSOR');
 			if (isAbortLikeError(err)) {
 				await log.warn('pipeline', 'Character profile compressor aborted');
 			} else {
@@ -351,15 +408,7 @@ export async function runAsyncPhases(ctx: AsyncPhasesContext): Promise<AsyncPhas
 			}
 		}
 
-		return {
-			actSummary: serializedSummary,
-			summarizerMetadata: result.metadata,
-			...(compressorResult
-				? {
-						compressorMetadata: compressorResult.metadata,
-					}
-				: {}),
-		};
+		return { actSummary: serializedSummary };
 	}
 	return {};
 }

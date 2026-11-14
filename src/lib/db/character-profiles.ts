@@ -67,7 +67,7 @@ function mapRowToEntity(row: CharacterProfileRow): CharacterProfileEntity {
 	};
 }
 
-function parseAliases(raw: string): string[] {
+export function parseAliases(raw: string): string[] {
 	try {
 		const parsed = JSON.parse(raw);
 		return Array.isArray(parsed) ? parsed.filter((a) => typeof a === 'string') : [];
@@ -78,6 +78,10 @@ function parseAliases(raw: string): string[] {
 
 function serializeAliases(aliases: string[]): string {
 	return JSON.stringify(aliases);
+}
+
+export function serializeCanonicalAliases(aliases: string[]): string {
+	return JSON.stringify([...new Set(aliases.map(toCanonicalName))]);
 }
 
 /** Trim entries, drop empties, dedupe exact matches, and keep the first MAX_CHARACTER_TRAITS in order. */
@@ -148,8 +152,8 @@ export async function insertCharacterProfile(input: InsertCharacterProfileInput)
 	const db = getDatabase();
 	const now = Date.now();
 	await db.execute(
-		`INSERT INTO character_profiles (id, act_line_id, scene_number, canonical_name, preferred_name, aliases, logline, state, goal, relationships, voice, traits, scene_details, importance, created_at, updated_at, removed)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+		`INSERT INTO character_profiles (id, act_line_id, scene_number, canonical_name, preferred_name, aliases, logline, state, goal, relationships, voice, traits, scene_details, importance, created_at, updated_at, removed, canonical_aliases)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
 		[
 			input.id,
 			input.actLineId,
@@ -168,6 +172,7 @@ export async function insertCharacterProfile(input: InsertCharacterProfileInput)
 			input.createdAt ?? now,
 			input.updatedAt ?? now,
 			input.removed ? 1 : 0,
+			serializeCanonicalAliases(input.aliases),
 		]
 	);
 }
@@ -237,11 +242,12 @@ export async function getProfilesAtScene(actLineId: string, sceneNumber: number)
 
 /**
  * Get the active profile for a single character, resolving any alias they are known by.
- * Matches on canonical_name, preferred_name OR aliases of the winning version only, so
- * obsolete aliases and tombstoned identities never match.
+ * Matches on canonical_name, preferred_name OR canonical-form aliases of the winning
+ * version only, so obsolete aliases and tombstoned identities never match.
  */
 export async function getLatestProfileByAlias(actLineId: string, nameOrAlias: string): Promise<CharacterProfileEntity | null> {
 	const db = getDatabase();
+	const canonical = toCanonicalName(nameOrAlias);
 	const rows = await db.select<CharacterProfileRow[]>(
 		`SELECT cp.* FROM character_profiles cp
 		 WHERE cp.act_line_id = $1
@@ -253,14 +259,14 @@ export async function getLatestProfileByAlias(actLineId: string, nameOrAlias: st
 		 AND cp.removed = 0
 		 AND (
 			   cp.canonical_name = $2
-				 OR cp.preferred_name = $2
+				 OR cp.preferred_name = $3
 		     OR EXISTS (
-		         SELECT 1 FROM json_each(cp.aliases) WHERE value = $2
+		         SELECT 1 FROM json_each(cp.canonical_aliases) WHERE value = $2
 		     )
 		 )
 		 ORDER BY COALESCE(cp.scene_number, -1) DESC, cp.created_at DESC
 		 LIMIT 1`,
-		[actLineId, nameOrAlias]
+		[actLineId, canonical, nameOrAlias]
 	);
 	return rows.length > 0 ? mapRowToEntity(rows[0]) : null;
 }
@@ -271,6 +277,7 @@ export async function areAnyCharacterNamesKnown(actLineId: string, names: string
 
 	const db = getDatabase();
 	const placeholders = names.map((_, i) => `$${i + 2}`).join(',');
+	const canonicalPlaceholders = names.map((_, i) => `$${i + 2 + names.length}`).join(',');
 
 	const rows = await db.select<{ found: number }[]>(
 		`SELECT 1 as found FROM character_profiles cp
@@ -283,10 +290,10 @@ export async function areAnyCharacterNamesKnown(actLineId: string, names: string
 		 AND cp.removed = 0
 		 AND (
 		     cp.preferred_name IN (${placeholders})
-		     OR EXISTS (SELECT 1 FROM json_each(cp.aliases) WHERE value IN (${placeholders}))
+		     OR EXISTS (SELECT 1 FROM json_each(cp.canonical_aliases) WHERE value IN (${canonicalPlaceholders}))
 		 )
 		 LIMIT 1`,
-		[actLineId, ...names]
+		[actLineId, ...names, ...names.map(toCanonicalName)]
 	);
 
 	return rows.length > 0;
@@ -303,6 +310,7 @@ export async function resolveTombstonedCanonicalName(actLineId: string, names: s
 
 	const db = getDatabase();
 	const placeholders = names.map((_, i) => `$${i + 2}`).join(',');
+	const canonicalPlaceholders = names.map((_, i) => `$${i + 2 + names.length}`).join(',');
 
 	const rows = await db.select<CharacterProfileRow[]>(
 		`SELECT cp.* FROM character_profiles cp
@@ -315,11 +323,11 @@ export async function resolveTombstonedCanonicalName(actLineId: string, names: s
 		 AND cp.removed = 1
 		 AND (
 		     cp.preferred_name IN (${placeholders})
-		     OR EXISTS (SELECT 1 FROM json_each(cp.aliases) WHERE value IN (${placeholders}))
+		     OR EXISTS (SELECT 1 FROM json_each(cp.canonical_aliases) WHERE value IN (${canonicalPlaceholders}))
 		 )
 		 ORDER BY COALESCE(cp.scene_number, -1) DESC, cp.created_at DESC
 		 LIMIT 1`,
-		[actLineId, ...names]
+		[actLineId, ...names, ...names.map(toCanonicalName)]
 	);
 
 	return rows.length > 0 ? rows[0].canonical_name : null;
@@ -390,6 +398,7 @@ interface SerializedProfileWrite {
 	canonicalName: string;
 	preferredName: string;
 	aliases: string;
+	canonicalAliases: string;
 	logline: string;
 	state: string | null;
 	goal: string | null;
@@ -405,7 +414,7 @@ interface SerializedProfileWrite {
 
 const PROFILE_WRITE_SQL = `
 INSERT INTO character_profiles (
-	id, act_line_id, scene_number, canonical_name, preferred_name, aliases, logline,
+	id, act_line_id, scene_number, canonical_name, preferred_name, aliases, canonical_aliases, logline,
 	state, goal, relationships, voice, traits, scene_details, importance, removed,
 	created_at, updated_at
 )
@@ -416,6 +425,7 @@ SELECT
 	json_extract(input.value, '$.canonicalName'),
 	json_extract(input.value, '$.preferredName'),
 	json_extract(input.value, '$.aliases'),
+	json_extract(input.value, '$.canonicalAliases'),
 	json_extract(input.value, '$.logline'),
 	json_extract(input.value, '$.state'),
 	json_extract(input.value, '$.goal'),
@@ -481,6 +491,7 @@ ON CONFLICT(id) DO UPDATE SET
 	canonical_name = excluded.canonical_name,
 	preferred_name = excluded.preferred_name,
 	aliases = excluded.aliases,
+	canonical_aliases = excluded.canonical_aliases,
 	logline = excluded.logline,
 	state = excluded.state,
 	goal = excluded.goal,
@@ -552,6 +563,7 @@ function serializeProfileWrite(
 		canonicalName: next.canonicalName,
 		preferredName: next.preferredName,
 		aliases: serializeAliases(next.aliases ?? []),
+		canonicalAliases: serializeCanonicalAliases(next.aliases ?? []),
 		logline: next.logline,
 		state: next.state ?? null,
 		goal: next.goal ?? null,
@@ -685,8 +697,8 @@ export async function cloneCharacterProfiles(fromActLineId: string, toActLineId:
 	);
 	for (const row of rows) {
 		await db.execute(
-			`INSERT INTO character_profiles (id, act_line_id, scene_number, canonical_name, preferred_name, aliases, logline, state, goal, relationships, voice, traits, scene_details, importance, created_at, updated_at, removed)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+			`INSERT INTO character_profiles (id, act_line_id, scene_number, canonical_name, preferred_name, aliases, logline, state, goal, relationships, voice, traits, scene_details, importance, created_at, updated_at, removed, canonical_aliases)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
 			[
 				crypto.randomUUID(),
 				toActLineId,
@@ -705,6 +717,7 @@ export async function cloneCharacterProfiles(fromActLineId: string, toActLineId:
 				row.created_at,
 				row.updated_at,
 				row.removed,
+				serializeCanonicalAliases(parseAliases(row.aliases)),
 			]
 		);
 	}
@@ -746,8 +759,8 @@ export async function inheritProfilesFromActLine(fromActLineId: string, toActLin
 	for (const row of rows) {
 		const aliases = ensurePreferredInAliases(row.preferred_name, parseAliases(row.aliases));
 		await db.execute(
-			`INSERT INTO character_profiles (id, act_line_id, scene_number, canonical_name, preferred_name, aliases, logline, state, goal, relationships, voice, traits, scene_details, importance, created_at, updated_at, removed)
-			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
+			`INSERT INTO character_profiles (id, act_line_id, scene_number, canonical_name, preferred_name, aliases, logline, state, goal, relationships, voice, traits, scene_details, importance, created_at, updated_at, removed, canonical_aliases)
+			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)`,
 			[
 				crypto.randomUUID(),
 				toActLineId,
@@ -766,6 +779,7 @@ export async function inheritProfilesFromActLine(fromActLineId: string, toActLin
 				now,
 				now,
 				0,
+				serializeCanonicalAliases(aliases),
 			]
 		);
 	}

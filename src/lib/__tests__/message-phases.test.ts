@@ -46,8 +46,8 @@ describe('message_phases CRUD', () => {
 		expect(loaded.get('msg-1')).toEqual(makePhases());
 	});
 
-	it('upsert replaces phase content in place and lets the async chain add a phase', async () => {
-		// Main settle writes the first batch; async settle re-sends the full array
+	it('upsert replaces phase content in place and lets the background chain add a phase', async () => {
+		// Main settle writes the first batch; background settle re-sends the full array
 		// with updated EDITOR content plus a SUMMARIZER row — both upserts must be
 		// idempotent per phase so ordering between them is safe.
 		await messagePhases.upsertMessagePhases('msg-1', makePhases());

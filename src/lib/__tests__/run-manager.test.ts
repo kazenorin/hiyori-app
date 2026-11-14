@@ -76,7 +76,9 @@ vi.mock('#lib/ai/chat/persistence.ts', () => ({
 }));
 
 import {
+	abortRun,
 	draftMessageFromRecord,
+	getActiveSession,
 	resumedSessionMessage,
 	startMainRun,
 	subscribeRuns,
@@ -84,6 +86,8 @@ import {
 	type RunEvent,
 } from '#lib/ai/chat/run-manager.ts';
 import { runPipeline } from '#lib/ai/pipeline/index.ts';
+import { persistMessage } from '#lib/ai/chat/persistence.ts';
+import { fileLog } from '#lib/logging/logger.ts';
 import * as dbMessagePhases from '#lib/db/message-phases.ts';
 import type { PipelineRunRecord } from '#lib/db/pipeline-runs.ts';
 import type { PipelineCallbacks } from '#lib/ai/pipeline/types.ts';
@@ -268,32 +272,54 @@ describe('trackStreamingPhase', () => {
 		};
 	}
 
-	it('sets streamingPhase on phase start and clears it on phase complete, notifying the UI both times', () => {
-		// The phase strip spinner needs a live source: the session must expose which
-		// phase is currently streaming through RunSessionView events.
+	it('adds the phase on start and removes it on complete', () => {
 		const inner = makeInner();
-		const session = { streamingPhase: null as PhaseName | null };
+		const session = { streamingPhases: [] as PhaseName[] };
 		const onUpdate = vi.fn();
 		const wrapped = trackStreamingPhase(session, inner, onUpdate);
 
 		wrapped.onPhaseStart('WRITER');
-		expect(session.streamingPhase).toBe('WRITER');
+		expect(session.streamingPhases).toEqual(['WRITER']);
 		expect(inner.onPhaseStart).toHaveBeenCalledWith('WRITER');
 		expect(onUpdate).toHaveBeenCalledTimes(1);
 
 		wrapped.onPhaseStream('WRITER', { content: 'x', reasoning: null, variables: null });
-		expect(session.streamingPhase).toBe('WRITER');
-		expect(onUpdate).toHaveBeenCalledTimes(1);
+		expect(session.streamingPhases).toEqual(['WRITER']);
 
 		wrapped.onPhaseComplete('WRITER', { writerOutput: 'x' });
-		expect(session.streamingPhase).toBeNull();
-		expect(inner.onPhaseComplete).toHaveBeenCalledWith('WRITER', { writerOutput: 'x' });
+		expect(session.streamingPhases).toEqual([]);
+		expect(inner.onPhaseComplete).toHaveBeenCalledWith('WRITER', { writerOutput: 'x' }, undefined);
 		expect(onUpdate).toHaveBeenCalledTimes(2);
+	});
+
+	it('keeps a single entry when the same phase starts twice', () => {
+		const session = { streamingPhases: [] as PhaseName[] };
+		const wrapped = trackStreamingPhase(session, makeInner(), vi.fn());
+		wrapped.onPhaseStart('WRITER');
+		wrapped.onPhaseStart('WRITER');
+		expect(session.streamingPhases).toEqual(['WRITER']);
+	});
+
+	it('tracks concurrent phases independently — completing one keeps the other spinning', () => {
+		// WHY: GM ‖ Plot Planner (and later Summarizer ‖ Writer) stream at the same
+		// time; a single slot made the second phase overwrite the first's spinner.
+		const session = { streamingPhases: [] as PhaseName[] };
+		const wrapped = trackStreamingPhase(session, makeInner(), vi.fn());
+
+		wrapped.onPhaseStart('GAME_MASTER');
+		wrapped.onPhaseStart('PLOT_PLANNER');
+		expect(session.streamingPhases).toEqual(['GAME_MASTER', 'PLOT_PLANNER']);
+
+		wrapped.onPhaseComplete('GAME_MASTER', { gameMasterOutput: 'gm' });
+		expect(session.streamingPhases).toEqual(['PLOT_PLANNER']);
+
+		wrapped.onPhaseComplete('PLOT_PLANNER', { scenePlot: 'plot' });
+		expect(session.streamingPhases).toEqual([]);
 	});
 
 	it('passes every other callback through untouched', () => {
 		const inner = makeInner();
-		const session = { streamingPhase: null as PhaseName | null };
+		const session = { streamingPhases: [] as PhaseName[] };
 		const wrapped = trackStreamingPhase(session, inner, vi.fn());
 
 		const streamState = { content: 'c', reasoning: null, variables: null };
@@ -310,53 +336,172 @@ describe('phase persistence on settle', () => {
 	beforeEach(() => {
 		settingsMock.reviewerEnabled = false;
 		vi.mocked(dbMessagePhases.upsertMessagePhases).mockClear();
+		vi.mocked(fileLog).mockClear();
 	});
 
-	it('upserts phases at main settle and again after the async chain lands', async () => {
+	it('upserts phases at main settle and again after the background chain lands', async () => {
 		// The write path is the whole point of message_phases: phases must survive
-		// reload (main settle) and gain SUMMARIZER/COMPRESSOR rows when the async
-		// chain finishes after it (async settle).
+		// reload (main settle) and gain SUMMARIZER/COMPRESSOR rows when the background
+		// chain finishes after it (background settle).
 		vi.mocked(runPipeline).mockImplementation(async (input) => {
 			const cb = input.execution.callbacks;
 			cb.onPhaseStart('EDITOR');
 			cb.onPhaseStream('EDITOR', { content: 'final prose', reasoning: 'thoughts', variables: null });
 			cb.onPhaseComplete('EDITOR', { editorOutput: 'final prose', editorReasoning: 'thoughts' });
+			cb.onPhaseStart('SUMMARIZER');
+			cb.onPhaseComplete(
+				'SUMMARIZER',
+				{ actSummary: 'the summary' },
+				{
+					finishReason: 'stop',
+					usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+					durationMs: 1,
+					models: new Set(['sum-model']),
+				}
+			);
 			return {
 				state: { editorOutput: 'final prose' },
 				phases: [],
-				asyncPhases: Promise.resolve({ actSummary: 'the summary' }),
+				backgroundPhases: Promise.resolve({ actSummary: 'the summary' }),
 			};
 		});
 
 		const events: RunEvent[] = [];
 		let resolveSettled!: () => void;
-		let resolveAsyncSettled!: () => void;
+		let resolveBackgroundSettled!: () => void;
 		const settled = new Promise<void>((r) => (resolveSettled = r));
-		const asyncSettled = new Promise<void>((r) => (resolveAsyncSettled = r));
+		const backgroundSettled = new Promise<void>((r) => (resolveBackgroundSettled = r));
 		const off = subscribeRuns((e) => {
 			events.push(e);
 			if (e.type === 'settled') resolveSettled();
-			if (e.type === 'async-settled') resolveAsyncSettled();
+			if (e.type === 'background-settled') resolveBackgroundSettled();
 		});
 
 		const { assistantMessage } = await startMainRun({ actLineId: 'line-1', message: 'go' });
 		await settled;
-		await asyncSettled;
+		await backgroundSettled;
 		off();
 
 		const upserts = vi.mocked(dbMessagePhases.upsertMessagePhases).mock.calls;
 		expect(upserts).toHaveLength(2);
-		// Main settle: the dual-routed EDITOR entry.
+		// Main settle: background rows are excluded (the background chain owns them).
 		expect(upserts[0][0]).toBe(assistantMessage.id);
 		expect(upserts[0][1]).toEqual([{ phaseName: 'EDITOR', content: 'final prose', reasoning: 'thoughts' }]);
-		// Async settle: the full array re-sent with the SUMMARIZER row added.
+		// Background settle: the full array, SUMMARIZER content from the lifecycle callbacks.
 		expect(upserts[1][0]).toBe(assistantMessage.id);
 		expect(upserts[1][1].map((p) => p.phaseName)).toEqual(['EDITOR', 'SUMMARIZER']);
 		expect(upserts[1][1][1].content).toBe('the summary');
 
-		// streamingPhase drives the strip spinner: live during the phase, gone on settle.
-		expect(events.some((e) => e.type === 'update' && e.session.streamingPhase === 'EDITOR')).toBe(true);
+		// The early-merged summarizer metadata survives finalize's rebuild (no double count).
+		const persisted = vi.mocked(persistMessage).mock.calls[0][1];
+		expect(persisted.metadata?.phases?.map((p) => p.phaseName)).toEqual(['SUMMARIZER']);
+		expect(persisted.metadata?.inputTokens).toBe(10);
+
+		// streamingPhases drives the strip spinner: live during the phase, gone on settle.
+		expect(events.some((e) => e.type === 'update' && e.session.streamingPhases.includes('EDITOR'))).toBe(true);
 		const settledEvent = events.find((e) => e.type === 'settled');
-		expect(settledEvent?.type === 'settled' && settledEvent.session.streamingPhase).toBeNull();
+		expect(settledEvent?.type === 'settled' && settledEvent.session.streamingPhases).toEqual([]);
+
+		// WHY: the finalize report only covers main-tracker phases; background usage
+		// must get its own report when the chain lands, or cache measurement misses it.
+		const cacheLogs = vi.mocked(fileLog).mock.calls.filter((c) => c[1] === 'pipeline-cache');
+		expect(cacheLogs.length).toBe(2);
+		const backgroundReport = (cacheLogs[1][2] as () => string)();
+		expect(backgroundReport).toContain('SUMMARIZER');
+		expect(backgroundReport).toContain('input=10');
+	});
+
+	it('skips the background cache report when no background phase metadata landed', async () => {
+		// WHY: the report is guarded on non-empty background entries — a chain that
+		// lands without phase metadata (or an epilogue, which has no background chain)
+		// must not emit an empty report.
+		vi.mocked(runPipeline).mockImplementation(async (input) => {
+			const cb = input.execution.callbacks;
+			cb.onPhaseStart('EDITOR');
+			cb.onPhaseComplete('EDITOR', { editorOutput: 'prose' });
+			return { state: { editorOutput: 'prose' }, phases: [], backgroundPhases: Promise.resolve({}) };
+		});
+
+		let resolveBackgroundSettled!: () => void;
+		const backgroundSettled = new Promise<void>((r) => (resolveBackgroundSettled = r));
+		const off = subscribeRuns((e) => {
+			if (e.type === 'background-settled') resolveBackgroundSettled();
+		});
+
+		await startMainRun({ actLineId: 'line-1', message: 'go' });
+		await backgroundSettled;
+		off();
+
+		const cacheLogs = vi.mocked(fileLog).mock.calls.filter((c) => c[1] === 'pipeline-cache');
+		expect(cacheLogs.length).toBe(1);
+	});
+});
+
+describe('background session reachability', () => {
+	beforeEach(() => {
+		settingsMock.reviewerEnabled = false;
+	});
+
+	function mockRunWithDeferredBackground() {
+		let resolveBackground!: (v: { actSummary?: string }) => void;
+		const backgroundPhases = new Promise<{ actSummary?: string }>((r) => (resolveBackground = r));
+		let capturedSignal: AbortSignal | undefined;
+		vi.mocked(runPipeline).mockImplementation(async (input) => {
+			capturedSignal = input.execution.abortSignal;
+			const cb = input.execution.callbacks;
+			cb.onPhaseStart('EDITOR');
+			cb.onPhaseComplete('EDITOR', { editorOutput: 'prose' });
+			cb.onPhaseStart('SUMMARIZER');
+			return { state: { editorOutput: 'prose' }, phases: [], backgroundPhases };
+		});
+		return { resolveBackground: () => resolveBackground({ actSummary: 's' }), getSignal: () => capturedSignal };
+	}
+
+	it('getActiveSession falls back to the background session after main settle', async () => {
+		// WHY: spinners and re-attach must keep working while the background chain
+		// runs after the main run has settled and unregistered.
+		const { resolveBackground } = mockRunWithDeferredBackground();
+		const events: RunEvent[] = [];
+		let resolveSettled!: () => void;
+		let resolveBackgroundSettled!: () => void;
+		const settled = new Promise<void>((r) => (resolveSettled = r));
+		const backgroundSettled = new Promise<void>((r) => (resolveBackgroundSettled = r));
+		const off = subscribeRuns((e) => {
+			events.push(e);
+			if (e.type === 'settled') resolveSettled();
+			if (e.type === 'background-settled') resolveBackgroundSettled();
+		});
+
+		await startMainRun({ actLineId: 'line-1', message: 'go' });
+		await settled;
+
+		const view = getActiveSession('line-1');
+		expect(view).toBeDefined();
+		expect(view?.streamingPhases).toEqual(['SUMMARIZER']);
+
+		resolveBackground();
+		await backgroundSettled;
+		expect(getActiveSession('line-1')).toBeUndefined();
+		off();
+	});
+
+	it('abortRun aborts the background chain when no live run is running', async () => {
+		// WHY: Stop must cover visible background phases (design D3).
+		const { resolveBackground, getSignal } = mockRunWithDeferredBackground();
+		let resolveSettled!: () => void;
+		const settled = new Promise<void>((r) => (resolveSettled = r));
+		const off = subscribeRuns((e) => {
+			if (e.type === 'settled') resolveSettled();
+		});
+
+		await startMainRun({ actLineId: 'line-1', message: 'go' });
+		await settled;
+		expect(getSignal()?.aborted).toBe(false);
+
+		abortRun('line-1');
+		expect(getSignal()?.aborted).toBe(true);
+
+		resolveBackground();
+		off();
 	});
 });

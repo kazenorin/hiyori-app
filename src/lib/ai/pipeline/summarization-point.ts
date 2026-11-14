@@ -5,7 +5,7 @@ import type { UIMessage } from '../chat/types';
  * Summaries snapshot. Scenes after the SP are injected raw and append-only, so the
  * shared prefix stays byte-stable across turns within an interval.
  *
- * The async Summarizer of the run for scene S+1 merges scene S and persists the
+ * The background Summarizer of the run for scene S+1 merges scene S and persists the
  * resulting summary (covering scenes 1..S) on the assistant message for scene S+1, so
  * a boundary's own snapshot only exists from the run after it. The SP is therefore one
  * full interval below the current boundary —
@@ -39,7 +39,7 @@ const NO_SUMMARIES: SummariesSnapshot = { summarizationPoint: 0, actSummaryAtSP:
  * Resolve the frozen Summaries snapshot and the raw-Scenes window for a run. The
  * snapshot covering 1..SP is the act summary persisted on the assistant message for
  * scene SP+1 (see `resolveSummarizationPoint`), looked up by exact match: when that
- * message carries no summary (its run's async Summarizer failed or was aborted),
+ * message carries no summary (its run's background Summarizer failed or was aborted),
  * every scene stays raw instead of freezing an older snapshot whose coverage would
  * leave the scenes after it in a gap.
  */

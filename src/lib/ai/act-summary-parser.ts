@@ -9,7 +9,7 @@ import {
 	traitsLabel,
 	importanceLabel,
 } from '#lib/definitions/character-profile-labels.ts';
-import { parseTraits, type CharacterImportance } from '#lib/db/character-profiles.ts';
+import { parseTraits, toCanonicalName, type CharacterImportance } from '#lib/db/character-profiles.ts';
 import {
 	sceneSummariesHeader,
 	characterSummariesHeader,
@@ -184,7 +184,17 @@ function parseCharactersBody(body: string): CharacterSummary[] {
 		const h3Match = trimmed.match(/^###\s+(.+)$/);
 		if (h3Match) {
 			if (currentCharacter) characters.push(currentCharacter);
-			currentCharacter = { characterName: h3Match[1].trim(), aliases: [], sceneEntries: [] };
+			// The summary template uses [bracket] placeholders; models copy the brackets
+			// into names, and name-form drift breaks exact-match sceneDetails derivation
+			// and mergeActSummary identity.
+			currentCharacter = {
+				characterName: h3Match[1]
+					.trim()
+					.replace(/^\[(.+)\]$/, '$1')
+					.trim(),
+				aliases: [],
+				sceneEntries: [],
+			};
 			continue;
 		}
 
@@ -505,8 +515,13 @@ export function serializeActSummary(data: ActSummary): string {
 	return lines.join('\n').trimEnd();
 }
 
-export function serializeCharacterSceneDetails(actSummary: ActSummary, characterName: string): string {
-	const character = actSummary.characters.find((c) => c.characterName === characterName || c.aliases.includes(characterName));
+export function serializeCharacterSceneDetails(actSummary: ActSummary, characterNames: readonly string[]): string {
+	// The summarizer refers to characters by short/role names; the profile's
+	// accumulated aliases are the structural link (canonical-form intersection),
+	// while name equality stays the stronger signal.
+	const names = new Set(characterNames.map(toCanonicalName));
+	const byName = actSummary.characters.find((c) => names.has(toCanonicalName(c.characterName)));
+	const character = byName ?? actSummary.characters.find((c) => c.aliases.some((a) => names.has(toCanonicalName(a))));
 	if (!character || character.sceneEntries.length === 0) return '';
 	const lines = character.sceneEntries.map((e) => `- ${e.sceneNumber}: ${e.summary}`);
 	return lines.join('\n');

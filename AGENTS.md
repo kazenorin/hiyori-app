@@ -123,8 +123,8 @@ Sequential chain:
                                 → Game Master ‖ Plot Planner (concurrent)
                                   → [Template Fitter for GM]
 
-Async chain (starts concurrently with sequential):
-  Summarizer → Memory Extraction
+Background chain (starts concurrently with sequential):
+  Summarizer → Character Profile Compressor → Memory Extraction
 ```
 
 1. **Writer** — Streams narrative with `NARRATIVE_DESCRIPTORS` (scene + game data)
