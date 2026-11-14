@@ -22,6 +22,8 @@ export async function createModel(config: ProviderConfig) {
 			baseURL,
 			fetch: providerFetch,
 			apiKey: config.apiKey,
+			// Local servers (LM Studio / llama.cpp) report 0 stream usage unless include_usage is requested
+			includeUsage: true,
 			// Users may point this type at OpenRouter; attribute those calls too (see constants.ts)
 			headers: isOpenRouterBaseUrl(baseURL) ? OPENROUTER_ATTRIBUTION_HEADERS : undefined,
 		});

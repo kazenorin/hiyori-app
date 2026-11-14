@@ -98,3 +98,30 @@ describe('createModel — openai-compatible pointed at OpenRouter', () => {
 		expect(headers['x-openrouter-categories']).toBeUndefined();
 	});
 });
+
+describe('createModel — openai-compatible stream usage', () => {
+	// LM Studio / llama.cpp only return token usage in the stream when the request carries
+	// stream_options.include_usage. createOpenAICompatible omits it unless includeUsage is
+	// set, so without it the pipeline records 0 tokens for these providers. The built chat
+	// model must therefore carry includeUsage: true.
+	function lmStudioConfig(overrides: Partial<ProviderConfig> = {}): ProviderConfig {
+		return {
+			id: 'p1',
+			name: 'LM Studio',
+			provider: 'openai-compatible',
+			apiType: 'chat-completions',
+			baseURL: 'http://localhost:1234/v1',
+			model: 'local-model',
+			apiKey: '',
+			corsBypassEnabled: false,
+			wispProxyUrl: 'ws://localhost:6001',
+			...overrides,
+		};
+	}
+
+	it('requests stream usage so local OpenAI-compatible servers report tokens', async () => {
+		type ModelWithConfig = { config?: { includeUsage?: boolean } };
+		const model = (await createModel(lmStudioConfig())) as unknown as ModelWithConfig;
+		expect(model.config?.includeUsage).toBe(true);
+	});
+});
