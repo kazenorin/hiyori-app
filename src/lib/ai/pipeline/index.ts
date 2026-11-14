@@ -165,7 +165,8 @@ function finalizePipelineResult(state: PipelineState, tracker: ReturnType<typeof
  * Sequential phases: Writer → Reviewer → Editor → [Game Master ‖ Plot Planner].
  * Game Master and Plot Planner run concurrently after Editor completes.
  * Background phases (Summarizer → Character Profile Compressor → Memory Extraction)
- * run concurrently with the sequential chain and resolve afterward.
+ * start after the Writer completes, run concurrently with the remaining sequential
+ * phases, and resolve afterward.
  * Editor LLM call is skipped when the reviewer indicates "accept as-is".
  * Context is passed as user messages, not stuffed into the system prompt.
  */
@@ -181,7 +182,15 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	const tracker = buildTrackPhase(input.initialPhases);
 	const trackPhase = buildCommittingTrackPhase(tracker, input.initialState ?? {}, execution.onPhaseCommit);
 
+	// --- Sequential phases (resume gates: cached outputs are skipped) ---
+	let state: PipelineState = { ...input.initialState };
+	if (state.writerOutput === undefined) {
+		state = await runWriterPhase(ctx, state, trackPhase);
+	}
+
 	// --- Background phases (Summarizer → Character Profile Compressor → Memory) ---
+	// Deferred until the Writer's request completes so the shared-prefix cache it
+	// populated is readable; a concurrent start would miss it.
 	const backgroundPhases = runBackgroundPhases({
 		player,
 		completedScenes,
@@ -200,11 +209,6 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		callbacks,
 	});
 
-	// --- Sequential phases (resume gates: cached outputs are skipped) ---
-	let state: PipelineState = { ...input.initialState };
-	if (state.writerOutput === undefined) {
-		state = await runWriterPhase(ctx, state, trackPhase);
-	}
 	state = await runReviewerEditorPhases(ctx, state, trackPhase);
 	state = await runEditorTemplateFitter(ctx, state, trackPhase);
 	maybeExtractImportantPhrases(state, callbacks);

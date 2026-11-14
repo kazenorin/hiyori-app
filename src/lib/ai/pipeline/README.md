@@ -1,6 +1,6 @@
 # Narrative Generation Pipeline
 
-> **Last updated:** 2026-11-13 | **Version:** 1.12.0
+> **Last updated:** 2026-11-14 | **Version:** 1.12.0
 
 Multi-phase LLM pipeline that generates narrative prose, game data, and scene plots for interactive fiction.
 
@@ -53,18 +53,22 @@ Tool side effects of cached phases (act-line events such as phase transitions or
 ### Main Pipeline (`runPipeline`)
 
 ```
- ┌─ Background chain (starts concurrently, resolves independently) ─────────────┐
- │  Summarizer → Character Profile Compressor → Memory Extraction                │
- └──────────────────────────────────────────────────────────────────────────────┘
-
  Sequential chain:
    Writer → Reviewer ─→ Editor → [Editor Template Fitter]
-                │                      → Important Phrases Extraction (fire-and-forget)
-                │                      → Game Master ‖ Plot Planner (concurrent)
-                │                           → [GM Template Fitter]
-                │
-                └─ "accept as-is" ──▶ skip Editor (Writer output = Editor output)
+        │       │                      → Important Phrases Extraction (fire-and-forget)
+        │       │                      → Game Master ‖ Plot Planner (concurrent)
+        │       │                           → [GM Template Fitter]
+        │       │
+        │       └─ "accept as-is" ──▶ skip Editor (Writer output = Editor output)
+        │
+        └─ after Writer completes ─▶ Background chain (resolves independently)
+                                     Summarizer → Character Profile Compressor → Memory Extraction
 ```
+
+The background chain starts only once the Writer's request has completed (or immediately on
+resume, when the Writer output is already cached). Starting it after the Writer lets its
+shared-prefix request read the prompt cache the Writer just populated; a concurrent start
+would miss that cache. It then runs concurrently with the remaining sequential phases.
 
 ### Epilogue Pipeline (`runEpiloguePipeline`)
 
@@ -86,7 +90,7 @@ Runs the pre-editor chain only (Writer → Reviewer → Editor → Template Fitt
 
 ### Background Phases
 
-These phases run concurrently with the sequential chain and outlive it; they are ordinary pipeline phases, not a separate class. The chain resolves after the main run settles.
+These phases start after the Writer completes, run concurrently with the remaining sequential chain, and outlive it; they are ordinary pipeline phases, not a separate class. The chain resolves after the main run settles.
 
 | Phase                            | Purpose                                                                                             | Provider Role          | Output / pane content                                                                                   | Mode                          |
 | -------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------- |
@@ -102,7 +106,7 @@ These phases run concurrently with the sequential chain and outlive it; they are
 - **GM Template Fitter** — runs only when `gameData.decisions` is empty AND `gameMasterOutput` exists.
 - **Plot Planner** — gated by `isPlotPlannerEnabled()`. Even when enabled, GM may run alone (carrying forward previous `scenePlot`) if the re-evaluation frequency hasn't elapsed. Runs concurrently with GM via `Promise.all` when it does run.
 - **Important Phrases Extraction** — fire-and-forget, gated by `isPhraseHighlightingEnabled()`.
-- **Background phases** — only run when `player.playerResponse` exists and `completedScenes > 0`.
+- **Background phases** — only run when `player.playerResponse` exists and `completedScenes > 0`; they start after the Writer completes (immediately on resume when the Writer is cached), and never start if the Writer fails.
 - **Character Profile Compressor** — only runs when `characterProfileCompressorInterval > 0` and enough scenes have elapsed since the last compression.
 
 On resume these conditions are re-evaluated with current settings, but cached outputs always win: a phase whose output is present in the seeded `PipelineState` never re-runs (see [Resume gates](#resume-gates)).
@@ -150,7 +154,7 @@ The background phases (Summarizer and Character Profile Compressor) share the sa
 
 ### Prompt caching
 
-`run-manager.ts` builds the `PipelineContext` once per run (resolving the summarization point, act-summary snapshot, character profiles, and scene sections) and reuses it for every phase, so the shared prefix is byte-identical across phases within a turn. `extractCacheTokens()` records `cacheReadTokens`/`cacheWriteTokens` from providers that report them. Caching is strictly **per model**, so phases assigned to different provider roles cannot share a cache regardless of layout.
+`run-manager.ts` builds the `PipelineContext` once per run (resolving the summarization point, act-summary snapshot, character profiles, and scene sections) and reuses it for every phase, so the shared prefix is byte-identical across phases within a turn. `extractCacheTokens()` records `cacheReadTokens`/`cacheWriteTokens` from providers that report them. Caching is strictly **per model**, so phases assigned to different provider roles cannot share a cache regardless of layout. Because a provider only populates its prefix cache once a request completes, the background chain is started **after the Writer finishes** (see [Execution Flow](#execution-flow)): a concurrent start would race the Writer and miss the cache on the shared prefix.
 
 ## Module Structure
 
