@@ -14,6 +14,7 @@ export type Provider = 'openai' | 'openai-compatible' | 'ollama' | 'openrouter';
 export type ApiType = 'chat-completions' | 'responses';
 export type ThemeMode = 'system' | 'light' | 'dark';
 export type CharacterNameSuggestionMode = 'ai' | 'analytic';
+export type ParallelRunMode = 'auto' | 'singleThreaded' | 'parallelAfterWriter' | 'parallelWithWriter';
 
 export interface ProviderConfig {
 	id: string;
@@ -60,6 +61,8 @@ export interface Settings {
 	characterProfileCompressorInterval: number;
 	/** Scenes between summarization points; the Summaries snapshot is frozen for this many scenes. 0 = disabled. */
 	summarizationPointInterval: number;
+	/** When the background chain starts relative to the sequential phases; 'auto' resolves from the writer/summarizer providers. */
+	parallelRun: ParallelRunMode;
 	characterProfileImportanceThreshold: number;
 	characterProfileMaxIncluded: number;
 	phaseAdvancementThreshold: number;
@@ -135,6 +138,7 @@ function createDefaults(): Settings {
 		directorModeEnabled: false,
 		characterProfileCompressorInterval: 5, // scenes between compressor runs; 0 = disabled
 		summarizationPointInterval: 8, // scenes between summarization points; 0 = disabled
+		parallelRun: 'auto',
 		characterProfileImportanceThreshold: 2, // 1=Protagonist, 2=Main, 3=Supporting, 4=Minor
 		characterProfileMaxIncluded: 5, // hard cap on number of full-profile inlines
 		phaseAdvancementThreshold: 5,

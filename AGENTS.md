@@ -123,7 +123,7 @@ Sequential chain:
                                 → Game Master ‖ Plot Planner (concurrent)
                                   → [Template Fitter for GM]
 
-Background chain (starts concurrently with sequential):
+Background chain (start point per `parallelRun` setting: with Writer, after Writer, or after GM Template Fitter; Auto resolves from writer/summarizer providers):
   Summarizer → Character Profile Compressor → Memory Extraction
 ```
 

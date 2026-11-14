@@ -56,6 +56,19 @@ describe('settings', () => {
 		expect(settings.summarizationPointInterval).toBe(12);
 	});
 
+	it('defaults parallelRun to auto', async () => {
+		vi.resetModules();
+		const { settings } = await import('#lib/stores/settings.svelte.ts');
+		expect(settings.parallelRun).toBe('auto');
+	});
+
+	it('persists parallelRun via updateSettings', async () => {
+		vi.resetModules();
+		const { settings, updateSettings } = await import('#lib/stores/settings.svelte.ts');
+		await updateSettings({ parallelRun: 'singleThreaded' });
+		expect(settings.parallelRun).toBe('singleThreaded');
+	});
+
 	it('addProviderConfig creates a config with UUID', async () => {
 		vi.resetModules();
 		const { addProviderConfig, getSettings } = await import('#lib/stores/settings.svelte.ts');

@@ -1,5 +1,5 @@
 import { t } from '#lib/i18n/index.ts';
-import { settings } from '#lib/stores/settings.svelte.ts';
+import { settings, type ParallelRunMode } from '#lib/stores/settings.svelte.ts';
 
 export function getProviderItems(): { label: string; value: string }[] {
 	return [
@@ -72,6 +72,15 @@ export function getReviewerModeItems(): { label: string; value: string }[] {
 	return [
 		{ label: t('settings.reviewerModeDetailed'), value: 'detailed' },
 		{ label: t('settings.reviewerModeQuick'), value: 'quick' },
+	];
+}
+
+export function getParallelRunItems(): { label: string; value: ParallelRunMode }[] {
+	return [
+		{ label: t('settings.parallelRunAuto'), value: 'auto' },
+		{ label: t('settings.parallelRunSingleThreaded'), value: 'singleThreaded' },
+		{ label: t('settings.parallelRunAfterWriter'), value: 'parallelAfterWriter' },
+		{ label: t('settings.parallelRunWithWriter'), value: 'parallelWithWriter' },
 	];
 }
 

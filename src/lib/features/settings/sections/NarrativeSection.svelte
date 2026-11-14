@@ -1,13 +1,27 @@
 <script lang="ts">
-	import { getMinorTaskAgentProviderConfig, settings, updateSettings } from '#lib/stores/settings.svelte.ts';
+	import { getMinorTaskAgentProviderConfig, settings, updateSettings, type ParallelRunMode } from '#lib/stores/settings.svelte.ts';
 	import { t } from '#lib/i18n/index.ts';
 	import Card from '#lib/components/ui/Card.svelte';
 	import NumberField from '#lib/components/ui/NumberField.svelte';
+	import ThemedSelect from '#lib/components/ThemedSelect.svelte';
+	import { getParallelRunItems } from '#lib/features/settings-options.ts';
+
+	const parallelRunItems = $derived(getParallelRunItems());
+	const parallelRunDescriptionKey = $derived(
+		(
+			{
+				auto: 'settings.parallelRunAutoDescription',
+				singleThreaded: 'settings.parallelRunSingleThreadedDescription',
+				parallelAfterWriter: 'settings.parallelRunAfterWriterDescription',
+				parallelWithWriter: 'settings.parallelRunWithWriterDescription',
+			} as Record<ParallelRunMode, string>
+		)[settings.parallelRun]
+	);
 </script>
 
 <div class="space-y-4">
 	<Card title={t('settings.narrative')}>
-		<!-- Word Count, Compressor & Summarization Point: full-width card -->
+		<!-- Word Count: full-width card -->
 		<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-4">
 			<NumberField
 				label={t('settings.targetWordCount')}
@@ -20,6 +34,11 @@
 					if (v >= 50 && v <= 2000) updateSettings({ targetWordCount: v });
 				}}
 			/>
+		</div>
+
+		<!-- Background Phases: intervals & parallel run -->
+		<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-4">
+			<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.backgroundPhases')}</h3>
 			<NumberField
 				label={t('settings.compressorInterval')}
 				hint={t('settings.compressorIntervalDescription')}
@@ -42,6 +61,11 @@
 					if (v >= 0 && v <= 50) updateSettings({ summarizationPointInterval: v });
 				}}
 			/>
+			<div>
+				<span class="text-xs font-medium text-surface-500">{t('settings.parallelRun')}</span>
+				<ThemedSelect items={parallelRunItems} value={settings.parallelRun} onValueChange={(v) => updateSettings({ parallelRun: v })} />
+				<span class="text-xs text-surface-500 block mt-1">{t(parallelRunDescriptionKey)}</span>
+			</div>
 		</div>
 
 		<!-- Director Mode & Phrase Highlighting: side-by-side mini-cards -->
