@@ -1,6 +1,7 @@
 import type { EndingType } from '../narrative-types';
 import { DEFAULT_RETRY_CONFIG, type PhaseMetadata, toPhaseMetadata } from '../chat-stream';
 import {
+	type BackgroundPhaseResults,
 	type CommonPipelineInput,
 	type PipelineInput,
 	type PipelineProviderConfigs,
@@ -27,7 +28,8 @@ import {
 import type { LoadedPrompts } from './prompt-loader';
 import { loadPrompts } from './prompt-loader';
 import { runBackgroundPhases } from './summarizer';
-import { buildPipelineProviderConfigs } from '#lib/ai/chat/pipeline-config.ts';
+import { buildPipelineProviderConfigs, resolveParallelRunMode } from '#lib/ai/chat/pipeline-config.ts';
+import { settings } from '#lib/stores/settings.svelte.ts';
 import { buildTools } from '#lib/ai/tools/tools.ts';
 import { createNarrativeOverrides } from '#lib/ai/narrative-types.ts';
 
@@ -165,8 +167,8 @@ function finalizePipelineResult(state: PipelineState, tracker: ReturnType<typeof
  * Sequential phases: Writer → Reviewer → Editor → [Game Master ‖ Plot Planner].
  * Game Master and Plot Planner run concurrently after Editor completes.
  * Background phases (Summarizer → Character Profile Compressor → Memory Extraction)
- * start after the Writer completes, run concurrently with the remaining sequential
- * phases, and resolve afterward.
+ * start according to the parallelRun setting: concurrently with the Writer, after
+ * the Writer completes, or after the GM Template Fitter (single-threaded).
  * Editor LLM call is skipped when the reviewer indicates "accept as-is".
  * Context is passed as user messages, not stuffed into the system prompt.
  */
@@ -177,10 +179,35 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 	const loadedPrompts: LoadedPrompts = await loadPrompts(story.storyId, story.storyName);
 	const providerConfigs: PipelineProviderConfigs = buildPipelineProviderConfigs();
 	const ctx = await buildPipelineContext(input, loadedPrompts, providerConfigs);
+	const parallelRun = resolveParallelRunMode(settings.parallelRun, providerConfigs);
 
 	const { callbacks } = execution;
 	const tracker = buildTrackPhase(input.initialPhases);
 	const trackPhase = buildCommittingTrackPhase(tracker, input.initialState ?? {}, execution.onPhaseCommit);
+
+	// --- Background phases (Summarizer → Character Profile Compressor → Memory) ---
+	const startBackgroundPhases = () =>
+		runBackgroundPhases({
+			player,
+			completedScenes,
+			actSummary: input.latestActSummary,
+			previousNarrativeVariables,
+			previousNarrativeBody,
+			providerConfigs,
+			abortSignal: execution.abortSignal,
+			storyId: story.storyId,
+			actLineId: story.actLine.id,
+			assistant: input.assistant,
+			loadedPrompts,
+			context: input.context,
+			tools: ctx.tools,
+			compression: ctx.compression,
+			callbacks,
+		});
+
+	// No shared cache to wait for: start immediately, concurrently with the Writer.
+	let backgroundPhases: Promise<BackgroundPhaseResults> | undefined =
+		parallelRun === 'parallelWithWriter' ? startBackgroundPhases() : undefined;
 
 	// --- Sequential phases (resume gates: cached outputs are skipped) ---
 	let state: PipelineState = { ...input.initialState };
@@ -188,26 +215,11 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 		state = await runWriterPhase(ctx, state, trackPhase);
 	}
 
-	// --- Background phases (Summarizer → Character Profile Compressor → Memory) ---
 	// Deferred until the Writer's request completes so the shared-prefix cache it
 	// populated is readable; a concurrent start would miss it.
-	const backgroundPhases = runBackgroundPhases({
-		player,
-		completedScenes,
-		actSummary: input.latestActSummary,
-		previousNarrativeVariables,
-		previousNarrativeBody,
-		providerConfigs,
-		abortSignal: execution.abortSignal,
-		storyId: story.storyId,
-		actLineId: story.actLine.id,
-		assistant: input.assistant,
-		loadedPrompts,
-		context: input.context,
-		tools: ctx.tools,
-		compression: ctx.compression,
-		callbacks,
-	});
+	if (parallelRun === 'parallelAfterWriter') {
+		backgroundPhases = startBackgroundPhases();
+	}
 
 	state = await runReviewerEditorPhases(ctx, state, trackPhase);
 	state = await runEditorTemplateFitter(ctx, state, trackPhase);
@@ -215,6 +227,12 @@ export async function runPipeline(input: PipelineInput): Promise<PipelineResult>
 
 	state = await runGamePhases(ctx, state, trackPhase);
 	state = await runGmTemplateFitter(ctx, state, trackPhase);
+
+	// Local servers may exhaust their context on concurrent runs: wait until the
+	// sequential chain has fully finished.
+	if (parallelRun === 'singleThreaded') {
+		backgroundPhases = startBackgroundPhases();
+	}
 
 	const result = finalizePipelineResult(state, tracker);
 	callbacks.onAllComplete(state);
