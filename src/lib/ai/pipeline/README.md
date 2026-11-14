@@ -61,14 +61,26 @@ Tool side effects of cached phases (act-line events such as phase transitions or
         │       │
         │       └─ "accept as-is" ──▶ skip Editor (Writer output = Editor output)
         │
-        └─ after Writer completes ─▶ Background chain (resolves independently)
-                                     Summarizer → Character Profile Compressor → Memory Extraction
+        └─ start point per parallelRun ─▶ Background chain (resolves independently)
+                                          Summarizer → Character Profile Compressor → Memory Extraction
 ```
 
-The background chain starts only once the Writer's request has completed (or immediately on
-resume, when the Writer output is already cached). Starting it after the Writer lets its
-shared-prefix request read the prompt cache the Writer just populated; a concurrent start
-would miss that cache. It then runs concurrently with the remaining sequential phases.
+The background chain's start point is chosen by the `parallelRun` setting, resolved once per
+run by `resolveParallelRunMode()` ([`chat/pipeline-config.ts`](../chat/pipeline-config.ts)):
+
+- **`parallelWithWriter`** — starts immediately, concurrently with the Writer. For distinct
+  endpoints or distinct cloud models: no prefix cache is shared and no context pool is contended.
+- **`parallelAfterWriter`** — starts once the Writer's request completes (immediately on resume,
+  when the Writer output is already cached), so its shared-prefix request reads the prompt cache
+  the Writer just populated; a concurrent start would miss that cache. It then runs concurrently
+  with the remaining sequential phases.
+- **`singleThreaded`** — starts after the GM Template Fitter, so a context-limited local server
+  never serves two runs at once.
+
+**Auto** (the default) compares the resolved `writer` and `summarizer` provider configs:
+different `baseURL` → `parallelWithWriter`; same local/LAN `baseURL` → `singleThreaded`;
+same cloud `baseURL` with the same model → `parallelAfterWriter`, otherwise `parallelWithWriter`
+(caches are per-model). Missing configs fall back to `parallelAfterWriter`.
 
 ### Epilogue Pipeline (`runEpiloguePipeline`)
 
@@ -90,7 +102,7 @@ Runs the pre-editor chain only (Writer → Reviewer → Editor → Template Fitt
 
 ### Background Phases
 
-These phases start after the Writer completes, run concurrently with the remaining sequential chain, and outlive it; they are ordinary pipeline phases, not a separate class. The chain resolves after the main run settles.
+These phases start at the point chosen by `parallelRun` (see [Execution Flow](#execution-flow)) and outlive the sequential chain; they are ordinary pipeline phases, not a separate class. The chain resolves after the main run settles.
 
 | Phase                            | Purpose                                                                                             | Provider Role          | Output / pane content                                                                                   | Mode                          |
 | -------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------- |
@@ -106,7 +118,7 @@ These phases start after the Writer completes, run concurrently with the remaini
 - **GM Template Fitter** — runs only when `gameData.decisions` is empty AND `gameMasterOutput` exists.
 - **Plot Planner** — gated by `isPlotPlannerEnabled()`. Even when enabled, GM may run alone (carrying forward previous `scenePlot`) if the re-evaluation frequency hasn't elapsed. Runs concurrently with GM via `Promise.all` when it does run.
 - **Important Phrases Extraction** — fire-and-forget, gated by `isPhraseHighlightingEnabled()`.
-- **Background phases** — only run when `player.playerResponse` exists and `completedScenes > 0`; they start after the Writer completes (immediately on resume when the Writer is cached), and never start if the Writer fails.
+- **Background phases** — only run when `player.playerResponse` exists and `completedScenes > 0`; their start point follows `parallelRun` (see [Execution Flow](#execution-flow)). In the after-Writer and single-threaded modes they never start if the Writer fails; with-Writer starts them before the Writer runs.
 - **Character Profile Compressor** — only runs when `characterProfileCompressorInterval > 0` and enough scenes have elapsed since the last compression.
 
 On resume these conditions are re-evaluated with current settings, but cached outputs always win: a phase whose output is present in the seeded `PipelineState` never re-runs (see [Resume gates](#resume-gates)).
@@ -154,7 +166,7 @@ The background phases (Summarizer and Character Profile Compressor) share the sa
 
 ### Prompt caching
 
-`run-manager.ts` builds the `PipelineContext` once per run (resolving the summarization point, act-summary snapshot, character profiles, and scene sections) and reuses it for every phase, so the shared prefix is byte-identical across phases within a turn. `extractCacheTokens()` records `cacheReadTokens`/`cacheWriteTokens` from providers that report them. Caching is strictly **per model**, so phases assigned to different provider roles cannot share a cache regardless of layout. Because a provider only populates its prefix cache once a request completes, the background chain is started **after the Writer finishes** (see [Execution Flow](#execution-flow)): a concurrent start would race the Writer and miss the cache on the shared prefix.
+`run-manager.ts` builds the `PipelineContext` once per run (resolving the summarization point, act-summary snapshot, character profiles, and scene sections) and reuses it for every phase, so the shared prefix is byte-identical across phases within a turn. `extractCacheTokens()` records `cacheReadTokens`/`cacheWriteTokens` from providers that report them. Caching is strictly **per model**, so phases assigned to different provider roles cannot share a cache regardless of layout. Because a provider only populates its prefix cache once a request completes, Auto starts the background chain **after the Writer finishes** when both roles share the same cloud endpoint and model (see [Execution Flow](#execution-flow)): a concurrent start would race the Writer and miss the cache on the shared prefix. `parallelWithWriter` skips the wait when no cache is shared; `singleThreaded` serializes for context-limited local servers.
 
 ## Module Structure
 
