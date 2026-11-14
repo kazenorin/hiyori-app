@@ -112,7 +112,7 @@ Each story gets a dedicated folder in AppData with its own `general-instructions
 
 ## Narrative Generation Pipeline
 
-**`src/lib/ai/pipeline.ts`** — `runPipeline()`; **`src/lib/ai/pipeline-types.ts`** — types.
+**`src/lib/ai/pipeline/index.ts`** — `runPipeline()`; **`src/lib/ai/pipeline/types.ts`** — types.
 
 ### Execution Flow
 
@@ -161,7 +161,7 @@ Background chain (starts concurrently with sequential):
 
 ## Act Plot System
 
-**`src/lib/ai/act-plot-generator.ts`** — generates `act-plot.md` using a Writer → Reviewer → Editor pipeline. Triggered by `ensureActPlot()` when an act line is selected and no act-plot file exists. `createReadActPlotTool()` gives the LLM access to the current act plot during chat.
+**`src/lib/ai/act-plot/act-plot-generator.ts`** — generates `act-plot.md` using a Writer → Reviewer → Editor pipeline. Triggered by `ensureActPlot()` when an act line is selected and no act-plot file exists. `createReadActPlotTool()` gives the LLM access to the current act plot during chat.
 
 ## AI Tools
 
@@ -169,11 +169,11 @@ Background chain (starts concurrently with sequential):
 
 ## World Builder
 
-AI-guided interview that creates a story's world document (`src/lib/ai/world-builder.svelte.ts`). Uses `streamChatResponse()` from `chat-stream.ts`. Completion marker: `[WORLD_BUILDER_COMPLETE]` followed by story name and Markdown world document. `createStoryFromWorldBuilder()` in `stories.svelte.ts` creates the story structure.
+AI-guided interview that creates a story's world document (`src/lib/features/world-builder/world-builder.svelte.ts`). Uses `streamChatResponse()` from `chat-stream.ts`. Completion marker: `[WORLD_BUILDER_COMPLETE]` followed by story name and Markdown world document. `createStoryFromWorldBuilder()` in `stories.svelte.ts` creates the story structure.
 
 ## Import World
 
-Import existing chat transcripts as new stories (`src/lib/import-world/`). `import-orchestrator.ts` parses transcript files (JSON, Markdown, text), detects game data, generates acts, and creates story structure.
+Import existing chat transcripts as new stories (`src/lib/features/import-world/`). `import-orchestrator.ts` parses transcript files (JSON, Markdown, text), detects game data, generates acts, and creates story structure.
 
 ## Streaming Pipeline
 
@@ -194,7 +194,7 @@ executeStream (streaming.ts)
 
 ## Character and Act Card Generation
 
-- **Character Cards** (`src/lib/ai/character-card-generator.ts`): Extracts characters from an act line, generates cards with personality, appearance, arc info. Uses lineage tracking for previous act context.
-- **Act Cards** (`src/lib/ai/act-card-generator.ts`): Generates summary documents for entire acts.
+- **Character Cards** (`src/lib/features/character-card-generator/index.ts`): Extracts characters from an act line, generates cards with personality, appearance, arc info. Uses lineage tracking for previous act context.
+- **Act Cards** (`src/lib/features/act-card-generator/index.ts`): Generates summary documents for entire acts.
 
 Both use `Prompt` class instances, support parallel generation, and write to story folder under `act-N/characters/`.
