@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { applyLayoutSlots } from '#lib/definitions/pipeline-prompts.ts';
+import {
+	applyLayoutSlots,
+	getProfileUpdateLabels,
+	profileUpdateContract,
+	profileUpdateRepairInstructions,
+	type ProfileUpdateLabels,
+} from '#lib/definitions/pipeline-prompts.ts';
 import { ls, loadLocaleStrings } from '#lib/localization/index.ts';
 
 // Mirrors how src/lib/fs/prompts.ts bundles the assets (eager ?raw glob): the
@@ -99,4 +105,70 @@ for (const locale of LOCALES) {
 			}
 		}
 	});
+
+	for (const locale of LOCALES) {
+		describe(`profile update contracts (${locale})`, () => {
+			beforeAll(async () => {
+				await loadLocaleStrings(locale);
+			});
+
+			const allLabels = (labels: ProfileUpdateLabels) => [
+				labels.envelope,
+				labels.count,
+				labels.clearFields,
+				...Object.values(labels.fields),
+			];
+
+			it('structuredMarkdown contract resolves every captured label and excludes the tool transport', () => {
+				const labels = getProfileUpdateLabels();
+				const contract = profileUpdateContract('structuredMarkdown', labels);
+				for (const label of allLabels(labels)) expect(contract).toContain(label);
+				expect(contract).not.toContain('{{');
+				expect(contract).not.toContain('update-character-profile');
+			});
+
+			it('toolCalls contract is a distinct resolved contract for the tool transport', () => {
+				const labels = getProfileUpdateLabels();
+				const markdown = profileUpdateContract('structuredMarkdown', labels);
+				const toolCalls = profileUpdateContract('toolCalls', labels);
+				expect(toolCalls).not.toBe(markdown);
+				for (const label of allLabels(labels)) expect(toolCalls).toContain(label);
+				expect(toolCalls).not.toContain('{{');
+				expect(toolCalls).toContain('update-character-profile');
+			});
+
+			it('structuredMarkdown contract places scalars before collection sections', () => {
+				const labels = getProfileUpdateLabels();
+				const contract = profileUpdateContract('structuredMarkdown', labels);
+				const order = [
+					labels.envelope,
+					labels.count,
+					labels.fields.preferredName,
+					labels.fields.logline,
+					labels.fields.state,
+					labels.fields.goal,
+					labels.fields.relationships,
+					labels.fields.voice,
+					labels.fields.importance,
+					labels.fields.aliases,
+					labels.fields.traits,
+					labels.clearFields,
+				];
+				let lastIndex = -1;
+				for (const label of order) {
+					const index = contract.indexOf(label);
+					expect(index).toBeGreaterThan(lastIndex);
+					lastIndex = index;
+				}
+			});
+
+			it('repair instructions are resolved, complete and distinct from the transport contract', () => {
+				const labels = getProfileUpdateLabels();
+				const repair = profileUpdateRepairInstructions(labels);
+				for (const label of allLabels(labels)) expect(repair).toContain(label);
+				expect(repair).not.toContain('{{');
+				expect(repair).not.toBe(profileUpdateContract('structuredMarkdown', labels));
+			});
+		});
+	}
 }

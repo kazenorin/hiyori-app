@@ -64,7 +64,7 @@ vi.mock('#lib/ai/chat-stream.ts', () => ({
 	),
 }));
 vi.mock('#lib/stores/settings.svelte.ts', () => ({
-	getSettings: () => ({ characterProfileCompressorInterval: 5 }),
+	getSettings: () => ({ characterProfileCompressorInterval: 5, backgroundContextMode: 'rich', characterProfileUpdateMethod: 'toolCalls' }),
 	isMemoryAvailable: () => false,
 }));
 
@@ -73,6 +73,7 @@ import { buildUpdateCharacterProfileTools } from '#lib/ai/tools/update-character
 import { insertCharacterProfile } from '#lib/db/character-profiles.ts';
 import { parseActSummary } from '#lib/ai/act-summary-parser.ts';
 import { loadLocaleStrings } from '#lib/localization/index.ts';
+import { loadLocale } from '#lib/i18n/index.ts';
 import type { ProfileCompressionState, PipelineContext, PipelineCallbacks } from '#lib/ai/pipeline/types.ts';
 
 const LINE = 'line-1';
@@ -117,6 +118,7 @@ function run(compression: ProfileCompressionState, callbacks?: PipelineCallbacks
 			completedScenes: 9,
 			assistant: { messageId: 'msg-10', messageSequence: 10 },
 			providerConfig: { model: 'm' } as never,
+			minorTaskAgentProviderConfig: undefined,
 			abortSignal: new AbortController().signal,
 			context,
 			tools,
@@ -131,6 +133,7 @@ beforeEach(async () => {
 	testDb = createTestDatabase();
 	await runMigrations();
 	await loadLocaleStrings('en');
+	await loadLocale('en');
 	scriptedCalls = [];
 	await insertCharacterProfile({
 		id: 'p1',
@@ -178,7 +181,25 @@ describe('compressor streaming lifecycle', () => {
 		const result = await run(compression, callbacks);
 		expect(result).not.toBeNull();
 		const state = vi.mocked(callbacks.onPhaseComplete).mock.calls[0][1];
-		expect(state.profileCompressionLog).toBe('No profile changes — the new material did not justify any updates.');
+		expect(state.profileCompressionLog).toContain('No profile changes — the new material did not justify any updates.');
+		expect(state.profileCompressionLog).toContain('## Tools');
+	});
+
+	it('emits exactly one start and one terminal event under the compressor identity', async () => {
+		// WHY: generation/repair/tool fallback are internal stages; a foreground
+		// TEMPLATE_FITTER chip must never appear for them.
+		scriptedCalls = [{ name: 'elena-vale', state: 'Recovered' }];
+		const callbacks = makeCallbacks();
+		await run({ completedScenes: 9, newActSummary: undefined, attemptCount: 0, successCount: 0 }, callbacks);
+
+		expect(vi.mocked(callbacks.onPhaseStart).mock.calls.map((c) => c[0])).toEqual(['CHARACTER_PROFILE_COMPRESSOR']);
+		expect(vi.mocked(callbacks.onPhaseComplete).mock.calls.map((c) => c[0])).toEqual(['CHARACTER_PROFILE_COMPRESSOR']);
+		const phases = [
+			...vi.mocked(callbacks.onPhaseStart).mock.calls.map((c) => c[0]),
+			...vi.mocked(callbacks.onPhaseComplete).mock.calls.map((c) => c[0]),
+			...vi.mocked(callbacks.onPhaseStream).mock.calls.map((c) => c[0]),
+		];
+		expect(phases).not.toContain('TEMPLATE_FITTER');
 	});
 
 	it('all-failed run still completes the chip with the failure log (D10)', async () => {

@@ -86,6 +86,8 @@ pipeline:
     sceneSummaries: Scene Summaries
     characterSummaries: Character Summaries
     characterProfiles: Character Profiles
+    characterProfileUpdates: Character Profile Updates
+    clearFields: Clear Fields
   sections:
     actPlotCharacterCards: Character Card
     actPlotActCards: Act Card
@@ -102,8 +104,8 @@ pipeline:
       rich: 'The Existing Act Summary provided after the shared story context is the authoritative merge base; any earlier Act Summary snapshot appearing in the context is background only. Focus on the last scene block in the Scenes section and the Player Response folded into it — that is the scene you are summarizing.'
       compact: 'Review the Existing Act Summary for context, then focus on the Previous Narrative Body and the Player Response — that is the scene you are summarizing.'
     incrementalScope:
-      rich: 'Summarize only that scene. Because the resolution of the player''s choice is not yet known, your summary must end at the decision point without inventing the outcome. Ignore the Upcoming Scene Plot — it describes a scene that has not happened yet.'
-      compact: 'Summarize only that scene. Because the resolution of the player''s choice is not yet known, your summary must end at the decision point without inventing the outcome.'
+      rich: "Summarize only that scene. Because the resolution of the player's choice is not yet known, your summary must end at the decision point without inventing the outcome. Ignore the Upcoming Scene Plot — it describes a scene that has not happened yet."
+      compact: "Summarize only that scene. Because the resolution of the player's choice is not yet known, your summary must end at the decision point without inventing the outcome."
     compressorSources:
       rich: 'Treat the latest {{actSummaryHeader}} as the authoritative account of recent events, using raw scene material in the shared context as supporting evidence. Any earlier summary snapshots in the shared context are background only.'
       compact: 'Treat the latest {{actSummaryHeader}} as the authoritative account of recent events.'
@@ -183,6 +185,69 @@ pipeline:
       If a section is missing from the content, add the header with no body.
     plotPlanner:
       estimatedLengthRequirement: 'Your output must end with this section. Estimate the number of scenes this phase will span, written as a single integer.'
+    characterProfileRepair: |
+      # Repair the Character Profile Update Batch
+
+      You are repairing a candidate character-profile update batch that failed structural validation. You receive the required output contract, the validation errors, and the raw candidate text as data. Correct the candidate so it satisfies the contract.
+
+      Preserve every record, every scalar field ({{preferredName}}, {{logline}}, {{state}}, {{goal}}, {{relationships}}, {{voice}}, {{importance}}) and every supplied value that is present in the candidate, and preserve explicit omissions and explicit clears exactly as intended. Keep the batch in the required order: the {{envelope}} heading, its single "{{count}}: <number>" item, then one level-two record per character with its scalar list before the {{aliases}}, {{traits}} and {{clearFields}} sections.
+
+      Rewrite only what is needed to fix the reported errors. Never fabricate facts, records or field values that are absent from the candidate. Never discard incomplete or invalid records to produce a clean zero-count batch ("{{count}}: 0"); a batch that drops the material it was meant to report is not a repair.
+
+      Output only the corrected Markdown batch. Do not add commentary, explanations or a code fence.
+  compressor:
+    transport:
+      structuredMarkdown: |
+        # Output Transport: Structured Markdown
+
+        This final section defines the output transport. It overrides any earlier instruction that describes a different way of emitting updates.
+
+        Emit exactly one Markdown batch and nothing else — no preamble, no commentary, no surrounding code fence. The batch has this shape:
+
+        # {{envelope}}
+        - {{count}}: <number>
+
+        ## <character name>
+        - {{preferredName}}: <text>
+        - {{logline}}: <text>
+        - {{state}}: <text>
+        - {{goal}}: <text>
+        - {{relationships}}: <text>
+        - {{voice}}: <text>
+        - {{importance}}: <1-4>
+
+        ### {{aliases}}
+        - <new alias>
+
+        ### {{traits}}
+        - <trait>
+
+        ### {{clearFields}}
+        - {{logline}}
+
+        Rules:
+        - "{{envelope}}" is a level-one heading and appears exactly once. Its list contains exactly one item, "{{count}}: <number>", where the number equals the number of level-two character records.
+        - A zero-count batch is valid: emit the envelope, "- {{count}}: 0", and no character records.
+        - Start each character record with a level-two heading containing only the character name.
+        - Every scalar item belongs to a single plain list directly under the record heading, before any level-three heading. Use each scalar label at most once and only the labels listed above. Do not use collection headings, unknown labels or task-list syntax.
+        - Optional level-three sections follow the scalar list in this order: "{{aliases}}", "{{traits}}", "{{clearFields}}". Each has at most one plain list and appears at most once per record.
+        - "{{aliases}}" lists only new aliases; existing aliases are kept, and an empty list clears nothing.
+        - Clearing is explicit: list the field label under "{{clearFields}}" to clear a text field, or to clear {{traits}} when none remain established. Never clear by passing null and never rely on omission.
+        - Supplied fields replace their whole previous value; omitted fields and records keep their baseline values.
+      toolCalls: |
+        # Output Transport: Tool Calls
+
+        This final section defines the output transport. It overrides any earlier instruction that describes a different way of emitting updates.
+
+        Emit no prose and no Markdown. Call `update-character-profile` once per new or changed character; the set of calls is the batch. Do not wrap calls in a {{envelope}} or emit a {{count}} line. A valid zero-count batch has no calls at all.
+
+        Each call identifies the character by name and may supply any of these fields: {{preferredName}}, {{logline}}, {{state}}, {{goal}}, {{relationships}}, {{voice}}, {{importance}}, {{aliases}}, {{traits}}. There is no separate {{clearFields}} section in tool mode; clearing is expressed through the field values themselves.
+
+        Rules:
+        - Omitted fields keep their baseline values; every supplied text field, {{preferredName}}, {{importance}} and {{traits}} replaces its whole previous value rather than merging into it.
+        - "{{aliases}}" is the exception: list only new aliases; existing aliases are kept, and an empty list clears nothing.
+        - Clearing is explicit: pass null for {{logline}}, {{state}}, {{goal}}, {{relationships}} or {{voice}}, or pass an empty list for {{traits}}. Omission never clears.
+        - Do not emit a call for an unchanged character and do not repeat the same character twice.
   memoryTools:
     writer: '- Use the `query-memories` tool for background information'
     reviewer: '- **Verify Continuity:** Use the `query-memories` tool as needed to fact-check character details, past events, and location consistency.'
@@ -208,6 +273,7 @@ pipeline:
     recommendation: Recommendation
     preferredName: Preferred Name
     state: State
+    updateCount: Update count
     logline: Logline
     goal: Goal
     relationships: Relationships

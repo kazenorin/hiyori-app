@@ -116,7 +116,7 @@ vi.mock('#lib/ai/chat-stream.ts', () => ({
 	),
 }));
 vi.mock('#lib/stores/settings.svelte.ts', () => ({
-	getSettings: () => ({ characterProfileCompressorInterval: 5 }),
+	getSettings: () => ({ characterProfileCompressorInterval: 5, backgroundContextMode: 'rich', characterProfileUpdateMethod: 'toolCalls' }),
 	isMemoryAvailable: () => false,
 }));
 vi.mock('#lib/db/act-lines.ts', () => ({
@@ -166,6 +166,7 @@ describe('compressor shared-prefix layout (step 1)', () => {
 				completedScenes: 9,
 				assistant: { messageId: 'msg-10', messageSequence: 10 },
 				providerConfig: { model: 'm' } as never,
+				minorTaskAgentProviderConfig: undefined,
 				abortSignal: new AbortController().signal,
 				context,
 				tools: undefined,
@@ -218,6 +219,7 @@ it('fills the holder with the new act summary before the executor runs', async (
 			completedScenes: 9,
 			assistant: { messageId: 'msg-10', messageSequence: 10 },
 			providerConfig: { model: 'm' } as never,
+			minorTaskAgentProviderConfig: undefined,
 			abortSignal: new AbortController().signal,
 			context,
 			tools: undefined,

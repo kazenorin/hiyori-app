@@ -434,6 +434,90 @@ describe('settings', () => {
 		expect(settings.backgroundContextMode).toBe('compact');
 	});
 
+	describe('characterProfileUpdateMethod', () => {
+		it('defaults to structuredMarkdown when storage is empty', async () => {
+			vi.resetModules();
+			const { settings } = await import('#lib/stores/settings.svelte.ts');
+			expect(settings.characterProfileUpdateMethod).toBe('structuredMarkdown');
+		});
+
+		it('defaults to structuredMarkdown when saved settings omit the field', async () => {
+			localStorage.setItem(STORAGE_KEY, JSON.stringify({ logLevel: 'debug' }));
+			vi.resetModules();
+			const { settings } = await import('#lib/stores/settings.svelte.ts');
+			expect(settings.characterProfileUpdateMethod).toBe('structuredMarkdown');
+			expect(settings.logLevel).toBe('debug');
+		});
+
+		it('defaults to structuredMarkdown when the saved value is invalid', async () => {
+			localStorage.setItem(STORAGE_KEY, JSON.stringify({ characterProfileUpdateMethod: 'toolCallsV2' }));
+			vi.resetModules();
+			const { settings } = await import('#lib/stores/settings.svelte.ts');
+			expect(settings.characterProfileUpdateMethod).toBe('structuredMarkdown');
+		});
+
+		it('loads and persists toolCalls across module reloads', async () => {
+			vi.resetModules();
+			const first = await import('#lib/stores/settings.svelte.ts');
+			await first.updateSettings({ characterProfileUpdateMethod: 'toolCalls' });
+			expect(JSON.parse(localStorage.getItem(STORAGE_KEY)!).characterProfileUpdateMethod).toBe('toolCalls');
+
+			vi.resetModules();
+			const second = await import('#lib/stores/settings.svelte.ts');
+			expect(second.settings.characterProfileUpdateMethod).toBe('toolCalls');
+		});
+
+		it('resetConfiguration restores structuredMarkdown', async () => {
+			vi.resetModules();
+			const mod = await import('#lib/stores/settings.svelte.ts');
+			await mod.updateSettings({ characterProfileUpdateMethod: 'toolCalls' });
+			await mod.resetConfiguration();
+			expect(mod.settings.characterProfileUpdateMethod).toBe('structuredMarkdown');
+		});
+	});
+
+	describe('getCharacterProfileUpdateMethodItems', () => {
+		it('lists structuredMarkdown before toolCalls with resolved English labels', async () => {
+			vi.resetModules();
+			const { loadLocale } = await import('#lib/i18n/index.ts');
+			await loadLocale('en');
+			const { getCharacterProfileUpdateMethodItems } = await import('#lib/features/settings-options.ts');
+
+			const items = getCharacterProfileUpdateMethodItems();
+
+			expect(items.map((item) => item.value)).toEqual(['structuredMarkdown', 'toolCalls']);
+			expect(items[0].label).toBe('Structured Markdown');
+			expect(items[1].label).toBe('Tool Calls');
+		});
+
+		it('resolves labels in zh-Hant-HK', async () => {
+			vi.resetModules();
+			const { loadLocale } = await import('#lib/i18n/index.ts');
+			await loadLocale('zh-Hant-HK');
+			const { getCharacterProfileUpdateMethodItems } = await import('#lib/features/settings-options.ts');
+
+			const items = getCharacterProfileUpdateMethodItems();
+
+			expect(items.map((item) => item.label)).toEqual(['結構化 Markdown', '工具呼叫']);
+		});
+	});
+
+	it('character profile update method i18n keys exist in both locales', async () => {
+		const en = (await import('../i18n/locales/en.json')).default;
+		const zh = (await import('../i18n/locales/zh-Hant-HK.json')).default;
+		const keys = [
+			'characterProfileUpdateMethod',
+			'characterProfileStructuredMarkdown',
+			'characterProfileToolCalls',
+			'characterProfileStructuredMarkdownDescription',
+			'characterProfileToolCallsDescription',
+		] as const;
+		for (const key of keys) {
+			expect(en.settings[key]).toBeTruthy();
+			expect(zh.settings[key]).toBeTruthy();
+		}
+	});
+
 	it('background context mode i18n keys exist in both locales', async () => {
 		const en = (await import('../i18n/locales/en.json')).default;
 		const zh = (await import('../i18n/locales/zh-Hant-HK.json')).default;

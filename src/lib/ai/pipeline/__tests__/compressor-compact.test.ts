@@ -94,7 +94,11 @@ vi.mock('#lib/ai/chat-stream.ts', () => ({
 		}
 	),
 }));
-const mockSettings = vi.hoisted(() => ({ backgroundContextMode: 'compact' as 'rich' | 'compact', characterProfileCompressorInterval: 5 }));
+const mockSettings = vi.hoisted(() => ({
+	backgroundContextMode: 'compact' as 'rich' | 'compact',
+	characterProfileCompressorInterval: 5,
+	characterProfileUpdateMethod: 'toolCalls' as const,
+}));
 vi.mock('#lib/stores/settings.svelte.ts', () => ({
 	getSettings: () => mockSettings,
 	isMemoryAvailable: () => false,
@@ -151,6 +155,7 @@ describe('compressor compact layout', () => {
 				completedScenes: 9,
 				assistant: { messageId: 'msg-10', messageSequence: 10 },
 				providerConfig: { model: 'm' } as never,
+				minorTaskAgentProviderConfig: undefined,
 				abortSignal: new AbortController().signal,
 				context,
 				tools: undefined,
@@ -181,6 +186,7 @@ describe('compressor compact layout', () => {
 				completedScenes: 9,
 				assistant: { messageId: 'msg-10', messageSequence: 10 },
 				providerConfig: { model: 'm' } as never,
+				minorTaskAgentProviderConfig: undefined,
 				abortSignal: new AbortController().signal,
 				context,
 				tools: undefined,
@@ -231,6 +237,7 @@ it('fills the holder with the new act summary before the executor runs', async (
 			completedScenes: 9,
 			assistant: { messageId: 'msg-10', messageSequence: 10 },
 			providerConfig: { model: 'm' } as never,
+			minorTaskAgentProviderConfig: undefined,
 			abortSignal: new AbortController().signal,
 			context,
 			tools: undefined,

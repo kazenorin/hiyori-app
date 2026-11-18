@@ -80,7 +80,7 @@ vi.mock('#lib/ai/chat-stream.ts', () => ({
 	),
 }));
 vi.mock('#lib/stores/settings.svelte.ts', () => ({
-	getSettings: () => ({ characterProfileCompressorInterval: 5 }),
+	getSettings: () => ({ characterProfileCompressorInterval: 5, backgroundContextMode: 'rich', characterProfileUpdateMethod: 'toolCalls' }),
 	isMemoryAvailable: () => false,
 }));
 
@@ -90,6 +90,7 @@ import { insertCharacterProfile, getLatestProfilesByActLine, getLatestProfileByA
 import { getLastCompressionScene } from '#lib/db/act-lines.ts';
 import { parseActSummary, type ActSummary } from '#lib/ai/act-summary-parser.ts';
 import { PHASE_TOOLS } from '#lib/ai/tools/tools.ts';
+import { loadLocale } from '#lib/i18n/index.ts';
 import { fileLog } from '#lib/logging/logger.ts';
 import type { ProfileCompressionState, PipelineContext } from '#lib/ai/pipeline/types.ts';
 
@@ -124,6 +125,7 @@ function run(compression: ProfileCompressionState, summary: ActSummary = newSumm
 			completedScenes: 9,
 			assistant: { messageId: 'msg-10', messageSequence: 10 },
 			providerConfig: { model: 'm' } as never,
+			minorTaskAgentProviderConfig: undefined,
 			abortSignal: new AbortController().signal,
 			context,
 			tools,
@@ -136,6 +138,7 @@ function run(compression: ProfileCompressionState, summary: ActSummary = newSumm
 beforeEach(async () => {
 	testDb = createTestDatabase();
 	await runMigrations();
+	await loadLocale('en');
 	scriptedCalls = [];
 	executorError = undefined;
 	vi.mocked(fileLog).mockClear();
@@ -168,12 +171,14 @@ describe('compressor recording matrix (D4)', () => {
 
 	it('partial success records; failed character does not block the rest', async () => {
 		scriptedCalls = [{ name: 'elena-vale', state: 'Recovered' }, { name: '' }];
-		const result = await run({ completedScenes: 9, newActSummary: undefined, attemptCount: 0, successCount: 0 });
+		const compression: ProfileCompressionState = { completedScenes: 9, newActSummary: undefined, attemptCount: 0, successCount: 0 };
+		const result = await run(compression);
 		expect(result).not.toBeNull();
 		expect(await getLastCompressionScene(LINE)).toBe(9);
 		const latest = await getLatestProfileByAlias(LINE, 'Elena Vale');
 		expect(latest?.state).toBe('Recovered');
 		expect(latest?.sceneNumber).toBe(9);
+		expect(compression.onAttempt).toBeUndefined();
 	});
 
 	it('all attempts failed: no recording, gate stays open', async () => {

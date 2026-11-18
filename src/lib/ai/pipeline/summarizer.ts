@@ -12,10 +12,11 @@ import type {
 	PipelineProviderConfigs,
 	PlayerContext,
 	ProfileCompressionState,
+	ProfileUpdateInput,
 	SummarizerResult,
 } from './types';
 import { aggregateMetadata, runNonStreamingPhase } from './phase-executor';
-import { emptyCompressionLog, formatProfileUpdateAttempt } from './compression-log';
+import { createCompressionLog } from './compression-log';
 import { DEFAULT_RETRY_CONFIG, streamWithRetry } from '../chat-stream';
 import type { StreamResultMetadata } from '../streaming';
 import {
@@ -34,16 +35,23 @@ import { actSummaryHeader, currentCharacterProfilesHeader } from '#lib/definitio
 import {
 	actSummaryTemplate,
 	applyLayoutSlots,
+	getProfileUpdateLabels,
+	profileUpdateContract,
+	profileUpdateRepairInstructions,
 	resolveSharedSystemPrompt,
 	summarizerExtractionPromptTemplate,
 	summarizerFallbackExtractionPromptTemplate,
+	templateFitterSystemPrompt,
 } from '#lib/definitions/pipeline-prompts.ts';
 import { isAbortLikeError } from '#lib/utils/async.ts';
 import { log } from '#lib/logging/logger.ts';
+import { t } from '#lib/i18n/index.ts';
 import { runMemoryExtractionPipeline } from '#lib/features/memory/memory-extraction-pipeline.ts';
 import { type LoadedPrompts } from './prompt-loader';
-import { getLatestProfilesByActLine } from '#lib/db/character-profiles.ts';
+import { getLatestProfilesByActLine, type CharacterProfileEntity } from '#lib/db/character-profiles.ts';
 import { getLastCompressionScene, recordCharacterProfileCompression } from '#lib/db/act-lines.ts';
+import { applyCharacterProfileUpdate } from '#lib/ai/tools/update-character-profile.ts';
+import { parseProfileUpdates, validateProfileUpdateTargets, type ProfileUpdateBatchResult } from './character-profile-updates';
 
 // --- Input interfaces ---
 
@@ -73,6 +81,7 @@ export interface CharacterProfileCompressorInput {
 	completedScenes: number;
 	assistant: AssistantContext;
 	providerConfig: ProviderConfig | undefined;
+	minorTaskAgentProviderConfig: ProviderConfig | undefined;
 	abortSignal: AbortSignal;
 	context: PipelineContext;
 	tools: ToolSet | undefined;
@@ -242,6 +251,16 @@ export async function generateSummarizerResult(input: SummarizerInput, prompts: 
 
 // --- Character profile compressor ---
 
+interface CompletedStage {
+	text: string;
+	metadata: StreamResultMetadata;
+}
+
+/** Bounded terminal decision for one eligible compression; assigned once before any write. */
+type CompressionTerminal = { kind: 'markdown'; updates: ProfileUpdateInput[] } | { kind: 'tools' };
+
+const FAILED_FINISH_REASONS = new Set(['length', 'content-filter', 'error', 'tool-calls']);
+
 /**
  * Run the character profile compressor if the interval threshold is met.
  * Returns null if the compressor is disabled or the interval hasn't elapsed.
@@ -251,7 +270,7 @@ export async function generateCharacterProfiles(
 	compressorInput: CharacterProfileCompressorInput,
 	prompts: SummarizerPrompts
 ): Promise<CompressorResult | null> {
-	const { providerConfig, abortSignal } = compressorInput;
+	const { providerConfig, minorTaskAgentProviderConfig, abortSignal } = compressorInput;
 	const { completedScenes } = compressorInput;
 
 	const settings = getSettings();
@@ -262,66 +281,221 @@ export async function generateCharacterProfiles(
 
 	if (completedScenes - lastScene < interval) return null;
 
-	const mode = getSettings().backgroundContextMode;
-	const compressorPrompt = applyLayoutSlots(prompts.characterProfileCompressorPrompt, mode)
+	const mode = settings.backgroundContextMode;
+	const method = settings.characterProfileUpdateMethod;
+	const labels = getProfileUpdateLabels();
+	const contracts = {
+		structuredMarkdown: profileUpdateContract('structuredMarkdown', labels),
+		toolCalls: profileUpdateContract('toolCalls', labels),
+	};
+	const repairInstructions = profileUpdateRepairInstructions(labels);
+
+	const compressorBody = applyLayoutSlots(prompts.characterProfileCompressorPrompt, mode)
 		.replaceAll('{{actSummaryHeader}}', actSummaryHeader())
 		.replaceAll('{{currentCharacterProfilesHeader}}', currentCharacterProfilesHeader());
 
-	const existingProfiles = await getLatestProfilesByActLine(compressorInput.actLineId);
-	const tail = [...formatActSummaryForCompressor(completedScenes, newActSummary), ...formatExistingProfilesForCompressor(existingProfiles)];
-	const messages = mode === 'compact' ? toUserMessages(tail) : buildPhaseMessages(compressorInput.context, tail, compressorPrompt, '');
+	const baselineProfiles = await getLatestProfilesByActLine(compressorInput.actLineId);
+
+	const buildStageRequest = (contract: string, profiles: CharacterProfileEntity[]) => {
+		const fullPrompt = `${compressorBody}\n\n${contract}`;
+		const tail = [...formatActSummaryForCompressor(completedScenes, newActSummary), ...formatExistingProfilesForCompressor(profiles)];
+		const messages = mode === 'compact' ? toUserMessages(tail) : buildPhaseMessages(compressorInput.context, tail, fullPrompt, '');
+		return { systemPrompt: mode === 'compact' ? fullPrompt : resolveSharedSystemPrompt(prompts), messages };
+	};
+
+	const buildRepairMessages = (raw: string, errors: string[]): MessageBase[] =>
+		toUserMessages([contracts.structuredMarkdown, errors.map((error) => `- ${error}`).join('\n'), raw, repairInstructions]);
+
+	const isCancellation = (err: unknown) => abortSignal.aborted || isAbortLikeError(err);
 
 	compressorInput.compression.newActSummary = newActSummary;
 	const callbacks = compressorInput.callbacks;
 	const { compression } = compressorInput;
-	let toolLog = '';
+
+	const directTools = method === 'toolCalls';
+	const runLog = createCompressionLog(directTools, (key) => t(`pipeline.compressorStages.${key}`));
 	let latestReasoning: string | null = null;
+
 	const emitStream = () =>
-		callbacks?.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', { content: toolLog, reasoning: latestReasoning, variables: null });
-	if (callbacks) {
-		compression.onAttempt = (attempt) => {
-			toolLog += (toolLog ? '\n\n' : '') + formatProfileUpdateAttempt(attempt);
-			emitStream();
-		};
-		callbacks.onPhaseStart('CHARACTER_PROFILE_COMPRESSOR');
-	}
-	let metadata: StreamResultMetadata;
-	try {
-		const accumulator = await streamWithRetry(mode === 'compact' ? compressorPrompt : resolveSharedSystemPrompt(prompts), messages, {
+		callbacks?.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', {
+			content: runLog.streamContent(),
+			reasoning: latestReasoning,
+			variables: null,
+		});
+
+	let aggregated: StreamResultMetadata | undefined;
+	const accumulate = (stage: CompletedStage, stageProvider: ProviderConfig | undefined) => {
+		const merged = aggregateMetadata(aggregated ?? null, stage.metadata, stageProvider?.model);
+		// The helper replaces the set with the stage provider; keep every model the stage reported.
+		merged.models = new Set([...merged.models, ...stage.metadata.models]);
+		aggregated = merged;
+	};
+
+	const requestStage = async (
+		stageKey: 'generation' | 'repair' | 'tools',
+		request: { systemPrompt: string; messages: MessageBase[] },
+		stageProvider: ProviderConfig | undefined,
+		tools: ToolSet | undefined
+	): Promise<CompletedStage> => {
+		abortSignal.throwIfAborted();
+		runLog.beginStage(stageKey);
+		emitStream();
+		const accumulator = await streamWithRetry(request.systemPrompt, request.messages, {
 			retryConfig: DEFAULT_RETRY_CONFIG,
 			onProgress: (state) => {
 				latestReasoning = state.reasoning;
+				runLog.setPreview(state.content);
 				emitStream();
 			},
 			onError: () => {},
-			providerConfig,
+			providerConfig: stageProvider,
 			abortSignal,
-			tools: guardToolsForBackgroundPhase(compressorInput.tools, 'CHARACTER_PROFILE_COMPRESSOR'),
+			tools,
 			descriptors: [],
 			allowEmptyText: true,
 			onRetry: callbacks
-				? (attempt, maxAttempts) => callbacks.onPhaseRetry('CHARACTER_PROFILE_COMPRESSOR', attempt, maxAttempts)
+				? (attempt, maxAttempts) => {
+						callbacks.onPhaseRetry('CHARACTER_PROFILE_COMPRESSOR', attempt, maxAttempts);
+						runLog.addRetry();
+						emitStream();
+					}
 				: undefined,
 		});
-		metadata = await accumulator.resultMetadata;
+		const metadata = await accumulator.resultMetadata;
+		runLog.setPreview(null);
+		emitStream();
+		const completed = { text: accumulator.state.content, metadata };
+		accumulate(completed, stageProvider);
+		return completed;
+	};
+
+	const readBatch = async (stage: CompletedStage): Promise<ProfileUpdateBatchResult> => {
+		if (FAILED_FINISH_REASONS.has(stage.metadata.finishReason)) {
+			return {
+				ok: false,
+				errors: [`The response did not complete normally (${stage.metadata.finishReason}); the batch may be truncated.`],
+			};
+		}
+		if (!stage.text.trim()) return { ok: false, errors: ['The response body is empty.'] };
+		const parsed = parseProfileUpdates(stage.text, labels);
+		if (!parsed.ok) return parsed;
+		return validateProfileUpdateTargets(compressorInput.actLineId, parsed.updates);
+	};
+
+	/** Request failures only: validation, lookup, write and checkpoint failures must escape. */
+	const tryMarkdownRequest = async (
+		stage: 'generation' | 'repair',
+		request: Parameters<typeof requestStage>[1],
+		provider: ProviderConfig | undefined
+	): Promise<CompletedStage | null> => {
+		try {
+			return await requestStage(stage, request, provider, undefined);
+		} catch (err) {
+			if (isCancellation(err)) throw err;
+			await log.warn('pipeline', `Character profile markdown ${stage} failed, using tools: ${err}`);
+			runLog.addFallbackReason(err instanceof Error ? err.message : String(err));
+			return null;
+		}
+	};
+
+	const selectCompressionTerminal = async (): Promise<CompressionTerminal> => {
+		if (method === 'toolCalls') return { kind: 'tools' };
+
+		const generation = await tryMarkdownRequest(
+			'generation',
+			buildStageRequest(contracts.structuredMarkdown, baselineProfiles),
+			providerConfig
+		);
+		if (!generation) return { kind: 'tools' };
+
+		if (!generation.text.trim()) {
+			await log.warn('pipeline', 'Character profile markdown generation returned an empty body, using tools');
+			runLog.addFallbackReason(t('pipeline.compressorStages.blankBody'));
+			return { kind: 'tools' };
+		}
+
+		const batch = await readBatch(generation);
+		if (batch.ok) return { kind: 'markdown', updates: batch.updates };
+
+		await log.warn('pipeline', `Character profile markdown rejected: ${batch.errors.join(' ')}`);
+		runLog.addFallbackReason(batch.errors.join(' '));
+		if (!minorTaskAgentProviderConfig) return { kind: 'tools' };
+
+		const repaired = await tryMarkdownRequest(
+			'repair',
+			{ systemPrompt: templateFitterSystemPrompt(), messages: buildRepairMessages(generation.text, batch.errors) },
+			minorTaskAgentProviderConfig
+		);
+		if (!repaired) return { kind: 'tools' };
+
+		const repairedBatch = await readBatch(repaired);
+		if (repairedBatch.ok) return { kind: 'markdown', updates: repairedBatch.updates };
+
+		await log.warn('pipeline', `Repaired character profile markdown rejected: ${repairedBatch.errors.join(' ')}`);
+		runLog.addFallbackReason(repairedBatch.errors.join(' '));
+		return { kind: 'tools' };
+	};
+
+	let terminalEmitted = false;
+	try {
+		if (callbacks) {
+			compression.onAttempt = (attempt) => {
+				runLog.addAttempt(attempt);
+				emitStream();
+			};
+			callbacks.onPhaseStart('CHARACTER_PROFILE_COMPRESSOR');
+		}
+		const terminal = await selectCompressionTerminal();
+
+		if (terminal.kind === 'markdown') {
+			for (const update of terminal.updates) {
+				await applyCharacterProfileUpdate(compressorInput.actLineId, compression, update, abortSignal);
+			}
+		} else {
+			const profiles = method === 'toolCalls' ? baselineProfiles : await getLatestProfilesByActLine(compressorInput.actLineId);
+			await requestStage(
+				'tools',
+				buildStageRequest(contracts.toolCalls, profiles),
+				providerConfig,
+				guardToolsForBackgroundPhase(compressorInput.tools, 'CHARACTER_PROFILE_COMPRESSOR')
+			);
+		}
+
+		const metadata = aggregated;
+		if (!metadata) throw new Error('Character profile compressor completed without request metadata');
+		abortSignal.throwIfAborted();
+		const shouldRecord = compression.successCount > 0 || compression.attemptCount === 0;
+		if (shouldRecord) {
+			await recordCharacterProfileCompression(compressorInput.actLineId, compressorInput.assistant, completedScenes);
+		}
+		terminalEmitted = true;
+		callbacks?.onPhaseComplete('CHARACTER_PROFILE_COMPRESSOR', { profileCompressionLog: runLog.committedContent(true) }, metadata);
+
+		if (shouldRecord) {
+			await log.info(
+				'pipeline',
+				`Character profile compression at scene ${completedScenes}: ${compression.successCount} updated, ${compression.attemptCount - compression.successCount} failed`
+			);
+			return { metadata };
+		}
+		await log.warn(
+			'pipeline',
+			`Character profile compression: all ${compression.attemptCount} attempts failed; not recorded, will retry next turn`
+		);
+		return null;
+	} catch (err) {
+		if (!terminalEmitted) {
+			const cancelled = isCancellation(err);
+			runLog.addFailure(cancelled, err instanceof Error ? err.message : String(err));
+			callbacks?.onPhaseFailed?.('CHARACTER_PROFILE_COMPRESSOR', {
+				profileCompressionLog: runLog.committedContent(false),
+				metadata: aggregated,
+			});
+		}
+		throw err;
 	} finally {
 		compression.onAttempt = undefined;
 	}
-	callbacks?.onPhaseComplete('CHARACTER_PROFILE_COMPRESSOR', { profileCompressionLog: toolLog || emptyCompressionLog() }, metadata);
-
-	if (compression.successCount > 0 || compression.attemptCount === 0) {
-		await recordCharacterProfileCompression(compressorInput.actLineId, compressorInput.assistant, completedScenes);
-		await log.info(
-			'pipeline',
-			`Character profile compression at scene ${completedScenes}: ${compression.successCount} updated, ${compression.attemptCount - compression.successCount} failed`
-		);
-		return { metadata };
-	}
-	await log.warn(
-		'pipeline',
-		`Character profile compression: all ${compression.attemptCount} attempts failed; not recorded, will retry next turn`
-	);
-	return null;
 }
 
 // --- Background phases (Summarizer → Compressor → Memory) ---
@@ -401,6 +575,7 @@ export async function runBackgroundPhases(ctx: BackgroundPhasesContext): Promise
 					completedScenes,
 					assistant,
 					providerConfig: providerConfigs.summarizer,
+					minorTaskAgentProviderConfig: providerConfigs.minorTaskAgent,
 					abortSignal,
 					context,
 					tools,
@@ -410,7 +585,6 @@ export async function runBackgroundPhases(ctx: BackgroundPhasesContext): Promise
 				await generateCharacterProfiles(result.actSummary, compressorInput, summarizerPrompts);
 			}
 		} catch (err) {
-			callbacks.onPhaseFailed?.('CHARACTER_PROFILE_COMPRESSOR');
 			if (isAbortLikeError(err)) {
 				await log.warn('pipeline', 'Character profile compressor aborted');
 			} else {

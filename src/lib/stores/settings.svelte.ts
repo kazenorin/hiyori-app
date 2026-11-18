@@ -16,6 +16,7 @@ export type ThemeMode = 'system' | 'light' | 'dark';
 export type CharacterNameSuggestionMode = 'ai' | 'analytic';
 export type ParallelRunMode = 'auto' | 'singleThreaded' | 'parallelAfterWriter' | 'parallelWithWriter';
 export type BackgroundContextMode = 'rich' | 'compact';
+export type CharacterProfileUpdateMethod = 'structuredMarkdown' | 'toolCalls';
 
 export interface ProviderConfig {
 	id: string;
@@ -66,6 +67,8 @@ export interface Settings {
 	parallelRun: ParallelRunMode;
 	/** Background-phase context: rich = shared cacheable prefix; compact = act summary + latest scene material only. */
 	backgroundContextMode: BackgroundContextMode;
+	/** How the compressor submits profile updates: structured Markdown text or update-character-profile tool calls. */
+	characterProfileUpdateMethod: CharacterProfileUpdateMethod;
 	characterProfileImportanceThreshold: number;
 	characterProfileMaxIncluded: number;
 	phaseAdvancementThreshold: number;
@@ -143,6 +146,7 @@ function createDefaults(): Settings {
 		summarizationPointInterval: 8, // scenes between summarization points; 0 = disabled
 		parallelRun: 'auto',
 		backgroundContextMode: 'rich',
+		characterProfileUpdateMethod: 'structuredMarkdown',
 		characterProfileImportanceThreshold: 2, // 1=Protagonist, 2=Main, 3=Supporting, 4=Minor
 		characterProfileMaxIncluded: 5, // hard cap on number of full-profile inlines
 		phaseAdvancementThreshold: 5,
@@ -190,6 +194,9 @@ function loadSettings(): Settings {
 					wispProxyUrl: 'ws://localhost:6001',
 					...p,
 				}));
+			}
+			if (merged.characterProfileUpdateMethod !== 'structuredMarkdown' && merged.characterProfileUpdateMethod !== 'toolCalls') {
+				merged.characterProfileUpdateMethod = 'structuredMarkdown';
 			}
 			if (merged.cloudSync) {
 				merged.cloudSync = {

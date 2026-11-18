@@ -86,6 +86,8 @@ pipeline:
     sceneSummaries: 場景摘要
     characterSummaries: 角色摘要
     characterProfiles: 角色檔案
+    characterProfileUpdates: 角色檔案更新
+    clearFields: 清除欄位
   sections:
     actPlotCharacterCards: 角色卡片
     actPlotActCards: 章節卡片
@@ -177,6 +179,69 @@ pipeline:
       插入適當的標題而不更改任何內容。若缺少某個區段，請加上標題並留空內容。
     plotPlanner:
       estimatedLengthRequirement: '你的輸出必須以此區段作結。估計此階段將涵蓋的場景數量，以一個整數表示。'
+    characterProfileRepair: |
+      # 修復角色檔案更新批次
+
+      你正在修復一個未通過結構驗證的角色檔案更新候選批次。你會以資料形式收到所需的輸出契約、驗證錯誤和原始候選文字。請修正候選內容，使其符合契約。
+
+      保留候選中每一個記錄、每一個純量欄位（{{preferredName}}、{{logline}}、{{state}}、{{goal}}、{{relationships}}、{{voice}}、{{importance}}）和每一個已提供的值，並完全按原意保留明確的省略與明確的清除。批次須維持規定順序：{{envelope}}標題、其單一「{{count}}: <number>」項目，然後每個角色一個二級記錄，其純量清單位於{{aliases}}、{{traits}}和{{clearFields}}區段之前。
+
+      只改寫修正所報告錯誤所需的部分。切勿虛構候選中不存在的事實、記錄或欄位值。切勿捨棄不完整或無效的記錄來產生乾淨的零數量批次（「{{count}}: 0」）；丟棄原應報告內容的批次不算修復。
+
+      只輸出修正後的 Markdown 批次。不要加入評論、說明或程式碼圍欄。
+  compressor:
+    transport:
+      structuredMarkdown: |
+        # 輸出傳輸：結構化 Markdown
+
+        本最後區段定義輸出傳輸方式。若先前的任何指示描述了不同的更新輸出方式，一律以本區段為準。
+
+        只輸出恰好一個 Markdown 批次，不要任何其他內容——不要前言、不要評論、不要程式碼圍欄。批次格式如下：
+
+        # {{envelope}}
+        - {{count}}: <number>
+
+        ## <角色名稱>
+        - {{preferredName}}: <text>
+        - {{logline}}: <text>
+        - {{state}}: <text>
+        - {{goal}}: <text>
+        - {{relationships}}: <text>
+        - {{voice}}: <text>
+        - {{importance}}: <1-4>
+
+        ### {{aliases}}
+        - <新別名>
+
+        ### {{traits}}
+        - <特質>
+
+        ### {{clearFields}}
+        - {{logline}}
+
+        規則：
+        - 「{{envelope}}」是一級標題且只出現一次。其清單只包含一個項目「{{count}}: <number>」，數字須等於二級角色記錄的數量。
+        - 零數量批次有效：輸出信封、「- {{count}}: 0」，且不包含任何角色記錄。
+        - 每個角色記錄以只含角色名稱的二級標題開始。
+        - 所有純量項目屬於記錄標題正下方的一個純文字清單，且位於任何三級標題之前。每個純量標籤最多使用一次，且只能使用上方列出的標籤。不要使用集合標題、未知標籤或任務清單語法。
+        - 選填的三級區段依序位於純量清單之後：「{{aliases}}」、「{{traits}}」、「{{clearFields}}」。每個區段最多一個純文字清單，且每個記錄中最多出現一次。
+        - 「{{aliases}}」只列出新增別名; 現有別名會保留，空清單不會清除任何別名。
+        - 清除必須明確：在「{{clearFields}}」下列出欄位標籤以清除文字欄位，或在沒有明確特質時以此清除{{traits}}。切勿傳入 null 來清除，也切勿依賴省略。
+        - 提供的欄位會取代其整個先前的值; 省略的欄位和記錄則保留基準值。
+      toolCalls: |
+        # 輸出傳輸：工具呼叫
+
+        本最後區段定義輸出傳輸方式。若先前的任何指示描述了不同的更新輸出方式，一律以本區段為準。
+
+        不要輸出任何文字或 Markdown。對每個新增或有改變的角色呼叫一次 `update-character-profile`; 所有呼叫的集合即為批次。不要把呼叫包在{{envelope}}中，也不要輸出{{count}}行。有效的零數量批次完全沒有呼叫。
+
+        每次呼叫以名稱識別角色，並可提供以下任何欄位：{{preferredName}}、{{logline}}、{{state}}、{{goal}}、{{relationships}}、{{voice}}、{{importance}}、{{aliases}}、{{traits}}。工具模式沒有獨立的{{clearFields}}區段; 清除是透過欄位值本身表達。
+
+        規則：
+        - 省略的欄位保留基準值; 每個提供的文字欄位、{{preferredName}}、{{importance}}和{{traits}}都會取代其整個先前的值，而不是合併。
+        - 「{{aliases}}」是例外：只列出新增別名; 現有別名會保留，空清單不會清除任何別名。
+        - 清除必須明確：對{{logline}}、{{state}}、{{goal}}、{{relationships}}或{{voice}}傳入 null，或對{{traits}}傳入空清單。省略永遠不會清除。
+        - 未改變的角色不要呼叫，且不要重複同一角色。
   memoryTools:
     writer: '- 使用 `query-memories` 工具擷取相關的背景資訊'
     reviewer: '- **驗證連貫性:** 視需要使用 `query-memories` 工具來核實角色細節、過往事件和地點一致性。'
@@ -202,6 +267,7 @@ pipeline:
     recommendation: 建議
     preferredName: 偏好名稱
     state: 狀態
+    updateCount: 更新數量
     logline: 概述
     goal: 目標
     relationships: 關係

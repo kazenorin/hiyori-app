@@ -36,12 +36,18 @@ export interface PhaseStreamState {
 	variables: NarrativeVariables | null;
 }
 
+/** Terminal compressor context retained by the UI; only this phase supplies it. */
+export interface CompressorFailureDetails {
+	profileCompressionLog: string;
+	metadata: StreamResultMetadata | undefined;
+}
+
 export interface PipelineCallbacks {
 	onPhaseStart: (phase: PhaseName) => void;
 	onPhaseStream: (phase: PhaseName, streamState: PhaseStreamState) => void;
 	onPhaseRetry: (phase: PhaseName, attempt: number, maxAttempts: number) => void;
 	onPhaseComplete: (phase: PhaseName, state: PipelineState, metadata?: StreamResultMetadata) => void;
-	onPhaseFailed?: (phase: PhaseName) => void;
+	onPhaseFailed?: (phase: PhaseName, details?: CompressorFailureDetails) => void;
 	onError: (phase: PhaseName, error: unknown) => void;
 	onPhrasesExtracted?: (phrases: string[]) => void;
 	onAllComplete: (state: PipelineState) => void;
@@ -57,20 +63,23 @@ export interface CompressorResult {
 	metadata: StreamResultMetadata;
 }
 
+/** One profile update; omitted fields inherit, `null` clears nullable text, `[]` clears traits. */
+export interface ProfileUpdateInput {
+	name: string;
+	preferredName?: string;
+	aliases?: string[];
+	logline?: string | null;
+	state?: string | null;
+	goal?: string | null;
+	relationships?: string | null;
+	voice?: string | null;
+	traits?: string[];
+	importance?: number;
+}
+
 /** One update-character-profile attempt, as supplied to the tool (observer payload). */
 export interface ProfileUpdateAttempt {
-	input: {
-		name: string;
-		preferredName?: string;
-		aliases?: string[];
-		logline?: string | null;
-		state?: string | null;
-		goal?: string | null;
-		relationships?: string | null;
-		voice?: string | null;
-		traits?: string[];
-		importance?: number;
-	};
+	input: ProfileUpdateInput;
 	result: string;
 	success: boolean;
 }

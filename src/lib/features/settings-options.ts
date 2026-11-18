@@ -1,5 +1,10 @@
 import { t } from '#lib/i18n/index.ts';
-import { settings, type ParallelRunMode, type BackgroundContextMode } from '#lib/stores/settings.svelte.ts';
+import {
+	settings,
+	type ParallelRunMode,
+	type BackgroundContextMode,
+	type CharacterProfileUpdateMethod,
+} from '#lib/stores/settings.svelte.ts';
 
 export function getProviderItems(): { label: string; value: string }[] {
 	return [
@@ -88,6 +93,13 @@ export function getBackgroundContextItems(): { label: string; value: BackgroundC
 	return [
 		{ label: t('settings.backgroundContextRich'), value: 'rich' },
 		{ label: t('settings.backgroundContextCompact'), value: 'compact' },
+	];
+}
+
+export function getCharacterProfileUpdateMethodItems(): { label: string; value: CharacterProfileUpdateMethod }[] {
+	return [
+		{ label: t('settings.characterProfileStructuredMarkdown'), value: 'structuredMarkdown' },
+		{ label: t('settings.characterProfileToolCalls'), value: 'toolCalls' },
 	];
 }
 

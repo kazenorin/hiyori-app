@@ -5,12 +5,13 @@
 		updateSettings,
 		type ParallelRunMode,
 		type BackgroundContextMode,
+		type CharacterProfileUpdateMethod,
 	} from '#lib/stores/settings.svelte.ts';
 	import { t } from '#lib/i18n/index.ts';
 	import Card from '#lib/components/ui/Card.svelte';
 	import NumberField from '#lib/components/ui/NumberField.svelte';
 	import ThemedSelect from '#lib/components/ThemedSelect.svelte';
-	import { getParallelRunItems, getBackgroundContextItems } from '#lib/features/settings-options.ts';
+	import { getParallelRunItems, getBackgroundContextItems, getCharacterProfileUpdateMethodItems } from '#lib/features/settings-options.ts';
 
 	const parallelRunItems = $derived(getParallelRunItems());
 	const parallelRunDescriptionKey = $derived(
@@ -31,6 +32,15 @@
 				compact: 'settings.backgroundContextCompactDescription',
 			} as Record<BackgroundContextMode, string>
 		)[settings.backgroundContextMode]
+	);
+	const characterProfileUpdateMethodItems = $derived(getCharacterProfileUpdateMethodItems());
+	const characterProfileUpdateMethodDescriptionKey = $derived(
+		(
+			{
+				structuredMarkdown: 'settings.characterProfileStructuredMarkdownDescription',
+				toolCalls: 'settings.characterProfileToolCallsDescription',
+			} as Record<CharacterProfileUpdateMethod, string>
+		)[settings.characterProfileUpdateMethod]
 	);
 </script>
 
@@ -89,6 +99,15 @@
 					onValueChange={(v) => updateSettings({ backgroundContextMode: v })}
 				/>
 				<span class="text-xs text-surface-500 block mt-1">{t(backgroundContextDescriptionKey)}</span>
+			</div>
+			<div>
+				<span class="text-xs font-medium text-surface-500">{t('settings.characterProfileUpdateMethod')}</span>
+				<ThemedSelect
+					items={characterProfileUpdateMethodItems}
+					value={settings.characterProfileUpdateMethod}
+					onValueChange={(v) => updateSettings({ characterProfileUpdateMethod: v })}
+				/>
+				<span class="text-xs text-surface-500 block mt-1">{t(characterProfileUpdateMethodDescriptionKey)}</span>
 			</div>
 		</div>
 

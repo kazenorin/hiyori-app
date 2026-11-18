@@ -179,10 +179,10 @@ export function trackStreamingPhase(
 			onUpdate();
 			callbacks.onPhaseComplete(phase, state, metadata);
 		},
-		onPhaseFailed: (phase) => {
+		onPhaseFailed: (phase, details) => {
 			session.streamingPhases = session.streamingPhases.filter((p) => p !== phase);
 			onUpdate();
-			callbacks.onPhaseFailed?.(phase);
+			callbacks.onPhaseFailed?.(phase, details);
 		},
 	};
 }

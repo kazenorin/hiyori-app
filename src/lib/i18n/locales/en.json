@@ -215,6 +215,11 @@
 		"backgroundContextCompact": "Compact Context",
 		"backgroundContextRichDescription": "Background phases read the full shared story context (world, plot, scenes, profiles) and share the prefix cache with the main phases.",
 		"backgroundContextCompactDescription": "Background phases see only the existing Act Summary and the latest scene material. Fewer input tokens, but no prefix-cache sharing with the main phases.",
+		"characterProfileUpdateMethod": "Character Profile Update Method",
+		"characterProfileStructuredMarkdown": "Structured Markdown",
+		"characterProfileToolCalls": "Tool Calls",
+		"characterProfileStructuredMarkdownDescription": "Generate structured updates, repair formatting if needed, then fall back to tool calls.",
+		"characterProfileToolCallsDescription": "Use the existing tool-based character profile updater directly.",
 		"plotMode": "Plot Mode",
 		"plotModeGuidance": "Guidance-based",
 		"plotModePhaseEvent": "Event-based",
@@ -978,5 +983,19 @@
 		"wispProxyTitle": "Wisp Proxy (Web app)",
 		"corsWarning": "Web app mode: your server must allow CORS requests from this app's origin, or sync will fail.",
 		"insecureTransportWarning": "Insecure connection: this URL uses plain HTTP and is not on your local network. Credentials may be intercepted."
+	},
+	"pipeline": {
+		"compressorStages": {
+			"generation": "Generation",
+			"repair": "Repair",
+			"tools": "Tool fallback",
+			"toolsDirect": "Tools",
+			"blankBody": "Generation returned an empty body.",
+			"preview": "Preview (uncommitted)",
+			"applied": "Applied updates",
+			"failed": "Failed",
+			"cancelled": "Cancelled",
+			"retry": "Retrying"
+		}
 	}
 }

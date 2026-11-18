@@ -1,17 +1,21 @@
 import { ls } from '#lib/localization/index.ts';
+import { aliasesLabel } from './common-labels';
 import { ACT_PHASE_LOCALE_KEYS, type ActPhase } from '#lib/ai/narrative-types.ts';
-import type { BackgroundContextMode } from '#lib/stores/settings.svelte.ts';
+import type { BackgroundContextMode, CharacterProfileUpdateMethod } from '#lib/stores/settings.svelte.ts';
 
 // Headers
 export const sceneSummariesHeader = () => ls('pipeline.headers.sceneSummaries');
 export const characterSummariesHeader = () => ls('pipeline.headers.characterSummaries');
 export const characterProfilesHeader = () => ls('pipeline.headers.characterProfiles');
+export const characterProfileUpdatesHeader = () => ls('pipeline.headers.characterProfileUpdates');
+export const clearFieldsHeader = () => ls('pipeline.headers.clearFields');
 
 // Labels
 export const upToLabel = () => ls('pipeline.labels.upTo');
 export const acceptAsIsLabel = () => ls('pipeline.labels.acceptAsIs');
 export const totalViolationsLabel = () => ls('pipeline.labels.totalViolations');
 export const recommendationLabel = () => ls('pipeline.labels.recommendation');
+export const preferredNameLabel = () => ls('pipeline.labels.preferredName');
 export const stateLabel = () => ls('pipeline.labels.state');
 export const loglineLabel = () => ls('pipeline.labels.logline');
 export const goalLabel = () => ls('pipeline.labels.goal');
@@ -19,6 +23,7 @@ export const relationshipsLabel = () => ls('pipeline.labels.relationships');
 export const voiceLabel = () => ls('pipeline.labels.voice');
 export const traitsLabel = () => ls('pipeline.labels.traits');
 export const importanceLabel = () => ls('pipeline.labels.importance');
+export const updateCountLabel = () => ls('pipeline.labels.updateCount');
 export const importanceLevelLabel = (level: 1 | 2 | 3 | 4) => ls(`pipeline.labels.importanceLevels.${level}`);
 export const sceneCountLabel = (n: number) =>
 	n === 1 ? ls('pipeline.labels.sceneCountSingular') : ls('pipeline.labels.sceneCountPlural', { count: n });
@@ -26,6 +31,47 @@ export const lastSeenLabel = (sceneNumber: number) => ls('pipeline.labels.lastSe
 export const lastUpdatedLabel = (sceneNumber: number) => ls('pipeline.labels.lastUpdated', { sceneNumber });
 export const importanceValueLabel = (importance: string) => ls('pipeline.labels.importanceValue', { importance });
 export const aliasesValueLabel = (aliases: string) => ls('pipeline.labels.aliasesValue', { aliases });
+
+/** Labels for one structured character-profile update batch, captured once per compression. */
+export function getProfileUpdateLabels() {
+	return {
+		envelope: characterProfileUpdatesHeader(),
+		count: updateCountLabel(),
+		clearFields: clearFieldsHeader(),
+		fields: {
+			preferredName: preferredNameLabel(),
+			logline: loglineLabel(),
+			state: stateLabel(),
+			goal: goalLabel(),
+			relationships: relationshipsLabel(),
+			voice: voiceLabel(),
+			importance: importanceLabel(),
+			aliases: aliasesLabel(),
+			traits: traitsLabel(),
+		},
+	};
+}
+export type ProfileUpdateLabels = ReturnType<typeof getProfileUpdateLabels>;
+
+function profileLabelParams(labels: ProfileUpdateLabels): Record<string, string> {
+	return {
+		envelope: labels.envelope,
+		count: labels.count,
+		clearFields: labels.clearFields,
+		...labels.fields,
+	};
+}
+
+/** Single resolved output-transport contract for the configured update method. */
+export function profileUpdateContract(method: CharacterProfileUpdateMethod, labels: ProfileUpdateLabels): string {
+	const key = method === 'toolCalls' ? 'pipeline.compressor.transport.toolCalls' : 'pipeline.compressor.transport.structuredMarkdown';
+	return ls(key, profileLabelParams(labels));
+}
+
+/** Instructions for repairing a rejected structured-Markdown batch without inventing or dropping data. */
+export function profileUpdateRepairInstructions(labels: ProfileUpdateLabels): string {
+	return ls('pipeline.extraction.characterProfileRepair', profileLabelParams(labels));
+}
 export const noDescriptionLabel = () => ls('pipeline.labels.noDescription');
 export const sceneDetailsLabel = () => ls('pipeline.labels.sceneDetails');
 export const canonicalNameLabel = () => ls('pipeline.labels.canonicalName');

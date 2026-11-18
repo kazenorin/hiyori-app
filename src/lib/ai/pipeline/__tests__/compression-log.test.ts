@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { loadLocaleStrings } from '#lib/localization/index.ts';
-import { formatProfileUpdateAttempt, emptyCompressionLog } from '#lib/ai/pipeline/compression-log.ts';
+import { createCompressionLog, formatProfileUpdateAttempt, emptyCompressionLog } from '#lib/ai/pipeline/compression-log.ts';
 import type { ProfileUpdateAttempt } from '#lib/ai/pipeline/types.ts';
 
 beforeAll(async () => {
@@ -60,5 +60,28 @@ describe('formatProfileUpdateAttempt', () => {
 describe('emptyCompressionLog', () => {
 	it('is a localized no-changes marker (quiet run)', () => {
 		expect(emptyCompressionLog()).toBe('No profile changes — the new material did not justify any updates.');
+	});
+});
+
+describe('createCompressionLog', () => {
+	it('never persists an uncommitted preview', () => {
+		const log = createCompressionLog(false, (key) => key);
+		log.beginStage('generation');
+		log.setPreview('UNCOMMITTED_MODEL_BODY');
+		log.addAttempt(attempt({ state: 'Recovered' }));
+		expect(log.streamContent()).toContain('UNCOMMITTED_MODEL_BODY');
+		expect(log.committedContent(true)).not.toContain('UNCOMMITTED_MODEL_BODY');
+		expect(log.committedContent(true)).toContain('## applied');
+		expect(log.committedContent(true)).toContain('### elena-vale');
+	});
+
+	it('distinguishes direct tools, quiet success, and failure', () => {
+		const log = createCompressionLog(true, (key) => key);
+		log.beginStage('tools');
+		expect(log.streamContent()).toBe('## toolsDirect');
+		expect(log.committedContent(true)).toContain(emptyCompressionLog());
+		log.addFailure(true, '');
+		expect(log.committedContent(false)).toContain('## cancelled');
+		expect(log.committedContent(false)).not.toContain(emptyCompressionLog());
 	});
 });

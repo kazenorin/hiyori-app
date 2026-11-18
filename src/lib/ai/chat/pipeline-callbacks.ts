@@ -3,7 +3,7 @@ import { isReviewerEnabled } from '#lib/stores/settings.svelte.ts';
 import { getErrorMessage } from '#lib/utils/error-handling.ts';
 import type { UIMessage } from './types';
 import { BACKGROUND_PHASES, type GameDataFields, type NarrativeVariables, type PhaseName, type UIScenePhase } from '../narrative-types';
-import type { PipelineCallbacks, PipelineState, PhaseStreamState } from '../pipeline/types';
+import type { CompressorFailureDetails, PipelineCallbacks, PipelineState, PhaseStreamState } from '../pipeline/types';
 import type { StreamResultMetadata } from '../streaming';
 import { mergeTokenFields } from './metadata';
 import { toPhaseMetadata } from '../chat-stream';
@@ -58,7 +58,7 @@ export function createOptionalCallbacks({
 	onPhaseStream = () => {},
 	onPhaseRetry = () => {},
 	onPhaseComplete = () => {},
-	onPhaseFailed = (_phase) => {},
+	onPhaseFailed = (_phase, _details) => {},
 	onError = (_phase, _err) => {},
 	onAllComplete = () => {},
 }: Partial<PipelineCallbacks> = {}): PipelineCallbacks {
@@ -172,7 +172,17 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 				setCurrentMessage({ ...current, scenePlot: pipelineState.scenePlot });
 			}
 		},
-		onPhaseFailed: (phase: PhaseName) => {
+		onPhaseFailed: (phase: PhaseName, details?: CompressorFailureDetails) => {
+			if (phase === 'CHARACTER_PROFILE_COMPRESSOR' && details) {
+				updatePhaseInList(phase, { content: details.profileCompressionLog });
+				if (details.metadata) {
+					const current = getCurrentMessage();
+					const model = [...details.metadata.models][0] ?? 'unknown';
+					const entry = toPhaseMetadata(phase, details.metadata, model);
+					setCurrentMessage({ ...current, metadata: mergeTokenFields(current.metadata, details.metadata, entry, model) });
+				}
+				return;
+			}
 			const current = getCurrentMessage();
 			setCurrentMessage({ ...current, phases: (current.phases ?? []).filter((p) => p.phaseName !== phase) });
 		},

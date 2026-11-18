@@ -4,7 +4,7 @@ vi.mock('#lib/stores/settings.svelte.ts', () => ({
 	getSummarizerProviderConfig: () => ({ model: 'sum-model' }),
 }));
 
-import { mergePreservedBackgroundMetadata, mergeTokenFields } from '#lib/ai/chat/metadata.ts';
+import { mergePreservedBackgroundMetadata } from '#lib/ai/chat/metadata.ts';
 import type { MessageMetadata } from '#lib/ai/chat-stream.ts';
 
 const summarizerEntry = {
@@ -75,5 +75,29 @@ describe('mergePreservedBackgroundMetadata', () => {
 		const merged = mergePreservedBackgroundMetadata(undefined, existing);
 		expect(merged?.inputTokens).toBe(100);
 		expect(merged?.phases).toEqual([summarizerEntry]);
+	});
+
+	it('preserves a failed compressor entry merged before finalize without double counting', () => {
+		// WHY: a compressor failure can settle while the foreground phases are still
+		// running; finalize rebuilds from the main aggregate and must re-append the
+		// retained failure entry exactly once.
+		const failureEntry = {
+			phaseName: 'CHARACTER_PROFILE_COMPRESSOR',
+			model: 'sum-model',
+			finishReason: 'stop',
+			inputTokens: 50,
+			outputTokens: 5,
+			totalTokens: 55,
+			durationMs: 4,
+		};
+		const existing: MessageMetadata = {
+			...mainMetadata(),
+			inputTokens: 550,
+			totalTokens: 755,
+			phases: [...mainMetadata().phases!, failureEntry],
+		};
+		const merged = mergePreservedBackgroundMetadata(mainMetadata(), existing);
+		expect(merged?.inputTokens).toBe(550);
+		expect(merged?.phases?.map((p) => p.phaseName)).toEqual(['WRITER', 'CHARACTER_PROFILE_COMPRESSOR']);
 	});
 });

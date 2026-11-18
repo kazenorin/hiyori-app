@@ -215,4 +215,41 @@ describe('background phase callbacks', () => {
 
 		expect(h.phase('SUMMARIZER')).toBeUndefined();
 	});
+
+	it('retains a failed compressor entry with its terminal log and available usage once', () => {
+		// WHY: a compressor failure after a streamed preview must not erase the chip;
+		// the terminal log and the usage already spent are the only durable evidence.
+		const h = makeHarness();
+		h.callbacks.onPhaseStart('EDITOR');
+		h.callbacks.onPhaseComplete('EDITOR', { editorOutput: 'prose' });
+		h.callbacks.onPhaseStart('CHARACTER_PROFILE_COMPRESSOR');
+		h.callbacks.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', { content: 'partial log', reasoning: 'thinking', variables: null });
+		h.callbacks.onPhaseFailed?.('CHARACTER_PROFILE_COMPRESSOR', {
+			profileCompressionLog: '## Failed\n\ncheckpoint down',
+			metadata: meta(50, 5),
+		});
+
+		const entries = h.message.phases?.filter((p) => p.phaseName === 'CHARACTER_PROFILE_COMPRESSOR');
+		expect(entries).toHaveLength(1);
+		expect(entries?.[0]).toEqual({
+			phaseName: 'CHARACTER_PROFILE_COMPRESSOR',
+			content: '## Failed\n\ncheckpoint down',
+			reasoning: 'thinking',
+		});
+		expect(h.phase('EDITOR')?.content).toBe('prose');
+		expect(h.message.metadata?.inputTokens).toBe(50);
+		expect(h.message.metadata?.phases?.map((p) => p.phaseName)).toEqual(['CHARACTER_PROFILE_COMPRESSOR']);
+	});
+
+	it('ignores failure details for other phases and strips their chip', () => {
+		const h = makeHarness();
+		h.callbacks.onPhaseStart('SUMMARIZER');
+		h.callbacks.onPhaseFailed?.('SUMMARIZER', {
+			profileCompressionLog: '## Failed\n\nsummarizer down',
+			metadata: meta(50, 5),
+		});
+
+		expect(h.phase('SUMMARIZER')).toBeUndefined();
+		expect(h.message.metadata).toBeUndefined();
+	});
 });

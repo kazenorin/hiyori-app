@@ -86,7 +86,7 @@ import {
 	type RunEvent,
 } from '#lib/ai/chat/run-manager.ts';
 import { runPipeline } from '#lib/ai/pipeline/index.ts';
-import { persistMessage } from '#lib/ai/chat/persistence.ts';
+import { persistMessage, updatePersistentMessageMetadata } from '#lib/ai/chat/persistence.ts';
 import { fileLog } from '#lib/logging/logger.ts';
 import * as dbMessagePhases from '#lib/db/message-phases.ts';
 import type { PipelineRunRecord } from '#lib/db/pipeline-runs.ts';
@@ -267,6 +267,7 @@ describe('trackStreamingPhase', () => {
 			onPhaseStream: vi.fn(),
 			onPhaseRetry: vi.fn(),
 			onPhaseComplete: vi.fn(),
+			onPhaseFailed: vi.fn(),
 			onError: vi.fn(),
 			onAllComplete: vi.fn(),
 		};
@@ -329,6 +330,30 @@ describe('trackStreamingPhase', () => {
 		expect(inner.onPhaseRetry).toHaveBeenCalledWith('EDITOR', 1, 3);
 		wrapped.onAllComplete({});
 		expect(inner.onAllComplete).toHaveBeenCalledWith({});
+	});
+
+	it('forwards compressor failure details and clears its spinner', () => {
+		// WHY: the terminal log/usage must reach the callbacks, and a failed phase
+		// must stop spinning even though it keeps its chip.
+		const inner = makeInner();
+		const session = { streamingPhases: ['CHARACTER_PROFILE_COMPRESSOR'] as PhaseName[] };
+		const onUpdate = vi.fn();
+		const wrapped = trackStreamingPhase(session, inner, onUpdate);
+		const details = {
+			profileCompressionLog: '## Failed\n\ncheckpoint down',
+			metadata: {
+				finishReason: 'stop',
+				usage: { inputTokens: 1, outputTokens: 1, totalTokens: 2 },
+				durationMs: 1,
+				models: new Set(['m']),
+			},
+		};
+
+		wrapped.onPhaseFailed?.('CHARACTER_PROFILE_COMPRESSOR', details);
+
+		expect(session.streamingPhases).toEqual([]);
+		expect(onUpdate).toHaveBeenCalledTimes(1);
+		expect(inner.onPhaseFailed).toHaveBeenCalledWith('CHARACTER_PROFILE_COMPRESSOR', details);
 	});
 });
 
@@ -409,6 +434,106 @@ describe('phase persistence on settle', () => {
 		const backgroundReport = (cacheLogs[1][2] as () => string)();
 		expect(backgroundReport).toContain('SUMMARIZER');
 		expect(backgroundReport).toContain('input=10');
+	});
+
+	it('persists a successful compressor terminal log and usage after background settle', async () => {
+		// WHY: the applied-attempt log is the chip's only content; it must be the row
+		// the UI reloads, exactly like the failed-log path.
+		vi.mocked(runPipeline).mockImplementation(async (input) => {
+			const cb = input.execution.callbacks;
+			cb.onPhaseStart('EDITOR');
+			cb.onPhaseComplete('EDITOR', { editorOutput: 'prose' });
+			cb.onPhaseStart('CHARACTER_PROFILE_COMPRESSOR');
+			cb.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', { content: '## Preview', reasoning: 'thinking', variables: null });
+			cb.onPhaseComplete(
+				'CHARACTER_PROFILE_COMPRESSOR',
+				{ profileCompressionLog: '## Generation\n\n## Applied updates\n\n### Elena Vale' },
+				{
+					finishReason: 'stop',
+					usage: { inputTokens: 15, outputTokens: 4, totalTokens: 19 },
+					durationMs: 3,
+					models: new Set(['sum-model']),
+				}
+			);
+			return { state: { editorOutput: 'prose' }, phases: [], backgroundPhases: Promise.resolve({}) };
+		});
+
+		let resolveBackgroundSettled!: () => void;
+		const backgroundSettled = new Promise<void>((r) => (resolveBackgroundSettled = r));
+		const off = subscribeRuns((e) => {
+			if (e.type === 'background-settled') resolveBackgroundSettled();
+		});
+
+		await startMainRun({ actLineId: 'line-1', message: 'go' });
+		await backgroundSettled;
+		off();
+
+		const backgroundUpsert = vi.mocked(dbMessagePhases.upsertMessagePhases).mock.calls.at(-1)!;
+		expect(backgroundUpsert[1].find((p) => p.phaseName === 'CHARACTER_PROFILE_COMPRESSOR')?.content).toBe(
+			'## Generation\n\n## Applied updates\n\n### Elena Vale'
+		);
+		const persisted = JSON.parse(vi.mocked(updatePersistentMessageMetadata).mock.calls.at(-1)![1].metadata!);
+		expect(persisted.phases.find((p: { phaseName: string }) => p.phaseName === 'CHARACTER_PROFILE_COMPRESSOR').inputTokens).toBe(15);
+	});
+
+	it('persists a failed compressor entry, terminal log and usage after background settle', async () => {
+		// WHY: a compressor failure must survive reload exactly like a success; the
+		// retained chip content and the usage already spent are persisted at settle.
+		const compressorMeta = {
+			finishReason: 'stop',
+			usage: { inputTokens: 20, outputTokens: 5, totalTokens: 25 },
+			durationMs: 2,
+			models: new Set(['sum-model']),
+		};
+		vi.mocked(runPipeline).mockImplementation(async (input) => {
+			const cb = input.execution.callbacks;
+			cb.onPhaseStart('EDITOR');
+			cb.onPhaseComplete('EDITOR', { editorOutput: 'final prose', editorReasoning: 'thoughts' });
+			cb.onPhaseStart('SUMMARIZER');
+			cb.onPhaseComplete(
+				'SUMMARIZER',
+				{ actSummary: 'the summary' },
+				{
+					finishReason: 'stop',
+					usage: { inputTokens: 10, outputTokens: 5, totalTokens: 15 },
+					durationMs: 1,
+					models: new Set(['sum-model']),
+				}
+			);
+			cb.onPhaseStart('CHARACTER_PROFILE_COMPRESSOR');
+			cb.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', { content: '## Preview', reasoning: 'thinking', variables: null });
+			cb.onPhaseFailed?.('CHARACTER_PROFILE_COMPRESSOR', {
+				profileCompressionLog: '## Generation\n\n## Failed\n\ncheckpoint down',
+				metadata: compressorMeta,
+			});
+			return {
+				state: { editorOutput: 'final prose' },
+				phases: [],
+				backgroundPhases: Promise.resolve({ actSummary: 'the summary' }),
+			};
+		});
+
+		let resolveBackgroundSettled!: () => void;
+		const backgroundSettled = new Promise<void>((r) => (resolveBackgroundSettled = r));
+		const off = subscribeRuns((e) => {
+			if (e.type === 'background-settled') resolveBackgroundSettled();
+		});
+
+		const { assistantMessage } = await startMainRun({ actLineId: 'line-1', message: 'go' });
+		await backgroundSettled;
+		off();
+
+		const backgroundUpsert = vi.mocked(dbMessagePhases.upsertMessagePhases).mock.calls.at(-1)!;
+		expect(backgroundUpsert[0]).toBe(assistantMessage.id);
+		const compressorRow = backgroundUpsert[1].find((p) => p.phaseName === 'CHARACTER_PROFILE_COMPRESSOR');
+		expect(compressorRow?.content).toBe('## Generation\n\n## Failed\n\ncheckpoint down');
+
+		const metadataUpdates = vi.mocked(updatePersistentMessageMetadata).mock.calls.at(-1)!;
+		const persisted = JSON.parse(metadataUpdates[1].metadata!);
+		expect(persisted.phases.map((p: { phaseName: string }) => p.phaseName)).toEqual(['SUMMARIZER', 'CHARACTER_PROFILE_COMPRESSOR']);
+		expect(persisted.inputTokens).toBe(30);
+		expect(persisted.phases.find((p: { phaseName: string }) => p.phaseName === 'CHARACTER_PROFILE_COMPRESSOR').inputTokens).toBe(20);
+		expect(getActiveSession('line-1')).toBeUndefined();
 	});
 
 	it('skips the background cache report when no background phase metadata landed', async () => {
