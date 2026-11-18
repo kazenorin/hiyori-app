@@ -1,12 +1,14 @@
 import type { MessageBase } from '#lib/db/messages.ts';
 import type { GameDataFields, NarrativeOverrides, NarrativeVariables } from '../narrative-types';
 import { hasNarrativeOverrides } from '../narrative-types';
-import type { PipelineContext } from './types';
+import type { PipelineContext, PlayerContext } from './types';
 import type { StreamState } from '../chat-callbacks';
 import {
 	formatCharacterProfileAsMessage,
 	formatDirectorNotesSection,
+	formatPreviousNarrativeBody,
 	formatStorySoFar,
+	formatTurnOfEventsSection,
 	SECTION,
 	upcomingScenePlotSection,
 } from '#lib/definitions/pipeline-sections.ts';
@@ -14,6 +16,7 @@ import {
 	actSummaryForScenesHeader,
 	actSummaryHeader,
 	currentCharacterProfilesHeader,
+	playerResponseHeader,
 	scenesHeader,
 	sectionFormat,
 	summaryHeader,
@@ -163,6 +166,11 @@ export function formatActSummaryForSummarizer(completedScenes: number, actSummar
 	return summarizerActSummary ? [actSummaryHeading + summarizerActSummary] : [];
 }
 
+function playerResponseSection(playerContext: PlayerContext | undefined): string[] {
+	const playerResponse = playerContext?.playerResponse;
+	return playerResponse ? [sectionFormat(playerResponseHeader()) + playerResponse] : [];
+}
+
 // --- Shared-prefix message builders (Tiers 0–2) ---
 
 /** Assemble the Tier-0 sectional messages: World Content · Story so Far · Act Plot. */
@@ -248,4 +256,30 @@ export function buildTranscriptSummarizerMessages(transcript: { role: 'user' | '
 		{ role: 'user', content: summarizerTranscriptEnd() },
 		{ role: 'user', content: summarizerFullExtractionPromptTemplate() },
 	];
+}
+
+/**
+ * Compact (pre-shared-prefix) summarizer layout: existing act summary plus the latest
+ * scene material as dedicated sections. The role prompt is the system prompt in this
+ * mode, so it does not appear in the tail.
+ */
+export function buildCompactSummarizerMessages(
+	actSummary: string,
+	previousNarrativeVariables: NarrativeVariables | undefined,
+	completedScenes: number,
+	player: PlayerContext | undefined,
+	parsedActSummary: ActSummary | undefined,
+	finalLine: string
+): MessageBase[] {
+	const effectiveSummary = parsedActSummary ?? parseActSummary(actSummary);
+	if (previousNarrativeVariables && previousNarrativeVariables.narrativeBody) {
+		return toUserMessages([
+			...formatActSummaryForSummarizer(completedScenes, effectiveSummary),
+			...formatPreviousNarrativeBody(previousNarrativeVariables.narrativeBody, completedScenes),
+			...playerResponseSection(player),
+			...formatTurnOfEventsSection(previousNarrativeVariables.turnOfEvents),
+			finalLine,
+		]);
+	}
+	return toUserMessages([...formatActSummaryForSummarizer(completedScenes, effectiveSummary), ...playerResponseSection(player), finalLine]);
 }

@@ -19,18 +19,21 @@ import { emptyCompressionLog, formatProfileUpdateAttempt } from './compression-l
 import { DEFAULT_RETRY_CONFIG, streamWithRetry } from '../chat-stream';
 import type { StreamResultMetadata } from '../streaming';
 import {
+	buildCompactSummarizerMessages,
 	buildPhaseMessages,
 	buildTranscriptSummarizerMessages,
 	formatActSummaryForCompressor,
 	formatActSummaryForSummarizer,
 	formatExistingProfilesForCompressor,
 	substituteActSummaryTemplate,
+	toUserMessages,
 } from './message-builder';
 import { guardToolsForBackgroundPhase } from '#lib/ai/tools/tools.ts';
 import { type ActSummary, mergeActSummary, parseActSummary, parseIncrementalOutput, serializeActSummary } from '../act-summary-parser';
 import { actSummaryHeader, currentCharacterProfilesHeader } from '#lib/definitions/common-headers.ts';
 import {
 	actSummaryTemplate,
+	applyLayoutSlots,
 	resolveSharedSystemPrompt,
 	summarizerExtractionPromptTemplate,
 	summarizerFallbackExtractionPromptTemplate,
@@ -106,13 +109,22 @@ async function streamSummaryText(
 
 export async function generateFullSummary(input: SummarizerInput, prompts: SummarizerPrompts): Promise<SummarizerResult> {
 	const { providerConfig, abortSignal } = input;
+	const mode = getSettings().backgroundContextMode;
 
 	const fullTemplate = `# {{actSummaryHeader}}\n\n${actSummaryTemplate()}`;
 	const actSummaryTemplateProcessed = substituteActSummaryTemplate(fullTemplate, {
 		sceneNumber: '{N}',
 		sceneTitle: '[Scene title]',
 	});
-	const fullRolePrompt = prompts.summarizerPrompt.replaceAll('{{actSummaryTemplate}}', actSummaryTemplateProcessed);
+	// Transcript regeneration keeps the rich wording: its bespoke layout predates both modes.
+	const fullRolePrompt = applyLayoutSlots(prompts.summarizerPrompt, input.transcript?.length ? 'rich' : mode).replaceAll(
+		'{{actSummaryTemplate}}',
+		actSummaryTemplateProcessed
+	);
+	const sceneTitle = input.previousNarrativeVariables?.sceneTitle ?? '';
+	const finalLine = input.previousNarrativeVariables?.narrativeBody
+		? summarizerExtractionPromptTemplate(String(input.completedScenes), sceneTitle)
+		: summarizerFallbackExtractionPromptTemplate(input.completedScenes);
 
 	let systemPrompt: string;
 	let summarizerMessages: MessageBase[];
@@ -124,13 +136,20 @@ export async function generateFullSummary(input: SummarizerInput, prompts: Summa
 		systemPrompt = fullRolePrompt;
 		summarizerMessages = buildTranscriptSummarizerMessages(input.transcript);
 		phaseTools = undefined;
+	} else if (mode === 'compact') {
+		systemPrompt = fullRolePrompt;
+		summarizerMessages = buildCompactSummarizerMessages(
+			input.actSummary,
+			input.previousNarrativeVariables,
+			input.completedScenes,
+			input.player,
+			undefined,
+			finalLine
+		);
+		phaseTools = undefined;
 	} else {
 		const context = requireContext(input);
 		systemPrompt = resolveSharedSystemPrompt(prompts);
-		const sceneTitle = input.previousNarrativeVariables?.sceneTitle ?? '';
-		const finalLine = input.previousNarrativeVariables?.narrativeBody
-			? summarizerExtractionPromptTemplate(String(input.completedScenes), sceneTitle)
-			: summarizerFallbackExtractionPromptTemplate(input.completedScenes);
 		summarizerMessages = buildPhaseMessages(
 			context,
 			[...formatActSummaryForSummarizer(input.completedScenes, parseActSummary(input.actSummary)), fullRolePrompt],
@@ -168,18 +187,26 @@ async function generateIncrementalSummary(input: SummarizerInput, prompts: Summa
 	const sceneTitle = previousNarrativeVariables?.sceneTitle ?? '';
 	const processedTemplate = substituteActSummaryTemplate(actSummaryTemplate(), { sceneNumber, sceneTitle });
 
-	const incrementalExtraction = prompts.summarizerIncrementalPrompt.replaceAll('{{actSummaryTemplate}}', processedTemplate);
-	const incrementalMessages = buildPhaseMessages(
-		requireContext(input),
-		[...formatActSummaryForSummarizer(completedScenes, existingParsed), incrementalExtraction],
-		summarizerExtractionPromptTemplate(sceneNumber, sceneTitle),
-		''
+	const mode = getSettings().backgroundContextMode;
+	const incrementalExtraction = applyLayoutSlots(prompts.summarizerIncrementalPrompt, mode).replaceAll(
+		'{{actSummaryTemplate}}',
+		processedTemplate
 	);
+	const finalLine = summarizerExtractionPromptTemplate(sceneNumber, sceneTitle);
+	const incrementalMessages =
+		mode === 'compact'
+			? buildCompactSummarizerMessages(actSummary, previousNarrativeVariables, completedScenes, input.player, existingParsed, finalLine)
+			: buildPhaseMessages(
+					requireContext(input),
+					[...formatActSummaryForSummarizer(completedScenes, existingParsed), incrementalExtraction],
+					finalLine,
+					''
+				);
 	const { text: incrementalRaw, metadata } = await streamSummaryText(
 		input,
-		resolveSharedSystemPrompt(prompts),
+		mode === 'compact' ? incrementalExtraction : resolveSharedSystemPrompt(prompts),
 		incrementalMessages,
-		guardToolsForBackgroundPhase(input.tools, 'SUMMARIZER')
+		mode === 'compact' ? undefined : guardToolsForBackgroundPhase(input.tools, 'SUMMARIZER')
 	);
 
 	try {
@@ -235,17 +262,14 @@ export async function generateCharacterProfiles(
 
 	if (completedScenes - lastScene < interval) return null;
 
-	const compressorExtraction = prompts.characterProfileCompressorPrompt
+	const mode = getSettings().backgroundContextMode;
+	const compressorPrompt = applyLayoutSlots(prompts.characterProfileCompressorPrompt, mode)
 		.replaceAll('{{actSummaryHeader}}', actSummaryHeader())
 		.replaceAll('{{currentCharacterProfilesHeader}}', currentCharacterProfilesHeader());
 
 	const existingProfiles = await getLatestProfilesByActLine(compressorInput.actLineId);
-	const messages = buildPhaseMessages(
-		compressorInput.context,
-		[...formatActSummaryForCompressor(completedScenes, newActSummary), ...formatExistingProfilesForCompressor(existingProfiles)],
-		compressorExtraction,
-		''
-	);
+	const tail = [...formatActSummaryForCompressor(completedScenes, newActSummary), ...formatExistingProfilesForCompressor(existingProfiles)];
+	const messages = mode === 'compact' ? toUserMessages(tail) : buildPhaseMessages(compressorInput.context, tail, compressorPrompt, '');
 
 	compressorInput.compression.newActSummary = newActSummary;
 	const callbacks = compressorInput.callbacks;
@@ -263,7 +287,7 @@ export async function generateCharacterProfiles(
 	}
 	let metadata: StreamResultMetadata;
 	try {
-		const accumulator = await streamWithRetry(resolveSharedSystemPrompt(prompts), messages, {
+		const accumulator = await streamWithRetry(mode === 'compact' ? compressorPrompt : resolveSharedSystemPrompt(prompts), messages, {
 			retryConfig: DEFAULT_RETRY_CONFIG,
 			onProgress: (state) => {
 				latestReasoning = state.reasoning;

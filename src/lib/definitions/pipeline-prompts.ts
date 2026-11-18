@@ -1,5 +1,6 @@
 import { ls } from '#lib/localization/index.ts';
 import { ACT_PHASE_LOCALE_KEYS, type ActPhase } from '#lib/ai/narrative-types.ts';
+import type { BackgroundContextMode } from '#lib/stores/settings.svelte.ts';
 
 // Headers
 export const sceneSummariesHeader = () => ls('pipeline.headers.sceneSummaries');
@@ -40,6 +41,23 @@ export const templateFitterSystemPrompt = () => ls('pipeline.system.templateFitt
 /** Resolve the single shared system prompt (persona + general instructions + tools note). */
 export function resolveSharedSystemPrompt(prompts: { mainChatSystemPrompt: string; generalInstructions: string }): string {
 	return prompts.mainChatSystemPrompt.replaceAll('{{generalInstructions}}', prompts.generalInstructions);
+}
+
+const LAYOUT_SLOT_KEYS = {
+	'{{layoutFullAnalyzeInputs}}': 'pipeline.layoutSlots.fullAnalyzeInputs',
+	'{{layoutFullSceneSummaries}}': 'pipeline.layoutSlots.fullSceneSummaries',
+	'{{layoutIncrementalAnalyzeInputs}}': 'pipeline.layoutSlots.incrementalAnalyzeInputs',
+	'{{layoutIncrementalScope}}': 'pipeline.layoutSlots.incrementalScope',
+	'{{layoutCompressorSources}}': 'pipeline.layoutSlots.compressorSources',
+} as const;
+
+/** Fill the layout-dependent prompt spans for the background context mode. */
+export function applyLayoutSlots(prompt: string, mode: BackgroundContextMode): string {
+	let result = prompt;
+	for (const [placeholder, key] of Object.entries(LAYOUT_SLOT_KEYS)) {
+		result = result.replaceAll(placeholder, ls(`${key}.${mode}`));
+	}
+	return result;
 }
 
 // Extraction prompts

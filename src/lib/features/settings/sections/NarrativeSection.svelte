@@ -1,10 +1,16 @@
 <script lang="ts">
-	import { getMinorTaskAgentProviderConfig, settings, updateSettings, type ParallelRunMode } from '#lib/stores/settings.svelte.ts';
+	import {
+		getMinorTaskAgentProviderConfig,
+		settings,
+		updateSettings,
+		type ParallelRunMode,
+		type BackgroundContextMode,
+	} from '#lib/stores/settings.svelte.ts';
 	import { t } from '#lib/i18n/index.ts';
 	import Card from '#lib/components/ui/Card.svelte';
 	import NumberField from '#lib/components/ui/NumberField.svelte';
 	import ThemedSelect from '#lib/components/ThemedSelect.svelte';
-	import { getParallelRunItems } from '#lib/features/settings-options.ts';
+	import { getParallelRunItems, getBackgroundContextItems } from '#lib/features/settings-options.ts';
 
 	const parallelRunItems = $derived(getParallelRunItems());
 	const parallelRunDescriptionKey = $derived(
@@ -16,6 +22,15 @@
 				parallelWithWriter: 'settings.parallelRunWithWriterDescription',
 			} as Record<ParallelRunMode, string>
 		)[settings.parallelRun]
+	);
+	const backgroundContextItems = $derived(getBackgroundContextItems());
+	const backgroundContextDescriptionKey = $derived(
+		(
+			{
+				rich: 'settings.backgroundContextRichDescription',
+				compact: 'settings.backgroundContextCompactDescription',
+			} as Record<BackgroundContextMode, string>
+		)[settings.backgroundContextMode]
 	);
 </script>
 
@@ -65,6 +80,15 @@
 				<span class="text-xs font-medium text-surface-500">{t('settings.parallelRun')}</span>
 				<ThemedSelect items={parallelRunItems} value={settings.parallelRun} onValueChange={(v) => updateSettings({ parallelRun: v })} />
 				<span class="text-xs text-surface-500 block mt-1">{t(parallelRunDescriptionKey)}</span>
+			</div>
+			<div>
+				<span class="text-xs font-medium text-surface-500">{t('settings.backgroundContextMode')}</span>
+				<ThemedSelect
+					items={backgroundContextItems}
+					value={settings.backgroundContextMode}
+					onValueChange={(v) => updateSettings({ backgroundContextMode: v })}
+				/>
+				<span class="text-xs text-surface-500 block mt-1">{t(backgroundContextDescriptionKey)}</span>
 			</div>
 		</div>
 

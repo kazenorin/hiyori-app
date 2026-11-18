@@ -20,6 +20,8 @@ export const gameMasterOutputHeader = () => ls('common.headers.gameMasterOutput'
 export const previousActSummaryHeader = () => ls('common.headers.previousActSummary');
 export const actSummaryForScenesHeader = (summarizedScenes: number | string) =>
 	ls('common.headers.actSummaryForScenes', { summarizedScenes });
+export const previousNarrativeBodyHeader = (completedScenes: number | string) =>
+	ls('common.headers.previousNarrativeBody', { completedScenes });
 export const activePlotThreadsHeader = () => ls('common.headers.activePlotThreads');
 export const decisionContextHeader = () => ls('common.headers.decisionContext');
 export const decisionsHeader = () => ls('common.headers.decisions');

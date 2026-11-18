@@ -39,6 +39,7 @@ common:
     gameMasterOutput: GM 輸出
     previousActSummary: 上一章節摘要
     actSummaryForScenes: '章節摘要 {{summarizedScenes}}'
+    previousNarrativeBody: '場景 {{completedScenes}} 的敘事正文'
     sceneTitle: 場景標題
     background: 背景
     narrativeBody: 敘事正文
@@ -90,6 +91,22 @@ pipeline:
     actPlotActCards: 章節卡片
     actPlotCharacterProfiles: 角色檔案
     actPlotPlayerPreferences: 玩家偏好
+  layoutSlots:
+    fullAnalyzeInputs:
+      rich: '審閱所有提供的故事材料。若提供了現有章節摘要，以其為準; 脈絡中任何較早的摘要快照僅供參考。若脈絡中有即將到來的場景規劃區段，請忽略——它描述的是尚未發生的事件。'
+      compact: '審閱現有的章節摘要、前一段敘事正文和玩家回應。'
+    fullSceneSummaries:
+      rich: '在場景摘要下，逐字複製所有現有條目，不得改寫或重新推導。接著，為每個尚未記錄的新遊玩場景附加新條目，使用材料中顯示的場景編號和標題，擷取簡潔的地點並摘要核心事件。若材料停在玩家抉擇點而結果未知，摘要必須停在該抉擇點，不得虛構結果。'
+      compact: '在場景摘要下，逐字複製所有現有條目，不得改寫或重新推導。接著，為尚未記錄的新遊玩場景附加新條目，使用最終指令中提供的場景編號和標題，擷取簡潔的地點並摘要核心事件。若材料停在玩家抉擇點而結果未知，摘要必須停在該抉擇點，不得虛構結果。'
+    incrementalAnalyzeInputs:
+      rich: '在共享故事脈絡之後提供的現有章節摘要，是權威的合併基礎; 脈絡中任何較早的章節摘要快照僅供背景參考。專注於場景章節中最後一個場景區塊，以及摺疊其中的玩家回應——那就是你要摘要的場景。'
+      compact: '審閱現有章節摘要作為脈絡，然後專注於前一段敘事正文和玩家回應——那就是你要摘要的場景。'
+    incrementalScope:
+      rich: '只摘要該場景。由於玩家選擇的結果尚不可知，你的摘要必須停在抉擇點，不得虛構結果。忽略即將到來的場景規劃——它描述的是尚未發生的場景。'
+      compact: '只摘要該場景。由於玩家選擇的結果尚不可知，你的摘要必須停在抉擇點，不得虛構結果。'
+    compressorSources:
+      rich: '將最新的{{actSummaryHeader}}視為近期事件的權威記述，並以共享脈絡中的原始場景材料作為佐證。共享脈絡中任何較早的摘要快照僅供背景參考。'
+      compact: '將最新的{{actSummaryHeader}}視為近期事件的權威記述。'
   extraction:
     actShortSummary: '你是一個敘事摘要者。你的任務是將提供的章節摘要濃縮為精確的 3 個簡潔句子，捕捉章節的關的關鍵事件、衝突和結果。專注於發生了什麼以及故事如何改變。以過去式撰寫。在 3 個句子之後，空一行，然後評估章節摘要中列出的角色。僅列出你判斷為重要且可能在未來章節中再次出現的角色，每行格式為:「名字 (一句話描述其在此章節中的角色或弧線) 」。按重要性由高到低排序。不要列出次要或僅出現一次的角色。僅輸出摘要和角色列表——不添加標籤、標題或評論。'
     actShortSummaryCharacterPrefix: '此章節中的角色'

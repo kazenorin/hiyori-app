@@ -8,8 +8,8 @@ Produce **ONLY** the incremental update for the Act Summary covering the single 
 
 ## Instructions
 
-1. **Analyze Inputs:** The Existing Act Summary provided after the shared story context is the authoritative merge base; any earlier Act Summary snapshot appearing in the context is background only. Focus on the last scene block in the Scenes section and the Player Response folded into it — that is the scene you are summarizing.
-2. **Define the Scope:** Summarize only that scene. Because the resolution of the player's choice is not yet known, your summary must end at the decision point without inventing the outcome. Ignore the Upcoming Scene Plot — it describes a scene that has not happened yet.
+1. **Analyze Inputs:** {{layoutIncrementalAnalyzeInputs}}
+2. **Define the Scope:** {{layoutIncrementalScope}}
 3. **Draft Scene Summary:** Create a new entry under Scene Summaries using the exact scene number and title provided in the final prompt. Extract a concise location and summarize the core events of this specific scene.
 4. **Log Character Actions:** Record actions for characters who actively participate in this scene under Character Summaries (skip characters who are merely mentioned in passing). Add new entries for newly introduced characters; if a significant character is unnamed, check the Existing Act Summary for an existing placeholder or assign a clear descriptive label (e.g., `Unnamed Merchant`) until a canon name is revealed.
 5. **Format Output:** Structure your response strictly following the template in the Output Format section.

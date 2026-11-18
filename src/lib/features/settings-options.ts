@@ -1,5 +1,5 @@
 import { t } from '#lib/i18n/index.ts';
-import { settings, type ParallelRunMode } from '#lib/stores/settings.svelte.ts';
+import { settings, type ParallelRunMode, type BackgroundContextMode } from '#lib/stores/settings.svelte.ts';
 
 export function getProviderItems(): { label: string; value: string }[] {
 	return [
@@ -81,6 +81,13 @@ export function getParallelRunItems(): { label: string; value: ParallelRunMode }
 		{ label: t('settings.parallelRunSingleThreaded'), value: 'singleThreaded' },
 		{ label: t('settings.parallelRunAfterWriter'), value: 'parallelAfterWriter' },
 		{ label: t('settings.parallelRunWithWriter'), value: 'parallelWithWriter' },
+	];
+}
+
+export function getBackgroundContextItems(): { label: string; value: BackgroundContextMode }[] {
+	return [
+		{ label: t('settings.backgroundContextRich'), value: 'rich' },
+		{ label: t('settings.backgroundContextCompact'), value: 'compact' },
 	];
 }
 

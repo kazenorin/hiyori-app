@@ -39,6 +39,7 @@ common:
     gameMasterOutput: Game Master Output
     previousActSummary: Previous Act Summary
     actSummaryForScenes: 'Act Summary {{summarizedScenes}}'
+    previousNarrativeBody: 'Narrative Body for Scene {{completedScenes}}'
     sceneTitle: Scene title
     background: Background
     narrativeBody: Narrative Body
@@ -90,6 +91,22 @@ pipeline:
     actPlotActCards: Act Card
     actPlotCharacterProfiles: Character Profiles
     actPlotPlayerPreferences: Player Preferences
+  layoutSlots:
+    fullAnalyzeInputs:
+      rich: 'Review the provided story material. If an Existing Act Summary is provided, treat it as authoritative over any earlier summary snapshot in the context. If an Upcoming Scene Plot section is present, ignore it — it describes events that have not happened yet.'
+      compact: 'Review the Existing Act Summary, the Previous Narrative Body, and the Player Response.'
+    fullSceneSummaries:
+      rich: 'Copy all existing entries under Scene Summaries verbatim without rewriting or re-deriving them. Then, for each newly played scene not yet recorded, append a new entry using the scene number and title shown in the material, a concise location, and the core events. Where the material ends at a player decision whose outcome is unknown, stop at the decision point without inventing the outcome.'
+      compact: 'Copy all existing entries under Scene Summaries verbatim without rewriting or re-deriving them. Then, for the newly played scene not yet recorded, append a new entry using the scene number and title provided in the final instruction, a concise location, and the core events. Where the material ends at a player decision whose outcome is unknown, stop at the decision point without inventing the outcome.'
+    incrementalAnalyzeInputs:
+      rich: 'The Existing Act Summary provided after the shared story context is the authoritative merge base; any earlier Act Summary snapshot appearing in the context is background only. Focus on the last scene block in the Scenes section and the Player Response folded into it — that is the scene you are summarizing.'
+      compact: 'Review the Existing Act Summary for context, then focus on the Previous Narrative Body and the Player Response — that is the scene you are summarizing.'
+    incrementalScope:
+      rich: 'Summarize only that scene. Because the resolution of the player''s choice is not yet known, your summary must end at the decision point without inventing the outcome. Ignore the Upcoming Scene Plot — it describes a scene that has not happened yet.'
+      compact: 'Summarize only that scene. Because the resolution of the player''s choice is not yet known, your summary must end at the decision point without inventing the outcome.'
+    compressorSources:
+      rich: 'Treat the latest {{actSummaryHeader}} as the authoritative account of recent events, using raw scene material in the shared context as supporting evidence. Any earlier summary snapshots in the shared context are background only.'
+      compact: 'Treat the latest {{actSummaryHeader}} as the authoritative account of recent events.'
   extraction:
     actShortSummary: 'You are a narrative summarizer. Your task is to distill the provided act summary into exactly 3 concise sentences that capture the key events, conflicts, and outcomes of the act. Focus on what happened and how the story changed. Write in past tense. After the 3 sentences, add a blank line then evaluate the characters listed in the act summary. List only those you judge to be important and likely to appear again in future acts, each on a new line, in the format: "Name (one-line description of their role or arc in this act)". Order them from most to least important. Do not list minor or one-off characters. Output only the summary and character list — no labels, no headings, no commentary.'
     actShortSummaryCharacterPrefix: 'Characters in this act'

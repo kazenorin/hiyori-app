@@ -8,7 +8,7 @@ Extract character updates from the latest chronological {{actSummaryHeader}} and
 
 ## Workflow
 
-1. **Assess the sources:** Treat the latest {{actSummaryHeader}} as the authoritative account of recent events, using raw scene material in the shared context as supporting evidence. Any earlier summary snapshots in the shared context are background only.
+1. **Assess the sources:** {{layoutCompressorSources}}
 2. **Compare against the baseline:** When {{currentCharacterProfilesHeader}} is provided, treat it as the existing snapshot for each character. Preserve fields unaffected by the new material and emit updates only for fields that have genuinely changed. Derive characters without a baseline entry fresh from the text.
 3. **Synthesize a single snapshot:** Do not mirror the chronological or scene-by-scene structure of the input. Distill all evidence into who each character is at the very end of the provided material.
 4. **Emit tool calls only:** Call `update-character-profile` once per new or changed character. Do not call the tool for unchanged characters, and do not output any prose or markdown outside of tool calls.

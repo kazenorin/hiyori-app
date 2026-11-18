@@ -420,4 +420,33 @@ describe('settings', () => {
 			expect(mod.getRoleCallSettings('main')).toBe(withTemp);
 		});
 	});
+
+	it('defaults backgroundContextMode to rich', async () => {
+		vi.resetModules();
+		const { settings } = await import('#lib/stores/settings.svelte.ts');
+		expect(settings.backgroundContextMode).toBe('rich');
+	});
+
+	it('persists backgroundContextMode via updateSettings', async () => {
+		vi.resetModules();
+		const { settings, updateSettings } = await import('#lib/stores/settings.svelte.ts');
+		await updateSettings({ backgroundContextMode: 'compact' });
+		expect(settings.backgroundContextMode).toBe('compact');
+	});
+
+	it('background context mode i18n keys exist in both locales', async () => {
+		const en = (await import('../i18n/locales/en.json')).default;
+		const zh = (await import('../i18n/locales/zh-Hant-HK.json')).default;
+		const keys = [
+			'backgroundContextMode',
+			'backgroundContextRich',
+			'backgroundContextCompact',
+			'backgroundContextRichDescription',
+			'backgroundContextCompactDescription',
+		] as const;
+		for (const key of keys) {
+			expect(en.settings[key]).toBeTruthy();
+			expect(zh.settings[key]).toBeTruthy();
+		}
+	});
 });
