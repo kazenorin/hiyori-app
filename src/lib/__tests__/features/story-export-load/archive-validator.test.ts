@@ -215,6 +215,40 @@ describe('validateStoryData', () => {
 			expect(result.isValid).toBe(false);
 			expect(result.errors[0]).toContain('messagePhases');
 		});
+
+		it('accepts processedContent as string, null or absent (archive v7)', () => {
+			const data = makeValidData();
+			data.messagePhases = [
+				{
+					messageId: 'msg-1',
+					phaseName: 'CHARACTER_PROFILE_COMPRESSOR',
+					reasoning: null,
+					content: 'body',
+					processedContent: 'log',
+					sequence: 0,
+				},
+				{ messageId: 'msg-1', phaseName: 'EDITOR', reasoning: null, content: 'final', processedContent: null, sequence: 1 },
+				{ messageId: 'msg-1', phaseName: 'WRITER', reasoning: null, content: 'draft', sequence: 2 },
+			];
+			expect(validateStoryData(data).isValid).toBe(true);
+		});
+
+		it('rejects a non-string processedContent', () => {
+			const data = makeValidData();
+			asRaw(data).messagePhases = [
+				{
+					messageId: 'msg-1',
+					phaseName: 'CHARACTER_PROFILE_COMPRESSOR',
+					reasoning: null,
+					content: 'body',
+					processedContent: 42,
+					sequence: 0,
+				},
+			];
+			const result = validateStoryData(data);
+			expect(result.isValid).toBe(false);
+			expect(result.errors[0]).toContain('messagePhases');
+		});
 	});
 
 	describe('characterProfiles (archive v5)', () => {

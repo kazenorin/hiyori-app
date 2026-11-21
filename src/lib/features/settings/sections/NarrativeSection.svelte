@@ -46,6 +46,36 @@
 
 <div class="space-y-4">
 	<Card title={t('settings.narrative')}>
+		<!-- Director Mode & Phrase Highlighting: side-by-side mini-cards -->
+		<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+				<div class="flex items-center gap-2">
+					<input
+						type="checkbox"
+						class="checkbox"
+						checked={settings.directorModeEnabled}
+						onchange={(e) => updateSettings({ directorModeEnabled: (e.currentTarget as HTMLInputElement).checked })}
+					/>
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.directorMode')}</h3>
+				</div>
+				<span class="text-xs text-surface-500 block">{t('settings.directorModeDescription')}</span>
+			</div>
+
+			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
+				<label class="flex items-center gap-2">
+					<input
+						type="checkbox"
+						class="checkbox"
+						checked={settings.importantPhraseHighlighting}
+						disabled={!getMinorTaskAgentProviderConfig()}
+						onchange={(e) => updateSettings({ importantPhraseHighlighting: (e.currentTarget as HTMLInputElement).checked })}
+					/>
+					<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.phraseHighlighting')}</h3>
+				</label>
+				<span class="text-xs text-surface-500 block">{t('settings.phraseHighlightingDescription')}</span>
+			</div>
+		</div>
+
 		<!-- Word Count: full-width card -->
 		<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-4">
 			<NumberField
@@ -108,36 +138,6 @@
 					onValueChange={(v) => updateSettings({ characterProfileUpdateMethod: v })}
 				/>
 				<span class="text-xs text-surface-500 block mt-1">{t(characterProfileUpdateMethodDescriptionKey)}</span>
-			</div>
-		</div>
-
-		<!-- Director Mode & Phrase Highlighting: side-by-side mini-cards -->
-		<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
-				<div class="flex items-center gap-2">
-					<input
-						type="checkbox"
-						class="checkbox"
-						checked={settings.directorModeEnabled}
-						onchange={(e) => updateSettings({ directorModeEnabled: (e.currentTarget as HTMLInputElement).checked })}
-					/>
-					<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.directorMode')}</h3>
-				</div>
-				<span class="text-xs text-surface-500 block">{t('settings.directorModeDescription')}</span>
-			</div>
-
-			<div class="bg-surface-100-900 border border-surface-200-800 rounded-lg p-4 space-y-3">
-				<label class="flex items-center gap-2">
-					<input
-						type="checkbox"
-						class="checkbox"
-						checked={settings.importantPhraseHighlighting}
-						disabled={!getMinorTaskAgentProviderConfig()}
-						onchange={(e) => updateSettings({ importantPhraseHighlighting: (e.currentTarget as HTMLInputElement).checked })}
-					/>
-					<h3 class="text-sm font-semibold text-surface-700-300">{t('settings.phraseHighlighting')}</h3>
-				</label>
-				<span class="text-xs text-surface-500 block">{t('settings.phraseHighlightingDescription')}</span>
 			</div>
 		</div>
 

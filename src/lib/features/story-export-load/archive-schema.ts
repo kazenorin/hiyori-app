@@ -12,8 +12,11 @@
  *   6 — added `inventory` field (optional; complete inventory event history keyed by act line,
  *        mirroring the `inventory` table). Older archives without it still load, but carry no
  *        inventory rows.
+ *   7 — added optional `processedContent` to `messagePhases` entries (the compressor run log;
+ *        `content` holds the raw phase output). Older archives without it still load; legacy
+ *        compressor rows keep their run log in `content`.
  */
-export const CURRENT_ARCHIVE_VERSION = 6;
+export const CURRENT_ARCHIVE_VERSION = 7;
 
 export interface StoryExportData {
 	version: number;
@@ -112,6 +115,8 @@ export interface StoryExportData {
 		phaseName: string;
 		reasoning: string | null;
 		content: string;
+		/** Archive v7+. Absent in v1–v6 archives, whose rows carry no processed body. */
+		processedContent?: string | null;
 		sequence: number;
 	}[];
 	/** Archive v6+. Absent in v1–v5 archives, which import without inventory rows. */

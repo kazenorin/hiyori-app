@@ -27,6 +27,8 @@ export interface PipelineState {
 	gameData?: GameDataFields | null;
 	actSummary?: string;
 	profileCompressionLog?: string;
+	/** Last structured-markdown stage body; empty for the tool-calls method. */
+	profileMarkdownOutput?: string;
 }
 
 /** Stream state for a single phase during streaming */
@@ -34,11 +36,14 @@ export interface PhaseStreamState {
 	content: string;
 	reasoning: string | null;
 	variables: NarrativeVariables | null;
+	/** Post-processed display body; only the compressor supplies it. */
+	processedContent?: string;
 }
 
 /** Terminal compressor context retained by the UI; only this phase supplies it. */
 export interface CompressorFailureDetails {
 	profileCompressionLog: string;
+	profileMarkdownOutput?: string;
 	metadata: StreamResultMetadata | undefined;
 }
 

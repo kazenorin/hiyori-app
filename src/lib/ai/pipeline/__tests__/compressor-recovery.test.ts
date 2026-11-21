@@ -417,7 +417,7 @@ describe('structured Markdown repair and fallback bounds', () => {
 		expect(terminalLog).toContain('## Tool fallback');
 		expect(terminalLog).not.toContain('## Tools');
 		expect(terminalLog).toContain(t('pipeline.compressorStages.blankBody'));
-		expect(terminalLog).not.toContain('Preview (uncommitted)');
+		expect(vi.mocked(callbacks.onPhaseComplete).mock.calls[0][1].profileMarkdownOutput).toBe('   ');
 	});
 
 	it('rejects a truncated known finish reason and repairs the body', async () => {
@@ -596,7 +596,7 @@ describe('gating, capture and cancellation', () => {
 		const compression = state();
 		const callbacks = makeCallbacks();
 		callbacks.onPhaseStream = vi.fn((_phase, streamState) => {
-			if (streamState.content.includes('### Elena Vale') && !controller.signal.aborted) controller.abort();
+			if (streamState.processedContent?.includes('### Elena Vale') && !controller.signal.aborted) controller.abort();
 		});
 		queue.push({
 			text: markdown([
@@ -620,9 +620,9 @@ describe('gating, capture and cancellation', () => {
 });
 
 describe('compressor terminal lifecycle', () => {
-	it('streams an uncommitted raw preview and commits stages plus applied attempts only', async () => {
-		// WHY: raw model output may be invalid; it can guide the user live but must
-		// never become the persisted terminal log.
+	it('streams the raw markdown body as content and commits the log as processedContent', async () => {
+		// WHY: the generated batch is the phase's output body (content); the log
+		// (processedContent) records stages and applied attempts, never the raw body.
 		const l = getProfileUpdateLabels();
 		const raw = markdown([{ name: 'Elena Vale', fields: { state: 'Previewed' } }]);
 		queue.push({ text: raw, reasoning: 'raw thoughts' });
@@ -632,17 +632,48 @@ describe('compressor terminal lifecycle', () => {
 		await generateCharacterProfiles(newSummary, input(compression, callbacks), prompts);
 
 		const streamed = vi.mocked(callbacks.onPhaseStream).mock.calls.map((call) => call[1]);
-		expect(streamed.some((s) => s.content.includes('## Preview (uncommitted)') && s.content.includes(l.envelope))).toBe(true);
+		expect(streamed.some((s) => s.content.includes(l.envelope) && s.content.includes('Previewed'))).toBe(true);
+		expect(streamed.some((s) => (s.processedContent ?? '').includes('## Generation'))).toBe(true);
 		expect(streamed.some((s) => s.reasoning === 'raw thoughts')).toBe(true);
 
-		const terminalLog = vi.mocked(callbacks.onPhaseComplete).mock.calls[0][1].profileCompressionLog!;
+		const terminalState = vi.mocked(callbacks.onPhaseComplete).mock.calls[0][1];
+		expect(terminalState.profileMarkdownOutput).toBe(raw);
+		const terminalLog = terminalState.profileCompressionLog!;
 		expect(terminalLog).toContain('## Generation');
 		expect(terminalLog).toContain('## Applied updates');
 		expect(terminalLog).toContain('### Elena Vale');
-		expect(terminalLog).not.toContain('Preview (uncommitted)');
 		expect(terminalLog).not.toContain(l.envelope);
 		expect(vi.mocked(callbacks.onPhaseStart).mock.calls.map((c) => c[0])).toEqual(['CHARACTER_PROFILE_COMPRESSOR']);
 		expect(compression.onAttempt).toBeUndefined();
+	});
+
+	it('a successful repair replaces the generation body as the recorded output', async () => {
+		// WHY: the repaired batch is what gets applied; the stale generation body
+		// must not masquerade as the phase output.
+		const repaired = markdown([{ name: 'Elena Vale', fields: { state: 'Repaired' } }]);
+		queue.push({ text: 'garbage' });
+		queue.push({ text: repaired });
+		const callbacks = makeCallbacks();
+
+		await generateCharacterProfiles(newSummary, input(state(), callbacks), prompts);
+
+		const terminalState = vi.mocked(callbacks.onPhaseComplete).mock.calls[0][1];
+		expect(terminalState.profileMarkdownOutput).toBe(repaired);
+		expect((await getLatestProfileByAlias(LINE, 'Elena Vale'))?.state).toBe('Repaired');
+	});
+
+	it('a tool fallback keeps the last rejected markdown body as the recorded output', async () => {
+		// WHY: the rejected body is the evidence for why the fallback happened.
+		queue.push({ text: 'garbage' });
+		queue.push({ text: 'still garbage' });
+		queue.push({ toolCalls: [{ name: 'Elena Vale', state: 'Fallback' }] });
+		const callbacks = makeCallbacks();
+
+		await generateCharacterProfiles(newSummary, withTools(state(), callbacks), prompts);
+
+		const terminalState = vi.mocked(callbacks.onPhaseComplete).mock.calls[0][1];
+		expect(terminalState.profileMarkdownOutput).toBe('still garbage');
+		expect(terminalState.profileCompressionLog).toContain('## Tool fallback');
 	});
 
 	it('labels direct tool calling with the neutral tools stage', async () => {
@@ -657,6 +688,7 @@ describe('compressor terminal lifecycle', () => {
 		const terminalLog = vi.mocked(callbacks.onPhaseComplete).mock.calls[0][1].profileCompressionLog!;
 		expect(terminalLog).toContain(`## ${t('pipeline.compressorStages.toolsDirect')}`);
 		expect(terminalLog).not.toContain('Tool fallback');
+		expect(vi.mocked(callbacks.onPhaseComplete).mock.calls[0][1].profileMarkdownOutput).toBe('');
 	});
 
 	it('clears the attempt observer when the phase start callback throws', async () => {
@@ -683,7 +715,7 @@ describe('compressor terminal lifecycle', () => {
 			expect([attempt, maxAttempts]).toEqual([2, 3]);
 		});
 		callbacks.onPhaseStream = vi.fn((_phase, streamState) => {
-			events.push(`stream:${streamState.content}`);
+			events.push(`stream:${streamState.processedContent}`);
 		});
 		queue.push({ toolCalls: [{ name: 'Elena Vale', state: 'Retried' }], retry: { attempt: 2, maxAttempts: 3 } });
 

@@ -154,23 +154,25 @@ beforeEach(async () => {
 });
 
 describe('compressor streaming lifecycle', () => {
-	it('streams the per-character parameter log and completes with it', async () => {
-		// WHY: the pane's output is the tool activity — supplied parameters per
-		// character — not model prose.
+	it('streams the per-character parameter log as processedContent and completes with it', async () => {
+		// WHY: the pane's body is the tool activity — supplied parameters per
+		// character — not model prose; tool-calls mode has no markdown output body.
 		scriptedCalls = [{ name: 'elena-vale', state: 'Recovered' }];
 		const callbacks = makeCallbacks();
 		const compression: ProfileCompressionState = { completedScenes: 9, newActSummary: undefined, attemptCount: 0, successCount: 0 };
 		await run(compression, callbacks);
 
 		expect(callbacks.onPhaseStart).toHaveBeenCalledWith('CHARACTER_PROFILE_COMPRESSOR');
-		const streamContents = vi.mocked(callbacks.onPhaseStream).mock.calls.map((c) => c[1].content);
-		expect(streamContents.some((c) => c.includes('### elena-vale') && c.includes('- State: Recovered'))).toBe(true);
+		const streamLogs = vi.mocked(callbacks.onPhaseStream).mock.calls.map((c) => c[1].processedContent ?? '');
+		expect(streamLogs.some((c) => c.includes('### elena-vale') && c.includes('- State: Recovered'))).toBe(true);
+		expect(vi.mocked(callbacks.onPhaseStream).mock.calls.every((c) => c[1].content === '')).toBe(true);
 		// WHY: the pane must show the model's reasoning alongside the tool log.
 		expect(vi.mocked(callbacks.onPhaseStream).mock.calls.some((c) => c[1].reasoning === 'compressor thoughts')).toBe(true);
 		const [phase, state, metadata] = vi.mocked(callbacks.onPhaseComplete).mock.calls[0];
 		expect(phase).toBe('CHARACTER_PROFILE_COMPRESSOR');
 		expect(state.profileCompressionLog).toContain('### elena-vale');
 		expect(state.profileCompressionLog).toContain('Profile updated for elena-vale at scene 9.');
+		expect(state.profileMarkdownOutput).toBe('');
 		expect(metadata?.usage.inputTokens).toBe(1);
 		expect(compression.onAttempt).toBeUndefined();
 	});

@@ -108,6 +108,23 @@ describe('story load round-trips messagePhases', () => {
 		]);
 	});
 
+	// WHY (archive v7): the compressor's run log (processedContent) must survive
+	// export→import exactly; a null in the archive reads back as an absent field.
+	it('overwrite round-trip preserves compressor processedContent', async () => {
+		await upsertMessagePhases('m1', [
+			{ phaseName: 'CHARACTER_PROFILE_COMPRESSOR', content: '# Profile Updates', processedContent: '## Applied updates' },
+		]);
+		const data = await buildStoryExportData('story-1');
+		await deletePhasesForMessages(['m1']); // simulate a fresh install
+
+		const result = await loadStoryOverwrite(data, ['line-1'], makeZip(data));
+
+		expect(result.success).toBe(true);
+		expect((await getPhasesForMessages(['m1'])).get('m1')).toEqual([
+			{ phaseName: 'CHARACTER_PROFILE_COMPRESSOR', content: '# Profile Updates', processedContent: '## Applied updates' },
+		]);
+	});
+
 	// WHY (acceptance): repeated loads must not duplicate rows — the
 	// (message_id, phase_name) upsert is the guard.
 	it('overwrite twice produces no duplicate phase rows', async () => {

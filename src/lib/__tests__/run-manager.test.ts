@@ -437,17 +437,22 @@ describe('phase persistence on settle', () => {
 	});
 
 	it('persists a successful compressor terminal log and usage after background settle', async () => {
-		// WHY: the applied-attempt log is the chip's only content; it must be the row
-		// the UI reloads, exactly like the failed-log path.
+		// WHY: the markdown body (content) and applied-attempt log (processedContent)
+		// must be the rows the UI reloads, exactly like the failed-log path.
 		vi.mocked(runPipeline).mockImplementation(async (input) => {
 			const cb = input.execution.callbacks;
 			cb.onPhaseStart('EDITOR');
 			cb.onPhaseComplete('EDITOR', { editorOutput: 'prose' });
 			cb.onPhaseStart('CHARACTER_PROFILE_COMPRESSOR');
-			cb.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', { content: '## Preview', reasoning: 'thinking', variables: null });
+			cb.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', {
+				content: '# Profile Updates',
+				processedContent: '## Generation',
+				reasoning: 'thinking',
+				variables: null,
+			});
 			cb.onPhaseComplete(
 				'CHARACTER_PROFILE_COMPRESSOR',
-				{ profileCompressionLog: '## Generation\n\n## Applied updates\n\n### Elena Vale' },
+				{ profileCompressionLog: '## Generation\n\n## Applied updates\n\n### Elena Vale', profileMarkdownOutput: '# Profile Updates' },
 				{
 					finishReason: 'stop',
 					usage: { inputTokens: 15, outputTokens: 4, totalTokens: 19 },
@@ -469,9 +474,9 @@ describe('phase persistence on settle', () => {
 		off();
 
 		const backgroundUpsert = vi.mocked(dbMessagePhases.upsertMessagePhases).mock.calls.at(-1)!;
-		expect(backgroundUpsert[1].find((p) => p.phaseName === 'CHARACTER_PROFILE_COMPRESSOR')?.content).toBe(
-			'## Generation\n\n## Applied updates\n\n### Elena Vale'
-		);
+		const successRow = backgroundUpsert[1].find((p) => p.phaseName === 'CHARACTER_PROFILE_COMPRESSOR');
+		expect(successRow?.content).toBe('# Profile Updates');
+		expect(successRow?.processedContent).toBe('## Generation\n\n## Applied updates\n\n### Elena Vale');
 		const persisted = JSON.parse(vi.mocked(updatePersistentMessageMetadata).mock.calls.at(-1)![1].metadata!);
 		expect(persisted.phases.find((p: { phaseName: string }) => p.phaseName === 'CHARACTER_PROFILE_COMPRESSOR').inputTokens).toBe(15);
 	});
@@ -501,9 +506,15 @@ describe('phase persistence on settle', () => {
 				}
 			);
 			cb.onPhaseStart('CHARACTER_PROFILE_COMPRESSOR');
-			cb.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', { content: '## Preview', reasoning: 'thinking', variables: null });
+			cb.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', {
+				content: '# Profile Updates',
+				processedContent: '## Generation',
+				reasoning: 'thinking',
+				variables: null,
+			});
 			cb.onPhaseFailed?.('CHARACTER_PROFILE_COMPRESSOR', {
 				profileCompressionLog: '## Generation\n\n## Failed\n\ncheckpoint down',
+				profileMarkdownOutput: '# Profile Updates',
 				metadata: compressorMeta,
 			});
 			return {
@@ -526,7 +537,8 @@ describe('phase persistence on settle', () => {
 		const backgroundUpsert = vi.mocked(dbMessagePhases.upsertMessagePhases).mock.calls.at(-1)!;
 		expect(backgroundUpsert[0]).toBe(assistantMessage.id);
 		const compressorRow = backgroundUpsert[1].find((p) => p.phaseName === 'CHARACTER_PROFILE_COMPRESSOR');
-		expect(compressorRow?.content).toBe('## Generation\n\n## Failed\n\ncheckpoint down');
+		expect(compressorRow?.content).toBe('# Profile Updates');
+		expect(compressorRow?.processedContent).toBe('## Generation\n\n## Failed\n\ncheckpoint down');
 
 		const metadataUpdates = vi.mocked(updatePersistentMessageMetadata).mock.calls.at(-1)!;
 		const persisted = JSON.parse(metadataUpdates[1].metadata!);

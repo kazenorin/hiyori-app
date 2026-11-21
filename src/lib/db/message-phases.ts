@@ -6,6 +6,7 @@ interface MessagePhaseRow {
 	phase_name: string;
 	reasoning: string | null;
 	content: string;
+	processed_content: string | null;
 	sequence: number;
 }
 
@@ -34,13 +35,14 @@ export async function upsertMessagePhases(messageId: string, phases: UIScenePhas
 	const db = getDatabase();
 	for (const [index, phase] of phases.entries()) {
 		await db.execute(
-			`INSERT INTO message_phases (message_id, phase_name, reasoning, content, sequence)
-			 VALUES ($1, $2, $3, $4, $5)
+			`INSERT INTO message_phases (message_id, phase_name, reasoning, content, processed_content, sequence)
+			 VALUES ($1, $2, $3, $4, $5, $6)
 			 ON CONFLICT(message_id, phase_name) DO UPDATE SET
 				reasoning = excluded.reasoning,
 				content = excluded.content,
+				processed_content = excluded.processed_content,
 				sequence = excluded.sequence`,
-			[messageId, phase.phaseName, phase.reasoning ?? null, phase.content, index]
+			[messageId, phase.phaseName, phase.reasoning ?? null, phase.content, phase.processedContent ?? null, index]
 		);
 	}
 }
@@ -52,7 +54,7 @@ export async function getPhasesForMessages(messageIds: string[]): Promise<Map<st
 	const db = getDatabase();
 	for (const ids of chunk(messageIds, CHUNK_SIZE)) {
 		const rows = await db.select<MessagePhaseRow[]>(
-			`SELECT message_id, phase_name, reasoning, content, sequence FROM message_phases
+			`SELECT message_id, phase_name, reasoning, content, processed_content, sequence FROM message_phases
 			 WHERE message_id IN (${placeholders(ids.length)})
 			 ORDER BY message_id, sequence`,
 			ids
@@ -62,6 +64,7 @@ export async function getPhasesForMessages(messageIds: string[]): Promise<Map<st
 				phaseName: row.phase_name as PhaseName,
 				content: row.content,
 				...(row.reasoning !== null && { reasoning: row.reasoning }),
+				...(row.processed_content !== null && { processedContent: row.processed_content }),
 			};
 			const existing = result.get(row.message_id);
 			if (existing) existing.push(phase);

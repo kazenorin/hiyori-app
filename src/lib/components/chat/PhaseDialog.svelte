@@ -39,6 +39,10 @@
 		return idx >= 0 ? idx : 0;
 	});
 	const active = $derived(phases[activeIdx]);
+	// Compressor rows carry the run log in processedContent and the raw markdown body
+	// in content; legacy rows (and every other phase) render content as the body.
+	const displayBody = $derived(active ? (active.processedContent ?? active.content) : '');
+	const outputBody = $derived(active?.processedContent !== undefined ? active.content : '');
 	const phaseMeta = $derived(active ? message?.metadata?.phases?.find((m) => m.phaseName === active.phaseName) : undefined);
 	const characterNames = $derived(getCharacterNames());
 	// The run-manager session is the spinner source; only the live last message can be streaming.
@@ -56,7 +60,7 @@
 	}
 
 	function isNotStarted(phase: UIScenePhase): boolean {
-		return phase.content === '' && !phase.reasoning;
+		return phase.content === '' && !phase.reasoning && !phase.processedContent;
 	}
 
 	function formatTokens(n: number): string {
@@ -102,6 +106,7 @@
 		// Dependency reads: re-run this effect on every streaming delta of the active pane.
 		void active?.content;
 		void active?.reasoning;
+		void active?.processedContent;
 		requestAnimationFrame(() => {
 			if (pinnedToBottom && contentEl) contentEl.scrollTop = contentEl.scrollHeight;
 		});
@@ -268,9 +273,16 @@
 										</ReasoningAccordion>
 									{/if}
 
+									<!-- Raw phase output when a processed body exists (compressor markdown batch) -->
+									{#if outputBody.trim() !== ''}
+										<ReasoningAccordion label={t('chat.output')} value="output" plain>
+											{outputBody}
+										</ReasoningAccordion>
+									{/if}
+
 									<!-- Output: same MarkdownContent invocation as the main chat body -->
 									<div class="leading-relaxed text-surface-800-200">
-										<MarkdownContent content={active.content} {characterNames} importantPhrases={message.importantPhrases} />
+										<MarkdownContent content={displayBody} {characterNames} importantPhrases={message.importantPhrases} />
 									</div>
 								{/if}
 							{/key}

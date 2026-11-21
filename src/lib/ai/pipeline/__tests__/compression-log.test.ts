@@ -64,13 +64,13 @@ describe('emptyCompressionLog', () => {
 });
 
 describe('createCompressionLog', () => {
-	it('never persists an uncommitted preview', () => {
+	it('commits stages and applied attempts without the raw model body', () => {
+		// WHY: the raw markdown body lives in the phase's content field; the log
+		// records only stage markers and per-character attempts.
 		const log = createCompressionLog(false, (key) => key);
 		log.beginStage('generation');
-		log.setPreview('UNCOMMITTED_MODEL_BODY');
 		log.addAttempt(attempt({ state: 'Recovered' }));
-		expect(log.streamContent()).toContain('UNCOMMITTED_MODEL_BODY');
-		expect(log.committedContent(true)).not.toContain('UNCOMMITTED_MODEL_BODY');
+		expect(log.streamContent()).toContain('## generation');
 		expect(log.committedContent(true)).toContain('## applied');
 		expect(log.committedContent(true)).toContain('### elena-vale');
 	});

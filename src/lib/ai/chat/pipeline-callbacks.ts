@@ -43,7 +43,7 @@ export function getPhaseContent(phase: PhaseName, state: PipelineState): string 
 		case 'TEMPLATE_FITTER':
 			return '';
 		case 'CHARACTER_PROFILE_COMPRESSOR':
-			return state.profileCompressionLog ?? '';
+			return state.profileMarkdownOutput ?? '';
 	}
 }
 
@@ -123,7 +123,11 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 			// EDITOR is dual-routed: its deltas feed the body above AND its own
 			// phases entry so the dialog pane streams in lockstep.
 			if (!hiddenPhases.includes(phase)) {
-				updatePhaseInList(phase, { content: streamState.content, reasoning: streamState.reasoning ?? undefined });
+				updatePhaseInList(phase, {
+					content: streamState.content,
+					reasoning: streamState.reasoning ?? undefined,
+					...(streamState.processedContent !== undefined && { processedContent: streamState.processedContent }),
+				});
 			}
 		},
 		onPhaseRetry: (phase: PhaseName, attempt: number, maxAttempts: number) => {
@@ -159,7 +163,10 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 				return;
 			}
 
-			updatePhaseInList(phase, { content: getPhaseContent(phase, pipelineState) });
+			updatePhaseInList(phase, {
+				content: getPhaseContent(phase, pipelineState),
+				...(phase === 'CHARACTER_PROFILE_COMPRESSOR' && { processedContent: pipelineState.profileCompressionLog ?? '' }),
+			});
 
 			if (phase === 'GAME_MASTER') {
 				const current = getCurrentMessage();
@@ -174,7 +181,7 @@ export function createPipelineCallbacks(deps: CallbackDeps): PipelineCallbacks {
 		},
 		onPhaseFailed: (phase: PhaseName, details?: CompressorFailureDetails) => {
 			if (phase === 'CHARACTER_PROFILE_COMPRESSOR' && details) {
-				updatePhaseInList(phase, { content: details.profileCompressionLog });
+				updatePhaseInList(phase, { content: details.profileMarkdownOutput ?? '', processedContent: details.profileCompressionLog });
 				if (details.metadata) {
 					const current = getCurrentMessage();
 					const model = [...details.metadata.models][0] ?? 'unknown';

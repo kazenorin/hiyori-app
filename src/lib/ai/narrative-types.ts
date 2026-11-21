@@ -24,6 +24,8 @@ export interface UIScenePhase {
 	phaseName: PhaseName;
 	reasoning?: string;
 	content: string;
+	/** Post-processed display body (compressor run log); when present, `content` is the raw phase output. */
+	processedContent?: string;
 }
 
 /** All narrative variables with proper types per field */

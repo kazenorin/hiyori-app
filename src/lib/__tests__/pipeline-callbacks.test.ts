@@ -193,15 +193,25 @@ describe('background phase callbacks', () => {
 		]);
 	});
 
-	it('routes the compressor log through getPhaseContent on complete', () => {
+	it('routes the compressor body to content and its log to processedContent', () => {
 		const h = makeHarness();
 		h.callbacks.onPhaseStart('CHARACTER_PROFILE_COMPRESSOR');
-		h.callbacks.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', { content: 'partial log', reasoning: 'thinking', variables: null });
-		h.callbacks.onPhaseComplete('CHARACTER_PROFILE_COMPRESSOR', { profileCompressionLog: 'final log' });
+		h.callbacks.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', {
+			content: 'partial body',
+			processedContent: 'partial log',
+			reasoning: 'thinking',
+			variables: null,
+		});
+		expect(h.phase('CHARACTER_PROFILE_COMPRESSOR')?.processedContent).toBe('partial log');
+		h.callbacks.onPhaseComplete('CHARACTER_PROFILE_COMPRESSOR', {
+			profileCompressionLog: 'final log',
+			profileMarkdownOutput: 'final body',
+		});
 
 		expect(h.phase('CHARACTER_PROFILE_COMPRESSOR')).toEqual({
 			phaseName: 'CHARACTER_PROFILE_COMPRESSOR',
-			content: 'final log',
+			content: 'final body',
+			processedContent: 'final log',
 			reasoning: 'thinking',
 		});
 		expect(h.message.content).toBe('');
@@ -217,15 +227,21 @@ describe('background phase callbacks', () => {
 	});
 
 	it('retains a failed compressor entry with its terminal log and available usage once', () => {
-		// WHY: a compressor failure after a streamed preview must not erase the chip;
+		// WHY: a compressor failure after a streamed body must not erase the chip;
 		// the terminal log and the usage already spent are the only durable evidence.
 		const h = makeHarness();
 		h.callbacks.onPhaseStart('EDITOR');
 		h.callbacks.onPhaseComplete('EDITOR', { editorOutput: 'prose' });
 		h.callbacks.onPhaseStart('CHARACTER_PROFILE_COMPRESSOR');
-		h.callbacks.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', { content: 'partial log', reasoning: 'thinking', variables: null });
+		h.callbacks.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', {
+			content: 'partial body',
+			processedContent: 'partial log',
+			reasoning: 'thinking',
+			variables: null,
+		});
 		h.callbacks.onPhaseFailed?.('CHARACTER_PROFILE_COMPRESSOR', {
 			profileCompressionLog: '## Failed\n\ncheckpoint down',
+			profileMarkdownOutput: 'partial body',
 			metadata: meta(50, 5),
 		});
 
@@ -233,7 +249,8 @@ describe('background phase callbacks', () => {
 		expect(entries).toHaveLength(1);
 		expect(entries?.[0]).toEqual({
 			phaseName: 'CHARACTER_PROFILE_COMPRESSOR',
-			content: '## Failed\n\ncheckpoint down',
+			content: 'partial body',
+			processedContent: '## Failed\n\ncheckpoint down',
 			reasoning: 'thinking',
 		});
 		expect(h.phase('EDITOR')?.content).toBe('prose');

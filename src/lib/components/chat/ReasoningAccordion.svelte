@@ -4,10 +4,12 @@
 	interface Props {
 		label: string;
 		value: string;
+		/** Drops the quoted-dialog border styling (used for phase output bodies). */
+		plain?: boolean;
 		children: import('svelte').Snippet;
 	}
 
-	let { label, value, children }: Props = $props();
+	let { label, value, plain = false, children }: Props = $props();
 </script>
 
 <div class="mb-3">
@@ -24,7 +26,9 @@
 					{#if !attributes.hidden}
 						<div
 							{...attributes}
-							class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap border-l-2 border-surface-200-800 pl-3 mt-2"
+							class="text-xs text-surface-500 leading-relaxed whitespace-pre-wrap mt-2 {plain
+								? ''
+								: 'border-l-2 border-surface-200-800 pl-3'}"
 						>
 							{@render children()}
 						</div>

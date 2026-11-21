@@ -46,6 +46,23 @@ describe('message_phases CRUD', () => {
 		expect(loaded.get('msg-1')).toEqual(makePhases());
 	});
 
+	it('round-trips processedContent and reads it back absent when not stored', async () => {
+		// WHY: the compressor's run log lives in processedContent while content holds
+		// the raw markdown body; legacy rows (log in content) must read back unchanged.
+		await messagePhases.upsertMessagePhases('msg-1', [
+			{ phaseName: 'CHARACTER_PROFILE_COMPRESSOR', content: '# Profile Updates', processedContent: '## Generation\n\n## Applied updates' },
+			{ phaseName: 'SUMMARIZER', content: 'act summary' },
+		]);
+
+		const phases = (await messagePhases.getPhasesForMessages(['msg-1'])).get('msg-1')!;
+		expect(phases[0]).toEqual({
+			phaseName: 'CHARACTER_PROFILE_COMPRESSOR',
+			content: '# Profile Updates',
+			processedContent: '## Generation\n\n## Applied updates',
+		});
+		expect(phases[1]).not.toHaveProperty('processedContent');
+	});
+
 	it('upsert replaces phase content in place and lets the background chain add a phase', async () => {
 		// Main settle writes the first batch; background settle re-sends the full array
 		// with updated EDITOR content plus a SUMMARIZER row — both upserts must be

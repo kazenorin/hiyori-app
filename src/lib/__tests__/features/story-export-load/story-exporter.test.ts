@@ -57,10 +57,10 @@ describe('buildStoryExportData messagePhases', () => {
 		testDb.close();
 	});
 
-	it('exports archive version 6', async () => {
+	it('exports archive version 7', async () => {
 		const data = await buildStoryExportData('story-1');
-		expect(CURRENT_ARCHIVE_VERSION).toBe(6);
-		expect(data.version).toBe(6);
+		expect(CURRENT_ARCHIVE_VERSION).toBe(7);
+		expect(data.version).toBe(7);
 	});
 
 	// WHY: traits must survive the export→import round-trip across devices.
@@ -130,11 +130,20 @@ describe('buildStoryExportData messagePhases', () => {
 		await upsertMessagePhases('m1', [
 			{ phaseName: 'WRITER', content: 'draft', reasoning: 'thinking' },
 			{ phaseName: 'EDITOR', content: 'final' },
+			{ phaseName: 'CHARACTER_PROFILE_COMPRESSOR', content: '# Profile Updates', processedContent: '## Applied updates' },
 		]);
 		const data = await buildStoryExportData('story-1');
 		expect(data.messagePhases).toEqual([
-			{ messageId: 'm1', phaseName: 'WRITER', reasoning: 'thinking', content: 'draft', sequence: 0 },
-			{ messageId: 'm1', phaseName: 'EDITOR', reasoning: null, content: 'final', sequence: 1 },
+			{ messageId: 'm1', phaseName: 'WRITER', reasoning: 'thinking', content: 'draft', processedContent: null, sequence: 0 },
+			{ messageId: 'm1', phaseName: 'EDITOR', reasoning: null, content: 'final', processedContent: null, sequence: 1 },
+			{
+				messageId: 'm1',
+				phaseName: 'CHARACTER_PROFILE_COMPRESSOR',
+				reasoning: null,
+				content: '# Profile Updates',
+				processedContent: '## Applied updates',
+				sequence: 2,
+			},
 		]);
 	});
 

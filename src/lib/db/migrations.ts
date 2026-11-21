@@ -176,6 +176,8 @@ const migrationStatements: string[][] = [
 	[`ALTER TABLE character_profiles ADD COLUMN traits TEXT`],
 	[`ALTER TABLE character_profiles ADD COLUMN removed INTEGER NOT NULL DEFAULT 0`],
 	[`ALTER TABLE character_profiles ADD COLUMN canonical_aliases TEXT NOT NULL DEFAULT '[]'`],
+	// No backfill: legacy compressor rows keep their run log in `content`.
+	[`ALTER TABLE message_phases ADD COLUMN processed_content TEXT`],
 ];
 
 interface ActLineMetaMigrateRow {

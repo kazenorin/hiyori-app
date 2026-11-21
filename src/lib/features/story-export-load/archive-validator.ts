@@ -121,12 +121,13 @@ export function validateStoryData(data: unknown): ValidationResult {
 					typeof r.phaseName !== 'string' ||
 					typeof r.content !== 'string' ||
 					typeof r.sequence !== 'number' ||
-					!(r.reasoning === null || r.reasoning === undefined || typeof r.reasoning === 'string')
+					!(r.reasoning === null || r.reasoning === undefined || typeof r.reasoning === 'string') ||
+					!(r.processedContent === null || r.processedContent === undefined || typeof r.processedContent === 'string')
 				);
 			});
 			if (hasMalformed) {
 				errors.push(
-					'messagePhases contains malformed elements (expected {messageId, phaseName, content: string, sequence: number, reasoning: string|null})'
+					'messagePhases contains malformed elements (expected {messageId, phaseName, content: string, sequence: number, reasoning: string|null, processedContent?: string|null})'
 				);
 			}
 		}

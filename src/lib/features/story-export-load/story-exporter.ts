@@ -134,6 +134,7 @@ export async function buildStoryExportData(storyId: string): Promise<StoryExport
 				phaseName: phase.phaseName,
 				reasoning: phase.reasoning ?? null,
 				content: phase.content,
+				processedContent: phase.processedContent ?? null,
 				sequence: index,
 			}))
 		),

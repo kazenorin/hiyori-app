@@ -134,6 +134,7 @@ export async function upsertMessagePhasesFromRows(
 			phaseName: r.phaseName as PhaseName,
 			content: r.content,
 			...(r.reasoning != null && { reasoning: r.reasoning }),
+			...(r.processedContent != null && { processedContent: r.processedContent }),
 		}));
 		await upsertMessagePhases(messageId, phases);
 	}

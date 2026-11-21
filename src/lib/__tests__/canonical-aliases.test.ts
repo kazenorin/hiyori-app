@@ -53,10 +53,12 @@ describe('canonical_aliases migration (v16)', () => {
 	});
 
 	it('adds the column and backfills canonical forms when upgrading a v15 database', async () => {
-		// Simulate a pre-v16 database: drop the column, rewind the version clock,
-		// and seed rows in the old shape so only migration 16 runs again.
+		// Simulate a pre-v16 database: undo every migration after 15 (the runner
+		// resumes from MAX(version), so all later version rows must go too), and
+		// seed rows in the old shape so migration 16 runs again.
 		await testDb.execute('ALTER TABLE character_profiles DROP COLUMN canonical_aliases');
-		await testDb.execute('DELETE FROM schema_version WHERE version = 16');
+		await testDb.execute('ALTER TABLE message_phases DROP COLUMN processed_content');
+		await testDb.execute('DELETE FROM schema_version WHERE version >= 16');
 		await testDb.execute(
 			`INSERT INTO character_profiles (id, act_line_id, canonical_name, preferred_name, aliases, logline, created_at, updated_at)
 			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,

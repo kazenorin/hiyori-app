@@ -315,10 +315,13 @@ export async function generateCharacterProfiles(
 	const directTools = method === 'toolCalls';
 	const runLog = createCompressionLog(directTools, (key) => t(`pipeline.compressorStages.${key}`));
 	let latestReasoning: string | null = null;
+	// Last markdown stage body wins (repair replaces generation); kept on tool fallback as rejection evidence.
+	let markdownBody = '';
 
 	const emitStream = () =>
 		callbacks?.onPhaseStream('CHARACTER_PROFILE_COMPRESSOR', {
-			content: runLog.streamContent(),
+			content: markdownBody,
+			processedContent: runLog.streamContent(),
 			reasoning: latestReasoning,
 			variables: null,
 		});
@@ -340,11 +343,12 @@ export async function generateCharacterProfiles(
 		abortSignal.throwIfAborted();
 		runLog.beginStage(stageKey);
 		emitStream();
+		const isMarkdownStage = stageKey !== 'tools';
 		const accumulator = await streamWithRetry(request.systemPrompt, request.messages, {
 			retryConfig: DEFAULT_RETRY_CONFIG,
 			onProgress: (state) => {
 				latestReasoning = state.reasoning;
-				runLog.setPreview(state.content);
+				if (isMarkdownStage) markdownBody = state.content;
 				emitStream();
 			},
 			onError: () => {},
@@ -362,7 +366,7 @@ export async function generateCharacterProfiles(
 				: undefined,
 		});
 		const metadata = await accumulator.resultMetadata;
-		runLog.setPreview(null);
+		if (isMarkdownStage) markdownBody = accumulator.state.content;
 		emitStream();
 		const completed = { text: accumulator.state.content, metadata };
 		accumulate(completed, stageProvider);
@@ -469,7 +473,11 @@ export async function generateCharacterProfiles(
 			await recordCharacterProfileCompression(compressorInput.actLineId, compressorInput.assistant, completedScenes);
 		}
 		terminalEmitted = true;
-		callbacks?.onPhaseComplete('CHARACTER_PROFILE_COMPRESSOR', { profileCompressionLog: runLog.committedContent(true) }, metadata);
+		callbacks?.onPhaseComplete(
+			'CHARACTER_PROFILE_COMPRESSOR',
+			{ profileCompressionLog: runLog.committedContent(true), profileMarkdownOutput: markdownBody },
+			metadata
+		);
 
 		if (shouldRecord) {
 			await log.info(
@@ -489,6 +497,7 @@ export async function generateCharacterProfiles(
 			runLog.addFailure(cancelled, err instanceof Error ? err.message : String(err));
 			callbacks?.onPhaseFailed?.('CHARACTER_PROFILE_COMPRESSOR', {
 				profileCompressionLog: runLog.committedContent(false),
+				profileMarkdownOutput: markdownBody,
 				metadata: aggregated,
 			});
 		}

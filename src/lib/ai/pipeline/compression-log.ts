@@ -42,7 +42,7 @@ export function emptyCompressionLog(): string {
 }
 
 export type CompressionStage = 'generation' | 'repair' | 'tools';
-export type CompressionStageLabel = CompressionStage | 'toolsDirect' | 'preview' | 'applied' | 'failed' | 'cancelled' | 'retry';
+export type CompressionStageLabel = CompressionStage | 'toolsDirect' | 'applied' | 'failed' | 'cancelled' | 'retry';
 
 /** Accumulates run-log sections; rendering is pure and callers own streaming/emission. */
 export function createCompressionLog(
@@ -50,7 +50,6 @@ export function createCompressionLog(
 	label: (key: CompressionStageLabel) => string
 ): {
 	beginStage: (stage: CompressionStage) => void;
-	setPreview: (text: string | null) => void;
 	addAttempt: (attempt: ProfileUpdateAttempt) => void;
 	addFallbackReason: (reason: string) => void;
 	addRetry: () => void;
@@ -61,30 +60,23 @@ export function createCompressionLog(
 	const logBlocks: string[] = [];
 	const appliedAttempts: string[] = [];
 	const failedAttempts: string[] = [];
-	let preview: string | null = null;
 
-	const render = (includePreview: boolean): string => {
+	const render = (): string => {
 		const sections = [...logBlocks];
 		if (appliedAttempts.length > 0) sections.push(`## ${label('applied')}\n\n${appliedAttempts.join('\n\n')}`);
 		if (failedAttempts.length > 0) sections.push(`## ${label('failed')}\n\n${failedAttempts.join('\n\n')}`);
-		if (includePreview && preview) sections.push(`## ${label('preview')}\n\n${preview}`);
 		return sections.join('\n\n');
 	};
 
 	return {
 		beginStage: (stage) => {
 			logBlocks.push(`## ${label(stage === 'tools' && directTools ? 'toolsDirect' : stage)}`);
-			preview = null;
-		},
-		setPreview: (text) => {
-			preview = text;
 		},
 		addAttempt: (attempt) => {
 			(attempt.success ? appliedAttempts : failedAttempts).push(formatProfileUpdateAttempt(attempt));
 		},
 		addFallbackReason: (reason) => {
 			logBlocks.push(`- ${label('failed')}: ${reason}`);
-			preview = null;
 		},
 		addRetry: () => {
 			logBlocks.push(`## ${label('retry')}`);
@@ -92,9 +84,9 @@ export function createCompressionLog(
 		addFailure: (cancelled, reason) => {
 			logBlocks.push(`## ${label(cancelled ? 'cancelled' : 'failed')}${cancelled ? '' : `\n\n${reason}`}`);
 		},
-		streamContent: () => render(true),
+		streamContent: render,
 		committedContent: (withNoChangesMarker) => {
-			const logContent = render(false);
+			const logContent = render();
 			if (withNoChangesMarker && appliedAttempts.length === 0 && failedAttempts.length === 0) {
 				return logContent ? `${logContent}\n\n${emptyCompressionLog()}` : emptyCompressionLog();
 			}
