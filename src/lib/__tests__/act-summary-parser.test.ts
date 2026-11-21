@@ -129,6 +129,16 @@ describe('parseActSummary', () => {
 		});
 	});
 
+	it('overwrites an earlier scene entry when the summarizer repeats a scene number', () => {
+		// WHY: a repeated scene number must not yield two sceneDetails lines in the
+		// profile; the later summary of the same scene replaces the earlier one.
+		const result = parseActSummary(`## Character Summaries
+### Elena
+- Scene 5: Elena watches the gate.
+- Scene 5: Elena holds the gate against the raiders.`);
+		expect(result.characters[0].sceneEntries).toEqual([{ sceneNumber: 5, summary: 'Elena holds the gate against the raiders.' }]);
+	});
+
 	it('parses empty markdown', () => {
 		const result = parseActSummary('');
 		expect(result.completedScenes).toBe(0);
@@ -420,6 +430,19 @@ describe('serializeCharacterSceneDetails', () => {
 	it('matches alias variants that differ only in case, punctuation or brackets', () => {
 		expect(serializeCharacterSceneDetails(summary, ['Amiri Verspera', '[Little Rose]'])).toBe('- 5: Amiri recovers in the lead wagon.');
 	});
+
+	it('a scene re-emitted by an incremental update yields one sceneDetails line (later wins)', () => {
+		// WHY: the profile sceneDetails are rebuilt from the merged act summary; a
+		// duplicated scene number there must collapse to the newest summary.
+		const existing = parseActSummary(`## Character Summaries
+### Amiri
+- Scene 5: Amiri recovers in the lead wagon.`);
+		const incremental = parseIncrementalOutput(`## Character Summaries
+### Amiri
+- Scene 5: Amiri relapses and is carried to the healer.`);
+		const merged = mergeActSummary(existing, incremental);
+		expect(serializeCharacterSceneDetails(merged, ['Amiri'])).toBe('- 5: Amiri relapses and is carried to the healer.');
+	});
 });
 
 describe('code fence stripping', () => {
@@ -551,6 +574,45 @@ describe('mergeActSummary', () => {
 		expect(merged.characters).toHaveLength(1);
 		expect(merged.characters[0].aliases).toEqual(['Elena', 'The Shadow', 'Shadow']);
 		expect(merged.characters[0].sceneEntries).toHaveLength(2);
+	});
+
+	it('a re-emitted scene number overwrites the earlier entry instead of duplicating it', () => {
+		// WHY: an incremental update may summarize a scene already recorded; appending
+		// would leave two entries for one scene and duplicate the profile sceneDetails.
+		const existing: ActSummary = {
+			turnOfEvents: null,
+			turnOfEventsSceneNumber: null,
+			turnOfEventsSceneTitle: null,
+			completedScenes: 2,
+			scenes: [
+				{ sceneNumber: 1, title: 'Start', location: 'Town', summary: 'Beginning.' },
+				{ sceneNumber: 2, title: 'Gate', location: 'Gate', summary: 'A fight.' },
+			],
+			characters: [
+				{
+					characterName: 'Elena',
+					aliases: ['Elena'],
+					sceneEntries: [
+						{ sceneNumber: 1, summary: 'Elena watches.' },
+						{ sceneNumber: 2, summary: 'Elena leaves.' },
+					],
+				},
+			],
+			characterProfiles: [],
+			characterProfileLastScene: null,
+		};
+		const incremental: IncrementalUpdate = {
+			completedScenes: 2,
+			newScene: undefined,
+			characterUpdates: [{ characterName: 'Elena', aliases: [], sceneEntries: [{ sceneNumber: 2, summary: 'Elena stays and fights.' }] }],
+		};
+
+		const merged = mergeActSummary(existing, incremental);
+
+		expect(merged.characters[0].sceneEntries).toEqual([
+			{ sceneNumber: 1, summary: 'Elena watches.' },
+			{ sceneNumber: 2, summary: 'Elena stays and fights.' },
+		]);
 	});
 
 	it('adds a new character to existing summary', () => {

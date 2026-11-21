@@ -173,6 +173,13 @@ function parseScenesBody(body: string): SceneSummary[] {
 	return scenes;
 }
 
+/** The summarizer may re-emit a scene; the later summary of a scene replaces the earlier one. */
+function dedupeSceneEntries(entries: CharacterSceneEntry[]): CharacterSceneEntry[] {
+	const byScene = new Map<number, CharacterSceneEntry>();
+	for (const entry of entries) byScene.set(entry.sceneNumber, entry);
+	return [...byScene.values()];
+}
+
 function parseCharactersBody(body: string): CharacterSummary[] {
 	const characters: CharacterSummary[] = [];
 	const sceneItemRegex = buildSceneHeaderRegex();
@@ -223,7 +230,7 @@ function parseCharactersBody(body: string): CharacterSummary[] {
 	}
 
 	if (currentCharacter) characters.push(currentCharacter);
-	return characters;
+	return characters.map((c) => ({ ...c, sceneEntries: dedupeSceneEntries(c.sceneEntries) }));
 }
 
 function parseLastSceneFromCharacterSummaries(body: string): number | null {
@@ -582,10 +589,13 @@ export function mergeActSummary(existing: ActSummary, incremental: IncrementalUp
 			result.characters[existingIdx] = {
 				...existingChar,
 				aliases: mergedAliases,
-				sceneEntries: [...existingChar.sceneEntries, ...update.sceneEntries],
+				sceneEntries: dedupeSceneEntries([...existingChar.sceneEntries, ...update.sceneEntries]),
 			};
 		} else {
-			result.characters = [...result.characters, { ...update, aliases: [...update.aliases], sceneEntries: [...update.sceneEntries] }];
+			result.characters = [
+				...result.characters,
+				{ ...update, aliases: [...update.aliases], sceneEntries: dedupeSceneEntries(update.sceneEntries) },
+			];
 		}
 	}
 
