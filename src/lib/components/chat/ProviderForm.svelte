@@ -191,12 +191,12 @@
 		{#if mode === 'edit'}
 			{t('settings.editing')}{#if isMainProvider}{t('settings.mainProviderTag')}{/if}
 		{:else}
-			{t('settings.newProvider')}
+			{t('settings.newCustomModel')}
 		{/if}
 	</p>
 	<details open>
 		<summary class="text-sm font-medium cursor-pointer">
-			{formName || (mode === 'edit' ? t('settings.untitled') : t('settings.newProviderTitle'))}
+			{formName || (mode === 'edit' ? t('settings.untitled') : t('settings.newCustomModel'))}
 		</summary>
 		<div class="mt-3 space-y-3">
 			<TextField label={t('settings.name')} type="text" placeholder={t('settings.namePlaceholder')} bind:value={formName} />
@@ -322,7 +322,7 @@
 	</details>
 	<div class="flex gap-2">
 		<Button variant="filled" class="min-h-11" onclick={handleSave}>
-			{mode === 'edit' ? t('settings.save') : t('settings.addProviderButton')}
+			{mode === 'edit' ? t('settings.save') : t('settings.addCustomModel')}
 		</Button>
 		<Button class="min-h-11" onclick={oncancel}>{t('settings.cancel')}</Button>
 	</div>

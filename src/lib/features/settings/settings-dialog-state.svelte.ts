@@ -1,9 +1,19 @@
 export type SectionId =
-	'general' | 'providers' | 'roles' | 'narrative' | 'characterNames' | 'tts' | 'cloudSync' | 'memory' | 'data' | 'developer';
+	| 'general'
+	| 'catalogProviders'
+	| 'providers'
+	| 'roles'
+	| 'narrative'
+	| 'characterNames'
+	| 'tts'
+	| 'cloudSync'
+	| 'memory'
+	| 'data'
+	| 'developer';
 
-// AI Providers is the landing section: it's the most important setting
-// (nothing works without a provider), even though General lists first.
-export const DEFAULT_SECTION: SectionId = 'providers';
+// The catalog-backed AI Providers section is the landing section: it's the most
+// important setting (nothing works without a provider), even though General lists first.
+export const DEFAULT_SECTION: SectionId = 'catalogProviders';
 
 let isOpen = $state(false);
 let activeSection = $state<SectionId>(DEFAULT_SECTION);

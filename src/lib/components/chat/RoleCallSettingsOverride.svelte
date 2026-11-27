@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { t } from '#lib/i18n/index.ts';
 	import { getRoleCallSettings, setRoleCallSettings } from '#lib/stores/settings.svelte.ts';
+	import { roleCatalogConstraints } from '#lib/features/settings/role-catalog.ts';
 	import AdvancedSettingsEditor from '#lib/components/chat/AdvancedSettingsEditor.svelte';
 
 	interface Props {
@@ -10,6 +11,7 @@
 	let { role }: Props = $props();
 
 	const override = $derived(getRoleCallSettings(role));
+	const catalogConstraints = $derived(roleCatalogConstraints(role));
 </script>
 
 <details>
@@ -26,8 +28,8 @@
 		</label>
 		<span class="text-xs text-surface-500 block">{t('settings.advancedSettingsFollowHint')}</span>
 		{#if override !== undefined}
-			<!-- `cs ?? {}`: an enabled override with no fields set still replaces the provider's settings -->
-			<AdvancedSettingsEditor callSettings={override} onValueChange={(cs) => setRoleCallSettings(role, cs ?? {})} />
+			<!-- `cs ?? {}`: an enabled override with no fields set still replaces the provider's settings, except catalog `providerOptions`, which `applyRoleCallSettings` preserves -->
+			<AdvancedSettingsEditor callSettings={override} {catalogConstraints} onValueChange={(cs) => setRoleCallSettings(role, cs ?? {})} />
 		{/if}
 	</div>
 </details>

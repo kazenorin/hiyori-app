@@ -16,6 +16,7 @@
 		"tauri": "tauri",
 		"postinstall": "node scripts/copy-wasm.mjs",
 		"update-manifest": "node scripts/update-config-manifest.mjs",
+		"build-catalog": "node scripts/build-catalog-snapshot.mjs",
 		"bump-version": "node scripts/bump-version.mjs",
 		"prebuild": "node scripts/update-config-manifest.mjs"
 	},
@@ -39,6 +40,7 @@
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
 		"@lucide/svelte": "^1.63.0",
+		"@opencode-ai/models": "^0.0.147",
 		"@skeletonlabs/skeleton": "^5.0.1",
 		"@skeletonlabs/skeleton-svelte": "^5.0.1",
 		"@svelte-put/swipeable": "^1.2.0",

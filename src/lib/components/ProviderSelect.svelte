@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { t } from '#lib/i18n/index.ts';
-	import { settings } from '#lib/stores/settings.svelte.ts';
 	import ThemedSelect from '#lib/components/ThemedSelect.svelte';
 	import SearchableSelect from '#lib/components/SearchableSelect.svelte';
 
@@ -14,10 +13,10 @@
 
 	let { items, value, onValueChange, disabled = false, placeholder = '' }: Props = $props();
 
-	// Above this provider count, a searchable dialog replaces the themed select
+	// Above this item count (catalog entries and custom models merge into one list), a searchable dialog replaces the themed select
 	const PROVIDER_DIALOG_THRESHOLD = 5;
 
-	const useDialog = $derived(settings.providers.length > PROVIDER_DIALOG_THRESHOLD);
+	const useDialog = $derived(items.length > PROVIDER_DIALOG_THRESHOLD);
 </script>
 
 {#if useDialog}

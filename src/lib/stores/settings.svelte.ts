@@ -7,6 +7,7 @@ import { detectDefaultLocale, setLocale, type Locale } from '#lib/i18n/index.ts'
 import { setLogLevel, type LogLevel } from '#lib/logging/logger.ts';
 import type { LanguageModelCallOptions } from 'ai';
 import type { VoiceId } from '#lib/kokoro/kokoro-hiyori/index.ts';
+import type { CatalogModelEntry, CatalogProviderEntity } from '#lib/ai/catalog/types.ts';
 
 export type { LogLevel };
 
@@ -28,11 +29,27 @@ export interface ProviderConfig {
 	apiKey?: string;
 	corsBypassEnabled: boolean;
 	wispProxyUrl: string;
-	callSettings?: LanguageModelCallOptions;
+	callSettings?: ProviderCallSettings;
 }
+
+/**
+ * JSON-serializable provider option value; mirrors the AI SDK's internal providerOptions shape
+ * so these settings can be spread directly into model calls.
+ */
+export type ProviderOptionValue = null | string | number | boolean | { [key: string]: ProviderOptionValue } | ProviderOptionValue[];
+
+/**
+ * Standard call options plus a provider-specific `providerOptions` passthrough,
+ * used by catalog materialization for OpenRouter reasoning toggle/budget transport.
+ */
+export type ProviderCallSettings = LanguageModelCallOptions & {
+	providerOptions?: Record<string, { [key: string]: ProviderOptionValue }>;
+};
 
 export interface Settings {
 	providers: ProviderConfig[];
+	/** models.dev catalog providers; models are configured here rather than as custom providers */
+	catalogProviders: CatalogProviderEntity[];
 	roleAssignments: Record<string, string>;
 	/** Per-role Advanced Settings overrides; presence of an entry means the role overrides its provider's callSettings */
 	roleCallSettings: Record<string, LanguageModelCallOptions>;
@@ -116,6 +133,7 @@ const STORAGE_KEY = 'hiyori-settings';
 function createDefaults(): Settings {
 	return {
 		providers: [],
+		catalogProviders: [],
 		roleAssignments: {},
 		roleCallSettings: {},
 		locale: detectDefaultLocale(),
@@ -233,14 +251,58 @@ export function getSettings(): Settings {
 
 // --- Provider Config CRUD ---
 
+/** Custom providers take precedence over catalog entries when ids collide. */
 export function getProviderConfig(id: string): ProviderConfig | undefined {
-	return settings.providers.find((p) => p.id === id);
+	const custom = settings.providers.find((p) => p.id === id);
+	if (custom) return custom;
+	for (const entity of settings.catalogProviders) {
+		const entry = entity.enabledModels.find((m) => m.id === id);
+		if (entry) return materializeEntry(entity, entry);
+	}
+	return undefined;
 }
 
-/** Returns the config with the role's Advanced Settings override applied, if any */
+function materializeEntry(entity: CatalogProviderEntity, entry: CatalogModelEntry): ProviderConfig {
+	const callSettings: ProviderCallSettings = { ...entry.callSettings };
+	if (entry.providerType === 'openrouter' && (entry.reasoningToggle || entry.reasoningBudget !== undefined)) {
+		const reasoning: { enabled?: boolean; max_tokens?: number } = {};
+		if (entry.reasoningToggle === 'on') reasoning.enabled = true;
+		if (entry.reasoningToggle === 'off') reasoning.enabled = false;
+		if (entry.reasoningBudget !== undefined) reasoning.max_tokens = entry.reasoningBudget;
+		callSettings.providerOptions = {
+			...callSettings.providerOptions,
+			openrouter: { ...callSettings.providerOptions?.openrouter, reasoning },
+		};
+	} else if (entry.reasoningToggle === 'off') {
+		// BD5: other providers transport the toggle via the standard call option; 'on'/default stays omitted (provider default).
+		callSettings.reasoning = 'none';
+	}
+	return {
+		id: entry.id,
+		name: `${entity.displayName} · ${entry.snapshot.name}`,
+		provider: entry.providerType,
+		apiType: entry.apiType,
+		baseURL: entry.baseURL ?? entity.baseURL,
+		model: entry.modelId,
+		apiKey: entity.apiKey,
+		corsBypassEnabled: entity.corsBypassEnabled,
+		wispProxyUrl: entity.wispProxyUrl,
+		callSettings,
+	};
+}
+
+/**
+ * Returns the config with the role's Advanced Settings override applied, if any.
+ * A role override replaces the provider's callSettings wholesale, except that catalog-materialized
+ * providerOptions (e.g. OpenRouter reasoning transport) survive unless the override brings its own.
+ */
 function applyRoleCallSettings(config: ProviderConfig, roleKey: string): ProviderConfig {
-	const override = settings.roleCallSettings[roleKey];
-	return override !== undefined ? { ...config, callSettings: override } : config;
+	const override: ProviderCallSettings | undefined = settings.roleCallSettings[roleKey];
+	if (override === undefined) return config;
+	if (override.providerOptions === undefined && config.callSettings?.providerOptions !== undefined) {
+		return { ...config, callSettings: { ...override, providerOptions: config.callSettings.providerOptions } };
+	}
+	return { ...config, callSettings: override };
 }
 
 export function getMainProviderConfig(): ProviderConfig | undefined {
@@ -261,8 +323,7 @@ function resolvePipelineRoleProviderConfig(roleKey: string, providerRole: string
 	const id = settings.roleAssignments[role];
 	const config = id ? getProviderConfig(id) : getProviderConfig(role);
 	if (!config?.model) return undefined;
-	const override = settings.roleCallSettings[roleKey] ?? settings.roleCallSettings[role];
-	return override !== undefined ? { ...config, callSettings: override } : config;
+	return applyRoleCallSettings(config, settings.roleCallSettings[roleKey] !== undefined ? roleKey : role);
 }
 
 export function getMemoryProviderConfig(): ProviderConfig | undefined {
@@ -412,10 +473,50 @@ export function reorderProviders(orderedIds: string[]): void {
 	persist();
 }
 
+/** Removes role assignments pointing at any of the given provider or catalog entry ids. */
+export function cleanupRoleAssignments(removedIds: string[]): void {
+	if (removedIds.length === 0) return;
+	settings.roleAssignments = omitBy(settings.roleAssignments, (configId) => removedIds.includes(configId));
+	persist();
+}
+
 export function deleteProviderConfig(id: string): void {
 	settings.providers = settings.providers.filter((p) => p.id !== id);
-	// Clean up any role assignments pointing to the deleted config
-	settings.roleAssignments = omitBy(settings.roleAssignments, (configId) => configId === id);
+	cleanupRoleAssignments([id]);
+	persist();
+}
+
+export function addCatalogProvider(entity: Omit<CatalogProviderEntity, 'id'>): CatalogProviderEntity {
+	const created: CatalogProviderEntity = { ...entity, id: uuidv4() };
+	settings.catalogProviders = [...settings.catalogProviders, created];
+	if (!settings.roleAssignments['main'] && created.enabledModels.length > 0) {
+		settings.roleAssignments['main'] = created.enabledModels[0].id;
+	}
+	persist();
+	return created;
+}
+
+export function updateCatalogProvider(id: string, partial: Partial<Omit<CatalogProviderEntity, 'id'>>): void {
+	settings.catalogProviders = settings.catalogProviders.map((e) => (e.id === id ? { ...e, ...partial } : e));
+	persist();
+}
+
+/** Also clears role assignments pointing at any of the entity's model entries. */
+export function deleteCatalogProvider(id: string): void {
+	const entity = settings.catalogProviders.find((e) => e.id === id);
+	if (!entity) return;
+	settings.catalogProviders = settings.catalogProviders.filter((e) => e.id !== id);
+	cleanupRoleAssignments(entity.enabledModels.map((m) => m.id));
+	persist();
+}
+
+/** Reorders catalog providers to match the given entity ids; ids not listed keep their relative order at the end. */
+export function reorderCatalogProviders(orderedEntityIds: string[]): void {
+	const index = (id: string) => {
+		const position = orderedEntityIds.indexOf(id);
+		return position === -1 ? orderedEntityIds.length : position;
+	};
+	settings.catalogProviders = [...settings.catalogProviders].sort((a, b) => index(a.id) - index(b.id));
 	persist();
 }
 
