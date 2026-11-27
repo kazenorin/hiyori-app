@@ -5,10 +5,13 @@ import {
 	assignRole,
 	cleanupRoleAssignments,
 	deleteCatalogProvider,
+	getMainProviderConfig,
 	getProviderConfig,
+	getWriterProviderConfig,
 	reorderCatalogProviders,
 	settings,
 	updateCatalogProvider,
+	type ProviderCallSettings,
 } from '#lib/stores/settings.svelte.ts';
 import type { CatalogModelEntry, CatalogProviderEntity } from '#lib/ai/catalog/types.ts';
 
@@ -177,6 +180,40 @@ describe('catalog entry materialization', () => {
 		const callSettings = getProviderConfig(ENTRY_ID)?.callSettings;
 		expect(callSettings).toEqual({});
 		expect(callSettings?.providerOptions).toBeUndefined();
+	});
+});
+
+describe('catalog reasoning transport vs role overrides', () => {
+	function setupOpenRouterEntry() {
+		addCatalogProvider(makeEntity({ enabledModels: [openRouterEntry({ reasoningToggle: 'on', reasoningBudget: 4096 })] }));
+	}
+
+	it('preserves materialized OpenRouter reasoning when the role override has no providerOptions', () => {
+		setupOpenRouterEntry();
+		settings.roleCallSettings['main'] = { temperature: 0.4 };
+
+		const callSettings = getMainProviderConfig()?.callSettings;
+		expect(callSettings?.temperature).toBe(0.4);
+		expect(callSettings?.providerOptions).toEqual({ openrouter: { reasoning: { enabled: true, max_tokens: 4096 } } });
+	});
+
+	it('lets the role override providerOptions win wholesale', () => {
+		setupOpenRouterEntry();
+		const override: ProviderCallSettings = { providerOptions: { openrouter: { reasoning: { max_tokens: 512 } } } };
+		settings.roleCallSettings['main'] = override;
+
+		expect(getMainProviderConfig()?.callSettings?.providerOptions).toEqual({
+			openrouter: { reasoning: { max_tokens: 512 } },
+		});
+	});
+
+	it('preserves materialized reasoning for pipeline roles inheriting the main override', () => {
+		setupOpenRouterEntry();
+		settings.roleCallSettings['main'] = { reasoning: 'low' };
+
+		expect(getWriterProviderConfig()?.callSettings?.providerOptions).toEqual({
+			openrouter: { reasoning: { enabled: true, max_tokens: 4096 } },
+		});
 	});
 });
 

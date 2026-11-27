@@ -106,6 +106,8 @@ export function getCharacterProfileUpdateMethodItems(): { label: string; value: 
 export function getRoleItems(includeMain: boolean = true): { label: string; value: string }[] {
 	const items: { label: string; value: string }[] = [];
 	if (includeMain) items.push({ label: t('settings.mainProvider'), value: 'main' });
+	for (const entity of settings.catalogProviders)
+		for (const entry of entity.enabledModels) items.push({ label: `${entity.displayName} · ${entry.snapshot.name}`, value: entry.id });
 	for (const c of settings.providers) items.push({ label: c.name, value: c.id });
 	return items;
 }

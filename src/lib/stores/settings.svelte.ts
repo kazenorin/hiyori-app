@@ -288,10 +288,18 @@ function materializeEntry(entity: CatalogProviderEntity, entry: CatalogModelEntr
 	};
 }
 
-/** Returns the config with the role's Advanced Settings override applied, if any */
+/**
+ * Returns the config with the role's Advanced Settings override applied, if any.
+ * A role override replaces the provider's callSettings wholesale, except that catalog-materialized
+ * providerOptions (e.g. OpenRouter reasoning transport) survive unless the override brings its own.
+ */
 function applyRoleCallSettings(config: ProviderConfig, roleKey: string): ProviderConfig {
-	const override = settings.roleCallSettings[roleKey];
-	return override !== undefined ? { ...config, callSettings: override } : config;
+	const override: ProviderCallSettings | undefined = settings.roleCallSettings[roleKey];
+	if (override === undefined) return config;
+	if (override.providerOptions === undefined && config.callSettings?.providerOptions !== undefined) {
+		return { ...config, callSettings: { ...override, providerOptions: config.callSettings.providerOptions } };
+	}
+	return { ...config, callSettings: override };
 }
 
 export function getMainProviderConfig(): ProviderConfig | undefined {
@@ -312,8 +320,7 @@ function resolvePipelineRoleProviderConfig(roleKey: string, providerRole: string
 	const id = settings.roleAssignments[role];
 	const config = id ? getProviderConfig(id) : getProviderConfig(role);
 	if (!config?.model) return undefined;
-	const override = settings.roleCallSettings[roleKey] ?? settings.roleCallSettings[role];
-	return override !== undefined ? { ...config, callSettings: override } : config;
+	return applyRoleCallSettings(config, settings.roleCallSettings[roleKey] !== undefined ? roleKey : role);
 }
 
 export function getMemoryProviderConfig(): ProviderConfig | undefined {

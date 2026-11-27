@@ -26,7 +26,7 @@
 		</label>
 		<span class="text-xs text-surface-500 block">{t('settings.advancedSettingsFollowHint')}</span>
 		{#if override !== undefined}
-			<!-- `cs ?? {}`: an enabled override with no fields set still replaces the provider's settings -->
+			<!-- `cs ?? {}`: an enabled override with no fields set still replaces the provider's settings, except catalog `providerOptions`, which `applyRoleCallSettings` preserves -->
 			<AdvancedSettingsEditor callSettings={override} onValueChange={(cs) => setRoleCallSettings(role, cs ?? {})} />
 		{/if}
 	</div>

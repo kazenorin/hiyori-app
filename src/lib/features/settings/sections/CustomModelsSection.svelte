@@ -102,12 +102,12 @@
 
 <Card>
 	<div class="flex items-center justify-between">
-		<h2 class="h4">{t('settings.aiProviders')}</h2>
-		<Button class="min-h-11" onclick={startAdd}>{t('settings.addProvider')}</Button>
+		<h2 class="h4">{t('settings.customModels')}</h2>
+		<Button class="min-h-11" onclick={startAdd}>{t('settings.addCustomModel')}</Button>
 	</div>
 
 	{#if settings.providers.length === 0 && !isAddingNew}
-		<p class="text-sm text-surface-500 py-2">{t('settings.noProvidersAdd')}</p>
+		<p class="text-sm text-surface-500 py-2">{t('settings.customModelsEmpty')}</p>
 	{/if}
 
 	<!-- Provider List -->

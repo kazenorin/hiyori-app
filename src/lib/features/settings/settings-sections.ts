@@ -3,7 +3,8 @@ import { Palette, Plug, Users, BookOpen, Sparkles, AudioLines, CloudUpload, Brai
 import type { SectionId } from './settings-dialog-state.svelte';
 import { isMemoryCapable } from '#lib/stores/settings.svelte.ts';
 import GeneralSection from './sections/GeneralSection.svelte';
-import ProvidersSection from './sections/ProvidersSection.svelte';
+import CatalogProvidersSection from './sections/CatalogProvidersSection.svelte';
+import CustomModelsSection from './sections/CustomModelsSection.svelte';
 import RolesSection from './sections/RolesSection.svelte';
 import NarrativeSection from './sections/NarrativeSection.svelte';
 import CharacterNamesSection from './sections/CharacterNamesSection.svelte';
@@ -30,7 +31,14 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
 		icon: Palette,
 		component: GeneralSection,
 	},
-	{ id: 'providers', labelKey: 'settings.aiProviders', icon: Plug, component: ProvidersSection },
+	{
+		id: 'catalogProviders',
+		labelKey: 'settings.catalog.title',
+		descriptionKey: 'settings.catalog.description',
+		icon: Plug,
+		component: CatalogProvidersSection,
+	},
+	{ id: 'providers', labelKey: 'settings.customModels', icon: Plug, component: CustomModelsSection },
 	{
 		id: 'roles',
 		labelKey: 'settings.section.roles',
