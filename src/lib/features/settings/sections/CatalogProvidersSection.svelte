@@ -3,23 +3,25 @@
 	import Sortable from 'sortablejs';
 	import { t } from '#lib/i18n/index.ts';
 	import { getCatalog } from '#lib/ai/catalog/service.ts';
-	import { resolveEndpoint, resolveProviderType } from '#lib/ai/catalog/eligibility.ts';
 	import type { CatalogModelEntry, CatalogProviderEntity, CatalogResult, EligibleProvider } from '#lib/ai/catalog/types.ts';
-	import { deleteCatalogProvider, reorderCatalogProviders, settings, type Provider } from '#lib/stores/settings.svelte.ts';
+	import {
+		addCatalogProvider,
+		cleanupRoleAssignments,
+		deleteCatalogProvider,
+		reorderCatalogProviders,
+		settings,
+		updateCatalogProvider,
+	} from '#lib/stores/settings.svelte.ts';
+	import { removedEntryIds } from '#lib/features/settings/catalog-setup.ts';
 	import Button from '#lib/components/ui/Button.svelte';
 	import Card from '#lib/components/ui/Card.svelte';
 	import Icon from '#lib/components/ui/Icon.svelte';
 	import ProviderLogo from '#lib/components/catalog/ProviderLogo.svelte';
 	import CatalogBrowser from './CatalogBrowser.svelte';
+	import CatalogSetup from './CatalogSetup.svelte';
 
 	type View = 'list' | 'browser' | 'setup';
 
-	const PROVIDER_LABEL_KEYS: Record<Provider, string> = {
-		openai: 'settings.providers.openai',
-		openrouter: 'settings.providers.openrouter',
-		ollama: 'settings.providers.ollama',
-		'openai-compatible': 'settings.providers.openaiCompatible',
-	};
 	const STATUS_LABEL_KEYS = {
 		alpha: 'settings.catalog.statusAlpha',
 		beta: 'settings.catalog.statusBeta',
@@ -29,6 +31,7 @@
 	let view = $state<View>('list');
 	let setupEntityId = $state<string | null>(null);
 	let setupProvider = $state<EligibleProvider | null>(null);
+	let setupFocusEntryId = $state<string | null>(null);
 	let catalog = $state<CatalogResult | null>(null);
 
 	let entityListEl = $state<HTMLDivElement | null>(null);
@@ -38,18 +41,6 @@
 	const totalModels = $derived(settings.catalogProviders.reduce((sum, entity) => sum + entity.enabledModels.length, 0));
 	const setupEntity = $derived(setupEntityId ? settings.catalogProviders.find((entity) => entity.id === setupEntityId) : undefined);
 	const setupCatalogProvider = $derived(setupEntity ? catalogProviders.get(setupEntity.catalogId) : (setupProvider ?? undefined));
-	const setupProviderType = $derived(
-		setupCatalogProvider
-			? resolveProviderType(setupCatalogProvider.npm)
-			: (setupEntity?.enabledModels[0]?.providerType ?? 'openai-compatible')
-	);
-	const setupCatalogName = $derived(setupCatalogProvider?.name ?? setupEntity?.displayName ?? setupProvider?.name ?? '');
-	const setupLogoId = $derived(setupEntity?.catalogId ?? setupProvider?.id ?? '');
-	const setupModelCount = $derived(
-		setupEntity
-			? t('settings.catalog.nModels', { count: setupEntity.enabledModels.length })
-			: t('settings.catalog.catalogModels', { count: countCurrentModels(setupCatalogProvider) })
-	);
 
 	onMount(() => {
 		void getCatalog()
@@ -76,30 +67,44 @@
 		};
 	});
 
-	function countCurrentModels(provider: EligibleProvider | undefined): number {
-		return provider ? provider.models.filter((model) => model.status !== 'deprecated').length : 0;
-	}
-
 	function startAddProvider(): void {
 		setupEntityId = null;
 		setupProvider = null;
+		setupFocusEntryId = null;
 		view = 'browser';
 	}
 
 	function startSetup(provider: EligibleProvider): void {
 		setupEntityId = null;
 		setupProvider = provider;
+		setupFocusEntryId = null;
 		view = 'setup';
 	}
 
-	function startEdit(entity: CatalogProviderEntity): void {
+	function startEdit(entity: CatalogProviderEntity, focusEntryId: string | null = null): void {
 		setupEntityId = entity.id;
 		setupProvider = null;
+		setupFocusEntryId = focusEntryId;
 		view = 'setup';
 	}
 
 	function backFromSetup(): void {
 		view = setupEntityId ? 'list' : 'browser';
+		setupFocusEntryId = null;
+	}
+
+	function handleSaveSetup(data: Omit<CatalogProviderEntity, 'id'>): void {
+		const previous = setupEntityId ? settings.catalogProviders.find((entity) => entity.id === setupEntityId) : undefined;
+		if (previous) {
+			updateCatalogProvider(previous.id, data);
+			cleanupRoleAssignments(removedEntryIds(previous.enabledModels, data.enabledModels));
+		} else {
+			addCatalogProvider(data);
+		}
+		view = 'list';
+		setupEntityId = null;
+		setupProvider = null;
+		setupFocusEntryId = null;
 	}
 
 	function catalogNameOf(entity: CatalogProviderEntity): string | undefined {
@@ -209,7 +214,7 @@
 										type="button"
 										title={t('settings.catalog.advancedSettings')}
 										aria-label={t('settings.catalog.advancedSettings')}
-										onclick={() => startEdit(entity)}
+										onclick={() => startEdit(entity, entry.id)}
 									>
 										<Icon name="cog" class="h-4 w-4" />
 									</button>
@@ -227,54 +232,12 @@
 	</Card>
 {:else}
 	<Card>
-		<div class="flex flex-wrap items-center gap-2">
-			<button class="btn preset-tonal btn-sm inline-flex min-h-11 items-center gap-1.5 px-2.5" type="button" onclick={backFromSetup}>
-				<Icon name="chevron-left" class="h-4 w-4" />
-				{t('settings.back')}
-			</button>
-			<span class="text-xs text-surface-500">
-				{setupEntity ? t('settings.catalog.editingProvider') : t('settings.catalog.addingProvider')}
-			</span>
-		</div>
-
-		<div class="flex items-center gap-3">
-			<ProviderLogo id={setupLogoId} name={setupCatalogName} size="lg" />
-			<div class="min-w-0">
-				<p class="truncate text-lg font-medium">{setupCatalogName}</p>
-				<p class="text-xs text-surface-500">{t(PROVIDER_LABEL_KEYS[setupProviderType])} · {setupModelCount}</p>
-			</div>
-		</div>
-
-		{#if setupEntity}
-			<dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-				<div class="min-w-0">
-					<dt class="text-xs text-surface-500">{t('settings.catalog.displayName')}</dt>
-					<dd class="truncate">{setupEntity.displayName}</dd>
-				</div>
-				<div class="min-w-0">
-					<dt class="text-xs text-surface-500">{t('settings.catalog.endpoint')}</dt>
-					<dd class="truncate">{setupEntity.baseURL}</dd>
-				</div>
-				<div>
-					<dt class="text-xs text-surface-500">{t('settings.catalog.apiKey')}</dt>
-					<dd>{setupEntity.apiKey ? t('settings.catalog.keySet') : t('settings.catalog.noKey')}</dd>
-				</div>
-				<div>
-					<dt class="text-xs text-surface-500">{t('settings.catalog.models')}</dt>
-					<dd>{t('settings.catalog.nModels', { count: setupEntity.enabledModels.length })}</dd>
-				</div>
-			</dl>
-		{:else}
-			<dl class="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-				<div class="min-w-0">
-					<dt class="text-xs text-surface-500">{t('settings.catalog.endpoint')}</dt>
-					<dd class="truncate">{setupCatalogProvider ? resolveEndpoint(setupCatalogProvider) : ''}</dd>
-				</div>
-				<div>
-					<dt class="text-xs text-surface-500">{t('settings.catalog.models')}</dt>
-					<dd>{t('settings.catalog.catalogModels', { count: countCurrentModels(setupCatalogProvider) })}</dd>
-				</div>
-			</dl>
-		{/if}
+		<CatalogSetup
+			entity={setupEntity ?? null}
+			catalogProvider={setupCatalogProvider ?? null}
+			focusEntryId={setupFocusEntryId}
+			onsave={handleSaveSetup}
+			oncancel={backFromSetup}
+		/>
 	</Card>
 {/if}
