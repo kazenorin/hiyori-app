@@ -18,10 +18,10 @@ describe('settings-dialog-state', () => {
 		expect(isSettingsDialogOpen()).toBe(false);
 	});
 
-	it('opens on the AI Providers landing section by default', () => {
+	it('opens on the catalog AI Providers landing section by default', () => {
 		openSettingsDialog();
 		expect(isSettingsDialogOpen()).toBe(true);
-		expect(getActiveSection()).toBe('providers');
+		expect(getActiveSection()).toBe('catalogProviders');
 	});
 
 	it('opens a specific section when requested', () => {
