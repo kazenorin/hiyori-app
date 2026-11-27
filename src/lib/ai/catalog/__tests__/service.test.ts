@@ -156,6 +156,59 @@ describe('poisoned cache resilience', () => {
 	});
 });
 
+describe('catalog provenance', () => {
+	it('stamps the cached response with the fetch time and keeps the original headers', async () => {
+		const { getCatalog } = await import('../service');
+		const before = Date.now();
+		mockFetch.mockResolvedValue(jsonResponse({ openrouter: rawProvider() }));
+		await getCatalog();
+		const stored = mockCache.put.mock.calls[0][1] as Response;
+		expect(stored.headers.get('etag')).toBe('"abc"');
+		const stampedAt = new Date(stored.headers.get('x-catalog-fetched-at')!).getTime();
+		expect(stampedAt).toBeGreaterThanOrEqual(before);
+		expect(stampedAt).toBeLessThanOrEqual(Date.now());
+	});
+
+	it('reports the stamped fetch time for cached data, not the read time', async () => {
+		const { getCatalog } = await import('../service');
+		mockCache.match.mockResolvedValue(
+			new Response(JSON.stringify({ openrouter: rawProvider() }), {
+				headers: { etag: '"abc"', 'x-catalog-fetched-at': '2026-01-02T03:04:05.000Z' },
+			})
+		);
+		mockFetch.mockRejectedValue(new Error('network'));
+		const result = await getCatalog();
+		expect(result.source).toBe('cache');
+		expect(result.generatedAt).toBe('2026-01-02T03:04:05.000Z');
+	});
+
+	it('keeps the original fetch date across a 304 revalidation', async () => {
+		const { getCatalog } = await import('../service');
+		mockCache.match.mockResolvedValue(
+			new Response(JSON.stringify({ openrouter: rawProvider() }), {
+				headers: { etag: '"abc"', 'x-catalog-fetched-at': '2026-01-02T03:04:05.000Z' },
+			})
+		);
+		mockFetch.mockResolvedValue(new Response(null, { status: 304 }));
+		const result = await getCatalog();
+		expect(result.source).toBe('cache');
+		expect(result.generatedAt).toBe('2026-01-02T03:04:05.000Z');
+	});
+
+	it('falls back to the cached Date header for entries stored before the fetch stamp existed', async () => {
+		const { getCatalog } = await import('../service');
+		mockCache.match.mockResolvedValue(
+			new Response(JSON.stringify({ openrouter: rawProvider() }), {
+				headers: { etag: '"abc"', date: 'Fri, 02 Jan 2026 03:04:05 GMT' },
+			})
+		);
+		mockFetch.mockRejectedValue(new Error('network'));
+		const result = await getCatalog();
+		expect(result.source).toBe('cache');
+		expect(result.generatedAt).toBe('Fri, 02 Jan 2026 03:04:05 GMT');
+	});
+});
+
 describe('memoization', () => {
 	it('does not refetch on a second getCatalog()', async () => {
 		const { getCatalog } = await import('../service');

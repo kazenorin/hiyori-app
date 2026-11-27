@@ -130,9 +130,12 @@ describe('catalog entry materialization', () => {
 	it('maps an OpenRouter toggle-off to providerOptions.openrouter.reasoning', () => {
 		addCatalogProvider(makeEntity({ enabledModels: [openRouterEntry({ reasoningToggle: 'off' })] }));
 
-		expect(getProviderConfig('entry-openrouter-o3')?.callSettings?.providerOptions).toEqual({
+		const callSettings = getProviderConfig('entry-openrouter-o3')?.callSettings;
+		expect(callSettings?.providerOptions).toEqual({
 			openrouter: { reasoning: { enabled: false } },
 		});
+		// OpenRouter must not also get the standard option — the toggle travels only via providerOptions.
+		expect(callSettings?.reasoning).toBeUndefined();
 	});
 
 	it('maps an OpenRouter toggle-on plus budget to enabled reasoning with max_tokens', () => {
@@ -168,6 +171,19 @@ describe('catalog entry materialization', () => {
 		expect(callSettings?.providerOptions).toEqual({
 			openrouter: { transforms: ['middle-out'], reasoning: { enabled: true } },
 		});
+	});
+
+	it('maps a non-OpenRouter toggle-off to the standard reasoning call option', () => {
+		addCatalogProvider(makeEntity({ enabledModels: [makeEntry({ reasoningToggle: 'off' })] }));
+
+		// BD5: without this mapping the persisted 'off' toggle would be silently ignored at call time.
+		expect(getProviderConfig(ENTRY_ID)?.callSettings?.reasoning).toBe('none');
+	});
+
+	it('omits reasoning for a non-OpenRouter toggle-on so the provider default applies', () => {
+		addCatalogProvider(makeEntity({ enabledModels: [makeEntry({ reasoningToggle: 'on' })] }));
+
+		expect(getProviderConfig(ENTRY_ID)?.callSettings).toEqual({});
 	});
 
 	it('does not emit reasoning providerOptions for non-OpenRouter entries', () => {

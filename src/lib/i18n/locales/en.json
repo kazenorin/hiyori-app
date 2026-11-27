@@ -11,7 +11,6 @@
 			"roles": "Roles",
 			"characterNames": "Character Names"
 		},
-		"aiProviders": "AI Providers",
 		"catalog": {
 			"title": "AI Providers",
 			"description": "Add providers from the models.dev catalog, then choose which of their models to enable.",
@@ -67,11 +66,9 @@
 			"catalogModels": "{{count}} models in catalog"
 		},
 		"customModels": "Custom Models",
-		"customModelsDescription": "Models you configure manually. Use this for providers or models that are not in the models.dev catalog.",
 		"customModelsEmpty": "No custom models configured. Add one to get started.",
 		"addCustomModel": "+ Add Custom Model",
 		"newCustomModel": "New custom model",
-		"addProvider": "+ Add Provider",
 		"advanced": "Advanced",
 		"apiProvider": "API Provider",
 		"providerTips": {
@@ -154,13 +151,10 @@
 		"edit": "Edit",
 		"delete": "Delete",
 		"enabled": "Enabled",
-		"addProviderButton": "Add Provider",
 		"untitledProvider": "Untitled Provider",
 		"editing": "Editing",
 		"mainProviderTag": "(main provider)",
 		"untitled": "Untitled",
-		"newProvider": "New provider",
-		"newProviderTitle": "New Provider",
 		"copySuffix": " (copy)",
 		"providerDisplay": "{{provider}} · {{model}}",
 		"providerRoles": "Provider Roles",
@@ -312,7 +306,6 @@
 		"logInputMessages": "Log input messages",
 		"logCompletedResponse": "Log completed response",
 		"settingsAutoSaved": "Settings are saved automatically.",
-		"noProvidersAdd": "No providers configured. Add one to get started.",
 		"failedToFetchModels": "Failed to fetch models",
 		"data": "Data",
 		"dataDescription": "Export and import your application data for backup or migration.",

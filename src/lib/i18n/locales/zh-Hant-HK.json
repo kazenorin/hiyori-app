@@ -11,7 +11,6 @@
 			"roles": "角色分工",
 			"characterNames": "角色名稱"
 		},
-		"aiProviders": "AI 提供者",
 		"catalog": {
 			"title": "AI 提供者",
 			"description": "從 models.dev 目錄新增提供者，然後選擇要啟用哪些模型。",
@@ -67,11 +66,9 @@
 			"catalogModels": "目錄中有 {{count}} 個模型"
 		},
 		"customModels": "自訂模型",
-		"customModelsDescription": "手動設定的模型。適用於 models.dev 目錄未收錄的提供者或模型。",
 		"customModelsEmpty": "尚未設定自訂模型。新增一個即可開始。",
 		"addCustomModel": "+ 新增自訂模型",
 		"newCustomModel": "新自訂模型",
-		"addProvider": "+ 新增提供者",
 		"advanced": "進階",
 		"apiProvider": "API 提供者",
 		"providerTips": {
@@ -154,13 +151,10 @@
 		"edit": "編輯",
 		"delete": "刪除",
 		"enabled": "啟用",
-		"addProviderButton": "新增提供者",
 		"untitledProvider": "未命名的提供者",
 		"editing": "編輯中",
 		"mainProviderTag": "(主要提供者)",
 		"untitled": "未命名",
-		"newProvider": "新提供者",
-		"newProviderTitle": "新提供者",
 		"copySuffix": "(副本)",
 		"providerDisplay": "{{provider}} · {{model}}",
 		"providerRoles": "提供者角色",
@@ -312,7 +306,6 @@
 		"logInputMessages": "記錄輸入訊息",
 		"logCompletedResponse": "記錄已完成回應",
 		"settingsAutoSaved": "設定會自動儲存。",
-		"noProvidersAdd": "尚未設定AI提供者。新增一個即可開始。",
 		"failedToFetchModels": "無法取得模型",
 		"data": "資料",
 		"dataDescription": "匯出和匯入你的應用程式資料以進行備份或遷移。",

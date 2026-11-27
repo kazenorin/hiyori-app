@@ -8,6 +8,7 @@
 	import { getRoleItems, getReviewerModeItems } from '#lib/features/settings-options.ts';
 
 	const mainProviderId = $derived(settings.roleAssignments['main']);
+	const noProviders = $derived(settings.providers.length === 0 && settings.catalogProviders.length === 0);
 	const reviewerModeItems = $derived(getReviewerModeItems());
 </script>
 
@@ -20,7 +21,7 @@
 					items={getRoleItems(false)}
 					value={mainProviderId}
 					onValueChange={(v) => assignRole('main', v)}
-					disabled={settings.providers.length === 0}
+					disabled={noProviders}
 					placeholder={t('settings.noProvidersConfigured')}
 				/>
 				<span class="text-xs text-surface-500 block">{t('settings.mainProviderDescription')}</span>
@@ -33,7 +34,7 @@
 					items={getRoleItems()}
 					value={settings.minorTaskAgentProviderRole}
 					onValueChange={(v) => updateSettings({ minorTaskAgentProviderRole: v })}
-					disabled={settings.providers.length === 0}
+					disabled={noProviders}
 					placeholder={t('settings.noProvidersConfigured')}
 				/>
 				<span class="text-xs text-surface-500 block">{t('settings.minorTaskAgentDescription')}</span>
@@ -52,7 +53,7 @@
 						type="checkbox"
 						class="checkbox"
 						checked={settings.plotPlannerEnabled}
-						disabled={settings.providers.length === 0}
+						disabled={noProviders}
 						onchange={(e) => updateSettings({ plotPlannerEnabled: (e.currentTarget as HTMLInputElement).checked })}
 					/>
 					<span class="text-xs text-surface-500">{t('settings.enabled')}</span>
@@ -61,7 +62,7 @@
 					items={getRoleItems()}
 					value={settings.plotPlannerProviderRole}
 					onValueChange={(v) => updateSettings({ plotPlannerProviderRole: v })}
-					disabled={settings.providers.length === 0 || !settings.plotPlannerEnabled}
+					disabled={noProviders || !settings.plotPlannerEnabled}
 					placeholder={t('settings.noProvidersConfigured')}
 				/>
 			</div>
@@ -107,7 +108,7 @@
 						type="checkbox"
 						class="checkbox"
 						checked={settings.reviewerEnabled}
-						disabled={settings.providers.length === 0}
+						disabled={noProviders}
 						onchange={(e) => updateSettings({ reviewerEnabled: (e.currentTarget as HTMLInputElement).checked })}
 					/>
 					<span class="text-xs text-surface-500">{t('settings.enabled')}</span>
@@ -116,7 +117,7 @@
 					items={getRoleItems()}
 					value={settings.reviewerProviderRole}
 					onValueChange={(v) => updateSettings({ reviewerProviderRole: v })}
-					disabled={settings.providers.length === 0 || !settings.reviewerEnabled}
+					disabled={noProviders || !settings.reviewerEnabled}
 					placeholder={t('settings.noProvidersConfigured')}
 				/>
 			</div>
@@ -147,7 +148,7 @@
 					items={getRoleItems()}
 					value={settings.writerProviderRole}
 					onValueChange={(v) => updateSettings({ writerProviderRole: v })}
-					disabled={settings.providers.length === 0}
+					disabled={noProviders}
 					placeholder={t('settings.noProvidersConfigured')}
 				/>
 				<span class="text-xs text-surface-500 block">{t('settings.writerDescription')}</span>
@@ -161,7 +162,7 @@
 					items={getRoleItems()}
 					value={settings.editorProviderRole}
 					onValueChange={(v) => updateSettings({ editorProviderRole: v })}
-					disabled={!settings.reviewerEnabled || settings.providers.length === 0}
+					disabled={!settings.reviewerEnabled || noProviders}
 					placeholder={t('settings.noProvidersConfigured')}
 				/>
 				<span class="text-xs text-surface-500 block">{t('settings.editorDescription')}</span>
@@ -178,7 +179,7 @@
 					items={getRoleItems()}
 					value={settings.gameMasterProviderRole}
 					onValueChange={(v) => updateSettings({ gameMasterProviderRole: v })}
-					disabled={settings.providers.length === 0}
+					disabled={noProviders}
 					placeholder={t('settings.noProvidersConfigured')}
 				/>
 				<span class="text-xs text-surface-500 block">{t('settings.gameMasterDescription')}</span>
@@ -192,7 +193,7 @@
 					items={getRoleItems()}
 					value={settings.summarizerProviderRole}
 					onValueChange={(v) => updateSettings({ summarizerProviderRole: v })}
-					disabled={settings.providers.length === 0}
+					disabled={noProviders}
 					placeholder={t('settings.noProvidersConfigured')}
 				/>
 				<span class="text-xs text-surface-500 block">{t('settings.summarizerDescription')}</span>

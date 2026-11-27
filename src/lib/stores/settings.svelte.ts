@@ -273,6 +273,9 @@ function materializeEntry(entity: CatalogProviderEntity, entry: CatalogModelEntr
 			...callSettings.providerOptions,
 			openrouter: { ...callSettings.providerOptions?.openrouter, reasoning },
 		};
+	} else if (entry.reasoningToggle === 'off') {
+		// BD5: other providers transport the toggle via the standard call option; 'on'/default stays omitted (provider default).
+		callSettings.reasoning = 'none';
 	}
 	return {
 		id: entry.id,

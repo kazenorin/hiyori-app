@@ -49,7 +49,11 @@ function filterProviders(raw: Record<string, unknown>): EligibleProvider[] {
 
 async function parseResponse(response: Response, source: CatalogResult['source']): Promise<CatalogResult> {
 	const body = (await response.clone().json()) as Record<string, unknown>;
-	const generatedAt = (body.generatedAt as string) ?? new Date().toISOString();
+	const generatedAt =
+		(body.generatedAt as string) ??
+		response.headers.get('x-catalog-fetched-at') ??
+		response.headers.get('date') ??
+		new Date().toISOString();
 	return { providers: filterProviders(body), generatedAt, source };
 }
 
@@ -75,7 +79,13 @@ async function parseValidated(response: Response, source: CatalogResult['source'
 async function storeCachedResponse(cache: Cache | undefined, response: Response): Promise<void> {
 	if (!cache) return;
 	try {
-		await cache.put(CATALOG_URL, response.clone());
+		// api.json carries no generatedAt; stamp the fetch time so cache/304 reads report the data's real age.
+		const headers = new Headers(response.headers);
+		headers.set('x-catalog-fetched-at', new Date().toISOString());
+		await cache.put(
+			CATALOG_URL,
+			new Response(response.clone().body, { status: response.status, statusText: response.statusText, headers })
+		);
 	} catch (err) {
 		void log.warn(LOG_TAG, `Failed to cache live response: ${errorMessage(err)}`);
 	}

@@ -6,6 +6,7 @@
 	import type { CatalogModelEntry, CatalogProviderEntity, CatalogResult, EligibleProvider } from '#lib/ai/catalog/types.ts';
 	import {
 		addCatalogProvider,
+		assignRole,
 		cleanupRoleAssignments,
 		deleteCatalogProvider,
 		reorderCatalogProviders,
@@ -13,6 +14,7 @@
 		updateCatalogProvider,
 	} from '#lib/stores/settings.svelte.ts';
 	import { removedEntryIds } from '#lib/features/settings/catalog-setup.ts';
+	import { isMainRoleEntry, reassignMainRole } from '#lib/features/settings/role-catalog.ts';
 	import Button from '#lib/components/ui/Button.svelte';
 	import Card from '#lib/components/ui/Card.svelte';
 	import Icon from '#lib/components/ui/Icon.svelte';
@@ -97,7 +99,16 @@
 		const previous = setupEntityId ? settings.catalogProviders.find((entity) => entity.id === setupEntityId) : undefined;
 		if (previous) {
 			updateCatalogProvider(previous.id, data);
-			cleanupRoleAssignments(removedEntryIds(previous.enabledModels, data.enabledModels));
+			const removed = removedEntryIds(previous.enabledModels, data.enabledModels);
+			// Capture before cleanup: cleanupRoleAssignments also drops main when its entry is removed.
+			const currentMain = settings.roleAssignments['main'];
+			cleanupRoleAssignments(removed);
+			const newMain = reassignMainRole(
+				currentMain,
+				removed,
+				data.enabledModels.map((m) => m.id)
+			);
+			if (newMain) assignRole('main', newMain);
 		} else {
 			addCatalogProvider(data);
 		}
@@ -173,13 +184,15 @@
 								<button class="btn preset-tonal min-h-11 px-2 py-1 text-xs" type="button" onclick={() => startEdit(entity)}>
 									{t('settings.edit')}
 								</button>
-								<button
-									class="btn preset-tonal min-h-11 px-2 py-1 text-xs text-error-700-300"
-									type="button"
-									onclick={() => deleteCatalogProvider(entity.id)}
-								>
-									{t('settings.delete')}
-								</button>
+								{#if !isMainRoleEntry(entity.enabledModels.map((entry) => entry.id))}
+									<button
+										class="btn preset-tonal min-h-11 px-2 py-1 text-xs text-error-700-300"
+										type="button"
+										onclick={() => deleteCatalogProvider(entity.id)}
+									>
+										{t('settings.delete')}
+									</button>
+								{/if}
 							</div>
 						</div>
 
