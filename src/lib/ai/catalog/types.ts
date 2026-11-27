@@ -1,5 +1,4 @@
-import type { Provider, ApiType } from '#lib/stores/settings.svelte.ts';
-import type { LanguageModelCallOptions } from 'ai';
+import type { Provider, ApiType, ProviderCallSettings } from '#lib/stores/settings.svelte.ts';
 
 /** Mirrors @opencode-ai/models ReasoningOption without runtime import. */
 export type ReasoningEffortValue = null | 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'max' | 'default';
@@ -24,7 +23,7 @@ export interface CatalogModelEntry {
 	apiType: ApiType;
 	baseURL?: string;
 	snapshot: ModelSnapshot;
-	callSettings?: LanguageModelCallOptions;
+	callSettings?: ProviderCallSettings;
 	reasoningToggle?: 'on' | 'off';
 	reasoningBudget?: number;
 }
